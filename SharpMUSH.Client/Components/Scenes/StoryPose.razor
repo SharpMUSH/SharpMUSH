@@ -5,8 +5,9 @@
 
 @* D1 §5.4 one pose in the Story view: a 44px portrait (radius 12), the name in its colour (700) and the
    time (12px dim), then the pose at 15px/1.6 with the other participants' names as mentions. A pose
-   tagged "ooc" is the OOC band (§4.10). The portrait and the name open the character: the sheet in
-   Play (OnCharacter), the profile page elsewhere. *@
+   tagged "ooc" is the OOC band (§4.10), which names the speaker, so its text drops the "Name: " in front.
+   The portrait and the name open the character: the sheet in Play (OnCharacter), the profile page
+   elsewhere. *@
 @if (IsOoc)
 {
     <div class="story-row story-row--ooc @(Pose.IsDeleted ? "story-row--deleted" : null) @(_flash ? "story-row--just-edited" : null)">
@@ -175,7 +176,10 @@ else
         if (_bodyMarkup is not null && !string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal)) _ = FlashAsync();
         _bodyMarkup = Pose.Markup;
         _bodyMentions = Mentions;
-        Body = (MarkupString)StoryMentions.Mark(SceneMarkupRenderer.ToHtml(Pose.Markup),
+        var html = IsOoc
+            ? SceneMarkupRenderer.OocToHtml(Pose.Markup, Pose.Content, Pose.DisplayName, Pose.AuthorName)
+            : SceneMarkupRenderer.ToHtml(Pose.Markup);
+        Body = (MarkupString)StoryMentions.Mark(html,
             Mentions.Where(m => !IsAuthor(m.Name)).ToList());
     }
 

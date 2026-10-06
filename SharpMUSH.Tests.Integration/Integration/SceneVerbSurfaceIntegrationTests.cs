@@ -330,6 +330,7 @@ public class SceneVerbSurfaceIntegrationTests
 	[Arguments("say", "Hello there.")]
 	[Arguments("semipose", "'s hand lifts.")]
 	[Arguments("emit", "A lantern gutters.")]
+	[Arguments("ooc", "Back in five.")]
 	public async Task WebComposeVerb_FocusesTheSceneItPostsTo(string mode, string text)
 	{
 		await PutLoggerInMasterRoomAsync();
@@ -348,6 +349,55 @@ public class SceneVerbSurfaceIntegrationTests
 
 		await Assert.That(await Eval($"scenefocus({Num(guest)})")).IsEqualTo(sceneId)
 			.Because($"+scene/{mode} <id>=<text> must leave the poser focused on <id>");
+	}
+
+	/// <summary>
+	/// <c>+scene/ooc &lt;id&gt;=&lt;text&gt;</c>, the portal's OOC mode, records what the <c>ooc</c> command
+	/// would: the line less its <c>&lt;OOC&gt;</c> marker, tagged and sourced <c>ooc</c> (the tag is what the
+	/// portal draws as the OOC band), with a leading <c>:</c> posing and a leading <c>;</c> semiposing.
+	/// </summary>
+	[Test]
+	[Arguments("Back in five, sorry.", "{0}: Back in five, sorry.")]
+	[Arguments(":waves.", "{0} waves.")]
+	[Arguments(";'s back.", "{0}'s back.")]
+	public async Task WebOocVerb_RecordsATaggedOocLine(string text, string expected)
+	{
+		await PutLoggerInMasterRoomAsync();
+		var name = $"Oak{Tag}{(text[0] is ':' or ';' ? (text[0] == ':' ? "p" : "s") : "t")}";
+		var (who, handle) = await CreatePlayerAsync(name);
+
+		await RunAs(handle, $"+scene/create Oak Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+
+		await RunAs(handle, $"+scene/ooc {sceneId}={text.Replace(";", "%;")}");
+
+		var poseId = await Eval($"last(sceneposes({sceneId}))");
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},content)")).IsEqualTo(string.Format(expected, name));
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},tags)")).IsEqualTo("ooc");
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},source)")).IsEqualTo("ooc");
+	}
+
+	/// <summary>
+	/// <c>+scene/ooc</c> refuses what <c>ooc</c> refuses: a gagged player, and a <c>:</c> or <c>;</c> with
+	/// nothing after it. Neither records a pose.
+	/// </summary>
+	[Test]
+	[Arguments(true, "gagged")]
+	[Arguments(false, ":")]
+	[Arguments(false, "%;  ")]
+	public async Task WebOocVerb_RefusesWhatOocRefuses(bool gagged, string text)
+	{
+		await PutLoggerInMasterRoomAsync();
+		var name = $"Elm{Tag}{(gagged ? "g" : text[0] == ':' ? "p" : "s")}";
+		var (who, handle) = await CreatePlayerAsync(name);
+
+		await RunAs(handle, $"+scene/create Elm Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+		if (gagged) await God1($"@set {who}=GAGGED");
+
+		await RunAs(handle, $"+scene/ooc {sceneId}={text}");
+
+		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("0");
 	}
 
 	/// <summary>

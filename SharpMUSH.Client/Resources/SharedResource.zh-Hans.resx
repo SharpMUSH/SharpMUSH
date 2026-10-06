@@ -3001,10 +3001,6 @@
     <value>颜色</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>摆姿态、说话或叙述…</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>删除“{0}”（{1}）？这会将它从所有持有它的账号中移除。</value>
     <comment>MT</comment>
@@ -3062,22 +3058,6 @@
   </data>
   <data name="RolLookUp" xml:space="preserve">
     <value>查找</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>旁白</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>姿态</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>说话</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>半姿态</value>
     <comment>MT</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
@@ -5667,5 +5647,20 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>已暂停，未定时间</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>发送方式</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter 发送</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>此场景已暂停。在其所有者恢复之前不接受动作。</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>此场景未在进行，因此不接受动作。</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

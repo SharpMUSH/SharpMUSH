@@ -94,6 +94,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 	private const string ActiveStatus = "active";
 	private const string PausedStatus = "paused";
 	private const string FinishedStatus = "finished";
+	private const string CancelledStatus = "cancelled";
 
 	private static readonly byte[] IdxAll = Keys.Composite(IdxAllKind, "");
 	private static readonly byte[] IdxScheduled = Keys.Composite(IdxScheduledKind, "");
@@ -366,7 +367,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 					{
 						return [];
 					}
-					matches = ScenesByIndex(tx, MemberIndexKey(viewer)).OrderByDescending(s => s.LastActivityAt);
+					matches = ScenesByIndex(tx, MemberIndexKey(viewer)).Where(IsListed).OrderByDescending(s => s.LastActivityAt);
 					break;
 				case "active":
 					matches = ScenesByIndex(tx, StatusIndexKey(ActiveStatus)).OrderByDescending(s => s.LastActivityAt);
@@ -375,12 +376,18 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 					matches = ScenesByIndex(tx, StatusIndexKey(FinishedStatus)).OrderByDescending(s => s.LastActivityAt);
 					break;
 				default:
-					matches = ScenesByIndex(tx, IdxAll).OrderByDescending(s => s.LastActivityAt);
+					matches = ScenesByIndex(tx, IdxAll).Where(IsListed).OrderByDescending(s => s.LastActivityAt);
 					break;
 			}
 
 			return matches.Take(Math.Max(0, count)).Select(s => ProjectScene(tx, s)).ToList();
 		}));
+
+	/// <summary>
+	/// A cancelled scene never ran and never will: the lists leave it out, and only its own page (the archive)
+	/// still opens it.
+	/// </summary>
+	private static bool IsListed(SceneRecord scene) => !string.Equals(scene.Status, CancelledStatus, StringComparison.Ordinal);
 
 	public Task<Found<SceneModel>> GetActiveSceneInRoomAsync(string roomDbref)
 		=> Task.FromResult(_accessor.Read<Found<SceneModel>>(tx =>
