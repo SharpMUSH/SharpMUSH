@@ -232,8 +232,6 @@ public class WebSocketClientService : IWebSocketClientService
 
 			_cancellationTokenSource = new CancellationTokenSource();
 			socket = _webSocket;
-			// Cancelled when this socket's receive loop ends: whatever waits on this socket stops waiting.
-			var gone = new CancellationTokenSource();
 			if (reconnect) _reconnecting = socket;
 
 			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", LogSanitizer.Sanitize(_serverUri));
@@ -270,6 +268,10 @@ public class WebSocketClientService : IWebSocketClientService
 			// at login.").
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 
+			// Cancelled, then disposed, when this socket's receive loop ends: whatever waits on this socket
+			// stops waiting. The token is taken first because a disposed source no longer hands one out.
+			var gone = new CancellationTokenSource();
+			var socketGone = gone.Token;
 			_receiveTask = ReceiveMessagesAsync(_webSocket, verdict, gone, _cancellationTokenSource.Token);
 
 			// Wait for the server's answer to a resume, so a caller knows whether the session is the one
@@ -287,7 +289,7 @@ public class WebSocketClientService : IWebSocketClientService
 			bool loggedIn;
 			if (!reconnect || (answer == ResumeVerdict.Resumed && !_loginOwed))
 				loggedIn = true;
-			else if (await ReloginAsync(_webSocket, gone.Token) is { } relogged)
+			else if (await ReloginAsync(_webSocket, socketGone) is { } relogged)
 				loggedIn = relogged;
 			else
 				// The socket closed while logging in: the reconnect loop tries again, with the commands kept.
@@ -542,7 +544,7 @@ public class WebSocketClientService : IWebSocketClientService
 
 	/// <param name="socket">The socket this loop reads.</param>
 	/// <param name="verdict">This socket's pending resume answer, or null for a hello.</param>
-	/// <param name="gone">Cancelled when the loop ends.</param>
+	/// <param name="gone">Cancelled and disposed when the loop ends; the loop owns it.</param>
 	private async Task ReceiveMessagesAsync(ClientWebSocket socket, TaskCompletionSource<ResumeVerdict>? verdict,
 		CancellationTokenSource gone, CancellationToken cancellationToken)
 	{
@@ -607,6 +609,7 @@ public class WebSocketClientService : IWebSocketClientService
 		// Likewise a socket a reconnect was still setting up: that reconnect tries again.
 		var reconnecting = ReferenceEquals(_reconnecting, socket);
 		gone.Cancel();
+		gone.Dispose();
 
 		// Attempt automatic reconnection if the disconnect was neither client-intentional nor an
 		// engine-initiated logout (the server's {"type":"bye"}).
