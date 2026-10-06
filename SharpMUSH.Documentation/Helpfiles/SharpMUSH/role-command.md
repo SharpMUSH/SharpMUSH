@@ -132,7 +132,7 @@ As in PennMUSH, an object may give a role it holds to a thing it owns, or take i
 
 Player #1 is exempt from all of these. Role priority decides only who may manage roles; it never decides who controls whom.
 
-**See Also:**
+::: seealso
 - [roles]
 - [@permission]
 - [ROLES()]
@@ -140,3 +140,4 @@ Player #1 is exempt from all of these. Role priority decides only who may manage
 - [PERMISSION()]
 - [@power]
 - [lock keys]
+:::

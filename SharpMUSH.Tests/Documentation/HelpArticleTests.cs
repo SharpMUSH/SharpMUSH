@@ -145,4 +145,99 @@ public class HelpArticleTests
 			.Concat(HelpArticleParser.Parse("# sample2\nContinuation.", "help")).ToList();
 		await Assert.That(() => HelpCorpusValidator.Validate(parsed)).Throws<InvalidDataException>();
 	}
+
+	[Test]
+	public async Task WebKeepsColumnsTheTerminalLinesUp()
+	{
+		const string markdown = "ACTION LISTS     ANCESTORS<br>\nCHAT             CLIENTS";
+		var html = HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic);
+		await Assert.That(html).IsEqualTo("<p class=\"help-aligned\">ACTION LISTS     ANCESTORS<br>CHAT             CLIENTS</p>\n");
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText())
+			.IsEqualTo("ACTION LISTS     ANCESTORS\nCHAT             CLIENTS");
+	}
+
+	[Test]
+	[Arguments("One line\nwraps here.", "<p>One line wraps here.</p>\n")]
+	[Arguments("Hard break  \nnext line.", "<p>Hard break<br />next line.</p>\n")]
+	[Arguments("Two spaces.  Then prose.", "<p>Two spaces.  Then prose.</p>\n")]
+	public async Task WebLineBreaksAreWhatTheTerminalPrints(string markdown, string expected)
+	{
+		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task TerminalTableCellsThatWrapKeepTheirBorders()
+	{
+		const string markdown = "| Failure to... | Lock |\n| --- | --- |\n| run an `$-command` on an object that is quite a long way from here | Command |";
+		var lines = RecursiveMarkdownHelper.RenderMarkdown(markdown, maxWidth: 40).ToPlainText().Split('\n');
+		await Assert.That(lines.Length).IsGreaterThan(3);
+		foreach (var line in lines)
+		{
+			await Assert.That(line.Length).IsEqualTo(40);
+			await Assert.That(line[0]).IsEqualTo('|');
+			await Assert.That(line[^1]).IsEqualTo('|');
+		}
+	}
+
+	private const string TopicList = "Topics:\n\n|     |     |\n|-----|-----|\n| [newbie] | [ZONES] |\n\nAfter.";
+
+	[Test]
+	public async Task TerminalTopicListsNameTheTopicsBare()
+	{
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(TopicList).ToPlainText())
+			.IsEqualTo("Topics:\n\nnewbie  ZONES\n\nAfter.");
+	}
+
+	[Test]
+	public async Task WebTopicListsDropTheEmptyHeader()
+	{
+		var html = HelpHtmlRenderer.RenderToHtml(TopicList, topic => "/help/" + topic);
+		await Assert.That(html).Contains("<table class=\"help-list\">");
+		await Assert.That(html).DoesNotContain("<thead>");
+		await Assert.That(html).Contains("<a href=\"/help/newbie\">newbie</a>");
+	}
+
+	private const string SeeAlso = "Body.\n\n::: seealso\n- [newbie]\n- [ZONES]\n- `[NO_TEL]`\n:::";
+
+	[Test]
+	public async Task TerminalSeeAlsoIsOneCommaSeparatedLine()
+	{
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(SeeAlso).ToPlainText())
+			.IsEqualTo("Body.\n\nSee Also: newbie, ZONES, [NO_TEL]");
+	}
+
+	[Test]
+	public async Task TerminalSeeAlsoWrapsAtACommaUnderTheFirstTopic()
+	{
+		var lines = RecursiveMarkdownHelper.RenderMarkdown(SeeAlso, maxWidth: 24).ToPlainText().Split('\n');
+		await Assert.That(lines[^2]).IsEqualTo("See Also: newbie, ZONES,");
+		await Assert.That(lines[^1]).IsEqualTo("          [NO_TEL]");
+	}
+
+	[Test]
+	public async Task SeeAlsoWithDescribedItemsStaysAListUnderTheLabel()
+	{
+		const string markdown = "::: seealso\n- [newbie] — where to start\n:::";
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText())
+			.IsEqualTo("See Also:\n* help newbie — where to start");
+		var html = HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic);
+		await Assert.That(html).Contains("<span class=\"help-see-also-label\">See Also</span>");
+		await Assert.That(html).Contains("<li><a href=\"/help/newbie\">newbie</a> — where to start</li>");
+		await Assert.That(html).DoesNotContain("help-see-also-names");
+	}
+
+	[Test]
+	public async Task BoldSeeAlsoLabelIsOnlyAParagraph()
+	{
+		const string markdown = "**See Also:**\n- [newbie]";
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText()).IsEqualTo("See Also:\n* help newbie");
+	}
+
+	[Test]
+	public async Task WebSeeAlsoIsALabelledNavOfLinks()
+	{
+		var html = HelpHtmlRenderer.RenderToHtml(SeeAlso, topic => "/help/" + topic);
+		await Assert.That(html).IsEqualTo("<p>Body.</p>\n<nav class=\"help-see-also\" aria-label=\"See also\"><span class=\"help-see-also-label\">See Also</span>"
+			+ "<ul class=\"help-see-also-names\"><li><a href=\"/help/newbie\">newbie</a></li><li><a href=\"/help/ZONES\">ZONES</a></li><li><code>[NO_TEL]</code></li></ul></nav>\n");
+	}
 }

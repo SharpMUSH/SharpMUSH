@@ -45,10 +45,11 @@ This will create the room as above, and also open an exit leading to it named `K
 This will do just the same as the above, except it will also create an exit named `Out \<S\>` with the aliases s, south, out and o coming back from the kitchen to whatever room you are currently in.
 
 
-**See Also:**
+::: seealso
 - [@open]
 - [@link]
 - [EXITS]
 - [@create]
 - [database]
 - [DIG()]
+:::

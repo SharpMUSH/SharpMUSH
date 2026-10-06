@@ -33,13 +33,14 @@ To destroy objects set SAFE, you must use `@destroy/override` or @nuke. If the r
 
 @recycle is an alias for @destroy. Some MUSHes disable @destroy and only use @recycle, to avoid players mistyping. @nuke is an alias for `@destroy/override`.
 
-**See Also:**
+::: seealso
 - [@undestroy]
 - [@create]
 - [@dig]
 - [@open]
 - [DESTROY_OK]
 - [SAFE]
+:::
 
 ## Destruction lifecycle
 
@@ -47,11 +48,12 @@ When an object is marked for destruction, the GOING flag is set on it and its @a
 
 The MUSH checks for GOING objects every ten minutes or so (see '@config purge_interval'); each one is set with the GOING_TWICE flag, and will be destroyed totally on the next cycle. You can save it from destruction during this period using the @undestroy command, or @destroy it again to destroy it instantly. The GOING and GOING_TWICE flags cannot be set or removed manually.
 
-When an object is destroyed, any commands, @waits and semaphores it has queued are drained, and the object stops counting against its owner's used building quota. SharpMUSH has no monetary creation deposit to refund. The OBJECT`DESTROY event is also queued.
+When an object is destroyed, any commands, @waits and semaphores it has queued are drained, and the object stops counting against its owner's used building quota. SharpMUSH has no monetary creation deposit to refund. The ``OBJECT`DESTROY`` event is also queued.
 
 Players can only be @destroyed when they are not connected, and even then can only be destroyed by a Wizard player. If the destroy_possessions @config option is on, anything the player owns is @destroyed. If the really_safe option is also on, his SAFE possessions are spared. Any objects he owns which aren't destroyed are @chown'd to the Probate player (as per '@config probate_judge'), as are any @channels the player owned.
 
 
-**See Also:**
+::: seealso
 - [SAFE]
 - [EVENTS]
+:::

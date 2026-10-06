@@ -72,8 +72,9 @@ You can group together different sets of keys by enclosing each group in parenth
 allows non-players to pass, or players who do not have the "unregistered" flag set.
 
 
-**See Also:**
-- [- [LOCKING]
+::: seealso
+- [LOCKING]
 - [locktypes]
 - [@CHANNEL CLOCK]
 - [OBJID()]
+:::

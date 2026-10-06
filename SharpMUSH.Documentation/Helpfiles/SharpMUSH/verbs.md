@@ -52,6 +52,7 @@ Example:
     Foo has been used by Sketch!
 ```
 
-**See Also:**
+::: seealso
 - [@verb]
 - [attribute flags]
+:::

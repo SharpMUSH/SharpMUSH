@@ -119,9 +119,10 @@ The function looks for attributes on `<object>` with specific names that define 
 ## Container templates
 
 - ``RENDERMARKUP`CONTAINER`` - Custom container (`::: name args`) rendering
-  - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, or your own)
+  - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, `seealso`, or your own)
   - `%1` - The rest of the fence line, empty if there is none
-  - `%2` - The container's contents, rendered (see the note below)
+  - `%2` - The container's contents, rendered (see the note below). For a
+    `::: seealso` footer of names only, that is the topics separated by `, `
   
 ## Inline templates
 
@@ -331,9 +332,9 @@ payload across the three bands, each receiving it as `%0`.
 
 `json_map()` supplies the element value as `%1` and its index as `%2` - the
 index is how `SPEC` and `CELL` find their own column's width, and
-`FUN`TABLE`ROWJ` exists only to move that value into `%0` for `u()`. A string
+``FUN`TABLE`ROWJ`` exists only to move that value into `%0` for `u()`. A string
 element arrives as raw JSON, quoted, which is why `SPEC` and `CELL` read it
-through `json_query(%1,unescape)`. `FUN`TABLE`ROW` and `FUN`TABLE`CELL` read
+through `json_query(%1,unescape)`. ``FUN`TABLE`ROW`` and ``FUN`TABLE`CELL`` read
 `%q<spec>` and `%q<wd>` from the enclosing call, so a `ulocal()` in this chain
 would break them. The `max(10,...)` is `rendermarkdown()`'s own minimum width,
 which a narrow column can fall under.
@@ -360,8 +361,9 @@ than as hooks of their own.
 - Returns `#-1 ERROR RENDERING MARKDOWN: <error>` if markdown parsing fails
 - Falls back to default rendering if template attribute evaluation fails
 
-### See Also
+::: seealso
 - [rendermarkdown()]
 - [GET()]
 - [u()]
 - [ANSI]
+:::

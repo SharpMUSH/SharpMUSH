@@ -57,11 +57,12 @@ lsearch() is free unless it includes either an eval-class search or an elock sea
 lsearchr() is like an lsearch() run through revwords(). Results are returned from highest dbref to lowest. search() is an alias for lsearch().
 
 
-**See Also:**
+::: seealso
 - [@search]
 - [@find]
 - [LPARENT()]
 - [LSTATS()]
+:::
 
 ## Search examples
 

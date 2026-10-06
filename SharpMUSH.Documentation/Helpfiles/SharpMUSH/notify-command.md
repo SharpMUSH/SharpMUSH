@@ -47,8 +47,9 @@ Hello, Walker!
 ```
 
 
-**See Also:**
+::: seealso
 - [semaphores]
 - [@drain]
 - [@wait]
 - [@halt]
+:::

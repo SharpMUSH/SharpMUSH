@@ -48,6 +48,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 - **Tables**: Pipe-delimited tables with column alignment (`:---` left, `:---:` center, `---:` right)
 - **Code Blocks**: Triple-backtick fenced code blocks with optional language tag for syntax highlighting (see below)
 - **Block Quotes**: `> Quote` rendered with 2-space indentation
+- **See Also footers**: a `::: seealso` block holding a list of `[topic]` or `` `code` `` names prints as one line, `See Also: @lock, @unlock`, wrapped under the first topic. If any item says more than its name, the list prints as a list under the label
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
 
 ## Syntax Highlighting in Code Blocks
@@ -215,7 +216,8 @@ Output:
 - All structural elements (borders, bullets) use ANSI faint/dim styling for visual distinction
 - Output is proper MarkupString with embedded ANSI codes
 
-### See Also
+::: seealso
 - [rendermarkdowncustom()]
 - `[MARKUP]`
 - [ANSI]
+:::

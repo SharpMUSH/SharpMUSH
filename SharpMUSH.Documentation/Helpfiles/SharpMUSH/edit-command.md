@@ -60,8 +60,9 @@ Replace a literal '^' with 'v'
 ```
 
 
-**See Also:**
+::: seealso
 - [EDIT()]
 - [REGEDIT()]
 - [attributes]
 - [WILDCARDS]
+:::

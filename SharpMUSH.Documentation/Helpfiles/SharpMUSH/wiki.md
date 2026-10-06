@@ -232,11 +232,12 @@ attached to it - softcode that renders a page is free to present its links
 however it likes, and `@wiki` is the only surface that already knows how to
 follow one.
 
-**See Also:**
+::: seealso
 - [wiki editing]
 - [wiki administration]
 - [wiki categories]
 - [WIKI()]
+:::
 
 ## Editing wiki pages
 
@@ -296,9 +297,10 @@ WIKI: Wrote the fr translation of 'Combat Primer' (now rev 1).
 WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<text>
 ```
 
-**See Also:**
+::: seealso
 - [wiki]
 - [wiki administration]
+:::
 
 ## Wiki administration
 
@@ -321,9 +323,10 @@ the source; `@wiki/history/source` shows the source locale's stream. An edit
 summary is prose about unpublished content, so a draft's revisions are withheld
 exactly as its body is: `@wiki/history/draft` shows them, to a wizard.
 
-**See Also:**
+::: seealso
 - [wiki]
 - [wiki editing]
+:::
 
 ## Wiki categories
 
@@ -364,6 +367,7 @@ WIKI: Category 'Rules' — 1 page(s), 0 subcategory(ies):
   main:combat_primer             Combat Primer (rev 2, 2026-10-05)
 ```
 
-**See Also:**
+::: seealso
 - [wiki]
 - [wiki editing]
+:::

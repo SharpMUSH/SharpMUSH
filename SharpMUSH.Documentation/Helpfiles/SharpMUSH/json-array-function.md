@@ -26,10 +26,11 @@ This function assembles a MUSH `<list>` (separated by `<delimiter>`, which defau
 
 Unlike json(array, ...), which takes each element as a separate argument, json_array() takes a single list, so it composes naturally with iter(). If any element is not valid JSON, json_array() returns a #-1 BAD ARGUMENT error.
 
-**See Also:**
+::: seealso
 - [json()]
 - [json_map()]
 - [OOB()]
+:::
 
 ## Array construction examples
 

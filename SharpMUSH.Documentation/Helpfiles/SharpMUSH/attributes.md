@@ -35,19 +35,22 @@
 
 Attributes with (*) after them are special, cannot be set by players, and may only be visible to wizards or admin. For those attributes, there is no @-command, so you can just type 'help `<attribute name>`' for help. For all other attributes, type 'help @`<attribute name>`' for help.
 
-Standard Attributes: (see `@list/attribs` for the complete list)<br>
-AAHEAR        ACLONE        ACONNECT      ADESCRIBE     ADISCONNECT<br>
-ADROP         AEFAIL        AENTER        AFAILURE      AHEAR<br>
-ALEAVE        ALFAIL        AMHEAR        AMOVE         APAYMENT<br>
-ASUCCESS      AWAY          CHARGES       COST          DESCRIBE<br>
-DROP          EALIAS        EFAIL         ENTER         FAILURE<br>
-FORWARDLIST   HAVEN         IDESCRIBE     IDLE          LALIAS<br>
-LAST (*)      LASTIP (*)    LASTLOGOUT(*) LASTSITE (*)  LEAVE<br>
-LFAIL         LISTEN        MOVE          ODESCRIBE     ODROP<br>
-OEFAIL        OENTER        OFAILURE      OLEAVE        OLFAIL<br>
-OMOVE         OPAYMENT      OSUCCESS      OXENTER       OXLEAVE<br>
-OXMOVE        PAYMENT       QUEUE (*)     RQUOTA (*)    RUNOUT<br>
-SEX           STARTUP       SUCCESS       TFPREFIX
+Standard Attributes: (see `@list/attribs` for the complete list)
+
+|                |              |                  |                |                |
+|----------------|--------------|------------------|----------------|----------------|
+| [@AAHEAR]      | [@ACLONE]    | [@ACONNECT]      | [@ADESCRIBE]   | [@ADISCONNECT] |
+| [@ADROP]       | [@AEFAIL]    | [@AENTER]        | [@AFAILURE]    | [@AHEAR]       |
+| [@ALEAVE]      | [@ALFAIL]    | [@AMHEAR]        | [@AMOVE]       | [@APAYMENT]    |
+| [@ASUCCESS]    | [@AWAY]      | [@CHARGES]       | [@COST]        | [@DESCRIBE]    |
+| [@DROP]        | [@EALIAS]    | [@EFAIL]         | [@ENTER]       | [@FAILURE]     |
+| [@FORWARDLIST] | [@HAVEN]     | [@IDESCRIBE]     | [@IDLE]        | [@LALIAS]      |
+| [LAST] (*)     | [LASTIP] (*) | [LASTLOGOUT] (*) | [LASTSITE] (*) | [@LEAVE]       |
+| [@LFAIL]       | [@LISTEN]    | [@MOVE]          | [@ODESCRIBE]   | [@ODROP]       |
+| [@OEFAIL]      | [@OENTER]    | [@OFAILURE]      | [@OLEAVE]      | [@OLFAIL]      |
+| [@OMOVE]       | [@OPAYMENT]  | [@OSUCCESS]      | [@OXENTER]     | [@OXLEAVE]     |
+| [@OXMOVE]      | [@PAYMENT]   | [QUEUE] (*)      | [RQUOTA] (*)   | [@RUNOUT]      |
+| [@SEX]         | [@STARTUP]   | [@SUCCESS]       | TFPREFIX       |                |
 
 ## Attribute contents
 
@@ -82,7 +85,7 @@ Attributes can be owned by someone other than the object they are set on. This a
 
 In addition to the standard attributes with pre-set effects, there are some special attributes that date from the days before you could set non-standard attributes with any name you wanted. These are the attributes VA-VZ, WA-WZ, XA-XZ. These attributes have no pre-set effects, and were just to allow players to store any text or MUSHcode that they wished in those attributes. Now that non-standard attributes are available, it is highly recommended that you instead use them, since you can use longer and descriptive names for attributes, which makes it much easier to examine and work on objects.
 
-**See Also:**
+::: seealso
 - [ATTRIB-OWNERSHIP]
 - [@set]
 - [examine]
@@ -94,3 +97,4 @@ In addition to the standard attributes with pre-set effects, there are some spec
 - [NON-STANDARD ATTRIBUTES]
 - [SETTING-ATTRIBUTES]
 - [attribute trees]
+:::

@@ -77,11 +77,12 @@ Placing one of these characters before the width alters the spacing for this col
 
 Ansi: Place ansi characters (as defined in [ansi()]) within ()s to define a column's ansi markup.
 
-**See Also:**
+::: seealso
 - [CENTER()]
 - [LJUST()]
 - [RJUST()]
 - [TABLE()]
+:::
 
 ## Basic examples
 

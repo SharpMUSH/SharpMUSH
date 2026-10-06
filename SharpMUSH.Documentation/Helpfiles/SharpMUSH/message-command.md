@@ -43,13 +43,14 @@ Switches:
 - /silent -- don't show a confirmation message
 - /noisy -- show a confirmation message; default depends on the silent_pemit @config option
 
-**See Also:**
+::: seealso
 - [MESSAGE()]
 - [@chatformat]
 - [@pageformat]
 - [@oemit]
 - [@remit]
 - [speak()]
+:::
 
 ## Speech format examples
 

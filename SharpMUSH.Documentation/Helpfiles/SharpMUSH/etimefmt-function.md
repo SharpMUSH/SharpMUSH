@@ -43,10 +43,11 @@ think etimefmt($2mm $2ss, 500) - [timestring(500)]
 ```
 
 
-**See Also:**
+::: seealso
 - [TIMESTRING()]
 - [timefmt()]
 - [ETIME()]
+:::
 
 ## Duration escape codes
 

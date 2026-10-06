@@ -47,13 +47,14 @@ When using `@dolist/inline`, an @break in an `<action list>` will stop the calli
 
 `@dolist/inplace` is an alias for `@dolist/inline/nobreak/localize`.
 
-**See Also:**
+::: seealso
 - [iter()]
 - [ilev()]
 - [MAP()]
 - [@notify]
 - [semaphores]
 - [action lists]
+:::
 
 ## Iteration examples
 

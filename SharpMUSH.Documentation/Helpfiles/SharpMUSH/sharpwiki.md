@@ -46,11 +46,12 @@ Home
 en
 ```
 
-**See Also:**
+::: seealso
 - [WIKICATEGORY()]
 - [WIKILIST()]
 - [WIKISEARCH()]
 - [WIKIRECENT()]
+:::
 
 # WIKICATEGORY()
 
@@ -75,10 +76,11 @@ help:markdown_guide help:application_schema_guide
 help
 ```
 
-**See Also:**
+::: seealso
 - [WIKI()]
 - [WIKILIST()]
 - [wiki]
+:::
 
 # WIKILIST()
 
@@ -100,9 +102,10 @@ so this list is the same whatever your `LOCALE` is. Pass a reference from it to
 help:markdown_guide
 ```
 
-**See Also:**
+::: seealso
 - [WIKI()]
 - [WIKISEARCH()]
+:::
 
 # WIKISEARCH()
 
@@ -121,9 +124,10 @@ the first 100 matches.
 combat_primer house_rules
 ```
 
-**See Also:**
+::: seealso
 - [WIKI()]
 - [WIKILIST()]
+:::
 
 # WIKIRECENT()
 
@@ -133,7 +137,8 @@ combat_primer house_rules
 Returns a space-separated list of the most recently edited page references,
 newest first. *<count>* defaults to 10 and is clamped to 1-50.
 
-**See Also:**
+::: seealso
 - [WIKI()]
 - [WIKILIST()]
+:::
 

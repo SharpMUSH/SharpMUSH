@@ -59,13 +59,14 @@ When using `@switch/inline`, an @break in an `<action>` will stop the calling ac
 
 `@switch/inplace` is an alias for `@switch/inline/nobreak/localize`.
 
-**See Also:**
+::: seealso
 - [SWITCH WILDCARDS]
 - [switch()]
 - [@if]
 - [@break]
 - [STEXT()]
 - [STEXT()]
+:::
 
 ## Pattern matching examples
 

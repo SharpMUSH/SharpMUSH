@@ -69,10 +69,11 @@ Note that you have to pass %0 and %1 yourself. For some $-commands or listens, t
 Walker slaps himself around with a trout
 ```
 
-**See Also:**
+::: seealso
 - [@include]
 - [u()]
 - [verbs]
+:::
 
 ## Trigger examples
 

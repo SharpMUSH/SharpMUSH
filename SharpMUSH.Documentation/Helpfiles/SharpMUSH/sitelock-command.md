@@ -43,11 +43,12 @@ For backward compatibility, `@sitelock/ban` is shorthand for setting options "!c
 
 If the `/player` switch is given, `<host-pattern>` is treated as a player name, and sitelock rules are added for that player's LASTIP and LASTSITE, if set.
 
-**See Also:**
+::: seealso
 - [WILDCARDS]
 - [regexp]
 - [IPADDR()]
 - [HOST()]
+:::
 
 ## Allow and deny options
 

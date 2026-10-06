@@ -81,8 +81,9 @@ Examples:
     > @command/restrict @emit=!flag^suspect&!flag^gagged
 ```
 
-**See Also:**
+::: seealso
 - [@command]
 - [@function]
 - [@attribute]
 - [LOCKING]
+:::

@@ -47,7 +47,8 @@ Some games customize the appearance of channels a little (for instance, adding c
 
 There's much more you can do with the channel system - see [@channel] for the other commands.
 
-**See Also:**
+::: seealso
 - [gs talking]
 - [@channel]
 - [@chat]
+:::

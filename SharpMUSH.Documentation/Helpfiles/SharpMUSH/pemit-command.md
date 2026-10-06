@@ -41,7 +41,7 @@ The @pemit command can take the following additional switches:
 You cannot @pemit to objects set HAVEN, or objects whose @lock/page you do not pass, unless you are set WIZARD or have the pemit_all @power.
 
 
-**See Also:**
+::: seealso
 - [@emit]
 - [@nspemit]
 - [@oemit]
@@ -49,3 +49,4 @@ You cannot @pemit to objects set HAVEN, or objects whose @lock/page you do not p
 - [NOSPOOF]
 - [SPOOFING]
 - [page]
+:::

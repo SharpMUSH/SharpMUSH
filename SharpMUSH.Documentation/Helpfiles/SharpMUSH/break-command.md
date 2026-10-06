@@ -32,12 +32,13 @@ If `<action list>` is given, it is executed instead of the rest of the commands 
 
 `@assert` does the inverse: it stops execution if `<boolean>` evaluates to false.
 
-**See Also:**
+::: seealso
 - [action lists]
 - [queue]
 - [boolean values]
 - [@switch]
 - [@if]
+:::
 
 ## Conditional break examples
 

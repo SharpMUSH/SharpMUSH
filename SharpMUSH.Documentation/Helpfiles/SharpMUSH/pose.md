@@ -33,10 +33,11 @@ The pose and semipose commands allow you to perform actions. Pose shows your nam
 
 If you have a SPEECHMOD attribute set, it will be evaluated with `<action>` as %0 and either : (for pose) or ; (for semipose) as %1. The result is used instead of `<action>`, as long as it returns a non-empty string.
 
-**See Also:**
+::: seealso
 - ["]
 - [@emit]
 - [@SPEECHMOD]
+:::
 
 ## Pose examples
 

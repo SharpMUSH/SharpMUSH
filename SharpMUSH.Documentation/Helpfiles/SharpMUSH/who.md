@@ -44,7 +44,8 @@ Existing games which have softcoded 'who' commands can maintain separation from 
 Note: The WHO command available at the login screen is totally separate from the in-game WHO command, and is not affected by any changes to the in-game WHO. To alter that, use the WHO_FILE @config option.
 
 
-**See Also:**
+::: seealso
 - [@doing]
 - [@poll]
 - [SESSION]
+:::

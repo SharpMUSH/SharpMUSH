@@ -41,9 +41,10 @@
 | [GREP()]     | [GREP()]    | [XATTR()]        | [GET()]         |
 | [ZFUN()]         |                  |                  |                  |
 
-**See Also:**
+::: seealso
 - [attributes]
 - [NON-STANDARD ATTRIBUTES]
+:::
 # Bitwise functions
   These functions treat integers as a sequence of binary bits (either 0 or 1) and manipulate them.
 
@@ -65,9 +66,10 @@
 | [GTE()]      | [LT()]       | [LTE()]      | [NAND()]     | [NEQ()]      |
 | [NOR()]      | [NOT()]      | [OR()]       | [T()]        | [XOR()]      |
 
-**See Also:**
+::: seealso
 - [boolean values]
 - [@config]
+:::
 # Communication functions
   Communication functions are side-effect functions that send a message to an object or objects. [PAGERECALL()] and [PAGECONVERSATIONS()] are the exception: they read your own page log and send nothing (SharpMUSH extensions).
 
@@ -77,9 +79,10 @@
 | [OEMIT()]             | [PEMIT()]             | [REMIT()]             | [ZEMIT()]             |
 | [PAGERECALL()]        | [PAGECONVERSATIONS()] |                       |                       |
 
-**See Also:**
+::: seealso
 - [channel functions]
 - [Mail Functions]
+:::
 
 # Connection functions
   Connection functions return information about the connections open on a game, or about specific connections.
@@ -109,9 +112,10 @@
 | [RLOC()]         | [RNUM()]         | [ROOM()]         | [WHERE()]        |
 | [ZONE()]         |                  |                  |                  |
 
-**See Also:**
+::: seealso
 - [database]
 - [Information functions]
+:::
 # Information functions
   Information functions return values related to objects or the game.
 
@@ -132,8 +136,9 @@
 | [PLAYERMEM()]    | [POLL()]         | [POWERS()]       | [QUOTA()]        |
 | [RESTARTS()]     | [TYPE()]         | [VERSION()]      | [VISIBLE()]      |
 
-**See Also:**
+::: seealso
 - [Dbref functions]
+:::
 
 # List functions
   List functions take at least one list of elements and return transformed lists or one or more members of those lists. Most of these functions can take an arbitrary `<delimiter>` argument to specify what delimits list elements; if none is provided, a space is used by default.
@@ -153,8 +158,9 @@
 | [SORTBY()]       | [SORTKEY()]      | [SPLICE()]       | [STEP()]         |
 | [TABLE()]        | [UNIQUE()]       | [WORDPOS()]      | [WORDS()]        |
 
-**See Also:**
+::: seealso
 - [LISTS]
+:::
 
 # Math functions
   Math functions take one or more floating point numbers and return a numeric value.
@@ -183,8 +189,9 @@
   Math functions are affected by a number of @config options, including the TinyMUSH compatability options null_eq_zero and tiny_math.
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # Vector functions
   These functions operate on n-dimensional vectors. A vector is a delimiter-separated list of numbers (space-separated, by default):
 
@@ -195,8 +202,9 @@
 
 
 
-**See Also:**
+::: seealso
 - [Math functions]
+:::
 
 # Regular expression functions
   These functions take a regular expression (regexp, or re) and match it against assorted things.
@@ -210,9 +218,10 @@
 | [RESWITCH()]     | [RESWITCH()]  | [RESWITCH()] | [RESWITCH()]    |
 | [XATTR()]     | [XATTR()]    |                  |                  |
 
-**See Also:**
+::: seealso
 - [String functions]
 - [regexp]
+:::
 
 # SQL functions
   These functions perform queries or other operations on an SQL database to which the MUSH is connected, if SQL support is available and enabled.
@@ -247,8 +256,9 @@
 | [WRAP()]         | [DISPLAYWIDTH()] | [GRAPHEMECOUNT()] | [GRAPHEMES()]     |
 | [PRINTF()]       | [STRDISTANCE()]  |                  |                  |
 
-**See Also:**
+::: seealso
 - [STRINGS]
+:::
 # Time functions
   These functions return times or format times.
 
@@ -260,8 +270,9 @@
 | [STRINGSECS()]   | [time()]         | [timecalc()]     | [timefmt()]      |
 | [TIMESTRING()]   | [UPTIME()]       | [time()]      |                  |
 
-**See Also:**
+::: seealso
 - [timezones]
+:::
 # Utility functions
   These functions don't quite fit into any other category.
 
@@ -292,8 +303,9 @@
 | [WIKI()]         | [WIKICATEGORY()] | [WIKILIST()]     | [WIKIRECENT()]   |
 | [WIKISEARCH()]   |                  |                  |                  |
 
-**See Also:**
+::: seealso
 - [wiki]
+:::
 
 # @@()
 # NULL()
@@ -304,8 +316,9 @@
 
   The null() function is similar, but does evaluate its argument(s), so side-effects can occur within a null(). Useful for eating the output of functions when you don't use that output.
 
-**See Also:**
+::: seealso
 - [@@]
+:::
 
 # ABS()
 `abs(<number>)`
@@ -323,8 +336,9 @@ You say, "4"
 You say, "2"
 ```
 
-**See Also:**
+::: seealso
 - [SIGN()]
+:::
 
 # ACCNAME()
 `accname(<object>)`
@@ -333,11 +347,12 @@ You say, "2"
   @nameaccent, if any.
 
 
-**See Also:**
+::: seealso
 - [NAME()]
 - [FULLNAME()]
 - [INAME()]
 - [accents]
+:::
 # ACOS()
 `acos(<cosine>[, <angle type>])`
 
@@ -346,22 +361,24 @@ You say, "2"
   See 'HELP ANGLES' for more on the `<angle type>`.
 
 
-**See Also:**
+::: seealso
 - [ASIN()]
 - [ATAN()]
 - [COS()]
 - [CTU()]
 - [SIN()]
 - [TAN()]
+:::
 # ADD()
 `add(<number1>, <number2>[, ... , <numberN>])`
 
   Returns the sum of the given numbers.
 
 
-**See Also:**
+::: seealso
 - [Math functions]
 - [LMATH()]
+:::
 # AFTER()
 `after(<string1>, <string2>)`
 
@@ -377,9 +394,10 @@ You say, " baz"
 You say, "r baz"
 ```
 
-**See Also:**
+::: seealso
 - [BEFORE()]
 - [REST()]
+:::
 # ALLOF()
 `allof(<expr>[, ... , <exprN>], <osep>)`
 
@@ -407,11 +425,12 @@ You say, "r baz"
     You say, "foo bar baz"
 ```
 
-**See Also:**
+::: seealso
 - [FIRSTOF()]
 - [boolean values]
 - [STRFIRSTOF()]
 - [FILTER()]
+:::
 # ALPHAMAX()
 `alphamax(<word>[, ... , <wordN>])`
 
@@ -419,9 +438,10 @@ You say, "r baz"
 
   This is equivilent to ```last(sort(`<word>` ... `<wordN>`,a))```.
 
-**See Also:**
+::: seealso
 - [ALPHAMIN()]
 - [MAX()]
+:::
 # ALPHAMIN()
 `alphamin(<word>[, ... , <wordN>])`
 
@@ -430,9 +450,10 @@ You say, "r baz"
   This is equivilent to first(sort(`<word>` ... `<wordN>`,a)).
 
 
-**See Also:**
+::: seealso
 - [ALPHAMAX()]
 - [MIN()]
+:::
 # AND()
 # CAND()
 `and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>
@@ -443,13 +464,14 @@ You say, "r baz"
   Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.
 
 
-**See Also:**
+::: seealso
 - [boolean values]
 - [NAND()]
 - [OR()]
 - [XOR()]
 - [NOT()]
 - [LMATH()]
+:::
 # ANDFLAGS()
 # ANDLFLAGS()
 `andflags(<object>, <string of flag letters>)`<br>
@@ -464,10 +486,11 @@ You say, "r baz"
     > say andlflags(%#, wizard dark !ansi)
 
 
-**See Also:**
+::: seealso
 - [ORFLAGS()]
 - [FLAGS()]
 - [LFLAGS()]
+:::
 # ANDLPOWERS()
 `andlpowers(<object>, <list of powers>)`
 
@@ -478,11 +501,12 @@ You say, "r baz"
   If there is a syntax error like a ! without a following flag, '#-1 INVALID POWER' is returned. Unknown powers are treated as being not set.
 
 
-**See Also:**
+::: seealso
 - [POWERS()]
 - [ORLPOWERS()]
 - [@power]
 - [@power]
+:::
 # APOSS()
 # %a
 `aposs(<object>)`
@@ -490,10 +514,11 @@ You say, "r baz"
   Returns the absolute possessive pronoun - his/hers/its/theirs - for an object. The %a substitution returns the absolute possessive pronoun of the enactor.
 
 
-**See Also:**
+::: seealso
 - [OBJ()]
 - [POSS()]
 - [SUBJ()]
+:::
 # ART()
 `art(<string>)`
 
@@ -506,13 +531,14 @@ You say, "r baz"
   See 'HELP ANGLES' for more on the angle type.
 
 
-**See Also:**
+::: seealso
 - [ACOS()]
 - [ATAN()]
 - [COS()]
 - [CTU()]
 - [SIN()]
 - [TAN()]
+:::
 # ATAN()
 # ATAN2()
 `atan(<tangent>[, <angle type>])`<br>
@@ -525,13 +551,14 @@ You say, "r baz"
   See 'HELP ANGLES' for more on the angle type.
 
 
-**See Also:**
+::: seealso
 - [ACOS()]
 - [ASIN()]
 - [COS()]
 - [CTU()]
 - [SIN()]
 - [TAN()]
+:::
 # ATRLOCK()
 # ATTRLOCK()
 `atrlock(<object>/<attrib>[, [on|off]])`
@@ -548,10 +575,11 @@ You say, "r baz"
   except that the attribute's owner is also changed when you lock it via atrlock().
 
 
-**See Also:**
+::: seealso
 - [@atrlock]
 - [@atrchown]
 - [HASFLAG()]
+:::
 # ATTRIB_SET()
 `attrib_set(<object>/<attrib>[, <value>])`
 
@@ -560,10 +588,11 @@ You say, "r baz"
   If there is a second argument, then attrib_set() will create an attribute, even if the second argument is empty (in which case attrib_set() will create an empty attribute). If the empty_attrs configuration option is off, the attribute will be set to a single space. This means that attrib_set(me/foo,%0) will _always_ create an attribute.
 
 
-**See Also:**
+::: seealso
 - [SET()]
 - [@set]
 - [ATTRIB_SET#()]
+:::
 # ATTRIB_SET#()
 `attrib_set#(<object>/<attrib>[, <value>])`
 
@@ -576,18 +605,20 @@ You say, "r baz"
   [ATTRIB_SET()] until that is fixed.
 
 
-**See Also:**
+::: seealso
 - [ATTRIB_SET()]
 - [SET()]
+:::
 # BAND()
 `band(<integer>[, ... , <integerN>])`
 
   Does a bitwise AND of all its arguments, returning the result (a number with only the bits set in every argument set in it).
 
 
-**See Also:**
+::: seealso
 - [Bitwise functions]
 - [LMATH()]
+:::
 # BASECONV()
 `baseconv(<number>, <from base>, <to base>)`
 
@@ -623,9 +654,10 @@ You say, "foo b"
 ```
 
 
-**See Also:**
+::: seealso
 - [AFTER()]
 - [FIRST()]
+:::
 # BENCHMARK()
 `benchmark(<expression>, <number>[, <sendto>])`
 
@@ -655,25 +687,28 @@ think brackets(v(desc))
   Returns `<integer1>` with every bit that was set in `<integer2>` cleared.
 
 
-**See Also:**
+::: seealso
 - [Bitwise functions]
+:::
 # BNOT()
 `bnot(<integer>)`
 
   Returns the bitwise complement of `<integer>`. Every bit set in it is cleared, and every clear bit is set.
 
 
-**See Also:**
+::: seealso
 - [Bitwise functions]
+:::
 # BOR()
 `bor(<integer>[, ... , <integerN>])`
 
   Does a bitwise OR of all its arguments, returning the result. (A number with a bit set if that bit appears in any of its arguments).
 
 
-**See Also:**
+::: seealso
 - [Bitwise functions]
 - [LMATH()]
+:::
 # BOUND()
 `bound(<number>, <lower bound>[, <higher bound>])`
 
@@ -682,20 +717,22 @@ think brackets(v(desc))
   If you just want to know whether `<number>` is within the range of `<lower>` to `<higher>`, consider using lte(`<lower>`, `<number>`, `<higher>`) instead to get a boolean result.
 
 
-**See Also:**
+::: seealso
 - [ROUND()]
 - [ROUND()]
 - [ROUND()]
 - [TRUNC()]
+:::
 # BXOR()
 `bxor(<integer>[, ... , <integerN>])`
 
   Does a bitwise XOR of all its arguments, returning the result. (A number with a bit set if it's set in only one of its arguments).
 
 
-**See Also:**
+::: seealso
 - [Bitwise functions]
 - [LMATH()]
+:::
 # CAPSTR()
 `capstr(<string>)`
 
@@ -708,9 +745,10 @@ Foo bar baz
 ```
 
 
-**See Also:**
+::: seealso
 - [LCSTR()]
 - [UCSTR()]
+:::
 # CAT()
 # STRCAT()
 `cat(<string>[, ... , <stringN>])`<br>
@@ -748,10 +786,11 @@ You say, "--X--"
     You say, "12345hello543215"
 
 
-**See Also:**
+::: seealso
 - [align()]
 - [LJUST()]
 - [RJUST()]
+:::
 # CHAIN()
 `chain(<attribute list>, <base>[, <arg0>[, ... , <argN>]])`
 
@@ -776,7 +815,7 @@ You say, "*HELLO*!"
   WRAP wraps the base "hello" in the side-arg "*" to make "*hello*"; that result becomes %0 for SHOUT, which upper-cases it and appends "!".
 
 
-**See Also:**
+::: seealso
 - [fold()]
 - [MAP()]
 - [iter()]
@@ -784,6 +823,7 @@ You say, "*HELLO*!"
 - [JITER()]
 - [u()]
 - [@include attribute pipelines]
+:::
 # CHECKPASS()
 `checkpass(<player>, <string>)`
 
@@ -792,9 +832,10 @@ You say, "*HELLO*!"
   This function can only be used by wizards.
 
 
-**See Also:**
+::: seealso
 - [@password]
 - [@newpassword]
+:::
 # CHR()
 # ORD()
 `chr(<number>)`<br>
@@ -822,11 +863,12 @@ You say, "A"
   Note: If @create or @clone is restricted or disabled, clone() will also be restricted/disabled.
 
 
-**See Also:**
+::: seealso
 - [@clone]
 - [CREATE()]
 - [DIG()]
 - [OPEN()]
+:::
 # CMDS()
 `cmds(<player|descriptor>)`
 
@@ -835,8 +877,9 @@ You say, "A"
   You must be a Wizard, Royalty or See_All to use this function on anyone but yourself.
 
 
-**See Also:**
+::: seealso
 - [Connection functions]
+:::
 # SENT()
 `sent(<player|descriptor>)`
 
@@ -845,8 +888,9 @@ You say, "A"
   You must be a Wizard, Royalty or See_All to use this function on anyone but yourself.
 
 
-**See Also:**
+::: seealso
 - [Connection functions]
+:::
 # RECV()
 `recv(<player|descriptor>)`
 
@@ -855,8 +899,9 @@ You say, "A"
   You must be a Wizard, Royalty or See_All to use this function on anyone but yourself.
 
 
-**See Also:**
+::: seealso
 - [Connection functions]
+:::
 # COMP()
 `comp(<value1>, <value2>[, <type>])`
 
@@ -873,9 +918,10 @@ You say, "A"
 
   Whether or not the a sort type is case-sensitive or not depends on the particular MUSH and its environment.
 
-**See Also:**
+::: seealso
 - [STRMATCH()]
 - [EQ()]
+:::
 # CON()
 `con(<object>)`
 
@@ -884,9 +930,10 @@ You say, "A"
   You can get the complete contents of any container you may examine, regardless of whether or not objects are dark. You can get the partial contents (obeying DARK/LIGHT/etc.) of your current location or the enactor (%#). You CANNOT get the contents of anything else, regardless of whether or not you have objects in it.
 
 
-**See Also:**
+::: seealso
 - [LCON()]
 - [NEXT()]
+:::
 # COND()
 # CONDALL()
 # NCOND()
@@ -915,9 +962,10 @@ You say, "This is true"
     You say, "This is falseThis is also false"
 
 
-**See Also:**
+::: seealso
 - [FIRSTOF()]
 - [ALLOF()]
+:::
 # CONFIG()
 `config([<option>])`
 
@@ -937,17 +985,19 @@ Penny
   This function returns -1 for invalid `<player|descriptor>`s, offline players and players who are dark, if the caller is not able to see them.
 
 
-**See Also:**
+::: seealso
 - [Connection functions]
+:::
 # CONTROLS()
 `controls(<object>, <victim>[/<attribute>])`
 
   With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If one of the objects does not exist, it will return #-1 ARGN NOT FOUND (where N is the argument which is the invalid object). If `<attribute>` is not a valid attribute name, it will return #-1 BAD ATTR NAME. You must control `<object>` or `<victim>`, or have the See_All power, to use this function.
 
 
-**See Also:**
+::: seealso
 - [VISIBLE()]
 - [CONTROL]
+:::
 # CONVSECS()
 # CONVUTCSECS()
 `convsecs(<seconds>[, <timezone>])`<br>
@@ -975,10 +1025,11 @@ You say, "709395750"
     You say, "Wed Jun 24 14:22:30 1992"
 ```
 
-**See Also:**
+::: seealso
 - [CONVTIME()]
 - [time()]
 - [timefmt()]
+:::
 # CONVTIME()
 # CONVUTCTIME()
 `convtime(<time string>[, <timezone>[, <precision>]])`<br>
@@ -1002,10 +1053,11 @@ You say, "Wed Jun 24 10:22:54 1992"
     You say, "709395774"
 
 
-**See Also:**
+::: seealso
 - [CONVSECS()]
 - [time()]
 - [timezones]
+:::
 # COS()
 `cos(<angle>[, <angle type>])`
 
@@ -1023,13 +1075,14 @@ You say, "0"
 
   See 'HELP ANGLES' for more on the angle type.
 
-**See Also:**
+::: seealso
 - [ACOS()]
 - [ASIN()]
 - [ATAN()]
 - [CTU()]
 - [SIN()]
 - [TAN()]
+:::
 # PCREATE()
 `pcreate(<name>, <password>[, <dbref>])`
 
@@ -1038,11 +1091,12 @@ You say, "0"
   The optional third argument can be used to specify a garbage object to use for the new player.
 
 
-**See Also:**
+::: seealso
 - [@pcreate]
 - [CREATE()]
 - [DIG()]
 - [OPEN()]
+:::
 # CREATE()
 `create(<object>[, <cost>[, <dbref>]])`
 
@@ -1051,11 +1105,12 @@ You say, "0"
    Wizards may also specify a `<dbref>`; if this refers to a garbage object, the new object is created with this dbref.
 
 
-**See Also:**
+::: seealso
 - [@create]
 - [PCREATE()]
 - [DIG()]
 - [OPEN()]
+:::
 # CTIME()
 # CSECS()
 `ctime(<object>[, <utc>])`<br>
@@ -1066,11 +1121,12 @@ You say, "0"
   csecs() returns the time as the number of seconds since the epoch. Anyone can get the creation time of any object in the game.
 
 
-**See Also:**
+::: seealso
 - [MTIME()]
 - [time()]
 - [SECS()]
 - [OBJID()]
+:::
 # ANGLES
 
   In any function which accepts an angle type, the argument can be one of 'd' for degrees, 'r' for radians, or 'g' for gradians. Gradians are not used often, but it's included for completeness.
@@ -1078,7 +1134,7 @@ You say, "0"
   As a refresher, there are 180 degrees in pi radians in 200 gradians.
 
 
-**See Also:**
+::: seealso
 - [ACOS()]
 - [ASIN()]
 - [ATAN()]
@@ -1086,6 +1142,7 @@ You say, "0"
 - [CTU()]
 - [SIN()]
 - [TAN()]
+:::
 # CTU()
 `ctu(<angle>, <from>, <to>)`
 
@@ -1098,13 +1155,14 @@ You say, "90 degrees is 1.570796 radians"
 ```
 
 
-**See Also:**
+::: seealso
 - [ACOS()]
 - [ASIN()]
 - [ATAN()]
 - [COS()]
 - [SIN()]
 - [TAN()]
+:::
 # DEC()
 `dec(<integer>)`<br>
 `dec(<string-ending-in-integer>)`
@@ -1133,9 +1191,10 @@ You say, "90 degrees is 1.570796 radians"
   If the null_eq_zero @config option is on, using dec() on a string which does not end in an integer will return `<string>`-1. When null_eq_zero is turned off, it will return an error.
 
 
-**See Also:**
+::: seealso
 - [INC()]
 - [SUB()]
+:::
 # DECOMPOSEWEB()
 `decomposeweb(<string>)`
 
@@ -1150,10 +1209,11 @@ a&lt;b&gt; <span style="color: #ff5555">red</span>
   This is a SharpMUSH function; PennMUSH has no decomposeweb().
 
 
-**See Also:**
+::: seealso
 - [DECOMPOSE()]
 - [ansi()]
 - [RENDER()]
+:::
 # DECOMPOSE()
 `decompose(<string>)`
 
@@ -1166,11 +1226,11 @@ This is \[a%b[ansi(y,test)]\] %b%b
 ```
 
 
-**See Also:**
+::: seealso
 - [@decompile output switches]
 - [ESCAPE()]
 - [SECURE()]
-- []
+:::
 # DEFAULT()
 `default([<obj>/]<attr>[, ... ,[<objN>]/<attrN>], <default>)`
 
@@ -1190,7 +1250,7 @@ You say "apple orange banana"
     You say "No fruits!"
 ```
 
-**See Also:**
+::: seealso
 - [GET()]
 - [HASATTR()]
 - [u()]
@@ -1198,6 +1258,7 @@ You say "apple orange banana"
 - [UDEFAULT()]
 - [UDEFAULT()]
 - [STRFIRSTOF()]
+:::
 # STRDELETE()
 # DELETE()
 `strdelete(<string>, <first>, <len>)`
@@ -1223,11 +1284,12 @@ You say, "abcfgh"
   delete() is an alias for strdelete(), for backwards compatability.
 
 
-**See Also:**
+::: seealso
 - [STRREPLACE()]
 - [STRINSERT()]
 - [MID()]
 - [LDELETE()]
+:::
 # DIE()
 `die(<number of times to roll die>, <number of sides on die>[, <show>])`
 
@@ -1241,8 +1303,9 @@ think die(3, 6, 1)
 5 2 1
 ```
 
-**See Also:**
+::: seealso
 - [RAND()]
+:::
 # DIG()
 `dig(<name>[, <exit to>[, <exit from>[, <room dbref>, <to dbref>, <from dbref>]]])`
 
@@ -1251,12 +1314,13 @@ think die(3, 6, 1)
   Wizards and objects with the pick_dbref power can supply optional fourth through sixth arguments to specify garbage objects to use for the new room and exits.
 
 
-**See Also:**
+::: seealso
 - [@dig]
 - [OPEN()]
 - [@open]
 - [CREATE()]
 - [PCREATE()]
+:::
 # DIGEST()
 # MD5
 # SHA1
@@ -1287,28 +1351,31 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 ```
 
 
-**See Also:**
+::: seealso
 - [ENCODE64()]
 - [ENCRYPT()]
 - [HMAC()]
+:::
 # DIST2D()
 `dist2d(<x1>, <y1>, <x2>, <y2>)`
 
   Returns the distance between two points in the Cartesian plane that have coordinates (`<x1>`, `<y1>`) and (`<x2>`, `<y2>`).
 
 
-**See Also:**
+::: seealso
 - [DIST3D()]
 - [LMATH()]
+:::
 # DIST3D()
 `dist3d(<x1>, <y1>, <z1>, <x2>, <y2>, <z2>)`
 
   Returns the distance between two points in space, with coordinates (`<x1>`, `<y1>`, `<z1>`) and (`<x2>`, `<y2>`, `<z2>`).
 
 
-**See Also:**
+::: seealso
 - [DIST2D()]
 - [LMATH()]
+:::
 # DIV()
 # FLOORDIV()
 # FDIV()
@@ -1334,19 +1401,21 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
   Note that add(mul(div(%0,%1),%1),remainder(%0,%1)) always yields %0, and add(mul(floordiv(%0,%1),%1),modulo(%0,%1)) also always yields %0.
 
 
-**See Also:**
+::: seealso
 - [MOD()]
 - [LMATH()]
+:::
 # DOING()
 `doing(<player|descriptor>)`
 
   When given the name of a player or descriptor, doing() returns the player's @doing. If no matching player or descriptor is found, or the descriptor is not yet connected to a player, an empty string is returned.
 
 
-**See Also:**
+::: seealso
 - [@poll]
 - [@doing]
 - [POLL()]
+:::
 # E()
 # EVERY()
 # SOME()
@@ -1371,12 +1440,13 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
   The same shape works as a command guard: `@assert every(ISNUM, %0, , bad)=@pemit %#=Not numbers: %q<bad>`
 
 
-**See Also:**
+::: seealso
 - [FILTER()]
 - [FILTER()]
 - [FILTERQ()]
 - [setq()]
 - [CHAIN()]
+:::
 # EXP()
 `e([<number>])`
 
@@ -1386,9 +1456,10 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 
   exp() is an alias for e().
 
-**See Also:**
+::: seealso
 - [POWER()]
 - [LOG()]
+:::
 # EDEFAULT()
 `edefault([<obj>/]<attr>, <default case>)`
 
@@ -1406,13 +1477,14 @@ You say "You have lost 6 marbles."
     You say "You have no marbles."
 
 
-**See Also:**
+::: seealso
 - [GET()]
 - [EVAL()]
 - [u()]
 - [DEFAULT()]
 - [UDEFAULT()]
 - [HASATTR()]
+:::
 # EDIT()
 `edit(<string>, <search>, <replace>[, ... , <searchN>, <replaceN>])`
 
@@ -1432,9 +1504,10 @@ You say "I think this is an exam."
   edit() can not replace a literal single ^ or $. Use regedit() for that.
 
 
-**See Also:**
+::: seealso
 - [@edit]
 - [REGEDIT()]
+:::
 # ELEMENTS()
 `elements(<list of words>, <list of numbers>[, <delim>[, <osep>]])`
 
@@ -1455,10 +1528,11 @@ You say "Ack Moo"
     You say "foo"
 
 
-**See Also:**
+::: seealso
 - [EXTRACT()]
 - [INDEX()]
 - [GRAB()]
+:::
 # ELOCK()
 `elock(<object>[/<locktype>], <victim>)`
 
@@ -1478,12 +1552,13 @@ think elock(Dancing Slippers/drop, Princess)
     0
 
 
-**See Also:**
+::: seealso
 - [LOCKING]
 - [locktypes]
 - [TESTLOCK()]
 - [LOCKFILTER()]
 - [@lset]
+:::
 # EMIT()
 # NSEMIT()
 `emit(<message>)`<br>
@@ -1494,12 +1569,13 @@ think elock(Dancing Slippers/drop, Princess)
   nsemit() works like @nsemit.
 
 
-**See Also:**
+::: seealso
 - [PEMIT()]
 - [REMIT()]
 - [NSLEMIT()]
 - [OEMIT()]
 - [ZEMIT()]
+:::
 # ENCODE64()
 # DECODE64()
 # base64
@@ -1511,9 +1587,10 @@ think elock(Dancing Slippers/drop, Princess)
   decode64() converts a base-64 encoded `<string>` back to its original form.
 
 
-**See Also:**
+::: seealso
 - [ENCRYPT()]
 - [DIGEST()]
+:::
 # ENCRYPT()
 # DECRYPT()
 `encrypt(<string>, <password>[, <encode>])`<br>
@@ -1526,9 +1603,10 @@ think elock(Dancing Slippers/drop, Princess)
   decrypt() decrypts a string encrypted with encrypt(). The `<encoded>` argument indicates that the encrypted string was base-64 encoded.
 
 
-**See Also:**
+::: seealso
 - [ENCODE64()]
 - [DIGEST()]
+:::
 # ENTRANCES()
 `entrances([<object>[, <type>[, <begin>[, <end>]]]])`
 
@@ -1542,18 +1620,20 @@ think elock(Dancing Slippers/drop, Princess)
   You can also limit the range of the dbrefs searched by giving `<begin>` and `<end>`. If you control `<object>`, or have the Search or See_All powers, all objects linked to `<object>` are returned. Otherwise, only objects you can examine will be included.
 
 
-**See Also:**
+::: seealso
 - [lsearch()]
 - [@entrances]
+:::
 # EQ()
 `eq(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more `<number>`s, and returns 1 if they are all equal, and 0 otherwise.
 
 
-**See Also:**
+::: seealso
 - [NEQ()]
 - [LMATH()]
+:::
 # ESCAPE()
 `escape(<string>)`
 
@@ -1564,10 +1644,10 @@ think elock(Dancing Slippers/drop, Princess)
   This function prevents code injection in strings entered by players. It is only needed when `<string>` will be passed through a command or function which will evaluate it again, which can usually be avoided. Since the function preserves the original string, it is, in most cases, a better choice than secure(), but decompose() is often better still.
 
 
-**See Also:**
+::: seealso
 - [DECOMPOSE()]
 - [SECURE()]
-- []
+:::
 # EVAL()
 # GET_EVAL()
 `eval(<object>, <attribute>)`<br>
@@ -1585,11 +1665,12 @@ test
 ```
 
 
-**See Also:**
+::: seealso
 - [GET()]
 - [u()]
 - [GET()]
 - [EDEFAULT()]
+:::
 # EXIT()
 `exit(<object>)`
 
@@ -1598,9 +1679,10 @@ test
   You can get the complete exit list of any room you may examine, regardless of whether or not exits are dark. You can get the partial exit list (obeying DARK/LIGHT/etc.) of your current location or the enactor (%#). You CANNOT get the exit list of anything else, regardless of whether or not you have objects in it.
 
 
-**See Also:**
+::: seealso
 - [LEXITS()]
 - [NEXT()]
+:::
 # EXTRACT()
 `extract(<list>[, <first>[, <length>[, <delimiter>]]])`
 
@@ -1623,10 +1705,11 @@ a test
     last three elements
 
 
-**See Also:**
+::: seealso
 - [INDEX()]
 - [ELEMENTS()]
 - [GRAB()]
+:::
 # FILTER()
 # FILTERBOOL()
 `filter([<obj>/]<attr>, <list>[, <delimiter>[, <osep>[, ..., <argN>]]])`<br>
@@ -1646,7 +1729,7 @@ You say, "1 3 5"
 ```
 
 
-**See Also:**
+::: seealso
 - [anonymous attributes]
 - [FIRSTOF()]
 - [ALLOF()]
@@ -1655,6 +1738,7 @@ You say, "1 3 5"
 - [E()]
 - [E()]
 - [boolean values]
+:::
 # FILTERQ()
 `filterq(<register>, [<object>/]<attribute>, <list>[, <delimiter>[, <osep>[, <arg1>[, ... , <argN>]]]])`
 
@@ -1670,12 +1754,13 @@ Kept: 12 7 / Dropped: apples pears
 ```
 
 
-**See Also:**
+::: seealso
 - [FILTER()]
 - [FILTER()]
 - [E()]
 - [E()]
 - [setq()]
+:::
 # FINDABLE()
 `findable(<object>, <victim>)`
 
@@ -1684,21 +1769,23 @@ Kept: 12 7 / Dropped: apples pears
   The object executing the function needs to be see_all or control both `<object>` and `<victim>`.
 
 
-**See Also:**
+::: seealso
 - [locate()]
 - [LOC()]
+:::
 # FIRST()
 `first(<list>[, <delimiter>])`
 
   Returns the first element of a list.
 
 
-**See Also:**
+::: seealso
 - [BEFORE()]
 - [REST()]
 - [LAST()]
 - [FIRSTOF()]
 - [STRFIRSTOF()]
+:::
 # FIRSTOF()
 `firstof([<expr>, ... , <exprN>][, <default>])`
 
@@ -1724,11 +1811,12 @@ You say, "2"
     You say, ""
 
 
-**See Also:**
+::: seealso
 - [ALLOF()]
 - [boolean values]
 - [STRFIRSTOF()]
 - [FILTER()]
+:::
 # FLAGS()
 `flags()`<br>
 `flags([<object>[/<attribute>]])`
@@ -1751,9 +1839,10 @@ Tnp
     $vp
 
 
-**See Also:**
+::: seealso
 - [LFLAGS()]
 - [LIST()]
+:::
 # LFLAGS()
 `lflags()`<br>
 `lflags(<object>[/<attribute>])`
@@ -1774,9 +1863,10 @@ NO_COMMAND PUPPET
     NO_COMMAND VISUAL
 
 
-**See Also:**
+::: seealso
 - [FLAGS()]
 - [LIST()]
+:::
 # FLIP()
 # REVERSE()
 `flip(<string>)`
@@ -1790,8 +1880,9 @@ You say, "zab rab oof"
 ```
 
 
-**See Also:**
+::: seealso
 - [REVWORDS()]
+:::
 # FMOD()
 `fmod(<number>, <divisor>)`
 
@@ -1803,31 +1894,34 @@ think fmod(6.1,2.5)
 1.1
 ```
 
-**See Also:**
+::: seealso
 - [DIV()]
 - [DIV()]
 - [MOD()]
 - [LMATH()]
+:::
 # FOLLOWERS()
 `followers(<object>)`
 
   Returns the list of things and players following object. You must control `<object>`.
 
 
-**See Also:**
+::: seealso
 - [FOLLOWING()]
 - [follow]
 - [unfollow]
+:::
 # FOLLOWING()
 `following(<object>)`
 
   Returns the list of things and players that the object is following. You must control `<object>`.
 
 
-**See Also:**
+::: seealso
 - [FOLLOWERS()]
 - [follow]
 - [unfollow]
+:::
 # FRACTION()
 `fraction(<number>[, <whole>])`
 
@@ -1869,21 +1963,23 @@ You say, "South;sout;sou;so;s"
 ```
 
 
-**See Also:**
+::: seealso
 - [NAME()]
 - [ACCNAME()]
 - [INAME()]
 - [ALIAS()]
 - [ALIAS()]
+:::
 # FUNCTIONS()
 `functions([<type>])`
 
   Returns a space-separated list of the names of functions. If `<type>` is "local", only @functions are listed. If "builtin", only builtin functions. If "all" or omitted, both are returned.
 
 
-**See Also:**
+::: seealso
 - [LIST()]
 - [CONFIG()]
+:::
 # GET()
 # XGET()
 `get(<object>/<attribute>)`<br>
@@ -1899,24 +1995,26 @@ This is [a test].
 ```
 
 
-**See Also:**
+::: seealso
 - [HASATTR()]
 - [VISIBLE()]
 - [u()]
 - [DEFAULT()]
 - [UDEFAULT()]
+:::
 # GETPIDS()
 `getpids(<object>[/<attribute>])`
 
   Returns a space-separated list of semaphore queue process ids waiting on the given `<object>` and semaphore `<attribute>`. If `<attribute>` is not given, pids for all semaphores on the object are returned.
 
 
-**See Also:**
+::: seealso
 - [@ps]
 - [@wait]
 - [LPIDS()]
 - [PIDINFO()]
 - [semaphores]
+:::
 # GRAB()
 # REGRAB()
 # REGRABI()
@@ -1931,12 +2029,13 @@ This is [a test].
   or the regular expression variation thereof.
 
 
-**See Also:**
+::: seealso
 - [GRABALL()]
 - [element()]
 - [EXTRACT()]
 - [ELEMENTS()]
 - [regmatch()]
+:::
 # GRABALL()
 # REGRABALL()
 # REGRABALLI()
@@ -1957,11 +2056,12 @@ You say "This is"
 ```
 
 
-**See Also:**
+::: seealso
 - [element()]
 - [element()]
 - [GRAB()]
 - [regmatch()]
+:::
 # GREP()
 # REGREP()
 # WILDGREP()
@@ -1987,36 +2087,39 @@ You say "This is"
   pgrep() works like grep(), but also checks attributes inherited from parents.
 
 
-**See Also:**
+::: seealso
 - [@grep]
 - [LATTR()]
 - [WILDCARDS]
+:::
 # GT()
 `gt(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more numbers, and returns 1 if and only if each number is greater than the number after it, and 0 otherwise.
 
 
-**See Also:**
+::: seealso
 - [GTE()]
 - [LT()]
 - [LTE()]
 - [EQ()]
 - [NEQ()]
 - [LMATH()]
+:::
 # GTE()
 `gte(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more numbers, and returns 1 if and only if each number is greater than or equal to the number after it, and 0 otherwise.
 
 
-**See Also:**
+::: seealso
 - [GT()]
 - [LT()]
 - [LTE()]
 - [EQ()]
 - [NEQ()]
 - [LMATH()]
+:::
 # HASATTR()
 # HASATTRP()
 # HASATTRVAL()
@@ -2040,9 +2143,10 @@ You say "This is"
   single argument carrying no `/` is `#-1 BAD ARGUMENT FORMAT TO <function>`.
 
 
-**See Also:**
+::: seealso
 - [VISIBLE()]
 - [LATTR()]
+:::
 # HASFLAG()
 `hasflag(<object>[/<attrib>], <flag>)`
 
@@ -2057,7 +2161,7 @@ think hasflag(me, wizard)
 ```
 
 
-**See Also:**
+::: seealso
 - [ORFLAGS()]
 - [ANDFLAGS()]
 - [ORFLAGS()]
@@ -2068,6 +2172,7 @@ think hasflag(me, wizard)
 - [@flag]
 - [HASPOWER()]
 - [HASTYPE()]
+:::
 # HASPOWER()
 `haspower(<object>, <power>)`
 
@@ -2076,10 +2181,11 @@ think hasflag(me, wizard)
   You can check the powers of any object, whether you control it or not.
 
 
-**See Also:**
+::: seealso
 - [@power]
 - [@power]
 - [HASFLAG()]
+:::
 # HASROLE()
 `hasrole(<object>, <role>)`
 
@@ -2092,10 +2198,11 @@ think hasrole(*Ariel, moderator)
 ```
 
 
-**See Also:**
+::: seealso
 - [ROLES()]
 - [PERMISSION()]
 - [@role]
+:::
 # HASTYPE()
 `hastype(<object>, <type list>)`
 
@@ -2111,25 +2218,28 @@ think hastype(test object, PLAYER THING)
 ```
 
 
-**See Also:**
+::: seealso
 - [TYPES OF OBJECTS]
 - [TYPE()]
+:::
 # HIDDEN()
 `hidden(<player|descriptor>)`
 
   If you can see hidden players, this function returns 1 if `<player>` (or the player connected to `<descriptor>`) is hidden, and 0 otherwise. If you cannot see hidden players, hidden() returns #-1.
 
 
-**See Also:**
+::: seealso
 - [@hide]
+:::
 # HOME()
 `home(<object>)`
 
   Returns the object's 'home', where it is @link'd to. This is the home for a player or thing, the drop-to of a room, or source of an exit.
 
 
-**See Also:**
+::: seealso
 - [@link]
+:::
 # HOST()
 # HOSTNAME()
 `host(<player|descriptor>)`
@@ -2141,11 +2251,12 @@ think hastype(test object, PLAYER THING)
   hostname() is an alias for host().
 
 
-**See Also:**
+::: seealso
 - [Connection functions]
 - [IPADDR()]
 - [LPORTS()]
 - [LPORTS()]
+:::
 # IDLE()
 # IDLESECS()
 `idle(<player|descriptor>[, <precision>])`
@@ -2155,9 +2266,10 @@ think hastype(test object, PLAYER THING)
   idlesecs() is an alias for idle().
 
 
-**See Also:**
+::: seealso
 - [Connection functions]
 - [CONN()]
+:::
 # IF()
 # IFELSE()
 `if(<condition>, <true expression>[, <false expression>])`<br>
@@ -2166,12 +2278,13 @@ think hastype(test object, PLAYER THING)
   These functions evaluate the `<condition>` and return `<true expression>` if the `<condition>` is true, or `<false expression>` (if provided) if the `<condition>` is false. Only the returned `<expression>` is evaluated.
 
 
-**See Also:**
+::: seealso
 - [boolean values]
 - [switch()]
 - [@if]
 - [@break]
 - [COND()]
+:::
 # INAME()
 `iname(<object>)`
 
@@ -2180,12 +2293,13 @@ think hastype(test object, PLAYER THING)
   You must be see_all, control `<object>`, or be inside it to use this function.
 
 
-**See Also:**
+::: seealso
 - [@nameformat]
 - [@nameaccent]
 - [NAME()]
 - [FULLNAME()]
 - [ACCNAME()]
+:::
 # INC()
 `inc(<integer>)`<br>
 `inc(<string-ending-in-integer>)`
@@ -2209,10 +2323,11 @@ think inc(3)
   If the null_eq_zero @config option is on, using inc() on a string which does not end in an integer will return `<string>`1. When null_eq_zero is turned off, it will return an error.
 
 
-**See Also:**
+::: seealso
 - [DEC()]
 - [ADD()]
 - [SUB()]
+:::
 # INDEX()
 `index(<list>, <character>, <first>, <length>)`
 
@@ -2230,10 +2345,11 @@ You say, "Mug of Beer"
     cute doll"
 
 
-**See Also:**
+::: seealso
 - [EXTRACT()]
 - [ELEMENTS()]
 - [GRAB()]
+:::
 # INSERT()
 # LINSERT()
 `linsert(<list>, <position>, <new item>[, <delim>])`
@@ -2257,19 +2373,21 @@ You say, "meep GOOP bleep gleep"
   insert() is an alias for linsert(), for backwards compatability.
 
 
-**See Also:**
+::: seealso
 - [LREPLACE()]
 - [LDELETE()]
 - [STRINSERT()]
+:::
 # ISDAYLIGHT()
 `isdaylight([<secs>[, <timezone>]])`
 
   Returns 1 if it's daylight savings in the specified timezone at the given time. Defaults to the host server's time zone and current time if not specified.
 
 
-**See Also:**
+::: seealso
 - [timezones]
 - [SECS()]
+:::
 # ISAPPROVED()
 `isapproved(<object>)`
 
@@ -2287,10 +2405,11 @@ think isapproved(me)
 ```
 
 
-**See Also:**
+::: seealso
 - [HASFLAG()]
 - [@flag]
 - [FLAG LIST]
+:::
 # ISDBREF()
 # ISOBJID()
 `isdbref(<string>)`<br>
@@ -2326,35 +2445,39 @@ The next object to be created will be #33.
     0
 
 
-**See Also:**
+::: seealso
 - [database]
 - [OBJIDS]
 - [NUM()]
 - [OBJID()]
+:::
 # ISINT()
 `isint(<string>)`
 
   Returns 1 if its argument is an integer, and 0 otherwise. Integers can begin with a '+' or '-' sign, but the rest of the string must be digits.
 
 
-**See Also:**
+::: seealso
 - [ISNUM()]
+:::
 # ISNUM()
 `isnum(<string>)`
 
   This function returns 1 if `<string>` is a number, and 0 if it is not. Numbers can begin with a '-' sign (for negatives), but the rest of the characters in the string must be digits, and an optional decimal point.
 
 
-**See Also:**
+::: seealso
 - [ISINT()]
+:::
 # ISREGEXP()
 `isregexp(<string>)`
 
   This function returns 1 if `<string>` is a valid regular expression, and 0 if it is not.
 
 
-**See Also:**
+::: seealso
 - [regexp]
+:::
 # ISWORD()
 `isword(<string>)`
 
@@ -2374,8 +2497,9 @@ The next object to be created will be #33.
    Another way to think about this is that items() counts the number of times `<delim>` appears in `<list>`, and adds 1.
 
 
-**See Also:**
+::: seealso
 - [WORDS()]
+:::
 # ITEMIZE()
 # ELIST()
 `itemize(<list>[, <delim>[, <conjunction>[, <punctuation>]]])`<br>
@@ -2415,11 +2539,12 @@ You say, "Test 1! Test 2! Test 3!"
     You say, "1a 2a 3a 1b 2b 3b 1c "
 
 
-**See Also:**
+::: seealso
 - [iter()]
 - [ilev()]
 - [ilev()]
 - [ilev()]
+:::
 # IPADDR()
 `ipaddr(<player|descriptor>)`
 
@@ -2428,11 +2553,12 @@ You say, "Test 1! Test 2! Test 3!"
   The caller can use the function on himself, but using on any other player requires privileged power such as Wizard, Royalty or SEE_ALL.
 
 
-**See Also:**
+::: seealso
 - [Connection functions]
 - [HOST()]
 - [LPORTS()]
 - [LPORTS()]
+:::
 # JITER()
 `jiter(<attribute list>, <input>[, <osep>])`
 
@@ -2451,23 +2577,25 @@ You say, "One|PLAYER"
 ```
 
 
-**See Also:**
+::: seealso
 - [CHAIN()]
 - [MAP()]
 - [iter()]
 - [fold()]
 - [u()]
+:::
 # LAST()
 `last(<list>[, <delimiter>])`
 
   Returns the last element of a list. Elements in `<list>` are separated by `<delimiter>`, if given, or by a space if not.
 
 
-**See Also:**
+::: seealso
 - [FIRST()]
 - [REST()]
 - [BEFORE()]
 - [AFTER()]
+:::
 # LATTR()
 # LATTRP()
 # REGLATTR()
@@ -2481,20 +2609,21 @@ You say, "One|PLAYER"
 
   The resulting list will be separated by `<output separator>`, or a space if no separator is given.
 
-  reglattr() returns attributes whose names match the regexp `<regexp>`. The match is not case-sensitive (as attribute names are always upper-case), and the "`" branch separator has no special meaning in the pattern.
+  reglattr() returns attributes whose names match the regexp `<regexp>`. The match is not case-sensitive (as attribute names are always upper-case), and the `` ` `` branch separator has no special meaning in the pattern.
 
   lattrp() and reglattrp() also include attributes inherited from parents.
 
   When returning large numbers of attributes, the results may be truncated due to buffer limits. In these cases, you can use nattr() and xattr() to retrieve the results in smaller pieces.
 
 
-**See Also:**
+::: seealso
 - [NATTR()]
 - [XATTR()]
 - [HASATTR()]
 - [examine]
 - [GREP()]
 - [WILDCARDS]
+:::
 # NATTR()
 # NATTRP()
 # ATTRCNT()
@@ -2515,11 +2644,12 @@ You say, "One|PLAYER"
   attrcnt() and attrpcnt() are aliases for nattr() and nattrp() respectively.
 
 
-**See Also:**
+::: seealso
 - [LATTR()]
 - [HASATTR()]
 - [XATTR()]
 - [WILDCARDS]
+:::
 # LCON()
 `lcon(<object>[, <type>])`
 
@@ -2537,13 +2667,14 @@ You say, "One|PLAYER"
     puppet             - return only THINGs set PUPPET
 
 
-**See Also:**
+::: seealso
 - [LEXITS()]
 - [LPLAYERS()]
 - [LTHINGS()]
 - [CON()]
 - [NEXT()]
 - [LVCON()]
+:::
 # LCSTR()
 # LCSTR2()
 `lcstr(<string>)`<br>
@@ -2560,9 +2691,10 @@ You say, "foo bar baz"
 ```
 
 
-**See Also:**
+::: seealso
 - [CAPSTR()]
 - [UCSTR()]
+:::
 # LDELETE()
 `ldelete(<list>, <position(s)>[, <delimiter>[, <osep>]])`
 
@@ -2583,20 +2715,22 @@ You say, "foo ~ bar ~ boing"
 ```
 
 
-**See Also:**
+::: seealso
 - [STRDELETE()]
 - [REMOVE()]
 - [INSERT()]
+:::
 # LEFT()
 `left(<string>, <length>)`
 
   Returns the first `<length>` characters from `<string>`.
 
 
-**See Also:**
+::: seealso
 - [RIGHT()]
 - [MID()]
 - [LJUST()]
+:::
 # NSLEMIT()
 # LEMIT()
 `lemit(<message>)`<br>
@@ -2607,9 +2741,10 @@ You say, "foo ~ bar ~ boing"
   nslemit() like @nslemit.
 
 
-**See Also:**
+::: seealso
 - [@lemit]
 - [REMIT()]
+:::
 # LETQ()
 `letq([<reg1>, <value1>[, ... , <regN>, <valueN>], ]<expr>)`
 
@@ -2626,7 +2761,7 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
 ```
 
 
-**See Also:**
+::: seealso
 - [setq()]
 - [setq()]
 - [LISTQ()]
@@ -2634,6 +2769,7 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
 - [LOCALIZE()]
 - [ulocal()]
 - [R()]
+:::
 # LEXITS()
 `lexits(<room>)`
 
@@ -2642,11 +2778,12 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
   You can get the complete exit list of any room you may examine, regardless of whether or not exits are dark. You can get the partial exit list (obeying DARK/LIGHT/etc.) of your current location or the enactor (%#). You CANNOT get the exit list of anything else, regardless of whether or not you have objects in it.
 
 
-**See Also:**
+::: seealso
 - [LCON()]
 - [EXIT()]
 - [NEXT()]
 - [LVEXITS()]
+:::
 # LJUST()
 `ljust(<string>, <length>[, <fill>[, <truncate?>]])`
 
@@ -2672,20 +2809,22 @@ You say, "foo   "
     You say, "This is t"
 
 
-**See Also:**
+::: seealso
 - [align()]
 - [CENTER()]
 - [RJUST()]
 - [LEFT()]
+:::
 # LINK()
 `link(<object>, <destination>[, <preserve>])`
 
   This function links `<object>` to `<destination>`. While normally used on exits, it has all of the other capabilities of @link as well. It returns #-1 or 0 on failure, 1 on success. If the optional third argument is true, acts like @link/preserve.
 
 
-**See Also:**
+::: seealso
 - [@link]
 - [OPEN()]
+:::
 # LIST()
 `list(<option>[, <type>])`
 
@@ -2705,7 +2844,7 @@ You say, "foo   "
   "commands"/"functions" return both built-in and local commands/functions by default. You can specify a `<type>` of either "builtin", "local" or "all" to limit this if you wish.
 
 
-**See Also:**
+::: seealso
 - [@list]
 - [FLAGS()]
 - [LFLAGS()]
@@ -2713,6 +2852,8 @@ You say, "foo   "
 - [FUNCTIONS()]
 - [@motd]
 - [@motd]
+:::
+
 `llocks()`
 # LIT()
 `lit(<string>)`
@@ -2731,8 +2872,9 @@ You say, "foo   "
   Leaving out the {}'s will not work in the above.
 
 
-**See Also:**
+::: seealso
 - [DECOMPOSE()]
+:::
 # LMATH()
 `lmath(<op>, <list>[, <delim>])`
 
@@ -2759,8 +2901,9 @@ think lmath(add, 1|2|3, |)
   Returns the natural log of `<number>`. This is equivilent to log(`<number>`, e).
 
 
-**See Also:**
+::: seealso
 - [LOG()]
+:::
 # LNUM()
 `lnum(<number>)`<br>
 `lnum(<start number>, <end number>[, <output separator>[, <step>]])`
@@ -2785,7 +2928,7 @@ think lmath(add, 1|2|3, |)
   You can also get the location of the enactor using the %L substitution, whether you are near to/can examine it or not.
 
 
-**See Also:**
+::: seealso
 - [locate()]
 - [RLOC()]
 - [HOME()]
@@ -2793,7 +2936,9 @@ think lmath(add, 1|2|3, |)
 - [RNUM()]
 - [ROOM()]
 - [@link]
-  UNFINDABLE, @whereis
+- [UNFINDABLE]
+- [@whereis]
+:::
 # LOCALIZE()
 `localize(<code>)`
 
@@ -2813,13 +2958,14 @@ You say, "Outside-Inside-Inside"
     You say, "Outside-Inside-Outside"
 
 
-**See Also:**
+::: seealso
 - [LETQ()]
 - [setq()]
 - [setq()]
 - [R()]
 - [ulocal()]
 - [UDEFAULT()]
+:::
 # LOCK()
 `lock(<object>[/<locktype>][, <new value>])`
 
@@ -2828,7 +2974,7 @@ You say, "Outside-Inside-Inside"
   If a `<new value>` is given, lock() attempts to change the lock as @lock would first. You must control the object.
 
 
-**See Also:**
+::: seealso
 - [LOCKING]
 - [locktypes]
 - [ELOCK()]
@@ -2838,6 +2984,7 @@ You say, "Outside-Inside-Inside"
 - [LLOCKS()]
 - [LOCKOWNER()]
 - [LOCKFILTER()]
+:::
 # LLOCKS()
 # LOCKS()
 `llocks([<object>])`<br>
@@ -2857,12 +3004,13 @@ Basic USER:ITSME Use
 ```
 
 
-**See Also:**
+::: seealso
 - [LOCK()]
 - [LSET()]
 - [LOCKFLAGS()]
 - [LLOCKFLAGS()]
 - [LOCKOWNER()]
+:::
 # LOCKFILTER()
 `lockfilter(<key>, <dbrefs>[, <delim>])`
 
@@ -2893,13 +3041,14 @@ Walker WalkerBot Wilco
     Mike Walker Qon
 
 
-**See Also:**
+::: seealso
 - [LOCKING]
 - [LOCK()]
 - [ELOCK()]
 - [lock keys]
 - [FILTER()]
 - [TESTLOCK()]
+:::
 # LOCKFLAGS()
 `lockflags(<object>[/<locktype>])`<br>
 `lockflags()`
@@ -2909,12 +3058,13 @@ Walker WalkerBot Wilco
   Given no arguments, this function returns a string consisting of all the flag letters the server knows.
 
 
-**See Also:**
+::: seealso
 - [LLOCKFLAGS()]
 - [LSET()]
 - [LOCK()]
 - [LLOCKS()]
 - [LOCKOWNER()]
+:::
 # LLOCKFLAGS()
 `llockflags(<object>[/<locktype>])`<br>
 `llockflags()`
@@ -2924,24 +3074,26 @@ Walker WalkerBot Wilco
   Given no arguments, this function returns a space-separated list of all the names of all lock flags known to the server.
 
 
-**See Also:**
+::: seealso
 - [LOCKFLAGS()]
 - [LSET()]
 - [LOCK()]
 - [LLOCKS()]
 - [LOCKOWNER()]
+:::
 # LOCKOWNER()
 `lockowner(<object>[/<locktype>])`
 
   This function returns the dbref of the executor who set the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock. Legacy locks with an unknown creator return `#-1`; absent or inaccessible locks return `#-1 NO SUCH LOCK`.
 
 
-**See Also:**
+::: seealso
 - [LOCKFLAGS()]
 - [LLOCKFLAGS()]
 - [LSET()]
 - [LOCK()]
 - [LLOCKS()]
+:::
 # LISTSET()
 `listset(<list>,<position>,<replacement>[,<input delimiter>[,<output delimiter>]])`
 
@@ -2949,9 +3101,10 @@ Walker WalkerBot Wilco
 
   List replacement uses `listset()`. `lset()` sets lock flags.
 
-**See Also:**
+::: seealso
 - [LREPLACE()]
 - [LSET()]
+:::
 # LSET()
 `lset(<object>/<locktype>,[!]<flag>)`
 
@@ -2960,40 +3113,44 @@ Walker WalkerBot Wilco
   See [@lset] for more information on what flags are available.
 
 
-**See Also:**
+::: seealso
 - [LOCKFLAGS()]
 - [LLOCKFLAGS()]
 - [LOCK()]
 - [LOCKOWNER()]
+:::
 # LOG()
 `log(<number>[, <base>])`
 
   Returns the logarithm (base 10, or the given base) of `<number>`. `<base>` can be a floating-point number, or 'e' for the natural logarithm.
 
 
-**See Also:**
+::: seealso
 - [LN()]
+:::
 # LPARENT()
 `lparent(<object>)`
 
   This function returns a list consisting of `<object>`'s dbref (as per num()), the dbref of its parent, grandparent, greatgrandparent, etc. The list will not, however, show parents of objects which the player is not privileged to examine. Ancestor objects are not included.
 
 
-**See Also:**
+::: seealso
 - [PARENT()]
 - [lsearch()]
 - [parent]
 - [ANCESTORS]
+:::
 # LPLAYERS()
 `lplayers(<object>)`
 
   This function returns the dbrefs of all players, connected or not, in `<object>`. DARK wizards aren't listed to mortals or those without the see_all power. You must be in `<object>` or control it to use this function.
 
 
-**See Also:**
+::: seealso
 - [LVPLAYERS()]
 - [LCON()]
 - [LTHINGS()]
+:::
 # LTHINGS()
 # LOBJECTS()
 `lthings(<object>)`
@@ -3001,9 +3158,10 @@ Walker WalkerBot Wilco
   This function returns the dbrefs of all things, dark or not, in `<object>`. You must be in `<object>` or control it to use this function.
 
 
-**See Also:**
+::: seealso
 - [LVTHINGS()]
 - [LCON()]
+:::
 # LPOS()
 `lpos(<string>, <character>)`
 
@@ -3018,11 +3176,12 @@ You say, "1 4 8"
 ```
 
 
-**See Also:**
+::: seealso
 - [POS()]
 - [MEMBER()]
 - [element()]
 - [WORDPOS()]
+:::
 # LSTATS()
 # STATS()
 `lstats([<player>])`
@@ -3040,8 +3199,9 @@ You say, "1 4 8"
 
   stats() is an alias for lstats().
 
-**See Also:**
+::: seealso
 - [lsearch()]
+:::
 # LT()
 `lt(<number1>, <number2>[, ... , <numberN>])`
 
@@ -3058,57 +3218,62 @@ th lt(1,3,2)
 ```
 
 
-**See Also:**
+::: seealso
 - [LTE()]
 - [GT()]
 - [GTE()]
 - [LNUM()]
 - [LMATH()]
+:::
 # LTE()
 `lte(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more numbers, and returns 1 if and only if each number is less than or equal to the number after it, and 0 otherwise.
 
 
-**See Also:**
+::: seealso
 - [LT()]
 - [GT()]
 - [GTE()]
 - [LNUM()]
 - [LMATH()]
+:::
 # LVCON()
 `lvcon(<object>)`
 
   This function returns the dbrefs of all objects that are inside `<object>` and visible (non-dark). You must be in `<object>` or control it to use this function.
 
 
-**See Also:**
+::: seealso
 - [LCON()]
 - [LVPLAYERS()]
 - [LVTHINGS()]
 - [LVEXITS()]
+:::
 # LVEXITS()
 `lvexits(<room>)`
 
   This function returns the dbrefs of all visible (non-dark) exits from `<room>`. You must be in the room or control it to use this function.
 
 
-**See Also:**
+::: seealso
 - [LEXITS()]
 - [LVCON()]
 - [LVPLAYERS()]
 - [LVTHINGS()]
+:::
 # LVPLAYERS()
 `lvplayers(<object>)`
 
   This function returns the dbrefs of all connected and non-dark players in an object. You must be in the object or control it to use this function.
 
 
-**See Also:**
+::: seealso
 - [LPLAYERS()]
 - [LVCON()]
 - [LVTHINGS()]
 - [LVEXITS()]
+:::
 # LVTHINGS()
 # LVOBJECTS()
 `lvthings(<object>)`
@@ -3116,11 +3281,12 @@ th lt(1,3,2)
   This function returns the dbrefs of all non-dark things inside an object. You must be in the object or control it to use this function.
 
 
-**See Also:**
+::: seealso
 - [LTHINGS()]
 - [LVPLAYERS()]
 - [LVCON()]
 - [LVEXITS()]
+:::
 # LWHO()
 # LWHOID()
 `lwho([<viewer>[, <status>]])`<br>
@@ -3135,11 +3301,12 @@ th lt(1,3,2)
   lwhoid() returns a list of objid's instead.
 
 
-**See Also:**
+::: seealso
 - [MWHO()]
 - [NMWHO()]
 - [XWHO()]
 - [LPORTS()]
+:::
 # MAP()
 `map([<object>/]<attribute>, <list>[, <delim>[, <osep>]])`
 
@@ -3160,21 +3327,23 @@ th lt(1,3,2)
     You say, "2;4;6;8;10"
 
 
-**See Also:**
+::: seealso
 - [anonymous attributes]
 - [iter()]
 - [@dolist]
+:::
 # MAX()
 `max(<number1>[, ... , <numberN>])`
 
   This function returns the largest number in its list of arguments. It can take any number of arguments.
 
 
-**See Also:**
+::: seealso
 - [MIN()]
 - [LMATH()]
 - [BOUND()]
 - [ALPHAMAX()]
+:::
 # AVG()
 # MEAN()
 `mean(<number1>[, ... , <numberN>])`
@@ -3184,20 +3353,22 @@ th lt(1,3,2)
   avg() is an alias for mean(), for Rhost compatibility.
 
 
-**See Also:**
+::: seealso
 - [MEDIAN()]
 - [STDDEV()]
 - [LMATH()]
+:::
 # MEDIAN()
 `median(<number>[, ... , <numberN>])`
 
   Returns the median (the middlemost numerically) of its arguments.
 
 
-**See Also:**
+::: seealso
 - [AVG()]
 - [STDDEV()]
 - [LMATH()]
+:::
 # MEMBER()
 `member(<list>, <word>[, <delimiter>])`
 
@@ -3206,11 +3377,12 @@ th lt(1,3,2)
   member() is case-sensitive, and does not perform wildcard matching. If you need to do a wildcard match, use match(). To compare two strings (instead of a word and list elements), consider comp().
 
 
-**See Also:**
+::: seealso
 - [element()]
 - [GRAB()]
 - [COMP()]
 - [STRMATCH()]
+:::
 # MERGE()
 `merge(<string1>, <string2>, <characters>)`
 
@@ -3231,9 +3403,10 @@ You say, "ABcdEF"
 ```
 
 
-**See Also:**
+::: seealso
 - [SPLICE()]
 - [TR()]
+:::
 # MESSAGE()
 `message(<recipients>, <message>, [<object>/]<attribute>[, <arg0>[, ... , <arg9>][, <switches>]])`
 
@@ -3255,11 +3428,12 @@ Formatted> Foo Bar Baz
   Formatted> Backwards Compatability Is Annoying Sometimes
 
 
-**See Also:**
+::: seealso
 - [@message]
 - [OEMIT()]
 - [REMIT()]
 - [speak()]
+:::
 # MID()
 `mid(<string>, <first>, <length>)`
 
@@ -3274,21 +3448,23 @@ You say, "es"
 ```
 
 
-**See Also:**
+::: seealso
 - [LEFT()]
 - [RIGHT()]
 - [STRDELETE()]
+:::
 # MIN()
 `min(<number1>[, ... , <numberN>])`
 
   This function returns the smallest number in its list of arguments. It can take any number of arguments.
 
 
-**See Also:**
+::: seealso
 - [MAX()]
 - [LMATH()]
 - [BOUND()]
 - [ALPHAMIN()]
+:::
 # MOD()
 # MODULO()
 # MODULUS()
@@ -3312,9 +3488,10 @@ You say, "es"
   mod() and modulus() are aliases for modulo().
 
 
-**See Also:**
+::: seealso
 - [DIV()]
 - [LMATH()]
+:::
 # MONEY()
 `money(<integer>)`<br>
 `money(<object>)`
@@ -3328,8 +3505,9 @@ You say, "es"
 ```
 
 
-**See Also:**
+::: seealso
 - [score]
+:::
 # MTIME()
 # MSECS()
 `mtime(<object>[, <utc?>])`<br>
@@ -3342,12 +3520,13 @@ You say, "es"
   Only things, rooms, and exits have modification times. You must be able to examine an object to see its modification time.
 
 
-**See Also:**
+::: seealso
 - [CTIME()]
 - [time()]
 - [SECS()]
 - [CONVTIME()]
 - [CONVSECS()]
+:::
 # MUDNAME()
 # MUDURL()
 `mudname()`<br>
@@ -3364,18 +3543,20 @@ You say, "http://www.testmush.com"
 ```
 
 
-**See Also:**
+::: seealso
 - [CONFIG()]
+:::
 # MUL()
 `mul(<number1>, <number2>[, ... , <numberN>])`
 
   Returns the product of some numbers.
 
 
-**See Also:**
+::: seealso
 - [LMATH()]
 - [DIV()]
 - [DIV()]
+:::
 # MWHO()
 # MWHOID()
 `mwho()`<br>
@@ -3386,9 +3567,10 @@ You say, "http://www.testmush.com"
   mwhoid() returns a list of objids instead.
 
 
-**See Also:**
+::: seealso
 - [LWHO()]
 - [NMWHO()]
+:::
 # ALIAS()
 # FULLALIAS()
 `alias(<object>[, <new alias>])`<br>
@@ -3409,8 +3591,9 @@ You say, "$;No;Nol;Noli;Nolt"
 ```
 
 
-**See Also:**
+::: seealso
 - [FULLNAME()]
+:::
 # NAME()
 `name(<object>[, <new name>])`
 
@@ -3419,12 +3602,13 @@ You say, "$;No;Nol;Noli;Nolt"
   With two arguments, name() attempts to rename `<object>` to `<new name>`, as per @name.
 
 
-**See Also:**
+::: seealso
 - [FULLNAME()]
 - [ACCNAME()]
 - [INAME()]
 - [ALIAS()]
 - [MONIKER()]
+:::
 # MONIKER()
 # CNAME()
 `moniker(<object>)`
@@ -3432,13 +3616,14 @@ You say, "$;No;Nol;Noli;Nolt"
   Returns `<object>`'s accented name, with the color template from its @moniker applied. moniker() always returns the colored name, even if monikers are disabled via @config.
 
 
-**See Also:**
+::: seealso
 - [monikers]
 - [@moniker]
 - [NAME()]
 - [MONIKER()]
 - [INAME()]
 - [ACCNAME()]
+:::
 # NAMELIST()
 `namelist(<player-list>[, [<object>/]<attribute>])`
 
@@ -3455,12 +3640,13 @@ You say, "#1 #7 #56 #-1"
 ```
 
 
-**See Also:**
+::: seealso
 - [NAMEGRAB()]
 - [NAME()]
 - [locate()]
 - [NUM()]
 - [PMATCH()]
+:::
 # NAMEGRAB()
 # NAMEGRABALL()
 `namegrab(<dbref list>, <name>[, <delimiter>])`<br>
@@ -3479,9 +3665,10 @@ You say, "#1 #7 #56 #-1"
     You say, "#0 #2"
 
 
-**See Also:**
+::: seealso
 - [NAMELIST()]
 - [locate()]
+:::
 # NAND()
 # NCAND()
 # CNAND()
@@ -3494,31 +3681,34 @@ You say, "#1 #7 #56 #-1"
   Equivalent to not(and()) and not(cand()), but more efficient.
 
 
-**See Also:**
+::: seealso
 - [LMATH()]
 - [AND()]
 - [AND()]
 - [OR()]
 - [NOR()]
+:::
 # NEARBY()
 `nearby(<object 1>, <object 2>)`
 
   Returns 1 if `<object 1>` is "nearby" `<object 2>`, and 0 otherwise. "Nearby" means the objects are in the same location, or that one is located inside the other. You must control at least one of the objects; if you don't, or if one of the objects can't be found, nearby() returns #-1.
 
 
-**See Also:**
+::: seealso
 - [locate()]
 - [FINDABLE()]
+:::
 # NEQ()
 `neq(<number1>, <number2>[, ... , <numberN>])`
 
   Returns 0 if all the given `<number>`s are the same, and 1 otherwise. Basically the same as [not(eq(`<number1>`, `<number2>`[, ... , `<numberN>`]))] but more efficient.
 
 
-**See Also:**
+::: seealso
 - [EQ()]
 - [NOT()]
 - [LMATH()]
+:::
 # NEXT()
 `next(<object>)`
 
@@ -3527,20 +3717,22 @@ You say, "#1 #7 #56 #-1"
   You can get the complete contents of any container you may examine, regardless of whether or not objects are dark. You can get the partial contents (obeying DARK/LIGHT/etc.) of your current location or the enactor (%#). You CANNOT get the contents of anything else, regardless of whether or not you have objects in it. These rules apply to exits, as well.
 
 
-**See Also:**
+::: seealso
 - [LCON()]
 - [LEXITS()]
 - [CON()]
 - [EXIT()]
+:::
 # NEXTDBREF()
 `nextdbref()`
 
   This function returns the next dbref on the free list; when the next object is @created (or @dug, or @opened, or @pcreated, etc.), it will have this dbref.
 
 
-**See Also:**
+::: seealso
 - [@stats]
 - [LSTATS()]
+:::
 # NOR()
 # NCOR()
 `nor(<boolean1>[, ... , <booleanN>])`<br>
@@ -3551,13 +3743,14 @@ You say, "#1 #7 #56 #-1"
   Equivalent to not(or()) and not(cor()), but more efficient.
 
 
-**See Also:**
+::: seealso
 - [AND()]
 - [OR()]
 - [XOR()]
 - [NOT()]
 - [NAND()]
 - [LMATH()]
+:::
 # NOT()
 `not(<boolean>)`
 
@@ -3566,23 +3759,25 @@ You say, "#1 #7 #56 #-1"
   The definition of truth and falsehood depends on configuration settings; see [boolean values] for details.
 
 
-**See Also:**
+::: seealso
 - [Boolean functions]
 - [T()]
 - [AND()]
 - [OR()]
 - [NOR()]
 - [XOR()]
+:::
 # NUM()
 `num(<object>)`
 
   Returns the dbref number of `<object>`. `<object>` must reference a valid object, as per [MATCHING].
 
 
-**See Also:**
+::: seealso
 - [locate()]
 - [RNUM()]
 - [PMATCH()]
+:::
 # NVCON()
 # NCON()
 `ncon(<object>)`<br>
@@ -3591,12 +3786,13 @@ You say, "#1 #7 #56 #-1"
   These functions return a the number of objects inside `<object>`. They are identical to words(lcon(`<object>`)) and words(lvcon(`<object>`)), respectively, but are more efficient and do not suffer from buffer constraints.
 
 
-**See Also:**
+::: seealso
 - [NVEXITS()]
 - [NVPLAYERS()]
 - [XVCON()]
 - [LCON()]
 - [LVCON()]
+:::
 # NVEXITS()
 # NEXITS()
 `nexits(<room>)`<br>
@@ -3605,12 +3801,13 @@ You say, "#1 #7 #56 #-1"
   These functions return a count of the exits in a room. They are equivilent to words(lexits(`<room>`)) and words(lvexits(`<room>`)) respectively, though are more efficient, and don't suffer from buffer constraints.
 
 
-**See Also:**
+::: seealso
 - [NVCON()]
 - [NVPLAYERS()]
 - [XVEXITS()]
 - [LEXITS()]
 - [LVEXITS()]
+:::
 # NVPLAYERS()
 # NPLAYERS()
 `nplayers(<object>)`<br>
@@ -3619,12 +3816,13 @@ You say, "#1 #7 #56 #-1"
   These functions return a count of the players in `<object>`. They are equivilent to words(lplayers(`<object>`)) and words(lvplayers(`<object>`)) respectively, though are more efficient and do not suffer from buffer constraints.
 
 
-**See Also:**
+::: seealso
 - [NVCON()]
 - [NVEXITS()]
 - [XVPLAYERS()]
 - [LPLAYERS()]
 - [LVPLAYERS()]
+:::
 # NVTHINGS()
 # NTHINGS()
 # NOBJECTS()
@@ -3635,12 +3833,13 @@ You say, "#1 #7 #56 #-1"
   These functions return a count of the things in a container. They are equivilent to words(lthings(`<object>`)) and words(lvthings(`<object>`)) respectively, though are more efficient and do not suffer from buffer constraints.
 
 
-**See Also:**
+::: seealso
 - [NVCON()]
 - [NVEXITS()]
 - [XVTHINGS()]
 - [LTHINGS()]
 - [LVTHINGS()]
+:::
 # NMWHO()
 # NWHO()
 `nwho([<viewer>])`<br>
@@ -3653,11 +3852,12 @@ You say, "#1 #7 #56 #-1"
   These functions are equivilent to words(lwho([`<viewer>`])) and words(mwho()), but are more efficient, and don't suffer from buffer constraints.
 
 
-**See Also:**
+::: seealso
 - [LWHO()]
 - [MWHO()]
 - [XWHO()]
 - [XWHO()]
+:::
 # OBJ()
 # %o
 `obj(<object>)`
@@ -3665,18 +3865,20 @@ You say, "#1 #7 #56 #-1"
   Returns the objective pronoun - him/her/it - for an object. The %o substitution will return the objective pronoun of the enactor.
 
 
-**See Also:**
+::: seealso
 - [SUBJ()]
 - [POSS()]
 - [APOSS()]
+:::
 # OBJEVAL()
 `objeval(<object>, <expression>)`
 
   Allows you to evaluate `<expression>` from the viewpoint of `<object>`. If side-effect functions are enabled, you must control `<object>`; if not, you must either control `<object>` or have the see_all power. If `<object>` does not exist or you don't meet one of the criterion, the expression evaluates with your privileges.
 
 
-**See Also:**
+::: seealso
 - [S()]
+:::
 # OBJID()
 `objid(<object>)`
 
@@ -3687,11 +3889,12 @@ You say, "#1 #7 #56 #-1"
   The substitution %: returns the object id of the enactor.
 
 
-**See Also:**
+::: seealso
 - [NUM()]
 - [CTIME()]
 - [CTIME()]
 - [%#]
+:::
 # OBJMEM()
 `objmem(<object>)`
 
@@ -3700,8 +3903,9 @@ You say, "#1 #7 #56 #-1"
   **Not implemented.** SharpMUSH always answers 0, whatever object it is asked about, so no caller can tell a large object from a small one.
 
 
-**See Also:**
+::: seealso
 - [PLAYERMEM()]
+:::
 # OEMIT()
 # NSOEMIT()
 `oemit([<room>/]<object> [... <object>], <message>)`<br>
@@ -3723,13 +3927,14 @@ You say, "#1 #7 #56 #-1"
   It returns the dbref of the newly created exit, or #-1 on error.
 
 
-**See Also:**
+::: seealso
 - [@open]
 - [@link]
 - [DIG()]
 - [LINK()]
 - [CREATE()]
 - [PCREATE()]
+:::
 # OR()
 # COR()
 `or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>
@@ -3740,13 +3945,14 @@ You say, "#1 #7 #56 #-1"
   Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.
 
 
-**See Also:**
+::: seealso
 - [boolean values]
 - [AND()]
 - [NOR()]
 - [FIRSTOF()]
 - [ALLOF()]
 - [LMATH()]
+:::
 # ORFLAGS()
 # ORLFLAGS()
 `orflags(<object>, <string of flag characters>)`<br>
@@ -3761,11 +3967,12 @@ You say, "#1 #7 #56 #-1"
     > say orlflags(%#, wizard dark !ansi)
 
 
-**See Also:**
+::: seealso
 - [ANDFLAGS()]
 - [FLAGS()]
 - [LFLAGS()]
 - [ORLPOWERS()]
+:::
 # ORLPOWERS()
 `orlpowers(<object>, <list of powers>)`
 
@@ -3776,12 +3983,13 @@ You say, "#1 #7 #56 #-1"
   If there is a syntax error like a ! without a following power, '#-1 INVALID POWER' is returned. Unknown powers are treated as being not set.
 
 
-**See Also:**
+::: seealso
 - [POWERS()]
 - [ANDLPOWERS()]
 - [@power]
 - [@power]
 - [ORFLAGS()]
+:::
 # OWNER()
 `owner(<object>[/<attribute>])`<br>
 `owner(<object>[/<attribute>], <new owner>[, preserve])`
@@ -3792,10 +4000,11 @@ You say, "#1 #7 #56 #-1"
   If changing ownership, #-1 or 0 is returned on failure, 1 on success.
 
 
-**See Also:**
+::: seealso
 - [LOCKOWNER()]
 - [@chown]
 - [@atrchown]
+:::
 
 # PARENT()
 `parent(<object>[, <new parent>])`
@@ -3803,11 +4012,12 @@ You say, "#1 #7 #56 #-1"
   This function returns the dbref number of an object's parent. You must be able to examine the object to do this. If you specify a second argument, parent() attempts to change the parent first. You must control `<object>`, and be allowed to @parent to `<new parent>`.
 
 
-**See Also:**
+::: seealso
 - [@parent]
 - [ANCESTORS]
 - [pfun()]
 - [LPARENT()]
+:::
 # PEMIT()
 # NSPEMIT()
 # PROMPT()
@@ -3824,10 +4034,11 @@ You say, "#1 #7 #56 #-1"
   prompt() adds a telnet GOAHEAD to the end of the message, as per the @prompt command. nsprompt() that works like @nsprompt.
 
 
-**See Also:**
+::: seealso
 - [@prompt]
 - [@nspemit]
 - [PROMPT_NEWLINES]
+:::
 # PERMISSION()
 `permission(<object>, <permission>)`
 
@@ -3840,10 +4051,11 @@ think permission(me, wiki.delete)
 ```
 
 
-**See Also:**
+::: seealso
 - [HASROLE()]
 - [roles]
 - [@role]
+:::
 # PI()
 `pi()`
 
@@ -3863,27 +4075,30 @@ think permission(me, wiki.delete)
   If `<list of fields>` is not provided, all fields are returned. The fields are separated by `<output separator>`, which defaults to a space.
 
 
-**See Also:**
+::: seealso
 - [@ps]
 - [LPIDS()]
 - [GETPIDS()]
+:::
 # PLAYERMEM()
 `playermem(<player>)`
 
   This function returns the amount of memory, in bytes, being used by everything owned by the player. It can only be used by players with Search powers.
 
 
-**See Also:**
+::: seealso
 - [OBJMEM()]
+:::
 # PLAYER()
 `player(<port>)`
 
   Returns the dbref of the player connected to a given port. Mortals can only use this function on their own ports, while See_All players can use it on any port.
 
 
-**See Also:**
+::: seealso
 - [LPORTS()]
 - [LPORTS()]
+:::
 # PMATCH()
 `pmatch(<name>)`
 
@@ -3892,10 +4107,11 @@ think permission(me, wiki.delete)
   pmatch() does not check for the string "me". If you wish to do that, you should use locate (for example, locate(`<player>`, `<name>`, PFym)).
 
 
-**See Also:**
+::: seealso
 - [NUM()]
 - [NAMELIST()]
 - [locate()]
+:::
 # MOTD()
 # WIZMOTD()
 # DOWNMOTD()
@@ -3912,20 +4128,22 @@ think permission(me, wiki.delete)
   These are SharpMUSH functions; PennMUSH exposes the same text only through [@motd].
 
 
-**See Also:**
+::: seealso
 - [@motd]
 - [POLL()]
 - [@poll]
+:::
 # POLL()
 `poll()`
 
   This function returns the current @poll.
 
 
-**See Also:**
+::: seealso
 - [@poll]
 - [DOING()]
 - [@doing]
+:::
 # LPIDS()
 `lpids([<object>[, <queue types>]])`
 
@@ -3938,10 +4156,11 @@ think permission(me, wiki.delete)
   If not specified, it defaults to "wait semaphore".
 
 
-**See Also:**
+::: seealso
 - [@ps]
 - [GETPIDS()]
 - [PIDINFO()]
+:::
 # LPORTS()
 # PORTS()
 `lports([<viewer>[, <status>]])`<br>
@@ -3956,21 +4175,23 @@ think permission(me, wiki.delete)
   These port numbers also appear in the wizard WHO, and can be used with @boot/port, page/port, and the functions that return information about a connection to make them use a specific connection rather than the least-idle one when a player has multiple connections open. Players can get information about their own connections. See_all is needed to use them to get information about other people's ports.
 
 
-**See Also:**
+::: seealso
 - [LWHO()]
 - [PLAYER()]
 - [Connection functions]
+:::
 # POS()
 `pos(<needle>, <haystack>)`
 
   This function returns the position that `<needle>` begins in `<haystack>`. Unlike most other string functions, the first character of `<haystack>` is numbered 1, not 0. If `<needle>` is not present in `<haystack>`, pos() returns #-1.
 
 
-**See Also:**
+::: seealso
 - [MEMBER()]
 - [element()]
 - [LPOS()]
 - [WORDPOS()]
+:::
 # POSS()
 # %p
 `poss(<object>)`
@@ -3978,10 +4199,11 @@ think permission(me, wiki.delete)
   Returns the possessive pronoun - his/her/its - for an object. The %p substitution also returns the possessive pronoun of the enactor.
 
 
-**See Also:**
+::: seealso
 - [SUBJ()]
 - [OBJ()]
 - [APOSS()]
+:::
 # POWER()
 `power(<number>, <exponent>)`
 
@@ -3990,8 +4212,9 @@ think permission(me, wiki.delete)
   (For the functional version of @power, see [POWERS()].)
 
 
-**See Also:**
+::: seealso
 - [ROOT()]
+:::
 # POWERS()
 `powers()`<br>
 `powers(<object>)`<br>
@@ -4002,11 +4225,12 @@ think permission(me, wiki.delete)
   With two arguments, it attempts to set `<power>` on `<object>`, as per @power `<object>`=`<power>`.
 
 
-**See Also:**
+::: seealso
 - [ANDLPOWERS()]
 - [ORLPOWERS()]
 - [@power]
 - [@power]
+:::
 # QUOTA()
 `quota(<player>)`
 
@@ -4015,13 +4239,14 @@ think permission(me, wiki.delete)
   You must control `<player>` or have the See_All or Quotas @powers to use this function.
 
 
-**See Also:**
+::: seealso
 - [@quota]
 - [@quota administrative quota changes]
 - [@quota administrative quota changes]
 - [QUOTAS]
 - [@power]
 - [@power]
+:::
 # R()
 # %q
 # R-FUNCTION
@@ -4040,7 +4265,7 @@ think permission(me, wiki.delete)
   qregisters can also be accessed via the %qX (for one-char register names) or %q`\<X\>` (for registers with longer names) substitutions.
 
 
-**See Also:**
+::: seealso
 - [setq()]
 - [LETQ()]
 - [LISTQ()]
@@ -4051,6 +4276,7 @@ think permission(me, wiki.delete)
 - [STEXT()]
 - [ilev()]
 - [STEXT()]
+:::
 # RAND()
 `rand()`<br>
 `rand(<num>)`<br>
@@ -4068,8 +4294,9 @@ think permission(me, wiki.delete)
   beginning with #-1.
 
 
-**See Also:**
+::: seealso
 - [RANDWORD()]
+:::
 # RANDWORD()
 # PICKRAND()
 `randword(<list>[, <delimiter>])`
@@ -4079,9 +4306,10 @@ think permission(me, wiki.delete)
   pickrand() is an alias for randword().
 
 
-**See Also:**
+::: seealso
 - [RAND()]
 - [RANDEXTRACT()]
+:::
 # RANDEXTRACT()
 `randextract(<list>[, <count>[, <delim>[, <type>[, <osep>]]]])`
 
@@ -4105,9 +4333,10 @@ You say, "this test is this is is"
 ```
 
 
-**See Also:**
+::: seealso
 - [RAND()]
 - [RANDWORD()]
+:::
 # REGEDIT()
 # REGEDITALL()
 # REGEDITI()
@@ -4132,11 +4361,12 @@ You say "this Trash is the Brash string"
 ```
 
 
-**See Also:**
+::: seealso
 - [EDIT()]
 - [@edit]
 - [regmatch()]
 - [GRAB()]
+:::
 # REGREPLACE()
 `regreplace(<string>, <regexp>, <replacement>[, <flags>])`
 
@@ -4149,10 +4379,11 @@ You say "this Trash is the Brash string"
   This is a SharpMUSH function. PennMUSH spells the same idea [REGEDIT()], which takes alternating pattern/replacement pairs instead of a flags argument and uses `$1` / `$<name>` softcode capture substitutions.
 
 
-**See Also:**
+::: seealso
 - [REGEDIT()]
 - [regmatch()]
 - [regexp syntax]
+:::
 # REMIT()
 # NSREMIT()
 `remit(<object list>, <message>)`<br>
@@ -4163,10 +4394,11 @@ You say "this Trash is the Brash string"
   nsremit() works like @nsremit/list.
 
 
-**See Also:**
+::: seealso
 - [@remit]
 - [PEMIT()]
 - [NSLEMIT()]
+:::
 # REMOVE()
 `remove(<list>, <words>[, <delimiter>])`
 
@@ -4175,10 +4407,11 @@ You say "this Trash is the Brash string"
   Elements of `<list>` and `<words>` are both separated by `<delimiter>`, which defaults to a space.
 
 
-**See Also:**
+::: seealso
 - [INSERT()]
 - [LDELETE()]
 - [SETDIFF()]
+:::
 # RENDER()
 `render(<string>, <formats>)`
 
@@ -4197,13 +4430,14 @@ You say, "&lt;Test 1&gt; &amp; \<u\>Test 2</u>"
 ```
 
 
-**See Also:**
+::: seealso
 - [STRIPACCENTS()]
 - [STRIPANSI()]
 - [pueblo]
 - [@sql]
 - [TAGWRAP()]
 - [json()]
+:::
 # REPEAT()
 `repeat(<string>, <number>)`
 
@@ -4216,8 +4450,9 @@ You say, "TestTestTestTestTest"
 ```
 
 
-**See Also:**
+::: seealso
 - [SPACE()]
+:::
 # LREPLACE()
 # REPLACE()
 `lreplace(<list>, <position(s)>, <new item>[, <delimiter>[, <osep>]])`
@@ -4244,22 +4479,24 @@ You say, "Turn south at the junction"
   replace() is an alias for lreplace(), for backwards compatability.
 
 
-**See Also:**
+::: seealso
 - [LDELETE()]
 - [INSERT()]
 - [SETDIFF()]
 - [SPLICE()]
 - [STRREPLACE()]
+:::
 # REST()
 `rest(<list>[, <delimiter>])`
 
   Returns a list minus its first element.
 
 
-**See Also:**
+::: seealso
 - [AFTER()]
 - [FIRST()]
 - [LAST()]
+:::
 # REVWORDS()
 `revwords(<list>[, <delimiter>[, <output separator>]])`
 
@@ -4272,17 +4509,19 @@ You say, "eep baz bar foo"
 ```
 
 
-**See Also:**
+::: seealso
 - [FLIP()]
+:::
 # RIGHT()
 `right(<string>, <length>)`
 
   Returns the `<length>` rightmost characters from `<string>`.
 
 
-**See Also:**
+::: seealso
 - [LEFT()]
 - [MID()]
+:::
 # RJUST()
 `rjust(<string>, <length>[, <fill>[, <truncate?>]])`
 
@@ -4308,11 +4547,12 @@ You say, "-   foo-"
     You say, " too long"
 
 
-**See Also:**
+::: seealso
 - [align()]
 - [CENTER()]
 - [LJUST()]
 - [RIGHT()]
+:::
 # RLOC()
 `rloc(<object>, <levels>)`
 
@@ -4321,12 +4561,13 @@ You say, "-   foo-"
   If rloc() encounters a room, the dbref of that room is returned. If rloc() encounters an exit, the dbref of that exit's destination is returned. You must control `<object>`, be near it, or it must be a findable player.
 
 
-**See Also:**
+::: seealso
 - [LOC()]
 - [WHERE()]
 - [ROOM()]
 - [RNUM()]
 - [locate()]
+:::
 # RNUM()
 `rnum(<container>, <object>)`
 
@@ -4337,11 +4578,12 @@ You say, "-   foo-"
   This function has been deprecated and may be removed in a future patchlevel; locate(`<container>`, `<object>`, i) should be used instead.
 
 
-**See Also:**
+::: seealso
 - [locate()]
 - [NUM()]
 - [RLOC()]
 - [ROOM()]
+:::
 # ROLES()
 `roles(<object>)`
 
@@ -4354,21 +4596,23 @@ moderator player everyone
 ```
 
 
-**See Also:**
+::: seealso
 - [HASROLE()]
 - [PERMISSION()]
 - [@role]
+:::
 # ROOM()
 `room(<object>)`
 
   Returns the "absolute" location of an object. This is always a room; it is the container of all other containers of the object. The "absolute" location of an object is the place @lemit messages are sent to and NO_TEL status determined. You must control the object, be See_All, or be near the object in order for this function to work. The exception to this are players; if `<object>` is a player, the ROOM() function may be used to find the player's absolute location if the player is not set UNFINDABLE.
 
 
-**See Also:**
+::: seealso
 - [LOC()]
 - [RLOC()]
 - [RNUM()]
 - [WHERE()]
+:::
 # ROOT()
 `root(<number>, \<n\>)`
 
@@ -4383,9 +4627,10 @@ think power(3, 3)
 ```
 
 
-**See Also:**
+::: seealso
 - [SQRT()]
 - [POWER()]
+:::
 # ROUND()
 # CEIL()
 # FLOOR()
@@ -4410,9 +4655,10 @@ think floor(3.14159)
 ```
 
 
-**See Also:**
+::: seealso
 - [BOUND()]
 - [TRUNC()]
+:::
 # S()
 # S-FUNCTION
 `s(<string>)`
@@ -4427,9 +4673,10 @@ You say, "When we eval [ucstr(test)], we get TEST"
 ```
 
 
-**See Also:**
+::: seealso
 - [OBJEVAL()]
 - [DECOMPOSE()]
+:::
 # SCAN()
 `scan(<looker>, <command>[, <switches>])`<br>
 `scan(<command>)`
@@ -4451,12 +4698,13 @@ You say, "When we eval [ucstr(test)], we get TEST"
   The order of searching for the "break" switch is the same as the order for normal $-command matching, as described in [evaluation order].
 
 
-**See Also:**
+::: seealso
 - [@scan]
 - [@sweep]
 - [MASTER ROOM]
 - [evaluation order]
 - [$-commands]
+:::
 # SCRAMBLE()
 `scramble(<string>)`
 
@@ -4469,17 +4717,19 @@ You say, "cfaedb"
 ```
 
 
-**See Also:**
+::: seealso
 - [SHUFFLE()]
+:::
 # SECS()
 `secs([<precision>])`
 
   This function returns the number of elapsed seconds since midnight, January 1, 1970 UTC. UTC is the base time zone, formerly GMT. This is a good way of synchronizing things that must run at a certain time.
 
 
-**See Also:**
+::: seealso
 - [CONVSECS()]
 - [time()]
+:::
 # SECURE()
 `secure(<string>)`
 
@@ -4488,9 +4738,10 @@ You say, "cfaedb"
   Note that the use of this function is very rarely needed.
 
 
-**See Also:**
+::: seealso
 - [DECOMPOSE()]
 - [ESCAPE()]
+:::
 # SET()
 `set(<object>[/<attribute>], <flag>)`<br>
 `set(<object>, <attribute>:<value>)`
@@ -4500,10 +4751,11 @@ You say, "cfaedb"
   The attribute-setting ability of set() is deprecated. You should use attrib_set() instead; it's easier to read, and allows you to clear attributes, too.
 
 
-**See Also:**
+::: seealso
 - [ATTRIB_SET()]
 - [@set]
 - [WIPE()]
+:::
 # SETDIFF()
 `setdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
@@ -4516,10 +4768,11 @@ You say, "baz foo"
 ```
 
 
-**See Also:**
+::: seealso
 - [SETINTER()]
 - [SETSYMDIFF()]
 - [SETUNION()]
+:::
 # SETSYMDIFF()
 `setsymdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
@@ -4532,10 +4785,11 @@ You say, "baz foo moof"
 ```
 
 
-**See Also:**
+::: seealso
 - [SETDIFF()]
 - [SETINTER()]
 - [SETUNION()]
+:::
 # SETINTER()
 `setinter(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
@@ -4548,10 +4802,11 @@ You say, "bar gleep"
 ```
 
 
-**See Also:**
+::: seealso
 - [SETDIFF()]
 - [SETSYMDIFF()]
 - [SETUNION()]
+:::
 # LISTQ()
 # UNSETQ()
 `listq([<pattern>])`<br>
@@ -4578,13 +4833,14 @@ LOC
 ```
 
 
-**See Also:**
+::: seealso
 - [setq()]
 - [LETQ()]
 - [R()]
 - [LOCALIZE()]
 - [REGISTERS()]
 - [WILDCARDS]
+:::
 # REGISTERS()
 `registers([<pattern>[, <types>[, <osep>]]])`
 
@@ -4601,7 +4857,7 @@ LOC
   The list returned may contain duplicates (for instance, if %0 and %q0 both have a value, the list will include "0" twice), and is not sorted in any particular order.
 
 
-**See Also:**
+::: seealso
 - [LISTQ()]
 - [setq()]
 - [setq()]
@@ -4610,6 +4866,7 @@ LOC
 - [V()]
 - [STEXT()]
 - [ilev()]
+:::
 # SETUNION()
 `setunion(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
@@ -4628,34 +4885,38 @@ You say, "bar baz foo gleep moof"
     You say, "1.0 1.1"
 
 
-**See Also:**
+::: seealso
 - [SETDIFF()]
 - [SETINTER()]
 - [SETSYMDIFF()]
+:::
 # SHA0()
 `sha0(<string>)`
 
   Returns the SHA-0 cryptographic hash of the string. See RFC 3174 for more information. Deprecated; use digest() and higher strength algorithms instead. On servers with newer versions of OpenSSL that no longer provide the algorithm, returns #-1 NOT SUPPORTED.
 
 
-**See Also:**
+::: seealso
 - [digest().]
+:::
 # SHL()
 `shl(<number>, <count>)`
 
   Performs a leftwards bit-shift on `<number>`, shifting it `<count>` times. This is equivalent to mul(`<number>`, power(2, `<count>`), but much faster.
 
 
-**See Also:**
+::: seealso
 - [SHR()]
+:::
 # SHR()
 `shr(<number>, <count>)`
 
   Performs a rightwards bit-shift on `<number>`, shifting it `<count>` times. This is equivalent to div(`<number>`, power(2, `<count>`), but much faster.
 
 
-**See Also:**
+::: seealso
 - [SHL()]
+:::
 # SHUFFLE()
 `shuffle(<list>[, <delimiter>[, <osep>]])`
 
@@ -4670,9 +4931,10 @@ You say, "baz foo gleep bar"
 ```
 
 
-**See Also:**
+::: seealso
 - [SCRAMBLE()]
 - [RANDWORD()]
+:::
 # SIGN()
 `sign(<number>)`
 
@@ -4691,9 +4953,10 @@ You say, "-1"
     You say, "0"
 
 
-**See Also:**
+::: seealso
 - [ABS()]
 - [BOUND()]
+:::
 # SIN()
 `sin(<angle>[, <angle type>])`
 
@@ -4702,13 +4965,14 @@ You say, "-1"
   See 'HELP ANGLES' for more on the angle type.
 
 
-**See Also:**
+::: seealso
 - [ACOS()]
 - [ASIN()]
 - [ATAN()]
 - [COS()]
 - [CTU()]
 - [TAN()]
+:::
 # SORT()
 `sort(<list>[, <sort type>[, <delimiter>[, <osep>]]])`
 
@@ -4719,9 +4983,10 @@ You say, "-1"
   The optional third argument gives the list's delimiter character. If not present, `<delimiter>` defaults to a space. The optional fourth argument gives a string that will delimit the resulting list; it defaults to `<delimiter>`.
 
 
-**See Also:**
+::: seealso
 - [SORTBY()]
 - [SORTKEY()]
+:::
 # SORTBY()
 `sortby([<obj>/]<attrib>, <list>[, <delimiter>[, <output separator>]])`
 
@@ -4740,11 +5005,12 @@ You say, "-1"
   Warning: the function invocation limit applies to this function. If this limit is exceeded, the function will fail _silently_. List and function sizes should be kept reasonable.
 
 
-**See Also:**
+::: seealso
 - [anonymous attributes]
 - [SORTING]
 - [SORT()]
 - [SORTKEY()]
+:::
 # SORTKEY()
 `sortkey([<obj>/]<attrib>, <list>[, <sort type>[, <delimiter>[, <osep>]]])`
 
@@ -4763,10 +5029,11 @@ You say, "-1"
     You say, "#2 #3 #1"
 
 
-**See Also:**
+::: seealso
 - [anonymous attributes]
 - [SORTING]
 - [SORTBY()]
+:::
 # SORTING
   In functions where you can specify a sorting method, you can provide one of these sort types:
 
@@ -4794,13 +5061,14 @@ You say, "-1"
   Whether or not the 'a' sort type is case-sensitive or not depends on the particular mush and its environment.
 
 
-**See Also:**
+::: seealso
 - [SORT()]
 - [SORTBY()]
 - [SORTKEY()]
 - [SETUNION()]
 - [SETINTER()]
 - [SETDIFF()]
+:::
 # SOUNDLIKE()
 # SOUNDSLIKE()
 `soundslike(<word>, <word>[, <hash type>])`<br>
@@ -4817,8 +5085,9 @@ think soundslike(robin,roebuck, phone)
 ```
 
 
-**See Also:**
+::: seealso
 - [soundex()]
+:::
 # SPACE()
 `space(<number>)`
 
@@ -4831,8 +5100,9 @@ Amberyl says, "a     b"
 ```
 
 
-**See Also:**
+::: seealso
 - [REPEAT()]
+:::
 # SPELLNUM()
 `spellnum(<number>)`
 
@@ -4845,8 +5115,9 @@ twelve thousand three hundred forty-five
 ```
 
 
-**See Also:**
+::: seealso
 - [ORDINAL()]
+:::
 # ORDINAL()
 `ordinal(<integer>)`
 
@@ -4859,8 +5130,9 @@ first
 ```
 
 
-**See Also:**
+::: seealso
 - [SPELLNUM()]
+:::
 # SPLICE()
 `splice(<list1>, <list2>, <word>[, <delimiter>])`
 
@@ -4876,8 +5148,9 @@ You say, "foo moof baz"
 ```
 
 
-**See Also:**
+::: seealso
 - [MERGE()]
+:::
 # MAPSQL()
 `mapsql([<object>/]<attribute>, <query>[, <osep>[, <dofieldnames>[, <param1>[, <param2>[, ...]]]]])`
 
@@ -4900,12 +5173,13 @@ You say, "foo moof baz"
   See [SQL Examples] for examples.
 
 
-**See Also:**
+::: seealso
 - [anonymous attributes]
 - [SQLESCAPE()]
 - [SQL()]
 - [@sql]
 - [@mapsql]
+:::
 # SQL()
 `sql(<query>[, <row separator>[, <field separator>[, <register>[, <param1>[, <param2>[, ...]]]]]])`
 
@@ -4929,13 +5203,14 @@ You say, "foo moof baz"
   See [SQL Examples] for more examples.
 
 
-**See Also:**
+::: seealso
 - [SQLESCAPE()]
 - [MAPSQL()]
 - [@sql]
 - [setq()]
 - [R()]
 - [@mapsql]
+:::
 # SQL Examples
 
   Example of using sqlescape() to prevent injection attacks:<br>
@@ -4987,19 +5262,21 @@ You don\'t say
   You must be a WIZARD or have the Sql_Ok power to use this function.
 
 
-**See Also:**
+::: seealso
 - [SQL()]
 - [MAPSQL()]
 - [@sql]
 - [@mapsql]
+:::
 # SQRT()
 `sqrt(<number>)`
 
   Returns the square root of `<number>`. `<number>` cannot be negative.
 
 
-**See Also:**
+::: seealso
 - [ROOT()]
+:::
 # SQUISH()
 `squish(<string>[, <character>])`
 
@@ -5015,8 +5292,9 @@ You don\'t say
 ```
 
 
-**See Also:**
+::: seealso
 - [TRIM()]
+:::
 # STARTTIME()
 # RESTARTTIME()
 `starttime()`<br>
@@ -5036,26 +5314,29 @@ Tue Sep 22 13:54:04 2015
 ```
 
 
-**See Also:**
+::: seealso
 - [CONVTIME()]
 - [RESTARTS()]
+:::
 # RESTARTS()
 `restarts()`
 
   Returns the number of times the server has been rebooted with @shutdown/reboot since the last full startup.
 
 
-**See Also:**
+::: seealso
 - [STARTTIME()]
 - [STARTTIME()]
+:::
 # SSL()
 `ssl(<player|descriptor>)`
 
   This function returns 1 if the player is using an SSL connection, and 0 otherwise. If SSL connections are disabled, it always returns 0. You must be See_All to use this function on another player.
 
 
-**See Also:**
+::: seealso
 - [TERMINFO()]
+:::
 # STEP()
 `step([<obj>/]<attr>, <list>, <step>[, <delim>[, <osep>]])`
 
@@ -5076,22 +5357,24 @@ d - e -
     d - e
 
 
-**See Also:**
+::: seealso
 - [MAP()]
 - [iter()]
 - [fold()]
 - [anonymous attributes]
 - [REGISTERS()]
+:::
 # STDDEV()
 `stddev(<number1>[, ... , <numberN>])`
 
   Returns the sample standard deviation of its arguments.
 
 
-**See Also:**
+::: seealso
 - [AVG()]
 - [MEDIAN()]
 - [LMATH()]
+:::
 # STRFIRSTOF()
 # STRALLOF()
 `strfirstof(<expr>[, ... , <exprN>], <default>)`<br>
@@ -5114,13 +5397,14 @@ You say, "foo"
     You say, "foo| |bar|baz|#-1"
 
 
-**See Also:**
+::: seealso
 - [ALLOF()]
 - [FIRSTOF()]
 - [FIRST()]
 - [STRLEN()]
 - [CAT()]
 - [DEFAULT()]
+:::
 # STRINSERT()
 `strinsert(<string>, <position>, <insert>)`
 
@@ -5137,10 +5421,11 @@ My name
 ```
 
 
-**See Also:**
+::: seealso
 - [STRDELETE()]
 - [INSERT()]
 - [STRREPLACE()]
+:::
 # STRIPACCENTS()
 `stripaccents(<string>[, <smart>])`
 
@@ -5149,23 +5434,25 @@ My name
  If the second argument is true, it does more a intelligent conversion that might result in one character being turned into several. When it's false, or not given, one character in the input string corresponds to one character in the result.
 
 
-**See Also:**
+::: seealso
 - [accent()]
 - [@nameaccent]
 - [ACCNAME()]
 - [STRIPANSI()]
 - [RENDER()]
+:::
 # STRIPANSI()
 `stripansi(<string>)`
 
   Returns the string with all ansi and HTML codes removed.
 
 
-**See Also:**
+::: seealso
 - [STRIPACCENTS()]
 - [ansi()]
 - [TAG()]
 - [RENDER()]
+:::
 
 # STRDISTANCE()
 
@@ -5187,10 +5474,11 @@ strdistance(,é😀)
 
   These return `3`, `1`, and `2`, respectively.
 
-**See Also:**
+::: seealso
 - [SUGGEST()]
 - [GRAPHEMECOUNT()]
 - [GRAPHEMES()]
+:::
 
 # PRINTF()
 `printf(<format>[, <value>...])`
@@ -5212,11 +5500,12 @@ printf(lit(%+08.2f),12.345)
 printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 ```
 
-**See Also:**
+::: seealso
 - [DISPLAYWIDTH()]
 - [align()]
 - [TABLE()]
 - [WRAP()]
+:::
 
 # DISPLAYWIDTH()
 `displaywidth(<string>)`
@@ -5227,10 +5516,11 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 
   Examples: `displaywidth(界)` returns `2`; `graphemecount(界)` returns `1`.
 
-**See Also:**
+::: seealso
 - [STRLEN()]
 - [GRAPHEMECOUNT()]
 - [GRAPHEMES()]
+:::
 
 # GRAPHEMECOUNT()
 `graphemecount(<string>)`
@@ -5239,9 +5529,10 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 
   Examples: `graphemecount(é)` returns `1`; `graphemecount(👩‍👩‍👧‍👦)` returns `1`.
 
-**See Also:**
+::: seealso
 - [DISPLAYWIDTH()]
 - [GRAPHEMES()]
+:::
 
 # GRAPHEMES()
 `graphemes(<string>[, <output-separator>])`
@@ -5252,10 +5543,11 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 
   All three Unicode functions take normally evaluated arguments and use the usual function invocation and recursion limits. The evaluator permits at most 5,242,880 UTF-16 code units per function result. GRAPHEMES checks the expanded length before constructing its output and returns `#-1 OUTPUT EXCEEDED MAXIMUM SIZE` if it would exceed that ceiling. Cluster length itself has no separate fixed limit. Text is not normalized; malformed UTF-16 is retained under the library's segmentation policy.
 
-**See Also:**
+::: seealso
 - [DISPLAYWIDTH()]
 - [GRAPHEMECOUNT()]
 - [FLIP()]
+:::
 
 # STRLEN()
 `strlen(<string>[, <count controls>])`
@@ -5275,9 +5567,10 @@ You say, "2"
 ```
 
 
-**See Also:**
+::: seealso
 - [WORDS()]
 - [STRFIRSTOF()]
+:::
 # STRMATCH()
 `strmatch(<string>, <pattern>[, <register list>])`
 
@@ -5304,12 +5597,13 @@ You say, "1"
     You say, "1/foo/bar/baz"
 
 
-**See Also:**
+::: seealso
 - [COMP()]
 - [element()]
 - [setq()]
 - [R()]
 - [WILDCARDS]
+:::
 # STRREPLACE()
 `strreplace(<string>, <start>, <length>, <text>)`
 
@@ -5329,22 +5623,24 @@ You say, "abcdefgh"
     Fix the typo
 
 
-**See Also:**
+::: seealso
 - [STRDELETE()]
 - [STRINSERT()]
 - [LDELETE()]
 - [LREPLACE()]
+:::
 # SUB()
 `sub(<number1>, <number>[, ... , <number>])`
 
   sub() subtracts `<number>` from `<number1>`. If more than one `<number>` argument is given, each is subtracted from the result of the previous subtraction in turn. The result of the final subtraction is returned.
 
 
-**See Also:**
+::: seealso
 - [ADD()]
 - [DEC()]
 - [LMATH()]
 - [VSUB()]
+:::
 # SUBJ()
 # %s
 `subj(<object>)`
@@ -5352,10 +5648,11 @@ You say, "abcdefgh"
   Returns the subjective pronoun - he/she/it - for an object. You can also use the %s substitution to get the subjective pronoun of the enactor.
 
 
-**See Also:**
+::: seealso
 - [APOSS()]
 - [OBJ()]
 - [POSS()]
+:::
 # RESWITCH()
 # RESWITCHI()
 # RESWITCHALL()
@@ -5374,11 +5671,12 @@ You say, "abcdefgh"
   The string "#$" in the `<list>`s will be replaced with the value of `<str>`, /before/ `<list>` is evaluated. You can also use $N in `<list>` to refer to the Nth subpattern which matched in `<re>`, with $0 being the entire matching string. Use $`<name>` (the '<>' are literal) to refer to named subpatterns.
 
 
-**See Also:**
+::: seealso
 - [switch()]
 - [regmatch()]
 - [REGEDIT()]
 - [regexp]
+:::
 # SWITCH WILDCARDS
   @switch, @select, switch(), and switchall() normally do wildcard matching between their first argument and the `<expr>`ession arguments, with the normal * and ? special characters. However, if one of the `<expr>`essions starts with "`<" or ">`", a less-than or greater-than check is done instead of wildcard matching for that pair.
 
@@ -5395,8 +5693,9 @@ You say, "abcdefgh"
   If you need to have a leading `< or >` that's treated like a normal character in a wildcard match, use \\`< or \\>` (the \\ will turn into \ when the argument is evaluated, and then that single \ will stop the greater/less than check).
 
 
-**See Also:**
+::: seealso
 - [WILDCARDS]
+:::
 # STEXT()
 # SLEV()
 # %$
@@ -5417,23 +5716,25 @@ You say, "foo bar!"
 ```
 
 
-**See Also:**
+::: seealso
 - [switch()]
 - [RESWITCH()]
 - [@switch]
+:::
 # T()
 `t(<expression>)`
 
   Returns 1 if `<expression>` is a true boolean value, and 0 otherwise. The definitions of true and false vary depending on the value of the 'tiny_booleans' @config option. See [boolean values] for details.
 
 
-**See Also:**
+::: seealso
 - [NOT()]
 - [IF()]
 - [COND()]
 - [@break]
 - [OR()]
 - [AND()]
+:::
 # TABLE()
 `table(<list>[, <field width>[, <line length>[, <delimiter>[, <osep>]]]])`
 
@@ -5452,29 +5753,32 @@ a          b          areallylon d
     brown     |fox
 
 
-**See Also:**
+::: seealso
 - [align()]
+:::
 # TAN()
 `tan(<angle>[, <angle type>])`
 
   Returns the tangent of `<angle>`, which should be expressed in the given angle type, or radians by default. See HELP ANGLES for more information.
 
 
-**See Also:**
+::: seealso
 - [ACOS()]
 - [ASIN()]
 - [ATAN()]
 - [COS()]
 - [CTU()]
 - [SIN()]
+:::
 # TEL()
 `tel(<object>, <destination>[, <silent>[, <inside>]])`
 
   This function will teleport `<object>` to `<destination>`, exactly as @teleport `<object>`=`<destination>`. `<silent>` is an optional boolean that, if true, makes the function act like @teleport/silent. `<inside>` is an optional boolean that, if true, makes the function act like @teleport/inside.
 
 
-**See Also:**
+::: seealso
 - [@teleport]
+:::
 # TERMINFO()
 `terminfo(<player|descriptor>)`
 
@@ -5497,13 +5801,14 @@ a          b          areallylon d
   You must have see_all, or use terminfo() on yourself, to see all information or use a `<descriptor>`. Mortals using terminfo() on another player will always receive "unknown" for the client name, and will not get telnet/gmcp/ssl/prompt_newlines in the output list.
 
 
-**See Also:**
+::: seealso
 - [PUEBLO()]
 - [WIDTH()]
 - [WIDTH()]
 - [SSL()]
 - [@SOCKSET]
 - [OOB()]
+:::
 # JSON FUNCTIONS
   JSON functions are used to create and modify JSON objects.
 
@@ -5514,8 +5819,9 @@ a          b          areallylon d
 `oob()`
 
 
-**See Also:**
+::: seealso
 - [JSON PATHS]
+:::
 # WEBSOCKET_HTML()
 # WEBSOCKET_JSON()
 `websocket_html(<html>[, <player>])`<br>
@@ -5528,9 +5834,10 @@ a          b          areallylon d
   These are SharpMUSH functions; PennMUSH has neither.
 
 
-**See Also:**
+::: seealso
 - [OOB()]
 - [json()]
+:::
 # OOB()
 # GMCP
 `oob(<players>, <package>[, <message>])`
@@ -5548,8 +5855,9 @@ a          b          areallylon d
   Returns the number of descriptors the message was sent to on success, or a string starting with #-1 on error.
 
 
-**See Also:**
+::: seealso
 - [json()]
+:::
 # ISJSON()
 `isjson(<text>)`
 
@@ -5568,8 +5876,9 @@ think isjson("quoted")
 ```
 
 
-**See Also:**
+::: seealso
 - [json()]
+:::
 # JSON_GROUP_BY()
 `json_group_by([<object>/]<attribute>, <list>[, <delimiter>])`
 
@@ -5585,13 +5894,14 @@ think isjson("quoted")
 ```
 
 
-**See Also:**
+::: seealso
 - [json()]
 - [json_array()]
 - [json_query()]
 - [FILTER()]
 - [MAP()]
 - [CHAIN()]
+:::
 # JSON PATHS
 
   json_mod() and the extract argument for json_query() take a path string that describes what part of a JSON object or array to act on. All paths start with a $ to indicate the base JSON value, and 0 or more specifiers in the following formats:
@@ -5600,9 +5910,10 @@ think isjson("quoted")
   [N]    - the Nth element of a JSON array. Note that the brackets need to be escaped.
 
 
-**See Also:**
+::: seealso
 - [json_mod()]
 - [json_query()]
+:::
 # TESTLOCK()
 `testlock(<key>, <victim>)`
 
@@ -5623,12 +5934,13 @@ think testlock(\\+FOO:BAR,*Walker)
 
 
 
-**See Also:**
+::: seealso
 - [LOCKING]
 - [LOCK()]
 - [ELOCK()]
 - [LOCKFILTER()]
 - [locktypes]
+:::
 # TEXTFILE()
 # TEXTENTRIES()
 # TEXTSEARCH()
@@ -5660,12 +5972,14 @@ You say, "CWHO() LWHO() MWHO() NWHO() XWHO() ZWHO()"
       Returns the natural log of `<number>`.
 
 
-**See Also:**
+::: seealso
 - [LOG()]
     "
+:::
 
-**See Also:**
+::: seealso
 - [WILDCARDS]
+:::
 # ETIME()
 `etime(<seconds>[, <width>[, <precision>]])`
 
@@ -5686,10 +6000,11 @@ think etime(61, 5)
 ```
 
 
-**See Also:**
+::: seealso
 - [etimefmt()]
 - [TIMESTRING()]
 - [STRINGSECS()]
+:::
 # TIMESTRING()
 `timestring(<seconds>[, <pad flag>[, <precision>]])`
 
@@ -5706,11 +6021,12 @@ You say, "00d 00h 05m 01s"
 ```
 
 
-**See Also:**
+::: seealso
 - [STRINGSECS()]
 - [CONVSECS()]
 - [ETIME()]
 - [etimefmt()]
+:::
 # STRINGSECS()
 `stringsecs(<timestring>[, <precision>])`
 
@@ -5726,11 +6042,12 @@ You say, "301"
     You say, "95232300"
 
 
-**See Also:**
+::: seealso
 - [TIMESTRING()]
 - [etimefmt()]
 - [CONVTIME()]
 - [ETIME()]
+:::
 # TR()
 `tr(<string>, <find>, <replace>)`
 
@@ -5745,9 +6062,10 @@ You say, "hello"
 ```
 
 
-**See Also:**
+::: seealso
 - [MERGE()]
 - [SPLICE()]
+:::
 # TRIM()
 # TRIMPENN()
 # TRIMTINY()
@@ -5776,9 +6094,10 @@ You say "Trim Test"
 ```
 
 
-**See Also:**
+::: seealso
 - [SQUISH()]
 - [EDIT()]
+:::
 # TRUNC()
 # VAL()
 `trunc(<string>)`
@@ -5796,12 +6115,13 @@ You say, "101"
   val() is an alias for trunc().
 
 
-**See Also:**
+::: seealso
 - [ROUND()]
 - [ROUND()]
 - [BOUND()]
 - [ROUND()]
 - [LEFT()]
+:::
 # TYPE()
 `type(<object>)`
 
@@ -5819,9 +6139,10 @@ ROOM
 ```
 
 
-**See Also:**
+::: seealso
 - [HASTYPE()]
 - [TYPES OF OBJECTS]
+:::
 # UCSTR()
 # UCSTR2()
 `ucstr(<string>)`<br>
@@ -5840,9 +6161,10 @@ You say, "GRÜSSEN
 ```
 
 
-**See Also:**
+::: seealso
 - [LCSTR()]
 - [CAPSTR()]
+:::
 # UDEFAULT()
 # ULDEFAULT()
 `udefault([<object>/]<attribute>, <default case>[, <arg0>[, ... , <arg29>]])`<br>
@@ -5865,7 +6187,7 @@ You say "-- BOOM --"
 ```
 
 
-**See Also:**
+::: seealso
 - [GET()]
 - [EVAL()]
 - [u()]
@@ -5873,6 +6195,7 @@ You say "-- BOOM --"
 - [EDEFAULT()]
 - [ulocal()]
 - [LOCALIZE()]
+:::
 # UNIQUE()
 `unique(<list>[, <sort type>[, <delim>[, <osep>]]])`
 
@@ -5889,9 +6212,10 @@ think unique(1|2|3|3, n, |, _)
 ```
 
 
-**See Also:**
+::: seealso
 - [SETUNION()]
 - [SORT()]
+:::
 # V()
 # V-FUNCTION
 `v(<variable>)`<br>
@@ -5909,13 +6233,14 @@ think unique(1|2|3|3, n, |, _)
   The final form of this function is equivilent to get(me/`<attribute>`), but is usually slightly more efficient.
 
 
-**See Also:**
+::: seealso
 - [STACK]
 - [registers]
 - [%]
 - [GET()]
 - [R()]
 - [attributes]
+:::
 # VADD()
 `vadd(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
@@ -5927,8 +6252,9 @@ think unique(1|2|3|3, n, |, _)
   1|2|3
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VCROSS()
 `vcross(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
@@ -5942,8 +6268,9 @@ think unique(1|2|3|3, n, |, _)
   -3 6 -3
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VDIM()
 `vdim(<vector>[, <delimiter>])`
 
@@ -5953,8 +6280,9 @@ think unique(1|2|3|3, n, |, _)
   4
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VDOT()
 `vdot(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
@@ -5964,8 +6292,9 @@ think unique(1|2|3|3, n, |, _)
   20
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VMIN()
 `vmin(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
@@ -5975,8 +6304,9 @@ think unique(1|2|3|3, n, |, _)
   1 1 2
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VMAX()
 `vmax(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
@@ -5986,8 +6316,9 @@ think unique(1|2|3|3, n, |, _)
   4 2 3
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VERSION()
 # NUMVERSION()
 `version()`<br>
@@ -6009,8 +6340,9 @@ You say "1008001004"
     You say, "1008005007"
 
 
-**See Also:**
+::: seealso
 - [@version]
+:::
 # VISIBLE()
 `visible(<object>, <victim>[/<attribute>])`
 
@@ -6019,9 +6351,10 @@ You say "1008001004"
   If `<object>`, `<victim>`, or `<attribute>` is invalid, the function returns 0.
 
 
-**See Also:**
+::: seealso
 - [CONTROLS()]
 - [VISUAL]
+:::
 # VMAG()
 `vmag(<vector>[, <delimiter>])`
 
@@ -6031,8 +6364,9 @@ You say "1008001004"
   5
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VMUL()
 `vmul(<vector1|number1>, <vector2|number2>[, <delimiter>[, <osep>]])`
 
@@ -6044,8 +6378,9 @@ You say "1008001004"
   2 6 12
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VSUB()
 `vsub(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
@@ -6055,8 +6390,9 @@ You say "1008001004"
   0 2 4
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # VUNIT()
 `vunit(<vector>[, <delimiter>])`
 
@@ -6068,8 +6404,9 @@ You say "1008001004"
   5 6 7
 
 
-**See Also:**
+::: seealso
 - [Vector functions]
+:::
 # WIDTH()
 # HEIGHT()
 # SCREENWIDTH
@@ -6093,23 +6430,25 @@ You say "1008001004"
   will return the latter). A room's "real" location is always Nothing (the LOC() function will return its drop-to).
 
 
-**See Also:**
+::: seealso
 - [ROOM()]
 - [LOC()]
 - [RNUM()]
 - [locate()]
 - [HOME()]
 - [@whereis]
+:::
 # WIPE()
 `wipe(<object>[/<attribute pattern>])`
 
   This function is equivalent to @wipe, and attempts to wipe all the attributes on `<object>` whose names match `<attribute pattern>`, or "*" if no pattern is given. It returns nothing. Like @wipe, this function will destroy entire attribute trees; to safely remove a single attribute, use attrib_set() instead.
 
 
-**See Also:**
+::: seealso
 - [@wipe]
 - [ATTRIB_SET()]
 - [SET()]
+:::
 # WORDPOS()
 `wordpos(<list>, <number>[, <delimiter>])`
 
@@ -6122,9 +6461,10 @@ You say, "2"
 ```
 
 
-**See Also:**
+::: seealso
 - [MEMBER()]
 - [POS()]
+:::
 # WORDS()
 `words(<list>[, <delimiter>])`
 
@@ -6142,9 +6482,10 @@ think words(1 2%b%b3, %b)
     4
 
 
-**See Also:**
+::: seealso
 - [STRLEN()]
 - [ITEMS()]
+:::
 # WRAP()
 `wrap(<string>, <width>[, <first line width>[, <line separator>]])`
 
@@ -6175,24 +6516,26 @@ think words(1 2%b%b3, %b)
   xattrp() and regxattrp() will include attributes from parents. Do note that parent attributes are listed _after_ child attributes, not sorted alphabetically.
 
 
-**See Also:**
+::: seealso
 - [NATTR()]
 - [LATTR()]
 - [WILDCARDS]
 - [regexp]
+:::
 # XOR()
 `xor(<boolean1>, <boolean2>[, ... , <booleanN>])`
 
   Takes two or more booleans and returns a 1 if one, and only one, of the inputs is equivalent to true(1).
 
 
-**See Also:**
+::: seealso
 - [boolean values]
 - [AND()]
 - [OR()]
 - [NOT()]
 - [NOR()]
 - [LMATH()]
+:::
 # XVCON()
 # XCON()
 `xcon(<object>, <start>, <count>)`<br>
@@ -6205,10 +6548,11 @@ think words(1 2%b%b3, %b)
   xvcon() is identical, but follows the restrictions of lvcon().
 
 
-**See Also:**
+::: seealso
 - [NVCON()]
 - [LCON()]
 - [LVCON()]
+:::
 # XVEXITS()
 # XEXITS()
 `xexits(<room>, <start>, <count>)`<br>
@@ -6221,10 +6565,11 @@ think words(1 2%b%b3, %b)
   xvexits() is identical, but follows the restrictions of lvexits().
 
 
-**See Also:**
+::: seealso
 - [NVEXITS()]
 - [LEXITS()]
 - [LVEXITS()]
+:::
 # XVPLAYERS()
 # XPLAYERS()
 `xplayers(<object>, <start>, <count>)`<br>
@@ -6237,12 +6582,13 @@ think words(1 2%b%b3, %b)
   xvplayers() is identical, but follows the restrictions of lvplayers().
 
 
-**See Also:**
+::: seealso
 - [NVPLAYERS()]
 - [LPLAYERS()]
 - [LVPLAYERS()]
 - [XVTHINGS()]
 - [XVEXITS()]
+:::
 # XVTHINGS()
 # XTHINGS()
 # XOBJECTS()
@@ -6257,12 +6603,13 @@ think words(1 2%b%b3, %b)
   xvthings() is identical, except it follows the restrictions of lvthings().
 
 
-**See Also:**
+::: seealso
 - [NVTHINGS()]
 - [LTHINGS()]
 - [LVTHINGS()]
 - [XVPLAYERS()]
 - [XVEXITS()]
+:::
 # XWHO()
 # XWHOID()
 # XMWHO()
@@ -6281,11 +6628,12 @@ think words(1 2%b%b3, %b)
   xwhoid() and xmwhoid() return objids instead of dbrefs.
 
 
-**See Also:**
+::: seealso
 - [LWHO()]
 - [MWHO()]
 - [NMWHO()]
 - [ZWHO()]
+:::
 # ZFIND()
 `zfind(<zone>[, <osep>])`
 
@@ -6296,11 +6644,12 @@ think words(1 2%b%b3, %b)
   This is a SharpMUSH function; PennMUSH offers the zone lists through [lsearch()] and [ZWHO()].
 
 
-**See Also:**
+::: seealso
 - [ZWHO()]
 - [ZONE()]
 - [@chzone]
 - [lsearch()]
+:::
 # ZWHO()
 # ZMWHO()
 `zwho(<object>[, <viewer>])`<br>
@@ -6311,12 +6660,13 @@ think words(1 2%b%b3, %b)
   See_All players can pass a `<viewer>` argument to zwho() to get only those players that `<viewer>` can see is online.
 
 
-**See Also:**
+::: seealso
 - [LWHO()]
 - [NMWHO()]
 - [ZONE()]
 - [ZFUN()]
 - [ZEMIT()]
+:::
 # ZEMIT()
 # NSZEMIT()
 `zemit(<zone>, <message>)`<br>
@@ -6327,12 +6677,13 @@ think words(1 2%b%b3, %b)
   nszemit() works like @nszemit.
 
 
-**See Also:**
+::: seealso
 - [@zemit]
 - [ZONE()]
 - [ZFUN()]
 - [ZWHO()]
 - [zones]
+:::
 # ZFUN()
 `zfun(<attribute>[, <arg0>[, <arg1>[, ... , <arg29>]]])`
 
@@ -6341,13 +6692,14 @@ think words(1 2%b%b3, %b)
 `ufun(zone(me)/<attribute>[, <arg0>[, ... , <arg29>]])`
 
 
-**See Also:**
+::: seealso
 - [u()]
 - [GET()]
 - [ZONE()]
 - [ZEMIT()]
 - [ZWHO()]
 - [zones]
+:::
 # ZONE()
 `zone(<object>[, <new zone>])`
 
@@ -6356,11 +6708,12 @@ think words(1 2%b%b3, %b)
   If a `<new zone>` is given, zone() attempts to change the zone of `<object>` to `<new zone>` first - see help @chzone for details.
 
 
-**See Also:**
+::: seealso
 - [@chzone]
 - [ZFUN()]
 - [ZWHO()]
 - [zemit() ZONES]
+:::
 # UPTIME()
 `UPTIME([<type>[, <precision>]])`
 
@@ -6375,7 +6728,7 @@ think words(1 2%b%b3, %b)
     warnings  - The time of the next automatic warnings check, or -1 if automated warnings are disabled.
 
 
-**See Also:**
+::: seealso
 - [@uptime]
 - [SECS()]
 - [CONVSECS()]
@@ -6389,6 +6742,7 @@ think words(1 2%b%b3, %b)
 - [@config]
 - [@dump]
 - [@shutdown]
+:::
 # SUGGEST()
 `SUGGEST(<category>, <word>[, <seperator>[, <limit>]])`
 
@@ -6405,8 +6759,9 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 ```
 
 
-**See Also:**
+::: seealso
 - [@SUGGEST]
+:::
 # CONNRECORD()
 `CONNRECORD(<id>[, <osep>])`
 
@@ -6421,8 +6776,9 @@ AARDVARK AARDVARKS AARDVARK'S etc...
   This function must be enabled (by the use_connlog @config option); if disabled, it returns #-1.
 
 
-**See Also:**
+::: seealso
 - [connlog()]
+:::
 # ADDRLOG()
 `ADDRLOG([<count>, ]ip|hostname, <pattern>[, <osep>])`
 
@@ -6433,27 +6789,30 @@ AARDVARK AARDVARKS AARDVARK'S etc...
   This function must be enabled (by the use_connlog @config option); if disabled, it returns #-1.
 
 
-**See Also:**
+::: seealso
 - [connlog()]
 - [CONNRECORD()]
+:::
 # URLENCODE()
 `URLENCODE(<string>)`
 
   This function converts its argument to a URL-encoded string where everything but a-z, A-Z, 0-9, -, ., _, and ~ are converted into %NN where NN is a hex code for their character value.
 
 
-**See Also:**
+::: seealso
 - [URLDECODE()]
 - [@HTTP]
+:::
 # URLDECODE()
 `URLDECODE(<string>)`
 
   This function takes a URL-encoded string and returns it in its decoded form. Unprintable characters are converted to question marks.
 
 
-**See Also:**
+::: seealso
 - [URLENCODE()]
 - [@HTTP]
+:::
 # HMAC()
 `HMAC(<digest>, <key>, <text>[, <encoding>])`
 
@@ -6468,5 +6827,6 @@ lZj9lZYz8qZKfX6YWWZ3SqbzNLyALlszAXcuyO1u7Vo=
 ```
 
 
-**See Also:**
+::: seealso
 - [DIGEST()]
+:::

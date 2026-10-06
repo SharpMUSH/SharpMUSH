@@ -35,13 +35,14 @@ switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in [SWIT
 If the string "#$" appears in the `<list>` to be evaluated, it will be replaced with the evaluated value of `<str>` /before/ evaluation of `<list>`. This is not done in case() and caseall(), for TinyMUSH 3 compatibility. Note that this replacement happens before evaluation, which makes it unsafe when `<str>` contains user input, and makes it unsuitable for use in nested switch()es. It is strongly recommended you use the %$`\<n\>` substitution or stext() function instead, which solves these problems.
 
 
-**See Also:**
+::: seealso
 - [RESWITCH()]
 - [STEXT()]
 - [STEXT()]
 - [IF()]
 - [COND()]
 - [FIRSTOF()]
+:::
 
 ## Pattern selection examples
 

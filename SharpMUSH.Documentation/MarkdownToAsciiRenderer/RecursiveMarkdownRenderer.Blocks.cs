@@ -1,5 +1,6 @@
 using Markdig.Extensions.CustomContainers;
 using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using MarkupString;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -27,9 +28,70 @@ public partial class RecursiveMarkdownRenderer
 		return content.Trim(TrimType.TrimEnd, " ");
 	}
 
+	/// <summary>
+	/// A See Also footer (<see cref="SeeAlsoBlock"/>) as PennMUSH prints it: the label, then the topics
+	/// separated by commas, wrapped at a comma with the continuation lines under the first topic.
+	/// </summary>
+	protected virtual MString RenderSeeAlso(SeeAlsoBlock seeAlso)
+	{
+		var label = $"{HelpSeeAlsoExtension.Label}: ";
+		if (seeAlso.Items is null)
+		{
+			// An item says more than its name, so the contents print as written, under the label.
+			return MarkupText.Concat([MarkupText.Wrap(_boldStyle, label.TrimEnd()), MarkupText.Plain("\n"),
+				RenderContainerBlock(seeAlso)]);
+		}
+
+		var indent = MarkupText.Plain("\n" + new string(' ', label.Length));
+		var parts = new List<MString> { MarkupText.Wrap(_boldStyle, label.TrimEnd()), MarkupText.Plain(" ") };
+		var column = label.Length;
+		var items = RenderSeeAlsoItems(seeAlso);
+		for (var i = 0; i < items.Count; i++)
+		{
+			var width = items[i].ToPlainText().Length;
+			if (i > 0)
+			{
+				parts.Add(MarkupText.Plain(","));
+				column++;
+				var trailingComma = i < items.Count - 1 ? 1 : 0;
+				if (column + 1 + width + trailingComma > _maxWidth)
+				{
+					parts.Add(indent);
+					column = label.Length;
+				}
+				else
+				{
+					parts.Add(MarkupText.Plain(" "));
+					column++;
+				}
+			}
+			parts.Add(items[i]);
+			column += width;
+		}
+		return MarkupText.Concat(parts);
+	}
+
+	/// <summary>
+	/// Each topic of a See Also footer of bare names, rendered (none if an item says more). A topic link is named bare (<c>@lock</c>, not
+	/// <c>help @lock</c>): the label already says these are help topics, as in PennMUSH.
+	/// </summary>
+	protected IReadOnlyList<MString> RenderSeeAlsoItems(SeeAlsoBlock seeAlso)
+	{
+		_bareCommandLabels = true;
+		try
+		{
+			return (seeAlso.Items ?? []).Select(Render).ToList();
+		}
+		finally
+		{
+			_bareCommandLabels = false;
+		}
+	}
+
 	/// <summary>One item per line, each with a marker; an ordered list numbers from its own start.</summary>
 	private MString RenderList(ListBlock list)
 	{
+
 		var itemIndex = FirstItemIndex(list);
 		var items = list
 			.OfType<ListItemBlock>()

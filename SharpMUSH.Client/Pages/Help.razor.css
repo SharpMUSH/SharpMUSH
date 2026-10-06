@@ -86,10 +86,33 @@
 	overflow-x: auto;
 }
 
+/* Helpfiles are written for a terminal, which prints every space: authors line text up with runs of
+   them. The server turns each line break into what the terminal prints (HelpHtmlRenderer), so keeping
+   the spaces here adds no line the terminal would not show. A paragraph laid out in columns is marked
+   help-aligned, and its columns only line up in a monospaced font. */
+.help-entry ::deep p,
+.help-entry ::deep td,
+.help-entry ::deep th {
+	white-space: pre-wrap;
+}
+
+.help-entry ::deep p.help-aligned {
+	font-family: var(--font-mono);
+	font-size: 0.8125rem;
+}
+
 .help-entry ::deep table {
 	display: block;
 	overflow-x: auto;
 	max-width: 100%;
+}
+
+/* A header-less table is a list of names in columns (the topic index); the terminal prints it bare. */
+.help-entry ::deep table.help-list td {
+	padding: 0.125rem 1.5rem 0.125rem 0;
+	border: none;
+	font-family: var(--font-mono);
+	font-size: 0.8125rem;
 }
 
 /* narrow: the card header's filter takes the full width it has, and the entry keeps less padding */

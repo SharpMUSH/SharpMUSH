@@ -29,10 +29,11 @@ These attributes can limit how many times an object can be successfully "use"d. 
 When the CHARGES attribute is present and AUSE is triggered, the value of the CHARGES attribute is automatically decreased by 1. When no CHARGES attribute is set, AUSE is always triggered.
 
 
-**See Also:**
+::: seealso
 - [use]
 - [@ause]
 - [action lists]
+:::
 
 ## Limited use example
 

@@ -103,13 +103,14 @@ Other substitutions:<br>
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.<br>
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
-**See Also:**
+::: seealso
 - [evaluation order]
 - [%#]
 - [%!]
 - [database]
 - [registers]
 - [V()]
+:::
 
 ## Substitution examples
 

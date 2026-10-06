@@ -40,10 +40,11 @@ There may be some objects on the game that you can go inside (wagons or cars, fo
 
 It's also sometimes possible to teleport from one room to another, using the '`@teleport`' command. However, most new players on a game probably won't be able to do that - it's mentioned here only for completeness.
 
-**See Also:**
+::: seealso
 - [go]
 - [HOMES]
 - [enter]
 - [leave]
 - [@teleport]
 - [@link]
+:::

@@ -45,9 +45,10 @@ You say "bananas apples bananas oranges pears"
 In this second example, in SUB-FUNCTION, %q0 was set to "apples bananas oranges pears", so that when the u() "returned" and TOP-FUNCTION evaluated %q0, this is what was printed. In the first example, ulocal() reset the value of %q0 to its original "are delicious!"
 
 
-**See Also:**
+::: seealso
 - [u()]
 - [setq()]
 - [LETQ()]
 - [R()]
 - [LOCALIZE()]
+:::

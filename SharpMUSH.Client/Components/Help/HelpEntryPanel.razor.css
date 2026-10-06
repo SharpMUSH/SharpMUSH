@@ -25,8 +25,23 @@
 .help-entry ::deep pre {
     overflow-x: auto;
     padding: 0.75rem;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
     background: var(--surface-alt, rgba(127, 127, 127, 0.08));
+}
+
+/* Helpfiles are written for a terminal, which prints every space: authors line text up with runs of
+   them. The server turns each line break into what the terminal prints (HelpHtmlRenderer), so keeping
+   the spaces here adds no line the terminal would not show. A paragraph laid out in columns is marked
+   help-aligned, and its columns only line up in a monospaced font. */
+.help-entry ::deep p,
+.help-entry ::deep td,
+.help-entry ::deep th {
+    white-space: pre-wrap;
+}
+
+.help-entry ::deep p.help-aligned {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
 }
 
 .help-entry ::deep table {
@@ -40,6 +55,56 @@
 .help-entry ::deep th {
     padding: 0.25rem 0.625rem;
     border: 1px solid var(--border-soft);
+}
+
+/* A header-less table is a list of names in columns (the topic index); the terminal prints it bare. */
+.help-entry ::deep table.help-list td {
+    padding: 0.125rem 1.5rem 0.125rem 0;
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+}
+
+/* A ::: seealso block (SeeAlsoBlock, HtmlSeeAlsoRenderer): a labelled nav. A list of bare names wraps
+   as one row of links, as the terminal prints it comma-separated; a described list stays a list. */
+.help-entry ::deep nav.help-see-also {
+    margin: 1.25rem 0 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-soft);
+}
+
+.help-entry ::deep .help-see-also-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.help-entry ::deep ul.help-see-also-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+}
+
+.help-entry ::deep ul.help-see-also-names a,
+.help-entry ::deep ul.help-see-also-names code {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+}
+
+.help-entry ::deep ul.help-see-also-names a:hover,
+.help-entry ::deep ul.help-see-also-names a:focus-visible {
+    border-color: var(--accent);
 }
 
 .help-ambiguous {

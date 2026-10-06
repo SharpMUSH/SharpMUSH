@@ -86,9 +86,10 @@ If multiple `<class>` and `<restrictions>` are given, objects must meet all crit
 
 @search is only mildly computationally expensive for most of the search classes. Computationally expensive searches are the evaluating searches (EVAL, EPLAYER, ETHING, EROOM, EEXIT), the attribute pattern searches (COMMAND, LISTEN), and ELOCK searches which perform evaluation searches (attr/value) or indirect locks (@obj/lock). These searches all cost a number of pennies (the exact amount is configurable; see @config find_cost).
 
-**See Also:**
+::: seealso
 - [lsearch()]
 - [@find]
+:::
 
 ## Object search examples
 

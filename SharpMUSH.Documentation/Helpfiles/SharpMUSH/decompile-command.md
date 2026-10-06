@@ -79,8 +79,9 @@ Set your Options -> Grab Password
 ```
 
 
-**See Also:**
+::: seealso
 - [CLIENTS]
 - [attributes]
 - [WILDCARDS]
 - [mushcode]
+:::

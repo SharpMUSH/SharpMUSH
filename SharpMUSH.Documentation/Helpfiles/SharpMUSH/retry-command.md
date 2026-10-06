@@ -30,11 +30,12 @@ Please note: @retry only restarts the action list it is currently in. If you hav
 Each `@retry` invocation has an independent hard cap of 1,000 retry iterations. If the condition remains true, it stops at that cap without a separate limit notification. Execution budgets and function-invocation limits can stop evaluation sooner. Write a terminating condition rather than relying on the cap.
 
 
-**See Also:**
+::: seealso
 - [action lists]
 - [boolean values]
 - [@break]
 - [@include]
+:::
 
 ## Retry examples
 

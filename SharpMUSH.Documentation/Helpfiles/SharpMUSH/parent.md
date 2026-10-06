@@ -95,10 +95,11 @@ If you are "mass-marketing" your objects, you can create blank copies, and `@par
 Locks can also be inherited, but are flagged no-inherit by default. Use `@lset` to change that on a per-lock basis.
 
 
-**See Also:**
+::: seealso
 - [@parent]
 - [$-commands]
 - [attributes]
 - [ANCESTORS]
 - [ORPHAN]
 - [pfun()]
+:::

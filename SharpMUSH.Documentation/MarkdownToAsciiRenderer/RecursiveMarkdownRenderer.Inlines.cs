@@ -1,3 +1,4 @@
+using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax.Inlines;
 using MarkupString.Ansi;
@@ -88,7 +89,9 @@ public partial class RecursiveMarkdownRenderer
 		if (isCommand)
 		{
 			var separator = url.IndexOf(' ');
-			contentText = separator > 0 && HasCommandPrefix(link, url[..separator])
+			// A table of topics or a See Also footer is a list of names to pick from, as PennMUSH prints
+			// it; elsewhere the command is spelled out unless the text before the link already says it.
+			contentText = separator > 0 && (_bareCommandLabels || IsInTableCell(link) || HasCommandPrefix(link, url[..separator]))
 				? url[(separator + 1)..]
 				: url;
 		}
@@ -98,6 +101,19 @@ public partial class RecursiveMarkdownRenderer
 			linkKind: isCommand ? LinkKind.Command : LinkKind.Url,
 			linkText: hint);
 		return MarkupText.Wrap(linkMarkup, contentText);
+	}
+
+	/// <summary>Set while a See Also footer renders, whose topics are named bare.</summary>
+	private bool _bareCommandLabels;
+
+	private static bool IsInTableCell(Inline inline)
+	{
+		var root = inline;
+		while (root.Parent is not null)
+		{
+			root = root.Parent;
+		}
+		return root is ContainerInline { ParentBlock.Parent: TableCell };
 	}
 
 	private static bool HasCommandPrefix(LinkInline link, string command)

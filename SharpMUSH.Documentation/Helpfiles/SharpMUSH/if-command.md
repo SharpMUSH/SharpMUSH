@@ -32,11 +32,12 @@ For RhostMUSH compatability, @skip runs the action list `<false>` when `<boolean
 
 @ifelse and `@skip/ifelse` are aliases for @if.
 
-**See Also:**
+::: seealso
 - [@break]
 - [@switch]
 - [IF()]
 - [boolean values]
+:::
 
 ## Conditional examples
 
