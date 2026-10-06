@@ -147,29 +147,4 @@ public class PlayerAliasIndexTests
 
 		await Assert.That(await Find("Griff")).IsEmpty();
 	}
-
-	[Test]
-	public async Task MigrationIndexesAliasesWrittenBeforeTheyWereIndexed()
-	{
-		var player = await NewPlayer("Mockturtle");
-		var number = player.Object.DBRef.Number;
-		await _db.SetAttributeAsync(player.Object.DBRef, ["ALIAS"], MarkupText.Plain("Turtle;Soup"), await God());
-
-		// The shape every world written before #1499 has: the attribute set, the record and index blank.
-		await _db.Store.WriteAsync(tx =>
-		{
-			tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.PlayerAliasIndexMigrationId));
-			var record = Codec.Deserialize<ObjectRecord>(tx.TryGet(Tables.Obj, Keys.Dbref(number), out var bytes) ? bytes : []);
-			tx.Put(Tables.Obj, Keys.Dbref(number), Codec.Serialize(record with { Aliases = [] }));
-			tx.Delete(Tables.ObjName, Keys.Lower("Turtle"), Keys.Dbref(number));
-			tx.Delete(Tables.ObjName, Keys.Lower("Soup"), Keys.Dbref(number));
-		});
-		await Assert.That(await Find("Turtle")).IsEmpty();
-
-		await _db.Migrate();
-
-		await Assert.That(await Find("Turtle")).IsEquivalentTo([number]);
-		await Assert.That(await Find("Soup")).IsEquivalentTo([number]);
-		await Assert.That(await AliasesOf(player)).IsEquivalentTo(["Turtle", "Soup"]);
-	}
 }

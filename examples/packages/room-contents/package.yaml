@@ -1,6 +1,6 @@
 format: 1
 package: room-contents
-version: 2.2.2
+version: 1.0.0
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT

@@ -1,6 +1,6 @@
 format: 1
 package: plus-help
-version: 1.3.0
+version: 1.0.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -10,7 +10,7 @@ requires_server: ">=0.1"
 
 depends:
   - package: common-functions
-    version: ">=1.2"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/common-functions/
