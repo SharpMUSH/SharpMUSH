@@ -9,6 +9,11 @@ Available functions:
 - fields() — labels and values, the values lined up
 - tree() and node() — items under their parents
 - figure() — a picture, with text art for a terminal
+- gauge() — a bar filled to a value
+- bullets() — a bulleted or numbered list
+- grid() — short items in as many columns as fit
+- datatable() — a table that gives way on a narrow screen
+- badge() — a coloured status tag
 
 The result is text, so `strlen()`, `mid()`, `edit()` and listen patterns all work on the box art. A layout cut or edited by another function is shown as the text it now is, in the portal too.
 
@@ -18,7 +23,7 @@ Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `
 
 **Readers.** A client that cannot show Unicode is sent ASCII borders; see [LAYOUT BORDERS]. A client that says it is a screen reader is sent the content alone, in reading order: no borders, fields as `Label: value` lines, tree levels as indentation.
 
-**Options.** box(), rule(), flex(), fields() and tree() take options as `key:value` pairs separated by spaces. Put a value in double quotes when it holds a space: `open:"<< "`. A value keeps its colour, so `top:[ansi(hb,=)]` draws a blue edge. An unknown key is an error naming it.
+**Options.** The layout functions take options as `key:value` pairs separated by spaces. Put a value in double quotes when it holds a space: `open:"<< "`. A value keeps its colour, so `top:[ansi(hb,=)]` draws a blue edge. An unknown key is an error naming it.
 
 ### Example: a finger sheet
 ```sharp
@@ -70,6 +75,11 @@ In the portal the picture shows in place of the cat, with the fields beside it.
 - [FIELDS()]
 - [TREE()]
 - [FIGURE()]
+- [GAUGE()]
+- [BULLETS()]
+- [GRID()]
+- [DATATABLE()]
+- [BADGE()]
 - [LAYOUT BORDERS]
 - [ALIGN()]
 :::
@@ -384,5 +394,162 @@ all night long.
 ::: seealso
 - [IMAGE()]
 - [MEDIA FUNCTIONS]
+- [LAYOUT FUNCTIONS]
+:::
+
+# GAUGE()
+
+`gauge(<value>, <maximum>[, <label>[, <options>]])`
+
+A bar filled to *<value>*'s share of *<maximum>*, with *<label>* before it and the figures after it. The bar takes whatever width the label and figures leave. A value below zero draws an empty bar and one above the maximum a full one. In the web portal it is a meter.
+
+Options (the last argument):
+- `width:<n>` — see [LAYOUT FUNCTIONS].
+- `bar:<n>` — the bar's own width, in cells.
+- `show:percent`, `show:value` or `show:none` — the figures after the bar: `50%` (the default), `6/12`, or nothing.
+- `filled:<text>` and `empty:<text>` — the pieces the bar is drawn with. `█` and `░` by default, `#` and `-` for a client without Unicode.
+- `open:<text>` and `close:<text>` — the ends. `[` and `]` by default; leave one empty for none.
+
+### Examples
+```sharp
+> think gauge(6,12,HP,width:20)
+HP [██████░░░░░] 50%
+> think gauge(3,4,,bar:8 show:value filled:= empty:-)
+[======--] 3/4
+> think gauge(30,100,XP,width:30 show:none filled:# empty:.)
+XP [########.................]
+```
+
+::: seealso
+- [DATATABLE()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# BULLETS()
+
+`bullets(<list>[, <delimiter>[, <options>]])`
+
+Each item of *<list>* on its own line after a bullet or a number. An item too long for its line wraps under its own text, not under the bullet; numbers line up on their right. In the web portal it is a bulleted or numbered list.
+
+Options (the last argument):
+- `width:<n>` — see [LAYOUT FUNCTIONS].
+- `style:<style>` — `bullet` (`•`, the default), `dash`, `star`, `number`, `alpha`, `roman` or `none`.
+- `start:<n>` — the first number, letter or numeral. 1 by default.
+- `marker:<text>` — your own marker in front of every item.
+
+### Examples
+```sharp
+> think bullets(Be kind to other players|No spam|Have fun,|,width:20)
+• Be kind to other
+  players
+• No spam
+• Have fun
+> think bullets(Mannaz Raya Tomas,,style:number start:9)
+ 9. Mannaz
+10. Raya
+11. Tomas
+> think bullets(North South,,style:roman)
+ i. North
+ii. South
+> think bullets(a b,,marker:->)
+-> a
+-> b
+```
+
+::: seealso
+- [GRID()]
+- [TREE()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# GRID()
+
+`grid(<list>[, <delimiter>[, <options>]])`
+
+Short items, such as names, in as many columns as fit the width, each column as wide as the longest item. The items run down each column, the way `ls` lists files, or across each row with `across`. In the web portal the columns follow the width of the page.
+
+Options (the last argument):
+- `width:<n>` — see [LAYOUT FUNCTIONS].
+- `gap:<n>` — spaces between the columns. Two by default.
+- `across` — fill each row before the next.
+
+### Examples
+```sharp
+> think grid(Mannaz Raya Tomas Ilse Quill Ottoline Bram,,width:32)
+Mannaz    Ilse      Bram
+Raya      Quill
+Tomas     Ottoline
+> think grid(Mannaz Raya Tomas Ilse Quill Ottoline Bram,,width:32 across)
+Mannaz    Raya      Tomas
+Ilse      Quill     Ottoline
+Bram
+```
+
+::: seealso
+- [BULLETS()]
+- [DATATABLE()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# DATATABLE()
+
+`datatable(<options>, <headings>[, <row1>, ... , <rowN>])`
+
+Rows under headings, the headings and each row's cells split by `|`. Each column is as wide as its widest cell. Begin a heading with `<`, `-` or `>`, as in [ALIGN()], to place its column's text left, centred or right.
+
+When the table is too wide, the columns that wrap give way first, widest first, down to their least widths. If it is still too wide, the least important column is left out, then the next. A column that does not wrap is shown whole or not at all. When not even one column fits, each row is shown as labelled values instead. In the web portal it is a table; on a narrow screen it hides the columns of priority 2 or more, the least important first.
+
+Options (the first argument, which may be empty). The lists are split like the cells, and a list may stop short or leave a column's place empty:
+- `width:<n>` — see [LAYOUT FUNCTIONS].
+- `priority:<list>` — how important each column is: 1 is the most important. Every column is 1 by default, and among equals the rightmost is left out first.
+- `min:<list>` and `max:<list>` — each column's least and greatest width. A cell wider than its column's greatest width wraps.
+- `nowrap:<list>` — the numbers of the columns that never wrap.
+- `gap:<n>` — spaces between the columns. Two by default.
+- `sep:<text>` — drawn between the columns instead of spaces.
+- `rule:<text>` — the line under the headings. `-` by default; `rule:` for none.
+- `delim:<text>` — what splits the headings, cells and lists. `|` by default.
+
+### Examples
+```sharp
+> think datatable(width:30 nowrap:2 min:6||8,Name|>Idle|Doing,Mannaz|0s|Hooooo?,Raya|5m|Writing a scene in the garden)
+Name    Idle  Doing
+------------------------------
+Mannaz    0s  Hooooo?
+Raya      5m  Writing a scene
+              in the garden
+> think datatable(width:18 nowrap:2 min:6||8,Name|>Idle|Doing,Mannaz|0s|Hooooo?,Raya|5m|Writing a scene in the garden)
+Name    Idle
+------------
+Mannaz    0s
+Raya      5m
+> think datatable(width:18 priority:1|3|2 nowrap:2 min:6||8,Name|>Idle|Doing,Mannaz|0s|Hooooo?,Raya|5m|Writing a scene in the garden)
+Name    Doing
+------------------
+Mannaz  Hooooo?
+Raya    Writing a
+        scene in
+        the garden
+```
+
+::: seealso
+- [GRID()]
+- [FIELDS()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# BADGE()
+
+`badge(<text>[, <kind>])`
+
+*<text>* in brackets, coloured for its kind: `ok` (green), `warn` (yellow), `error` (red), `info` (cyan, the default) or `muted` (grey). For a status beside a name or in a table cell.
+
+### Example
+```sharp
+> think Mannaz [badge(Online,ok)] Raya [badge(Away,muted)]
+Mannaz [Online] Raya [Away]
+```
+
+::: seealso
+- [ANSI()]
 - [LAYOUT FUNCTIONS]
 :::

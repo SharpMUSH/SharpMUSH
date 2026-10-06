@@ -162,7 +162,7 @@ public class LayoutFunctionTests
 	/// <summary>Every <c>&gt; think</c> example in the layout help, with the lines under it as its output.</summary>
 	public static IEnumerable<Func<(string Code, string Expected)>> HelpExamples()
 	{
-		var lines = File.ReadAllLines(Path.Combine(TestPaths.Helpfiles.FullName, "layout-functions.md"));
+		var lines = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"));
 		for (var i = 0; i < lines.Length; i++)
 		{
 			if (!lines[i].StartsWith("> think ", StringComparison.Ordinal)) continue;
@@ -191,6 +191,16 @@ public class LayoutFunctionTests
 	[Arguments("fields(cols:0,Sex,Male)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("tree(guide:wavy,a)", "#-1 UNKNOWN GUIDE STYLE")]
 	[Arguments("tree(colour:red,a)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
+	[Arguments("gauge(a,12)", ErrorMessages.Returns.Numbers)]
+	[Arguments("gauge(1,0)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("gauge(1,2,,show:all)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("bullets(a b,,style:wavy)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("bullets(a b,,start:0)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("grid(a b,,gap:99)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("datatable(nowrap:4,A|B,1|2)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("datatable(priority:1|2|3,A|B,1|2)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("datatable(min:x,A|B,1|2)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	public async Task ABadArgumentIsRefused(string code, string error)
 		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(error);
 }

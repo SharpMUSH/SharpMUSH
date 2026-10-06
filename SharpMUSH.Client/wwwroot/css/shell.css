@@ -742,7 +742,7 @@ pre.ms-preformatted {
     white-space: pre-wrap;
 }
 
-/* box(), rule(), flex(), item(), figure(), fields() and tree() arrive as <div class="ms-layout">. These rules mirror
+/* box(), rule(), flex(), item(), figure(), fields(), tree(), gauge(), bullets(), grid() and datatable() arrive as <div class="ms-layout">. These rules mirror
    MarkupString.Html's LayoutCss.Fixed verbatim (pinned by MarkupCssCoverageTests). */
 .ms-layout { display: block; max-width: 100%; white-space: normal; }
 .ms-text { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -786,6 +786,22 @@ pre.ms-preformatted {
 .ms-tree.ms-guide-heavy ul > li, .ms-tree.ms-guide-heavy ul > li::before { border-width: 2px; }
 .ms-tree.ms-guide-double ul > li, .ms-tree.ms-guide-double ul > li::before { border-left-style: double; border-left-width: 3px; }
 .ms-tree.ms-guide-none ul > li, .ms-tree.ms-guide-none ul > li::before { border-color: transparent; }
+.ms-gauge { display: flex; align-items: center; gap: 1ch; }
+.ms-gauge > meter { flex: 1 1 8ch; min-width: 4ch; }
+.ms-bullets { margin: 0; padding-left: 3ch; }
+.ms-bullet-dash { list-style-type: "- "; }
+.ms-bullet-star { list-style-type: "* "; }
+.ms-bullet-none, .ms-bullet-custom { list-style: none; }
+.ms-bullet-custom > li > .ms-marker { display: inline-block; margin-left: -2ch; min-width: 2ch; }
+.ms-grid { list-style: none; margin: 0; padding: 0; display: grid; }
+.ms-grid.ms-down { display: block; }
+.ms-grid > li { break-inside: avoid; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ms-table-wrap { max-width: 100%; overflow-x: auto; }
+.ms-table { border-collapse: collapse; }
+.ms-table th, .ms-table td { padding: 0 1ch; vertical-align: top; text-align: left; }
+.ms-table th { border-bottom: 1px solid currentColor; }
+@media (max-width: 48em) { .ms-table .ms-p3 { display: none; } }
+@media (max-width: 32em) { .ms-table .ms-p2 { display: none; } }
 
 /* Command links (xch_cmd) — clickable, run a MUSH command. Distinct from URL links.
    The base rule mirrors HtmlCss.Fixed's .ms-cmd-link verbatim (pinned by
