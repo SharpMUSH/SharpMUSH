@@ -22,6 +22,7 @@ public record SharpMUSHOptions
 	public required RestrictionOptions Restriction { get; init; }
 	public required BannedNamesOptions BannedNames { get; init; }
 	public required SitelockRulesOptions SitelockRules { get; init; }
+	public required MsspOptions Mssp { get; init; }
 	public required WarningOptions Warning { get; init; }
 	public required TextFileOptions TextFile { get; init; }
 	public required WikiOptions Wiki { get; init; }
@@ -50,7 +51,7 @@ public record SharpMUSHOptions
 	/// <para>
 	/// A method rather than a property because the configuration source generators enumerate this
 	/// record's properties to find the option categories, and a static one would be read as a
-	/// twenty-fourth category.
+	/// twenty-fifth category.
 	/// </para>
 	/// </remarks>
 	public static SharpMUSHOptions Default() => new()
@@ -306,6 +307,13 @@ public record SharpMUSHOptions
 				{ "*.example.com", ["!connect", "!create", "!guest"] },
 				{ "192.168.1.*", ["register"] },
 				{ "trusted.domain.org", ["connect", "create", "guest"] }
+			}
+		),
+		Mssp = new MsspOptions(
+			Variables: new Dictionary<string, string[]>
+			{
+				// The SharpMUSH test server, so a crawler that finds a new game also finds it.
+				{ "REFERRAL", ["telnet.sharpmush.com 4201"] }
 			}
 		),
 		Warning = new WarningOptions(

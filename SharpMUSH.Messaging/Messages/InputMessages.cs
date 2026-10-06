@@ -16,9 +16,10 @@ public record GMCPSignalMessage(long Handle, string Package, string Info) : IHan
 public record MSDPUpdateMessage(long Handle, Dictionary<string, string> Variables) : IHandleMessage;
 
 /// <summary>
-/// Message sent from ConnectionServer to MainProcess for MSSP updates
+/// Message sent from ConnectionServer to MainProcess when it starts, asking for the current
+/// <see cref="MSSPReportMessage"/>.
 /// </summary>
-public record MSSPUpdateMessage(long Handle, Dictionary<string, string> Configuration) : IHandleMessage;
+public record MSSPReportRequestMessage(DateTimeOffset Timestamp);
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess for NAWS (window size) updates

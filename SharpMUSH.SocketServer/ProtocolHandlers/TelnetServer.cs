@@ -28,7 +28,7 @@ public class TelnetServer : ConnectionHandler
 	private readonly IDescriptorGeneratorService _descriptorGenerator;
 	private readonly ITelnetInterpreterFactory _telnetFactory;
 	private readonly ConnectionServerOptions _options;
-	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
+	private readonly MsspReportHolder _mssp;
 
 	/// <summary>
 	/// How much a client may type before its connection is registered. Registration normally takes
@@ -43,7 +43,8 @@ public class TelnetServer : ConnectionHandler
 		IMessageBus publishEndpoint,
 		IDescriptorGeneratorService descriptorGenerator,
 		ITelnetInterpreterFactory telnetFactory,
-		ConnectionServerOptions options)
+		ConnectionServerOptions options,
+		MsspReportHolder mssp)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
@@ -52,6 +53,7 @@ public class TelnetServer : ConnectionHandler
 		_descriptorGenerator = descriptorGenerator;
 		_telnetFactory = telnetFactory;
 		_options = options;
+		_mssp = mssp;
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -235,13 +237,9 @@ public class TelnetServer : ConnectionHandler
 				await PublishAfterRegistrationAsync(
 					() => _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct));
 			})
-			.AddPlugin<MSSPProtocol>().WithMSSPConfig(() => _msspConfig).OnMSSP(async _ =>
-			{
-				await AnnounceTelnetIfNegotiatedAsync();
-				// Not Yet Implemented. Need to turn config into a dictionary
-				await PublishAfterRegistrationAsync(
-					() => _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct));
-			})
+			.AddPlugin<MSSPProtocol>().WithMSSPConfig(() => _mssp.Current)
+			// A client reporting MSSP to a server means nothing here; the callback is only a sampling point.
+			.OnMSSP(async _ => await AnnounceTelnetIfNegotiatedAsync())
 			.AddPlugin<NAWSProtocol>().OnNAWS(async (newHeight, newWidth) =>
 			{
 				await AnnounceTelnetIfNegotiatedAsync();

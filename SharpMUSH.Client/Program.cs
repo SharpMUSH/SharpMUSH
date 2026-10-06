@@ -57,6 +57,7 @@ builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddSingleton<SetupWizardService>();
 builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
+builder.Services.AddSingleton<MsspService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<AdminGuestsService>();

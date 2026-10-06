@@ -69,7 +69,6 @@ public class ConfigurationDefaultsTests
 		["log_wipe_passwd"] = "Penn's @logwipe password; SharpMUSH owns no log sink to wipe.",
 		["log_max_size"] = "Penn rotates its own log files.",
 		["log_size_policy"] = "Penn rotates its own log files.",
-		["mssp"] = "Free-form MSSP fields; SharpMUSH answers MSSP from the game itself.",
 		["include"] = "A directive, not an option: the file it names is read in its place."
 	};
 
