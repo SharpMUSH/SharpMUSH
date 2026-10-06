@@ -177,7 +177,13 @@ character password needed for linked characters.
 1. Phase 1: Email + password (ASP.NET Identity)
 2. Phase 2: Discord OAuth ("Link Discord" in account settings)
 3. Phase 3: Google OAuth (if demand exists)
-4. Future: Passkeys/WebAuthn as opt-in
+4. Passkeys/WebAuthn as opt-in — built. An account adds passkeys from `/account` (its password
+   confirms it) and signs in with one from `/login`; the password stays. Every passkey is a
+   discoverable credential with user verification required, so sign-in asks for no name.
+   Credentials live with the account (`IAccountStore` passkey methods); ceremonies are
+   `PasskeyService` over Fido2NetLib. The relying party is the portal's own host, or
+   `Passkeys:RelyingPartyId` for a parent domain; a portal served from another origin must be in
+   `Passkeys:Origins` (else `Cors:AllowedOrigins`). Telnet login is unchanged.
 
 ---
 

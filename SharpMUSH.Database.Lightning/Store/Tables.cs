@@ -56,6 +56,10 @@ public static class Tables
 	public static readonly TableDef AccountPermission = TableDef.Node("acct.perm");
 	/// <summary>Account key → its ban (reason, who, when, until when); absent when the account is not banned.</summary>
 	public static readonly TableDef AccountBan = TableDef.Node("acct.ban");
+	/// <summary>SHA-256 of a passkey's credential id → the passkey; see <c>LightningDatabase.Passkeys.cs</c>.</summary>
+	public static readonly TableDef AccountPasskey = TableDef.Node("acct.passkey");
+	/// <summary>Account key → the credential-id hashes of its passkeys.</summary>
+	public static readonly TableDef AccountPasskeyByAccount = TableDef.Index("acct.passkey.acct", duplicates: true);
 	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
 	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
 	public static readonly TableDef Session = TableDef.Node("session");
