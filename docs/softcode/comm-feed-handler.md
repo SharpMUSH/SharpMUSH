@@ -76,9 +76,10 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
 | ``CHANNEL`WHO`` | channel name | member objid | member name | `on` or `off` | viewer objids | cause | | |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
-  connect or disconnect line, sent only on a channel with the `announce`
-  privilege) for a channel, and `say`, `pose` or `semipose`
-  for a page.
+  connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
+  for a page. The bundled handler sends no `comm.message` for a presence line,
+  and the portal's recall endpoint leaves them out: the portal shows who is on
+  a channel as its member list instead.
 - The name and message are **plain text**, and for a channel, what the
   channel's mogrifier (`MOGRIFY`*`) made of them. A member's own
   `@chatformat` changes only their terminal line.
@@ -106,7 +107,7 @@ comments every attribute; every helper is under ``FN`COMM`` so it cannot
 collide with `room-contents`' ``FN`*``.
 
 ```mushcode
-&CHANNEL`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7)))
+&CHANNEL`MESSAGE #9=think null(if(strmatch(%2,presence),,oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7))))
 &PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1,%6)))
 &PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))
 &CHANNEL`WHO #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%4),comm.who,u(me/FN`COMM`WHO,%0,%1,%2,%3)))

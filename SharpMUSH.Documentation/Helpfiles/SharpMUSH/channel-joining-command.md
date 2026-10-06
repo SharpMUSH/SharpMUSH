@@ -46,7 +46,7 @@
 
 `@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *\<prefix\>* if one is given. Channels you may decompile also show their locks.
 
-`@channel/who` lists the members of the given channel: connected players and things. Members hiding on the channel with `@channel/hide` are omitted unless you have the `Who` power. A member's own hidden or gagging state is noted beside their name. A channel does not announce its members connecting and disconnecting unless it has the `announce` privilege ([@CHANNEL PRIVS]), so this is how to see who is on it; the web portal's channel view keeps the same list beside the conversation.
+`@channel/who` lists the members of the given channel: connected players and things. Members hiding on the channel with `@channel/hide` are omitted unless you have the `Who` power. A member's own hidden or gagging state is noted beside their name. The web portal's channel view keeps the same list beside the conversation, in place of connect and disconnect lines, which it does not show.
 
 `@channel/on` and `@channel/off` add or remove you from the given *\<channel\>*. You only hear messages for channels you're on, and most channels require you to join them before you can speak on them. /join and /leave are aliases for /on and /off.
 

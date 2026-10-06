@@ -19,8 +19,7 @@ public static class SharpEvents
 	/// <summary>
 	/// Fired once per channel line, after it has been delivered, naming exactly the members who were
 	/// sent it (a gagged member, one whose <c>@chatformat</c> silenced the line, one the speaker may not
-	/// be heard by, and a mute member's presence line are all left out). A presence line is sent only on a
-	/// channel with the <c>Announce</c> privilege. Args: (channel name, speaker
+	/// be heard by, and a mute member's presence line are all left out). Args: (channel name, speaker
 	/// objid or empty, style, speaker name, message, recipient objids, unix-ms, line id). The line id is
 	/// the one the recall buffer holds the line under, and rises with time. The style is
 	/// <c>say</c>, <c>pose</c>, <c>semipose</c>, <c>emit</c> or <c>presence</c>; the name and message are
