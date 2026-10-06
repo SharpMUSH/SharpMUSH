@@ -8,18 +8,26 @@ using Antlr4.Runtime.Tree;
 using ContextLexer = SharpMUSH.Tools.Grammar.SharpMUSHLexer;
 using ContextParser = SharpMUSH.Tools.Grammar.SharpMUSHContextParser;
 
-// dotnet run --project tools/grammar/compare -- [--fuzz N] [--show N] [--bench] [--scale TEXT] FILE...
+// dotnet run --project tools/grammar/compare -- [--fuzz N] [--show N] FILE...      compare trees
+//   --bench STRATEGY FILE...           time parsing FILEs; STRATEGY is stock, merged, resolved, context or combined
+//   --slow STRATEGY CALLS [--malformed] time the #1629 expression
+//   --scale TEXT                        time TEXT repeated
 // Each FILE holds one input per line.
 var files = new List<string>();
 int fuzz = 0, show = 20;
-string? mode = null, scale = null;
+string? mode = null, scale = null, strategy = null;
+int calls = 0;
+var broken = false;
 for (var i = 0; i < args.Length; i++)
 {
 	switch (args[i])
 	{
 		case "--fuzz": fuzz = int.Parse(args[++i]); break;
 		case "--show": show = int.Parse(args[++i]); break;
-		case "--bench": mode = "bench"; break;
+		case "--bench": mode = "bench"; strategy = args[++i]; break;
+		case "--slow": mode = "slow"; strategy = args[++i]; calls = int.Parse(args[++i]); break;
+		case "--malformed": broken = true; break;
+		case "--errors": mode = "errors"; strategy = args[++i]; break;
 		case "--scale": mode = "scale"; scale = args[++i]; break;
 		default: files.Add(args[i]); break;
 	}
@@ -37,7 +45,9 @@ string[] entries = ["startPlainString", "startCommandString", "startSingleComman
 
 switch (mode)
 {
-	case "bench": Bench(); return;
+	case "bench": Bench(strategy!); return;
+	case "slow": Slow(strategy!, calls, broken); return;
+	case "errors": CompareErrors(strategy!); return;
 	case "scale": Scale(scale!); return;
 }
 
@@ -186,42 +196,173 @@ static string Write(IParseTree tree, string[] ruleNames)
 	}
 }
 
-// Parses every input as a command list, four times over, with each grammar's SLL pass.
-void Bench()
+// Parses every input as a command list the way each strategy would in the product: an SLL pass, and
+// an LL pass for the inputs it rejects. Run one strategy per process so the first round is cold.
+void Bench(string strategy)
 {
 	var streams = inputs.Select(Lex).ToArray();
-	for (var round = 1; round <= 4; round++)
+	for (var round = 1; round <= 15; round++)
 	{
 		foreach (var groups in new[] { false, true })
 		{
+			var rejected = 0;
 			var clock = Stopwatch.StartNew();
 			foreach (var tokens in streams)
 			{
-				tokens.Seek(0);
-				var parser = new SharpMUSHParser(tokens);
-				parser.ResolvePredicatesAtDecisionStart();
-				parser.parenGroups = groups;
-				Prepare(parser, sll: true);
-				try { parser.startCommandString(); } catch (ParseCanceledException) { }
-			}
-
-			var current = clock.Elapsed.TotalMilliseconds;
-			clock.Restart();
-			foreach (var tokens in streams)
-			{
-				tokens.Seek(0);
-				var parser = new ContextParser(tokens);
-				Prepare(parser, sll: true);
-				try
+				if (!Parse(strategy, tokens, "startCommandString", groups))
 				{
-					if (groups) { parser.startCommandString__G(); } else { parser.startCommandString(); }
+					rejected++;
 				}
-				catch (ParseCanceledException) { }
 			}
 
-			Console.WriteLine($"round {round}, paren_groups={groups}: current {current:F0}ms, context {clock.Elapsed.TotalMilliseconds:F0}ms for {streams.Length} inputs");
+			Console.WriteLine($"{strategy} round {round} paren_groups={groups}: {clock.Elapsed.TotalMilliseconds:F0}ms for {streams.Length} inputs ({rejected} rejected)");
 		}
 	}
+}
+
+// The #1629 expression with CALLS nested calls in a later argument, and with its last ')' missing.
+void Slow(string strategy, int calls, bool broken)
+{
+	var text = $"if(0,A,[strcat({string.Join(",", Enumerable.Repeat("strlen(lcstr(ab))", calls))})]" + (broken ? "" : ")");
+	var tokens = Lex(text);
+	// Warm up on FILEs, so the first round times prediction rather than JIT.
+	foreach (var input in inputs)
+	{
+		Parse(strategy, Lex(input), "startPlainString", false);
+	}
+
+	for (var round = 1; round <= 3; round++)
+	{
+		var clock = Stopwatch.StartNew();
+		var parsed = Parse(strategy, tokens, "startPlainString", false);
+		Console.WriteLine($"{strategy} calls={calls} {(broken ? "malformed" : "valid")} round {round}: {clock.Elapsed.TotalMilliseconds:F1}ms (parsed={parsed})");
+	}
+}
+
+// How often STRATEGY reports different syntax errors from the merged fix, over every input, entry
+// point and paren_groups setting both reject.
+void CompareErrors(string other)
+{
+	int rejected = 0, differ = 0, listed = 0;
+	foreach (var text in inputs)
+	{
+		foreach (var entry in entries)
+		{
+			foreach (var groups in new[] { false, true })
+			{
+				var merged = Errors("merged", text, entry, groups);
+				var errors = Errors(other, text, entry, groups);
+				if (merged.Count == 0 || errors.Count == 0)
+				{
+					continue;
+				}
+
+				rejected++;
+				if (!merged.SequenceEqual(errors))
+				{
+					differ++;
+					if (listed++ < show)
+					{
+						Console.WriteLine($"{entry} paren_groups={groups}: {text}\n  merged: {string.Join("; ", merged)}\n  {other}: {string.Join("; ", errors)}");
+					}
+				}
+			}
+		}
+	}
+
+	Console.WriteLine($"{other}: {differ} of {rejected} rejected parses report different errors from merged");
+}
+
+// The errors the LL pass reports, which is where the product's errors come from.
+static List<string> Errors(string strategy, string text, string entry, bool groups)
+{
+	var tokens = Lex(text);
+	if (Parse(strategy, tokens, entry, groups))
+	{
+		return [];
+	}
+
+	var (context, resolved) = strategy switch
+	{
+		"stock" or "merged" or "combined" => (false, false),
+		"resolved" => (false, true),
+		"context" => (true, false),
+		_ => throw new ArgumentException($"unknown strategy {strategy}"),
+	};
+	tokens.Seek(0);
+	Parser parser;
+	if (context)
+	{
+		parser = new ContextParser(tokens);
+		entry = groups ? entry + "__G" : entry;
+	}
+	else
+	{
+		var current = new SharpMUSHParser(tokens);
+		if (resolved)
+		{
+			current.ResolvePredicatesAtDecisionStart();
+		}
+
+		current.parenGroups = groups;
+		parser = current;
+	}
+
+	var errors = Prepare(parser, sll: false);
+	parser.GetType().GetMethod(entry, Type.EmptyTypes)!.Invoke(parser, null);
+	return errors;
+}
+
+// One parse as the product would run it. stock: SharpMUSHParser.g4 before #1632. merged: #1632, predicates
+// resolved on the SLL pass only. resolved: resolved on both passes. context: the generated grammar on
+// both passes. combined: the generated grammar's SLL pass, then the current grammar's stock LL pass,
+// whose error messages and recovery are today's.
+static bool Parse(string strategy, CommonTokenStream tokens, string entry, bool groups)
+{
+	var (sllContext, sllResolved, llContext, llResolved) = strategy switch
+	{
+		"stock" => (false, false, false, false),
+		"merged" => (false, true, false, false),
+		"resolved" => (false, true, false, true),
+		"context" => (true, false, true, false),
+		"combined" => (true, false, false, false),
+		_ => throw new ArgumentException($"unknown strategy {strategy}"),
+	};
+	return Pass(tokens, entry, groups, sll: true, sllContext, sllResolved) || Pass(tokens, entry, groups, sll: false, llContext, llResolved);
+}
+
+static bool Pass(CommonTokenStream tokens, string entry, bool groups, bool sll, bool context, bool resolved)
+{
+	tokens.Seek(0);
+	Parser parser;
+	if (context)
+	{
+		parser = new ContextParser(tokens);
+		entry = groups ? entry + "__G" : entry;
+	}
+	else
+	{
+		var current = new SharpMUSHParser(tokens);
+		if (resolved)
+		{
+			current.ResolvePredicatesAtDecisionStart();
+		}
+
+		current.parenGroups = groups;
+		parser = current;
+	}
+
+	var errors = Prepare(parser, sll);
+	try
+	{
+		parser.GetType().GetMethod(entry, Type.EmptyTypes)!.Invoke(parser, null);
+	}
+	catch (TargetInvocationException e) when (e.InnerException is ParseCanceledException)
+	{
+		return false;
+	}
+
+	return errors.Count == 0;
 }
 
 // Times TEXT repeated n times, first run and second, under both grammars with paren_groups on and off.
