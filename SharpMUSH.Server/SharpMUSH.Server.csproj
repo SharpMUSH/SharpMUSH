@@ -169,6 +169,14 @@
       <Link>BundledPackages\wiki-reader.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.wiki-reader.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\jobs\package.yaml">
+      <Link>BundledPackages\jobs.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.jobs.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\jobs-app\package.yaml">
+      <Link>BundledPackages\jobs-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.jobs-app.package.yaml</LogicalName>
+    </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the
          file names carry hyphens. -->

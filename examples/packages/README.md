@@ -27,6 +27,7 @@ which games can add as a remote in the admin panel.
 | [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
 | [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
 | [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
+| [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
 
 ## The manifest: `package.yaml`
 

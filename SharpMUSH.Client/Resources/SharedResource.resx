@@ -4859,6 +4859,18 @@
   <data name="AdmSetupPkgPlusHelpDesc" xml:space="preserve">
     <value>The game's own help, gathering the topics installed packages carry and keeping the ones you write.</value>
   </data>
+  <data name="AdmSetupPkgJobsTitle" xml:space="preserve">
+    <value>Jobs</value>
+  </data>
+  <data name="AdmSetupPkgJobsDesc" xml:space="preserve">
+    <value>A request queue for players and staff: +request and +job, the commands AnomalyJobs players know, with buckets worked through roles, due dates, and hooks on each bucket. Needs the HTTP handler.</value>
+  </data>
+  <data name="AdmSetupPkgJobsAppTitle" xml:space="preserve">
+    <value>Jobs in the portal</value>
+  </data>
+  <data name="AdmSetupPkgJobsAppDesc" xml:space="preserve">
+    <value>A Jobs page in the portal where players file and follow requests and staff answer, claim and close them.</value>
+  </data>
   <data name="AdmImportConfigRecommended" xml:space="preserve">
     <value>Configuration (mush.cnf, recommended)</value>
   </data>
