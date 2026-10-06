@@ -9,9 +9,8 @@
     @if (Categories.Count > 0)
     {
         <div class="wcp-chips">
-            @foreach (var category in Categories)
+            @foreach (var c in Categories)
             {
-                var c = category;
                 <span class="wcp-chip">
                     <MudIcon Icon="@Icons.Material.Outlined.Label" Size="Size.Small" Class="wcp-chip-icon" />
                     @WikiCategories.Display(c, Names)
@@ -37,9 +36,8 @@
                     @string.Format(Loc["WikiCategoryNew"], _entry.Trim())
                 </button>
             }
-            @foreach (var known in Suggestions)
+            @foreach (var k in Suggestions)
             {
-                var k = known;
                 <button type="button" class="wcp-option" @onclick="@(() => AddAsync(k.HasPage ? k.Key : k.Name))">
                     @k.Name
                     <span class="wcp-option-count">@k.Pages</span>
