@@ -132,7 +132,7 @@ public class MushBasicAuthenticationHandlerTests
 		// Unknown character must fail — but only after a verification runs, so the response
 		// latency doesn't reveal that the character does not exist.
 		await Assert.That(result.Succeeded).IsFalse();
-		passwordService.Received().PasswordIsValid(Arg.Any<string>(), "guessed-password", Arg.Any<string>());
+		passwordService.Received().PasswordIsValid("guessed-password", Arg.Any<string>());
 	}
 
 	[Test]
@@ -142,7 +142,7 @@ public class MushBasicAuthenticationHandlerTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.CreateStream(Arg.Any<GetPlayerQuery>()).Returns(new[] { player }.ToAsyncEnumerable());
 		var passwordService = Substitute.For<IPasswordService>();
-		passwordService.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		passwordService.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 		var accountService = Substitute.For<IAccountService>();
 		accountService.GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
 			.Returns(new SharpAccount { Id = "node_accounts/7", Username = "owner", PasswordHash = "h" });
@@ -162,7 +162,7 @@ public class MushBasicAuthenticationHandlerTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.CreateStream(Arg.Any<GetPlayerQuery>()).Returns(new[] { player }.ToAsyncEnumerable());
 		var passwordService = Substitute.For<IPasswordService>();
-		passwordService.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		passwordService.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 		var accountService = Substitute.For<IAccountService>();
 		accountService.GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
 			.Returns((SharpAccount?)null);

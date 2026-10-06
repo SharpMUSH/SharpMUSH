@@ -113,6 +113,8 @@ public class SoftcodeEditorConsoleTests : BunitContext
 
 		cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).Click();
 		cut.WaitForElement(".sc-tree-toggle", TimeSpan.FromSeconds(5)).Click();
+		// The attribute list loads after the toggle opens, so wait for it rather than reading it at once.
+		cut.WaitForAssertion(() => cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")), TimeSpan.FromSeconds(5));
 		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")).Click();
 		cut.WaitForElement(".sc-tab", TimeSpan.FromSeconds(5));
 		return cut;

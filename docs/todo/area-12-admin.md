@@ -28,7 +28,10 @@
 - [ ] Form-based config editor (sections: General, Limits, Features)
 - [ ] Validation on form fields (type, range)
 - [ ] Save → write to config store → hot-reload where possible
-- [ ] "Requires restart" indicator on fields that can't hot-reload
+- [x] Inert listener options marked "Not used", naming what sets them (no option needs a restart, so no restart indicator; #1565)
+
+### Server
+- [x] Server page (`/admin/server`, `server.admin`): readiness, uptime, version, players, queue, bus, storage, last backup; refreshed every 10 s
 
 ### Layout Editor
 - [ ] Handled by Area 13 (widget system) — just the route lives here
@@ -36,7 +39,7 @@
 ## Testing
 - [ ] Royalty can see players/moderation, cannot see config
 - [ ] Wizard can see everything except server settings
-- [ ] God can see server settings
+- [x] Only `server.admin` holders are offered the server page
 - [x] Audit log: every action creates an entry
 - [ ] Config save: values persist, hot-reload works for supported fields
-- [ ] Ban: banned account cannot log in
+- [x] Ban: banned account cannot log in

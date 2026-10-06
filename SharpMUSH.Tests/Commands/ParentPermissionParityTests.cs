@@ -41,16 +41,16 @@ public class ParentPermissionParityTests
 
 	/// <summary>
 	/// A connected mortal alone in a fresh God-owned room, so room-wide messages from other tests
-	/// (connects, disconnects) never land among the ones a test reads.
+	/// (connects, disconnects) never land among the ones a test reads. It is created there: a mortal
+	/// that passed through the default home first could still be handed a disconnect announced there.
 	/// </summary>
 	private async Task<TestIsolationHelpers.TestPlayer> Mortal(string prefix)
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		await God($"@teleport/silent {mortal.DbRef}={dig.Message!.ToPlainText().Trim()}");
-		return mortal;
+		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
 	}
 
 	/// <summary>A God-owned thing, optionally LINK_OK and with a Parent lock.</summary>

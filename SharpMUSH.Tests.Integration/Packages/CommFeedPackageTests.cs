@@ -8,6 +8,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
@@ -451,47 +452,13 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// On a channel with the <c>announce</c> privilege, a connect line from a member hidden on the channel
-	/// goes only to See_All members (PennMUSH's CB_SEEALL), and a connect line never goes to a member who
-	/// muted the channel (CB_CHECKQUIET). The payload follows the terminal: the mortal and the muted member
-	/// are sent nothing.
+	/// Connecting puts the member on their channels' member lists in the portal, in place of the connect line
+	/// (#1579): the line still goes to the channel and its recall buffer, as on a terminal, but no
+	/// <c>comm.message</c> carries it. The list follows <c>@channel/who</c>: a member hiding on the channel
+	/// comes on only for a See_All member, and nobody else hears of it.
 	/// </summary>
 	[Test]
-	public async Task HiddenMembersConnectLine_ReachesOnlySeeAllMembers_AndNotAMutedOne()
-	{
-		var hider = await ViewerAsync("CommPresenceHider");
-		var mortal = await ViewerAsync("CommPresenceMortal");
-		var seer = await ViewerAsync("CommPresenceSeer");
-		var muted = await ViewerAsync("CommPresenceMuted");
-		await God($"@power {seer.Number}=See_All");
-		await God($"@power {muted.Number}=See_All");
-		var channel = await ChannelAsync("CommPresence", "player open hide_ok announce", hider, mortal, seer, muted);
-		await Run(hider, $"@channel/hide {channel}=yes");
-		await Run(muted, $"@channel/mute {channel}=yes");
-		var socket = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "websocket");
-
-		await using var watch = await OobWatch.OpenAsync(factory);
-		var sent = await watch.SentWhile(
-			() => factory.CommandParser.CommandParse(socket, ConnectionService,
-				MarkupText.Plain($"connect {hider.Name} TestPassword123")).AsTask(),
-			Run, mortal, seer, muted);
-
-		await Assert.That(Frames(sent[mortal.Handle], "comm.message")).IsEmpty()
-			.Because("a mortal member does not see a hidden member's connect line");
-		await Assert.That(Frames(sent[muted.Handle], "comm.message")).IsEmpty()
-			.Because("a member who muted the channel is not sent connect lines, See_All or not");
-		var line = Frames(sent[seer.Handle], "comm.message").Single();
-		await Assert.That(line["style"]!.GetValue<string>()).IsEqualTo("presence");
-		await Assert.That(line["channel"]!.GetValue<string>()).IsEqualTo(channel);
-	}
-
-	/// <summary>
-	/// A channel is quiet by default (#1579): connecting sends its members no line, and their member list
-	/// is told instead. The list follows <c>@channel/who</c>: a member hiding on the channel comes on only for
-	/// a See_All member, and nobody else hears of it.
-	/// </summary>
-	[Test]
-	public async Task Connecting_SendsNoLine_OnAQuietChannel_AndPutsTheMemberOnItsList()
+	public async Task Connecting_SendsNoLineToThePortal_AndPutsTheMemberOnItsList()
 	{
 		var comer = await ViewerAsync("CommWhoComer");
 		var hider = await ViewerAsync("CommWhoHider");
@@ -513,8 +480,13 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 			},
 			Run, mortal, seer);
 
+		var buffered = await Mediator
+			.CreateStream(new GetChannelMessagesQuery((await Mediator.Send(new GetChannelQuery(channel)))!.Id!, int.MaxValue))
+			.ToListAsync();
+		await Assert.That(buffered.Count(line => line.Style == "presence")).IsEqualTo(2)
+			.Because("the channel is not quiet, so both connect lines went out");
 		await Assert.That(Frames(sent[mortal.Handle], "comm.message")).IsEmpty()
-			.Because("a channel without announce carries no connect line");
+			.Because("the portal is not sent connect lines");
 		await Assert.That(Frames(sent[seer.Handle], "comm.message")).IsEmpty();
 
 		var comerObjid = await Objid(comer);

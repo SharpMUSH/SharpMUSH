@@ -108,6 +108,13 @@ public class PropertyMetadata
 	/// </summary>
 	[JsonPropertyName("path")]
 	public string Path { get; set; } = string.Empty;
+
+	/// <summary>
+	/// What decides this instead, when SharpMUSH reads the option and acts on nothing it says; null for
+	/// an option that takes effect.
+	/// </summary>
+	[JsonPropertyName("unused")]
+	public string? Unused { get; set; }
 }
 
 /// <summary>

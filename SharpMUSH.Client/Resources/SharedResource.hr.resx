@@ -327,14 +327,6 @@
     <value>Status poslužitelja</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>Konfiguracija poslužitelja i mjerni podaci uživo uskoro dolaze.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>Postavke poslužitelja samo za God</value>
-    <comment>MT — God kept in English as a privilege level / API value</comment>
-  </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Admin · Poslužitelj</value>
     <comment>MT — middle dot separator preserved</comment>
@@ -3277,11 +3269,11 @@
     <comment>MT</comment>
   </data>
   <data name="RolCategoryHoldsRoles" xml:space="preserve">
-    <value>{count, plural, one {# uloga} few {# uloge} many {# uloga} other {# uloga}}</value>
+    <value>{count, plural, one {# uloga} few {# uloge} other {# uloga}}</value>
     <comment>MT</comment>
   </data>
   <data name="RolCategoryHoldsPermissions" xml:space="preserve">
-    <value>{count, plural, one {# dopuštenje} few {# dopuštenja} many {# dopuštenja} other {# dopuštenja}}</value>
+    <value>{count, plural, one {# dopuštenje} few {# dopuštenja} other {# dopuštenja}}</value>
     <comment>MT</comment>
   </data>
   <data name="RolRoleCategories" xml:space="preserve">
@@ -3442,10 +3434,6 @@
   </data>
   <data name="ServerConfiguration" xml:space="preserve">
     <value>Konfiguracija poslužitelja</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Postavke poslužitelja</value>
     <comment>MT</comment>
   </data>
   <data name="SetAsIcon" xml:space="preserve">
@@ -4212,7 +4200,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Zaštiti</value>
+    <value>Zaključaj uređivanje</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Ukloni zaštitu</value>
+    <value>Otključaj uređivanje</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4683,7 +4671,6 @@
     <value>Teme iz ahelpa. Samo za Čarobnjake i Boga, na portalu kao i u igri.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Trenutačni pristup: {0}; prioritet {1}; uloge {2}; odluka {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Konfiguraciju nije moguće uvesti: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5119,7 @@
     <value>Prikaži kao</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Uloge ili dodjele</value>
+    <value>Odjeljci uloga i dopuštenja</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atributi rukovatelja</value>
@@ -5386,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Nema iznimki</value>
+    <value>Nema iznimki.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5550,7 +5537,7 @@
     <value>Promijeni</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Nazivi dozvola odvojeni razmacima. Potrebna je svaka.</value>
+    <value>Potrebno je svako dopuštenje navedeno za radnju.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Dozvole spremljene.</value>
@@ -5566,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Brisanje</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Vi</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Imate ovo dopuštenje</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Nemate ovo dopuštenje</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Iznimka lika</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Iznimka računa</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Nijedna uloga to ne dopušta</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Nepoznato dopuštenje</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Vi ste vlasnik ove igre, pa imate svako dopuštenje bez obzira na uloge.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Jedna od vaših uloga dopušta Administratora, pa imate svako dopuštenje.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Dodaj dopuštenje…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Nijedno dopuštenje ne odgovara.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definiraj novo dopuštenje</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Ukloni {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Samo administratori wikija mogu uređivati ili brisati odabrane stranice. Tko ih može čitati, ne mijenja se.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Uklanja vlastita pravila uređivanja i brisanja odabranih stranica, pa ponovno odlučuju pravila njihova imenskog prostora i kategorija.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Imenski prostor</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Kategorija</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Stranica</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Članci igre.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Stranice pomoći za igrače.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Životopisi likova.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Stranice za osoblje.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Vlastita stranica svake kategorije.</value>
   </data>
 </root>

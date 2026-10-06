@@ -118,7 +118,10 @@ public class CodeGenerationTests
 		await Assert.That(port.Max).IsEqualTo(65535);
 
 		var sslPort = ConfigMetadata.PropertyMetadata["SslPort"];
-		await Assert.That(sslPort.Tooltip).IsEqualTo("Set to 0 to disable SSL");
+		await Assert.That(sslPort.Tooltip).IsEqualTo("0 reports no TLS port");
+
+		await Assert.That(ConfigMetadata.PropertyMetadata["PortalPort"].Unused).Contains("ASPNETCORE_URLS");
+		await Assert.That(port.Unused).IsNull();
 	}
 
 	/// <summary>

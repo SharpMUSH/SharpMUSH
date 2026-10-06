@@ -24,6 +24,11 @@ The ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS`` and
   whole list from `api/comm/channels/{channel}/who` when it opens a channel and
   keeps it current with these.
 
+A connect or disconnect line on a channel (style `presence`) is not sent as a
+`comm.message`: the member list shows who is on the channel instead. Players on
+a terminal still see those lines as before, on every channel without the
+`quiet` privilege.
+
 There are no unread counts in the payloads: the engine does not know what a
 player has read. The portal works them out from its own read markers.
 

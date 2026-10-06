@@ -327,14 +327,6 @@
     <value>Szerver állapota</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>A szerverkonfiguráció és az élő mérőszámok hamarosan elérhetők.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>Csak God számára elérhető szerverbeállítások</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Admin · Szerver</value>
     <comment>MT</comment>
@@ -3444,10 +3436,6 @@
     <value>Szerverkonfiguráció</value>
     <comment>MT</comment>
   </data>
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Szerverbeállítások</value>
-    <comment>MT</comment>
-  </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Beállítás profilképként</value>
     <comment>MT</comment>
@@ -4212,7 +4200,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Védelem</value>
+    <value>Szerkesztés zárolása</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Védelem feloldása</value>
+    <value>Szerkesztés feloldása</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4683,7 +4671,6 @@
     <value>Az ahelp témakörök. Csak Varázslóknak és Istennek, a portálon is, mint a játékban.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Jelenlegi hozzáférés: {0}; prioritás {1}; szerepek {2}; döntés {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>A konfigurációt nem sikerült importálni: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5119,7 @@
     <value>Megjelenítés</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Szerepkörök vagy hozzárendelések</value>
+    <value>Szerepkörök és engedélyek szakaszai</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>A kezelő attribútumai</value>
@@ -5386,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Nincsenek kivételek</value>
+    <value>Nincsenek kivételek.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5550,7 +5537,7 @@
     <value>Módosítás</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Jogosultságnevek szóközzel elválasztva. Mindegyik szükséges.</value>
+    <value>Egy művelethez felsorolt minden engedély szükséges.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Jogosultságok mentve.</value>
@@ -5566,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Törlés</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Ön</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Önnek megvan ez az engedélye</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Önnek nincs meg ez az engedélye</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Karakterre vonatkozó kivétel</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Fiókra vonatkozó kivétel</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Egyik szerepkör sem engedi</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Ismeretlen engedély</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Ön a játék tulajdonosa, ezért minden engedélye megvan, bármit mondanak is a szerepkörei.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Az egyik szerepköre engedi az Adminisztrátort, ezért minden engedélye megvan.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Engedély hozzáadása…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Nincs egyező engedély.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Új engedély megadása</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>{0} eltávolítása</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>A kijelölt oldalakat csak a wiki adminisztrátorai szerkeszthetik vagy törölhetik. Az, hogy ki olvashatja őket, nem változik.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Törli a kijelölt oldalak saját szerkesztési és törlési szabályait, így ismét a névtér és a kategóriák szabályai döntenek.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Névtér</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Kategória</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Oldal</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>A játék cikkei.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Súgóoldalak a játékosoknak.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Karakterek életrajzai.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Oldalak a stábnak.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Minden kategória saját oldala.</value>
   </data>
 </root>

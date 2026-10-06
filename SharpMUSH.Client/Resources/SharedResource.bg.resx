@@ -327,14 +327,6 @@
     <value>Състояние на сървъра</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>Конфигурацията на сървъра и показателите на живо предстоят.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>Настройки на сървъра само за God</value>
-    <comment>MT — «God» kept in English: privilege level / API value</comment>
-  </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Администриране · Сървър</value>
     <comment>MT — middle dot separator preserved</comment>
@@ -3444,10 +3436,6 @@
     <value>Конфигурация на сървъра</value>
     <comment>MT</comment>
   </data>
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Настройки на сървъра</value>
-    <comment>MT</comment>
-  </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Задай като икона на профила</value>
     <comment>MT</comment>
@@ -4212,7 +4200,7 @@
     <comment>MT — polite Вие-form</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Защити</value>
+    <value>Заключи редактирането</value>
     <comment>MT — plain imperative, button</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Премахни защитата</value>
+    <value>Отключи редактирането</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4683,7 +4671,6 @@
     <value>Темите от ahelp. Само за магьосници и Бог, в портала както и в играта.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Текущ достъп: {0}; приоритет {1}; роли {2}; решение {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Конфигурацията не можа да бъде импортирана: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5119,7 @@
     <value>Показване като</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Роли или назначения</value>
+    <value>Раздели за роли и разрешения</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Атрибути на обработчика</value>
@@ -5386,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Няма изключения</value>
+    <value>Няма изключения.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5550,7 +5537,7 @@
     <value>Промяна</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Имена на разрешения, разделени с интервали. Изисква се всяко от тях.</value>
+    <value>Изисква се всяко разрешение, посочено за действието.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Разрешенията са запазени.</value>
@@ -5566,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Изтриване</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Вие</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Имате това разрешение</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Нямате това разрешение</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Изключение за персонажа</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Изключение за акаунта</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Никоя роля не го позволява</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Непознато разрешение</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Вие сте собственик на тази игра, затова имате всички разрешения независимо от ролите си.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Една от ролите ви позволява „Администратор“, затова имате всички разрешения.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Добавете разрешение…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Няма съвпадащо разрешение.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Определете ново разрешение</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Премахване на {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Само администраторите на уикито могат да редактират или изтриват избраните страници. Кой може да ги чете, не се променя.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Изчиства собствените правила за редактиране и изтриване на избраните страници, така че отново решават правилата на пространството от имена и категорията.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Пространство от имена</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Страница</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Статиите на играта.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Помощни страници за играчите.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Биографии на персонажи.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Страници за екипа.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Собствената страница на всяка категория.</value>
   </data>
 </root>

@@ -27,10 +27,9 @@ public class PennMUSHDumpImportTests
 	{
 		await using var world = await ImportAsync();
 		var player = (await FindAsync(world, name)).Expect<SharpPlayer>();
-		var key = $"#{player.Object.Key}:{player.Object.CreationTime}";
 
-		await Assert.That(world.Passwords.PasswordIsValid(key, password, player.PasswordHash)).IsTrue();
-		await Assert.That(world.Passwords.PasswordIsValid(key, "wrongpass", player.PasswordHash)).IsFalse();
+		await Assert.That(world.Passwords.PasswordIsValid(password, player.PasswordHash)).IsTrue();
+		await Assert.That(world.Passwords.PasswordIsValid("wrongpass", player.PasswordHash)).IsFalse();
 	}
 
 	/// <summary>The hash lives in the password field only, never as an attribute softcode could read.</summary>

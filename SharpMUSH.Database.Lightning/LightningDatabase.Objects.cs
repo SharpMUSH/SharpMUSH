@@ -37,14 +37,13 @@ public partial class LightningDatabase
 		CancellationToken cancellationToken = default)
 	{
 		var (created, modified) = Timestamps(creationTime, modifiedTime);
+		// Hashed before the write: PBKDF2 costs tens of milliseconds, and every other write in the game
+		// waits on the writer for as long as a transaction is open.
+		var hashedPassword = salt != null ? password : _passwordService.HashPassword(password);
 
 		return await Store.WriteAsync(tx =>
 		{
 			var dbref = AllocateDbrefFor(tx, requestedDbref);
-			// Hashed against the objid this object is about to have, not against the wall clock — an
-			// imported player carries its original creation time, and hashing before that is settled
-			// would key the hash to an objid the object never has.
-			var hashedPassword = salt != null ? password : _passwordService.HashPassword($"#{dbref}:{created}", password);
 
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
 			{

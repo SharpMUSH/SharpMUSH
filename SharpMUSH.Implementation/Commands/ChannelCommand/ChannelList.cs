@@ -121,7 +121,7 @@ public static class ChannelList
 			On("Player", 'P'),
 			On("Object", 'T'),
 			Has("Admin") ? 'A' : Has("Wizard") ? 'W' : '-',
-			On("Announce", 'a'),
+			On("Quiet", 'Q'),
 			On("Hide_Ok", 'H'),
 			On("Open", 'o'));
 	}

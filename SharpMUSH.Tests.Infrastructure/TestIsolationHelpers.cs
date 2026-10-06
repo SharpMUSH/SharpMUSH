@@ -31,9 +31,9 @@ public static class TestIsolationHelpers
 
 	/// <summary>
 	/// <see cref="TestPassword"/>, hashed once for the whole run. A player created with a plaintext password
-	/// is hashed inside the database writer's transaction (PBKDF2, tens of milliseconds of CPU), which holds
-	/// up every other test's writes; a stored hash with an empty salt skips that and leaves the same record.
-	/// The hasher ignores its user argument, so one hash verifies for every player.
+	/// is hashed on creation (PBKDF2, tens of milliseconds of CPU, paid by every test that makes a player);
+	/// a stored hash with an empty salt skips that and leaves the same record. A hash does not depend on
+	/// whose password it is, so one verifies for every player.
 	/// </summary>
 	public static string TestPasswordHash => TestPasswordHashValue.Value;
 

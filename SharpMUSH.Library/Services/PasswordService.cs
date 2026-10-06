@@ -27,10 +27,12 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 	public string GenerateRandomPassword()
 		=> RandomNumberGenerator.GetString(Chars, 32);
 
-	public string HashPassword(string user, string pw) =>
-		hasher.HashPassword(user, pw);
+	// PasswordHasher's user argument exists for subclasses to key on; the default ignores it and salts
+	// every hash at random.
+	public string HashPassword(string pw) =>
+		hasher.HashPassword(string.Empty, pw);
 
-	public bool PasswordIsValid(string user, string pw, string hash)
+	public bool PasswordIsValid(string pw, string hash)
 	{
 		if (string.IsNullOrEmpty(hash) || hash.StartsWith('!'))
 		{
@@ -44,7 +46,7 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 
 		try
 		{
-			return hasher.VerifyHashedPassword(user, hash, pw) != PasswordVerificationResult.Failed;
+			return hasher.VerifyHashedPassword(string.Empty, hash, pw) != PasswordVerificationResult.Failed;
 		}
 		catch (FormatException)
 		{
@@ -63,8 +65,7 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 
 	public async ValueTask RehashPasswordAsync(SharpPlayer player, string plaintext)
 	{
-		var userKey = $"#{player.Object.Key}:{player.Object.CreationTime}";
-		var newHash = HashPassword(userKey, plaintext);
+		var newHash = HashPassword(plaintext);
 		await mediator.Send(new SetPlayerPasswordCommand(player, newHash, Salt: null));
 	}
 

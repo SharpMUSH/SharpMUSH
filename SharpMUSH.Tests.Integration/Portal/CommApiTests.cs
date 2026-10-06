@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
@@ -205,6 +207,38 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var lines = Value(await (await As(reader)).Recall(channel, 2, null, CancellationToken.None));
 
 		await Assert.That(lines.Select(line => line.Text)).IsEquivalentTo(new[] { "line 4", "line 5" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// The portal is not given connect and disconnect lines (#1579): they stay in the buffer for
+	/// <c>@channel/recall</c>, and a window of lines counts only what was said.
+	/// </summary>
+	[Test]
+	public async Task Recall_LeavesOutConnectLines_AndCountsTheWindowWithoutThem()
+	{
+		var reader = await NewPlayerAsync("CommRecallPresenceReader");
+		var comer = await NewPlayerAsync("CommRecallPresenceComer");
+		var channel = await ChannelAsync("CommRecallConn", reader, comer);
+		await God($"@chat {channel}=said 1");
+		await God($"@chat {channel}=said 2");
+		var comerObject = (await Mediator.Send(new GetObjectNodeQuery(comer))).Expect<AnySharpObject>();
+		await factory.Services.GetRequiredService<IConnectionAnnounceService>()
+			.AnnounceConnectAsync(comerObject, connectionCount: 1, isHiddenConnection: false);
+		await God($"@chat {channel}=said 3");
+
+		var buffered = await Mediator
+			.CreateStream(new GetChannelMessagesQuery((await Mediator.Send(new GetChannelQuery(channel)))!.Id!, int.MaxValue))
+			.ToListAsync();
+		await Assert.That(buffered.Count(line => line.Style == "presence")).IsEqualTo(1)
+			.Because("the connect line is buffered, as on any channel without the quiet privilege");
+
+		var controller = await As(reader);
+		var all = Value(await controller.Recall(channel, null, null, CancellationToken.None));
+		var tail = Value(await controller.Recall(channel, 2, null, CancellationToken.None));
+
+		await Assert.That(all.Select(line => line.Style)).DoesNotContain("presence");
+		await Assert.That(tail.Select(line => line.Text)).IsEquivalentTo(new[] { "said 2", "said 3" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 

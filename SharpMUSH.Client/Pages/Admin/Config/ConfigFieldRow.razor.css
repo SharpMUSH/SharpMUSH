@@ -44,6 +44,17 @@
 	padding: 1px 7px;
 }
 
+.cfg-row-unused {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	background: var(--surface-2);
+	border-radius: 99px;
+	padding: 1px 7px;
+}
+
 .cfg-row-help {
 	margin-top: 2px;
 	font-size: 13px;

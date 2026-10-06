@@ -129,6 +129,7 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		var tooltip = Named(attr, "Tooltip") as string;
 		var validationPattern = Named(attr, "ValidationPattern") as string;
 		var order = Named(attr, "Order") is int o ? o : 0;
+		var unused = Named(attr, "Unused") as string;
 
 		return "{ \"" + prop.Name + "\", new SharpConfigAttribute { "
 			+ $"Name = \"{Emit.Escape(name)}\", "
@@ -141,7 +142,8 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 			+ $"Tooltip = {Emit.Quote(tooltip) ?? "null"}, "
 			+ $"ValidationPattern = {Emit.Quote(validationPattern) ?? "null"}, "
 			+ $"Dbref = {(Named(attr, "Dbref") is true ? "true" : "false")}, "
-			+ $"Flag = {(Named(attr, "Flag") is true ? "true" : "false")}"
+			+ $"Flag = {(Named(attr, "Flag") is true ? "true" : "false")}, "
+			+ $"Unused = {Emit.Quote(unused) ?? "null"}"
 			+ " } }";
 	}
 

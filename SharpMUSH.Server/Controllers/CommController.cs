@@ -74,6 +74,9 @@ public class CommController(
 	/// </summary>
 	public const int PageConversationListLimit = CommLimits.PageConversationListMax;
 
+	/// <summary>The style a connect or disconnect line is buffered with.</summary>
+	private const string PresenceStyle = "presence";
+
 	private bool PageLogOn => options.CurrentValue.Chat.PageLog;
 
 	/// <summary>
@@ -204,6 +207,8 @@ public class CommController(
 	/// The last <paramref name="lines"/> lines of the channel's recall buffer (every line when not given, or 0).
 	/// With <paramref name="after"/>, a read marker's id, it reaches further back when it must, to the first
 	/// line after that id, so a reader coming back gets everything they have not seen that the buffer still holds.
+	/// Connect and disconnect lines are not returned: the portal shows who is on a channel as its member list
+	/// (<see cref="Who"/>), and <c>@channel/recall</c> still has them.
 	/// </summary>
 	[HttpGet("channels/{channel}/recall")]
 	public async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> Recall(string channel, [FromQuery] int? lines,
@@ -223,16 +228,15 @@ public class CommController(
 	private async Task<ActionResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(AnySharpObject executor,
 		SharpChannel channel, int lines, long? after, CancellationToken ct)
 	{
+		// Connect and disconnect lines are left out before the window is taken, so a window counts what was said.
 		var buffered = await mediator
-			.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, after is null ? lines : int.MaxValue), ct)
+			.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue), ct)
+			.Where(line => line.Style != PresenceStyle)
 			.ToListAsync(ct);
-		if (after is { } seen)
-		{
-			var unseen = buffered.FindIndex(line => line.Id > seen);
-			var from = Math.Max(0, buffered.Count - lines);
-			var start = unseen < 0 ? from : Math.Min(unseen, from);
-			buffered = buffered.GetRange(start, buffered.Count - start);
-		}
+		var from = Math.Max(0, buffered.Count - lines);
+		var unseen = after is { } seen ? buffered.FindIndex(line => line.Id > seen) : -1;
+		var start = unseen < 0 ? from : Math.Min(unseen, from);
+		buffered = buffered.GetRange(start, buffered.Count - start);
 		var name = channel.Name.ToPlainText();
 		var handler = await textComposer.HandlerAsync(ct);
 

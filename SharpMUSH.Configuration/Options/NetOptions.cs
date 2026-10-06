@@ -14,31 +14,31 @@ public record NetOptions(
 	[property: SharpConfig(Name = "mud_url", Category = "Net", Description = "Web address of your MUSH for browser redirects", Group = "General", Order = 2)]
 	string? MudUrl,
 
-	[property: SharpConfig(Name = "ip_addr", Category = "Net", Description = "Specific IP address to listen on (leave blank for all addresses)", Group = "Connection Settings", Order = 4)]
+	[property: SharpConfig(Name = "ip_addr", Category = "Net", Description = "Specific IP address to listen on (leave blank for all addresses)", Group = "Connection Settings", Order = 4, Unused = "The connection server listens on every address; there is no setting for one.")]
 	string? IpAddr,
 
-	[property: SharpConfig(Name = "ssl_ip_addr", Category = "Net", Description = "IP address to bind to for SSL connections", Group = "Connection Settings", Order = 5)]
+	[property: SharpConfig(Name = "ssl_ip_addr", Category = "Net", Description = "IP address to bind to for SSL connections", Group = "Connection Settings", Order = 5, Unused = "The connection server listens on every address; there is no setting for one.")]
 	string? SslIpAddr,
 
-	[property: SharpConfig(Name = "port", Category = "Net", Description = "The port number the server listens on for incoming connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 1, Min = 1, Max = 65535)]
+	[property: SharpConfig(Name = "port", Category = "Net", Description = "The telnet port reported to MUD crawlers (MSSP-REQUEST). Telnet listens on ConnectionServer:TelnetPort, which can differ behind a port mapping", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 1, Min = 1, Max = 65535)]
 	uint Port,
 
-	[property: SharpConfig(Name = "ssl_port", Category = "Net", Description = "Port for SSL/TLS encrypted connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 2, Min = 0, Max = 65535, Tooltip = "Set to 0 to disable SSL")]
+	[property: SharpConfig(Name = "ssl_port", Category = "Net", Description = "The TLS telnet port reported to MUD crawlers (MSSP-REQUEST). TLS telnet listens on ConnectionServer:TelnetSslPort", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 2, Min = 0, Max = 65535, Tooltip = "0 reports no TLS port")]
 	uint SslPort,
 
-	[property: SharpConfig(Name = "portal_port", Category = "Net", Description = "Port for portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 6, Min = 0, Max = 65535)]
+	[property: SharpConfig(Name = "portal_port", Category = "Net", Description = "Port for portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 6, Min = 0, Max = 65535, Unused = "The web portal listens where SharpMUSH.Server's Kestrel addresses say (ASPNETCORE_URLS).")]
 	uint PortalPort,
 
-	[property: SharpConfig(Name = "ssl_portal_port", Category = "Net", Description = "Port for secure portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 7, Min = 0, Max = 65535)]
+	[property: SharpConfig(Name = "ssl_portal_port", Category = "Net", Description = "Port for secure portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 7, Min = 0, Max = 65535, Unused = "The web portal listens where SharpMUSH.Server's Kestrel addresses say (ASPNETCORE_URLS).")]
 	uint SslPortalPort,
 
-	[property: SharpConfig(Name = "socket_file", Category = "Net", Description = "Unix domain socket file for SSL slave communication", Group = "Connection Settings", Order = 8)]
+	[property: SharpConfig(Name = "socket_file", Category = "Net", Description = "Unix domain socket file for SSL slave communication", Group = "Connection Settings", Order = 8, Unused = "There is no SSL slave process. TLS telnet is ConnectionServer:TelnetSslPort with a Kestrel certificate.")]
 	string SocketFile,
 
-	[property: SharpConfig(Name = "use_ws", Category = "Net", Description = "Enable WebSocket support for web clients", Group = "Network Protocol", Order = 4)]
+	[property: SharpConfig(Name = "use_ws", Category = "Net", Description = "Enable WebSocket support for web clients", Group = "Network Protocol", Order = 4, Unused = "WebSockets are always on, at /ws on ConnectionServer:HttpPort.")]
 	bool UseWebsockets,
 
-	[property: SharpConfig(Name = "ws_url", Category = "Net", Description = "URL path for WebSocket connections", Group = "Network Protocol", Order = 5)]
+	[property: SharpConfig(Name = "ws_url", Category = "Net", Description = "URL path for WebSocket connections", Group = "Network Protocol", Order = 5, Unused = "The WebSocket path is always /ws, on ConnectionServer:HttpPort.")]
 	string? WebsocketUrl,
 
 	[property: SharpConfig(Name = "use_dns", Category = "Net", Description = "Resolve IP numbers to hostnames (affects WHO display)", Group = "Network Protocol", Order = 6)]

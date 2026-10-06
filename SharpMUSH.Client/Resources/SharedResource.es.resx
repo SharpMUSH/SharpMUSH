@@ -327,14 +327,6 @@
     <value>Estado del servidor</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmServerComingSoon" xml:space="preserve">
-    <value>Configuración del servidor y métricas en vivo próximamente.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerGodOnly" xml:space="preserve">
-    <value>Configuración del servidor solo para God</value>
-    <comment>MT — God kept as a privilege-level name</comment>
-  </data>
   <data name="AdmServerKicker" xml:space="preserve">
     <value>Admin · Servidor</value>
     <comment>MT</comment>
@@ -3444,10 +3436,6 @@
     <value>Configuración del servidor</value>
     <comment>MT</comment>
   </data>
-  <data name="ServerSettings" xml:space="preserve">
-    <value>Configuración del servidor</value>
-    <comment>MT — same rendering as ServerConfiguration; Spanish has no useful distinction between Settings and Configuration here</comment>
-  </data>
   <data name="SetAsIcon" xml:space="preserve">
     <value>Establecer como icono de perfil</value>
     <comment>MT</comment>
@@ -4212,7 +4200,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Proteger</value>
+    <value>Bloquear edición</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4236,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Desproteger</value>
+    <value>Desbloquear edición</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4683,7 +4671,6 @@
     <value>Los temas de ahelp. Solo para Magos y Dios, tanto en el portal como en el juego.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Acceso actual: {0}; prioridad {1}; roles {2}; resolución {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>No se pudo importar la configuración: {0}</value>
     <comment>MT</comment>
@@ -5132,7 +5119,7 @@
     <value>Mostrar como</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Roles o asignaciones</value>
+    <value>Secciones de roles y permisos</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atributos del manejador</value>
@@ -5386,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Sin excepciones</value>
+    <value>Sin excepciones.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5550,7 +5537,7 @@
     <value>Cambiar</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Nombres de permisos separados por espacios. Se requieren todos.</value>
+    <value>Se exigen todos los permisos indicados para una acción.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Permisos guardados.</value>
@@ -5566,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Eliminar</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Tú</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Tienes este permiso</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>No tienes este permiso</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Excepción del personaje</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Excepción de la cuenta</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Ningún rol lo permite</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Permiso desconocido</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Eres el dueño de este juego, así que tienes todos los permisos, digan lo que digan tus roles.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Uno de tus roles permite Administrador, así que tienes todos los permisos.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Añadir un permiso…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Ningún permiso coincide.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definir un permiso nuevo</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Quitar {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Solo los administradores de la wiki pueden editar o eliminar las páginas seleccionadas. Quién puede leerlas no cambia.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Quita las reglas propias de edición y eliminación de las páginas seleccionadas, para que vuelvan a decidir las de su espacio de nombres y sus categorías.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Espacio de nombres</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Página</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Los artículos del juego.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Páginas de ayuda para los jugadores.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Biografías de personajes.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Páginas para el equipo.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>La página propia de cada categoría.</value>
   </data>
 </root>

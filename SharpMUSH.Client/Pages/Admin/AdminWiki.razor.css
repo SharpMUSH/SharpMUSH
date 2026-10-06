@@ -265,16 +265,9 @@
 .adminwiki-requirements-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+	align-items: start;
 	gap: 0.75rem;
 	padding: 1rem;
-}
-
-.adminwiki-rule {
-	min-width: 0;
-	padding: 0.75rem 0.875rem;
-	border-radius: var(--radius-row);
-	background: var(--surface-2);
-	border: 1px solid var(--border-soft);
 }
 
 /* Dialogs */
@@ -329,4 +322,13 @@
 	.adminwiki-newcat ::deep .adminwiki-newcat-desc {
 		flex-basis: 100%;
 	}
+}
+
+/* A bulk action's tooltip: what the button is called, then what it does */
+.adminwiki-tip {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	max-width: 18rem;
+	text-align: left;
 }

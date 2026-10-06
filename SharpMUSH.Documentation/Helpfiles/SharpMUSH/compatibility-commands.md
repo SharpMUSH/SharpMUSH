@@ -44,11 +44,6 @@
       "id": "typed-input-is-bounded-by-a-pending-count-not-a-replenishing-rate",
       "heading": "Typed input is bounded by a pending count, not a replenishing rate",
       "lookup": "compatibility commands typed input is bounded by a pending count not a replenishing rate"
-    },
-    {
-      "id": "channels-announce-connections-only-when-asked",
-      "heading": "Channels announce connections only when asked",
-      "lookup": "compatibility commands channels announce connections only when asked"
     }
   ]
 }
@@ -222,30 +217,4 @@ PennMUSH answers `#-1 NO SUCH CONFIG OPTION`:
 ```sharp
 > think config(command_burst_size)
 100
-```
-
-## Channels announce connections only when asked
-
-**A choice.**
-
-**PennMUSH** tells a channel's members whenever one of them connects or disconnects, unless the
-channel has the `quiet` privilege (`chat_player_announce`, `extchat.c:3187-3205`).<br>
-**SharpMUSH** has no `quiet` privilege. A channel carries connect and disconnect lines only when it
-has `announce` (`a`), and a PennMUSH channel imports without it, so a channel says nothing about
-connections unless a game asks it to. `@channel/who` and the web portal's member list say who is on
-a channel now. (#1579)<br>
-**Why.** A channel's history is what its members said. Connection lines crowd it out, and the web
-portal shows a channel's history from its recall buffer, where they would otherwise land.<br>
-**Workaround.** `@channel/privs <channel>=announce` gives a channel PennMUSH's behaviour. Code that
-sets `quiet` drops it; code that reads `cflags()` sees `a` where PennMUSH would show no `Q`.
-
-PennMUSH has no `announce` privilege to set:
-
-```sharp
-> @channel/add AnnounceExample=player
-> think [cflags(AnnounceExample)]
-P
-> @channel/privs AnnounceExample=announce
-> think [cflags(AnnounceExample)]
-Pa
 ```
