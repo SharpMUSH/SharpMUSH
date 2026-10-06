@@ -772,9 +772,9 @@ objects:
         [setq(_j,u({{jobs}}/FUN`JOB,%1))][if(cand(strlen(%q<_j>),u({{jobs}}/FUN`CAN`SEE,%q<_j>,%0)),u({{jobs}}/WEB`SCHEMA`JOB`SEEN,%0,%q<_j>),u({{jobs}}/WEB`SCHEMA`NOJOB,%1))]
       WEB`SCHEMA`NOJOB: |-
         [setq(_nj,u({{jobs}}/WEB`MD,There is no job %0.))][u({{jobs}}/WEB`DOC,view,Job %0,u({{jobs}}/WEB`SEC,,1,%q<_nj>))]
-      # Job object %1 for viewer %0. Each part is built into a register first: the parser is far slower on a long bracketed expression inside a function argument than at the top level.
+      # Job object %1 for viewer %0: its details, the messages, the reply box and the buttons.
       WEB`SCHEMA`JOB`SEEN: |-
-        [setq(_sa,u({{jobs}}/WEB`SEC,,1,json(object,kind,json(string,keyvalue),fields,u({{jobs}}/WEB`KEYS,%1,%0))))][setq(_sb,u({{jobs}}/WEB`SEC,Messages,2,json(object,kind,json(string,timeline),rows_field,json(string,entries),empty,json(string,No messages.))))][setq(_sc,u({{jobs}}/WEB`SEC`REPLY,%1,%0))][setq(_ab,u({{jobs}}/WEB`BUTTONS,%1,%0))][setq(_sd,if(strlen(%q<_ab>),%r[u({{jobs}}/WEB`SEC,,4,%q<_ab>,4)]))][u({{jobs}}/WEB`DOC,form,Job [get(%1/NUM)]: [get(%1/TITLE)],%q<_sa>%r%q<_sb>%r%q<_sc>%q<_sd>,json(object,act,u({{jobs}}/WEB`ACTION)))]
+        [u({{jobs}}/WEB`DOC,form,Job [get(%1/NUM)]: [get(%1/TITLE)],[u({{jobs}}/WEB`SEC,,1,json(object,kind,json(string,keyvalue),fields,u({{jobs}}/WEB`KEYS,%1,%0)))]%r[u({{jobs}}/WEB`SEC,Messages,2,json(object,kind,json(string,timeline),rows_field,json(string,entries),empty,json(string,No messages.)))]%r[u({{jobs}}/WEB`SEC`REPLY,%1,%0)][if(strlen(setr(_ab,u({{jobs}}/WEB`BUTTONS,%1,%0))),%r[u({{jobs}}/WEB`SEC,,4,%q<_ab>,4)])],json(object,act,u({{jobs}}/WEB`ACTION)))]
       WEB`KEYS: |-
         [setq(_ks,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][u({{jobs}}/WEB`ARR,iter(squish(Bucket Status Priority Filed [if(%q<_ks>,Due)] Handlers [if(%q<_ks>,Watchers)] [if(words(lattr(%0/HELPER`*)),Helpers)]),json(string,%i0),%b,%r))]
       # The reply box; a player whose job closed longer ago than the bucket reopens gets a note instead.

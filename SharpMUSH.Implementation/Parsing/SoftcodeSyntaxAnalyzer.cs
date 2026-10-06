@@ -32,10 +32,9 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		new SharpMUSHLexer(new StringSpanInputStream(string.Empty, string.Empty)).Vocabulary;
 
 	/// <summary>
-	/// The single ANTLR prediction mode to use where two-stage parsing is not applied — the
-	/// tooling paths (validation, semantic tokens). TwoStage resolves to LL here so those paths
-	/// always produce the authoritative result; the two-stage speedup is applied only on the hot
-	/// evaluation path.
+	/// The single ANTLR prediction mode for a pass that reports what it finds — the tooling paths
+	/// (validation, semantic tokens), after <see cref="TryCleanParse"/> — and for every pass under
+	/// the SLL and LL settings. TwoStage resolves to LL here so the result is the authoritative one.
 	/// </summary>
 	internal static PredictionMode SinglePassPredictionMode(SharpMUSHOptions options)
 		=> options.Debug.ParserPredictionMode switch
@@ -49,6 +48,29 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		var options = configuration.CurrentValue;
 		return SoftcodeParsePipeline.CreateParser(tokens, options.Compatibility.ParenGroups,
 			SinglePassPredictionMode(options));
+	}
+
+	/// <summary>
+	/// Under TwoStage, the SLL pass the evaluator runs first (<see cref="SoftcodeParsePipeline.ParseClean"/>):
+	/// a tree from it is the one LL would build, so tooling takes it and runs LL only on input SLL
+	/// cannot parse. <see langword="null"/> under the SLL and LL settings, or when SLL failed; the
+	/// tokens are sought back to the start either way.
+	/// </summary>
+	private ParserRuleContext? TryCleanParse(BufferedTokenSpanStream tokens, string plaintext, ParseType parseType)
+	{
+		var options = configuration.CurrentValue;
+		if (options.Debug.ParserPredictionMode != ParserPredictionMode.TwoStage)
+		{
+			return null;
+		}
+
+		var parser = SoftcodeParsePipeline.CreateParser(tokens, options.Compatibility.ParenGroups, PredictionMode.SLL,
+			resolvePredicates: true);
+		var context = SoftcodeParsePipeline.ParseClean(parser, p => SoftcodeParsePipeline.Enter(p, parseType),
+			new ParserErrorListener(plaintext));
+		tokens.Seek(0);
+
+		return context;
 	}
 
 	/// <summary>
@@ -112,6 +134,11 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			];
 		}
 
+		if (TryCleanParse(bufferedTokenSpanStream, plaintext, parseType) is not null)
+		{
+			return [];
+		}
+
 		var sharpParser = CreateParser(bufferedTokenSpanStream);
 		var errorListener = new ParserErrorListener(plaintext);
 		sharpParser.AddErrorListener(errorListener);
@@ -164,6 +191,11 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out _))
 		{
 			return ConvertSyntacticToSemanticTokens(Tokenize(text));
+		}
+
+		if (TryCleanParse(bufferedTokenSpanStream, plaintext, parseType) is { } clean)
+		{
+			return AnalyzeSemanticTokens(clean, bufferedTokenSpanStream, plaintext);
 		}
 
 		var sharpParser = CreateParser(bufferedTokenSpanStream);

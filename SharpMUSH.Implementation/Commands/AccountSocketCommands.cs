@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -83,15 +84,18 @@ public partial class Commands
 		};
 	}
 
-	/// <summary>Binds the socket to the account <c>register</c> just created and says what to do next.</summary>
+	/// <summary>
+	/// Binds the socket to the account <c>register</c> just created and says what to do next: the new-user message
+	/// (PennMUSH's <c>newuser_file</c>), or a fixed hint when that shows nothing.
+	/// </summary>
 	private async ValueTask<Option<CallState>> RegisteredAsync(long handle, SharpAccount account)
 	{
 		await ConnectionService.BindAccount(handle, account.Id!);
 
-		await NotifyService.Notify(handle,
-			$"Account '{account.Username}' created successfully.\n" +
-			"You have no characters yet.\n" +
-			"Use: make <character-name> <password>    to create your first character.");
+		await NotifyService.Notify(handle, $"Account '{account.Username}' created successfully.");
+		await NotifyService.Notify(handle, await MessageService.RenderAsync(GameMessage.NewUser, handle) is MString newUserText
+			? newUserText
+			: MarkupText.Plain("You have no characters yet.\nUse: make <character-name> <password>    to create your first character."));
 		return new CallState(account.Id!);
 	}
 
@@ -164,7 +168,7 @@ public partial class Commands
 			var linked = await AccountService.GetCharactersAsync(account.Id!);
 			if (!await AnyStaffCharacterAsync(linked))
 			{
-				await NotifyService.Notify(handle, "Logins are disabled.");
+				await NotifyLoginsDisabledAsync(handle);
 				return new None();
 			}
 		}
@@ -392,21 +396,15 @@ public partial class Commands
 			: "You must be logged in to an account first. Use: login <display-name-or-email> <password>");
 
 	/// <summary>
-	/// PennMUSH-style refusal for a disabled <c>Net.PlayerCreation</c>: prefer the configured
-	/// <c>register_create_file</c> contents (same resolution as <see cref="Handlers.ConnectionStateEventHandler"/>'s
-	/// <c>connect_file</c> handling) and fall back to the hardcoded message when it's unset/missing/empty.
+	/// PennMUSH-style refusal for a disabled <c>Net.PlayerCreation</c>: the register message, or the fixed line when
+	/// that shows nothing.
 	/// </summary>
 	private async ValueTask NotifyPlayerCreationDisabledAsync(long handle)
 	{
-		var registerFile = Configuration.CurrentValue.Message.RegisterCreateFile;
-		if (!string.IsNullOrEmpty(registerFile) && File.Exists(registerFile))
+		if (await MessageService.RenderAsync(GameMessage.Register, handle) is MString registerText)
 		{
-			var registerText = await File.ReadAllTextAsync(registerFile);
-			if (!string.IsNullOrWhiteSpace(registerText))
-			{
-				await NotifyService.Notify(handle, registerText);
-				return;
-			}
+			await NotifyService.Notify(handle, registerText);
+			return;
 		}
 
 		await NotifyService.Notify(handle, "Player creation is disabled on this server.");

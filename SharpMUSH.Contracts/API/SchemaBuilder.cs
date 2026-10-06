@@ -189,7 +189,6 @@ public static partial class SchemaBuilder
 			"Database" => "Database configuration",
 			"Command" => "Command processing settings",
 			"Log" => "Logging and audit settings",
-			"Message" => "System messages and prompts",
 			_ => null
 		};
 	}
@@ -204,7 +203,6 @@ public static partial class SchemaBuilder
 			"Database" => "mdi-database",
 			"Command" => "mdi-console",
 			"Log" => "mdi-file-document",
-			"Message" => "mdi-message-text",
 			_ => "mdi-cog"
 		};
 	}
@@ -219,7 +217,6 @@ public static partial class SchemaBuilder
 			"Chat" => 4,
 			"Command" => 5,
 			"Log" => 6,
-			"Message" => 7,
 			_ => 99
 		};
 	}

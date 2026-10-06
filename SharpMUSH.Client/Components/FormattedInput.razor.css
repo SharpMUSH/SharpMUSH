@@ -43,6 +43,17 @@
 	color: var(--text);
 }
 
+/* Unwrapped: the layer keeps each line whole, as the textarea does, and follows its sideways scroll. */
+.fi--nowrap .fi-input {
+	white-space: pre;
+	overflow-x: auto;
+}
+
+.fi--nowrap .fi-overlay {
+	white-space: pre;
+	overflow-wrap: normal;
+}
+
 /* A style must not change a character's width, or everything after it drifts off the caret: bold is drawn with a
    shadow instead of a heavier face. Blink is marked, not animated, while it is being written. */
 .fi-overlay ::deep .ms-bold {

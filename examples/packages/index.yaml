@@ -76,3 +76,8 @@ packages:
     package: jobs-app
     version: 1.0.0
     description: Application package — the job queue as a portal page at /apps/jobs (requires jobs)
+  - path: messages/
+    name: Messages
+    package: messages
+    version: 1.0.0
+    description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."

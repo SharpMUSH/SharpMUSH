@@ -255,7 +255,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.Because("queue.inspect.own alone opens the diagnostics page, as in the section sidebar");
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
 		foreach (var gated in new[] { "/admin/accounts", "/admin/audit", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
-			"/admin/suggestions", "/admin/wiki", "/admin/media", "/admin/applications", "/admin/packages", "/admin/layout",
+			"/admin/suggestions", "/admin/messages", "/admin/wiki", "/admin/media", "/admin/applications", "/admin/packages", "/admin/layout",
 			"/admin/server", "/admin/import" })
 		{
 			await Assert.That(cut.FindAll($"a.adm-dash-card[href='{gated}']").Count).IsEqualTo(0).Because(gated);
@@ -373,7 +373,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cards).IsEquivalentTo(new[]
 		{
 			"/softcode", "/admin/characters", "/admin/guests", "/admin/moderation", "/admin/audit",
-			"/admin/wiki", "/admin/suggestions", "/admin/profiles", "/admin/server", "/admin/config", "/admin/import",
+			"/admin/wiki", "/admin/suggestions", "/admin/messages", "/admin/profiles", "/admin/server", "/admin/config", "/admin/import",
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -476,6 +476,39 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		{
 			var remotes = cut.Find(".adm-stat[data-stat='remotes'] .adm-stat-value").TextContent.Trim();
 			if (remotes != "2") throw new InvalidOperationException($"remotes tile reads '{remotes}'");
+		}, TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>
+	/// A package that sets a configuration option lists it with its value now and after, and the apply waits for the
+	/// admin to confirm the change.
+	/// </summary>
+	[Test]
+	public async Task PackageReview_ListsTheOptionsItSets_AndWaitsForTheirConfirmation()
+	{
+		var changeset = new SharpMUSH.Library.Models.Packages.PackageChangeset("messages", null, "1.0.0",
+			SharpMUSH.Library.Models.Packages.PackageRevisionKind.Install, [], [], [], [], [], [],
+			Settings: [new("messages_object", SharpMUSH.Library.Models.Packages.PackageSettingAction.Set, null, "#12",
+				"The object this install creates.")]);
+		_api.Bodies["api/packages/plan"] = System.Text.Json.JsonSerializer.Serialize(
+			new SharpMUSH.Library.API.PlanResponse("messages", "1.0.0", "abc", changeset, [], [], []),
+			new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+		Services.GetRequiredService<NavigationManager>().NavigateTo("admin/packages/review?remote=official&path=messages");
+
+		var cut = RenderPage(typeof(AdminPackageReview));
+
+		cut.WaitForAssertion(() => cut.Find(".pkg-settings"), TimeSpan.FromSeconds(5));
+		var row = cut.Find(".pkg-settings tbody tr").TextContent;
+		await Assert.That(row).Contains("messages_object");
+		await Assert.That(row).Contains("PkgSettingNone");
+		await Assert.That(row).Contains("#12");
+		bool ApplyDisabled() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled");
+		await Assert.That(ApplyDisabled()).IsTrue();
+
+		cut.Find("input#pkg-settings-confirm, #pkg-settings-confirm input").Change(true);
+		cut.WaitForAssertion(() =>
+		{
+			if (ApplyDisabled()) throw new InvalidOperationException("apply still waits");
 		}, TimeSpan.FromSeconds(5));
 	}
 

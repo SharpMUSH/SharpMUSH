@@ -24,6 +24,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Application">The dynamic-application registration this package installs, when <see cref="Kind"/> is <see cref="PackageKind.Application"/>; otherwise null.</param>
 /// <param name="Binary">The compiled plugin DLL(s) this package carries, when <see cref="Kind"/> is <see cref="PackageKind.Managed"/>; otherwise null.</param>
 /// <param name="Declarations">The roles, permissions and categories the package declares, or null for none (see <see cref="Declared"/>).</param>
+/// <param name="Settings">The configuration options the package sets (<c>settings:</c>, format 1.3), or null for none.</param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -43,7 +44,8 @@ public sealed record PackageManifest(
 	PackageKind Kind = PackageKind.Softcode,
 	PackageApplicationSpec? Application = null,
 	PackageBinarySpec? Binary = null,
-	PackageDeclarations? Declarations = null)
+	PackageDeclarations? Declarations = null,
+	IReadOnlyList<PackageSettingSpec>? Settings = null)
 {
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
@@ -147,7 +149,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 2);
+	public static PackageFormatVersion Supported { get; } = new(1, 3);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

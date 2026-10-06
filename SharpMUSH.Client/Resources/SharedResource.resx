@@ -6035,4 +6035,160 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Line {0}: a ::: item lays out only directly inside a flex.</value>
   </data>
+  <data name="PkgSettingsCount" xml:space="preserve">
+    <value>Configuration changes ({0})</value>
+  </data>
+  <data name="PkgSettingsSub" xml:space="preserve">
+    <value>Applying this package changes these game options. Removing it puts each one back, unless it has been changed since.</value>
+  </data>
+  <data name="PkgSettingOption" xml:space="preserve">
+    <value>Option</value>
+  </data>
+  <data name="PkgSettingNow" xml:space="preserve">
+    <value>Now</value>
+  </data>
+  <data name="PkgSettingAfter" xml:space="preserve">
+    <value>After</value>
+  </data>
+  <data name="PkgSettingNone" xml:space="preserve">
+    <value>(none)</value>
+  </data>
+  <data name="PkgSettingBlocked" xml:space="preserve">
+    <value>Setting</value>
+  </data>
+  <data name="PkgSettingsConfirm" xml:space="preserve">
+    <value>I understand this package changes the game options above.</value>
+  </data>
+  <data name="AdmMessagesTitle" xml:space="preserve">
+    <value>Messages</value>
+  </data>
+  <data name="AdmCardMessages" xml:space="preserve">
+    <value>Edit the connect screen, the messages of the day and the other texts a connection is shown.</value>
+  </data>
+  <data name="AdmMessagesDescription" xml:space="preserve">
+    <value>The connect screen, the messages of the day and the other texts the server shows a connection. Each is stored as a terminal receives it, colours and all.</value>
+  </data>
+  <data name="AdmMessagesSourceTitle" xml:space="preserve">
+    <value>Where messages come from</value>
+  </data>
+  <data name="AdmMessagesSourceSub" xml:space="preserve">
+    <value>The stored text edited below, or an object's attributes evaluated as softcode. This sets the messages_object option.</value>
+  </data>
+  <data name="AdmMessagesSourceStored" xml:space="preserve">
+    <value>Stored text</value>
+  </data>
+  <data name="AdmMessagesSourceStoredHint" xml:space="preserve">
+    <value>The text edited on this page.</value>
+  </data>
+  <data name="AdmMessagesSourceObject" xml:space="preserve">
+    <value>Messages object</value>
+  </data>
+  <data name="AdmMessagesSourceObjectHint" xml:space="preserve">
+    <value>One attribute per message, evaluated as softcode. A message the object has no attribute for uses its stored text.</value>
+  </data>
+  <data name="AdmMessagesObjectIs" xml:space="preserve">
+    <value>messages_object is {0} (#{1}).</value>
+  </data>
+  <data name="AdmMessagesNoObject" xml:space="preserve">
+    <value>The Messages package is not installed, so there is no Messages object to choose.</value>
+  </data>
+  <data name="AdmMessagesInstallPackage" xml:space="preserve">
+    <value>Install it from Packages</value>
+  </data>
+  <data name="AdmMessagesObjectMissing" xml:space="preserve">
+    <value>messages_object names #{0}, which no longer exists, so the stored text is shown.</value>
+  </data>
+  <data name="AdmMessagesUnsaved" xml:space="preserve">
+    <value>Unsaved</value>
+  </data>
+  <data name="AdmMessagesEdited" xml:space="preserve">
+    <value>Edited</value>
+  </data>
+  <data name="AdmMessagesShownFromObject" xml:space="preserve">
+    <value>Shown from {0} on {1} (#{2}). The text below is used only if that attribute is removed.</value>
+  </data>
+  <data name="AdmMessagesOpenSoftcode" xml:space="preserve">
+    <value>Open the Softcode Editor</value>
+  </data>
+  <data name="AdmMessagesObjectLacks" xml:space="preserve">
+    <value>The object has no {0} attribute, so this stored text is shown.</value>
+  </data>
+  <data name="AdmMessagesEditorHint" xml:space="preserve">
+    <value>Select text and pick a colour from the palette. Ctrl+B bolds, Ctrl+U underlines.</value>
+  </data>
+  <data name="AdmMessagesReset" xml:space="preserve">
+    <value>Use the shipped text</value>
+  </data>
+  <data name="AdmMessagesRevert" xml:space="preserve">
+    <value>Discard changes</value>
+  </data>
+  <data name="AdmMessagesPreview" xml:space="preserve">
+    <value>What a connection sees now</value>
+  </data>
+  <data name="AdmMessagesShowsNothing" xml:space="preserve">
+    <value>Nothing is shown.</value>
+  </data>
+  <data name="AdmMessagesSaved" xml:space="preserve">
+    <value>{0} saved.</value>
+  </data>
+  <data name="AdmMessagesResetDone" xml:space="preserve">
+    <value>{0} is back to the shipped text.</value>
+  </data>
+  <data name="AdmMessagesSourceSaved" xml:space="preserve">
+    <value>Message source saved.</value>
+  </data>
+  <data name="AdmMsgConnectTitle" xml:space="preserve">
+    <value>Connect screen</value>
+  </data>
+  <data name="AdmMsgConnectDesc" xml:space="preserve">
+    <value>Shown to a connection arriving at the login prompt, and again after LOGOUT.</value>
+  </data>
+  <data name="AdmMsgMotdTitle" xml:space="preserve">
+    <value>Message of the day</value>
+  </data>
+  <data name="AdmMsgMotdDesc" xml:space="preserve">
+    <value>Shown to every player after logging in. An @motd stands in for it while one is set.</value>
+  </data>
+  <data name="AdmMsgWizMotdTitle" xml:space="preserve">
+    <value>Wizard message of the day</value>
+  </data>
+  <data name="AdmMsgWizMotdDesc" xml:space="preserve">
+    <value>Shown after the message of the day to wizards and royalty. An @wizmotd stands in for it while one is set.</value>
+  </data>
+  <data name="AdmMsgGuestTitle" xml:space="preserve">
+    <value>Guest welcome</value>
+  </data>
+  <data name="AdmMsgGuestDesc" xml:space="preserve">
+    <value>Shown to a guest after the message of the day.</value>
+  </data>
+  <data name="AdmMsgNewUserTitle" xml:space="preserve">
+    <value>New account</value>
+  </data>
+  <data name="AdmMsgNewUserDesc" xml:space="preserve">
+    <value>Shown after register creates an account.</value>
+  </data>
+  <data name="AdmMsgRegisterTitle" xml:space="preserve">
+    <value>Creation closed</value>
+  </data>
+  <data name="AdmMsgRegisterDesc" xml:space="preserve">
+    <value>Shown instead of creating an account or a character while player creation is off.</value>
+  </data>
+  <data name="AdmMsgDownTitle" xml:space="preserve">
+    <value>Logins closed</value>
+  </data>
+  <data name="AdmMsgDownDesc" xml:space="preserve">
+    <value>Shown before the refusal while logins are off, followed by any @motd/down.</value>
+  </data>
+  <data name="AdmMsgQuitTitle" xml:space="preserve">
+    <value>Goodbye</value>
+  </data>
+  <data name="AdmMsgQuitDesc" xml:space="preserve">
+    <value>Shown after "GOODBYE." on QUIT and LOGOUT.</value>
+  </data>
+  <data name="AdmSetupPkgMessagesTitle" xml:space="preserve">
+    <value>Messages object</value>
+  </data>
+  <data name="AdmSetupPkgMessagesDesc" xml:space="preserve">
+    <value>Keeps the connect screen, the messages of the day and the other server messages as softcode on one object instead of the stored text. Admin &gt; Messages switches back at any time.</value>
+  </data>
 </root>

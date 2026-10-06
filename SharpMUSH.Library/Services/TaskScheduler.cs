@@ -418,7 +418,8 @@ public partial class TaskScheduler(
 
 	// One outstanding halt per offender. A quota that is full stays full until the wipe runs, so
 	// every admission behind this one is refused too and would otherwise queue its own duplicate.
-	private readonly ConcurrentDictionary<DBRef, byte> _runawayHalts = new();
+	// The value completes once the halt has finished; the consumer waits on it (AwaitRunawayHalts).
+	private readonly ConcurrentDictionary<DBRef, Task> _runawayHalts = new();
 
 	/// <summary>
 	/// PennMUSH's runaway path (<c>src/cque.c:303-313</c>): <c>pay_queue</c> does not merely refuse
@@ -431,11 +432,15 @@ public partial class TaskScheduler(
 	/// is already holding the semaphore lease when it is refused, so halting inline would wait on a
 	/// lease this call stack owns. It is not admitted as a queue entry either: the refusal it answers
 	/// means the queue is at a limit, and taking a slot to run the wipe would deny one to an
-	/// unrelated owner. <see cref="DrainImmediateQueueForTests"/> waits on the outstanding set.
+	/// unrelated owner. What Penn's inline call guarantees is kept anyway: the consumer starts no
+	/// further entry until the halt has finished (<see cref="AwaitRunawayHalts"/>), so work queued
+	/// after the refusal, such as a <c>think hasflag(obj,HALT)</c>, sees the wipe and the flag.
+	/// <see cref="DrainImmediateQueueForTests"/> waits on the outstanding set.
 	/// </remarks>
 	private void QueueRunawayHalt(DBRef offender, string owner)
 	{
-		if (!_runawayHalts.TryAdd(offender, 0)) return;
+		var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		if (!_runawayHalts.TryAdd(offender, done.Task)) return;
 		_ = Task.Run(async () =>
 		{
 			try
@@ -452,8 +457,22 @@ public partial class TaskScheduler(
 				await HaltRunaway(offender, owner);
 			}
 			catch (Exception ex) { logger.LogError(ex, "Could not halt runaway object {DbRef}", offender); }
-			finally { _runawayHalts.TryRemove(offender, out _); }
+			finally
+			{
+				_runawayHalts.TryRemove(offender, out _);
+				done.TrySetResult();
+			}
 		});
+	}
+
+	/// <summary>
+	/// Waits for every runaway halt in flight. The consumer calls it before each entry, when no entry
+	/// of its own holds a lease the wipe needs. A halt never waits on the consumer and completes even
+	/// when it fails, so this cannot deadlock; shutdown cancels the wipe's budget.
+	/// </summary>
+	private async ValueTask AwaitRunawayHalts()
+	{
+		while (!_runawayHalts.IsEmpty) await Task.WhenAll(_runawayHalts.Values);
 	}
 
 	private async ValueTask HaltRunaway(DBRef offender, string owner)
@@ -771,6 +790,7 @@ public partial class TaskScheduler(
 		{
 			await foreach (var entry in _immediateQueue.Reader.ReadAllAsync(shutdownToken))
 			{
+				await AwaitRunawayHalts();
 				try
 				{
 					lock (_admissionLock) _running.Add(entry.Pid);

@@ -157,6 +157,15 @@ public class PackageManifestWriterTests
 	}
 
 	[Test]
+	public async Task SettingsRoundTrip()
+	{
+		PackageSettingSpec[] settings = [new("messages_object", "{{hall}}"), new("portal_port", "4300"), new("noisy_whisper", "yes")];
+		var again = RoundTrip(Maximal() with { Format = new PackageFormatVersion(1, 3), Settings = settings });
+
+		await Assert.That(again.Settings).IsEquivalentTo(settings);
+	}
+
+	[Test]
 	public async Task DependenciesAndConflictsRoundTrip()
 	{
 		var original = Maximal();

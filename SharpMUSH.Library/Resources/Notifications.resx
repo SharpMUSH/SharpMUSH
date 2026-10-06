@@ -2217,17 +2217,8 @@
   <data name="ListMotdCurrentSettingsHeader" xml:space="preserve">
     <value>Current Message of the Day settings:</value>
   </data>
-  <data name="ListMotdConnectFileFormat" xml:space="preserve">
-    <value>  Connect MOTD File: {0}</value>
-  </data>
-  <data name="ListMotdConnectHtmlFormat" xml:space="preserve">
-    <value>  Connect MOTD HTML: {0}</value>
-  </data>
-  <data name="ListMotdWizardFileFormat" xml:space="preserve">
-    <value>  Wizard MOTD File: {0}</value>
-  </data>
-  <data name="ListMotdWizardHtmlFormat" xml:space="preserve">
-    <value>  Wizard MOTD HTML: {0}</value>
+  <data name="ListMotdSourceFormat" xml:space="preserve">
+    <value>  Messages come from: {0}</value>
   </data>
   <data name="ListMotdTemporaryHeader" xml:space="preserve">
     <value>Temporary Message of the Day (cleared on restart):</value>

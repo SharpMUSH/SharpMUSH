@@ -40,7 +40,8 @@ public class PackageOperationGateTests
 			services.GetRequiredService<IMediator>(),
 			gate,
 			services.GetRequiredService<ILockService>(),
-			services.GetRequiredService<IPackageDeclarationService>());
+			services.GetRequiredService<IPackageDeclarationService>(),
+			services.GetRequiredService<IPackageSettingService>());
 	}
 
 	private static PackageManifest Manifest(string id, string version) =>
