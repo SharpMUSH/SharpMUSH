@@ -5549,7 +5549,7 @@
     <value>Ändra</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Behörighetsnamn åtskilda med mellanslag. Alla krävs.</value>
+    <value>Varje behörighet som anges för en åtgärd krävs.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Behörigheter sparade.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>En av dina roller tillåter Administratör, så du har alla behörigheter.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Lägg till en behörighet…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Ingen behörighet matchar.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definiera en ny behörighet</value>
   </data>
 </root>

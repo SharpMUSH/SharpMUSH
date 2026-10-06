@@ -4816,7 +4816,7 @@
     <value>Modifier</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Noms de permissions séparés par des espaces. Chacune est requise.</value>
+    <value>Chaque permission indiquée pour une action est exigée.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Permissions enregistrées.</value>
@@ -4859,5 +4859,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>L’un de vos rôles autorise Administrateur : vous avez donc toutes les permissions.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Ajouter une permission…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Aucune permission ne correspond.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Définir une nouvelle permission</value>
   </data>
 </root>

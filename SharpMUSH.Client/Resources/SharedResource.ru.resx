@@ -5549,7 +5549,7 @@
     <value>Изменить</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Названия разрешений через пробел. Требуется каждое.</value>
+    <value>Требуется каждое разрешение, указанное для действия.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Разрешения сохранены.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Одна из ваших ролей разрешает «Администратор», поэтому у вас есть все разрешения.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Добавить разрешение…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Нет подходящих разрешений.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Определить новое разрешение</value>
   </data>
 </root>

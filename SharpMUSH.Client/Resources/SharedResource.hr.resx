@@ -5549,7 +5549,7 @@
     <value>Promijeni</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Nazivi dozvola odvojeni razmacima. Potrebna je svaka.</value>
+    <value>Potrebno je svako dopuštenje navedeno za radnju.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Dozvole spremljene.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Jedna od vaših uloga dopušta Administratora, pa imate svako dopuštenje.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Dodaj dopuštenje…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Nijedno dopuštenje ne odgovara.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definiraj novo dopuštenje</value>
   </data>
 </root>

@@ -5549,7 +5549,7 @@
     <value>Skift</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Rettighedsnavne adskilt af mellemrum. Alle kræves.</value>
+    <value>Alle tilladelser, der står ved en handling, kræves.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Rettigheder gemt.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>En af dine roller tillader Administrator, så du har alle tilladelser.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Tilføj en tilladelse…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Ingen tilladelse passer.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definér en ny tilladelse</value>
   </data>
 </root>

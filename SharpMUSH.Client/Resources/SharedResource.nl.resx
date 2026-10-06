@@ -5549,7 +5549,7 @@
     <value>Wijzigen</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Rechtnamen, gescheiden door spaties. Elk ervan is vereist.</value>
+    <value>Elke machtiging bij een actie is vereist.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Rechten opgeslagen.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Een van je rollen staat Beheerder toe, dus je hebt elke machtiging.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Machtiging toevoegen…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Geen machtiging komt overeen.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Een nieuwe machtiging definiëren</value>
   </data>
 </root>

@@ -422,7 +422,14 @@
 
     private IReadOnlyDictionary<string, PermissionExplanation> _effective = new Dictionary<string, PermissionExplanation>();
 
-    protected override Task OnInitializedAsync() => List.LoadAsync();
+    /// <summary>The tab to open on, by name (<c>?tab=permissions</c>): how the wiki's permission pickers link here.</summary>
+    [SupplyParameterFromQuery(Name = "tab")] public string? InitialTab { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        if (Enum.TryParse<Tab>(InitialTab, ignoreCase: true, out var tab)) _tab = tab;
+        return List.LoadAsync();
+    }
 
     private async Task<IEnumerable<PortalRoleModel>> FetchAsync()
     {

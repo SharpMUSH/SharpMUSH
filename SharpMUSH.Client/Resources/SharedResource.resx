@@ -5454,7 +5454,7 @@
     <value>Change</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Permission names, separated by spaces. Every one is required.</value>
+    <value>Every permission listed for an action is required.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Permissions saved.</value>
@@ -5593,5 +5593,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>One of your roles allows Administrator, so you hold every permission.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Add a permission…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>No permission matches.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Define a new permission</value>
   </data>
 </root>

@@ -5549,7 +5549,7 @@
     <value>更改</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>权限名称，以空格分隔。每一项都是必需的。</value>
+    <value>某个操作列出的每项权限都是必需的。</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>权限已保存。</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>你的某个角色允许“管理员”，因此你拥有所有权限。</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>添加权限…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>没有匹配的权限。</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>定义新权限</value>
   </data>
 </root>

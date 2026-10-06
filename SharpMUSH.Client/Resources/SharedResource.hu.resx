@@ -5549,7 +5549,7 @@
     <value>Módosítás</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Jogosultságnevek szóközzel elválasztva. Mindegyik szükséges.</value>
+    <value>Egy művelethez felsorolt minden engedély szükséges.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Jogosultságok mentve.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Az egyik szerepköre engedi az Adminisztrátort, ezért minden engedélye megvan.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Engedély hozzáadása…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Nincs egyező engedély.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Új engedély megadása</value>
   </data>
 </root>

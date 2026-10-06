@@ -5549,7 +5549,7 @@
     <value>Промяна</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Имена на разрешения, разделени с интервали. Изисква се всяко от тях.</value>
+    <value>Изисква се всяко разрешение, посочено за действието.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Разрешенията са запазени.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Една от ролите ви позволява „Администратор“, затова имате всички разрешения.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Добавете разрешение…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Няма съвпадащо разрешение.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Определете ново разрешение</value>
   </data>
 </root>

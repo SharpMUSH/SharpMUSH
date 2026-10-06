@@ -4,6 +4,7 @@ using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components.Wiki;
@@ -36,6 +37,8 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 
 			switch (path)
 			{
+				case "/api/roles/permissions":
+					return Json("""[{"scope":"lore.read","category":"Wiki","description":"Read the lore pages","createdAt":0}]""");
 				case "/api/wiki/first/requirements":
 					await FirstPageReleased.Task;
 					return Json($$"""{"page":{{Set("page", "wiki_page/1", """{"edit":["first.scope"]}""")}},"inherited":[]}""");
@@ -63,6 +66,7 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		Services.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(_ => new WikiService(factory, NullLogger<WikiService>.Instance))
+			.AddSingleton(_ => new RoleRegistryClient(factory, NullLogger<RoleRegistryClient>.Instance))
 			.AddLocalization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -76,8 +80,9 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
 
 		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
-		// The fields are read, create, edit and delete, in that order.
-		cut.FindAll("input")[2].Change("media.admin");
+		// The pickers are read, create, edit and delete, in that order.
+		var pickers = cut.FindComponents<MudAutocomplete<WikiRequirementsEditor.PermissionOption>>();
+		await cut.InvokeAsync(() => pickers[2].Instance.ValueChanged.InvokeAsync(new("media.admin", "Image Library · Manage", "")));
 		cut.FindAll("button").Single(b => b.TextContent.Contains("Save")).Click();
 		cut.WaitForAssertion(() =>
 		{
@@ -87,6 +92,32 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var sent = JsonDocument.Parse(Server.Puts[0]).RootElement.GetProperty("required");
 		await Assert.That(sent.EnumerateObject().Select(p => p.Name)).IsEquivalentTo(new[] { "edit" });
 		await Assert.That(sent.GetProperty("edit")[0].GetString()).IsEqualTo("media.admin");
+	}
+
+	/// <summary>
+	/// A picker searches the game's own permissions and the built-in ones by name, scope or description, and
+	/// leaves out what the action already requires.
+	/// </summary>
+	[Test]
+	public async Task APickerSearchesCustomAndBuiltInPermissions()
+	{
+		var set = new WikiRequirementSetDto("category", "lore", "lore",
+			new Dictionary<string, IReadOnlyList<string>> { ["read"] = ["wiki.read"] }, null, null);
+		var cut = Render<WikiRequirementsEditor>(p => p
+			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
+
+		cut.FindAll("button").Single(b => b.TextContent.Contains("Change")).Click();
+		var read = cut.FindComponents<MudAutocomplete<WikiRequirementsEditor.PermissionOption>>()[0].Instance;
+		cut.WaitForAssertion(() =>
+		{
+			if (!read.SearchFunc!("lore", default).Result.Any()) throw new InvalidOperationException("custom permissions not loaded");
+		}, TimeSpan.FromSeconds(5));
+
+		var lore = (await read.SearchFunc!("lore", default)).Select(o => o.Scope).ToArray();
+		var wiki = (await read.SearchFunc!("wiki.", default)).Select(o => o.Scope).ToArray();
+		await Assert.That(lore).Contains("lore.read");
+		await Assert.That(wiki).Contains("wiki.edit");
+		await Assert.That(wiki).DoesNotContain("wiki.read");
 	}
 
 	[Test]

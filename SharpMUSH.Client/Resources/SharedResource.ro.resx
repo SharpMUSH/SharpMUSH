@@ -5549,7 +5549,7 @@
     <value>Modifică</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Nume de permisiuni separate prin spații. Fiecare este necesară.</value>
+    <value>Este necesară fiecare permisiune listată pentru o acțiune.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Permisiuni salvate.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Unul dintre rolurile tale permite Administrator, așa că ai toate permisiunile.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Adaugă o permisiune…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Nicio permisiune nu se potrivește.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definește o permisiune nouă</value>
   </data>
 </root>

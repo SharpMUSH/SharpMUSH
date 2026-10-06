@@ -1,5 +1,8 @@
+@using SharpMUSH.Library.Authorization
 @using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models
 @inject WikiService Wiki
+@inject RoleRegistryClient Roles
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -12,13 +15,48 @@
     }
     @if (_editing)
     {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WikiRequirementsHelp"]</MudText>
         @foreach (var action in Actions)
         {
             var name = action;
-            <MudTextField T="string" Value="@_draft[name]" ValueChanged="@(v => _draft[name] = v ?? string.Empty)"
-                          Label="@Loc[ActionLabelKey(name)]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          HelperText="@(name == Actions[0] ? Loc["WikiRequirementsHelp"].Value : null)"
-                          Class="wiki-req-field" />
+            <div class="wiki-req-field">
+                <div class="wiki-req-label">@Loc[ActionLabelKey(name)]</div>
+                @if (_draft[name].Count > 0)
+                {
+                    <div class="wiki-req-chips">
+                        @foreach (var scope in _draft[name])
+                        {
+                            var chosen = scope;
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" title="@DescriptionOf(chosen)"
+                                     OnClose="@(_ => _draft[name].Remove(chosen))">@chosen</MudChip>
+                        }
+                    </div>
+                }
+                <MudAutocomplete T="PermissionOption" @ref="_pickers[name]" Value="@null"
+                                 SearchFunc="@((text, _) => Task.FromResult(Search(name, text)))"
+                                 ValueChanged="@(option => AddAsync(name, option))"
+                                 ToStringFunc="@(option => option?.Scope ?? string.Empty)"
+                                 Placeholder="@Loc["WikiRequirementsAdd"]" aria-label="@Loc[ActionLabelKey(name)]"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" MaxItems="null"
+                                 Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                 ResetValueOnEmptyText="true" CoerceText="false" Class="wiki-req-picker">
+                    <ItemTemplate Context="option">
+                        <div class="wiki-req-option">
+                            <span class="wiki-req-option-name">@option.Label</span>
+                            @if (option.Label != option.Scope)
+                            {
+                                <code class="wiki-req-option-scope">@option.Scope</code>
+                            }
+                            <span class="wiki-req-option-desc">@option.Description</span>
+                        </div>
+                    </ItemTemplate>
+                    <NoItemsTemplate>
+                        <MudText Typo="Typo.body2" Class="pa-2 mud-text-secondary">@Loc["WikiRequirementsNoMatch"]</MudText>
+                        @DefineLink
+                    </NoItemsTemplate>
+                    <AfterItemsTemplate>@DefineLink</AfterItemsTemplate>
+                </MudAutocomplete>
+            </div>
         }
         <div class="wiki-req-actions">
             <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@_saving" OnClick="@(() => _editing = false)">@Loc["Cancel"]</MudButton>
@@ -76,8 +114,23 @@
 
     private bool _editing;
     private bool _saving;
-    private readonly Dictionary<string, string> _draft = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, string> _loaded = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<string>> _draft = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string[]> _loaded = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, MudAutocomplete<PermissionOption>> _pickers = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Every permission a requirement may name: the game's own first, then the built-in ones.</summary>
+    private IReadOnlyList<PermissionOption> _options = [];
+
+    /// <summary>One entry in a picker: what it is called, its scope and what it lets someone do.</summary>
+    public sealed record PermissionOption(string Scope, string Label, string Description);
+
+    /// <summary>The picker's last entry: a link to define a new permission, for those who may.</summary>
+    private RenderFragment DefineLink =>
+        @<AuthorizeView Policy="@PortalPermission.RolesAdmin">
+            <a class="wiki-req-define" href="/admin/roles?tab=permissions">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> @Loc["WikiRequirementsDefine"]
+            </a>
+        </AuthorizeView>;
     private (string, string)? _target;
 
     protected override void OnParametersSet()
@@ -101,24 +154,49 @@
         _ => "WikiActionDelete",
     };
 
-    private void StartEditing()
+    private async Task StartEditing()
     {
         foreach (var action in Actions)
         {
-            _draft[action] = _loaded[action] = Set?.Required.TryGetValue(action, out var scopes) == true ? string.Join(' ', scopes) : string.Empty;
+            _loaded[action] = Set?.Required.TryGetValue(action, out var scopes) == true ? scopes.ToArray() : [];
+            _draft[action] = [.. _loaded[action]];
         }
 
         _editing = true;
+        var custom = await Roles.ListCustomPermissionsAsync();
+        _options =
+        [
+            .. custom.OrderBy(p => p.Scope, StringComparer.Ordinal).Select(p => new PermissionOption(p.Scope, p.Scope, p.Description)),
+            .. PortalPermission.All.Select(d => new PermissionOption(d.Scope, Loc[d.LabelKey], Loc[d.DescriptionKey]))
+        ];
     }
 
-    private static string[] Permissions(string text) => text.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);
+    /// <summary>The permissions matching <paramref name="text"/> by name, scope or description, less those already chosen.</summary>
+    private IEnumerable<PermissionOption> Search(string action, string? text) =>
+        _options.Where(o => !_draft[action].Contains(o.Scope, StringComparer.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(text)
+                || o.Scope.Contains(text, StringComparison.OrdinalIgnoreCase)
+                || o.Label.Contains(text, StringComparison.OrdinalIgnoreCase)
+                || o.Description.Contains(text, StringComparison.OrdinalIgnoreCase)));
+
+    private async Task AddAsync(string action, PermissionOption? option)
+    {
+        if (option is null) return;
+        if (!_draft[action].Contains(option.Scope, StringComparer.OrdinalIgnoreCase))
+            _draft[action].Add(option.Scope);
+        if (_pickers.TryGetValue(action, out var picker))
+            await picker.ClearAsync();
+    }
+
+    private string? DescriptionOf(string scope) =>
+        _options.FirstOrDefault(o => string.Equals(o.Scope, scope, StringComparison.OrdinalIgnoreCase))?.Description;
 
     private async Task SaveAsync()
     {
         // Only the actions changed here are sent: the server leaves the others alone, so a save does not undo
         // another admin's change to an action this form never touched.
-        var required = Actions.Where(action => !Permissions(_draft[action]).SequenceEqual(Permissions(_loaded[action])))
-            .ToDictionary(action => action, action => (IReadOnlyList<string>)Permissions(_draft[action]));
+        var required = Actions.Where(action => !_draft[action].SequenceEqual(_loaded[action], StringComparer.OrdinalIgnoreCase))
+            .ToDictionary(action => action, action => (IReadOnlyList<string>)_draft[action].ToArray());
         if (required.Count == 0)
         {
             _editing = false;

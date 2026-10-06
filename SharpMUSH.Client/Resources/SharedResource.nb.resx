@@ -5549,7 +5549,7 @@
     <value>Endre</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Tillatelsesnavn atskilt med mellomrom. Alle kreves.</value>
+    <value>Alle tillatelser som står ved en handling, kreves.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Tillatelser lagret.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>En av rollene dine tillater Administrator, så du har alle tillatelser.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Legg til en tillatelse…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Ingen tillatelse passer.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definer en ny tillatelse</value>
   </data>
 </root>

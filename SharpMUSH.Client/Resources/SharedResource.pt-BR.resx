@@ -5549,7 +5549,7 @@
     <value>Alterar</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Nomes de permissões separados por espaços. Todas são exigidas.</value>
+    <value>Todas as permissões listadas para uma ação são exigidas.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Permissões salvas.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Um dos seus papéis permite Administrador, então você tem todas as permissões.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Adicionar uma permissão…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Nenhuma permissão corresponde.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definir uma nova permissão</value>
   </data>
 </root>

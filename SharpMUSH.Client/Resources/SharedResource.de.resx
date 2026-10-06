@@ -5549,7 +5549,7 @@
     <value>Ändern</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Berechtigungsnamen, durch Leerzeichen getrennt. Jede wird benötigt.</value>
+    <value>Jede bei einer Aktion aufgeführte Berechtigung ist erforderlich.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Berechtigungen gespeichert.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Eine deiner Rollen erlaubt „Administrator“, daher hast du jede Berechtigung.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Berechtigung hinzufügen…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Keine passende Berechtigung.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Neue Berechtigung festlegen</value>
   </data>
 </root>

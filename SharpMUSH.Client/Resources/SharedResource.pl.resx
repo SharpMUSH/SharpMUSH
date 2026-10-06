@@ -5549,7 +5549,7 @@
     <value>Zmień</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Nazwy uprawnień oddzielone spacjami. Wymagane są wszystkie.</value>
+    <value>Wymagane jest każde uprawnienie wymienione przy czynności.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Uprawnienia zapisane.</value>
@@ -5592,5 +5592,14 @@
   </data>
   <data name="RolAccessAdministratorNote" xml:space="preserve">
     <value>Jedna z twoich ról zezwala na Administratora, więc masz każde uprawnienie.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Dodaj uprawnienie…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Brak pasującego uprawnienia.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Zdefiniuj nowe uprawnienie</value>
   </data>
 </root>
