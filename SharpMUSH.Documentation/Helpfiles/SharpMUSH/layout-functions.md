@@ -24,7 +24,7 @@ Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `
 
 **Readers.** A client that cannot show Unicode is sent ASCII borders; see [LAYOUT BORDERS]. A client that says it is a screen reader is sent the content alone, in reading order: no borders, fields as `Label: value` lines, tree levels as indentation.
 
-**Options.** The layout functions take options as `key:value` pairs separated by spaces. Put a value in double quotes when it holds a space: `open:"<< "`. A value keeps its colour, so `top:[ansi(hb,=)]` draws a blue edge. An unknown key is an error naming it.
+**Options.** The layout functions take options as `key:value` pairs separated by spaces. Put a value in double quotes when it holds a space: `open:"<< "`. A value keeps its colour, so `top:[ansi(hb,=)]` draws a blue edge. An option that is on or off (`vertical`, `across`, `mirror`) is on written bare, and takes `yes` or `no`. Options apply in the order written, except a preset (`border:`, `guide:`), which applies first so the pieces written beside it change it whatever their order. Every function answers a bad list the same way: `#-1 UNKNOWN LAYOUT OPTION <KEY>` for a key it does not take, `#-1 ARGUMENT OUT OF RANGE` for a number outside its range, and `#-1 INVALID ARGUMENT` for any other value it cannot read.
 
 ### Example: a finger sheet
 ```sharp
@@ -180,7 +180,9 @@ Options:
 
 A line across the width, with *<title>* set into it. On a line of its own inside a [BOX()], it divides the box, its ends meeting the box's sides.
 
-It takes the same `border`, `title`, `top`, `open` and `close` options as [BOX()].
+Options:
+- `border:<style>` and the border pieces — see [LAYOUT BORDERS]. Inside a box, a rule with none of these takes the box's border.
+- `title:left`, `title:center` or `title:right` — where the title sits. Centred by default.
 
 ### Examples
 ```sharp
@@ -206,8 +208,8 @@ Options (the first argument, which may be empty):
 - `width:<n>` — the width of the whole row; see [LAYOUT FUNCTIONS] for leaving it out.
 - `gap:<n>` — spaces between items, 0 to 20. Two by default.
 - `sep:<text>` — drawn between items on every line instead of the gap, for example `sep:" | "`.
-- `justify:start`, `end`, `center` or `between` — where spare width goes when no item takes it.
-- `align:top`, `center` or `bottom` — where a shorter item sits against the tallest.
+- `justify:<where>` — `start`, `end`, `center` or `between`: where spare width goes when no item takes it.
+- `align:<where>` — `top`, `center` or `bottom`: where a shorter item sits against the tallest.
 - `vertical` — always one under the other.
 
 ### Examples
@@ -414,7 +416,7 @@ Options (the last argument):
 - `open:<text>` and `close:<text>` — the ends. `[` and `]` by default; leave one empty for none.
 - `gradient:<colors>` — shade the bar through these colours, [ANSI()] codes split by `|`: `gradient:r|y|g` or `gradient:#ff4040|#40ff80`. See [GRADIENT()] for how they blend.
 - `shade:cells` or `shade:value` — with `cells` (the default) each cell takes the colour at its place along the whole bar, so a fuller bar reaches further along the gradient. With `value` the whole filled part takes one colour, the one at the value's place: red when nearly empty, green when full.
-- `space:oklch`, `space:oklab` or `space:hsl` — the space the colours blend in; see [GRADIENT()].
+- `space:oklch`, `space:oklab` or `space:hsl`, `mirror` and `repeat:<n>` — how the colours blend and run; see [GRADIENT()].
 
 ### Examples
 ```sharp
@@ -573,21 +575,33 @@ With lists from other functions, change the delimiter to the space they use: `da
 
 # GRADIENT()
 
-`gradient(<text>, <colors>[, <space>])`
+`gradient(<text>, <colors>[, <options>])`
 
-*<text>* with each character in the colour at its place along a gradient through *<colors>*, which are [ANSI()] codes split by `|`: `r|y|g`, `#ff6000|#8040ff`, or colour names. Spaces take no colour and no place. The text keeps its own markup.
+*<text>* in colours blended one into the next through *<colors>*, which are [ANSI()] codes split by `|`: `r|y|g`, `#ff6000|#8040ff`, or colour names. Spaces take no colour and no place. The text keeps its own markup.
 
-The colours blend in a space built to look even to the eye, not in plain RGB, whose midpoints go grey and dark (red to green through a muddy olive). *<space>* is one of:
-- `oklch` (the default) — keeps the middle as bright and vivid as the ends; red to green passes through yellow.
-- `oklab` — straight across, with no swing through other hues; colours far apart meet in a softer middle.
-- `hsl` — a brighter, less even rainbow sweep.
+Given a layout, such as a [BOX()] or a [DATATABLE()], the whole block is shaded, borders and all, and stays a layout: each reader still gets it at their own width, and the portal draws it as a card with its text and borders in the gradient.
 
-A client with fewer colours gets each one's nearest. The portal shows the same colours.
+Options (the last argument):
+- `flow:characters`, `flow:words`, `flow:across`, `flow:down` or `flow:diagonal` — which way the colours run. `characters` (the default) runs along the characters that show, on through every line; `words` gives each word one colour; `across` runs left to right by column, every line alike; `down` gives each line one colour; `diagonal` runs from the top-left corner to the bottom-right. The portal runs `characters` and `words` across.
+- `space:oklch`, `space:oklab` or `space:hsl` — the space the colours blend in.
+- `mirror` — run there and back: red to blue to red.
+- `repeat:<n>` — run through the colours *<n>* times, 1 to 1000.
 
-### Example
+The colours blend in a space built to look even to the eye, not in plain RGB, whose midpoints go grey and dark (red to green through a muddy olive):
+- `oklch` (the default) keeps the middle as bright and vivid as the ends; red to green passes through yellow.
+- `oklab` goes straight across, with no swing through other hues; colours far apart meet in a softer middle.
+- `hsl` is a brighter, less even rainbow sweep.
+
+A blend needs a client with 256 colours or more, which gets each shade's nearest. A client with only the sixteen standard colours gets bands of the colours you named instead, each character in the one it lies nearest: `r|b` shows as a red half and a blue half. The portal shows the full blend.
+
+### Examples
 ```sharp
 > think gradient(Mannaz Byron,#ff4040|#ffd040|#40c0ff)
 Mannaz Byron
+> think gradient(box(Sheet,Mannaz,20),hc|hm,flow:diagonal)
++====< Mannaz >====+
+| Sheet            |
++==================+
 ```
 
 ::: seealso

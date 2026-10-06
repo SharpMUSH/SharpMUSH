@@ -798,6 +798,10 @@ pre.ms-preformatted {
 .ms-grid { list-style: none; margin: 0; padding: 0; display: grid; }
 .ms-grid.ms-down { display: block; }
 .ms-grid > li { break-inside: avoid; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* A block with no HTML of its own is drawn as its lines; gradient() over a layout clips the gradient to its text and borders. */
+.ms-pre { margin: 0; font: inherit; white-space: pre; overflow-x: auto; }
+.ms-shaded { -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ms-shaded :is(.ms-box, .ms-gauge-bar), .ms-shaded :is(.ms-rule, .ms-divider)::before, .ms-shaded :is(.ms-rule, .ms-divider)::after { border-image: var(--ms-shade) 1; }
 .ms-table-wrap { max-width: 100%; overflow-x: auto; }
 .ms-table { border-collapse: collapse; }
 .ms-table th, .ms-table td { padding: 0 1ch; vertical-align: top; text-align: left; }

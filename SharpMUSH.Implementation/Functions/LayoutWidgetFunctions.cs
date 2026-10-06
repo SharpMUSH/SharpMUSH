@@ -13,22 +13,64 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Implementation.Functions;
 
 /// <summary>
-/// The smaller layout pieces: <c>gauge()</c>, <c>bullets()</c>, <c>grid()</c>, <c>datatable()</c> and
-/// <c>badge()</c>. Like <c>box()</c>, each returns the text a terminal shows with the layout riding on it.
+/// The smaller layout pieces: <c>gauge()</c>, <c>bullets()</c>, <c>grid()</c>, <c>datatable()</c>,
+/// <c>datacolumns()</c>, <c>badge()</c> and <c>gradient()</c>. Like <c>box()</c>, each returns the text a
+/// terminal shows with the layout riding on it.
 /// </summary>
 public partial class Functions
 {
-	private static readonly IReadOnlySet<string> GaugeKeys =
-		new HashSet<string>(["width", "filled", "empty", "open", "close", "show", "bar", "gradient", "space", "shade"], StringComparer.OrdinalIgnoreCase);
+	/// <summary>gauge()'s options; its colours are read with the game's colour names.</summary>
+	private static OptionSchema<Laid<Gauge>> GaugeOptions(Func<string, IColorMarkup?> color) => OptionSchema<Laid<Gauge>>.Empty
+		.Width((laid, width) => laid with { Width = width })
+		.NonEmptyText("filled", (laid, piece) => laid with { Block = laid.Block with { Filled = piece } })
+		.NonEmptyText("empty", (laid, piece) => laid with { Block = laid.Block with { Empty = piece } })
+		.Text("open", (laid, piece) => laid with { Block = laid.Block with { Open = piece } })
+		.Text("close", (laid, piece) => laid with { Block = laid.Block with { Close = piece } })
+		.Choice("show", Names<GaugeShow>(), (laid, show) => laid with { Block = laid.Block with { Show = show } })
+		.Int("bar", 1, MaxLayoutWidth, (laid, bar) => laid with { Block = laid.Block with { BarWidth = bar } })
+		.Gradient(color, laid => laid.Block.Gradient, (laid, gradient) => laid with { Block = laid.Block with { Gradient = gradient } })
+		.Choice("shade", Names<GaugeShade>(), (laid, shade) => laid with { Block = laid.Block with { Shade = shade } });
 
-	private static readonly IReadOnlySet<string> BulletsKeys =
-		new HashSet<string>(["width", "style", "marker", "start"], StringComparer.OrdinalIgnoreCase);
+	private static OptionSchema<Laid<Gauge>> GaugeSchema { get; } = GaugeOptions(_ => null);
 
-	private static readonly IReadOnlySet<string> GridKeys =
-		new HashSet<string>(["width", "gap", "across"], StringComparer.OrdinalIgnoreCase);
+	private static OptionSchema<Laid<Bullets>> BulletsSchema { get; } = OptionSchema<Laid<Bullets>>.Empty
+		.Width((laid, width) => laid with { Width = width })
+		.Choice("style", Names<BulletStyle>().Where(name => name.Value != BulletStyle.Custom).ToDictionary(),
+			(laid, style) => laid with { Block = laid.Block with { Style = style } })
+		.NonEmptyText("marker", (laid, marker) => laid with { Block = laid.Block with { Style = BulletStyle.Custom, Marker = marker } })
+		.Int("start", 1, 100000, (laid, start) => laid with { Block = laid.Block with { Start = start } });
 
-	private static readonly IReadOnlySet<string> DataTableKeys =
-		new HashSet<string>(["width", "delim", "gap", "sep", "rule", "priority", "min", "max", "nowrap"], StringComparer.OrdinalIgnoreCase);
+	private static OptionSchema<Laid<Grid>> GridSchema { get; } = OptionSchema<Laid<Grid>>.Empty
+		.Width((laid, width) => laid with { Width = width })
+		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } })
+		.Flag("across", (laid, across) => laid with { Block = laid.Block with { Across = across } });
+
+	/// <summary>
+	/// A table's options. The per-column lists are kept as written: they are read once the delimiter
+	/// (applied first) has split the headings into columns.
+	/// </summary>
+	private sealed record TableSettings(Table Table, MString Width, MString Delimiter)
+	{
+		public ImmutableList<(string Key, MString List)> ColumnLists { get; init; } = [];
+	}
+
+	private static OptionSchema<TableSettings> DataTableSchema { get; } = OptionSchema<TableSettings>.Empty
+		.Width((settings, width) => settings with { Width = width })
+		.NonEmptyText("delim", (settings, delimiter) => settings with { Delimiter = delimiter })
+		.Int("gap", 0, LayoutOptionGroups.MaxGap, (settings, gap) => settings with { Table = settings.Table with { Gap = gap } })
+		.Text("sep", (settings, separator) => settings with { Table = settings.Table with { Separator = separator.Length == 0 ? null : separator } })
+		.Text("rule", (settings, rule) => settings with { Table = settings.Table with { HeaderRule = rule } })
+		.Text("priority", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("priority", list)) })
+		.Text("min", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("min", list)) })
+		.Text("max", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("max", list)) })
+		.Text("nowrap", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("nowrap", list)) });
+
+	/// <summary>A gradient's colours and the way it runs.</summary>
+	private sealed record Shading(ColorGradient Gradient, GradientFlow Flow);
+
+	private static OptionSchema<Shading> GradientSchema { get; } = OptionSchema<Shading>.Empty
+		.GradientShape(shading => shading.Gradient, (shading, gradient) => shading with { Gradient = gradient })
+		.Choice("flow", LayoutOptionGroups.Flows, (shading, flow) => shading with { Flow = flow });
 
 	/// <summary>
 	/// <c>gauge(&lt;value&gt;, &lt;maximum&gt;[, &lt;label&gt;[, &lt;options&gt;]])</c> — a bar filled to the
@@ -42,62 +84,9 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		if (maximum <= 0) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 3), GaugeKeys) switch
-		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildGauge(parser, value, maximum, Arg(args, 2), options),
-			Error<string> error => new CallState(error.Value),
-		});
-	}
-
-	private CallState BuildGauge(IMUSHCodeParser parser, double value, double maximum, MString label, IReadOnlyList<(string Key, MString Value)> options)
-	{
-		var settings = GaugeOptions.Default;
-		var widthArg = MarkupText.Empty;
-		foreach (var (key, option) in options)
-		{
-			var plain = option.ToPlainText().Trim().ToLowerInvariant();
-			switch (key)
-			{
-				case "width":
-					widthArg = option;
-					break;
-				case "filled" or "empty" when option.Length == 0:
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-				case "filled":
-					settings = settings with { Filled = option };
-					break;
-				case "empty":
-					settings = settings with { Empty = option };
-					break;
-				case "open":
-					settings = settings with { Open = option };
-					break;
-				case "close":
-					settings = settings with { Close = option };
-					break;
-				case "show" when plain is "percent" or "value" or "none":
-					settings = settings with { Show = plain switch { "value" => GaugeShow.Value, "none" => GaugeShow.None, _ => GaugeShow.Percent } };
-					break;
-				case "bar" when int.TryParse(plain, out var bar) && bar is > 0 and <= MaxLayoutWidth:
-					settings = settings with { BarWidth = bar };
-					break;
-				case "gradient":
-					if (GradientStops(option) is not { } stops) return new CallState("#-1 UNKNOWN COLOR");
-					settings = settings with { Gradient = new ColorGradient(stops, settings.Gradient?.Space ?? GradientSpace.Oklch) };
-					break;
-				case "space" when GradientSpaceOf(plain) is { } space:
-					settings = settings with { Gradient = (settings.Gradient ?? new ColorGradient([])) with { Space = space } };
-					break;
-				case "shade" when plain is "cells" or "value":
-					settings = settings with { Shade = plain == "value" ? GaugeShade.Value : GaugeShade.Cells };
-					break;
-				default:
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-			}
-		}
-
-		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
-		return new CallState(BlockLayout.Build(new GaugeNode(value, maximum, label.Length == 0 ? null : label, settings), width, fluid));
+		var label = Arg(args, 2);
+		var gauge = new Gauge(value, maximum) { Label = label.Length == 0 ? null : label };
+		return ValueTask.FromResult(Laidout(parser, GaugeOptions(AnsiCodes), Arg(args, 3), gauge));
 	}
 
 	/// <summary>
@@ -108,42 +97,12 @@ public partial class Functions
 	public ValueTask<CallState> Bullets(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 2), BulletsKeys) switch
+		var items = ListItems(Arg(args, 0), Arg(args, 1));
+		return ValueTask.FromResult(BulletsSchema.Apply(Arg(args, 2), new Laid<Bullets>(new Bullets([.. items.Select(item => Body(item))]), MarkupText.Empty, DefaultBorder())) switch
 		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildBullets(parser, ListItems(Arg(args, 0), Arg(args, 1)), options),
+			Laid<Bullets> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width),
 			Error<string> error => new CallState(error.Value),
 		});
-	}
-
-	private CallState BuildBullets(IMUSHCodeParser parser, MString[] items, IReadOnlyList<(string Key, MString Value)> options)
-	{
-		var settings = BulletOptions.Default;
-		var widthArg = MarkupText.Empty;
-		foreach (var (key, option) in options)
-		{
-			var plain = option.ToPlainText().Trim().ToLowerInvariant();
-			switch (key)
-			{
-				case "width":
-					widthArg = option;
-					break;
-				case "style" when plain is not "custom" && Enum.TryParse<BulletStyle>(plain, ignoreCase: true, out var style) && Enum.IsDefined(style):
-					settings = settings with { Style = style };
-					break;
-				case "marker" when option.Length > 0:
-					settings = settings with { Style = BulletStyle.Custom, Marker = option };
-					break;
-				case "start" when int.TryParse(plain, out var start) && start is >= 1 and <= 100000:
-					settings = settings with { Start = start };
-					break;
-				default:
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-			}
-		}
-
-		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
-		if (items.Length == 0) return CallState.Empty;
-		return new CallState(BlockLayout.Build(new BulletsNode([.. items.Select(item => Body(item))], settings), width, fluid));
 	}
 
 	/// <summary>
@@ -154,40 +113,17 @@ public partial class Functions
 	public ValueTask<CallState> Grid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 2), GridKeys) switch
+		var items = ListItems(Arg(args, 0), Arg(args, 1));
+		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items]), MarkupText.Empty, DefaultBorder())) switch
 		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildGrid(parser, ListItems(Arg(args, 0), Arg(args, 1)), options),
+			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
 
-	private CallState BuildGrid(IMUSHCodeParser parser, MString[] items, IReadOnlyList<(string Key, MString Value)> options)
-	{
-		var gap = 2;
-		var across = false;
-		var widthArg = MarkupText.Empty;
-		foreach (var (key, option) in options)
-		{
-			switch (key)
-			{
-				case "width":
-					widthArg = option;
-					break;
-				case "gap" when int.TryParse(option.ToPlainText().Trim(), out var cells) && cells is >= 0 and <= 20:
-					gap = cells;
-					break;
-				case "across":
-					across = LayoutSpec.IsYes(option);
-					break;
-				default:
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-			}
-		}
-
-		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
-		if (items.Length == 0) return CallState.Empty;
-		return new CallState(BlockLayout.Build(new GridNode([.. items], gap, across), width, fluid));
-	}
+	/// <summary>Nothing for an empty list, once its options have been checked as for a full one.</summary>
+	private CallState EmptyUnlessBadWidth(IMUSHCodeParser parser, MString width) =>
+		LayoutWidth(parser, width) is null ? new CallState(ErrorMessages.Returns.ArgRange) : CallState.Empty;
 
 	/// <summary>
 	/// <c>datatable(&lt;options&gt;, &lt;headings&gt;, &lt;row1&gt;[, ... &lt;rowN&gt;])</c> — rows under headings,
@@ -198,17 +134,8 @@ public partial class Functions
 	public ValueTask<CallState> DataTable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), DataTableKeys) switch
-		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildDataTable(parser, options, delimiter =>
-			{
-				var lists = args.Keys.Select(int.Parse).Where(i => i > 1).Order()
-					.Select(i => MushText.SplitList(delimiter, args[i.ToString()].Message!))
-					.ToArray();
-				return (MushText.SplitList(delimiter, Arg(args, 1)), lists);
-			}),
-			Error<string> error => new CallState(error.Value),
-		});
+		return ValueTask.FromResult(BuildDataTable(parser, Arg(args, 0), delimiter =>
+			(MushText.SplitList(delimiter, Arg(args, 1)), [.. Rest(args, 2).Select(row => MushText.SplitList(delimiter, row))])));
 	}
 
 	/// <summary>
@@ -220,97 +147,79 @@ public partial class Functions
 	public ValueTask<CallState> DataColumns(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), DataTableKeys) switch
+		return ValueTask.FromResult(BuildDataTable(parser, Arg(args, 0), delimiter =>
 		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildDataTable(parser, options, delimiter =>
-			{
-				var columns = args.Keys.Select(int.Parse).Where(i => i > 0).Order()
-					.Select(i => MushText.SplitList(delimiter, args[i.ToString()].Message!))
-					.ToArray();
-				var height = columns.Max(column => column.Length) - 1;
-				var rows = Enumerable.Range(1, height)
-					.Select(r => columns.Select(column => r < column.Length ? column[r] : MarkupText.Empty).ToArray())
-					.ToArray();
-				return ([.. columns.Select(column => column[0])], rows);
-			}),
-			Error<string> error => new CallState(error.Value),
-		});
+			var columns = Rest(args, 1).Select(column => MushText.SplitList(delimiter, column)).ToArray();
+			var height = columns.Max(column => column.Length) - 1;
+			var rows = Enumerable.Range(1, height)
+				.Select(r => columns.Select(column => r < column.Length ? column[r] : MarkupText.Empty).ToArray())
+				.ToArray();
+			return ([.. columns.Select(column => column[0])], rows);
+		}));
 	}
 
 	/// <summary>A table from its options and, once the delimiter is known, its headings and rows of cells.</summary>
-	private CallState BuildDataTable(IMUSHCodeParser parser, IReadOnlyList<(string Key, MString Value)> options,
-		Func<MString, (MString[] Headings, MString[][] Rows)> read)
-	{
-		var delimiter = options.LastOrDefault(option => option.Key == "delim").Value is { Length: > 0 } given ? given : MarkupText.Plain("|");
-		var (headings, cells) = read(delimiter);
-		var columns = headings.Select(Heading).ToArray();
-
-		var settings = TableOptions.Default;
-		var widthArg = MarkupText.Empty;
-		foreach (var (key, option) in options)
+	private CallState BuildDataTable(IMUSHCodeParser parser, MString options, Func<MString, (MString[] Headings, MString[][] Rows)> read) =>
+		DataTableSchema.Apply(options, new TableSettings(new Table([], []), MarkupText.Empty, MarkupText.Plain("|"))) switch
 		{
-			switch (key)
-			{
-				case "width":
-					widthArg = option;
-					break;
-				case "delim":
-					break;
-				case "gap" when int.TryParse(option.ToPlainText().Trim(), out var gap) && gap is >= 0 and <= 20:
-					settings = settings with { Gap = gap };
-					break;
-				case "sep":
-					settings = settings with { Separator = option.Length == 0 ? null : option };
-					break;
-				case "rule":
-					settings = settings with { HeaderRule = option };
-					break;
-				case "priority" or "min" or "max":
-					var numbers = MushText.SplitList(delimiter, option);
-					if (numbers.Length > columns.Length) return new CallState(ErrorMessages.Returns.ArgRange);
-					for (var c = 0; c < numbers.Length; c++)
-					{
-						var text = numbers[c].ToPlainText().Trim();
-						if (text.Length == 0) continue;
-						if (!int.TryParse(text, out var number)) return new CallState(ErrorMessages.Returns.InvalidArgument);
-						TableColumn? changed = key switch
-						{
-							"priority" when number is >= 1 and <= 99 => columns[c] with { Priority = number },
-							"min" when number is >= 1 and <= MaxLayoutWidth => columns[c] with { Min = number },
-							"max" when number is >= 0 and <= MaxLayoutWidth => columns[c] with { Max = number },
-							_ => null,
-						};
-						if (changed is null) return new CallState(ErrorMessages.Returns.ArgRange);
-						columns[c] = changed;
-					}
-					break;
-				case "nowrap":
-					foreach (var column in MushText.SplitList(delimiter, option))
-					{
-						if (!int.TryParse(column.ToPlainText().Trim(), out var index) || index < 1 || index > columns.Length)
-							return new CallState(ErrorMessages.Returns.ArgRange);
-						columns[index - 1] = columns[index - 1] with { Wrap = false };
-					}
-					break;
-				default:
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-			}
+			TableSettings settings => BuildDataTable(parser, settings, read),
+			Error<string> error => new CallState(error.Value),
+		};
+
+	private CallState BuildDataTable(IMUSHCodeParser parser, TableSettings settings, Func<MString, (MString[] Headings, MString[][] Rows)> read)
+	{
+		var (headings, cells) = read(settings.Delimiter);
+		var columns = headings.Select(Heading).ToArray();
+		foreach (var (key, list) in settings.ColumnLists)
+		{
+			if (ApplyColumnList(columns, key, MushText.SplitList(settings.Delimiter, list)) is { } failure) return new CallState(failure);
 		}
 
-		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
-
 		var rows = cells.Select(row => row.Select(cell => Body(cell)).ToImmutableArray()).ToImmutableArray();
-		return new CallState(BlockLayout.Build(new TableNode([.. columns], rows, settings), width, fluid));
+		return Finish(parser, settings.Table with { Columns = [.. columns], Rows = rows }, settings.Width);
+	}
+
+	/// <summary>
+	/// A per-column list applied to <paramref name="columns"/>: <c>priority</c>, <c>min</c> and <c>max</c>
+	/// give a number for each column in turn (empty to leave one as it is), <c>nowrap</c> names columns
+	/// by their place. The error, or null.
+	/// </summary>
+	private static string? ApplyColumnList(TableColumn[] columns, string key, MString[] list)
+	{
+		if (key == "nowrap")
+		{
+			foreach (var column in list)
+			{
+				if (!int.TryParse(column.ToPlainText().Trim(), out var index) || index < 1 || index > columns.Length) return ErrorMessages.Returns.ArgRange;
+				columns[index - 1] = columns[index - 1] with { Wrap = false };
+			}
+			return null;
+		}
+
+		if (list.Length > columns.Length) return ErrorMessages.Returns.ArgRange;
+		for (var c = 0; c < list.Length; c++)
+		{
+			var text = list[c].ToPlainText().Trim();
+			if (text.Length == 0) continue;
+			if (!int.TryParse(text, out var number)) return ErrorMessages.Returns.InvalidArgument;
+			TableColumn? changed = key switch
+			{
+				"priority" when number is >= 1 and <= 99 => columns[c] with { Priority = number },
+				"min" when number is >= 1 and <= MaxLayoutWidth => columns[c] with { Min = number },
+				"max" when number is >= 0 and <= MaxLayoutWidth => columns[c] with { Max = number },
+				_ => null,
+			};
+			if (changed is null) return ErrorMessages.Returns.ArgRange;
+			columns[c] = changed;
+		}
+		return null;
 	}
 
 	/// <summary>A heading, after <c>align()</c>'s <c>&lt;</c>, <c>-</c> or <c>&gt;</c> to place its column's text.</summary>
-	private static TableColumn Heading(MString heading)
-	{
-		var alignment = heading.Length > 1 ? LayoutSpec.ParseAlignment(heading.Substring(0, 1)) : null;
-		return alignment is { } placed
-			? new TableColumn(heading.Substring(1), placed)
+	private static TableColumn Heading(MString heading) =>
+		heading.Length > 1 && heading.Text[0] is '<' or '-' or '>' && LayoutOptionGroups.Alignments.TryGetValue(heading.Text[..1], out var placed)
+			? new TableColumn(heading.Substring(1)) { Alignment = placed }
 			: new TableColumn(heading);
-	}
 
 	/// <summary>
 	/// <c>badge(&lt;text&gt;[, &lt;kind&gt;])</c> — the text in brackets, coloured for its kind: <c>ok</c>,
@@ -336,54 +245,36 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// <c>gradient(&lt;text&gt;, &lt;colors&gt;[, &lt;space&gt;])</c> — the text with each character in the
-	/// colour at its place along a gradient through the colours, which are ansi() codes split by
-	/// <c>|</c>. Blended in OKLCH unless <c>oklab</c> or <c>hsl</c> is named, never in plain RGB.
+	/// <c>gradient(&lt;text&gt;, &lt;colors&gt;[, &lt;options&gt;])</c> — the text in colours blended one into the
+	/// next, which are ansi() codes split by <c>|</c>, running along the characters, the words, across
+	/// each line, down the lines or diagonally. Given a layout (a <c>box()</c>, a <c>datatable()</c>), the
+	/// whole block is shaded, borders and all, and stays a block the portal draws.
 	/// </summary>
-	[SharpFunction(Name = "gradient", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["text", "colors", "space"])]
+	[SharpFunction(Name = "gradient", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["text", "colors", "options"])]
 	public ValueTask<CallState> Gradient(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		if (GradientStops(Arg(args, 1)) is not { } stops) return ValueTask.FromResult(new CallState("#-1 UNKNOWN COLOR"));
-		var spaceArg = Arg(args, 2).ToPlainText().Trim().ToLowerInvariant();
-		if ((spaceArg.Length == 0 ? GradientSpace.Oklch : GradientSpaceOf(spaceArg)) is not { } space)
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
+		if (LayoutOptionGroups.Stops(Arg(args, 1), AnsiCodes) is not { } stops) return ValueTask.FromResult(new CallState("#-1 UNKNOWN COLOR"));
 
-		var gradient = new ColorGradient(stops, space);
-		var text = Arg(args, 0);
-		var characters = text.EnumerateGraphemes().ToArray();
-		var visible = characters.Count(character => !string.IsNullOrWhiteSpace(character.ToPlainText()));
-		var place = 0;
-		var painted = characters.Select(character =>
+		return ValueTask.FromResult(GradientSchema.Apply(Arg(args, 2), new Shading(new ColorGradient(stops), GradientFlow.Characters)) switch
 		{
-			// Spaces take no colour and no place, so a gradient over "a b" runs from a straight to b.
-			if (string.IsNullOrWhiteSpace(character.ToPlainText())) return character;
-			return gradient.Paint(character, visible > 1 ? place++ / (double)(visible - 1) : 0);
+			Shading shading => new CallState(Shade(Arg(args, 0), shading)),
+			Error<string> error => new CallState(error.Value),
 		});
-		return ValueTask.FromResult(new CallState(MarkupText.Concat([.. painted])));
 	}
 
-	/// <summary>Colour stops, ansi() codes split by <c>|</c>; null when one sets no foreground colour.</summary>
-	private ImmutableArray<IColorMarkup>? GradientStops(MString list)
-	{
-		var stops = new List<IColorMarkup>();
-		foreach (var codes in MushText.SplitList(MarkupText.Plain("|"), list))
-		{
-			var text = codes.ToPlainText().Trim();
-			if (text.Length == 0) continue;
-			if (AnsiCodes(text) is not { Foreground: not null } stop) return null;
-			stops.Add(stop);
-		}
-		return stops.Count == 0 ? null : [.. stops];
-	}
+	/// <summary>
+	/// <paramref name="text"/> shaded: a layout as a <see cref="Shaded"/> block laid out again at its own
+	/// width, any other text character by character.
+	/// </summary>
+	private static MString Shade(MString text, Shading shading) =>
+		BlockLayout.AsBlock(text) is not TextBlock && LayoutOf(text) is { } layout
+			? BlockLayout.Build(layout.Root.Shaded(shading.Gradient, shading.Flow), layout.Width, layout.Fluid)
+			: shading.Gradient.Shade(text, shading.Flow);
 
-	private static GradientSpace? GradientSpaceOf(string name) => name switch
-	{
-		"oklch" => GradientSpace.Oklch,
-		"oklab" => GradientSpace.Oklab,
-		"hsl" => GradientSpace.Hsl,
-		_ => null,
-	};
+	/// <summary>The layout that covers the whole of <paramref name="text"/>.</summary>
+	private static LayoutMarkup? LayoutOf(MString text) =>
+		text.Runs.IsDefaultOrEmpty ? null : text.Runs[0].Markups.OfType<LayoutMarkup>().FirstOrDefault();
 
 	/// <summary>A list's items split on its delimiter (a space when none is given); none for an empty list.</summary>
 	private static MString[] ListItems(MString list, MString delimiter) =>

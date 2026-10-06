@@ -72,10 +72,10 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	{
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
-		var options = !capabilities.SupportsUtf8 || capabilities.ScreenReader
-			? new BlockRenderOptions { AsciiOnly = !capabilities.SupportsUtf8, Linear = capabilities.ScreenReader }
-			: BlockRenderOptions.Default;
-		return BlockLayout.Relayout(text, capabilities.Width, options);
+		var context = !capabilities.SupportsUtf8 || capabilities.ScreenReader
+			? new LayoutContext { AsciiOnly = !capabilities.SupportsUtf8, Linear = capabilities.ScreenReader }
+			: LayoutContext.Default;
+		return BlockLayout.Relayout(text, capabilities.Width, context);
 	}
 
 	/// <summary>

@@ -1,3 +1,4 @@
+using MarkupString.Layout;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -31,7 +32,7 @@ public class LayoutFunctionTests
 			"+=============================<< Mannaz Byron >>=============================+",
 			"| Sex: Male                           | Job: Dark Warrior                    |",
 			"| Species: Human                      | Online: 1h                           |",
-			"+==================================< Quote >=================================+",
+			"+=================================<< Quote >>================================+",
 			"| Hooooo?                                                                    |",
 			"+============================================================================+"));
 	}
@@ -182,6 +183,68 @@ public class LayoutFunctionTests
 		=> await Assert.That((await Eval("gauge(12,12,,bar:2 show:none open: close: shade:value space:hsl gradient:#ff0000|#0000ff)")).Render(MarkupFormat.Ansi))
 			.Contains("\u001b[38;2;0;0;255m██");
 
+	[Test]
+	public async Task Gradient_FlowsDownTheLines_EachLineOneColour()
+	{
+		var ansi = (await Eval("gradient(ab%rcd,#ff0000|#0000ff,flow:down)")).Render(MarkupFormat.Ansi);
+
+		await Assert.That(ansi).Contains("\u001b[38;2;255;0;0mab");
+		await Assert.That(ansi).Contains("\u001b[38;2;0;0;255mcd");
+	}
+
+	[Test]
+	public async Task Gradient_MirrorAndRepeat_RunTheColoursAgain()
+	{
+		var mirrored = (await Eval("gradient(abc,#ff0000|#0000ff,mirror)")).Render(MarkupFormat.Ansi);
+		var repeated = (await Eval("gradient(abcde,#ff0000|#0000ff,repeat:2)")).Render(MarkupFormat.Ansi);
+
+		await Assert.That(mirrored).Contains("\u001b[38;2;255;0;0mc");
+		await Assert.That(repeated).Contains("\u001b[38;2;255;0;0mc");
+	}
+
+	[Test]
+	public async Task Gradient_OverALayout_ShadesTheBlockAndKeepsItALayout()
+	{
+		var shaded = await Eval("gradient(box(Hi,T,12),#ff0000|#0000ff,flow:diagonal)");
+
+		await Assert.That(BlockLayout.AsBlock(shaded)).IsTypeOf<Shaded>();
+		await Assert.That(shaded.Render(MarkupFormat.Html)).Contains("ms-shaded");
+		await Assert.That(shaded.Render(MarkupFormat.Ansi)).Contains("\u001b[38;2;255;0;0m");
+	}
+
+	[Test]
+	public async Task Box_ADividerWithNoBorderOfItsOwn_TakesTheBoxs()
+		=> await Assert.That(TrimLines(await Eval("box(a%r[rule()]%rb,,9,border:double)")))
+			.IsEqualTo(Lines("╔═══════╗", "║ a     ║", "╠═══════╣", "║ b     ║", "╚═══════╝"));
+
+	/// <summary>Each layout function's help lists exactly the option keys its schema takes.</summary>
+	[Test]
+	public async Task TheHelpListsEveryOptionEachFunctionTakes()
+	{
+		var help = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"));
+		var borderPieces = OptionKeys(Topic(help, "LAYOUT BORDERS").SkipWhile(line => !line.StartsWith("Any part of the style", StringComparison.Ordinal)).Skip(1));
+
+		foreach (var (function, keys) in SharpMUSH.Implementation.Functions.Functions.LayoutOptionKeys)
+		{
+			var topic = Topic(help, function == "datacolumns" ? "DATATABLE()" : $"{function.ToUpperInvariant()}()");
+			var options = topic.SkipWhile(line => !line.StartsWith("Options", StringComparison.Ordinal)).Skip(1).ToArray();
+			var documented = OptionKeys(options);
+			if (options.TakeWhile(line => line.StartsWith("- ", StringComparison.Ordinal)).Any(line => line.Contains("[LAYOUT BORDERS]")))
+				documented.UnionWith(borderPieces);
+
+			await Assert.That(documented.Order()).IsEquivalentTo(keys.Order()).Because($"{function}() help and schema differ");
+		}
+	}
+
+	/// <summary>The lines of a help topic, from its heading to the next.</summary>
+	private static IEnumerable<string> Topic(string[] help, string name) =>
+		help.SkipWhile(line => line != $"# {name}").Skip(1).TakeWhile(line => !line.StartsWith("# ", StringComparison.Ordinal));
+
+	/// <summary>The keys a list of options names: every <c>`key:...`</c> or <c>`key`</c> before the dash that explains it.</summary>
+	private static HashSet<string> OptionKeys(IEnumerable<string> lines) =>
+		[.. lines.TakeWhile(line => line.StartsWith("- ", StringComparison.Ordinal))
+			.SelectMany(line => System.Text.RegularExpressions.Regex.Matches(line.Split(" — ")[0], "`([a-z]+)[^`]*`").Select(match => match.Groups[1].Value))];
+
 	/// <summary>Every <c>&gt; think</c> example in the layout help, with the lines under it as its output.</summary>
 	public static IEnumerable<Func<(string Code, string Expected)>> HelpExamples()
 	{
@@ -207,25 +270,31 @@ public class LayoutFunctionTests
 	[Arguments("box(x,,0)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("box(x,,1001)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("rule(x,abc)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("flex(gap:99,a,b)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("flex(gap:99,a,b)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("flex(vertical:maybe,a,b)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("item(x,wide)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("figure(a.png,,,up)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("fields(,Sex,Male,Species)", "#-1 FUNCTION (FIELDS) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
-	[Arguments("fields(cols:0,Sex,Male)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("fields(cols:0,Sex,Male)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("fields(cols:x,Sex,Male)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("tree(guide:wavy,a)", "#-1 UNKNOWN GUIDE STYLE")]
 	[Arguments("tree(colour:red,a)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("gauge(a,12)", ErrorMessages.Returns.Numbers)]
 	[Arguments("gauge(1,0)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("gauge(1,2,,show:all)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("bullets(a b,,style:wavy)", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("bullets(a b,,start:0)", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("grid(a b,,gap:99)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("bullets(a b,,start:0)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("grid(a b,,gap:99)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("datatable(nowrap:4,A|B,1|2)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("datatable(priority:1|2|3,A|B,1|2)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("datatable(min:x,A|B,1|2)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("gradient(x,h|r)", "#-1 UNKNOWN COLOR")]
-	[Arguments("gradient(x,r|g,rgb)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("gradient(x,r|g,rgb)", "#-1 UNKNOWN LAYOUT OPTION RGB")]
+	[Arguments("gradient(x,r|g,space:rgb)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("gradient(x,r|g,flow:sideways)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("gradient(x,r|g,repeat:0)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("gradient(x,r|g,gradient:b)", "#-1 UNKNOWN LAYOUT OPTION GRADIENT")]
 	[Arguments("gauge(1,2,,gradient:r space:rgb)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("datacolumns(nowrap:3,A|1,B|2)", ErrorMessages.Returns.ArgRange)]
 	public async Task ABadArgumentIsRefused(string code, string error)

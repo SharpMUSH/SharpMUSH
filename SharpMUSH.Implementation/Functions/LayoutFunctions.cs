@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using MarkupString;
 using MarkupString.Layout;
 using SharpMUSH.Library;
@@ -12,26 +13,80 @@ namespace SharpMUSH.Implementation.Functions;
 /// <summary>
 /// SharpMUSH's own layout functions: <c>box()</c>, <c>rule()</c>, <c>flex()</c>, <c>item()</c>,
 /// <c>figure()</c>, <c>fields()</c>, <c>tree()</c> and <c>node()</c>. Each returns the text a terminal
-/// shows — the same box art <c>align()</c> and <c>repeat()</c> would draw — with the layout it was
+/// shows — the same box art <c>align()</c> and <c>repeat()</c> would draw — with the block it was
 /// drawn from riding on it, so the portal draws a bordered card whose columns wrap on a phone, and a
-/// telnet client is sent the box again at its own width. <c>align()</c>, <c>center()</c> and the rest are unchanged.
+/// telnet client is sent the box again at its own width. A function given another's result nests that
+/// block rather than its text. <c>align()</c>, <c>center()</c> and the rest are unchanged.
 /// </summary>
+/// <remarks>
+/// Every function reads its options through one <see cref="OptionSchema{T}"/>, so they take the same
+/// spellings and fail the same way; <see cref="LayoutOptionKeys"/> lists each one's keys.
+/// </remarks>
 public partial class Functions
 {
-	private static readonly IReadOnlySet<string> BoxKeys =
-		new HashSet<string>(LayoutSpec.BorderKeys.Append("title").Append("pad"), StringComparer.OrdinalIgnoreCase);
+	/// <summary>A block being built and the <c>width:</c> it was given, with the game's border for pieces set without a preset.</summary>
+	private sealed record Laid<T>(T Block, MString Width, BorderStyle House) where T : Block;
 
-	private static readonly IReadOnlySet<string> RuleKeys =
-		new HashSet<string>(LayoutSpec.BorderKeys.Append("title"), StringComparer.OrdinalIgnoreCase);
+	private static OptionSchema<Laid<Frame>> BoxSchema { get; } = OptionSchema<Laid<Frame>>.Empty
+		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border } })
+		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
+		.Int("pad", 0, 10, (laid, pad) => laid with { Block = laid.Block with { Padding = pad } });
 
-	private static readonly IReadOnlySet<string> FlexKeys =
-		new HashSet<string>(["width", "gap", "sep", "justify", "align", "vertical"], StringComparer.OrdinalIgnoreCase);
+	private static OptionSchema<Laid<Rule>> RuleSchema { get; } = OptionSchema<Laid<Rule>>.Empty
+		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border } })
+		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } });
 
-	private static readonly IReadOnlySet<string> FieldsKeys =
-		new HashSet<string>(["width", "align", "sep", "leader", "cols", "gap"], StringComparer.OrdinalIgnoreCase);
+	private static OptionSchema<Laid<Flex>> FlexSchema { get; } = OptionSchema<Laid<Flex>>.Empty
+		.Width((laid, width) => laid with { Width = width })
+		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } })
+		.Text("sep", (laid, separator) => laid with { Block = laid.Block with { Separator = separator } })
+		.Choice("justify", Names<FlexJustify>(), (laid, justify) => laid with { Block = laid.Block with { Justify = justify } })
+		.Choice("align", new Dictionary<string, FlexAlign>
+		{
+			["top"] = FlexAlign.Start,
+			["center"] = FlexAlign.Center,
+			["centre"] = FlexAlign.Center,
+			["bottom"] = FlexAlign.End,
+		}, (laid, align) => laid with { Block = laid.Block with { Align = align } })
+		.Flag("vertical", (laid, vertical) => laid with { Block = laid.Block with { Vertical = vertical } });
 
-	private static readonly IReadOnlySet<string> TreeKeys =
-		new HashSet<string>(["width", "guide", "branch", "last", "pipe", "blank"], StringComparer.OrdinalIgnoreCase);
+	private static OptionSchema<Laid<Fields>> FieldsSchema { get; } = OptionSchema<Laid<Fields>>.Empty
+		.Width((laid, width) => laid with { Width = width })
+		.Choice("align", new Dictionary<string, Alignment> { ["left"] = Alignment.Left, ["right"] = Alignment.Right },
+			(laid, alignment) => laid with { Block = laid.Block with { LabelAlignment = alignment } })
+		.Text("sep", (laid, separator) => laid with { Block = laid.Block with { Separator = separator } })
+		.Text("leader", (laid, leader) => laid with { Block = laid.Block with { Leader = leader.Length == 0 ? null : leader } })
+		.Int("cols", 1, 10, (laid, columns) => laid with { Block = laid.Block with { Columns = columns } })
+		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } });
+
+	private static OptionSchema<Laid<Tree>> TreeSchema { get; } = OptionSchema<Laid<Tree>>.Empty
+		.Width((laid, width) => laid with { Width = width })
+		.Custom("guide", (laid, value) => TreeGuide.Preset(value.ToPlainText().Trim()) is { } preset
+			? laid with { Block = laid.Block with { Guide = preset } }
+			: new Error<string>("#-1 UNKNOWN GUIDE STYLE"), first: true)
+		.Text("branch", (laid, piece) => WithGuide(laid, guide => guide with { Branch = piece }))
+		.Text("last", (laid, piece) => WithGuide(laid, guide => guide with { Last = piece }))
+		.Text("pipe", (laid, piece) => WithGuide(laid, guide => guide with { Pipe = piece }))
+		.Text("blank", (laid, piece) => WithGuide(laid, guide => guide with { Blank = piece }));
+
+	private static Laid<Tree> WithGuide(Laid<Tree> laid, Func<TreeGuide, TreeGuide> change) =>
+		laid with { Block = laid.Block with { Guide = change(laid.Block.Guide ?? TreeGuide.Line) } };
+
+	/// <summary>Each layout function's option keys, as its schema declares them: what its help must list.</summary>
+	public static IReadOnlyDictionary<string, IEnumerable<string>> LayoutOptionKeys => new Dictionary<string, IEnumerable<string>>
+	{
+		["box"] = BoxSchema.Keys,
+		["rule"] = RuleSchema.Keys,
+		["flex"] = FlexSchema.Keys,
+		["fields"] = FieldsSchema.Keys,
+		["tree"] = TreeSchema.Keys,
+		["gauge"] = GaugeSchema.Keys,
+		["bullets"] = BulletsSchema.Keys,
+		["grid"] = GridSchema.Keys,
+		["datatable"] = DataTableSchema.Keys,
+		["datacolumns"] = DataTableSchema.Keys,
+		["gradient"] = GradientSchema.Keys,
+	};
 
 	/// <summary>The widest layout a function will draw.</summary>
 	private const int MaxLayoutWidth = 1000;
@@ -45,72 +100,21 @@ public partial class Functions
 	public ValueTask<CallState> Box(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		if (LayoutWidth(parser, Arg(args, 2)) is not (int width, bool fluid)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
-
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 3), BoxKeys) switch
-		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildBox(Arg(args, 0), Arg(args, 1), width, fluid, options),
-			Error<string> error => new CallState(error.Value),
-		});
-	}
-
-	private CallState BuildBox(MString body, MString title, int width, bool fluid, IReadOnlyList<(string Key, MString Value)> options)
-	{
-		if (LayoutSpec.Border(options, DefaultBorder()) is not BorderStyle border) return new CallState("#-1 UNKNOWN BORDER STYLE");
-
-		var titleAlignment = Alignment.Center;
-		var padding = 1;
-		foreach (var (key, value) in options)
-		{
-			switch (key)
-			{
-				case "title" when LayoutSpec.ParseAlignment(value) is { } aligned:
-					titleAlignment = aligned;
-					break;
-				case "title":
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-				case "pad" when int.TryParse(value.ToPlainText(), out var pad) && pad is >= 0 and <= 10:
-					padding = pad;
-					break;
-				case "pad":
-					return new CallState(ErrorMessages.Returns.ArgRange);
-			}
-		}
-
-		var node = new BoxNode(Body(body), border, title.Length == 0 ? null : title, titleAlignment, padding);
-		return new CallState(BlockLayout.Build(node, width, fluid));
+		var title = Arg(args, 1);
+		var frame = new Frame(Body(Arg(args, 0))) { Title = title.Length == 0 ? null : title };
+		return ValueTask.FromResult(Laidout(parser, BoxSchema, Arg(args, 3), frame, Arg(args, 2)));
 	}
 
 	/// <summary>
 	/// <c>rule([&lt;title&gt;[, &lt;width&gt;[, &lt;options&gt;]]])</c> — a line across the width with the
-	/// title set into it. Inside a <c>box()</c> it divides the box.
+	/// title set into it. Inside a <c>box()</c> it divides the box, in the box's border unless it names one.
 	/// </summary>
 	[SharpFunction(Name = "rule", MinArgs = 0, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["title", "width", "options"])]
 	public ValueTask<CallState> Rule(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		if (LayoutWidth(parser, Arg(args, 1)) is not (int width, bool fluid)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
-
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 2), RuleKeys) switch
-		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildRule(Arg(args, 0), width, fluid, options),
-			Error<string> error => new CallState(error.Value),
-		});
-	}
-
-	private CallState BuildRule(MString title, int width, bool fluid, IReadOnlyList<(string Key, MString Value)> options)
-	{
-		if (LayoutSpec.Border(options, DefaultBorder()) is not BorderStyle border) return new CallState("#-1 UNKNOWN BORDER STYLE");
-
-		var titleAlignment = Alignment.Center;
-		foreach (var (key, value) in options)
-		{
-			if (key != "title") continue;
-			if (LayoutSpec.ParseAlignment(value) is not { } aligned) return new CallState(ErrorMessages.Returns.InvalidArgument);
-			titleAlignment = aligned;
-		}
-
-		return new CallState(BlockLayout.Build(new RuleNode(title.Length == 0 ? null : title, border, titleAlignment), width, fluid));
+		var title = Arg(args, 0);
+		return ValueTask.FromResult(Laidout(parser, RuleSchema, Arg(args, 2), new Rule(title.Length == 0 ? null : title), Arg(args, 1)));
 	}
 
 	/// <summary>
@@ -122,51 +126,8 @@ public partial class Functions
 	public ValueTask<CallState> Flex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), FlexKeys) switch
-		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildFlex(parser, args, options),
-			Error<string> error => new CallState(error.Value),
-		});
-	}
-
-	private CallState BuildFlex(IMUSHCodeParser parser, IReadOnlyDictionary<string, CallState> args, IReadOnlyList<(string Key, MString Value)> options)
-	{
-		var flexOptions = FlexOptions.Default;
-		var widthArg = MarkupText.Empty;
-		foreach (var (key, value) in options)
-		{
-			var plain = value.ToPlainText().Trim().ToLowerInvariant();
-			switch (key)
-			{
-				case "width":
-					widthArg = value;
-					break;
-				case "gap" when int.TryParse(plain, out var gap) && gap is >= 0 and <= 20:
-					flexOptions = flexOptions with { Gap = gap };
-					break;
-				case "sep":
-					flexOptions = flexOptions with { Separator = value };
-					break;
-				case "justify" when Enum.TryParse<FlexJustify>(plain, ignoreCase: true, out var justify) && Enum.IsDefined(justify):
-					flexOptions = flexOptions with { Justify = justify };
-					break;
-				case "align" when plain is "top" or "center" or "centre" or "bottom":
-					flexOptions = flexOptions with { Align = plain switch { "top" => FlexAlign.Start, "bottom" => FlexAlign.End, _ => FlexAlign.Center } };
-					break;
-				case "vertical":
-					flexOptions = flexOptions with { Vertical = LayoutSpec.IsYes(value) };
-					break;
-				default:
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-			}
-		}
-
-		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
-
-		var items = args.Keys.Select(int.Parse).Where(i => i > 0).Order()
-			.Select(i => FlexItemOf(args[i.ToString()].Message!))
-			.ToArray();
-		return new CallState(BlockLayout.Build(new FlexNode([.. items], flexOptions), width, fluid));
+		var items = Rest(args, 1).Select(FlexItemOf).ToImmutableArray();
+		return ValueTask.FromResult(Laidout(parser, FlexSchema, Arg(args, 0), new Flex(items)));
 	}
 
 	/// <summary>
@@ -179,12 +140,12 @@ public partial class Functions
 	public ValueTask<CallState> Item(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		if (!LayoutSpec.TryItemWidth(Arg(args, 1).ToPlainText(), out var basis, out var alignment)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
+		if (!LayoutOptionGroups.TryItemWidth(Arg(args, 1).ToPlainText(), out var basis, out var alignment)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
 		if (!TryCount(Arg(args, 2), 1, out var min) || !TryCount(Arg(args, 3), 0, out var grow)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 		if (LayoutWidth(parser, MarkupText.Empty) is not (int width, bool fluid)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 
-		var item = new FlexItem(Body(Arg(args, 0), alignment), basis, Math.Max(1, min), grow);
-		return ValueTask.FromResult(new CallState(BlockLayout.Build(new FlexNode([item], FlexOptions.Default), width, fluid)));
+		var item = Body(Arg(args, 0), alignment).Sized(basis, Math.Max(1, min), grow);
+		return ValueTask.FromResult(new CallState(Build(new Flex([item]), width, fluid)));
 	}
 
 	/// <summary>
@@ -217,8 +178,8 @@ public partial class Functions
 		var image = new ImageMarkup(shown ? address : string.Empty, description.Length == 0 ? null : description);
 		var beside = Arg(args, 4);
 
-		var node = new FigureNode(image, Arg(args, 2), floated, beside.Length == 0 ? null : Body(beside));
-		return new CallState(BlockLayout.Build(node, width, fluid));
+		var figure = new Figure(image, Arg(args, 2)) { Float = floated, Beside = beside.Length == 0 ? null : Body(beside) };
+		return new CallState(Build(figure, width, fluid));
 	}
 
 	/// <summary>
@@ -231,51 +192,10 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (args.Count % 2 == 0) return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, "FIELDS")));
 
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), FieldsKeys) switch
-		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildFields(parser, args, options),
-			Error<string> error => new CallState(error.Value),
-		});
-	}
-
-	private CallState BuildFields(IMUSHCodeParser parser, IReadOnlyDictionary<string, CallState> args, IReadOnlyList<(string Key, MString Value)> options)
-	{
-		var settings = FieldsOptions.Default;
-		var widthArg = MarkupText.Empty;
-		foreach (var (key, value) in options)
-		{
-			var plain = value.ToPlainText().Trim().ToLowerInvariant();
-			switch (key)
-			{
-				case "width":
-					widthArg = value;
-					break;
-				case "align" when plain is "left" or "right":
-					settings = settings with { LabelAlignment = plain == "right" ? Alignment.Right : Alignment.Left };
-					break;
-				case "sep":
-					settings = settings with { Separator = value };
-					break;
-				case "leader":
-					settings = settings with { Leader = value.Length == 0 ? null : value };
-					break;
-				case "cols" when int.TryParse(plain, out var columns) && columns is >= 1 and <= 10:
-					settings = settings with { Columns = columns };
-					break;
-				case "gap" when int.TryParse(plain, out var gap) && gap is >= 0 and <= 20:
-					settings = settings with { Gap = gap };
-					break;
-				default:
-					return new CallState(ErrorMessages.Returns.InvalidArgument);
-			}
-		}
-
-		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
-
 		var fields = new List<Field>();
 		for (var i = 1; i + 1 < args.Count; i += 2)
 			fields.Add(new Field(Arg(args, i), Body(Arg(args, i + 1))));
-		return new CallState(BlockLayout.Build(new FieldsNode([.. fields], settings), width, fluid));
+		return ValueTask.FromResult(Laidout(parser, FieldsSchema, Arg(args, 0), new Fields([.. fields])));
 	}
 
 	/// <summary>
@@ -286,54 +206,25 @@ public partial class Functions
 	public ValueTask<CallState> Tree(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), TreeKeys) switch
+		var tree = new Tree([.. Rest(args, 1).SelectMany(TreeItemsOf)]);
+		return ValueTask.FromResult(TreeSchema.Apply(Arg(args, 0), new Laid<Tree>(tree, MarkupText.Empty, DefaultBorder())) switch
 		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildTree(parser, args, options),
+			Laid<Tree> laid => Finish(parser, laid.Block with { Guide = laid.Block.Guide is { } guide ? Even(guide) : null }, laid.Width),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
 
-	private CallState BuildTree(IMUSHCodeParser parser, IReadOnlyDictionary<string, CallState> args, IReadOnlyList<(string Key, MString Value)> options)
+	/// <summary>The guide with each piece padded or cut to the width of the branch, so the levels line up.</summary>
+	private static TreeGuide Even(TreeGuide guide)
 	{
-		var guide = TreeGuide.Line;
-		var widthArg = MarkupText.Empty;
-		foreach (var (key, value) in options)
-		{
-			if (key == "width") widthArg = value;
-			else if (key == "guide")
-			{
-				if (TreeGuide.Preset(value.ToPlainText().Trim()) is not { } preset) return new CallState("#-1 UNKNOWN GUIDE STYLE");
-				guide = preset;
-			}
-		}
-
-		// Each piece replaces its part, padded or cut to the width of the branch so the levels line up.
-		foreach (var (key, value) in options)
-		{
-			guide = key switch
-			{
-				"branch" => guide with { Branch = value },
-				"last" => guide with { Last = value },
-				"pipe" => guide with { Pipe = value },
-				"blank" => guide with { Blank = value },
-				_ => guide,
-			};
-		}
 		var step = Math.Max(guide.Branch.DisplayWidth, guide.Last.DisplayWidth);
-		guide = guide with
+		return guide with
 		{
 			Branch = Step(guide.Branch, step),
 			Last = Step(guide.Last, step),
 			Pipe = Step(guide.Pipe, step),
 			Blank = Step(guide.Blank, step),
 		};
-
-		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
-
-		var items = args.Keys.Select(int.Parse).Where(i => i > 0).Order()
-			.SelectMany(i => TreeItemsOf(args[i.ToString()].Message!))
-			.ToArray();
-		return new CallState(BlockLayout.Build(new TreeNode([.. items], guide), width, fluid));
 	}
 
 	private static MString Step(MString piece, int width) =>
@@ -349,16 +240,42 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (LayoutWidth(parser, MarkupText.Empty) is not (int width, bool fluid)) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 
-		var children = args.Keys.Select(int.Parse).Where(i => i > 0).Order()
-			.SelectMany(i => TreeItemsOf(args[i.ToString()].Message!))
-			.ToArray();
-		var item = new TreeItem(Body(Arg(args, 0)), [.. children]);
-		return ValueTask.FromResult(new CallState(BlockLayout.Build(new TreeNode([item], TreeGuide.Line), width, fluid)));
+		var item = new TreeItem(Body(Arg(args, 0)), [.. Rest(args, 1).SelectMany(TreeItemsOf)]);
+		return ValueTask.FromResult(new CallState(Build(new Tree([item]), width, fluid)));
 	}
 
+	/// <summary>
+	/// <paramref name="block"/> with <paramref name="options"/> applied through <paramref name="schema"/>
+	/// and laid out at the width an option or <paramref name="width"/> names.
+	/// </summary>
+	private CallState Laidout<T>(IMUSHCodeParser parser, OptionSchema<Laid<T>> schema, MString options, T block, MString? width = null) where T : Block =>
+		schema.Apply(options, new Laid<T>(block, width ?? MarkupText.Empty, DefaultBorder()),
+			laid => Finish(parser, laid.Block, laid.Width),
+			error => new CallState(error.Value));
+
+	private CallState Finish(IMUSHCodeParser parser, Block block, MString widthArg) =>
+		LayoutWidth(parser, widthArg) is (int width, bool fluid)
+			? new CallState(Build(block, width, fluid))
+			: new CallState(ErrorMessages.Returns.ArgRange);
+
+	/// <summary>
+	/// <paramref name="block"/> laid out under the game's look (<c>layout_border</c>), which a block that
+	/// takes it in as a child sheds again so the outer one's look carries through (<see cref="Adopt"/>).
+	/// </summary>
+	private MString Build(Block block, int width, bool fluid) => BlockLayout.Build(block.Themed(HouseTheme()), width, fluid);
+
+	private LayoutTheme HouseTheme() => new() { Border = DefaultBorder() };
+
+	/// <summary>A child block without the game's look a function laid it out under.</summary>
+	private Block Adopt(Block block) => block is Themed themed && themed.Theme == HouseTheme() ? themed.Content : block;
+
+	/// <summary>The arguments from <paramref name="first"/> on, in order.</summary>
+	private static IEnumerable<MString> Rest(IReadOnlyDictionary<string, CallState> args, int first) =>
+		args.Keys.Select(int.Parse).Where(i => i >= first).Order().Select(i => args[i.ToString()].Message ?? MarkupText.Empty);
+
 	/// <summary>An argument as tree items: the items a <c>node()</c> or <c>tree()</c> made, or the content as a leaf.</summary>
-	private static IEnumerable<TreeItem> TreeItemsOf(MString content) =>
-		BlockLayout.AsNode(content) is TreeNode { Items.IsDefaultOrEmpty: false } tree
+	private IEnumerable<TreeItem> TreeItemsOf(MString content) =>
+		Adopt(BlockLayout.AsBlock(content)) is Tree { Items.IsDefaultOrEmpty: false } tree
 			? tree.Items
 			: [new TreeItem(Body(content))];
 
@@ -372,23 +289,25 @@ public partial class Functions
 	private BorderStyle DefaultBorder() =>
 		BorderStyle.Preset(Configuration.CurrentValue.Cosmetic.LayoutBorder ?? string.Empty) ?? BorderStyle.Mush;
 
-	/// <summary>An argument's content as a flex item: the item an <c>item()</c> made, or the content at an automatic width.</summary>
-	private static FlexItem FlexItemOf(MString content) =>
-		BlockLayout.AsNode(content) is FlexNode { Items.Length: 1 } single
-			? single.Items[0]
-			: new FlexItem(Body(content));
+	/// <summary>An argument as a flex item: the sized item an <c>item()</c> made, or the content at an automatic width.</summary>
+	private Block FlexItemOf(MString content) =>
+		Adopt(BlockLayout.AsBlock(content)) is Flex { Items: [Sized single] } ? single : Body(content);
 
-	/// <summary>A body as one node: its blocks and the text between them, in order.</summary>
-	private static LayoutNode Body(MString content, Alignment alignment = Alignment.Left)
+	/// <summary>A body as one block: its blocks and the text between them, in order.</summary>
+	private Block Body(MString content, Alignment? alignment = null)
 	{
-		var nodes = BlockLayout.Nodes(content, alignment);
-		return nodes.Count switch
+		var blocks = BlockLayout.Blocks(content, alignment);
+		return blocks.Count switch
 		{
-			0 => new TextNode(MarkupText.Empty, alignment),
-			1 => nodes[0],
-			_ => new StackNode([.. nodes]),
+			0 => new TextBlock(MarkupText.Empty) { Alignment = alignment },
+			1 => Adopt(blocks[0]),
+			_ => new Stack([.. blocks.Select(Adopt)]),
 		};
 	}
+
+	/// <summary>An enum's values by their lower-case names.</summary>
+	private static Dictionary<string, TEnum> Names<TEnum>() where TEnum : struct, Enum =>
+		Enum.GetValues<TEnum>().ToDictionary(value => value.ToString().ToLowerInvariant());
 
 	/// <summary>
 	/// The width a layout is drawn at: the number given, or for an empty argument or <c>auto</c>, the

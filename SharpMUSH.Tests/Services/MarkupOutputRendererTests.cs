@@ -569,7 +569,7 @@ public partial class MarkupOutputRendererTests
 	// ── Layouts: laid out again for the client ──────────────────────────────────
 
 	private static string Box(bool fluid) => MarkupTextSerializer.Serialize(BlockLayout.Build(
-		new BoxNode(new TextNode(MarkupText.Plain("Hi")), BorderStyle.Single, MarkupText.Plain("T")), 12, fluid));
+		new Frame(new TextBlock(MarkupText.Plain("Hi"))) { Border = BorderStyle.Single, Title = MarkupText.Plain("T") }, 12, fluid));
 
 	private static string RenderFor(string markup, ProtocolCapabilities capabilities) =>
 		StripAnsi(Encoding.UTF8.GetString(new MarkupOutputRenderer().Render(markup, Connection() with { Capabilities = capabilities }).Data))
