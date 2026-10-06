@@ -120,6 +120,19 @@ public class PackageDeclarationManifestTests
 	}
 
 	[Test]
+	public async Task ARoleOrPermissionWithoutACategoryIsRefused()
+	{
+		var errors = Errors(Parse("""
+			permissions:
+			  - name: requests.handle
+			    description: Work on any request.
+			roles:
+			  - slug: handler
+			"""));
+		await Assert.That(errors.Select(e => e.Path)).IsEquivalentTo(new[] { "permissions[0].category", "roles[0].category" });
+	}
+
+	[Test]
 	public async Task AnUndeclaredCategoryOrPermissionIsOnlyAWarning()
 	{
 		var parsed = Parse("""

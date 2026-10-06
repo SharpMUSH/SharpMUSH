@@ -96,6 +96,26 @@ public class PackageDeclarationPlannerTests
 	}
 
 	[Test]
+	public async Task APermissionNamingACategoryNobodyHasBlocks()
+	{
+		var plan = PackageDeclarationPlanner.Plan(
+			new PackageDeclarations([], [], [Handle with { Category = "Nowhere" }], []), null, Live(), 5);
+
+		await Assert.That(plan.IsBlocked).IsTrue();
+		await Assert.That(plan.Changes.Single().Detail!).Contains("Nowhere");
+		await Assert.That(plan.PermissionWrites).IsEmpty();
+	}
+
+	[Test]
+	public async Task ARoleCategoryDoesNotStandInForAPermissionCategory()
+	{
+		// Requests is declared only as a role category; the permission needs a permission category.
+		var plan = PackageDeclarationPlanner.Plan(new PackageDeclarations([Requests], [], [Handle], []), null, Live(), 5);
+
+		await Assert.That(ActionOf(plan, PackageDeclarationKind.Permission, "requests.handle")).IsEqualTo(PackageDeclarationAction.Blocked);
+	}
+
+	[Test]
 	public async Task ARoleNamingAPermissionNobodyDefinesBlocks()
 	{
 		var plan = PackageDeclarationPlanner.Plan(Declared(permissions: []), null, Live(), 5);

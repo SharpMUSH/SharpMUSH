@@ -150,6 +150,37 @@ public class PackageDeclarationInstallTests
 	}
 
 	[Test]
+	public async Task AMissingCategoryRefusesTheApplyBeforeAnyWrite()
+	{
+		var names = Names.Fresh();
+		var manifest = new PackageManifestService().ParseManifest($$"""
+			format: 1.2
+			package: {{names.Package}}
+			version: "1.0"
+			objects:
+			  - ref: desk
+			    type: thing
+			    name: Request Desk
+			permissions:
+			  - name: {{names.Permission}}
+			    category: {{names.Category}}
+			    description: Work on any request.
+			roles:
+			  - slug: {{names.Role}}
+			    category: {{names.Category}}
+			""").Expect<ParsedPackageManifest>().Manifest;
+
+		var plan = await Installer.PlanAsync(manifest);
+		await Assert.That(plan.IsBlocked).IsTrue();
+		var refused = (await ApplyAsync(manifest)).Expect<Error<string>>();
+		await Assert.That(refused.Value).Contains(names.Category);
+
+		await Assert.That(await PermissionExistsAsync(names.Permission)).IsFalse();
+		await Assert.That(await RoleAsync(names.Role)).IsNull();
+		await Assert.That(await Registry.GetInstalledPackageAsync(names.Package) is NotFound).IsTrue();
+	}
+
+	[Test]
 	public async Task ARoleAnotherPackageOwnsBlocksTheApply()
 	{
 		var names = Names.Fresh();
