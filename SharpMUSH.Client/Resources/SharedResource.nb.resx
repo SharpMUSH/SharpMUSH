@@ -5611,6 +5611,24 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Gjør krav på en eksisterende karakter</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Gjør krav på en karakter</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Gjør krav på karakter</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Knytt en karakter du allerede spiller til denne kontoen: en som ble opprettet på tilkoblingsskjermen, av staben eller hentet fra et annet spill. Passordet beviser at den er din.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Har du allerede en karakter? Gjør krav på den.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Opprett en ny karakter i stedet.</value>
+  </data>
   <data name="AuthPasskeys" xml:space="preserve">
     <value>Tilgangsnøkler</value>
     <comment>MT</comment>

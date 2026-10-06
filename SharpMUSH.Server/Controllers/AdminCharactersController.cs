@@ -26,6 +26,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  api/admin/characters/{dbref}         — detail
 ///   POST api/admin/characters/{dbref}/boot    — boot  ?created=&amp;reason=
 ///   POST api/admin/characters/{dbref}/warn    — warn  ?created=, the reason in the body
+///   POST api/admin/characters/{dbref}/link    — link to an account ?created=, the account's username in the body
 ///
 /// Unlinking a character from its account is <c>DELETE api/admin/accounts/{key}/characters/{dbref}</c>.
 /// </summary>
@@ -183,6 +184,46 @@ public class AdminCharactersController(
 			player.Object.DBRef.ToString(), reason, staff);
 		await audit.RecordPortalAsync(User, AuditActions.PlayerWarn, AuditTargets.Of(player),
 			AuditLog.WithReason(null, reason), ct);
+		return NoContent();
+	}
+
+	/// <summary>
+	/// Links a character to an account without its password: one made with <c>@pcreate</c> or imported, or one
+	/// whose holder cannot prove it. The account takes on the character's roles, so as with
+	/// <c>@newpassword</c> only God links God and only a wizard links a wizard. A character another account
+	/// holds is refused; unlink it from that account first.
+	/// </summary>
+	[HttpPost("{dbref:int}/link")]
+	[Authorize(Policy = PortalPermission.PlayersModerate)]
+	public async Task<IActionResult> Link(int dbref, [FromQuery] long? created, [FromBody] AdminLinkCharacterRequest request,
+		CancellationToken ct)
+	{
+		if (string.IsNullOrWhiteSpace(request.Account))
+			return BadRequest(new ApiErrorDto("Name the account to link the character to."));
+		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor)
+			return Conflict(new ApiErrorDto("Choose a character to act as before linking anyone."));
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
+			return NotFound();
+		if (created is { } stamp && player.Object.CreationTime != stamp)
+			return Conflict(new ApiErrorDto($"#{dbref} is now a different character. Reload and try again."));
+		if (await accounts.GetByUsernameAsync(request.Account.Trim(), ct) is not { } account)
+			return NotFound(new ApiErrorDto($"No account named '{request.Account.Trim()}'."));
+
+		AnySharpObject target = player;
+		if (target.IsGod() ? !executor.IsGod() : await target.IsWizard() && !await executor.IsWizard())
+			return StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto($"You may not link {player.Object.Name}."));
+
+		return await accounts.AttachCharacterAsync(account.Id!, player, ct) switch
+		{
+			SharpPlayer => await LinkedAsync(player, account, ct),
+			LinkedElsewhere elsewhere => Conflict(new ApiErrorDto(
+				$"{player.Object.Name} is linked to account '{elsewhere.Account.Username}'. Unlink it there first.")),
+		};
+	}
+
+	private async Task<IActionResult> LinkedAsync(SharpPlayer player, SharpAccount account, CancellationToken ct)
+	{
+		await audit.RecordPortalAsync(User, AuditActions.CharacterLink, AuditTargets.Of(player), account.Username, ct);
 		return NoContent();
 	}
 

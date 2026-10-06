@@ -4904,6 +4904,24 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Réclamer un personnage existant</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Réclamer un personnage</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Réclamer le personnage</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Liez à ce compte un personnage que vous jouez déjà : créé à l'écran de connexion, par l'équipe ou venu d'un autre jeu. Son mot de passe prouve qu'il est à vous.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Vous avez déjà un personnage ? Réclamez-le.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Créer plutôt un nouveau personnage.</value>
+  </data>
   <data name="AuthPasskeys" xml:space="preserve">
     <value>Clés d'accès</value>
     <comment>MT</comment>

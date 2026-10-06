@@ -41,14 +41,17 @@ public sealed class CommandHistory(IJSRuntime js)
 
 	/// <summary>
 	/// Commands whose arguments include a password: logging in (<c>connect</c> and its <c>cd</c>, <c>cv</c> and
-	/// <c>ch</c> forms, <c>login</c>, <c>create</c>, <c>register</c>) and changing one. Kept out of history, which
+	/// <c>ch</c> forms, <c>login</c>, <c>create</c>, <c>register</c>, <c>make</c>, <c>claim</c>, <c>@account/claim</c>) and changing one, <c>@account/newpassword</c> included. Kept out of history, which
 	/// sits in plain <c>localStorage</c>. The verb ends at any whitespace, a tab as much as a space.
 	/// </summary>
 	public static bool CarriesSecret(string line)
 	{
 		var verb = line.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
-		return verb.ToLowerInvariant() is "connect" or "co" or "cd" or "cv" or "ch" or "login" or "create" or "cr"
-			or "register" or "make" or "@password" or "@newpassword" or "@pcreate";
+		var lower = verb.ToLowerInvariant();
+		return lower is "connect" or "co" or "cd" or "cv" or "ch" or "login" or "create" or "cr"
+			or "register" or "make" or "claim" or "@password" or "@newpassword" or "@pcreate"
+			|| lower.StartsWith("@account/claim", StringComparison.Ordinal)
+			|| lower.StartsWith("@account/newpassword", StringComparison.Ordinal);
 	}
 
 	private async Task LoadCoreAsync()

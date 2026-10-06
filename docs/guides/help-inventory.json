@@ -63,6 +63,33 @@
       "redirect": true
     },
     {
+      "file": "accounts.md",
+      "corpus": "help",
+      "names": [
+        "accounts",
+        "account"
+      ],
+      "canonical": "accounts"
+    },
+    {
+      "file": "accounts.md",
+      "corpus": "help",
+      "names": [
+        "accounts claiming"
+      ],
+      "canonical": "accounts claiming",
+      "section": true
+    },
+    {
+      "file": "accounts.md",
+      "corpus": "help",
+      "names": [
+        "accounts staff"
+      ],
+      "canonical": "accounts staff",
+      "section": true
+    },
+    {
       "file": "action-lists.md",
       "corpus": "help",
       "names": [
@@ -7181,6 +7208,14 @@
         "play"
       ],
       "canonical": "play"
+    },
+    {
+      "file": "sharpcmd.md",
+      "corpus": "help",
+      "names": [
+        "claim"
+      ],
+      "canonical": "claim"
     },
     {
       "file": "sharpcmd.md",

@@ -660,15 +660,33 @@ public class AccountAuthService(
 			CreateCharacterResponse created => await AddedAsync(new CharacterSummary(created.DbrefNumber, created.CreationTime ?? 0, name, created.Flags ?? "")),
 			ApiFailure failure => Logged(failure, "CreateCharacter"),
 		};
+	}
 
-		async Task<CharacterSummary> AddedAsync(CharacterSummary character)
+	/// <summary>
+	/// Links a character that already exists (made at the connect screen, by staff, or imported) to this
+	/// account, proven by its password. Like a new one, it joins the roster without becoming the acting one.
+	/// </summary>
+	public async Task<ApiResult<CharacterSummary>> ClaimCharacterAsync(string name, string password)
+	{
+		await InitAsync();
+		if (AccountSessionToken is null) return NotLoggedIn("Not logged in to account.");
+
+		return await _api.ClaimCharacterAsync(name, password) switch
 		{
+			ClaimCharacterResponse claimed => await AddedAsync(new CharacterSummary(claimed.DbrefNumber, claimed.CreationTime, claimed.Name, claimed.Flags ?? "")),
+			ApiFailure failure => Logged(failure, "ClaimCharacter"),
+		};
+	}
+
+	private async Task<CharacterSummary> AddedAsync(CharacterSummary character)
+	{
+		// Claiming a character the account already holds succeeds without linking anything new.
+		if (!Characters.Any(c => c.DbrefNumber == character.DbrefNumber))
 			_roster.Add(character);
-			// An account's role comes from its characters: a fresh account is a Guest until its first
-			// one exists, and stayed one in this tab (no build tools, no wiki editing) until it signed in again.
-			await ReloadAuthorityAsync();
-			return character;
-		}
+		// An account's role comes from its characters: a fresh account is a Guest until its first
+		// one exists, and stayed one in this tab (no build tools, no wiki editing) until it signed in again.
+		await ReloadAuthorityAsync();
+		return character;
 	}
 
 	/// <summary>Unlinks a character from this account; see <see cref="CharacterUnlinked"/> for the advisory.</summary>

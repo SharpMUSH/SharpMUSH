@@ -103,6 +103,31 @@ public class AccountsAndSessionsTests
 		await Assert.That(await _db.HasAnyAccountAsync()).IsTrue();
 	}
 
+	/// <summary>
+	/// The holder check is inside the write: two accounts linking one character at once leave it on exactly
+	/// one, not in both rosters with the reverse row naming whichever wrote last.
+	/// </summary>
+	[Test]
+	public async Task LinkingACharacterAnotherAccountHoldsIsRefused()
+	{
+		var alice = await _db.CreateAccountAsync("Alice", null, "hash");
+		var bob = await _db.CreateAccountAsync("Bob", null, "hash");
+		var god = new DBRef(1);
+
+		var links = await Task.WhenAll(
+			_db.LinkCharacterToAccountAsync(alice.Id!, god).AsTask(),
+			_db.LinkCharacterToAccountAsync(bob.Id!, god).AsTask());
+
+		await Assert.That(links.Count(holder => holder is null)).IsEqualTo(1);
+		var winner = (await _db.GetAccountForCharacterAsync(god))!.Id;
+		await Assert.That(links.Single(holder => holder is not null)!.Id).IsEqualTo(winner);
+		var aliceHas = (await _db.GetCharactersForAccountAsync(alice.Id!)).Count;
+		var bobHas = (await _db.GetCharactersForAccountAsync(bob.Id!)).Count;
+		await Assert.That(aliceHas + bobHas).IsEqualTo(1);
+		await Assert.That(await _db.LinkCharacterToAccountAsync(winner!, god)).IsNull()
+			.Because("linking a character to the account that already holds it changes nothing");
+	}
+
 	[Test]
 	public async Task LinkAndUnlinkCharacterToAccountRoundTripsBothDirections()
 	{

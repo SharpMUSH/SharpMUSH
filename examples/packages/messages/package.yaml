@@ -57,7 +57,7 @@ objects:
             login <name-or-email> <password>
             make <character> <password>
             play <character>
-
+            claim <character> <password>
         CHARACTER - classic MUSH login:
             connect <character> <password>
             connect guest
@@ -74,7 +74,7 @@ objects:
       GUEST: |-
         %rWelcome, Guest! You are connected as a temporary guest character.%rType 'help' for assistance.
       NEWUSER: |-
-        %rWelcome, new player!%r%rYour account is ready. Create your first character with:%r[space(4)]make <character-name> <password>%r%rThen enter play with:%r[space(4)]play <character-name>
+        %rWelcome, new player!%r%rYour account is ready. Create your first character with:%r[space(4)]make <character-name> <password>%r%rOr link a character you already have:%r[space(4)]claim <character-name> <password>%r%rThen enter play with:%r[space(4)]play <character-name>
       REGISTER: |-
         %rRegistration is not available on this server.
       DOWN: |-

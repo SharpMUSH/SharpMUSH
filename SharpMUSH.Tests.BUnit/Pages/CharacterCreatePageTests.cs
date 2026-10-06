@@ -20,6 +20,11 @@ file sealed class CharacterCreateApiHandler(bool succeed) : HttpMessageHandler
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+		if (request.Method == HttpMethod.Post && path == "api/account/link-character")
+			return Task.FromResult(succeed
+				? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { dbrefNumber = 7, creationTime = 7L, name = "Imported Bob" }) }
+				: new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent("Invalid character credentials.") });
+
 		if (request.Method == HttpMethod.Post && path == "api/account/characters")
 			return Task.FromResult(succeed
 				? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { dbrefNumber = 5, creationTime = 5L }) }
@@ -99,5 +104,47 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("did not navigate to /play yet");
 		});
 		await _upgrade.Received(1).PlayAsAsync(Arg.Is<AccountAuthService.CharacterSummary>(c => c.Name == "Bob"));
+	}
+
+	[TUnit.Core.Test]
+	public async Task Claiming_a_first_character_links_it_and_goes_to_play()
+	{
+		SeedLoggedIn(createSucceeds: true);
+		var nav = Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo("/characters/claim");
+
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		await Assert.That(cut.Markup).Contains("NavClaimACharacter");
+		cut.FindAll("input").First().Change("imported bob");
+
+		await cut.InvokeAsync(() => cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").Click());
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!nav.Uri.EndsWith("/play"))
+				throw new InvalidOperationException("did not navigate to /play yet");
+		});
+		// The roster takes the name as the game spells it, not as it was typed.
+		await _upgrade.Received(1).PlayAsAsync(Arg.Is<AccountAuthService.CharacterSummary>(c => c.Name == "Imported Bob" && c.DbrefNumber == 7));
+	}
+
+	[TUnit.Core.Test]
+	public async Task A_refused_claim_shows_why_and_stays()
+	{
+		SeedLoggedIn(createSucceeds: false);
+		var nav = Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo("/characters/claim");
+
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		cut.FindAll("input").First().Change("Bob");
+
+		await cut.InvokeAsync(() => cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").Click());
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Invalid character credentials."))
+				throw new InvalidOperationException("no refusal shown yet");
+		});
+		await Assert.That(nav.Uri).EndsWith("/characters/claim");
 	}
 }

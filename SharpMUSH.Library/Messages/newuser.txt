@@ -4,5 +4,8 @@ Welcome, new player!
 Your account is ready. Create your first character with:
     make <character-name> <password>
 
+Or link a character you already have:
+    claim <character-name> <password>
+
 Then enter play with:
     play <character-name>

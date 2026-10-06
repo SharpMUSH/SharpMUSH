@@ -55,6 +55,7 @@ public class ConnectBannerTests
 		await Assert.That(advertised).Contains("login");
 		await Assert.That(advertised).Contains("make");
 		await Assert.That(advertised).Contains("play");
+		await Assert.That(advertised).Contains("claim");
 		await Assert.That(advertised).Contains("connect");
 		await Assert.That(advertised).Contains("WHO");
 		await Assert.That(advertised).Contains("QUIT");
