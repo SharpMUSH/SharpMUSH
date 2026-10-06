@@ -6191,4 +6191,13 @@
   <data name="AdmSetupPkgMessagesDesc" xml:space="preserve">
     <value>Keeps the connect screen, the messages of the day and the other server messages as softcode on one object instead of the stored text. Admin &gt; Messages switches back at any time.</value>
   </data>
+  <data name="LayAppNavUrl" xml:space="preserve">
+    <value>Sidebar Route</value>
+  </data>
+  <data name="LayAppNavUrlOptional" xml:space="preserve">
+    <value>Sidebar route (optional)</value>
+  </data>
+  <data name="LayAppNavUrlHelper" xml:space="preserve">
+    <value>A route returning this app's own sidebar links, e.g. http/jobs/nav</value>
+  </data>
 </root>

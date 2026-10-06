@@ -331,6 +331,16 @@ public class PackageManifestWriterTests
 	}
 
 	[Test]
+	public async Task ApplicationNavUrlRoundTrips()
+	{
+		var manifest = ApplicationManifest(null, null);
+		var again = RoundTrip(manifest with { Application = manifest.Application! with { NavUrl = "http/weather/nav" } });
+
+		await Assert.That(again.Application!.NavUrl).IsEqualTo("http/weather/nav");
+		await Assert.That(RoundTrip(manifest).Application!.NavUrl).IsNull();
+	}
+
+	[Test]
 	public async Task ApplicationScopeAndOobPackageRoundTrip()
 	{
 		var again = RoundTrip(ApplicationManifest("play", "weather.now"));

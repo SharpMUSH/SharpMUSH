@@ -11,7 +11,8 @@ namespace SharpMUSH.Client.Models.Applications;
 /// DTO (enums travel as strings, zones as a string array). Parsed-enum helpers are provided for
 /// nav filtering and renderer selection. <see cref="Scope"/> names the layout scope a game panel belongs to
 /// (e.g. <c>"play"</c>); <see cref="OobPackage"/> names the OOB package whose latest payload is its data;
-/// <see cref="Permission"/> names a permission scope the viewer must hold besides the minimum role.
+/// <see cref="Permission"/> names a permission scope the viewer must hold besides the minimum role;
+/// <see cref="NavUrl"/> is the route that serves the page app's own sidebar entries.
 /// </summary>
 public sealed record PortalApplication(
 	string Slug,
@@ -31,7 +32,8 @@ public sealed record PortalApplication(
 	string? ComponentTypeName = null,
 	string? Scope = null,
 	string? OobPackage = null,
-	string? Permission = null)
+	string? Permission = null,
+	string? NavUrl = null)
 {
 	/// <summary>True when this app is rendered by a plugin-shipped compiled component (not the schema renderer).</summary>
 	public bool IsComponent =>

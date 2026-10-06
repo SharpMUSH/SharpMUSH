@@ -410,6 +410,7 @@ application:                      # required for kind: application; forbidden ot
   submit_route: http/chargen      # optional POST base for actions
   minimum_role: "{{?access}}"     # guest|player|builder|royalty|wizard|god, or a {{?configure}} ref
   nav_placement: Play             # optional nav section (page apps): Play, World, Build, Manage, or a new name
+  nav_url: http/chargen/nav       # optional GET → the app's own sidebar links (page apps in a section of their own)
   zones: [MainContent]            # optional layout zones (widget apps)
   scope: play                     # optional layout scope the widget belongs to (e.g. play)
   oob_package: chargen.status     # optional OOB package whose latest push is the widget's data
@@ -422,6 +423,24 @@ hidden and `/apps/{slug}` shows the no-access card unless the viewer holds that
 scope (a built-in one or a custom permission from `@role`). It is portal-side
 only, like `minimum_role`; the softcode routes still decide for themselves.
 
+`nav_url` gives a page app in a section of its own (a `nav_placement` that is
+not Play, World, Build or Manage) its own sidebar. The portal reads the route
+for the viewer on every visit to the section and draws its links in place of
+the app's single link:
+
+```json
+{ "groups": [
+  { "label": "", "items": [
+    { "label": "Needs attention", "path": "/apps/jobs", "icon": "inbox", "count": 3 },
+    { "label": "Closed", "path": "/apps/jobs?filter=old", "icon": "inventory_2" } ] },
+  { "label": "Buckets", "items": [ … ] } ] }
+```
+
+`path` must be a portal address (it starts with one `/`); `icon` is a Material
+icon name and `count` is optional. A link is current when both its path and its
+query match the address. No groups, or a route that fails, leaves the app's
+single link.
+
 `scope` names the page a widget belongs to: the Play page lists the `play`
 apps for its right-hand zone and its sidebar. `oob_package` replaces
 `data_url` for live data: the widget still loads its schema from
@@ -430,7 +449,7 @@ package (a `{ "fields": { … } }` data document) and re-renders on every new
 push. A missing or malformed payload shows the widget's empty state.
 
 The string fields (`display_name`, `icon`, `schema_url`, `data_url`,
-`submit_route`, `minimum_role`, `nav_placement`, `scope`, `oob_package`,
+`submit_route`, `minimum_role`, `nav_placement`, `nav_url`, `scope`, `oob_package`,
 `permission`, `zones`) accept the same
 `{{?configure}}` / `{{$well_known}}` / `{{dependency/ref}}` refs as attribute
 values, resolved at apply — so one published application package adapts its

@@ -304,6 +304,7 @@ RegisteredApplication {
   scope?,             // layout scope the widget belongs to, e.g. "play" (package key `scope`)
   oobPackage?,        // OOB package whose latest push is the data, in place of dataUrl (package key `oob_package`)
   permission?,        // permission scope the viewer must also hold (package key `permission`)
+  navUrl?,            // GET → the page app's own sidebar links for the viewer (package key `nav_url`)
   order
 }
 ```

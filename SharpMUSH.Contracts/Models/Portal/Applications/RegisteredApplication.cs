@@ -64,6 +64,10 @@ public enum ApplicationKind
 /// A permission scope (e.g. <c>jobs.staff</c>) the viewer must hold, in addition to
 /// <see cref="MinimumRole"/>, to see the nav entry and open the route; null when the role alone gates it.
 /// </param>
+/// <param name="NavUrl">
+/// For Page apps: an optional relative route returning the app's own sidebar entries for the viewer
+/// (groups of labelled links with counts), drawn in its nav section in place of the single app link.
+/// </param>
 public sealed record RegisteredApplication(
 	string Slug,
 	string DisplayName,
@@ -82,7 +86,8 @@ public sealed record RegisteredApplication(
 	string? ComponentTypeName = null,
 	string? Scope = null,
 	string? OobPackage = null,
-	string? Permission = null);
+	string? Permission = null,
+	string? NavUrl = null);
 
 /// <summary>
 /// String discriminator values for <see cref="RegisteredApplication.RenderKind"/>. Kept as constants

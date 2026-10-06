@@ -212,6 +212,8 @@ objects:
       DATA`SW`VIEW: |-
         view
       # What +bucket/set says about a value it refuses.
+      DATA`SETTINGS: |-
+        description turnaround reopen anonymous hidden priority keep
       DATA`SETTING`DESCRIPTION: |-
         A description is up to 200 characters.
       DATA`SETTING`TURNAROUND: |-
@@ -740,23 +742,33 @@ objects:
       WEB`DONE: |-
         [json(object,ok,json(boolean,true),message,json(string,%0),fields,u({{jobs}}/WEB`EMPTY),schema,u({{jobs}}/WEB`SCHEMA`JOB,%q<viewer>,%q<n>),data,u({{jobs}}/WEB`DATA`JOB,%q<viewer>,%q<n>))]
 
-      # schemas: GET /http/jobs/schema?at=<path>
-      # Viewer %0, sub-path %1: the queue, new, or a job number.
+      # schemas: GET /http/jobs/schema?at=<path>[&filter=<filter>|&bucket=<slug>]
+      # Viewer %0, sub-path %1: the queue (filter %2 or bucket %3), new, a job number, buckets, or buckets/<slug>.
       WEB`SCHEMA: |-
-        [switch(1,not(strlen(%0)),u({{jobs}}/WEB`SCHEMA`ANON),isint(%1),u({{jobs}}/WEB`SCHEMA`JOB,%0,%1),strmatch(%1,new),u({{jobs}}/WEB`SCHEMA`NEW,%0),u({{jobs}}/WEB`SCHEMA`QUEUE,%0))]
+        [switch(1,not(strlen(%0)),u({{jobs}}/WEB`SCHEMA`ANON),isint(%1),u({{jobs}}/WEB`SCHEMA`JOB,%0,%1),strmatch(%1,new),u({{jobs}}/WEB`SCHEMA`NEW,%0),strmatch(%1,buckets),u({{jobs}}/WEB`SCHEMA`BUCKETS,%0),strmatch(%1,buckets/*),u({{jobs}}/WEB`SCHEMA`BUCKET,%0,after(%1,/)),u({{jobs}}/WEB`SCHEMA`QUEUE,%0,%2,%3))]
       WEB`SCHEMA`ANON: |-
         [setq(_an,u({{jobs}}/WEB`MD,Sign in with a character to file and read jobs.))][u({{jobs}}/WEB`DOC,view,,u({{jobs}}/WEB`SEC,,1,%q<_an>))]
       WEB`FILTERS: |-
         [if(u({{jobs}}/WEB`STAFF,%0),default mine new overdue all old,default old)]
       WEB`FLABEL: |-
-        [switch(%0,default,if(%1,Needs attention,Open),mine,Handled by me,new,New,overdue,Overdue,all,All open,old,Closed)]
+        [switch(%0,default,if(%1,Needs attention,My open jobs),mine,Handled by me,new,New,overdue,Overdue,all,All open,old,Closed)]
       WEB`FPRED: |-
         [switch(%0,mine,MINE,new,NEW,overdue,OVERDUE,all,OPEN,old,OLD,DEFAULT)]
       WEB`COLS: |-
         [json(array,json(object,key,json(string,num),label,json(string,#),link,json(string,/apps/jobs/\{number\})),json(object,key,json(string,title),label,json(string,Title),link,json(string,/apps/jobs/\{number\})),json(object,key,json(string,unread),label,json(string,),type,json(string,chip),color_key,json(string,unread_color)),json(object,key,json(string,bucket),label,json(string,Bucket)),json(object,key,json(string,status),label,json(string,Status),type,json(string,chip),color_key,json(string,color)),json(object,key,json(string,priority),label,json(string,Priority)),json(object,key,json(string,updated),label,json(string,Updated)))]
-      # The queue: a filter that reloads the page, New request, and the table. Changing the filter posts with no op.
+      # The queue for viewer %0: filter %1, or the open jobs of the bucket whose slug is %2, titled with
+      # what it shows. The sidebar (WEB`NAV) moves between them.
       WEB`SCHEMA`QUEUE: |-
-        [setq(_st,u({{jobs}}/WEB`STAFF,%0))][setq(_qo,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`FILTERS,%0),u({{jobs}}/WEB`OPT,%i0,u({{jobs}}/WEB`FLABEL,%i0,%q<_st>)),%b,%r)))][setq(_qf,json(object,kind,json(string,field),key,json(string,filter),label,json(string,Show),type,json(string,select),options,%q<_qo>,default,json(string,default),triggers_action,json(string,act)))][setq(_qb,u({{jobs}}/WEB`BTN,New request,json(object,op,json(string,new)),primary))][setq(_qt,json(object,kind,json(string,table),rows_field,json(string,jobs),columns,u({{jobs}}/WEB`COLS),empty,json(string,No jobs here.)))][setq(_q1,u({{jobs}}/WEB`SEC,,1,%q<_qf>%r%q<_qb>,2))][setq(_q2,u({{jobs}}/WEB`SEC,,2,%q<_qt>))][u({{jobs}}/WEB`DOC,form,,%q<_q1>%r%q<_q2>,json(object,act,u({{jobs}}/WEB`ACTION)))]
+        [setq(_qk,u({{jobs}}/WEB`QBUCKET,%0,%2))][setq(_qt,json(object,kind,json(string,table),rows_field,json(string,jobs),columns,u({{jobs}}/WEB`COLS),empty,json(string,No jobs here.)))][u({{jobs}}/WEB`DOC,view,if(strlen(%q<_qk>),Open jobs in [name(%q<_qk>)],u({{jobs}}/WEB`FLABEL,u({{jobs}}/WEB`QFILTER,%0,%1),u({{jobs}}/WEB`STAFF,%0))),u({{jobs}}/WEB`SEC,,1,%q<_qt>))]
+      # Filter %1 when viewer %0 has it, else default.
+      WEB`QFILTER: |-
+        [if(t(match(u({{jobs}}/WEB`FILTERS,%0),%1)),%1,default)]
+      # The bucket whose slug is %1, when viewer %0 works it.
+      WEB`QBUCKET: |-
+        [if(strlen(%1),first(squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(cand(strmatch(get(%i0/SLUG),%1),u({{jobs}}/FUN`CAN`WORK,%i0,%0)),%i0)))))]
+      # The buckets viewer %0 works.
+      WEB`WORKED: |-
+        [squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))]
       # The new-request form. Its hidden op field makes the submit a file.
       WEB`SCHEMA`NEW: |-
         [setq(_n1,json(object,kind,json(string,field),key,json(string,op),type,json(string,hidden),default,json(string,file)))][setq(_no,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`FILEABLE,%0),u({{jobs}}/WEB`OPT,name(%i0),[name(%i0)]: [get(%i0/DESCRIPTION)]),%b,%r)))][setq(_n2,json(object,kind,json(string,field),key,json(string,bucket),label,json(string,Bucket),type,json(string,select),options,%q<_no>,default,json(string,get({{jobs}}/DATA`DEFAULT`BUCKET))))][setq(_n3,json(object,kind,json(string,field),key,json(string,title),label,json(string,Title),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,80))))][setq(_n4,json(object,kind,json(string,field),key,json(string,text),label,json(string,What do you need?),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP)),validation,json(object,required,json(boolean,true))))][setq(_n5,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean),help,json(string,get({{jobs}}/DATA`WEB`CODEHELP))))][setq(_ns,u({{jobs}}/WEB`SEC,,1,%q<_n1>%r%q<_n2>%r%q<_n3>%r%q<_n4>%r%q<_n5>))][u({{jobs}}/WEB`DOC,form,New request,%q<_ns>,json(object,submit,u({{jobs}}/WEB`ACTION)))]
@@ -784,15 +796,15 @@ objects:
       WEB`BUTTONS: |-
         [setq(_bs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_bn,get(%0/NUM))][setq(_bo,not(strmatch(get(%0/STATE),closed)))][setq(_bc,if(hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%1)]),Unclaim,Claim))][switch(1,cand(%q<_bs>,%q<_bo>),u({{jobs}}/WEB`BUTTONS`STAFF,%q<_bn>,%q<_bc>),cand(%q<_bo>,u({{jobs}}/FUN`IS`PARTY,%0,%1)),u({{jobs}}/WEB`BTN,Cancel job,json(object,op,json(string,close),outcome,json(string,canceled),job,json(number,%q<_bn>)),default,Cancel job %q<_bn>?),%q<_bs>,u({{jobs}}/WEB`BTN,Reopen,json(object,op,json(string,reopen),job,json(number,%q<_bn>))),)]
 
-      # data: GET /http/jobs/data?at=<path>[&filter=<filter>]
+      # data: GET /http/jobs/data?at=<path>[&filter=<filter>|&bucket=<slug>]
       # Job %0 to staff on an open job: %1 (Claim or Unclaim), then approve, deny and complete.
       WEB`BUTTONS`STAFF: |-
         [u({{jobs}}/WEB`BTN,%1,json(object,op,json(string,lcstr(%1)),job,json(number,%0)))]%r[iter(approved denied completed,u({{jobs}}/WEB`BTN,capstr(switch(%i0,approved,approve,denied,deny,complete)),json(object,op,json(string,close),outcome,json(string,%i0),job,json(number,%0)),switch(%i0,denied,error,success),Close job %0 as %i0? What is in the message box goes to the player with it.),%b,%r)]
       # Leaves the data in %q<out>. Opening a job marks it read.
       WEB`DATA: |-
-        think [setq(out,switch(1,not(strlen(%q<viewer>)),json(object,fields,u({{jobs}}/WEB`EMPTY)),isint(%q<form.at>),u({{jobs}}/WEB`DATA`JOB,%q<viewer>,%q<form.at>),strmatch(%q<form.at>,new),json(object,fields,u({{jobs}}/WEB`EMPTY)),u({{jobs}}/WEB`DATA`QUEUE,%q<viewer>,%q<form.filter>)))]; @assert cand(strlen(%q<viewer>),isint(%q<form.at>),strlen(setr(jo,u({{jobs}}/FUN`JOB,%q<form.at>))),u({{jobs}}/FUN`CAN`SEE,%q<jo>,%q<viewer>)); &READ`[u({{jobs}}/FUN`KEY,%q<viewer>)] %q<jo>=[secs()]
+        think [setq(out,switch(1,not(strlen(%q<viewer>)),json(object,fields,u({{jobs}}/WEB`EMPTY)),isint(%q<form.at>),u({{jobs}}/WEB`DATA`JOB,%q<viewer>,%q<form.at>),strmatch(%q<form.at>,new),json(object,fields,u({{jobs}}/WEB`EMPTY)),strmatch(%q<form.at>,buckets),u({{jobs}}/WEB`DATA`BUCKETS,%q<viewer>),strmatch(%q<form.at>,buckets/*),u({{jobs}}/WEB`DATA`BUCKET,%q<viewer>,after(%q<form.at>,/)),u({{jobs}}/WEB`DATA`QUEUE,%q<viewer>,%q<form.filter>,%q<form.bucket>)))]; @assert cand(strlen(%q<viewer>),isint(%q<form.at>),strlen(setr(jo,u({{jobs}}/FUN`JOB,%q<form.at>))),u({{jobs}}/FUN`CAN`SEE,%q<jo>,%q<viewer>)); &READ`[u({{jobs}}/FUN`KEY,%q<viewer>)] %q<jo>=[secs()]
       WEB`DATA`QUEUE: |-
-        [setq(_f,if(t(match(default mine new overdue all old,%1)),%1,default))][json(object,fields,json(object,filter,u({{jobs}}/WEB`V,json(string,%q<_f>),1),jobs,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%0,u({{jobs}}/WEB`FPRED,%q<_f>),)),u({{jobs}}/WEB`ROW,%i0,%0),%b,%r)),1)))]
+        [setq(_qk,u({{jobs}}/WEB`QBUCKET,%0,%2))][setq(_qs,if(strlen(%q<_qk>),u({{jobs}}/FUN`SELECT,%0,BUCKET,%q<_qk>),u({{jobs}}/FUN`SELECT,%0,u({{jobs}}/WEB`FPRED,u({{jobs}}/WEB`QFILTER,%0,%1)),)))][json(object,fields,json(object,jobs,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/FUN`SORT,%q<_qs>),u({{jobs}}/WEB`ROW,%i0,%0),%b,%r)),1)))]
       # Job %0 as a queue row for %1. unread reads Unread when something is new to %1, the * of +jobs.
       WEB`ROW: |-
         [setq(_w,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][json(object,number,json(number,get(%0/NUM)),num,json(string,get(%0/NUM)),unread,json(string,if(u({{jobs}}/FUN`UNREAD,%0,%1),Unread)),unread_color,json(string,info),title,json(string,get(%0/TITLE)),bucket,json(string,name(get(%0/BUCKET))),status,json(string,if(cand(%q<_w>,u({{jobs}}/FUN`IS`OVERDUE,%0)),Overdue,u({{jobs}}/FUN`STATE`TEXT,%0,%q<_w>))),color,json(string,u({{jobs}}/WEB`COLOR,%0,%q<_w>)),priority,json(string,capstr(get(%0/PRIORITY))),updated,json(string,u({{jobs}}/FUN`DATE,get(%0/[if(%q<_w>,UPDATED`AT,PUBLIC`AT)]))))]
@@ -818,14 +830,10 @@ objects:
         [if(cand(not(strmatch(%q<_k>,action)),cor(%3,strmatch(get(%0/ENTRY`%1`BY),%2))),json(array,json(object,label,json(string,if(%q<_c>,Show as markdown,Show as typed)),action,json(string,act),values,json(object,op,json(string,format),job,json(number,get(%0/NUM)),entry,json(number,%1),fmt,json(string,if(%q<_c>,markdown,softcode))))),json_array())]
 
       # actions: POST /http/jobs/act, the posted fields in %q<body>
-      # Runs the posted op as %q<viewer> and leaves the answer in %q<out>. A post with no op is the queue
-      # filter changing. Checks mirror the +job commands; the writes are the same INC`DO` routines.
+      # Runs the posted op as %q<viewer> and leaves the answer in %q<out>. Checks mirror the +job and
+      # +bucket commands; the writes are the same INC`DO` routines and settings.
       WEB`ACT: |-
-        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%q<viewer>)][setq(me,if(strlen(%q<viewer>),u({{jobs}}/FUN`KEY,%q<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(t(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode)))),softcode,markdown))][setq(mailforce,0)]; @assert strlen(%q<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert t(match(filter new file reply claim unclaim close reopen format,setr(op,firstof(%q<op>,filter))))=think [setq(out,u({{jobs}}/WEB`ERR,There is no %q<op> action.))]; @include {{jobs}}/WEB`ACT`%q<op>
-      WEB`ACT`FILTER: |-
-        think [setq(_f,u({{jobs}}/WEB`GET,filter))][setq(out,u({{jobs}}/WEB`GO,/apps/jobs[if(t(match(mine new overdue all old,%q<_f>)),?filter=%q<_f>)]))]
-      WEB`ACT`NEW: |-
-        think [setq(out,u({{jobs}}/WEB`GO,/apps/jobs/new))]
+        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%q<viewer>)][setq(me,if(strlen(%q<viewer>),u({{jobs}}/FUN`KEY,%q<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(t(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode)))),softcode,markdown))][setq(mailforce,0)]; @assert strlen(%q<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert t(match(file reply claim unclaim close reopen format bucket,%q<op>))=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
       WEB`ACT`FILE: |-
         think [setq(fb,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`GET,bucket),%q<viewer>))][setq(title,trim(u({{jobs}}/WEB`GET,title)))]; @assert cand(strlen(%q<fb>),u({{jobs}}/FUN`CAN`FILE,%q<fb>,%q<viewer>))=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,Pick a bucket you can file in.))]; @assert strlen(%q<title>)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Give it a title.))]; @assert lte(strlen(%q<title>),80)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Keep the title to 80 characters.))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Say what you need.))]; think [setq(how,portal)][setq(author,)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Filed job %q<n>.),redirect,json(string,/apps/jobs/%q<n>)))]
       # The posted job, as INC`NEED`JOB finds one for a command.
@@ -848,6 +856,51 @@ objects:
         @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @assert strmatch(get(%q<jo>/STATE),closed)=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> is open.))]; think [setq(byp,0)]; @include/nobreak {{jobs}}/INC`DO`REOPEN; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is open again.))]
       WEB`ACT`FORMAT: |-
         @include {{jobs}}/WEB`NEED`JOB; think [setq(ent,u({{jobs}}/WEB`GET,entry))][setq(fmt,lcstr(u({{jobs}}/WEB`GET,fmt)))]; @assert cand(isint(%q<ent>),hasattr(%q<jo>,ENTRY`%q<ent>`KIND),not(strmatch(get(%q<jo>/ENTRY`%q<ent>`KIND),action)),u({{jobs}}/FUN`ENTRY`VISIBLE,%q<jo>,%q<ent>,%q<staff>,))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> has no message %q<ent>.))]; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=think [setq(out,u({{jobs}}/WEB`ERR,Only its author or staff can change how a message shows.))]; @assert t(match(markdown softcode,%q<fmt>))=think [setq(out,u({{jobs}}/WEB`ERR,A message shows as markdown or softcode.))]; @include {{jobs}}/INC`DO`FORMAT; think [setq(out,u({{jobs}}/WEB`DONE,Message %q<ent> shows [if(strmatch(%q<fmt>,softcode),as typed,as markdown)] now.))]
+
+      # The bucket page's Save: every setting at once, checked as +bucket/set checks one.
+      WEB`ACT`BUCKET: |-
+        think [setq(bk,u({{jobs}}/WEB`QBUCKET,%q<viewer>,u({{jobs}}/WEB`GET,bucket)))]; @assert strlen(%q<bk>)=think [setq(out,u({{jobs}}/WEB`ERR,Only a Job Admin or someone who works that bucket can change it.))]; think [setq(bad,first(squish(iter(get({{jobs}}/DATA`SETTINGS),if(u({{jobs}}/FUN`SETTING`OK,%i0,u({{jobs}}/WEB`SETTING,%i0)),,%i0)))))]; @assert not(strlen(%q<bad>))=think [setq(out,u({{jobs}}/WEB`ERRF,%q<bad>,get({{jobs}}/DATA`SETTING`%q<bad>)))]; @dolist/inline [get({{jobs}}/DATA`SETTINGS)]=&## %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,##,u({{jobs}}/WEB`SETTING,##))]; think [setq(out,json(object,ok,json(boolean,true),message,json(string,[name(%q<bk>)] is saved.)))]
+      # Setting %0 as posted, in the words +bucket/set takes.
+      WEB`SETTING: |-
+        [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(t(match(true 1 yes on,lcstr(%q<_v>))),yes,no),if(strmatch(%q<_v>,null),,%q<_v>))]
+
+      # sidebar: GET /http/jobs/nav
+      # Viewer %0's sidebar: staff get the queue's views and the buckets they work, players their own
+      # jobs, with counts. Nobody signed in gets no links, and the portal shows the app's own.
+      WEB`NAV: |-
+        [json(object,groups,if(strlen(%0),u({{jobs}}/WEB`ARR,u({{jobs}}/WEB`NAV`[if(u({{jobs}}/WEB`STAFF,%0),STAFF,PLAYER)],%0)),json_array()))]
+      WEB`NAV`STAFF: |-
+        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,Needs attention,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Handled by me,/apps/jobs?filter=mine,person,u({{jobs}}/WEB`COUNT,%0,MINE)),u({{jobs}}/WEB`LINK,New,/apps/jobs?filter=new,fiber_new,u({{jobs}}/WEB`COUNT,%0,NEW)),u({{jobs}}/WEB`LINK,Overdue,/apps/jobs?filter=overdue,alarm,u({{jobs}}/WEB`COUNT,%0,OVERDUE)),u({{jobs}}/WEB`LINK,All open,/apps/jobs?filter=all,view_list,u({{jobs}}/WEB`COUNT,%0,OPEN)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]%r[json(object,label,json(string,Buckets),items,u({{jobs}}/WEB`ARR,[iter(u({{jobs}}/WEB`WORKED,%0),u({{jobs}}/WEB`LINK,name(%i0),/apps/jobs?bucket=[get(%i0/SLUG)],folder_open,u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),%b,%r)]%r[u({{jobs}}/WEB`LINK,Bucket settings,/apps/jobs/buckets,tune)]))]
+      WEB`NAV`PLAYER: |-
+        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,My open jobs,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]
+      # A sidebar link: label %0, path %1, Material icon %2, and count %3 when there is one.
+      WEB`LINK: |-
+        [if(strlen(%3),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2),count,json(number,%3)),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2)))]
+      # How many jobs predicate %1 (with %2) selects for viewer %0.
+      WEB`COUNT: |-
+        [words(u({{jobs}}/FUN`SELECT,%0,%1,%2))]
+
+      # Bucket settings: /apps/jobs/buckets lists the buckets the viewer works; buckets/<slug> edits one.
+      WEB`SCHEMA`BUCKETS: |-
+        [setq(_bt,json(object,kind,json(string,table),rows_field,json(string,buckets),columns,json(array,json(object,key,json(string,name),label,json(string,Bucket),link,json(string,/apps/jobs/buckets/\{slug\})),json(object,key,json(string,open),label,json(string,Open)),json(object,key,json(string,turnaround),label,json(string,Turnaround)),json(object,key,json(string,about),label,json(string,What it is for))),empty,json(string,You work no buckets.)))][u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,%q<_bt>))]
+      WEB`DATA`BUCKETS: |-
+        [json(object,fields,json(object,buckets,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`WORKED,%0),json(object,slug,json(string,get(%i0/SLUG)),name,json(string,name(%i0)),open,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),turnaround,json(string,if(gt(firstof(get(%i0/TURNAROUND),0),0),[get(%i0/TURNAROUND)] days,None)),about,json(string,get(%i0/DESCRIPTION))),%b,%r)),1)))]
+      # The settings form for the bucket whose slug is %1, for viewer %0 who works it.
+      WEB`SCHEMA`BUCKET: |-
+        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),u({{jobs}}/WEB`SCHEMA`BUCKET`SEEN,%q<_bk>),u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,u({{jobs}}/WEB`MD,You do not work a bucket called %1.))))]
+      WEB`SCHEMA`BUCKET`SEEN: |-
+        [setq(_s1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Open jobs),json(string,Permission),json(string,Role),json(string,Hooks))))][setq(_s2,[u({{jobs}}/WEB`FIELD,description,About,text,Shown in +buckets and the new-request form.)]%r[u({{jobs}}/WEB`FIELD,turnaround,Turnaround in days,number,A new job is due this many days after it is filed. 0 sets no due date.)]%r[u({{jobs}}/WEB`FIELD,reopen,Reopen window in days,number,A player's reply opens a closed job again for this many days. 0 never.)]%r[u({{jobs}}/WEB`SELECT,anonymous,Hide who is talking,none None|filer The filer\, from staff|staff Staff\, from the filer)]%r[u({{jobs}}/WEB`SELECT,priority,Priority of new jobs,low Low|normal Normal|high High)]%r[u({{jobs}}/WEB`FIELD,keep,Keep closed jobs for days,text,Empty keeps them forever.)]%r[u({{jobs}}/WEB`FIELD,hidden,Hidden from players,boolean,Players do not see the bucket or file in it.)])][setq(_s3,json(object,kind,json(string,button),label,json(string,Save),action,json(string,save),values,json(object,op,json(string,bucket),bucket,json(string,get(%0/SLUG))),color,json(string,primary),variant,json(string,filled)))][u({{jobs}}/WEB`DOC,form,name(%0),[u({{jobs}}/WEB`SEC,,1,%q<_s1>)]%r[u({{jobs}}/WEB`SEC,Settings,2,%q<_s2>)]%r[u({{jobs}}/WEB`SEC,,3,%q<_s3>)],json(object,save,u({{jobs}}/WEB`ACTION`KEEP)))]
+      # A form field: key %0, label %1, type %2, help %3.
+      WEB`FIELD: |-
+        [json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,%2),help,json(string,%3))]
+      # A select field: key %0, label %1, options %2 as |-separated "<value> <label>".
+      WEB`SELECT: |-
+        [json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,select),options,u({{jobs}}/WEB`ARR,iter(%2,u({{jobs}}/WEB`OPT,first(%i0),rest(%i0)),|,%r)))]
+      # The act action without emptying the form, for a form that shows what it saved.
+      WEB`ACTION`KEEP: |-
+        [json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/jobs/act),payload,json(string,fields),on_error,json(object,bind_field_errors,json(boolean,true)))]
+      WEB`DATA`BUCKET: |-
+        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),json(object,fields,json(object,Open jobs,u({{jobs}}/WEB`V,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%q<_bk>)),1),Permission,u({{jobs}}/WEB`V,json(string,softcode.jobs.[get(%q<_bk>/SLUG)]),1),Role,u({{jobs}}/WEB`V,json(string,job-admin-[get(%q<_bk>/SLUG)]),1),Hooks,u({{jobs}}/WEB`V,json(string,firstof(itemize(squish(iter(lattr(%q<_bk>/ON`*),if(strmatch(get(%q<_bk>/%i0),@@*),,lcstr(after(%i0,`)))))),None written)),1),description,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/DESCRIPTION)),1),turnaround,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/TURNAROUND),0)),1),reopen,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/REOPEN),0)),1),anonymous,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/ANONYMOUS),none)),1),priority,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/PRIORITY),normal)),1),keep,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/KEEP)),1),hidden,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/HIDDEN)),1))),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
 
       # ---- lifecycle ------------------------------------------------------------
       # Commands added with @command/add and their hooks, and @functions, last until a restart, so STARTUP
@@ -1213,14 +1266,17 @@ objects:
   # ---- portal routes ------------------------------------------------------------------
   # Routes on the HTTP handler, as children of http-handler's GET and POST verbs. The portal's jobs
   # application (the jobs-app package) reads /http/jobs/schema and /http/jobs/data with ?at= set to
-  # the address after /apps/jobs/, and posts its buttons to /http/jobs/act. %q<viewer> is the
+  # the address after /apps/jobs/, reads its sidebar from /http/jobs/nav, and posts its buttons to
+  # /http/jobs/act. %q<viewer> is the
   # character the portal signed in as. The handler must be WIZARD (the seeded one is) to @force the
   # Jobs object, which does the work so its "Set." lines never land in the response.
   - ref: routes
     target: "{{$http_handler}}"
     attributes:
       GET`JOBS`SCHEMA: |-
-        @respond/type application/json; think [u({{jobs}}/WEB`SCHEMA,%q<viewer>,%q<form.at>)]
+        @respond/type application/json; think [u({{jobs}}/WEB`SCHEMA,%q<viewer>,%q<form.at>,%q<form.filter>,%q<form.bucket>)]
+      GET`JOBS`NAV: |-
+        @respond/type application/json; think [u({{jobs}}/WEB`NAV,%q<viewer>)]
       GET`JOBS`DATA: |-
         @force {{jobs}}=@include/nobreak {{jobs}}/WEB`DATA; @respond/type application/json; think %q<out>
       POST`JOBS`ACT: |-

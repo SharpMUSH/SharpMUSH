@@ -161,20 +161,25 @@
         if (generation != _generation) return;
         _app = app;
 
-        if (_app is not null)
+        // Each await below can let a newer load start; this one publishes nothing once it is stale.
+        if (app is not null)
         {
-            _authorized = await IsAuthorizedAsync(_app);
-            if (_authorized)
+            var authorized = await IsAuthorizedAsync(app);
+            if (generation != _generation) return;
+            _authorized = authorized;
+            if (authorized)
             {
-                if (_app.IsComponent)
+                if (app.IsComponent)
                 {
                     // Compiled-component app: fetch + load the plugin assembly and resolve the Type by
                     // reflection (no plugin types referenced here). The loader no-ops when the gate is off.
-                    if (!string.IsNullOrWhiteSpace(_app.ComponentAssemblyUrl)
-                        && !string.IsNullOrWhiteSpace(_app.ComponentTypeName))
+                    if (!string.IsNullOrWhiteSpace(app.ComponentAssemblyUrl)
+                        && !string.IsNullOrWhiteSpace(app.ComponentTypeName))
                     {
-                        _componentType = await ComponentLoader.ResolveComponentAsync(
-                            _app.ComponentAssemblyUrl!, _app.ComponentTypeName!);
+                        var componentType = await ComponentLoader.ResolveComponentAsync(
+                            app.ComponentAssemblyUrl!, app.ComponentTypeName!);
+                        if (generation != _generation) return;
+                        _componentType = componentType;
                     }
                 }
                 else

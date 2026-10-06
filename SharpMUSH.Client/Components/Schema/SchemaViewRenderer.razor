@@ -95,11 +95,25 @@ else
             return;
         }
 
+        // One action at a time: a second click, or a confirmation answered while the first is in
+        // flight, is dropped rather than posted twice.
+        if (_busy)
+        {
+            return;
+        }
+
         _busy = true;
         var payload = (request.Values ?? new Dictionary<string, JsonElement>())
             .ToDictionary(kv => kv.Key, kv => (object?)kv.Value, StringComparer.Ordinal);
-        var result = await Services.GetRequiredService<SchemaAppService>().SubmitAsync(action.Route!, payload);
-        _busy = false;
+        SchemaActionResult result;
+        try
+        {
+            result = await Services.GetRequiredService<SchemaAppService>().SubmitAsync(action.Route!, payload);
+        }
+        finally
+        {
+            _busy = false;
+        }
 
         if (!result.Ok)
         {

@@ -49,6 +49,7 @@ public class BuildSectionTests : TrackingBunitContext
 		Services.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(new ApplicationRegistryClient(factory, NullLogger<ApplicationRegistryClient>.Instance))
+			.AddSingleton(new SchemaAppService(factory, NullLogger<SchemaAppService>.Instance))
 			.AddSingleton<SidebarCollapseService>()
 			.AddSingleton(new AdminConfigService(NullLogger<AdminConfigService>.Instance, factory))
 			.AddLocalization();

@@ -136,7 +136,8 @@ else
     /// </summary>
     private async Task Dispatch(string actionName, IReadOnlyDictionary<string, JsonElement>? values)
     {
-        if (_model.Action(actionName) is not { } action)
+        // One action at a time: whatever arrives while one is in flight is dropped, not posted twice.
+        if (_busy || _model.Action(actionName) is not { } action)
         {
             return;
         }
@@ -154,9 +155,15 @@ else
         _model.ClearErrors();
         StateHasChanged();
 
-        var result = await Schema.SubmitAsync(action.Route!, _model.Payload(values));
-
-        _busy = false;
+        SchemaActionResult result;
+        try
+        {
+            result = await Schema.SubmitAsync(action.Route!, _model.Payload(values));
+        }
+        finally
+        {
+            _busy = false;
+        }
 
         if (result.Ok)
         {

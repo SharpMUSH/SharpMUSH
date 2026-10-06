@@ -51,7 +51,7 @@
                    Color="@SchemaRendering.ParseColor(Element.Color, Color.Secondary)"
                    Class="mb-2 schema-button"
                    OnClick="@(() => RequestAsync(Element.Action, Element.Values, Element.Confirm, Element.Label))"
-                   Disabled="@(Busy || !CanDispatch(Element.Action))">
+                   Disabled="@(Busy || _pending || !CanDispatch(Element.Action))">
             @(Element.Label ?? Loc["WidAction"].Value)
         </MudButton>
         break;
@@ -81,25 +81,36 @@
     private bool CanDispatch(string? action)
         => !string.IsNullOrWhiteSpace(action) && Actions?.ContainsKey(action) == true;
 
+    /// <summary>True from a click until its action is answered, so a double click asks and posts once.</summary>
+    private bool _pending;
+
     private async Task RequestAsync(string? action, IReadOnlyDictionary<string, JsonElement>? values, string? confirm, string? title)
     {
-        if (!CanDispatch(action))
+        if (_pending || !CanDispatch(action))
         {
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(confirm))
+        _pending = true;
+        try
         {
-            var confirmed = await DialogService.ShowMessageBoxAsync(
-                title ?? Loc["WidConfirm"].Value, confirm,
-                yesText: Loc["WidConfirm"].Value, cancelText: Loc["Cancel"].Value);
-            if (confirmed != true)
+            if (!string.IsNullOrWhiteSpace(confirm))
             {
-                return;
+                var confirmed = await DialogService.ShowMessageBoxAsync(
+                    title ?? Loc["WidConfirm"].Value, confirm,
+                    yesText: Loc["WidConfirm"].Value, cancelText: Loc["Cancel"].Value);
+                if (confirmed != true)
+                {
+                    return;
+                }
             }
-        }
 
-        await OnAction.InvokeAsync(new SchemaActionRequest(action!, values));
+            await OnAction.InvokeAsync(new SchemaActionRequest(action!, values));
+        }
+        finally
+        {
+            _pending = false;
+        }
     }
 
     private JsonElement? Lookup(string key)
@@ -226,7 +237,7 @@
                             {
                                 <MudButton Variant="Variant.Text" Size="Size.Small" Class="schema-timeline-action"
                                            OnClick="@(() => RequestAsync(action.Action, action.Values, action.Confirm, action.Label))"
-                                           Disabled="@(Busy || !CanDispatch(action.Action))">
+                                           Disabled="@(Busy || _pending || !CanDispatch(action.Action))">
                                     @action.Label
                                 </MudButton>
                             }

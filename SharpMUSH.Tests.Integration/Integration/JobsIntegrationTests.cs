@@ -283,10 +283,44 @@ public class JobsIntegrationTests
 			var mine = await Http("GET", "/jobs/data?at=", "", player);
 			await Assert.That(mine.GetProperty("fields").GetProperty("jobs").GetProperty("value")[0].GetProperty("unread").GetString()).IsEqualTo("")
 				.Because("the filer has read what they wrote");
-			await Assert.That((await Http("GET", "/jobs/schema?at=", "", staff)).GetProperty("title").GetString()).IsEqualTo("")
-				.Because("the page header already names the application");
+			await Assert.That((await Http("GET", "/jobs/schema?at=", "", staff)).GetProperty("title").GetString()).IsEqualTo("Needs attention")
+				.Because("the page is titled with the view it shows, not the application again");
 			await Assert.That(app.Icon).IsEqualTo("support_agent");
 			await Assert.That(app.NavPlacement).IsEqualTo("Support");
+			await Assert.That(app.NavUrl).IsEqualTo("http/jobs/nav");
+
+			var staffNav = (await Http("GET", "/jobs/nav", "", staff)).GetProperty("groups");
+			var views = staffNav[0].GetProperty("items");
+			await Assert.That(views[0].GetProperty("label").GetString()).IsEqualTo("Needs attention");
+			await Assert.That(views[0].GetProperty("count").GetInt32()).IsEqualTo(1);
+			await Assert.That(staffNav[1].GetProperty("label").GetString()).IsEqualTo("Buckets");
+			var bugs = staffNav[1].GetProperty("items").EnumerateArray().Single(i => i.GetProperty("label").GetString() == "Bugs");
+			await Assert.That(bugs.GetProperty("path").GetString()).IsEqualTo("/apps/jobs?bucket=bugs");
+			await Assert.That(bugs.GetProperty("count").GetInt32()).IsEqualTo(1);
+			var playerNav = (await Http("GET", "/jobs/nav", "", player)).GetProperty("groups");
+			await Assert.That(playerNav.GetArrayLength()).IsEqualTo(1).Because("a player works no buckets");
+			await Assert.That(playerNav[0].GetProperty("items")[0].GetProperty("label").GetString()).IsEqualTo("My open jobs");
+			await Assert.That((await Http("GET", "/jobs/nav", "", null)).GetProperty("groups").GetArrayLength()).IsEqualTo(0);
+
+			var inBugs = await Http("GET", "/jobs/data?at=&bucket=bugs", "", staff);
+			await Assert.That(inBugs.GetProperty("fields").GetProperty("jobs").GetProperty("value").GetArrayLength()).IsEqualTo(1);
+			await Assert.That((await Http("GET", "/jobs/data?at=&bucket=plots", "", staff)).GetProperty("fields").GetProperty("jobs").GetProperty("value").GetArrayLength()).IsEqualTo(0);
+			await Assert.That((await Http("GET", "/jobs/schema?at=&bucket=bugs", "", staff)).GetProperty("title").GetString()).IsEqualTo("Open jobs in Bugs");
+
+			var buckets = (await Http("GET", "/jobs/data?at=buckets", "", staff)).GetProperty("fields").GetProperty("buckets").GetProperty("value");
+			await Assert.That(buckets.EnumerateArray().Any(b => b.GetProperty("slug").GetString() == "bugs")).IsTrue();
+			var form = await Http("GET", "/jobs/data?at=buckets/bugs", "", staff);
+			await Assert.That(form.GetProperty("fields").GetProperty("Permission").GetProperty("value").GetString()).IsEqualTo("softcode.jobs.bugs");
+			var badSave = await Http("POST", "/jobs/act",
+				"""{"op":"bucket","bucket":"bugs","description":"Code problems.","turnaround":-2,"reopen":3,"anonymous":"none","priority":"high","keep":"","hidden":false}""", staff);
+			await Assert.That(badSave.GetProperty("ok").GetBoolean()).IsFalse();
+			await Assert.That(badSave.GetProperty("errors").TryGetProperty("turnaround", out _)).IsTrue();
+			var saved = await Http("POST", "/jobs/act",
+				"""{"op":"bucket","bucket":"bugs","description":"Code problems.","turnaround":5,"reopen":3,"anonymous":"none","priority":"high","keep":"","hidden":false}""", staff);
+			await Assert.That(saved.GetProperty("ok").GetBoolean()).IsTrue().Because(saved.ToString());
+			await Assert.That(await As(staff, "+bucket Bugs")).Contains("Code problems.").And.Contains("5 days").And.Contains("high");
+			var notTheirs = await Http("POST", "/jobs/act", """{"op":"bucket","bucket":"bugs","description":"Mine now."}""", player);
+			await Assert.That(notTheirs.GetProperty("ok").GetBoolean()).IsFalse();
 
 			var schema = await Http("GET", "/jobs/schema?at=1", "", staff);
 			await Assert.That(schema.GetProperty("kind").GetString()).IsEqualTo("form");

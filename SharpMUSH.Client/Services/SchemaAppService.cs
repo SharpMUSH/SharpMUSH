@@ -26,6 +26,12 @@ public class SchemaAppService(IHttpClientFactory httpClientFactory, ILogger<Sche
 			.GetApiAsync<SchemaData>(dataUrl, "The data route returned no payload.", SchemaJson.Options),
 			"data", dataUrl);
 
+	/// <summary>Loads a page application's sidebar entries for the viewer, or the <see cref="ApiFailure"/> when unavailable.</summary>
+	public Task<ApiResult<AppNav>> GetNavAsync(string navUrl) =>
+		LoggedAsync(httpClientFactory.CreateClient("api")
+			.GetApiAsync<AppNav>(navUrl, "The sidebar route returned nothing.", SchemaJson.Options),
+			"sidebar", navUrl);
+
 	private async Task<ApiResult<T>> LoggedAsync<T>(Task<ApiResult<T>> read, string what, string url)
 	{
 		var result = await read;

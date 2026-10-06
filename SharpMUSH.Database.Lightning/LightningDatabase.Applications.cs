@@ -33,7 +33,8 @@ public partial class LightningDatabase
 		ComponentTypeName = application.ComponentTypeName,
 		Scope = application.Scope,
 		OobPackage = application.OobPackage,
-		Permission = application.Permission
+		Permission = application.Permission,
+		NavUrl = application.NavUrl
 	};
 
 	private static RegisteredApplication MapApplication(ApplicationRecord r) => new(
@@ -54,7 +55,8 @@ public partial class LightningDatabase
 		r.ComponentTypeName,
 		r.Scope,
 		r.OobPackage,
-		r.Permission);
+		r.Permission,
+		r.NavUrl);
 
 	public async Task UpsertApplicationAsync(RegisteredApplication application)
 		=> await Store.WriteAsync(tx =>

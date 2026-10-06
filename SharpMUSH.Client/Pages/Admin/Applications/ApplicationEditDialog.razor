@@ -59,6 +59,14 @@
                 <MudItem xs="12" sm="4">
                     <MudNumericField @bind-Value="_order" Label="@Loc["LayAppOrder"]" Variant="Variant.Outlined" />
                 </MudItem>
+                @* A page app's own sidebar entries come from a route of its own. *@
+                @if (_kind == ApplicationKind.Page)
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_navUrl" Label="@Loc["LayAppNavUrlOptional"]" Variant="Variant.Outlined"
+                                      HelperText="@Loc["LayAppNavUrlHelper"]" />
+                    </MudItem>
+                }
                 @* A layout scope and a live OOB feed only mean something for a widget. *@
                 @if (_kind == ApplicationKind.Widget)
                 {
@@ -120,6 +128,7 @@
     private string? _scope;
     private string? _oobPackage;
     private string? _permission;
+    private string? _navUrl;
 
     protected override void OnInitialized()
     {
@@ -140,6 +149,7 @@
             _scope = Existing.Scope;
             _oobPackage = Existing.OobPackage;
             _permission = Existing.Permission;
+            _navUrl = Existing.NavUrl;
         }
     }
 
@@ -175,7 +185,8 @@
             Existing?.ComponentTypeName,
             _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_scope) ? null : _scope.Trim(),
             _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_oobPackage) ? null : _oobPackage.Trim(),
-            string.IsNullOrWhiteSpace(_permission) ? null : _permission.Trim());
+            string.IsNullOrWhiteSpace(_permission) ? null : _permission.Trim(),
+            _kind != ApplicationKind.Page || string.IsNullOrWhiteSpace(_navUrl) ? null : _navUrl.Trim());
 
         var result = await Registry.UpsertAsync(model);
         _saving = false;

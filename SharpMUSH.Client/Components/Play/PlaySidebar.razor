@@ -121,6 +121,18 @@
         {
             _directory = rows;
         }
+        await LoadAppsAsync();
+    }
+
+    // Signing in or out hands down a new AuthState; which apps show depends on who is looking.
+    protected override Task OnParametersSetAsync() =>
+        ReferenceEquals(AuthState, _appsAuth) ? Task.CompletedTask : LoadAppsAsync();
+
+    private Task<AuthenticationState>? _appsAuth;
+
+    private async Task LoadAppsAsync()
+    {
+        _appsAuth = AuthState;
         var user = AuthState is null ? null : (await AuthState).User;
         _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, "Play")
             .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Page)

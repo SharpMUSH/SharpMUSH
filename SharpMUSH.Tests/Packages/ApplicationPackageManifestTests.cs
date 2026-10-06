@@ -72,6 +72,28 @@ public class ApplicationPackageManifestTests
 	}
 
 	[Test]
+	public async Task ApplicationNavUrl_Parses()
+	{
+		var parsed = _service.ParseManifest(
+			"""
+			format: 1.1
+			package: jobs-app
+			version: 1.0.0
+			kind: application
+			application:
+			  slug: jobs
+			  display_name: Jobs
+			  schema_url: http/jobs/schema
+			  minimum_role: player
+			  nav_placement: Support
+			  nav_url: http/jobs/nav
+			""").Expect<ParsedPackageManifest>();
+
+		await Assert.That(parsed.Warnings.Count).IsEqualTo(0).Because("nav_url is a known application key");
+		await Assert.That(parsed.Manifest.Application!.NavUrl).IsEqualTo("http/jobs/nav");
+	}
+
+	[Test]
 	public async Task ApplicationPermission_ParsesLiteralAndConfigureRef()
 	{
 		var literal = _service.ParseManifest(
