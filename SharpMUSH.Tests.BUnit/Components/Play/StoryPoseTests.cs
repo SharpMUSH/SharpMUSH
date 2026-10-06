@@ -59,6 +59,20 @@ public class StoryPoseTests : BunitContext
 		await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// The <c>ooc</c> command records <c>Name: words</c>; the band already names the speaker, so it shows the
+	/// words. A posed OOC line keeps its name, which is part of the sentence.
+	/// </summary>
+	[Test]
+	[Arguments("Wren Halloway: brb, making tea", "brb, making tea")]
+	[Arguments("Wren Halloway waves.", "Wren Halloway waves.")]
+	[Arguments("Tomas: hi", "Tomas: hi")]
+	public async Task AnOocBand_DropsTheSpeakersNameFromWhatWasSaid(string recorded, string shown)
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", tags: ["ooc"], markup: recorded)));
+		await Assert.That(cut.Find(".kit-ooc-text").TextContent).IsEqualTo(shown);
+	}
+
 	[Test]
 	public async Task APersona_ShowsItsOwnName()
 	{
