@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Authorization;
+
 namespace SharpMUSH.Library.Models;
 
 /// <summary>
@@ -10,3 +12,10 @@ namespace SharpMUSH.Library.Models;
 /// <param name="Description">What holding it lets someone do, shown beside it in lists.</param>
 /// <param name="CreatedAt">Creation time (unix ms).</param>
 public sealed record CustomPermission(string Scope, string Category, string Description, long CreatedAt);
+
+/// <summary>Every override of one permission: who has it allowed or denied directly, apart from roles.</summary>
+/// <param name="Accounts">Account id → its setting.</param>
+/// <param name="Objects">Object number → its setting.</param>
+public sealed record PermissionOverrideHolders(
+	IReadOnlyDictionary<string, PermissionState> Accounts,
+	IReadOnlyDictionary<int, PermissionState> Objects);

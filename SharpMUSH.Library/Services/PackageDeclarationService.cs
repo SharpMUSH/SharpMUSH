@@ -79,8 +79,9 @@ public sealed class PackageDeclarationService(
 		foreach (var scope in plan.PermissionRemovals)
 		{
 			if ((await roles.GetCustomPermissionsAsync(cancellationToken)).FirstOrDefault(p => p.Scope == scope) is not { } previous) continue;
+			var overrides = await roles.GetOverridesOfAsync(scope, cancellationToken);
 			await roles.RemoveCustomPermissionAsync(scope);
-			writes.Track($"permission {scope}", () => roles.UpsertCustomPermissionAsync(previous));
+			writes.Track($"permission {scope}", () => RestorePermissionAsync(previous, overrides));
 		}
 
 		foreach (var (kind, name) in plan.CategoryRemovals)
@@ -125,6 +126,21 @@ public sealed class PackageDeclarationService(
 			held,
 			otherOwners);
 		return PackageDeclarationPlanner.Plan(declared, owned, live, _clock.GetUtcNow().ToUnixTimeMilliseconds());
+	}
+
+	/// <summary>Undoes a permission removal: the definition, then every override the removal cleared.</summary>
+	private async Task RestorePermissionAsync(CustomPermission permission, PermissionOverrideHolders overrides)
+	{
+		await roles.UpsertCustomPermissionAsync(permission);
+		foreach (var (account, state) in overrides.Accounts)
+		{
+			await roles.SetAccountOverrideAsync(account, permission.Scope, state);
+		}
+
+		foreach (var (number, state) in overrides.Objects)
+		{
+			await roles.SetObjectOverrideAsync(number, permission.Scope, state);
+		}
 	}
 
 	private async Task<RoleCategory?> FindCategoryAsync(CategoryKind kind, string name, CancellationToken cancellationToken)

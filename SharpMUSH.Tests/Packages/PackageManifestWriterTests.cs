@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
@@ -125,6 +126,34 @@ public class PackageManifestWriterTests
 		await Assert.That(again.RequiresServer?.ToString()).IsEqualTo(original.RequiresServer?.ToString());
 		await Assert.That(again.Replaces).IsEqualTo(original.Replaces);
 		await Assert.That(again.Kind).IsEqualTo(original.Kind);
+	}
+
+	[Test]
+	public async Task DeclarationsRoundTrip()
+	{
+		var declarations = new PackageDeclarations(
+			[new PackageCategorySpec("Requests", "Roles for the request queue.")],
+			[new PackageCategorySpec("Requests", "Permissions for: the request queue.")],
+			[
+				new PackagePermissionSpec("requests.handle", "Requests", "Work on any request."),
+				new PackagePermissionSpec("requests.view", "Requests", "")
+			],
+			[
+				new PackageRoleSpec("handler", "Request Handler", "Requests", "#4fc3c8", 11,
+					new Dictionary<string, PermissionState> { ["requests.handle"] = PermissionState.Allow, ["requests.view"] = PermissionState.Deny }),
+				new PackageRoleSpec("watcher", "watcher", "Requests", null, 1, new Dictionary<string, PermissionState>())
+			]);
+		var again = RoundTrip(Maximal() with { Format = new PackageFormatVersion(1, 2), Declarations = declarations }).Declared;
+
+		await Assert.That(again.RoleCategories).IsEquivalentTo(declarations.RoleCategories);
+		await Assert.That(again.PermissionCategories).IsEquivalentTo(declarations.PermissionCategories);
+		await Assert.That(again.Permissions).IsEquivalentTo(declarations.Permissions);
+		await Assert.That(again.Roles.Count).IsEqualTo(2);
+		foreach (var (expected, actual) in declarations.Roles.Zip(again.Roles))
+		{
+			await Assert.That(actual with { Permissions = expected.Permissions }).IsEqualTo(expected);
+			await Assert.That(actual.Permissions).IsEquivalentTo(expected.Permissions);
+		}
 	}
 
 	[Test]

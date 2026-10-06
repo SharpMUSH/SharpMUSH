@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -178,6 +179,46 @@ public class PackageDeclarationInstallTests
 		await Assert.That(await PermissionExistsAsync(names.Permission)).IsFalse();
 		await Assert.That(await RoleAsync(names.Role)).IsNull();
 		await Assert.That(await Registry.GetInstalledPackageAsync(names.Package) is NotFound).IsTrue();
+	}
+
+	[Test]
+	public async Task RevertingAPermissionRemovalBringsBackItsOverrides()
+	{
+		var names = Names.Fresh();
+		(await ApplyAsync(Manifest(names, "1.0"))).Expect<PackageApplyResult>();
+		var owned = (await Registry.GetInstalledPackageAsync(names.Package)).Expect<InstalledPackageRecord>().Owned;
+		await Roles.SetObjectOverrideAsync(1, names.Permission, PermissionState.Deny);
+		try
+		{
+			var god = (await Services.GetRequiredService<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await using (var writes = new PackageWriteTransaction(
+				Services.GetRequiredService<IMediator>(),
+				Services.GetRequiredService<IObjectStore>(),
+				Services.GetRequiredService<IAttributeStore>(),
+				Services.GetRequiredService<IFlagAndPowerStore>(),
+				Registry,
+				Services.GetRequiredService<IApplicationRegistryService>(),
+				Services.GetRequiredService<ILockService>(),
+				god))
+			{
+				// What an uninstall does to the declarations, then a later step of it failing.
+				(await Services.GetRequiredService<IPackageDeclarationService>()
+					.ApplyAsync(writes, names.Package, PackageDeclarations.None, owned, [])).Expect<PackageDeclarations>();
+				await Assert.That(await PermissionExistsAsync(names.Permission)).IsFalse();
+				await Assert.That(await Roles.GetObjectOverridesAsync(1)).DoesNotContainKey(names.Permission);
+
+				await writes.RevertAsync(new Error<string>("A later step failed."));
+			}
+
+			await Assert.That(await PermissionExistsAsync(names.Permission)).IsTrue();
+			await Assert.That(await RoleAsync(names.Role)).IsNotNull();
+			await Assert.That((await Roles.GetObjectOverridesAsync(1))[names.Permission]).IsEqualTo(PermissionState.Deny);
+		}
+		finally
+		{
+			await Roles.SetObjectOverrideAsync(1, names.Permission, PermissionState.Inherit);
+			await Installer.UninstallAsync(names.Package);
+		}
 	}
 
 	[Test]
