@@ -20,6 +20,7 @@ public abstract class ExtendedDatabaseBenchmarks
 	private SharpPlayer _god = null!;
 	private AnySharpContainer _masterRoom = null!;
 	private DBRef _inheritanceD;
+	private DBRef _inheritanceAncestor;
 	private DBRef _wideAttrsObject;
 	private DBRef[] _concurrentTargets = [];
 	private int _counter;
@@ -47,36 +48,36 @@ public abstract class ExtendedDatabaseBenchmarks
 	// --- InheritanceWalk -----------------------------------------------------------------------
 
 	/// <summary>
-	/// D's parent is C, C's parent is B, B's zone is Z, and DESC is set on Z alone - so resolving
-	/// D's DESC walks the whole precedence ladder <c>IAttributeStore.GetAttributeWithInheritanceAsync</c>
-	/// documents (self, then the parent chain, then each ancestor's zone) before finding it on the
-	/// very last candidate.
+	/// D's parent is C, C's parent is B, Z is D's type ancestor, and DESC is set on Z alone - so
+	/// resolving D's DESC walks the whole of <c>IAttributeStore.GetAttributeWithInheritanceAsync</c>
+	/// (self, then the parent chain, then the ancestor) before finding it on the very last candidate.
 	/// </summary>
 	private async ValueTask SeedInheritanceWalkAsync()
 	{
-		var zRef = await Database.CreateThingAsync("ExtBenchZoneZ", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
+		var zRef = await Database.CreateThingAsync("ExtBenchAncestorZ", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
 		var bRef = await Database.CreateThingAsync("ExtBenchThingB", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
 		var cRef = await Database.CreateThingAsync("ExtBenchThingC", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
 		var dRef = await Database.CreateThingAsync("ExtBenchThingD", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
 
-		if (await Database.GetObjectNodeAsync(zRef).ConfigureAwait(false) is not AnySharpObject z
+		if (await Database.GetObjectNodeAsync(zRef).ConfigureAwait(false) is not AnySharpObject
 			|| await Database.GetObjectNodeAsync(bRef).ConfigureAwait(false) is not AnySharpObject b
 			|| await Database.GetObjectNodeAsync(cRef).ConfigureAwait(false) is not AnySharpObject c
 			|| await Database.GetObjectNodeAsync(dRef).ConfigureAwait(false) is not AnySharpObject d)
 			throw new InvalidOperationException("The inheritance-walk fixture objects were not created.");
 
-		await Database.SetObjectZone(b, z).ConfigureAwait(false);
 		await Database.SetObjectParent(c, b).ConfigureAwait(false);
 		await Database.SetObjectParent(d, c).ConfigureAwait(false);
-		await Database.SetAttributeAsync(zRef, ["DESC"], MarkupText.Plain("zone description"), _god).ConfigureAwait(false);
+		await Database.SetAttributeAsync(zRef, ["DESC"], MarkupText.Plain("ancestor description"), _god).ConfigureAwait(false);
 
 		_inheritanceD = dRef;
+		_inheritanceAncestor = zRef;
 	}
 
-	[Benchmark(Description = "GetAttributeWithInheritanceAsync — self, 2 parents, then ancestor zone")]
+	[Benchmark(Description = "GetAttributeWithInheritanceAsync — self, 2 parents, then the type ancestor")]
 	public async Task InheritanceWalk()
 	{
-		await foreach (var _ in Database.GetAttributeWithInheritanceAsync(_inheritanceD, ["DESC"]))
+		await foreach (var _ in Database.GetAttributeWithInheritanceAsync(_inheritanceD, ["DESC"],
+			walk: new SharpMUSH.Library.Models.InheritanceWalk(_inheritanceAncestor, SharpMUSH.Library.Models.InheritanceWalk.DefaultMaxParents)))
 		{ }
 	}
 

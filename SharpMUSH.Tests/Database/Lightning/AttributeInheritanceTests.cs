@@ -10,10 +10,11 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Database.Lightning;
 
 /// <summary>
-/// The precedence ladder <c>IAttributeStore.GetAttributeWithInheritanceAsync</c> documents, exercised
-/// against the LMDB provider: object, then the whole parent chain, then the object's zones, then each
-/// parent's zones in chain order — with <c>no_inherit</c> on any existing prefix of a candidate
-/// aborting the walk instead of falling through (PennMUSH <c>atr_get_with_parent</c>).
+/// The walk <c>IAttributeStore.GetAttributeWithInheritanceAsync</c> documents — PennMUSH's
+/// <c>atr_get_with_parent</c> (<c>src/attrib.c:1203-1278</c>) — exercised against the LMDB provider:
+/// the object, its parent chain, then the type ancestor and its parents, never a zone; <c>no_inherit</c>
+/// on any existing prefix of a candidate ends the whole lookup; the depth bound is <c>MAX_PARENTS</c>
+/// objects per leg; and a name found nowhere is retried as the standard attribute it means.
 /// </summary>
 public class AttributeInheritanceTests
 {
@@ -68,6 +69,25 @@ public class AttributeInheritanceTests
 	private async Task Set(DBRef target, string[] path, string value)
 		=> await _db.SetAttributeAsync(target, path, MarkupText.Plain(value), await God());
 
+	private async Task NoInherit(DBRef target, string[] path)
+		=> await _db.SetAttributeFlagAsync((await Node(target)).Object(), path, (await _db.GetAttributeFlagAsync("no_inherit"))!);
+
+	private static InheritanceWalk WithAncestor(DBRef ancestor) => new(ancestor, InheritanceWalk.DefaultMaxParents);
+
+	/// <summary>A chain <paramref name="length"/> parents long above a new child: the child first.</summary>
+	private async Task<DBRef[]> Chain(int length)
+	{
+		var chain = new List<DBRef> { await Thing("Child") };
+		for (var i = 1; i <= length; i++)
+		{
+			var next = await Thing($"Parent{i}");
+			await Parent(chain[^1], next);
+			chain.Add(next);
+		}
+
+		return [.. chain];
+	}
+
 	[Test]
 	public async Task SelfBeatsParent()
 	{
@@ -84,22 +104,26 @@ public class AttributeInheritanceTests
 		await Assert.That(found.Attributes[^1].Value.ToPlainText()).IsEqualTo("from self");
 	}
 
+	/// <summary>
+	/// <c>atr_get_with_parent</c> never looks at <c>Zone()</c> (<c>src/attrib.c:1203-1278</c>); a zone
+	/// supplies $-commands only. Neither the object's own zone nor a parent's zone is read.
+	/// </summary>
 	[Test]
-	public async Task ParentBeatsTheObjectsZone()
+	public async Task NoZoneIsEverConsulted()
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
-		var zone = await Thing("Zone");
+		var ownZone = await Thing("OwnZone");
+		var parentZone = await Thing("ParentZone");
 		await Parent(child, parent);
-		await Zone(child, zone);
-		await Set(parent, ["GREET"], "from parent");
-		await Set(zone, ["GREET"], "from zone");
+		await Zone(child, ownZone);
+		await Zone(parent, parentZone);
+		await Set(ownZone, ["GREET"], "own zone");
+		await Set(parentZone, ["GREET"], "parent zone");
 
-		var found = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"]).SingleAsync();
+		var found = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"]).ToListAsync();
 
-		await Assert.That(found.Source).IsEqualTo(AttributeSource.Parent);
-		await Assert.That(found.SourceObject.Number).IsEqualTo(parent.Number);
-		await Assert.That(found.Attributes[^1].Value.ToPlainText()).IsEqualTo("from parent");
+		await Assert.That(found).IsEmpty();
 	}
 
 	[Test]
@@ -120,54 +144,33 @@ public class AttributeInheritanceTests
 	}
 
 	/// <summary>
-	/// The ladder is "the whole parent chain, then the zones" — not "the first parent, then the zones".
-	/// <see cref="ParentBeatsTheObjectsZone"/> only proves the immediate parent outranks the object's own
-	/// zone, which a walk that gave up after one hop would also satisfy; this one puts the value two hops
-	/// up the chain, with the object's own zone holding a competing value, so only a chain walked to its
-	/// end before any zone is consulted returns the grandparent's.
+	/// The ancestor comes after the whole parent chain, and its own parents after it
+	/// (<c>src/attrib.c:1262-1269</c>).
 	/// </summary>
 	[Test]
-	public async Task AGrandparentBeatsTheObjectsOwnZone()
-	{
-		var d = await Thing("D");
-		var c = await Thing("C");
-		var b = await Thing("B");
-		var z = await Thing("Z");
-		await Parent(d, c);
-		await Parent(c, b);
-		await Zone(d, z);
-		await Set(b, ["DESC"], "from the grandparent");
-		await Set(z, ["DESC"], "from the zone");
-
-		var found = await _db.GetAttributeWithInheritanceAsync(d, ["DESC"]).SingleAsync();
-
-		await Assert.That(found.Source).IsEqualTo(AttributeSource.Parent);
-		await Assert.That(found.SourceObject.Number).IsEqualTo(b.Number);
-		await Assert.That(found.Attributes[^1].Value.ToPlainText()).IsEqualTo("from the grandparent");
-	}
-
-	[Test]
-	public async Task TheParentsZoneIsConsultedAfterTheObjectsOwnZone()
+	public async Task TheAncestorAndItsParentsFollowTheChain()
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
-		var ownZone = await Thing("OwnZone");
-		var parentZone = await Thing("ParentZone");
+		var ancestor = await Thing("Ancestor");
+		var ancestorParent = await Thing("AncestorParent");
 		await Parent(child, parent);
-		await Zone(child, ownZone);
-		await Zone(parent, parentZone);
-		await Set(ownZone, ["GREET"], "own zone");
-		await Set(parentZone, ["GREET"], "parent zone");
+		await Parent(ancestor, ancestorParent);
+		await Set(ancestor, ["GREET"], "from the ancestor");
+		await Set(ancestorParent, ["GREET"], "from the ancestor's parent");
+		await Set(ancestorParent, ["DEEP"], "from the ancestor's parent");
 
-		var first = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"]).SingleAsync();
-		await Assert.That(first.Source).IsEqualTo(AttributeSource.Zone);
-		await Assert.That(first.SourceObject.Number).IsEqualTo(ownZone.Number);
+		var greet = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"], walk: WithAncestor(ancestor)).SingleAsync();
+		var deep = await _db.GetAttributeWithInheritanceAsync(child, ["DEEP"], walk: WithAncestor(ancestor)).SingleAsync();
 
-		await _db.ClearAttributeAsync(ownZone, ["GREET"]);
+		await Assert.That(greet.Source).IsEqualTo(AttributeSource.Ancestor);
+		await Assert.That(greet.SourceObject.Number).IsEqualTo(ancestor.Number);
+		await Assert.That(deep.Source).IsEqualTo(AttributeSource.Ancestor);
+		await Assert.That(deep.SourceObject.Number).IsEqualTo(ancestorParent.Number);
 
-		var second = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"]).SingleAsync();
-		await Assert.That(second.Source).IsEqualTo(AttributeSource.Zone);
-		await Assert.That(second.SourceObject.Number).IsEqualTo(parentZone.Number);
+		await Set(parent, ["GREET"], "from the parent");
+		var shadowed = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"], walk: WithAncestor(ancestor)).SingleAsync();
+		await Assert.That(shadowed.SourceObject.Number).IsEqualTo(parent.Number);
 	}
 
 	[Test]
@@ -182,12 +185,134 @@ public class AttributeInheritanceTests
 		// The parent carries only the branch prefix, flagged no_inherit: Penn returns NULL rather
 		// than falling through to the grandparent that does have the leaf.
 		await Set(parent, ["FOO"], "prefix only");
-		var noInherit = await _db.GetAttributeFlagAsync("no_inherit");
-		await _db.SetAttributeFlagAsync((await Node(parent)).Object(), ["FOO"], noInherit!);
+		await NoInherit(parent, ["FOO"]);
 
 		var found = await _db.GetAttributeWithInheritanceAsync(child, ["FOO", "BAR"]).ToListAsync();
 
 		await Assert.That(found).IsEmpty();
+	}
+
+	/// <summary>
+	/// A no_inherit hit on a parent is <c>return NULL</c> out of <c>atr_get_with_parent</c>
+	/// (<c>src/attrib.c:1250-1251</c>): the type ancestor's copy is never reached.
+	/// </summary>
+	[Test]
+	public async Task NoInheritOnAParentHidesTheAncestorsCopy()
+	{
+		var child = await Thing("Child");
+		var parent = await Thing("Parent");
+		var ancestor = await Thing("Ancestor");
+		await Parent(child, parent);
+		await Set(parent, ["FOO"], "parent");
+		await NoInherit(parent, ["FOO"]);
+		await Set(ancestor, ["FOO"], "ancestor");
+
+		var found = await _db.GetAttributeWithInheritanceAsync(child, ["FOO"], walk: WithAncestor(ancestor)).ToListAsync();
+
+		await Assert.That(found).IsEmpty();
+	}
+
+	/// <summary>
+	/// The same barrier stops the alias retry too: the <c>return NULL</c> leaves the function, and the
+	/// retry is the outer <c>for (;;)</c> (<c>src/attrib.c:1216-1277</c>).
+	/// </summary>
+	[Test]
+	public async Task NoInheritOnAParentStopsTheAliasRetry()
+	{
+		var child = await Thing("Child");
+		var parent = await Thing("Parent");
+		var grandparent = await Thing("Grandparent");
+		await Parent(child, parent);
+		await Parent(parent, grandparent);
+		await Set(parent, ["DESC"], "private alias-named copy");
+		await NoInherit(parent, ["DESC"]);
+		await Set(grandparent, ["DESCRIBE"], "the real description");
+
+		var found = await _db.GetAttributeWithInheritanceAsync(child, ["DESC"]).ToListAsync();
+
+		await Assert.That(found).IsEmpty();
+	}
+
+	/// <summary>
+	/// <c>atr_match</c> (<c>src/atr_tab.c:112-122</c>): a name found nowhere is retried under the
+	/// standard attribute it means — an <c>attralias</c> name, or a unique prefix of a
+	/// <c>prefixmatch</c> attribute. An ambiguous prefix means nothing.
+	/// </summary>
+	[Test]
+	[Arguments("DESC")]
+	[Arguments("DESCR")]
+	[Arguments("descri")]
+	public async Task AnAliasOrUniquePrefixReadsTheStandardAttribute(string name)
+	{
+		var child = await Thing("Child");
+		var parent = await Thing("Parent");
+		await Parent(child, parent);
+		await Set(parent, ["DESCRIBE"], "described");
+
+		var found = await _db.GetAttributeWithInheritanceAsync(child, [name]).SingleAsync();
+		var own = await _db.GetAttributeWithInheritanceAsync(parent, [name], checkParent: false).SingleAsync();
+
+		await Assert.That(found.Attributes[^1].LongName).IsEqualTo("DESCRIBE");
+		await Assert.That(found.SourceObject.Number).IsEqualTo(parent.Number);
+		await Assert.That(own.Attributes[^1].LongName).IsEqualTo("DESCRIBE");
+	}
+
+	[Test]
+	public async Task AnAmbiguousPrefixIsNotRetried()
+	{
+		var child = await Thing("Child");
+		await Set(child, ["DESCRIBE"], "described");
+
+		// DES begins DESC (an alias), DESCFORMAT and DESCRIBE.
+		var found = await _db.GetAttributeWithInheritanceAsync(child, ["DES"]).ToListAsync();
+
+		await Assert.That(found).IsEmpty();
+	}
+
+	/// <summary>
+	/// <c>while (parent_depth &lt; MAX_PARENTS ...)</c> (<c>src/attrib.c:1222</c>) visits the object and
+	/// <c>MAX_PARENTS - 1</c> parents; when the chain is still going there, the ancestor is never reached.
+	/// </summary>
+	[Test]
+	public async Task TheWalkVisitsTheObjectAndMaxParentsMinusOneParents()
+	{
+		const int maxParents = 4;
+		var chain = await Chain(maxParents);
+		var ancestor = await Thing("Ancestor");
+		var walk = new InheritanceWalk(ancestor, maxParents);
+		await Set(chain[maxParents - 1], ["REACHED"], "last visited parent");
+		await Set(chain[maxParents], ["BEYOND"], "one parent too far");
+		await Set(ancestor, ["ANCESTRAL"], "ancestor");
+
+		var reached = await _db.GetAttributeWithInheritanceAsync(chain[0], ["REACHED"], walk: walk).SingleAsync();
+		var beyond = await _db.GetAttributeWithInheritanceAsync(chain[0], ["BEYOND"], walk: walk).ToListAsync();
+		var ancestral = await _db.GetAttributeWithInheritanceAsync(chain[0], ["ANCESTRAL"], walk: walk).ToListAsync();
+
+		await Assert.That(reached.SourceObject.Number).IsEqualTo(chain[maxParents - 1].Number);
+		await Assert.That(beyond).IsEmpty();
+		await Assert.That(ancestral).IsEmpty();
+	}
+
+	/// <summary>
+	/// A chain that ends inside the bound resets the depth for the ancestor's leg
+	/// (<c>parent_depth = 0; target = ancestor</c>, <c>src/attrib.c:1265-1268</c>).
+	/// </summary>
+	[Test]
+	public async Task AChainEndingInsideTheBoundReachesTheAncestorsWholeLeg()
+	{
+		const int maxParents = 4;
+		var chain = await Chain(maxParents - 1);
+		var ancestorChain = await Chain(maxParents);
+		var walk = new InheritanceWalk(ancestorChain[0], maxParents);
+		await Set(ancestorChain[maxParents - 1], ["FAR"], "the ancestor's last visited parent");
+		await Set(ancestorChain[maxParents], ["TOOFAR"], "beyond the ancestor's leg");
+
+		var far = await _db.GetAttributeWithInheritanceAsync(chain[0], ["FAR"], walk: walk).SingleAsync();
+		var tooFar = await _db.GetAttributeWithInheritanceAsync(chain[0], ["TOOFAR"], walk: walk).ToListAsync();
+
+		await Assert.That(far.Source).IsEqualTo(AttributeSource.Ancestor);
+		await Assert.That(far.SourceObject.Number).IsEqualTo(ancestorChain[maxParents - 1].Number);
+		await Assert.That(tooFar).IsEmpty();
 	}
 
 	[Test]
@@ -227,10 +352,13 @@ public class AttributeInheritanceTests
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
+		var ancestor = await Thing("Ancestor");
 		await Parent(child, parent);
 		await Set(parent, ["GREET"], "from parent");
+		await Set(ancestor, ["GREET"], "from ancestor");
 
-		var found = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"], checkParent: false).ToListAsync();
+		var found = await _db.GetAttributeWithInheritanceAsync(child, ["GREET"], checkParent: false,
+			walk: WithAncestor(ancestor)).ToListAsync();
 		await Assert.That(found).IsEmpty();
 	}
 
@@ -239,16 +367,15 @@ public class AttributeInheritanceTests
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
-		var zone = await Thing("Zone");
+		var ancestor = await Thing("Ancestor");
 		await Parent(child, parent);
-		await Zone(child, zone);
-		await Set(zone, ["GREET"], "from zone");
+		await Set(ancestor, ["GREET"], "from ancestor");
 
-		var found = await _db.GetLazyAttributeWithInheritanceAsync(child, ["GREET"]).SingleAsync();
+		var found = await _db.GetLazyAttributeWithInheritanceAsync(child, ["GREET"], walk: WithAncestor(ancestor)).SingleAsync();
 
-		await Assert.That(found.Source).IsEqualTo(AttributeSource.Zone);
-		await Assert.That(found.SourceObject.Number).IsEqualTo(zone.Number);
+		await Assert.That(found.Source).IsEqualTo(AttributeSource.Ancestor);
+		await Assert.That(found.SourceObject.Number).IsEqualTo(ancestor.Number);
 		await Assert.That((await found.Attributes[^1].Value.WithCancellation(CancellationToken.None)).ToPlainText())
-			.IsEqualTo("from zone");
+			.IsEqualTo("from ancestor");
 	}
 }

@@ -86,17 +86,31 @@ public static class CacheKeys
 
 	private static string LazyAttribute(DBRef dbref, string path) => $"lazy-attribute:#{dbref.Number}:{path}";
 
-	public static string AttributeWithInheritance(DBRef dbref, string[] attribute, bool checkParent)
-		=> AttributeWithInheritance(dbref, AttributePath(attribute), checkParent);
+	/// <summary>
+	/// An inherited read. A walk other than the default (a type ancestor, or another depth) is part of
+	/// the key: the ancestor follows the object's ORPHAN flag and the configuration, neither of which
+	/// expires these entries. Those keys are reached by <see cref="CacheTags.InheritedAttributes"/>
+	/// alone, not by <see cref="AttributesTouchedBy"/>.
+	/// </summary>
+	public static string AttributeWithInheritance(DBRef dbref, string[] attribute, bool checkParent,
+		InheritanceWalk? walk = null)
+		=> AttributeWithInheritance(dbref, AttributePath(attribute), checkParent) + WalkSuffix(checkParent, walk);
 
 	private static string AttributeWithInheritance(DBRef dbref, string path, bool checkParent)
 		=> $"attribute-inheritance:#{dbref.Number}:{path}:{checkParent}";
 
-	public static string LazyAttributeWithInheritance(DBRef dbref, string[] attribute, bool checkParent)
-		=> LazyAttributeWithInheritance(dbref, AttributePath(attribute), checkParent);
+	/// <inheritdoc cref="AttributeWithInheritance(DBRef, string[], bool, InheritanceWalk?)"/>
+	public static string LazyAttributeWithInheritance(DBRef dbref, string[] attribute, bool checkParent,
+		InheritanceWalk? walk = null)
+		=> LazyAttributeWithInheritance(dbref, AttributePath(attribute), checkParent) + WalkSuffix(checkParent, walk);
 
 	private static string LazyAttributeWithInheritance(DBRef dbref, string path, bool checkParent)
 		=> $"lazy-attribute-inheritance:#{dbref.Number}:{path}:{checkParent}";
+
+	private static string WalkSuffix(bool checkParent, InheritanceWalk? walk)
+		=> !checkParent || walk is not { } given || given == InheritanceWalk.ParentsOnly
+			? string.Empty
+			: $":a{given.Ancestor?.Number.ToString() ?? "-"}:m{given.MaxParents}";
 
 	/// <summary>The object's $-command attributes, with their patterns compiled.</summary>
 	public static string Commands(DBRef dbref) => $"commands:#{dbref.Number}";
@@ -111,7 +125,7 @@ public static class CacheKeys
 	/// anywhere drop every object's cached attributes.
 	///
 	/// <para>The inherited reads do NOT get this. They answer "what does this object see, counting its
-	/// parents and zones", so a write to any object in that chain changes the answer — including a
+	/// parents and type ancestor", so a write to any object in that chain changes the answer — including a
 	/// write that makes a nearer ancestor shadow a further one. The chain a read walked is not in its
 	/// result (a not-found answer is an empty stream), so there is nothing to scope by until the
 	/// providers project the objects they visited; they keep
