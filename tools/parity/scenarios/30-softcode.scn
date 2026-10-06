@@ -84,5 +84,6 @@ think [strmatch(objeval(*Wiz,num(me)),num(me))] [objeval(*Wiz,setr(ov,ran))-[r(o
 ::logout bob
 
 ::case sc.piped-output  %> is the last command's output here; PennMUSH has no such substitution and prints >
+::as wiz
 think a%>b
 think a>b
