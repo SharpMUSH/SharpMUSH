@@ -245,10 +245,10 @@ public class AccountService(
 	public async ValueTask<IReadOnlyList<AccountBan>> LiftExpiredBansAsync(DateTimeOffset now, CancellationToken ct = default)
 	{
 		var lifted = new List<AccountBan>();
-		foreach (var ban in await database.GetAccountBansAsync(ct))
+		foreach (var ban in (await database.GetAccountBansAsync(ct)).Where(ban => ban.HasExpired(now)))
 		{
 			// The store checks the expiry again inside its write, so a ban renewed since the read stays.
-			if (!ban.HasExpired(now) || !await database.LiftAccountBanAsync(ban.AccountId, now, ct)) continue;
+			if (!await database.LiftAccountBanAsync(ban.AccountId, now, ct)) continue;
 			await StatusChangedAsync(ban.AccountId, AccountStatus.Active, ct);
 			lifted.Add(ban);
 		}
