@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Parses the same inputs with SharpMUSHParser.g4 and with the generated predicate-free
+	     SharpMUSHContextParser.g4, and reports where their trees differ. See ../README.md. -->
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<!-- CLS attributes on the generated code; ANT01 is the tool's own warning(154), which the
+		     product grammar's function rule raises too. -->
+		<NoWarn>$(NoWarn);CS3021;ANT01</NoWarn>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+		<PackageReference Include="Antlr4BuildTasks" Version="12.14.0" PrivateAssets="all" IncludeAssets="build">
+			<ToolType>antlr-ng</ToolType>
+		</PackageReference>
+		<Antlr4 Include="..\..\..\SharpMUSH.Parser.Generated\SharpMUSHLexer.g4" Package="SharpMUSH.Tools.Grammar" />
+		<Antlr4 Include="..\SharpMUSHContextParser.g4" Package="SharpMUSH.Tools.Grammar" />
+		<ProjectReference Include="..\..\..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" />
+	</ItemGroup>
+
+</Project>
