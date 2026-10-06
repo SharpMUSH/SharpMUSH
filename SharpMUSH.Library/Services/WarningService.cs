@@ -11,6 +11,10 @@ namespace SharpMUSH.Library.Services;
 /// <summary>
 /// Service for checking topology and integrity warnings on MUSH objects
 /// </summary>
+/// <remarks>
+/// Every attribute a check looks for is read with <c>atr_get</c> (<c>src/warnings.c:76-195</c>), so a
+/// description or message inherited from a parent or the type ancestor counts as present.
+/// </remarks>
 public class WarningService(
 	INotifyService notifyService,
 	IAttributeService attributeService,
@@ -276,7 +280,7 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.RoomDesc))
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
+			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
 			if (desc.IsNone)
 			{
 				await Complain(checker, target, "room-desc", "Room has no description.");
@@ -333,8 +337,8 @@ public class WarningService(
 					// DESTINATION or EXITTO attributes to dynamically determine the target
 					if (destinationNumber == -1)
 					{
-						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, false);
-						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, false);
+						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, parent: true);
+						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, parent: true);
 
 						if (destAttr.IsNone && exitToAttr.IsNone)
 						{
@@ -349,7 +353,7 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.ExitDesc))
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
+			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
 			if (desc.IsNone)
 			{
 				await Complain(checker, target, "exit-desc", "Exit has no description.");
@@ -359,9 +363,9 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.ExitMsgs))
 		{
-			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, false);
-			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
-			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
+			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, parent: true);
+			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, parent: true);
+			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, parent: true);
 
 			if (success.IsNone || osuccess.IsNone || odrop.IsNone)
 			{
@@ -369,7 +373,7 @@ public class WarningService(
 				hasWarnings = true;
 			}
 
-			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
+			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, parent: true);
 			if (failure.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing FAILURE message.");
@@ -446,7 +450,7 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.ThingDesc))
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
+			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
 			if (desc.IsNone)
 			{
 				// Skip things in player inventory as per PennMUSH behavior
@@ -471,10 +475,10 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.ThingMsgs))
 		{
-			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, false);
-			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
-			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, false);
-			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
+			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, parent: true);
+			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, parent: true);
+			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, parent: true);
+			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, parent: true);
 
 			if (success.IsNone || osuccess.IsNone || drop.IsNone || odrop.IsNone)
 			{
@@ -482,7 +486,7 @@ public class WarningService(
 				hasWarnings = true;
 			}
 
-			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
+			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, parent: true);
 			if (failure.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing FAILURE message.");
@@ -502,7 +506,7 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.PlayerDesc))
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
+			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
 			if (desc.IsNone)
 			{
 				await Complain(checker, target, "my-desc", "Player is missing description.");

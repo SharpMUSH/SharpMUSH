@@ -722,7 +722,9 @@ public static class TeleportHelpers
 	/// PennMUSH <c>find_var_dest</c> (<c>move.c:360</c>): a variable exit works out where it leads at move
 	/// time by evaluating its <c>DESTINATION</c> attribute — with <c>%0</c> set to the exit name or alias
 	/// the mover typed — falling back to <c>EXITTO</c>. The result is parsed as an objid, so it must name
-	/// an object rather than merely matching something nearby.
+	/// an object rather than merely matching something nearby. Both are read through <c>call_attrib</c>
+	/// (<c>move.c:376-377</c>), so they inherit from the exit's parents and ancestor, and the mover need not
+	/// be able to read them.
 	/// <para>Returns <c>null</c> after notifying the mover when no usable destination comes back.</para>
 	/// </summary>
 	private static async ValueTask<AnySharpContainer?> FindVariableDestination(

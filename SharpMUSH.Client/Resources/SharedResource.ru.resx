@@ -5147,6 +5147,18 @@
     <value>Ваши позы уходят в другую сцену. Присоединитесь к этой, чтобы позировать здесь.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Здесь идёт сцена</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Открыть историю</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Скрыть это уведомление</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Присоединиться</value>
     <comment>MT</comment>
@@ -5622,5 +5634,38 @@
   </data>
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Собственная страница каждой категории.</value>
+  </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>НА ПАУЗЕ</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Приостановить сцену</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Продолжить сцену</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Начать сейчас</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Новое время (необязательно)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Время</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>Приостановленная сцена перестаёт записываться и переходит из «В эфире» в расписание, пока её не продолжат.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Сцена не была приостановлена.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Комната ещё не выбрана</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Ведущий: {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>На паузе, без времени</value>
   </data>
 </root>

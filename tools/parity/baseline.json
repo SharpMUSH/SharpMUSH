@@ -33,16 +33,8 @@
    "command": "Wiz wizpass"
   },
   {
-   "key": "05-import/import.rooms#1",
-   "command": "look"
-  },
-  {
    "key": "05-import/import.rooms#2",
    "command": "@teleport me=[loc(*Alice)]"
-  },
-  {
-   "key": "05-import/import.rooms#3",
-   "command": "look"
   },
   {
    "key": "05-import/import.rooms#4",
@@ -147,10 +139,6 @@
   {
    "key": "20-admin-commands/admin.wizard#4",
    "command": "@teleport *Alice=here"
-  },
-  {
-   "key": "20-admin-commands/admin.wizard#5",
-   "command": "@teleport *Alice=[loc(*Alice)]"
   },
   {
    "key": "25-requested-dbref/dbref.holes#0",

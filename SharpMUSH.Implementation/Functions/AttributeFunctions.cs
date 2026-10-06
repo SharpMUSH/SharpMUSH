@@ -158,7 +158,7 @@ public partial class Functions
 						found,
 						attribute,
 						mode: IAttributeService.AttributeMode.Execute,
-						parent: false);
+						parent: true);
 
 					if (maybeAttr is SharpAttribute[])
 					{
@@ -212,7 +212,7 @@ public partial class Functions
 						found,
 						attribute,
 						mode: IAttributeService.AttributeMode.Execute,
-						parent: false);
+						parent: true);
 
 					if (maybeAttr is SharpAttribute[])
 					{
@@ -540,9 +540,10 @@ public partial class Functions
 				realLocated,
 				attribute,
 				IAttributeService.AttributeMode.Read,
-				false);
+				true);
 
-			if (maybeAttr is not SharpAttribute[] chain) return "0";
+			// fun_hasflag (fundb.c:1031-1033): parse_attrib reads through atr_get, and a miss is #-1.
+			if (maybeAttr is not SharpAttribute[] chain) return "#-1";
 
 			return chain.Last().Flags.Any(f =>
 				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
@@ -824,14 +825,13 @@ public partial class Functions
 				}
 
 				var attributeObject = await AttributeService.GetAttributeAsync(executor, actualObject, attribute,
-					IAttributeService.AttributeMode.Read, false);
+					IAttributeService.AttributeMode.Read, true);
 
-				return attributeObject switch
-				{
-					SharpAttribute[] attr => new CallState($"#{(await attr.Last().Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}"),
-					None => new CallState(ErrorMessages.Returns.NoSuchAttribute),
-					Error<string> error => new CallState(error.Value)
-				};
+				// fun_owner (fundb.c:1717-1724): the attribute comes through atr_get, and a missing or
+				// unreadable one is a bare #-1.
+				return attributeObject is SharpAttribute[] attr
+					? new CallState($"#{(await attr.Last().Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}")
+					: new CallState("#-1");
 			}
 		);
 	}
@@ -1025,7 +1025,7 @@ public partial class Functions
 			objectName, LocateFlags.All, async actualObject =>
 			{
 				var attribute = await AttributeService.GetAttributeAsync(executor, actualObject, attributeName,
-					mode: IAttributeService.AttributeMode.Execute, parent: false);
+					mode: IAttributeService.AttributeMode.Execute, parent: true);
 				if (attribute is not SharpAttribute[] chain)
 					return await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message!) ?? CallState.Empty;
 
@@ -1069,30 +1069,45 @@ public partial class Functions
 		return result;
 	}
 
-	[SharpFunction(Name = "pfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["object", "function", "arguments..."])]
+	/// <summary>
+	/// PennMUSH's <c>fun_pfun</c> (<c>funufun.c:244-292</c>): the attribute is read from the executor's
+	/// parent through <c>atr_get</c> (the parent's own chain and type ancestor), with no permission
+	/// check; a no_inherit or internal attribute is refused even on the parent itself; and the code runs
+	/// as the calling object, not the parent. No parent, no attribute: nothing.
+	/// </summary>
+	[SharpFunction(Name = "pfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "arguments..."])]
 	public async ValueTask<CallState> ParentFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr = parser.CurrentState.Arguments["0"].Message!;
+		var attributeName = parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToUpperInvariant();
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.Object().Parent.WithCancellation(CancellationToken.None) is not AnySharpObject parentObject)
 		{
-			return new CallState(ErrorMessages.Returns.ObjectHasNoParent);
+			return CallState.Empty;
 		}
 
-		// Trust checking and attribute inheritance logic (no_inherit, INTERNAL flags, etc.)
-		// should be implemented in EvaluateAttributeFunctionAsync for consistency
-		// across all attribute evaluation contexts (ufun, pfun, get, etc.).
-		// The evalParent=true parameter enables parent inheritance here.
-		// Future work: Add trust checks and attribute flag filtering in AttributeService.
+		var god = await HelperFunctions.GetGod(Mediator);
+		if (await AttributeService.GetAttributeAsync(god, parentObject, attributeName,
+					IAttributeService.AttributeMode.Read, parent: true) is not SharpAttribute[] chain)
+		{
+			return CallState.Empty;
+		}
 
-		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, parentObject,
-			dbrefAndAttr,
-			parser.CurrentState.Arguments.Skip(1)
-				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-				.ToDictionary(), true, false, true);
+		var found = chain.Last();
+		if (found.IsInternal() || found.IsNoInherit())
+		{
+			return CallState.Empty;
+		}
 
-		return result;
+		var arguments = parser.CurrentState.ArgumentsOrdered.Skip(1)
+			.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+			.ToDictionary();
+
+		return await AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
+		{
+			Arguments = arguments,
+			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
+		}), new AttributeFunction(executor, found.LongName.ToUpperInvariant(), found.Value));
 	}
 
 	[SharpFunction(Name = "ulambda", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["parameters", "expression", "arguments..."])]
@@ -1158,7 +1173,7 @@ public partial class Functions
 					executor,
 					plainText,
 					mode: IAttributeService.AttributeMode.Read,
-					parent: false);
+					parent: true);
 
 				return maybeAttr switch
 				{
@@ -1197,8 +1212,9 @@ public partial class Functions
 							return await PermissionService.CanSee(foundObj, foundVictim);
 						}
 
-						var realAttr = await AttributeService.GetAttributeAsync(executor, foundVictim, attr,
-							IAttributeService.AttributeMode.Read, false);
+						// fun_visible (fundb.c:981): atr_get, then Can_Read_Attr for the looker.
+						var realAttr = await AttributeService.GetAttributeAsync(foundObj, foundVictim, attr,
+							IAttributeService.AttributeMode.Read, true);
 
 						if (realAttr is not SharpAttribute[] chain)
 						{

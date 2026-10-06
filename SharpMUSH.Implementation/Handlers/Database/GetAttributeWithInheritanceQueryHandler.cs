@@ -6,9 +6,8 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 /// <summary>
-/// Handler for GetAttributeWithInheritanceQuery that retrieves an attribute
-/// with full parent/zone inheritance resolution in a single database call.
-/// Returns the complete attribute path (FOO → BAR → BAZ) as a stream of AttributeWithInheritance instances.
+/// Handler for GetAttributeWithInheritanceQuery: PennMUSH's <c>atr_get_with_parent</c> in a single
+/// database call. Returns the complete attribute path (FOO → BAR → BAZ).
 /// </summary>
 public class GetAttributeWithInheritanceQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetAttributeWithInheritanceQuery, AttributeWithInheritance>
@@ -21,14 +20,14 @@ public class GetAttributeWithInheritanceQueryHandler(IAttributeStore database)
 			request.DBRef,
 			Array.ConvertAll(request.Attribute, x => x.ToUpper()),
 			request.CheckParent,
+			request.Walk,
 			cancellationToken);
 	}
 }
 
 /// <summary>
-/// Handler for GetLazyAttributeWithInheritanceQuery that retrieves an attribute
-/// with full parent/zone inheritance resolution in a single database call (lazy version).
-/// Returns the complete attribute path (FOO → BAR → BAZ) as a stream of LazyAttributeWithInheritance instances.
+/// Handler for GetLazyAttributeWithInheritanceQuery: the same walk as
+/// <see cref="GetAttributeWithInheritanceQueryHandler"/>, with values loaded on demand.
 /// </summary>
 public class GetLazyAttributeWithInheritanceQueryHandler(IAttributeStore database)
 	: IStreamQueryHandler<GetLazyAttributeWithInheritanceQuery, LazyAttributeWithInheritance>
@@ -41,6 +40,7 @@ public class GetLazyAttributeWithInheritanceQueryHandler(IAttributeStore databas
 			request.DBRef,
 			Array.ConvertAll(request.Attribute, x => x.ToUpper()),
 			request.CheckParent,
+			request.Walk,
 			cancellationToken);
 	}
 }

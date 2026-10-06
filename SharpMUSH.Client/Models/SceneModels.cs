@@ -27,6 +27,11 @@ public sealed record SceneSummary(
 		|| string.Equals(Status, "open", StringComparison.OrdinalIgnoreCase)
 		|| string.Equals(Status, "live", StringComparison.OrdinalIgnoreCase);
 
+	/// <summary>True when the scene was paused: it waits on the schedule until it is resumed.</summary>
+	public bool IsPaused => string.Equals(Status, "paused", StringComparison.OrdinalIgnoreCase);
+
+	public bool IsFinished => string.Equals(Status, "finished", StringComparison.OrdinalIgnoreCase);
+
 	public DateTimeOffset StartedAtUtc => DateTimeOffset.FromUnixTimeMilliseconds(StartedAt);
 	public DateTimeOffset LastActivityAtUtc => DateTimeOffset.FromUnixTimeMilliseconds(LastActivityAt);
 	public DateTimeOffset? ScheduledForUtc =>

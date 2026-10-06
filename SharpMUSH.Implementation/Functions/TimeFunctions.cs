@@ -348,8 +348,9 @@ public partial class Functions
 			parser, executor, executor, arg0, LocateFlags.All,
 			async found =>
 			{
+				// parse_timezone_arg (tz.c:463) reads TZ through atr_get.
 				var attr = await AttributeService.GetAttributeAsync(executor, found, "TZ",
-					IAttributeService.AttributeMode.Read, false);
+					IAttributeService.AttributeMode.Read, true);
 				if (attr is not SharpAttribute[] tz)
 				{
 					return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);

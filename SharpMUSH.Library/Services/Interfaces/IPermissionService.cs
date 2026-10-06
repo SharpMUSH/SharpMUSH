@@ -26,6 +26,13 @@ public interface IPermissionService
 
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType);
 
+	/// <summary>
+	/// PennMUSH's <c>getlock(x, type) != TRUE_BOOLEXP &amp;&amp; eval_lock(p, x, type)</c>: <paramref name="target"/>
+	/// has the lock, its own or inherited as <c>getlock</c> inherits it, and <paramref name="who"/> passes it.
+	/// An unset lock passes everyone, so a caller for whom "unset" must mean "refused" asks this instead.
+	/// </summary>
+	ValueTask<bool> PassesSetLock(AnySharpObject who, AnySharpObject target, LockType lockType);
+
 	ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 
 	/// <summary>

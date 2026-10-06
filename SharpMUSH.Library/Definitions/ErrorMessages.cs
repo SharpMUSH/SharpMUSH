@@ -102,6 +102,12 @@ public static partial class ErrorMessages
 		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NoSuchFunction = "#-1 FUNCTION ({0}) NOT FOUND";
+		/// <summary>
+		/// PennMUSH <c>src/parse.c:3049-3059</c>: a global <c>@function</c> whose attribute is gone. Takes the
+		/// function name, the object's dbref and the attribute name.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UserFunctionMissingAttribute = "#-1 @FUNCTION ({0}) MISSING ATTRIBUTE ({1}/{2})";
 		public const string NoSuchPower = "#-1 NO SUCH POWER";
 		public const string NoSuchFlag = "#-1 NO SUCH FLAG";
 		public const string NoSuchTimezone = "#-1 NO SUCH TIMEZONE";

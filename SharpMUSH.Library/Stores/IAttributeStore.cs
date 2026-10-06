@@ -49,26 +49,33 @@ public interface IAttributeStore
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Get an attribute with full inheritance chain resolution in a single database call.
-	/// Follows the inheritance order: object → parent chain (parent, grandparent, etc.) → object's zones → parent's zones → grandparent's zones, etc.
-	/// This means PARENTS TAKE PRECEDENCE OVER ZONES at all levels.
-	/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
-	/// Streams each attribute in the path with inherited flags merged from deeper inheritance levels.
+	/// PennMUSH's <c>atr_get_with_parent</c> (<c>src/attrib.c:1203-1278</c>), in a single database call:
+	/// the object, then its <c>@parent</c> chain, then — once that chain ends inside the depth bound — the
+	/// <see cref="InheritanceWalk.Ancestor"/> and its own <c>@parent</c> chain. An ancestor already met in
+	/// the explicit chain is not visited again. Each leg visits at most
+	/// <see cref="InheritanceWalk.MaxParents"/> objects (the object counts as one), so a chain longer than
+	/// that never reaches the ancestor. Zones are never consulted. <c>no_inherit</c> on any existing
+	/// prefix of a candidate other than the object itself ends the whole lookup with nothing found.
+	/// When the name is found nowhere, the walk runs once more under the standard attribute it means
+	/// (<see cref="Common.AttributeNameMatch"/>), so <c>DESC</c> and <c>DESCR</c> read <c>DESCRIBE</c>.
+	/// Returns the complete attribute path (FOO → BAR → BAZ) from the object the attribute was found on.
 	/// </summary>
 	/// <param name="dbref">DBRef of the object to start the search from</param>
 	/// <param name="attribute">Attribute path to search for (e.g., ["FOO", "BAR", "BAZ"])</param>
-	/// <param name="checkParent">Whether to check parent and zone inheritance chains</param>
+	/// <param name="checkParent">
+	/// Whether to look past the object itself; false is <c>atr_get_noparent</c> (the object, then the alias).
+	/// </param>
+	/// <param name="walk">The type ancestor and depth bound; null is <see cref="InheritanceWalk.ParentsOnly"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>Stream of AttributeWithInheritance for each segment in the attribute path, or empty if not found</returns>
+	/// <returns>The resolved path, or an empty stream when nothing was found</returns>
 	IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
-		bool checkParent = true, CancellationToken cancellationToken = default);
+		bool checkParent = true, InheritanceWalk? walk = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Lazy version of GetAttributeWithInheritanceAsync for efficient retrieval.
-	/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
+	/// Lazy version of <see cref="GetAttributeWithInheritanceAsync"/>: the same walk, with values loaded on demand.
 	/// </summary>
 	IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
-		bool checkParent = true, CancellationToken cancellationToken = default);
+		bool checkParent = true, InheritanceWalk? walk = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Get all attribute entries from the attribute table.

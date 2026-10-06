@@ -1,4 +1,5 @@
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -9,8 +10,7 @@ using SharpMUSH.Library.Utilities;
 namespace SharpMUSH.Implementation.Handlers.Database;
 
 /// <summary>
-/// Shared $command attribute scan used by both the per-object command-attribute handler and the
-/// type-ancestor contribution handler. Collects all attributes of one object, applies the
+/// The $command attribute scan of one object in the command-attribute handler's parent walk. Collects all attributes of one object, applies the
 /// no_inherit / no_command tree gating, and pre-compiles the $command regex patterns — appending the
 /// survivors to <paramref name="commandAttributes"/> while threading the cross-object
 /// <c>seenNames</c> / <c>noCommandPrefixes</c> accumulators so child attributes shadow parents and
@@ -18,6 +18,14 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 /// </summary>
 public static class CommandAttributeScanner
 {
+	/// <summary>
+	/// Whether a no_command mask (each entry is a root name plus a backtick) covers <paramref name="name"/>:
+	/// the root itself, as Penn's <c>nocmd_roots</c> holds the root's own name, or anything under it.
+	/// </summary>
+	private static bool IsMasked(HashSet<string> noCommandPrefixes, string name)
+		=> noCommandPrefixes.Contains(name + "`")
+			|| noCommandPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+
 	public static async ValueTask ScanAttributes(
 		IAsyncEnumerable<SharpAttribute> attributes,
 		List<CommandAttributeCache> commandAttributes,
@@ -62,13 +70,24 @@ public static class CommandAttributeScanner
 					continue;
 				if (noInheritPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 					continue;
+
+				// On a parent, atr_comm_match tests nocmd_roots and AF_NOPROG before the seen check
+				// (src/attrib.c:1960-1995), so a parent's no_command FOO masks a farther FOO`BAR even when the
+				// child has a FOO of its own.
+				if (IsMasked(noCommandPrefixes, longName))
+					continue;
+				if (attr.IsNoprog())
+				{
+					noCommandPrefixes.Add(longName + "`");
+					continue;
+				}
 			}
 
 			// Track names we've already processed (child overrides parent)
 			if (!seenNames.Add(longName))
 				continue;
 
-			if (attr.Flags.Any(flag => flag.Name == "no_command"))
+			if (attr.IsNoprog())
 			{
 				// Block this attribute AND all tree descendants (propagate to cross-object noCommandPrefixes)
 				noCommandPrefixes.Add(longName + "`");
@@ -76,49 +95,56 @@ public static class CommandAttributeScanner
 			}
 
 			// Check if blocked by ancestor's no_command (tree-level blocking) — both local and cross-object
-			if (noCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+			if (IsMasked(noCommandPrefixes, longName))
 				continue;
 			if (localNoCommandPrefixes.Any(prefix => longName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 				continue;
 
-			var plainValue = attr.Value.ToPlainText();
-			var match = CommandDiscoveryService.CommandPatternRegex().Match(plainValue);
+			if (Compile(attr) is CommandAttributeCache compiled)
+				commandAttributes.Add(compiled);
+		}
+	}
 
-			if (!match.Success)
-				continue;
+	/// <summary>
+	/// The <c>$</c>-command <paramref name="attr"/> carries, its pattern compiled, or <see cref="NotFound"/>
+	/// when the value is not a <c>$</c>-command or its pattern does not compile.
+	/// </summary>
+	public static Found<CommandAttributeCache> Compile(SharpAttribute attr)
+	{
+		var plainValue = attr.Value.ToPlainText();
+		var match = CommandDiscoveryService.CommandPatternRegex().Match(plainValue);
 
-			// Extract command pattern and determine if it's REGEX or wildcard. The stored match half
-			// still carries Penn's separator escape, so \: has to collapse back to a plain colon before
-			// either compiler sees it — without that, a regexp pattern's own (?\:...) is not a legal
-			// .NET construct and the whole $-command is thrown away by the catch below.
-			var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
-			var isRegex = attr.IsRegexp();
-			// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
-			// both handled correctly — a leading space would otherwise cause an empty command name
-			// when CommandDispatcher.DispatchAsync strips the first token at its space boundary.
-			var commandBodyStart = match.Length;
-			while (commandBodyStart < plainValue.Length && plainValue[commandBodyStart] == ' ')
-				commandBodyStart++;
+		if (!match.Success)
+			return new NotFound();
 
-			try
-			{
-				// Caseless unless the attribute is CASE, for both kinds: atr_single_match_r passes AF_Case to
-				// regexp_match_case_r and wild_match_case_r alike (src/attrib.c:1813-1821).
-				var caseSensitive = attr.IsCase();
-				var regex = isRegex
-					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled | (caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase))
-					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled, caseSensitive);
+		// Extract command pattern and determine if it's REGEX or wildcard. The stored match half
+		// still carries Penn's separator escape, so \: has to collapse back to a plain colon before
+		// either compiler sees it — without that, a regexp pattern's own (?\:...) is not a legal
+		// .NET construct and the whole $-command is thrown away by the catch below.
+		var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
+		var isRegex = attr.IsRegexp();
+		// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
+		// both handled correctly — a leading space would otherwise cause an empty command name
+		// when CommandDispatcher.DispatchAsync strips the first token at its space boundary.
+		var commandBodyStart = match.Length;
+		while (commandBodyStart < plainValue.Length && plainValue[commandBodyStart] == ' ')
+			commandBodyStart++;
 
-				commandAttributes.Add(new CommandAttributeCache(
-					attr with { CommandListIndex = commandBodyStart },
-					regex,
-					isRegex));
-			}
-			catch (ArgumentException)
-			{
-				// Invalid regex pattern, skip this attribute
-				continue;
-			}
+		try
+		{
+			// Caseless unless the attribute is CASE, for both kinds: atr_single_match_r passes AF_Case to
+			// regexp_match_case_r and wild_match_case_r alike (src/attrib.c:1813-1821).
+			var caseSensitive = attr.IsCase();
+			var regex = isRegex
+				? SoftcodeRegex.Create(pattern, RegexOptions.Compiled | (caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase))
+				: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled, caseSensitive);
+
+			return new CommandAttributeCache(attr with { CommandListIndex = commandBodyStart }, regex, isRegex);
+		}
+		catch (ArgumentException)
+		{
+			// Invalid regex pattern, skip this attribute
+			return new NotFound();
 		}
 	}
 }

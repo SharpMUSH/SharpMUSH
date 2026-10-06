@@ -80,6 +80,14 @@ public class AttributeReadCancellationTests
 			yield break;
 		}
 		if (stage.EndsWith("parent")) target.Object().Parent = new(async token => { await Block(token); return new None(); });
+		// An inherited match is first tested against the object holding it (attrib.c:1584), so loading
+		// that object is the read that has to observe cancellation.
+		if (stage.EndsWith("parent"))
+			mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(async ValueTask<AnyOptionalSharpObject> (call) =>
+			{
+				await Block(call.Arg<CancellationToken>());
+				return new None();
+			});
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(call => BlockStream<SharpAttribute>(call.Arg<CancellationToken>()));
 		mediator.CreateStream(Arg.Any<GetLazyAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(call => BlockStream<LazySharpAttribute>(call.Arg<CancellationToken>()));
 		var source = stage.EndsWith("parent") ? new DBRef(11) : target.Object().DBRef;
@@ -164,11 +172,11 @@ public class AttributeReadCancellationTests
 	}
 
 	[Test]
-	[Arguments("fallback")]
+	[Arguments("walk")]
 	[Arguments("parent")]
 	[Arguments("ancestor-node")]
 	[Arguments("prefix")]
-	[Arguments("lazy-fallback")]
+	[Arguments("lazy-walk")]
 	[Arguments("orphan-flags")]
 	public async Task SecondaryAttributeReadsReceiveExecutionCancellation(string stage)
 	{
@@ -204,12 +212,12 @@ public class AttributeReadCancellationTests
 		mediator.CreateStream(Arg.Any<GetAttributeWithInheritanceQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
 		{
 			var query = call.Arg<GetAttributeWithInheritanceQuery>();
-			if (stage == "fallback" && query.DBRef.Number == 6) return BlockStream<AttributeWithInheritance>(call.Arg<CancellationToken>());
-			if (stage is "parent" or "prefix" || (stage == "ancestor-node" && query.DBRef.Number == 6)) return new[] { resolved }.ToAsyncEnumerable();
+			if (stage == "walk" && query.Walk?.Ancestor?.Number == 6) return BlockStream<AttributeWithInheritance>(call.Arg<CancellationToken>());
+			if (stage is "parent" or "prefix" || (stage == "ancestor-node" && query.Walk?.Ancestor?.Number == 6)) return new[] { resolved }.ToAsyncEnumerable();
 			return AsyncEnumerable.Empty<AttributeWithInheritance>();
 		});
 		mediator.CreateStream(Arg.Any<GetLazyAttributeWithInheritanceQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
-			call.Arg<GetLazyAttributeWithInheritanceQuery>().DBRef.Number == 6
+			call.Arg<GetLazyAttributeWithInheritanceQuery>().Walk?.Ancestor?.Number == 6
 				? BlockStream<LazyAttributeWithInheritance>(call.Arg<CancellationToken>()) : AsyncEnumerable.Empty<LazyAttributeWithInheritance>());
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(call => BlockStream<SharpAttribute>(call.Arg<CancellationToken>()));
 		if (stage == "parent") target.Object().Parent = new(async token => { await Block(token); return new None(); });
@@ -218,7 +226,7 @@ public class AttributeReadCancellationTests
 			await Block(call.Arg<CancellationToken>());
 			return ancestor;
 		});
-		var operation = stage == "lazy-fallback"
+		var operation = stage == "lazy-walk"
 			? service.LazilyGetAttributeAsync(target, target, "TREE`LEAF", IAttributeService.AttributeMode.Read).AsTask() as Task
 			: service.GetAttributeAsync(target, target, "TREE`LEAF", IAttributeService.AttributeMode.Read).AsTask();
 		try

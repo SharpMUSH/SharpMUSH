@@ -256,12 +256,11 @@ public class AttributeSingleReadAncestorWalkTests
 	}
 
 	/// <summary>
-	/// Fail-CLOSED guard. <c>ParentChainAsync</c> follows <c>@parent</c> only, so a zone-sourced
-	/// result's source object is not in the chain: running the walk over it would fall off the end
-	/// and deny (<c>attrib.c:356</c>), breaking zone tree attributes that read fine today.
+	/// PennMUSH's <c>atr_get_with_parent</c> (<c>src/attrib.c:1203-1278</c>) never looks at the zone, so
+	/// a tree attribute set only on the object's zone is not read through the object at all.
 	/// </summary>
 	[Test]
-	public async ValueTask ZoneSourcedTreeAttribute_StillResolvesForAMortal()
+	public async ValueTask ZoneTreeAttribute_IsNotInherited()
 	{
 		var uid = Uid();
 		var zone = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WalkZZ");
@@ -277,8 +276,8 @@ public class AttributeSingleReadAncestorWalkTests
 		await Cmd(1, $"@chzone {obj}={zone}");
 
 		var result = await Eval(viewer.Handle, $"get({obj}/ZT{uid}`PUB)");
-		await Assert.That(result).IsEqualTo($"zoneleaf{uid}")
-			.Because("a zone source is not in the @parent chain, so the target walk must be skipped for it");
+		await Assert.That(result).DoesNotContain($"zoneleaf{uid}")
+			.Because("a zone supplies $-commands, never attributes");
 	}
 
 	/// <summary>

@@ -5147,6 +5147,18 @@
     <value>Pozele tale merg într-o altă scenă. Alătură-te acesteia pentru a poza aici.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Aici se desfășoară o scenă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Deschide povestea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Ascunde această notificare</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Alătură-te scenei</value>
     <comment>MT</comment>
@@ -5622,5 +5634,38 @@
   </data>
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Pagina proprie a fiecărei categorii.</value>
+  </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>ÎN PAUZĂ</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Pune scena pe pauză</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Reia scena</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Începe acum</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Oră nouă (opțional)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Ora</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>O scenă pusă pe pauză nu mai înregistrează și trece din Live în program până este reluată.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Scena nu a fost pusă pe pauză.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Încă fără cameră</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Gazdă: {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>Pe pauză, fără oră</value>
   </data>
 </root>

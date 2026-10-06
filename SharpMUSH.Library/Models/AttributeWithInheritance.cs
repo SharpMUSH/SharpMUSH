@@ -16,19 +16,36 @@ public enum AttributeSource
 	Parent,
 
 	/// <summary>
-	/// Attribute is inherited from a zone.
-	/// </summary>
-	Zone,
-
-	/// <summary>
-	/// Attribute is inherited from the object's type ancestor (PennMUSH ANCESTOR_*).
+	/// Attribute is inherited from the object's type ancestor (PennMUSH ANCESTOR_*) or one of the
+	/// ancestor's own parents.
 	/// </summary>
 	Ancestor
 }
 
 /// <summary>
+/// How far PennMUSH's <c>atr_get_with_parent</c> reaches past the object itself
+/// (<c>src/attrib.c:1218-1270</c>).
+/// </summary>
+/// <param name="Ancestor">
+/// The object's type ancestor (<c>Ancestor_Parent</c>, <c>hdrs/dbdefs.h:225-232</c>), or null when it has
+/// none or is ORPHAN.
+/// </param>
+/// <param name="MaxParents">
+/// <c>MAX_PARENTS</c>: the most objects one leg of the walk visits, counting the object it starts on
+/// (<c>while (parent_depth &lt; MAX_PARENTS ...)</c>).
+/// </param>
+public readonly record struct InheritanceWalk(DBRef? Ancestor, int MaxParents)
+{
+	/// <summary>PennMUSH's default <c>max_parents</c>, and SharpMUSH's <c>Limit.MaxParents</c> default.</summary>
+	public const int DefaultMaxParents = 10;
+
+	/// <summary>The @parent chain alone, at the default depth.</summary>
+	public static InheritanceWalk ParentsOnly => new(null, DefaultMaxParents);
+}
+
+/// <summary>
 /// Represents an attribute along with its inheritance information.
-/// This includes where the attribute was found (self, parent, or zone),
+/// This includes where the attribute was found (self, parent, or type ancestor),
 /// and the flags adjusted for inheritance semantics.
 /// </summary>
 public record AttributeWithInheritance(
@@ -45,13 +62,13 @@ public record AttributeWithInheritance(
 	DBRef SourceObject,
 
 	/// <summary>
-	/// Indicates whether the attribute comes from the object itself, a parent, or a zone.
+	/// Indicates whether the attribute comes from the object itself, a parent, or the type ancestor.
 	/// </summary>
 	AttributeSource Source,
 
 	/// <summary>
 	/// Flags adjusted for inheritance.
-	/// Non-inheritable flags are filtered out when the attribute is inherited from a parent or zone.
+	/// Non-inheritable flags are filtered out when the attribute is inherited.
 	/// </summary>
 	IEnumerable<SharpAttributeFlag> InheritedFlags);
 
@@ -70,12 +87,12 @@ public record LazyAttributeWithInheritance(
 	DBRef SourceObject,
 
 	/// <summary>
-	/// Indicates whether the attribute comes from the object itself, a parent, or a zone.
+	/// Indicates whether the attribute comes from the object itself, a parent, or the type ancestor.
 	/// </summary>
 	AttributeSource Source,
 
 	/// <summary>
 	/// Flags adjusted for inheritance.
-	/// Non-inheritable flags are filtered out when the attribute is inherited from a parent or zone.
+	/// Non-inheritable flags are filtered out when the attribute is inherited.
 	/// </summary>
 	IEnumerable<SharpAttributeFlag> InheritedFlags);

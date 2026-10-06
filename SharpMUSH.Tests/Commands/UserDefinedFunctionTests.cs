@@ -72,6 +72,40 @@ public class UserDefinedFunctionTests
 		await Assert.That(await Eval($"{fn}(21)")).IsEqualTo("42");
 	}
 
+	/// <summary>
+	/// <c>do_function</c> does not look for the attribute (<c>function.c:1687-1692</c>); the call reads it
+	/// with <c>atr_get</c> (<c>parse.c:3048</c>), so an attribute the object inherits serves.
+	/// </summary>
+	[Test]
+	public async ValueTask AFunctionMayNameAnInheritedAttribute()
+	{
+		var fn = $"inh{U()}";
+		var attr = $"INHERITED{U()}";
+		var parent = await Eval($"create(UDFParent{U()})");
+		var child = await Eval($"create(UDFChild{U()})");
+		await Cmd($"&{attr} {parent}=mul(%0,3)");
+		await Cmd($"@parent {child}={parent}");
+		await Cmd($"@function {fn}={child},{attr}");
+
+		await Assert.That(await Eval($"{fn}(7)")).IsEqualTo("21");
+	}
+
+	/// <summary>
+	/// An attribute that is nowhere to be found is reported when the function is called, in PennMUSH's
+	/// words (<c>parse.c:3049-3059</c>), not when it is defined.
+	/// </summary>
+	[Test]
+	public async ValueTask AFunctionWhoseAttributeIsMissingSaysSoWhenCalled()
+	{
+		var fn = $"gone{U()}";
+		var attr = $"GONE{U()}";
+		var holder = await Eval($"create(UDFHolder{U()})");
+		await Cmd($"@function {fn}={holder},{attr}");
+
+		await Assert.That(await Eval($"{fn}()"))
+			.IsEqualTo($"#-1 @FUNCTION ({fn.ToUpperInvariant()}) MISSING ATTRIBUTE (#{DBRef.Parse(holder).Number}/{attr.ToUpperInvariant()})");
+	}
+
 	[Test]
 	public async ValueTask FormattingFunctionUsingCenter()
 	{

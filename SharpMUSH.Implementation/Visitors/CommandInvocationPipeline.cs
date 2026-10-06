@@ -1,4 +1,5 @@
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Handlers.Database;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -418,10 +420,15 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// For OVERRIDE and EXTEND hooks, perform $-command matching
 		if (hook.HookType is "OVERRIDE" or "EXTEND" && commandInput is MString input)
 		{
-			var matchResult = await services.CommandDiscoveryService.MatchUserDefinedCommand(
-				localParser,
-				new[] { targetObj }.ToAsyncEnumerable(),
-				input);
+			// run_cmd_hook (command.c:2459-2465): a hook that names an attribute tries only that one
+			// (one_comm_match); a hook without one tries every $-command on the object (atr_comm_match).
+			var matchResult = string.IsNullOrEmpty(hook.AttributeName)
+				? await services.CommandDiscoveryService.MatchUserDefinedCommand(
+					localParser,
+					new[] { targetObj }.ToAsyncEnumerable(),
+					input,
+					executorObj)
+				: await MatchOneCommandAsync(targetObj, executorObj, hook.AttributeName, input);
 
 			if (!matchResult.TryGetValue(out var matches))
 			{
@@ -438,6 +445,43 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// the @hook chose the code, so the player whose command triggered it needs no right to read it.
 		return await services.AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
 			hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>one_comm_match</c> (<c>src/attrib.c:2132-2181</c>): the one <c>$</c>-command
+	/// <paramref name="attributeName"/> names on <paramref name="thing"/>, read through its parents and
+	/// type ancestor as <c>atr_get_with_parent</c> reads it, matched against <paramref name="input"/>.
+	/// A HALT or NO_COMMAND object, a no_command attribute or branch, a value that is not a
+	/// <c>$</c>-command, and a refusal by <paramref name="player"/>'s @lock/command or @lock/use on
+	/// <paramref name="thing"/> are all no match.
+	/// </summary>
+	private async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchOneCommandAsync(
+		AnySharpObject thing, AnySharpObject player, string attributeName, MString input)
+	{
+		if (await thing.HasFlag("HALT") || await thing.HasFlag("NO_COMMAND"))
+		{
+			return new None();
+		}
+
+		// atr_get_with_parent with cmd set refuses AF_NOPROG on the attribute and on every branch above it.
+		if (await services.AttributeService.GetAttributeAsync(thing, thing, attributeName,
+					IAttributeService.AttributeMode.Read, parent: true) is not SharpAttribute[] { Length: > 0 } chain
+				|| chain.Any(segment => segment.IsNoprog())
+				|| CommandAttributeScanner.Compile(chain[^1]) is not CommandAttributeCache command)
+		{
+			return new None();
+		}
+
+		var trimmed = input.Trim(TrimType.TrimBoth);
+		if (SoftcodeRegex.Match(command.CompiledRegex, trimmed.ToPlainText()) is not { Success: true } match
+				|| !await services.LockService.Evaluate(LockType.Command, thing, player)
+				|| !await services.LockService.Evaluate(LockType.Use, thing, player))
+		{
+			return new None();
+		}
+
+		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
+			.FromOption([(thing, command.Attribute, PatternArguments.Capture(command.CompiledRegex, match, command.IsRegexFlag, trimmed))]);
 	}
 
 	/// <summary>

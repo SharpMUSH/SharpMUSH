@@ -4417,6 +4417,18 @@
     <value>Vos poses vont dans une autre scène. Rejoignez celle-ci pour poser ici.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Une scène est en cours ici</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Ouvrir le récit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Masquer cet avis</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Rejoindre la scène</value>
     <comment>MT</comment>
@@ -4892,5 +4904,38 @@
   </data>
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>La page propre à chaque catégorie.</value>
+  </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>EN PAUSE</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Mettre la scène en pause</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Reprendre la scène</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Commencer maintenant</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Nouvel horaire (facultatif)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Heure</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>Une scène en pause cesse d’enregistrer et passe du direct au programme jusqu’à sa reprise.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>La scène n’a pas été mise en pause.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Pas encore de salle</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Organisée par {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>En pause, sans horaire</value>
   </data>
 </root>

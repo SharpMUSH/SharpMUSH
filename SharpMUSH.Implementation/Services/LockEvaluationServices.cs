@@ -57,7 +57,9 @@ public sealed class LockEvaluationServices(
 				gated,
 				attributeName,
 				arguments,
-				evalParent: false,
+				// check_attrib_lock reads the attribute with fetch_ufun_attrib, an atr_get through the
+				// parents and the type ancestor (src/boolexp.c:1983).
+				evalParent: true,
 				ignorePermissions: true);
 
 			return result.ToPlainText();

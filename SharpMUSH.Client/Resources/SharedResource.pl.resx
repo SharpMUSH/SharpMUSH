@@ -5147,6 +5147,18 @@
     <value>Twoje pozy trafiają do innej sceny. Dołącz do tej, aby tu pozować.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Tu trwa scena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Otwórz opowieść</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Ukryj to powiadomienie</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Dołącz do sceny</value>
     <comment>MT</comment>
@@ -5622,5 +5634,38 @@
   </data>
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Własna strona każdej kategorii.</value>
+  </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>WSTRZYMANA</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Wstrzymaj scenę</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Wznów scenę</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Rozpocznij teraz</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Nowy termin (opcjonalnie)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Godzina</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>Wstrzymana scena przestaje zapisywać i przechodzi z Na żywo do harmonogramu, dopóki nie zostanie wznowiona.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Scena nie została wstrzymana.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Jeszcze bez lokacji</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Prowadzi: {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>Wstrzymane, bez terminu</value>
   </data>
 </root>

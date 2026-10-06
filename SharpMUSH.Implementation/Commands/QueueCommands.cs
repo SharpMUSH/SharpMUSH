@@ -1258,8 +1258,10 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		// do_trigger queues with noparent 0 (set.c:1342, cque.c:805-808): the attribute may come from a
+		// parent or the type ancestor.
 		if (await AttributeService.GetAttributeAsync(
-				executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false)
+				executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, parent: true)
 			is not SharpAttribute[] attributeChain)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, attributeName);

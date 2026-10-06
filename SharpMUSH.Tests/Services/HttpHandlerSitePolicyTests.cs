@@ -50,7 +50,7 @@ public class HttpHandlerSitePolicyTests
 					ValueTask.FromResult<AnyOptionalSharpObject>(Interlocked.Increment(ref reads) == 2 ? events : handler));
 
 			Attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(),
-					IAttributeService.AttributeMode.Execute, false)
+					IAttributeService.AttributeMode.Execute, Arg.Any<bool>())
 				.Returns(ValueTask<OptionalSharpAttributeOrError> (call) =>
 				{
 					var name = call.Arg<string>();

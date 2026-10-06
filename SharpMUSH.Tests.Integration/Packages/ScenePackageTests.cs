@@ -34,7 +34,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		if (await Registry.GetInstalledPackageAsync("scene") is not InstalledPackageRecord package)
 			throw new InvalidOperationException("scene is not installed.");
-		await Assert.That(package.Version).IsEqualTo("1.23.0");
+		await Assert.That(package.Version).IsEqualTo("1.25.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and
@@ -49,7 +49,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		await Assert.That(attrs).Contains("CMD`CAPTURE`SAY");
 		await Assert.That(attrs).Contains("CMD`CAPTURE`SEMI");
 		await Assert.That(attrs).Contains("CMD`CREATE");
-		await Assert.That(attrs).Contains("CMD`INFO");
+		await Assert.That(attrs).Contains("CMD`SHOW");
 		await Assert.That(attrs).Contains("FUN`OWNS");
 		await Assert.That(attrs).Contains("FUN`IS`APPROVED");
 		await Assert.That(attrs).Contains("DATA`DENY_APPROVAL");

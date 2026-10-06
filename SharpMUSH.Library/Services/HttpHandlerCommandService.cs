@@ -139,9 +139,11 @@ public class HttpHandlerCommandService(
 				// The <METHOD> attribute is the handler entry point: GET, POST, etc. — run as commands,
 				// the equivalent of PennMUSH's `@include #handler/<method>`. SharpMUSH deviates from
 				// Penn (200 + empty body) by answering 404 when the attribute is absent; see help sharphttp.
+				// Like @include (cque.c:712-717), the attribute may come from the handler's parents or the
+				// type ancestor.
 				var attributeName = method.ToUpperInvariant();
 				var attributeResult = await attributeService.GetAttributeAsync(
-					handler, handler, attributeName, IAttributeService.AttributeMode.Execute, parent: false);
+					handler, handler, attributeName, IAttributeService.AttributeMode.Execute, parent: true);
 				if (attributeResult is not SharpAttribute[] entryPoint)
 				{
 					return new NotFound();

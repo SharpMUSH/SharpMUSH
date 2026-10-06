@@ -162,13 +162,16 @@ public partial class Functions
 
 		async ValueTask<CallState> ControlsAttributeOn(AnySharpObject locateObject, AnySharpObject attributeObject, string attribute)
 		{
-			var locateAttribute = await AttributeService.GetAttributeAsync(executor, attributeObject, attribute,
-				IAttributeService.AttributeMode.Read);
+			// can_edit_attr (attrib.c:414-421) looks only at the object's own attribute list; an attribute
+			// it does not hold yet is judged as one about to be created, which comes down to control.
+			var god = await HelperFunctions.GetGod(Mediator);
+			var locateAttribute = await AttributeService.GetAttributeAsync(god, attributeObject, attribute,
+				IAttributeService.AttributeMode.Read, parent: false);
 
 			return locateAttribute switch
 			{
 				SharpAttribute[] foundAttribute => await PermissionService.Controls(locateObject, attributeObject, foundAttribute),
-				None => ErrorMessages.Returns.NotVisible,
+				None => await PermissionService.Controls(locateObject, attributeObject),
 				Error<string> error => error.Value
 			};
 		}

@@ -106,6 +106,16 @@ public class SoftcodeEditorConsoleTests : BunitContext
 			.SetResult("Hi, %0 from [name(me)].");
 	}
 
+	/// <summary>
+	/// Opens the console and waits for it: under a loaded parallel run the console has been seen to render after
+	/// <c>Click</c> returned, so reading its input at once failed.
+	/// </summary>
+	private static void OpenConsole(IRenderedComponent<Components.MudHarness> cut)
+	{
+		cut.Find(".sc-console-toggle").Click();
+		cut.WaitForElement(".sc-console-line", TimeSpan.FromSeconds(5));
+	}
+
 	private IRenderedComponent<Components.MudHarness> RenderWithFunctionOpen()
 	{
 		var cut = Render<Components.MudHarness>(p => p
@@ -125,7 +135,7 @@ public class SoftcodeEditorConsoleTests : BunitContext
 	{
 		var cut = RenderWithFunctionOpen();
 
-		cut.Find(".sc-console-toggle").Click();
+		OpenConsole(cut);
 		cut.Find(".sc-console-addarg").Click();
 		cut.Find(".sc-console-arg-input").Input("Bob");
 		cut.Find(".sc-eval").Click();
@@ -154,7 +164,7 @@ public class SoftcodeEditorConsoleTests : BunitContext
 	public async Task ATypedExpression_RunsAsTheCharacter_AndIsKeptForUp()
 	{
 		var cut = RenderWithFunctionOpen();
-		cut.Find(".sc-console-toggle").Click();
+		OpenConsole(cut);
 
 		var line = cut.Find(".sc-console-line");
 		line.Input("add(1,2)");
@@ -180,7 +190,7 @@ public class SoftcodeEditorConsoleTests : BunitContext
 	public async Task TheScrollbackBelongsToTheTabThatRan()
 	{
 		var cut = RenderWithFunctionOpen();
-		cut.Find(".sc-console-toggle").Click();
+		OpenConsole(cut);
 		cut.Find(".sc-eval").Click();
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.FindAll(".sc-console-entry")).Count().IsEqualTo(1),
