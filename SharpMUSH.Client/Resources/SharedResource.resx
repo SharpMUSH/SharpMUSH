@@ -1719,6 +1719,9 @@
   <data name="PkgObjectsCount" xml:space="preserve">
     <value>Objects ({0})</value>
   </data>
+  <data name="PkgDeclarationsCount" xml:space="preserve">
+    <value>Roles, permissions and jobs ({0})</value>
+  </data>
   <data name="PkgRef" xml:space="preserve">
     <value>Ref</value>
   </data>

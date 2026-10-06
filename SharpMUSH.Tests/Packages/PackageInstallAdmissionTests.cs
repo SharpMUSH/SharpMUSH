@@ -97,7 +97,8 @@ public class PackageInstallAdmissionTests
 				managedInstaller,
 				services.GetRequiredService<IMediator>(),
 				services.GetRequiredService<IPackageOperationGate>(),
-				services.GetRequiredService<ILockService>())
+				services.GetRequiredService<ILockService>(),
+				services.GetRequiredService<IPackageDeclarationService>())
 		};
 	}
 

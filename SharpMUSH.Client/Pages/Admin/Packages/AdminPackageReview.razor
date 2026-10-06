@@ -63,6 +63,11 @@ else
         </MudAlert>
     }
 
+    @foreach (var blocked in (_plan.Changeset.Declarations ?? []).Where(d => d.Action == PackageDeclarationAction.Blocked))
+    {
+        <MudAlert Severity="Severity.Error">@blocked.Kind.Noun() <b>@blocked.Name</b>: @blocked.Detail</MudAlert>
+    }
+
     @foreach (var warning in _plan.ManifestWarnings)
     {
         <MudAlert Severity="Severity.Warning" Dense="true">@warning</MudAlert>
@@ -131,6 +136,26 @@ else
             </MudTable>
         </div>
     </KitCard>
+
+    @* ── Roles, permissions, categories and jobs ──────────────────────── *@
+    @if (_plan.Changeset.Declarations is { Count: > 0 } declarations)
+    {
+        <KitCard Title="@Loc["PkgDeclarationsCount", declarations.Count]">
+            <div class="pkg-review-body">
+                <MudTable Items="declarations" Dense="true" Elevation="0" Class="pkg-objects-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgType"]</MudTh><MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgType"]">@context.Kind.Noun()</MudTd>
+                        <MudTd data-label="@Loc["PkgName"]"><code>@context.Name</code></MudTd>
+                        <MudTd data-label="@Loc["PkgAction"]"><MudChip T="string" Size="Size.Small" Color="@DeclarationColor(context.Action)">@context.Action</MudChip></MudTd>
+                        <MudTd data-label="@Loc["PkgDetails"]"><MudText Typo="Typo.caption">@context.Detail</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        </KitCard>
+    }
 
     @* ── Attributes ───────────────────────────────────────────────────── *@
     <KitCard Title="@Loc["PkgAttributesCount", _plan.Changeset.Attributes.Count]">
@@ -338,6 +363,16 @@ else
         PackageObjectAction.Create or PackageObjectAction.RecreateMissing => Color.Info,
         PackageObjectAction.Delete => Color.Error,
         PackageObjectAction.Rename or PackageObjectAction.UpdateMetadata => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static Color DeclarationColor(PackageDeclarationAction action) => action switch
+    {
+        PackageDeclarationAction.Create => Color.Info,
+        PackageDeclarationAction.Remove => Color.Error,
+        PackageDeclarationAction.Blocked => Color.Error,
+        PackageDeclarationAction.Update or PackageDeclarationAction.Release => Color.Warning,
+        PackageDeclarationAction.Existing => Color.Tertiary,
         _ => Color.Default
     };
 

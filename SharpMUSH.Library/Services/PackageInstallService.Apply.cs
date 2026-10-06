@@ -84,6 +84,12 @@ public partial class PackageInstallService
 			return Blocked(changeset.DependencyIssues);
 		}
 
+		var declared = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken);
+		if (declared.Where(d => d.Action == PackageDeclarationAction.Blocked).ToArray() is { Length: > 0 } blocked)
+		{
+			return new Error<string>($"Plan is blocked: {string.Join("; ", blocked.Select(d => $"{d.Kind.Noun()} {d.Name}: {d.Detail}"))}");
+		}
+
 		var decisions = request.ConflictDecisions.ToDictionary(
 			d => DecisionKey(d.TargetRef, d.Attribute), d => d, StringComparer.Ordinal);
 		var undecided = changeset.Attributes
@@ -182,6 +188,9 @@ public partial class PackageInstallService
 
 		public Dictionary<string, string> Created { get; } = new(StringComparer.Ordinal);
 
+		/// <summary>The declared items the package owns after this apply (<see cref="InstalledPackageRecord.Owned"/>).</summary>
+		public PackageDeclarations? Owned { get; set; }
+
 		public List<string> Notes { get; } = [.. Changeset.Notes];
 
 		/// <summary>Live values of attributes this apply overwrote, for the revision's pre-apply record.</summary>
@@ -223,6 +232,11 @@ public partial class PackageInstallService
 		if (await ApplyStructureAsync(run, cancellationToken) is string structureError)
 		{
 			return new Error<string>(structureError);
+		}
+
+		if (await ApplyDeclarationsAsync(run, cancellationToken) is Error<string> declarationError)
+		{
+			return declarationError;
 		}
 
 		await RetireRemovedObjectsAsync(run, cancellationToken);
@@ -349,6 +363,32 @@ public partial class PackageInstallService
 		return null;
 	}
 
+	/// <summary>
+	/// Pass 4b: the roles, permissions, categories and jobs the package declares, once every object a job
+	/// may run on has its objid. Skipped when the package declares none and owns none.
+	/// </summary>
+	private async Task<Error<string>?> ApplyDeclarationsAsync(ApplyRun run, CancellationToken cancellationToken)
+	{
+		var owned = run.Inputs.Installed?.Owned;
+		if (run.Manifest.Declared.IsEmpty && owned is null)
+		{
+			return null;
+		}
+
+		var applied = await declarations.ApplyAsync(run.Writes, run.Manifest.Name, run.Manifest.Declared, owned, run.Resolve, run.Notes, cancellationToken);
+		if (applied is Error<string> error)
+		{
+			return error;
+		}
+
+		if (applied is PackageDeclarations now && !now.IsEmpty)
+		{
+			run.Owned = now;
+		}
+
+		return null;
+	}
+
 	/// <summary>Pass 5: objects removed from the package are marked GOING, the @destroy convention.</summary>
 	private async Task RetireRemovedObjectsAsync(ApplyRun run, CancellationToken cancellationToken)
 	{
@@ -410,7 +450,7 @@ public partial class PackageInstallService
 		var source = run.Request.Source;
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
-			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision));
+			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned));
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))

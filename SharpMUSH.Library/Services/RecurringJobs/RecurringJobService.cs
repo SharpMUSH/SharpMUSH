@@ -76,7 +76,69 @@ public sealed class RecurringJobService(
 			var jobs = await Read(ct);
 			var job = Find(jobs, id);
 			await Authorize(actor, job.OwnerAccount == actor.AccountId ? PortalPermission.JobsManageOwn : PortalPermission.JobsManage, ct);
+			if (job.Package is not null) throw Error("package", $"The {job.Package} package owns this job; disable it, or uninstall the package.");
 			await Save(jobs.Where(j => j.Id != id).ToArray(), ct);
+		}
+		finally { _gate.Release(); }
+	}
+
+	public async Task<RecurringJob[]> GetPackageJobsAsync(string packageId, CancellationToken ct = default)
+		=> (await Read(ct)).Where(j => j.Package == packageId).ToArray();
+
+	public async Task<RecurringJob[]> SetPackageJobsAsync(string packageId, IReadOnlyList<PackageJobDefinition> jobs, CancellationToken ct = default)
+	{
+		await _gate.WaitAsync(ct);
+		try
+		{
+			var all = await Read(ct);
+			var previous = all.Where(j => j.Package == packageId).ToArray();
+			var now = _clock.GetUtcNow();
+			var updated = new List<RecurringJob>();
+			foreach (var definition in jobs)
+			{
+				var target = Identity(definition.Target).ToString();
+				var schedule = Schedule(definition.Schedule, definition.TimeZone);
+				var attribute = definition.Attribute.ToUpperInvariant();
+				var existing = previous.SingleOrDefault(j => j.PackageRef == definition.Ref);
+				if (existing is null)
+				{
+					var next = schedule.Next(now) ?? throw Error("invalid", $"Job {definition.Ref}'s schedule has no future occurrence.");
+					updated.Add(new RecurringJob(Guid.NewGuid().ToString("N"), "", target, target, attribute, definition.Schedule, definition.TimeZone,
+						definition.Description, true, 1, next.ToUnixTimeMilliseconds(), null, null, "scheduled", null, packageId, definition.Ref));
+					continue;
+				}
+
+				var moved = existing.Target != target || existing.Attribute != attribute
+					|| existing.Schedule != definition.Schedule || existing.TimeZone != definition.TimeZone;
+				updated.Add(!moved && existing.Description == definition.Description ? existing : existing with
+				{
+					Character = target,
+					Target = target,
+					Attribute = attribute,
+					Schedule = definition.Schedule,
+					TimeZone = definition.TimeZone,
+					Description = definition.Description,
+					Revision = checked(existing.Revision + 1),
+					NextRun = !moved ? existing.NextRun : existing.Enabled ? schedule.Next(now)?.ToUnixTimeMilliseconds() : null,
+					RunToken = moved ? null : existing.RunToken
+				});
+			}
+
+			var others = all.Where(j => j.Package != packageId).ToArray();
+			if (others.Length + updated.Count > 256) throw Error("limit", "Job limit reached (256 per world).");
+			await Save([.. others, .. updated], ct);
+			return previous;
+		}
+		finally { _gate.Release(); }
+	}
+
+	public async Task RestorePackageJobsAsync(string packageId, IReadOnlyList<RecurringJob> jobs, CancellationToken ct = default)
+	{
+		await _gate.WaitAsync(ct);
+		try
+		{
+			var all = await Read(ct);
+			await Save([.. all.Where(j => j.Package != packageId), .. jobs], ct);
 		}
 		finally { _gate.Release(); }
 	}
@@ -185,9 +247,12 @@ public sealed class RecurringJobService(
 				if (job is null || !job.Enabled || job.RunToken != token) return null;
 				await Save(Replace(jobs, job with { Status = "running" }), ct);
 				var active = Identity(job.Character);
-				var actor = new CapabilityActor(job.OwnerAccount, active, active);
-				var executor = await Authorize(actor, PortalPermission.JobsManageOwn, ct);
 				var target = Identity(job.Target);
+				// A package's job runs as the object holding the attribute, as @trigger would; there is no
+				// account behind it to hold a jobs capability.
+				var executor = job.Package is not null
+					? await PackageExecutor(target, ct)
+					: await Authorize(new CapabilityActor(job.OwnerAccount, active, active), PortalPermission.JobsManageOwn, ct);
 				var attribute = await Executable(executor, target, job.Attribute, ct);
 				ExecutionBudget.Current?.ThrowIfExceeded();
 				// Starting evaluation is the dispatch boundary. Do not hold the gate while awaiting
@@ -237,6 +302,10 @@ public sealed class RecurringJobService(
 			|| player.Object.DBRef != active || await player.Object.HasFlag("HALT", ct) || await player.Object.HasFlag("GOING", ct)) throw Error("missing", "The executing player no longer exists.");
 		return executor;
 	}
+	private async Task<AnySharpObject> PackageExecutor(DBRef target, CancellationToken ct)
+		=> await objects.GetObjectNodeAsync(target, ct) is AnySharpObject obj && obj.Object().DBRef == target
+			? obj
+			: throw Error("missing", "The target identity no longer exists.");
 	private async Task<SharpAttribute> Executable(AnySharpObject executor, DBRef target, string attribute, CancellationToken ct)
 	{
 		if (await objects.GetObjectNodeAsync(target, ct) is not AnySharpObject obj || obj.Object().DBRef != target

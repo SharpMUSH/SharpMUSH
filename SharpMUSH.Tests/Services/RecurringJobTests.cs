@@ -754,4 +754,48 @@ public class RecurringJobTests
 		await Assert.That(context.Callbacks.Count).IsEqualTo(1);
 	}
 
+	[Test]
+	public async Task APackageJobRunsAsItsTargetWithoutAnAccount()
+	{
+		var context = await Setup();
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Expect<SharpPlayer>();
+		await Get<IMediator>().Send(new SetAttributeCommand(context.Target, ["RUN"], MarkupText.Plain("@set me=FIRED:%!"), player));
+		// No account stands behind a package's job, so no jobs capability is asked for.
+		context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+		await context.Service.SetPackageJobsAsync("requests", [new("sweep", context.Target.ToString(), "RUN", "* * * * *", "UTC", "Sweep.")]);
+
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		await context.Callbacks.Single()();
+
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).LastAsync()).Value.ToPlainText())
+			.IsEqualTo($"#{context.Target.Number}");
+	}
+
+	[Test]
+	public async Task PackageJobsFollowTheManifestAndKeepTheirEnabledState()
+	{
+		var context = await Setup();
+		var target = context.Target.ToString();
+		var own = await Create(context);
+		await context.Service.SetPackageJobsAsync("requests", [
+			new("sweep", target, "RUN", "0 4 * * *", "UTC", "Sweep."),
+			new("report", target, "RUN", "0 5 * * *", "UTC", "Report.")]);
+		var sweep = (await context.Service.GetPackageJobsAsync("requests")).Single(j => j.PackageRef == "sweep");
+		await context.Service.ConfigureAsync(context.Actor, sweep.Id, sweep.Schedule, sweep.TimeZone, false);
+
+		var previous = await context.Service.SetPackageJobsAsync("requests", [new("sweep", target, "RUN", "0 4 * * *", "UTC", "Sweeps the desk.")]);
+
+		var after = (await context.Service.GetPackageJobsAsync("requests")).Single();
+		await Assert.That(previous.Length).IsEqualTo(2);
+		await Assert.That(after.Id).IsEqualTo(sweep.Id);
+		await Assert.That(after.Enabled).IsFalse();
+		await Assert.That(after.Description).IsEqualTo("Sweeps the desk.");
+		await Assert.That((await context.Service.ListAsync(context.Actor, all: true)).Select(j => j.Id)).Contains(own.Id);
+		var refusal = await Assert.ThrowsAsync<RecurringJobException>(() => context.Service.DeleteAsync(context.Actor, after.Id));
+		await Assert.That(refusal!.Message).Contains("requests");
+
+		await context.Service.RestorePackageJobsAsync("requests", previous);
+		await Assert.That((await context.Service.GetPackageJobsAsync("requests")).Length).IsEqualTo(2);
+	}
 }

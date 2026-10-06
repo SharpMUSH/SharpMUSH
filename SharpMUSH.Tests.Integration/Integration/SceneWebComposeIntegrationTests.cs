@@ -281,8 +281,8 @@ public class SceneWebComposeIntegrationTests
 	}
 
 	/// <summary>
-	/// Staff finish a scene that is not theirs by id once the game defines <c>scene.close</c> and allows
-	/// it to them. Until then <c>+scene/finish &lt;id&gt;</c> refuses them, and the owner can still finish
+	/// Staff finish a scene that is not theirs by id once the game allows them <c>scene.close</c>, which
+	/// the scene package defines. Until then <c>+scene/finish &lt;id&gt;</c> refuses them, and the owner can still finish
 	/// their own.
 	/// </summary>
 	[Test]
@@ -306,9 +306,9 @@ public class SceneWebComposeIntegrationTests
 			.IsTrue().Because($"saw instead: [{string.Join(" // ", hidden)}]");
 		await Assert.That(await Eval($"scene({sceneId},status)")).IsNotEqualTo("finished");
 
+		// The scene package defines scene.close; the helper needs it allowed.
 		try
 		{
-			await God1("@permission/define scene.close=Staff/Finish any scene");
 			await God1($"@permission/allow {helper}=scene.close");
 
 			var finished = await RunAs(helperHandle, $"+scene/finish {sceneId}");
@@ -318,7 +318,7 @@ public class SceneWebComposeIntegrationTests
 		}
 		finally
 		{
-			await God1("@permission/undefine scene.close");
+			await God1($"@permission/clear {helper}=scene.close");
 		}
 	}
 

@@ -24,6 +24,11 @@
       "id": "roles-wizard-split",
       "heading": "What a wizard's work is split into",
       "lookup": "roles wizard"
+    },
+    {
+      "id": "roles-packages",
+      "heading": "Roles and permissions from packages",
+      "lookup": "roles packages"
     }
   ],
   "redirects": {
@@ -38,7 +43,7 @@ A role is a named set of permissions. Roles decide what an object may do: in the
 
 Both objects and accounts hold roles. An object holds the roles assigned to it; a character linked to an account also holds the account's. Nothing is inherited from an object's owner.
 
-Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and `@permission` for the list of permissions. A game can add permissions of its own, such as `scene.close`, with `@permission/define` (see [@permission define]).
+Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and `@permission` for the list of permissions. A game can add permissions of its own, such as `bbs.moderate`, with `@permission/define` (see [@permission define]), and a package can bring its own (see [roles packages]).
 
 ## How roles combine
 
@@ -102,6 +107,14 @@ Everything else a wizard does still needs `game.wizard`: wizard attributes, over
 A power made with `@power/add` is stored on the object as before.
 
 A PennMUSH database imported into SharpMUSH keeps every privilege: WIZARD and ROYALTY become role assignments and each power an override, on the same objects.
+
+## Roles and permissions from packages
+
+A package can bring the custom permissions its softcode checks, roles that allow or deny them, and the role and permission categories they go in. Installing it creates what the game lacks and uses what the game already has without changing it. A package's role sets only custom permissions, and sits below the wizard role, so installing a package never hands out a built-in permission: allow those on its role with `@role` if you want them.
+
+An upgrade keeps your edits. A field you changed on the package's role or permission keeps your value unless the new version changes that same field. Allowing or denying something else on its role is never undone.
+
+Uninstalling, or a version that drops an item, removes it unless the game still relies on it: a role someone holds, a permission a role still sets, or a category with something in it is kept and becomes the game's own. Removing a permission clears every override of it.
 
 ::: seealso
 - [@role]

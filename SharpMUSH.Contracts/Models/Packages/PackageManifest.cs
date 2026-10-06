@@ -23,6 +23,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Kind">Package kind: a softcode package (objects/attributes), an application package (a portal registration), or a managed package (a C# plugin DLL).</param>
 /// <param name="Application">The dynamic-application registration this package installs, when <see cref="Kind"/> is <see cref="PackageKind.Application"/>; otherwise null.</param>
 /// <param name="Binary">The compiled plugin DLL(s) this package carries, when <see cref="Kind"/> is <see cref="PackageKind.Managed"/>; otherwise null.</param>
+/// <param name="Declarations">The roles, permissions, categories and jobs the package declares, or null for none (see <see cref="Declared"/>).</param>
 public sealed record PackageManifest(
 	PackageFormatVersion Format,
 	string Name,
@@ -41,7 +42,12 @@ public sealed record PackageManifest(
 	IReadOnlyList<PackageObjectSpec> Objects,
 	PackageKind Kind = PackageKind.Softcode,
 	PackageApplicationSpec? Application = null,
-	PackageBinarySpec? Binary = null);
+	PackageBinarySpec? Binary = null,
+	PackageDeclarations? Declarations = null)
+{
+	/// <summary>What the package declares beyond its objects; never null.</summary>
+	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
+}
 
 /// <summary>
 /// The kinds of package the manager installs. A <see cref="Softcode"/>
@@ -139,7 +145,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 1);
+	public static PackageFormatVersion Supported { get; } = new(1, 2);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

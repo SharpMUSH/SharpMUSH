@@ -19,6 +19,11 @@ namespace SharpMUSH.Library.Models.Packages;
 /// exactly what it deposited. Empty for softcode/application packages. A simple
 /// string list on the existing record — no separate collection.
 /// </param>
+/// <param name="Owned">
+/// The categories, permissions, roles and jobs this package created and still owns, each as it was
+/// last applied: the baseline an upgrade merges against and the list an uninstall removes from.
+/// Null when it owns none.
+/// </param>
 public sealed record InstalledPackageRecord(
 	string Id,
 	string Version,
@@ -28,7 +33,8 @@ public sealed record InstalledPackageRecord(
 	string? PinnedBranch,
 	DateTimeOffset InstalledAt,
 	int CurrentRevision,
-	IReadOnlyList<string>? DeployedFiles = null);
+	IReadOnlyList<string>? DeployedFiles = null,
+	PackageDeclarations? Owned = null);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

@@ -272,6 +272,81 @@ Warnings (manifest is accepted): unknown keys (typo detection); reserved keys
 unused configure refs; more than 5 keywords; format minor newer than
 supported.
 
+## Roles, permissions and jobs (format 1.2)
+
+A package can bring the roles and custom permissions its softcode checks, the
+categories they sit in, and recurring jobs on `@job`'s scheduler. Declare them
+beside `objects:` and set `format: 1.2`; an older server warns and ignores the
+blocks.
+
+```yaml
+format: 1.2
+package: requests
+version: 1.0.0
+
+categories:                     # each list optional; a category needs a description
+  roles:
+    - name: Requests
+      description: Roles for working the request queue.
+  permissions:
+    - name: Requests
+      description: Permissions for the request queue.
+
+permissions:                    # custom permissions only, checked with permission() or PERM^ locks
+  - name: requests.handle
+    category: Requests          # declared above, or already in the game
+    description: Work on any request.
+
+roles:
+  - slug: handler               # what roles() lists and hasrole() takes
+    name: Request Handler       # optional display name (defaults to the slug)
+    category: Requests
+    color: "#4fc3c8"            # optional
+    priority: 11                # optional, 1-29: always below the wizard role
+    permissions:                # custom permissions only: allow | deny
+      requests.handle: allow
+
+jobs:
+  - ref: sweep                  # the job's name within the package
+    target: "{{desk}}"          # the object holding the attribute; it runs as that object
+    attribute: JOB`SWEEP
+    schedule: "0 4 * * *"       # five fields, as @job/create takes
+    timezone: UTC               # optional, default UTC
+    description: Closes requests idle for a month.
+```
+
+A role may allow or deny only custom permissions. Built-in ones (`wiki.admin`,
+`game.wizard`, ...) are the game's to hand out with `@role`, so installing a
+package never grants staff powers. A package cannot declare a system role, and
+a managed (`kind: managed`) package cannot declare any of these blocks.
+
+What install, upgrade and uninstall do:
+
+- **Install.** An item the game lacks is created and becomes the package's.
+  One the game already has (a `Staff` category, a `helper` role) is used as it
+  is: the package never changes or removes it. A role or permission another
+  installed package owns blocks the plan, as does a role naming a category or
+  permission that neither the package nor the game has.
+- **Upgrade.** The package's items are merged field by field against what the
+  previous version declared: a field the new version changes takes the new
+  value, and every other field keeps what the game has. Renaming the package's
+  role, or denying one of its permissions on it, survives an upgrade that
+  does not touch that field. A job keeps whether it is enabled, and keeps a
+  schedule set with `@job/schedule` until the package changes its schedule.
+- **Dropped items and uninstall.** Jobs are deleted. A role nobody holds, a
+  permission no remaining role sets, and an empty category are removed. One
+  the game still relies on (a role someone holds, a permission a role still
+  sets, a category with something in it) is kept and stops being the
+  package's, so reinstalling treats it as the game's own. Removing a
+  permission also clears every account and object override of it.
+- **Rollback** restores objects and attributes only; roles, permissions,
+  categories and jobs stay as they are.
+
+A package job runs its attribute as the target object, as `@trigger` would,
+with no account behind it. `@job/list/all` shows it as `[package/ref]`;
+`@job/disable`, `/enable` and `/schedule` work on it, but `@job/delete` does
+not: uninstall the package, or drop the job from the manifest.
+
 ## Application packages (`kind: application`)
 
 Most packages are **softcode** packages (`kind: softcode`, the default): they
