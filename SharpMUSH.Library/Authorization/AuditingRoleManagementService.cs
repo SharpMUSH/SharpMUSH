@@ -5,9 +5,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
-/// Records every role change <see cref="RoleManagementService"/> makes in the audit log. Every change,
-/// from the portal and from the game, already goes through that service, so recording here covers both
-/// once; a refused change is not recorded.
+/// Records every role, custom permission and category change <see cref="RoleManagementService"/> makes in
+/// the audit log. Every change, from the portal and from the game, already goes through that service, so
+/// recording here covers both once; a refused change is not recorded.
 /// </summary>
 public sealed class AuditingRoleManagementService(
 	RoleManagementService inner,
@@ -85,6 +85,54 @@ public sealed class AuditingRoleManagementService(
 		return outcome;
 	}
 
+	public async Task<RoleOutcome<CustomPermission>> DefinePermissionAsync(RoleActor actor, string scope, string category,
+		string description, CancellationToken ct = default)
+	{
+		var outcome = await inner.DefinePermissionAsync(actor, scope, category, description, ct);
+		if (outcome is CustomPermission permission)
+			await RecordAsync(actor, AuditActions.PermissionDefine, AuditTargets.Of(AuditTargetKinds.Permission, permission.Scope),
+				$"{permission.Category}: {permission.Description}", ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<Success>> RemovePermissionAsync(RoleActor actor, string scope, CancellationToken ct = default)
+	{
+		var outcome = await inner.RemovePermissionAsync(actor, scope, ct);
+		if (outcome is Success) await RecordAsync(actor, AuditActions.PermissionRemove, AuditTargets.Of(AuditTargetKinds.Permission, scope), null, ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<RoleCategory>> CreateCategoryAsync(RoleActor actor, CategoryKind kind, string name, string description,
+		CancellationToken ct = default)
+	{
+		var outcome = await inner.CreateCategoryAsync(actor, kind, name, description, ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), category.Description, ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<RoleCategory>> DescribeCategoryAsync(RoleActor actor, CategoryKind kind, string name, string description,
+		CancellationToken ct = default)
+	{
+		var outcome = await inner.DescribeCategoryAsync(actor, kind, name, description, ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), category.Description, ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<RoleCategory>> RenameCategoryAsync(RoleActor actor, CategoryKind kind, string name, string newName,
+		CancellationToken ct = default)
+	{
+		var outcome = await inner.RenameCategoryAsync(actor, kind, name, newName, ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategoryRename, CategoryTarget(kind, category.Name), $"from {name}", ct);
+		return outcome;
+	}
+
+	public async Task<RoleOutcome<Success>> DeleteCategoryAsync(RoleActor actor, CategoryKind kind, string name, CancellationToken ct = default)
+	{
+		var outcome = await inner.DeleteCategoryAsync(actor, kind, name, ct);
+		if (outcome is Success) await RecordAsync(actor, AuditActions.CategoryDelete, CategoryTarget(kind, name), null, ct);
+		return outcome;
+	}
+
 	private ValueTask RecordAsync(RoleActor actor, string action, AuditTarget target, string? details, CancellationToken ct)
 		=> actor switch
 		{
@@ -98,6 +146,10 @@ public sealed class AuditingRoleManagementService(
 			: AuditTargets.Of(AuditTargetKinds.Account, accountId);
 
 	private static AuditTarget RoleTarget(SharpRole role) => new(AuditTargetKinds.Role, role.Slug, role.Name);
+
+	/// <summary>A category is named within its list, so the id says which list: <c>role:Staff</c>, <c>permission:Scenes</c>.</summary>
+	private static AuditTarget CategoryTarget(CategoryKind kind, string name)
+		=> new(AuditTargetKinds.Category, $"{kind.ToString().ToLowerInvariant()}:{name}", name);
 
 	private static string Describe(RoleDraft draft)
 		=> $"priority {draft.Priority}; "
