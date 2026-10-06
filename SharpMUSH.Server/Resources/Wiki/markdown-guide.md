@@ -101,6 +101,25 @@ For example, the five most recently edited pages right now:
 ::: recent 5
 :::
 
+## Centring (SharpMUSH extension)
+
+CommonMark has no way to align text, so SharpMUSH adds one block. Everything
+between `::: center` and a bare `:::` is centred on the web, and in-game
+(`@wiki`, `rendermarkdown()`) each of its lines is centred in the text width,
+78 columns by default:
+
+```
+::: center
+# Welcome
+
+A game of *small towns and long winters*.
+:::
+```
+
+Headings, paragraphs, images and lists inside the block are all centred; a
+list keeps its bullets beside its items. Text outside the block stays
+left-aligned, including on the home page.
+
 ## Categories
 
 A page's categories are set in the editor's **Categories** field (below the text

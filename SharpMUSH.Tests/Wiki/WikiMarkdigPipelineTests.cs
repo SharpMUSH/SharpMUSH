@@ -18,6 +18,16 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("<strong>world</strong>");
 	}
 
+	/// <summary><c>::: center</c> is a container the portal's stylesheet centres (<c>div.center</c>).</summary>
+	[Test]
+	public async Task RenderToHtml_CenterContainer_ProducesCenterDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: center\n# Welcome\n:::");
+
+		await Assert.That(html).Contains("<div class=\"center\">");
+		await Assert.That(html).Contains("Welcome</h1>");
+	}
+
 	[Test]
 	public async Task RenderToHtml_Italic_ProducesEmTag()
 	{

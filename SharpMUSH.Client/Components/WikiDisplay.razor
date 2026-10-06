@@ -83,7 +83,7 @@ else if (Article is null)
 }
 else if (DisplayAsHero)
 {
-    <div class="WikiContent WikiContent--hero" style="text-align:center;">
+    <div class="WikiContent WikiContent--hero">
         @LocaleBanner
         <div class="mud-card-content">
             @RenderSegments
@@ -715,7 +715,8 @@ else
     }
 
     /// <summary>
-    /// True for the centred, chrome-free framing the home page gets inside the front-page widget.
+    /// True for the chrome-free framing the home page gets inside the front-page widget: its lead image
+    /// centred as the banner, and centred text only where the page asks for it with <c>::: center</c>.
     /// Only when <see cref="Embedded"/>: on the <c>/wiki/...</c> route the home page is an article
     /// like any other, and the hero would strip the very edit and history controls it needs there.
     /// </summary>

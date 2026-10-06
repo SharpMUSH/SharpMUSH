@@ -49,6 +49,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 - **Code Blocks**: Triple-backtick fenced code blocks with optional language tag for syntax highlighting (see below)
 - **Block Quotes**: `> Quote` rendered with 2-space indentation
 - **See Also footers**: a `::: seealso` block holding a list of `[topic]` or `` `code` `` names prints as one line, `See Also: @lock, @unlock`, wrapped under the first topic. If any item says more than its name, the list prints as a list under the label
+- **Centred blocks**: everything between `::: center` and a closing `:::` is wrapped to `<width>` and each line centred in it. The wiki and the web portal centre the same block on the page
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
 
 ## Syntax Highlighting in Code Blocks

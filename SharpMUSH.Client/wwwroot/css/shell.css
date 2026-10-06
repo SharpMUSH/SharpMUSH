@@ -1070,19 +1070,29 @@
 }
 
 /* ── Hero mode (home page) ── */
-/* The hero card uses text-align:center; these rules make block-level content
-   follow suit instead of pinning to the left edge. */
-
-/* Images are display:block, so text-align can't center them — auto margins do. */
-.WikiContent--hero .wiki-img {
+/* The page's lead image is the hero's banner. Images are display:block, so text-align can't
+   center them; auto margins do. */
+.WikiContent--hero .mud-card-content > p:first-child .wiki-img {
     margin-left: auto;
     margin-right: auto;
 }
 
-/* Lists: shrink-wrap the list box so it centers as a unit, keeping bullets
-   adjacent to their (left-aligned) items instead of at the page edge. */
-.WikiContent--hero .mud-card-content ul,
-.WikiContent--hero .mud-card-content ol {
+/* ── Centred blocks (`::: center`) ── */
+/* The author's way to centre part of a page; the terminal renderer centres the same block.
+   Images and tables center by their margins; lists shrink-wrap and center as a unit, keeping
+   bullets beside their (left-aligned) items instead of at the page edge. */
+.WikiContent div.center {
+    text-align: center;
+}
+
+.WikiContent div.center .wiki-img,
+.WikiContent div.center table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.WikiContent div.center ul,
+.WikiContent div.center ol {
     display: inline-block;
     text-align: left;
 }

@@ -157,11 +157,16 @@ public partial class RecursiveMarkdownRenderer
 	private static readonly HashSet<string> WikiDirectiveNames =
 		new(StringComparer.OrdinalIgnoreCase) { "category", "tag", "pagelist", "recent" };
 
+	/// <summary>The container that centres its contents: <c>::: center</c>.</summary>
+	public const string CenterContainerName = "center";
+
 	/// <summary>
 	/// Renders a <c>::: name args</c> custom container. The wiki's directive blocks
 	/// (category/tag/pagelist/recent) are live web-portal listings that a terminal
 	/// cannot resolve, so they render as a dimmed placeholder describing the listing.
-	/// Any other custom container renders its children like a normal block.
+	/// <c>::: center</c> centres each line of its contents in the render width, as the
+	/// portal centres it in the page. Any other custom container renders its children
+	/// like a normal block.
 	/// </summary>
 	protected virtual MString RenderCustomContainer(CustomContainer container)
 	{
@@ -182,7 +187,28 @@ public partial class RecursiveMarkdownRenderer
 			.Select(child => Render(child))
 			.Where(IsNonWhitespace)
 			.ToList();
-		return MarkupText.Join(MarkupText.Plain("\n"), parts);
+		var content = MarkupText.Join(MarkupText.Plain("\n"), parts);
+		return name.Equals(CenterContainerName, StringComparison.OrdinalIgnoreCase) ? Centered(content) : content;
+	}
+
+	/// <summary>
+	/// Each line of <paramref name="content"/> wrapped to the render width and centred in it, with no
+	/// trailing fill. A line that is already as wide as the width stays where it is.
+	/// </summary>
+	private MString Centered(MString content)
+	{
+		if (content.Length == 0) return content;
+
+		var lines = content
+			.Split("\n")
+			.SelectMany(line => line.Length == 0 ? [line] : line.WrapLines(_maxWidth))
+			.Select(line => line
+				.Trim(TrimType.TrimBoth, " ")
+				.Center(MarkupText.Space, MarkupText.Space, _maxWidth, TruncationType.Overflow)
+				.Trim(TrimType.TrimEnd, " "))
+			.ToArray();
+
+		return MarkupText.Join(MarkupText.NewLine, lines);
 	}
 
 	private MString RenderHtmlBlock(HtmlBlock html)
