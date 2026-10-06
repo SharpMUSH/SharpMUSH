@@ -5647,4 +5647,13 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>Scena nie została wstrzymana.</value>
   </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Jeszcze bez lokacji</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Prowadzi: {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>Wstrzymane, bez terminu</value>
+  </data>
 </root>

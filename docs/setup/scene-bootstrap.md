@@ -86,16 +86,16 @@ edit their own poses.
 
 | Command | Does |
 |---|---|
-| `+scene` | list active scenes |
-| `+scene <id>` | scene details card |
+| `+scene` · `/list` | list active scenes |
+| `+scene <id>` · `+event <id>` | scene details card |
 | `+scene/old` &nbsp;·&nbsp; `+scene/mine` | finished &nbsp;·&nbsp; your scenes |
 | `+scene/create <title>` | create + focus (active by default) |
-| `+scene/start` · `/pause` · `/finish` | lifecycle |
+| `+scene/start [<id>]` · `/pause [<id>][=<when>]` · `/finish` | lifecycle; a paused scene leaves the live list for the schedule until started again |
 | `+scene/join <id>` · `/leave` | membership + focus |
-| `+scene/tag <id>` · `/untag <id>` | RSVP |
+| `+scene/tag <id>` · `/untag <id>` (`/rsvp` · `/unrsvp`) | RSVP |
 | `+scene/activate <id>` · `/deactivate` | resume / pause recording without leaving |
 | `+scene/as <persona>` | display persona for your future poses |
-| `+scene/pitch <text>` | set the scene blurb |
+| `+scene/title <text>` · `/pitch <text>` | rename it · set the scene blurb |
 | `+scene/public` · `/private` | visibility |
 | `+scene/pose <id>=<text>` · `/say` · `/semipose` · `/emit` | pose into a named scene (what the portal's compose box sends); joins and focuses you on it |
 | `+scene/recall [<n>]` | print the last `<n>` poses, each under a rule naming its poser and id; bare, ``DATA`RECALL_ROUNDS`` rounds of the cast (2 × its size) |
@@ -103,7 +103,7 @@ edit their own poses.
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |
 | `+scene/schedule <title>=<when>` | schedule a roomless future scene |
-| `+scene/reschedule <id>=<when>` · `/unschedule <id>` · `/upcoming` | manage / list scheduled |
+| `+scene/reschedule <id>=<when>` · `/unschedule <id>` (`/cancel`) · `/upcoming` (`+scenes`, `+events`) | manage / list scheduled; rescheduling a running scene pauses it, cancelling marks a scene that has not started `cancelled` |
 | `+pot` | pose tracker (turn order for the focused scene) |
 
 **Reads are functions, writes are commands.** Reads use the `scene…()` functions

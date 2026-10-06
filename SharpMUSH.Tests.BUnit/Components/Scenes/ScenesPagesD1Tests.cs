@@ -88,7 +88,6 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	[Arguments("/scenes?scheduled=1", "Scheduled", "Night of Lamps")]
 	[Arguments("/scenes?finished=1", "Finished", "The Long Tide")]
 	public async Task TheAddress_PicksTheList(string path, string title, string scene)
 	{

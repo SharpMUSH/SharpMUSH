@@ -12,7 +12,7 @@
 
 @* The scene archive in the D1 kit: the plain header with Start scene, and the scenes as cards. Which
    scenes is the address the sidebar links to (ScenesFilter): every scene, the acting character's
-   (?mine=1), the scheduled ones or the finished ones. The live list is its own page, /scenes/active. *@
+   (?mine=1), the scheduled ones (as an agenda by day and time) or the finished ones. The live list is its own page, /scenes/active. *@
 <div class="scenes-page">
     <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@Heading" Description="@Description">
         <Actions>
@@ -70,6 +70,10 @@
     else if (_scenes is null || _scenes.Count == 0)
     {
         <EmptyBox>@Loc["ResNoScenesFound"]</EmptyBox>
+    }
+    else if (_filter == ScenesFilter.Scheduled)
+    {
+        <ScheduleAgenda Scenes="_scenes" />
     }
     else
     {
