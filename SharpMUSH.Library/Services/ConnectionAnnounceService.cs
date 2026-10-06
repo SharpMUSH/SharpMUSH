@@ -63,6 +63,7 @@ public class ConnectionAnnounceService(
 			}
 
 			await BroadcastAnnouncementAsync(player, fullMessage, isDark, isHiddenConnection);
+			await PublishOnlineChangedAsync(player, online: true);
 
 			await QueueHookAsync(player, player, "ACONNECT", connectionCount.ToString());
 
@@ -122,6 +123,10 @@ public class ConnectionAnnounceService(
 			}
 
 			await BroadcastAnnouncementAsync(player, fullMessage, isDark, isHiddenConnection);
+			if (remainingConnections == 0)
+			{
+				await PublishOnlineChangedAsync(player, online: false);
+			}
 
 			await QueueHookAsync(player, player, "ADISCONNECT", remainingConnections.ToString());
 
@@ -212,6 +217,23 @@ public class ConnectionAnnounceService(
 	}
 
 	/// <summary>
+	/// Tells the channels the player is on that they came or went, for their live member lists. Not gated
+	/// on <c>Cosmetic.AnnounceConnects</c> or a channel's <c>Announce</c> privilege: a member list is not an
+	/// announcement. Isolated as <see cref="BroadcastAnnouncementAsync"/> is, for the same reason.
+	/// </summary>
+	private async ValueTask PublishOnlineChangedAsync(AnySharpObject player, bool online)
+	{
+		try
+		{
+			await mediator.Publish(new PlayerOnlineChangedNotification(player, online));
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error updating channel member lists for player {Player}", player.Object().DBRef);
+		}
+	}
+
+	/// <summary>
 	/// Ports the zone (src/bsd.c:5994-6011) and master-room (src/bsd.c:6012-6015) traversal from
 	/// announce_connect; announce_disconnect (:6085-6127) does the same walk. If the player's zone is
 	/// set and is a Thing, the hook runs once on the zone itself; if it's a Room, the hook runs on
@@ -251,8 +273,9 @@ public class ConnectionAnnounceService(
 
 	/// <summary>
 	/// Ports the channel-broadcast portion of chat_player_announce (src/extchat.c:3187-3205): the
-	/// connect/disconnect line is published to every channel the player belongs to, skipping channels
-	/// with the "Quiet" privilege. A line from a hidden connection - or from a member who is hidden on
+	/// connect/disconnect line is published to every channel the player belongs to that has the "Announce"
+	/// privilege. PennMUSH announces on every channel without "Quiet"; SharpMUSH channels are quiet unless
+	/// they opt in, since a channel's history is for what was said on it. A line from a hidden connection - or from a member who is hidden on
 	/// that particular channel - goes out CB_SEEALL, so only See_All members (and the player
 	/// themselves) receive it; that is PennMUSH's
 	/// <c>if (Chanuser_Hide(up) || (desc_player-&gt;hide == 1))</c> at :3190. Per-viewer
@@ -265,7 +288,7 @@ public class ConnectionAnnounceService(
 
 		await foreach (var channel in mediator.CreateStream(new GetOnChannelQuery(player)))
 		{
-			if (channel.HasPriv("Quiet"))
+			if (!channel.HasPriv("Announce"))
 			{
 				continue;
 			}

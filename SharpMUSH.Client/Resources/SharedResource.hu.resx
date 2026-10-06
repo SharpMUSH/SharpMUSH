@@ -5340,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Még nincs itt semmi.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Tagok</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Most elérhető ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Most senki sem elérhető.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ez a játék nem őrzi meg az üzenetek előzményeit, ezért csak az ebben a látogatásban kapottak látszanak.</value>
   </data>

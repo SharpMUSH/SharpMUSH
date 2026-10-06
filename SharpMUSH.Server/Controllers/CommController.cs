@@ -23,6 +23,7 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   GET /api/comm/channels/{channel}/recall?lines=N&amp;after=ID — the channel's recall buffer (the last N lines, or
 ///                                                    all; with after, also every line after that id)
+///   GET /api/comm/channels/{channel}/who             — who is on the channel now, as @channel/who lists them
 ///   GET /api/comm/markers                            — the character's read markers
 ///   PUT /api/comm/markers/channels/{channel}         — move a channel's marker on
 ///   PUT /api/comm/markers/conversations              — move a page conversation's marker on
@@ -58,6 +59,7 @@ public class CommController(
 	IVisibleWorldProjection projection,
 	CommTextComposer textComposer,
 	IChannelMessageIdSource messageIds,
+	IConnectionService connectionService,
 	IOptionsWrapper<SharpMUSHOptions> options) : ControllerBase
 {
 	/// <summary>The most people one conversation marker may name; a page to more than this is not a conversation.</summary>
@@ -241,6 +243,30 @@ public class CommController(
 		}
 
 		return recalled;
+	}
+
+	/// <summary>
+	/// The channel's members as <c>@channel/who</c> lists them for the acting character, behind its gate: a
+	/// channel the character may not be told exists answers 404, as a missing one does.
+	/// </summary>
+	[HttpGet("channels/{channel}/who")]
+	public async Task<ActionResult<ChannelWhoList>> Who(string channel, CancellationToken ct)
+	{
+		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor) return Unauthorized();
+
+		if (await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator, notifyService, executor,
+				MarkupText.Plain(channel)) is not SharpChannel found)
+		{
+			return NotFound();
+		}
+
+		var privilegedWho = await ChannelHelper.PrivilegedWho(executor);
+		var members = (await ChannelHelper.ChannelMembers(connectionService, found))
+			.Where(member => member.ListedAsOn(privilegedWho))
+			.Select(member => new ChannelWhoMember(member.Object.Object().Name, member.Object.Object().DBRef.ToString()))
+			.ToList();
+
+		return new ChannelWhoList(found.Name.ToPlainText(), members);
 	}
 
 	[HttpGet("markers")]

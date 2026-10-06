@@ -751,11 +751,12 @@ public class ConnectionAnnounceServiceTests
 	}
 
 	/// <summary>
-	/// Task 13: the connect line is published to every channel the player belongs to that lacks the
-	/// "Quiet" privilege, ported from chat_player_announce (src/extchat.c:3164-3202).
+	/// Task 13: the connect line is published to every channel the player belongs to that has the
+	/// "Announce" privilege, ported from chat_player_announce (src/extchat.c:3164-3202) with the default
+	/// turned round: PennMUSH announces unless a channel is Quiet.
 	/// </summary>
 	[Test]
-	public async Task AnnounceConnectAsync_PlayerOnNonQuietChannel_PublishesChannelMessage()
+	public async Task AnnounceConnectAsync_PlayerOnAnnounceChannel_PublishesChannelMessage()
 	{
 		var communicationService = Substitute.For<ICommunicationService>();
 		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
@@ -764,7 +765,7 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 		var mediator = Substitute.For<IMediator>();
 
-		var channel = FakeChannel("Public", privs: []);
+		var channel = FakeChannel("Public", privs: ["Announce"]);
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
@@ -783,7 +784,7 @@ public class ConnectionAnnounceServiceTests
 	/// <summary>
 	/// Issue #904, gap 2: PennMUSH's chat_player_announce sends the line with <c>CB_SEEALL</c> when the
 	/// connecting descriptor is hidden (src/extchat.c:3190), so only See_All members receive it. Without
-	/// the flag, every ordinary member of every non-Quiet channel the player belongs to was told a
+	/// the flag, every ordinary member of every announcing channel the player belongs to was told a
 	/// hidden player had just arrived.
 	/// </summary>
 	[Test]
@@ -796,7 +797,7 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 		var mediator = Substitute.For<IMediator>();
 
-		var channel = FakeChannel("Public", privs: []);
+		var channel = FakeChannel("Public", privs: ["Announce"]);
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
@@ -828,7 +829,7 @@ public class ConnectionAnnounceServiceTests
 		var mediator = Substitute.For<IMediator>();
 
 		var player = FakeConnectedPlayer("Bob");
-		var channel = FakeChannel("Public", privs: [], HiddenMember(player));
+		var channel = FakeChannel("Public", privs: ["Announce"], HiddenMember(player));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
@@ -842,10 +843,11 @@ public class ConnectionAnnounceServiceTests
 	}
 
 	/// <summary>
-	/// Task 13: a channel with the "Quiet" privilege is skipped entirely.
+	/// Issue #1579: a channel without the "Announce" privilege is skipped entirely, which is every channel
+	/// by default. The member lists still hear of the connection.
 	/// </summary>
 	[Test]
-	public async Task AnnounceConnectAsync_PlayerOnQuietChannel_DoesNotPublish()
+	public async Task AnnounceConnectAsync_PlayerOnChannelWithoutAnnounce_DoesNotPublishALine()
 	{
 		var communicationService = Substitute.For<ICommunicationService>();
 		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
@@ -854,7 +856,7 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 		var mediator = Substitute.For<IMediator>();
 
-		var channel = FakeChannel("Quiet Channel", privs: ["Quiet"]);
+		var channel = FakeChannel("Quiet Channel", privs: ["Player", "Open"]);
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
 
@@ -866,6 +868,41 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await mediator.DidNotReceive().Publish(Arg.Any<ChannelMessageNotification>(), Arg.Any<CancellationToken>());
+		await mediator.Received(1).Publish(Arg.Is<PlayerOnlineChangedNotification>(n => n.Player == player && n.Online),
+			Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// A member list changes when a player's first connection opens and their last one closes, whatever
+	/// <c>announce_connects</c> says: a member list is not an announcement. A disconnect that leaves a
+	/// connection open changes nothing.
+	/// </summary>
+	[Test]
+	public async Task AnnounceDisconnectAsync_PublishesOffline_OnlyForTheLastConnection()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var options = configuration.CurrentValue;
+		var silent = options with { Cosmetic = options.Cosmetic with { AnnounceConnects = false } };
+		configuration.CurrentValue.Returns(silent);
+		var mediator = Substitute.For<IMediator>();
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeScheduler(), FakeLogger());
+
+		var player = FakeConnectedPlayer("Bob");
+
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 1, isHiddenConnection: false);
+		await mediator.DidNotReceive().Publish(Arg.Any<PlayerOnlineChangedNotification>(), Arg.Any<CancellationToken>());
+
+		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
+		await mediator.Received(1).Publish(Arg.Is<PlayerOnlineChangedNotification>(n => n.Player == player && !n.Online),
+			Arg.Any<CancellationToken>());
 	}
 
 	/// <summary>

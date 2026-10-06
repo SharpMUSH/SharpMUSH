@@ -5340,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Ingenting her ennå.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Medlemmer</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Pålogget nå ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Ingen er pålogget nå.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dette spillet lagrer ikke historikk for private meldinger, så bare meldinger fra dette besøket vises.</value>
   </data>

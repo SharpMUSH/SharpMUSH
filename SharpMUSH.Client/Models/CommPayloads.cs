@@ -2,7 +2,7 @@ using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Client.Models;
 
-// The comm-feed package's OOB payloads (`comm.channels`, `comm.message`), typed as far as the feed needs
+// The comm-feed package's OOB payloads (`comm.channels`, `comm.message`, `comm.who`), typed as far as the feed needs
 // beyond ICommFeed's own records. The wire contract is docs/softcode/comm-feed-handler.md; the design
 // handoff's proposal is docs/design/d1/README.md §7.3. CommPayloadParser builds these.
 
@@ -25,3 +25,7 @@ public sealed record CommChannelList(
 /// <param name="Recipients">A page's recipients, each with its objid when the payload's <c>toObjids</c>
 /// lines up with <c>to</c>; empty for a channel line.</param>
 public sealed record CommEntry(CommMessage Message, IReadOnlyList<CommParticipant> Recipients);
+
+/// <summary>A <c>comm.who</c> push: <paramref name="Member"/> came onto (<paramref name="Online"/>) or went off
+/// <paramref name="Channel"/>'s member list, as the receiving player sees it.</summary>
+public sealed record CommWhoChange(string Channel, CommParticipant Member, bool Online);

@@ -1,10 +1,11 @@
 # WebSocket Support Package — the Channels and Pages Handlers
 
 This document is part of the **WebSocket Support Package**. It describes the
-``CHANNEL`MESSAGE``, ``PAGE`MESSAGE`` and ``PLAYER`CHANNELS`` event handlers
-that give a player's web client their channels and pages as structured OOB
-pushes — the data source behind the Play sidebar's **Channels** and **Pages**
-groups and the channel view (`docs/design/d1/README.md` §5.1, board `06`).
+``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS`` and ``CHANNEL`WHO``
+event handlers that give a player's web client their channels, pages and who is
+on each channel as structured OOB pushes — the data source behind the Play
+sidebar's **Channels** and **Pages** groups and the channel view and its member
+list (`docs/design/d1/README.md` §5.1, board `06`).
 It is the channels-and-pages companion of
 [`room-contents-handler.md`](room-contents-handler.md).
 
@@ -43,10 +44,18 @@ events name the result:
   `addcom`/`delcom`, `@channel/wipe`, and being joined by someone who controls
   them), a change to their own channel flags (`gag`, `hide`, `mute`,
   `combine`, a title), and the rename or deletion of a channel they are on.
+- ``CHANNEL`WHO`` fires when a member comes onto or goes off a channel's
+  member list as `@channel/who` lists it (a thing always, a player while
+  connected, a member hiding on the channel only to a viewer who may see
+  hidden members): on connect, on the last disconnect, on joining or leaving,
+  and on starting or stopping `@channel/hide`. It names only the connected
+  player members whose view of the list changed, so a hidden member's
+  comings and goings reach those who may see them and nobody else, not even
+  as a timing.
 
 So `comm.message` goes to the delivered list (plus the pager, for a page, who
-saw their own page echoed) and `comm.channels` to the player whose list
-changed. Nothing reaches a player who did not see the line in their terminal:
+saw their own page echoed), `comm.channels` to the player whose list
+changed, and `comm.who` to the members the engine named. Nothing reaches a player who did not see the line in their terminal:
 the handler can only narrow the engine's list, never widen it.
 
 A hidden speaker is **not** anonymised: `@channel/hide` keeps a member off the
@@ -64,14 +73,18 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
 | ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms | line id |
 | ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | page id | |
 | ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect and resume) | | | | | |
+| ``CHANNEL`WHO`` | channel name | member objid | member name | `on` or `off` | viewer objids | cause | | |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
-  connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
+  connect or disconnect line, sent only on a channel with the `announce`
+  privilege) for a channel, and `say`, `pose` or `semipose`
   for a page.
 - The name and message are **plain text**, and for a channel, what the
   channel's mogrifier (`MOGRIFY`*`) made of them. A member's own
   `@chatformat` changes only their terminal line.
-- Cause is `connect`, `resume`, `join`, `leave`, `status`, `rename` or `delete`.
+- ``PLAYER`CHANNELS``' cause is `connect`, `resume`, `join`, `leave`, `status`,
+  `rename` or `delete`; ``CHANNEL`WHO``'s is `connect`, `disconnect`, `join`,
+  `leave` or `status`.
 - The line id is the id the channel's recall buffer holds the line under, which
   the portal's recall endpoint returns too. The page id is the id the page log
   keeps the page under (when `page_log` is on), which the portal's conversation
@@ -80,7 +93,7 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
   across a restart.
 - `%#` is the speaker or pager. For ``PLAYER`CHANNELS`` it is the player on
   connect and resume, and `#1` otherwise: the change is reported by the database write,
-  which does not know who asked.
+  which does not know who asked. For ``CHANNEL`WHO`` it is the member who came or went.
 
 `help event channel`, `help event page` and `help event player` carry the
 same in-game.
@@ -96,16 +109,18 @@ collide with `room-contents`' ``FN`*``.
 &CHANNEL`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7)))
 &PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1,%6)))
 &PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))
+&CHANNEL`WHO #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%4),comm.who,u(me/FN`COMM`WHO,%0,%1,%2,%3)))
 ```
 
 | Attribute | Decides |
 |---|---|
 | ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to: a CONNECTED player |
-| ``FN`COMM`RECIPIENTS`` (`%0` objids) | the players a `comm.message` goes to: ``filter(me/FN`COMM`VIEWER,%0)`` |
+| ``FN`COMM`RECIPIENTS`` (`%0` objids) | the players a `comm.message` or `comm.who` goes to: ``filter(me/FN`COMM`VIEWER,%0)`` |
 | ``FN`COMM`TEXT`` (`%0` style, `%1` name, `%2` message) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
 | ``FN`COMM`CHANNELROW`` (`%0` channel, `%1` viewer) | one row of `channels` |
 | ``FN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
 | ``FN`COMM`MESSAGE`` (`%0` kind … `%7` page recipients, `%8` line id) | the whole `comm.message` payload |
+| ``FN`COMM`WHO`` (`%0` channel, `%1` member objid, `%2` member name, `%3` on/off) | the whole `comm.who` payload |
 
 The idioms are the ones `room-contents` uses (see its handler document):
 `think null(...)` to swallow `oob()`'s count, `json_array()` with `%r` as the
@@ -190,6 +205,18 @@ A page (here a group pose-page):
   id whether or not the game keeps a page log. (Before `comm-feed` 1.2.0 a page
   had none.)
 
+### `comm.who`
+
+```json
+{"v":2,"channel":"Public","member":{"name":"Wren Halloway","objid":"#12:1790741467794"},"online":true}
+```
+
+- `online` is whether the receiving player now lists `member` on `channel`.
+  It is a change, not the list: the list itself is
+  `GET api/comm/channels/<channel>/who` (`ChannelWhoList`), `@channel/who`'s
+  members for the session's character, which the portal reads when it opens
+  the channel and keeps current with these.
+
 ## What the portal does with them
 
 `SharpMUSH.Client/Services/OobCommFeed.cs` (`ICommFeed`) reads both off the
@@ -259,6 +286,13 @@ of a missing `v` and of any malformed member):
   the same text pulled as pushed. The bundled default is used only when the
   attribute is absent. A logged page's `text` is composed the same way, with
   the pager as enactor.
+
+`SharpMUSH.Client/Services/ChannelWhoFeed.cs` (`IChannelWho`) keeps the member
+lists: it reads a channel's list from `api/comm/channels/<channel>/who` when the
+channel view opens it, applies each `comm.who` to every list it holds, and reads
+the open channel's list again on every `comm.channels` (connect, resume, a
+change to the viewer's own channels), since a change made while the connection
+was down is not replayed.
 
 ## Testing
 

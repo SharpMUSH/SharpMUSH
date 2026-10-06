@@ -66,6 +66,9 @@ public static class TerminalServiceCollectionExtensions
 		// it from the server.
 		services.AddSingleton<ICommFeed>(sp => new OobCommFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels,
 			history: sp.GetService<ICommHistory>(), connection: sp.GetRequiredService<PlayTerminalServiceHost>()));
+		// The channel view's member list, off the same store: comm.who pushes keep the list it reads current.
+		services.AddSingleton<IChannelWho>(sp => new ChannelWhoFeed(sp.GetRequiredService<PlayTerminalServiceHost>().OobChannels,
+			sp.GetService<ICommHistory>()));
 
 		services.AddSingleton<CharacterSwitchService>();
 		services.AddSingleton<TerminalLoginService>();
@@ -82,6 +85,9 @@ public static class TerminalServiceCollectionExtensions
 	/// to connecting the play terminal (a login, <see cref="CharacterUpgradeService"/>) does. Call once,
 	/// right after the host is built.
 	/// </summary>
-	public static void AttachPlayTerminalFeeds(this IServiceProvider services) =>
+	public static void AttachPlayTerminalFeeds(this IServiceProvider services)
+	{
 		services.GetRequiredService<ICommFeed>();
+		services.GetRequiredService<IChannelWho>();
+	}
 }

@@ -5340,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Ovdje još nema ničega.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Članovi</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Trenutno prisutni ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Trenutno nitko nije prisutan.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ova igra ne čuva povijest poruka, pa se prikazuju samo poruke iz ovog posjeta.</value>
   </data>

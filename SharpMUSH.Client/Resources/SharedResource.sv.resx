@@ -5340,6 +5340,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Inget här än.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Medlemmar</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Online nu ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Ingen är online just nu.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Det här spelet sparar ingen historik över privata meddelanden, så bara meddelanden från det här besöket visas.</value>
   </data>
