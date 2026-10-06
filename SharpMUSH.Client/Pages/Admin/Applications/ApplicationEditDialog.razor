@@ -34,6 +34,10 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
+                    <MudTextField @bind-Value="_permission" Label="@Loc["LayAppPermissionOptional"]" Variant="Variant.Outlined"
+                                  HelperText="@Loc["LayAppPermissionHelper"]" />
+                </MudItem>
+                <MudItem xs="12">
                     <MudTextField @bind-Value="_schemaUrl" Label="@Loc["LayAppSchemaUrl"]" Required="true" Variant="Variant.Outlined"
                                   HelperText="@Loc["LayAppSchemaUrlHelper"]" />
                 </MudItem>
@@ -115,6 +119,7 @@
     private int _order;
     private string? _scope;
     private string? _oobPackage;
+    private string? _permission;
 
     protected override void OnInitialized()
     {
@@ -134,6 +139,7 @@
             _order = Existing.Order;
             _scope = Existing.Scope;
             _oobPackage = Existing.OobPackage;
+            _permission = Existing.Permission;
         }
     }
 
@@ -168,7 +174,8 @@
             Existing?.ComponentAssemblyUrl,
             Existing?.ComponentTypeName,
             _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_scope) ? null : _scope.Trim(),
-            _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_oobPackage) ? null : _oobPackage.Trim());
+            _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_oobPackage) ? null : _oobPackage.Trim(),
+            string.IsNullOrWhiteSpace(_permission) ? null : _permission.Trim());
 
         var result = await Registry.UpsertAsync(model);
         _saving = false;

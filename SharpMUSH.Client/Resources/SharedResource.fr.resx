@@ -4901,4 +4901,7 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WidConfirm" xml:space="preserve">
+    <value>Confirmer</value>
+  </data>
 </root>

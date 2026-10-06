@@ -35,11 +35,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var role = AuthState is null
-            ? SharpMUSH.Library.Authorization.PortalRole.Guest
-            : PortalRoleHelper.CurrentRole((await AuthState).User);
+        var user = AuthState is null ? null : (await AuthState).User;
 
         var all = Applications ?? await Registry.ListAsync();
-        _apps = PortalNavSections.AppsForSection(all, role, Section);
+        _apps = PortalNavSections.AppsForSection(all, user, Section);
     }
 }

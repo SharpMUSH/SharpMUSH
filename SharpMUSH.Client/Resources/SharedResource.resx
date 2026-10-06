@@ -5945,4 +5945,16 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WidConfirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="LayAppPermission" xml:space="preserve">
+    <value>Permission</value>
+  </data>
+  <data name="LayAppPermissionOptional" xml:space="preserve">
+    <value>Permission (optional)</value>
+  </data>
+  <data name="LayAppPermissionHelper" xml:space="preserve">
+    <value>A permission scope the viewer must also hold, e.g. jobs.staff; hides the nav entry and refuses the page otherwise</value>
+  </data>
 </root>

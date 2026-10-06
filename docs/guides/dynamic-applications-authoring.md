@@ -76,7 +76,58 @@ ANSI/MXP markup. `select`/`radio`/`multiselect` carry an `options` array of
 `{value,label}`.
 
 **Display elements (for `view`, also usable in `form`):** `markdown`, `image` (`src_field`),
-`table` (`rows_field` + `columns`), `keyvalue` (`fields`), `divider`, `button`.
+`table` (`rows_field` + `columns`), `keyvalue` (`fields`), `timeline` (`rows_field`), `divider`,
+`button`. A form draws them exactly as a view does, so one `form` document can show a ticket's
+history above its comment box. Markdown never passes raw HTML through, and links with a scheme
+other than `http`/`https`/`mailto` are dropped.
+
+**Tables.** A column may carry `link` (an href template; `{field}` is replaced by that row's
+value, URL-escaped), `type: "chip"` (the cell as a chip), and `color_key` (the row field holding
+its color). The table's `empty` text shows when there are no rows:
+
+```jsonc
+{ "kind": "table", "rows_field": "jobs", "empty": "No open jobs.", "columns": [
+  { "key": "id",     "label": "#",      "link": "/apps/jobs/{id}" },
+  { "key": "status", "label": "Status", "type": "chip", "color_key": "status_color" },
+  { "key": "title",  "label": "Title" } ] }
+```
+
+Colors are `default`, `primary`, `secondary`, `tertiary`, `info`, `success`, `warning`,
+`error`, `dark`; anything else is `default`.
+
+**Timelines.** `{ "kind": "timeline", "rows_field": "entries", "empty": "No comments." }` over rows
+like:
+
+```jsonc
+{ "author": "Ada", "time": 1760000000, "body": "Fixed in **#12**.",
+  "format": "markdown",                       // or "code": verbatim, no markdown
+  "tag": "Staff only", "tag_color": "warning",
+  "actions": [ { "label": "Delete", "action": "delete_comment", "values": { "comment": 4 },
+                 "confirm": "Delete this comment?" } ] }
+```
+
+`time` is unix seconds (number or string), shown in the viewer's local time. An entry action
+dispatches the named action with its `values` merged over the form's field values.
+
+**Buttons** take `confirm` (asked in a dialog first), `values` (merged over the field values
+posted — two buttons can share a route and differ by intent), `color`, and `variant`
+(`filled`/`outlined`/`text`):
+
+```jsonc
+{ "kind": "button", "label": "Close job", "action": "update", "values": { "intent": "close" },
+  "confirm": "Close this job?", "color": "error", "variant": "filled" }
+```
+
+In a `view`, buttons and timeline actions post their `values` alone.
+
+**Fields** may carry `triggers_action`: the action dispatched whenever the value changes — a
+filter select that re-fetches its table:
+
+```jsonc
+{ "kind": "field", "key": "status", "type": "select", "label": "Show",
+  "options": [ {"value":"open","label":"Open"}, {"value":"all","label":"All"} ],
+  "triggers_action": "filter" }
+```
 
 **Layout.** A section stacks its elements one per row by default. To place fields
 side-by-side, set the section's `columns` to 2+ (it becomes a responsive grid, single-column
@@ -99,6 +150,7 @@ on mobile); give an element `span: N` to make it occupy N of those columns:
   "errors":   { "strength": "Must be 3–18.", "_global": "Roll failed." },
   "fields":   { "strength": 14, "dexterity": 9 },   // merged when on_success.merge_fields
   "schema":   { /* a replacement Portal Schema Document */ },
+  "data":     { "fields": { "entries": { "value": [ /* rows */ ], "visible": true } } },
   "redirect": "/character/Gandalf",
   "message":  "Character created."
 }
@@ -106,10 +158,29 @@ on mobile); give an element `span: N` to make it occupy N of those columns:
 
 - `_global` errors raise a snackbar; keyed errors attach to the matching field.
 - `merge_fields` fills the named fields with returned values.
+- `on_success.reset_fields: true` clears every input first, then merges the returned `fields`
+  (post a comment, get an empty box back).
+- A returned **`data` replaces the page's data payload**: tables and timelines redraw in place.
 - A returned **`schema` replaces the whole document** and the portal re-renders.
+- A `redirect` to `/apps/...` moves within the portal and reloads that application.
 
 > The `errors` shape is identical to the one the existing admin config form already
 > consumes, so this contract is battle-tested.
+
+## Sub-paths and the query string
+
+An application answers every address under its slug. In the registered `schema_url` and
+`data_url`, `{path}` is replaced by the sub-path after the slug (each segment URL-escaped), and the
+page's query string is appended to both:
+
+| Address | `data_url: http/jobs/{path}` fetches |
+|---|---|
+| `/apps/jobs` | `http/jobs/` |
+| `/apps/jobs/12` | `http/jobs/12` |
+| `/apps/jobs/12?mine=1` | `http/jobs/12?mine=1` |
+
+A `{path}` in the query works too (`http/jobs?id={path}`). Moving between these addresses — a
+table `link`, a `redirect` — refetches schema and data. Your route reads the rest as usual.
 
 ## Softcode-driven progression (no client branching)
 

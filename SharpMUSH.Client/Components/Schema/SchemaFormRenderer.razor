@@ -1,7 +1,6 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
-@using Markdig
 @inject SchemaAppService Schema
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
@@ -9,7 +8,8 @@
 
 @* Renders an editable Portal Schema Document (kind:"form"). Collects field values, POSTs actions to
    the in-game handler, and binds the structured response back. All branching/progression is
-   softcode-driven: an action may return a replacement schema, which simply re-renders. *@
+   softcode-driven: an action may return a replacement schema, which simply re-renders, or replacement
+   data, which redraws the display elements (tables, timelines) the form shares with a view. *@
 
 @if (!_model.HasPages)
 {
@@ -99,8 +99,12 @@ else
 @code {
     [Parameter, EditorRequired] public PortalSchemaDocument? Document { get; set; }
 
-    /// <summary>Optional prefill data (form editing an existing record).</summary>
+    /// <summary>Optional prefill data (form editing an existing record), also what display elements read.</summary>
     [Parameter] public SchemaData? Data { get; set; }
+
+    // The data display elements read: the parameter, until an action answers with replacement data.
+    private SchemaData? _data;
+    private SchemaData? _dataParameter;
 
     // Everything entered, the page showing and the errors bound; this component draws it and sends it.
     private readonly SchemaFormModel _model = new();
@@ -111,13 +115,26 @@ else
 
     protected override void OnParametersSet()
     {
+        if (!ReferenceEquals(Data, _dataParameter))
+        {
+            _data = _dataParameter = Data;
+        }
+
         if (!ReferenceEquals(_model.Document, Document))
         {
-            _model.Load(Document, Data);
+            _model.Load(Document, _data);
         }
     }
 
-    private async Task Dispatch(string actionName)
+    private Task Dispatch(string actionName) => Dispatch(actionName, null);
+
+    private Task Dispatch(SchemaActionRequest request) => Dispatch(request.Action, request.Values);
+
+    /// <summary>
+    /// Posts the field values, with <paramref name="values"/> merged over them, to the action's route, and
+    /// applies the answer.
+    /// </summary>
+    private async Task Dispatch(string actionName, IReadOnlyDictionary<string, JsonElement>? values)
     {
         if (_model.Action(actionName) is not { } action)
         {
@@ -137,21 +154,32 @@ else
         _model.ClearErrors();
         StateHasChanged();
 
-        var result = await Schema.SubmitAsync(action.Route!, _model.Values);
+        var result = await Schema.SubmitAsync(action.Route!, _model.Payload(values));
 
         _busy = false;
 
         if (result.Ok)
         {
-            if (result.Fields is not null && (action.OnSuccess?.MergeFields ?? false))
+            var reset = action.OnSuccess?.ResetFields ?? false;
+            if (result.Fields is not null && reset)
+            {
+                _model.ResetValues();
+            }
+
+            if (result.Fields is not null && (reset || (action.OnSuccess?.MergeFields ?? false)))
             {
                 _model.MergeFields(result.Fields);
+            }
+
+            if (result.Data is not null)
+            {
+                _data = result.Data;
             }
 
             if (result.Schema is not null)
             {
                 // Softcode-driven progression: re-render from the returned document.
-                _model.Load(result.Schema, Data);
+                _model.Load(result.Schema, _data);
             }
 
             if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Toast) || !string.IsNullOrWhiteSpace(result.Message))
@@ -177,13 +205,21 @@ else
     }
 
     private string GetString(string key) => _model.GetString(key);
-    private void SetString(string key, string? value) => _model.SetString(key, value);
     private bool GetBool(string key) => _model.GetBool(key);
-    private void SetBool(string key, bool value) => _model.SetBool(key, value);
     private double? GetNumber(string key) => _model.GetNumber(key);
-    private void SetNumber(string key, double? value) => _model.SetNumber(key, value);
     private IEnumerable<string> GetMulti(string key) => _model.GetMulti(key);
-    private void SetMulti(string key, IEnumerable<string> values) => _model.SetMulti(key, values);
+
+    /// <summary>
+    /// Stores an edit, then dispatches the field's <c>triggers_action</c> if it names one — how a filter
+    /// select re-asks softcode for its rows the moment it changes.
+    /// </summary>
+    private Task Changed(SchemaElement field, Action store)
+    {
+        store();
+        return string.IsNullOrWhiteSpace(field.TriggersAction) || _busy
+            ? Task.CompletedTask
+            : Dispatch(field.TriggersAction!, null);
+    }
     private string? Error(string key) => _model.Error(key);
     private bool HasAction(string name) => _model.HasAction(name);
 
@@ -191,21 +227,13 @@ else
     {
         switch ((element.Kind ?? "field").ToLowerInvariant())
         {
-            case "divider":
-                <MudDivider Class="my-2" />
-                break;
-            case "markdown":
-                <div class="mb-2">@((MarkupString)Markdown.ToHtml(element.Value ?? string.Empty))</div>
-                break;
-            case "button":
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mb-2"
-                           OnClick="@(() => Dispatch(element.Action ?? string.Empty))"
-                           Disabled="@(_busy || string.IsNullOrWhiteSpace(element.Action) || !HasAction(element.Action!))">
-                    @(element.Label ?? Loc["WidAction"].Value)
-                </MudButton>
-                break;
             case "field":
                 @RenderField(element)
+                break;
+            case var kind when SchemaDisplay.Kinds.Contains(kind):
+                <div class="mb-2">
+                    <SchemaDisplay Element="element" Data="_data" Actions="_model.Document?.Actions" Busy="_busy" OnAction="Dispatch" />
+                </div>
                 break;
         }
     };
@@ -227,7 +255,7 @@ else
         {
             case "boolean":
                 <div class="mb-2">
-                    <MudSwitch T="bool" Value="GetBool(key)" ValueChanged="v => SetBool(key, v)"
+                    <MudSwitch T="bool" Value="GetBool(key)" ValueChanged="v => Changed(element, () => _model.SetBool(key, v))"
                                Label="@label" Color="Color.Primary" />
                     @if (!string.IsNullOrWhiteSpace(help))
                     {
@@ -243,13 +271,13 @@ else
                     <div class="mb-3">
                         <MudText Typo="Typo.body2">@label: @(GetNumber(key)?.ToString() ?? "—")</MudText>
                         <MudSlider T="double" Value="@(GetNumber(key) ?? element.Validation?.Min ?? 0)"
-                                   ValueChanged="v => SetNumber(key, v)"
+                                   ValueChanged="v => Changed(element, () => _model.SetNumber(key, v))"
                                    Min="@(element.Validation?.Min ?? 0)" Max="@(element.Validation?.Max ?? 100)" Step="1" />
                     </div>
                 }
                 else
                 {
-                    <MudNumericField T="double?" Value="GetNumber(key)" ValueChanged="v => SetNumber(key, v)"
+                    <MudNumericField T="double?" Value="GetNumber(key)" ValueChanged="v => Changed(element, () => _model.SetNumber(key, v))"
                                      Label="@label" Variant="Variant.Outlined" Class="mb-2"
                                      HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error"
                                      Min="@(element.Validation?.Min)" Max="@(element.Validation?.Max)" />
@@ -258,13 +286,13 @@ else
 
             case "textarea":
             case "mstring":
-                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)"
+                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))"
                               Label="@label" Variant="Variant.Outlined" Lines="4" Class="mb-2"
                               HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error" />
                 break;
 
             case "select":
-                <MudSelect T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)"
+                <MudSelect T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))"
                            Label="@label" Variant="Variant.Outlined" Class="mb-2"
                            HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error">
                     @foreach (var option in element.Options ?? [])
@@ -276,7 +304,7 @@ else
 
             case "multiselect":
                 <MudSelect T="string" SelectedValues="GetMulti(key).ToHashSet()"
-                           SelectedValuesChanged="v => SetMulti(key, v)" MultiSelection="true"
+                           SelectedValuesChanged="v => Changed(element, () => _model.SetMulti(key, v))" MultiSelection="true"
                            Label="@label" Variant="Variant.Outlined" Class="mb-2"
                            HelperText="@help" Error="@(error is not null)" ErrorText="@error">
                     @foreach (var option in element.Options ?? [])
@@ -289,7 +317,7 @@ else
             case "radio":
                 <div class="mb-2">
                     <MudText Typo="Typo.body2">@label</MudText>
-                    <MudRadioGroup T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)">
+                    <MudRadioGroup T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))">
                         @foreach (var option in element.Options ?? [])
                         {
                             <MudRadio T="string" Value="@option.Value">@option.Label</MudRadio>
@@ -304,13 +332,13 @@ else
 
             case "date":
                 <MudDatePicker Label="@label" Date="_model.GetDate(key)"
-                               DateChanged="d => _model.SetDate(key, d)"
+                               DateChanged="d => Changed(element, () => _model.SetDate(key, d))"
                                Variant="Variant.Outlined" Class="mb-2" HelperText="@help"
                                Error="@(error is not null)" ErrorText="@error" />
                 break;
 
             default:
-                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => SetString(key, v)"
+                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))"
                               Label="@label" Variant="Variant.Outlined" Class="mb-2"
                               HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error"
                               MaxLength="@(element.Validation?.MaxLength ?? 524288)" />

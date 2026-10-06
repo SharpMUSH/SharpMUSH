@@ -41,8 +41,8 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var role = AuthState is null ? PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
-        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), role, Section);
+        var user = AuthState is null ? null : (await AuthState).User;
+        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, Section);
     }
 
     private bool IsCurrent(string href) =>

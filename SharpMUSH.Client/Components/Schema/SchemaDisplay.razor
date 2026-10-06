@@ -1,0 +1,234 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Applications
+@inject IDialogService DialogService
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One display element of a Portal Schema Document — markdown, image, table, keyvalue, timeline, divider,
+   button — drawn from the data payload. Shared by SchemaViewRenderer and SchemaFormRenderer so a form can
+   show the same tables and timelines a view does. It sends no requests: a button or a timeline action
+   asks the renderer hosting it to dispatch, after confirming when the schema asks it to. *@
+
+@switch (Kind)
+{
+    case "divider":
+        <MudDivider Class="my-2" />
+        break;
+
+    case "markdown":
+        <div class="schema-markdown">@((MarkupString)SchemaRendering.MarkdownToHtml(Element.Value))</div>
+        break;
+
+    case "image":
+        var src = Element.SrcField is not null ? SchemaViewRenderer.ValueToString(Lookup(Element.SrcField)) : Element.Value;
+        @if (ImageUrlPolicy.IsRenderable(src))
+        {
+            <img class="schema-image" src="@ApiUrl.Resolve(src!)" alt="@(Element.Alt ?? string.Empty)" loading="lazy" />
+        }
+        break;
+
+    case "table":
+        @RenderTable()
+        break;
+
+    case "keyvalue":
+        <dl class="schema-kv">
+            @foreach (var key in (Element.Fields ?? []).Where(IsKeyVisible))
+            {
+                <div class="schema-kv-row">
+                    <dt class="schema-label">@key</dt>
+                    <dd class="schema-value">@SchemaViewRenderer.ValueToString(Lookup(key))</dd>
+                </div>
+            }
+        </dl>
+        break;
+
+    case "timeline":
+        @RenderTimeline()
+        break;
+
+    case "button":
+        <MudButton Variant="@SchemaRendering.ParseVariant(Element.Variant)"
+                   Color="@SchemaRendering.ParseColor(Element.Color, Color.Secondary)"
+                   Class="mb-2 schema-button"
+                   OnClick="@(() => RequestAsync(Element.Action, Element.Values, Element.Confirm, Element.Label))"
+                   Disabled="@(Busy || !CanDispatch(Element.Action))">
+            @(Element.Label ?? Loc["WidAction"].Value)
+        </MudButton>
+        break;
+}
+
+@code {
+    /// <summary>The element kinds this component draws; anything else is the hosting renderer's (fields).</summary>
+    public static readonly IReadOnlySet<string> Kinds =
+        new HashSet<string>(["divider", "markdown", "image", "table", "keyvalue", "timeline", "button"], StringComparer.OrdinalIgnoreCase);
+
+    [Parameter, EditorRequired] public SchemaElement Element { get; set; } = default!;
+
+    /// <summary>The data payload tables, timelines, images and keyvalues read from.</summary>
+    [Parameter] public SchemaData? Data { get; set; }
+
+    /// <summary>The document's actions; a button or timeline action naming one it lacks is disabled.</summary>
+    [Parameter] public IReadOnlyDictionary<string, SchemaAction>? Actions { get; set; }
+
+    /// <summary>True while the hosting renderer has an action in flight.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Raised, after any confirmation, with the action to dispatch and the values to merge in.</summary>
+    [Parameter] public EventCallback<SchemaActionRequest> OnAction { get; set; }
+
+    private string Kind => (Element.Kind ?? string.Empty).ToLowerInvariant();
+
+    private bool CanDispatch(string? action)
+        => !string.IsNullOrWhiteSpace(action) && Actions?.ContainsKey(action) == true;
+
+    private async Task RequestAsync(string? action, IReadOnlyDictionary<string, JsonElement>? values, string? confirm, string? title)
+    {
+        if (!CanDispatch(action))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(confirm))
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync(
+                title ?? Loc["WidConfirm"].Value, confirm,
+                yesText: Loc["WidConfirm"].Value, cancelText: Loc["Cancel"].Value);
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
+
+        await OnAction.InvokeAsync(new SchemaActionRequest(action!, values));
+    }
+
+    private JsonElement? Lookup(string key)
+        => Data?.Fields is not null && Data.Fields.TryGetValue(key, out var v) && v.Visible ? v.Value : null;
+
+    private bool IsKeyVisible(string key)
+        => !string.IsNullOrEmpty(SchemaViewRenderer.ValueToString(Lookup(key)));
+
+    private IReadOnlyList<JsonElement> Rows()
+        => Element.RowsField is not null && Lookup(Element.RowsField) is { ValueKind: JsonValueKind.Array } rows
+            ? rows.EnumerateArray().ToList()
+            : [];
+
+    private RenderFragment RenderTable() => __builder =>
+    {
+        var rows = Rows();
+        if (Element.Columns is null)
+        {
+            return;
+        }
+
+        if (rows.Count == 0)
+        {
+            @if (!string.IsNullOrWhiteSpace(Element.Empty))
+            {
+                <div class="schema-empty">@Element.Empty</div>
+            }
+            return;
+        }
+
+        <MudSimpleTable Dense="true" Striped="true" Class="schema-table">
+            <thead>
+                <tr>
+                    @foreach (var col in Element.Columns)
+                    {
+                        <th>@col.Label</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
+                {
+                    <tr>
+                        @foreach (var col in Element.Columns)
+                        {
+                            <td>@RenderCell(col, row)</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    };
+
+    private RenderFragment RenderCell(SchemaColumn column, JsonElement row) => __builder =>
+    {
+        var text = row.ValueKind == JsonValueKind.Object && row.TryGetProperty(column.Key, out var cell)
+            ? SchemaViewRenderer.ValueToString(cell)
+            : string.Empty;
+        var color = column.ColorKey is not null && row.ValueKind == JsonValueKind.Object
+                    && row.TryGetProperty(column.ColorKey, out var colorValue)
+            ? SchemaRendering.ParseColor(SchemaViewRenderer.ValueToString(colorValue))
+            : Color.Default;
+        var href = column.Link is null ? null : SchemaRendering.FillLink(column.Link, row);
+        var isChip = string.Equals(column.Type, "chip", StringComparison.OrdinalIgnoreCase);
+
+        RenderFragment content = isChip
+            ? @<MudChip T="string" Size="Size.Small" Color="color" Class="schema-chip">@text</MudChip>
+            : @<span class="@(color == Color.Default ? null : $"mud-{color.ToString().ToLowerInvariant()}-text")">@text</span>;
+
+        @if (href is not null)
+        {
+            <a class="schema-link" href="@href">@content</a>
+        }
+        else
+        {
+            @content
+        }
+    };
+
+    private RenderFragment RenderTimeline() => __builder =>
+    {
+        var entries = Rows().Select(SchemaRendering.ReadTimelineEntry).ToList();
+        if (entries.Count == 0)
+        {
+            @if (!string.IsNullOrWhiteSpace(Element.Empty))
+            {
+                <div class="schema-empty">@Element.Empty</div>
+            }
+            return;
+        }
+
+        <ol class="schema-timeline">
+            @foreach (var entry in entries)
+            {
+                <li class="schema-timeline-entry">
+                    <div class="schema-timeline-head">
+                        <span class="schema-timeline-author">@entry.Author</span>
+                        @if (!string.IsNullOrEmpty(entry.Time))
+                        {
+                            <span class="schema-timeline-time">@entry.Time</span>
+                        }
+                        @if (entry.Tag is not null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="entry.TagColor" Class="schema-timeline-tag">@entry.Tag</MudChip>
+                        }
+                    </div>
+                    @if (entry.IsCode)
+                    {
+                        <pre class="schema-timeline-body schema-timeline-code"><code>@entry.Body</code></pre>
+                    }
+                    else
+                    {
+                        <div class="schema-timeline-body schema-markdown">@((MarkupString)SchemaRendering.MarkdownToHtml(entry.Body))</div>
+                    }
+                    @if (entry.Actions.Count > 0)
+                    {
+                        <div class="schema-timeline-actions">
+                            @foreach (var action in entry.Actions)
+                            {
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Class="schema-timeline-action"
+                                           OnClick="@(() => RequestAsync(action.Action, action.Values, action.Confirm, action.Label))"
+                                           Disabled="@(Busy || !CanDispatch(action.Action))">
+                                    @action.Label
+                                </MudButton>
+                            }
+                        </div>
+                    }
+                </li>
+            }
+        </ol>
+    };
+}

@@ -78,9 +78,8 @@
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _entries = await BuildNavCatalog.VisibleAsync(Authorization, user);
-        var role = PortalRoleHelper.CurrentRole(user);
         var all = await Registry.ListAsync();
-        _apps = [.. PortalNavSections.AppsForSection(all, role, "Build"), .. PortalNavSections.AppsForSection(all, role, "Manage")];
+        _apps = [.. PortalNavSections.AppsForSection(all, user, "Build"), .. PortalNavSections.AppsForSection(all, user, "Manage")];
     }
 
     /// <summary>

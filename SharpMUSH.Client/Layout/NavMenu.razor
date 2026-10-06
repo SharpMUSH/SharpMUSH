@@ -207,15 +207,13 @@
         // Independent of the role and the application list, so it is not queued behind them.
         var serverInfo = LoadServerInfoAsync();
 
-        var role = AuthState is null
-            ? PortalRole.Guest
-            : PortalRoleHelper.CurrentRole((await AuthState).User);
+        var user = AuthState is null ? null : (await AuthState).User;
 
         // The startup catalog, not a second GET api/applications of our own: the list is the same
         // for every viewer (the caller filters by role), and the catalog is already fetching it.
         await Applications.Loaded;
         _apps = Applications.All;
-        _novelSections = PortalNavSections.NovelSections(_apps, role);
+        _novelSections = PortalNavSections.NovelSections(_apps, user);
 
         await serverInfo;
     }

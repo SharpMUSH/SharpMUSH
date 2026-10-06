@@ -121,8 +121,8 @@
         {
             _directory = rows;
         }
-        var role = AuthState is null ? SharpMUSH.Library.Authorization.PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
-        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), role, "Play")
+        var user = AuthState is null ? null : (await AuthState).User;
+        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, "Play")
             .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Page)
             .ToList();
     }

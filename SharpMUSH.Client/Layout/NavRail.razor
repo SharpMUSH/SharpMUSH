@@ -149,7 +149,7 @@
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _build = await BuildNavCatalog.VisibleAsync(Authorization, user);
-        await LoadAppsAsync(PortalRoleHelper.CurrentRole(user));
+        await LoadAppsAsync(user);
     }
 
     protected override async Task OnInitializedAsync()
@@ -158,15 +158,15 @@
         _gameName = await ServerInfo.GameNameAsync();
     }
 
-    private async Task LoadAppsAsync(PortalRole role)
+    private async Task LoadAppsAsync(System.Security.Claims.ClaimsPrincipal user)
     {
         var apps = await Registry.ListAsync();
-        _novelSections = PortalNavSections.NovelSections(apps, role)
-            .Select(name => PortalNavSections.AppsForSection(apps, role, name))
+        _novelSections = PortalNavSections.NovelSections(apps, user)
+            .Select(name => PortalNavSections.AppsForSection(apps, user, name))
             .Where(list => list.Count > 0)
             .Select(list => new NovelSection(list[0].NavPlacement!, list[0], list))
             .ToList();
-        _buildApps = [.. PortalNavSections.AppsForSection(apps, role, "Build"), .. PortalNavSections.AppsForSection(apps, role, "Manage")];
+        _buildApps = [.. PortalNavSections.AppsForSection(apps, user, "Build"), .. PortalNavSections.AppsForSection(apps, user, "Manage")];
     }
 
     private void Locate()

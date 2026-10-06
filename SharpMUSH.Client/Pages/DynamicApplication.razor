@@ -1,4 +1,6 @@
 @page "/apps/{Slug}"
+@page "/apps/{Slug}/{**Rest}"
+@implements IDisposable
 @using SharpMUSH.Client.Components.Schema
 @using SharpMUSH.Client.Components.Admin
 @using SharpMUSH.Client.Models.Applications
@@ -9,6 +11,7 @@
 @inject SchemaAppService Schema
 @inject PluginComponentLoader ComponentLoader
 @inject AccountAuthService AccountAuth
+@inject NavigationManager Nav
 
 <PageTitle>@(_app?.DisplayName ?? Loc["NavApplication"])</PageTitle>
 
@@ -77,17 +80,22 @@
     }
     else if (_schema.IsForm)
     {
-        <SchemaFormRenderer Document="_schema" Data="_data" />
+        @* Keyed by what was fetched, so /apps/jobs/12 → /apps/jobs/13 starts a fresh form rather than
+           carrying the values typed on the previous record. *@
+        <SchemaFormRenderer @key="_loadedFrom" Document="_schema" Data="_data" />
     }
     else
     {
-        <SchemaViewRenderer Document="_schema" Data="_data" />
+        <SchemaViewRenderer @key="_loadedFrom" Document="_schema" Data="_data" />
     }
 </div>
 </AppSectionFrame>
 
 @code {
     [Parameter] public string Slug { get; set; } = string.Empty;
+
+    /// <summary>The sub-path after the slug (<c>/apps/jobs/12</c> → <c>12</c>), filling <c>{path}</c> in the app's routes.</summary>
+    [Parameter] public string? Rest { get; set; }
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
@@ -99,18 +107,63 @@
     private SchemaData? _data;
     private Type? _componentType;
 
+    // What the showing page was loaded for: the address (sub-path and query included) and the
+    // signed-in state. A load is skipped when both are unchanged, so the parameter set and the
+    // location change one navigation raises do not fetch twice.
+    private string? _loadedUri;
+    private Task<AuthenticationState>? _loadedAuth;
+    private string? _loadedFrom;
+    private int _generation;
+
+    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+
+    /// <summary>
+    /// A query-only navigation (<c>/apps/jobs</c> → <c>/apps/jobs?status=open</c>) passes the page the same
+    /// parameters, which Blazor does not re-deliver, so the address change itself triggers the reload.
+    /// </summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (Location() is { } location && string.Equals(location.Slug, Slug, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(Nav.Uri, _loadedUri, StringComparison.Ordinal))
+        {
+            _ = InvokeAsync(async () =>
+            {
+                await LoadAsync();
+                StateHasChanged();
+            });
+        }
+    }
+
     protected override async Task OnParametersSetAsync()
     {
+        if (string.Equals(Nav.Uri, _loadedUri, StringComparison.Ordinal) && ReferenceEquals(AuthState, _loadedAuth)
+            && string.Equals(_app?.Slug, Slug, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var generation = ++_generation;
+        _loadedUri = Nav.Uri;
+        _loadedAuth = AuthState;
         _loading = true;
         _schema = null;
         _data = null;
         _componentType = null;
         _needsCharacter = false;
-        _app = await Registry.GetAsync(Slug);
+        var app = await Registry.GetAsync(Slug);
+        if (generation != _generation) return;
+        _app = app;
 
         if (_app is not null)
         {
-            _authorized = await IsAuthorizedAsync(_app.MinimumRoleEnum);
+            _authorized = await IsAuthorizedAsync(_app);
             if (_authorized)
             {
                 if (_app.IsComponent)
@@ -126,13 +179,44 @@
                 }
                 else
                 {
-                    await LoadSchemaAppAsync();
+                    await LoadSchemaAppAsync(generation);
                 }
             }
         }
 
+        if (generation != _generation) return;
         _loading = false;
     }
+
+    /// <summary>
+    /// The slug, sub-path segments and query of the current address when it is an /apps/ address. The
+    /// segments come back unescaped, ready to be escaped once each into a route.
+    /// </summary>
+    private (string Slug, IReadOnlyList<string> Segments, string Query)? Location()
+    {
+        var relative = Nav.ToBaseRelativePath(Nav.Uri);
+        var fragment = relative.IndexOf('#');
+        if (fragment >= 0) relative = relative[..fragment];
+        var queryStart = relative.IndexOf('?');
+        var query = queryStart >= 0 ? relative[(queryStart + 1)..] : string.Empty;
+        var path = queryStart >= 0 ? relative[..queryStart] : relative;
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length < 2 || !string.Equals(segments[0], "apps", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return (Uri.UnescapeDataString(segments[1]), segments.Skip(2).Select(Uri.UnescapeDataString).ToList(), query);
+    }
+
+    /// <summary>
+    /// The sub-path and query that fill this application's routes: read from the address when it is this
+    /// app's, else from the <see cref="Rest"/> parameter with no query.
+    /// </summary>
+    private (IReadOnlyList<string> Segments, string Query) PathAndQuery()
+        => Location() is { } location && string.Equals(location.Slug, Slug, StringComparison.OrdinalIgnoreCase)
+            ? (location.Segments, location.Query)
+            : ((Rest ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries), string.Empty);
 
     /// <summary>
     /// Fetches the schema and (optionally) the data document, filling any page-context token in
@@ -143,11 +227,13 @@
     /// requested <c>/http/profile?objid=%7Bobjid%7D</c> literally, for every persona, and reported the
     /// empty answer as "Nothing to display."
     /// </summary>
-    private async Task LoadSchemaAppAsync()
+    private async Task LoadSchemaAppAsync(int generation)
     {
         var objid = await ActingObjidAsync();
-        var schemaUrl = Substitute(_app!.SchemaUrl, objid);
-        var dataUrl = string.IsNullOrWhiteSpace(_app.DataUrl) ? null : Substitute(_app.DataUrl!, objid);
+        var (segments, query) = PathAndQuery();
+        var schemaUrl = Substitute(_app!.SchemaUrl, objid) is { } schemaRoute ? SchemaRendering.ApplyPath(schemaRoute, segments, query) : null;
+        var dataUrl = string.IsNullOrWhiteSpace(_app.DataUrl) ? null
+            : Substitute(_app.DataUrl!, objid) is { } dataRoute ? SchemaRendering.ApplyPath(dataRoute, segments, query) : null;
 
         // A route we cannot fill is not a route we should fetch.
         if (schemaUrl is null || (_app.DataUrl is { Length: > 0 } && dataUrl is null))
@@ -156,11 +242,13 @@
             return;
         }
 
-        _schema = await Schema.GetSchemaAsync(schemaUrl) is PortalSchemaDocument schema ? schema : null;
-        if (dataUrl is not null)
-        {
-            _data = await Schema.GetDataAsync(dataUrl) is SchemaData data ? data : null;
-        }
+        var schemaRead = Schema.GetSchemaAsync(schemaUrl);
+        var dataRead = dataUrl is null ? null : Schema.GetDataAsync(dataUrl);
+        var schema = await schemaRead is PortalSchemaDocument document ? document : null;
+        var data = dataRead is not null && await dataRead is SchemaData payload ? payload : null;
+        if (generation != _generation) return;
+
+        (_schema, _data, _loadedFrom) = (schema, data, $"{schemaUrl}\n{dataUrl}");
     }
 
     /// <summary>
@@ -219,14 +307,7 @@
         return result;
     }
 
-    private async Task<bool> IsAuthorizedAsync(PortalRole minimum)
-    {
-        if (AuthState is null)
-        {
-            return minimum <= PortalRole.Guest;
-        }
-
-        var state = await AuthState;
-        return PortalRoleHelper.Meets(state.User, minimum);
-    }
+    /// <summary>The viewer's role meets the app's minimum and, when it names one, they hold its permission.</summary>
+    private async Task<bool> IsAuthorizedAsync(PortalApplication app)
+        => app.Admits(AuthState is null ? null : (await AuthState).User);
 }
