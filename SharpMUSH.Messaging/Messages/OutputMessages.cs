@@ -71,10 +71,16 @@ public record GMCPOutputMessage(long Handle, string Module, string Message) : IH
 /// </summary>
 public record MSDPOutputMessage(long Handle, Dictionary<string, string> Variables) : IHandleMessage;
 
+/// <summary>One MSSP variable and every value it carries, the default last.</summary>
+public record MSSPVariable(string Name, string[] Values);
+
 /// <summary>
-/// Message sent from MainProcess to ConnectionServer to send MSSP configuration to a connection
+/// Message sent from MainProcess to ConnectionServer with the MSSP report, which the connection server
+/// answers <c>IAC DO MSSP</c> with. Published when the report changes, and when a connection server asks
+/// (<see cref="MSSPReportRequestMessage"/>), because the telnet option has to be answered at once and
+/// the connection server cannot build the report itself.
 /// </summary>
-public record MSSPOutputMessage(long Handle, Dictionary<string, string> Configuration) : IHandleMessage;
+public record MSSPReportMessage(MSSPVariable[] Variables);
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection

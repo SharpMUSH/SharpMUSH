@@ -96,9 +96,22 @@ The listener options a `mush.cnf` carries that nothing reads (`portal_port`,
 `ssl_portal_port`, `ip_addr`, `ssl_ip_addr`, `socket_file`, `use_ws`, `ws_url`) are
 marked "Not used", each with what sets it instead (the ConnectionServer settings, or
 the server's Kestrel addresses), via `SharpConfigAttribute.Unused`. `port` and
-`ssl_port` open no listener either, but `MSSP-REQUEST` reports them, so their
+`ssl_port` open no listener either, but MSSP reports them, so their
 descriptions say so instead. No other option
 needs a restart, so there is no restart marker (#1565).
+
+### MSSP (`/admin/config/mssp`) — `config.admin`
+
+What crawlers read through the MSSP telnet option and `MSSP-REQUEST`, one report for
+both (`IMsspReportService`). Rows follow the specification's tables
+(`MsspCatalog`, in `SharpMUSH.Configuration`). A variable the server reports itself
+(name, players, uptime, ports, website, codebase, family, charsets, protocols) is a greyed,
+read-only row naming where it comes from, with a link to the section that sets it. The rest
+edit the `mssp` option (`MsspOptions`, a variable → values dictionary in the configuration
+store, so it needs no schema of its own). Names MSSP does not list go under "Other
+variables". A `mush.cnf` import reads PennMUSH's `mssp name/value` lines into it. The
+connection server holds the latest report, which the main process sends when it changes
+(`MsspReportPublisher`) and when a connection server starts and asks for it.
 
 ### Layout Editor (`/admin/layout`)
 

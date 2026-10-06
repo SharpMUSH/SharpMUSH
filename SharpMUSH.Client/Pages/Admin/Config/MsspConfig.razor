@@ -1,0 +1,435 @@
+@page "/admin/config/mssp"
+@attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Configuration.Mssp
+@using SharpMUSH.Client.Models.Configuration
+@inject MsspService MsspService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AdmMssp"] - @Loc["Configuration"]</PageTitle>
+
+@* The MSSP settings: a card of rows per group of the specification's tables. A variable the server
+   reports itself is a greyed, read-only row saying where its value comes from, with a link to the
+   section that sets it; the rest edit the mssp option. The unsaved bar works as on every config
+   section, and the aside shows the saved report as crawlers read it. *@
+<div class="config-section">
+    <div class="config-section-main">
+        <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AdmMssp"]" Description="@Loc["AdmMsspDescription"]" />
+
+        <div class="config-section-content">
+            @if (_loading)
+            {
+                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+            }
+            else if (_loadError is not null)
+            {
+                <KitCard>
+                    <MudAlert Severity="Severity.Error">@string.Format(Loc["AdmMsspLoadFailed"], _loadError)</MudAlert>
+                </KitCard>
+            }
+            else
+            {
+                @foreach (var group in MsspNaming.Groups)
+                {
+                    <div class="cfg-group" id="@MsspNaming.Anchor(group)">
+                        <SectionLabel>@GroupTitle(group)</SectionLabel>
+                        <KitCard>
+                            @foreach (var variable in MsspCatalog.All.Where(v => v.Group == group))
+                            {
+                                @if (variable.ReportedByServer)
+                                {
+                                    @ServerRow(variable)
+                                }
+                                else
+                                {
+                                    @SettingRow(variable)
+                                }
+                            }
+                        </KitCard>
+                    </div>
+                }
+
+                <div class="cfg-group" id="@MsspNaming.OtherAnchor">
+                    <SectionLabel>@Loc["AdmMsspGroupOther"]</SectionLabel>
+                    <KitCard>
+                        <div class="cfg-row cfg-row--stacked">
+                            <div class="cfg-row-text">
+                                <div class="cfg-row-help">@Loc["AdmMsspOtherHelp"]</div>
+                            </div>
+                            <div class="cfg-row-control cfg-row-control--full">
+                                <div class="cfg-dict">
+                                    @foreach (var other in _draft.Others)
+                                    {
+                                        var key = _draft.OtherKey(other);
+                                        <div class="cfg-dict-entry" @key="other">
+                                            <div class="cfg-dict-head">
+                                                <input class="cfg-text mssp-other-name" placeholder="@Loc["AdmMsspVariableName"]" aria-label="@Loc["AdmMsspVariableName"]"
+                                                       value="@other.Name"
+                                                       @onchange="@(e => Edit(() => other.Name = e.Value?.ToString() ?? string.Empty))" />
+                                                <button type="button" class="cfg-icon-btn cfg-icon-btn--danger"
+                                                        aria-label="@Loc["AdmMsspRemoveVariable"]" title="@Loc["AdmMsspRemoveVariable"]"
+                                                        @onclick="@(() => Edit(() => _draft.Others.Remove(other)))">
+                                                    <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" />
+                                                </button>
+                                            </div>
+                                            @Chips(other.Values, index => other.Values.RemoveAt(index))
+                                            <input class="cfg-text" placeholder="@Loc["AdmMsspAddValue"]" aria-label="@Loc["AdmMsspAddValue"]"
+                                                   value="@other.ValueDraft"
+                                                   @oninput="@(e => other.ValueDraft = e.Value?.ToString() ?? string.Empty)"
+                                                   @onkeydown="@(e => OnEnter(e, () => _draft.CommitOtherDraft(other)))" />
+                                            @if (_problems.TryGetValue(key, out var problem))
+                                            {
+                                                <div class="cfg-row-error">@problem</div>
+                                            }
+                                        </div>
+                                    }
+                                    <button type="button" class="cfg-add" @onclick="@(() => Edit(() => _draft.Others.Add(new MsspOtherVariable())))">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["AdmMsspAddVariable"]
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </KitCard>
+                </div>
+            }
+        </div>
+
+        @if (!_loading && _draft.HasChanges)
+        {
+            <BottomBar Class="cfg-unsaved">
+                <div class="cfg-unsaved-row">
+                    <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" Class="cfg-unsaved-icon" />
+                    <span class="cfg-unsaved-text"><strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]</span>
+                    <span class="cfg-count">@Loc.Plural("ResChangeCount", "count", _draft.ChangedCount)</span>
+                    <span class="cfg-unsaved-spacer"></span>
+                    <CapsuleButton Class="cfg-reset" OnClick="ResetChanges" Disabled="_saving">@Loc["ResetChanges"]</CapsuleButton>
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" OnClick="SaveAsync" Disabled="_saving">
+                        @(_saving ? Loc["Saving"] : Loc["SaveConfiguration"])
+                    </CapsuleButton>
+                </div>
+            </BottomBar>
+        }
+    </div>
+
+    @if (!_loading && _loadError is null)
+    {
+        <aside class="config-section-aside">
+            <KitCard Aside="true" Title="@Loc["AdmConfigInThisSection"]">
+                <div class="cfg-toc-list">
+                    @foreach (var group in MsspNaming.Groups)
+                    {
+                        @TocLink(MsspNaming.Anchor(group), GroupTitle(group), MsspCatalog.All.Count(v => v.Group == group))
+                    }
+                    @TocLink(MsspNaming.OtherAnchor, Loc["AdmMsspGroupOther"], _draft.Others.Count)
+                </div>
+            </KitCard>
+            <KitCard Aside="true" Title="@Loc["AdmMsspReport"]" Sub="@Loc["AdmMsspReportHelp"]">
+                <dl class="mssp-report">
+                    @foreach (var variable in _report)
+                    {
+                        <dt>@variable.Name</dt>
+                        <dd>@string.Join(", ", variable.Values)</dd>
+                    }
+                </dl>
+            </KitCard>
+        </aside>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+    private bool _saving;
+    private string? _loadError;
+    private IReadOnlyList<MsspReportedVariable> _report = [];
+    private readonly MsspDraft _draft = new();
+    private Dictionary<string, string> _problems = new();
+
+    /// <summary>The "#mssp-…" anchor in the address, so the table of contents can mark it current.</summary>
+    private string? _currentAnchor;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var fragment = new Uri(NavigationManager.Uri).Fragment;
+        _currentAnchor = fragment.Length > 1 ? fragment[1..] : null;
+
+        switch (await MsspService.GetAsync())
+        {
+            case MsspSettingsResponse response:
+                Show(response);
+                break;
+            case ApiFailure failure:
+                _loadError = failure.Message;
+                break;
+        }
+
+        _loading = false;
+    }
+
+    private void Show(MsspSettingsResponse response)
+    {
+        _report = response.Report;
+        _savedSettings = response.Settings;
+        _draft.Load(response.Settings);
+        _problems = new();
+    }
+
+    private string GroupTitle(MsspGroup group) => Loc[$"AdmMsspGroup{group}"];
+
+    /// <summary>A server-reported variable's value as the row shows it: flags as Yes or No, the start time as a date too.</summary>
+    private string ReportedValue(MsspVariable variable)
+    {
+        if (_report.FirstOrDefault(v => v.Name == variable.Name) is not { } reported)
+        {
+            return Loc["AdmMsspNotReported"];
+        }
+
+        return (variable.Name, variable.Kind, reported.Values) switch
+        {
+            (_, MsspValueKind.Flag, ["1"]) => Loc["AdmMsspYes"],
+            (_, MsspValueKind.Flag, ["0"]) => Loc["AdmMsspNo"],
+            ("UPTIME", _, [var unix]) when long.TryParse(unix, out var seconds) =>
+                $"{DateTimeOffset.FromUnixTimeSeconds(seconds).ToLocalTime():yyyy-MM-dd HH:mm} ({unix})",
+            _ => string.Join(", ", reported.Values)
+        };
+    }
+
+    private string? Problem(string name) => _problems.GetValueOrDefault(name);
+
+    private string HelpId(MsspVariable variable) => "mssp-help-" + ConfigNaming.Slug(variable.Name);
+
+    private RenderFragment RowText(MsspVariable variable, bool changed, RenderFragment? source = null) => __builder =>
+    {
+        <div class="cfg-row-text">
+            <div class="cfg-row-name">
+                <span>@MsspNaming.Title(variable.Name)</span>
+                <code class="cfg-row-key">@variable.Name</code>
+                @if (changed)
+                {
+                    <span class="cfg-row-changed">@Loc["ResChangedBadge"]</span>
+                }
+            </div>
+            <div class="cfg-row-help" id="@HelpId(variable)">@variable.Description</div>
+            @source
+            @if (Problem(variable.Name) is { } problem)
+            {
+                <div class="cfg-row-error">@problem</div>
+            }
+        </div>
+    };
+
+    /// <summary>A variable the server reports: its current value, greyed, and where it comes from.</summary>
+    private RenderFragment ServerRow(MsspVariable variable) => __builder =>
+    {
+        var section = variable.Option is { } option ? MsspNaming.SectionFor(option) : null;
+        <div class="cfg-row cfg-row--inline mssp-row--server" data-mssp="@variable.Name">
+            @RowText(variable, false, Source(variable, section))
+            <div class="cfg-row-control">
+                <input class="cfg-text mssp-locked" type="text" readonly disabled aria-label="@MsspNaming.Title(variable.Name)"
+                       aria-describedby="@HelpId(variable)" value="@ReportedValue(variable)" />
+                @if (section is not null)
+                {
+                    <a class="cfg-icon-btn" href="@section.Route" aria-label="@string.Format(Loc["AdmMsspEditIn"], Loc[section.TitleKey])"
+                       title="@string.Format(Loc["AdmMsspEditIn"], Loc[section.TitleKey])">
+                        <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
+                    </a>
+                }
+            </div>
+        </div>
+    };
+
+    private RenderFragment Source(MsspVariable variable, ConfigSection? section) => __builder =>
+    {
+        <div class="mssp-source">
+            <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" />
+            @switch (variable.Source)
+            {
+                case MsspSource.Option:
+                    <span>@Loc["AdmMsspFromOption"] <code>@variable.Option</code>@if (section is not null) {<text> · </text><a href="@section.Route">@Loc[section.TitleKey]</a>}</span>
+                    break;
+                case MsspSource.Live:
+                    <span>@Loc["AdmMsspLive"]</span>
+                    break;
+                default:
+                    <span>@Loc["AdmMsspServer"]</span>
+                    break;
+            }
+        </div>
+    };
+
+    /// <summary>A variable the administrator sets, with the control its kind takes.</summary>
+    private RenderFragment SettingRow(MsspVariable variable) => __builder =>
+    {
+        var stacked = variable.Kind is MsspValueKind.Choice or MsspValueKind.Choices or MsspValueKind.List;
+        var name = variable.Name;
+        var title = MsspNaming.Title(name);
+        <div class="cfg-row @(stacked ? "cfg-row--stacked" : "cfg-row--inline")" data-mssp="@name">
+            @RowText(variable, _draft.IsChanged(name))
+            <div class="cfg-row-control @(stacked ? "cfg-row-control--full" : "")">
+                @switch (variable.Kind)
+                {
+                    case MsspValueKind.Flag:
+                        var flag = _draft.Single(name);
+                        <div class="cfg-pills" role="group" aria-label="@title" aria-describedby="@HelpId(variable)">
+                            @Pill(Loc["AdmMsspYes"], flag == "1", () => _draft.SetSingle(name, "1"))
+                            @Pill(Loc["AdmMsspNo"], flag == "0", () => _draft.SetSingle(name, "0"))
+                            @Pill(Loc["AdmMsspNotReported"], flag.Length == 0, () => _draft.SetSingle(name, null), none: true)
+                        </div>
+                        break;
+                    case MsspValueKind.Choice:
+                        var chosen = _draft.Single(name);
+                        <div class="cfg-pills cfg-pills--start" role="group" aria-label="@title" aria-describedby="@HelpId(variable)">
+                            @foreach (var choice in variable.Choices)
+                            {
+                                @Pill(choice, chosen == choice, () => _draft.Toggle(name, choice))
+                            }
+                            @Pill(Loc["AdmMsspNotReported"], chosen.Length == 0, () => _draft.SetSingle(name, null), none: true)
+                        </div>
+                        break;
+                    case MsspValueKind.Choices:
+                        var picked = _draft.Values(name);
+                        <div class="cfg-pills cfg-pills--start" role="group" aria-label="@title" aria-describedby="@HelpId(variable)">
+                            @foreach (var choice in variable.Choices)
+                            {
+                                @Pill(choice, picked.Contains(choice), () => _draft.ToggleMany(name, choice))
+                            }
+                        </div>
+                        break;
+                    case MsspValueKind.List:
+                        @Chips(_draft.Values(name), index => _draft.RemoveAt(name, index))
+                        <input class="cfg-text" placeholder="@Loc["AdmMsspAddValue"]" aria-label="@title" aria-describedby="@HelpId(variable)"
+                               list="@(variable.Choices.Count > 0 ? ListId(name) : null)"
+                               value="@_draft.ListDraft(name)"
+                               @oninput="@(e => _draft.SetListDraft(name, e.Value?.ToString() ?? string.Empty))"
+                               @onkeydown="@(e => OnEnter(e, () => _draft.CommitListDraft(name)))" />
+                        @Suggestions(variable)
+                        break;
+                    case MsspValueKind.Number:
+                        <input class="cfg-num" type="number" inputmode="numeric" aria-label="@title" aria-describedby="@HelpId(variable)"
+                               list="@(variable.Choices.Count > 0 ? ListId(name) : null)"
+                               value="@_draft.Single(name)"
+                               @onchange="@(e => Edit(() => _draft.SetSingle(name, e.Value?.ToString())))" />
+                        @Suggestions(variable)
+                        break;
+                    default:
+                        <input class="cfg-text" type="text" aria-label="@title" aria-describedby="@HelpId(variable)"
+                               list="@(variable.Choices.Count > 0 ? ListId(name) : null)"
+                               value="@_draft.Single(name)"
+                               @onchange="@(e => Edit(() => _draft.SetSingle(name, e.Value?.ToString())))" />
+                        @Suggestions(variable)
+                        break;
+                }
+            </div>
+        </div>
+    };
+
+    private static string ListId(string name) => "mssp-choices-" + ConfigNaming.Slug(name);
+
+    private RenderFragment Suggestions(MsspVariable variable) => __builder =>
+    {
+        @if (variable.Choices.Count > 0)
+        {
+            <datalist id="@ListId(variable.Name)">
+                @foreach (var choice in variable.Choices)
+                {
+                    <option value="@choice"></option>
+                }
+            </datalist>
+        }
+    };
+
+    private RenderFragment Pill(string label, bool on, Action pick, bool none = false) => __builder =>
+    {
+        <button type="button" class="cfg-pill @(on ? "cfg-pill--on" : "") @(none ? "cfg-pill--none" : "")" aria-pressed="@(on ? "true" : "false")"
+                @onclick="@(() => Edit(pick))">
+            @label
+        </button>
+    };
+
+    private RenderFragment Chips(IReadOnlyList<string> values, Action<int> remove) => __builder =>
+    {
+        <div class="cfg-chips">
+            @if (values.Count == 0)
+            {
+                <span class="cfg-empty">@Loc["NoItems"]</span>
+            }
+            @for (var i = 0; i < values.Count; i++)
+            {
+                var index = i;
+                <span class="cfg-chip">
+                    @values[index]
+                    <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {values[index]}")"
+                            @onclick="@(() => Edit(() => remove(index)))">×</button>
+                </span>
+            }
+        </div>
+    };
+
+    private RenderFragment TocLink(string anchor, string title, int count) => __builder =>
+    {
+        var current = anchor == _currentAnchor;
+        @* The path is spelt out: a bare "#anchor" resolves against <base href="/"> and leaves the page. *@
+        <a class="cfg-toc @(current ? "cfg-toc--current" : null)" href="@($"/admin/config/mssp#{anchor}")"
+           aria-current="@(current ? "location" : null)" @onclick="@(() => _currentAnchor = anchor)">
+            <span class="cfg-toc-name">@title</span>
+            <span class="cfg-toc-count">@count</span>
+        </a>
+    };
+
+    private void Edit(Action edit)
+    {
+        edit();
+        // A problem shown for a row clears once the row is edited, and is found again on save.
+        if (_problems.Count > 0)
+        {
+            _problems = _draft.Problems(HasField);
+        }
+    }
+
+    private void OnEnter(KeyboardEventArgs args, Action commit)
+    {
+        if (args.Key == "Enter")
+        {
+            Edit(commit);
+        }
+    }
+
+    private string HasField(string name) => string.Format(Loc["AdmMsspHasField"], name);
+
+    private void ResetChanges()
+    {
+        _draft.Load(_savedSettings);
+        _problems = new();
+    }
+
+    private IReadOnlyDictionary<string, string[]> _savedSettings = new Dictionary<string, string[]>();
+
+    private async Task SaveAsync()
+    {
+        _problems = _draft.Problems(HasField);
+        if (_problems.Count > 0)
+        {
+            Snackbar.Add(Loc["AdmMsspFix"].Value, Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            switch (await MsspService.SaveAsync(_draft.Settings()))
+            {
+                case MsspSettingsResponse response:
+                    Show(response);
+                    Snackbar.Add(Loc["AdmMsspSaved"].Value, Severity.Success);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(string.Format(Loc["AdmMsspSaveFailed"], failure.Message), Severity.Error);
+                    break;
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

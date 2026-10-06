@@ -437,3 +437,13 @@ internal static class ConnectionIncarnation
 		return connections?.Get(handle)?.Metadata.GetValueOrDefault("SessionId") == session;
 	}
 }
+
+/// <summary>A connection server started and asked for the MSSP report.</summary>
+public class MSSPReportRequestConsumer(Services.MsspReportPublisher publisher) : IMessageConsumer<MSSPReportRequestMessage>
+{
+	public Task HandleAsync(MSSPReportRequestMessage message, CancellationToken cancellationToken = default)
+	{
+		publisher.RequestSend();
+		return Task.CompletedTask;
+	}
+}

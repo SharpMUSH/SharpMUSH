@@ -158,6 +158,8 @@ public class Program
 		// This resolves the logger from DI automatically. Protocol plugins and per-connection
 		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
 		builder.Services.AddTelnetServer();
+		builder.Services.AddSingleton<MsspReportHolder>();
+		builder.Services.AddHostedService<MsspReportRequestService>();
 
 		builder.Services.AddHostedService<SharpMUSH.SocketServer.Services.HealthMonitoringService>();
 
@@ -186,6 +188,7 @@ public class Program
 				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
 				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
 				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();
+				x.AddConsumer<MSSPReportConsumer, MSSPReportMessage>();
 				x.AddConsumer<SessionResumeResponseConsumer, SessionResumeResponseMessage>();
 				x.AddConsumer<MainProcessShutdownConsumer, MainProcessShutdownMessage>();
 			});

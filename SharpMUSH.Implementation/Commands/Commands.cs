@@ -93,6 +93,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IAuditLog Audit { get; }
 
+	private IMsspReportService MsspReport { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -149,6 +151,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IBooleanExpressionParser booleanExpressionParser,
 		IPageLogService pageLog,
 		IAuditLog audit,
+		IMsspReportService msspReport,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -197,6 +200,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		BooleanExpressionParser = booleanExpressionParser;
 		PageLog = pageLog;
 		Audit = audit;
+		MsspReport = msspReport;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

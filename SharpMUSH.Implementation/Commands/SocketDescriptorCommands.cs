@@ -8,6 +8,7 @@ using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
@@ -63,30 +64,9 @@ public partial class Commands
 	private string ShowTime(DateTimeOffset when)
 		=> when.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
 
-	/// <summary>
-	/// PennMUSH <c>count_players()</c> (src/bsd.c): connected descriptors that have a player behind
-	/// them, skipping hidden (DARK) ones unless <c>count_all</c> is set.
-	/// </summary>
-	private async ValueTask<int> CountPlayers()
-	{
-		var countAll = Configuration.CurrentValue.Cosmetic.CountAll;
-		var count = 0;
-
-		await foreach (var connection in ConnectionService.GetAll())
-		{
-			if (connection.Ref is not { } reference) continue;
-
-			// GoodObject first, and unconditionally: a handle can outlive the object it is bound to, and
-			// such a descriptor is not a connected player under any counting rule.
-			if (await Mediator.Send(new GetObjectNodeQuery(reference)) is not AnySharpObject found) continue;
-
-			if (!countAll && await found.IsDark()) continue;
-
-			count++;
-		}
-
-		return count;
-	}
+	/// <summary>PennMUSH <c>count_players()</c> (src/bsd.c); see <see cref="ConnectedPlayers"/>.</summary>
+	private ValueTask<int> CountPlayers()
+		=> ConnectedPlayers.CountAsync(ConnectionService, Mediator, Configuration.CurrentValue.Cosmetic.CountAll);
 
 	/// <summary>
 	/// <c>INFO</c> — PennMUSH <c>dump_info()</c> (src/bsd.c). A fixed, machine-readable block that
@@ -122,40 +102,26 @@ public partial class Commands
 
 	/// <summary>
 	/// <c>MSSP-REQUEST</c> — PennMUSH <c>report_mssp()</c> (src/bsd.c) in its descriptor form: the
-	/// same values the MSSP telnet option carries, as plain tab-separated text for crawlers that
-	/// never negotiate telnet.
+	/// same report the MSSP telnet option carries (<see cref="IMsspReportService"/>), as plain
+	/// tab-separated text for crawlers that never negotiate telnet.
 	/// </summary>
 	[SharpCommand(Name = "MSSP-REQUEST", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> MsspRequest(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var net = Configuration.CurrentValue.Net;
-		var uptime = await ObjectDataService.GetExpandedServerDataAsync<UptimeData>();
-
-		// Leading blank line and tab separators are PennMUSH's, and the MSSP spec's.
+		// Leading blank line and tab separators are PennMUSH's, and the MSSP spec's. A variable with
+		// several values repeats its name on one line per value, the default last.
 		var lines = new List<string> { string.Empty, "MSSP-REPLY-START" };
 
-		lines.Add($"NAME\t{net.MudName}");
-		lines.Add($"PLAYERS\t{await CountPlayers()}");
-		lines.Add($"UPTIME\t{(uptime?.StartTime ?? DateTimeOffset.UtcNow).ToUnixTimeSeconds()}");
-		lines.Add($"PORT\t{net.Port}");
-		if (net.SslPort != 0)
+		foreach (var variable in await MsspReport.BuildAsync())
 		{
-			lines.Add($"SSL\t{net.SslPort}");
-		}
-		lines.Add($"PUEBLO\t{(net.Pueblo ? 1 : 0)}");
-		lines.Add($"CODEBASE\tSharpMUSH {Implementation.Generated.VersionInfo.SharpMUSHVersion}");
-		lines.Add("FAMILY\tTinyMUD");
-		if (!string.IsNullOrEmpty(net.MudUrl))
-		{
-			lines.Add($"WEBSITE\t{net.MudUrl}");
+			lines.AddRange(variable.Values.Select(value => $"{variable.Name}\t{value}"));
 		}
 
 		// Deliberate divergence. PennMUSH nests the terminator inside `if (mssp)`, so a game with no
 		// admin-defined mssp entries answers MSSP-REQUEST with a reply that never ends — a crawler
-		// reading until MSSP-REPLY-END waits for a sentinel that is not coming. SharpMUSH has no
-		// admin mssp option yet, so copying that would make every reply unterminated. The terminator
-		// is unconditional here; the spec requires it.
+		// reading until MSSP-REPLY-END waits for a sentinel that is not coming. The terminator is
+		// unconditional here; the spec requires it.
 		lines.Add("MSSP-REPLY-END");
 
 		await NotifyService.Notify(parser.CurrentState.Handle!.Value, string.Join("\n", lines));

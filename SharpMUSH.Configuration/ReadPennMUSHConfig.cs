@@ -1,4 +1,5 @@
 using SharpMUSH.Configuration.Generated;
+using SharpMUSH.Configuration.Mssp;
 using SharpMUSH.Configuration.Options;
 using System.Text.RegularExpressions;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
@@ -306,6 +307,9 @@ public static partial class ReadPennMushConfig
 			SitelockRules = new SitelockRulesOptions(
 				Rules: new Dictionary<string, string[]>()
 			),
+			Mssp = new MsspOptions(
+				Variables: Mssp(text, skipped)
+			),
 			Warning = new WarningOptions(
 				WarnInterval: RequiredString(Get(nameof(WarningOptions.WarnInterval)), d.Warning.WarnInterval)
 			),
@@ -448,6 +452,58 @@ public static partial class ReadPennMushConfig
 		}
 
 		return restrictions;
+	}
+
+	/// <summary>
+	/// Every <c>mssp name/value</c> line, as the variables <see cref="MsspOptions"/> holds. The name ends
+	/// at the first <c>/</c>, so a value may hold more (a URL does). A name given on several lines
+	/// carries each line's value, in order, which is MSSP's own array form with the last value the
+	/// default. A variable the server reports itself is not carried over: PennMUSH would report it twice.
+	/// One the server already reports as the line says, like the shipped <c>mssp ansi/1</c>, goes
+	/// without a note, since nothing is lost.
+	/// </summary>
+	private static Dictionary<string, string[]> Mssp(IEnumerable<string> lines, List<string> skipped)
+	{
+		var variables = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+		foreach (var line in lines.Where(line => "mssp".Equals(DirectiveName(line), StringComparison.OrdinalIgnoreCase)))
+		{
+			var value = DirectiveValue(line);
+			var slash = value.IndexOf('/');
+			if (slash <= 0)
+			{
+				skipped.Add($"{line.Trim()}: an mssp line is name/value, so it was not carried over.");
+				continue;
+			}
+
+			var name = MsspCatalog.Canonicalize(value[..slash]);
+			var setting = value[(slash + 1)..].Trim();
+			if (MsspCatalog.Find(name) is { ReportedByServer: true } reported)
+			{
+				if (!(reported is { Source: MsspSource.Server, Kind: MsspValueKind.Flag } && setting == "1"))
+				{
+					skipped.Add(reported.Option is { } option
+						? $"{line.Trim()}: SharpMUSH reports {name} from {option}, so it was not carried over."
+						: $"{line.Trim()}: SharpMUSH reports {name} itself, so it was not carried over.");
+				}
+
+				continue;
+			}
+
+			var values = variables.TryGetValue(name, out var earlier) ? earlier : variables[name] = [];
+			values.Add(setting);
+			if (MsspCatalog.Validate(name, values) is { } problem)
+			{
+				values.RemoveAt(values.Count - 1);
+				if (values.Count == 0)
+				{
+					variables.Remove(name);
+				}
+
+				skipped.Add($"{line.Trim()}: {problem}");
+			}
+		}
+
+		return variables.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray());
 	}
 
 	/// <summary>
