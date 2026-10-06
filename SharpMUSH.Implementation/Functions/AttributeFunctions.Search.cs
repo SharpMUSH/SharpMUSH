@@ -113,7 +113,7 @@ public partial class Functions
 					}
 
 					var matchingAttributes = await MatchingValuesAsync(matched,
-						value => value is { Length: > 0 } && regex.IsMatch(value), static attr => attr.Name);
+						value => value is { Length: > 0 } && regex.IsMatch(value), static attr => attr.LongName);
 
 					return new CallState(string.Join(" ", matchingAttributes));
 				});

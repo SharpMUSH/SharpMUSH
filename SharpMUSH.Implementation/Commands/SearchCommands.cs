@@ -819,26 +819,26 @@ public partial class Commands
 						continue;
 					}
 
+					// Penn's AL_NAME: the full tree path, so FUN`FOOTER`DISPLAY and not DISPLAY.
+					var attrName = attr.LongName;
 					if (attr.Value.Runs.Length > 0)
 					{
 						// Markup only survives as the softcode that makes it, which @set evaluates.
-						outputs.Add($"{prefix}@set {objectRef}={attr.Name}:{SoftcodeDecomposer.Decompose(attr.Value)}");
+						outputs.Add($"{prefix}@set {objectRef}={attrName}:{SoftcodeDecomposer.Decompose(attr.Value)}");
 					}
 					else
 					{
 						var plainValue = attr.Value.ToPlainText();
-						outputs.Add($"{prefix}&{attr.Name} {objectRef}={plainValue}");
+						outputs.Add($"{prefix}&{attrName} {objectRef}={plainValue}");
 					}
 
-					if (!isTf && attr.Flags.Any())
+					// Branch is Penn's AF_ROOT: structure the tree rebuilds itself, never decompiled.
+					// The rest go on one @set line, as privs_to_string writes them.
+					var attrFlags = attr.Flags.Where(flag => !flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase)).ToArray();
+					if (!isTf && attrFlags.Length > 0
+						&& (!skipDefaults || !await AreDefaultAttrFlagsAsync(attrName, attrFlags)))
 					{
-						if (!skipDefaults || !await AreDefaultAttrFlagsAsync(attr.Name, attr.Flags))
-						{
-							foreach (var flag in attr.Flags)
-							{
-								outputs.Add($"{prefix}@set {objectRef}/{attr.Name}={flag.Name}");
-							}
-						}
+						outputs.Add($"{prefix}@set {objectRef}/{attrName}={string.Join(" ", attrFlags.Select(flag => flag.Name))}");
 					}
 				}
 			}
@@ -1245,17 +1245,17 @@ public partial class Commands
 				}
 
 				await NotifyService.Notify(executor,
-					MarkupText.Concat(MarkupText.Plain($"{attr.Name}: ").Hilight(), displayValue), executor);
+					MarkupText.Concat(MarkupText.Plain($"{attr.LongName}: ").Hilight(), displayValue), executor);
 			}
 		}
 		else
 		{
-			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Attribute.Name));
+			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Attribute.LongName));
 			await NotifyService.Notify(executor, attrNames, executor);
 		}
 
 		// The attribute list grep() gives, whichever way the matches were shown.
-		return new CallState(string.Join(" ", matchingAttributes.Select(a => a.Attribute.Name)));
+		return new CallState(string.Join(" ", matchingAttributes.Select(a => a.Attribute.LongName)));
 	}
 
 	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS"], Behavior = CB.Default,

@@ -127,7 +127,7 @@ public partial class Commands
 					{
 						if (!attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)))
 						{
-							names.Add(attr.Name);
+							names.Add(attr.LongName);
 						}
 					}
 				}
