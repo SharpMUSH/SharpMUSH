@@ -1,0 +1,154 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The format button and its panel, for one FormattedInput: text and background colour (the sixteen palette
+   colours, none, or a #rrggbb), bold, underline, inverse and blink, clear formatting, and, when the owner
+   allows it, the switch to writing softcode. Every control keeps the focus (and so the selection) in the
+   field: they act on mousedown's default being prevented, and the field puts the selection back after. The
+   panel is MudMenu's popover, drawn at the page's root, so a container the field sits in (the composer is a
+   query container) cannot clip it; Escape closes it, from the button or from inside, as MudMenu does not. *@
+<div class="fm @Class">
+    <MudMenu AnchorOrigin="@(Placement == "down" ? Origin.BottomRight : Origin.TopRight)"
+             TransformOrigin="@(Placement == "down" ? Origin.TopRight : Origin.BottomRight)"
+             Open="_open" OpenChanged="OnOpenChanged">
+        <ActivatorContent>
+            <button type="button" class="@ButtonClass fm-toggle" aria-haspopup="true" aria-expanded="@(_open ? "true" : "false")"
+                    aria-label="@Loc["NavFormatMenu"]" title="@Loc["NavFormatMenu"]"
+                    @onmousedown:preventDefault @onclick="@context.ToggleAsync" @onkeydown="OnKeyDown">
+                <MudIcon Icon="@Icons.Material.Outlined.Palette" Size="Size.Small" />
+            </button>
+        </ActivatorContent>
+        <ChildContent>
+            <div class="fm-panel" role="group" aria-label="@Loc["NavFormatMenu"]" @onclick:stopPropagation="true" @onkeydown="OnKeyDown">
+                <div class="fm-attrs">
+                    @Attribute(new ComposerFormat.Bold(), "NavFormatBold", Icons.Material.Outlined.FormatBold)
+                    @Attribute(new ComposerFormat.Underline(), "NavFormatUnderline", Icons.Material.Outlined.FormatUnderlined)
+                    @Attribute(new ComposerFormat.Inverse(), "NavFormatInverse", Icons.Material.Outlined.InvertColors)
+                    @Attribute(new ComposerFormat.Blink(), "NavFormatBlink", Icons.Material.Outlined.FlashOn)
+                    <button type="button" class="fm-attr fm-clear" aria-label="@Loc["NavFormatClear"]" title="@Loc["NavFormatClear"]"
+                            @onmousedown:preventDefault @onclick="() => Apply(new ComposerFormat.ClearFormatting())">
+                        <MudIcon Icon="@Icons.Material.Outlined.FormatClear" Size="Size.Small" />
+                    </button>
+                </div>
+                @Swatches(false)
+                @Swatches(true)
+                <form class="fm-custom" @onsubmit="() => ApplyCustom(background: false)" @onsubmit:preventDefault>
+                    <label class="fm-custom-label">
+                        <span>@Loc["NavFormatCustom"]</span>
+                        <input class="fm-custom-input" type="text" inputmode="text" maxlength="7" placeholder="#rrggbb" spellcheck="false"
+                               value="@_custom" @oninput="e => _custom = e.Value?.ToString() ?? string.Empty" />
+                    </label>
+                    <button type="submit" class="fm-custom-apply" disabled="@(Custom is null)" @onmousedown:preventDefault>@Loc["NavFormatText"]</button>
+                    <button type="button" class="fm-custom-apply" disabled="@(Custom is null)" @onmousedown:preventDefault
+                            @onclick="() => ApplyCustom(background: true)">@Loc["NavFormatBackground"]</button>
+                </form>
+                @if (OnRawChanged.HasDelegate && !AlwaysRaw)
+                {
+                    <label class="fm-raw" title="@Loc["NavFormatSoftcodeHint"]">
+                        <input type="checkbox" checked="@Target.Draft.Raw" @onchange="ToggleRawAsync" />
+                        <span>@Loc["NavFormatSoftcode"]</span>
+                    </label>
+                }
+            </div>
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    /// <summary>The field this menu formats.</summary>
+    [Parameter, EditorRequired] public FormattedInput Target { get; set; } = null!;
+
+    /// <summary>Classes for the wrapper.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Classes for the button, so it matches the owner's other tools.</summary>
+    [Parameter] public string? ButtonClass { get; set; }
+
+    /// <summary>Which way the panel opens from the button: <c>up</c> (a bar at the foot of the page) or <c>down</c>.</summary>
+    [Parameter] public string Placement { get; set; } = "up";
+
+    /// <summary>Switches the field between styled text and softcode; without it the menu has no such switch.</summary>
+    [Parameter] public EventCallback<bool> OnRawChanged { get; set; }
+
+    /// <summary>The field is always softcode (a command line): the menu wraps the selection in <c>[ansi()]</c> and offers no switch.</summary>
+    [Parameter] public bool AlwaysRaw { get; set; }
+
+    private bool _open;
+    private string _custom = string.Empty;
+    private AnsiStyle _style;
+
+    private static readonly string[] ColorKeys =
+    [
+        "NavFormatBlack", "NavFormatRed", "NavFormatGreen", "NavFormatYellow",
+        "NavFormatBlue", "NavFormatMagenta", "NavFormatCyan", "NavFormatWhite",
+    ];
+
+    private AnsiColor.Rgb? Custom => AnsiColor.TryParseHex("#" + _custom.Trim().TrimStart('#'), out var rgb) ? rgb : null;
+
+    private void OnOpenChanged(bool open)
+    {
+        _open = open;
+        if (open) _style = Target.CurrentStyle();
+    }
+
+    private void Close() => _open = false;
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") Close();
+    }
+
+    private void Apply(ComposerFormat format)
+    {
+        Target.Apply(format);
+        _style = Target.CurrentStyle();
+    }
+
+    private void ApplyCustom(bool background)
+    {
+        if (Custom is not { } rgb) return;
+        Apply(background ? new ComposerFormat.Background(rgb) : new ComposerFormat.Foreground(rgb));
+    }
+
+    private async Task ToggleRawAsync(ChangeEventArgs e)
+    {
+        await OnRawChanged.InvokeAsync(e.Value is true);
+        Close();
+        await Target.FocusAsync();
+    }
+
+    private string ColorName(AnsiColor.Standard color) =>
+        color.Bright ? Loc["NavFormatBright", Loc[ColorKeys[color.Index]]] : Loc[ColorKeys[color.Index]];
+
+    private RenderFragment Attribute(ComposerFormat format, string key, string icon) => __builder =>
+    {
+        var on = !Target.Draft.Raw && format.IsSetIn(_style);
+        <button type="button" class="fm-attr" aria-pressed="@(on ? "true" : "false")" aria-label="@Loc[key]" title="@Loc[key]"
+                @onmousedown:preventDefault @onclick="() => Apply(format)">
+            <MudIcon Icon="@icon" Size="Size.Small" />
+        </button>
+    };
+
+    private RenderFragment Swatches(bool background) => __builder =>
+    {
+        var label = background ? Loc["NavFormatBackground"] : Loc["NavFormatText"];
+        var current = background ? _style.Background : _style.Foreground;
+        <div class="fm-section">
+            <div class="fm-section-label">@label</div>
+            <div class="fm-swatches" role="group" aria-label="@label">
+                <button type="button" class="fm-swatch fm-swatch--none" aria-label="@Loc["NavFormatNone"]" title="@Loc["NavFormatNone"]"
+                        aria-pressed="@(!Target.Draft.Raw && current is null ? "true" : "false")"
+                        @onmousedown:preventDefault
+                        @onclick="() => Apply(background ? new ComposerFormat.Background(null) : new ComposerFormat.Foreground(null))"></button>
+                @foreach (var color in ComposerFormat.Palette)
+                {
+                    var name = ColorName(color);
+                    <button type="button" class="fm-swatch" style="background:@color.ToHex()" aria-label="@name" title="@name"
+                            aria-pressed="@(!Target.Draft.Raw && Equals(current, color) ? "true" : "false")"
+                            @onmousedown:preventDefault
+                            @onclick="() => Apply(background ? new ComposerFormat.Background(color) : new ComposerFormat.Foreground(color))"></button>
+                }
+            </div>
+        </div>
+    };
+}

@@ -1,5 +1,6 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Markup
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §5.4 one pose in the Story view: a 44px portrait (radius 12), the name in its colour (700) and the
@@ -81,28 +82,68 @@ else
     /// <summary>The viewer wrote this pose, so it shows an Edit (the game still checks who may).</summary>
     [Parameter] public bool CanEdit { get; set; }
 
-    /// <summary>Saves an edit: the pose's id and its whole new text, as softcode (<see cref="SceneMarkupRenderer.ToSoftcode"/>).</summary>
+    /// <summary>
+    /// Saves an edit: the pose's id and its whole new text as softcode, <c>decompose()</c>'s answer for the styled
+    /// text the Edit box shows (<see cref="SceneMarkupRenderer.ToSoftcode"/>), or what was typed with the box
+    /// switched to softcode.
+    /// </summary>
     [Parameter] public EventCallback<(string PoseId, string Text)> OnEdit { get; set; }
 
     private bool _editing;
-    private string _draft = string.Empty;
+    private ComposerDraft _draft = new();
+    private FormattedInput? _field;
+    private FormattedInput? _menuFor;
+    private ComposerDraft? _watched;
+
+    /// <summary>Send's state follows the draft, which the field changes without this component rendering.</summary>
+    private void Watch(ComposerDraft draft)
+    {
+        if (ReferenceEquals(_watched, draft)) return;
+        if (_watched is not null) _watched.Changed -= OnDraftChanged;
+        _watched = draft;
+        draft.Changed += OnDraftChanged;
+    }
+
+    private void OnDraftChanged() => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>The format menu needs the field, which exists only once it has rendered: render again for it.</summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_field == _menuFor) return;
+        _menuFor = _field;
+        if (_field is not null) StateHasChanged();
+    }
     private string _seed = string.Empty;
     private bool _flash;
 
     private void StartEdit()
     {
-        // decompose(): the colours travel as ansi() calls, so a save that changed only the words keeps them.
-        _seed = _draft = SceneMarkupRenderer.ToSoftcode(Pose.Markup, Pose.Content);
+        // The pose as it shows, colours and all; it goes back as decompose() writes it, so a save that changed
+        // only the words keeps them.
+        _draft = new ComposerDraft();
+        _draft.Load(SceneMarkupRenderer.ToMarkupText(Pose.Markup, Pose.Content), raw: false);
+        Watch(_draft);
+        _seed = Softcode;
         _editing = true;
     }
 
-    private void CancelEdit() => _editing = false;
+    private string Softcode => _draft.Raw ? _draft.Value : SoftcodeDecomposer.Decompose(_draft.Text);
+
+    private void CancelEdit()
+    {
+        _editing = false;
+        _field = null;
+    }
+
+    private void SetRaw(bool raw) => _draft.SetRaw(raw);
 
     private async Task SaveEdit()
     {
-        if (string.IsNullOrWhiteSpace(_draft)) return;
+        if (_draft.IsEmpty) return;
         _editing = false;
-        if (_draft != _seed) await OnEdit.InvokeAsync((Pose.Id, _draft));
+        _field = null;
+        var text = Softcode;
+        if (text != _seed) await OnEdit.InvokeAsync((Pose.Id, text));
     }
 
     /// <summary>The tag the Scene plugin's <c>ooc</c> command puts on its poses (README §7.2).</summary>
@@ -175,11 +216,15 @@ else
     private RenderFragment Editor => __builder =>
     {
         <div class="story-editor">
-            <textarea class="story-editor-input" aria-label="@Loc["RolEditPose"]" value="@_draft"
-                      @oninput="e => _draft = e.Value?.ToString() ?? string.Empty"></textarea>
+            <FormattedInput @ref="_field" Draft="_draft" Class="story-editor-field" InputClass="story-editor-input" Rows="3"
+                            AriaLabel="@Loc["RolEditPose"]" OnRawRequested="() => SetRaw(true)" />
             <div class="story-editor-actions">
+                @if (_field is not null)
+                {
+                    <FormatMenu Target="_field" Class="story-editor-format" ButtonClass="story-editor-tool" Placement="down" OnRawChanged="SetRaw" />
+                }
                 <button type="button" class="story-editor-cancel" @onclick="CancelEdit">@Loc["Cancel"]</button>
-                <button type="button" class="story-editor-save" disabled="@string.IsNullOrWhiteSpace(_draft)" @onclick="SaveEdit">@Loc["Save"]</button>
+                <button type="button" class="story-editor-save" disabled="@_draft.IsEmpty" @onclick="SaveEdit">@Loc["Save"]</button>
             </div>
         </div>
     };

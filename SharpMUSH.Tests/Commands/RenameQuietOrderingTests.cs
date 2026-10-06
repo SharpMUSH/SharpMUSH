@@ -9,7 +9,8 @@ namespace SharpMUSH.Tests.Commands;
 /// <c>do_name</c> ends with <c>queue_event(...OBJECT`RENAME...)</c> and then
 /// <c>if (!AreQuiet(player, thing)) notify(player, T("Name set."))</c> (<c>src/set.c:151-154</c>).
 /// <c>queue_event</c> only enqueues, so <c>AreQuiet</c> is answered against the state the rename
-/// found, even when the handler goes on to flag the thing <c>QUIET</c>.
+/// found, even when the handler goes on to flag the thing <c>QUIET</c>. SharpMUSH queues the event the
+/// same way; the test waits on the queue before reading what the handler did.
 /// </summary>
 /// <remarks>
 /// <c>event_handler = 9</c> (the seeded Event Handler, a WIZARD) in the test config. The renamer is a
@@ -49,19 +50,6 @@ public class RenameQuietOrderingTests : ServerTestBase
 
 	private async Task<bool> IsQuiet(DBRef thing) => await Eval($"hasflag(#{thing.Number},QUIET)") == "1";
 
-	/// <summary>The handler's entry runs from the queue, after the rename has answered.</summary>
-	private async Task<bool> BecomesQuiet(DBRef thing)
-	{
-		var deadline = DateTime.UtcNow.AddSeconds(10);
-		while (DateTime.UtcNow < deadline)
-		{
-			if (await IsQuiet(thing)) return true;
-			await Task.Delay(50);
-		}
-
-		return false;
-	}
-
 	[Test]
 	public async ValueTask ARenameHandlerThatSetsQuietDoesNotSwallowItsOwnNameSet()
 	{
@@ -70,11 +58,13 @@ public class RenameQuietOrderingTests : ServerTestBase
 
 		try
 		{
-			await Cmd($"&OBJECT`RENAME #{EventHandlerDbRefNumber}=@switch num(%0)=#{thing.Number},@set %0=QUIET");
+			await Cmd($"&OBJECT`RENAME #{EventHandlerDbRefNumber}=think switch(num(%0),#{thing.Number},set(%0,QUIET))");
 
 			var heard = await Heard(renamer, $"@name #{thing.Number}={renamed}");
+			// OBJECT`RENAME is a queue entry of its own (#1567); it has run once the barrier is through.
+			await WebAppFactoryArg.QueueBarrierAsync();
 
-			await Assert.That(await BecomesQuiet(thing)).IsTrue()
+			await Assert.That(await IsQuiet(thing)).IsTrue()
 				.Because("the handler has to have run for the ordering to be under test at all");
 			await Assert.That(heard).Contains("Name set.")
 				.Because("the handler's QUIET arrives after queue_event, so it cannot answer this rename's AreQuiet");

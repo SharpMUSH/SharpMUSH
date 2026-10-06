@@ -25,5 +25,6 @@ public interface IPlayTerminalService : ITerminalService;
 /// own <see cref="IPlayWebSocketClientService"/>, giving the player a connection separate from the
 /// command/softcode terminal.
 /// </summary>
-public sealed class PlayTerminalService(IPlayWebSocketClientService wsService, ILogger<TerminalService> logger)
-	: TerminalService(wsService, logger), IPlayTerminalService;
+public sealed class PlayTerminalService(IPlayWebSocketClientService wsService, ILogger<TerminalService> logger,
+	ITerminalLoginTokens? loginTokens = null)
+	: TerminalService(wsService, logger, loginTokens), IPlayTerminalService;
