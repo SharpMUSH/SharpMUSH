@@ -135,6 +135,103 @@ public class ScenePauseTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheOwner_EditsThePitch_AndThePageShowsIt()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		await Assert.That(cut.FindAll(".scene-detail-pitch").Count).IsEqualTo(0);
+
+		cut.Find(".scene-detail-edit").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-edit-title input").GetAttribute("value")).IsEqualTo("Salt Market at Dusk")
+			.Because("the form opens on the scene as it is");
+		cut.Find(".scene-edit-pitch textarea").Change("Masks and music; a feud.");
+
+		Answer("Masks and music; a feud.", "Pitch set for scene S1.");
+		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", summary: "Masks and music; a feud.");
+		cut.Find(".scene-edit-submit").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-pitch"), TimeSpan.FromSeconds(5));
+		var sent = Commands().Single();
+		await Assert.That(sent.Command).IsEqualTo("+scene/pitch S1=Masks and music%; a feud.")
+			.Because("only what changed is sent, naming the scene, with the semicolon kept from ending the command");
+		await Assert.That(sent.Result).IsEqualTo("scene(S1,summary)");
+		await Assert.That(sent.Character).IsEqualTo("#313:1");
+		await Assert.That(cut.Find(".scene-detail-pitch").TextContent).IsEqualTo("Masks and music; a feud.");
+		await Assert.That(cut.FindAll(".scene-edit").Count).IsEqualTo(0).Because("the form closes once it is saved");
+	}
+
+	[Test]
+	public async Task TheOwner_MakesTheScenePrivate()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		cut.Find(".scene-detail-edit").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-edit-public input").Change(false);
+
+		Answer("0", "Scene S1 is now private.");
+		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", isPublic: false);
+		cut.Find(".scene-edit-submit").Click();
+
+		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
+		await Assert.That(Commands().Single().Command).IsEqualTo("+scene/private S1");
+	}
+
+	[Test]
+	public async Task AnEditTheGameRefuses_IsShown_AndTheFormStaysOpen()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		cut.Find(".scene-detail-edit").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+		cut.Find(".scene-edit-title input").Change("Ash and Salt");
+
+		Answer("Salt Market at Dusk", "That scene is not yours to change. Its owner or a wizard can do it.");
+		cut.Find(".scene-edit-submit").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-action-error").TextContent).Contains("not yours to change");
+		await Assert.That(Commands().Single().Command).IsEqualTo("+scene/title S1=Ash and Salt");
+		await Assert.That(cut.FindAll(".scene-edit").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task SomeoneElse_CannotEdit()
+	{
+		var cut = await RenderAsActingAsync(314, "active");
+		await Assert.That(cut.FindAll(".scene-detail-edit").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task AScheduledScene_CanBeAddedToACalendar()
+	{
+		var start = new DateTimeOffset(2030, 3, 4, 18, 30, 0, TimeSpan.Zero);
+		var cut = await RenderAsActingAsync(314, "scheduled", start.ToUnixTimeMilliseconds());
+
+		var google = cut.Find(".scene-calendar-google").GetAttribute("href")!;
+		await Assert.That(google).StartsWith("https://calendar.google.com/calendar/render?action=TEMPLATE");
+		await Assert.That(google).Contains("&text=Salt%20Market%20at%20Dusk");
+		await Assert.That(google).Contains("&dates=20300304T183000Z/20300304T203000Z");
+		await Assert.That(google).Contains("&location=The%20Salt%20Market");
+
+		var ics = cut.Find(".scene-calendar-ics");
+		await Assert.That(ics.GetAttribute("download")).IsEqualTo("scene-S1.ics");
+		var href = ics.GetAttribute("href")!;
+		await Assert.That(href).StartsWith("data:text/calendar;charset=utf-8,");
+		var file = Uri.UnescapeDataString(href["data:text/calendar;charset=utf-8,".Length..]);
+		await Assert.That(file).Contains("DTSTART:20300304T183000Z\r\n");
+		await Assert.That(file).Contains("SUMMARY:Salt Market at Dusk\r\n");
+		await Assert.That(file).Contains("URL:http://localhost/scenes/S1\r\n");
+	}
+
+	[Test]
+	[Arguments("active")]
+	[Arguments("finished")]
+	public async Task ASceneThatIsNotWaiting_HasNoCalendarLinks(string status)
+	{
+		var cut = await RenderAsActingAsync(314, status, new DateTimeOffset(2030, 3, 4, 18, 30, 0, TimeSpan.Zero).ToUnixTimeMilliseconds());
+		await Assert.That(cut.FindAll(".scene-calendar").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task TheSchedule_IsAnAgendaByDayAndTime_WithPausedScenesLast()
 	{
 		var first = new DateTimeOffset(2030, 3, 4, 18, 30, 0, TimeSpan.Zero);

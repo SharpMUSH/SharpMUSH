@@ -256,8 +256,8 @@ Status is a free string; the shipped defaults are **`new` → `active` ⇄ `paus
 - **`+scene/pause [<id>][=<when>]`** → `status=paused`, and `ScheduledFor=<when>`
   (cleared when no time is given). **`+scene/reschedule`** of an `active` scene
   pauses it too. **`+scene/finish`** → `status=finished`, clears focus.
-- **`+scene/upcoming`** — agenda view of `scenelist(scheduled, …)` (title,
-  `ScheduledFor`, RSVP count). The `scheduled` filter is every scene waiting to
+- **`+scene/upcoming [<days>|all]`** — agenda view of `scenelist(scheduled, …)`
+  (title, time, RSVP count), one rule per day, the next 30 days unless told. The `scheduled` filter is every scene waiting to
   run: a scene with a time that is neither `active` nor `finished`, and every
   `paused` scene (untimed ones last, and only when the list is not windowed).
   Bare `+scene` covers running scenes. The portal's Live list is `active`; its

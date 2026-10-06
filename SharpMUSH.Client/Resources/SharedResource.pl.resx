@@ -5668,4 +5668,31 @@
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Wstrzymane, bez terminu</value>
   </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Edytuj scenę</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Zapowiedź</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>O czym jest scena, żeby inni mogli zdecydować, czy przyjdą.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Każdy może oglądać</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>Scena nie została zmieniona.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Dodaj do kalendarza</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Kalendarz Google</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Inne kalendarze (.ics)</value>
+  </data>
 </root>
