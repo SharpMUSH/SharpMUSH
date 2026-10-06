@@ -3001,10 +3001,6 @@
     <value>Цвет</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Поза, реплика или повествование…</value>
-    <comment>MT — kept as a noun list to match the English placeholder; the verb rendering would run far longer.</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Удалить «{0}» ({1})? Роль будет снята со всех аккаунтов, у которых она есть.</value>
     <comment>MT — {0} sits inside quotation marks and {1} in parentheses, so neither needs to agree with the surrounding grammar.</comment>
@@ -3063,22 +3059,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Найти</value>
     <comment>MT — imperative button next to the username field.</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Эмит</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Поза</value>
-    <comment>MT — compose-mode label; pose → поза per the sheet.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Речь</value>
-    <comment>MT — compose-mode label paired with «Поза»; kept as a noun to match the mode-toggle pattern.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Полупоза</value>
-    <comment>MT — compose-mode label alongside «Поза»/«Речь»; semipose is the MUSH pose variant without a space after the name.</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Имя</value>
@@ -5694,5 +5674,20 @@
   </data>
   <data name="RolIcsDownload" xml:space="preserve">
     <value>Другие календари (.ics)</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Отправить как</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter — отправить</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Сцена приостановлена. Позы не принимаются, пока владелец её не возобновит.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Сцена не идёт, поэтому позы не принимаются.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

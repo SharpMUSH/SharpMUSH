@@ -3001,10 +3001,6 @@
     <value>Color</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Haga una pose, hable o narre…</value>
-    <comment>MT — compose box for the scene log; "pose" kept as the noun per glossary</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>¿Eliminar '{0}' ({1})? Se quitará de todas las cuentas que lo tengan.</value>
     <comment>MT</comment>
@@ -3063,22 +3059,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Buscar</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Decir</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MUSH pose-mode name, kept as in English alongside "pose"</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Nombre</value>
@@ -5694,5 +5674,20 @@
   </data>
   <data name="RolIcsDownload" xml:space="preserve">
     <value>Otros calendarios (.ics)</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Publicar como</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Intro para enviar</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Esta escena está en pausa. No admite poses hasta que su dueño la reanude.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Esta escena no está en curso, así que no admite poses.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

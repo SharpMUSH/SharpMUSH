@@ -294,6 +294,15 @@ objects:
       CMD`WEB`SEMIPOSE: |-
         $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @assert strmatch(scene(%0,status),active)=@pemit %#=[get(%!/DATA`DENY_NOT_RUNNING)]; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)]%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%1,%#/FORMAT`SEMIPOSE,%1,##}
 
+      # Out of character, into this scene. The room hears what the `ooc` command would have it hear
+      # (`<OOC> Name: words`; a leading `:` poses and a leading `;` semiposes), and the scene records
+      # the line less the marker with tag and source `ooc`, which is what the portal draws as the OOC
+      # band. No persona: out of character is the player speaking. As with `ooc`, a gagged player is
+      # refused, so is a marker with nothing after it, and the room's Speech lock applies when the
+      # speaker is standing in it. The `;` is spelled chr(59) because a bare one ends the command.
+      CMD`WEB`OOC: |-
+        $+scene/ooc *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @assert strmatch(scene(%0,status),active)=@pemit %#=[get(%!/DATA`DENY_NOT_RUNNING)]; @assert not(hasflag(%#,GAGGED))=@pemit %#=You cannot speak while gagged.; @assert or(not(strmatch(loc(%#),scene(%0,room))),elock(scene(%0,room)/Speech,%#))=@pemit %#=You may not speak there!; @assert strlen(trim(switch(left(%1,1),:,delete(%1,0,1),chr(59),delete(%1,0,1),%1)))=@pemit %#=OOC: What do you want to say?; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,,[scene(%0,room)],ooc,ooc,[setr(OocLine,switch(left(%1,1),:,[name(%#)] [delete(%1,0,1)],chr(59),[name(%#)][delete(%1,0,1)],[name(%#)]: %1))]; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=<OOC> %q<OocLine>,%#/FORMAT`OOC,%1,##}
+
       # ---- create / lifecycle ---------------------------------------------------
       # NOTE: capture the new scene id into %q<SceneID> with @assert (it both sets the register and
       # aborts cleanly if creation fails — the id is truthy), then drive the writes off %q<SceneID>.
@@ -742,7 +751,7 @@ objects:
         portal's compose box sends:
 
         - `+scene/pose <id>=<text>` · `+scene/say <id>=<text>` · `+scene/semipose <id>=<text>`
-        - `+scene/emit <id>=<text>`
+        - `+scene/emit <id>=<text>` · `+scene/ooc <id>=<text>` \(out of character\)
         - `+scene/as <name>` — pose under a different name from here on
         - `+scene/edit <id>=<old>^^^<new>` — fix a typo in your own pose
         - `+scene/rewrite <id>=<text>` — replace your own pose's whole text \(the portal's Edit\)

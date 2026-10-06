@@ -3001,10 +3001,6 @@
     <value>Kolor</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Poza, wypowiedź lub narracja…</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Usunąć rolę '{0}' ({1})? Zostanie ona odebrana wszystkim kontom, które ją posiadają.</value>
     <comment>MT — head noun 'rolę' carries the accusative so the quoted name {0} stays in the nominative; {1} assumed to be the role slug</comment>
@@ -3063,22 +3059,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Wyszukaj</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Poza</value>
-    <comment>MT — compose-mode label; noun to match RolModeSay</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Wypowiedź</value>
-    <comment>MT — compose-mode label; noun to match RolModePose</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipoza</value>
-    <comment>MT — MUSH term of art (semipose); kept as a loanword, matching 'poza' for pose</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Nazwa</value>
@@ -5694,5 +5674,20 @@
   </data>
   <data name="RolIcsDownload" xml:space="preserve">
     <value>Inne kalendarze (.ics)</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Opublikuj jako</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter, aby wysłać</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Ta scena jest wstrzymana. Nie przyjmuje póz, dopóki właściciel jej nie wznowi.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Ta scena nie trwa, więc nie przyjmuje póz.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

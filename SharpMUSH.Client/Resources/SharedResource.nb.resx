@@ -3001,10 +3001,6 @@
     <value>Farge</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pose, si eller fortell…</value>
-    <comment>MT — 'Pose' kept as the MUSH compose mode.</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Slette «{0}» ({1})? Dette fjerner den fra alle kontoer som har den.</value>
     <comment>MT</comment>
@@ -3063,22 +3059,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Slå opp</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — compose mode named after the MUSH 'pose' command; kept.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-    <comment>MT — compose mode named after the MUSH 'say' command; kept so it matches what the player types in the terminal.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MUSH compose mode; kept.</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Navn</value>
@@ -5694,5 +5674,20 @@
   </data>
   <data name="RolIcsDownload" xml:space="preserve">
     <value>Andre kalendere (.ics)</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Post som</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter for å sende</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Denne scenen er satt på pause. Den tar ikke imot poser før eieren gjenopptar den.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Denne scenen pågår ikke, så den tar ikke imot poser.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

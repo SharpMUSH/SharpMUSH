@@ -3001,10 +3001,6 @@
     <value>Culoare</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Poză, replică sau narațiune…</value>
-    <comment>MT — English verbs rendered as nouns; Romanian imperatives would be awkward in a compose-box placeholder</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Ștergeți „{0}” ({1})? Aceasta îl elimină din toate conturile care îl dețin.</value>
     <comment>MT</comment>
@@ -3063,22 +3059,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Căutare</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Poză</value>
-    <comment>MT — compose-mode label for the RP pose; the underlying game command stays `pose`</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Replică</value>
-    <comment>MT — compose-mode label for the RP say; the underlying game command stays `say`</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipoză</value>
-    <comment>MT — compose-mode label; the underlying game command stays `semipose`</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Nume</value>
@@ -5694,5 +5674,20 @@
   </data>
   <data name="RolIcsDownload" xml:space="preserve">
     <value>Alte calendare (.ics)</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Postează ca</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter pentru a trimite</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Această scenă este în pauză. Nu primește poze până când proprietarul nu o reia.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Această scenă nu este în desfășurare, deci nu primește poze.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

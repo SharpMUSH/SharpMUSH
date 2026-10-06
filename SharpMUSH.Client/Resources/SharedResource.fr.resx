@@ -2187,22 +2187,6 @@
   <data name="RolWaitingForActivity" xml:space="preserve">
     <value>En attente d'activité…</value>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-  </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Posez, parlez ou narrez…</value>
-  </data>
   <data name="RolEditPose" xml:space="preserve">
     <value>Modifier</value>
   </data>
@@ -4964,5 +4948,20 @@
   </data>
   <data name="RolIcsDownload" xml:space="preserve">
     <value>Autres calendriers (.ics)</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Publier en</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Entrée pour envoyer</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Cette scène est en pause. Elle n'accepte aucune pose tant que son propriétaire ne l'a pas reprise.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Cette scène n'est pas en cours, elle n'accepte donc aucune pose.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>
