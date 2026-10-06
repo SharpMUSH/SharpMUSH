@@ -77,9 +77,13 @@ public class AttributeWithInheritanceTests
 		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("Parent Value");
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>atr_get_with_parent</c> (<c>src/attrib.c:1203-1278</c>) never looks at the zone: a
+	/// zone supplies $-commands, not attributes.
+	/// </summary>
 	[Test]
 	[DependsOn(nameof(GetAttributeWithInheritance_ParentAttribute_ReturnsFromParent))]
-	public async Task GetAttributeWithInheritance_ZoneAttribute_ReturnsFromZone()
+	public async Task GetAttributeWithInheritance_ZoneAttribute_IsNotInherited()
 	{
 		var zoneResult = await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -107,15 +111,12 @@ public class AttributeWithInheritanceTests
 			objDbRef,
 			new[] { "ZONE_ATTR" },
 			CheckParent: true)).ToListAsync();
-		var result = results[0];
 
-		await Assert.That(result.Source).IsEqualTo(AttributeSource.Zone);
-		await Assert.That(result.SourceObject.Number).IsEqualTo(zoneDbRef.Number);
-		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("Zone Value");
+		await Assert.That(results).IsEmpty();
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_ZoneAttribute_ReturnsFromZone))]
+	[DependsOn(nameof(GetAttributeWithInheritance_ZoneAttribute_IsNotInherited))]
 	public async Task GetAttributeWithInheritance_CheckParentFalse_OnlyChecksObject()
 	{
 		var parentResult = await WebAppFactoryArg.CommandParser.CommandParse(

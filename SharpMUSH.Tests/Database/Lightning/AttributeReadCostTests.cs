@@ -66,9 +66,6 @@ public class AttributeReadCostTests
 	private async Task Parent(DBRef child, DBRef parent)
 		=> await _db.SetObjectParent(await Node(child), await Node(parent));
 
-	private async Task Zone(DBRef obj, DBRef zone)
-		=> await _db.SetObjectZone(await Node(obj), await Node(zone));
-
 	private async Task Set(DBRef target, string[] path, string value)
 		=> await _db.SetAttributeAsync(target, path, MarkupText.Plain(value), await God());
 
@@ -286,25 +283,23 @@ public class AttributeReadCostTests
 	// ---- #1467: an inherited read stops at the first decisive candidate ----
 
 	[Test]
-	public async Task NearestParentHitReadsNoZoneOrFartherParent()
+	public async Task NearestParentHitReadsNoFartherParentOrAncestor()
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
 		var grandparent = await Thing("Grandparent");
-		var zone = await Thing("Zone");
-		var parentZone = await Thing("ParentZone");
+		var ancestor = await Thing("Ancestor");
 		await Parent(child, parent);
 		await Parent(parent, grandparent);
-		await Zone(child, zone);
-		await Zone(parent, parentZone);
-		foreach (var holder in new[] { parent, grandparent, zone, parentZone })
+		foreach (var holder in new[] { parent, grandparent, ancestor })
 		{
 			await Set(holder, ["ROOT", "BRANCH", "LEAF"], $"from #{holder.Number}");
 		}
 
+		var walk = new InheritanceWalk(ancestor, InheritanceWalk.DefaultMaxParents);
 		var walks = _db.ReadStats.PathWalks;
 		var values = _db.ReadStats.ValueReads;
-		var eager = await _db.GetAttributeWithInheritanceAsync(child, ["ROOT", "BRANCH", "LEAF"]).SingleAsync();
+		var eager = await _db.GetAttributeWithInheritanceAsync(child, ["ROOT", "BRANCH", "LEAF"], walk: walk).SingleAsync();
 
 		await Assert.That(eager.SourceObject.Number).IsEqualTo(parent.Number);
 		await Assert.That(eager.Source).IsEqualTo(AttributeSource.Parent);
@@ -314,7 +309,7 @@ public class AttributeReadCostTests
 		await Assert.That(_db.ReadStats.ValueReads - values).IsEqualTo(3);
 
 		values = _db.ReadStats.ValueReads;
-		var lazy = await _db.GetLazyAttributeWithInheritanceAsync(child, ["ROOT", "BRANCH", "LEAF"]).SingleAsync();
+		var lazy = await _db.GetLazyAttributeWithInheritanceAsync(child, ["ROOT", "BRANCH", "LEAF"], walk: walk).SingleAsync();
 		await Assert.That(lazy.SourceObject.Number).IsEqualTo(eager.SourceObject.Number);
 		await Assert.That(lazy.Source).IsEqualTo(eager.Source);
 		await Assert.That(lazy.Attributes.Select(x => x.LongName)).IsEquivalentTo(eager.Attributes.Select(x => x.LongName), TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -327,69 +322,78 @@ public class AttributeReadCostTests
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
-		var zone = await Thing("Zone");
+		var grandparent = await Thing("Grandparent");
 		await Parent(child, parent);
-		await Zone(child, zone);
+		await Parent(parent, grandparent);
 		await Set(child, ["ROOT", "OTHER"], "self partial");
 		await Set(parent, ["ROOT", "BRANCH"], "parent partial");
-		await Set(zone, ["ROOT", "BRANCH", "LEAF"], "zone");
+		await Set(grandparent, ["ROOT", "BRANCH", "LEAF"], "grandparent");
 
 		var found = await _db.GetAttributeWithInheritanceAsync(child, ["ROOT", "BRANCH", "LEAF"]).SingleAsync();
 
-		await Assert.That(found.Source).IsEqualTo(AttributeSource.Zone);
-		await Assert.That(found.SourceObject.Number).IsEqualTo(zone.Number);
+		await Assert.That(found.Source).IsEqualTo(AttributeSource.Parent);
+		await Assert.That(found.SourceObject.Number).IsEqualTo(grandparent.Number);
 		await Assert.That(found.Attributes.Select(x => x.LongName))
 			.IsEquivalentTo(new[] { "ROOT", "ROOT`BRANCH", "ROOT`BRANCH`LEAF" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>atr_get_with_parent</c> returns NULL out of the whole lookup on a no_inherit prefix
+	/// (<c>src/attrib.c:1240-1243</c>), so the type ancestor is never read.
+	/// </summary>
 	[Test]
-	public async Task NoInheritOnABranchWithoutALeafStopsBeforeTheZones()
+	public async Task NoInheritOnABranchWithoutALeafStopsBeforeTheAncestor()
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
-		var zone = await Thing("Zone");
+		var ancestor = await Thing("Ancestor");
 		await Parent(child, parent);
-		await Zone(child, zone);
 		await Set(parent, ["ROOT", "BRANCH"], "barrier");
 		var noInherit = await _db.GetAttributeFlagAsync("no_inherit");
 		await _db.SetAttributeFlagAsync((await Node(parent)).Object(), ["ROOT"], noInherit!);
-		await Set(zone, ["ROOT", "BRANCH", "LEAF"], "zone");
+		await Set(ancestor, ["ROOT", "BRANCH", "LEAF"], "ancestor");
 
 		var walks = _db.ReadStats.PathWalks;
-		var found = await _db.GetAttributeWithInheritanceAsync(child, ["ROOT", "BRANCH", "LEAF"]).ToListAsync();
+		var found = await _db.GetAttributeWithInheritanceAsync(child, ["ROOT", "BRANCH", "LEAF"],
+			walk: new InheritanceWalk(ancestor, InheritanceWalk.DefaultMaxParents)).ToListAsync();
 
 		await Assert.That(found).IsEmpty();
 		await Assert.That(_db.ReadStats.PathWalks - walks).IsEqualTo(2);
 	}
 
 	/// <summary>
-	/// A miss walks everything, but an object reached twice — a zone shared by the object and its parent,
-	/// a parent that is also a zone — is read once.
+	/// A miss walks the object's chain, then the ancestor's (<c>src/attrib.c:1262-1269</c>); an ancestor
+	/// already in the explicit chain is read there and not again (<c>:1226</c>).
 	/// </summary>
 	[Test]
-	public async Task SharedZoneTailsAreReadOnce()
+	public async Task AMissWalksTheChainThenTheAncestorsChainOnce()
 	{
 		var child = await Thing("Child");
 		var parent = await Thing("Parent");
-		var shared = await Thing("Shared");
-		var tail = await Thing("Tail");
+		var ancestor = await Thing("Ancestor");
+		var ancestorParent = await Thing("AncestorParent");
 		await Parent(child, parent);
-		await Zone(child, shared);
-		await Zone(parent, shared);
-		await Zone(shared, tail);
-		await Zone(tail, parent);
+		await Parent(ancestor, ancestorParent);
+		var walk = new InheritanceWalk(ancestor, InheritanceWalk.DefaultMaxParents);
 
 		var walks = _db.ReadStats.PathWalks;
-		var found = await _db.GetAttributeWithInheritanceAsync(child, ["MISSING"]).ToListAsync();
+		var found = await _db.GetAttributeWithInheritanceAsync(child, ["MISSING"], walk: walk).ToListAsync();
 
 		await Assert.That(found).IsEmpty();
-		// child, parent, shared, tail — once each.
+		// child, parent, ancestor, ancestor's parent — once each.
 		await Assert.That(_db.ReadStats.PathWalks - walks).IsEqualTo(4);
 
-		await Set(tail, ["MISSING"], "found on the tail");
-		var hit = await _db.GetAttributeWithInheritanceAsync(child, ["MISSING"]).SingleAsync();
-		await Assert.That(hit.Source).IsEqualTo(AttributeSource.Zone);
-		await Assert.That(hit.SourceObject.Number).IsEqualTo(tail.Number);
+		await Set(ancestorParent, ["MISSING"], "found on the ancestor's parent");
+		var hit = await _db.GetAttributeWithInheritanceAsync(child, ["MISSING"], walk: walk).SingleAsync();
+		await Assert.That(hit.Source).IsEqualTo(AttributeSource.Ancestor);
+		await Assert.That(hit.SourceObject.Number).IsEqualTo(ancestorParent.Number);
+
+		await Parent(parent, ancestor);
+		walks = _db.ReadStats.PathWalks;
+		var missing = await _db.GetAttributeWithInheritanceAsync(child, ["ABSENT"], walk: walk).ToListAsync();
+		await Assert.That(missing).IsEmpty();
+		// child, parent, ancestor, ancestor's parent: the ancestor was in the chain, so no second leg.
+		await Assert.That(_db.ReadStats.PathWalks - walks).IsEqualTo(4);
 	}
 
 	// ---- #1469: pattern scans are time-bounded ----

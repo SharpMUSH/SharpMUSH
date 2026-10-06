@@ -336,6 +336,10 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>atr_iter_get_parent</c> lists object by object (<c>src/attrib.c:1574-1580</c>): the
+	/// child's matches, then the parent's.
+	/// </summary>
 	[Test]
 	[Arguments(
 		"[setq(0,create(AttrFuncTest_Reglattrp_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Reglattrp_ParentObj_ParentInherit)))]" +
@@ -343,7 +347,7 @@ public class AttributeFunctionUnitTests
 		"[attrib_set(%q1/REGLATTRP_PARENTINHERIT_002,value2)]" +
 		"[attrib_set(%q0/REGLATTRP_PARENTINHERIT_100,value3)]" +
 		"[reglattrp(%q0/^REGLATTRP_PARENTINHERIT_)]",
-		"REGLATTRP_PARENTINHERIT_001 REGLATTRP_PARENTINHERIT_002 REGLATTRP_PARENTINHERIT_100")]
+		"REGLATTRP_PARENTINHERIT_001 REGLATTRP_PARENTINHERIT_100 REGLATTRP_PARENTINHERIT_002")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
 		var result = await EvalOnOwnObjectAsync(str);
@@ -364,6 +368,10 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// The range counts in PennMUSH's listing order, the child's matches before the parent's
+	/// (<c>src/attrib.c:1574-1580</c>).
+	/// </summary>
 	[Test]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
@@ -376,7 +384,7 @@ public class AttributeFunctionUnitTests
 		"[attrib_set(%q1/REGXATTRP_PARENTINHERIT_002,value2)]" +
 		"[attrib_set(%q0/REGXATTRP_PARENTINHERIT_100,value3)]" +
 		"[regxattrp(%q0/^REGXATTRP_PARENTINHERIT_,1,2)]",
-		"REGXATTRP_PARENTINHERIT_001 REGXATTRP_PARENTINHERIT_002")]
+		"REGXATTRP_PARENTINHERIT_001 REGXATTRP_PARENTINHERIT_100")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
 		var result = await EvalOnOwnObjectAsync(str);
@@ -865,7 +873,9 @@ public class AttributeFunctionUnitTests
 
 	/// <summary>
 	/// The alias lives in the one by-name read every function goes through, so everything that gets or
-	/// evaluates an attribute by name sees it. Listing does not: <c>lattr()</c> matches stored names only.
+	/// evaluates an attribute by name sees it. So does a listing given a literal name: PennMUSH's
+	/// <c>atr_iter_get</c> reads it through <c>atr_get_noparent</c>, alias included, and lists the real
+	/// name (<c>src/attrib.c:1351-1356</c>).
 	/// </summary>
 	[Test]
 	[Arguments("get(%q0/DESC)", "x%0")]
@@ -882,8 +892,8 @@ public class AttributeFunctionUnitTests
 	[Arguments("fold(%q0/DESC,a b)", "xa")]
 	[Arguments("hasattr(%q0/DESC)", "1")]
 	[Arguments("hasattrval(%q0/DESC)", "1")]
-	[Arguments("lattr(%q0/DESC)", "")]
-	public async Task EveryByNameReadSeesTheAliasButListingDoesNot(string call, string expected)
+	[Arguments("lattr(%q0/DESC)", "DESCRIBE")]
+	public async Task EveryByNameReadSeesTheAlias(string call, string expected)
 	{
 		var thing = $"AliasAll_{Guid.NewGuid():N}"[..20];
 		var result = await Parser.FunctionParse(MarkupText.Plain(

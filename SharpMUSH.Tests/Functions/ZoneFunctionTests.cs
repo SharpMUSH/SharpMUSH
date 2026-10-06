@@ -283,8 +283,13 @@ public class ZoneFunctionTests
 		await Assert.That(zoneChain[1]).IsEqualTo(zoneADbRef.Number);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>atr_get_with_parent</c> (<c>src/attrib.c:1203-1278</c>) never looks at the zone: a
+	/// zone supplies $-commands, not attributes, so neither <c>hasattrp()</c> nor a read through the
+	/// object sees the zone's attribute.
+	/// </summary>
 	[Test]
-	public async Task ZoneAttributeInheritance()
+	public async Task ZoneAttributeIsNotInherited()
 	{
 		var zoneResult = await CreateFixtureAsync("ZoneAttrMaster");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
@@ -301,11 +306,9 @@ public class ZoneFunctionTests
 		var zoneAttribute = await Mediator.CreateStream(new GetAttributeQuery(zoneDbRef, ["TEST_ZONE_ATTR"])).SingleAsync();
 		await Assert.That(zoneAttribute.Value.ToPlainText()).IsEqualTo("Zone Master Value");
 
-		// hasattrp checks parents/zones
 		var hasAttr = (await FunctionParser.FunctionParse(MarkupText.Plain($"hasattrp({objDbRef},TEST_ZONE_ATTR)")))?.Message!;
-		await Assert.That(hasAttr.ToPlainText()).IsEqualTo("1");
+		await Assert.That(hasAttr.ToPlainText()).IsEqualTo("0");
 
-		// Directly test AttributeService to verify zone attribute inheritance
 		var executor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<AnySharpObject>();
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
@@ -317,7 +320,7 @@ public class ZoneFunctionTests
 			IAttributeService.AttributeMode.Read,
 			parent: true);
 
-		await Assert.That(maybeAttr.Expect<SharpAttribute[]>().Last().Value.ToPlainText()).IsEqualTo("Zone Master Value");
+		await Assert.That(maybeAttr.IsNone).IsTrue();
 	}
 
 	[Test]
@@ -352,18 +355,18 @@ public class ZoneFunctionTests
 		var childZoneFromDB = (await childFromDB.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
 		await Assert.That(childZoneFromDB.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
 
-		// Test attribute inheritance using get_eval which checks parent and zone chains
-		// Parent attributes should take precedence over zone attributes
+		// get_eval reads through the parent chain; the zone is never consulted
+		// so the parent's value is the one found
 		var childAttrValue = (await FunctionParser.FunctionParse(MarkupText.Plain($"get_eval({childDbRef}/ZONE_PREC_TEST)")))?.Message!;
 		await Assert.That(childAttrValue.ToPlainText()).IsEqualTo("From Parent");
 	}
 
+	/// <summary>
+	/// Neither the child's zone nor its parent's zone is consulted (<c>src/attrib.c:1203-1278</c>).
+	/// </summary>
 	[Test]
-	public async Task ZoneAttributeInheritanceParentHasDifferentZone()
+	public async Task ZoneAttributeIsNotInheritedThroughAnyZone()
 	{
-		// Test that each parent can have a different zone
-		// Lookup order: child -> child's zone -> parent -> parent's zone
-
 		var childZoneResult = await CreateFixtureAsync("ChildZoneMaster");
 		var childZoneDbRef = DBRef.Parse(childZoneResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&CHILD_ZONE_ATTR {childZoneDbRef}=From Child Zone"));
@@ -392,9 +395,8 @@ public class ZoneFunctionTests
 			IAttributeService.AttributeMode.Read,
 			parent: true);
 
-		await Assert.That(childZoneAttr.Expect<SharpAttribute[]>().Last().Value.ToPlainText()).IsEqualTo("From Child Zone");
+		await Assert.That(childZoneAttr.IsNone).IsTrue();
 
-		// Should inherit from parent's zone (after checking child and child's zone)
 		var parentZoneAttr = await attributeService.GetAttributeAsync(
 			executor,
 			child,
@@ -402,6 +404,6 @@ public class ZoneFunctionTests
 			IAttributeService.AttributeMode.Read,
 			parent: true);
 
-		await Assert.That(parentZoneAttr.Expect<SharpAttribute[]>().Last().Value.ToPlainText()).IsEqualTo("From Parent Zone");
+		await Assert.That(parentZoneAttr.IsNone).IsTrue();
 	}
 }
