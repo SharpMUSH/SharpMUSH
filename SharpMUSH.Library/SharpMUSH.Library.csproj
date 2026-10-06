@@ -69,6 +69,12 @@
 		<None Include="README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
+	<!-- The text SharpMUSH ships for each GameMessage (the connect screen, the MOTDs, ...): what a message shows
+	     until an administrator edits it on the Messages page. -->
+	<ItemGroup>
+		<EmbeddedResource Include="Messages\*.txt" LogicalName="SharpMUSH.Library.Messages.%(Filename)%(Extension)" />
+	</ItemGroup>
+
 	<!-- Bundle the (non-packable) ProjectReference output assemblies into the package's lib folder so the
 	     contract surface compiles standalone for external authors. DependsOnTargets="ResolveReferences"
 	     ensures @(ReferenceCopyLocalPaths) is populated when pack invokes this. -->

@@ -255,7 +255,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.Because("queue.inspect.own alone opens the diagnostics page, as in the section sidebar");
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
 		foreach (var gated in new[] { "/admin/accounts", "/admin/audit", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
-			"/admin/suggestions", "/admin/wiki", "/admin/media", "/admin/applications", "/admin/packages", "/admin/layout",
+			"/admin/suggestions", "/admin/messages", "/admin/wiki", "/admin/media", "/admin/applications", "/admin/packages", "/admin/layout",
 			"/admin/server", "/admin/import" })
 		{
 			await Assert.That(cut.FindAll($"a.adm-dash-card[href='{gated}']").Count).IsEqualTo(0).Because(gated);
@@ -373,7 +373,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cards).IsEquivalentTo(new[]
 		{
 			"/softcode", "/admin/characters", "/admin/guests", "/admin/moderation", "/admin/audit",
-			"/admin/wiki", "/admin/suggestions", "/admin/profiles", "/admin/server", "/admin/config", "/admin/import",
+			"/admin/wiki", "/admin/suggestions", "/admin/messages", "/admin/profiles", "/admin/server", "/admin/config", "/admin/import",
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 

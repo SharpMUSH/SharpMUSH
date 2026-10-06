@@ -98,11 +98,11 @@ public class ConfigIndexTests : TrackingBunitContext
 		int Count(string category) => schema.Properties.Values.Count(p => p.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
 		var wiki = Count("Wiki");
 		await Assert.That(wiki).IsGreaterThan(0).Because("the bug only shows when Wiki has settings to count");
-		var expected = Count("Message") + Count("Cosmetic") + Count("Chat") + wiki;
+		var expected = Count("Cosmetic") + Count("Chat") + wiki;
 
 		var cut = RenderHome();
 
-		var count = cut.Find("a.config-cat-card[href='/admin/config/message'] .config-cat-count").TextContent;
+		var count = cut.Find("a.config-cat-card[href='/admin/config/cosmetic'] .config-cat-count").TextContent;
 		await Assert.That(count).Contains(expected.ToString());
 	}
 

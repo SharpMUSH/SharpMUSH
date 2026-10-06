@@ -2,6 +2,7 @@ using SharpMUSH.Library.Authorization;
 using Humanizer;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -188,21 +189,9 @@ public partial class Commands
 
 		var isWizard = await executor.Can(PortalPermission.ChatAdmin);
 
-		var motdFile = Configuration.CurrentValue.Message.MessageOfTheDayFile;
-		var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
-
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdCurrentSettingsHeader), executor);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectFileFormat), executor, motdFile ?? "(not set)");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdConnectHtmlFormat), executor, motdHtmlFile ?? "(not set)");
-
-		if (isWizard)
-		{
-			var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
-			var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardFileFormat), executor, wizmotdFile ?? "(not set)");
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdWizardHtmlFormat), executor, wizmotdHtmlFile ?? "(not set)");
-		}
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ListMotdSourceFormat), executor,
+			await MessageSourceDescriptionAsync());
 
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>();
 		if (motdData != null)
@@ -221,6 +210,13 @@ public partial class Commands
 
 		return CallState.Empty;
 	}
+
+	/// <summary>Where the connect screen and the MOTDs come from, for <c>@listmotd</c> and <c>@list motd</c>.</summary>
+	private async ValueTask<string> MessageSourceDescriptionAsync()
+		=> await MessageService.GetSourceAsync() is (GameMessageSource.Object, _)
+			&& await MessageService.MessagesObjectAsync() is AnySharpObject holder
+				? $"the Messages object ({holder.Object().Name}(#{holder.Object().DBRef.Number}))"
+				: "the stored messages (the Messages page)";
 
 	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)

@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -287,7 +288,7 @@ public partial class Commands
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundDB).IsWizard())
 		{
-			await NotifyService.Notify(handle, "Logins are disabled.");
+			await NotifyLoginsDisabledAsync(handle);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -366,7 +367,7 @@ public partial class Commands
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundPlayer).IsWizard())
 		{
-			await NotifyService.Notify(handle, "Logins are disabled.");
+			await NotifyLoginsDisabledAsync(handle);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -399,7 +400,7 @@ public partial class Commands
 
 		if (!Configuration.CurrentValue.Net.Logins)
 		{
-			await NotifyService.Notify(handle, "Logins are disabled.");
+			await NotifyLoginsDisabledAsync(handle);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -538,10 +539,9 @@ public partial class Commands
 
 		await NotifyQuitAsync(MarkupText.Plain("GOODBYE."));
 
-		var quitText = await ReadMessageFileAsync(Configuration.CurrentValue.Message.QuitFile);
-		if (!string.IsNullOrWhiteSpace(quitText))
+		if (await MessageService.RenderAsync(GameMessage.Quit, handle, executor) is { } quitText)
 		{
-			await NotifyQuitAsync(MarkupText.Plain(quitText));
+			await NotifyQuitAsync(quitText);
 		}
 
 		await ConnectionService.Disconnect(handle);
@@ -593,13 +593,22 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Reads a message file by path, returning its content or null if the file does not exist.
+	/// PennMUSH's refusal while logins are off (<c>check_connect</c>): the down message, then <c>@motd/down</c>'s,
+	/// then the line that says why.
 	/// </summary>
-	private async Task<string?> ReadMessageFileAsync(string? filePath)
+	private async ValueTask NotifyLoginsDisabledAsync(long handle)
 	{
-		if (string.IsNullOrEmpty(filePath)) return null;
-		if (!File.Exists(filePath)) return null;
-		return await File.ReadAllTextAsync(filePath);
+		if (await MessageService.RenderAsync(GameMessage.Down, handle) is { } downText)
+		{
+			await NotifyService.Notify(handle, downText);
+		}
+
+		if ((await ObjectDataService.GetExpandedServerDataAsync<MotdData>())?.DownMotd is { Length: > 0 } downMotd)
+		{
+			await NotifyService.Notify(handle, downMotd);
+		}
+
+		await NotifyService.Notify(handle, "Logins are disabled.");
 	}
 
 	/// <summary>
@@ -720,42 +729,34 @@ public partial class Commands
 			: null;
 
 	/// <summary>
-	/// Shows required post-login messages (MOTD, wizard MOTD, guest file).
-	/// Matches PennMUSH login experience.
+	/// Shows the post-login messages: the MOTD, the wizard MOTD to wizards and royalty, and the guest message to a
+	/// guest. An <c>@motd</c> or <c>@wizmotd</c> stands in for its message while it is set.
 	/// </summary>
 	private async Task ShowPostLoginMessages(long handle, AnySharpObject player, bool isGuest = false)
 	{
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>();
 
-		var motdText = motdData?.ConnectMotd;
-		if (string.IsNullOrWhiteSpace(motdText))
-		{
-			motdText = await ReadMessageFileAsync(Configuration.CurrentValue.Message.MessageOfTheDayFile);
-		}
-		if (!string.IsNullOrWhiteSpace(motdText))
-		{
-			await NotifyService.Notify(handle, motdText);
-		}
+		await ShowAsync(GameMessage.Motd, motdData?.ConnectMotd);
 
 		if (await player.IsWizard() || await player.IsRoyalty())
 		{
-			var wizmotdText = motdData?.WizardMotd;
-			if (string.IsNullOrWhiteSpace(wizmotdText))
-			{
-				wizmotdText = await ReadMessageFileAsync(Configuration.CurrentValue.Message.WizMessageOfTheDayFile);
-			}
-			if (!string.IsNullOrWhiteSpace(wizmotdText))
-			{
-				await NotifyService.Notify(handle, wizmotdText);
-			}
+			await ShowAsync(GameMessage.WizMotd, motdData?.WizardMotd);
 		}
 
 		if (isGuest)
 		{
-			var guestText = await ReadMessageFileAsync(Configuration.CurrentValue.Message.GuestFile);
-			if (!string.IsNullOrWhiteSpace(guestText))
+			await ShowAsync(GameMessage.Guest, null);
+		}
+
+		async ValueTask ShowAsync(GameMessage message, string? temporary)
+		{
+			if (!string.IsNullOrWhiteSpace(temporary))
 			{
-				await NotifyService.Notify(handle, guestText);
+				await NotifyService.Notify(handle, temporary);
+			}
+			else if (await MessageService.RenderAsync(message, handle, player) is { } text)
+			{
+				await NotifyService.Notify(handle, text);
 			}
 		}
 	}

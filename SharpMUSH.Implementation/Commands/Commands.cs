@@ -95,6 +95,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IMsspReportService MsspReport { get; }
 
+	private IGameMessageService MessageService { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -152,6 +154,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IPageLogService pageLog,
 		IAuditLog audit,
 		IMsspReportService msspReport,
+		IGameMessageService gameMessages,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -201,6 +204,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		PageLog = pageLog;
 		Audit = audit;
 		MsspReport = msspReport;
+		MessageService = gameMessages;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

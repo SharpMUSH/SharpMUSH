@@ -729,13 +729,13 @@ public partial class Commands
 		=> !GodOnlyConfigOptions.Contains(property) || viewer.IsGod();
 
 	/// <summary>
-	/// <c>config_set</c> lets a command reach every option except the <c>files</c> and <c>messages</c>
-	/// groups — file paths, which could be pointed anywhere — and the CP_GODONLY ones. The list-valued
+	/// <c>config_set</c> lets a command reach every option except the <c>files</c> group — file paths, which
+	/// could be pointed anywhere — and the CP_GODONLY ones. The list-valued
 	/// options (banned names, sitelock rules, restrictions) have commands of their own.
 	/// </summary>
 	private static bool IsConfigOptionSettable(string property)
 		=> !GodOnlyConfigOptions.Contains(property)
-			 && ConfigGenerated.ConfigAccessor.GetCategoryForProperty(property) is not ("File" or "Message")
+			 && ConfigGenerated.ConfigAccessor.GetCategoryForProperty(property) is not "File"
 			 && ConfigGenerated.ConfigAccessor.GetPropertyType(property) is { } type
 			 && (Nullable.GetUnderlyingType(type) ?? type) is var scalar
 			 && (scalar.IsEnum || scalar == typeof(bool) || scalar == typeof(uint) || scalar == typeof(int)

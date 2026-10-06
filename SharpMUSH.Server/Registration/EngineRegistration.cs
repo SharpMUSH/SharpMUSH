@@ -199,6 +199,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IGameBroadcastService, GameBroadcastService>();
 		services.AddSingleton<IConnectionAnnounceService, ConnectionAnnounceService>();
 		services.AddSingleton<IChannelBroadcastService, Implementation.Services.ChannelBroadcastService>();
+		services.AddSingleton<IGameMessageService, Implementation.Services.GameMessageService>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ISortService, SortService>();

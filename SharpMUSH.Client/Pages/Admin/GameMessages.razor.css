@@ -1,0 +1,257 @@
+.adm-msg-source {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px 16px 16px;
+}
+
+.adm-msg-source-choices {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 10px;
+}
+
+.adm-msg-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.adm-msg-choice--on {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.adm-msg-choice:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.adm-msg-choice:disabled {
+	cursor: default;
+	opacity: 0.7;
+}
+
+.adm-msg-choice-text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.adm-msg-choice-label {
+	font-weight: 600;
+}
+
+.adm-msg-choice-hint,
+.adm-msg-faint,
+.adm-msg-hint {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.adm-msg-source-status {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 12px;
+	font-size: 13px;
+}
+
+.adm-msg-link {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--accent);
+	font: inherit;
+	cursor: pointer;
+}
+
+.adm-msg-link:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.adm-msg-layout {
+	display: grid;
+	grid-template-columns: 220px minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+}
+
+.adm-msg-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.adm-msg-item {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+	padding: 8px 12px;
+	border: 1px solid transparent;
+	border-radius: var(--radius-row);
+	background: transparent;
+	color: var(--text-dim);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.adm-msg-item:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.adm-msg-item--current {
+	border-color: var(--border);
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.adm-msg-item:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.adm-msg-item-title {
+	font-weight: 600;
+}
+
+.adm-msg-item-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.adm-msg-tag {
+	padding: 0 6px;
+	border-radius: 6px;
+	background: var(--surface-3);
+	color: var(--text-dim);
+	font-size: 11px;
+}
+
+.adm-msg-tag--object {
+	font-family: var(--font-mono);
+	color: var(--accent);
+}
+
+.adm-msg-tag--dirty {
+	background: var(--warn-tint);
+	color: var(--warn);
+}
+
+.adm-msg-body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: 14px 16px 16px;
+	min-width: 0;
+}
+
+.adm-msg-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+/* The field is a terminal: monospace, one line per line, on the terminal's own dark ground. */
+.adm-msg-editor ::deep .adm-msg-input,
+.adm-msg-preview {
+	width: 100%;
+	margin: 0;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-3);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	line-height: 1.35;
+	tab-size: 8;
+}
+
+.adm-msg-editor ::deep .adm-msg-input {
+	resize: vertical;
+	color: var(--text);
+}
+
+.adm-msg-editor ::deep .adm-msg-input:focus {
+	outline: none;
+	border-color: var(--accent);
+}
+
+.adm-msg-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.adm-msg-spacer {
+	flex: 1;
+}
+
+.adm-msg-actions ::deep .adm-msg-tool {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+	color: var(--text);
+	cursor: pointer;
+}
+
+.adm-msg-preview-block {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+
+.adm-msg-preview-label {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-dim);
+}
+
+.adm-msg-preview {
+	overflow-x: auto;
+	white-space: pre;
+	color: var(--text);
+}
+
+.adm-msg-preview--empty {
+	color: var(--text-faint);
+	font-family: var(--font-ui);
+	white-space: normal;
+}
+
+@container page (max-width: 48rem) {
+	.adm-msg-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.adm-msg-list {
+		flex-direction: row;
+		overflow-x: auto;
+		padding-bottom: 4px;
+	}
+
+	.adm-msg-item {
+		flex: 0 0 auto;
+	}
+}

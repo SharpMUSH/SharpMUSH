@@ -1,0 +1,272 @@
+@page "/admin/messages"
+@attribute [Authorize(Policy = "config.admin")]
+@inject IStringLocalizer<SharedResource> Loc
+@inject GameMessagesService Messages
+@inject ISnackbar Snackbar
+
+@* The connect screen, the MOTDs and the other texts the server shows a connection: each one's stored text,
+   edited as it will look (monospace, unwrapped, in colour), and the switch between that text and the
+   Messages object. A text is stored as a terminal receives it, ANSI escapes and all; the editor reads it
+   into styled text and writes it back the same way. *@
+
+<PageTitle>@Loc["AdmMessagesTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
+<div class="page-stack page-stack--padded adm-msg">
+    <PlainPageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["AdmMessagesTitle"]" Description="@Loc["AdmMessagesDescription"]" />
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+    }
+
+    @if (_state is null)
+    {
+        @if (_error is null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+    }
+    else
+    {
+        <KitCard Title="@Loc["AdmMessagesSourceTitle"]" Sub="@Loc["AdmMessagesSourceSub"]">
+            <div class="adm-msg-source">
+                <div class="adm-msg-source-choices" role="radiogroup" aria-label="@Loc["AdmMessagesSourceTitle"]">
+                    @SourceChoice(GameMessageSource.Stored, "AdmMessagesSourceStored", "AdmMessagesSourceStoredHint", Icons.Material.Outlined.Article)
+                    @SourceChoice(GameMessageSource.Object, "AdmMessagesSourceObject", "AdmMessagesSourceObjectHint", Icons.Material.Outlined.Code)
+                </div>
+                <div class="adm-msg-source-status" id="messages-source-status">
+                    @if (_state.ObjectDbref is { } dbref)
+                    {
+                        <span>@Loc["AdmMessagesObjectIs", _state.ObjectName ?? string.Empty, dbref]</span>
+                    }
+                    else
+                    {
+                        <span>@Loc["AdmMessagesNoObject"]</span>
+                        <MudLink Href="/admin/packages">@Loc["AdmMessagesInstallPackage"]</MudLink>
+                    }
+                    @if (_state.SourceChosen)
+                    {
+                        <button type="button" class="adm-msg-link" disabled="@_busy" @onclick="() => SetSourceAsync(null)">
+                            @Loc["AdmMessagesFollowPackage"]
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="adm-msg-faint">@Loc["AdmMessagesFollowingPackage"]</span>
+                    }
+                </div>
+                @if (_state.Source == GameMessageSource.Object && _state.ObjectDbref is null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">@Loc["AdmMessagesObjectMissing"]</MudAlert>
+                }
+            </div>
+        </KitCard>
+
+        <div class="adm-msg-layout">
+            <nav class="adm-msg-list" aria-label="@Loc["AdmMessagesTitle"]">
+                @foreach (var entry in _state.Messages)
+                {
+                    var current = entry.Message == _selected;
+                    <button type="button" class="adm-msg-item @(current ? "adm-msg-item--current" : null)"
+                            aria-current="@(current ? "true" : null)" data-message="@entry.Message"
+                            @onclick="() => _selected = entry.Message">
+                        <span class="adm-msg-item-title">@Title(entry.Message)</span>
+                        <span class="adm-msg-item-tags">
+                            @if (FromObject(entry))
+                            {
+                                <span class="adm-msg-tag adm-msg-tag--object">@entry.Attribute</span>
+                            }
+                            @if (IsDirty(entry))
+                            {
+                                <span class="adm-msg-tag adm-msg-tag--dirty">@Loc["AdmMessagesUnsaved"]</span>
+                            }
+                            else if (!entry.IsDefault)
+                            {
+                                <span class="adm-msg-tag">@Loc["AdmMessagesEdited"]</span>
+                            }
+                        </span>
+                    </button>
+                }
+            </nav>
+
+            @if (Selected is { } selected)
+            {
+                var draft = Draft(selected.Message);
+                <KitCard Class="adm-msg-editor-card" Title="@Title(selected.Message)" Sub="@Loc[$"AdmMsg{selected.Message}Desc"]">
+                    <div class="adm-msg-body">
+                        @if (FromObject(selected))
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" id="messages-from-object">
+                                @Loc["AdmMessagesShownFromObject", selected.Attribute, _state.ObjectName ?? string.Empty, _state.ObjectDbref ?? 0]
+                                <MudLink Href="/softcode" Class="ml-1">@Loc["AdmMessagesOpenSoftcode"]</MudLink>
+                            </MudAlert>
+                        }
+                        else if (_state.Source == GameMessageSource.Object && _state.ObjectDbref is not null)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true">@Loc["AdmMessagesObjectLacks", selected.Attribute]</MudAlert>
+                        }
+
+                        <div class="adm-msg-editor">
+                            <FormattedInput @key="selected.Message" @ref="_field" Draft="draft" Class="adm-msg-field" InputClass="adm-msg-input"
+                                            Rows="@Rows(selected.Message)" Wrap="false" AriaLabel="@Title(selected.Message)" />
+                            <div class="adm-msg-actions">
+                                @if (_field is not null)
+                                {
+                                    <FormatMenu @key="selected.Message" Target="_field" ButtonClass="adm-msg-tool" Placement="down" />
+                                }
+                                <span class="adm-msg-hint">@Loc["AdmMessagesEditorHint"]</span>
+                                <span class="adm-msg-spacer"></span>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" id="messages-reset"
+                                           Disabled="@(_busy || selected.IsDefault)" OnClick="() => ResetAsync(selected.Message)">
+                                    @Loc["AdmMessagesReset"]
+                                </MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" id="messages-revert"
+                                           Disabled="@(_busy || !IsDirty(selected))" OnClick="() => Revert(selected)">
+                                    @Loc["AdmMessagesRevert"]
+                                </MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" id="messages-save"
+                                           Disabled="@(_busy || !IsDirty(selected))" OnClick="() => SaveAsync(selected.Message)">
+                                    @Loc["Save"]
+                                </MudButton>
+                            </div>
+                        </div>
+
+                        <div class="adm-msg-preview-block">
+                            <div class="adm-msg-preview-label">@Loc["AdmMessagesPreview"]</div>
+                            @if (selected.Preview is { } preview)
+                            {
+                                <pre class="adm-msg-preview" id="messages-preview">@((Microsoft.AspNetCore.Components.MarkupString)AnsiEscapeParser.Parse(preview).Render(MarkupFormat.Html))</pre>
+                            }
+                            else
+                            {
+                                <div class="adm-msg-preview adm-msg-preview--empty" id="messages-preview">@Loc["AdmMessagesShowsNothing"]</div>
+                            }
+                        </div>
+                    </div>
+                </KitCard>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private GameMessagesResponse? _state;
+    private GameMessage _selected = GameMessage.Connect;
+    private readonly Dictionary<GameMessage, ComposerDraft> _drafts = [];
+    private FormattedInput? _field;
+    private FormattedInput? _menuFor;
+    private bool _busy;
+    private string? _error;
+
+    /// <summary>The format menu needs the field it formats, which exists only after a render: render once more for it.</summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_field is not null && !ReferenceEquals(_field, _menuFor))
+        {
+            _menuFor = _field;
+            StateHasChanged();
+        }
+    }
+
+    private GameMessageEntry? Selected => _state?.Messages.FirstOrDefault(m => m.Message == _selected);
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch (await Messages.GetAsync())
+        {
+            case GameMessagesResponse state:
+                Load(state, reload: null);
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    /// <summary>Takes the server's state; a draft is replaced only when it is <paramref name="reload"/>, or new.</summary>
+    private void Load(GameMessagesResponse state, GameMessage? reload)
+    {
+        _state = state;
+        foreach (var entry in state.Messages)
+        {
+            if (!_drafts.TryGetValue(entry.Message, out var draft))
+            {
+                draft = new ComposerDraft();
+                draft.Changed += () => InvokeAsync(StateHasChanged);
+                _drafts[entry.Message] = draft;
+                draft.Load(AnsiEscapeParser.Parse(entry.Text), raw: false);
+            }
+            else if (entry.Message == reload)
+            {
+                draft.Load(AnsiEscapeParser.Parse(entry.Text), raw: false);
+            }
+        }
+    }
+
+    private ComposerDraft Draft(GameMessage message) => _drafts[message];
+
+    private string Title(GameMessage message) => Loc[$"AdmMsg{message}Title"];
+
+    /// <summary>The connect screen is a page of art; the rest are a few lines.</summary>
+    private static int Rows(GameMessage message) => message == GameMessage.Connect ? 20 : 8;
+
+    private bool FromObject(GameMessageEntry entry) =>
+        _state is { Source: GameMessageSource.Object, ObjectDbref: not null } && entry.ObjectHasAttribute;
+
+    /// <summary>The stored text as the editor would write it back, so an untouched draft never reads as changed.</summary>
+    private static string Normalized(string ansi) => AnsiEscapeParser.Parse(ansi).Render(MarkupFormat.Ansi);
+
+    private bool IsDirty(GameMessageEntry entry) =>
+        _drafts.TryGetValue(entry.Message, out var draft) && draft.Text.Render(MarkupFormat.Ansi) != Normalized(entry.Text);
+
+    private void Revert(GameMessageEntry entry) => Draft(entry.Message).Load(AnsiEscapeParser.Parse(entry.Text), raw: false);
+
+    private async Task SaveAsync(GameMessage message)
+    {
+        await RunAsync(() => Messages.SaveAsync(message, Draft(message).Text.Render(MarkupFormat.Ansi)), message,
+            Loc["AdmMessagesSaved", Title(message)]);
+    }
+
+    private async Task ResetAsync(GameMessage message)
+    {
+        await RunAsync(() => Messages.ResetAsync(message), message, Loc["AdmMessagesResetDone", Title(message)]);
+    }
+
+    private async Task SetSourceAsync(GameMessageSource? source)
+    {
+        await RunAsync(() => Messages.SetSourceAsync(source), reload: null, Loc["AdmMessagesSourceSaved"]);
+    }
+
+    private async Task RunAsync(Func<Task<ApiResult<GameMessagesResponse>>> call, GameMessage? reload, string done)
+    {
+        _busy = true;
+        _error = null;
+        var result = await call();
+        _busy = false;
+
+        switch (result)
+        {
+            case GameMessagesResponse state:
+                Load(state, reload);
+                Snackbar.Add(done, Severity.Success);
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private RenderFragment SourceChoice(GameMessageSource source, string labelKey, string hintKey, string icon) => __builder =>
+    {
+        var on = _state!.Source == source;
+        <button type="button" role="radio" aria-checked="@(on ? "true" : "false")" disabled="@_busy"
+                class="adm-msg-choice @(on ? "adm-msg-choice--on" : null)" data-source="@source"
+                @onclick="() => SetSourceAsync(source)">
+            <MudIcon Icon="@icon" Size="Size.Small" />
+            <span class="adm-msg-choice-text">
+                <span class="adm-msg-choice-label">@Loc[labelKey]</span>
+                <span class="adm-msg-choice-hint">@Loc[hintKey]</span>
+            </span>
+        </button>
+    };
+}

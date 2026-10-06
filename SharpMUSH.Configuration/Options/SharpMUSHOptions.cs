@@ -15,7 +15,6 @@ public record SharpMUSHOptions
 	public required FunctionOptions Function { get; init; }
 	public required LimitOptions Limit { get; init; }
 	public required LogOptions Log { get; init; }
-	public required MessageOptions Message { get; init; }
 	public required NetOptions Net { get; init; }
 	public required DebugOptions Debug { get; init; }
 	public required AliasOptions Alias { get; init; }
@@ -238,29 +237,6 @@ public record SharpMUSHOptions
 			UseConnLog: true,
 			UseSyslog: false,
 			WizardLog: "log/wizard.log"
-		),
-		Message = new MessageOptions(
-			ConnectFile: "connect.txt",
-			ConnectHtmlFile: "connect.html",
-			DownFile: "down.txt",
-			DownHtmlFile: "down.html",
-			FullFile: "full.txt",
-			FullHtmlFile: "full.html",
-			GuestFile: "guest.txt",
-			GuestHtmlFile: "guest.html",
-			IndexHtmlFile: "index.html",
-			MessageOfTheDayFile: "motd.txt",
-			MessageOfTheDayHtmlFile: "motd.html",
-			NewUserFile: "newuser.txt",
-			NewUserHtmlFile: "newuser.html",
-			QuitFile: "quit.txt",
-			QuitHtmlFile: "quit.html",
-			RegisterCreateFile: "register.txt",
-			RegisterCreateHtmlFile: "register.html",
-			WhoFile: "who.txt",
-			WhoHtmlFile: "who.html",
-			WizMessageOfTheDayFile: "wizmotd.txt",
-			WizMessageOfTheDayHtmlFile: "wizmotd.html"
 		),
 		Net = new NetOptions(
 			Guests: true,
