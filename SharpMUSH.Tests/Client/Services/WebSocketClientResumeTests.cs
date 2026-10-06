@@ -181,7 +181,10 @@ public class WebSocketClientResumeTests
 
 	private static TerminalService NewTerminal(FakeResumeJs js, ITerminalLoginTokens? tokens = null) => new(
 		new WebSocketClientService(NullLogger<WebSocketClientService>.Instance, new TerminalResumeStore(js)),
-		NullLogger<TerminalService>.Instance, tokens);
+		NullLogger<TerminalService>.Instance, tokens)
+	{
+		LoginTokenRetryDelays = [TimeSpan.FromMilliseconds(20)]
+	};
 
 	private static string[] StoredTexts(FakeResumeJs js) =>
 		js.StoredValue(AliceLinesKey) is { } stored
@@ -393,6 +396,76 @@ public class WebSocketClientResumeTests
 		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsLessThan(frames.IndexOf("look"));
 		await Assert.That(IsResume(server.FirstFrames.Last())).IsTrue();
 		await Assert.That(tokens.Asked).IsEquivalentTo([Alice]);
+		await Assert.That(terminal.Lines.Skip(before).Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.System)).IsEmpty();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// A reboot brings the connection server back before the game, so the first asks for a login token find
+	/// nobody answering. The terminal keeps asking, logs in once the game answers, and only then sends what
+	/// was typed; it never tells the reader to log in themselves.
+	/// </summary>
+	[Test]
+	public async Task A_reconnect_keeps_asking_for_a_login_token_until_the_game_answers()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens("fresh-ott") { Unreachable = 3 };
+		await using var server = await DropsAfterLoginAsync(resumed: false);
+		var terminal = NewTerminal(js, tokens);
+		await ConnectAndDropAsync(terminal, server);
+		var before = terminal.Lines.Count;
+
+		await terminal.SendAsync("look");
+
+		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("look"))).IsTrue();
+		var frames = server.LaterFrames.ToList();
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsGreaterThan(-1);
+		await Assert.That(frames.IndexOf("connect token fresh-ott")).IsLessThan(frames.IndexOf("look"));
+		await Assert.That(tokens.Asked.Count).IsEqualTo(4);
+		await Assert.That(terminal.Lines.Skip(before).Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.System)).IsEmpty();
+
+		await terminal.DisposeAsync();
+	}
+
+	/// <summary>
+	/// The socket a reconnect landed on closes while the terminal is still waiting for the game to hand out a
+	/// login token. The next reconnect resumes that fresh session, which is at the login screen, so it logs in
+	/// there before what was typed; nothing typed is dropped and the reader is not asked to log in.
+	/// </summary>
+	[Test]
+	public async Task A_reconnect_that_closes_while_waiting_for_a_login_token_logs_in_on_the_next_one()
+	{
+		var js = new FakeResumeJs { Reloaded = false };
+		var tokens = new FakeLoginTokens("ott-a", "ott-b") { Unreachable = 1 };
+		await using var server = await ScriptedTerminalServer.StartAsync(
+			(first, connection) => connection switch
+			{
+				1 => [Token("tok-1"), Seq(1, "welcome")],
+				// The reboot: the session is gone, and the socket closes before the game is back.
+				2 => [Token("tok-fresh"), Seq(1, "banner")],
+				// The fresh session, still at the login screen, resumed.
+				_ => [Reattached, Token("tok-3")],
+			},
+			(frame, connection) => connection == 1 && frame == "drop",
+			dropAfterReply: connection => connection == 2);
+		var terminal = new TerminalService(
+			new WebSocketClientService(NullLogger<WebSocketClientService>.Instance, new TerminalResumeStore(js)),
+			NullLogger<TerminalService>.Instance, tokens)
+		{
+			LoginTokenRetryDelays = [TimeSpan.FromSeconds(1)]
+		};
+		await ConnectAndDropAsync(terminal, server);
+		var before = terminal.Lines.Count;
+
+		await terminal.SendAsync("look");
+
+		await Assert.That(await Eventually.TrueAsync(() => server.LaterFrames.Contains("look"), timeoutMs: 15000)).IsTrue();
+		var frames = server.LaterFrames.ToList();
+		var login = frames.FindLastIndex(f => f.StartsWith("connect token ", StringComparison.Ordinal));
+		await Assert.That(login).IsGreaterThan(frames.IndexOf("drop"));
+		await Assert.That(login).IsLessThan(frames.IndexOf("look"));
+		await Assert.That(ResumePointOf(server.FirstFrames.Last()).Token).IsEqualTo("tok-fresh");
 		await Assert.That(terminal.Lines.Skip(before).Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.System)).IsEmpty();
 
 		await terminal.DisposeAsync();

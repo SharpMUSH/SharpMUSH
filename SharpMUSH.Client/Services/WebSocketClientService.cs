@@ -91,7 +91,20 @@ public class WebSocketClientService : IWebSocketClientService
 	public event EventHandler? ResumeRefused;
 
 	/// <inheritdoc/>
-	public Func<Func<string, Task>, Task<bool>>? Relogin { get; set; }
+	public Func<Func<string, Task>, CancellationToken, Task<bool>>? Relogin { get; set; }
+
+	/// <summary>
+	/// Set when a reconnect landed in a fresh session, at the login screen, and cleared once it logged in again
+	/// or could not. The token the server handed that session resumes it, still at the login screen, so a
+	/// reconnect while this is set logs in even when the server resumes it.
+	/// </summary>
+	private bool _loginOwed;
+
+	/// <summary>
+	/// The socket a reconnect is still setting up (answering its resume, logging in again). When it closes,
+	/// that reconnect tries again itself, so its receive loop starts no second one.
+	/// </summary>
+	private ClientWebSocket? _reconnecting;
 	public event EventHandler<WebSocketState>? ConnectionStateChanged;
 
 	/// <summary>
@@ -155,6 +168,8 @@ public class WebSocketClientService : IWebSocketClientService
 		_serverUri = serverUri;
 		_intentionalDisconnect = false;
 		_serverTerminated = false;
+		// The caller logs this connection in itself, unless it resumes a session that already is.
+		_loginOwed = false;
 
 		await AdoptIdentityAsync(identity);
 
@@ -203,6 +218,7 @@ public class WebSocketClientService : IWebSocketClientService
 	{
 		if (_serverUri is null) return null;
 
+		ClientWebSocket? socket = null;
 		try
 		{
 			_webSocket?.Dispose();
@@ -215,6 +231,10 @@ public class WebSocketClientService : IWebSocketClientService
 			}
 
 			_cancellationTokenSource = new CancellationTokenSource();
+			socket = _webSocket;
+			// Cancelled when this socket's receive loop ends: whatever waits on this socket stops waiting.
+			var gone = new CancellationTokenSource();
+			if (reconnect) _reconnecting = socket;
 
 			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", LogSanitizer.Sanitize(_serverUri));
 			await _webSocket.ConnectAsync(new Uri(_serverUri), _cancellationTokenSource.Token);
@@ -250,7 +270,7 @@ public class WebSocketClientService : IWebSocketClientService
 			// at login.").
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 
-			_receiveTask = ReceiveMessagesAsync(verdict, _cancellationTokenSource.Token);
+			_receiveTask = ReceiveMessagesAsync(_webSocket, verdict, gone, _cancellationTokenSource.Token);
 
 			// Wait for the server's answer to a resume, so a caller knows whether the session is the one
 			// it left (still logged in) or a fresh one that needs a login.
@@ -263,7 +283,16 @@ public class WebSocketClientService : IWebSocketClientService
 				if (answer == ResumeVerdict.Interrupted) return answer;
 			}
 
-			var loggedIn = !reconnect || answer == ResumeVerdict.Resumed || await ReloginAsync(_webSocket);
+			if (reconnect && answer != ResumeVerdict.Resumed) _loginOwed = true;
+			bool loggedIn;
+			if (!reconnect || (answer == ResumeVerdict.Resumed && !_loginOwed))
+				loggedIn = true;
+			else if (await ReloginAsync(_webSocket, gone.Token) is { } relogged)
+				loggedIn = relogged;
+			else
+				// The socket closed while logging in: the reconnect loop tries again, with the commands kept.
+				return ResumeVerdict.Interrupted;
+			_loginOwed = false;
 
 			await _sendLock.WaitAsync(_cancellationTokenSource.Token);
 			try
@@ -284,6 +313,10 @@ public class WebSocketClientService : IWebSocketClientService
 		{
 			_logger.LogError(ex, "Error connecting to WebSocket server");
 			throw;
+		}
+		finally
+		{
+			if (socket is not null && ReferenceEquals(_reconnecting, socket)) _reconnecting = null;
 		}
 	}
 
@@ -388,16 +421,27 @@ public class WebSocketClientService : IWebSocketClientService
 	/// Logs a reconnect that could not resume back in, before anything buffered goes out. False when there is
 	/// no way to or it failed: the session stays at the login screen.
 	/// </summary>
-	private async Task<bool> ReloginAsync(ClientWebSocket socket)
+	/// <returns>Null when <paramref name="socketGone"/> fired first: the socket closed before a login could go out.</returns>
+	private async Task<bool?> ReloginAsync(ClientWebSocket socket, CancellationToken socketGone)
 	{
 		if (Relogin is not { } relogin) return false;
 
 		try
 		{
 			// The login goes straight to this socket; nothing else writes to it until it is ready.
-			return await relogin(message => WriteAsync(socket, message));
+			return await relogin(message => WriteAsync(socket, message), socketGone);
 		}
-		// A cancellation is not a failed login: it ends this attempt, and the reconnect loop takes it.
+		catch (OperationCanceledException) when (socketGone.IsCancellationRequested)
+		{
+			_logger.LogInformation("The socket closed before the reconnect could log in; the next one will");
+			return null;
+		}
+		catch (WebSocketException) when (socket.State != WebSocketState.Open)
+		{
+			_logger.LogInformation("The socket closed while the reconnect was logging in; the next one will");
+			return null;
+		}
+		// Any other cancellation is not a failed login either: it ends this attempt, and the reconnect loop takes it.
 		catch (Exception ex) when (ex is WebSocketException or HttpRequestException or InvalidOperationException)
 		{
 			_logger.LogWarning(ex, "Logging in again after a reconnect failed");
@@ -496,8 +540,11 @@ public class WebSocketClientService : IWebSocketClientService
 		ResumeRefused?.Invoke(this, EventArgs.Empty);
 	}
 
+	/// <param name="socket">The socket this loop reads.</param>
 	/// <param name="verdict">This socket's pending resume answer, or null for a hello.</param>
-	private async Task ReceiveMessagesAsync(TaskCompletionSource<ResumeVerdict>? verdict, CancellationToken cancellationToken)
+	/// <param name="gone">Cancelled when the loop ends.</param>
+	private async Task ReceiveMessagesAsync(ClientWebSocket socket, TaskCompletionSource<ResumeVerdict>? verdict,
+		CancellationTokenSource gone, CancellationToken cancellationToken)
 	{
 		var buffer = new byte[1024 * 4];
 		using var messageBuffer = new MemoryStream();
@@ -557,9 +604,13 @@ public class WebSocketClientService : IWebSocketClientService
 		var unanswered = verdict is not null
 			&& (verdict.TrySetResult(ResumeVerdict.Interrupted) || verdict.Task.Result == ResumeVerdict.Interrupted);
 
+		// Likewise a socket a reconnect was still setting up: that reconnect tries again.
+		var reconnecting = ReferenceEquals(_reconnecting, socket);
+		gone.Cancel();
+
 		// Attempt automatic reconnection if the disconnect was neither client-intentional nor an
 		// engine-initiated logout (the server's {"type":"bye"}).
-		if (!unanswered && !_intentionalDisconnect && !_serverTerminated && _serverUri is not null)
+		if (!unanswered && !reconnecting && !_intentionalDisconnect && !_serverTerminated && _serverUri is not null)
 		{
 			_ = Task.Run(async () =>
 			{

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
@@ -141,10 +142,11 @@ internal sealed class ScriptedTerminalServer : IAsyncDisposable
 	/// <paramref name="reply"/> is given the first frame and the connection's number (1 for the first);
 	/// null drops that connection without answering, as a network failure would. <paramref name="dropAfter"/>
 	/// is given each later frame and the connection's number, and drops the connection after a frame it
-	/// accepts.
+	/// accepts. <paramref name="dropAfterReply"/> drops a connection it accepts the number of shortly after its
+	/// reply is sent, once the client has had time to read it (an abort can overtake frames still in flight).
 	/// </summary>
 	public static async Task<ScriptedTerminalServer> StartAsync(Func<string, int, IReadOnlyList<string>?> reply,
-		Func<string, int, bool>? dropAfter = null)
+		Func<string, int, bool>? dropAfter = null, Func<int, bool>? dropAfterReply = null)
 	{
 		var connections = 0;
 		var builder = WebApplication.CreateSlimBuilder();
@@ -174,6 +176,12 @@ internal sealed class ScriptedTerminalServer : IAsyncDisposable
 			}
 			foreach (var frame in frames)
 				await socket.SendAsync(Encoding.UTF8.GetBytes(frame), WebSocketMessageType.Text, true, context.RequestAborted);
+			if (dropAfterReply?.Invoke(connection) is true)
+			{
+				await Task.Delay(TimeSpan.FromMilliseconds(200), context.RequestAborted);
+				socket.Abort();
+				return;
+			}
 
 			while (await ReceiveAsync(socket, context.RequestAborted) is { } later)
 			{
@@ -242,20 +250,33 @@ internal static class Eventually
 	}
 }
 
-/// <summary>Hands out the given login tokens in order, then none; records whom each was asked for.</summary>
+/// <summary>
+/// Hands out the given login tokens in order, then none; records whom each was asked for. The first
+/// <see cref="Unreachable"/> asks find the game not answering.
+/// </summary>
 internal sealed class FakeLoginTokens(params string[] tokens) : ITerminalLoginTokens
 {
 	private readonly ConcurrentQueue<string> _tokens = new(tokens);
+	private int _unreachable;
 
 	public ConcurrentQueue<TerminalIdentity> Asked { get; } = new();
 
 	/// <summary>When set, a mint waits for it: the reconnect is open and logging in, but not logged in yet.</summary>
 	public TaskCompletionSource? Hold { get; init; }
 
-	public async Task<string?> MintAsync(TerminalIdentity identity)
+	/// <summary>How many asks fail the way they do while the game is still starting.</summary>
+	public int Unreachable
+	{
+		get => _unreachable;
+		init => _unreachable = value;
+	}
+
+	public async Task<TerminalLoginMint> MintAsync(TerminalIdentity identity)
 	{
 		Asked.Enqueue(identity);
 		if (Hold is { } hold) await hold.Task;
-		return _tokens.TryDequeue(out var token) ? token : null;
+		if (Interlocked.Decrement(ref _unreachable) >= 0)
+			return ApiFailure.Transport(new HttpRequestException("Failed to fetch"));
+		return _tokens.TryDequeue(out var token) ? token : new NotFound();
 	}
 }
