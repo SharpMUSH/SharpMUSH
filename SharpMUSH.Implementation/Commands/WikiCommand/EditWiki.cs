@@ -157,7 +157,8 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		var categoryNames = await localization.GetCategoryNamesAsync(await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor));
+		var categoryNames = await localization.GetCategoryNamesAsync(await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor),
+			await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var labels = string.Join(", ", updated.Categories.Select(c => WikiHelpers.CategoryLabel(c, categoryNames)));
 		await notifyService.Notify(executor, updated.Categories.Count == 0
 			? $"WIKI: '{updated.Title}' is in no category."

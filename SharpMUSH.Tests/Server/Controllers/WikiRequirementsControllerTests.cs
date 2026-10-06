@@ -89,6 +89,21 @@ public class WikiRequirementsControllerTests
 	}
 
 	[Test]
+	public async Task ACategoryPageClosedToTheReaderKeepsItsNameFromThem()
+	{
+		var (wiki, _) = await SeedAsync();
+		var category = (await wiki.CreateAsync("Lore", "Stories.", "#1", WikiNamespace.Category, "en")).Expect<WikiPage>();
+		await wiki.SetMetadataAsync(category.Id, [], published: true);
+
+		var names = (IReadOnlyDictionary<string, string>)((OkObjectResult)await As(wiki).Browse.GetCategoryNames()).Value!;
+		await Assert.That(names["lore"]).IsEqualTo("Lore");
+
+		await As(wiki, Admin).Requirements.Put("page", category.Id, Require("read", PortalPermission.MediaAdmin));
+		names = (IReadOnlyDictionary<string, string>)((OkObjectResult)await As(wiki).Browse.GetCategoryNames()).Value!;
+		await Assert.That(names.ContainsKey("lore")).IsFalse();
+	}
+
+	[Test]
 	public async Task APageListsWhatItInheritsAndTheCallerIsToldWhy()
 	{
 		var (wiki, page) = await SeedAsync();

@@ -127,7 +127,7 @@ public class WikiBrowseController(
 	/// </summary>
 	[HttpGet("category-names")]
 	public async Task<IActionResult> GetCategoryNames([FromQuery] string? lang = null) =>
-		Ok(await Localization.GetCategoryNamesAsync(lang));
+		Ok(await Localization.GetCategoryNamesAsync(lang, await VisibilityAsync()));
 
 	/// <summary>
 	/// POST /api/wiki/exists

@@ -99,7 +99,9 @@ public static class ListWiki
 		var subcategories = members.Where(p => p.Namespace == WikiHelpers.NamespaceName(WikiNamespace.Category)).ToList();
 		var pages = members.Except(subcategories).ToList();
 
-		var names = forceSource ? null : await localization.GetCategoryNamesAsync(locale);
+		var names = forceSource
+			? null
+			: await localization.GetCategoryNamesAsync(locale, await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var lines = new List<MString>
 		{
 			MarkupText.Plain($"WIKI: Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies):"),

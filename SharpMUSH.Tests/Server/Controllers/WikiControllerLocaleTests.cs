@@ -85,18 +85,18 @@ public class WikiControllerLocaleTests
 	}
 
 	[Test]
-	public async Task GetPage_DraftTranslationIsVisibleToAnEditor()
+	public async Task GetPage_DraftTranslationDoesNotLeakToAnEditorWithoutWikiDrafts()
 	{
 		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
-		var result = await wiki.Pages.GetPage("main", "dragons", lang: "fr");
-
-		var dto = OkDto(result);
-		await Assert.That(dto.MarkdownSource).IsEqualTo("corps brouillon");
-		await Assert.That(dto.Locale).IsEqualTo("fr");
-		await Assert.That(dto.Published).IsFalse();
+		var dto = OkDto(await wiki.Pages.GetPage("main", "dragons", lang: "fr"));
+		await Assert.That(dto.Locale).IsEqualTo("en")
+			.Because("everyone holding wiki.edit is every player; another's draft translation needs wiki.drafts");
+		await Assert.That(dto.MarkdownSource).DoesNotContain("brouillon");
+		var translations = (IEnumerable<WikiTranslationSummaryDto>)((OkObjectResult)await wiki.Translations.GetTranslations("dragons")).Value!;
+		await Assert.That(translations).IsEmpty();
 	}
 
 	[Test]

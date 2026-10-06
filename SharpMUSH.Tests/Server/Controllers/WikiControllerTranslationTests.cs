@@ -245,9 +245,9 @@ public class WikiControllerTranslationTests
 	}
 
 	[Test]
-	public async Task GetTranslations_ShowsDraftsToAnEditor()
+	public async Task GetTranslations_ShowsDraftsToAWikiDraftsHolder()
 	{
-		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiDrafts);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
 		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false, expectedRevisionNumber: null);

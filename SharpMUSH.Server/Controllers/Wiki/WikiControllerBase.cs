@@ -79,15 +79,10 @@ public abstract class WikiControllerBase(
 			: await Access.AnonymousAsync(HttpContext.RequestAborted);
 
 	/// <summary>
-	/// True when the caller may see unpublished <em>translations</em>: they may see drafts
-	/// (<c>wiki.drafts</c>), or they hold the edit scope and so may be previewing their own translation at
-	/// <c>?lang=</c>.
+	/// True when the caller may see unpublished <em>translations</em>: they hold <c>wiki.drafts</c>, as for
+	/// draft pages. Holding <c>wiki.edit</c> is not enough, or every player would read every draft translation.
 	/// </summary>
-	protected async Task<bool> IncludeDraftsAsync()
-	{
-		var reader = await ReaderAsync();
-		return reader.Has(PortalPermission.WikiDrafts) || reader.Has(PortalPermission.WikiEdit);
-	}
+	protected async Task<bool> IncludeDraftsAsync() => (await ReaderAsync()).Has(PortalPermission.WikiDrafts);
 
 	/// <summary>
 	/// The caller's character dbref (the acting/primary character, from the <c>character_dbref</c>

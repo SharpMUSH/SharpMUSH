@@ -115,7 +115,9 @@ public static class ViewWiki
 		var restricted = (await access.RequirementsAsync()).HasPageRules(page.Id);
 		var markers = $"{(published ? "" : " (draft)")}{(restricted ? " (restricted)" : "")}";
 		// A category's name is its category page's title, in the reader's language where it is translated.
-		var categoryNames = forceSource ? null : await localization.GetCategoryNamesAsync(locale);
+		var categoryNames = forceSource
+			? null
+			: await localization.GetCategoryNamesAsync(locale, await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var categories = page.Categories.Count > 0
 			? string.Join(", ", page.Categories.Select(c => WikiHelpers.CategoryLabel(c, categoryNames)))
 			: "-";
