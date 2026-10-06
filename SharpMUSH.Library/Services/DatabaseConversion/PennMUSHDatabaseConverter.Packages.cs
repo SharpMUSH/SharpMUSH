@@ -85,7 +85,7 @@ public partial class PennMUSHDatabaseConverter
 		}
 
 		if (_registrations is not null
-			&& await _registrations.Value.ForgetRegistrationsOnAsync(packageObjects) is { IsEmpty: false } forgotten)
+			&& await _registrations.Value.ForgetRegistrationsOnAsync([.. packageObjects.Select(number => new DBRef(number))]) is { IsEmpty: false } forgotten)
 		{
 			context.Warnings.Add($"{forgotten.Describe()} They pointed at the removed package objects.");
 		}

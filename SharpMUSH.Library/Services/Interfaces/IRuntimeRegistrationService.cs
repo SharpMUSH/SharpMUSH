@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Models;
+
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
@@ -19,8 +21,11 @@ public interface IRuntimeRegistrationService
 	/// it answers to. A built-in command loses only its hooks, and an added command still hooked to
 	/// another object stays.
 	/// </summary>
-	/// <param name="targetObjects">The numbers of the objects that are going.</param>
-	ValueTask<ForgottenRegistrations> ForgetRegistrationsOnAsync(IReadOnlySet<int> targetObjects);
+	/// <param name="targetObjects">
+	/// The objects that are going. A full objid matches only registrations on that object, so a
+	/// recycled number is left alone; a bare dbref matches any registration on that number.
+	/// </param>
+	ValueTask<ForgottenRegistrations> ForgetRegistrationsOnAsync(IReadOnlyCollection<DBRef> targetObjects);
 }
 
 /// <summary>What <see cref="IRuntimeRegistrationService.ForgetRegistrationsOnAsync"/> forgot.</summary>

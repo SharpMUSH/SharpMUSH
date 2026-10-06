@@ -44,10 +44,11 @@ public interface IHookService
 
 	/// <summary>
 	/// Clears every hook, on any command, whose target is one of <paramref name="targetObjects"/>: those
-	/// objects are going, and their numbers may be given to other objects.
+	/// objects are going, and their numbers may be given to other objects. A full objid matches only
+	/// that object (<see cref="DBRef.Matches"/>); a bare dbref matches the number.
 	/// </summary>
 	/// <returns>Every hook that was cleared, by the command it was on and its type.</returns>
-	ValueTask<IReadOnlyList<ClearedHook>> ClearHooksOnAsync(IReadOnlySet<int> targetObjects);
+	ValueTask<IReadOnlyList<ClearedHook>> ClearHooksOnAsync(IReadOnlyCollection<DBRef> targetObjects);
 
 	/// <summary>
 	/// Gets all hooks for a specific command.

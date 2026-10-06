@@ -67,12 +67,12 @@ public class HookService : IHookService
 		return ValueTask.FromResult(false);
 	}
 
-	public ValueTask<IReadOnlyList<ClearedHook>> ClearHooksOnAsync(IReadOnlySet<int> targetObjects)
+	public ValueTask<IReadOnlyList<ClearedHook>> ClearHooksOnAsync(IReadOnlyCollection<DBRef> targetObjects)
 	{
 		var cleared = new List<ClearedHook>();
 		foreach (var (command, commandHooks) in _hooks)
 		{
-			foreach (var (hookType, _) in commandHooks.Where(pair => targetObjects.Contains(pair.Value.TargetObject.Number)).ToList())
+			foreach (var (hookType, _) in commandHooks.Where(pair => targetObjects.Any(pair.Value.TargetObject.Matches)).ToList())
 			{
 				commandHooks.Remove(hookType);
 				cleared.Add(new ClearedHook(command, hookType));

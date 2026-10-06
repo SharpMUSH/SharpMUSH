@@ -76,11 +76,8 @@ public class PackageUninstallRegistrationTests
 		var id = $"registrations-{lower}";
 		string added = $"+ZRA{tag}", alias = $"+ZRB{tag}", clone = $"+ZRC{tag}", shared = $"+ZRS{tag}";
 
-		var install = await Installer.ApplyAsync(Manifest(id, tag), new PackageApplyRequest(Source(id), new Dictionary<string, string>(), []));
-		if (install is not PackageApplyResult)
-		{
-			throw new InvalidOperationException($"The package did not apply: {install}");
-		}
+		(await Installer.ApplyAsync(Manifest(id, tag), new PackageApplyRequest(Source(id), new Dictionary<string, string>(), [])))
+			.Expect<PackageApplyResult>("the package applies");
 
 		// Another object's hook on the shared command: that command must survive the uninstall.
 		var other = HelperFunctions.ParseDbRef(await EvaluateAsync($"create(RegOther{tag})")).Expect<DBRef>();

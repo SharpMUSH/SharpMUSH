@@ -1,5 +1,6 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Services;
@@ -14,7 +15,7 @@ public sealed class RuntimeRegistrationService(
 	IHookService hooks,
 	IUserDefinedFunctionService functions) : IRuntimeRegistrationService
 {
-	public async ValueTask<ForgottenRegistrations> ForgetRegistrationsOnAsync(IReadOnlySet<int> targetObjects)
+	public async ValueTask<ForgottenRegistrations> ForgetRegistrationsOnAsync(IReadOnlyCollection<DBRef> targetObjects)
 	{
 		if (targetObjects.Count == 0)
 		{
@@ -25,7 +26,7 @@ public sealed class RuntimeRegistrationService(
 
 		// An alias or a clone copies its target's object, so it is matched by the same test.
 		var forgottenFunctions = new List<string>();
-		foreach (var function in functions.All().Where(function => targetObjects.Contains(function.Object.Number)))
+		foreach (var function in functions.All().Where(function => targetObjects.Any(function.Object.Matches)))
 		{
 			if (functions.Delete(function.Name))
 			{

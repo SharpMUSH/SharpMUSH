@@ -166,21 +166,23 @@ public partial class PackageInstallService
 	/// </summary>
 	private async Task ForgetRegistrationsAsync(IReadOnlyList<PackageObjectRecord> objects, List<string> notes)
 	{
-		var numbers = new HashSet<int>();
+		// Full objids, so a package object destroyed earlier whose number now names another object
+		// does not take that object's registrations with it.
+		var targets = new List<DBRef>();
 		foreach (var record in objects)
 		{
 			if (HelperFunctions.ParseDbRef(record.Objid) is DBRef dbref)
 			{
-				numbers.Add(dbref.Number);
+				targets.Add(dbref);
 			}
 		}
 
-		if (numbers.Count == 0)
+		if (targets.Count == 0)
 		{
 			return;
 		}
 
-		var forgotten = await registrations.Value.ForgetRegistrationsOnAsync(numbers);
+		var forgotten = await registrations.Value.ForgetRegistrationsOnAsync(targets);
 		if (!forgotten.IsEmpty)
 		{
 			notes.Add(forgotten.Describe());
