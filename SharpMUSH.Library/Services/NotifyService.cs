@@ -27,7 +27,8 @@ public class NotifyService(
 	IMediator? mediator = null,
 	IHttpOutputCapture? httpOutputCapture = null,
 	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
-	ICommandOutputCapture? commandOutputCapture = null) : INotifyService, IContextualNotifyService, IOrderedHandlePublisher
+	ICommandOutputCapture? commandOutputCapture = null,
+	IPipeOutputCapture? pipeOutputCapture = null) : INotifyService, IContextualNotifyService, IOrderedHandlePublisher
 {
 	/// <summary>Connection metadata naming a socket owner that takes prompts in order with output ("1").</summary>
 	public const string OrderedPromptsMetadata = ConnectionEstablishedMessage.OrderedPromptsMetadata;
@@ -212,6 +213,13 @@ public class NotifyService(
 		if (!prompt && IsEmpty(what) && (context is null
 			|| context.Relay == NotificationRelay.Initial && context.Prefix.Length == 0))
 		{
+			return false;
+		}
+
+		// A piped command's output (`look ;| say %|`) goes to the next command, not to anyone's screen.
+		if (!prompt && pipeOutputCapture?.Captures(who.Number) == true)
+		{
+			pipeOutputCapture.TryCapture(who.Number, context is not null ? MString.Concat(context.Prefix, AsMarkup(what)) : AsMarkup(what));
 			return false;
 		}
 
@@ -413,12 +421,14 @@ public class NotifyService(
 	/// so without this check a localized message to a connectionless http_handler would silently
 	/// vanish instead of joining the response body (e.g. @include's "No such attribute: …").
 	/// Captured text uses the neutral locale. A portal command's copy (<see cref="ICommandOutputCapture"/>)
-	/// is taken here too, and never stops delivery.
+	/// is taken here too, and never stops delivery. A piped command's output (<see cref="IPipeOutputCapture"/>)
+	/// is taken first, and is delivered to no one.
 	/// </summary>
 	private bool TryCaptureLocalized(DBRef who, string key, object[] args)
 	{
-		if (httpOutputCapture is null && commandOutputCapture is null) return false;
+		if (httpOutputCapture is null && commandOutputCapture is null && pipeOutputCapture is null) return false;
 		var neutral = localizationService.Format(key, null, args);
+		if (pipeOutputCapture?.TryCapture(who.Number, MString.Plain(neutral)) == true) return true;
 		commandOutputCapture?.Offer(who.Number, neutral);
 		return httpOutputCapture?.TryCapture(who.Number, neutral) == true;
 	}
@@ -461,6 +471,12 @@ public class NotifyService(
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
 		if (!await CanReceive(who, sender)) return;
+		if (pipeOutputCapture?.Captures(who.Number) == true)
+		{
+			pipeOutputCapture.TryCapture(who.Number, MarkupTemplateFormatter.Format(localizationService.Get(key, null), args));
+			return;
+		}
+
 		if (httpOutputCapture is not null || commandOutputCapture is not null)
 		{
 			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args).ToPlainText();

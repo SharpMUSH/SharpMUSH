@@ -206,6 +206,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IHttpHandlerCommandDispatcher, HttpHandlerCommandService>();
 		// Portal commands (POST api/commands): run as the session's character, its output copied back.
 		services.AddSingleton<ICommandOutputCapture, CommandOutputCapture>();
+		services.AddSingleton<IPipeOutputCapture, PipeOutputCapture>();
 		services.Configure<PortalCommandOptions>(configuration.GetSection(PortalCommandOptions.Section));
 		services.AddSingleton<IPortalCommandService, PortalCommandService>();
 		services.AddSingleton<IWarningService, WarningService>();

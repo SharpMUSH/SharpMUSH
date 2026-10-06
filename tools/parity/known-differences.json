@@ -172,6 +172,18 @@
       "command": "think a%>b",
       "sharp": "ab",
       "penn": "a>b"
+    },
+    {
+      "id": "KD-0017",
+      "scenario": "30-softcode",
+      "case": "sc.printed-output",
+      "step": 0,
+      "reason": "%| is what the command before a ;| showed, empty everywhere else (TinyMUX piping); PennMUSH has no %| substitution and evaluates it to |.",
+      "tracking": "#1590",
+      "profile": "`;|` and `%|` pipe a command's output",
+      "command": "think a%|b",
+      "sharp": "ab",
+      "penn": "a|b"
     }
   ]
 }

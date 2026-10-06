@@ -246,8 +246,11 @@ public class BreakPropagation
 /// <para>It also holds <see cref="Output"/>, <c>%></c>: the logical output of the last command run in
 /// the entry. Unlike <c>%c</c>/<c>%u</c>, a queued entry starts with a copy of the value its submitter
 /// had when it queued it, the way q-registers are copied.</para>
+///
+/// <para><see cref="Printed"/>, <c>%|</c>, is what the command before a <c>;|</c> printed, and is copied
+/// to a queued entry the same way.</para>
 /// </summary>
-public sealed class CommandText(MString? output = null)
+public sealed class CommandText(MString? output = null, MString? printed = null)
 {
 	private MString? _redispatchedRaw;
 	private MString _evaluated = MarkupText.Empty;
@@ -321,6 +324,13 @@ public sealed class CommandText(MString? output = null)
 
 	/// <summary>A command finished and leaves <see cref="Output"/> as it was.</summary>
 	public void KeepOutput() => OutputVersion++;
+
+	/// <summary>
+	/// <c>%|</c>: what the command piped into this one (<c>look ;| say %|</c>) printed for its executor.
+	/// Set only while the command after a <c>;|</c> runs; every other command reads what its list had
+	/// before, which is empty unless the entry was queued with a copy.
+	/// </summary>
+	public MString Printed { get; set; } = printed ?? MarkupText.Empty;
 }
 
 /// <summary>
@@ -445,8 +455,20 @@ public partial record ParserState(
 	/// <summary><c>%></c>: the logical output of the last command run in this queue entry.</summary>
 	public MString PipedOutput => CommandText?.Output ?? QueuedOutput ?? MarkupText.Empty;
 
-	/// <summary>This state, about to be queued: it keeps the value <c>%></c> has now.</summary>
-	public ParserState WithQueuedOutput() => this with { QueuedOutput = PipedOutput };
+	/// <summary>
+	/// <c>%|</c> as the list that queued this state had it when it did, started the same way as
+	/// <see cref="QueuedOutput"/>.
+	/// </summary>
+	public MString? QueuedPrinted { get; init; }
+
+	/// <summary><c>%|</c>: what the command piped into the running one printed.</summary>
+	public MString PrintedOutput => CommandText?.Printed ?? QueuedPrinted ?? MarkupText.Empty;
+
+	/// <summary>A <see cref="CommandText"/> for a list this state starts, carrying its queued <c>%></c> and <c>%|</c>.</summary>
+	public CommandText NewCommandText() => new(QueuedOutput, QueuedPrinted);
+
+	/// <summary>This state, about to be queued: it keeps the values <c>%></c> and <c>%|</c> have now.</summary>
+	public ParserState WithQueuedOutput() => this with { QueuedOutput = PipedOutput, QueuedPrinted = PrintedOutput };
 
 	/// <summary>
 	/// Most UTF-16 code units one function may produce in this evaluation. Lowered for a guest's
@@ -492,7 +514,8 @@ public partial record ParserState(
 		InplaceDepth = 0,
 		ExecutionBudget = null,
 		CommandText = null,
-		QueuedOutput = PipedOutput
+		QueuedOutput = PipedOutput,
+		QueuedPrinted = PrintedOutput
 	};
 
 	private AnyOptionalSharpObject? _executorObject;
@@ -672,6 +695,7 @@ public partial record ParserState(
 		MoveDepth = MoveDepth,
 		CommandText = CommandText,
 		QueuedOutput = QueuedOutput,
+		QueuedPrinted = QueuedPrinted,
 		OutputLimit = OutputLimit
 	};
 

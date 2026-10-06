@@ -95,6 +95,7 @@ Other substitutions:<br>
     %c = text of the last command, _before_ evaluation<br>
     %u = text of the last command, after evaluation, available to locks/hooks<br>
     %> = the output of the last command, like a function's result: see [command output]<br>
+    %| = what the command before a `;|` showed you: see [piping]<br>
     %? = The current function invocation and depth counts<br>
     %= = The dbref/attribute currently being evaluated<br>
     %+ = The number of arguments passed to the current ufun.<br>
