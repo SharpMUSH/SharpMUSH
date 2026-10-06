@@ -558,15 +558,14 @@ public partial class Commands
 				return [];
 			}
 
+			// The same walk GetAttributeAsync took, so a parent past the default depth is still named.
 			var path = chain.Last().LongName.Split('`');
-			var source = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(viewingRef, path))
+			var walk = new InheritanceWalk(await viewing.Ancestor(Configuration),
+				(int)Configuration.CurrentValue.Limit.MaxParents);
+			var source = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(viewingRef, path, true, walk))
 				.FirstOrDefaultAsync() is { } hit
 				? hit.SourceObject
-				: await viewing.Ancestor(Configuration) is { } ancestor
-					&& await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(ancestor, path))
-						.FirstOrDefaultAsync() is { } fromAncestor
-					? fromAncestor.SourceObject
-					: viewingRef;
+				: viewingRef;
 
 			return [(chain.Last(), source)];
 		}
