@@ -47,7 +47,7 @@ public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
 		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Expect<AnySharpObject>();
 
 		var result = await attributeService.SetAttributeAsync(god, handler, method, MarkupText.Plain(commandList));
-		await Assert.That(result.Value).IsTypeOf<Success>();
+		result.Expect<Success>();
 	}
 
 	/// <summary>A registered account with one character, and the session token that acts as it.</summary>
