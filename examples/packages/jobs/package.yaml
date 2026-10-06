@@ -291,6 +291,14 @@ objects:
         [t(elock(%0/file,%1))]
       FUN`IS`ADMIN: |-
         [t(permission(%0,softcode.jobs.admin))]
+      # Whether %1 may learn who filed job %0: anyone, unless its bucket hides the filer; then the filer,
+      # a Job Admin, or the bucket's own hooks.
+      FUN`FILER`SHOWN: |-
+        [cor(not(strmatch(get(get(%0/BUCKET)/ANONYMOUS),filer)),strmatch(get(%0/FILED`BY),objid(%1)),u({{jobs}}/FUN`IS`ADMIN,%1),strmatch(objid(loc(%1)),{{buckets}}))]
+      # Whether a closed job %0 still opens again on its filer's reply: its bucket reopens (not 0) and the
+      # job closed within that many days.
+      FUN`CAN`REOPEN: |-
+        [cand(gt(firstof(get(get(%0/BUCKET)/REOPEN),0),0),lte(sub(secs(),get(%0/CLOSED`AT)),mul(86400,firstof(get(get(%0/BUCKET)/REOPEN),0))))]
       # Job %0, person %1: the filer or a helper, who read the public side of a job and reply to it.
       FUN`IS`PARTY: |-
         [cor(strmatch(get(%0/FILED`BY),objid(%1)),hasattr(%0,HELPER`[u({{jobs}}/FUN`KEY,%1)]))]
@@ -383,7 +391,7 @@ objects:
       FUN`P`WHO: |-
         [cand(u({{jobs}}/FUN`P`OPEN,%0,%1),hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%2)]))]
       FUN`P`FROM: |-
-        [cand(strmatch(get(%0/FILED`BY),%2),u({{jobs}}/FUN`CAN`SEE,%0,%1))]
+        [cand(strmatch(get(%0/FILED`BY),%2),u({{jobs}}/FUN`CAN`SEE,%0,%1),u({{jobs}}/FUN`FILER`SHOWN,%0,%1))]
       FUN`P`OLD: |-
         [cand(strmatch(get(%0/STATE),closed),u({{jobs}}/FUN`CAN`SEE,%0,%1),cor(not(strlen(%2)),strmatch(get(%0/BUCKET),%2)))]
       FUN`P`UNREAD: |-
@@ -494,7 +502,7 @@ objects:
       # A public reply. Staff replying hands the turn to the player; the filer or a helper replying hands
       # it to staff, and opens a closed job again within its bucket's reopen window.
       INC`JOB`REPLY: |-
-        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`TEXT; @assert cor(%q<staff>,not(strmatch(get(%q<jo>/STATE),closed)),lte(sub(secs(),get(%q<jo>/CLOSED`AT)),mul(86400,firstof(get(%q<b>/REOPEN),0))))=@pemit %#=Job %q<n> closed more than [firstof(get(%q<b>/REOPEN),0)] days ago. File a new one with +request and mention job %q<n>.; think [setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))][setq(kind,reply)][setq(text,%q<rhs>)][setq(mailforce,0)]; @include {{jobs}}/INC`DO`REPLY; @pemit %#=You replied to job %q<n>[if(cand(%q<wasclosed>,not(%q<staff>)),%band opened it again)].
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`TEXT; @assert cor(%q<staff>,not(strmatch(get(%q<jo>/STATE),closed)),u({{jobs}}/FUN`CAN`REOPEN,%q<jo>))=@pemit %#=Job %q<n> [if(gt(firstof(get(%q<b>/REOPEN),0),0),closed more than [firstof(get(%q<b>/REOPEN),0)] days ago,is closed)]. File a new one with +request and mention job %q<n>.; think [setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))][setq(kind,reply)][setq(text,%q<rhs>)][setq(mailforce,0)]; @include {{jobs}}/INC`DO`REPLY; @pemit %#=You replied to job %q<n>[if(cand(%q<wasclosed>,not(%q<staff>)),%band opened it again)].
       # /note, and /add and /comment: staff only.
       INC`JOB`NOTE: |-
         @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`TEXT; think [setq(kind,note)][setq(text,%q<rhs>)][setq(mailforce,0)]; @include {{jobs}}/INC`DO`REPLY; @pemit %#=You added a staff note to job %q<n>.
@@ -661,7 +669,7 @@ objects:
         [cor(u({{jobs}}/FUN`CAN`SEE,%0,%1),t(permission(%1,game.see_all)),strmatch(objid(loc(%1)),{{buckets}}))]
       # job(<#>, <field>): see +help jobs api.
       FUN`API`JOB: |-
-        [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,switch(lcstr(%1),number,get(%q<_j>/NUM),bucket,name(get(%q<_j>/BUCKET)),title,get(%q<_j>/TITLE),state,get(%q<_j>/STATE),outcome,get(%q<_j>/OUTCOME),priority,get(%q<_j>/PRIORITY),filer,get(%q<_j>/FILED`BY),filed,get(%q<_j>/FILED`AT),due,get(%q<_j>/DUE),updated,get(%q<_j>/UPDATED`AT),overdue,u({{jobs}}/FUN`IS`OVERDUE,%q<_j>),handlers,u({{jobs}}/FUN`HLIST,%q<_j>,HANDLER),watchers,u({{jobs}}/FUN`HLIST,%q<_j>,WATCHER),helpers,u({{jobs}}/FUN`HLIST,%q<_j>,HELPER),entries,get(%q<_j>/ENTRIES),#-1 NO SUCH FIELD))]
+        [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,switch(lcstr(%1),number,get(%q<_j>/NUM),bucket,name(get(%q<_j>/BUCKET)),title,get(%q<_j>/TITLE),state,get(%q<_j>/STATE),outcome,get(%q<_j>/OUTCOME),priority,get(%q<_j>/PRIORITY),filer,if(u({{jobs}}/FUN`FILER`SHOWN,%q<_j>,%@),get(%q<_j>/FILED`BY)),filed,get(%q<_j>/FILED`AT),due,get(%q<_j>/DUE),updated,get(%q<_j>/UPDATED`AT),overdue,u({{jobs}}/FUN`IS`OVERDUE,%q<_j>),handlers,u({{jobs}}/FUN`HLIST,%q<_j>,HANDLER),watchers,u({{jobs}}/FUN`HLIST,%q<_j>,WATCHER),helpers,u({{jobs}}/FUN`HLIST,%q<_j>,HELPER),entries,get(%q<_j>/ENTRIES),#-1 NO SUCH FIELD))]
       # jobs([<bucket>[, open|all|<state>]]): job numbers, newest first.
       FUN`API`JOBS: |-
         [setq(_ab,if(strlen(%0),u({{jobs}}/FUN`BUCKET,%0)))][setq(_as,lcstr(firstof(%1,open)))][u({{jobs}}/FUN`SORT`NUM,squish(iter(lcon({{store}}),if(cand(not(hasflag(%i0,GOING)),cor(not(strlen(%0)),strmatch(get(%i0/BUCKET),%q<_ab>)),switch(%q<_as>,all,1,open,not(strmatch(get(%i0/STATE),closed)),strmatch(get(%i0/STATE),%q<_as>)),u({{jobs}}/FUN`CALLER`OK,%i0,%@)),get(%i0/NUM)))))]
@@ -771,7 +779,7 @@ objects:
         [setq(_ks,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][u({{jobs}}/WEB`ARR,iter(squish(Bucket Status Priority Filed [if(%q<_ks>,Due)] Handlers [if(%q<_ks>,Watchers)] [if(words(lattr(%0/HELPER`*)),Helpers)]),json(string,%i0),%b,%r))]
       # The reply box; a player whose job closed longer ago than the bucket reopens gets a note instead.
       WEB`SEC`REPLY: |-
-        [setq(_rs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_rc,strmatch(get(%0/STATE),closed))][setq(_rt,json(object,kind,json(string,field),key,json(string,text),label,json(string,Message),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP))))][setq(_rk,if(%q<_rs>,json(object,kind,json(string,field),key,json(string,kind),label,json(string,Send as),type,json(string,select),options,json(array,u({{jobs}}/WEB`OPT,reply,A reply the player sees),u({{jobs}}/WEB`OPT,note,A staff note)),default,json(string,reply))))][setq(_rf,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean)))][setq(_rb,u({{jobs}}/WEB`BTN,Send,json(object,op,json(string,reply),job,json(number,get(%0/NUM))),primary))][setq(_rl,%q<_rt>%r[if(%q<_rs>,%q<_rk>%r)]%q<_rf>%r%q<_rb>)][setq(_rm,u({{jobs}}/WEB`MD,This job closed too long ago to answer. File a new request and mention job [get(%0/NUM)].))][if(cand(%q<_rc>,not(%q<_rs>),gt(sub(secs(),get(%0/CLOSED`AT)),mul(86400,firstof(get(get(%0/BUCKET)/REOPEN),0)))),u({{jobs}}/WEB`SEC,,3,%q<_rm>),u({{jobs}}/WEB`SEC,if(cand(%q<_rc>,not(%q<_rs>)),Reply to open it again,Reply),3,%q<_rl>))]
+        [setq(_rs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_rc,strmatch(get(%0/STATE),closed))][setq(_rt,json(object,kind,json(string,field),key,json(string,text),label,json(string,Message),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP))))][setq(_rk,if(%q<_rs>,json(object,kind,json(string,field),key,json(string,kind),label,json(string,Send as),type,json(string,select),options,json(array,u({{jobs}}/WEB`OPT,reply,A reply the player sees),u({{jobs}}/WEB`OPT,note,A staff note)),default,json(string,reply))))][setq(_rf,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean)))][setq(_rb,u({{jobs}}/WEB`BTN,Send,json(object,op,json(string,reply),job,json(number,get(%0/NUM))),primary))][setq(_rl,%q<_rt>%r[if(%q<_rs>,%q<_rk>%r)]%q<_rf>%r%q<_rb>)][setq(_rm,u({{jobs}}/WEB`MD,This job closed too long ago to answer. File a new request and mention job [get(%0/NUM)].))][if(cand(%q<_rc>,not(%q<_rs>),not(u({{jobs}}/FUN`CAN`REOPEN,%0))),u({{jobs}}/WEB`SEC,,3,%q<_rm>),u({{jobs}}/WEB`SEC,if(cand(%q<_rc>,not(%q<_rs>)),Reply to open it again,Reply),3,%q<_rl>))]
       # Staff: claim or unclaim, then approve, deny and complete; the filer: cancel; staff on a closed job: reopen.
       WEB`BUTTONS: |-
         [setq(_bs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_bn,get(%0/NUM))][setq(_bo,not(strmatch(get(%0/STATE),closed)))][setq(_bc,if(hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%1)]),Unclaim,Claim))][switch(1,cand(%q<_bs>,%q<_bo>),u({{jobs}}/WEB`BUTTONS`STAFF,%q<_bn>,%q<_bc>),cand(%q<_bo>,u({{jobs}}/FUN`IS`PARTY,%0,%1)),u({{jobs}}/WEB`BTN,Cancel job,json(object,op,json(string,close),outcome,json(string,canceled),job,json(number,%q<_bn>)),default,Cancel job %q<_bn>?),%q<_bs>,u({{jobs}}/WEB`BTN,Reopen,json(object,op,json(string,reopen),job,json(number,%q<_bn>))),)]
@@ -828,7 +836,7 @@ objects:
       WEB`NEED`OPEN: |-
         @assert not(strmatch(get(%q<jo>/STATE),closed))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> is closed.))]
       WEB`ACT`REPLY: |-
-        @include {{jobs}}/WEB`NEED`JOB; think [setq(kind,if(cand(%q<staff>,strmatch(u({{jobs}}/WEB`GET,kind),note)),note,reply))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Write something first.))]; @assert cor(%q<staff>,not(strmatch(get(%q<jo>/STATE),closed)),lte(sub(secs(),get(%q<jo>/CLOSED`AT)),mul(86400,firstof(get(%q<b>/REOPEN),0))))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> closed too long ago to answer. File a new request.))]; @include {{jobs}}/INC`DO`REPLY; think [setq(out,u({{jobs}}/WEB`DONE,if(strmatch(%q<kind>,note),Note added.,Reply sent.)))]
+        @include {{jobs}}/WEB`NEED`JOB; think [setq(kind,if(cand(%q<staff>,strmatch(u({{jobs}}/WEB`GET,kind),note)),note,reply))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Write something first.))]; @assert cor(%q<staff>,not(strmatch(get(%q<jo>/STATE),closed)),u({{jobs}}/FUN`CAN`REOPEN,%q<jo>))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> closed too long ago to answer. File a new request.))]; @include {{jobs}}/INC`DO`REPLY; think [setq(out,u({{jobs}}/WEB`DONE,if(strmatch(%q<kind>,note),Note added.,Reply sent.)))]
       WEB`ACT`CLAIM: |-
         @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @include {{jobs}}/WEB`NEED`OPEN; @assert not(hasattr(%q<jo>,HANDLER`%q<me>))=think [setq(out,u({{jobs}}/WEB`ERR,You already handle job %q<n>.))]; think [setq(who,%q<actor>)][setq(add,1)]; @include {{jobs}}/INC`DO`CLAIM; think [setq(out,u({{jobs}}/WEB`DONE,You handle job %q<n> now.))]
       WEB`ACT`UNCLAIM: |-
@@ -1475,7 +1483,7 @@ objects:
       HELP`JOBS`API: |-
         ## Reading
 
-        - `job\(<#>, <field>\)`: `number`, `bucket`, `title`, `state`, `outcome`, `priority`, `filer`, `filed`, `due`, `updated`, `overdue`, `handlers`, `watchers`, `helpers`, `entries`.
+        - `job\(<#>, <field>\)`: `number`, `bucket`, `title`, `state`, `outcome`, `priority`, `filer` \(empty when the bucket hides the filer, except to the filer, a Job Admin or the bucket's hooks\), `filed`, `due`, `updated`, `overdue`, `handlers`, `watchers`, `helpers`, `entries`.
         - `jobs\(\[<bucket>\[, open/all/<state>\]\]\)`: job numbers, newest first.
         - `jobentries\(<#>\[, <viewer>\]\)`: the numbers of the messages `<viewer>` may read.
 

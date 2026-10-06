@@ -161,7 +161,7 @@ else
         if (result.Ok)
         {
             var reset = action.OnSuccess?.ResetFields ?? false;
-            if (result.Fields is not null && reset)
+            if (reset)
             {
                 _model.ResetValues();
             }

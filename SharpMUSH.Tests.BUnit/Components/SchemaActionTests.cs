@@ -176,6 +176,24 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	[Test]
+	public async Task Reset_fields_clears_the_inputs_when_the_answer_returns_no_fields()
+	{
+		_handler.Answers.Enqueue("""{"ok":true}""");
+		var cut = RenderForm(JobForm(new SchemaActionSuccess(null, null, MergeFields: false, ResetFields: true)), JobData());
+
+		Button(cut, "Comment").Click();
+		WaitForPosts(cut, 1);
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("draft text")) throw new InvalidOperationException("comment not cleared yet");
+		}, TimeSpan.FromSeconds(5));
+
+		Button(cut, "Comment").Click();
+		WaitForPosts(cut, 2);
+		await Assert.That(_handler.Posts.Last().Body.TryGetProperty("comment", out _)).IsFalse();
+	}
+
+	[Test]
 	public async Task Without_reset_fields_a_merge_keeps_what_was_typed()
 	{
 		_handler.Answers.Enqueue("""{"ok":true,"fields":{"filter":"open"}}""");

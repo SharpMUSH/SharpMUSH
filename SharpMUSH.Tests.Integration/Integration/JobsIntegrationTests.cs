@@ -203,6 +203,23 @@ public class JobsIntegrationTests
 			await As(admin, "+request Mod Mail/Hello=Hi there.");
 			await Assert.That(await As(builder, "+jobs")).Contains("Hello");
 
+			var filer = await Player("JobsFiler");
+			await As(filer, "+request Feedback/Idea=More plots.");
+			var idea = await God("think [first(jobs(Feedback))]");
+			await God($"@role/assign {bld}=job-admin-feedback");
+			await Assert.That(await As(builder, $"think [job({idea},title)]/[job({idea},filer)]")).IsEqualTo("Idea/")
+				.Because("Feedback hides who filed it from the staff who work it");
+			await Assert.That(await As(filer, $"think [job({idea},filer)]")).IsEqualTo(await Objid(filer));
+			await Assert.That(await As(admin, $"think [job({idea},filer)]")).IsEqualTo(await Objid(filer));
+
+			await As(admin, "+bucket/set Mod Mail/reopen=0");
+			await As(filer, "+request Mod Mail/Bye=Leaving.");
+			var bye = await God("think [first(jobs(Mod Mail))]");
+			await As(admin, $"+job/complete {bye}=Done.");
+			await Assert.That(await As(filer, $"+job/reply {bye}=One more.")).Contains($"Job {bye} is closed.")
+				.Because("a bucket that reopens after 0 days never reopens");
+			await Assert.That(await God($"think [job({bye},state)]")).IsEqualTo("closed");
+
 			var deleted = await As(admin, "+bucket/delete Mod Mail");
 			await Assert.That(deleted).Contains("still has jobs");
 		}
