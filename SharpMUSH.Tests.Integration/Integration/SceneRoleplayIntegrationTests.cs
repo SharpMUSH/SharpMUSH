@@ -160,6 +160,16 @@ public class SceneRoleplayIntegrationTests
 		return MessagesSince(before);
 	}
 
+	/// <summary>
+	/// Runs a command as a handle and returns only what <paramref name="player"/> heard. The substitute is shared
+	/// with every test running alongside, so an assertion that something is absent reads the receiver's own lines.
+	/// </summary>
+	private async Task<IReadOnlyList<string>> RunAndCollectHeardBy(long handle, string player, string command) =>
+		(await RunAndCollectNotificationsAs(handle, command))
+			.Where(n => n.Recipient == Num(player))
+			.Select(n => n.Message)
+			.ToList();
+
 	/// <summary>Runs a command as a handle and returns the full (recipient, message, sender) notifications.</summary>
 	private async Task<IReadOnlyList<Notification>> RunAndCollectNotificationsAs(long handle, string command)
 	{
@@ -403,7 +413,7 @@ public class SceneRoleplayIntegrationTests
 			.Because("+scene/undo should restore the pre-edit content");
 
 		// +scene/recall <count> prints the last <count> pose contents (Alice is focused).
-		var recapMsgs = await RunAndCollectAs(aliceHandle, "+scene/recall 10");
+		var recapMsgs = await RunAndCollectHeardBy(aliceHandle, alice, "+scene/recall 10");
 		var recap = string.Join("\n", recapMsgs);
 		Log($"[RECAP]\n{recap}");
 		await Assert.That(recap).Contains("lights a candle on the bar.")
@@ -449,7 +459,7 @@ public class SceneRoleplayIntegrationTests
 		// over a list — a nested one, in the tracker's case, sorting members by how long since each
 		// last posed. Both name their element with %iL rather than ##; an empty table body is what a
 		// substitution that resolved to nothing would look like.
-		var potMsgs = await RunAndCollectAs(aliceHandle, "+pot");
+		var potMsgs = await RunAndCollectHeardBy(aliceHandle, alice, "+pot");
 		var pot = string.Join("\n", potMsgs);
 		Log($"[POT]\n{pot}");
 		await Assert.That(pot).Contains("Pose Tracker").Because("the tracker prints its header");
@@ -604,7 +614,8 @@ public class SceneRoleplayIntegrationTests
 
 		// scenelist() is exercised through the verb (command-parser context) rather than Eval (the
 		// function-parser doesn't see the just-written scene in a collection scan; a key lookup does).
-		var listMsgs = await RunAndCollectAs(samHandle, "+scene/upcoming");
+		// 2050 is beyond the default 30 days, so the whole schedule is asked for.
+		var listMsgs = await RunAndCollectAs(samHandle, "+scene/upcoming all");
 		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
 		TestDiagnostics.WriteLine("=== +scene/upcoming ===\n" + table);
 		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
@@ -615,12 +626,12 @@ public class SceneRoleplayIntegrationTests
 		var tooWide = table.Split('\n').Where(l => l.Length > width).ToList();
 		await Assert.That(tooWide).IsEmpty().Because($"no line of the schedule may be wider than {width}");
 		var row = table.Split('\n').Single(l => l.Contains($"Gala_{Tag}"));
-		await Assert.That(row).Contains(await Eval("timefmt($a $b $d $H:$M,2524608000)"))
-			.Because("the When column is the scene's date and time");
+		await Assert.That(row).Contains(await Eval("timefmt($H:$M,2524608000)"))
+			.Because("the Time column is the scene's time of day; the day is the rule above it");
 		await Assert.That(row).Contains("scheduled").Because("the Status column is wide enough for its longest word, so it does not wrap");
 
 		// +scenes and +events are the names other games use for the same list.
-		foreach (var alias in new[] { "+scenes", "+events", "+scenes/upcoming", "+events/upcoming" })
+		foreach (var alias in new[] { "+scenes all", "+events all", "+scenes/upcoming all", "+events/upcoming all" })
 		{
 			var aliased = string.Join("\n", (await RunAndCollectAs(samHandle, alias)).SelectMany(m => m.Split('\n')));
 			await Assert.That(aliased).Contains($"Gala_{Tag}").Because($"{alias} lists the schedule");
@@ -729,6 +740,96 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("cancelled");
 		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo(string.Empty)
 			.Because("a cancelled scene leaves the schedule");
+	}
+
+	/// <summary>
+	/// +scene/upcoming reads like a calendar: each day under its own rule, the scenes of one day under the
+	/// same rule, and only the next 30 days unless a number of days (or all) is given. Every table fills
+	/// width(%#) without a blank row, and its heading row is underlined. The owner verbs that name a scene
+	/// (+scene/pitch &lt;id&gt;=, +scene/title &lt;id&gt;=, +scene/private &lt;id&gt;) work without focusing it.
+	/// </summary>
+	[Test]
+	public async Task SceneTables_FillTheWidth_AndTheScheduleIsGroupedByDay()
+	{
+		await God1("@set #1=WIZARD");
+
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
+		await God1($"@teleport {loggerDbref}=#2");
+
+		var (xan, xanHandle) = await CreatePlayerAsync($"Xan_{Tag}", "pw_xan_123");
+		var width = int.Parse(await Eval($"width({xan})"));
+
+		long At(int days, int hours) => new DateTimeOffset(DateTime.Today.AddDays(days).AddHours(hours)).ToUnixTimeSeconds();
+		async Task<string> Schedule(string title, long when)
+		{
+			var said = await RunAndCollectAs(xanHandle, $"+scene/schedule {title}=" + when);
+			return said.First(m => m.Contains("Scheduled scene")).Replace("Scheduled scene ", "").Split(' ')[0];
+		}
+
+		await Schedule($"Evening_{Tag}", At(3, 18));
+		var morning = await Schedule($"Morning_{Tag}", At(3, 9));
+		var later = await Schedule($"Later_{Tag}", At(10, 12));
+		await Schedule($"Far_{Tag}", At(60, 12));
+
+		static List<string> Lines(IEnumerable<string> said) =>
+			said.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
+
+		var table = Lines(await RunAndCollectAs(xanHandle, "+scene/upcoming"));
+		TestDiagnostics.WriteLine("=== +scene/upcoming ===\n" + string.Join("\n", table));
+		await Assert.That(table.Where(l => l.Length > width)).IsEmpty().Because($"no line may be wider than {width}");
+		await Assert.That(table.Where(string.IsNullOrWhiteSpace)).IsEmpty().Because("a table has no blank rows");
+
+		int Row(string title) => table.FindIndex(l => l.Contains(title));
+		var day = await Eval($"u({loggerDbref}/FUN`SCHED_DAY,{morning})");
+		await Assert.That(day).IsEqualTo(await Eval($"timefmt($A,{At(3, 9)})") + ", " + await Eval($"timefmt($B,{At(3, 9)})") + " " + DateTime.Today.AddDays(3).Day
+			+ (DateTime.Today.AddDays(3).Year == DateTime.Today.Year ? "" : ", " + DateTime.Today.AddDays(3).Year));
+		var rule = table.FindIndex(l => l.StartsWith('-') && l.Contains($" {day} "));
+		await Assert.That(rule).IsGreaterThan(-1).Because("each day is drawn as a rule naming it");
+		await Assert.That(Row($"Morning_{Tag}")).IsGreaterThan(rule);
+		await Assert.That(Row($"Evening_{Tag}")).IsGreaterThan(Row($"Morning_{Tag}")).Because("scenes run in time order within the day");
+		await Assert.That(table.Skip(rule + 1).Take(Row($"Evening_{Tag}") - rule).Any(l => l.StartsWith('-')))
+			.IsFalse().Because("two scenes on the same day share one rule");
+		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(" 09:00 ").Because("a row carries the time of day; its rule carries the date");
+		await Assert.That(Row($"Later_{Tag}")).IsGreaterThan(Row($"Evening_{Tag}"));
+		await Assert.That(Row($"Far_{Tag}")).IsEqualTo(-1).Because("by default the schedule looks 30 days ahead");
+		await Assert.That(table[^1]).Contains("in the next 30 days").Because("the footer says how far it looked");
+		await Assert.That(table[^1]).Contains("later: +scenes <days>").Because("and how to see what it left out");
+
+		var heading = await Eval($"u({loggerDbref}/FUN`HEAD,u({loggerDbref}/FUN`SCHED_COLS,78))");
+		await Assert.That(heading).IsEqualTo(">6(u) <50(u) <5(u) <9(u) >4(u)").Because("every column of a heading row is underlined");
+
+		var wider = Lines(await RunAndCollectAs(xanHandle, "+scenes 90"));
+		await Assert.That(wider.Any(l => l.Contains($"Far_{Tag}"))).IsTrue().Because("+scenes <days> looks further ahead");
+		var all = Lines(await RunAndCollectAs(xanHandle, "+events all"));
+		await Assert.That(all.Any(l => l.Contains($"Far_{Tag}"))).IsTrue();
+		await Assert.That(string.Join("\n", await RunAndCollectAs(xanHandle, "+scene/upcoming 0"))).Contains("How many days ahead?");
+
+		// The owner names the scene instead of focusing it. Xan has joined none of them.
+		await Assert.That(await Eval($"scenefocus({xan})")).StartsWith("#-1");
+		await RunAndCollectAs(xanHandle, $"+scene/pitch {later}=Lanterns over the water. Bring a coat=or two.");
+		await Assert.That(await Eval($"scene({later}, summary)")).IsEqualTo("Lanterns over the water. Bring a coat=or two.");
+		await RunAndCollectAs(xanHandle, $"+scene/title {later}=Lantern Night_{Tag}");
+		await Assert.That(await Eval($"scene({later}, title)")).IsEqualTo($"Lantern Night_{Tag}");
+		var hidden = string.Join(" | ", await RunAndCollectAs(xanHandle, $"+scene/private {later}"));
+		await Assert.That(await Eval($"scene({later}, public)")).IsEqualTo("0").Because(hidden);
+		await RunAndCollectAs(xanHandle, $"+scene/public {later}");
+		await Assert.That(await Eval($"scene({later}, public)")).IsEqualTo("1");
+
+		var card = Lines(await RunAndCollectAs(xanHandle, $"+scene {later}"));
+		TestDiagnostics.WriteLine("=== +scene <id> ===\n" + string.Join("\n", card));
+		await Assert.That(card.Where(l => l.Length > width)).IsEmpty();
+		await Assert.That(card.Where(string.IsNullOrWhiteSpace)).IsEmpty();
+		await Assert.That(card.Any(l => l.StartsWith("Status") && l.Contains("Name") && l.EndsWith("Poses") && l.Length == width)).IsTrue()
+			.Because("the Players heading spans the width, Poses at its right edge");
+		await Assert.That(card.Single(l => l.StartsWith('-') && l.Contains(" Pitch ")).Length).IsEqualTo(width);
+
+		// +scene/list (and +scene/mine) fit too, with a status as long as "scheduled".
+		var mine = Lines(await RunAndCollectAs(xanHandle, "+scene/mine"));
+		TestDiagnostics.WriteLine("=== +scene/mine ===\n" + string.Join("\n", mine));
+		await Assert.That(mine.Where(l => l.Length > width)).IsEmpty();
+		await Assert.That(mine.Single(l => l.Contains($"Far_{Tag}"))).EndsWith("scheduled");
 	}
 
 	/// <summary>+scene/deactivate keeps membership but clears focus; +scene/activate restores it.

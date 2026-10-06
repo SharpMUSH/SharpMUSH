@@ -120,20 +120,12 @@
     <value>Wyłączone</value>
     <comment>MT — agrees with "konto"</comment>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>Zarządzaj kontami</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Szukaj nazwy użytkownika lub adresu e-mail…</value>
     <comment>MT</comment>
   </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Konta</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>Widżety niestandardowe</value>
     <comment>MT</comment>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
@@ -151,26 +143,6 @@
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Odłączono postać „{0}” od konta „{1}”.</value>
     <comment>MT — restructured: the verb governs the accusative, so {0} was placed in quoted apposition after "postać" to keep the interpolated name uninflected</comment>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>Zobacz postacie</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>Konfiguracja witryny</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>Pulpit administratora</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>Importuj bazę danych</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>Import bazy danych</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmDisableAccount" xml:space="preserve">
     <value>Wyłącz</value>
@@ -192,20 +164,8 @@
     <value>Przeglądaj tematy, przeszukuj materiały referencyjne i czytaj podręcznik.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>Administracja</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>Edytor układu</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>Układ</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>Zasoby multimedialne</value>
     <comment>MT</comment>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
@@ -224,14 +184,6 @@
     <value>Operacja nie powiodła się.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Pakiety softcode</value>
-    <comment>MT — "softcode" kept per glossary</comment>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>Pakiety</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Hasło dla „{0}” zresetowano na: {1} — przekaż je bezpiecznie; przy następnym logowaniu użytkownik musi je zmienić.</value>
     <comment>MT — {0} quoted and {1} placed after a colon so both interpolations stay uninflected</comment>
@@ -244,21 +196,9 @@
     <value>Gracz #{0}</value>
     <comment>MT — "Player" translated as a common noun here (a specific player with a dbref number), not the privilege level</comment>
   </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>Zobacz graczy</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>Gracze</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPresent" xml:space="preserve">
     <value>Obecny</value>
     <comment>MT — assumed the counterpart of AdmMissing, describing a handler object that exists</comment>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>Profile postaci</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmProfilesConfigured" xml:space="preserve">
     <value>Skonfigurowano</value>
@@ -315,16 +255,8 @@
     <value>Resetowanie…</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>Role i uprawnienia</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Role</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>Status serwera</value>
     <comment>MT</comment>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
@@ -333,10 +265,6 @@
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Status</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>Sugestie słów</value>
     <comment>MT</comment>
   </data>
   <data name="AdmUnlinkFailed" xml:space="preserve">
@@ -4227,10 +4155,6 @@
     <value>Usunięto: {0}.</value>
     <comment>MT — restructured with a colon so {0} (file name) stays in the nominative</comment>
   </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG, JPEG, GIF, WebP lub SVG — maks. 10 MB.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkAssetUploaded" xml:space="preserve">
     <value>Przesłano: {0}.</value>
     <comment>MT — restructured with a colon so {0} (file name) stays in the nominative</comment>
@@ -4581,10 +4505,6 @@
   </data>
   <data name="WkViewRevision" xml:space="preserve">
     <value>Zobacz tę wersję</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Zasoby wiki</value>
     <comment>MT</comment>
   </data>
   <data name="WordAddFailed" xml:space="preserve">
@@ -5103,9 +5023,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atrybuty obsługi</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>Prześlij obraz</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Ta gra nie ma zainstalowanych tematów pomocy.</value>
@@ -5647,6 +5564,33 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Wstrzymane, bez terminu</value>
+  </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Edytuj scenę</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Zapowiedź</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>O czym jest scena, żeby inni mogli zdecydować, czy przyjdą.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Każdy może oglądać</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>Scena nie została zmieniona.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Dodaj do kalendarza</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Kalendarz Google</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Inne kalendarze (.ics)</value>
   </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Opublikuj jako</value>

@@ -125,14 +125,16 @@ public class ConfigIndexTests : TrackingBunitContext
 		await Assert.That(server.QuerySelectorAll(".config-cat-more").Length).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// The aside explains how changes apply and nothing else: it used to carry a third list of staff
+	/// pages beside the sidebar and the overview, and the three disagreed.
+	/// </summary>
 	[Test]
-	public async Task AsideListsOnlyAuthorisedTools()
+	public async Task AsideOnlyExplainsHowChangesApply()
 	{
-		Auth.SetPolicies("layout.admin");
+		Auth.SetPolicies("layout.admin", "packages.admin", "roles.admin");
 		var cut = RenderHome();
-		await Assert.That(cut.Find(".config-home-aside a[href='/admin/layout']")).IsNotNull();
-		await Assert.That(cut.FindAll(".config-home-aside a[href='/admin/packages']").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll(".config-home-aside a[href='/admin/roles']").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".config-home-aside .config-home-how")).IsNotNull();
+		await Assert.That(cut.FindAll(".config-home-aside a").Count).IsEqualTo(0);
 	}
 }

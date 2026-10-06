@@ -1,5 +1,6 @@
 using MarkupString.Mxp;
 using MarkupString.Pueblo;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -251,7 +252,18 @@ public class Program
 			.SelectMany(header => header.Value.Where(value => value is not null)
 				.Select(value => (header.Key, Value: value!)));
 
-		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, clientIp, context.RequestAborted);
+		// Who is calling, as the server verified it: the account session's acting character. The
+		// credential itself (Authorization, Cookie, ?access_token) is withheld from softcode by the
+		// dispatcher; this is what a route reads instead, as %q<viewer>. The scheme is named rather
+		// than taken from context.User so that Development's DebugAuth, which signs every request in
+		// as God, does not tell softcode an anonymous caller is God.
+		var session = await context.AuthenticateAsync(
+			SharpMUSH.Server.Authentication.AccountSessionAuthenticationHandler.SchemeName);
+		var viewer = session is { Succeeded: true, Principal: { } principal }
+			? SharpMUSH.Server.Authentication.AccountSessionAuthenticationHandler.ActingCharacter(principal)
+			: null;
+
+		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, clientIp, viewer, context.RequestAborted);
 
 		if (result is not SharpMUSH.Library.Services.Interfaces.HttpHandlerResult handled)
 		{

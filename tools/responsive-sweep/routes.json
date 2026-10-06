@@ -26,23 +26,22 @@
 	],
 	"admin": [
 		"/admin",
-		"/admin/players",
+		"/admin/guests",
 		"/admin/characters",
 		"/admin/accounts",
 		"/admin/moderation",
-		"/admin/moderation/audit",
+		"/admin/audit",
 		"/admin/profiles",
 		"/admin/media",
 		"/admin/server",
 		"/admin/wiki",
-		"/admin/wiki/assets",
 		"/admin/config",
 		"/admin/config/bannednames",
 		"/admin/config/restrictions",
 		"/admin/config/sitelock",
 		"/admin/config/sitelockrules",
 		"/admin/config/import",
-		"/admin/database/import",
+		"/admin/import",
 		"/admin/layout",
 		"/admin/roles",
 		"/admin/applications",
@@ -51,9 +50,6 @@
 		"/admin/packages/browse",
 		"/admin/packages/remotes",
 		"/admin/packages/review",
-		"/admin/restrictions",
-		"/admin/sitelock",
-		"/admin/bannednames",
 		"/admin/suggestions"
 	],
 	"_expectedRedirectsDoc": [
@@ -62,14 +58,10 @@
 		"for, so ANY other landing pathname is a gating failure rather than a benign alias.",
 		"This list is the whole allowlist: the default is to fail, so a forced redirect nobody",
 		"predicted fails loudly instead of quietly filing fiction under the requested route.",
-		"Verified sources: RestrictionsRedirect/SitelockRedirect/BannedNamesRedirect.razor,",
-		"SettingsCharactersRedirect.razor, Register.razor (NavigateTo /login?tab=register),",
+		"Verified sources: SettingsCharactersRedirect.razor, Register.razor (NavigateTo /login?tab=register),",
 		"Setup.razor (bounces to / once the game is claimed)."
 	],
 	"expectedRedirects": {
-		"/admin/restrictions": "/admin/config/restrictions",
-		"/admin/sitelock": "/admin/config/sitelock",
-		"/admin/bannednames": "/admin/config/bannednames",
 		"/settings/characters": "/account",
 		"/register": "/login",
 		"/setup": "/"
@@ -160,8 +152,8 @@
 			"note": "as above, for the live participation view"
 		},
 		{
-			"route": "/admin/players/{id}",
-			"samples": ["/admin/players/1"],
+			"route": "/admin/characters/{id}",
+			"samples": ["/admin/characters/1"],
 			"content": "placeholder",
 			"note": "the detail pane is still a stub in this build"
 		},

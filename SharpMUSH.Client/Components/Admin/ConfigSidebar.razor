@@ -22,7 +22,7 @@
             </a>
         }
         <SidebarHead Title="@Loc["Configuration"]">
-            <Sub>@Loc["ResConfigSectionKicker"]</Sub>
+            <Sub>@Loc["AdmGroupServer"]</Sub>
         </SidebarHead>
         <SectionLabel>@Loc["Settings"]</SectionLabel>
     }
@@ -65,8 +65,7 @@
 </SidebarPanel>
 
 @code {
-    /// <summary>Where "‹ Build &amp; manage" goes: the section's first other page this viewer may use, or
-    /// null when configuration is all they have there.</summary>
+    /// <summary>Where "‹ Build &amp; manage" goes: the section's overview.</summary>
     private string? _back;
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
@@ -81,8 +80,9 @@
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+        // Configuration is a staff page, so whoever reaches it also has the overview to go back to.
         _back = (await SharpMUSH.Client.Layout.BuildNavCatalog.VisibleAsync(Authorization, user))
-            .FirstOrDefault(e => e.Href != "/admin/config")?.Href;
+            .FirstOrDefault(e => e.Group == SharpMUSH.Client.Layout.BuildNavCatalog.Group.Overview)?.Href;
     }
 
     [Parameter] public bool Collapsed { get; set; }

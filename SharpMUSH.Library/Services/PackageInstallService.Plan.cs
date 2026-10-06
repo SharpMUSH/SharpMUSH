@@ -25,8 +25,18 @@ public partial class PackageInstallService
 		CancellationToken cancellationToken = default)
 	{
 		var inputs = await GatherInputsAsync(manifest, configureAnswers ?? new Dictionary<string, string>(), cancellationToken);
-		return planner.ComputeChangeset(inputs);
+		return planner.ComputeChangeset(inputs) with
+		{
+			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken)
+		};
 	}
+
+	/// <summary>What the package's roles, permissions and categories would do; nothing when it declares none and owns none.</summary>
+	private async Task<IReadOnlyList<PackageDeclarationChange>> PlanDeclarationsAsync(
+		PackageManifest manifest, InstalledPackageRecord? installed, CancellationToken cancellationToken)
+		=> manifest.Declared.IsEmpty && installed?.Owned is null
+			? []
+			: await declarations.PlanAsync(manifest.Name, manifest.Declared, installed?.Owned, cancellationToken);
 
 	private async Task<PackagePlanInputs> GatherInputsAsync(
 		PackageManifest manifest,

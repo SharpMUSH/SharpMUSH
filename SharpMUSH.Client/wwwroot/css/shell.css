@@ -732,6 +732,16 @@
 
 @keyframes ms-blink { 50% { opacity: 0; } }
 
+/* align() and the other laid-out text arrive as <pre class="ms-preformatted">. In game output that text
+   is part of a line, not a block: a block <pre> takes the browser's own margins and monospace size, so
+   every table row sat between blank lines and in a smaller font than the rules drawn around it. */
+pre.ms-preformatted {
+    display: inline;
+    margin: 0;
+    font: inherit;
+    white-space: pre-wrap;
+}
+
 /* Command links (xch_cmd) — clickable, run a MUSH command. Distinct from URL links.
    The base rule mirrors HtmlCss.Fixed's .ms-cmd-link verbatim (pinned by
    MarkupCssCoverageTests); the portal-only color theming sits in its own rule below. */

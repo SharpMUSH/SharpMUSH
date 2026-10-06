@@ -286,7 +286,8 @@ public static class SearchSpecEngine
 					break;
 				}
 
-				if (!await compiledLock(typedObj, executor))
+				// The searcher holds the lock and each candidate tries it, as PennMUSH's eval_boolexp(n, lock, player).
+				if (!await compiledLock(executor, typedObj))
 				{
 					matches = false;
 					break;

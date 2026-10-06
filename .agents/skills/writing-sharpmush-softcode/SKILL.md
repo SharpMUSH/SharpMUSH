@@ -34,7 +34,9 @@ SharpMUSH is a modern MUSH server that *targets* PennMUSH compatibility but dive
 Never build nested `@switch` ladders for validation. Guard with `@assert`/`@break`, one specific error per check, real work last:
 
 ```
-&CMD`SETRANK obj=$+setrank *=*: @assert orflags(%#,Wr)=@pemit %#=Permission denied.; @assert isdbref(setr(who, locate(%#, %0, PFym)))=@pemit %#=No such player: %0; @assert t(match(recruit member officer, lcstr(%1)))=@pemit %#=Rank must be recruit, member, or officer.; @include me/INC`SETRANK=%q<who>,[lcstr(%1)]
+@permission/define guild.rank=Staff/Set guild ranks
+@role/allow <rank-manager role>=guild.rank
+&CMD`SETRANK obj=$+setrank *=*: @assert permission(%#,guild.rank)=@pemit %#=Permission denied.; @assert isdbref(setr(who, locate(%#, %0, PFym)))=@pemit %#=No such player: %0; @assert t(match(recruit member officer, lcstr(%1)))=@pemit %#=Rank must be recruit, member, or officer.; @include me/INC`SETRANK=%q<who>,[lcstr(%1)]
 ```
 
 - `@assert <bool>=<action>` stops the list unless bool is true; `@break` is the inverse.
@@ -70,6 +72,28 @@ Read directly: ``get(obj/DATA`#30:171943`DUES)``. Key by **objid**, not dbref or
 
 Validation one-liner (instead of filter+setr gymnastics): ``@assert every(FN`ISNUM, %0, , bad)=@pemit %#=Not numbers: %q<bad>`` with `` &FN`ISNUM obj=isnum(%0) ``. (These functions are mid-2026 additions — older builds may lack them; `help chain()` confirms.)
 
+## Roles and permissions
+
+Who may do what is the game's job, not a staff list in an attribute. Roles are named sets of permissions held by objects and by accounts (a character also holds its account's); the game, the portal and softcode read one answer. `help roles`, `help @role`, `help @permission`.
+
+| Ask | Function | Lock key |
+|---|---|---|
+| What someone **is**: approved, on a roster | `hasrole(<obj>, <role>)` | `role^<role>` |
+| What someone **may do**: approve, close any scene | `permission(<obj>, <perm>)` | `perm^<perm>` |
+
+- **Gate on permissions, tag with roles.** `@assert permission(%#, chargen.approve)` survives staff moving that job to another role, `@permission/allow` for one person, `@permission/deny` against one, with no code change. `hasrole(%#, wizard)` and `orflags(%#, Wr)` don't. Flags and powers still answer (WIZARD/ROYALTY are the `wizard`/`royalty` roles, each power a `game.` permission), but they name a rank, not a job.
+- **A job the game lacks is a custom permission**: `@permission/define chargen.approve=Staff/Approve new characters`, then `@role/allow <role>=chargen.approve`. Nobody holds it but #1 and `administrator` holders until something allows it, wizards included.
+- **Status is a role in a category**: `@role/category/create Status=<description>`, `@role/create approved=Status/Approved`. The category must exist first; role and permission categories are separate lists (`Staff` starts in both).
+- **Tagging from softcode**: a wizard global runs `@role/assign %q<who>=approved`. It acts as the **executor**, which needs `roles.admin` and must rank above the role and the target, so a wizard target is refused. The command reports to the global; confirm with `@assert hasrole(%q<who>,approved)=@pemit %#=<failure>`. Run the checks on `%#`: `permission(me, …)` asks about the global, a wizard holding nearly every built-in permission and no custom one.
+- **Character, not account.** `@role/assign/account` and `@permission/allow/account` reach every character on the account: right for who the person is, wrong for approval or a guild.
+- **Find holders with a lock search**: `lsearch(all, type, player, elock, role^approved)`, from a privileged object (a mortal sees only what they can examine).
+- **Whole commands**: `@lock/command <obj>=perm^<perm>` gates every `$`-command on the object; built-ins take `@command/restrict <cmd>=PERM^<perm>` and `@function/restrict <fn>=<perm>`.
+- **Role priority is not control.** Ranking higher gives no power over anyone; control is ownership, zones, locks, `control.all`/`protect.*`. Priority only orders who may manage roles, so never build an "outranks" check for game actions on it.
+- **A Deny role does not cancel another role's Allow.** Take a permission from one person with `@permission/deny`, from a group by removing it from their role.
+- **Typos fail closed.** An unknown role makes `hasrole()` `0`; an unknown permission makes `permission()` `#-1 NO SUCH PERMISSION`, which is false. Check names with `valid(permission, <name>)` / `valid(rolename, <name>)`; `@role/player <obj>` shows where each permission came from.
+
+Upcoming, not merged: packages declaring roles and permissions in `package.yaml` (SharpMUSH#1615), and `%q<viewer>` on `/http` routes so a route can ask `permission(%q<viewer>, …)` (SharpMUSH#1617).
+
 ## Pre-populated world (do NOT create or configure these)
 
 A fresh SharpMUSH seeds: `#0` Room Zero, `#1` God, `#2` Master Room, `#3`–`#6` Ancestors (room/player/exit/thing — attribute-only fallback parents; no $-commands; `ORPHAN` opts out), `#7` Package Manager, **`#8` HTTP Handler**, **`#9` Event Handler**. Both handlers are already wizard-flagged and already pointed at by `http_handler`/`event_handler` config. **Never `@create` a handler or `@config/set event_handler` on a fresh game.**
@@ -92,7 +116,7 @@ The verb routers (`&GET`, `&POST`, …) are pre-installed on `#8`. URLs live und
 &GET`GUILDROSTER #8=@respond/type application/json; think json_array(iter(lattr(#300/DATA`*`NAME), json(string, get(#300/%i0))))
 ```
 
-- In a **sub-handler**: `%0` = request BODY (raw); query params arrive pre-decoded as `%q<form.name>`; headers as `%q<hdr.host>` etc.
+- In a **sub-handler**: `%0` = request BODY (raw); query params arrive pre-decoded as `%q<form.name>`; headers as `%q<hdr.host>` etc. (`Authorization`, `Proxy-Authorization` and `Cookie` are withheld); the signed-in caller's objid as `%q<viewer>` (empty when anonymous).
 - Everything `think`/`@pemit`-ed to the handler during the run IS the response body; queued work (`@wait`, $-commands) never reaches the client — write inline.
 - `@respond <code> <text>`, `@respond/type <ctype>`, `@respond/header <name>=<value>` control the response; default is 404 for unmatched routes.
 - Build JSON with `json()`, `json_array()`, `json_group_by()`, `json_query()` — never hand-concatenate escaped brackets.
@@ -123,3 +147,7 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | `@assert %#` to detect system events | `%#` is `#1` for system events; gate on event args |
 | `ibreak()add(…)` trailing function unevaluated | `ibreak()[add(…)]` |
 | Flagging the event handler wizard "so it can act" | Seeded `#9` already is; only custom handlers need it |
+| `orflags(%#,Wr)`, `hasrole(%#,wizard)` or a `&STAFF` dbref list as the gate | `permission(%#, <perm>)`; define a custom one for the job |
+| `permission(me, …)` on a wizard global | Check `%#`; `me` is the global, not the player |
+| A Deny role to take a permission from one player | Any other role's Allow wins; `@permission/deny <player>=<perm>` |
+| Role priority as an "outranks" check | Priority only orders role management; control is ownership, zones, locks |

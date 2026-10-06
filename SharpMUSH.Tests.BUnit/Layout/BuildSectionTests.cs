@@ -14,8 +14,8 @@ using SharpMUSH.Client.Services;
 namespace SharpMUSH.Tests.BUnit.Layout;
 
 /// <summary>
-/// The Build &amp; manage section (README §3): its sidebar lists what the viewer may use, grouped
-/// Build and Manage, then the applications placed there under Apps; the config tree offers a way back
+/// The Build &amp; manage section (README §3): its sidebar lists the overview and what the viewer may
+/// use, by group, then the applications placed there under Apps; the config tree offers a way back
 /// to it; and an application page joins its section's sidebar (Build &amp; manage, or a novel section's
 /// own list of apps).
 /// </summary>
@@ -68,21 +68,21 @@ public class BuildSectionTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find("a.kit-row[href='/apps/bbs']"), TimeSpan.FromSeconds(5));
 
 		var rows = cut.FindAll("a.kit-row").Select(a => a.GetAttribute("href")).ToList();
-		await Assert.That(rows).IsEquivalentTo(new[] { "/softcode", "/admin/config", "/apps/bbs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
-			.Because("only the viewer's gates, Build then Manage, then the section's apps; Workshop apps are another section");
+		await Assert.That(rows).IsEquivalentTo(new[] { "/admin", "/softcode", "/admin/suggestions", "/admin/config", "/apps/bbs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("the overview, then only the viewer's gates in group order, then the section's apps; Workshop apps are another section");
 		await Assert.That(cut.Find("a.kit-row[href='/admin/config']").GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(cut.Find(".kit-side-title").TextContent).IsEqualTo("Build & manage");
 	}
 
 	/// <summary>
-	/// The dashboard opens pages the sidebar does not list (players, accounts, suggestions, the server,
-	/// the database import). On those no row was current, so the sidebar lost the reader's place; the
-	/// dashboard row, which is how they got there, now is. A listed page keeps its own row.
+	/// The sidebar lists every staff page the overview does, so each page marks its own row; a page under
+	/// one (a character's detail) marks its list, and the one page left out (the design kit) marks the
+	/// overview, so the reader never loses their place.
 	/// </summary>
 	[Test]
-	[Arguments("/admin/players", "/admin")]
-	[Arguments("/admin/suggestions", "/admin")]
-	[Arguments("/admin/database/import", "/admin")]
+	[Arguments("/admin/guests", "/admin/guests")]
+	[Arguments("/admin/characters/7", "/admin/characters")]
+	[Arguments("/admin/kit", "/admin")]
 	[Arguments("/admin", "/admin")]
 	[Arguments("/admin/roles", "/admin/roles")]
 	[Arguments("/admin/packages/browse", "/admin/packages")]
@@ -98,18 +98,14 @@ public class BuildSectionTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task TheConfigTree_OffersTheWayBack_OnlyWhenThereIsSomewhereElseToGo()
+	public async Task TheConfigTree_LeadsBackToTheOverview()
 	{
-		_auth.SetPolicies("config.admin");
-		Nav.NavigateTo("/admin/config");
-		var alone = Render<ConfigSidebar>();
-		await Assert.That(alone.FindAll("a.config-side-back").Count).IsEqualTo(0)
-			.Because("configuration is the only Build & manage page this viewer has");
-
 		_auth.SetPolicies("config.admin", "roles.admin");
+		Nav.NavigateTo("/admin/config");
 		var staff = Render<ConfigSidebar>();
 		staff.WaitForAssertion(() => staff.Find("a.config-side-back"), TimeSpan.FromSeconds(5));
-		await Assert.That(staff.Find("a.config-side-back").GetAttribute("href")).IsEqualTo("/admin/roles");
+		await Assert.That(staff.Find("a.config-side-back").GetAttribute("href")).IsEqualTo("/admin")
+			.Because("the way back is the overview, not whichever tool happens to come first");
 	}
 
 	[Test]

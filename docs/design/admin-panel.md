@@ -27,14 +27,14 @@ Overview cards:
 - New registrations (last 7 days)
 - Recent audit log entries (last 10)
 
-### Player Management (`/admin/players`)
+### Player Management (`/admin/accounts`, `/admin/characters`)
 
 **List view:**
 - Table: account name, linked characters, last login, role, status (active/banned)
 - Search/filter by name, role, status
 - Click row → detail view
 
-**Detail view (`/admin/players/{id}`):**
+**Detail view (`/admin/characters/{id}`):**
 - Account info: email, created date, last login, IP (God only)
 - Linked characters: name, dbref, flags, last activity
 - Actions: ban/unban account, force password reset, unlink character
@@ -59,7 +59,7 @@ scene pose delete, profile edit).
   the expiry
 - Host bans stay in the sitelock (`config.admin`); the page lists its rules read-only
 
-**Audit Log (`/admin/moderation/audit`):**
+**Audit Log (`/admin/audit`):**
 - Searchable log of all staff actions
 - Fields: who, what, target, timestamp, details
 - Filter by action type, staff member, date range

@@ -120,10 +120,6 @@
     <value>Отключена</value>
     <comment>MT — account status, feminine.</comment>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>Управление аккаунтами</value>
-    <comment>MT [normalized: аккаунт, matching the rest of the locale]</comment>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Поиск по имени пользователя или email…</value>
     <comment>MT — email kept Latin, as is standard in Russian UI.</comment>
@@ -131,10 +127,6 @@
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Аккаунты</value>
     <comment>MT [normalized: аккаунт, matching the rest of the locale]</comment>
-  </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>Пользовательские виджеты</value>
-    <comment>MT — widget → виджет per locale sheet.</comment>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
     <value>Приложения</value>
@@ -151,26 +143,6 @@
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Персонаж «{0}» отвязан от аккаунта «{1}».</value>
     <comment>MT — assumed {0} is a character name and {1} an account name; head nouns added so both names stay nominative in quotes and the participle agrees with «персонаж». [normalized: аккаунт, matching the rest of the locale]</comment>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>Просмотр персонажей</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>Настройки сайта</value>
-    <comment>MT — setting → настройка per locale sheet.</comment>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>Панель администрирования</value>
-    <comment>MT — dashboard → панель per locale sheet.</comment>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>Импорт базы данных</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>Импорт базы данных</value>
-    <comment>MT — Russian collapses the action and title forms into the same noun phrase.</comment>
   </data>
   <data name="AdmDisableAccount" xml:space="preserve">
     <value>Отключить</value>
@@ -192,21 +164,9 @@
     <value>Просматривайте темы, ищите справочные статьи и читайте руководство.</value>
     <comment>MT — formal вы imperatives.</comment>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>Администрирование</value>
-    <comment>MT — fixed decision: «Администрирование» renders the Admin kicker.</comment>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>Редактор макета</value>
-    <comment>MT — layout → макет per locale sheet.</comment>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>Макет</value>
     <comment>MT</comment>
-  </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>Медиаресурсы</value>
-    <comment>MT — asset → ресурс per locale sheet.</comment>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
     <value>Библиотека изображений</value>
@@ -224,14 +184,6 @@
     <value>Не удалось выполнить операцию.</value>
     <comment>MT — impersonal status message per locale sheet.</comment>
   </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Пакеты softcode</value>
-    <comment>MT — softcode kept untranslated per glossary; package → пакет per locale sheet.</comment>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>Пакеты</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Пароль для аккаунта «{0}» сброшен: {1} — передайте его безопасным способом; при следующем входе пароль потребуется изменить.</value>
     <comment>MT — account name is a quoted appositive after a genitive head noun; the new password follows a colon. Slightly longer than the English but within the same order of magnitude. [normalized: аккаунт, matching the rest of the locale]</comment>
@@ -244,21 +196,9 @@
     <value>Игрок #{0}</value>
     <comment>MT — dbref number follows the head noun; player → игрок per corpus (descriptive noun, not the Player enum).</comment>
   </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>Просмотр игроков</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>Игроки</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPresent" xml:space="preserve">
     <value>Присутствует</value>
     <comment>MT — counterpart of AdmMissing in batch 021; assumed 'is present', not 'gift'.</comment>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>Профили персонажей</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmProfilesConfigured" xml:space="preserve">
     <value>Настроено</value>
@@ -315,16 +255,8 @@
     <value>Сброс…</value>
     <comment>MT — impersonal progress label.</comment>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>Роли и права доступа</value>
-    <comment>MT — role → роль, permission → права (доступа) per locale sheet.</comment>
-  </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Роли</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>Состояние сервера</value>
     <comment>MT</comment>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
@@ -334,10 +266,6 @@
   <data name="AdmStatus" xml:space="preserve">
     <value>Статус</value>
     <comment>MT — column header; «статус» kept consistent with AdmAccountStatusChanged.</comment>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>Предложенные слова</value>
-    <comment>MT — assumed words suggested by players for review, per the Word* keys in batch 020.</comment>
   </data>
   <data name="AdmUnlinkFailed" xml:space="preserve">
     <value>Не удалось отвязать.</value>
@@ -4227,10 +4155,6 @@
     <value>Удалено: {0}.</value>
     <comment>MT — restructured to a colon so the past participle need not agree in gender with the interpolated file name.</comment>
   </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG, JPEG, GIF, WebP или SVG — не более 10 МБ.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkAssetUploaded" xml:space="preserve">
     <value>Загружено: {0}.</value>
     <comment>MT — restructured to a colon to avoid gender agreement with the interpolated file name.</comment>
@@ -4581,10 +4505,6 @@
   </data>
   <data name="WkViewRevision" xml:space="preserve">
     <value>Посмотреть эту версию</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Файлы wiki</value>
     <comment>MT</comment>
   </data>
   <data name="WordAddFailed" xml:space="preserve">
@@ -5103,9 +5023,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Атрибуты обработчика</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>Загрузить изображение</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>В этой игре не установлены разделы справки.</value>
@@ -5647,6 +5564,33 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>На паузе, без времени</value>
+  </data>
+  <data name="RolEditScene" xml:space="preserve">
+    <value>Изменить сцену</value>
+  </data>
+  <data name="RolScenePitchLabel" xml:space="preserve">
+    <value>Анонс</value>
+  </data>
+  <data name="RolScenePitchHint" xml:space="preserve">
+    <value>О чём сцена, чтобы люди решили, придут ли они.</value>
+  </data>
+  <data name="RolScenePublicLabel" xml:space="preserve">
+    <value>Смотреть может любой</value>
+  </data>
+  <data name="RolSceneDate" xml:space="preserve">
+    <value>Дата</value>
+  </data>
+  <data name="RolSceneNotSaved" xml:space="preserve">
+    <value>Сцена не изменена.</value>
+  </data>
+  <data name="RolAddToCalendar" xml:space="preserve">
+    <value>Добавить в календарь</value>
+  </data>
+  <data name="RolGoogleCalendar" xml:space="preserve">
+    <value>Google Календарь</value>
+  </data>
+  <data name="RolIcsDownload" xml:space="preserve">
+    <value>Другие календари (.ics)</value>
   </data>
   <data name="RolComposeMode" xml:space="preserve">
     <value>Отправить как</value>

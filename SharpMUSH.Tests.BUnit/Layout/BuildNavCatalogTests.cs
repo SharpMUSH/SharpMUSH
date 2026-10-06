@@ -8,8 +8,9 @@ using SharpMUSH.Client.Layout;
 namespace SharpMUSH.Tests.BUnit.Layout;
 
 /// <summary>
-/// The Build &amp; manage gates, declared once for the rail, the section sidebar and the mobile drawer:
-/// any-of policies (with the menu's fallback pairs) or a <c>perm</c> claim for snapshots.
+/// The Build &amp; manage gates, declared once for the rail, the section sidebar, the mobile drawer and the
+/// overview: any-of policies (with the menu's fallback pairs), a <c>perm</c> claim for snapshots, a role
+/// for accounts; and the overview, offered only when there is a staff page to put on it.
 /// </summary>
 public class BuildNavCatalogTests : BunitContext
 {
@@ -65,6 +66,54 @@ public class BuildNavCatalogTests : BunitContext
 	{
 		_auth.SetAuthorized("wizard");
 		_auth.SetPolicies("softcode.use", "config.admin", "players.view");
-		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/softcode", "/admin", "/admin/config" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/softcode", "/admin/characters", "/admin/guests", "/admin/suggestions", "/admin/config" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>A builder's own tools are not a staff area: they get no overview, so the rail opens their first tool.</summary>
+	[Test]
+	public async Task BuildToolsAlone_GetNoOverview()
+	{
+		_auth.SetAuthorized("builder");
+		_auth.SetPolicies("softcode.use", "jobs.manage.own");
+		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/softcode", "/admin/jobs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	[Arguments("Wizard")]
+	[Arguments("God")]
+	public async Task Accounts_FollowTheWizardRole(string role)
+	{
+		_auth.SetAuthorized("wizard");
+		_auth.SetRoles(role);
+		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/admin/accounts" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>Every staff group has a heading in the resx, and the catalogue routes no two entries to one page.</summary>
+	[Test]
+	public async Task EveryGroupHasAHeading_AndEveryEntryItsOwnPage()
+	{
+		foreach (var group in BuildNavCatalog.All.Select(e => e.Group).Distinct())
+			await Assert.That(BuildNavCatalog.GroupLabelKey(group)).IsNotNull().Because(group.ToString());
+		await Assert.That(BuildNavCatalog.All.Select(e => e.Href).Distinct().Count()).IsEqualTo(BuildNavCatalog.All.Count);
+	}
+
+	/// <summary>
+	/// The overview page's own gate: typing /admin refuses a player and a builder with only Build tools,
+	/// the same viewers no link sends there.
+	/// </summary>
+	[Test]
+	public async Task TheOverviewPolicy_AdmitsExactlyThoseTheOverviewLinkIsOfferedTo()
+	{
+		static ClaimsPrincipal User(params Claim[] claims) => new(new ClaimsIdentity(claims, "test"));
+
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User())).IsFalse();
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim("perm", "softcode.use"), new Claim("perm", "jobs.manage.own")))).IsFalse();
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim("perm", "players.view")))).IsTrue();
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim(ClaimTypes.Role, "Wizard")))).IsTrue();
+
+		var gate = typeof(SharpMUSH.Client.Pages.Admin.Dashboard).GetCustomAttributes(typeof(AuthorizeAttribute), true)
+			.Cast<AuthorizeAttribute>().Single();
+		await Assert.That(gate.Policy).IsEqualTo(BuildNavCatalog.OverviewPolicy);
 	}
 }

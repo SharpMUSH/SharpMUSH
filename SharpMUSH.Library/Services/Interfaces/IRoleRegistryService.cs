@@ -82,6 +82,9 @@ public interface IRoleRegistryService
 	/// <summary>Defines a custom permission, or replaces its description (keyed by <see cref="CustomPermission.Scope"/>).</summary>
 	Task UpsertCustomPermissionAsync(CustomPermission permission);
 
+	/// <summary>Every account and object override of <paramref name="scope"/>, as <see cref="RemoveCustomPermissionAsync"/> would clear them.</summary>
+	Task<PermissionOverrideHolders> GetOverridesOfAsync(string scope, CancellationToken cancellationToken = default);
+
 	/// <summary>
 	/// Removes a custom permission and every setting of it: on roles, on accounts and on objects, in one
 	/// write. Does not error if absent.

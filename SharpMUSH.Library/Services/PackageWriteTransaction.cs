@@ -100,6 +100,12 @@ public sealed class PackageWriteTransaction(
 
 	private void OnRevert(string what, Func<Task> revert) => _undo.Push((what, revert));
 
+	/// <summary>
+	/// Records a write made outside this class with its inverse, for a store it does not cover: the
+	/// role registry (<see cref="IPackageDeclarationService"/>).
+	/// </summary>
+	public void Track(string what, Func<Task> revert) => OnRevert(what, revert);
+
 	private async Task<AnySharpObject?> CurrentAsync(DBRef dbref) =>
 		await objects.GetObjectNodeAsync(dbref) is AnySharpObject node ? node : null;
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
@@ -84,7 +85,7 @@ public class ApplicationsControllerOverlayTests
 
 		public ValueTask<Found<HttpHandlerResult>> DispatchAsync(
 			string method, string path, string body, IEnumerable<(string Name, string Value)> headers,
-			string clientIp, CancellationToken ct = default) =>
+			string clientIp, DBRef? viewer, CancellationToken ct = default) =>
 			throw new InvalidOperationException("read paths must not dispatch");
 	}
 }

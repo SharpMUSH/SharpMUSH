@@ -398,7 +398,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(accountAuth.IsLoggedIn).IsTrue();
 		await Assert.That(accountAuth.Username).IsEqualTo("headwiz");
 		await Assert.That(accountAuth.Role).IsEqualTo("God");
-		await Assert.That(cut.Find("a.setup-import").GetAttribute("href")).IsEqualTo("/admin/database/import?setup=1");
+		await Assert.That(cut.Find("a.setup-import").GetAttribute("href")).IsEqualTo("/admin/import?setup=1");
 
 		cut.Find("button.setup-fresh").Click();
 

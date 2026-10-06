@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -24,7 +25,8 @@ public record HttpHandlerResult(
 /// <c>&lt;METHOD&gt;</c> attribute (GET/POST/…) <b>as a command list</b> — the equivalent of
 /// PennMUSH's invisible-login + <c>@include #handler/&lt;method&gt;</c> (src/cque.c
 /// <c>run_http_command</c>). <c>%0</c> = path (including query string), <c>%1</c> = request body,
-/// headers arrive as <c>%q&lt;hdr.name&gt;</c> q-registers plus a <c>%q&lt;headers&gt;</c> name list.
+/// headers arrive as <c>%q&lt;hdr.name&gt;</c> q-registers plus a <c>%q&lt;headers&gt;</c> name list
+/// (credential headers excepted), and the authenticated caller, if any, as <c>%q&lt;viewer&gt;</c>.
 /// Output the handler emits to itself becomes the response body; <c>@respond</c> shapes the
 /// status line, content type, and headers.
 ///
@@ -71,11 +73,17 @@ public interface IHttpHandlerCommandDispatcher
 	/// The effective client address, already resolved through the trusted-proxy pipeline. Pass
 	/// <see cref="UnknownAddress"/> rather than an empty string when there is none.
 	/// </param>
+	/// <param name="viewer">
+	/// The objid of the character the request authenticated as, already verified by the server
+	/// (the account session's acting character); <c>null</c> for an anonymous request. Becomes
+	/// <c>%q&lt;viewer&gt;</c>. The credential that proved it never reaches softcode.
+	/// </param>
 	ValueTask<Found<HttpHandlerResult>> DispatchAsync(
 		string method,
 		string path,
 		string body,
 		IEnumerable<(string Name, string Value)> headers,
 		string clientIp,
+		DBRef? viewer,
 		CancellationToken ct = default);
 }

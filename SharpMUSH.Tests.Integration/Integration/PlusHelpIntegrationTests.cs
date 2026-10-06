@@ -373,6 +373,21 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
+	/// A body is evaluated, so the optional parts of a syntax line are written \[ \]: unescaped, [&lt;id&gt;]
+	/// ran as a function call and the reader saw an error where the syntax should be.
+	/// </summary>
+	[Test]
+	public async Task OptionalArguments_AreShownNotRun()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), "+help scene schedule"));
+
+		await Assert.That(said).Contains("+scene/pause [<id>][=<when>]");
+		await Assert.That(said).Contains("+scene/start [<id>]");
+		await Assert.That(said).DoesNotContain("#-1");
+	}
+
+	/// <summary>
 	/// A subtopic is shown by its short name but must RUN the full one — the reader clicking "join"
 	/// under "scene" wants "+help scene join", not "+help join", which resolves to nothing.
 	/// </summary>

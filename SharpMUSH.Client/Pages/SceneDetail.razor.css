@@ -114,3 +114,48 @@
 	display: flex;
 	gap: 8px;
 }
+
+.scene-detail-pitch {
+	margin: 0;
+	max-width: 70ch;
+	white-space: pre-line;
+	color: var(--text-dim);
+}
+
+.scene-edit-form {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px 16px 16px;
+}
+
+.scene-edit-form ::deep .scene-edit-date,
+.scene-edit-form ::deep .scene-edit-time {
+	flex: 1 1 12rem;
+}
+
+.scene-calendar {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 12px;
+	padding-top: 10px;
+	border-top: 1px solid var(--border);
+	font-size: 12px;
+}
+
+.scene-calendar-label {
+	color: var(--text-faint);
+}
+
+.scene-calendar a {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.scene-calendar a:hover {
+	text-decoration: underline;
+}
