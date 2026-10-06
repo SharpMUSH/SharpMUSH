@@ -283,10 +283,29 @@ public sealed class HtmlFlexItemRenderer : HtmlObjectRenderer<FlexItemBlock>
 		if (options.Basis is not null) renderer.Write(" md-fixed");
 		if (options.Align is { } align) renderer.Write($" md-self-{align.ToString().ToLowerInvariant()}");
 		renderer.Write($"\" style=\"--md-grow:{options.Grow.ToString(CultureInfo.InvariantCulture)};--md-min:{options.Min.ToString(CultureInfo.InvariantCulture)}");
-		if (options.Basis is { } basis) renderer.Write($";--md-basis:{basis.Css}");
+		if (options.Basis is { } basis) renderer.Write($";--md-basis:{BasisCss(basis, block.Parent as FlexBlock)}");
 		renderer.WriteLine("\">");
 		renderer.WriteChildren(block);
 		renderer.WriteLine("</div>");
+	}
+
+	/// <summary>
+	/// A basis as CSS. A percentage in a row is of the width left once the gaps are taken out, as the terminal
+	/// counts it; a browser places items on a line by their basis before shrinking any, so two 50% items with a
+	/// gap between them would otherwise never share one.
+	/// </summary>
+	private static string BasisCss(FlexBasis basis, FlexBlock? flex)
+	{
+		var gaps = flex is null ? 0 : flex.Count - 1;
+		if (!basis.IsPercent || flex is null || flex.Options.Direction == FlexDirection.Column || gaps <= 0
+			|| flex.Options.Gap == 0)
+		{
+			return basis.Css;
+		}
+
+		// md-gap-N is N × 0.5rem.
+		var gapRem = (flex.Options.Gap * gaps * 0.5m).ToString("0.##", CultureInfo.InvariantCulture);
+		return $"calc((100% - {gapRem}rem) * {basis.Value.ToString(CultureInfo.InvariantCulture)} / 100)";
 	}
 }
 

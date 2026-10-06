@@ -1113,6 +1113,7 @@ pre.ms-preformatted {
 
 .md-flex.md-column { flex-direction: column; }
 .md-flex.md-nowrap { flex-wrap: nowrap; }
+/* N × 0.5rem; HtmlFlexItemRenderer.BasisCss takes the same sizes out of a row for a percentage basis. */
 .md-flex.md-gap-0 { gap: 0; }
 .md-flex.md-gap-1 { gap: 0.5rem; }
 .md-flex.md-gap-2 { gap: 1rem; }
@@ -1132,12 +1133,18 @@ pre.ms-preformatted {
     min-width: min(100%, calc(var(--md-min, 24) * 1ch));
 }
 
+/* A fixed item may shrink when the row runs short (a percentage basis already has the gaps taken out). */
 .md-item.md-fixed {
-    flex: 0 0 var(--md-basis);
+    flex: 0 1 var(--md-basis);
     max-width: 100%;
 }
 
+/* In a column the main axis is vertical, where a basis would set a height; it stays a width. */
 .md-flex.md-column > .md-item { min-width: 0; }
+.md-flex.md-column > .md-item.md-fixed {
+    flex: none;
+    width: var(--md-basis);
+}
 .md-item.md-self-start { align-self: flex-start; }
 .md-item.md-self-center { align-self: center; }
 .md-item.md-self-end { align-self: flex-end; }

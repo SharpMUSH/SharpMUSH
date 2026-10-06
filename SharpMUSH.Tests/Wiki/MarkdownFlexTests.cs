@@ -99,6 +99,42 @@ public class MarkdownFlexTests
 		await Assert.That(lines).IsEquivalentTo(["Top", "", "Bottom"]);
 	}
 
+	/// <summary>A percentage basis in a row is of the width left after the gaps, as in the terminal.</summary>
+	[Test]
+	public async Task Html_PercentBasis_LeavesRoomForTheGaps()
+	{
+		var html = Html(":::: flex {gap=3}\n::: item {basis=50%}\nA\n:::\n::: item {basis=50%}\nB\n:::\n::::");
+
+		await Assert.That(html).Contains("--md-basis:calc((100% - 1.5rem) * 50 / 100)");
+	}
+
+	[Test]
+	public async Task Html_PercentBasisInAColumn_IsPlain()
+	{
+		var html = Html(":::: flex {direction=column}\n::: item {basis=50%}\nA\n:::\n::: item\nB\n:::\n::::");
+
+		await Assert.That(html).Contains("--md-basis:50%\"");
+	}
+
+	/// <summary>A basis stays a width when the items stack, as the portal keeps it in a column layout.</summary>
+	[Test]
+	public async Task Terminal_ColumnDirection_KeepsTheBasisAsAWidth()
+	{
+		var lines = Lines(":::: flex {direction=column}\n::: item {basis=10 min=4}\nalpha beta gamma\n:::\n::: item\nBottom\n:::\n::::", 78);
+
+		await Assert.That(lines).IsEquivalentTo(["alpha beta", "gamma", "", "Bottom"]);
+	}
+
+	/// <summary>The gap comes out of the row before the percentages, so two halves share one line.</summary>
+	[Test]
+	public async Task Terminal_TwoHalves_FitBesideTheirGap()
+	{
+		var lines = Lines(":::: flex\n::: item {basis=50% min=4}\nLeft\n:::\n::: item {basis=50% min=4}\nRight\n:::\n::::", 40);
+
+		// (40 - 2 gap) * 50% = 19 columns each.
+		await Assert.That(lines).IsEquivalentTo([$"Left{new string(' ', 15)}  Right"]);
+	}
+
 	/// <summary>Text wraps inside its column, and the shorter column is padded so the next one stays in line.</summary>
 	[Test]
 	public async Task Terminal_LongText_WrapsInsideItsColumn()

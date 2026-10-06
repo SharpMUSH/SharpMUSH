@@ -10,7 +10,8 @@ public partial class RecursiveMarkdownRenderer
 	/// A <c>flex</c> layout as columns, the way <c>align()</c> sets them: each item gets a width (a fixed
 	/// <c>basis</c> first, then what is left shared by <c>grow</c>), renders at that width, and the columns are
 	/// joined line by line with the gap between them. A column direction, or a row whose items would fall below
-	/// their <c>min</c> width while wrapping is on, stacks the items instead, as the portal does on a phone.
+	/// their <c>min</c> width while wrapping is on, stacks the items instead, as the portal does on a phone; a
+	/// stacked item keeps its basis as its width.
 	/// </summary>
 	protected virtual MString RenderFlex(FlexBlock flex)
 	{
@@ -24,7 +25,7 @@ public partial class RecursiveMarkdownRenderer
 
 		if (options.Direction == FlexDirection.Column || widths is null || (options.Wrap && !fits))
 		{
-			var stacked = items.Select(RenderFlexItem).Where(IsNonWhitespace).ToList();
+			var stacked = items.Select(StackedItem).Where(IsNonWhitespace).ToList();
 			return MarkupText.Join(MarkupText.Plain("\n\n"), stacked);
 		}
 
@@ -92,6 +93,12 @@ public partial class RecursiveMarkdownRenderer
 		var parts = item.Select(child => Render(child)).Where(IsNonWhitespace).ToList();
 		return MarkupText.Join(MarkupText.Plain("\n"), parts);
 	}
+
+	/// <summary>An item stacked under the others: at its basis when it has one, else at the full width.</summary>
+	private MString StackedItem(FlexItemBlock item) => item.Options.Basis is { } basis
+		? MarkupText.Join(MarkupText.NewLine, FlexColumn(item, basis.Columns(_maxWidth))
+			.Select(line => line.Trim(TrimType.TrimEnd, " ")).ToArray())
+		: RenderFlexItem(item);
 
 	/// <summary>An item rendered at <paramref name="width"/> and broken into lines no wider than it.</summary>
 	private List<MString> FlexColumn(FlexItemBlock item, int width)
