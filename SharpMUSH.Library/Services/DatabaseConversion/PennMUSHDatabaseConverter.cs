@@ -2265,7 +2265,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// </summary>
 	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput)
 	{
-		foreach (var pennAttr in pennObj.Attributes.Where(pennAttr => PipedOutputSubstitution().IsMatch(pennAttr.Value)))
+		foreach (var pennAttr in pennObj.Attributes.Where(pennAttr => UsesPipedOutput(pennAttr.Value)))
 		{
 			pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
 		}
@@ -2295,9 +2295,26 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	[GeneratedRegex(@"(?<![\d#])#(?<number>\d+)(?!\d)")]
 	private static partial Regex TextDbref();
 
-	/// <summary>A <c>%&gt;</c> whose <c>%</c> is not itself escaped by <c>%</c> or <c>\</c>.</summary>
-	[GeneratedRegex(@"(?<![%\\])(?:%%)*%>")]
-	private static partial Regex PipedOutputSubstitution();
+	/// <summary>
+	/// Whether the text has a <c>%&gt;</c> that evaluation reads as a substitution. A <c>\</c> escapes the
+	/// character after it and a <c>%</c> takes the one after it, so each pair is read as a unit.
+	/// </summary>
+	private static bool UsesPipedOutput(string text)
+	{
+		for (var i = 0; i < text.Length - 1; i++)
+		{
+			switch (text[i])
+			{
+				case '%' when text[i + 1] == '>':
+					return true;
+				case '%' or '\\':
+					i++;
+					break;
+			}
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// The player who set an attribute in the source (PennMUSH's <c>AL_CREATOR</c>), or null when it names

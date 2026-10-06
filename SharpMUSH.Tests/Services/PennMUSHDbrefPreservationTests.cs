@@ -553,7 +553,8 @@ public class PennMUSHDbrefPreservationTests
 
 	/// <summary>
 	/// PennMUSH evaluates <c>%&gt;</c> to <c>&gt;</c>; here it is the last command's output. The text stays
-	/// as written and the import names each attribute that uses it, but not one whose <c>%</c> is escaped.
+	/// as written and the import names each attribute that uses it, but not one whose <c>%</c> is escaped;
+	/// an escaped backslash leaves the <c>%</c> live.
 	/// </summary>
 	[Test]
 	public async Task AttributesUsingPipedOutputAreReported()
@@ -572,14 +573,15 @@ public class PennMUSHDbrefPreservationTests
 					new PennMUSHAttribute { Name = "ARROW", Value = "think a %> b" },
 					new PennMUSHAttribute { Name = "AFTER", Value = "think %%%>" },
 					new PennMUSHAttribute { Name = "PERCENT", Value = "think 50%%> 40%%" },
-					new PennMUSHAttribute { Name = "ESCAPED", Value = "think \\%>" }
+					new PennMUSHAttribute { Name = "ESCAPED", Value = "think \\%>" },
+					new PennMUSHAttribute { Name = "BACKSLASH", Value = "think \\\\%>" }
 				]
 			}));
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(await AttributeAsync(world, 10, "ARROW")).IsEqualTo("think a %> b");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("2 attribute(s) use %>")
-			&& w.EndsWith(": #10/ARROW, #10/AFTER"))).IsTrue();
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("3 attribute(s) use %>")
+			&& w.EndsWith(": #10/ARROW, #10/AFTER, #10/BACKSLASH"))).IsTrue();
 	}
 
 	/// <summary>
