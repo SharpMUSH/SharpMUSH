@@ -216,14 +216,6 @@
     <value>缺失</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>举报与封禁</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>举报、封禁和审计日志功能即将推出。</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>内容管理</value>
     <comment>MT</comment>

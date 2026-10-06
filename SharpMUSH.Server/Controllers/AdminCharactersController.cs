@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +10,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
@@ -17,12 +19,13 @@ namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
 /// Every character in the game, for staff: the list with search and filters, one character's detail,
-/// and booting one.
+/// and booting or warning one.
 ///
 /// Routes:
 ///   GET  api/admin/characters                 — list  ?search=&amp;online=&amp;flag=&amp;account=&amp;page=&amp;pageSize=
 ///   GET  api/admin/characters/{dbref}         — detail
-///   POST api/admin/characters/{dbref}/boot    — boot  ?created=
+///   POST api/admin/characters/{dbref}/boot    — boot  ?created=&amp;reason=
+///   POST api/admin/characters/{dbref}/warn    — warn  ?created=, the reason in the body
 ///
 /// Unlinking a character from its account is <c>DELETE api/admin/accounts/{key}/characters/{dbref}</c>.
 /// </summary>
@@ -36,6 +39,7 @@ public class AdminCharactersController(
 	IAuthorizationService authorization,
 	IVisibleWorldProjection projection,
 	IEngineCommandInvoker commandInvoker,
+	IEventService events,
 	IAuditLog audit) : ControllerBase
 {
 	/// <summary>The most rows one page holds.</summary>
@@ -126,8 +130,12 @@ public class AdminCharactersController(
 	/// </param>
 	[HttpPost("{dbref:int}/boot")]
 	[Authorize(Policy = PortalPermission.PlayersModerate)]
-	public async Task<IActionResult> Boot(int dbref, [FromQuery] long? created, CancellationToken ct)
+	/// <param name="reason">Why, when the staff member gave a reason; kept in the audit log.</param>
+	public async Task<IActionResult> Boot(int dbref, [FromQuery] long? created, [FromQuery] string? reason,
+		CancellationToken ct)
 	{
+		if (reason is { Length: > AdminBansController.MaxReasonLength })
+			return BadRequest(new ApiErrorDto($"Keep the reason to {AdminBansController.MaxReasonLength} characters."));
 		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor)
 			return Conflict(new ApiErrorDto("Choose a character to act as before booting anyone."));
 		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
@@ -138,12 +146,44 @@ public class AdminCharactersController(
 			return Conflict(new ApiErrorDto($"{player.Object.Name} is not connected."));
 
 		// @BOOT does the work, checks the permission and records itself in the audit log, as the portal's.
-		using var portal = audit.BeginPortal(User);
+		using var portal = audit.BeginPortal(User, reason);
 		var result = await commandInvoker.InvokeAsync("@BOOT", executor.Object().DBRef,
 			new Dictionary<string, CallState> { ["0"] = new(player.Object.DBRef.ToString()) });
 		return result?.Message?.ToPlainText() is { } message && message.StartsWith("#-1", StringComparison.Ordinal)
 			? StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(message))
 			: NoContent();
+	}
+
+	/// <summary>
+	/// Fires the game's <c>PLAYER`WARN</c> event: the staff member's character is the enactor, <c>%0</c> the
+	/// warned character's objid, <c>%1</c> the reason and <c>%2</c> the staff account's username. What a
+	/// warning does is the handler's business; nothing else is stored apart from the audit entry.
+	/// </summary>
+	[HttpPost("{dbref:int}/warn")]
+	[Authorize(Policy = PortalPermission.PlayersModerate)]
+	public async Task<IActionResult> Warn(int dbref, [FromQuery] long? created, [FromBody] AdminWarnRequest request,
+		CancellationToken ct)
+	{
+		if (string.IsNullOrWhiteSpace(request.Reason))
+			return BadRequest(new ApiErrorDto("Give a reason for the warning."));
+		if (request.Reason.Length > AdminBansController.MaxReasonLength)
+			return BadRequest(new ApiErrorDto($"Keep the reason to {AdminBansController.MaxReasonLength} characters."));
+		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor)
+			return Conflict(new ApiErrorDto("Choose a character to act as before warning anyone."));
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
+			return NotFound();
+		if (created is { } stamp && player.Object.CreationTime != stamp)
+			return Conflict(new ApiErrorDto($"#{dbref} is now a different character. Reload and try again."));
+
+		var staff = User.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } accountId
+			? (await accounts.GetByIdAsync(accountId, ct))?.Username ?? ""
+			: "";
+		var reason = request.Reason.Trim();
+		await events.TriggerEventAsync("PLAYER`WARN", executor.Object().DBRef,
+			player.Object.DBRef.ToString(), reason, staff);
+		await audit.RecordPortalAsync(User, AuditActions.PlayerWarn, AuditTargets.Of(player),
+			AuditLog.WithReason(null, reason), ct);
+		return NoContent();
 	}
 
 	private async Task<AdminCharacterRow> RowAsync(SharpPlayer player, CancellationToken ct)

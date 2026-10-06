@@ -143,13 +143,22 @@ public partial class Commands
 			return new None();
 		}
 
-		var account = await AccountService.AuthenticateAsync(identifier, password);
-		if (account is null)
+		return await AccountService.AuthenticateAsync(identifier, password) switch
 		{
-			await NotifyService.Notify(handle, "Invalid account name or password.");
-			return new None();
-		}
+			SharpAccount account => await AccountLoggedInAsync(handle, account),
+			AccountUnavailable unavailable => await RefusedAsync(handle, unavailable.Message),
+			NotFound => await RefusedAsync(handle, "Invalid account name or password.")
+		};
+	}
 
+	private async ValueTask<Option<CallState>> RefusedAsync(long handle, string message)
+	{
+		await NotifyService.Notify(handle, message);
+		return new None();
+	}
+
+	private async ValueTask<Option<CallState>> AccountLoggedInAsync(long handle, SharpAccount account)
+	{
 		if (!Configuration.CurrentValue.Net.Logins)
 		{
 			var linked = await AccountService.GetCharactersAsync(account.Id!);

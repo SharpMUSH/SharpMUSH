@@ -216,14 +216,6 @@
     <value>Nedostaje</value>
     <comment>MT — assumed a status label meaning the item is absent</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Prijave i zabrane</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Prijave, zabrane i zapisnik revizije uskoro dolaze.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderiranje</value>
     <comment>MT</comment>

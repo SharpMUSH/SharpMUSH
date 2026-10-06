@@ -7,19 +7,20 @@
 ## Implementation Tasks
 - [ ] Admin layout (separate from player-facing layout — fixed structure)
 - [ ] Role-gated access: Royalty+ for panel, Wizard+ for config, God for server
-- [ ] Dashboard page: online count, active scenes, new registrations, pending reports, recent audit
+- [ ] Dashboard page: online count, active scenes, new registrations, recent audit (no pending reports: #1565 dropped the report queue)
 
 ### Player Management
 - [ ] Account list with search/filter (name, role, status)
 - [ ] Account detail: email, created, last login, linked characters
 - [x] Character list (`/admin/characters`): search, online, flag and account filters
 - [x] Character detail (`/admin/players/{id}`): flags, roles, attribute count, mail count, last connect/site
-- [ ] Actions: ban/unban, force password reset, unlink character
+- [x] Actions: ban/unban, warn, boot, force password reset, unlink character (`/admin/moderation`)
 - [ ] Role override (promote/demote — Wizard+ only, cannot exceed own role)
 
 ### Moderation
 - [-] Report queue and report actions: dropped (#1565). Games take reports their own way; the panel standardizes only staff actions
-- [ ] Ban management: list, add, remove, expiry
+- [x] Ban management (`/admin/moderation`): list, add, lift, expiry; host bans stay in the sitelock
+- [x] Warn: fires the game's `PLAYER`WARN` event; no built-in warning record
 - [x] Audit log: staff actions from the portal and in-game logged (who, what, target, when)
 - [x] Audit log viewer (`/admin/moderation/audit`): filter by action / staff / text / date range
 

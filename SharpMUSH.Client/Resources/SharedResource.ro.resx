@@ -216,14 +216,6 @@
     <value>Lipsește</value>
     <comment>MT — assumed it is a status value paired with "Present" (e.g. whether an attribute exists)</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Raportări și interdicții</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Raportările, interdicțiile și jurnalul de audit vor fi disponibile în curând.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderare</value>
     <comment>MT</comment>

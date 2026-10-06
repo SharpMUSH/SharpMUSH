@@ -25,7 +25,6 @@ Overview cards:
 - Online players (count + trend)
 - Active scenes (count)
 - New registrations (last 7 days)
-- Pending reports (count, red if > 0)
 - Recent audit log entries (last 10)
 
 ### Player Management (`/admin/players`)
@@ -44,15 +43,21 @@ Overview cards:
 
 ### Moderation (`/admin/moderation`)
 
-**Reports queue:**
-- Reported wiki pages, scene poses, profile content
-- Each report: reporter, target content, reason, timestamp
-- Actions: dismiss report, delete content, warn player, ban player
+No report queue (#1565): games take reports their own way (softcode, +jobs, Discord), so the panel
+standardizes only the actions staff take. Content removal stays where the content lives (wiki delete,
+scene pose delete, profile edit).
+
+**Actions:**
+- Pick a character, give a reason, then warn, boot, ban the account, or unlink the character
+- Warn fires the game's `PLAYER`WARN` event (staff character as `%#`; objid, reason, staff account
+  name as `%0`-`%2`); the game's handler decides what a warning does
+- Every action is audited with its reason
 
 **Bans:**
-- Active bans list (account bans, IP bans if implemented)
-- Add/remove bans
-- Ban reason + expiry (permanent or timed)
+- Account bans: reason, staff member, expiry (permanent or timed); a timed ban lifts by itself
+- Signing in as a banned account (portal, telnet `login`, telnet `connect`, MCP) is refused with
+  the expiry
+- Host bans stay in the sitelock (`config.admin`); the page lists its rules read-only
 
 **Audit Log (`/admin/moderation/audit`):**
 - Searchable log of all staff actions

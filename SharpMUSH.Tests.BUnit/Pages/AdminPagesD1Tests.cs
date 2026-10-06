@@ -62,6 +62,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<AdminAccountsService>()
 			.AddSingleton<AdminCharactersService>()
 			.AddSingleton<AdminAuditService>()
+			.AddSingleton<AdminBansService>()
 			.AddSingleton<WikiAssetService>()
 			.AddSingleton<WikiService>()
 			.AddSingleton<ApplicationRegistryClient>()
@@ -259,6 +260,20 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		{
 			await Assert.That(cut.FindAll($"a.adm-dash-card[href='{gated}']").Count).IsEqualTo(0).Because(gated);
 		}
+	}
+
+	/// <summary>A moderator (Royalty's scopes) is offered characters, moderation and the audit log, not configuration.</summary>
+	[Test]
+	public async Task Dashboard_OffersModerationToModerators()
+	{
+		Auth.SetPolicies("players.view", "players.moderate");
+		var cut = RenderPage(typeof(Dashboard));
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/moderation']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/moderation/audit']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/config']").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/server']").Count).IsEqualTo(0);
 	}
 
 	/// <summary>

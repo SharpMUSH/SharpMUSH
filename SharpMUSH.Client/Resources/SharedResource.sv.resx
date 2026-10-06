@@ -216,14 +216,6 @@
     <value>Saknas</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Anmälningar och bannlysningar</value>
-    <comment>MT — ~2x the English; a card action label, worth checking for overflow.</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Anmälningar, bannlysningar och granskningslogg kommer snart.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderering</value>
     <comment>MT</comment>

@@ -216,14 +216,6 @@
     <value>Отсутствует</value>
     <comment>MT — assumed a status label meaning 'not present'.</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Жалобы и баны</value>
-    <comment>MT — «баны» chosen over «блокировки» because the locale sheet reserves «блокировка» for the MUSH lock.</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Жалобы, баны и журнал аудита появятся позже.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Модерация</value>
     <comment>MT</comment>

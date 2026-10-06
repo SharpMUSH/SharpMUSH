@@ -37,15 +37,15 @@
     private sealed record AdminCard(string TitleKey, string ActionKey, string Href, string Icon, string[] Policies, string[]? Roles = null);
 
     /// <remarks>
-    /// Only pages with something behind them. Moderation and Server are still placeholders
-    /// (AdminComingSoon) and stay off the grid until they are built: a card that opens "coming soon" is a
-    /// dead end. Their routes remain.
+    /// Only pages with something behind them. Server is still a placeholder (AdminComingSoon) and stays
+    /// off the grid until it is built: a card that opens "coming soon" is a dead end. Its route remains.
     /// </remarks>
     private static readonly AdminCard[] Cards =
     [
         new("DiagTitle", "DiagDescription", "/admin/diagnostics", Icons.Material.Filled.QueryStats, ["queue.inspect", "queue.inspect.own"]),
         new("AdmPlayersTitle", "AdmPlayersAction", "/admin/players", Icons.Material.Filled.Group, ["players.view"]),
         new("Characters", "AdmCharactersAction", "/admin/characters", Icons.Material.Filled.Person, ["players.view"]),
+        new("AdmModerationTitle", "AdmModerationCardAction", "/admin/moderation", Icons.Material.Filled.Gavel, ["players.moderate"]),
         new("AdmAuditTitle", "AdmAuditCardAction", "/admin/moderation/audit", Icons.Material.Filled.History, ["players.moderate"]),
         new("AdmAccountsTitle", "AdmAccountsAction", "/admin/accounts", Icons.Material.Filled.ManageAccounts, [], ["Wizard", "God"]),
         new("AdmProfilesTitle", "AdmProfilesAction", "/admin/profiles", Icons.Material.Filled.Badge, ["players.moderate"]),

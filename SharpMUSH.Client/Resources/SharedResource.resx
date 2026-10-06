@@ -2481,12 +2481,6 @@
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderation</value>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Reports &amp; Bans</value>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Bans and moderation actions coming soon.</value>
-  </data>
   <data name="AdmSuggestionsAction" xml:space="preserve">
     <value>Word Suggestions</value>
   </data>
@@ -5468,5 +5462,101 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Delete</value>
+  </data>
+  <data name="AdmAuditSourceSystem" xml:space="preserve">
+    <value>Server</value>
+  </data>
+  <data name="AdmModerationCardAction" xml:space="preserve">
+    <value>Warn, boot, ban or unlink a character, with a reason</value>
+  </data>
+  <data name="AdmModerate" xml:space="preserve">
+    <value>Moderate</value>
+  </data>
+  <data name="AdmModerationBlurb" xml:space="preserve">
+    <value>Pick a character, give a reason, then act. Every action is kept in the audit log.</value>
+  </data>
+  <data name="AdmModerationActTitle" xml:space="preserve">
+    <value>Act on a character</value>
+  </data>
+  <data name="AdmModerationFind" xml:space="preserve">
+    <value>Find a character</value>
+  </data>
+  <data name="AdmModerationPickHint" xml:space="preserve">
+    <value>Search for a character by name to warn, boot, ban or unlink them.</value>
+  </data>
+  <data name="AdmModerationBanned" xml:space="preserve">
+    <value>Banned</value>
+  </data>
+  <data name="AdmModerationReason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="AdmModerationReasonHelp" xml:space="preserve">
+    <value>Required to warn or ban; kept with boot and unlink when given.</value>
+  </data>
+  <data name="AdmModerationBanLength" xml:space="preserve">
+    <value>Ban length</value>
+  </data>
+  <data name="AdmModerationDays" xml:space="preserve">
+    <value>{0} days</value>
+  </data>
+  <data name="AdmModerationPermanent" xml:space="preserve">
+    <value>Until lifted</value>
+  </data>
+  <data name="AdmModerationWarn" xml:space="preserve">
+    <value>Warn</value>
+  </data>
+  <data name="AdmModerationBan" xml:space="preserve">
+    <value>Ban account</value>
+  </data>
+  <data name="AdmModerationLift" xml:space="preserve">
+    <value>Lift ban</value>
+  </data>
+  <data name="AdmModerationWarnNote" xml:space="preserve">
+    <value>A warning runs the game's PLAYER`WARN event; what it does is up to the game's event handler. A ban covers the whole account and every character on it.</value>
+  </data>
+  <data name="AdmModerationWarned" xml:space="preserve">
+    <value>{0} was warned.</value>
+  </data>
+  <data name="AdmModerationBanConfirmTitle" xml:space="preserve">
+    <value>Ban {0}?</value>
+  </data>
+  <data name="AdmModerationBanConfirm" xml:space="preserve">
+    <value>The account {0} and every character on it are signed out and cannot sign in. Length: {1}.</value>
+  </data>
+  <data name="AdmModerationBannedDone" xml:space="preserve">
+    <value>{0} is banned.</value>
+  </data>
+  <data name="AdmModerationLiftConfirmTitle" xml:space="preserve">
+    <value>Lift the ban on {0}?</value>
+  </data>
+  <data name="AdmModerationLiftConfirm" xml:space="preserve">
+    <value>The account {0} can sign in again straight away.</value>
+  </data>
+  <data name="AdmModerationLifted" xml:space="preserve">
+    <value>The ban on {0} is lifted.</value>
+  </data>
+  <data name="AdmModerationBansTitle" xml:space="preserve">
+    <value>Banned accounts</value>
+  </data>
+  <data name="AdmModerationNoBans" xml:space="preserve">
+    <value>No account is banned.</value>
+  </data>
+  <data name="AdmModerationBannedBy" xml:space="preserve">
+    <value>Banned by</value>
+  </data>
+  <data name="AdmModerationUntil" xml:space="preserve">
+    <value>Until</value>
+  </data>
+  <data name="AdmModerationHostsTitle" xml:space="preserve">
+    <value>Host bans</value>
+  </data>
+  <data name="AdmModerationHostsBlurb" xml:space="preserve">
+    <value>Sites are banned through the sitelock. Its rules are listed here for reference.</value>
+  </data>
+  <data name="AdmModerationManageSitelock" xml:space="preserve">
+    <value>Manage the sitelock</value>
+  </data>
+  <data name="AdmModerationNoHosts" xml:space="preserve">
+    <value>The sitelock has no rules.</value>
   </data>
 </root>

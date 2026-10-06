@@ -12,3 +12,12 @@ public sealed record AccountRecord
 	public bool MustChangePassword { get; init; }
 	public string Status { get; init; } = "Active";
 }
+
+/// <summary>An account's ban, keyed by the account key. Times are Unix milliseconds.</summary>
+public sealed record AccountBanRecord
+{
+	public string Reason { get; init; } = "";
+	public string? BannedBy { get; init; }
+	public long AtMs { get; init; }
+	public long? ExpiresAtMs { get; init; }
+}

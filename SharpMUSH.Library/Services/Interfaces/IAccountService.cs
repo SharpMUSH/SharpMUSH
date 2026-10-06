@@ -13,9 +13,14 @@ public interface IAccountService
 	/// owning account. Legacy PennMUSH character password hashes are transparently rehashed on success.
 	/// An account with an empty stored password hash (e.g. the pre-generated, unclaimed admin account)
 	/// can never match at the account level — only a linked character's own password can authenticate it.
-	/// Returns the account on success, or <c>null</c> on auth failure / disabled / not found.
+	/// Returns the account on success; <see cref="AccountUnavailable"/> when the password matched an
+	/// account that is disabled, banned or closed; <see cref="NotFound"/> otherwise, a deleted account
+	/// included.
 	/// </summary>
-	ValueTask<SharpAccount?> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default);
+	ValueTask<AccountSignIn> AuthenticateAsync(string usernameOrEmail, string password, CancellationToken ct = default);
+
+	/// <summary>Why <paramref name="account"/>, which is not active, may not sign in.</summary>
+	ValueTask<AccountUnavailable> UnavailableAsync(SharpAccount account, CancellationToken ct = default);
 
 	/// <summary>Returns true if at least one account exists.</summary>
 	ValueTask<bool> HasAnyAccountAsync(CancellationToken ct = default);
@@ -90,6 +95,25 @@ public interface IAccountService
 	ValueTask<SharpAccount> CreateUnclaimedAccountAsync(string username, CancellationToken ct = default);
 
 	ValueTask<Result<Success>> EnableAccountAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>
+	/// Bans the account: disables it, keeps the ban's reason, author and expiry, and revokes its sessions
+	/// and live connections as a disable does. Replaces any ban it already had.
+	/// Returns an error if the account is not found, or if it is the reserved system account.
+	/// </summary>
+	ValueTask<Result<Success>> BanAsync(AccountBan ban, CancellationToken ct = default);
+
+	/// <summary>Lifts the account's ban and makes it active again; <see cref="NotFound"/> when it had none.</summary>
+	ValueTask<Found<None>> LiftBanAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>Lifts every ban that has run out by <paramref name="now"/>, and returns them.</summary>
+	ValueTask<IReadOnlyList<AccountBan>> LiftExpiredBansAsync(DateTimeOffset now, CancellationToken ct = default);
+
+	/// <summary>The account's ban, or null when it is not banned.</summary>
+	ValueTask<AccountBan?> GetBanAsync(string accountId, CancellationToken ct = default);
+
+	/// <summary>Every ban.</summary>
+	ValueTask<IReadOnlyList<AccountBan>> GetBansAsync(CancellationToken ct = default);
 
 	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken ct = default);
 }

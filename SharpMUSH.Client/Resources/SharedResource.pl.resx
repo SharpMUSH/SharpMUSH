@@ -216,14 +216,6 @@
     <value>Brak</value>
     <comment>MT — assumed a status meaning "not present", not the adjective modifying a noun</comment>
   </data>
-  <data name="AdmModerationAction" xml:space="preserve">
-    <value>Zgłoszenia i bany</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmModerationComingSoon" xml:space="preserve">
-    <value>Zgłoszenia, bany i dziennik audytu wkrótce.</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderacja</value>
     <comment>MT</comment>

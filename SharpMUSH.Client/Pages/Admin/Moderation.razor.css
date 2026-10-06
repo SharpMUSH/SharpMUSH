@@ -1,0 +1,110 @@
+.adm-mod-body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px 16px 16px;
+}
+
+.adm-mod-matches,
+.adm-mod-hosts {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.adm-mod-match {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px;
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.adm-mod-match:hover,
+.adm-mod-match:focus-visible {
+	border-color: var(--accent);
+}
+
+.adm-mod-picked {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.adm-mod-who {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.adm-mod-ban-length {
+	max-width: 14rem;
+}
+
+.adm-mod-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.adm-mod-note {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}
+
+.adm-mod-dim {
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
+.adm-mod-body ::deep .adm-mod-table .adm-mod-dim {
+	display: block;
+}
+
+.adm-mod-hosts li {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: baseline;
+}
+
+.adm-mod-mono {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+.adm-mod-link {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.adm-mod-link:hover {
+	text-decoration: underline;
+}
+
+.adm-mod-body ::deep .adm-mod-table {
+	background: transparent;
+}
+
+.adm-mod-body ::deep .adm-mod-reason {
+	overflow-wrap: anywhere;
+}
+
+@container page (max-width: 48rem) {
+	.adm-mod-ban-length {
+		max-width: none;
+	}
+}

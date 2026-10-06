@@ -14,7 +14,7 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-/// <summary>The characters list, a character's detail page and the audit log.</summary>
+/// <summary>The characters list, a character's detail page, the moderation page and the audit log.</summary>
 public class AdminCharactersPagesTests : TrackingBunitContext
 {
 	/// <summary>Answers by path and query first, then by path alone, else 404.</summary>
@@ -62,7 +62,8 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton<AdminAccountsService>()
 			.AddSingleton<AdminCharactersService>()
-			.AddSingleton<AdminAuditService>();
+			.AddSingleton<AdminAuditService>()
+			.AddSingleton<AdminBansService>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		Auth = AddAuthorization();
 		Auth.SetAuthorized("staff");
@@ -203,5 +204,92 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find(".kit-empty-box"), TimeSpan.FromSeconds(5));
 		await Assert.That(_api.Requested).Contains("GET api/admin/audit?text=%237%3A1700000000000&limit=50");
+	}
+
+	private const string NoBans = """{"bans":[],"hosts":[]}""";
+
+	[Test]
+	public async Task PlayerDetail_LinksAModeratorToTheModerationPage()
+	{
+		Auth.SetPolicies("players.view", "players.moderate");
+		_api.Bodies["api/admin/characters/7"] = AliceDetail;
+		var cut = RenderPage<PlayerDetail>(p => p.Add(x => x.Id, 7));
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-char-moderate"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("a.adm-char-moderate").GetAttribute("href")).IsEqualTo("/admin/moderation?character=7");
+	}
+
+	[Test]
+	public async Task Moderation_ListsBansAndTheSitelockRules()
+	{
+		Auth.SetPolicies("players.view", "players.moderate");
+		_api.Bodies["api/admin/bans"] = """
+			{"bans":[{"accountKey":"acc1","accountName":"alice","characters":["Alice"],"reason":"spam",
+			  "bannedBy":"wiz","at":"2026-10-05T12:00:00+00:00","expiresAt":null}],
+			 "hosts":[{"pattern":"*.example.com","rules":["!connect"]}]}
+			""";
+		var cut = RenderPage<Moderation>();
+
+		cut.WaitForAssertion(() => cut.Find(".adm-mod-table"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".adm-mod-table").TextContent).Contains("spam");
+		await Assert.That(cut.Find(".adm-mod-table").TextContent).Contains("AdmModerationPermanent");
+		await Assert.That(cut.FindAll(".adm-mod-table .adm-mod-lift").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".adm-mod-hosts").TextContent).Contains("*.example.com");
+		await Assert.That(cut.FindAll("a[href='/admin/config/sitelock']").Count).IsEqualTo(0)
+			.Because("managing the sitelock needs config.admin");
+	}
+
+	[Test]
+	public async Task Moderation_WarnsThePickedCharacterOnceAReasonIsGiven()
+	{
+		Auth.SetPolicies("players.view", "players.moderate");
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>()
+			.NavigateTo("/admin/moderation?character=7");
+		_api.Bodies["api/admin/characters/7"] = AliceDetail;
+		_api.Bodies["api/admin/bans"] = NoBans;
+		_api.Bodies["api/admin/characters/7/warn"] = "{}";
+		var cut = RenderPage<Moderation>();
+
+		cut.WaitForAssertion(() => cut.Find(".adm-mod-warn"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".adm-mod-warn").HasAttribute("disabled")).IsTrue().Because("a warning needs a reason");
+		await Assert.That(cut.Find(".adm-mod-ban").HasAttribute("disabled")).IsTrue().Because("a ban needs a reason");
+		await Assert.That(cut.Find(".adm-mod-boot").HasAttribute("disabled")).IsFalse().Because("Alice is online");
+
+		cut.Find("#moderation-reason").Input("off-topic");
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".adm-mod-warn").HasAttribute("disabled")) throw new InvalidOperationException("still disabled");
+		}, TimeSpan.FromSeconds(5));
+		cut.Find(".adm-mod-warn").Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!_api.Requested.Contains("POST api/admin/characters/7/warn?created=1700000000000"))
+				throw new InvalidOperationException("not sent");
+		}, TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task Moderation_OffersNoBanOrUnlinkForACharacterWithoutAnAccount()
+	{
+		Auth.SetPolicies("players.view", "players.moderate");
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>()
+			.NavigateTo("/admin/moderation?character=9");
+		_api.Bodies["api/admin/characters/9"] = $$"""
+			{"character":{{Bob}},"created":"2023-11-14T22:13:20+00:00","attributeCount":0,"mailTotal":0,"mailUnread":0,
+			 "lastLogout":null,"lastSite":null,"lastIp":null,"roles":[],"connections":[]}
+			""";
+		_api.Bodies["api/admin/bans"] = NoBans;
+		var cut = RenderPage<Moderation>();
+
+		cut.WaitForAssertion(() => cut.Find(".adm-mod-unlink"), TimeSpan.FromSeconds(5));
+		cut.Find("#moderation-reason").Input("reason");
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".adm-mod-warn").HasAttribute("disabled")) throw new InvalidOperationException("still disabled");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".adm-mod-ban").HasAttribute("disabled")).IsTrue();
+		await Assert.That(cut.Find(".adm-mod-unlink").HasAttribute("disabled")).IsTrue();
+		await Assert.That(cut.Find(".adm-mod-boot").HasAttribute("disabled")).IsTrue().Because("Bob is offline");
 	}
 }
