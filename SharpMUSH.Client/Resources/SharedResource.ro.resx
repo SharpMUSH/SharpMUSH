@@ -4200,7 +4200,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Protejare</value>
+    <value>Blochează editarea</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4224,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Anulare protecție</value>
+    <value>Deblochează editarea</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4671,7 +4671,6 @@
     <value>Subiectele ahelp. Doar pentru Vrăjitori și Dumnezeu, atât în portal, cât și în joc.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Acces curent: {0}; prioritate {1}; roluri {2}; decizie {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Configurația nu a putut fi importată: {0}</value>
     <comment>MT</comment>
@@ -5120,7 +5119,7 @@
     <value>Afișează ca</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Roluri sau atribuiri</value>
+    <value>Secțiuni pentru roluri și permisiuni</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atributele handlerului</value>
@@ -5374,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Nicio excepție</value>
+    <value>Nicio excepție.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5538,7 +5537,7 @@
     <value>Modifică</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Nume de permisiuni separate prin spații. Fiecare este necesară.</value>
+    <value>Este necesară fiecare permisiune listată pentru o acțiune.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Permisiuni salvate.</value>
@@ -5554,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Ștergere</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Tu</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Ai această permisiune</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Nu ai această permisiune</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Excepție pentru personaj</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Excepție pentru cont</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Niciun rol nu permite</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Permisiune necunoscută</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Deții acest joc, așa că ai toate permisiunile, indiferent de roluri.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Unul dintre rolurile tale permite Administrator, așa că ai toate permisiunile.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Adaugă o permisiune…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Nicio permisiune nu se potrivește.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definește o permisiune nouă</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Elimină {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Doar administratorii wikiului pot edita sau șterge paginile selectate. Cine le poate citi nu se schimbă.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Șterge regulile proprii de editare și ștergere ale paginilor selectate, astfel încât decid din nou regulile spațiului de nume și ale categoriilor.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Spațiu de nume</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Categorie</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Pagină</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Articolele jocului.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Pagini de ajutor pentru jucători.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Biografiile personajelor.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Pagini pentru echipă.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Pagina proprie a fiecărei categorii.</value>
   </data>
 </root>

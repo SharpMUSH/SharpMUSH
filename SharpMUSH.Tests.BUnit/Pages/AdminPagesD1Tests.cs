@@ -569,7 +569,9 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
 		cut.Find(".ra-card").Click();
 		var section = cut.FindAll(".ra-section").Single(s => s.QuerySelector(".ra-section-label")?.TextContent == "Scenes");
-		var row = section.QuerySelectorAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-scope")?.TextContent == "scene.close");
+		var row = section.QuerySelectorAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-name")?.TextContent == "scene.close");
+		// A custom permission is named by its scope, so the scope is not repeated under it.
+		await Assert.That(row.QuerySelector(".ra-perm-scope")).IsNull();
 		await Assert.That(row.QuerySelector(".ra-perm-desc")!.TextContent).IsEqualTo("Finish any scene");
 		await Assert.That(row.QuerySelector(".ra-tri--allow")!.ClassList.Contains("ra-tri--on")).IsTrue();
 
@@ -577,6 +579,50 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".roleadmin-assign .ra-section-label").TextContent).IsEqualTo("Scenes");
 		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-scope").TextContent).IsEqualTo("scene.close");
 		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-desc").TextContent).IsEqualTo("Finish any scene");
+	}
+
+	/// <summary>
+	/// Each permission row shows the viewer's own access as a badge naming what decided it: the deciding roles,
+	/// or the override or default. A resolution that decides every scope (owning the game) is stated once above
+	/// the matrix instead.
+	/// </summary>
+	[Test]
+	public async Task Roles_ShowsTheViewersAccessOnEachRow()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"helper","name":"Helper","category":"Staff","color":"#123456","priority":12,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0}]
+			""";
+		_api.Bodies["api/roles/effective"] = """
+			{"snapshots.capture":{"allowed":true,"priority":12,"roles":["helper"],"reason":"role-allow"},
+			 "snapshots.restore":{"allowed":false,"priority":null,"roles":[],"reason":"account-deny"}}
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		cut.Find(".ra-card").Click();
+		var capture = cut.FindAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-scope")?.TextContent == "snapshots.capture");
+		await Assert.That(capture.QuerySelector(".ra-access--allow .ra-access-role")!.TextContent.Trim()).IsEqualTo("Helper");
+		var restore = cut.FindAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-scope")?.TextContent == "snapshots.restore");
+		await Assert.That(restore.QuerySelector(".ra-access--deny")!.TextContent).Contains("RolAccessAccountOverride");
+		await Assert.That(cut.FindAll(".ra-note--access").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Roles_StatesOwnershipOnceInsteadOfOnEveryRow()
+	{
+		_api.Bodies["api/roles"] = """
+			[{"slug":"helper","name":"Helper","category":"Staff","color":"#123456","priority":12,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0}]
+			""";
+		_api.Bodies["api/roles/effective"] = """
+			{"snapshots.capture":{"allowed":true,"priority":null,"roles":[],"reason":"owner"},
+			 "snapshots.restore":{"allowed":true,"priority":null,"roles":[],"reason":"owner"}}
+			""";
+		var cut = RenderPage(typeof(AdminRoles));
+
+		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
+		cut.Find(".ra-card").Click();
+		await Assert.That(cut.Find(".ra-note--access").TextContent).Contains("RolAccessOwnerNote");
+		await Assert.That(cut.FindAll(".ra-access").Count).IsEqualTo(0);
 	}
 
 	/// <summary>

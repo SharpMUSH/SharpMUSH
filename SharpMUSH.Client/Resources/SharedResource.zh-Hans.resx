@@ -4200,7 +4200,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>保护</value>
+    <value>锁定编辑</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4224,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>取消保护</value>
+    <value>解锁编辑</value>
     <comment>MT</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4671,7 +4671,6 @@
     <value>ahelp 主题。仅限巫师和上帝查看，门户与游戏一致。</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>当前访问权限：{0}；优先级：{1}；角色：{2}；判定：{3}。</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>无法导入配置：{0}</value>
     <comment>MT</comment>
@@ -5120,7 +5119,7 @@
     <value>显示为</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>角色或分配</value>
+    <value>角色与权限分区</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>处理器属性</value>
@@ -5374,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>无例外</value>
+    <value>无例外。</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5538,7 +5537,7 @@
     <value>更改</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>权限名称，以空格分隔。每一项都是必需的。</value>
+    <value>某个操作列出的每项权限都是必需的。</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>权限已保存。</value>
@@ -5554,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>删除</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>你</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>你拥有此权限</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>你没有此权限</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>角色例外</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>账户例外</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>没有权限组允许</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>未知权限</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>你是此游戏的所有者，因此无论权限组如何设置，你都拥有所有权限。</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>你的某个权限组允许“管理员”，因此你拥有所有权限。</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>添加权限…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>没有匹配的权限。</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>定义新权限</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>移除 {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>只有 Wiki 管理员可以编辑或删除所选页面。谁可以阅读这些页面不变。</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>清除所选页面自身的编辑和删除规则，重新由其命名空间和分类的规则决定。</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>命名空间</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>页面</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>游戏的文章。</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>给玩家的帮助页面。</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>角色传记。</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>供工作人员使用的页面。</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>每个分类自己的页面。</value>
   </data>
 </root>

@@ -25,8 +25,13 @@ namespace SharpMUSH.Tests.Integration.Portal;
 /// message nothing in the repository consumed: a command sent that way never reached the engine, and
 /// there was nothing to answer with. These drive a command from the HTTP request to the engine's queue
 /// and back, and read the answer the request got — not a notification recorded on the side.</para>
+///
+/// <para>Every test here is the same account session, and an account may have only
+/// <c>PortalCommands:MaxPendingPerAccount</c> (4) commands pending, so they run one at a time: run
+/// together, the eleven of them were answered 429.</para>
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+[NotInParallel(nameof(PortalCommandApiTests))]
 public class PortalCommandApiTests(ServerWebAppFactory factory)
 {
 	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();

@@ -76,24 +76,28 @@
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Class="adminwiki-filter adminwiki-filter--search" />
                 <MudSpacer />
-                <MudButton Variant="Variant.Outlined" Color="Color.Warning"
-                           StartIcon="@Icons.Material.Filled.Lock"
-                           Disabled="@(_selected.Count == 0 || _busy)"
-                           OnClick="@(() => BatchProtectAsync(true))">
-                    @Loc["WikiProtect"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Info"
-                           StartIcon="@Icons.Material.Filled.LockOpen"
-                           Disabled="@(_selected.Count == 0 || _busy)"
-                           OnClick="@(() => BatchProtectAsync(false))">
-                    @Loc["WikiUnprotect"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Error"
-                           StartIcon="@Icons.Material.Filled.Delete"
-                           Disabled="@(_selected.Count == 0 || _busy)"
-                           OnClick="@(() => _showDeleteConfirm = true)">
-                    @Loc["WikiDelete"]
-                </MudButton>
+                <MudTooltip>
+                    <TooltipContent>
+                        <div class="adminwiki-tip"><strong>@Loc["WikiProtect"]</strong><span>@Loc["WikiProtectHelp"]</span></div>
+                    </TooltipContent>
+                    <ChildContent>
+                        <MudIconButton Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" aria-label="@Loc["WikiProtect"]"
+                                       Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => BatchProtectAsync(true))" />
+                    </ChildContent>
+                </MudTooltip>
+                <MudTooltip>
+                    <TooltipContent>
+                        <div class="adminwiki-tip"><strong>@Loc["WikiUnprotect"]</strong><span>@Loc["WikiUnprotectHelp"]</span></div>
+                    </TooltipContent>
+                    <ChildContent>
+                        <MudIconButton Icon="@Icons.Material.Filled.LockOpen" Color="Color.Info" aria-label="@Loc["WikiUnprotect"]"
+                                       Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => BatchProtectAsync(false))" />
+                    </ChildContent>
+                </MudTooltip>
+                <MudTooltip Text="@Loc["WikiDelete"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" aria-label="@Loc["WikiDelete"]"
+                                   Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => _showDeleteConfirm = true)" />
+                </MudTooltip>
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Secondary" aria-label="@Loc["Refresh"]"
                                OnClick="@ReloadAsync" />
@@ -188,17 +192,19 @@
                 @foreach (var key in RequirementNamespaces)
                 {
                     <WikiRequirementsEditor @key="@("namespace/" + key)" Scope="namespace" Key="@key" Editable="true"
-                                            Heading="@string.Format(Loc["WikiRequirementsNamespace"], key)"
+                                            Kicker="@Loc["WikiRequirementsKindNamespace"]" Heading="@NamespaceName(key)"
+                                            Sub="@Loc[NamespaceSubKey(key)]"
                                             Set="@_requirements.FirstOrDefault(r => r.Scope == "namespace" && r.Key == key)"
                                             SetChanged="@(_ => LoadRequirementsAsync())" />
                 }
+                @foreach (var rule in _requirements.Where(r => r.Scope != "namespace"))
+                {
+                    <WikiRequirementsEditor @key="@(rule.Scope + "/" + rule.Key)" Scope="@rule.Scope" Key="@rule.Key" Set="@rule" Editable="true"
+                                            Kicker="@Loc[rule.Scope == "category" ? "WikiRequirementsKindCategory" : "WikiRequirementsKindPage"]"
+                                            Heading="@(rule.Scope == "category" ? WikiHelpers.CategoryLabel(rule.Key, _categoryNames) : rule.Label)"
+                                            SetChanged="@(_ => LoadRequirementsAsync())" />
+                }
             </div>
-            @foreach (var rule in _requirements.Where(r => r.Scope != "namespace"))
-            {
-                <WikiRequirementsEditor @key="@(rule.Scope + "/" + rule.Key)" Scope="@rule.Scope" Key="@rule.Key" Set="@rule" Editable="true"
-                                        Heading="@(rule.Scope == "category" ? string.Format(Loc["WikiRequirementsCategory"], WikiHelpers.CategoryLabel(rule.Key, _categoryNames)) : rule.Label)"
-                                        SetChanged="@(_ => LoadRequirementsAsync())" />
-            }
         }
     </KitCard>
 </div>
@@ -314,6 +320,17 @@
     private IReadOnlyDictionary<string, string>? _categoryNames;
 
     private static readonly string[] RequirementNamespaces = ["main", "help", "character", "system", "category"];
+
+    private static string NamespaceName(string key) => char.ToUpperInvariant(key[0]) + key[1..];
+
+    private static string NamespaceSubKey(string key) => key switch
+    {
+        "main" => "WikiNsMainSub",
+        "help" => "WikiNsHelpSub",
+        "character" => "WikiNsCharacterSub",
+        "system" => "WikiNsSystemSub",
+        _ => "WikiNsCategorySub",
+    };
 
     /// <summary>Every requirement set; null until loaded.</summary>
     private List<WikiRequirementSetDto>? _requirements;

@@ -4200,7 +4200,7 @@
     <comment>MT — formal вы, lower case per locale sheet.</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Защитить</value>
+    <value>Запретить правку</value>
     <comment>MT — imperative button label.</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4224,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Снять защиту</value>
+    <value>Разрешить правку</value>
     <comment>MT — imperative button label.</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4671,7 +4671,6 @@
     <value>Темы ahelp. Только для волшебников и Бога — как в портале, так и в игре.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Текущий доступ: {0}; приоритет {1}; роли {2}; решение {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Не удалось импортировать конфигурацию: {0}</value>
     <comment>MT</comment>
@@ -5120,7 +5119,7 @@
     <value>Показать как</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Роли или назначения</value>
+    <value>Разделы ролей и разрешений</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Атрибуты обработчика</value>
@@ -5374,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Нет исключений</value>
+    <value>Нет исключений.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5538,7 +5537,7 @@
     <value>Изменить</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Названия разрешений через пробел. Требуется каждое.</value>
+    <value>Требуется каждое разрешение, указанное для действия.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Разрешения сохранены.</value>
@@ -5554,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Удаление</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Вы</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>У вас есть это разрешение</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>У вас нет этого разрешения</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Исключение персонажа</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Исключение аккаунта</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Ни одна роль этого не разрешает</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Неизвестное разрешение</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Вы владелец этой игры, поэтому у вас есть все разрешения независимо от ролей.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>Одна из ваших ролей разрешает «Администратор», поэтому у вас есть все разрешения.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Добавить разрешение…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Нет подходящих разрешений.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Определить новое разрешение</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Удалить {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Только администраторы вики смогут редактировать или удалять выбранные страницы. Кто может их читать, не меняется.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Снимает собственные правила редактирования и удаления выбранных страниц, и снова действуют правила их пространства имён и категорий.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Пространство имён</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Страница</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Статьи игры.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Справочные страницы для игроков.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Биографии персонажей.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Страницы для персонала.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Собственная страница каждой категории.</value>
   </data>
 </root>

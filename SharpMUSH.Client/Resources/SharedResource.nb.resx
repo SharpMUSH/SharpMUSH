@@ -4200,7 +4200,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Beskytt</value>
+    <value>Lås redigering</value>
     <comment>MT</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -4224,7 +4224,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Opphev beskyttelse</value>
+    <value>Lås opp redigering</value>
     <comment>MT — ~2x the English label; Norwegian has no single verb for 'unprotect'.</comment>
   </data>
   <data name="WikiUntranslatedOnly" xml:space="preserve">
@@ -4671,7 +4671,6 @@
     <value>Ahelp-emnene. Kun for Trollmenn og Gud, i portalen som i spillet.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Gjeldende tilgang: {0}; prioritet {1}; roller {2}; avgjørelse {3}.</value></data>
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Kunne ikke importere konfigurasjonen: {0}</value>
     <comment>MT</comment>
@@ -5120,7 +5119,7 @@
     <value>Vis som</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Roller eller tildelinger</value>
+    <value>Seksjoner for roller og tillatelser</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Håndtererens attributter</value>
@@ -5374,7 +5373,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Ingen unntak</value>
+    <value>Ingen unntak.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -5538,7 +5537,7 @@
     <value>Endre</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Tillatelsesnavn atskilt med mellomrom. Alle kreves.</value>
+    <value>Alle tillatelser som står ved en handling, kreves.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Tillatelser lagret.</value>
@@ -5554,5 +5553,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Slette</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Du</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Du har denne tillatelsen</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Du har ikke denne tillatelsen</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Unntak for karakteren</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Unntak for kontoen</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Ingen rolle tillater det</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Ukjent tillatelse</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Du eier dette spillet, så du har alle tillatelser uansett hva rollene dine sier.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>En av rollene dine tillater Administrator, så du har alle tillatelser.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Legg til en tillatelse…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Ingen tillatelse passer.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Definer en ny tillatelse</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Fjern {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Bare wiki-administratorer kan redigere eller slette de valgte sidene. Hvem som kan lese dem, endres ikke.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Fjerner de valgte sidenes egne regler for redigering og sletting, så navnerommets og kategorienes regler avgjør igjen.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Navnerom</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Side</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Spillets artikler.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Hjelpesider for spillere.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Karakterbiografier.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Sider for staben.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>Hver kategoris egen side.</value>
   </data>
 </root>

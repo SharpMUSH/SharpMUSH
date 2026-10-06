@@ -178,10 +178,20 @@ public class RolesController(
 		};
 	}
 
+	/// <summary>
+	/// The custom permissions, for the role editor and for the wiki requirement pickers: a wiki.admin holder
+	/// who cannot manage roles still chooses among them.
+	/// </summary>
 	[HttpGet("permissions")]
-	[Authorize(Policy = PortalPermission.RolesAdmin)]
 	public async Task<ActionResult<IReadOnlyList<CustomPermission>>> ListPermissions()
-		=> Ok(await roles.GetCustomPermissionsAsync(HttpContext.RequestAborted));
+	{
+		var ct = HttpContext.RequestAborted;
+		if (Actor() is not { } actor
+			|| !(await capabilities.AuthorizeAsync(actor, PortalPermission.RolesAdmin, ct)
+				|| await capabilities.AuthorizeAsync(actor, PortalPermission.WikiAdmin, ct)))
+			return Forbid();
+		return Ok(await roles.GetCustomPermissionsAsync(ct));
+	}
 
 	[HttpPut("permissions")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]

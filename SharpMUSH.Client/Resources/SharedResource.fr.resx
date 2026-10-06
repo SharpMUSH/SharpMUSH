@@ -3790,7 +3790,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiProtect" xml:space="preserve">
-    <value>Protéger</value>
+    <value>Verrouiller la modification</value>
     <comment>MT — matches EnumPermWikiAdminDesc</comment>
   </data>
   <data name="WikiPublished" xml:space="preserve">
@@ -3810,7 +3810,7 @@
     <comment>MT</comment>
   </data>
   <data name="WikiUnprotect" xml:space="preserve">
-    <value>Déprotéger</value>
+    <value>Déverrouiller la modification</value>
     <comment>MT — matches EnumPermWikiAdminDesc « Protéger et déprotéger »</comment>
   </data>
   <data name="WikiUpdated" xml:space="preserve">
@@ -3881,7 +3881,6 @@
     <value>Les sujets ahelp. Réservés aux Sorciers et à Dieu, dans le portail comme dans le jeu.</value>
     <comment>MT</comment>
   </data>
-<data name="RolEffectiveExplanation" xml:space="preserve"><value>Accès actuel : {0} ; priorité {1} ; rôles {2} ; décision {3}.</value></data>
   <data name="DiagTitle" xml:space="preserve"><value>Diagnostic des files</value></data>
   <data name="DiagDescription" xml:space="preserve"><value>Consultez les tâches autorisées et leurs résultats récents. Historique de 15 minutes, effacé au redémarrage.</value></data>
   <data name="DiagPid" xml:space="preserve"><value>PID</value></data>
@@ -4390,7 +4389,7 @@
     <value>Afficher en</value>
   </data>
   <data name="AdmRolesTabsLabel" xml:space="preserve">
-    <value>Rôles ou attributions</value>
+    <value>Sections des rôles et permissions</value>
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Attributs du gestionnaire</value>
@@ -4644,7 +4643,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNoOverrides" xml:space="preserve">
-    <value>Aucune exception</value>
+    <value>Aucune exception.</value>
     <comment>MT</comment>
   </data>
   <data name="RolClearOverride" xml:space="preserve">
@@ -4808,7 +4807,7 @@
     <value>Modifier</value>
   </data>
   <data name="WikiRequirementsHelp" xml:space="preserve">
-    <value>Noms de permissions séparés par des espaces. Chacune est requise.</value>
+    <value>Chaque permission indiquée pour une action est exigée.</value>
   </data>
   <data name="WikiRequirementsSaved" xml:space="preserve">
     <value>Permissions enregistrées.</value>
@@ -4824,5 +4823,74 @@
   </data>
   <data name="WikiActionDelete" xml:space="preserve">
     <value>Supprimer</value>
+  </data>
+  <data name="RolAccessYou" xml:space="preserve">
+    <value>Vous</value>
+  </data>
+  <data name="RolAccessHeld" xml:space="preserve">
+    <value>Vous avez cette permission</value>
+  </data>
+  <data name="RolAccessNotHeld" xml:space="preserve">
+    <value>Vous n’avez pas cette permission</value>
+  </data>
+  <data name="RolAccessCharacterOverride" xml:space="preserve">
+    <value>Exception du personnage</value>
+  </data>
+  <data name="RolAccessAccountOverride" xml:space="preserve">
+    <value>Exception du compte</value>
+  </data>
+  <data name="RolAccessNoRole" xml:space="preserve">
+    <value>Aucun rôle ne l’autorise</value>
+  </data>
+  <data name="RolAccessUnknown" xml:space="preserve">
+    <value>Permission inconnue</value>
+  </data>
+  <data name="RolAccessOwnerNote" xml:space="preserve">
+    <value>Ce jeu vous appartient : vous avez donc toutes les permissions, quels que soient vos rôles.</value>
+  </data>
+  <data name="RolAccessAdministratorNote" xml:space="preserve">
+    <value>L’un de vos rôles autorise Administrateur : vous avez donc toutes les permissions.</value>
+  </data>
+  <data name="WikiRequirementsAdd" xml:space="preserve">
+    <value>Ajouter une permission…</value>
+  </data>
+  <data name="WikiRequirementsNoMatch" xml:space="preserve">
+    <value>Aucune permission ne correspond.</value>
+  </data>
+  <data name="WikiRequirementsDefine" xml:space="preserve">
+    <value>Définir une nouvelle permission</value>
+  </data>
+  <data name="WikiRequirementsRemove" xml:space="preserve">
+    <value>Retirer {0}</value>
+  </data>
+  <data name="WikiProtectHelp" xml:space="preserve">
+    <value>Seuls les administrateurs du wiki peuvent modifier ou supprimer les pages sélectionnées. Qui peut les lire ne change pas.</value>
+  </data>
+  <data name="WikiUnprotectHelp" xml:space="preserve">
+    <value>Retire les règles de modification et de suppression propres aux pages sélectionnées ; celles de leur espace de noms et de leurs catégories s'appliquent de nouveau.</value>
+  </data>
+  <data name="WikiRequirementsKindNamespace" xml:space="preserve">
+    <value>Espace de noms</value>
+  </data>
+  <data name="WikiRequirementsKindCategory" xml:space="preserve">
+    <value>Catégorie</value>
+  </data>
+  <data name="WikiRequirementsKindPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="WikiNsMainSub" xml:space="preserve">
+    <value>Les articles du jeu.</value>
+  </data>
+  <data name="WikiNsHelpSub" xml:space="preserve">
+    <value>Pages d'aide pour les joueurs.</value>
+  </data>
+  <data name="WikiNsCharacterSub" xml:space="preserve">
+    <value>Biographies des personnages.</value>
+  </data>
+  <data name="WikiNsSystemSub" xml:space="preserve">
+    <value>Pages réservées à l'équipe.</value>
+  </data>
+  <data name="WikiNsCategorySub" xml:space="preserve">
+    <value>La page propre à chaque catégorie.</value>
   </data>
 </root>
