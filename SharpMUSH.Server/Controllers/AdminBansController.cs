@@ -86,21 +86,12 @@ public class AdminBansController(
 
 		if (User.FindFirstValue(ClaimTypes.NameIdentifier) is not { Length: > 0 } actorAccount)
 			return Unauthorized();
-		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor)
-			return Conflict(new ApiErrorDto("Choose a character to act as before banning anyone."));
 		if (await accounts.GetByIdAsync(FullId(request.AccountKey), ct) is not { } account)
 			return NotFound(new ApiErrorDto($"No account with key '{request.AccountKey}'."));
 		if (account.Id == actorAccount)
 			return Conflict(new ApiErrorDto("You cannot ban your own account."));
-
-		// A ban reaches every character on the account, so the staff member has to control each one:
-		// a royal cannot ban a wizard's account, nor anyone God's.
-		foreach (var character in await accounts.GetCharactersAsync(account.Id!, ct))
-		{
-			if (!await permissions.Controls(executor, character))
-				return StatusCode(StatusCodes.Status403Forbidden,
-					new ApiErrorDto($"You do not control {character.Object.Name}, who is on that account."));
-		}
+		if (await RefuseUncontrolledAsync(account, "banning", ct) is { } refused)
+			return refused;
 
 		var reason = request.Reason.Trim();
 		var result = await accounts.BanAsync(new AccountBan(account.Id!, reason, actorAccount, now, request.ExpiresAt), ct);
@@ -118,10 +109,32 @@ public class AdminBansController(
 	{
 		if (await accounts.GetByIdAsync(FullId(key), ct) is not { } account)
 			return NotFound(new ApiErrorDto($"No account with key '{key}'."));
+		if (await RefuseUncontrolledAsync(account, "lifting a ban", ct) is { } refused)
+			return refused;
 		if (await accounts.LiftBanAsync(account.Id!, ct) is Library.DiscriminatedUnions.NotFound)
 			return NotFound(new ApiErrorDto($"{account.Username} is not banned."));
 
 		await audit.RecordPortalAsync(User, AuditActions.BanLift, AuditTargets.Of(account), ct: ct);
 		return NoContent();
+	}
+
+	/// <summary>
+	/// Why the request's staff member may not ban or unban <paramref name="account"/>, or null when they
+	/// may. A ban reaches every character on the account, so they have to act as a character that controls
+	/// each one: a royal can neither ban nor unban a wizard's account, nor anyone God's.
+	/// </summary>
+	private async Task<IActionResult?> RefuseUncontrolledAsync(SharpAccount account, string doing, CancellationToken ct)
+	{
+		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor)
+			return Conflict(new ApiErrorDto($"Choose a character to act as before {doing}."));
+
+		foreach (var character in await accounts.GetCharactersAsync(account.Id!, ct))
+		{
+			if (!await permissions.Controls(executor, character))
+				return StatusCode(StatusCodes.Status403Forbidden,
+					new ApiErrorDto($"You do not control {character.Object.Name}, who is on that account."));
+		}
+
+		return null;
 	}
 }

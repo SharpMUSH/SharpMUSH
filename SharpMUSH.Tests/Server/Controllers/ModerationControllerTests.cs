@@ -211,7 +211,7 @@ public class ModerationControllerTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task OnlyStaffWhoControlEveryCharacterMayBanTheAccount()
+	public async Task OnlyStaffWhoControlEveryCharacterMayBanOrUnbanTheAccount()
 	{
 		var mortal = await PersonAsync("ModMortalStaff");
 		var wizard = await PersonAsync("ModWizardVictim", wizard: true);
@@ -223,6 +223,15 @@ public class ModerationControllerTests : ServerTestBase
 			await Assert.That(((ObjectResult)result).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
 			await Assert.That(await Accounts.GetBanAsync(wizard.Account.Id!)).IsNull();
 			await Assert.That((await Accounts.GetByIdAsync(wizard.Account.Id!))!.Status).IsEqualTo(AccountStatus.Active);
+
+			// Nor may they undo a ban someone else put on it.
+			(await Accounts.BanAsync(new AccountBan(wizard.Account.Id!, "by God", null, DateTimeOffset.UtcNow, null)))
+				.Expect<Success>();
+			var lift = await (await BansAs(mortal)).Lift(Key(wizard.Account), CancellationToken.None);
+			await Assert.That(lift).IsTypeOf<ObjectResult>();
+			await Assert.That(((ObjectResult)lift).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
+			await Assert.That(await Accounts.GetBanAsync(wizard.Account.Id!)).IsNotNull();
+			(await Accounts.LiftBanAsync(wizard.Account.Id!)).Expect<None>();
 
 			var self = await (await BansAs(wizard)).Ban(new AdminBanRequest(Key(wizard.Account), "oops", null), CancellationToken.None);
 			await Assert.That(self).IsTypeOf<ConflictObjectResult>();
