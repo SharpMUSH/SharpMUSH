@@ -126,6 +126,27 @@
 	color: var(--text-dim);
 }
 
+.exit-dest {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.exit-dest ::deep .mud-icon-root {
+	flex-shrink: 0;
+	font-size: 14px;
+}
+
+.exit-dest-name {
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 /* the mobile Room sheet: a list of rows, picture left (board 11) */
 .exits--rows .exit-go {
 	flex-direction: row;
@@ -158,23 +179,33 @@
 	font-weight: 600;
 }
 
-/* hover / focus preview (board 10), beside the aside */
+/* hover / focus preview (board 10), beside the aside. The wrapper reaches back to the tile: its
+   right padding is the gap the panel keeps, so the pointer stays over this .exit while crossing to Go
+   and Look. Hiding waits a moment, so a diagonal path that grazes the edge does not close it. */
 .exit-preview {
 	display: none;
 	position: absolute;
-	transform: translateX(calc(-100% - 12px));
-	width: 300px;
+	transform: translateX(-100%);
+	width: 312px;
+	padding-right: 12px;
+	box-sizing: border-box;
 	z-index: 5;
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-card);
-	box-shadow: var(--shadow);
-	overflow: hidden;
+	transition: display 0s linear 0.25s allow-discrete;
 }
 
 .exit:hover .exit-preview,
 .exit:focus-within .exit-preview {
 	display: block;
+	z-index: 6;
+	transition-delay: 0s;
+}
+
+.exit-preview-panel {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	box-shadow: var(--shadow);
+	overflow: hidden;
 }
 
 .exit-preview-img {

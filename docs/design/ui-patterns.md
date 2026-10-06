@@ -1120,12 +1120,7 @@ tier literals, each with an enforced direction:
 
 Blocks are ordered roomy → medium → narrow in the stylesheet, so a later,
 narrower rule wins the cascade over an earlier, wider one when both match.
-`ResponsiveConventionsTests` enforces the literal set and the direction; a
-`max-width: 90rem` tier (or wider) isn't just off-spec, it's broken, because
-the shell caps `.phosphor-page` at `--content-max` (1400px) above a 1601px
-viewport — a threshold that high is either unreachable, or (with the sidebar
-collapsed) flickers as the container crosses the 1400px cap and the tier
-threshold within the same few pixels.
+`ResponsiveConventionsTests` enforces the literal set and the direction.
 
 **Components are not pages.** A component that declares its own unnamed
 container (`@container (max-width: 30rem) { … }`) is sizing itself against
@@ -1139,20 +1134,15 @@ stack without a named threshold. A container query is for a layout
 *transformation* (columns to stack, icon-only to labeled), not for scaling a
 number.
 
-**The two opt-outs.** `.phosphor-page` normally caps width at 1400px and
-sizes to content height. Two independent classes on a page's root override
-that, and a page carries either, both, or neither depending on what it
-actually needs:
-
-- `full-bleed` — removes the 1400px reading cap (the wiki diff view, the
-  layout editor's board, the softcode editor's three panes).
-- `full-height` — gives the wrapper a definite `height: 100%` instead of just
-  `min-height`, so a page whose own layout depends on percentage heights
-  (`height: 100%` nested content) doesn't collapse to `auto`.
-
-They're separate because they answer separate questions — wanting the full
-window width and needing a definite height are unrelated, and a page can
-want one without the other.
+**Width and height.** `.phosphor-page` fills the content column at every
+width, with no cap and no centring, so every page's left edge sits against the
+sidebar. A page that reads better narrower (a form, an article's measure, a
+help entry) caps its own block with `max-width` and stays left-aligned; the
+shell never caps for it. Height is content height unless the page's root
+carries `full-height`, which gives the wrapper a definite `height: 100%`
+instead of just `min-height`, so a page whose own layout depends on percentage
+heights (`height: 100%` nested content: the softcode editor, Play, the wiki
+editor) doesn't collapse to `auto`.
 
 **Enforcement:** `ResponsiveConventionsTests`
 (`SharpMUSH.Tests.BUnit/Layout/ResponsiveConventionsTests.cs`) is the gate.
@@ -1208,10 +1198,6 @@ only showed up when the page was opened in a browser.
   Several rules in this codebase were silently dead for exactly this reason:
   correct selector, correct specificity, correct layer, and still
   overridden, because the component was setting the same property inline.
-- **A page tier above 1400px is a trap, not just noise.** See the
-  `SanctionedTiersUseTheCorrectDirection` rationale above — a `max-width`
-  literal at `90rem` or wider sits above the shell's 1400px content cap and
-  is unreachable-or-flickery, never simply "a bit late."
 - **`container-type: size` needs a genuinely definite block size, and
   `min-height` doesn't give you one.** `.onboarding-shell` needed a
   block-axis (height) query for its short-viewport layout, so it declared
