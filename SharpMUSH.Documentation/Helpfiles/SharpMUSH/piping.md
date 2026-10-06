@@ -12,7 +12,7 @@
 -->
 # piping
 
-In an action list, `;|` separates two commands like `;` does, and pipes the first into the second: what the first command shows you is passed to the second instead, which reads it as `%|`.
+In an action list, `;|` separates two commands like `;` does, and pipes the first into the second: what the first command shows you is passed to the second instead, which reads it as `%|`. Spaces may come between the `;` and the `|`.
 
 ```sharp
 > @force me={think [ansi(hr,Hello)] there ;| @pemit me=Got [words(%|)] words: %|}
@@ -33,7 +33,7 @@ Colors: red - green
 
 `%|` is what a command showed. `%>` is what it returned: see [command output].
 
-PennMUSH has neither: it reads `%|` as a plain `|`, and runs `;|` as `;` followed by a command starting with `|`.
+PennMUSH has neither: it reads `%|` as a plain `|`, and runs `;|` as `;` followed by a command starting with `|`, which is no command there either.
 
 ::: seealso
 - [action lists]

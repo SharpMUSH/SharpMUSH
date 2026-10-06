@@ -363,14 +363,15 @@ a>b
 **A choice.**
 
 **PennMUSH** has no command piping. It evaluates `%|` to a plain `|`, and runs `;|` as a `;`
-followed by a command that starts with `|`.<br>
+followed by a command that starts with `|` (`; |` too).<br>
 **SharpMUSH** pipes as TinyMUX does: in an action list, a command followed by `;|` has what it
 shows you passed to the next command, which reads it as `%|`. Everywhere else `%|` is empty. See
 `help piping`.<br>
 **Why.** It lets softcode use what a command shows, which has no function of its own (`look`),
 and TinyMUX code that pipes runs unchanged.<br>
-**Workaround.** Write a plain `|`, which means the same on both servers, and `; |` where a command
-really starts with `|`. Importing a PennMUSH database names every attribute that uses `%|` or `;|`.
+**Workaround.** Write a plain `|`, which means the same on both servers. No command starts with `|`
+on either server, so `;|` had no use in PennMUSH. Importing a PennMUSH database names every
+attribute that uses `%|` or `;|`.
 
 PennMUSH answers `a|b` to the first line:
 

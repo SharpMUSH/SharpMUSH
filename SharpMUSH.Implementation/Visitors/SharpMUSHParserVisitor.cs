@@ -1001,7 +1001,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 
 	/// <summary>
 	/// Whether the command at <paramref name="index"/> of a list is piped into: TinyMUX's <c>;|</c>, a
-	/// <c>|</c> straight after the separator (<c>look ;| say %|</c>).
+	/// command that starts with <c>|</c> (<c>look ;| say %|</c>). <c>|</c> is no command of its own, so
+	/// <c>; |</c> pipes the same way.
 	/// </summary>
 	private bool IsPipedInto(CommandListContext context, int index)
 		=> index > 0
@@ -1009,9 +1010,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			&& context.GetChild(index) is CommandContext { Start: { } start }
 			&& context.GetChild(index - 1) is ITerminalNode { Symbol: { } separator }
 			&& separator.Type == SEMICOLON
-			// The separator token takes the spaces after the ';', so `; |x` is not a pipe: the '|' must follow
-			// the ';' itself.
-			&& start.StartIndex == separator.StartIndex + 1
+			// The separator token takes the spaces after the ';', so this is the command's first character.
+			&& start.StartIndex == separator.StopIndex + 1
 			&& start.StartIndex < source.Text.Length
 			&& source.Text[start.StartIndex] == '|';
 

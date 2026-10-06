@@ -2239,7 +2239,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			var more = piping.Count > piping.Shown.Count ? $" and {piping.Count - piping.Shown.Count} more" : string.Empty;
 			warnings.Add($"{piping.Count} attribute(s) use %| or ;|, which PennMUSH reads as a plain | and SharpMUSH as command piping; " +
-				$"softcode is not rewritten, so write | or ; | where those were meant: {string.Join(", ", piping.Shown)}{more}");
+				$"softcode is not rewritten, so write | where | was meant: {string.Join(", ", piping.Shown)}{more}");
 		}
 
 		_logger.LogInformation("Created {Count} attributes", count);
@@ -2270,7 +2270,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <summary>
 	/// Records each of the object's attributes whose text uses <c>%&gt;</c>, and each that pipes with
 	/// <c>%|</c> or <c>;|</c>. PennMUSH has none of these: it evaluates <c>%&gt;</c> to <c>&gt;</c> and
-	/// <c>%|</c> to <c>|</c>, and runs <c>;|</c> as a <c>;</c> before a command starting with <c>|</c>.
+	/// <c>%|</c> to <c>|</c>, and runs <c>;|</c> (or <c>; |</c>) as a <c>;</c> before a command starting with <c>|</c>.
 	/// Here they are the last command's output and command piping.
 	/// </summary>
 	private static void NotePipedOutput(PennMUSHObject pennObj, DBRef imported, AttributeMentions pipedOutput,
@@ -2283,7 +2283,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				pipedOutput.Add($"#{imported.Number}/{pennAttr.Name}");
 			}
 
-			if (HasPair(pennAttr.Value, static (first, second) => first is '%' or ';' && second == '|'))
+			if (HasPair(pennAttr.Value, static (first, second) => first == '%' && second == '|') || PipesCommand(pennAttr.Value))
 			{
 				piping.Add($"#{imported.Number}/{pennAttr.Name}");
 			}
@@ -2325,6 +2325,30 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			if (matches(text[i], text[i + 1])) return true;
 			if (text[i] is '%' or '\\') i++;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Whether the text has a <c>;</c> whose next command starts with <c>|</c>, spaces between allowed.
+	/// Escapes are read as in <see cref="HasPair"/>.
+	/// </summary>
+	private static bool PipesCommand(string text)
+	{
+		for (var i = 0; i < text.Length - 1; i++)
+		{
+			switch (text[i])
+			{
+				case ';':
+					var next = i + 1;
+					while (next < text.Length && text[next] == ' ') next++;
+					if (next < text.Length && text[next] == '|') return true;
+					break;
+				case '%' or '\\':
+					i++;
+					break;
+			}
 		}
 
 		return false;

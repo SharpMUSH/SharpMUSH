@@ -604,6 +604,7 @@ public class PennMUSHDbrefPreservationTests
 				[
 					new PennMUSHAttribute { Name = "SUB", Value = "think a%|b" },
 					new PennMUSHAttribute { Name = "PIPE", Value = "look ;| say %0" },
+					new PennMUSHAttribute { Name = "SPACED", Value = "look ;  | say %0" },
 					new PennMUSHAttribute { Name = "BAR", Value = "think a|b; think c" },
 					new PennMUSHAttribute { Name = "ESCAPED", Value = "think \\;| %%|" },
 					new PennMUSHAttribute { Name = "SEMI", Value = "think %;|" }
@@ -612,8 +613,8 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(await AttributeAsync(world, 10, "PIPE")).IsEqualTo("look ;| say %0");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("2 attribute(s) use %| or ;|")
-			&& w.EndsWith(": #10/SUB, #10/PIPE"))).IsTrue();
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("3 attribute(s) use %| or ;|")
+			&& w.EndsWith(": #10/SUB, #10/PIPE, #10/SPACED"))).IsTrue();
 	}
 
 	/// <summary>
