@@ -17,31 +17,10 @@ public sealed record WikiPageRecord
 	public string CreatedAt { get; init; } = "";
 	public string UpdatedAt { get; init; } = "";
 	public int RevisionNumber { get; init; } = 1;
-	/// <summary>The page's category keys; absent on a row written before
-	/// <c>0012_wiki_categories</c>, which fills it.</summary>
+	/// <summary>The page's category keys.</summary>
 	public string[]? Categories { get; init; }
 	public bool? Published { get; init; }
 	public string? SourceLocale { get; init; }
-}
-
-/// <summary>
-/// The two fields a page row carried while a category was part of its identity and tags were set beside
-/// the text. Read only by <c>0012_wiki_categories</c>, which merges them into the page's
-/// category list.
-/// </summary>
-public sealed record WikiPageFiledRecord
-{
-	public string? Category { get; init; }
-	public string[]? Tags { get; init; }
-}
-
-/// <summary>
-/// The protected flag a page row carried before requirements replaced it. Read only by
-/// <c>0013_wiki_requirements</c>, which turns it into a page requirement.
-/// </summary>
-public sealed record WikiPageProtectedRecord
-{
-	public bool IsProtected { get; init; }
 }
 
 /// <summary>

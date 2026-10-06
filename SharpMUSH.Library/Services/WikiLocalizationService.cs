@@ -88,13 +88,12 @@ public sealed class WikiLocalizationService(
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(page.SourceLocale);
 		if (normalized.Length > 0) return normalized;
 
-		// Unreachable once Migration_AddWikiTranslations has run, which is why it is a Warning rather than a
+		// Unreachable while every create path stamps the field, which is why it is a Warning rather than a
 		// branch anything is allowed to depend on. A read can never fail for locale reasons, so the page
-		// still renders — but the row is broken, and pre-production the fix is to re-run migrations or wipe
-		// and reseed, not to make this substitution part of the design.
+		// still renders — but the row is broken, and the fix is to correct the row, not to make this
+		// substitution part of the design.
 		logger.LogWarning(
-			"Wiki page {PageId} ({Slug}) has no SourceLocale. The Migration_AddWikiTranslations backfill has "
-			+ "not run on this database; serving it as '{DefaultLocale}' for this read only.",
+			"Wiki page {PageId} ({Slug}) has no SourceLocale; serving it as '{DefaultLocale}' for this read only.",
 			page.Id, page.Slug, resolver.DefaultLocale);
 
 		return resolver.DefaultLocale;

@@ -1,6 +1,6 @@
 format: 1
 package: common-functions
-version: 2.0.0
+version: 1.0.0
 authors: [SharpMUSH]
 description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right."
 license: MIT

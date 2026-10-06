@@ -30,7 +30,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	{
 		if (await Registry.GetInstalledPackageAsync("common-functions") is not InstalledPackageRecord package)
 			throw new InvalidOperationException("common-functions is not installed.");
-		await Assert.That(package.Version).IsEqualTo("2.0.0");
+		await Assert.That(package.Version).IsEqualTo("1.0.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("common-functions");
 		await Assert.That(objects.Count).IsEqualTo(1);

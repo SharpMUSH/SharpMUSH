@@ -103,7 +103,7 @@ public enum LocateFlags
 /// operations with a fixed flag set or a different return type, so each is a default member built on
 /// them and a failed locate is reported from exactly one place. They stay on the interface rather than
 /// becoming extension methods because this interface is published plugin contract: a plugin compiled
-/// against 3.0.0 binds them as interface methods, and an extension method cannot satisfy that call.
+/// against the contract package binds them as interface methods, and an extension method cannot satisfy that call.
 /// </remarks>
 public interface ILocateService
 {

@@ -10,6 +10,9 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 public partial class NavigationTests
 {
+	private string[] Edges(TableDef table) => _db.Store.Read(tx => tx.Range(table, [])
+		.Select(entry => Convert.ToHexString(entry.Key) + ":" + Convert.ToHexString(entry.Value)).ToArray());
+
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]

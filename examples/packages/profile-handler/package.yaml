@@ -1,6 +1,6 @@
 format: 1
 package: profile-handler
-version: 1.5.0
+version: 1.0.0
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT

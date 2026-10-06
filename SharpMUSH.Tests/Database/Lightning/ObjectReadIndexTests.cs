@@ -183,16 +183,4 @@ public class ObjectReadIndexTests : LightningDatabaseFixture
 			Keys.Dbref(two.Object.DBRef.Number)));
 		await Assert.That((await Db.GetAllPlayersAsync().ToListAsync()).Select(p => p.Object.DBRef.Number)).DoesNotContain(two.Object.DBRef.Number);
 	}
-
-	[Test]
-	public async Task MigrationBuildsTheTypeIndexForObjectsWrittenBeforeIt()
-	{
-		await NewPlayer("LegacyPlayer");
-		var built = Dump(Tables.ObjType);
-		await ForgetIndexAsync(LightningDatabase.ObjectTypeIndexMigrationId, Tables.ObjType);
-
-		await Db.Migrate();
-
-		await Assert.That(Dump(Tables.ObjType)).IsEquivalentTo(built, CollectionOrdering.Matching);
-	}
 }

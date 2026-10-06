@@ -115,26 +115,4 @@ public class ObjectGrantsStoreTests
 		await Assert.That(await _db.GetObjectOverridesAsync(number)).IsEmpty();
 		await Assert.That(await _db.GetObjectsForRoleAsync("helper")).DoesNotContain(number);
 	}
-
-	[Test]
-	public async Task MigrationMovesStoredFlagAndPowerEdges()
-	{
-		var thing = await ThingAsync("Legacy");
-		var number = thing.Object().Key;
-		await _db.Store.WriteAsync(tx =>
-		{
-			foreach (var (table, name) in new[] { (Tables.ObjFlag, "ROYALTY"), (Tables.ObjPower, "SEE_ALL"), (Tables.ObjPower, "GUEST") })
-			{
-				tx.Put(table.Forward, Keys.Dbref(number), Keys.Upper(name));
-				tx.Put(table.Reverse, Keys.Upper(name), Keys.Dbref(number));
-			}
-		});
-
-		await _db.Migrate();
-
-		await Assert.That(await _db.GetObjectRolesAsync(number)).IsEquivalentTo([BuiltInRoles.RoyaltySlug, BuiltInRoles.GuestSlug]);
-		await Assert.That((await _db.GetObjectOverridesAsync(number))[PortalPermission.GamePower("See_All")]).IsEqualTo(PermissionState.Allow);
-		await Assert.That(_db.Store.Read(tx => tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(number)).Count())).IsEqualTo(0);
-		await Assert.That(_db.Store.Read(tx => tx.Dups(Tables.ObjPower.Forward, Keys.Dbref(number)).Count())).IsEqualTo(0);
-	}
 }

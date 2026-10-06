@@ -14,8 +14,7 @@ public record WikiOptions(
 {
 	/// <summary>
 	/// The locale used when nothing else supplies one: the shipped default in <see cref="SharpMUSHOptions.Default"/>, the resolver's
-	/// last resort when a configured value is unusable, and what the wiki-translation migration stamps
-	/// on rows that predate <c>WikiPage.SourceLocale</c>.
+	/// last resort when a configured value is unusable.
 	/// </summary>
 	/// <remarks>
 	/// One constant so those three cannot drift. A migration in particular <em>cannot</em> read
