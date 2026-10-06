@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
@@ -13,27 +15,26 @@ namespace SharpMUSH.Tests.Services;
 /// <summary>
 /// Wiring tests for the bundled <c>room-contents</c> package's ROOM`CONTENTS handler.
 ///
-/// These tests install handlers on #9, fire ROOM`CONTENTS via EventService.TriggerEventAsync (the
-/// same path movement uses), then assert on what the handler did.
+/// These tests fire ROOM`CONTENTS through <see cref="EventService"/> (the same path movement uses)
+/// on a WIZARD thing of their own standing in for #9, then assert on what the handler did.
 ///
 /// They prove:
-///   1. The ROOM`CONTENTS attribute on #9 is executed when the event fires.
-///   2. %0 correctly carries the room dbref into the handler body.
-///   3. lcon(%0) returns the room's occupants from within the handler context.
-///   4. The package's own helpers build valid OOB v2 payloads, per viewer.
+///   1. %0 correctly carries the room dbref into the handler body, and %1 the cause.
+///   2. lcon(%0) returns the room's occupants from within the handler context.
+///   3. The package's own helpers build valid OOB v2 payloads, per viewer.
+///   4. The shipped handler runs end to end for every cause.
 ///
-/// The first tests record lcon(%0)/words(lcon(%0)) into scratch attributes on #9 instead of calling
-/// oob() — oob() requires WebSocket connections the unit harness lacks — so they assert fan-out
-/// targeting logic. They replace the session-wide handler on #9, which every move in every test
-/// fires, so they run one at a time and each puts the package back in a finally block (via
-/// <see cref="RestorePackage"/>), reinstalling rather than blanking it because the package is
-/// bootstrapped onto #9 at first boot and the rest of the session expects it there.
+/// The configured event_handler (#9) is session-wide: every move in every test fires its
+/// ROOM`CONTENTS, so a test that rewrote it would have to run alone. Instead each test builds its own
+/// handler — #9 is seeded WIZARD, and the package's helpers name only <c>me/</c> — and raises the
+/// event with an <see cref="EventService"/> whose event_handler is that thing (<see cref="Raise"/>),
+/// so they run in parallel. That the configured #9 receives the event is
+/// <see cref="RoomContentsEventTests"/>' subject.
 ///
-/// The payload tests go further: they install the REAL package attributes from the embedded
-/// manifest onto a WIZARD thing of their own — #9 is seeded WIZARD, and the helpers name only
-/// <c>me/</c> — and call a helper for a named viewer with u(), which keeps God as the enactor the
-/// way the event path does. That exercises the helpers as the shipped handler calls them (%0 the
-/// room, %1 the viewer) without touching #9, so they run in parallel.
+/// The first tests record lcon(%0)/words(lcon(%0)) into scratch attributes instead of calling oob() —
+/// oob() requires WebSocket connections the unit harness lacks — so they assert fan-out targeting
+/// logic. The payload tests call a helper for a named viewer with u(), which keeps God as the enactor
+/// the way the event path does.
 /// </summary>
 public class RoomContentsHandlerReferenceTests
 {
@@ -41,7 +42,6 @@ public class RoomContentsHandlerReferenceTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IEventService EventService => WebAppFactoryArg.Services.GetRequiredService<IEventService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	/// <summary>The attributes the shipped manifest installs on the event handler, by name.</summary>
@@ -58,22 +58,42 @@ public class RoomContentsHandlerReferenceTests
 	private async Task<string> Eval(string expression) =>
 		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
-	/// <summary>Raises ROOM`CONTENTS as God, and returns once the queued handler has run.</summary>
-	private Task Trigger(string room, string cause) => Raise(WebAppFactoryArg.ExecutorDBRef, room, cause);
+	/// <summary>Raises ROOM`CONTENTS on <paramref name="handler"/> as God, and returns once the queued handler has run.</summary>
+	private Task Trigger(string handler, string room, string cause) => Raise(handler, WebAppFactoryArg.ExecutorDBRef, room, cause);
 
-	/// <summary>Raises ROOM`CONTENTS as <paramref name="enactor"/>, and returns once the queued handler has run.</summary>
-	private async Task Raise(DBRef enactor, string room, string cause)
+	/// <summary>
+	/// Raises ROOM`CONTENTS as <paramref name="enactor"/>, and returns once the queued handler has run.
+	/// The event goes through a real <see cref="EventService"/> on the session's queue, configured with
+	/// <paramref name="handler"/> as its event_handler, so nothing else in the session sees it.
+	/// </summary>
+	private async Task Raise(string handler, DBRef enactor, string room, string cause)
 	{
-		await EventService.TriggerEventAsync(SharpEvents.RoomContents, enactor, room, cause);
+		var services = WebAppFactoryArg.Services;
+		var events = new EventService(
+			Mediator,
+			services.GetRequiredService<IAttributeService>(),
+			new Lazy<ITaskScheduler>(services.GetRequiredService<ITaskScheduler>),
+			new EventHandlerOverride(services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(), uint.Parse(handler[1..])),
+			NullLogger<EventService>.Instance);
+		await events.TriggerEventAsync(SharpEvents.RoomContents, enactor, room, cause);
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
+	/// <summary>The session's options with another object as event_handler.</summary>
+	private sealed class EventHandlerOverride(IOptionsWrapper<SharpMUSHOptions> live, uint handler) : IOptionsWrapper<SharpMUSHOptions>
+	{
+		public SharpMUSHOptions CurrentValue => live.CurrentValue with
+		{
+			Database = live.CurrentValue.Database with { EventHandler = handler }
+		};
+	}
+
 	/// <summary>
-	/// Installs (or reinstalls) every attribute the package manifest declares onto
-	/// <paramref name="target"/>, verbatim: an <c>&amp;</c> typed at a client stores without
-	/// evaluating, which is what the package installer does too.
+	/// Installs every attribute the package manifest declares onto <paramref name="target"/>,
+	/// verbatim: an <c>&amp;</c> typed at a client stores without evaluating, which is what the package
+	/// installer does too.
 	/// </summary>
-	private async Task InstallPackage(string target = "#9")
+	private async Task InstallPackage(string target)
 	{
 		foreach (var (name, value) in PackageAttributes.Value)
 		{
@@ -84,29 +104,17 @@ public class RoomContentsHandlerReferenceTests
 	/// <summary>A WIZARD thing carrying the package's attributes, standing in for #9.</summary>
 	private async Task<string> BuildHandler(string token)
 	{
-		var handler = await Build($"create(RcHandler{token})");
-		await Cmd($"@set {handler}=WIZARD");
+		var handler = await BuildBareHandler(token);
 		await InstallPackage(handler);
 		return handler;
 	}
 
-	/// <summary>
-	/// Clears every scratch attribute the event-path tests write on #9 and puts the package's own
-	/// attributes back. Runs in each test's finally so a failed assertion never leaks handler state
-	/// into a later test.
-	/// </summary>
-	private async Task RestorePackage()
+	/// <summary>A WIZARD thing with no attributes, standing in for #9: the test writes its ROOM`CONTENTS.</summary>
+	private async Task<string> BuildBareHandler(string token)
 	{
-		foreach (var attr in new[]
-		{
-			"FANOUT_LIST", "FANOUT_COUNT", "LAST_CAUSE", "FANOUT_SENTINEL", "LAST_PAYLOAD",
-			"FN`NOTEXIT", "FN`V1ROW",
-		})
-		{
-			await Cmd($"@wipe #9/{attr}");
-		}
-
-		await InstallPackage();
+		var handler = await Build($"create(RcHandler{token})");
+		await Cmd($"@set {handler}=WIZARD");
+		return handler;
 	}
 
 	/// <summary>
@@ -130,22 +138,22 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask HandlerReceivesCorrectRoomDbrefInPercent0()
 	{
 		var probe = await ProbeRoom();
+		var handler = await BuildBareHandler(probe.Room[1..]);
 		try
 		{
 			// Install a simplified handler: record lcon(%0) (all occupants) under the room's number, so
 			// we can verify %0 was the correct room and that lcon sees its contents.
-			await Cmd("&ROOM`CONTENTS #9=&FANOUT_LIST`[after(first(%0,:),#)] #9=[lcon(%0)]");
+			await Cmd($"&ROOM`CONTENTS {handler}=&FANOUT_LIST`[after(first(%0,:),#)] {handler}=[lcon(%0)]");
 
 			// Fire the event via the same service path that movement/connect/disconnect use.
-			// The handler (#9) runs with its own permissions; #9 is seeded WIZARD, so it retains the
-			// elevated (see-all) access this handler needs.
-			await Trigger(probe.Room, "move-in");
+			// The handler runs with its own permissions; like #9 it is WIZARD, so it has the elevated
+			// (see-all) access this handler needs.
+			await Trigger(handler, probe.Room, "move-in");
 
-			var recorded = await Eval($"get(#9/FANOUT_LIST`{probe.Room[1..]})");
+			var recorded = await Eval($"get({handler}/FANOUT_LIST`{probe.Room[1..]})");
 
 			// Independently compute lcon of the same room to verify handler saw same contents.
 			var expected = await Eval($"lcon({probe.Room})");
@@ -156,24 +164,24 @@ public class RoomContentsHandlerReferenceTests
 		}
 		finally
 		{
-			await RestorePackage();
+			await Cmd($"@dest/override {handler}");
 			await RemoveProbeRoom(probe);
 		}
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask HandlerCountsOccupantsMatchingIndependentLcon()
 	{
 		var probe = await ProbeRoom();
+		var handler = await BuildBareHandler(probe.Room[1..]);
 		try
 		{
 			// Install a handler that records the occupant COUNT (via words()) for easier assertion.
-			await Cmd("&ROOM`CONTENTS #9=&FANOUT_COUNT`[after(first(%0,:),#)] #9=[words(lcon(%0))]");
+			await Cmd($"&ROOM`CONTENTS {handler}=&FANOUT_COUNT`[after(first(%0,:),#)] {handler}=[words(lcon(%0))]");
 
-			await Trigger(probe.Room, "move-in");
+			await Trigger(handler, probe.Room, "move-in");
 
-			var recorded = await Eval($"get(#9/FANOUT_COUNT`{probe.Room[1..]})");
+			var recorded = await Eval($"get({handler}/FANOUT_COUNT`{probe.Room[1..]})");
 			var expected = await Eval($"words(lcon({probe.Room}))");
 
 			// Recorded count must equal the independently computed lcon count.
@@ -182,41 +190,41 @@ public class RoomContentsHandlerReferenceTests
 		}
 		finally
 		{
-			await RestorePackage();
+			await Cmd($"@dest/override {handler}");
 			await RemoveProbeRoom(probe);
 		}
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask HandlerCauseArgIsPassedAsPercent1()
 	{
 		var probe = await ProbeRoom();
+		var handler = await BuildBareHandler(probe.Room[1..]);
 		try
 		{
 			// Install a handler that captures %1 (the cause) into LAST_CAUSE.
-			await Cmd("&ROOM`CONTENTS #9=&LAST_CAUSE`[after(first(%0,:),#)] #9=%1");
+			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_CAUSE`[after(first(%0,:),#)] {handler}=%1");
 
 			var cause = "move-in";
-			await Trigger(probe.Room, cause);
+			await Trigger(handler, probe.Room, cause);
 
-			var recorded = await Eval($"get(#9/LAST_CAUSE`{probe.Room[1..]})");
+			var recorded = await Eval($"get({handler}/LAST_CAUSE`{probe.Room[1..]})");
 
 			// %1 must carry the cause string "move-in".
 			await Assert.That(recorded).IsEqualTo(cause);
 		}
 		finally
 		{
-			await RestorePackage();
+			await Cmd($"@dest/override {handler}");
 			await RemoveProbeRoom(probe);
 		}
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask V1RowShape_StillBuildsValidJson()
 	{
 		var probe = await ProbeRoom();
+		var handler = await BuildBareHandler(probe.Room[1..]);
 		var thingName = await Eval($"name({probe.Thing})");
 		try
 		{
@@ -227,15 +235,15 @@ public class RoomContentsHandlerReferenceTests
 			// Install the v1 helpers under scratch names, plus a handler that records the
 			// room.contents payload (json_array of per-occupant rows) into LAST_PAYLOAD — oob() needs
 			// a live WebSocket the harness lacks, so we capture the built payload instead of sending it.
-			await Cmd("&FN`NOTEXIT #9=not(hastype(%0,exit))");
-			await Cmd("&FN`V1ROW #9=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))");
-			await Cmd("&ROOM`CONTENTS #9=&LAST_PAYLOAD`[after(first(%0,:),#)] #9=json(object,who,json_array(iter(filter(#9/FN`NOTEXIT,lcon(%0)),u(#9/FN`V1ROW,itext(0)),%b,|),|))");
+			await Cmd($"&FN`NOTEXIT {handler}=not(hastype(%0,exit))");
+			await Cmd($"&FN`V1ROW {handler}=json(object,dbref,json(string,[num(%0)]),name,json(string,name(%0)),cmd,json(string,look [num(%0)]))");
+			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=json(object,who,json_array(iter(filter({handler}/FN`NOTEXIT,lcon(%0)),u({handler}/FN`V1ROW,itext(0)),%b,|),|))");
 
-			await Trigger(probe.Room, "move-in");
+			await Trigger(handler, probe.Room, "move-in");
 
 			// The core assertion the earlier tests missed: the handler emits VALID JSON.
-			var payload = await Eval($"get(#9/LAST_PAYLOAD`{probe.Room[1..]})");
-			await Assert.That(await Eval($"isjson(get(#9/LAST_PAYLOAD`{probe.Room[1..]}))")).IsEqualTo("1");
+			var payload = await Eval($"get({handler}/LAST_PAYLOAD`{probe.Room[1..]})");
+			await Assert.That(await Eval($"isjson(get({handler}/LAST_PAYLOAD`{probe.Room[1..]}))")).IsEqualTo("1");
 
 			// And the who list is built from the real occupants: it carries the room's one thing.
 			await Assert.That(payload).Contains(thingName);
@@ -243,30 +251,30 @@ public class RoomContentsHandlerReferenceTests
 		}
 		finally
 		{
-			await RestorePackage();
+			await Cmd($"@dest/override {handler}");
 			await RemoveProbeRoom(probe);
 		}
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask HandlerDoesNotRunAfterAttributeIsCleared()
 	{
 		var probe = await ProbeRoom();
+		var handler = await BuildBareHandler(probe.Room[1..]);
 		try
 		{
 			// Install, then immediately clear. Trigger must not set FANOUT_SENTINEL.
-			await Cmd("&ROOM`CONTENTS #9=&FANOUT_SENTINEL`[after(first(%0,:),#)] #9=ran");
-			await Cmd("&ROOM`CONTENTS #9=");
+			await Cmd($"&ROOM`CONTENTS {handler}=&FANOUT_SENTINEL`[after(first(%0,:),#)] {handler}=ran");
+			await Cmd($"&ROOM`CONTENTS {handler}=");
 
-			await Trigger(probe.Room, "move-in");
+			await Trigger(handler, probe.Room, "move-in");
 
 			// Sentinel must be empty because the handler was cleared before the trigger.
-			await Assert.That(await Eval($"get(#9/FANOUT_SENTINEL`{probe.Room[1..]})")).IsEqualTo(string.Empty);
+			await Assert.That(await Eval($"get({handler}/FANOUT_SENTINEL`{probe.Room[1..]})")).IsEqualTo(string.Empty);
 		}
 		finally
 		{
-			await RestorePackage();
+			await Cmd($"@dest/override {handler}");
 			await RemoveProbeRoom(probe);
 		}
 	}
@@ -831,26 +839,26 @@ public class RoomContentsHandlerReferenceTests
 	/// room.info goes to the causer alone when the causer is in the room, to everyone otherwise.
 	/// </summary>
 	[Test]
-	[NotInParallel]
 	public async ValueTask ShippedHandler_RunsEndToEnd_ForEveryCause_AndTargetsRoomInfo()
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
+		string? handler = null;
 		try
 		{
-			await InstallPackage();
+			handler = await BuildHandler(token);
 			f = await BuildFixture(token);
 
-			// null() swallows the handler's own output; anything else reaching #9 is an evaluation
+			// null() swallows the handler's own output; anything else reaching the handler is an evaluation
 			// error ("#-1 ...") or a locate failure ("I can't see that here."). Capture both by
 			// recording what the handler evaluates to — the same body with strcat() for null(), so
 			// every argument still runs and their output is stored — with the send left in place.
-			var handler = PackageAttributes.Value["ROOM`CONTENTS"];
-			await Assert.That(handler).StartsWith("think null(");
-			var body = handler["think null(".Length..];
-			// Recorded under the fixture room's number: another test's ROOM`CONTENTS cannot overwrite it.
+			var shipped = PackageAttributes.Value["ROOM`CONTENTS"];
+			await Assert.That(shipped).StartsWith("think null(");
+			var body = shipped["think null(".Length..];
+			// Recorded under the fixture room's number.
 			var payload = $"LAST_PAYLOAD`{f.Room[1..]}";
-			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD`[after(first(%0,:),#)] #9=strcat({body}");
+			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=strcat({body}");
 
 			// The causer (God, the test's enactor) is not in the room: two viewers, each sent
 			// room.contents and room.exits (0 deliveries each, no WebSocket), plus room.info to both on
@@ -858,58 +866,58 @@ public class RoomContentsHandlerReferenceTests
 			// joins the viewers with its default space.
 			foreach (var cause in new[] { "move-in", "move-out", "connect", "disconnect" })
 			{
-				await Cmd($"&{payload} #9=unset");
-				await Trigger(f.Room, cause);
-				var result = await Eval($"get(#9/{payload})");
+				await Cmd($"&{payload} {handler}=unset");
+				await Trigger(handler, f.Room, cause);
+				var result = await Eval($"get({handler}/{payload})");
 				await Assert.That(result).IsEqualTo(cause is "move-in" or "connect" ? "000 000" : "00 00")
 					.Because($"{cause}: the handler must run every oob() cleanly, got '{result}'");
 			}
 
 			// The causer is in the room (the mortal walked in): room.info goes to the mortal alone, so
 			// one viewer's run has three zeros and the other's two.
-			await Cmd($"&{payload} #9=unset");
-			await Raise(new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "move-in");
-			var targeted = (await Eval($"get(#9/{payload})")).Split(' ').Order().ToArray();
+			await Cmd($"&{payload} {handler}=unset");
+			await Raise(handler, new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "move-in");
+			var targeted = (await Eval($"get({handler}/{payload})")).Split(' ').Order().ToArray();
 			await Assert.That(targeted).IsEquivalentTo(["00", "000"]);
 
 			// The causer is in the room but is not a viewer — a thing that moved itself in. Nobody
 			// would match it, so room.info goes to everyone rather than to no one.
-			await Cmd($"&{payload} #9=unset");
-			await Raise(new DBRef(int.Parse(f.Bundle[1..]), null), f.Room, "move-in");
-			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo("000 000")
+			await Cmd($"&{payload} {handler}=unset");
+			await Raise(handler, new DBRef(int.Parse(f.Bundle[1..]), null), f.Room, "move-in");
+			await Assert.That(await Eval($"get({handler}/{payload})")).IsEqualTo("000 000")
 				.Because("a causer who is not a connected viewer must not swallow room.info for everyone");
 
 			// A resume re-sends one session's state, as connect does, and nothing changed for anyone
 			// else: the resuming player alone is sent room.contents, room.exits and room.info.
-			await Cmd($"&{payload} #9=unset");
-			await Raise(new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "resume");
-			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo("000")
+			await Cmd($"&{payload} {handler}=unset");
+			await Raise(handler, new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "resume");
+			await Assert.That(await Eval($"get({handler}/{payload})")).IsEqualTo("000")
 				.Because("a resume is sent to the resuming player alone, all three packages");
 
 			// A scene change (the Scene plugin's cause) re-sends room.info alone, to every viewer, the
 			// causer included when they are in the room: only the scene block changed, and it is per viewer.
-			await Cmd($"&{payload} #9=unset");
-			await Raise(new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "scene");
-			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo("0 0")
+			await Cmd($"&{payload} {handler}=unset");
+			await Raise(handler, new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "scene");
+			await Assert.That(await Eval($"get({handler}/{payload})")).IsEqualTo("0 0")
 				.Because("a scene change sends room.info, and nothing else, to every viewer in the room");
 
 			// A resuming player who is not a viewer in the room is sent nothing, and nobody else is either.
-			await Cmd($"&{payload} #9=unset");
-			await Trigger(f.Room, "resume");
-			await Assert.That(await Eval($"get(#9/{payload})")).IsEqualTo(string.Empty);
+			await Cmd($"&{payload} {handler}=unset");
+			await Trigger(handler, f.Room, "resume");
+			await Assert.That(await Eval($"get({handler}/{payload})")).IsEqualTo(string.Empty);
 
 			// A room nobody connected is in: the handler finds no viewer and builds nothing. The record also
 			// carries the info<n> register FN`PREPARE fills, so preparing the room's rows anyway shows.
-			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD`[after(first(%0,:),#)] #9=strcat({body[..^1]},[r(info[rest(num(%0),#)])])");
+			await Cmd($"&ROOM`CONTENTS {handler}=&LAST_PAYLOAD`[after(first(%0,:),#)] {handler}=strcat({body[..^1]},[r(info[rest(num(%0),#)])])");
 			var emptyRoom = $"LAST_PAYLOAD`{f.Dest[1..]}";
-			await Cmd($"&{emptyRoom} #9=unset");
-			await Trigger(f.Dest, "move-in");
-			await Assert.That(await Eval($"get(#9/{emptyRoom})")).IsEqualTo(string.Empty)
+			await Cmd($"&{emptyRoom} {handler}=unset");
+			await Trigger(handler, f.Dest, "move-in");
+			await Assert.That(await Eval($"get({handler}/{emptyRoom})")).IsEqualTo(string.Empty)
 				.Because("a room with no connected viewer is neither prepared nor sent anything");
 		}
 		finally
 		{
-			await RestorePackage();
+			if (handler is not null) await Cmd($"@dest/override {handler}");
 			if (f is not null) await TearDownFixture(f);
 		}
 	}
