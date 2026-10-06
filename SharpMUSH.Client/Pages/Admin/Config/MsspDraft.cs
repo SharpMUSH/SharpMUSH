@@ -110,12 +110,9 @@ public sealed class MsspDraft
 	public Dictionary<string, string[]> Settings()
 	{
 		var settings = new Dictionary<string, string[]>(StringComparer.Ordinal);
-		foreach (var variable in MsspCatalog.All.Where(variable => !variable.ReportedByServer))
+		foreach (var variable in MsspCatalog.All.Where(variable => !variable.ReportedByServer && Values(variable.Name).Count > 0))
 		{
-			if (Values(variable.Name) is { Count: > 0 } values)
-			{
-				settings[variable.Name] = [.. values];
-			}
+			settings[variable.Name] = [.. Values(variable.Name)];
 		}
 
 		foreach (var other in Others.Where(other => other.Name.Trim().Length > 0 || other.Values.Count > 0))
@@ -131,12 +128,13 @@ public sealed class MsspDraft
 	public Dictionary<string, string> Problems(Func<string, string> hasField)
 	{
 		var problems = new Dictionary<string, string>(StringComparer.Ordinal);
-		foreach (var variable in MsspCatalog.All.Where(variable => !variable.ReportedByServer))
+		var invalid = MsspCatalog.All
+			.Where(variable => !variable.ReportedByServer && Values(variable.Name).Count > 0)
+			.Select(variable => (variable.Name, Problem: MsspCatalog.Validate(variable.Name, Values(variable.Name)) ?? string.Empty))
+			.Where(entry => entry.Problem.Length > 0);
+		foreach (var (name, problem) in invalid)
 		{
-			if (Values(variable.Name) is { Count: > 0 } values && MsspCatalog.Validate(variable.Name, values) is { } problem)
-			{
-				problems[variable.Name] = problem;
-			}
+			problems[name] = problem;
 		}
 
 		var seen = new HashSet<string>(StringComparer.Ordinal);

@@ -206,9 +206,8 @@ public static class MsspCatalog
 		var folded = new StringBuilder(name.Length);
 		var pendingSpace = false;
 
-		foreach (var character in name)
+		foreach (var c in name.Select(character => character == '_' ? ' ' : character))
 		{
-			var c = character == '_' ? ' ' : character;
 			if (char.IsWhiteSpace(c))
 			{
 				pendingSpace = folded.Length > 0;

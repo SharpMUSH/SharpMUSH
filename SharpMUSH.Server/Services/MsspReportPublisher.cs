@@ -62,6 +62,7 @@ public sealed class MsspReportPublisher(
 		}
 		catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
 		{
+			// The host is stopping; the connection server keeps the last report it was sent.
 		}
 	}
 

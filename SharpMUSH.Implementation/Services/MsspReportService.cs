@@ -66,20 +66,15 @@ public sealed class MsspReportService(
 
 		var settings = MsspCatalog.Normalize(current.Mssp.Variables, out _);
 
-		var report = new List<MsspReportedVariable>();
-		foreach (var variable in MsspCatalog.All)
-		{
-			if ((variable.ReportedByServer ? server : settings).TryGetValue(variable.Name, out var values))
-			{
-				report.Add(new MsspReportedVariable(variable.Name, values));
-			}
-		}
-
-		report.AddRange(settings
+		var catalogued = MsspCatalog.All
+			.Select(variable => (variable.Name, Source: variable.ReportedByServer ? server : settings))
+			.Where(entry => entry.Source.ContainsKey(entry.Name))
+			.Select(entry => new MsspReportedVariable(entry.Name, entry.Source[entry.Name]));
+		var others = settings
 			.Where(entry => MsspCatalog.Find(entry.Key) is null)
-			.Select(entry => new MsspReportedVariable(entry.Key, entry.Value)));
+			.Select(entry => new MsspReportedVariable(entry.Key, entry.Value));
 
-		return report;
+		return [.. catalogued, .. others];
 	}
 
 	private static string Number(long value) => value.ToString(CultureInfo.InvariantCulture);
