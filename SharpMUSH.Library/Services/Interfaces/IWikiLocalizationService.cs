@@ -23,11 +23,11 @@ public interface IWikiLocalizationService
 	/// The locale a page was authored in: its materialised <see cref="WikiPage.SourceLocale"/>, canonicalised.
 	/// </summary>
 	/// <remarks>
-	/// Exists so no caller re-derives this. The field is stamped once by <c>Migration_AddWikiTranslations</c>
-	/// and by every create path, and is immutable thereafter — the configured default affects new pages and
-	/// fallback resolution, never the interpretation of an existing one. An empty value means the backfill has
-	/// not run: this method logs a warning and returns <see cref="DefaultLocale"/> so the page still renders,
-	/// which is degradation over a broken row rather than a meaning callers may rely on.
+	/// Exists so no caller re-derives this. The field is stamped by every create path and is immutable
+	/// thereafter — the configured default affects new pages and fallback resolution, never the
+	/// interpretation of an existing one. An empty value means a broken row: this method logs a warning and
+	/// returns <see cref="DefaultLocale"/> so the page still renders, which is degradation over a broken row
+	/// rather than a meaning callers may rely on.
 	/// </remarks>
 	string SourceLocaleOf(WikiPage page);
 

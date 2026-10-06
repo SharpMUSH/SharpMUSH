@@ -204,26 +204,6 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		await Assert.That(await Wiki.CountPagesAsync(null, WikiVisibility.All)).IsEqualTo(10);
 	}
 
-	/// <summary>A row written before the published flag existed is listed as published once the index is built.</summary>
-	[Test]
-	public async Task MigrationBuildsTheIndexesAndReadsLegacyDefaults()
-	{
-		var ids = await Seed();
-		var legacyKey = long.Parse(ids[2]["wiki_page/".Length..]);
-		await Db.Store.WriteAsync(tx =>
-		{
-			tx.TryGet(Tables.WikiPage, Keys.Dbref(legacyKey), out var bytes);
-			tx.Put(Tables.WikiPage, Keys.Dbref(legacyKey), Codec.Serialize(Codec.Deserialize<WikiPageRecord>(bytes) with { Published = null }));
-		});
-		await ForgetIndexAsync(LightningDatabase.WikiListIndexMigrationId,
-			Tables.WikiRecent, Tables.WikiByNamespace, Tables.WikiByCategory);
-
-		await Db.Migrate();
-
-		await Assert.That((await Wiki.GetPagesAsync("main", 0, 50, WikiVisibility.PublishedOnly)).Select(p => p.Id)).Contains(ids[2]);
-		await AssertListingsMatchReference();
-	}
-
 	/// <summary>The counts by state as defined over decoded page rows.</summary>
 	private async Task<WikiPageCounts> ReferenceCounts(WikiVisibility visibility)
 	{

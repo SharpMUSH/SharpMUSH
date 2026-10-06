@@ -23,7 +23,7 @@
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<PackageId>SharpMUSH.Implementation.Generated</PackageId>
-		<Version>6.1.0</Version>
+		<Version>1.1.0</Version>
 		<Authors>SharpMUSH Contributors</Authors>
 		<Description>SharpMUSH command/function source generator, packaged as a Roslyn analyzer. External SharpMUSH plugins reference this so their [SharpCommand]/[SharpFunction] methods produce the generated CommandLibrary/FunctionLibrary that PluginBase reflects. Aligned to PluginContractVersion 6.1.0.</Description>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>

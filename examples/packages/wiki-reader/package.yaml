@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.7.0
+version: 1.0.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -15,7 +15,7 @@ depends:
       path: examples/packages/plus-help/
       branch: main
   - package: common-functions
-    version: ">=1.2"
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/common-functions/

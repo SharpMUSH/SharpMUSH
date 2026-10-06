@@ -52,33 +52,4 @@ public partial class LightningDatabase
 
 		tx.Put(Tables.Obj, key, Codec.Serialize(record with { Aliases = aliases }));
 	}
-
-	/// <summary>
-	/// Indexes every player's <c>ALIAS</c> attribute, once, for worlds written before the record followed
-	/// it (#1499): until then an alias set in game, or imported from PennMUSH as an attribute, reached
-	/// neither the record nor the name index.
-	/// </summary>
-	internal void RebuildPlayerAliases(ITx tx, CancellationToken cancellationToken)
-	{
-		cancellationToken.ThrowIfCancellationRequested();
-		var marker = Keys.Str("mig:" + PlayerAliasIndexMigrationId);
-		if (tx.TryGet(Tables.Meta, marker, out _)) return;
-
-		// Materialised first: SyncPlayerAliases rewrites rows of the table being scanned.
-		var players = tx.Range(Tables.Obj, [])
-			.Where(entry => Codec.Deserialize<ObjectRecord>(entry.Value).Type == DatabaseConstants.TypePlayer)
-			.Select(entry => Keys.ReadDbref(entry.Key))
-			.ToList();
-
-		foreach (var player in players)
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-			SyncPlayerAliases(tx, player);
-		}
-
-		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
-		{
-			Id = PlayerAliasIndexMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-		}));
-	}
 }

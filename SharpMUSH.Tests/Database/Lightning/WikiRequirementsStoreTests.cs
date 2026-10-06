@@ -68,39 +68,4 @@ public class WikiRequirementsStoreTests : LightningDatabaseFixture
 			await Assert.That(system!.For(action)).IsEquivalentTo([PortalPermission.WikiAdmin]);
 		await Assert.That(system!.For(WikiAction.Read)).IsEmpty();
 	}
-
-	/// <summary>
-	/// A world written while pages carried a protected flag: each protected page gets the page requirement
-	/// protection now is, the flag leaves the row, and an unprotected page gets nothing.
-	/// </summary>
-	[Test]
-	public async Task MigrationTurnsTheProtectedFlagIntoAPageRequirement()
-	{
-		var guarded = await AddAsync("guarded");
-		var open = await AddAsync("open");
-		var guardedKey = Keys.Dbref(long.Parse(guarded.Id["wiki_page/".Length..]));
-		await Db.Store.WriteAsync(tx =>
-		{
-			tx.TryGet(Tables.WikiPage, guardedKey, out var bytes);
-			var row = JsonNode.Parse(bytes)!.AsObject();
-			row["IsProtected"] = true;
-			tx.Put(Tables.WikiPage, guardedKey, System.Text.Encoding.UTF8.GetBytes(row.ToJsonString()));
-		});
-		await ForgetIndexAsync(LightningDatabase.WikiRequirementsMigrationId, Tables.WikiRequirement);
-
-		await Db.Migrate();
-
-		var requirements = new WikiRequirements(await Wiki.GetRequirementsAsync());
-		var page = requirements.For(WikiRuleTarget.ForPage(guarded.Id));
-		await Assert.That(page).IsNotNull();
-		await Assert.That(page!.For(WikiAction.Edit)).IsEquivalentTo([PortalPermission.WikiAdmin]);
-		await Assert.That(page.For(WikiAction.Delete)).IsEquivalentTo([PortalPermission.WikiAdmin]);
-		await Assert.That(requirements.HasPageRules(open.Id)).IsFalse();
-		await Assert.That(requirements.For(WikiRuleTarget.ForNamespace(WikiNamespace.System))).IsNotNull();
-
-		var rewritten = Db.Store.Read(tx => tx.TryGet(Tables.WikiPage, guardedKey, out var bytes)
-			? System.Text.Encoding.UTF8.GetString(bytes)
-			: string.Empty);
-		await Assert.That(rewritten).DoesNotContain("IsProtected");
-	}
 }
