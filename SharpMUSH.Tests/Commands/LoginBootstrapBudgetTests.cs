@@ -85,6 +85,8 @@ public class LoginBootstrapBudgetTests
 		var roomName = TestIsolationHelpers.GenerateUniqueName("LoginLookRoom");
 		var room = await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@dig {roomName}"));
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message!.ToPlainText().Trim()}"));
+		// The teleport's own look shows the room too; only what the login says counts.
+		var heardBeforeLogin = Factory.Notifications.CountFor(playerRef);
 		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();
 		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(connections, "telnet");
 		var events = Substitute.For<IEventService>();
@@ -111,7 +113,8 @@ public class LoginBootstrapBudgetTests
 			}
 
 			await Assert.That(budget.IsExpired).IsTrue();
-			await Assert.That(Factory.Notifications.For(playerRef).Any(line => line.Contains(roomName, StringComparison.Ordinal))).IsTrue();
+			await Assert.That(Factory.Notifications.For(playerRef).Skip(heardBeforeLogin)
+				.Any(line => line.Contains(roomName, StringComparison.Ordinal))).IsTrue();
 			await notify.DidNotReceive().NotifyLocalized(Arg.Any<SharpMUSH.Library.Models.DBRef>(), "CpuUsageExceeded",
 				Arg.Any<AnySharpObject?>(), Arg.Any<object[]>());
 		}
