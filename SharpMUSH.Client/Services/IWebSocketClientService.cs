@@ -35,9 +35,10 @@ public interface IWebSocketClientService : IAsyncDisposable
 	/// screen; this runs before the commands buffered while disconnected are sent, and is handed the only way
 	/// to write to the socket until it returns (<see cref="SendAsync"/> buffers meanwhile). It returns false
 	/// when it could not log in; then, as with none, the buffered commands and any typed before the socket was
-	/// ready are dropped.
+	/// ready are dropped. Its token is cancelled when that socket closes: the next reconnect logs in instead,
+	/// and nothing buffered is dropped.
 	/// </summary>
-	Func<Func<string, Task>, Task<bool>>? Relogin { get; set; }
+	Func<Func<string, Task>, CancellationToken, Task<bool>>? Relogin { get; set; }
 
 	/// <summary>
 	/// Gets whether the WebSocket is currently connected

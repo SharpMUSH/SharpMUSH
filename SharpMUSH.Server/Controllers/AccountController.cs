@@ -27,7 +27,6 @@ public class AccountController(
 	IMediator mediator,
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
-	IPasswordService passwordService,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IValidateService validateService,
 	PasskeyService passkeys,
@@ -170,9 +169,10 @@ public class AccountController(
 	public record LinkCharacterRequest(string CharacterName, string CharacterPassword);
 
 	/// <summary>
-	/// Link an EXISTING character to the authenticated account by verifying the
-	/// character's MUSH password. Counterpart to <see cref="CreateCharacter"/>,
-	/// which creates a brand-new character.
+	/// Claims an EXISTING character for the authenticated account: one made with <c>create</c>, <c>@pcreate</c>
+	/// or a database import, proven by the character's own password. Counterpart to
+	/// <see cref="CreateCharacter"/>, which creates a brand-new character. A character with no password
+	/// cannot be claimed; staff link those.
 	/// </summary>
 	[HttpPost("link-character")]
 	public async Task<IActionResult> LinkCharacter([FromBody] LinkCharacterRequest request)
@@ -183,45 +183,30 @@ public class AccountController(
 		if (string.IsNullOrWhiteSpace(request.CharacterName))
 			return BadRequest("CharacterName is required.");
 
-		var player = await mediator
-			.CreateStream(new GetPlayerQuery(request.CharacterName))
-			.FirstOrDefaultAsync();
-
-		if (player is null)
+		return await accountService.ClaimCharacterAsync(accountId!, request.CharacterName.Trim(), request.CharacterPassword ?? string.Empty) switch
 		{
-			logger.LogInformation("Account {AccountId}: link-character failed — character not found", LogSanitizer.Sanitize(accountId));
-			return Unauthorized("Invalid character credentials.");
-		}
+			SharpPlayer player => await ClaimedAsync(player),
+			LinkedElsewhere => Conflict("Character is already linked to another account."),
+			Library.DiscriminatedUnions.NotFound => ClaimRefused(),
+		};
+	}
 
-		var valid = passwordService.PasswordIsValid(
-			request.CharacterPassword ?? string.Empty,
-			player.PasswordHash);
-
-		// Mirror the OTT login rule: a character with no stored password hash is
-		// linkable without one; a wrong password against a real hash is rejected.
-		if (!valid && !string.IsNullOrEmpty(player.PasswordHash))
+	private async Task<IActionResult> ClaimedAsync(SharpPlayer player)
+	{
+		logger.LogInformation("Linked existing character #{Key} to the requesting account", player.Object.Key);
+		return Ok(new
 		{
-			logger.LogInformation("Account {AccountId}: link-character failed — bad password for #{Key}",
-				LogSanitizer.Sanitize(accountId), player.Object.Key);
-			return Unauthorized("Invalid character credentials.");
-		}
+			DbrefNumber = player.Object.Key,
+			player.Object.CreationTime,
+			player.Object.Name,
+			Flags = await CreatedFlagsAsync(player.Object.DBRef)
+		});
+	}
 
-		if (valid && passwordService.NeedsRehash(player.PasswordHash))
-		{
-			await passwordService.RehashPasswordAsync(player, request.CharacterPassword ?? string.Empty);
-			logger.LogInformation("Rehashed legacy password for player #{Key} via link-character", player.Object.Key);
-		}
-
-		var charRef = new DBRef(player.Object.Key, player.Object.CreationTime);
-
-		var existingOwner = await accountService.GetAccountForCharacterAsync(charRef);
-		if (existingOwner is not null && existingOwner.Id != accountId)
-			return Conflict("Character is already linked to another account.");
-
-		await accountService.LinkCharacterAsync(accountId!, charRef);
-
-		logger.LogInformation("Account {AccountId}: linked existing character #{Key}", LogSanitizer.Sanitize(accountId), player.Object.Key);
-		return Ok(new { DbrefNumber = player.Object.Key, CreationTime = player.Object.CreationTime, player.Object.Name });
+	private UnauthorizedObjectResult ClaimRefused()
+	{
+		logger.LogInformation("link-character refused: no character with that name and password");
+		return Unauthorized("Invalid character credentials.");
 	}
 
 	/// <summary>Unlink a character from the authenticated account.</summary>
@@ -385,7 +370,10 @@ public class AccountController(
 		return NoContent();
 	}
 
-	/// <summary>Invalidate the current account session token (logout).</summary>
+	/// <summary>
+	/// Invalidate the current account session token (logout), and the browser's remembered login so a
+	/// tab opened later does not sign straight back in.
+	/// </summary>
 	[HttpPost("logout")]
 	public async Task<IActionResult> Logout()
 	{
@@ -395,6 +383,9 @@ public class AccountController(
 			var token = header["Bearer ".Length..].Trim();
 			await accountSessionStore.RevokeAsync(token);
 		}
+		if (RememberedLoginCookie.Read(Request) is { } remembered)
+			await accountSessionStore.RevokeAsync(remembered);
+		RememberedLoginCookie.Delete(Response);
 		return NoContent();
 	}
 }

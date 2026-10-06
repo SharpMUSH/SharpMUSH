@@ -31,8 +31,12 @@ public interface IAccountStore
 
 	ValueTask UpdateAccountUsernameAsync(string accountId, string newUsername, CancellationToken cancellationToken = default);
 
-	/// <summary>Creates a graph edge linking <paramref name="characterRef"/> to the account.</summary>
-	ValueTask LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);
+	/// <summary>
+	/// Links <paramref name="characterRef"/> to the account, unless another account already holds it. The check
+	/// and the write are one transaction, so of two accounts linking the same character at once exactly one wins.
+	/// </summary>
+	/// <returns>The account that holds the character instead, or null when it is now (or already was) this account's.</returns>
+	ValueTask<SharpAccount?> LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);
 
 	/// <summary>Removes the graph edge linking <paramref name="characterRef"/> to the account.</summary>
 	ValueTask UnlinkCharacterFromAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default);

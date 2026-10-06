@@ -82,4 +82,36 @@ public class DatabaseAccountSessionStoreTests
 		await Assert.That(identity).IsNull()
 			.Because("a request holding a token that has already been revoked must not authenticate");
 	}
+
+	/// <summary>
+	/// A remembered login is not a bearer, and asking it as one leaves it alone: the refusal must not
+	/// delete a credential that is still good for what it is.
+	/// </summary>
+	[Test]
+	public async Task RememberedLogin_RefusedAsABearer_IsNotSpent()
+	{
+		var spy = new SessionSpy();
+		var store = new DatabaseAccountSessionStore(spy.Database);
+		var remembered = await store.CreateRememberedLoginAsync("acct-1", TimeSpan.FromDays(90), "203.0.113.1");
+
+		await Assert.That(await store.ValidateAsync(remembered)).IsNull();
+		await Assert.That(spy.Deletes).IsEqualTo(0);
+		await Assert.That(await store.RedeemRememberedLoginAsync(remembered)).IsEqualTo("acct-1");
+	}
+
+	/// <summary>Redeeming slides a remembered login like any session, so 90 days counts from its last use.</summary>
+	[Test]
+	public async Task RememberedLogin_SlidesWhenRedeemed()
+	{
+		var spy = new SessionSpy();
+		var store = new DatabaseAccountSessionStore(spy.Database);
+		var remembered = await store.CreateRememberedLoginAsync("acct-1", TimeSpan.FromDays(90), "203.0.113.1");
+		var expiryAtMint = spy.Stored!.ExpiryUnixMs;
+
+		spy.AgeBy(TimeSpan.FromDays(30));
+		await Assert.That(await store.RedeemRememberedLoginAsync(remembered)).IsEqualTo("acct-1");
+
+		await Assert.That(spy.Touches).IsEqualTo(1);
+		await Assert.That(spy.Stored!.ExpiryUnixMs).IsGreaterThanOrEqualTo(expiryAtMint);
+	}
 }

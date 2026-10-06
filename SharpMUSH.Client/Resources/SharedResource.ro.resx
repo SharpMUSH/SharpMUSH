@@ -391,6 +391,10 @@
     <value>E-mail (opțional)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Ține-mă minte</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Introduceți datele de autentificare.</value>
     <comment>MT</comment>
@@ -5609,6 +5613,24 @@
   </data>
   <data name="WidConfirm" xml:space="preserve">
     <value>Confirmă</value>
+  </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Revendicați un personaj existent</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Revendicați un personaj</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Revendicați personajul</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Asociați acestui cont un personaj pe care îl jucați deja: creat la ecranul de conectare, de echipă sau adus din alt joc. Parola lui dovedește că este al dumneavoastră.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Aveți deja un personaj? Revendicați-l.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Creați în schimb un personaj nou.</value>
   </data>
   <data name="AuthPasskeys" xml:space="preserve">
     <value>Chei de acces</value>

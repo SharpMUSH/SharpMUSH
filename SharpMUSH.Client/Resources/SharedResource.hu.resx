@@ -391,6 +391,10 @@
     <value>E-mail (nem kötelező)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Emlékezz rám</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Adja meg a bejelentkezési adatait.</value>
     <comment>MT</comment>
@@ -5609,6 +5613,24 @@
   </data>
   <data name="WidConfirm" xml:space="preserve">
     <value>Megerősítés</value>
+  </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Meglévő karakter igénylése</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Karakter igénylése</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Karakter igénylése</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Kapcsoljon ehhez a fiókhoz egy karaktert, akivel már játszik: a csatlakozási képernyőn, a stáb által létrehozottat vagy egy másik játékból áthozottat. A jelszava bizonyítja, hogy az Öné.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Már van karaktere? Igényelje.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Inkább új karakter létrehozása.</value>
   </data>
   <data name="AuthPasskeys" xml:space="preserve">
     <value>Azonosítókulcsok</value>

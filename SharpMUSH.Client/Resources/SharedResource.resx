@@ -1210,6 +1210,9 @@
   <data name="AuthEmailOptional" xml:space="preserve">
     <value>Email (optional)</value>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Remember me</value>
+  </data>
   <data name="AuthCreateAccount" xml:space="preserve">
     <value>Create Account</value>
   </data>
@@ -6058,6 +6061,36 @@
   </data>
   <data name="PkgSettingsConfirm" xml:space="preserve">
     <value>I understand this package changes the game options above.</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Claim character</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Claim a character</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Link a character you already play to this account: one made at the game's connect screen, by staff, or brought over from another game. Its password proves it is yours.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Already have a character? Claim it.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Make a new character instead.</value>
+  </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Claim an existing character</value>
+  </data>
+  <data name="AdmCharacterLink" xml:space="preserve">
+    <value>Link to account</value>
+  </data>
+  <data name="AdmCharacterLinkAccount" xml:space="preserve">
+    <value>Account username</value>
+  </data>
+  <data name="AdmCharacterLinked" xml:space="preserve">
+    <value>Linked {0} to '{1}'.</value>
+  </data>
+  <data name="AdmLinkFailed" xml:space="preserve">
+    <value>Link failed.</value>
   </data>
   <data name="AdmMessagesTitle" xml:space="preserve">
     <value>Messages</value>

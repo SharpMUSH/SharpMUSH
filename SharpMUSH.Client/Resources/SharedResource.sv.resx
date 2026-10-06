@@ -391,6 +391,10 @@
     <value>E-post (valfritt)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Kom ihåg mig</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Ange dina inloggningsuppgifter.</value>
     <comment>MT</comment>
@@ -5609,6 +5613,24 @@
   </data>
   <data name="WidConfirm" xml:space="preserve">
     <value>Bekräfta</value>
+  </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Gör anspråk på en befintlig karaktär</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Gör anspråk på en karaktär</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Gör anspråk på karaktär</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Koppla en karaktär du redan spelar till det här kontot: en som skapades på anslutningsskärmen, av personalen eller togs med från ett annat spel. Dess lösenord bevisar att den är din.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Har du redan en karaktär? Gör anspråk på den.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Skapa en ny karaktär i stället.</value>
   </data>
   <data name="AuthPasskeys" xml:space="preserve">
     <value>Lösennycklar</value>

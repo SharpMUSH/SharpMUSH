@@ -215,7 +215,9 @@ public class AuthController(
 	}
 
 	/// <summary>Request body for account login.</summary>
-	public record AccountLoginRequest(string UsernameOrEmail, string Password);
+	/// <param name="RememberMe">Also keep the account signed in on this browser, in a
+	/// <see cref="RememberedLoginCookie"/>, for tabs opened later.</param>
+	public record AccountLoginRequest(string UsernameOrEmail, string Password, bool RememberMe = false);
 
 	/// <summary>Response body for account login and registration.</summary>
 	public record AccountLoginResponse(string AccountId, string Username,
@@ -239,7 +241,7 @@ public class AuthController(
 		switch (await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password))
 		{
 			case SharpAccount account:
-				return await AccountLoggedInAsync(account);
+				return await AccountLoggedInAsync(account, request.RememberMe);
 			case AccountUnavailable unavailable:
 				logger.LogInformation("Account login refused for {Identifier}: account is {Status}",
 					LogSanitizer.Sanitize(request.UsernameOrEmail), unavailable.Account.Status);
@@ -269,7 +271,8 @@ public class AuthController(
 	}
 
 	/// <summary>Request body for a passkey sign-in: the ceremony id and the browser's credential, as its JSON.</summary>
-	public record PasskeyLoginRequest(string? CeremonyId, JsonElement Credential);
+	/// <param name="RememberMe">As on <see cref="AccountLoginRequest"/>.</param>
+	public record PasskeyLoginRequest(string? CeremonyId, JsonElement Credential, bool RememberMe = false);
 
 	/// <summary>
 	/// Signs in with a passkey, answering as <see cref="AccountLogin"/> does. The passkey names the account.
@@ -285,7 +288,7 @@ public class AuthController(
 		{
 			SharpAccount { Status: AccountStatus.Deleted } => Unauthorized("This passkey is not registered here. It may have been removed from the account."),
 			SharpAccount { IsActive: false } account => await PasskeyRefusedAsync(account),
-			SharpAccount account => await AccountLoggedInAsync(account),
+			SharpAccount account => await AccountLoggedInAsync(account, request.RememberMe),
 			Error<string> error => Unauthorized(error.Value),
 		};
 	}
@@ -297,12 +300,19 @@ public class AuthController(
 		return StatusCode(StatusCodes.Status403Forbidden, unavailable.Message);
 	}
 
-	private async Task<IActionResult> AccountLoggedInAsync(SharpAccount account)
+	/// <param name="remember">Also start a remembered login for this browser.</param>
+	/// <param name="preferredKey">The character to bind the session to, when the account still owns it;
+	/// otherwise the primary character.</param>
+	private async Task<IActionResult> AccountLoggedInAsync(SharpAccount account, bool remember,
+		int? preferredKey = null, long? preferredCreationTime = null)
 	{
 		var characters = await accountService.GetCharactersAsync(account.Id!);
 
 		if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
 			return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+
+		if (remember)
+			await RememberAsync(account.Id!);
 
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
@@ -311,7 +321,9 @@ public class AuthController(
 		// the token names none" state for a request handler to paper over. Switching mints a new token.
 		// The pick goes through ActingCharacterResolver so that this binding and the implicit
 		// resolution a characterless session falls back to can never name different characters.
-		var primary = ActingCharacterResolver.Primary(characters);
+		var primary = characters.FirstOrDefault(c =>
+				c.Object.Key == preferredKey && c.Object.CreationTime == preferredCreationTime)
+			?? ActingCharacterResolver.Primary(characters);
 
 		// The roster carries the binding too — the token is opaque to the client, so this response is
 		// where the tab learns who it starts as.
@@ -325,7 +337,8 @@ public class AuthController(
 	}
 
 	/// <summary>Request body for account registration.</summary>
-	public record AccountRegisterRequest(string Username, string? Email, string Password);
+	/// <param name="RememberMe">As on <see cref="AccountLoginRequest"/>.</param>
+	public record AccountRegisterRequest(string Username, string? Email, string Password, bool RememberMe = false);
 
 	/// <summary>
 	/// Create a new account and return an account session. Email is optional.
@@ -345,7 +358,7 @@ public class AuthController(
 
 		return await accountService.CreateAccountAsync(request.Username, request.Email, request.Password) switch
 		{
-			SharpAccount account => await RegisteredAsync(account),
+			SharpAccount account => await RegisteredAsync(account, request.RememberMe),
 			Error<string> error => Conflict(error.Value),
 		};
 	}
@@ -353,8 +366,11 @@ public class AuthController(
 	/// <summary>
 	/// Mint the session a newly registered account signs in with.
 	/// </summary>
-	private async Task<IActionResult> RegisteredAsync(SharpAccount account)
+	private async Task<IActionResult> RegisteredAsync(SharpAccount account, bool remember)
 	{
+		if (remember)
+			await RememberAsync(account.Id!);
+
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!);
 
@@ -363,6 +379,55 @@ public class AuthController(
 		logger.LogInformation("Account registered: {Username} ({Id})", LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken,
 			account.MustChangePassword, role.ToString(), permissions.ToList()));
+	}
+
+	/// <summary>
+	/// Starts a remembered login for <paramref name="accountId"/> and hands it to the browser. One per
+	/// sign-in: a browser that signs in again gets a new one, and the one it replaced lapses on its own.
+	/// </summary>
+	private async Task RememberAsync(string accountId)
+	{
+		var token = await accountSessionStore.CreateRememberedLoginAsync(accountId, RememberedLoginCookie.Lifetime, ClientIp());
+		RememberedLoginCookie.Write(Response, token);
+	}
+
+	/// <summary>Request body for <see cref="AccountResume"/>: the character the tab was playing, if any.</summary>
+	public record AccountResumeRequest(int? CharacterKey, long? CharacterCreationTime);
+
+	/// <summary>
+	/// Signs a tab in from the browser's remembered login (<see cref="RememberedLoginCookie"/>): a tab
+	/// opened after the last one closed, or one whose own session ran out while it sat idle. Answers like
+	/// <see cref="AccountLogin"/>, with a new session bound to the requested character when the account
+	/// still owns it, and renews the remembered login for another <see cref="RememberedLoginCookie.Lifetime"/>.
+	/// </summary>
+	[HttpPost("account-resume")]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> AccountResume([FromBody] AccountResumeRequest? request)
+	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
+		if (RememberedLoginCookie.Read(Request) is not { } token)
+			return Unauthorized("This browser has no remembered login.");
+
+		if (await accountSessionStore.RedeemRememberedLoginAsync(token) is not { } accountId)
+		{
+			RememberedLoginCookie.Delete(Response);
+			return Unauthorized("The remembered login has expired or was signed out.");
+		}
+
+		var account = await accountService.GetByIdAsync(accountId);
+		if (account is null || !account.IsActive)
+		{
+			await accountSessionStore.RevokeAsync(token);
+			RememberedLoginCookie.Delete(Response);
+			return Unauthorized("Account not found or not active.");
+		}
+
+		RememberedLoginCookie.Write(Response, token);
+		logger.LogInformation("Remembered login resumed for {Username} ({Id})",
+			LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
+		return await AccountLoggedInAsync(account, remember: false, request?.CharacterKey, request?.CharacterCreationTime);
 	}
 
 	/// <summary>Response body for the debug OTT endpoint.</summary>

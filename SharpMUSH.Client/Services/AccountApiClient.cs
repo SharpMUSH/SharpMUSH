@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
 using static SharpMUSH.Client.Services.AccountAuthService;
@@ -41,18 +42,24 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	/// <param name="Flags">The new character's flags, as the roster carries them.</param>
 	public sealed record CreateCharacterResponse(int DbrefNumber, long? CreationTime, string? Flags = null);
 
+	/// <param name="Name">The character's name as the game spells it, whatever case it was typed in.</param>
+	/// <param name="Flags">The character's flags, as the roster carries them.</param>
+	public sealed record ClaimCharacterResponse(int DbrefNumber, long CreationTime, string Name, string? Flags = null);
+
 	public sealed record SetupStatusResponse(bool NeedsSetup);
 
-	private sealed record LoginRequest(string UsernameOrEmail, string Password);
-	private sealed record RegisterRequest(string Username, string? Email, string Password);
+	private sealed record LoginRequest(string UsernameOrEmail, string Password, bool RememberMe);
+	private sealed record RegisterRequest(string Username, string? Email, string Password, bool RememberMe);
+	private sealed record ResumeRequest(int? CharacterKey, long? CharacterCreationTime);
 	private sealed record SetupCompleteRequest(string Username, string Password);
 	private sealed record MushTokenRequest(string AccountSessionToken, int CharacterKey, long CharacterCreationTime);
 	private sealed record SwitchCharacterRequest(int CharacterKey, long CharacterCreationTime);
 	private sealed record CreateCharacterRequest(string Name, string Password);
+	private sealed record LinkCharacterRequest(string CharacterName, string CharacterPassword);
 	private sealed record ChangePasswordRequest(string OldPassword, string NewPassword);
 	private sealed record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 	private sealed record ChangeUsernameRequest(string NewUsername);
-	private sealed record PasskeyLoginRequest(string CeremonyId, JsonElement Credential);
+	private sealed record PasskeyLoginRequest(string CeremonyId, JsonElement Credential, bool RememberMe);
 	private sealed record PasskeyOptionsRequest(string CurrentPassword);
 	private sealed record AddPasskeyRequest(string CeremonyId, string? Name, JsonElement Credential);
 	private sealed record RenamePasskeyRequest(string Name);
@@ -68,15 +75,35 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public async Task<ApiResult<LoginResponse>> LoginAsync(string identifier, string password) =>
+	/// <param name="rememberMe">Also keep this browser signed in (see <see cref="ResumeAsync"/>).</param>
+	public async Task<ApiResult<LoginResponse>> LoginAsync(string identifier, string password, bool rememberMe) =>
 		Complete(await Client.PostApiAsync<LoginRequest, LoginResponse>(
-			"api/auth/account-login", new LoginRequest(identifier, password), NoSession));
+			"api/auth/account-login", new LoginRequest(identifier, password, rememberMe), NoSession));
 
-	public async Task<ApiResult<LoginResponse>> RegisterAsync(string username, string? email, string password) =>
+	public async Task<ApiResult<LoginResponse>> RegisterAsync(string username, string? email, string password, bool rememberMe) =>
 		Complete(await Client.PostApiAsync<RegisterRequest, LoginResponse>(
 			"api/auth/account-register",
-			new RegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password),
+			new RegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password, rememberMe),
 			NoSession));
+
+	/// <summary>
+	/// A new session for this tab from the browser's remembered login, an HttpOnly cookie the browser
+	/// sends by itself; bound to <paramref name="character"/> when the account still owns it.
+	/// </summary>
+	/// <remarks>
+	/// Sent as <see cref="AccountSessionBearerHandler.Anonymous"/>: it runs inside the hydration the
+	/// handler waits on, and it is how the handler recovers from a rejected bearer, so it must neither
+	/// wait on the one nor trigger the other.
+	/// </remarks>
+	public async Task<ApiResult<LoginResponse>> ResumeAsync(CharacterSummary? character, CancellationToken cancellationToken)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/account-resume")
+		{
+			Content = JsonContent.Create(new ResumeRequest(character?.DbrefNumber, character?.CreationTime)),
+		};
+		request.Options.Set(AccountSessionBearerHandler.Anonymous, true);
+		return Complete(await Client.SendApiAsync<LoginResponse>(request, NoSession, cancellationToken));
+	}
 
 	/// <summary>
 	/// A sign-in answer the tab can adopt whole. JSON that parses but leaves out the token, the name or
@@ -142,6 +169,12 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 			"api/account/characters", new CreateCharacterRequest(name, password),
 			"The character was created but the server described nothing.");
 
+	/// <summary>Claims an existing character for this account with the character's own password.</summary>
+	public Task<ApiResult<ClaimCharacterResponse>> ClaimCharacterAsync(string name, string password) =>
+		Client.PostApiAsync<LinkCharacterRequest, ClaimCharacterResponse>(
+			"api/account/link-character", new LinkCharacterRequest(name, password),
+			"The character was linked but the server described nothing.");
+
 	public Task<ApiResult<Success>> UnlinkCharacterAsync(int dbrefNumber) =>
 		Client.DeleteApiAsync($"api/account/characters/{dbrefNumber}");
 
@@ -157,9 +190,9 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<PasskeyChallenge>> PasskeyLoginOptionsAsync() =>
 		Client.PostApiAsync<object?, PasskeyChallenge>("api/auth/passkey-login/options", null, "The server started no passkey sign-in.");
 
-	public async Task<ApiResult<LoginResponse>> PasskeyLoginAsync(string ceremonyId, JsonElement credential) =>
+	public async Task<ApiResult<LoginResponse>> PasskeyLoginAsync(string ceremonyId, JsonElement credential, bool rememberMe) =>
 		Complete(await Client.PostApiAsync<PasskeyLoginRequest, LoginResponse>(
-			"api/auth/passkey-login", new PasskeyLoginRequest(ceremonyId, credential), NoSession));
+			"api/auth/passkey-login", new PasskeyLoginRequest(ceremonyId, credential, rememberMe), NoSession));
 
 	public Task<ApiResult<IReadOnlyList<PasskeySummary>>> PasskeysAsync() =>
 		Client.GetApiAsync<IReadOnlyList<PasskeySummary>>("api/account/passkeys", "The server returned no passkey list.");

@@ -35,6 +35,11 @@ public sealed class FakeAccountAuthState : IAccountAuthState
 
 	public Task InitAsync() => Task.CompletedTask;
 
+	/// <summary>What <see cref="RenewSessionAsync"/> answers.</summary>
+	public string? RenewedToken { get; set; }
+
+	public Task<string?> RenewSessionAsync(string rejectedToken) => Task.FromResult(RenewedToken);
+
 	public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync()
 	{
 		DebugOttCallCount++;

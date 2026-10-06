@@ -391,6 +391,10 @@
     <value>Correo electrónico (opcional)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Recordarme</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Introduzca sus credenciales.</value>
     <comment>MT</comment>
@@ -5609,6 +5613,24 @@
   </data>
   <data name="WidConfirm" xml:space="preserve">
     <value>Confirmar</value>
+  </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Reclamar un personaje existente</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Reclamar un personaje</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Reclamar personaje</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Vincule a esta cuenta un personaje que ya interpreta: uno creado en la pantalla de conexión, por el equipo o traído de otro juego. Su contraseña demuestra que es suyo.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>¿Ya tiene un personaje? Reclámelo.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Crear un personaje nuevo en su lugar.</value>
   </data>
   <data name="AuthPasskeys" xml:space="preserve">
     <value>Llaves de acceso</value>

@@ -311,6 +311,57 @@ public class ModerationControllerTests : ServerTestBase
 		}
 	}
 
+	[Test]
+	public async Task LinkingACharacterAttachesItToTheNamedAccountAndIsAudited()
+	{
+		var staff = await PersonAsync("ModLinkStaff", wizard: true);
+		var holder = await PersonAsync("ModLinkHolder");
+		var character = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "ModLinkLoose");
+		try
+		{
+			var result = await (await CharactersAs(staff, Substitute.For<IEventService>())).Link(character.DbRef.Number, null,
+				new AdminLinkCharacterRequest(holder.Account.Username), CancellationToken.None);
+
+			await Assert.That(result).IsTypeOf<NoContentResult>();
+			await Assert.That((await Accounts.GetAccountForCharacterAsync(character.DbRef))?.Id).IsEqualTo(holder.Account.Id);
+			var entry = (await AuditAbout(await Objid(character.DbRef))).Single(e => e.Action == AuditActions.CharacterLink);
+			await Assert.That(entry.Source).IsEqualTo(AuditSource.Portal);
+			await Assert.That(entry.Details).IsEqualTo(holder.Account.Username);
+		}
+		finally
+		{
+			await CleanupAsync(staff, holder);
+			await ConnectionService.Disconnect(character.Handle);
+		}
+	}
+
+	[Test]
+	public async Task LinkingRefusesACharacterOnAnotherAccountAndAWizardForAModerator()
+	{
+		var staff = await PersonAsync("ModLinkMod");
+		var wizard = await PersonAsync("ModLinkWiz", wizard: true);
+		var other = await PersonAsync("ModLinkOther");
+		try
+		{
+			var controller = await CharactersAs(staff, Substitute.For<IEventService>());
+
+			var held = await controller.Link(other.Player.DbRef.Number, null,
+				new AdminLinkCharacterRequest(staff.Account.Username), CancellationToken.None);
+			var outranked = await controller.Link(wizard.Player.DbRef.Number, null,
+				new AdminLinkCharacterRequest(staff.Account.Username), CancellationToken.None);
+
+			await Assert.That(held).IsTypeOf<ConflictObjectResult>();
+			await Assert.That((await Accounts.GetAccountForCharacterAsync(other.Player.DbRef))?.Id).IsEqualTo(other.Account.Id);
+			await Assert.That(((ObjectResult)outranked).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
+			await Assert.That((await Accounts.GetAccountForCharacterAsync(wizard.Player.DbRef))?.Id).IsEqualTo(wizard.Account.Id);
+		}
+		finally
+		{
+			await CleanupAsync(staff, wizard, other);
+		}
+	}
+
 	private sealed class FixedClock(DateTimeOffset now) : TimeProvider
 	{
 		public override DateTimeOffset GetUtcNow() => now;

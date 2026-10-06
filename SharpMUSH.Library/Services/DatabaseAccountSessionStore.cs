@@ -30,8 +30,15 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : 
 	/// </remarks>
 	private const double SlidePersistThresholdFractionOfTtl = 0.02;
 
-	public async Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, string originIp,
+	public Task<string> CreateTokenAsync(string accountId, TimeSpan ttl, string originIp,
 		int? characterKey = null, long? characterCreationTime = null, CancellationToken ct = default)
+		=> CreateAsync(accountId, ttl, originIp, characterKey, characterCreationTime, remembered: false, ct);
+
+	public Task<string> CreateRememberedLoginAsync(string accountId, TimeSpan ttl, string originIp, CancellationToken ct = default)
+		=> CreateAsync(accountId, ttl, originIp, characterKey: null, characterCreationTime: null, remembered: true, ct);
+
+	private async Task<string> CreateAsync(string accountId, TimeSpan ttl, string originIp,
+		int? characterKey, long? characterCreationTime, bool remembered, CancellationToken ct)
 	{
 		var token = Guid.NewGuid().ToString("N");
 		await database.UpsertSessionAsync(new SharpSession
@@ -42,15 +49,26 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : 
 			ExpiryUnixMs = DateTimeOffset.UtcNow.Add(ttl).ToUnixTimeMilliseconds(),
 			TtlMs = (long)ttl.TotalMilliseconds,
 			CharacterKey = characterKey,
-			CharacterCreationTime = characterCreationTime
+			CharacterCreationTime = characterCreationTime,
+			Remembered = remembered
 		}, ct);
 		return token;
 	}
 
-	public async Task<IAccountSessionStore.SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default)
+	public Task<IAccountSessionStore.SessionIdentity?> ValidateAsync(string token, CancellationToken ct = default)
+		=> ValidateAsync(token, remembered: false, ct);
+
+	public async Task<string?> RedeemRememberedLoginAsync(string token, CancellationToken ct = default)
+		=> await ValidateAsync(token, remembered: true, ct) is { } identity ? identity.AccountId : null;
+
+	/// <summary>
+	/// Validates <paramref name="token"/> as the kind of credential the caller takes. A tab session presented
+	/// as a remembered login, or the reverse, is refused and left alone: it is still good for what it is.
+	/// </summary>
+	private async Task<IAccountSessionStore.SessionIdentity?> ValidateAsync(string token, bool remembered, CancellationToken ct)
 	{
 		var s = await database.GetSessionAsync(token, ct);
-		if (s is null) return null;
+		if (s is null || s.Remembered != remembered) return null;
 
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		// ExpiryUnixMs is the instant the session expires at, not the last instant it is usable.

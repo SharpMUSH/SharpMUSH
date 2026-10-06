@@ -167,6 +167,53 @@ public class AccountService(
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
 	}
 
+	public async ValueTask<CharacterClaim> ClaimCharacterAsync(string accountId, string characterName, string password,
+		CancellationToken ct = default)
+	{
+		var character = await objects.GetPlayerByNameOrAliasAsync(characterName, ct).FirstOrDefaultAsync(ct);
+		if (character is null)
+			return new NotFound();
+
+		if (await CharacterPasswordMatchesAsync(character, password))
+			return await AttachCharacterAsync(accountId, character, ct) switch
+			{
+				SharpPlayer linked => linked,
+				LinkedElsewhere elsewhere => elsewhere,
+			};
+
+		// The password of the account that holds the character moves it here: whoever holds that account
+		// already holds the character.
+		return await database.GetAccountForCharacterAsync(character.Object.DBRef, ct) is { } holder
+			&& holder.Id != accountId
+			&& !string.IsNullOrEmpty(holder.PasswordHash)
+			&& passwordService.PasswordIsValid(password, holder.PasswordHash)
+				? await MoveCharacterAsync(holder, accountId, character, ct)
+				: new NotFound();
+	}
+
+	private async ValueTask<CharacterClaim> MoveCharacterAsync(SharpAccount holder, string accountId, SharpPlayer character,
+		CancellationToken ct)
+	{
+		await UnlinkCharacterAsync(holder.Id!, character.Object.DBRef, ct);
+		return await AttachCharacterAsync(accountId, character, ct) switch
+		{
+			SharpPlayer linked => linked,
+			LinkedElsewhere elsewhere => elsewhere,
+		};
+	}
+
+	public async ValueTask<CharacterLink> AttachCharacterAsync(string accountId, SharpPlayer character, CancellationToken ct = default)
+	{
+		// The store checks for another holder inside the write, so two claims racing for one character
+		// cannot both land.
+		if (await database.LinkCharacterToAccountAsync(accountId, character.Object.DBRef, ct) is { } holder)
+			return new LinkedElsewhere(character, holder);
+
+		if (claimsInvalidator is not null)
+			await claimsInvalidator.InvalidateAsync(accountId, ct);
+		return character;
+	}
+
 	/// <remarks>
 	/// The security-relevant direction: unlinking the last character drops the account back to Guest,
 	/// and leaving Player scopes cached would keep granting them after the entitlement is gone.

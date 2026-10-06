@@ -162,13 +162,18 @@ public partial class LightningDatabase
 		}, cancellationToken);
 	}
 
-	public async ValueTask LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
+	public async ValueTask<SharpAccount?> LinkCharacterToAccountAsync(string accountId, DBRef characterRef, CancellationToken cancellationToken = default)
 	{
 		var key = ParseAccountId(accountId);
-		await Store.WriteAsync(tx =>
+		return await Store.WriteAsync(tx =>
 		{
+			if (tx.TryGet(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), out var heldBy)
+					&& Keys.ReadStr(heldBy) is var holder && holder != key)
+				return ReadAccountByKey(tx, holder);
+
 			tx.Put(Tables.AccountChar.Forward, Keys.Str(key), Keys.Dbref(characterRef.Number));
 			tx.Put(Tables.AccountChar.Reverse, Keys.Dbref(characterRef.Number), Keys.Str(key));
+			return null;
 		}, cancellationToken);
 	}
 

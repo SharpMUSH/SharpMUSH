@@ -391,6 +391,10 @@
     <value>E-mail (opcjonalnie)</value>
     <comment>MT</comment>
   </data>
+  <data name="AuthRememberMe" xml:space="preserve">
+    <value>Zapamiętaj mnie</value>
+    <comment>MT</comment>
+  </data>
   <data name="AuthEnterCredentials" xml:space="preserve">
     <value>Proszę podać dane logowania.</value>
     <comment>MT</comment>
@@ -5609,6 +5613,24 @@
   </data>
   <data name="WidConfirm" xml:space="preserve">
     <value>Potwierdź</value>
+  </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Przejmij istniejącą postać</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Przejmij postać</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Przejmij postać</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Powiąż z tym kontem postać, którą już grasz: utworzoną na ekranie połączenia, przez obsługę lub przeniesioną z innej gry. Jej hasło dowodzi, że należy do ciebie.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Masz już postać? Przejmij ją.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Zamiast tego utwórz nową postać.</value>
   </data>
   <data name="AuthPasskeys" xml:space="preserve">
     <value>Klucze dostępu</value>

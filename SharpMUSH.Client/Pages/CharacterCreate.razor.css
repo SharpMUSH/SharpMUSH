@@ -15,6 +15,10 @@
     margin-top: 1.25rem;
 }
 
+.charcreate-page ::deep .charcreate-switch {
+    margin-top: 1rem;
+}
+
 @container page (max-width: 48rem) {
     .charcreate-page {
         padding: var(--cpad-mobile);
