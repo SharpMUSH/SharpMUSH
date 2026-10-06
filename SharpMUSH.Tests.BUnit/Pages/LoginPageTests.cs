@@ -102,6 +102,24 @@ public class LoginPageRenderTests : BunitContext
 		await Assert.That(cut.Find("a[href='/play']")).IsNotNull();
 	}
 
+	/// <summary>The passkey button is offered only by a browser that can use one.</summary>
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments(true)]
+	[TUnit.Core.Arguments(false)]
+	public async Task Login_OffersPasskeySignIn_OnlyWhereSupported(bool supported)
+	{
+		SeedServices();
+		JSInterop.Setup<bool>("SharpMUSH.Passkeys.isSupported").SetResult(supported);
+
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+
+		if (supported)
+			cut.WaitForAssertion(() => cut.Find("button.login-passkey"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("button.login-passkey").Count).IsEqualTo(supported ? 1 : 0);
+		if (supported)
+			await Assert.That(cut.Find("button.login-passkey").TextContent).Contains("AuthPasskeySignIn");
+	}
+
 	[TUnit.Core.Test]
 	public async Task Login_DefaultsToSignInTab()
 	{

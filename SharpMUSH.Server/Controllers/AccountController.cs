@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -10,6 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Authentication.Passkeys;
 using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Controllers;
@@ -27,6 +30,7 @@ public class AccountController(
 	IPasswordService passwordService,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IValidateService validateService,
+	PasskeyService passkeys,
 	ILogger<AccountController> logger) : ControllerBase
 {
 	/// <summary>
@@ -283,6 +287,102 @@ public class AccountController(
 			Success => NoContent(),
 			Error<string> err => Conflict(err.Value)
 		};
+	}
+
+	/// <summary>A passkey as the account's owner sees it. <paramref name="Id"/> is its credential id, base64url.</summary>
+	public record PasskeySummary(string Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt, bool IsSynced);
+
+	private static PasskeySummary Summarize(AccountPasskey passkey)
+		=> new(PasskeyService.IdOf(passkey), passkey.Name, passkey.CreatedAt, passkey.LastUsedAt, passkey.IsBackedUp);
+
+	/// <summary>The account's passkeys, oldest first.</summary>
+	[HttpGet("passkeys")]
+	public async Task<IActionResult> GetPasskeys()
+	{
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
+
+		var held = await passkeys.ListAsync(accountId!);
+		return Ok(held.Select(Summarize).ToList());
+	}
+
+	public record PasskeyOptionsRequest(string CurrentPassword);
+
+	/// <summary>
+	/// Starts adding a passkey: the options the browser hands to <c>navigator.credentials.create</c>. Asks
+	/// for the password the holder signs in with, so a session alone cannot plant a passkey of its own.
+	/// </summary>
+	[HttpPost("passkeys/options")]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> PasskeyOptions([FromBody] PasskeyOptionsRequest request)
+	{
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
+
+		var account = await accountService.GetByIdAsync(accountId!);
+		if (account is null) return Unauthorized("Account not found or not active.");
+
+		if (await accountService.AuthenticateAsync(account.Username, request.CurrentPassword ?? string.Empty) is not SharpAccount confirmed
+			|| confirmed.Id != account.Id)
+			return Unauthorized("Current password is incorrect.");
+
+		return await passkeys.BeginRegistrationAsync(account, Request, HttpContext.RequestAborted) switch
+		{
+			PasskeyService.Challenge challenge => Ok(challenge),
+			Error<string> error => BadRequest(error.Value),
+		};
+	}
+
+	public record AddPasskeyRequest(string? CeremonyId, string? Name, JsonElement Credential);
+
+	/// <summary>Finishes adding a passkey with the browser's new credential.</summary>
+	[HttpPost("passkeys")]
+	public async Task<IActionResult> AddPasskey([FromBody] AddPasskeyRequest request)
+	{
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
+
+		return await passkeys.CompleteRegistrationAsync(accountId!, request.CeremonyId, request.Name, request.Credential,
+				HttpContext.RequestAborted) switch
+		{
+			AccountPasskey passkey => Ok(Summarize(passkey)),
+			Error<string> error => BadRequest(error.Value),
+		};
+	}
+
+	public record RenamePasskeyRequest(string Name);
+
+	/// <summary>Renames one of the account's passkeys.</summary>
+	[HttpPut("passkeys/{id}")]
+	public async Task<IActionResult> RenamePasskey(string id, [FromBody] RenamePasskeyRequest request)
+	{
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
+
+		var name = request.Name?.Trim();
+		if (string.IsNullOrEmpty(name))
+			return BadRequest("A passkey needs a name.");
+		if (name.Length > PasskeyService.MaxNameLength)
+			return BadRequest($"A passkey's name can be at most {PasskeyService.MaxNameLength} characters.");
+
+		return PasskeyService.CredentialIdOf(id) is { } credentialId
+			&& await passkeys.RenameAsync(accountId!, credentialId, name)
+				? NoContent()
+				: NotFound("No such passkey on this account.");
+	}
+
+	/// <summary>Removes one of the account's passkeys. It can no longer sign in.</summary>
+	[HttpDelete("passkeys/{id}")]
+	public async Task<IActionResult> RemovePasskey(string id)
+	{
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
+
+		if (PasskeyService.CredentialIdOf(id) is not { } credentialId
+			|| !await passkeys.RemoveAsync(accountId!, credentialId))
+			return NotFound("No such passkey on this account.");
+
+		return NoContent();
 	}
 
 	/// <summary>

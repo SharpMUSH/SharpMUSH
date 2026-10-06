@@ -5611,4 +5611,88 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Tilgangsnøkler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Logg inn med fingeravtrykk, ansikt eller enhetens PIN-kode i stedet for å skrive passordet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>Ingen tilgangsnøkler ennå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>Denne nettleseren støtter ikke tilgangsnøkler.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Legg til en tilgangsnøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Navn på tilgangsnøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Opprett tilgangsnøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Tilgangsnøkkelen er lagt til.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Tilgangsnøkkelen er fjernet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Gi nytt navn til tilgangsnøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Fjern tilgangsnøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>Fjerne {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>Denne tilgangsnøkkelen kan ikke lenger logge inn på kontoen din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Lagt til {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Sist brukt {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Aldri brukt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Synkronisert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Logg inn med en tilgangsnøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Linje {0}: denne ::: har ikke noe navn og åpner derfor en tom blokk. Hvis den skulle lukke en blokk, gi blokken rundt flere kolon enn blokkene inni den.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Linje {0}: ::: -blokken som åpnes her, lukkes aldri og går til slutten av siden eller av blokken rundt.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Linje {0}: dette står i en flex, men utenfor et ::: item, og blir derfor en egen kolonne.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Linje {0}: et ::: item legges bare ut direkte inne i en flex.</value>
+  </data>
 </root>

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.JSInterop;
 using SharpMUSH.Library.DiscriminatedUnions;
 using static SharpMUSH.Client.Services.AccountApiClient;
@@ -34,6 +35,7 @@ public class AccountAuthService(
 	private readonly AccountApiClient _api = new(httpClientFactory);
 	private readonly AccountSessionStorage _storage = new(js);
 	private readonly ActiveCharacterState _roster = new(logger);
+	private readonly PasskeyInterop _passkeys = new(js);
 
 	/// <summary><paramref name="IsActing"/> is the server's answer to "who is this tab?" — the acting
 	/// character is bound to the session token, which is opaque here, so the roster carries it.</summary>
@@ -364,6 +366,42 @@ public class AccountAuthService(
 		{
 			LoginResponse session => await SignedInAsync(session),
 			ApiFailure failure => Logged(failure, "Account login"),
+		};
+
+	/// <inheritdoc cref="PasskeyInterop.IsSupportedAsync"/>
+	public Task<bool> PasskeysSupportedAsync() => _passkeys.IsSupportedAsync();
+
+	/// <summary>
+	/// Signs in with a passkey the visitor picks in the browser's prompt; the passkey names the account.
+	/// Answers with the account's roster, as <see cref="LoginAsync"/> does.
+	/// </summary>
+	/// <param name="rememberMe">As on <see cref="LoginAsync"/>.</param>
+	public async Task<PasskeyOutcome<IReadOnlyList<CharacterSummary>>> LoginWithPasskeyAsync(bool rememberMe = false) =>
+		await _api.PasskeyLoginOptionsAsync() switch
+		{
+			PasskeyChallenge challenge => await SignInWithPasskeyAsync(challenge, rememberMe),
+			ApiFailure failure => Logged(failure, "Passkey login"),
+		};
+
+	private async Task<PasskeyOutcome<IReadOnlyList<CharacterSummary>>> SignInWithPasskeyAsync(PasskeyChallenge challenge,
+		bool rememberMe) =>
+		await _passkeys.GetAsync(challenge.Options) switch
+		{
+			JsonElement credential => await PasskeySignedInAsync(challenge.CeremonyId, credential, rememberMe),
+			PasskeyCancelled cancelled => cancelled,
+			ApiFailure failure => Logged(failure, "Passkey prompt"),
+		};
+
+	private async Task<PasskeyOutcome<IReadOnlyList<CharacterSummary>>> PasskeySignedInAsync(string ceremonyId,
+		JsonElement credential, bool rememberMe) =>
+		await _api.PasskeyLoginAsync(ceremonyId, credential, rememberMe) switch
+		{
+			LoginResponse session => await SignedInAsync(session) switch
+			{
+				IReadOnlyList<CharacterSummary> characters => new PasskeyOutcome<IReadOnlyList<CharacterSummary>>(characters),
+				ApiFailure failure => failure,
+			},
+			ApiFailure failure => Logged(failure, "Passkey login"),
 		};
 
 	/// <summary>Creates an account and signs in to it; answers with its (empty) roster.</summary>

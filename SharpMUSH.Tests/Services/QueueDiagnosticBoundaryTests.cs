@@ -19,12 +19,12 @@ namespace SharpMUSH.Tests.Services;
 public class QueueDiagnosticBoundaryTests
 {
 	private static Scheduler Create(QueueDiagnosticsRecorder recorder, IMediator? mediator = null,
-		IMUSHCodeParser? parser = null, INotifyService? notify = null)
+		IMUSHCodeParser? parser = null, INotifyService? notify = null, IConnectionService? connections = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(config with { Limit = config.Limit with { QueueEntryCpuTime = 1000 } });
-		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
+		return new(parser ?? Substitute.For<IMUSHCodeParser>(), connections ?? Substitute.For<IConnectionService>(),
 			Substitute.For<ISchedulerFactory>(), Substitute.For<IAttributeService>(), mediator ?? QueueAdmissionTests.TargetMediator(),
 			NullLogger<Scheduler>.Instance, options, notify, diagnostics: recorder);
 	}
@@ -48,25 +48,35 @@ public class QueueDiagnosticBoundaryTests
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var notify = Substitute.For<INotifyService>();
 		// A line typed before login has no enactor object, so its connection hears "CPU usage exceeded.".
+		// It is timed only if the login lands before it runs.
 		notify.NotifyLocalized(Arg.Any<long>(), "CpuUsageExceeded", Arg.Any<AnySharpObject?>(), Arg.Any<object[]>())
 			.Returns(async ValueTask (_) =>
 			{
 				entered.TrySetResult(DateTimeOffset.UtcNow);
 				await release.Task.WaitAsync(ExecutionBudget.CurrentToken);
 			});
-		await using var queue = Create(recorder, parser: parser, notify: notify);
+		var connections = Substitute.For<IConnectionService>();
+		await using var queue = Create(recorder, parser: parser, notify: notify, connections: connections);
+		var blocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var loggedIn = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await loggedIn.Task; return null; }, "blocker", "test");
 		try
 		{
+			await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
 			var admission = await queue.AdmitUserCommand(42, MarkupText.Plain("ignored"), ParserState.Empty);
 			await Assert.That(admission.Accepted).IsTrue();
+			connections.Get(42).Returns(new IConnectionService.ConnectionData(42, new DBRef(10),
+				IConnectionService.ConnectionState.LoggedIn, _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+				() => System.Text.Encoding.UTF8, new System.Collections.Concurrent.ConcurrentDictionary<string, string>()));
+			loggedIn.TrySetResult();
 			var notificationStarted = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			await Assert.That(recorder.Recent().Count).IsEqualTo(1);
-			var row = recorder.Recent().Single();
+			await Assert.That(recorder.Recent().Count).IsEqualTo(2);
+			var row = recorder.Recent().Single(r => r.Outcome == QueueOutcome.ExecutionLimit);
 			await Assert.That(row.Outcome).IsEqualTo(QueueOutcome.ExecutionLimit);
 			await Assert.That(row.EndedAt <= notificationStarted).IsTrue();
 			await Assert.That(row.ExecutionDuration).IsNotNull();
 		}
-		finally { release.TrySetResult(); }
+		finally { loggedIn.TrySetResult(); release.TrySetResult(); }
 	}
 
 	[Test]

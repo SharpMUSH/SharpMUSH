@@ -5611,4 +5611,88 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Toegangssleutels</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Log in met je vingerafdruk, gezicht of apparaatpincode in plaats van je wachtwoord te typen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>Nog geen toegangssleutels.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>Deze browser ondersteunt geen toegangssleutels.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Toegangssleutel toevoegen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Naam van toegangssleutel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Toegangssleutel maken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Toegangssleutel toegevoegd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Toegangssleutel verwijderd.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Toegangssleutel hernoemen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Toegangssleutel verwijderen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>{0} verwijderen?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>Met deze toegangssleutel kun je niet meer inloggen op je account.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Toegevoegd op {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Laatst gebruikt op {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Nooit gebruikt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Gesynchroniseerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Inloggen met een toegangssleutel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Regel {0}: deze ::: heeft geen naam en opent dus een leeg blok. Als hij een blok moest sluiten, geef het omringende blok dan meer dubbele punten dan de blokken erin.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Regel {0}: het hier geopende :::-blok wordt nooit gesloten en loopt door tot het einde van de pagina of van het omringende blok.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Regel {0}: dit staat in een flex maar buiten een ::: item, en wordt dus een eigen kolom.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Regel {0}: een ::: item wordt alleen direct binnen een flex uitgelijnd.</value>
+  </data>
 </root>

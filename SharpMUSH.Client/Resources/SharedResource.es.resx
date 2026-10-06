@@ -5611,4 +5611,88 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Llaves de acceso</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Inicie sesión con su huella, su cara o el PIN del dispositivo en lugar de escribir su contraseña.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>Aún no hay llaves de acceso.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>Este navegador no admite llaves de acceso.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Añadir una llave de acceso</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Nombre de la llave</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Crear llave de acceso</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Llave de acceso añadida.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Llave de acceso eliminada.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Cambiar nombre de la llave</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Eliminar llave de acceso</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>¿Eliminar {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>Esta llave de acceso ya no podrá iniciar sesión en su cuenta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Añadida el {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Último uso: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Nunca usada</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Sincronizada</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Iniciar sesión con una llave de acceso</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Línea {0}: este ::: no tiene nombre, así que abre un bloque vacío. Si debía cerrar un bloque, dale al bloque que lo rodea más dos puntos que a los bloques que contiene.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Línea {0}: el bloque ::: abierto aquí nunca se cierra y llega hasta el final de la página o del bloque que lo rodea.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Línea {0}: esto está dentro de un flex pero fuera de cualquier ::: item, así que se convierte en una columna propia.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Línea {0}: un ::: item solo se distribuye directamente dentro de un flex.</value>
+  </data>
 </root>

@@ -1,6 +1,6 @@
 format: 1
 package: profile-handler
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
@@ -71,10 +71,15 @@ objects:
       # inside the captured scope, which is why it showed in CI and in no local run.
       #
       # switch() evaluates only the arm it selects, so an empty ref means the comparison is never
-      # reached rather than reached with nothing in it. A game whose ref does resolve compares exactly
-      # as before.
+      # reached rather than reached with nothing in it.
+      #
+      # The ref is never located either. It installs as an objid, and an objid stops resolving when
+      # the object behind it is recreated or the world is replaced under the installed package; num()
+      # on it then notified once per player, the same broken body as above. before(%q<pm>,:) is the
+      # ref's dbref, compared as text, so a stale creation time still hides the seeded principal and
+      # nothing is ever notified.
       FN`CHARVIS: |-
-        cand(not(strmatch(u(FN`CHARCAT,%0),Guest)),switch(setr(pm,{{$package_manager}}),,1,not(strmatch(num(%0),num(%q<pm>)))))
+        cand(not(strmatch(u(FN`CHARCAT,%0),Guest)),switch(setr(pm,{{$package_manager}}),,1,not(strmatch(num(%0),before(%q<pm>,:)))))
       # Online visibility predicate (%0): the character-directory rules. mwho() already hides DARK,
       # so the DARK guard here is just a belt-and-suspenders default. Redefine to suit.
       FN`ONLINEVIS: |-

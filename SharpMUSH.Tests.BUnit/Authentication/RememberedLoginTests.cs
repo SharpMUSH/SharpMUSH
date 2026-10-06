@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.JSInterop;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.Shared;
@@ -244,5 +246,73 @@ public class BearerRenewalTests
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 		await Assert.That(server.Seen.Select(s => s.Bearer)).IsEquivalentTo(new string?[] { null });
+	}
+}
+
+/// <summary>The passkey button signs in with the same Remember me choice as the password one.</summary>
+public class PasskeyRememberMeTests
+{
+	/// <summary>Empty storage, and a passkey prompt that answers with a credential.</summary>
+	private sealed class PasskeyBrowser : IJSRuntime
+	{
+		public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+			InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+		public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+			ValueTask.FromResult(identifier == "SharpMUSH.Passkeys.get"
+				? JsonSerializer.Deserialize<TValue>("""{"credential":"{\"id\":\"cred\"}","error":null,"cancelled":false}""",
+					JsonSerializerOptions.Web)!
+				: default!);
+	}
+
+	private sealed class PasskeyServer : HttpMessageHandler
+	{
+		public string? LoginBody { get; private set; }
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			switch (request.RequestUri!.AbsolutePath)
+			{
+				case "/api/auth/passkey-login/options":
+					return new HttpResponseMessage(HttpStatusCode.OK)
+					{
+						Content = JsonContent.Create(new { ceremonyId = "ceremony-1", options = new { challenge = "abc" } })
+					};
+				case "/api/auth/passkey-login":
+					LoginBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+					return new HttpResponseMessage(HttpStatusCode.OK)
+					{
+						Content = JsonContent.Create(new
+						{
+							accountId = "acct-1",
+							username = "headwiz",
+							characters = Array.Empty<object>(),
+							accountSessionToken = "passkey-token",
+							mustChangePassword = false,
+							role = "Player",
+							permissions = Array.Empty<string>(),
+						})
+					};
+				default:
+					return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+			}
+		}
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task APasskeySignIn_CarriesTheRememberMeChoice(bool rememberMe)
+	{
+		var server = new PasskeyServer();
+		using var http = new HttpClient(server) { BaseAddress = new Uri("https://localhost:8081/") };
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient("api").Returns(http);
+		var service = new AccountAuthService(factory, new PasskeyBrowser(), NullLogger<AccountAuthService>.Instance, []);
+
+		var outcome = await service.LoginWithPasskeyAsync(rememberMe);
+
+		await Assert.That(outcome is IReadOnlyList<AccountAuthService.CharacterSummary>).IsTrue();
+		await Assert.That(server.LoginBody!).Contains($"\"rememberMe\":{(rememberMe ? "true" : "false")}");
 	}
 }

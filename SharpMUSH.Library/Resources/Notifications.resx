@@ -712,9 +712,6 @@
   </data>
 
   <!-- Connection lifecycle -->
-  <data name="Connected" xml:space="preserve">
-    <value>Connected!</value>
-  </data>
   <data name="WelcomeBackFormat" xml:space="preserve">
     <value>Welcome back, {0}!</value>
   </data>

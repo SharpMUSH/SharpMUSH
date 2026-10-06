@@ -32,6 +32,13 @@ public class AuthControllerDebugOttTests
 			options,
 			env,
 			new SharpMUSH.Server.Authentication.SitelockGuard(options),
+			new SharpMUSH.Server.Authentication.Passkeys.PasskeyService(
+				Substitute.For<SharpMUSH.Library.IAccountStore>(),
+				new SharpMUSH.Server.Authentication.Passkeys.PasskeyRelyingParty(
+					new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build(), options),
+				new SharpMUSH.Server.Authentication.Passkeys.PasskeyCeremonyStore(TimeProvider.System),
+				TimeProvider.System,
+				Substitute.For<Microsoft.Extensions.Logging.ILogger<SharpMUSH.Server.Authentication.Passkeys.PasskeyService>>()),
 			Substitute.For<Microsoft.Extensions.Logging.ILogger<AuthController>>());
 	}
 

@@ -5611,4 +5611,88 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthPasskeys" xml:space="preserve">
+    <value>Chei de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysDescription" xml:space="preserve">
+    <value>Conectează-te cu amprenta, fața sau PIN-ul dispozitivului în loc să tastezi parola.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeysNone" xml:space="preserve">
+    <value>Nu există încă chei de acces.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyUnsupported" xml:space="preserve">
+    <value>Acest browser nu acceptă chei de acces.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdd" xml:space="preserve">
+    <value>Adaugă o cheie de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyName" xml:space="preserve">
+    <value>Numele cheii de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreate" xml:space="preserve">
+    <value>Creează cheia de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyAdded" xml:space="preserve">
+    <value>Cheia de acces a fost adăugată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoved" xml:space="preserve">
+    <value>Cheia de acces a fost eliminată.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRename" xml:space="preserve">
+    <value>Redenumește cheia de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemove" xml:space="preserve">
+    <value>Elimină cheia de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirmTitle" xml:space="preserve">
+    <value>Elimini {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyRemoveConfirm" xml:space="preserve">
+    <value>Această cheie de acces nu se va mai putea conecta la contul tău.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyCreatedOn" xml:space="preserve">
+    <value>Adăugată la {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyLastUsed" xml:space="preserve">
+    <value>Folosită ultima dată la {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeyNeverUsed" xml:space="preserve">
+    <value>Nefolosită</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySynced" xml:space="preserve">
+    <value>Sincronizată</value>
+    <comment>MT</comment>
+  </data>
+  <data name="AuthPasskeySignIn" xml:space="preserve">
+    <value>Conectează-te cu o cheie de acces</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Rândul {0}: acest ::: nu are nume, deci deschide un bloc gol. Dacă trebuia să închidă un bloc, dă blocului din jur mai multe două puncte decât blocurilor din el.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Rândul {0}: blocul ::: deschis aici nu se închide niciodată și ține până la sfârșitul paginii sau al blocului din jur.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Rândul {0}: acesta este într-un flex, dar în afara oricărui ::: item, deci devine o coloană separată.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Rândul {0}: un ::: item se așază doar direct în interiorul unui flex.</value>
+  </data>
 </root>

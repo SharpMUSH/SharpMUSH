@@ -18,6 +18,60 @@ public class WikiMarkdigPipelineTests
 		await Assert.That(html).Contains("<strong>world</strong>");
 	}
 
+	/// <summary>An attribute block keeps ids and plain class names, never event handlers or styles.</summary>
+	[Test]
+	[Arguments("# Title {onclick=\"alert(1)\" style=\"position:fixed\"}")]
+	[Arguments("::: note {onmouseover=alert(1)}\nA\n:::")]
+	[Arguments("[a](/x){onclick=alert(1)}")]
+	public async Task RenderToHtml_AttributeBlock_DropsScriptAndStyle(string markdown)
+	{
+		var html = Pipeline().RenderToHtml(markdown);
+
+		await Assert.That(html).DoesNotContain("alert(1)");
+		await Assert.That(html).DoesNotContain("style=");
+	}
+
+	/// <summary>A link, autolink or image may not use a <c>javascript:</c> (or other script) scheme.</summary>
+	[Test]
+	[Arguments("[x](javascript:alert(1))")]
+	[Arguments("<javascript:alert(1)>")]
+	[Arguments("![i](javascript:alert(1))")]
+	[Arguments("[x](JaVaScRiPt:alert(1))")]
+	[Arguments("[x](java&#x09;script:alert(1))")]
+	[Arguments("[x](data:text/html,hi)")]
+	public async Task RenderToHtml_ScriptUrl_IsDropped(string markdown)
+	{
+		var html = Pipeline().RenderToHtml(markdown);
+
+		await Assert.That(html).DoesNotContain("href=\"javascript").And.DoesNotContain("src=\"javascript")
+			.And.DoesNotContain("href=\"data:").And.DoesNotContain("href=\"java\tscript");
+		await Assert.That(html.Contains("href=\"\"") || html.Contains("src=\"\"")).IsTrue();
+	}
+
+	/// <summary>Ordinary links and heading anchors are untouched.</summary>
+	[Test]
+	public async Task RenderToHtml_SafeUrlsAndIds_AreKept()
+	{
+		var html = Pipeline().RenderToHtml("## Intro {#start .lead}\n\n[a](https://example.com) [b](/wiki/main/home) [c](mailto:x@y.z) [d](#start)");
+
+		await Assert.That(html).Contains("id=\"start\"");
+		await Assert.That(html).Contains("class=\"lead\"");
+		await Assert.That(html).Contains("href=\"https://example.com\"");
+		await Assert.That(html).Contains("href=\"/wiki/main/home\"");
+		await Assert.That(html).Contains("href=\"mailto:x@y.z\"");
+		await Assert.That(html).Contains("href=\"#start\"");
+	}
+
+	/// <summary><c>::: center</c> is a container the portal's stylesheet centres (<c>div.center</c>).</summary>
+	[Test]
+	public async Task RenderToHtml_CenterContainer_ProducesCenterDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: center\n# Welcome\n:::");
+
+		await Assert.That(html).Contains("<div class=\"center\">");
+		await Assert.That(html).Contains("Welcome</h1>");
+	}
+
 	[Test]
 	public async Task RenderToHtml_Italic_ProducesEmTag()
 	{

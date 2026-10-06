@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -147,6 +148,11 @@ internal static class EngineRegistration
 		services.AddSingleton<IAccountClaimsInvalidator, AccountClaimsInvalidator>();
 		// Task 15: gates AuthController/SetupController/GameHub on sitelock rules (!connect/!create/!guest).
 		services.AddSingleton<SitelockGuard>();
+		// Passkey (WebAuthn) registration and sign-in beside account passwords.
+		services.TryAddSingleton(TimeProvider.System);
+		services.AddSingleton<Server.Authentication.Passkeys.PasskeyRelyingParty>();
+		services.AddSingleton<Server.Authentication.Passkeys.PasskeyCeremonyStore>();
+		services.AddSingleton<Server.Authentication.Passkeys.PasskeyService>();
 		services.AddSingleton<BanEnforcementService>();
 		// Library-layer call sites (AccountService, SitelockController) depend on IBanEnforcer, not
 		// the concrete Server-layer BanEnforcementService, so Library stays off Server.

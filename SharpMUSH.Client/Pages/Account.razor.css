@@ -132,6 +132,48 @@
     color: var(--accent);
 }
 
+/* ── Passkeys ── */
+.acct-passkeys {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.acct-passkey {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.acct-passkey-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.acct-passkey-name {
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.acct-passkey-meta {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+}
+
+.acct-page ::deep .acct-passkey-icon {
+    color: var(--text-dim);
+}
+
+.acct-passkey-rename {
+    margin-bottom: 0.25rem;
+}
+
+.acct-passkey-add {
+    margin-top: 1rem;
+}
+
 .acct-row {
     display: flex;
     align-items: center;

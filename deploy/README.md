@@ -116,6 +116,20 @@ wss://<your-domain>/ws
 (Same origin, so no mixed-content or CORS issues.) The default `ws://localhost:4202/ws` is for
 local development only — over HTTPS a browser will refuse a plaintext `ws://` connection.
 
+### Passkeys
+
+Players can add passkeys to their accounts and sign in with them. A passkey belongs to the host
+name the portal was on when it was made, so it needs nothing configured as long as the portal is
+reached at one stable HTTPS address and the proxy passes the browser's `Host` through, as the
+`Caddyfile` does. Two settings change that, as environment variables on the server:
+
+- `Passkeys__RelyingPartyId=example.com` makes passkeys work on every subdomain of `example.com`
+  (`play.example.com`, `www.example.com`). Set it before players make passkeys: changing it later
+  leaves the existing ones unusable, and their holders sign in with their password and add new ones.
+- `Passkeys__Origins__0=https://portal.example.com` lists a portal served from an origin other than
+  the server's own, or one behind a proxy that rewrites `Host`. Without it, `Cors__AllowedOrigins`
+  is used.
+
 ## Ports
 
 | Port | Service | Exposed to internet? |
