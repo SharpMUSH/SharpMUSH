@@ -45,7 +45,6 @@ public static class ConfigSections
 		]),
 		new("Content", "Content", "ContentCategoryDescription", Icons.Material.Outlined.Article, false,
 		[
-			new("/admin/config/message", "Message", Icons.Material.Outlined.Message, "Messages"),
 			new("/admin/config/cosmetic", "Cosmetic", Icons.Material.Outlined.Palette, "Cosmetic"),
 			new("/admin/config/chat", "Chat", Icons.Material.Outlined.Chat, "Chat"),
 			new("/admin/config/wiki", "Wiki", Icons.Material.Outlined.MenuBook, "Wiki"),

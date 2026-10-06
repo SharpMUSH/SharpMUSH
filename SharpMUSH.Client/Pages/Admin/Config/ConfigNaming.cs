@@ -18,7 +18,6 @@ public static partial class ConfigNaming
 		"command" or "commands" => "Command",
 		"chat" => "Chat",
 		"log" or "logging" => "Log",
-		"message" or "messages" => "Message",
 		"cosmetic" => "Cosmetic",
 		"cost" or "costs" => "Cost",
 		"attribute" or "attributes" => "Attribute",

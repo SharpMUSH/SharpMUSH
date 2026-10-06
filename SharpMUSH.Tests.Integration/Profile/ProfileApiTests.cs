@@ -194,6 +194,48 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// The package_manager ref is written into FN`CHARVIS as an objid when the package installs. If
+	/// that objid stops resolving (the object was recreated, or the world replaced under the
+	/// installed package), the predicate must still answer quietly. It used to locate the ref with
+	/// num(), which notifies "I can't see that here." on a miss, once per player, and everything
+	/// notified during a request becomes the response body: the directory came back as a stack of
+	/// locate failures in front of the JSON.
+	/// </summary>
+	[Test]
+	[Arguments("#7:1")]
+	[Arguments("#999999:1")]
+	public async Task Characters_StalePackageManagerRefStillAnswersJson(string staleRef)
+	{
+		var verb = staleRef.StartsWith("#7:") ? "STALEPMSEEDED" : "STALEPMMISSING";
+		var manifest = SharpMUSH.Server.Services.BundledPackages.ManifestYaml("profile-handler");
+		var charvis = System.Text.RegularExpressions.Regex
+			.Match(manifest, @"FN`CHARVIS: \|-\r?\n\s+(?<body>.+)").Groups["body"].Value.Trim();
+		await Assert.That(charvis).Contains("{{$package_manager}}");
+
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var attributes = factory.Services.GetRequiredService<IAttributeService>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Expect<AnySharpObject>();
+		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Expect<AnySharpObject>();
+		(await attributes.SetAttributeAsync(god, handler, $"FN`{verb}",
+			MarkupText.Plain(charvis.Replace("{{$package_manager}}", staleRef)))).Expect<Success>();
+		(await attributes.SetAttributeAsync(god, handler, verb, MarkupText.Plain(
+			$"@respond/type application/json; think json_array(iter(filter(me/FN`{verb},lsearch(all,type,player)),u(me/FN`CHARROW,%i0),,%r),%r)"))).Expect<Success>();
+
+		var http = factory.CreateHttpClient();
+		using var request = new HttpRequestMessage(new HttpMethod(verb), "http/characters");
+		var response = await http.SendAsync(request);
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		await Assert.That(body).DoesNotContain("I can't see that here.");
+		using var doc = JsonDocument.Parse(body);
+		var names = doc.RootElement.EnumerateArray().Select(row => row.GetProperty("name").GetString()).ToList();
+		await Assert.That(names).Contains((await GodIdentity()).Name);
+		// The ref's dbref still names the seeded principal, so it stays hidden.
+		if (staleRef.StartsWith("#7:")) await Assert.That(names).DoesNotContain("Package Manager");
+	}
+
+	/// <summary>
 	/// GET /http/online reports presence, not the roster: it is built on mwho(), which reads the
 	/// same connection registry WHO does, so it tracks who is actually here in both directions. The
 	/// portal used to derive "players online" from the full character roster, which made every

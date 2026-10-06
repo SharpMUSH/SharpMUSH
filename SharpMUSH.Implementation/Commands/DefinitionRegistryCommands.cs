@@ -2533,23 +2533,8 @@ public partial class Commands : ICommandRestrictionApplier
 
 		if (kind == ListKind.Motd)
 		{
-			var isWizard = await executor.IsWizard();
-
-			var motdFile = Configuration.CurrentValue.Message.MessageOfTheDayFile;
-			var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
-
 			await NotifyService.Notify(executor, "Current Message of the Day settings:", executor);
-			await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}", executor);
-			await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}", executor);
-
-			if (isWizard)
-			{
-				var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
-				var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
-
-				await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}", executor);
-				await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}", executor);
-			}
+			await NotifyService.Notify(executor, $"  Messages come from: {await MessageSourceDescriptionAsync()}", executor);
 
 			return CallState.Empty;
 		}

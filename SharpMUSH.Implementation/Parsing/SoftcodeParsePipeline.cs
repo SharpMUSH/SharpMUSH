@@ -1,5 +1,6 @@
 using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
+using Antlr4.Runtime.Misc;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Runtime.InteropServices;
 
@@ -80,21 +81,54 @@ internal static class SoftcodeParsePipeline
 	/// A parser over <paramref name="tokens"/> with no error listeners. Callers attach the listener
 	/// and error strategy their pass needs.
 	/// </summary>
+	/// <param name="resolvePredicates">
+	/// Predict with <see cref="PredicateResolvingSimulator"/>, which settles the grammar's predicates
+	/// before the lookahead instead of after it. Without it, a large bracketed expression in a later
+	/// argument (<c>if(c,A,[...])</c>) takes time exponential in the calls inside the bracket. The
+	/// SLL pass of two-stage prediction uses it; the LL pass that reports a syntax error does not,
+	/// so its errors and recovery stay ANTLR's own.
+	/// </param>
 	public static SharpMUSHParser CreateParser(BufferedTokenSpanStream tokens, bool parenGroups, PredictionMode mode,
-		bool trace = false)
+		bool trace = false, bool resolvePredicates = false)
 	{
 		var parser = new SharpMUSHParser(tokens)
 		{
 			parenGroups = parenGroups,
-			Interpreter =
-			{
-				PredictionMode = mode
-			},
 			Trace = trace
 		};
+		if (resolvePredicates)
+		{
+			parser.ResolvePredicatesAtDecisionStart();
+		}
+
+		parser.Interpreter.PredictionMode = mode;
 		parser.RemoveErrorListeners();
 
 		return parser;
+	}
+
+	/// <summary>
+	/// The SLL pass of two-stage prediction, for a <paramref name="parser"/> built with SLL and
+	/// <c>resolvePredicates</c>: runs <paramref name="entryPoint"/> under a
+	/// <see cref="BailErrorStrategy"/> and returns the tree only if nothing went wrong. A tree from
+	/// here is the one LL would build, so it stands; on <see langword="null"/>, the caller seeks the
+	/// tokens back to the start and parses again with LL, which decides whether the input really has
+	/// a syntax error and reports it.
+	/// </summary>
+	public static TContext? ParseClean<TContext>(SharpMUSHParser parser, Func<SharpMUSHParser, TContext> entryPoint,
+		ParserErrorListener errors) where TContext : ParserRuleContext
+	{
+		parser.ErrorHandler = new BailErrorStrategy();
+		parser.AddErrorListener(errors);
+		try
+		{
+			var context = entryPoint(parser);
+			return errors.HasErrors ? null : context;
+		}
+		catch (ParseCanceledException)
+		{
+			return null;
+		}
 	}
 
 	/// <summary>

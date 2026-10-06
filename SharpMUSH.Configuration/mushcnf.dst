@@ -545,42 +545,10 @@ forking_dump yes
 ### Filenames
 ###
 
-# Text files shown on connection, as message of the day, as wizard
-# message of the day, on quit, to newly created players, when logins
-# are disabled, when player creation is disabled, and when a guest
-# logs in. These must either be the path to a text file, or a
-# #dbref/attrname to be evaluated and shown.  dbref/attrs are passed
-# the port/descriptor as %0. If it's a message shown to a connected
-# player, their dbref is also passed as %1.
-connect_file txt/connect.txt
-motd_file txt/motd.txt
-wizmotd_file txt/wizmotd.txt
-quit_file txt/quit.txt
-newuser_file txt/newuser.txt
-down_file txt/down.txt
-register_create_file txt/register.txt
-guest_file txt/guest.txt
-full_file txt/full.txt
-
-# Text file shown when someone uses WHO/DOING/SESSION at the login
-# screen. If empty, the default WHO output is shown. If an obj/attr
-# is given, you can use a softcoded WHO at the login screen. %2 will
-# be the arg given (for 'WHO foo').
-# OPTIONAL
-# who_file
-
-# The equivalent files in html, shown to Pueblo clients.
-connect_html_file txt/connect.html
-motd_html_file txt/motd.html
-wizmotd_html_file txt/wizmotd.html
-quit_html_file txt/quit.html
-newuser_html_file txt/newuser.html
-down_html_file txt/down.html
-register_create_html_file txt/register.html
-guest_html_file txt/guest.html
-full_html_file txt/full.html
-# OPTIONAL
-# who_html_file
+# The connect screen, the MOTDs and the other messages a connection is
+# shown are not files: they are kept in the database and edited on the
+# web portal's Messages page, or read from the bundled Messages object.
+# See 'help messages'.
 
 # Static HTML landing page to show when someone accesses the MUSH
 # port using a web browser and no http_handler is defined.

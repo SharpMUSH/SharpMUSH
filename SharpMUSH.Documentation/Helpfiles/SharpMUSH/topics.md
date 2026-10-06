@@ -40,18 +40,18 @@ Help is available on the following topics:
 
 |                           |                           |                           |
 |---------------------------|---------------------------|---------------------------|
-| [MONEY]                   | [MUSHCODE]                | [NON-STANDARD ATTRIBUTES] |
-| [OBJECT SNAPSHOTS]        | [PARENTS]                 | [PENNMUSH COMPATIBILITY]  |
-| [PIPING]                  | [@POWER]                  | [PUPPETS]                 |
-| [QUEUE]                   | [QUEUE BUDGETS]           | [RECURRING JOBS]          |
-| [REGEXPS]                 | [REGISTERS]               | [ROLES]                   |
-| [SECURITY]                | [SEMAPHORES]              | [SETTING-ATTRIBUTES]      |
-| [SHARPMUSH FEATURES]      | [SPOOFING]                | [STACK]                   |
-| [STRINGS]                 | [SUBSTITUTIONS]           | [SUCCESS]                 |
-| [SWITCHES]                | [TIMEZONES]               | [TYPES OF OBJECTS]        |
-| [USER-DEFINED COMMANDS]   | [VERBS]                   | [WARNINGS]                |
-| [WIKI]                    | [WILDCARDS]               | [ZONE MASTER ROOMS]       |
-| [ZONE MASTERS]            | [ZONES]                   |                           |
+| [MESSAGES]                | [MONEY]                   | [MUSHCODE]                |
+| [NON-STANDARD ATTRIBUTES] | [OBJECT SNAPSHOTS]        | [PARENTS]                 |
+| [PENNMUSH COMPATIBILITY]  | [PIPING]                  | [@POWER]                  |
+| [PUPPETS]                 | [QUEUE]                   | [QUEUE BUDGETS]           |
+| [RECURRING JOBS]          | [REGEXPS]                 | [REGISTERS]               |
+| [ROLES]                   | [SECURITY]                | [SEMAPHORES]              |
+| [SETTING-ATTRIBUTES]      | [SHARPMUSH FEATURES]      | [SPOOFING]                |
+| [STACK]                   | [STRINGS]                 | [SUBSTITUTIONS]           |
+| [SUCCESS]                 | [SWITCHES]                | [TIMEZONES]               |
+| [TYPES OF OBJECTS]        | [USER-DEFINED COMMANDS]   | [VERBS]                   |
+| [WARNINGS]                | [WIKI]                    | [WILDCARDS]               |
+| [ZONE MASTER ROOMS]       | [ZONE MASTERS]            | [ZONES]                   |
 
 Type 'help `<topic name>`' for help.<br>
 For a list of all topics, see [help search]. For what SharpMUSH adds to PennMUSH, see [sharpmush features].

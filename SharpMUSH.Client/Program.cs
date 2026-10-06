@@ -62,6 +62,7 @@ builder.Services.AddSingleton<MsspService>();
 builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<AdminGuestsService>();
+builder.Services.AddSingleton<GameMessagesService>();
 builder.Services.AddSingleton<AdminCharactersService>();
 builder.Services.AddSingleton<AdminAuditService>();
 builder.Services.AddSingleton<AdminBansService>();

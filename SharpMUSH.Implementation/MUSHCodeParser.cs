@@ -145,8 +145,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// Parses <paramref name="entryPoint"/> over an already-lexed token stream, applying the
 	/// configured prediction strategy.
 	/// <para>
-	/// Under <see cref="ParserPredictionMode.TwoStage"/> (the default) it first parses with SLL and
-	/// a <see cref="BailErrorStrategy"/> that aborts on the first error instead of recovering. If
+	/// Under <see cref="ParserPredictionMode.TwoStage"/> (the default) it first parses with SLL, the
+	/// grammar's predicates resolved where each decision starts (see
+	/// <see cref="PredicateResolvingSimulator"/>), and a <see cref="BailErrorStrategy"/> that aborts
+	/// on the first error instead of recovering. If
 	/// that succeeds with no syntax error the result stands — ANTLR guarantees SLL then matches LL.
 	/// Only if SLL errors is the token stream rewound and re-parsed with LL, which is authoritative;
 	/// its result and its (strict- or lenient-) recovered tree are what the caller sees. On
@@ -169,11 +171,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null
 			&& !ContainsRestrictedEntryPoint(tokens, functions ?? FunctionLibrary);
 
-		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
+		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy,
+			bool resolvePredicates = false)
 		{
 			tokens.Seek(0);
 			var parser = SoftcodeParsePipeline.CreateParser(tokens, Configuration.CurrentValue.Compatibility.ParenGroups,
-				mode, trace: debug);
+				mode, trace: debug, resolvePredicates);
 			parser.ErrorHandler = strategy;
 			var errors = new ParserErrorListener(inputText);
 			parser.AddErrorListener(errors);
@@ -192,7 +195,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		if (Configuration.CurrentValue.Debug.ParserPredictionMode == ParserPredictionMode.TwoStage)
 		{
-			var (sllParser, sllErrors) = Build(PredictionMode.SLL, new BailErrorStrategy());
+			var (sllParser, sllErrors) = Build(PredictionMode.SLL, new BailErrorStrategy(), resolvePredicates: true);
 			try
 			{
 				var sllContext = entryPoint(sllParser);

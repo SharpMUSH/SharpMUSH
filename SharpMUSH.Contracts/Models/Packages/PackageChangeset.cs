@@ -15,6 +15,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="CommandCollisions">$command patterns that collide with other installed packages (warnings, decision 20.20).</param>
 /// <param name="Notes">Free-form reviewer notes (recreated objects, contents warnings, unresolved-at-apply values).</param>
 /// <param name="Declarations">What happens to the roles, permissions and categories the package declares or owned; a blocked one blocks the apply.</param>
+/// <param name="Settings">What happens to the configuration options the package sets or set; a blocked one blocks the apply.</param>
 public sealed record PackageChangeset(
 	string PackageId,
 	string? FromVersion,
@@ -26,10 +27,16 @@ public sealed record PackageChangeset(
 	IReadOnlyList<PackageDependencyIssue> DependencyIssues,
 	IReadOnlyList<PackageCommandCollision> CommandCollisions,
 	IReadOnlyList<string> Notes,
-	IReadOnlyList<PackageDeclarationChange>? Declarations = null)
+	IReadOnlyList<PackageDeclarationChange>? Declarations = null,
+	IReadOnlyList<PackageSettingChange>? Settings = null)
 {
-	/// <summary>True when dependency/conflict issues, or a declared item that cannot be applied, prevent applying at all.</summary>
-	public bool IsBlocked => DependencyIssues.Count > 0 || (Declarations?.Any(d => d.Action == PackageDeclarationAction.Blocked) ?? false);
+	/// <summary>
+	/// True when dependency/conflict issues, or a declared item or setting that cannot be applied, prevent applying
+	/// at all.
+	/// </summary>
+	public bool IsBlocked => DependencyIssues.Count > 0
+		|| (Declarations?.Any(d => d.Action == PackageDeclarationAction.Blocked) ?? false)
+		|| (Settings?.Any(s => s.Action == PackageSettingAction.Blocked) ?? false);
 
 	/// <summary>True when at least one attribute or structure element needs an admin decision.</summary>
 	public bool HasConflicts =>

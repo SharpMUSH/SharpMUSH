@@ -39,7 +39,8 @@ public partial class PackageInstallService(
 	IMediator mediator,
 	IPackageOperationGate gate,
 	ILockService locks,
-	IPackageDeclarationService declarations) : IPackageInstallService
+	IPackageDeclarationService declarations,
+	IPackageSettingService settings) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 

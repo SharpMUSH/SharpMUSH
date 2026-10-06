@@ -25,7 +25,7 @@ packages:
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.0.0
+    version: 1.0.1
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
@@ -66,3 +66,8 @@ packages:
     package: wiki-reader
     version: 1.0.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit
+  - path: messages/
+    name: Messages
+    package: messages
+    version: 1.0.0
+    description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."

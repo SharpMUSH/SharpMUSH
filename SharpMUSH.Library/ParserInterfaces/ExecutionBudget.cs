@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace SharpMUSH.Library.ParserInterfaces;
 
 /// <summary>One monotonic elapsed-time deadline for an evaluation, including async I/O.
@@ -10,7 +8,8 @@ public sealed class ExecutionBudget : IDisposable
 	private readonly CancellationTokenSource _cancellation;
 	private readonly CancellationTokenSource _deadline;
 	private readonly CancellationToken _cancelledBy;
-	private readonly long _started = Stopwatch.GetTimestamp();
+	private readonly TimeProvider _clock;
+	private readonly long _started;
 	private readonly TimeSpan _duration;
 	public const string Error = "#-1 EXECUTION TIME LIMIT EXCEEDED";
 	public static ExecutionBudget? Current => Ambient.Value;
@@ -18,13 +17,15 @@ public sealed class ExecutionBudget : IDisposable
 	public ExecutionBudget(TimeSpan duration, CancellationToken cancellationToken = default)
 		: this(duration, cancellationToken, TimeProvider.System) { }
 
-	internal ExecutionBudget(TimeSpan duration, CancellationToken cancellationToken, TimeProvider timerProvider)
+	internal ExecutionBudget(TimeSpan duration, CancellationToken cancellationToken, TimeProvider timeProvider)
 	{
 		if (duration != Timeout.InfiniteTimeSpan && (duration < TimeSpan.Zero || duration.TotalMilliseconds > uint.MaxValue - 1))
 			throw new ArgumentOutOfRangeException(nameof(duration));
 		_duration = duration;
+		_clock = timeProvider;
+		_started = timeProvider.GetTimestamp();
 		_cancelledBy = cancellationToken;
-		_deadline = new CancellationTokenSource(duration, timerProvider);
+		_deadline = new CancellationTokenSource(duration, timeProvider);
 		if (duration == TimeSpan.Zero) _deadline.Cancel();
 		_cancellation = cancellationToken.CanBeCanceled
 			? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _deadline.Token)
@@ -36,8 +37,8 @@ public sealed class ExecutionBudget : IDisposable
 	public CancellationToken CancelledBy => _cancelledBy;
 	public static ExecutionBudget FromMilliseconds(uint milliseconds, CancellationToken token = default)
 		=> new(milliseconds == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(milliseconds), token);
-	public TimeSpan Remaining => _duration == Timeout.InfiniteTimeSpan ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(0, (_duration - Stopwatch.GetElapsedTime(_started)).Ticks));
-	// Timer callbacks and Stopwatch can cross their boundary at different granularities.
+	public TimeSpan Remaining => _duration == Timeout.InfiniteTimeSpan ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(0, (_duration - _clock.GetElapsedTime(_started)).Ticks));
+	// Timer callbacks and the clock can cross their boundary at different granularities.
 	public bool IsExpired => _deadline.IsCancellationRequested || Remaining == TimeSpan.Zero;
 	public bool IsCancelled => _cancellation.IsCancellationRequested;
 	public bool IsExceeded => IsExpired || IsCancelled;

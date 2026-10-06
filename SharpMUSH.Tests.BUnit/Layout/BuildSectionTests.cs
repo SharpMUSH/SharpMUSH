@@ -68,7 +68,7 @@ public class BuildSectionTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find("a.kit-row[href='/apps/bbs']"), TimeSpan.FromSeconds(5));
 
 		var rows = cut.FindAll("a.kit-row").Select(a => a.GetAttribute("href")).ToList();
-		await Assert.That(rows).IsEquivalentTo(new[] { "/admin", "/softcode", "/admin/suggestions", "/admin/config", "/apps/bbs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+		await Assert.That(rows).IsEquivalentTo(new[] { "/admin", "/softcode", "/admin/suggestions", "/admin/messages", "/admin/config", "/apps/bbs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 			.Because("the overview, then only the viewer's gates in group order, then the section's apps; Workshop apps are another section");
 		await Assert.That(cut.Find("a.kit-row[href='/admin/config']").GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(cut.Find(".kit-side-title").TextContent).IsEqualTo("Build & manage");

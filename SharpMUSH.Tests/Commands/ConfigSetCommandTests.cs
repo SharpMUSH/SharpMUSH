@@ -142,12 +142,11 @@ public class ConfigSetCommandTests
 		});
 
 	/// <summary>
-	/// <c>config_set</c> skips, for a command, every option in the <c>files</c> and <c>messages</c>
-	/// groups and every CP_GODONLY one — "@config/set output_data=../../.bashrc? Ouch."
+	/// <c>config_set</c> skips, for a command, every option in the <c>files</c> group and every
+	/// CP_GODONLY one — "@config/set output_data=../../.bashrc? Ouch."
 	/// </summary>
 	[Test]
 	[Arguments("names_file")]
-	[Arguments("connect_file")]
 	[Arguments("sql_password")]
 	public async ValueTask Set_RefusesOptionsPennKeepsOutOfReach(string option)
 		=> await Restoring(async () =>

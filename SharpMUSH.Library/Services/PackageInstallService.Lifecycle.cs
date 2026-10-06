@@ -109,6 +109,13 @@ public partial class PackageInstallService
 			return error;
 		}
 
+		// The options it set get back the values they replaced, unless the game has changed them since.
+		if (installed.Settings is not null
+			&& await settings.ApplyAsync(writes, packageId, [], installed.Settings, _ => null, notes) is Error<string> settingError)
+		{
+			return settingError;
+		}
+
 		var ownObjids = ownObjects.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
 
 		// Managed attrs on objects this package does NOT own (cross-package): clear them.
@@ -367,6 +374,11 @@ public partial class PackageInstallService
 		if (installed.Owned is not null)
 		{
 			notes.Add("Roles, permissions and categories are left as they are: a rollback restores objects and attributes only.");
+		}
+
+		if (installed.Settings is not null)
+		{
+			notes.Add("Configuration options are left as they are: a rollback restores objects and attributes only.");
 		}
 
 		var newRevision = installed.CurrentRevision + 1;

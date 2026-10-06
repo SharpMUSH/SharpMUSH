@@ -90,6 +90,12 @@ public partial class PackageInstallService
 			return new Error<string>($"Plan is blocked: {string.Join("; ", blocked.Select(d => $"{d.Kind.Noun()} {d.Name}: {d.Detail}"))}");
 		}
 
+		if ((await PlanSettingsAsync(inputs, changeset)).Where(s => s.Action == PackageSettingAction.Blocked).ToArray()
+			is { Length: > 0 } blockedSettings)
+		{
+			return new Error<string>($"Plan is blocked: {string.Join("; ", blockedSettings.Select(s => $"setting {s.Option}: {s.Detail}"))}");
+		}
+
 		var decisions = request.ConflictDecisions.ToDictionary(
 			d => DecisionKey(d.TargetRef, d.Attribute), d => d, StringComparer.Ordinal);
 		var undecided = changeset.Attributes
@@ -191,6 +197,9 @@ public partial class PackageInstallService
 		/// <summary>The declared items the package owns after this apply (<see cref="InstalledPackageRecord.Owned"/>).</summary>
 		public PackageDeclarations? Owned { get; set; }
 
+		/// <summary>The options the package owns after this apply (<see cref="InstalledPackageRecord.Settings"/>).</summary>
+		public IReadOnlyList<PackageSettingRecord>? Settings { get; set; }
+
 		public List<string> Notes { get; } = [.. Changeset.Notes];
 
 		/// <summary>Live values of attributes this apply overwrote, for the revision's pre-apply record.</summary>
@@ -237,6 +246,11 @@ public partial class PackageInstallService
 		if (await ApplyDeclarationsAsync(run, cancellationToken) is Error<string> declarationError)
 		{
 			return declarationError;
+		}
+
+		if (await ApplySettingsAsync(run) is Error<string> settingError)
+		{
+			return settingError;
 		}
 
 		await RetireRemovedObjectsAsync(run, cancellationToken);
@@ -389,6 +403,30 @@ public partial class PackageInstallService
 		return null;
 	}
 
+	/// <summary>
+	/// Pass 4c: the configuration options the package sets, once its objects exist so a ref resolves. Skipped when
+	/// the package sets none and owns none.
+	/// </summary>
+	private async Task<Error<string>?> ApplySettingsAsync(ApplyRun run)
+	{
+		var owned = run.Inputs.Installed?.Settings;
+		if (run.Manifest.Settings is not { Count: > 0 } && owned is null)
+		{
+			return null;
+		}
+
+		switch (await settings.ApplyAsync(run.Writes, run.Manifest.Name, run.Manifest.Settings ?? [], owned, run.Resolve, run.Notes))
+		{
+			case Error<string> error:
+				return error;
+			case IReadOnlyList<PackageSettingRecord> now:
+				run.Settings = now.Count > 0 ? now : null;
+				return null;
+		}
+
+		return null;
+	}
+
 	/// <summary>Pass 5: objects removed from the package are marked GOING, the @destroy convention.</summary>
 	private async Task RetireRemovedObjectsAsync(ApplyRun run, CancellationToken cancellationToken)
 	{
@@ -450,7 +488,7 @@ public partial class PackageInstallService
 		var source = run.Request.Source;
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
-			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned));
+			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings));
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))

@@ -9,8 +9,9 @@
    draft (ComposerDraft) is the model: each input is worked out from the field's value and caret, and the
    format menu (FormatMenu) applies to the textarea's selection. In raw mode there is no layer: the field is
    the softcode as typed. *@
-<div class="fi @Class @(Draft.Raw ? "fi--raw" : "fi--rich")">
+<div class="fi @Class @(Draft.Raw ? "fi--raw" : "fi--rich") @(Wrap ? null : "fi--nowrap")">
     <textarea @ref="_input" class="fi-input @InputClass" rows="@Rows" aria-label="@AriaLabel" placeholder="@Placeholder"
+              wrap="@(Wrap ? "soft" : "off")"
               value="@Draft.Value" @oninput="OnInput" @onkeydown="OnKeyDown" spellcheck="true"></textarea>
     @if (!Draft.Raw)
     {
@@ -41,6 +42,12 @@
     [Parameter] public string? AriaLabel { get; set; }
 
     [Parameter] public int Rows { get; set; } = 1;
+
+    /// <summary>
+    /// Whether long lines wrap. Off for text laid out in columns (a connect screen's art): each line stays one
+    /// line, and the field scrolls sideways instead.
+    /// </summary>
+    [Parameter] public bool Wrap { get; set; } = true;
 
     [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
 

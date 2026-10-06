@@ -1,5 +1,5 @@
 using Mediator;
-using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -29,7 +29,7 @@ public class ConnectionStateEventHandler(
 	INotifyService notifyService,
 	IMediator mediator,
 	IConnectionAnnounceService connectionAnnounceService,
-	IOptionsWrapper<SharpMUSHOptions> configuration)
+	IGameMessageService gameMessages)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
@@ -47,14 +47,9 @@ public class ConnectionStateEventHandler(
 			var connectionData = connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
-				var connectFile = configuration.CurrentValue.Message.ConnectFile;
-				if (!string.IsNullOrEmpty(connectFile) && File.Exists(connectFile))
+				if (await gameMessages.RenderAsync(GameMessage.Connect, notification.Handle) is MString connectText)
 				{
-					var connectText = await File.ReadAllTextAsync(connectFile, cancellationToken);
-					if (!string.IsNullOrWhiteSpace(connectText))
-					{
-						await notifyService.Notify(notification.Handle, connectText);
-					}
+					await notifyService.Notify(notification.Handle, connectText);
 				}
 
 				// SOCKET`CONNECT is about the socket, not the login prompt, so it stays on the arrival of

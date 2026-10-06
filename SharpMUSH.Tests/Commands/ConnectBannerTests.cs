@@ -1,4 +1,6 @@
+using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -7,7 +9,7 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// connect.txt is the first thing a telnet player reads. It advertised
+/// The connect screen is the first thing a telnet player reads. It advertised
 /// <c>create &lt;name&gt; &lt;password&gt;</c>, which is not a command — typing it answers
 /// "No such command available at login." — and said nothing at all about the account flow
 /// (register / login / make / play), which is the only route to a character for someone who has
@@ -21,8 +23,9 @@ public class ConnectBannerTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	/// <summary>The banner as shipped, copied into the test output by the csproj as <c>txt/</c>.</summary>
-	private static string BannerPath => Path.Combine(AppContext.BaseDirectory, "txt", "connect.txt");
+	/// <summary>The banner as shipped, without its colours.</summary>
+	private string Banner => AnsiEscapeParser.Parse(WebAppFactoryArg.Services.GetRequiredService<IGameMessageService>()
+		.ShippedText(GameMessage.Connect)).ToPlainText();
 
 	/// <summary>Every command word the banner tells a player to type must exist pre-login.</summary>
 	[Test]
@@ -34,7 +37,7 @@ public class ConnectBannerTests
 			.Select(x => x.Key)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-		foreach (var advertised in AdvertisedCommands(await File.ReadAllTextAsync(BannerPath)))
+		foreach (var advertised in AdvertisedCommands(Banner))
 		{
 			await Assert.That(socketCommands).Contains(advertised);
 		}
@@ -46,7 +49,7 @@ public class ConnectBannerTests
 	[Test]
 	public async Task TheBannerDocumentsTheAccountFlow()
 	{
-		var advertised = AdvertisedCommands(await File.ReadAllTextAsync(BannerPath));
+		var advertised = AdvertisedCommands(Banner);
 
 		await Assert.That(advertised).Contains("register");
 		await Assert.That(advertised).Contains("login");

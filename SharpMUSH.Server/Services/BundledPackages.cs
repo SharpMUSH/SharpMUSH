@@ -71,6 +71,9 @@ public static class BundledPackages
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Offered, not installed: a new game reads its messages from the stored text until the administrator
+		// chooses the Messages object (the setup wizard or the package page).
+		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

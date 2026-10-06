@@ -66,7 +66,7 @@ public class BuildNavCatalogTests : BunitContext
 	{
 		_auth.SetAuthorized("wizard");
 		_auth.SetPolicies("softcode.use", "config.admin", "players.view");
-		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/softcode", "/admin/characters", "/admin/guests", "/admin/suggestions", "/admin/config" },
+		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/softcode", "/admin/characters", "/admin/guests", "/admin/suggestions", "/admin/messages", "/admin/config" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
