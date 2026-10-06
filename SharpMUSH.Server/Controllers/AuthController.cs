@@ -125,7 +125,6 @@ public class AuthController(
 		}
 
 		var valid = passwordService.PasswordIsValid(
-			$"#{player.Object.Key}:{player.Object.CreationTime}",
 			request.Password ?? string.Empty,
 			player.PasswordHash);
 

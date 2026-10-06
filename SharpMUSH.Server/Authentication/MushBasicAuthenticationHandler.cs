@@ -90,7 +90,7 @@ public class MushBasicAuthenticationHandler(
 			// character must too — otherwise the response latency alone reveals whether the
 			// character exists, defeating the opaque error message below. Verify against a real
 			// (never-matching) hash so the work is equivalent.
-			_ = passwordService.PasswordIsValid("timing:parity", password, DummyHash.Value);
+			_ = passwordService.PasswordIsValid(password, DummyHash.Value);
 
 			// Same opaque message whether the character is unknown or the password is wrong,
 			// so the endpoint doesn't confirm which characters exist.
@@ -102,12 +102,11 @@ public class MushBasicAuthenticationHandler(
 			// A passwordless character can't authenticate over MCP. Spend the same verification
 			// time as every other failure so its response latency doesn't reveal that it has no
 			// password set (PasswordIsValid would otherwise short-circuit on the empty hash).
-			_ = passwordService.PasswordIsValid("timing:parity", password, DummyHash.Value);
+			_ = passwordService.PasswordIsValid(password, DummyHash.Value);
 			return AuthenticateResult.Fail("Invalid character or password.");
 		}
 
-		var salt = $"#{player.Object.Key}:{player.Object.CreationTime}";
-		if (!passwordService.PasswordIsValid(salt, password, player.PasswordHash))
+		if (!passwordService.PasswordIsValid(password, player.PasswordHash))
 		{
 			return AuthenticateResult.Fail("Invalid character or password.");
 		}

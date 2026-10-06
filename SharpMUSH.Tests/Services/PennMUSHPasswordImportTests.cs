@@ -32,19 +32,18 @@ public class PennMUSHPasswordImportTests
 		await Assert.That(result.Errors).IsEmpty();
 
 		var player = await FindPlayerAsync(world, name);
-		var key = $"#{player.Object.Key}:{player.Object.CreationTime}";
 
 		await Assert.That(player.PasswordHash).IsEqualTo(stored)
 			.Because("the importer stores the source value verbatim");
-		await Assert.That(world.Passwords.PasswordIsValid(key, Password, player.PasswordHash)).IsTrue();
-		await Assert.That(world.Passwords.PasswordIsValid(key, "wrongpass", player.PasswordHash)).IsFalse();
+		await Assert.That(world.Passwords.PasswordIsValid(Password, player.PasswordHash)).IsTrue();
+		await Assert.That(world.Passwords.PasswordIsValid("wrongpass", player.PasswordHash)).IsFalse();
 		await Assert.That(world.Passwords.NeedsRehash(player.PasswordHash)).IsTrue();
 
 		await world.Passwords.RehashPasswordAsync(player, Password);
 
 		var rehashed = await FindPlayerAsync(world, name);
 		await Assert.That(rehashed.PasswordHash).IsNotEqualTo(stored);
-		await Assert.That(world.Passwords.PasswordIsValid(key, Password, rehashed.PasswordHash)).IsTrue();
+		await Assert.That(world.Passwords.PasswordIsValid(Password, rehashed.PasswordHash)).IsTrue();
 		await Assert.That(world.Passwords.NeedsRehash(rehashed.PasswordHash)).IsFalse();
 	}
 
@@ -64,13 +63,12 @@ public class PennMUSHPasswordImportTests
 		});
 
 		var player = await FindPlayerAsync(world, "Passwordless");
-		var key = $"#{player.Object.Key}:{player.Object.CreationTime}";
 
 		await Assert.That(player.PasswordHash).IsNotEmpty()
 			.Because("an empty hash is a passwordless character, which logs in with anything");
 		foreach (var attempt in (string[])[Password, player.PasswordHash, "NEEDS_RESET", ""])
 		{
-			await Assert.That(world.Passwords.PasswordIsValid(key, attempt, player.PasswordHash)).IsFalse()
+			await Assert.That(world.Passwords.PasswordIsValid(attempt, player.PasswordHash)).IsFalse()
 				.Because($"'{attempt}' logged in to a player imported without a password");
 		}
 	}

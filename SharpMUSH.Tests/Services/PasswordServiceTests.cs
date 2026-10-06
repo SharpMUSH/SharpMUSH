@@ -20,11 +20,10 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask ModernPassword_ValidPassword_ReturnsTrue()
 	{
-		var user = "#1:12345";
 		var password = "TestPassword123";
-		var hash = PasswordService.HashPassword(user, password);
+		var hash = PasswordService.HashPassword(password);
 
-		var result = PasswordService.PasswordIsValid(user, password, hash);
+		var result = PasswordService.PasswordIsValid(password, hash);
 
 		await Assert.That(result).IsTrue();
 	}
@@ -32,12 +31,11 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask ModernPassword_InvalidPassword_ReturnsFalse()
 	{
-		var user = "#1:12345";
 		var password = "TestPassword123";
 		var wrongPassword = "WrongPassword456";
-		var hash = PasswordService.HashPassword(user, password);
+		var hash = PasswordService.HashPassword(password);
 
-		var result = PasswordService.PasswordIsValid(user, wrongPassword, hash);
+		var result = PasswordService.PasswordIsValid(wrongPassword, hash);
 
 		await Assert.That(result).IsFalse();
 	}
@@ -49,7 +47,7 @@ public class PasswordServiceTests
 		var salt = "ab";
 		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA1");
 
-		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(password, pennMUSHHash);
 
 		await Assert.That(result).IsTrue();
 	}
@@ -62,7 +60,7 @@ public class PasswordServiceTests
 		var salt = "ab";
 		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA1");
 
-		var result = PasswordService.PasswordIsValid("ignored", wrongPassword, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(wrongPassword, pennMUSHHash);
 
 		await Assert.That(result).IsFalse();
 	}
@@ -77,8 +75,8 @@ public class PasswordServiceTests
 		var hash2 = CreatePennMUSHHash(salt2, password, "SHA1");
 
 		await Assert.That(hash1).IsNotEqualTo(hash2);
-		await Assert.That(PasswordService.PasswordIsValid("ignored", password, hash1)).IsTrue();
-		await Assert.That(PasswordService.PasswordIsValid("ignored", password, hash2)).IsTrue();
+		await Assert.That(PasswordService.PasswordIsValid(password, hash1)).IsTrue();
+		await Assert.That(PasswordService.PasswordIsValid(password, hash2)).IsTrue();
 	}
 
 	[Test]
@@ -88,7 +86,7 @@ public class PasswordServiceTests
 		var salt = "cd";
 		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA256");
 
-		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(password, pennMUSHHash);
 
 		await Assert.That(result).IsTrue();
 	}
@@ -101,7 +99,7 @@ public class PasswordServiceTests
 		var salt = "cd";
 		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA256");
 
-		var result = PasswordService.PasswordIsValid("ignored", wrongPassword, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(wrongPassword, pennMUSHHash);
 
 		await Assert.That(result).IsFalse();
 	}
@@ -116,7 +114,7 @@ public class PasswordServiceTests
 		var password = "mypassword";
 		var pennMUSHHash = $"1:SHA1:{Convert.ToHexStringLower(SHA1.HashData(Encoding.UTF8.GetBytes(password)))}:12345";
 
-		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(password, pennMUSHHash);
 
 		await Assert.That(result).IsTrue();
 	}
@@ -129,7 +127,7 @@ public class PasswordServiceTests
 		var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA1", timestamp: timestamp);
 
-		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(password, pennMUSHHash);
 
 		await Assert.That(result).IsTrue();
 	}
@@ -142,7 +140,7 @@ public class PasswordServiceTests
 		var withTimestamp = CreatePennMUSHHash(salt, password, "SHA1", timestamp: 12345);
 		var pennMUSHHash = withTimestamp[..withTimestamp.LastIndexOf(':')];
 
-		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(password, pennMUSHHash);
 
 		await Assert.That(pennMUSHHash.Count(c => c == ':')).IsEqualTo(2);
 		await Assert.That(result).IsTrue();
@@ -155,7 +153,7 @@ public class PasswordServiceTests
 		var salt = "mn";
 		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA256", timestamp: 12345) + ":extra:fields";
 
-		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(password, pennMUSHHash);
 
 		await Assert.That(result).IsTrue();
 	}
@@ -163,7 +161,7 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask EmptyHash_ReturnsFalse()
 	{
-		var result = PasswordService.PasswordIsValid("user", "password", "");
+		var result = PasswordService.PasswordIsValid("password", "");
 
 		await Assert.That(result).IsFalse();
 	}
@@ -171,7 +169,7 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask NullHash_ReturnsFalse()
 	{
-		var result = PasswordService.PasswordIsValid("user", "password", null!);
+		var result = PasswordService.PasswordIsValid("password", null!);
 
 		await Assert.That(result).IsFalse();
 	}
@@ -179,7 +177,7 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask InvalidPennMUSHFormat_TooFewParts_FallsBackToModern()
 	{
-		var result = PasswordService.PasswordIsValid("user", "password", "invalid:hash");
+		var result = PasswordService.PasswordIsValid("password", "invalid:hash");
 
 		await Assert.That(result).IsFalse();
 	}
@@ -187,7 +185,7 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask InvalidPennMUSHFormat_InvalidVersion_FallsBackToModern()
 	{
-		var result = PasswordService.PasswordIsValid("user", "password", "99:SHA1:hash:12345");
+		var result = PasswordService.PasswordIsValid("password", "99:SHA1:hash:12345");
 
 		await Assert.That(result).IsFalse();
 	}
@@ -195,7 +193,7 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask InvalidPennMUSHFormat_UnknownAlgorithm_ReturnsFalse()
 	{
-		var result = PasswordService.PasswordIsValid("user", "password", "2:MD5:hash:12345");
+		var result = PasswordService.PasswordIsValid("password", "2:MD5:hash:12345");
 
 		await Assert.That(result).IsFalse();
 	}
@@ -230,7 +228,7 @@ public class PasswordServiceTests
 		var upperHash = Convert.ToHexString(hashBytes).ToUpperInvariant();
 		var pennMUSHHash = $"2:SHA1:{salt}{upperHash}:12345";
 
-		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+		var result = PasswordService.PasswordIsValid(password, pennMUSHHash);
 
 		await Assert.That(result).IsTrue();
 	}
@@ -248,7 +246,7 @@ public class PasswordServiceTests
 	[Test]
 	public async ValueTask NeedsRehash_ModernPBKDF2Format_ReturnsFalse()
 	{
-		var modernHash = PasswordService.HashPassword("#1:12345", "password");
+		var modernHash = PasswordService.HashPassword("password");
 
 		var result = PasswordService.NeedsRehash(modernHash);
 

@@ -66,7 +66,7 @@ public class SetPasswordConnectTests
 		// already-hashed value to the setter (salt == null). This exercises
 		// caller → SetPlayerPasswordCommand → SetPlayerPasswordAsync exactly as @password does.
 		const string plaintext = "brand-new-secret-42";
-		var preHashed = PasswordService.HashPassword(player.Object.DBRef.ToString(), plaintext);
+		var preHashed = PasswordService.HashPassword(plaintext);
 		await PasswordService.SetPassword(player, preHashed);
 
 		// A WRONG password must NOT bind (guards against a vacuous pass).

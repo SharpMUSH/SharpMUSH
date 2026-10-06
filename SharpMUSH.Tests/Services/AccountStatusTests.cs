@@ -75,7 +75,7 @@ public class AccountStatusTests
 	{
 		var (svc, db, pw, _) = Build();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount(status));
-		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
 		await Assert.That(await svc.AuthenticateAsync("TestUser", "correct-password")).IsNull();
 	}
@@ -85,7 +85,7 @@ public class AccountStatusTests
 	{
 		var (svc, db, pw, _) = Build();
 		db.GetAccountByUsernameAsync("TestUser", Arg.Any<CancellationToken>()).Returns(MakeAccount());
-		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+		pw.PasswordIsValid(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
 
 		var result = await svc.AuthenticateAsync("TestUser", "correct-password");
 

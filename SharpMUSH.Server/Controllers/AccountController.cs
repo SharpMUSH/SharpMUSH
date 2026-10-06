@@ -190,7 +190,6 @@ public class AccountController(
 		}
 
 		var valid = passwordService.PasswordIsValid(
-			$"#{player.Object.Key}:{player.Object.CreationTime}",
 			request.CharacterPassword ?? string.Empty,
 			player.PasswordHash);
 
