@@ -109,9 +109,6 @@
     <Content Include="appsettings*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="*.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -169,6 +166,10 @@
     <EmbeddedResource Include="..\examples\packages\wiki-reader\package.yaml">
       <Link>BundledPackages\wiki-reader.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.wiki-reader.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\messages\package.yaml">
+      <Link>BundledPackages\messages.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.messages.package.yaml</LogicalName>
     </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the

@@ -1327,13 +1327,7 @@ public static partial class ErrorMessages
 
 		public const string ListMotdCurrentSettingsHeader = "Current Message of the Day settings:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ListMotdConnectFileFormat = "  Connect MOTD File: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ListMotdConnectHtmlFormat = "  Connect MOTD HTML: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ListMotdWizardFileFormat = "  Wizard MOTD File: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ListMotdWizardHtmlFormat = "  Wizard MOTD HTML: {0}";
+		public const string ListMotdSourceFormat = "  Messages come from: {0}";
 		public const string ListMotdTemporaryHeader = "Temporary Message of the Day (cleared on restart):";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ListMotdConnectMotdFormat = "  Connect MOTD: {0}";

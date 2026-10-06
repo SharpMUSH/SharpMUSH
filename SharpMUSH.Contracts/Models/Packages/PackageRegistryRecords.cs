@@ -24,6 +24,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// last applied: the baseline an upgrade merges against and the list an uninstall removes from.
 /// Null when it owns none.
 /// </param>
+/// <param name="Settings">The configuration options this package set and still owns. Null when it owns none.</param>
 public sealed record InstalledPackageRecord(
 	string Id,
 	string Version,
@@ -34,7 +35,8 @@ public sealed record InstalledPackageRecord(
 	DateTimeOffset InstalledAt,
 	int CurrentRevision,
 	IReadOnlyList<string>? DeployedFiles = null,
-	PackageDeclarations? Owned = null);
+	PackageDeclarations? Owned = null,
+	IReadOnlyList<PackageSettingRecord>? Settings = null);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

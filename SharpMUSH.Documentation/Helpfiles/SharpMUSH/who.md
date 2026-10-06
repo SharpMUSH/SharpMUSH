@@ -41,7 +41,7 @@ Existing games which have softcoded 'who' commands can maintain separation from 
 
 @hooks are not maintained across reboots, and should be placed into an @startup on a low-dbref object.
 
-Note: The WHO command available at the login screen is totally separate from the in-game WHO command, and is not affected by any changes to the in-game WHO. To alter that, use the WHO_FILE @config option.
+Note: The WHO command available at the login screen is totally separate from the in-game WHO command, and is not affected by any changes to the in-game WHO.
 
 
 ::: seealso

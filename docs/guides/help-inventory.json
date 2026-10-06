@@ -213,6 +213,24 @@
       "section": true
     },
     {
+      "file": "messages.md",
+      "corpus": "help",
+      "names": [
+        "messages",
+        "CONNECT SCREEN"
+      ],
+      "canonical": "messages"
+    },
+    {
+      "file": "messages.md",
+      "corpus": "help",
+      "names": [
+        "messages object"
+      ],
+      "canonical": "messages object",
+      "section": true
+    },
+    {
       "file": "reality.md",
       "corpus": "help",
       "names": [

@@ -25,10 +25,37 @@ public partial class PackageInstallService
 		CancellationToken cancellationToken = default)
 	{
 		var inputs = await GatherInputsAsync(manifest, configureAnswers ?? new Dictionary<string, string>(), cancellationToken);
-		return planner.ComputeChangeset(inputs) with
+		var changeset = planner.ComputeChangeset(inputs);
+		return changeset with
 		{
-			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken)
+			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken),
+			Settings = await PlanSettingsAsync(inputs, changeset)
 		};
+	}
+
+	/// <summary>What the package's configuration options would do; nothing when it sets none and owns none.</summary>
+	private async Task<IReadOnlyList<PackageSettingChange>> PlanSettingsAsync(PackagePlanInputs inputs, PackageChangeset changeset)
+	{
+		var manifest = inputs.Manifest;
+		if (manifest.Settings is not { Count: > 0 } && inputs.Installed?.Settings is null)
+		{
+			return [];
+		}
+
+		// Before the apply, an object this package will create has no dbref yet; the plan shows its ref instead.
+		var existing = changeset.Objects.Where(o => o.Objid is not null)
+			.ToDictionary(o => o.Ref, o => o.Objid!, StringComparer.Ordinal);
+		string? Resolve(PackageRef reference) => reference switch
+		{
+			{ Kind: PackageRefKind.Internal, Package: not null } =>
+				inputs.CrossPackageObjids.GetValueOrDefault($"{reference.Package}/{reference.Name}"),
+			{ Kind: PackageRefKind.Internal } => existing.GetValueOrDefault(reference.Name),
+			{ Kind: PackageRefKind.WellKnown } => inputs.WellKnownObjids.GetValueOrDefault(reference.Name),
+			{ Kind: PackageRefKind.Configure } => ResolveConfigure(manifest, inputs.ConfigureAnswers, reference.Name),
+			_ => null
+		};
+
+		return await settings.PlanAsync(manifest.Name, manifest.Settings ?? [], inputs.Installed?.Settings, Resolve);
 	}
 
 	/// <summary>What the package's roles, permissions and categories would do; nothing when it declares none and owns none.</summary>

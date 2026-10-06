@@ -67,6 +67,10 @@ else
     {
         <MudAlert Severity="Severity.Error">@blocked.Kind.Noun() <b>@blocked.Name</b>: @blocked.Detail</MudAlert>
     }
+    @foreach (var blocked in (_plan.Changeset.Settings ?? []).Where(s => s.Action == PackageSettingAction.Blocked))
+    {
+        <MudAlert Severity="Severity.Error">@Loc["PkgSettingBlocked"] <b>@blocked.Option</b>: @blocked.Detail</MudAlert>
+    }
 
     @foreach (var warning in _plan.ManifestWarnings)
     {
@@ -136,6 +140,32 @@ else
             </MudTable>
         </div>
     </KitCard>
+
+    @* ── Configuration options ───────────────────────────────────── *@
+    @if (_plan.Changeset.Settings is { Count: > 0 } settings)
+    {
+        <KitCard Title="@Loc["PkgSettingsCount", settings.Count]" Sub="@Loc["PkgSettingsSub"]" Class="pkg-settings">
+            <div class="pkg-review-body">
+                <MudTable Items="settings" Dense="true" Elevation="0" Class="pkg-objects-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgSettingOption"]</MudTh><MudTh>@Loc["PkgSettingNow"]</MudTh><MudTh>@Loc["PkgSettingAfter"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgSettingOption"]"><code>@context.Option</code></MudTd>
+                        <MudTd data-label="@Loc["PkgSettingNow"]"><code>@(context.Current ?? Loc["PkgSettingNone"].Value)</code></MudTd>
+                        <MudTd data-label="@Loc["PkgSettingAfter"]"><code>@(context.Value ?? Loc["PkgSettingNone"].Value)</code></MudTd>
+                        <MudTd data-label="@Loc["PkgAction"]"><MudChip T="string" Size="Size.Small" Color="@SettingColor(context.Action)">@context.Action</MudChip></MudTd>
+                        <MudTd data-label="@Loc["PkgDetails"]"><MudText Typo="Typo.caption">@context.Detail</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+                @if (ChangesSettings)
+                {
+                    <MudCheckBox T="bool" @bind-Value="_settingsConfirmed" Color="Color.Primary" id="pkg-settings-confirm"
+                                 Label="@Loc["PkgSettingsConfirm"]" />
+                }
+            </div>
+        </KitCard>
+    }
 
     @* ── Roles, permissions and categories ──────────────────────── *@
     @if (_plan.Changeset.Declarations is { Count: > 0 } declarations)
@@ -263,9 +293,16 @@ else
     private Dictionary<(string, string), AttributeRenderDto> _renders = new();
     private List<PackageAttributeChange> _conflicts = [];
 
+    private bool _settingsConfirmed;
+
+    /// <summary>Whether applying changes a configuration option, which the admin confirms before applying.</summary>
+    private bool ChangesSettings =>
+        _plan?.Changeset.Settings?.Any(s => s.Action is PackageSettingAction.Set or PackageSettingAction.Restore) ?? false;
+
     private bool CanApply =>
         _plan is not null
         && !_plan.Changeset.IsBlocked
+        && (!ChangesSettings || _settingsConfirmed)
         && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))));
 
     protected override async Task OnInitializedAsync()
@@ -297,6 +334,7 @@ else
             if (planned is not PlanResponse plan) return;
 
             _plan = plan;
+            _settingsConfirmed = false;
             _renders = plan.Renders.ToDictionary(r => (r.TargetRef, r.Attribute), r => r);
             _conflicts = plan.Changeset.Attributes
                 .Where(a => a.Action == PackageAttributeAction.Conflict)
@@ -363,6 +401,14 @@ else
         PackageObjectAction.Create or PackageObjectAction.RecreateMissing => Color.Info,
         PackageObjectAction.Delete => Color.Error,
         PackageObjectAction.Rename or PackageObjectAction.UpdateMetadata => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static Color SettingColor(PackageSettingAction action) => action switch
+    {
+        PackageSettingAction.Set or PackageSettingAction.Restore => Color.Warning,
+        PackageSettingAction.Blocked => Color.Error,
+        PackageSettingAction.Keep or PackageSettingAction.Release => Color.Tertiary,
         _ => Color.Default
     };
 

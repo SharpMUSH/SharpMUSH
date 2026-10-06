@@ -38,6 +38,7 @@ public static class PackageManifestWriter
 		WriteRelations(yaml, "conflicts", manifest.Conflicts, withSource: false);
 		WriteConfigure(yaml, manifest.Configure);
 		WriteDeclarations(yaml, manifest.Declared);
+		WriteSettings(yaml, manifest.Settings ?? []);
 
 		switch (manifest.Kind)
 		{
@@ -190,6 +191,22 @@ public static class PackageManifestWriter
 					}
 				}
 			}
+		}
+	}
+
+	private static void WriteSettings(StringBuilder yaml, IReadOnlyList<PackageSettingSpec> settings)
+	{
+		if (settings.Count == 0)
+		{
+			return;
+		}
+
+		yaml.AppendLine();
+		yaml.AppendLine("settings:");
+		foreach (var setting in settings)
+		{
+			// Quoted always: an unquoted yes, 40 or #12 would come back as a bool, a number or a comment.
+			yaml.Append("  ").Append(setting.Option).Append(": ").AppendLine(Quoted(setting.Value));
 		}
 	}
 

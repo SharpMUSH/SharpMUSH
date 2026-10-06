@@ -36,7 +36,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
@@ -331,6 +331,50 @@ What install, upgrade and uninstall do:
   permission also clears every account and object override of it.
 - **Rollback** restores objects and attributes only; roles, permissions and
   categories stay as they are.
+
+## Configuration options (format 1.3)
+
+A package can set configuration options, the ones `@config/set` sets. Declare
+them in `settings:` and set `format: 1.3`; an older server warns and ignores
+the block.
+
+```yaml
+format: 1.3
+package: messages
+version: 1.0.0
+
+objects:
+  - ref: messages
+    type: thing
+    name: Messages
+
+settings:                       # option name as @config lists it: value
+  messages_object: "{{messages}}"   # a dbref option may name one object ref
+  noisy_whisper: "yes"          # otherwise the value @config/set would take
+```
+
+The option must exist and be one `@config/set` can set (not a file path, a
+list with a command of its own, or one of God's options), and a literal value
+must be one the option takes; the manifest is refused otherwise. A ref is
+allowed only on a dbref option, and must be the whole value. When the package
+is planned, each value is also checked against the live configuration: a
+value outside the option's range, or one the game's validators refuse, blocks
+the plan rather than being clamped. A managed package cannot declare
+`settings:`.
+
+The review screen lists each option with its value now and after, and asks
+the installer to confirm before applying a package that changes one.
+
+- **Install.** Each option is set, and the value it replaced is recorded. An
+  option another installed package sets blocks the plan: uninstall that
+  package first.
+- **Upgrade.** A value the new version changes is set again. A value it
+  leaves as it was keeps whatever the game has now, so an administrator's
+  `@config/set` survives.
+- **Dropped options and uninstall.** The option gets back the value the
+  package replaced, unless the game has changed it since the package set it;
+  then it is left as it is.
+- **Rollback** leaves configuration options as they are.
 
 ## Application packages (`kind: application`)
 

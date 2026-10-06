@@ -1,0 +1,83 @@
+format: 1.3
+package: messages
+version: 1.0.0
+authors: [SharpMUSH]
+description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
+license: MIT
+keywords: [messages, motd, connect, login]
+requires_server: ">=0.1"
+
+# One object, one attribute per message. While messages_object names this object (installing the package sets
+# it; Admin > Messages switches between it and the stored text), each attribute is evaluated as the object
+# whenever its message is shown: %# is the player it is shown to, or the object itself at the connect screen,
+# and %0 is the connection's descriptor. A message the object has no attribute for falls back to its stored
+# text; an attribute that evaluates to nothing shows nothing.
+
+# Removing the package puts messages_object back as it was, unless it has been changed since.
+settings:
+  messages_object: "{{messages}}"
+
+objects:
+  - ref: messages
+    type: thing
+    name: Messages
+    flags: [no_command]
+    attributes:
+      # The connect screen: LOGO in the logo's green beside TEXT, line by line. Both are read with v(), so
+      # neither is evaluated: their spaces and brackets reach the screen as written.
+      CONNECT: |-
+        [iter(lnum(1,words(v(LOGO),%r),%r),[ansi(#00f5b7,ljust(extract(v(LOGO),##,1,%r),37))][extract(v(TEXT),##,1,%r)],%r,%r)]
+      LOGO: |2-
+                  ==         ==
+                 ====       ====
+               =======     =======
+              =========   =========
+             =========== ===========
+            =================== =====
+          ======-  ===========   ======
+         ======     =========     ======
+        ======   =   =======   =   ======
+        ======   ==   =====   ==   ======
+         =====   ===   ===   ===   =====
+         =====   ====   =   ====   =====
+          ====   =====     =====   ====
+           ===    ====     ====    ===
+           ===     ===     ===-    ===
+            ==     ===     ===     ==
+             =      ==     ==      =
+                     =     =
+
+      TEXT: |2-
+
+
+        Welcome to SharpMUSH!
+
+        ACCOUNT - one account, many characters:
+            register <name> [email] <password>
+            login <name-or-email> <password>
+            make <character> <password>
+            play <character>
+
+        CHARACTER - classic MUSH login:
+            connect <character> <password>
+            connect guest
+
+        ANY TIME:
+            WHO      see who is online
+            QUIT     disconnect
+
+
+      MOTD: |-
+        %rWelcome to [ansi(#00f5b7,mudname())]!
+      WIZMOTD: |-
+        %rWizard Message of the Day
+      GUEST: |-
+        %rWelcome, Guest! You are connected as a temporary guest character.%rType 'help' for assistance.
+      NEWUSER: |-
+        %rWelcome, new player!%r%rYour account is ready. Create your first character with:%r[space(4)]make <character-name> <password>%r%rThen enter play with:%r[space(4)]play <character-name>
+      REGISTER: |-
+        %rRegistration is not available on this server.
+      DOWN: |-
+        %r[mudname()] is currently unavailable. Please try again later.
+      QUIT: |-
+        %rGoodbye from [mudname()]!
