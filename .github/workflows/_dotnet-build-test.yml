@@ -159,22 +159,6 @@ jobs:
             dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/$help_suite/*"
           done
 
-      - name: Generate editor data from the shared article model
-        env:
-          SHARPMUSH_REGENERATE_CLIENT_DATA: "1"
-        run: >-
-          dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/ClientDataGenerationTests/*"
-
-      - name: Upload generated editor data
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: generated-editor-data
-          path: SharpMUSH.Client/wwwroot/data/mush-*.json
-          retention-days: 7
-
-      - name: Verify checked-in editor data matches the articles
-        run: git diff --exit-code --stat -- SharpMUSH.Client/wwwroot/data
-
   test:
     needs: [build]
     runs-on: ubuntu-latest

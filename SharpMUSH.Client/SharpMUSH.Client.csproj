@@ -91,4 +91,48 @@
 		<PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
 	</ItemGroup>
 
+	<!-- The softcode editor's data files (data/mush-defs.json, data/mush-functions.json,
+	     data/mush-commands.json) are built by tools/ClientData from the [SharpFunction]/[SharpCommand]
+	     attributes and the shipped helpfiles, into wwwroot/data, which .gitignore leaves out. They are
+	     not checked in: a checked-in copy went stale with every help change and conflicted on every
+	     merge. -->
+	<PropertyGroup>
+		<ClientDataHelpfiles>$(MSBuildThisFileDirectory)..\SharpMUSH.Documentation\Helpfiles\SharpMUSH</ClientDataHelpfiles>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Built, never referenced: its output lands in @(ClientDataTool), the way an analyzer's does. -->
+		<ProjectReference Include="..\tools\ClientData\ClientData.csproj" ReferenceOutputAssembly="false" Private="false"
+			OutputItemType="ClientDataTool" SkipGetTargetFrameworkProperties="true" />
+	</ItemGroup>
+
+	<Target Name="ResolveClientDataInputs" DependsOnTargets="ResolveProjectReferences">
+		<PropertyGroup>
+			<ClientDataTool>@(ClientDataTool)</ClientDataTool>
+			<ClientDataOutput>$(MSBuildProjectDirectory)\wwwroot\data\</ClientDataOutput>
+			<ClientDataHost>$(DOTNET_HOST_PATH)</ClientDataHost>
+			<ClientDataHost Condition="'$(ClientDataHost)' == ''">dotnet</ClientDataHost>
+		</PropertyGroup>
+		<ItemGroup>
+			<_ClientDataInput Include="$(ClientDataHelpfiles)\**\*.md;$(ClientDataTool)" />
+		</ItemGroup>
+	</Target>
+
+	<Target Name="GenerateClientData" DependsOnTargets="ResolveClientDataInputs" Condition="'$(NoBuild)' != 'true'"
+		Inputs="@(_ClientDataInput)"
+		Outputs="$(ClientDataOutput)mush-defs.json;$(ClientDataOutput)mush-functions.json;$(ClientDataOutput)mush-commands.json">
+		<Exec Command="&quot;$(ClientDataHost)&quot; &quot;$(ClientDataTool)&quot; &quot;$(ClientDataHelpfiles)&quot; &quot;$(ClientDataOutput.TrimEnd('\'))&quot;" />
+	</Target>
+
+	<Target Name="IncludeClientData" DependsOnTargets="GenerateClientData" BeforeTargets="ResolveProjectStaticWebAssets"
+		Condition="'$(NoBuild)' != 'true'">
+		<ItemGroup>
+			<!-- On a clean checkout the files did not exist when wwwroot/** was globbed into Content. -->
+			<_ClientDataFile Include="wwwroot\data\mush-defs.json;wwwroot\data\mush-functions.json;wwwroot\data\mush-commands.json" />
+			<Content Remove="@(_ClientDataFile)" />
+			<Content Include="@(_ClientDataFile)" />
+			<FileWrites Include="@(_ClientDataFile)" />
+		</ItemGroup>
+	</Target>
+
 </Project>
