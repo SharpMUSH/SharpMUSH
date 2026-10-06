@@ -33,6 +33,7 @@ public sealed class WikiMarkdigPipeline
 	///   <item><see cref="WikiDirectiveExtension"/> for dynamic-listing directives
 	///     (<c>::: category …</c>, <c>::: pagelist …</c>, <c>::: recent N</c>)</item>
 	///   <item>DisableHtml — raw HTML in wiki source is blocked for security</item>
+	///   <item><see cref="WikiSafetyExtension"/> — attribute blocks and link URLs cannot carry script either</item>
 	/// </list>
 	/// </summary>
 	public static MarkdownPipeline CreatePipeline() =>
@@ -42,6 +43,7 @@ public sealed class WikiMarkdigPipeline
 			.Use<WikiImageExtension>()
 			.Use<WikiDirectiveExtension>()
 			.DisableHtml()
+			.Use<WikiSafetyExtension>()
 			.Build();
 
 	/// <summary>
