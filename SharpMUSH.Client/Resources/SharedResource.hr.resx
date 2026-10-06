@@ -3666,10 +3666,6 @@
     <value>Greška pri učitavanju objekta: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Rezultat evaluacije</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Proširi atribute</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT — 'softcode' untranslated per glossary, Croatian genitive ending attached</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — pokreni spremljeni atribut s u()</value>
+    <value>Pokreni međuspremnik kao objekt, uključujući nespremljene izmjene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konzola</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Izrazi se izvode kao vi: %!, %# i me su vaš lik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Izrazi se izvode kao vi. ▶ pokreće međuspremnik kao {0}, kao što bi u(): %! i me su {0}, %# ste vi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Izračunaj izraz kao vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Izračunaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Očisti konzolu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Dodaj argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Ukloni argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nespremljeno</value>

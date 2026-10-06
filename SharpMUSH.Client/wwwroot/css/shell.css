@@ -791,20 +791,6 @@
     border-top: 1px solid #333;
 }
 
-/* ── Eval result panel ── */
-.mush-eval-output {
-    font-family: monospace;
-    font-size: 0.75rem;
-    white-space: pre-wrap;
-    word-break: break-all;
-    padding: 0.375rem 0.625rem;
-    background: #111;
-    color: #a3e8a0;
-    border-top: 1px solid #333;
-    max-height: 120px;
-    overflow-y: auto;
-}
-
 /* ── HelpDrawer markdown rendering ── */
 .mush-help-md {
     font-family: Consolas, 'Courier New', monospace;

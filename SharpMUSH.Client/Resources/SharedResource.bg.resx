@@ -3666,10 +3666,6 @@
     <value>Грешка при зареждане на обекта: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Резултат от изчислението</value>
-    <comment>MT — «eval» rendered descriptively; no established Bulgarian MUSH term</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Разгъни атрибутите</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT — `softcode` kept untranslated per glossary</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — изпълни запазения атрибут с u()</value>
+    <value>Изпълни буфера като обекта, включително незапазените промени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Конзола</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Изразите се изпълняват като вас: %!, %# и me са вашият персонаж.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Изразите се изпълняват като вас. ▶ изпълнява буфера като {0}, както би го направил u(): %! и me са {0}, %# сте вие.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Изчисли израз като вас</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Изчисли</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Изчисти конзолата</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Добави аргумент {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Премахни аргумент {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>незапазено</value>

@@ -3666,10 +3666,6 @@
     <value>Hiba az objektum betöltésekor: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Kiértékelés eredménye</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Attribútumok kibontása</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — a mentett attribútum futtatása u()-val</value>
+    <value>A puffer futtatása az objektumként, a mentetlen változtatásokkal együtt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konzol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>A kifejezések a nevedben futnak: %!, %# és me a karaktered.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>A kifejezések a nevedben futnak. A ▶ a puffert {0} nevében futtatja, ahogy az u() tenné: %! és me {0}, %# te vagy.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Kifejezés kiértékelése a nevedben</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Kiértékelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Konzol törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>{0} argumentum hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>{0} argumentum eltávolítása</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>nincs mentve</value>

@@ -38,6 +38,9 @@ public sealed class SoftcodeTab(MushObject obj, MushAttribute attr)
 	/// </summary>
 	public void MarkSaved(string value) => SavedContent = value;
 
+	/// <summary>This tab's console: its scrollback and the arguments its runs pass.</summary>
+	public SoftcodeConsole Repl { get; } = new();
+
 	public bool Is(int dbref, string attributeName) =>
 		Obj.Dbref == dbref && string.Equals(Attr.Name, attributeName, StringComparison.OrdinalIgnoreCase);
 }

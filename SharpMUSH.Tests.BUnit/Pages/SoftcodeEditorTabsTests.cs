@@ -89,6 +89,7 @@ public class SoftcodeEditorTabsTests : BunitContext
 			.AddSingleton(terminal)
 			.AddSingleton(factory)
 			.AddSingleton<ObjectApiService>()
+			.AddSingleton<GameCommandService>()
 			.AddSingleton(sp => new HelpService(sp.GetRequiredService<IHttpClientFactory>().CreateClient("api")))
 			.AddSingleton(sp => new MushQueryService(
 				sp.GetRequiredService<ITerminalService>(), NullLogger<MushQueryService>.Instance))
