@@ -1056,13 +1056,43 @@
     <value>Aucun attribut sélectionné</value>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — exécuter l'attribut enregistré avec u()</value>
+    <value>Exécuter le tampon en tant qu’objet, modifications non enregistrées comprises</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Console</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Les expressions s’exécutent en votre nom : %!, %# et me sont votre personnage.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Les expressions s’exécutent en votre nom. ▶ exécute le tampon en tant que {0}, comme u() : %! et me sont {0}, %# c’est vous.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Évaluer une expression en votre nom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Évaluer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Vider la console</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Ajouter l’argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Retirer l’argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermRefreshAttributes" xml:space="preserve">
     <value>Actualiser les attributs</value>
-  </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Résultat de l'évaluation</value>
   </data>
   <data name="TermErrorLine" xml:space="preserve">
     <value>[Erreur] {0}</value>

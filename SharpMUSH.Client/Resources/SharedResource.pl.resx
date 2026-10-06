@@ -3666,10 +3666,6 @@
     <value>Błąd wczytywania obiektu: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Wynik ewaluacji</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Rozwiń atrybuty</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — uruchom zapisany atrybut przez u()</value>
+    <value>Uruchom bufor jako obiekt, łącznie z niezapisanymi zmianami</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konsola</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Wyrażenia działają jako ty: %!, %# i me to twoja postać.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Wyrażenia działają jako ty. ▶ uruchamia bufor jako {0}, tak jak u(): %! i me to {0}, %# to ty.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Oblicz wyrażenie jako ty</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Oblicz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Wyczyść konsolę</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Dodaj argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Usuń argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>niezapisane</value>

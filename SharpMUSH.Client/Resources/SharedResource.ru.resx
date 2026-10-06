@@ -3666,10 +3666,6 @@
     <value>Ошибка загрузки объекта: {0}</value>
     <comment>MT — {0} sits after a colon, so it stays in whatever form the server supplies.</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Результат вычисления</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Развернуть атрибуты</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT — softcode kept untranslated per the glossary.</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — выполнить сохранённый атрибут через u()</value>
+    <value>Выполнить буфер от имени объекта, включая несохранённые правки</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Консоль</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Выражения выполняются от вашего имени: %!, %# и me — ваш персонаж.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Выражения выполняются от вашего имени. ▶ выполняет буфер от имени {0}, как это сделал бы u(): %! и me — это {0}, %# — вы.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Вычислить выражение от вашего имени</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Вычислить</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Очистить консоль</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Добавить аргумент {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Удалить аргумент {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>не сохранено</value>

@@ -12,6 +12,7 @@
 - [x] Implement subject filtering (broad NATS subjects, server filters by payload before forwarding) — wildcard subscribe + dbref extraction + null-payload guard in `NatsBridgeService`
 - [x] Wire up game output → NATS → SignalR → client terminal panel — bridge forwards `ReceiveOutput`; `ConnectionStateService` surfaces `OnOutputReceived`
 - [x] Portal-issued game commands — `POST api/commands` (`CommandsController` → `PortalCommandService`) runs one line as the session's bound character on the engine queue and answers with its captured output and an optional `Result` expression (#1485). The hub's `SendCommand` → `GameCommandMessage` publish, which nothing consumed, is retired
+- [x] Softcode Editor console — `POST api/commands/eval` evaluates an expression with `%0`-`%9` as the character, or as an object the character controls (the editor's unsaved buffer, run as `u()` would run it), on the same queue and per-account limit (#1578)
 - [x] Implement reconnection handling (SignalR auto-reconnect + state transitions) — `ExponentialBackOffRetryPolicy` in `GameHubConnectionFactory`; `ConnectionStateService` tracks Reconnecting/Connected
 
 ## NATS Subjects

@@ -3666,10 +3666,6 @@
     <value>Fehler beim Laden des Objekts: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Eval-Ergebnis</value>
-    <comment>MT — Eval kept: it names the softcode evaluation step, matching the Test button below.</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Attribute ausklappen</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT — hyphenated compound on the protected term, per the spec.</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — gespeichertes Attribut mit u() ausführen</value>
+    <value>Puffer als das Objekt ausführen, ungespeicherte Änderungen eingeschlossen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konsole</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Ausdrücke laufen als du: %!, %# und me sind dein Charakter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Ausdrücke laufen als du. ▶ führt den Puffer als {0} aus, wie u() es täte: %! und me sind {0}, %# bist du.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Ausdruck als du auswerten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Auswerten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Konsole leeren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Argument {0} hinzufügen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Argument {0} entfernen</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ungespeichert</value>

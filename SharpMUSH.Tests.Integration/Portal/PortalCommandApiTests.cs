@@ -10,6 +10,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
@@ -190,12 +191,91 @@ public class PortalCommandApiTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 	}
 
+	private static async Task<HttpResponseMessage> EvaluateAsync(HttpClient http, PortalEvalRequest request) =>
+		await http.PostAsJsonAsync("api/commands/eval", request);
+
+	private static async Task<PortalCommandResponse> EvaluatedAsync(HttpClient http, PortalEvalRequest request)
+	{
+		var response = await EvaluateAsync(http, request);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK)
+			.Because(await response.Content.ReadAsStringAsync());
+		return (await response.Content.ReadFromJsonAsync<PortalCommandResponse>())!;
+	}
+
+	/// <summary>
+	/// The Softcode Editor's console (#1578): an expression runs as the character, with its arguments as
+	/// <c>%0</c> onward, each evaluated first as <c>u()</c> evaluates its arguments, and its value is the answer.
+	/// </summary>
+	[Test]
+	public async Task AnExpression_RunsAsTheCharacter_WithItsArguments()
+	{
+		var http = CreateClient();
+		var me = (await RunAsync(http, "think", "num(me)")).Result;
+
+		var answer = await EvaluatedAsync(http,
+			new PortalEvalRequest("[add(%0,%1)] [num(me)] [num(%#)]", ["2", "[add(1,2)]"]));
+
+		await Assert.That(answer.Result).IsEqualTo($"5 {me} {me}");
+	}
+
+	/// <summary>
+	/// Given an object, the expression — the editor's unsaved buffer — runs as <c>u()</c> would run it from
+	/// one of that object's attributes: <c>%!</c> and <c>me</c> are the object, <c>%#</c> the character, and
+	/// what the code tells the character comes back with the value.
+	/// </summary>
+	[Test]
+	public async Task AnExpressionRunsAsAnObjectTheCharacterControls()
+	{
+		var http = CreateClient();
+		var gadget = TestIsolationHelpers.GenerateUniqueName("EvalGadget");
+		await RunAsync(http, $"@create {gadget}");
+		var number = int.Parse((await RunAsync(http, "think", $"num({gadget})")).Result!.TrimStart('#'));
+		var marker = TestIsolationHelpers.GenerateUniqueName("EvalTold");
+		var me = (await RunAsync(http, "think", "num(me)")).Result;
+
+		var answer = await EvaluatedAsync(http, new PortalEvalRequest(
+			$"[pemit(%#,{marker} %0)][num(%!)] [name(me)] [num(%#)]", ["hi"], number));
+
+		await Assert.That(answer.Result).IsEqualTo($"#{number} {gadget} {me}");
+		await Assert.That(answer.Output).Contains($"{marker} hi");
+	}
+
+	/// <summary>Running code as an object takes what writing code onto it takes: control of it.</summary>
+	[Test]
+	public async Task AnObjectTheCharacterDoesNotControl_IsRefused()
+	{
+		var number = await TestIsolationHelpers.CreateTestPlayerAsync(factory.Services, Mediator, "EvalMortal");
+		var character = (await Mediator.Send(new GetObjectNodeQuery(number))).Expect<SharpPlayer>().Object.DBRef;
+		var controller = await CommandsControllerAs(character);
+
+		var refused = await controller.Evaluate(new PortalEvalRequest("num(%!)", Object: 1), CancellationToken.None);
+		var own = await controller.Evaluate(new PortalEvalRequest("num(%!)", Object: character.Number), CancellationToken.None);
+
+		await Assert.That((refused.Result as ObjectResult)?.StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
+		await Assert.That(own.Value!.Result).IsEqualTo($"#{character.Number}");
+	}
+
+	[Test]
+	public async Task AnEmptyExpression_OrMoreThanTenArguments_IsRefused()
+	{
+		var http = CreateClient();
+
+		var empty = await EvaluateAsync(http, new PortalEvalRequest(" "));
+		var eleven = await EvaluateAsync(http, new PortalEvalRequest("%0", Enumerable.Range(0, 11).Select(i => $"{i}").ToList()));
+
+		await Assert.That(empty.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+		await Assert.That(eleven.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+	}
+
 	private async Task<CommandsController> CommandsControllerAs(DBRef character)
 	{
 		var identity = await PortalControllers.IdentityFor(factory, character);
 		return new CommandsController(
 			factory.Services.GetRequiredService<IPortalCommandService>(),
-			factory.Services.GetRequiredService<IVisibleWorldProjection>())
+			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
+			Mediator,
+			factory.Services.GetRequiredService<IPermissionService>(),
+			factory.Services.GetRequiredService<IRealityPolicy>())
 		{
 			ControllerContext = new ControllerContext
 			{

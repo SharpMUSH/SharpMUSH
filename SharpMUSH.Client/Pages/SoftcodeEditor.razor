@@ -8,6 +8,7 @@
 @using SharpMUSH.Client.Services
 @inject ITerminalService Terminal
 @inject MushQueryService QueryService
+@inject GameCommandService Commands
 @inject ObjectApiService ObjectApi
 @inject IJSRuntime JsRuntime
 @inject ILogger<SoftcodeEditor> Logger
@@ -296,8 +297,14 @@
             <MudSpacer />
             <MudTooltip Text="@Loc["TermEvalTooltip"]">
                 <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
-                               OnClick="EvalAsync" Disabled="@(_evalLoading || ActiveTab is null)"
+                               OnClick="RunBufferAsync" Disabled="@(_evaluating || ActiveTab is null)"
                                aria-label="@Loc["TermEvalTooltip"]" Class="sc-eval" />
+            </MudTooltip>
+            <MudTooltip Text="@Loc["TermConsole"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"
+                               Color="@(_consoleOpen ? Color.Primary : Color.Default)"
+                               OnClick="ToggleConsole" aria-label="@Loc["TermConsole"]"
+                               aria-pressed="@(_consoleOpen ? "true" : "false")" Class="sc-console-toggle" />
             </MudTooltip>
             @* Icons alone: a floppy and a bin need no label, and the toolbar's width belongs to
                the attribute's name. The tooltip and aria-label still name them. *@
@@ -391,21 +398,102 @@
             }
         </div>
 
-        @if (_evalLoading)
+        @if (_consoleOpen)
         {
-            <MudProgressLinear Indeterminate="true" Color="Color.Success" Style="height:2px;flex-shrink:0;" />
-        }
-        else if (_evalOutput is not null)
-        {
-            <div class="mush-eval-output" style="flex-shrink:0;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem;">
-                    <MudText Typo="Typo.caption" Color="Color.Success">▶ @Loc["TermEvalResult"]</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                                   Style="padding:0;min-width:0;height:16px;" Color="Color.Default"
-                                   OnClick="@(() => { _evalOutput = null; StateHasChanged(); })" />
+            var repl = Repl;
+            <section class="sc-console" aria-label="@Loc["TermConsole"]">
+                <div class="sc-console-head">
+                    <span class="sc-console-title">@Loc["TermConsole"]</span>
+                    @* Who the code runs as is the question every softcode author asks first, so the
+                       panel says it rather than leaving it to be found out. *@
+                    <span class="sc-console-hint">@(ActiveTab is { } runTab
+                        ? Loc["TermConsoleSemantics", $"{runTab.Obj.Name}(#{runTab.Obj.Dbref})"]
+                        : Loc["TermConsoleAsYou"])</span>
+                    <MudSpacer />
+                    <MudTooltip Text="@Loc["TermConsoleClear"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.ClearAll" Size="Size.Small"
+                                       OnClick="repl.Clear" Disabled="@(repl.Entries.Count == 0)"
+                                       aria-label="@Loc["TermConsoleClear"]" Class="sc-console-clear" />
+                    </MudTooltip>
                 </div>
-                @_evalOutput
-            </div>
+                <div class="sc-console-args">
+                    @for (var i = 0; i < repl.Arguments.Count; i++)
+                    {
+                        var index = i;
+                        <label class="sc-console-arg">
+                            <span class="sc-console-arg-name">%@index</span>
+                            <input class="sc-console-arg-input" value="@repl.Arguments[index]" spellcheck="false"
+                                   @oninput="e => repl.SetArgument(index, e.Value?.ToString() ?? string.Empty)" />
+                        </label>
+                    }
+                    @if (repl.Arguments.Count < SoftcodeConsole.MaxArguments)
+                    {
+                        <button type="button" class="sc-console-argbtn sc-console-addarg" @onclick="repl.AddArgument"
+                                title="@Loc["TermConsoleAddArgument", $"%{repl.Arguments.Count}"]"
+                                aria-label="@Loc["TermConsoleAddArgument", $"%{repl.Arguments.Count}"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" />
+                        </button>
+                    }
+                    @if (repl.Arguments.Count > 0)
+                    {
+                        <button type="button" class="sc-console-argbtn sc-console-removearg" @onclick="repl.RemoveArgument"
+                                title="@Loc["TermConsoleRemoveArgument", $"%{repl.Arguments.Count - 1}"]"
+                                aria-label="@Loc["TermConsoleRemoveArgument", $"%{repl.Arguments.Count - 1}"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Remove" Style="font-size:0.875rem;" />
+                        </button>
+                    }
+                </div>
+                <div class="sc-console-log" id="@ConsoleLogId" role="log" aria-live="polite">
+                    @foreach (var entry in repl.Entries)
+                    {
+                        <div class="sc-console-entry">
+                            <div class="sc-console-src">
+                                <span class="sc-console-sigil" aria-hidden="true">@(entry.IsBuffer ? "▶" : "›")</span>
+                                <span class="sc-console-code">@entry.Source</span>
+                                @if (entry.Unsaved)
+                                {
+                                    <span class="sc-console-unsaved">@Loc["TermUnsaved"]</span>
+                                }
+                            </div>
+                            @if (entry.Arguments.Count > 0)
+                            {
+                                <div class="sc-console-argline">@string.Join("  ", entry.Arguments.Select((a, n) => $"%{n}={a}"))</div>
+                            }
+                            @foreach (var line in entry.Output)
+                            {
+                                <div class="sc-console-out">@line</div>
+                            }
+                            @if (entry.Error is not null)
+                            {
+                                <div class="sc-console-error">@Loc["TermErrorLine", entry.Error]</div>
+                            }
+                            else if (!string.IsNullOrEmpty(entry.Result))
+                            {
+                                <div class="sc-console-result">@entry.Result</div>
+                            }
+                            else if (entry.Output.Count == 0)
+                            {
+                                <div class="sc-console-none">@Loc["TermNoOutput"]</div>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (_evaluating)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Success" Style="height:2px;flex-shrink:0;" />
+                }
+                <div class="sc-console-input">
+                    <span class="sc-console-prompt" aria-hidden="true">›</span>
+                    <input class="sc-console-line" value="@_consoleInput" spellcheck="false"
+                           @oninput="OnConsoleInput" @onkeydown="OnConsoleKeyDown"
+                           placeholder="@Loc["TermConsoleInputPlaceholder"]"
+                           aria-label="@Loc["TermConsoleInputPlaceholder"]" />
+                    <button type="button" class="sc-console-send" @onclick="EvaluateInputAsync"
+                            disabled="@_evaluating" title="@Loc["TermConsoleEvaluate"]" aria-label="@Loc["TermConsoleEvaluate"]">
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardReturn" Style="font-size:0.875rem;" />
+                    </button>
+                </div>
+            </section>
         }
 
         @if (_saveMessage is not null)
@@ -460,8 +548,29 @@
     private bool _loadingAttrs;
     private string? _saveMessage;
     private Severity _saveSeverity = Severity.Success;
-    private string? _evalOutput;
-    private bool _evalLoading;
+    private bool _evaluating;
+    private bool _consoleOpen;
+    private string _consoleInput = string.Empty;
+    private const string ConsoleLogId = "sc-console-log";
+
+    // Typed expressions, oldest first, for Up and Down. Kept in memory only, for as long as the page is
+    // open: an expression can carry a secret anywhere in it (checkpass(me,...), decrypt(...,key)), which
+    // no rule about a leading verb catches, so none of it goes to localStorage as the terminal's does.
+    private readonly List<string> _consoleHistory = [];
+    private readonly HistoryWalk _consoleWalk = new();
+
+    private void RememberExpression(string line)
+    {
+        if (_consoleHistory.Count > 0 && _consoleHistory[^1] == line) return;
+        _consoleHistory.Add(line);
+        if (_consoleHistory.Count > CommandHistory.Capacity) _consoleHistory.RemoveAt(0);
+    }
+
+    // With no tab open, typed expressions still run; their scrollback lives here until one is.
+    private readonly SoftcodeConsole _looseRepl = new();
+
+    /// <summary>The console the panel shows: the active tab's, or the page's own with none open.</summary>
+    private SoftcodeConsole Repl => ActiveTab?.Repl ?? _looseRepl;
 
     private bool _objCollapsed;
     private bool _attrCollapsed;
@@ -855,26 +964,103 @@
 
     }
 
-    private async Task EvalAsync()
+    private void ToggleConsole() => _consoleOpen = !_consoleOpen;
+
+    /// <summary>
+    /// Runs the editor's buffer as it stands, unsaved edits included, as the object holding the attribute:
+    /// what <c>u()</c> would do with it once saved, with the console's arguments as <c>%0</c> onward.
+    /// </summary>
+    private async Task RunBufferAsync()
     {
         if (_monacoEditor is null || ActiveTab is null) return;
-        _evalLoading = true;
-        _evalOutput = null;
+
+        var tab = ActiveTab;
+        var value = await _monacoEditor.GetValue() ?? string.Empty;
+        // As in SaveAsync: a tab switch during the interop call loads another tab's text into Monaco.
+        if (!ReferenceEquals(ActiveTab, tab)) return;
+        _tabs.Capture(value);
+
+        _consoleOpen = true;
+        await EvaluateAsync(tab.Repl, $"#{tab.Obj.Dbref}/{tab.Attr.Name}", isBuffer: true, tab.IsDirty, value, tab.Obj.Dbref);
+    }
+
+    private void OnConsoleInput(ChangeEventArgs e)
+    {
+        _consoleInput = e.Value?.ToString() ?? string.Empty;
+        _consoleWalk.Reset();
+    }
+
+    /// <summary>Enter evaluates; Up and Down walk the console's history, as the terminal's input line does.</summary>
+    private async Task OnConsoleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await EvaluateInputAsync();
+                break;
+            case "ArrowUp":
+                if (_consoleWalk.Older(_consoleHistory, _consoleInput) is { } older) _consoleInput = older;
+                break;
+            case "ArrowDown":
+                if (_consoleWalk.Newer(_consoleHistory) is { } newer) _consoleInput = newer;
+                break;
+        }
+    }
+
+    /// <summary>Evaluates the typed expression as the character, with the console's arguments.</summary>
+    private async Task EvaluateInputAsync()
+    {
+        var line = _consoleInput.Trim();
+        if (line.Length == 0 || _evaluating) return;
+
+        _consoleInput = string.Empty;
+        _consoleWalk.Reset();
+        RememberExpression(line);
+        await EvaluateAsync(Repl, line, isBuffer: false, unsaved: false, line, objectDbref: null);
+    }
+
+    /// <summary>Evaluates <paramref name="expression"/> and adds what came back to <paramref name="console"/>.</summary>
+    /// <remarks>
+    /// The console is captured by the caller, not read back afterwards: the reader may switch tabs while
+    /// the request is out, and the answer belongs with the tab that asked.
+    /// </remarks>
+    private async Task EvaluateAsync(SoftcodeConsole console, string source, bool isBuffer, bool unsaved,
+        string expression, int? objectDbref)
+    {
+        var arguments = console.ArgumentsToSend;
+        // An empty buffer has nothing to evaluate, and the server would refuse it as a bad request.
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            console.Add(new SoftcodeConsoleEntry(source, isBuffer, unsaved, arguments, [], string.Empty, null, false));
+            await ScrollConsoleAsync();
+            return;
+        }
+
+        _evaluating = true;
+        StateHasChanged();
         try
         {
-            var lines = await QueryService.EvalAsync($"#{ActiveTab.Obj.Dbref}", ActiveTab.Attr.Name);
-            _evalOutput = lines.Length > 0
-                ? string.Join("\n", lines.Where(l => !string.IsNullOrEmpty(l)))
-                : Loc["TermNoOutput"];
-        }
-        catch (Exception ex)
-        {
-            _evalOutput = Loc["TermErrorLine", ex.Message];
+            var answer = await Commands.EvaluateAsync(expression, arguments.Count > 0 ? arguments : null, objectDbref);
+            console.Add(answer switch
+            {
+                PortalCommandResponse response => new SoftcodeConsoleEntry(source, isBuffer, unsaved, arguments,
+                    response.Output, response.Result, null, response.Truncated),
+                ApiFailure failure => new SoftcodeConsoleEntry(source, isBuffer, unsaved, arguments, [], null, failure.Message, false),
+            });
         }
         finally
         {
-            _evalLoading = false;
+            _evaluating = false;
         }
+
+        StateHasChanged();
+        await ScrollConsoleAsync();
+    }
+
+    private async Task ScrollConsoleAsync()
+    {
+        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.jumpToLatest", ConsoleLogId); }
+        catch (JSException) { /* the newest entry is still there to scroll to */ }
     }
 
     private void ShowCreateObjectDialog(MushObjectType type)

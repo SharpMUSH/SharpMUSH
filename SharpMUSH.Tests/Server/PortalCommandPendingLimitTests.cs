@@ -65,6 +65,7 @@ public class PortalCommandPendingLimitTests
 		queue.Scheduler,
 		new CommandOutputCapture(),
 		Substitute.For<IMediator>(),
+		Substitute.For<IPermissionService>(),
 		Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(),
 		Options.Create(new PortalCommandOptions { MaxPendingPerAccount = Limit }),
 		NullLogger<PortalCommandService>.Instance);
@@ -141,7 +142,7 @@ public class PortalCommandPendingLimitTests
 		scheduler.AdmitSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action?>())
 			.Returns(ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.GlobalLimit)));
 		var service = new PortalCommandService(Substitute.For<IMUSHCodeParser>(), scheduler, new CommandOutputCapture(),
-			Substitute.For<IMediator>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(),
+			Substitute.For<IMediator>(), Substitute.For<IPermissionService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(),
 			Options.Create(new PortalCommandOptions { MaxPendingPerAccount = Limit }), NullLogger<PortalCommandService>.Instance);
 		var player = Player(44);
 

@@ -3666,10 +3666,6 @@
     <value>Erro ao carregar o objeto: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Resultado da avaliação</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Expandir atributos</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — executar o atributo salvo com u()</value>
+    <value>Executar o buffer como o objeto, incluindo as alterações não salvas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Console</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>As expressões rodam como você: %!, %# e me são o seu personagem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>As expressões rodam como você. ▶ executa o buffer como {0}, como o u() faria: %! e me são {0}, %# é você.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Avaliar uma expressão como você</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Avaliar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Limpar o console</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Adicionar argumento {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Remover argumento {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>não salvo</value>

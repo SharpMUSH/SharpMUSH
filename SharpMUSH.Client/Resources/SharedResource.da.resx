@@ -3666,10 +3666,6 @@
     <value>Fejl ved indlæsning af objekt: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="TermEvalResult" xml:space="preserve">
-    <value>Evalueringsresultat</value>
-    <comment>MT</comment>
-  </data>
   <data name="TermExpandAttributes" xml:space="preserve">
     <value>Vis attributter</value>
     <comment>MT</comment>
@@ -3769,7 +3765,40 @@
     <comment>MT</comment>
   </data>
   <data name="TermEvalTooltip" xml:space="preserve">
-    <value>Eval — kør den gemte attribut med u()</value>
+    <value>Kør bufferen som objektet, inklusive ikke-gemte ændringer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsole" xml:space="preserve">
+    <value>Konsol</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAsYou" xml:space="preserve">
+    <value>Udtryk køres som dig: %!, %# og me er din karakter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleSemantics" xml:space="preserve">
+    <value>Udtryk køres som dig. ▶ kører bufferen som {0}, som u() ville: %! og me er {0}, %# er dig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleInputPlaceholder" xml:space="preserve">
+    <value>Evaluer et udtryk som dig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleEvaluate" xml:space="preserve">
+    <value>Evaluer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleClear" xml:space="preserve">
+    <value>Ryd konsollen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleAddArgument" xml:space="preserve">
+    <value>Tilføj argument {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="TermConsoleRemoveArgument" xml:space="preserve">
+    <value>Fjern argument {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="TermUnsaved" xml:space="preserve">
     <value>ugemt</value>

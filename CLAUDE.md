@@ -195,6 +195,9 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
   limit. A request naming a `Character` (objid) is refused 409 unless the session is still bound to it;
   an account may have `PortalCommands:MaxPendingPerAccount` (default 4) commands queued or running,
   and is answered 429 past that
+- The Softcode Editor's console evaluates through `POST api/commands/eval` on the same queue and limit:
+  an expression with `%0`-`%9`, as the character or, given an object the character controls, as that
+  object with `%#` the character (how the editor runs its unsaved buffer the way `u()` would)
 
 ### Widget System
 

@@ -45,6 +45,16 @@ public interface IPortalCommandService
 	/// as it may, or why the command did not run to completion.</returns>
 	ValueTask<PortalCommandOutcome> RunAsync(string account, SharpPlayer character, PortalCommandRequest request,
 		CancellationToken ct = default);
+
+	/// <summary>
+	/// Queues an evaluation of <paramref name="request"/>'s expression, with its arguments as <c>%0</c>-<c>%9</c>,
+	/// waits for it to run, and returns its value and whatever <paramref name="character"/> was told meanwhile.
+	/// It runs as <paramref name="self"/> when given, which the caller has already checked
+	/// <paramref name="character"/> controls; <c>%#</c> and <c>%@</c> stay <paramref name="character"/>.
+	/// </summary>
+	/// <param name="account">The account the request came from, whose pending commands are bounded.</param>
+	ValueTask<PortalCommandOutcome> EvaluateAsync(string account, SharpPlayer character, DBRef? self,
+		PortalEvalRequest request, CancellationToken ct = default);
 }
 
 /// <inheritdoc />
@@ -67,6 +77,7 @@ public sealed class PortalCommandService(
 	ITaskScheduler scheduler,
 	ICommandOutputCapture outputCapture,
 	IMediator mediator,
+	IPermissionService permissions,
 	IOptionsWrapper<SharpMUSHOptions> gameOptions,
 	IOptions<PortalCommandOptions> options,
 	ILogger<PortalCommandService> logger) : IPortalCommandService
@@ -82,18 +93,34 @@ public sealed class PortalCommandService(
 		CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
+		return await HoldingSlotAsync(account, character.Object.DBRef,
+			queued => QueueAsync(account, character.Object.DBRef, () => ExecuteAsync(character.Object.DBRef, request), queued, ct));
+	}
+
+	/// <inheritdoc />
+	public async ValueTask<PortalCommandOutcome> EvaluateAsync(string account, SharpPlayer character, DBRef? self,
+		PortalEvalRequest request, CancellationToken ct = default)
+	{
+		ct.ThrowIfCancellationRequested();
+		var actor = character.Object.DBRef;
+		return await HoldingSlotAsync(account, actor,
+			queued => QueueAsync(account, actor, () => EvaluateCoreAsync(actor, self ?? actor, request), queued, ct));
+	}
+
+	private async ValueTask<PortalCommandOutcome> HoldingSlotAsync(string account, DBRef actor,
+		Func<Action, ValueTask<PortalCommandOutcome>> queue)
+	{
 		var limit = Math.Max(1, options.Value.MaxPendingPerAccount);
 		if (!TryHoldSlot(account, limit))
 		{
-			logger.LogInformation("Portal command for {Character} refused: the account has {Limit} pending.",
-				character.Object.DBRef, limit);
+			logger.LogInformation("Portal command for {Character} refused: the account has {Limit} pending.", actor, limit);
 			return new TooManyCommands(limit);
 		}
 
 		var queued = false;
 		try
 		{
-			return await QueueAsync(account, character.Object.DBRef, request, () => queued = true, ct);
+			return await queue(() => queued = true);
 		}
 		finally
 		{
@@ -102,8 +129,8 @@ public sealed class PortalCommandService(
 		}
 	}
 
-	private async ValueTask<PortalCommandOutcome> QueueAsync(string account, DBRef actor, PortalCommandRequest request,
-		Action queued, CancellationToken ct)
+	private async ValueTask<PortalCommandOutcome> QueueAsync(string account, DBRef actor,
+		Func<ValueTask<Result<PortalCommandResponse>>> execute, Action queued, CancellationToken ct)
 	{
 		var completion = new TaskCompletionSource<Result<PortalCommandResponse>>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var abandoned = false;
@@ -112,7 +139,7 @@ public sealed class PortalCommandService(
 			// A caller that gave up while the command waited its turn has nobody to answer, and a command
 			// nobody is waiting on is one the player no longer asked for.
 			if (Volatile.Read(ref abandoned)) return null;
-			var execution = ExecuteAsync(actor, request).AsTask();
+			var execution = execute().AsTask();
 			// The outcome, a fault included, belongs to the request waiting on it, not to the queue.
 			await ((Task)execution).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 			completion.TrySetFromTask(execution);
@@ -179,10 +206,7 @@ public sealed class PortalCommandService(
 			{
 				// The command ran under the character's own output ceiling (a guest's is guest_output_limit);
 				// the expression read after it is the character's code too, and gets the same one.
-				var outputLimit = await FunctionLimits.OutputLimitForAsync(
-					await mediator.Send(new GetObjectNodeQuery(actor)) is AnySharpObject actorObject ? actorObject : null,
-					gameOptions.CurrentValue.Limit.GuestOutputLimit);
-				var value = await parser.Push(ParserState.RootFor(actor) with { OutputLimit = outputLimit })
+				var value = await parser.Push(ParserState.RootFor(actor) with { OutputLimit = await OutputLimitAsync(actor) })
 					.FunctionParse(MarkupText.Plain(request.Result));
 				result = value?.Message?.ToPlainText() ?? string.Empty;
 			}
@@ -197,6 +221,66 @@ public sealed class PortalCommandService(
 			? new Error<string>(ExecutionBudget.Error)
 			: new PortalCommandResponse(transcript.Lines, result, transcript.Truncated);
 	}
+
+	/// <summary>
+	/// Evaluates the expression as <paramref name="self"/> on <paramref name="actor"/>'s behalf: the arguments
+	/// first, as <paramref name="actor"/>, then the expression with them as <c>%0</c>-<c>%9</c> — what
+	/// <c>u(self/ATTR, ...)</c> typed by <paramref name="actor"/> does with the attribute's text.
+	/// </summary>
+	private async ValueTask<Result<PortalCommandResponse>> EvaluateCoreAsync(DBRef actor, DBRef self, PortalEvalRequest request)
+	{
+		var transcript = new CommandTranscript(FunctionLimits.MaxOutputCodeUnits);
+		// The caller checked control when the request arrived, but the entry runs later, after whatever was
+		// queued ahead of it: a @chown or a lost power in between must stop the code running as the object.
+		if (!self.Equals(actor) && !await StillControlsAsync(actor, self))
+			return new PortalCommandResponse(transcript.Lines, ErrorMessages.Returns.PermissionDenied, false);
+
+		var result = string.Empty;
+		try
+		{
+			using (outputCapture.BeginCapture(actor.Number, transcript))
+			{
+				// The character's output ceiling, whoever the code runs as: it is the character's request.
+				var asCharacter = ParserState.RootFor(actor) with { OutputLimit = await OutputLimitAsync(actor) };
+				var arguments = new Dictionary<string, CallState>();
+				foreach (var argument in request.Arguments ?? [])
+				{
+					if (BudgetExpired()) break;
+					arguments[arguments.Count.ToString()] =
+						await parser.Push(asCharacter).FunctionParse(MarkupText.Plain(argument)) ?? CallState.Empty;
+				}
+
+				if (!BudgetExpired())
+				{
+					var value = await parser.Push(asCharacter with
+					{
+						Executor = self,
+						Arguments = arguments,
+						EnvironmentRegisters = arguments
+					}).FunctionParse(MarkupText.Plain(request.Expression));
+					result = value?.Message?.ToPlainText() ?? string.Empty;
+				}
+			}
+		}
+		catch (OperationCanceledException) when (BudgetExpired())
+		{
+			// As in ExecuteAsync: the entry's CPU limit fired mid-await.
+		}
+
+		return BudgetExpired()
+			? new Error<string>(ExecutionBudget.Error)
+			: new PortalCommandResponse(transcript.Lines, result, transcript.Truncated);
+	}
+
+	private async ValueTask<bool> StillControlsAsync(DBRef actor, DBRef self) =>
+		await mediator.Send(new GetObjectNodeQuery(actor)) is AnySharpObject character
+		&& await mediator.Send(new GetObjectNodeQuery(self)) is AnySharpObject target
+		&& await permissions.Controls(character, target);
+
+	private async ValueTask<int> OutputLimitAsync(DBRef actor) =>
+		await FunctionLimits.OutputLimitForAsync(
+			await mediator.Send(new GetObjectNodeQuery(actor)) is AnySharpObject actorObject ? actorObject : null,
+			gameOptions.CurrentValue.Limit.GuestOutputLimit);
 
 	private static bool BudgetExpired() => ExecutionBudget.Current?.IsExpired == true;
 }
