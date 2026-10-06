@@ -109,7 +109,11 @@ public class JobsIntegrationTests
 			await Assert.That(await God("think [job(1,state)]")).IsEqualTo("new");
 
 			var queue = await As(staff, "+jobs");
-			await Assert.That(queue).Contains("Need a room").And.Contains("New");
+			await Assert.That(queue).Contains("Need a room").And.Contains("New").And.Contains("+jobs/all lists every open job");
+			await Assert.That(await As(player, "+jobs")).Contains("+job/old lists your closed ones")
+				.And.DoesNotContain("+jobs/all").Because("the staff-only hints are for staff");
+			await Assert.That(await As(staff, "+buckets")).Contains("* you work it \u00b7 +request");
+			await Assert.That(await As(player, "+buckets")).DoesNotContain("you work it");
 
 			await As(staff, "+job/claim 1");
 			await Assert.That(await God("think [job(1,state)]")).IsEqualTo("staff");
@@ -273,6 +277,16 @@ public class JobsIntegrationTests
 			await Assert.That(rows.GetArrayLength()).IsEqualTo(1);
 			await Assert.That(rows[0].GetProperty("title").GetString()).IsEqualTo("From the web");
 			await Assert.That(rows[0].GetProperty("bucket").GetString()).IsEqualTo("Bugs");
+			await Assert.That(rows[0].GetProperty("num").GetString()).IsEqualTo("1");
+			await Assert.That(rows[0].GetProperty("unread").GetString()).IsEqualTo("Unread")
+				.Because("staff have not read the new job yet");
+			var mine = await Http("GET", "/jobs/data?at=", "", player);
+			await Assert.That(mine.GetProperty("fields").GetProperty("jobs").GetProperty("value")[0].GetProperty("unread").GetString()).IsEqualTo("")
+				.Because("the filer has read what they wrote");
+			await Assert.That((await Http("GET", "/jobs/schema?at=", "", staff)).GetProperty("title").GetString()).IsEqualTo("")
+				.Because("the page header already names the application");
+			await Assert.That(app.Icon).IsEqualTo("support_agent");
+			await Assert.That(app.NavPlacement).IsEqualTo("Support");
 
 			var schema = await Http("GET", "/jobs/schema?at=1", "", staff);
 			await Assert.That(schema.GetProperty("kind").GetString()).IsEqualTo("form");

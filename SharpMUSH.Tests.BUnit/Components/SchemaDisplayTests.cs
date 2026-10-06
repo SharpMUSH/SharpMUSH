@@ -108,6 +108,18 @@ public class SchemaDisplayTests : BunitContext
 	}
 
 	[Test]
+	public async Task An_empty_chip_cell_draws_no_chip()
+	{
+		var cut = RenderDisplay(JobsTable(), Rows("jobs", """
+			[{"id":"1","status":"","title":"a"},
+			 {"id":"2","title":"b"}]
+			"""));
+
+		await Assert.That(cut.FindAll(".mud-chip").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("tbody tr").Count).IsEqualTo(2);
+	}
+
+	[Test]
 	public async Task A_table_with_no_rows_shows_its_empty_text()
 	{
 		var cut = RenderDisplay(JobsTable("No jobs match."), Rows("jobs", "[]"));

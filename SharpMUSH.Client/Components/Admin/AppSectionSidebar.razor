@@ -18,7 +18,7 @@
         {
             var a = app;
             var href = $"/apps/{a.Slug}";
-            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(a.Icon, Icons.Material.Outlined.Apps)"
                         Label="@a.DisplayName" Href="@href" IsCurrent="@IsCurrent(href)" Collapsed="@Collapsed" />
         }
     </SidebarGroup>

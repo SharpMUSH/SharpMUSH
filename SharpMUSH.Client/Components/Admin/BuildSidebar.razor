@@ -45,7 +45,7 @@
             @foreach (var app in _apps)
             {
                 var a = app;
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(a.Icon, Icons.Material.Outlined.Apps)"
                             Label="@a.DisplayName" Href="@($"/apps/{a.Slug}")" IsCurrent="@IsCurrent($"/apps/{a.Slug}", false)" Collapsed="@Collapsed" />
             }
         </SidebarGroup>

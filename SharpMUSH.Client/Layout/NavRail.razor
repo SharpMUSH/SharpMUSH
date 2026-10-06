@@ -54,7 +54,7 @@
     @foreach (var section in _novelSections)
     {
         var s = section;
-        @Item($"/apps/{s.First.Slug}", string.IsNullOrWhiteSpace(s.First.Icon) ? Icons.Material.Outlined.Apps : s.First.Icon!, s.Name,
+        @Item($"/apps/{s.First.Slug}", AppIcons.Outline(s.First.Icon, Icons.Material.Outlined.Apps), s.Name,
             s.Apps.Any(a => IsUnder($"/apps/{a.Slug}")))
     }
 

@@ -76,7 +76,7 @@
         <nav class="play-side-apps" aria-label="@Loc["NavPlayApps"]">
             @foreach (var app in _apps)
             {
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(app.Icon) ? Icons.Material.Outlined.Apps : app.Icon)"
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(app.Icon, Icons.Material.Outlined.Apps)"
                             Label="@app.DisplayName" Href="@($"/apps/{Uri.EscapeDataString(app.Slug)}")" Collapsed="@Collapsed" />
             }
         </nav>

@@ -31,5 +31,5 @@ application:
   data_url: http/jobs/data?at={path}
   submit_route: http/jobs/act
   minimum_role: player
-  nav_placement: main
+  nav_placement: Support
   order: 40

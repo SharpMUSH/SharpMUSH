@@ -403,13 +403,13 @@ configure:
 application:                      # required for kind: application; forbidden otherwise
   slug: chargen                   # URL key; the app renders at /apps/chargen (defaults to the package id)
   display_name: Character Application
-  icon: assignment_ind            # optional Material icon
+  icon: assignment_ind            # optional Material icon name
   type: page                      # page | widget
   schema_url: http/chargen/schema # GET → Portal Schema Document
   data_url: http/chargen          # optional GET → data (view display / form prefill)
   submit_route: http/chargen      # optional POST base for actions
   minimum_role: "{{?access}}"     # guest|player|builder|royalty|wizard|god, or a {{?configure}} ref
-  nav_placement: main             # optional nav section (page apps)
+  nav_placement: Play             # optional nav section (page apps): Play, World, Build, Manage, or a new name
   zones: [MainContent]            # optional layout zones (widget apps)
   scope: play                     # optional layout scope the widget belongs to (e.g. play)
   oob_package: chargen.status     # optional OOB package whose latest push is the widget's data

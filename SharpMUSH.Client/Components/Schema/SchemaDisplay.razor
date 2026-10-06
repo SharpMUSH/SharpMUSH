@@ -164,6 +164,11 @@
             : Color.Default;
         var href = column.Link is null ? null : SchemaRendering.FillLink(column.Link, row);
         var isChip = string.Equals(column.Type, "chip", StringComparison.OrdinalIgnoreCase);
+        @* An empty chip cell stays empty: a row with nothing to flag shows no blank pill. *@
+        if (isChip && string.IsNullOrEmpty(text))
+        {
+            return;
+        }
 
         RenderFragment content = isChip
             ? @<MudChip T="string" Size="Size.Small" Color="color" Class="schema-chip">@text</MudChip>

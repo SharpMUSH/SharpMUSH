@@ -2368,7 +2368,7 @@
     <value>Icon (optional)</value>
   </data>
   <data name="LayAppIconHelper" xml:space="preserve">
-    <value>MudBlazor Material icon string</value>
+    <value>A Material icon name, such as support_agent</value>
   </data>
   <data name="LayAppNavPlacementOptional" xml:space="preserve">
     <value>Nav placement (optional)</value>

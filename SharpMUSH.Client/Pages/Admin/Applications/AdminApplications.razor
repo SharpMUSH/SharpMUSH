@@ -60,7 +60,7 @@
                     <button type="button" class="aa-card @(on ? "aa-card--on" : "")" @onclick="@(() => List.Select(a))">
                         <div class="aa-card-top">
                             <span class="aa-card-icon">
-                                <MudIcon Icon="@(a.Icon ?? Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--card" />
+                                <MudIcon Icon="@AppIcons.Fill(a.Icon, Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--card" />
                             </span>
                             <div class="aa-grow">
                                 <div class="aa-card-name">@a.DisplayName</div>
@@ -87,7 +87,7 @@
                 {
                     <div class="aa-detail-head">
                         <span class="aa-detail-icon">
-                            <MudIcon Icon="@(selected.Icon ?? Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--detail" />
+                            <MudIcon Icon="@AppIcons.Fill(selected.Icon, Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--detail" />
                         </span>
                         <div class="aa-grow">
                             <div class="aa-detail-titles">
