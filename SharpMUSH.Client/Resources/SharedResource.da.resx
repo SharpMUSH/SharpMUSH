@@ -5147,6 +5147,18 @@
     <value>Dine poses går til en anden scene. Deltag i denne for at posere her.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Her kører en scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Åbn historien</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Skjul denne besked</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Deltag i scenen</value>
     <comment>MT</comment>

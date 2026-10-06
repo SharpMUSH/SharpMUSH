@@ -4553,6 +4553,15 @@
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
     <value>Your poses go to another scene. Join this one to pose here.</value>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>A scene is running here</value>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Open story</value>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Hide this notice</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Join scene</value>
   </data>

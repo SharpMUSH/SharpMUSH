@@ -136,6 +136,10 @@ else
                                     </div>
                                 }
                                 <div class="play-view play-terminal @(View == PlayView.Terminal ? null : "play-view--off")" inert="@(View != PlayView.Terminal)">
+                                    @if (SceneHere is { } running && _hintHiddenFor != running.Id)
+                                    {
+                                        @SceneHint(running)
+                                    }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
                                                     TargetColumns="_targetCols" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" />
                                 </div>
@@ -233,10 +237,10 @@ else
     private PlayComposer? _composer;
     private RoomState Room = RoomState.Empty;
 
-    /// <summary>The player's choice of view in a scene; null until they choose (Story, by default).</summary>
+    /// <summary>The player's choice of view in a scene; null until they choose (the terminal, by default).</summary>
     private PlayView? _chosenView;
 
-    /// <summary>The scene <see cref="_chosenView"/> was chosen in: a scene that starts later opens in Story again.</summary>
+    /// <summary>The scene <see cref="_chosenView"/> was chosen in: a scene that starts later opens in the terminal again.</summary>
     private string? _chosenFor;
 
     private bool _focus;
@@ -361,10 +365,41 @@ else
         else if (_liveRefusedFor == sceneId) _liveRefusedFor = null;
     }
 
-    /// <summary>Story in a scene unless the player chose Terminal; outside a scene there is only the terminal.</summary>
-    private PlayView View => SceneHere is { } scene
-        ? (_chosenFor == scene.Id ? _chosenView : null) ?? PlayView.Story
+    /// <summary>
+    /// The terminal unless the player opened the room's scene's Story: walking into a room with a scene only
+    /// marks it (<see cref="SceneHint"/>). Outside a scene there is only the terminal.
+    /// </summary>
+    private PlayView View => SceneHere is { } scene && _chosenFor == scene.Id
+        ? _chosenView ?? PlayView.Terminal
         : PlayView.Terminal;
+
+    /// <summary>The scene whose marker the player hid; a scene that starts later is marked again.</summary>
+    private string? _hintHiddenFor;
+
+    /// <summary>
+    /// Above the terminal while the room has a scene: says a scene is running here and opens its Story when
+    /// pressed. The room's scene is always a running one (room.info leaves out paused and finished scenes).
+    /// </summary>
+    private RenderFragment SceneHint(RoomScene scene) => __builder =>
+    {
+        <div class="play-scene-hint" role="status">
+            <button type="button" class="play-scene-hint-open" title="@Loc["NavPlaySceneHereOpen"]" @onclick="OpenScene">
+                <MudIcon Icon="@Icons.Material.Outlined.AutoStories" Size="Size.Small" />
+                <span class="play-scene-hint-text">
+                    <span class="play-scene-hint-label">@Loc["NavPlaySceneHere"]</span>
+                    @if (scene.Title is { Length: > 0 } title)
+                    {
+                        <span class="play-scene-hint-title">@title</span>
+                    }
+                </span>
+                <span class="play-scene-hint-action">@Loc["NavPlaySceneHereOpen"]</span>
+            </button>
+            <button type="button" class="play-scene-hint-hide" aria-label="@Loc["NavPlaySceneHereHide"]" title="@Loc["NavPlaySceneHereHide"]"
+                    @onclick="() => _hintHiddenFor = scene.Id">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+            </button>
+        </div>
+    };
 
     /// <summary>The sidebar's current row: the In scene row only while the Story is shown.</summary>
     private string? SidebarCurrent => _commKey ?? (View == PlayView.Story ? null : string.Empty);
@@ -796,10 +831,12 @@ else
 
     private void OnViewChanged(PlayView view) => ChooseView(view);
 
+    /// <summary>Choosing a view in a scene: the player knows of the scene now, so its marker stays hidden.</summary>
     private void ChooseView(PlayView view)
     {
         _chosenView = view;
         _chosenFor = SceneHere?.Id;
+        if (view == PlayView.Terminal && _chosenFor is { } scene) _hintHiddenFor = scene;
     }
 
     private void OnFocusChanged(bool focus) => _focus = focus;

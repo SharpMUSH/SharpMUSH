@@ -4417,6 +4417,18 @@
     <value>Vos poses vont dans une autre scène. Rejoignez celle-ci pour poser ici.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Une scène est en cours ici</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Ouvrir le récit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Masquer cet avis</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Rejoindre la scène</value>
     <comment>MT</comment>

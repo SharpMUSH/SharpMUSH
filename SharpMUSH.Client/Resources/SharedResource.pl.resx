@@ -5147,6 +5147,18 @@
     <value>Twoje pozy trafiają do innej sceny. Dołącz do tej, aby tu pozować.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Tu trwa scena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Otwórz opowieść</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Ukryj to powiadomienie</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Dołącz do sceny</value>
     <comment>MT</comment>

@@ -5147,6 +5147,18 @@
     <value>Vaše poze idu u drugu scenu. Pridružite se ovoj da biste ovdje pozirali.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlaySceneHere" xml:space="preserve">
+    <value>Ovdje je scena u tijeku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereOpen" xml:space="preserve">
+    <value>Otvori priču</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySceneHereHide" xml:space="preserve">
+    <value>Sakrij ovu obavijest</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Pridruži se sceni</value>
     <comment>MT</comment>

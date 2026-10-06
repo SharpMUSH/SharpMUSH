@@ -130,6 +130,13 @@ public class PlayPageD1Tests : TrackingBunitContext
 			"""{"v":2,"exits":[{"dbref":"#1210","name":"Harbour Row","aliases":["n"],"cmd":"goto #1210","state":"open"}]}""");
 	}
 
+	/// <summary>Opens the room scene's Story from the marker above the terminal, as a player would.</summary>
+	private static void OpenStory(IRenderedComponent<Host> cut)
+	{
+		cut.WaitForAssertion(() => cut.Find("button.play-scene-hint-open"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-scene-hint-open").Click();
+	}
+
 	[Test]
 	public async Task TheSidebar_GoesIntoTheShellsSlot()
 	{
@@ -178,12 +185,25 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("QuickActions").Because("§5.6: Quick actions is dropped");
 	}
 
+	/// <summary>
+	/// Walking into a room with a scene keeps the terminal: a marker above it says a scene is running and
+	/// opens the Story when pressed. The Story's composer replaces the terminal's line, which stays mounted.
+	/// </summary>
 	[Test]
-	public async Task InAScene_StoryIsTheDefault_WithTheComposer_AndTheTerminalStaysMounted()
+	public async Task InAScene_TheTerminalStays_AndTheMarkerOpensTheStory()
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find("[role='radiogroup'][aria-label='View']"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".play-scene-hint"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off");
+		await Assert.That(cut.Find(".play-terminal").HasAttribute("inert")).IsFalse();
+		await Assert.That(cut.Find(".play-scene-hint-text").TextContent).Contains("A scene is running here");
+		await Assert.That(cut.Find(".play-scene-hint-title").TextContent).IsEqualTo("Salt Market at Dusk");
+		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0).Because("the terminal keeps its own input");
+		await Assert.That(cut.FindAll(".scene-card-foot").Count).IsEqualTo(0)
+			.Because("no empty footer either: it pads itself, and a sideways phone has no height to give it (#1506)");
+
+		OpenStory(cut);
 		await Assert.That(cut.Find(".play-story").ClassList).DoesNotContain("play-view--off");
 		await Assert.That(cut.Find(".play-terminal").HasAttribute("inert")).IsTrue();
 		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(1);
@@ -191,11 +211,26 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		cut.FindAll(".scene-card-radio")[1].Click();
 		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off");
-		await Assert.That(cut.Find(".play-terminal").HasAttribute("inert")).IsFalse();
-		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0).Because("the terminal keeps its own input");
-		await Assert.That(cut.FindAll(".scene-card-foot").Count).IsEqualTo(0)
-			.Because("no empty footer either: it pads itself, and a sideways phone has no height to give it (#1506)");
+		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0);
 		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".play-scene-hint").Count).IsEqualTo(0)
+			.Because("a player who chose the terminal in this scene knows it is here");
+	}
+
+	/// <summary>The marker's close button hides it for that scene; the next scene is marked again.</summary>
+	[Test]
+	public async Task TheMarker_HidesForItsScene_AndComesBackForTheNext()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-scene-hint"), TimeSpan.FromSeconds(5));
+		cut.Find("button.play-scene-hint-hide").Click();
+		await Assert.That(cut.FindAll(".play-scene-hint").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off")
+			.Because("hiding the marker does not open the scene");
+
+		PushRoom(sceneId: "43");
+		cut.WaitForAssertion(() => cut.Find(".play-scene-hint"), TimeSpan.FromSeconds(5));
 	}
 
 	/// <summary>
@@ -207,6 +242,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom(focus: false);
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".composer").Count).IsEqualTo(0);
 
@@ -225,6 +261,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom(focus: false, elsewhere: elsewhere);
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Find(".play-join-text").TextContent).IsEqualTo(text);
@@ -249,6 +286,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		var cut = RenderPlay();
 		PushRoom(focus: false);
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
 		cut.Find("button.play-join-btn").Click();
 
@@ -264,6 +302,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 		var cut = RenderPlay();
 		PushRoom(focus: false);
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
 		cut.Find("button.play-join-btn").Click();
 
@@ -277,6 +316,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom(focus: false);
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-join"), TimeSpan.FromSeconds(5));
 
 		PushRoom(focus: true);
@@ -289,16 +329,15 @@ public class PlayPageD1Tests : TrackingBunitContext
 
 	/// <summary>
 	/// The page follows the room's scene as it changes: a scene that stops leaves the terminal, and a scene
-	/// that starts later opens in the Story even if the player chose the terminal in the last one.
+	/// that starts later is only marked, even if the player had the last one's Story open.
 	/// </summary>
 	[Test]
-	public async Task TheSceneEnding_LeavesTheTerminal_AndANewSceneOpensInTheStory()
+	public async Task TheSceneEnding_LeavesTheTerminal_AndANewSceneIsOnlyMarked()
 	{
 		var cut = RenderPlay();
 		PushRoom();
-		cut.WaitForAssertion(() => cut.Find("[role='radiogroup'][aria-label='View']"), TimeSpan.FromSeconds(5));
-		cut.FindAll(".scene-card-radio")[1].Click();
-		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off");
+		OpenStory(cut);
+		await Assert.That(cut.Find(".play-story").ClassList).DoesNotContain("play-view--off");
 
 		PushRoom(scene: false);
 		cut.WaitForAssertion(() =>
@@ -306,10 +345,11 @@ public class PlayPageD1Tests : TrackingBunitContext
 			if (cut.FindAll(".play-story").Count != 0) throw new InvalidOperationException("story still shown");
 		}, TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".play-terminal").HasAttribute("inert")).IsFalse();
+		await Assert.That(cut.FindAll(".play-scene-hint").Count).IsEqualTo(0);
 
 		PushRoom(sceneId: "43");
-		cut.WaitForAssertion(() => cut.Find(".play-story"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".play-story").ClassList).DoesNotContain("play-view--off");
+		cut.WaitForAssertion(() => cut.Find(".play-scene-hint"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-story").ClassList).Contains("play-view--off");
 	}
 
 	[Test]
@@ -494,6 +534,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom();
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".composer textarea"), TimeSpan.FromSeconds(5));
 		cut.Find(".composer textarea").Input("leans on the crates");
 		cut.Find("button.composer-send").Click();
@@ -506,6 +547,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		_hub.JoinRefusal = new Microsoft.AspNetCore.SignalR.HubException("no character can see this scene");
 		var cut = RenderPlay();
 		PushRoom();
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-story .play-story-unavailable"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".play-story-unavailable").GetAttribute("role")).IsEqualTo("status");
 
@@ -521,6 +563,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	{
 		var cut = RenderPlay();
 		PushRoom();
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait"), TimeSpan.FromSeconds(5));
 		cut.Find(".play-aside .kit-portrait").Click();
 		cut.WaitForAssertion(() => cut.Find(".sheet[role='dialog']"), TimeSpan.FromSeconds(5));
@@ -676,6 +719,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 		var cut = RenderPlay();
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".test-pagebar .play-side-scene .kit-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull()
+			.Because("walking in shows the terminal");
+		OpenStory(cut);
 		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsEqualTo("page");
 		cut.FindAll(".scene-card-radio")[1].Click();
 		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull();
@@ -688,6 +734,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		_store.Set(OobEntryParser.RoomInfoPackage, """{"v":2,"name":"Lower Docks","scene":{"id":"42","title":"Salt Market"}}""");
 		_store.Set(OobEntryParser.RoomContentsPackage,
 			"""{"v":2,"who":[{"dbref":"#312","type":"player","name":"Tomas Reyes","cmd":"look #312","profile":true,"actions":[{"label":"Page","cmd":"page #312="}]}]}""");
+		OpenStory(cut);
 		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait"), TimeSpan.FromSeconds(5));
 		cut.Find(".play-aside .kit-portrait").Click();
 		cut.WaitForAssertion(() => cut.Find(".sheet"), TimeSpan.FromSeconds(5));

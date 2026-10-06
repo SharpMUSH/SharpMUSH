@@ -141,6 +141,100 @@
     padding: 0 4px;
 }
 
+/* The room has a scene: one line above the terminal that opens its Story, and a close button that hides it. */
+.play-scene-hint {
+    flex-shrink: 0;
+    display: flex;
+    align-items: stretch;
+    margin: 8px 4px 4px;
+    border: 1px solid rgba(var(--glow), 0.35);
+    border-radius: 8px;
+    background: rgba(var(--glow), 0.08);
+    color: var(--text);
+    font-size: 13px;
+    container-type: inline-size;
+}
+
+.play-scene-hint-open {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.play-scene-hint-open ::deep .mud-icon-root {
+    color: var(--accent);
+}
+
+.play-scene-hint-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.play-scene-hint-label {
+    color: var(--text-dim);
+}
+
+.play-scene-hint-title {
+    margin-inline-start: 6px;
+    font-weight: 600;
+}
+
+/* Narrow: the scene's title alone says it; the label gives way first. */
+@container (max-width: 26rem) {
+    .play-scene-hint-label {
+        display: none;
+    }
+
+    .play-scene-hint-title {
+        margin-inline-start: 0;
+    }
+}
+
+.play-scene-hint-action {
+    flex-shrink: 0;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.play-scene-hint-open:hover .play-scene-hint-action {
+    text-decoration: underline;
+}
+
+.play-scene-hint-hide {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    border: 0;
+    border-inline-start: 1px solid rgba(var(--glow), 0.2);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.play-scene-hint-hide:hover {
+    color: var(--text);
+}
+
+.play-scene-hint-open:focus-visible,
+.play-scene-hint-hide:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: 8px;
+}
+
 .play-aside {
     display: flex;
     flex-direction: column;
