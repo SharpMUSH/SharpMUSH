@@ -5607,4 +5607,22 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Vorhandenen Charakter übernehmen</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Charakter übernehmen</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Charakter übernehmen</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Verknüpfen Sie einen Charakter, den Sie bereits spielen, mit diesem Konto: einen, der am Verbindungsbildschirm, vom Team oder in einem anderen Spiel erstellt wurde. Sein Passwort beweist, dass er Ihnen gehört.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Sie haben schon einen Charakter? Übernehmen Sie ihn.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Stattdessen einen neuen Charakter erstellen.</value>
+  </data>
 </root>

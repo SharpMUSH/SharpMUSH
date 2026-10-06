@@ -5607,4 +5607,22 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Привязать существующего персонажа</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Привязать персонажа</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Привязать персонажа</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Привяжите к этому аккаунту персонажа, за которого вы уже играете: созданного на экране подключения, командой игры или перенесённого из другой игры. Его пароль подтверждает, что он ваш.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Уже есть персонаж? Привяжите его.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Создать нового персонажа вместо этого.</value>
+  </data>
 </root>

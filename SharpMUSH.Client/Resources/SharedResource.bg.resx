@@ -5607,4 +5607,22 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="AuthClaimExistingCharacter" xml:space="preserve">
+    <value>Заявете съществуващ герой</value>
+  </data>
+  <data name="NavClaimACharacter" xml:space="preserve">
+    <value>Заявете герой</value>
+  </data>
+  <data name="NavClaimCharacter" xml:space="preserve">
+    <value>Заявете героя</value>
+  </data>
+  <data name="NavClaimCharacterBlurb" xml:space="preserve">
+    <value>Свържете с този акаунт герой, когото вече играете: създаден на екрана за свързване, от екипа или пренесен от друга игра. Паролата му доказва, че е ваш.</value>
+  </data>
+  <data name="NavClaimInstead" xml:space="preserve">
+    <value>Вече имате герой? Заявете го.</value>
+  </data>
+  <data name="NavCreateInstead" xml:space="preserve">
+    <value>Създайте нов герой вместо това.</value>
+  </data>
 </root>

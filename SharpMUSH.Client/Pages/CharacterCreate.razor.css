@@ -15,7 +15,7 @@
     margin-top: 1.25rem;
 }
 
-.charcreate-switch {
+.charcreate-page ::deep .charcreate-switch {
     margin-top: 1rem;
 }
 
