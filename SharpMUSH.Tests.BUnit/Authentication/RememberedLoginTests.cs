@@ -193,9 +193,11 @@ public class BearerRenewalTests
 	private sealed class RefusesStaleBearer : HttpMessageHandler
 	{
 		public List<(string? Bearer, string? Body)> Seen { get; } = [];
+		public List<HttpRequestMessage> Requests { get; } = [];
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
+			Requests.Add(request);
 			var bearer = request.Headers.Authorization?.Parameter;
 			Seen.Add((bearer, request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken)));
 			return new HttpResponseMessage(bearer == "fresh" ? HttpStatusCode.OK : HttpStatusCode.Unauthorized);
@@ -247,6 +249,33 @@ public class BearerRenewalTests
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 		await Assert.That(server.Seen.Select(s => s.Bearer)).IsEquivalentTo(new string?[] { null });
 	}
+
+	/// <summary>
+	/// The remembered login is a cookie; a fetch left at its same-origin default neither keeps nor sends it
+	/// when the API is on another origin than the page, as under the standalone client dev server.
+	/// </summary>
+	[Test]
+	public async Task EveryRequest_AsksTheBrowserToIncludeCookies_TheRetryToo()
+	{
+		var auth = new FakeAccountAuthState { AccountSessionToken = "stale", RenewedToken = "fresh" };
+		var server = new RefusesStaleBearer();
+		using var http = Client(auth, server);
+		using var anonymous = new HttpRequestMessage(HttpMethod.Post, "api/auth/account-resume");
+		anonymous.Options.Set(AccountSessionBearerHandler.Anonymous, true);
+
+		await http.SendAsync(anonymous);
+		await http.GetAsync("api/account/characters");
+
+		await Assert.That(server.Requests.Count).IsEqualTo(3);
+		foreach (var request in server.Requests)
+			await Assert.That(FetchCredentials(request)).IsEqualTo("include");
+	}
+
+	private static object? FetchCredentials(HttpRequestMessage request) =>
+		request.Options.TryGetValue(new HttpRequestOptionsKey<IDictionary<string, object>>("WebAssemblyFetchOptions"), out var fetch)
+		&& fetch.TryGetValue("credentials", out var credentials)
+			? credentials
+			: null;
 }
 
 /// <summary>The passkey button signs in with the same Remember me choice as the password one.</summary>

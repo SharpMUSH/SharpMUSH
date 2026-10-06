@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Components.WebAssembly.Http;
 
 namespace SharpMUSH.Client.Services;
 
@@ -12,6 +13,9 @@ namespace SharpMUSH.Client.Services;
 /// A request the server refuses with 401 on the bearer this attached is sent once more with a renewed
 /// one, when the browser's remembered login can renew it (<see cref="IAccountAuthState.RenewSessionAsync"/>):
 /// a tab left idle past its session's lifetime carries on instead of failing every call.
+/// <para>Every request carries the browser's cookies, even to an API on another origin (the standalone
+/// client dev server): the remembered login is a cookie, and a fetch left at its same-origin default
+/// would neither keep it from a sign-in nor send it back to <c>account-resume</c>.</para>
 /// </remarks>
 public sealed class AccountSessionBearerHandler(IAccountAuthState accountAuth) : DelegatingHandler
 {
@@ -23,6 +27,8 @@ public sealed class AccountSessionBearerHandler(IAccountAuthState accountAuth) :
 	protected override async Task<HttpResponseMessage> SendAsync(
 		HttpRequestMessage request, CancellationToken cancellationToken)
 	{
+		request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+
 		if (request.Options.TryGetValue(Anonymous, out var anonymous) && anonymous
 			|| request.Headers.Authorization is not null)
 			return await base.SendAsync(request, cancellationToken);
