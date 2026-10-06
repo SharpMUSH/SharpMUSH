@@ -18,9 +18,9 @@ public sealed record PackageSettingSpec(string Option, string Value);
 
 /// <summary>An option a package set and still owns, as it last set it.</summary>
 /// <param name="Option">The option's name as <c>@config</c> lists it, lowercase.</param>
-/// <param name="Value">The value the package set, as <c>@config</c> shows it.</param>
+/// <param name="Value">The value the package set, as <c>@config</c> shows it; null when it cleared the option.</param>
 /// <param name="Previous">The value it replaced, to put back when the package lets go; null when the option had none.</param>
-public sealed record PackageSettingRecord(string Option, string Value, string? Previous)
+public sealed record PackageSettingRecord(string Option, string? Value, string? Previous)
 {
 	private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 

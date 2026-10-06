@@ -148,6 +148,36 @@ public class PackageSettingInstallTests
 		await Assert.That(await PortAsync()).IsEqualTo("4100");
 	}
 
+	/// <summary>
+	/// A package that clears an option owns the clear like any value: uninstall puts back what it replaced. Room #0
+	/// holds none of the message attributes, so pointing <c>messages_object</c> at it meanwhile shows the same texts.
+	/// </summary>
+	[Test]
+	public async Task ClearingAnOptionIsRecordedAndUndone()
+	{
+		const string messages = nameof(DatabaseOptions.MessagesObject);
+		(await Config.SetAsync(messages, 0u)).Expect<SharpMUSHOptions>();
+		var id = FreshId();
+
+		try
+		{
+			(await ApplyAsync(Manifest(id, "1.0", "settings:\n  messages_object: \"-1\""))).Expect<PackageApplyResult>();
+			await Assert.That(await Config.CurrentTextAsync(messages)).IsNull();
+			var installed = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+			await Assert.That(installed.Settings!.Single()).IsEqualTo(new PackageSettingRecord("messages_object", null, "#0"));
+
+			var other = await Installer.PlanAsync(Manifest(FreshId(), "1.0", "settings:\n  messages_object: \"#0\""));
+			await Assert.That(other.Settings!.Single().Action).IsEqualTo(PackageSettingAction.Blocked);
+
+			await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+			await Assert.That(await Config.CurrentTextAsync(messages)).IsEqualTo("#0");
+		}
+		finally
+		{
+			(await Config.SetAsync(messages, null)).Expect<SharpMUSHOptions>();
+		}
+	}
+
 	/// <summary>An option set to an object the install creates is shown as that object until it exists.</summary>
 	[Test]
 	public async Task ARefToANewObjectIsPlannedAsThatObject()

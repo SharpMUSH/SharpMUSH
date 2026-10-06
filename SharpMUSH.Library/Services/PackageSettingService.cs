@@ -83,7 +83,7 @@ public sealed class PackageSettingService(
 		Func<PackageRef, string?> resolve)
 	{
 		var ownedByOption = (owned ?? []).ToDictionary(o => o.Option, StringComparer.OrdinalIgnoreCase);
-		var setByOthers = new Dictionary<string, (string Package, string Value)>(StringComparer.OrdinalIgnoreCase);
+		var setByOthers = new Dictionary<string, (string Package, string? Value)>(StringComparer.OrdinalIgnoreCase);
 		if (declared.Count > 0)
 		{
 			foreach (var other in (await packages.GetInstalledPackagesAsync()).Where(p => p.Id != packageId))
@@ -112,7 +112,7 @@ public sealed class PackageSettingService(
 	private async Task<Planned> PlanSettingAsync(
 		PackageSettingSpec spec,
 		PackageSettingRecord? mine,
-		IReadOnlyDictionary<string, (string Package, string Value)> setByOthers,
+		IReadOnlyDictionary<string, (string Package, string? Value)> setByOthers,
 		Func<PackageRef, string?> resolve)
 	{
 		if (ConfigOptionWriter.PropertyOf(spec.Option) is not { } property)
@@ -124,7 +124,7 @@ public sealed class PackageSettingService(
 		if (setByOthers.TryGetValue(spec.Option, out var other))
 		{
 			return Blocked(spec.Option, property, current, spec.Value,
-				$"The {other.Package} package already sets it (to {other.Value}); uninstall that package first.");
+				$"The {other.Package} package already sets it (to {Shown(other.Value)}); uninstall that package first.");
 		}
 
 		if (ResolveValue(spec.Value, resolve) is not { } text)
@@ -145,14 +145,6 @@ public sealed class PackageSettingService(
 		if (await config.PreviewAsync(property, target) is Error<string> refused)
 		{
 			return Blocked(spec.Option, property, current, value, refused.Value);
-		}
-
-		if (value is null)
-		{
-			// A package may clear an option, but it then owns nothing it could give back.
-			return new Planned(
-				new PackageSettingChange(spec.Option, current is null ? PackageSettingAction.Unchanged : PackageSettingAction.Set, current, null),
-				property, Write: current is not null, target, Record: null);
 		}
 
 		// The package set this before. A new value is the new version's to set; the same value leaves the game's
