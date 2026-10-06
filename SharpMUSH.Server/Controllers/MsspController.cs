@@ -41,12 +41,13 @@ public class MsspController(
 	[HttpPut]
 	public async Task<ActionResult<MsspSettingsResponse>> Put([FromBody] MsspSettingsRequest request)
 	{
-		var settings = MsspCatalog.Normalize(request.Settings ?? [], out var problems);
-		if (settings.Count > MsspCatalog.MaxVariables)
+		// Counted before normalizing, so an oversized body is not validated entry by entry first.
+		if (request.Settings is { Count: > MsspCatalog.MaxVariables })
 		{
-			problems.Add($"At most {MsspCatalog.MaxVariables} variables can be set.");
+			return BadRequest(new { error = $"At most {MsspCatalog.MaxVariables} variables can be set." });
 		}
 
+		var settings = MsspCatalog.Normalize(request.Settings ?? [], out var problems);
 		if (problems.Count > 0)
 		{
 			return BadRequest(new { error = string.Join(" ", problems) });

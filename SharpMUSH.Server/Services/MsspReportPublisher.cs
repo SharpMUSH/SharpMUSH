@@ -41,6 +41,7 @@ public sealed class MsspReportPublisher(
 		using var subscription = options.OnChange((_, _) => _wake.Writer.TryWrite(false));
 		using var timer = new PeriodicTimer(Interval);
 		var tick = Task.CompletedTask;
+		var woken = Task.CompletedTask;
 		var force = true;
 
 		try
@@ -50,7 +51,9 @@ public sealed class MsspReportPublisher(
 				await PublishAsync(force, stoppingToken);
 
 				tick = tick.IsCompleted ? timer.WaitForNextTickAsync(stoppingToken).AsTask() : tick;
-				var woken = _wake.Reader.WaitToReadAsync(stoppingToken).AsTask();
+				// Each wait is kept until it completes: a fresh one per timer tick would leave the last one
+				// pending on the channel, and an idle server would pile them up.
+				woken = woken.IsCompleted ? _wake.Reader.WaitToReadAsync(stoppingToken).AsTask() : woken;
 				await Task.WhenAny(tick, woken);
 
 				force = false;

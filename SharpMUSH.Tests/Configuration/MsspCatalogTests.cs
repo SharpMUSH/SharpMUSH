@@ -71,4 +71,18 @@ public class MsspCatalogTests
 		await Assert.That(problems.Any(problem => problem.Contains("NAME"))).IsTrue();
 		await Assert.That(problems.Any(problem => problem.Contains("given twice"))).IsTrue();
 	}
+
+	/// <summary>A blank first spelling still counts, so a second spelling of the name is reported, not kept quietly.</summary>
+	[Test]
+	public async Task NormalizeReportsASecondSpellingAfterABlankOne()
+	{
+		var settings = MsspCatalog.Normalize(new Dictionary<string, string[]>
+		{
+			["Contact"] = [" "],
+			["contact"] = ["staff@example.com"]
+		}, out var problems);
+
+		await Assert.That(settings).IsEmpty();
+		await Assert.That(problems).IsEquivalentTo(new[] { "CONTACT is given twice." });
+	}
 }

@@ -236,19 +236,21 @@ public static class MsspCatalog
 	{
 		problems = [];
 		var kept = new Dictionary<string, string[]>(StringComparer.Ordinal);
+		// Every spelling counts, kept or not: a blank or refused first spelling must not let a second through unreported.
+		var seen = new HashSet<string>(StringComparer.Ordinal);
 
 		foreach (var (name, raw) in settings)
 		{
 			var canonical = Canonicalize(name);
-			var values = (raw ?? []).Select(value => value?.Trim() ?? string.Empty).Where(value => value.Length > 0).ToArray();
-			if (values.Length == 0 && !IsReportedByServer(canonical))
+			if (!seen.Add(canonical))
 			{
+				problems.Add($"{canonical} is given twice.");
 				continue;
 			}
 
-			if (kept.ContainsKey(canonical))
+			var values = (raw ?? []).Select(value => value?.Trim() ?? string.Empty).Where(value => value.Length > 0).ToArray();
+			if (values.Length == 0 && !IsReportedByServer(canonical))
 			{
-				problems.Add($"{canonical} is given twice.");
 				continue;
 			}
 

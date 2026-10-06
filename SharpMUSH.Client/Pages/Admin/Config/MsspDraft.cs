@@ -118,7 +118,7 @@ public sealed class MsspDraft
 		foreach (var other in Others.Where(other => other.Name.Trim().Length > 0 || other.Values.Count > 0))
 		{
 			// Two rows under one name are reported, not merged: a save must send what the page shows.
-			settings.TryAdd(other.Name.Trim(), [.. other.Values]);
+			settings.TryAdd(MsspCatalog.Canonicalize(other.Name), [.. other.Values]);
 		}
 
 		return settings;
