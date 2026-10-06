@@ -552,6 +552,37 @@ public class PennMUSHDbrefPreservationTests
 	}
 
 	/// <summary>
+	/// PennMUSH evaluates <c>%&gt;</c> to <c>&gt;</c>; here it is the last command's output. The text stays
+	/// as written and the import names each attribute that uses it, but not one whose <c>%</c> is escaped.
+	/// </summary>
+	[Test]
+	public async Task AttributesUsingPipedOutputAreReported()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Master", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject
+			{
+				DBRef = 10, Name = "Ten", Type = PennMUSHObjectType.Thing,
+				Attributes =
+				[
+					new PennMUSHAttribute { Name = "ARROW", Value = "think a %> b" },
+					new PennMUSHAttribute { Name = "AFTER", Value = "think %%%>" },
+					new PennMUSHAttribute { Name = "PERCENT", Value = "think 50%%> 40%%" },
+					new PennMUSHAttribute { Name = "ESCAPED", Value = "think \\%>" }
+				]
+			}));
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(await AttributeAsync(world, 10, "ARROW")).IsEqualTo("think a %> b");
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("2 attribute(s) use %>")
+			&& w.EndsWith(": #10/ARROW, #10/AFTER"))).IsTrue();
+	}
+
+	/// <summary>
 	/// A minimal PennMUSH world is #0-#2. With the seeds at #3-#9 gone, the next object is #3, one past
 	/// the highest imported object, not the 10 the seeds had pushed the counter to.
 	/// </summary>
