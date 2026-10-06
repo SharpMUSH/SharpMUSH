@@ -36,7 +36,7 @@ public partial class Commands
 	/// split the whole of it arrived as one argument, so the dbref could not be read at all.
 	/// NOTE: Cost parameter requires economy/quota system implementation.
 	/// </remarks>
-	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
+	[SharpCommand(Name = "@CREATE", Output = CommandOutput.Value, Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
 	public async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -714,7 +714,7 @@ public partial class Commands
 	/// dig, so NO_TEL and Z_TEL still apply and a refused teleport leaves the room dug. <c>dig()</c>
 	/// passes no teleport flag (<c>fundb.c:2188</c>), so this lives here and not in the helper.</para>
 	/// </remarks>
-	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+	[SharpCommand(Name = "@DIG", Output = CommandOutput.Value, Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 6,
 		ParameterNames = ["name", "exit to", "exit from", "room dbref", "to dbref", "from dbref"])]
 	public async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -754,7 +754,7 @@ public partial class Commands
 	/// standing in. That is an artifact of <c>NOTHING</c> doing double duty as a sentinel, not a
 	/// contract, so an unlinked forward exit refuses the return one instead.
 	/// </remarks>
-	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+	[SharpCommand(Name = "@OPEN", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 6,
 		ParameterNames = ["exit", "destination", "return exit", "source room", "dbref", "return dbref"])]
 	public async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -855,7 +855,7 @@ public partial class Commands
 	/// PennMUSH <c>cmd_clone</c> (<c>src/cmds.c</c>) is one call to <c>do_clone</c>, which
 	/// <see cref="BuildingHelpers.CloneAsync"/> is; <c>clone()</c> reaches the same body.
 	/// </remarks>
-	[SharpCommand(Name = "@CLONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+	[SharpCommand(Name = "@CLONE", Output = CommandOutput.Value, Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 3, ParameterNames = ["object", "name", "dbref"])]
 	public async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

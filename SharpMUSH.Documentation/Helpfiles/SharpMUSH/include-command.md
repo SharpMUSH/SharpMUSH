@@ -31,6 +31,8 @@
 
 @include inserts the contents of the attribute provided into the action list in-place, without adding a new queue entry. It is useful to avoid having to copy the same code into multiple commands. The attribute to be included must be visible to the enactor.
 
+Output: the output of the last command run. See [command output].
+
 ### Example
 ```sharp
 &CHECKS me=@assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]

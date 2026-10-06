@@ -59,6 +59,7 @@ EXECUTOR_DBREF: '!' -> popMode;
 LOCATION_DBREF: [lL] -> popMode;
 LASTCOMMAND_BEFORE_EVAL: [cC] -> popMode;
 LASTCOMMAND_AFTER_EVAL: [uU] -> popMode;
+PIPED_OUTPUT: '>' -> popMode;
 INVOCATION_DEPTH: '?' -> popMode;
 CURRENT_ARG_COUNT: '+' -> popMode;
 ITEXT_NUM: [iI][0-9]+ -> popMode;

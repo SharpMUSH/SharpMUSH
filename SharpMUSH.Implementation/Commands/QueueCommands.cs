@@ -913,7 +913,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@FORCE", Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
+	[SharpCommand(Name = "@FORCE", Output = CommandOutput.Runs, Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSBrace, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "command"])]
 	public async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1204,7 +1204,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@TRIGGER",
+	[SharpCommand(Name = "@TRIGGER", Output = CommandOutput.Runs,
 		Switches = ["CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)

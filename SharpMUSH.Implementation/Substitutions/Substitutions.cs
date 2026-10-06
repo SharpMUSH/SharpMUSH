@@ -85,6 +85,9 @@ public static partial class Substitutions
 			"L" or "l" => await GetLocationDbRefString(parser, mediator),
 			"C" or "c" => CommandBeforeEvaluation(parser),
 			"U" or "u" => CommandAfterEvaluation(parser),
+			// %>: the logical output of the last command run in this queue entry (help command output).
+			// PennMUSH has no %> and prints a literal >.
+			">" => parser.CurrentState.PipedOutput,
 			// PennMUSH: %? returns "invocations recursions" (two space-separated numbers)
 			"?" => $"{parser.CurrentState.TotalInvocations!.Count} {parser.CurrentState.CallDepth!.Count}",
 			// PennMUSH's %+ is the argument count, not the register count: pi_regs_get_envc

@@ -40,6 +40,25 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	public async ValueTask<Option<CallState>> DispatchAsync(SharpMUSHParserVisitor visitor, MString src,
 		CommandContext context)
 	{
+		// Every command leaves a %>. A built-in records its own as its CommandOutput declares; anything that
+		// recorded nothing — a command with no output, a $-command, a refusal before the command ran —
+		// leaves the #-1 error it failed with, or nothing.
+		var commandText = visitor.Parser.CurrentState.CommandText;
+		var outputVersion = commandText?.OutputVersion;
+		var result = await DispatchCommandAsync(visitor, src, context);
+		if (commandText is not null && commandText.OutputVersion == outputVersion)
+		{
+			commandText.SetOutput(result is CallState { Message: { } message } && message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)
+				? message
+				: MarkupText.Empty);
+		}
+
+		return result;
+	}
+
+	private async ValueTask<Option<CallState>> DispatchCommandAsync(SharpMUSHParserVisitor visitor, MString src,
+		CommandContext context)
+	{
 		var parser = visitor.Parser;
 
 		// Hoisted out of the try so the catch can name the command that failed.
