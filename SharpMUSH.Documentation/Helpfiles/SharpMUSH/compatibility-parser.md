@@ -69,6 +69,11 @@
       "id": "a-wizard-s-mailstats-is-their-own",
       "heading": "A Wizard's `mailstats()` is their own",
       "lookup": "compatibility parser a wizard s mailstats is their own"
+    },
+    {
+      "id": "is-the-last-command-s-output",
+      "heading": "`%>` is the last command's output",
+      "lookup": "compatibility parser is the last command s output"
     }
   ]
 }
@@ -325,4 +330,25 @@ answer is an error nobody could have relied on.<br>
 ```sharp
 > think words(mailstats())
 2
+```
+
+## `%>` is the last command's output
+
+**A choice.**
+
+**PennMUSH** has no `%>` substitution, so it evaluates `%>` to a plain `>`.<br>
+**SharpMUSH** substitutes the output of the last command run in the same queue entry: after
+`@dig Kitchen`, `%>` is the new room's dbref. A typed line starts with it empty. See
+`help command output`.<br>
+**Why.** It lets one command's result feed the next without a search or a register.<br>
+**Workaround.** Write a plain `>`, which means the same on both servers. Importing a
+PennMUSH database names every attribute that uses `%>`.
+
+PennMUSH answers `a>b` to the first line:
+
+```sharp
+> think a%>b
+ab
+> think a>b
+a>b
 ```

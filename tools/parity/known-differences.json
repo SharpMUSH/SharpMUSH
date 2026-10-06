@@ -160,6 +160,18 @@
       "tracking": "#1512",
       "profile": "`decompose()` writes tags and links as the calls that make them",
       "command": "think [decompose(tagwrap(b,bold))]|[decompose(tagwrap(b,ansi(r,x)))]"
+    },
+    {
+      "id": "KD-0016",
+      "scenario": "30-softcode",
+      "case": "sc.piped-output",
+      "step": 0,
+      "reason": "%> is the output of the last command in the same queue entry, empty on a typed line; PennMUSH has no %> substitution and evaluates it to >.",
+      "tracking": "#1587",
+      "profile": "`%>` is the last command's output",
+      "command": "think a%>b",
+      "sharp": "ab",
+      "penn": "a>b"
     }
   ]
 }
