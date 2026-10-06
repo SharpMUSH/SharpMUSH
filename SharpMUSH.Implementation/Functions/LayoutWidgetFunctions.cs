@@ -19,7 +19,7 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	private static readonly IReadOnlySet<string> GaugeKeys =
-		new HashSet<string>(["width", "filled", "empty", "open", "close", "show", "bar"], StringComparer.OrdinalIgnoreCase);
+		new HashSet<string>(["width", "filled", "empty", "open", "close", "show", "bar", "gradient", "space", "shade"], StringComparer.OrdinalIgnoreCase);
 
 	private static readonly IReadOnlySet<string> BulletsKeys =
 		new HashSet<string>(["width", "style", "marker", "start"], StringComparer.OrdinalIgnoreCase);
@@ -80,6 +80,16 @@ public partial class Functions
 					break;
 				case "bar" when int.TryParse(plain, out var bar) && bar is > 0 and <= MaxLayoutWidth:
 					settings = settings with { BarWidth = bar };
+					break;
+				case "gradient":
+					if (GradientStops(option) is not { } stops) return new CallState("#-1 UNKNOWN COLOR");
+					settings = settings with { Gradient = new ColorGradient(stops, settings.Gradient?.Space ?? GradientSpace.Oklch) };
+					break;
+				case "space" when GradientSpaceOf(plain) is { } space:
+					settings = settings with { Gradient = (settings.Gradient ?? new ColorGradient([])) with { Space = space } };
+					break;
+				case "shade" when plain is "cells" or "value":
+					settings = settings with { Shade = plain == "value" ? GaugeShade.Value : GaugeShade.Cells };
 					break;
 				default:
 					return new CallState(ErrorMessages.Returns.InvalidArgument);
@@ -190,15 +200,49 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), DataTableKeys) switch
 		{
-			IReadOnlyList<(string Key, MString Value)> options => BuildDataTable(parser, args, options),
+			IReadOnlyList<(string Key, MString Value)> options => BuildDataTable(parser, options, delimiter =>
+			{
+				var lists = args.Keys.Select(int.Parse).Where(i => i > 1).Order()
+					.Select(i => MushText.SplitList(delimiter, args[i.ToString()].Message!))
+					.ToArray();
+				return (MushText.SplitList(delimiter, Arg(args, 1)), lists);
+			}),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
 
-	private CallState BuildDataTable(IMUSHCodeParser parser, IReadOnlyDictionary<string, CallState> args, IReadOnlyList<(string Key, MString Value)> options)
+	/// <summary>
+	/// <c>datacolumns(&lt;options&gt;, &lt;column1&gt;[, ... &lt;columnN&gt;])</c> — <c>datatable()</c> given a
+	/// column at a time: each column is its heading and then its cells, split by <c>|</c>, so a list
+	/// a function returned is a column as it stands. A short column is filled out with empty cells.
+	/// </summary>
+	[SharpFunction(Name = "datacolumns", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["options", "column..."])]
+	public ValueTask<CallState> DataColumns(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		return ValueTask.FromResult(LayoutSpec.Options(Arg(args, 0), DataTableKeys) switch
+		{
+			IReadOnlyList<(string Key, MString Value)> options => BuildDataTable(parser, options, delimiter =>
+			{
+				var columns = args.Keys.Select(int.Parse).Where(i => i > 0).Order()
+					.Select(i => MushText.SplitList(delimiter, args[i.ToString()].Message!))
+					.ToArray();
+				var height = columns.Max(column => column.Length) - 1;
+				var rows = Enumerable.Range(1, height)
+					.Select(r => columns.Select(column => r < column.Length ? column[r] : MarkupText.Empty).ToArray())
+					.ToArray();
+				return ([.. columns.Select(column => column[0])], rows);
+			}),
+			Error<string> error => new CallState(error.Value),
+		});
+	}
+
+	/// <summary>A table from its options and, once the delimiter is known, its headings and rows of cells.</summary>
+	private CallState BuildDataTable(IMUSHCodeParser parser, IReadOnlyList<(string Key, MString Value)> options,
+		Func<MString, (MString[] Headings, MString[][] Rows)> read)
 	{
 		var delimiter = options.LastOrDefault(option => option.Key == "delim").Value is { Length: > 0 } given ? given : MarkupText.Plain("|");
-		var headings = MushText.SplitList(delimiter, Arg(args, 1));
+		var (headings, cells) = read(delimiter);
 		var columns = headings.Select(Heading).ToArray();
 
 		var settings = TableOptions.Default;
@@ -255,9 +299,7 @@ public partial class Functions
 
 		if (LayoutWidth(parser, widthArg) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
 
-		var rows = args.Keys.Select(int.Parse).Where(i => i > 1).Order()
-			.Select(i => MushText.SplitList(delimiter, args[i.ToString()].Message!).Select(cell => Body(cell)).ToImmutableArray())
-			.ToImmutableArray();
+		var rows = cells.Select(row => row.Select(cell => Body(cell)).ToImmutableArray()).ToImmutableArray();
 		return new CallState(BlockLayout.Build(new TableNode([.. columns], rows, settings), width, fluid));
 	}
 
@@ -292,6 +334,56 @@ public partial class Functions
 		var text = MarkupText.Concat([MarkupText.Plain("["), Arg(args, 0), MarkupText.Plain("]")]);
 		return ValueTask.FromResult(new CallState(MarkupText.Wrap(AnsiCodeParser.Parse(codes), text)));
 	}
+
+	/// <summary>
+	/// <c>gradient(&lt;text&gt;, &lt;colors&gt;[, &lt;space&gt;])</c> — the text with each character in the
+	/// colour at its place along a gradient through the colours, which are ansi() codes split by
+	/// <c>|</c>. Blended in OKLCH unless <c>oklab</c> or <c>hsl</c> is named, never in plain RGB.
+	/// </summary>
+	[SharpFunction(Name = "gradient", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["text", "colors", "space"])]
+	public ValueTask<CallState> Gradient(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (GradientStops(Arg(args, 1)) is not { } stops) return ValueTask.FromResult(new CallState("#-1 UNKNOWN COLOR"));
+		var spaceArg = Arg(args, 2).ToPlainText().Trim().ToLowerInvariant();
+		if ((spaceArg.Length == 0 ? GradientSpace.Oklch : GradientSpaceOf(spaceArg)) is not { } space)
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
+
+		var gradient = new ColorGradient(stops, space);
+		var text = Arg(args, 0);
+		var characters = text.EnumerateGraphemes().ToArray();
+		var visible = characters.Count(character => !string.IsNullOrWhiteSpace(character.ToPlainText()));
+		var place = 0;
+		var painted = characters.Select(character =>
+		{
+			// Spaces take no colour and no place, so a gradient over "a b" runs from a straight to b.
+			if (string.IsNullOrWhiteSpace(character.ToPlainText())) return character;
+			return gradient.Paint(character, visible > 1 ? place++ / (double)(visible - 1) : 0);
+		});
+		return ValueTask.FromResult(new CallState(MarkupText.Concat([.. painted])));
+	}
+
+	/// <summary>Colour stops, ansi() codes split by <c>|</c>; null when one sets no foreground colour.</summary>
+	private ImmutableArray<IColorMarkup>? GradientStops(MString list)
+	{
+		var stops = new List<IColorMarkup>();
+		foreach (var codes in MushText.SplitList(MarkupText.Plain("|"), list))
+		{
+			var text = codes.ToPlainText().Trim();
+			if (text.Length == 0) continue;
+			if (AnsiCodes(text) is not { Foreground: not null } stop) return null;
+			stops.Add(stop);
+		}
+		return stops.Count == 0 ? null : [.. stops];
+	}
+
+	private static GradientSpace? GradientSpaceOf(string name) => name switch
+	{
+		"oklch" => GradientSpace.Oklch,
+		"oklab" => GradientSpace.Oklab,
+		"hsl" => GradientSpace.Hsl,
+		_ => null,
+	};
 
 	/// <summary>A list's items split on its delimiter (a space when none is given); none for an empty list.</summary>
 	private static MString[] ListItems(MString list, MString delimiter) =>

@@ -12,7 +12,8 @@ Available functions:
 - gauge() — a bar filled to a value
 - bullets() — a bulleted or numbered list
 - grid() — short items in as many columns as fit
-- datatable() — a table that gives way on a narrow screen
+- datatable() and datacolumns() — a table that gives way on a narrow screen, given by rows or by columns
+- gradient() — text shaded through colours
 - badge() — a coloured status tag
 
 The result is text, so `strlen()`, `mid()`, `edit()` and listen patterns all work on the box art. A layout cut or edited by another function is shown as the text it now is, in the portal too.
@@ -79,6 +80,8 @@ In the portal the picture shows in place of the cat, with the fields beside it.
 - [BULLETS()]
 - [GRID()]
 - [DATATABLE()]
+- [DATACOLUMNS()]
+- [GRADIENT()]
 - [BADGE()]
 - [LAYOUT BORDERS]
 - [ALIGN()]
@@ -409,6 +412,9 @@ Options (the last argument):
 - `show:percent`, `show:value` or `show:none` — the figures after the bar: `50%` (the default), `6/12`, or nothing.
 - `filled:<text>` and `empty:<text>` — the pieces the bar is drawn with. `█` and `░` by default, `#` and `-` for a client without Unicode.
 - `open:<text>` and `close:<text>` — the ends. `[` and `]` by default; leave one empty for none.
+- `gradient:<colors>` — shade the bar through these colours, [ANSI()] codes split by `|`: `gradient:r|y|g` or `gradient:#ff4040|#40ff80`. See [GRADIENT()] for how they blend.
+- `shade:cells` or `shade:value` — with `cells` (the default) each cell takes the colour at its place along the whole bar, so a fuller bar reaches further along the gradient. With `value` the whole filled part takes one colour, the one at the value's place: red when nearly empty, green when full.
+- `space:oklch`, `space:oklab` or `space:hsl` — the space the colours blend in; see [GRADIENT()].
 
 ### Examples
 ```sharp
@@ -418,9 +424,14 @@ HP [██████░░░░░] 50%
 [======--] 3/4
 > think gauge(30,100,XP,width:30 show:none filled:# empty:.)
 XP [########.................]
+> think gauge(9,10,HP,width:20 gradient:r|y|g)
+HP [██████████░] 90%
 ```
 
+The last bar runs from red through yellow to green, and the portal draws it with the same blend.
+
 ::: seealso
+- [GRADIENT()]
 - [DATATABLE()]
 - [LAYOUT FUNCTIONS]
 :::
@@ -532,8 +543,56 @@ Raya    Writing a
 ```
 
 ::: seealso
+- [DATACOLUMNS()]
 - [GRID()]
 - [FIELDS()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# DATACOLUMNS()
+
+`datacolumns(<options>, <column1>[, ... , <columnN>])`
+
+The same table as [DATATABLE()], given a column at a time instead of a row at a time. Each column is its heading and then its cells, split by `|`, so a list another function made is a column as it stands. A column shorter than the others is filled out with empty cells. It takes the same options, and gives way on a narrow screen the same way.
+
+### Example
+```sharp
+> think datacolumns(width:30 nowrap:2,Name|Mannaz|Raya,>Idle|0s|5m,Doing|Hooooo?)
+Name    Idle  Doing
+---------------------
+Mannaz    0s  Hooooo?
+Raya      5m
+```
+
+With lists from other functions, change the delimiter to the space they use: `datacolumns(delim:%b,Name [lwho()],Idle [iter(lwho(),idle(##))])`. A cell holding a space then needs another delimiter.
+
+::: seealso
+- [DATATABLE()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# GRADIENT()
+
+`gradient(<text>, <colors>[, <space>])`
+
+*<text>* with each character in the colour at its place along a gradient through *<colors>*, which are [ANSI()] codes split by `|`: `r|y|g`, `#ff6000|#8040ff`, or colour names. Spaces take no colour and no place. The text keeps its own markup.
+
+The colours blend in a space built to look even to the eye, not in plain RGB, whose midpoints go grey and dark (red to green through a muddy olive). *<space>* is one of:
+- `oklch` (the default) — keeps the middle as bright and vivid as the ends; red to green passes through yellow.
+- `oklab` — straight across, with no swing through other hues; colours far apart meet in a softer middle.
+- `hsl` — a brighter, less even rainbow sweep.
+
+A client with fewer colours gets each one's nearest. The portal shows the same colours.
+
+### Example
+```sharp
+> think gradient(Mannaz Byron,#ff4040|#ffd040|#40c0ff)
+Mannaz Byron
+```
+
+::: seealso
+- [ANSI()]
+- [GAUGE()]
 - [LAYOUT FUNCTIONS]
 :::
 

@@ -159,6 +159,29 @@ public class LayoutFunctionTests
 			.IsEqualTo(Lines("Mail", "+> Inbox", "*> Sent"));
 	}
 
+	[Test]
+	public async Task Gradient_ColoursEachCharacterAlongTheWay_SkippingSpaces()
+	{
+		var ansi = (await Eval("gradient(a b,#ff0000|#0000ff)")).Render(MarkupFormat.Ansi);
+
+		await Assert.That(ansi).Contains("\u001b[38;2;255;0;0ma");
+		await Assert.That(ansi).Contains("\u001b[38;2;0;0;255mb");
+	}
+
+	[Test]
+	public async Task Gauge_Gradient_IsDrawnInTheSameSpaceOnTheWeb()
+	{
+		var html = (await Eval("gauge(6,12,,bar:4 gradient:#ff0000|#00ff00)")).Render(MarkupFormat.Html);
+
+		await Assert.That(html).Contains("linear-gradient(to right in oklch, #ff0000, #00ff00)");
+		await Assert.That(html).Contains("<div class=\"ms-gauge-fill\" style=\"width:50%;");
+	}
+
+	[Test]
+	public async Task Gauge_ShadedByValue_IsOneColour()
+		=> await Assert.That((await Eval("gauge(12,12,,bar:2 show:none open: close: shade:value space:hsl gradient:#ff0000|#0000ff)")).Render(MarkupFormat.Ansi))
+			.Contains("\u001b[38;2;0;0;255m██");
+
 	/// <summary>Every <c>&gt; think</c> example in the layout help, with the lines under it as its output.</summary>
 	public static IEnumerable<Func<(string Code, string Expected)>> HelpExamples()
 	{
@@ -201,6 +224,10 @@ public class LayoutFunctionTests
 	[Arguments("datatable(priority:1|2|3,A|B,1|2)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("datatable(min:x,A|B,1|2)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
+	[Arguments("gradient(x,h|r)", "#-1 UNKNOWN COLOR")]
+	[Arguments("gradient(x,r|g,rgb)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("gauge(1,2,,gradient:r space:rgb)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("datacolumns(nowrap:3,A|1,B|2)", ErrorMessages.Returns.ArgRange)]
 	public async Task ABadArgumentIsRefused(string code, string error)
 		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(error);
 }

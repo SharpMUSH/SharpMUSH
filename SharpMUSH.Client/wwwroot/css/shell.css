@@ -788,6 +788,8 @@ pre.ms-preformatted {
 .ms-tree.ms-guide-none ul > li, .ms-tree.ms-guide-none ul > li::before { border-color: transparent; }
 .ms-gauge { display: flex; align-items: center; gap: 1ch; }
 .ms-gauge > meter { flex: 1 1 8ch; min-width: 4ch; }
+.ms-gauge-bar { flex: 1 1 8ch; min-width: 4ch; height: 1em; display: flex; border: 1px solid currentColor; box-sizing: border-box; }
+.ms-gauge-fill { height: 100%; }
 .ms-bullets { margin: 0; padding-left: 3ch; }
 .ms-bullet-dash { list-style-type: "- "; }
 .ms-bullet-star { list-style-type: "* "; }
