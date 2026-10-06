@@ -1,0 +1,197 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* A textarea whose text is styled as the game will show it. The textarea keeps the caret, the selection,
+   IME, spellcheck and the keyboard; its own text is transparent, and a layer over it shows the draft rendered
+   by MarkupString (the same HTML the Story uses), kept on the textarea's box and scroll by layout.js. The
+   draft (ComposerDraft) is the model: each input is worked out from the field's value and caret, and the
+   format menu (FormatMenu) applies to the textarea's selection. In raw mode there is no layer: the field is
+   the softcode as typed. *@
+<div class="fi @Class @(Draft.Raw ? "fi--raw" : "fi--rich")">
+    <textarea @ref="_input" class="fi-input @InputClass" rows="@Rows" aria-label="@AriaLabel" placeholder="@Placeholder"
+              value="@Draft.Value" @oninput="OnInput" @onkeydown="OnKeyDown" spellcheck="true"></textarea>
+    @if (!Draft.Raw)
+    {
+        <div @ref="_overlay" class="fi-overlay" aria-hidden="true">@Rendered</div>
+    }
+    @if (OnRawRequested.HasDelegate && Draft.SoftcodeLookalike is { } found && found != _dismissed)
+    {
+        <div class="fi-notice" role="status">
+            <span>@Loc["NavFormatSoftcodeNotice", found]</span>
+            <button type="button" class="fi-notice-action" @onclick="RequestRawAsync">@Loc["NavFormatSendAsSoftcode"]</button>
+            <button type="button" class="fi-notice-dismiss" @onclick="() => _dismissed = found">@Loc["NavFormatKeepAsText"]</button>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The draft this field edits; the owner reads it to send and to keep it.</summary>
+    [Parameter, EditorRequired] public ComposerDraft Draft { get; set; } = null!;
+
+    /// <summary>Classes for the wrapper.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Classes for the textarea, which the owner styles (through <c>::deep</c>); the layer copies its box.</summary>
+    [Parameter] public string? InputClass { get; set; }
+
+    [Parameter] public string? Placeholder { get; set; }
+
+    [Parameter] public string? AriaLabel { get; set; }
+
+    [Parameter] public int Rows { get; set; } = 1;
+
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+
+    /// <summary>
+    /// Switches the owner to raw mode. With it, a rich draft that looks like softcode (<see cref="ComposerDraft.SoftcodeLookalike"/>)
+    /// says it will be sent as text and offers to send it as softcode instead.
+    /// </summary>
+    [Parameter] public EventCallback OnRawRequested { get; set; }
+
+    /// <summary>The textarea, for listeners the owner attaches (Enter to send).</summary>
+    public ElementReference Input => _input;
+
+    private ElementReference _input;
+    private ElementReference _overlay;
+    private ComposerDraft? _subscribed;
+    private DotNetObjectReference<FormattedInput>? _self;
+    private bool _attached;
+    private bool _overlayShown;
+    private string? _dismissed;
+    private (int Start, int End)? _restore;
+
+    private MarkupString Rendered => (MarkupString)(Draft.Text.Render(MarkupFormat.Html) + "​");
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_subscribed, Draft)) return;
+        if (_subscribed is not null) _subscribed.Changed -= OnDraftChanged;
+        _subscribed = Draft;
+        Draft.Changed += OnDraftChanged;
+    }
+
+    private void OnDraftChanged() => InvokeAsync(StateHasChanged);
+
+    // Synchronous on purpose: an await here would let the next keystroke's event apply first, and this older
+    // value would then undo it.
+    private void OnInput(ChangeEventArgs e) => Draft.ApplyInput(e.Value?.ToString() ?? string.Empty, Selection()?.End);
+
+    /// <summary>Applies a format to the textarea's selection and puts the selection back over the same text.</summary>
+    public void Apply(ComposerFormat format)
+    {
+        var (start, end) = Selection() ?? (Draft.Value.Length, Draft.Value.Length);
+        _restore = Draft.Apply(format, start, end);
+    }
+
+    /// <summary>The style at the textarea's caret or selection, for the menu's pressed state.</summary>
+    public AnsiStyle CurrentStyle()
+    {
+        var (start, end) = Selection() ?? (Draft.Value.Length, Draft.Value.Length);
+        return Draft.StyleFor(start, end);
+    }
+
+    public async Task FocusAsync()
+    {
+        try
+        {
+            await _input.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // The field is not on the page (not rendered yet, or already gone): there is nothing to focus.
+        }
+    }
+
+    private (int Start, int End)? Selection()
+    {
+        if (JS is not IJSInProcessRuntime sync) return null;
+        try
+        {
+            return sync.Invoke<int[]?>("sharpmushLayout.fieldSelection", _input) is [var start, var end] ? (start, end) : null;
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Undo, redo and the format shortcuts, from layout.js, which keeps them from the textarea's own handling.</summary>
+    [JSInvokable]
+    public Task Shortcut(string action, int start, int end) => InvokeAsync(() =>
+    {
+        switch (action)
+        {
+            case "undo":
+                Draft.Undo();
+                _restore = null;
+                break;
+            case "redo":
+                Draft.Redo();
+                _restore = null;
+                break;
+            case "bold":
+                _restore = Draft.Apply(new ComposerFormat.Bold(), start, end);
+                break;
+            case "underline":
+                _restore = Draft.Apply(new ComposerFormat.Underline(), start, end);
+                break;
+            case "clear":
+                _restore = Draft.Apply(new ComposerFormat.ClearFormatting(), start, end);
+                break;
+        }
+        StateHasChanged();
+    });
+
+    private async Task RequestRawAsync()
+    {
+        _dismissed = null;
+        await OnRawRequested.InvokeAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (!_attached)
+            {
+                _self ??= DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("sharpmushLayout.formattedInput", _input, _self);
+                _attached = true;
+            }
+            // The layer comes and goes with the mode; layout.js lays it over the textarea each time it appears.
+            var shown = !Draft.Raw;
+            if (shown && !_overlayShown) await JS.InvokeVoidAsync("sharpmushLayout.formattedOverlay", _input, _overlay);
+            _overlayShown = shown;
+            if (_restore is var (start, end))
+            {
+                _restore = null;
+                await JS.InvokeVoidAsync("sharpmushLayout.fieldSelect", _input, start, end);
+            }
+            else if (shown)
+            {
+                await JS.InvokeVoidAsync("sharpmushLayout.formattedSync", _input);
+            }
+        }
+        catch (JSException)
+        {
+            // No layout script: the field still edits and sends; the layer just isn't kept aligned.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_subscribed is not null) _subscribed.Changed -= OnDraftChanged;
+        if (_self is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.unformattedInput", _input);
+        }
+        catch (Exception e) when (e is JSException or JSDisconnectedException)
+        {
+            // The page is going away with its listeners.
+        }
+        _self.Dispose();
+    }
+}

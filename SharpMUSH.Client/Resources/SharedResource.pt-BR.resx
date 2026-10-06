@@ -5373,6 +5373,102 @@
     <value>Exceção para {0} salva.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavFormatMenu" xml:space="preserve">
+    <value>Formatar texto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatText" xml:space="preserve">
+    <value>Cor do texto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBackground" xml:space="preserve">
+    <value>Fundo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatNone" xml:space="preserve">
+    <value>Sem cor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCustom" xml:space="preserve">
+    <value>Cor personalizada (#rrggbb)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBold" xml:space="preserve">
+    <value>Negrito</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatUnderline" xml:space="preserve">
+    <value>Sublinhado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatInverse" xml:space="preserve">
+    <value>Invertido</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlink" xml:space="preserve">
+    <value>Piscar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatClear" xml:space="preserve">
+    <value>Limpar formatação</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcode" xml:space="preserve">
+    <value>Escrever softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeHint" xml:space="preserve">
+    <value>Digite o softcode como ele é enviado; o menu de formatação envolve a seleção em [ansi()].</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
+    <value>Isto parece softcode ({0}). Será enviado como o texto que você vê.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
+    <value>Enviar como softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatKeepAsText" xml:space="preserve">
+    <value>Manter como texto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlack" xml:space="preserve">
+    <value>Preto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatRed" xml:space="preserve">
+    <value>Vermelho</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatGreen" xml:space="preserve">
+    <value>Verde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatYellow" xml:space="preserve">
+    <value>Amarelo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlue" xml:space="preserve">
+    <value>Azul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatMagenta" xml:space="preserve">
+    <value>Magenta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCyan" xml:space="preserve">
+    <value>Ciano</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatWhite" xml:space="preserve">
+    <value>Branco</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBright" xml:space="preserve">
+    <value>{0} claro</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavWikiUncategorized" xml:space="preserve">
     <value>Sem categoria</value>
   </data>

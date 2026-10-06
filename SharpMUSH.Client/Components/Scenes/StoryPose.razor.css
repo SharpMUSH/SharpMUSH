@@ -115,7 +115,8 @@
 }
 
 .story-edit-btn:focus-visible,
-.story-editor-input:focus-visible,
+.story-editor ::deep .story-editor-input:focus-visible,
+.story-editor-actions ::deep .story-editor-tool:focus-visible,
 .story-editor-save:focus-visible,
 .story-editor-cancel:focus-visible {
 	outline: 2px solid var(--accent);
@@ -129,7 +130,8 @@
 	margin-top: 4px;
 }
 
-.story-editor-input {
+/* The field (FormattedInput) renders the textarea, so the rules reach it through ::deep. */
+.story-editor ::deep .story-editor-input {
 	min-height: 96px;
 	max-height: 50vh;
 	field-sizing: content;
@@ -147,7 +149,32 @@
 .story-editor-actions {
 	display: flex;
 	justify-content: flex-end;
+	align-items: center;
 	gap: 8px;
+}
+
+/* The format menu leads the row; Cancel and Save keep the end. */
+.story-editor-actions ::deep .story-editor-format {
+	margin-right: auto;
+}
+
+.story-editor-actions ::deep .story-editor-tool {
+	width: 32px;
+	height: 32px;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+}
+
+.story-editor-actions ::deep .story-editor-tool:hover,
+.story-editor-actions ::deep .story-editor-tool[aria-expanded="true"] {
+	background: var(--surface-3);
+	color: var(--text);
 }
 
 .story-editor-cancel,
