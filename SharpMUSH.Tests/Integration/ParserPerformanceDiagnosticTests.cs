@@ -451,12 +451,12 @@ public class ParserPerformanceDiagnosticTests
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		TestDiagnostics.WriteLine($"\n[DIAGNOSTICS] Full output written to: {outputPath}");
 
-		// Assertions — 2 syntax errors expected from BBS lines 74 and 96
-		// (orphaned CBRACK after escaped brackets — Fix A reverted to prevent AdaptivePredict hang)
-		await Assert.That(llTotalSyntaxErrors).IsEqualTo(2)
-			.Because("BBS lines 74 and 96 have syntax errors from orphaned CBRACK (Fix A reverted)");
-		await Assert.That(sllTotalSyntaxErrors).IsEqualTo(2)
-			.Because("BBS lines 74 and 96 have syntax errors from orphaned CBRACK (Fix A reverted)");
+		// Assertions — BBS lines 74 and 96 each hold two `\[...]` whose `]` has no opener. This test
+		// lexes without SoftcodeParsePipeline's orphaned-closer rewrite, so each `]` is an error.
+		await Assert.That(llTotalSyntaxErrors).IsEqualTo(4)
+			.Because("BBS lines 74 and 96 each have two orphaned ] after an escaped [");
+		await Assert.That(sllTotalSyntaxErrors).IsEqualTo(4)
+			.Because("BBS lines 74 and 96 each have two orphaned ] after an escaped [");
 		await Assert.That(differingLines).IsEmpty()
 			.Because("SLL and LL modes should produce identical error results on every line");
 	}

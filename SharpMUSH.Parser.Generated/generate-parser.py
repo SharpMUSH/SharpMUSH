@@ -497,7 +497,10 @@ if __name__ == '__main__':
 	stale = []
 	for name, text in outputs.items():
 		path = os.path.join(here, name)
-		current = open(path, encoding='utf-8').read() if os.path.exists(path) else None
+		current = None
+		if os.path.exists(path):
+			with open(path, encoding='utf-8') as f:
+				current = f.read()
 		if current != text:
 			stale.append(name)
 			if not check:
