@@ -32,6 +32,27 @@ public static class WikiCategories
 		return key.Length == 0 ? uncategorizedLabel : WikiHelpers.CategoryLabel(key, names);
 	}
 
+	/// <summary>
+	/// The label of a category in an editor's list: its name from <paramref name="names"/>, else the name as
+	/// typed for one just added (the server titles its new category page with it), else its key as a title.
+	/// </summary>
+	public static string Display(string category, IReadOnlyDictionary<string, string>? names)
+	{
+		var key = Key(category);
+		return names?.ContainsKey(key) != true && category.Trim() is var typed && typed != key
+			? typed
+			: WikiHelpers.CategoryLabel(key, names);
+	}
+
+	/// <summary>Adds <paramref name="entry"/> as typed unless the list already holds its category.</summary>
+	public static bool Add(List<string> categories, string? entry)
+	{
+		var key = Key(entry);
+		if (key.Length == 0 || categories.Any(c => Key(c) == key)) return false;
+		categories.Add(entry!.Trim());
+		return true;
+	}
+
 	public static string Route(string category) => WikiRoutes.CategoryPath(category);
 
 	/// <summary>

@@ -95,6 +95,7 @@ public class WikiController(
 
 		async Task<IActionResult> PageCreatedAsync(WikiPage page)
 		{
+			await NameCategoriesAsync(request.Categories ?? [], [], authorDbref);
 			Logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} by={Author}",
 				LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(authorDbref));
 			return CreatedAtAction(nameof(GetPage),

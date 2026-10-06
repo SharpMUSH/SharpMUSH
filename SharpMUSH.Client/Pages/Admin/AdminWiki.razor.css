@@ -1,33 +1,152 @@
+/* Pages card: namespace chips on the left, search and language on the right */
+.adminwiki-filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1rem;
+	padding: 0.875rem 1rem 0.75rem;
+}
+
+.adminwiki-filters-fields {
+	display: flex;
+	gap: 0.625rem;
+	align-items: center;
+	flex: 0 1 30rem;
+	min-width: 0;
+}
+
+.adminwiki-filters-fields ::deep .adminwiki-filter--search {
+	flex: 1 1 14rem;
+	margin: 0;
+}
+
+.adminwiki-filters-fields ::deep .adminwiki-filter--locale {
+	flex: 0 0 12rem;
+	margin: 0;
+}
+
+/* Bulk actions, shown only while rows are selected */
+.adminwiki-selection {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	margin: 0 1rem 0.5rem;
+	padding: 0.25rem 0.375rem 0.25rem 0.875rem;
+	border-radius: var(--radius-row);
+	background: rgba(var(--glow), 0.08);
+	border: 1px solid rgba(var(--glow), 0.25);
+}
+
+.adminwiki-selection-count {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--accent);
+}
+
+.adminwiki-selection-rule {
+	width: 1px;
+	height: 1.25rem;
+	margin: 0 0.25rem;
+	background: rgba(var(--glow), 0.25);
+}
+
 .adminwiki-grid-scroll {
 	overflow-x: auto;
 	min-width: 0;
-	border-radius: var(--radius-card);
+	border-top: 1px solid var(--border);
+	border-radius: 0 0 var(--radius-card) var(--radius-card);
 }
 
 .adminwiki-grid-scroll ::deep .mud-table {
 	background: transparent;
 }
 
-.adminwiki-grid-scroll ::deep .adminwiki-toolbar {
-	width: 100%;
+.adminwiki-grid-scroll ::deep .mud-table-cell {
+	border-bottom-color: var(--border-soft);
+}
+
+.adminwiki-title {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 12rem;
+}
+
+.adminwiki-title-line {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+.adminwiki-title ::deep .adminwiki-title-link {
+	font-size: 0.875rem;
+	font-weight: 600;
+}
+
+.adminwiki-title ::deep .adminwiki-lock {
+	font-size: 0.875rem;
+}
+
+.adminwiki-title-ref {
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	color: var(--text-faint);
+}
+
+.adminwiki-cats {
+	display: flex;
 	flex-wrap: wrap;
+	gap: 0.25rem;
 }
 
-.adminwiki-grid-scroll ::deep .adminwiki-filter--ns {
-	max-width: 180px;
+.adminwiki-cat {
+	display: inline-flex;
+	align-items: center;
+	height: 22px;
+	padding: 0 0.5rem;
+	border-radius: 11px;
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+	font-size: 0.75rem;
+	text-decoration: none;
+	white-space: nowrap;
 }
 
-.adminwiki-grid-scroll ::deep .adminwiki-filter--locale {
-	max-width: 200px;
+.adminwiki-cat:hover,
+.adminwiki-cat:focus-visible {
+	border-color: var(--accent);
+	color: var(--accent);
 }
 
-.adminwiki-grid-scroll ::deep .adminwiki-filter--search {
-	max-width: 280px;
+.adminwiki-updated {
+	display: flex;
+	flex-direction: column;
+	font-size: 0.75rem;
+	color: var(--text-dim);
+	white-space: nowrap;
+}
+
+.adminwiki-rev {
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	color: var(--text-faint);
 }
 
 .admin-wiki-coverage {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
 	font-size: 0.6875rem;
 	color: var(--text-dim);
+}
+
+.adminwiki-locale {
+	padding: 0 0.375rem;
+	border-radius: 6px;
+	background: var(--surface-2);
+	font-family: var(--font-mono);
 	letter-spacing: 0.02em;
 }
 
@@ -35,20 +154,174 @@
 	color: var(--mud-palette-warning);
 }
 
-/* the three filters take the full row each once the toolbar cannot hold them side by side */
-@container page (max-width: 48rem) {
-	.adminwiki-grid-scroll ::deep .adminwiki-filter {
-		max-width: none;
-		flex: 1 1 100%;
-	}
+.admin-wiki-coverage ::deep .adminwiki-untranslated {
+	font-size: 0.9375rem;
+	opacity: 0.8;
 }
 
+.adminwiki-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.125rem;
+}
+
+/* Categories card */
+.adminwiki-newcat {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.625rem;
+	padding: 1rem 1rem 0;
+}
+
+.adminwiki-newcat ::deep .adminwiki-newcat-name {
+	flex: 1 1 14rem;
+	margin: 0;
+}
+
+.adminwiki-newcat ::deep .adminwiki-newcat-desc {
+	flex: 2 1 20rem;
+	margin: 0;
+}
+
+.adminwiki-newcat ::deep .mud-icon-button {
+	margin-top: 0.125rem;
+}
+
+.adminwiki-newcat-note {
+	padding: 0.375rem 1rem 0;
+	font-size: 0.75rem;
+	color: var(--warn);
+}
+
+.adminwiki-catlist {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+	gap: 0.5rem;
+	padding: 1rem;
+}
+
+.adminwiki-catcard {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+	padding: 0.5rem 0.625rem;
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+	text-decoration: none;
+	transition: border-color var(--motion-pop);
+}
+
+.adminwiki-catcard:hover,
+.adminwiki-catcard:focus-visible {
+	border-color: var(--accent);
+}
+
+.adminwiki-catcard ::deep .adminwiki-catcard-icon {
+	color: var(--accent);
+	font-size: 1rem;
+}
+
+/* in use, but no category page names it yet */
+.adminwiki-catcard--nopage {
+	border-style: dashed;
+	background: transparent;
+}
+
+.adminwiki-catcard--nopage ::deep .adminwiki-catcard-icon {
+	color: var(--text-faint);
+}
+
+.adminwiki-catcard-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.8125rem;
+}
+
+.adminwiki-catcard-count {
+	min-width: 1.5rem;
+	padding: 0 0.375rem;
+	border-radius: 9px;
+	background: var(--border);
+	color: var(--text-dim);
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	line-height: 1.125rem;
+	text-align: center;
+}
+
+.adminwiki-empty {
+	padding: 1rem;
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}
+
+/* Permissions card: each rule is a tile; the editors inside are their own */
 .adminwiki-requirements-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
 	align-items: start;
 	gap: 0.75rem;
 	padding: 1rem;
+}
+
+/* Dialogs */
+.adminwiki-dialog-title {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	font-size: 1.0625rem;
+	font-weight: 600;
+}
+
+.adminwiki-dialog-kicker {
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	font-weight: 400;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.adminwiki-dialog-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.adminwiki-dialog-label {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--text-dim);
+}
+
+.adminwiki-dialog-hint {
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}
+
+@container page (max-width: 48rem) {
+	.adminwiki-filters-fields {
+		flex: 1 1 100%;
+		flex-wrap: wrap;
+	}
+
+	.adminwiki-filters-fields ::deep .adminwiki-filter--locale {
+		flex: 1 1 100%;
+	}
+
+	.adminwiki-newcat {
+		flex-wrap: wrap;
+	}
+
+	.adminwiki-newcat ::deep .adminwiki-newcat-desc {
+		flex-basis: 100%;
+	}
 }
 
 /* A bulk action's tooltip: what the button is called, then what it does */

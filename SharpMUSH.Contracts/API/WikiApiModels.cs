@@ -103,6 +103,13 @@ public record WikiPageSummaryDto(
 /// </summary>
 public record WikiPageCountsDto(int Total, int Published, int Drafts, int Restricted);
 
+/// <summary>
+/// One row of <c>GET /api/wiki/categories</c>: a category any page the caller may see is filed in, or that has a
+/// page of its own. <see cref="Name"/> is its page's title in the reader's locale, else its key as a title;
+/// <see cref="Pages"/> counts the pages filed in it that the caller may see.
+/// </summary>
+public record WikiCategorySummaryDto(string Key, string Name, int Pages, bool HasPage);
+
 /// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
 public record WikiTranslationSummaryDto(
 	string Locale,

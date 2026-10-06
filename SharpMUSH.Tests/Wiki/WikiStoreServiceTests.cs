@@ -137,6 +137,47 @@ public class WikiStoreServiceTests
 	}
 
 	[Test]
+	public async Task NameCategories_TitlesANewCategoryPageAsTyped()
+	{
+		var svc = BuildService();
+
+		var created = await svc.NameCategoriesAsync(["  Places of Note ", "places of note", "Magic Items"], [], "#1", "en");
+
+		await Assert.That(created.Select(p => p.Title)).IsEquivalentTo(new[] { "Places of Note", "Magic Items" });
+		var page = (await svc.GetBySlugAsync("places_of_note", WikiNamespace.Category)).Expect<WikiPage>();
+		await Assert.That(page.Title).IsEqualTo("Places of Note");
+		await Assert.That(page.AuthorDbref).IsEqualTo("#1");
+	}
+
+	[Test]
+	public async Task NameCategories_LeavesKeysFiledCategoriesAndExistingPagesAlone()
+	{
+		var svc = BuildService();
+		await svc.CreateAsync("Lore", "Stories.", "#1", WikiNamespace.Category);
+
+		// A key names nothing new; a category the page already held comes back as its key; Lore has its page.
+		var created = await svc.NameCategoriesAsync(["places", "Rules", "LORE"], ["rules"], "#1", "en");
+
+		await Assert.That(created).IsEmpty();
+		await Assert.That(await svc.GetBySlugAsync("places", WikiNamespace.Category) is NotFound).IsTrue();
+		await Assert.That(await svc.GetBySlugAsync("rules", WikiNamespace.Category) is NotFound).IsTrue();
+		await Assert.That((await svc.GetBySlugAsync("lore", WikiNamespace.Category)).Expect<WikiPage>().Title).IsEqualTo("Lore");
+	}
+
+	[Test]
+	public async Task CountPagesByCategory_CountsEachPageOncePerCategory()
+	{
+		var svc = BuildService();
+		await svc.CreateAsync("Dragons", "x", "#1", categories: ["Lore", "lore", "Beasts"]);
+		await svc.CreateAsync("Wyverns", "x", "#1", categories: ["Beasts"]);
+
+		var counts = await svc.CountPagesByCategoryAsync(WikiVisibility.All);
+
+		await Assert.That(counts["beasts"]).IsEqualTo(2);
+		await Assert.That(counts["lore"]).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task CreateAsync_CategoryPageLivesInCategoryNamespace()
 	{
 		var svc = BuildService();

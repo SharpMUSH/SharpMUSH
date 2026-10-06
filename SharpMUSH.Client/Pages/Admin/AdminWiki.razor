@@ -5,6 +5,7 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
 @using SharpMUSH.Client.Components.Wiki
+@using SharpMUSH.Client.Models.Wiki
 @inject WikiService Wiki
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
@@ -29,158 +30,229 @@
         }
     </AdminStats>
 
-    <KitCard>
-    <div class="adminwiki-grid-scroll">
-    <MudDataGrid @ref="_grid"
-                 T="WikiPageSummary"
-                 ServerData="LoadServerData"
-                 MultiSelection="true"
-                 @bind-SelectedItems="_selected"
-                 Dense="true"
-                 Hover="true"
-                 Class="mush-dark-grid"
-                 Elevation="0">
-        <ToolBarContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="adminwiki-toolbar">
-                <MudSelect T="string"
-                           Value="@_namespaceFilter"
-                           ValueChanged="@OnNamespaceFilterChanged"
-                           Label="@Loc["WikiNamespaceFilter"]"
-                           Dense="true"
-                           Margin="Margin.Dense"
-                           Variant="Variant.Outlined"
-                           Class="adminwiki-filter adminwiki-filter--ns">
-                    <MudSelectItem T="string" Value="@(string.Empty)">@Loc["WikiAllNamespaces"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("main")">main</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("help")">help</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("character")">character</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("system")">system</MudSelectItem>
-                </MudSelect>
-                <MudSelect T="string"
-                           Value="@_localeFilter"
-                           ValueChanged="@SetLocaleFilterAsync"
-                           Label="@Loc["WikiLocaleFilter"]"
-                           Dense="true"
-                           Margin="Margin.Dense"
-                           Variant="Variant.Outlined"
-                           Class="adminwiki-filter adminwiki-filter--locale">
-                    @foreach (var option in LocaleFilterOptions)
-                    {
-                        var optionValue = option.Value;
-                        <MudSelectItem T="string" Value="@optionValue">@option.Label</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudTextField @bind-Value="_searchText" Immediate="true"
-                              Placeholder="@Loc["ResSearchTitlesPlaceholder"]"
-                              Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                              Class="adminwiki-filter adminwiki-filter--search" />
-                <MudSpacer />
-                <MudTooltip>
-                    <TooltipContent>
-                        <div class="adminwiki-tip"><strong>@Loc["WikiProtect"]</strong><span>@Loc["WikiProtectHelp"]</span></div>
-                    </TooltipContent>
-                    <ChildContent>
-                        <MudIconButton Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" aria-label="@Loc["WikiProtect"]"
-                                       Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => BatchProtectAsync(true))" />
-                    </ChildContent>
-                </MudTooltip>
-                <MudTooltip>
-                    <TooltipContent>
-                        <div class="adminwiki-tip"><strong>@Loc["WikiUnprotect"]</strong><span>@Loc["WikiUnprotectHelp"]</span></div>
-                    </TooltipContent>
-                    <ChildContent>
-                        <MudIconButton Icon="@Icons.Material.Filled.LockOpen" Color="Color.Info" aria-label="@Loc["WikiUnprotect"]"
-                                       Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => BatchProtectAsync(false))" />
-                    </ChildContent>
-                </MudTooltip>
-                <MudTooltip Text="@Loc["WikiDelete"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" aria-label="@Loc["WikiDelete"]"
-                                   Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => _showDeleteConfirm = true)" />
-                </MudTooltip>
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                               Color="Color.Secondary" aria-label="@Loc["Refresh"]"
+    <KitCard Title="@Loc["WikiPagesTitle"]" Sub="@Loc["WikiPagesSub"]" Class="adminwiki-pages">
+        <Controls>
+            <MudTooltip Text="@Loc["Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="@Loc["Refresh"]"
                                OnClick="@ReloadAsync" />
-            </MudStack>
-        </ToolBarContent>
-        <Columns>
-            <SelectColumn T="WikiPageSummary" />
-            <TemplateColumn Title="@Loc["WikiTitle"]" Sortable="false">
-                <CellTemplate>
-                    <div style="display:flex;align-items:center;gap:0.5rem;">
-                        @if (context.Item.IsRestricted)
+            </MudTooltip>
+        </Controls>
+        <ChildContent>
+            <div class="adminwiki-filters">
+                <TypeChips Items="@NamespaceOptions" Selected="@_namespaceFilter" SelectedChanged="@OnNamespaceFilterChanged"
+                           AriaLabel="@Loc["WikiNamespaceFilter"]" />
+                <div class="adminwiki-filters-fields">
+                    <MudTextField @bind-Value="_searchText" Immediate="true"
+                                  Placeholder="@Loc["ResSearchTitlesPlaceholder"]"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Class="adminwiki-filter adminwiki-filter--search" />
+                    <MudSelect T="string"
+                               Value="@_localeFilter"
+                               ValueChanged="@SetLocaleFilterAsync"
+                               Label="@Loc["WikiLocaleFilter"]"
+                               Dense="true"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Class="adminwiki-filter adminwiki-filter--locale">
+                        @foreach (var option in LocaleFilterOptions)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning" Style="font-size:0.8125rem;" />
+                            var optionValue = option.Value;
+                            <MudSelectItem T="string" Value="@optionValue">@option.Label</MudSelectItem>
                         }
-                        <MudLink Href="@PageHref(context.Item)" Style="font-size:0.8125rem;">@context.Item.Title</MudLink>
-                    </div>
-                </CellTemplate>
-            </TemplateColumn>
-            <PropertyColumn Property="p => p.Namespace" Title="@Loc["WikiNamespace"]" Sortable="false" />
-            <TemplateColumn Title="@Loc["NavWikiCategories"]" Sortable="false">
-                <CellTemplate>@string.Join(", ", context.Item.Categories.Select(c => WikiHelpers.CategoryLabel(c, _categoryNames)))</CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="@Loc["WikiPublished"]" Sortable="false">
-                <CellTemplate>
-                    <Pill Tag="true" Warn="@(!context.Item.Published)">
-                        @(context.Item.Published ? Loc["WikiPublished"] : Loc["ResDraft"])
-                    </Pill>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="@Loc["WikiUpdated"]" Sortable="false">
-                <CellTemplate>
-                    <MudText Style="font-size:0.75rem;color:var(--text-dim);">
-                        @context.Item.UpdatedAt.LocalDateTime.ToString("MMM d, yyyy")
-                    </MudText>
-                </CellTemplate>
-            </TemplateColumn>
-            <PropertyColumn Property="p => p.RevisionNumber" Title="@Loc["WikiRevision"]" Sortable="false" />
-            <TemplateColumn Title="@Loc["WikiTranslations"]" Sortable="false">
-                <CellTemplate>
-                    @{
-                        var locales = CoverageFor(context.Item);
-                    }
-                    <span class="@($"admin-wiki-coverage{(locales.Count == 0 ? " admin-wiki-coverage-none" : "")}")">
-                        @if (locales.Count == 0)
-                        {
-                            <MudIcon Icon="@Icons.Material.Outlined.Translate"
-                                     Size="Size.Small" Color="Color.Warning"
-                                     Style="font-size:0.8125rem;" />
-                        }
-                        else
-                        {
-                            @string.Join(" · ", locales)
-                        }
-                    </span>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Sortable="false">
-                <CellTemplate>
-                    <div style="display:flex;gap:0.125rem;">
-                        <MudTooltip Text="@Loc["WikiEdit"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="@Loc["WikiEdit"]"
-                                           Href="@($"{WikiHref(context.Item)}/edit")" />
-                        </MudTooltip>
-                        <MudTooltip Text="@Loc["WikiEditMetadata"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Tune" Size="Size.Small" aria-label="@Loc["WikiEditMetadata"]"
-                                           OnClick="@(() => OpenMetadataDialog(context.Item))" />
-                        </MudTooltip>
-                        <MudTooltip Text="@Loc["ResHistory"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["ResHistory"]"
-                                           Href="@($"{WikiHref(context.Item)}/history")" />
-                        </MudTooltip>
-                    </div>
-                </CellTemplate>
-            </TemplateColumn>
-        </Columns>
-        <NoRecordsContent>
-            <MudText Color="Color.Secondary">@Loc["WikiNoPages"]</MudText>
-        </NoRecordsContent>
-        <PagerContent>
-            <MudDataGridPager T="WikiPageSummary" />
-        </PagerContent>
-    </MudDataGrid>
-    </div>
+                    </MudSelect>
+                </div>
+            </div>
+
+            @if (_selected.Count > 0)
+            {
+                @* Bulk actions appear once there is something to act on. *@
+                <div class="adminwiki-selection" role="toolbar" aria-label="@Loc["WikiSelectionActions"]">
+                    <span class="adminwiki-selection-count">@Loc.Plural("WikiSelectedCount", "count", _selected.Count)</span>
+                    <MudSpacer />
+                    <MudTooltip Text="@Loc["WikiAddToCategory"]">
+                        <MudIconButton Icon="@Icons.Material.Outlined.NewLabel" Size="Size.Small" Color="Color.Primary"
+                                       aria-label="@Loc["WikiAddToCategory"]" Disabled="@_busy" OnClick="@OpenBulkCategoryDialog" />
+                    </MudTooltip>
+                    <MudTooltip>
+                        <TooltipContent>
+                            <div class="adminwiki-tip"><strong>@Loc["WikiProtect"]</strong><span>@Loc["WikiProtectHelp"]</span></div>
+                        </TooltipContent>
+                        <ChildContent>
+                            <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning"
+                                           aria-label="@Loc["WikiProtect"]" Disabled="@_busy" OnClick="@(() => BatchProtectAsync(true))" />
+                        </ChildContent>
+                    </MudTooltip>
+                    <MudTooltip>
+                        <TooltipContent>
+                            <div class="adminwiki-tip"><strong>@Loc["WikiUnprotect"]</strong><span>@Loc["WikiUnprotectHelp"]</span></div>
+                        </TooltipContent>
+                        <ChildContent>
+                            <MudIconButton Icon="@Icons.Material.Filled.LockOpen" Size="Size.Small" Color="Color.Info"
+                                           aria-label="@Loc["WikiUnprotect"]" Disabled="@_busy" OnClick="@(() => BatchProtectAsync(false))" />
+                        </ChildContent>
+                    </MudTooltip>
+                    <MudTooltip Text="@Loc["WikiDelete"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                       aria-label="@Loc["WikiDelete"]" Disabled="@_busy" OnClick="@(() => _showDeleteConfirm = true)" />
+                    </MudTooltip>
+                    <span class="adminwiki-selection-rule" aria-hidden="true"></span>
+                    <MudTooltip Text="@Loc["WikiClearSelection"]">
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                       aria-label="@Loc["WikiClearSelection"]" OnClick="@(() => _selected = [])" />
+                    </MudTooltip>
+                </div>
+            }
+
+            <div class="adminwiki-grid-scroll">
+            <MudDataGrid @ref="_grid"
+                         T="WikiPageSummary"
+                         ServerData="LoadServerData"
+                         MultiSelection="true"
+                         @bind-SelectedItems="_selected"
+                         Dense="true"
+                         Hover="true"
+                         Class="mush-dark-grid adminwiki-grid"
+                         Elevation="0">
+                <Columns>
+                    <SelectColumn T="WikiPageSummary" />
+                    <TemplateColumn Title="@Loc["WikiTitle"]" Sortable="false">
+                        <CellTemplate>
+                            <div class="adminwiki-title">
+                                <div class="adminwiki-title-line">
+                                    @if (context.Item.IsRestricted)
+                                    {
+                                        <MudTooltip Text="@Loc["WikiRestricted"]">
+                                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning" Class="adminwiki-lock" />
+                                        </MudTooltip>
+                                    }
+                                    <MudLink Href="@PageHref(context.Item)" Class="adminwiki-title-link">@context.Item.Title</MudLink>
+                                </div>
+                                <span class="adminwiki-title-ref">@context.Item.Namespace.ToLowerInvariant() / @context.Item.Slug</span>
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="@Loc["NavWikiCategories"]" Sortable="false">
+                        <CellTemplate>
+                            <div class="adminwiki-cats">
+                                @foreach (var category in context.Item.Categories)
+                                {
+                                    <a class="adminwiki-cat" href="@WikiCategories.Route(category)">@WikiHelpers.CategoryLabel(category, _categoryNames)</a>
+                                }
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="@Loc["WikiPublished"]" Sortable="false">
+                        <CellTemplate>
+                            <Pill Tag="true" Warn="@(!context.Item.Published)">
+                                @(context.Item.Published ? Loc["WikiPublished"] : Loc["ResDraft"])
+                            </Pill>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="@Loc["WikiUpdated"]" Sortable="false">
+                        <CellTemplate>
+                            <div class="adminwiki-updated">
+                                <span>@context.Item.UpdatedAt.LocalDateTime.ToString("MMM d, yyyy")</span>
+                                <span class="adminwiki-rev">@string.Format(Loc["WikiRevisionShort"], context.Item.RevisionNumber)</span>
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="@Loc["WikiTranslations"]" Sortable="false">
+                        <CellTemplate>
+                            @{
+                                var locales = CoverageFor(context.Item);
+                            }
+                            <span class="@($"admin-wiki-coverage{(locales.Count == 0 ? " admin-wiki-coverage-none" : "")}")">
+                                @if (locales.Count == 0)
+                                {
+                                    <MudTooltip Text="@Loc["WikiUntranslatedOnly"]">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Translate" Size="Size.Small" Color="Color.Warning"
+                                                 Class="adminwiki-untranslated" />
+                                    </MudTooltip>
+                                }
+                                else
+                                {
+                                    @foreach (var locale in locales)
+                                    {
+                                        <span class="adminwiki-locale">@locale</span>
+                                    }
+                                }
+                            </span>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Sortable="false" CellClass="adminwiki-actions-cell">
+                        <CellTemplate>
+                            <div class="adminwiki-actions">
+                                <MudTooltip Text="@Loc["WikiEdit"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="@Loc["WikiEdit"]"
+                                                   Href="@($"{WikiHref(context.Item)}/edit")" />
+                                </MudTooltip>
+                                <MudTooltip Text="@Loc["WikiEditMetadata"]">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Label" Size="Size.Small" aria-label="@Loc["WikiEditMetadata"]"
+                                                   OnClick="@(() => OpenMetadataDialog(context.Item))" />
+                                </MudTooltip>
+                                <MudTooltip Text="@Loc["ResHistory"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["ResHistory"]"
+                                                   Href="@($"{WikiHref(context.Item)}/history")" />
+                                </MudTooltip>
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <NoRecordsContent>
+                    <MudText Color="Color.Secondary">@Loc["WikiNoPages"]</MudText>
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudDataGridPager T="WikiPageSummary" />
+                </PagerContent>
+            </MudDataGrid>
+            </div>
+        </ChildContent>
+    </KitCard>
+
+    <KitCard Title="@Loc["NavWikiCategories"]" Sub="@Loc["WikiCategoriesSub"]" Class="adminwiki-categories">
+        <form class="adminwiki-newcat" @onsubmit="@CreateCategoryAsync" @onsubmit:preventDefault="true">
+            <MudTextField T="string" @bind-Value="_newCategoryName" Immediate="true"
+                          Label="@Loc["WikiNewCategoryName"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Class="adminwiki-newcat-name" />
+            <MudTextField T="string" @bind-Value="_newCategoryDescription" Immediate="true"
+                          Label="@Loc["WikiNewCategoryDescription"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Class="adminwiki-newcat-desc" />
+            <MudTooltip Text="@Loc["WikiCreateCategory"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary"
+                               ButtonType="ButtonType.Submit" aria-label="@Loc["WikiCreateCategory"]"
+                               Disabled="@(_busy || WikiCategories.Key(_newCategoryName).Length == 0 || NewCategoryExists)" />
+            </MudTooltip>
+        </form>
+        @if (NewCategoryExists)
+        {
+            <div class="adminwiki-newcat-note">@string.Format(Loc["WikiCategoryExists"], _newCategoryName.Trim())</div>
+        }
+
+        @if (_categories is null)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+        }
+        else if (_categories.Count == 0)
+        {
+            <div class="adminwiki-empty">@Loc["WikiNoCategories"]</div>
+        }
+        else
+        {
+            <div class="adminwiki-catlist">
+                @foreach (var category in _categories)
+                {
+                    <a class="@($"adminwiki-catcard{(category.HasPage ? null : " adminwiki-catcard--nopage")}")"
+                       href="@WikiCategories.Route(category.Key)"
+                       title="@(category.HasPage ? null : Loc["WikiCategoryNoPage"].Value)">
+                        <MudIcon Icon="@(category.HasPage ? Icons.Material.Filled.Label : Icons.Material.Outlined.Label)" Size="Size.Small"
+                                 Class="adminwiki-catcard-icon" />
+                        <span class="adminwiki-catcard-name">@category.Name</span>
+                        <span class="adminwiki-catcard-count">@category.Pages</span>
+                    </a>
+                }
+            </div>
+        }
     </KitCard>
 
     @* What each namespace requires, editable here; categories and pages are edited on their own pages and
@@ -224,41 +296,46 @@
     </DialogActions>
 </MudDialog>
 
-<MudDialog @bind-Visible="_showMetadataDialog">
+<MudDialog @bind-Visible="_showMetadataDialog" Options="@DialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">@Loc["WikiEditMetadata"]@(_metadataTarget is null ? string.Empty : $" — {_metadataTarget.Title}")</MudText>
+        <div class="adminwiki-dialog-title">
+            <span class="adminwiki-dialog-kicker">@Loc["WikiEditMetadata"]</span>
+            <span>@_metadataTarget?.Title</span>
+        </div>
     </TitleContent>
     <DialogContent>
-        <MudStack Spacing="2">
-            <MudTextField Value="@_metaCategoryEntry"
-                          ValueChanged="@((string v) => _metaCategoryEntry = v)"
-                          Label="@Loc["NavWikiCategories"]"
-                          Placeholder="@Loc["WkAddCategory"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Adornment="Adornment.End"
-                          AdornmentIcon="@Icons.Material.Filled.Add"
-                          OnAdornmentClick="@AddMetaCategory"
-                          OnKeyDown="@OnMetaCategoryKeyDown"
-                          Immediate="true" />
-            @if (_metaCategories.Count > 0)
-            {
-                <MudStack Row="true" Spacing="1" Style="flex-wrap:wrap;">
-                    @foreach (var category in _metaCategories)
-                    {
-                        <MudChip T="string" Text="@WikiHelpers.CategoryLabel(category, _categoryNames)" Size="Size.Small" Color="Color.Info"
-                                 Variant="Variant.Outlined" OnClose="@(() => _metaCategories.Remove(category))" />
-                    }
-                </MudStack>
-            }
-            <MudSwitch T="bool" @bind-Value="_metaPublished" Color="Color.Success"
-                       Label="@Loc["WikiPublished"]" />
-        </MudStack>
+        <div class="adminwiki-dialog-body">
+            <div class="adminwiki-dialog-label">@Loc["NavWikiCategories"]</div>
+            <WikiCategoryPicker Categories="@_metaCategories" Known="@(_categories ?? [])" CategoriesChanged="@StateHasChanged" />
+            <MudSwitch T="bool" @bind-Value="_metaPublished" Color="Color.Success" Label="@Loc["WikiPublished"]" />
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="@(() => _showMetadataDialog = false)">@Loc["Cancel"]</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@SaveMetadataAsync">
             @Loc["Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showBulkCategoryDialog" Options="@DialogOptions">
+    <TitleContent>
+        <div class="adminwiki-dialog-title">
+            <span class="adminwiki-dialog-kicker">@Loc["WikiAddToCategory"]</span>
+            <span>@Loc.Plural("WikiSelectedCount", "count", _selected.Count)</span>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="adminwiki-dialog-body">
+            <div class="adminwiki-dialog-hint">@Loc["WikiAddToCategoryHint"]</div>
+            <WikiCategoryPicker Categories="@_bulkCategories" Known="@(_categories ?? [])" CategoriesChanged="@StateHasChanged" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showBulkCategoryDialog = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_busy || _bulkCategories.Count == 0)"
+                   OnClick="@SaveBulkCategoriesAsync">
+            @Loc["WikiAddToCategory"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -303,12 +380,34 @@
         }),
     ];
 
+    private static readonly DialogOptions DialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true };
+
+    /// <summary>The namespace filter's chips: every page, then each namespace.</summary>
+    private IReadOnlyList<(string Key, string Label)> NamespaceOptions =>
+    [
+        (string.Empty, Loc["WikiAllNamespaces"]),
+        .. Enum.GetValues<SharpMUSH.Library.Models.Wiki.WikiNamespace>()
+            .Select(ns => (WikiHelpers.NamespaceName(ns), ns.ToString())),
+    ];
+
     private bool _showDeleteConfirm;
     private bool _showMetadataDialog;
     private WikiPageSummary? _metadataTarget;
     private bool _metaPublished = true;
-    private string _metaCategoryEntry = string.Empty;
     private List<string> _metaCategories = [];
+
+    private bool _showBulkCategoryDialog;
+    private List<string> _bulkCategories = [];
+
+    /// <summary>Every category, with its name and page count; null until loaded.</summary>
+    private List<WikiCategorySummaryDto>? _categories;
+
+    private string _newCategoryName = string.Empty;
+    private string _newCategoryDescription = string.Empty;
+
+    /// <summary>True when the name being typed is a category that already has its page.</summary>
+    private bool NewCategoryExists =>
+        WikiCategories.Key(_newCategoryName) is { Length: > 0 } key && _categories?.Any(c => c.Key == key && c.HasPage) == true;
 
     private bool _statsLoaded;
     private int _totalPages;
@@ -337,11 +436,47 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var names = Wiki.GetCategoryNamesAsync().AsTask();
+        var categories = LoadCategoriesAsync();
         var requirements = LoadRequirementsAsync();
         await LoadStatsAsync();
-        _categoryNames = await names;
+        await categories;
         await requirements;
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        if (await Wiki.GetCategoriesAsync() is not List<WikiCategorySummaryDto> categories) return;
+        _categories = categories;
+        _categoryNames = categories.Where(c => c.HasPage).ToDictionary(c => c.Key, c => c.Name, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Makes a category: its page in the category namespace, titled with the name exactly as typed, with the
+    /// description as its text.
+    /// </summary>
+    private async Task CreateCategoryAsync()
+    {
+        var name = _newCategoryName.Trim();
+        if (WikiCategories.Key(name).Length == 0 || NewCategoryExists || _busy) return;
+        _busy = true;
+        try
+        {
+            switch (await Wiki.CreatePageAsync(name, _newCategoryDescription.Trim(), "category"))
+            {
+                case WikiArticle:
+                    Snackbar.Add(string.Format(Loc["WikiCategoryCreated"], name), Severity.Success);
+                    _newCategoryName = string.Empty;
+                    _newCategoryDescription = string.Empty;
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(string.Format(Loc["WikiCategoryCreateFailed"], failure.Message), Severity.Error);
+                    break;
+            }
+
+            await LoadCategoriesAsync();
+            await ReloadAsync();
+        }
+        finally { _busy = false; }
     }
 
     private async Task LoadRequirementsAsync()
@@ -477,6 +612,7 @@
             var result = await Wiki.BatchDeleteAsync(_selected.Select(RefFor));
             ReportBatchResult(result);
             _showDeleteConfirm = false;
+            await LoadCategoriesAsync();
             await ReloadAsync();
         }
         finally { _busy = false; }
@@ -503,21 +639,38 @@
         _metadataTarget = page;
         _metaPublished = page.Published;
         _metaCategories = [.. page.Categories];
-        _metaCategoryEntry = string.Empty;
         _showMetadataDialog = true;
     }
 
-    private void AddMetaCategory()
+    private void OpenBulkCategoryDialog()
     {
-        var category = WikiHelpers.CategoryKey(_metaCategoryEntry);
-        if (category.Length > 0 && !_metaCategories.Contains(category))
-            _metaCategories.Add(category);
-        _metaCategoryEntry = string.Empty;
+        _bulkCategories = [];
+        _showBulkCategoryDialog = true;
     }
 
-    private void OnMetaCategoryKeyDown(KeyboardEventArgs args)
+    /// <summary>Files every selected page in the chosen categories too, keeping the ones it is already in.</summary>
+    private async Task SaveBulkCategoriesAsync()
     {
-        if (args.Key == "Enter") AddMetaCategory();
+        if (_selected.Count == 0 || _bulkCategories.Count == 0) return;
+        _busy = true;
+        try
+        {
+            int succeeded = 0, failed = 0;
+            foreach (var page in _selected)
+            {
+                var categories = new List<string>(page.Categories);
+                foreach (var category in _bulkCategories) WikiCategories.Add(categories, category);
+                if (await Wiki.SetMetadataAsync(page.Slug, categories, page.Published, page.Namespace) is WikiArticle) succeeded++;
+                else failed++;
+            }
+
+            if (succeeded > 0) Snackbar.Add(Loc.Plural("WikiBatchSucceeded", "count", succeeded), Severity.Success);
+            if (failed > 0) Snackbar.Add(Loc.Plural("WikiBatchFailed", "count", failed), Severity.Error);
+            _showBulkCategoryDialog = false;
+            await LoadCategoriesAsync();
+            await ReloadAsync();
+        }
+        finally { _busy = false; }
     }
 
     private async Task SaveMetadataAsync()
@@ -537,6 +690,7 @@
                     break;
             }
             _showMetadataDialog = false;
+            await LoadCategoriesAsync();
             await ReloadAsync();
         }
         finally { _busy = false; }

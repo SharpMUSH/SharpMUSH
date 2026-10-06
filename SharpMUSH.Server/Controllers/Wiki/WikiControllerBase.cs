@@ -113,6 +113,21 @@ public abstract class WikiControllerBase(
 		return (await Access.DecideAsync(reader, page, action)).Allowed ? null : Forbid();
 	}
 
+	/// <summary>
+	/// Gives the categories the caller just filed a page in a category page titled as they typed them
+	/// (<see cref="IWikiService.NameCategoriesAsync"/>), when the caller may create pages in the category
+	/// namespace. Otherwise the categories still hold the page and show the name their key spells.
+	/// </summary>
+	protected async Task NameCategoriesAsync(IEnumerable<string> names, IEnumerable<string> alreadyFiled, string? authorDbref)
+	{
+		var typed = names.ToList();
+		// A page needs an author; a session acting as no character files the page but names nothing.
+		if (typed.Count == 0 || string.IsNullOrEmpty(authorDbref)
+				|| !(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(WikiNamespace.Category), [])).Allowed)
+			return;
+		await Wiki.NameCategoriesAsync(typed, alreadyFiled, authorDbref, Localization.DefaultLocale);
+	}
+
 	/// <summary>Filters out the pages the caller may not see.</summary>
 	protected async Task<List<WikiPage>> FilterVisibleAsync(IEnumerable<WikiPage> pages)
 	{

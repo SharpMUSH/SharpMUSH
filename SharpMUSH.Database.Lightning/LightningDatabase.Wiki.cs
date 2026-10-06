@@ -360,6 +360,23 @@ public partial class LightningDatabase : IWikiStore
 			return new WikiPageCounts(published, drafts);
 		}));
 
+	public Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyDictionary<string, int>>(Store.Read(tx =>
+		{
+			// The index key opens with the upper-cased category and a separator; category keys are lower case.
+			var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+			foreach (var (key, value) in tx.Range(Tables.WikiByCategory, []))
+			{
+				if (!WikiVisibilityAdmits(visibility, value)) continue;
+				if (visibility.Hidden is not null && !(ReadWikiPage(tx, WikiIndexPageKey(key)) is { } page && visibility.Admits(page)))
+					continue;
+				var category = Keys.ReadStr(key.AsSpan(0, key.AsSpan().IndexOf(Keys.Sep[0]))).ToLowerInvariant();
+				counts[category] = counts.GetValueOrDefault(category) + 1;
+			}
+
+			return counts;
+		}));
+
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
 			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category)), visibility, skip, take)));

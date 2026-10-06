@@ -37,6 +37,31 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility)
 		=> store.CountPagesByStateAsync(visibility);
 
+	public Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility)
+		=> store.CountPagesByCategoryAsync(visibility);
+
+	public async Task<IReadOnlyList<WikiPage>> NameCategoriesAsync(IEnumerable<string> names, IEnumerable<string> alreadyFiled,
+		string authorDbref, string sourceLocale)
+	{
+		var filed = alreadyFiled.Select(WikiHelpers.CategoryKey).ToHashSet(StringComparer.Ordinal);
+		var created = new List<WikiPage>();
+		foreach (var name in names.Select(n => n.Trim()).Where(n => n.Length > 0).DistinctBy(WikiHelpers.CategoryKey))
+		{
+			var key = WikiHelpers.CategoryKey(name);
+			// A name spelled exactly as its key says nothing its key does not, and a page titled with it would only
+			// replace the label the key already gives ("places" shows as "Places").
+			if (name == key || filed.Contains(key)
+					|| await store.GetPageBySlugAsync(Namespace(WikiNamespace.Category), key) is WikiPage)
+				continue;
+			// A page created meanwhile by someone else wins; its title is the name.
+			if (await store.CreatePageAsync(NewPage(name, Render(string.Empty), authorDbref, WikiNamespace.Category,
+						WikiHelpers.NormalizeLocaleOrEmpty(sourceLocale), [])) is WikiPage page)
+				created.Add(page);
+		}
+
+		return created;
+	}
+
 	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null)
 		=> store.GetPagesByCategoryAsync(WikiHelpers.CategoryKey(category), skip, take, visibility ?? WikiVisibility.All);
 

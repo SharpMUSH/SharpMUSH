@@ -1,0 +1,117 @@
+@using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Picks a page's categories: the ones it holds as removable chips, an entry field, and the existing
+   categories matching what is typed as one-click suggestions. A name that is no category yet is offered
+   as a new one and kept as typed, so the category page the server makes for it keeps its capitals. *@
+<div class="wcp">
+    @if (Categories.Count > 0)
+    {
+        <div class="wcp-chips">
+            @foreach (var c in Categories)
+            {
+                <span class="wcp-chip">
+                    <MudIcon Icon="@Icons.Material.Outlined.Label" Size="Size.Small" Class="wcp-chip-icon" />
+                    @WikiCategories.Display(c, Names)
+                    <button type="button" class="wcp-chip-remove" aria-label="@string.Format(Loc["WikiRemoveCategory"], WikiCategories.Display(c, Names))"
+                            @onclick="@(() => RemoveAsync(c))">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                    </button>
+                </span>
+            }
+        </div>
+    }
+    <MudTextField T="string" Value="@_entry" ValueChanged="@(v => _entry = v ?? string.Empty)" Immediate="true"
+                  Placeholder="@Loc["WkAddCategory"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.NewLabel"
+                  OnKeyDown="@OnKeyDownAsync" aria-label="@Loc["WkAddCategory"]" Class="wcp-entry" />
+    @if (Suggestions.Count > 0 || IsNew)
+    {
+        <div class="wcp-suggest" aria-label="@Loc["WikiCategorySuggestions"]">
+            @if (IsNew)
+            {
+                <button type="button" class="wcp-option wcp-option--new" @onclick="@(() => AddAsync(_entry))">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                    @string.Format(Loc["WikiCategoryNew"], _entry.Trim())
+                </button>
+            }
+            @foreach (var k in Suggestions)
+            {
+                <button type="button" class="wcp-option" @onclick="@(() => AddAsync(k.HasPage ? k.Key : k.Name))">
+                    @k.Name
+                    <span class="wcp-option-count">@k.Pages</span>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The categories being edited, as keys or as names typed here; changed in place.</summary>
+    [Parameter, EditorRequired] public List<string> Categories { get; set; } = [];
+
+    /// <summary>Every category that exists, offered as suggestions.</summary>
+    [Parameter] public IReadOnlyList<WikiCategorySummaryDto> Known { get; set; } = [];
+
+    [Parameter] public EventCallback CategoriesChanged { get; set; }
+
+    private const int MaxSuggestions = 8;
+    private string _entry = string.Empty;
+
+    private IReadOnlyDictionary<string, string> Names =>
+        Known.Where(k => k.HasPage).ToDictionary(k => k.Key, k => k.Name, StringComparer.Ordinal);
+
+    /// <summary>Known categories not yet chosen that match the entry, busiest first; all of them while it is empty.</summary>
+    private IReadOnlyList<WikiCategorySummaryDto> Suggestions
+    {
+        get
+        {
+            var chosen = Categories.Select(WikiCategories.Key).ToHashSet(StringComparer.Ordinal);
+            var query = _entry.Trim();
+            return Known
+                .Where(k => !chosen.Contains(k.Key))
+                .Where(k => query.Length == 0
+                            || k.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                            || k.Key.Contains(WikiCategories.Key(query), StringComparison.Ordinal))
+                .OrderByDescending(k => k.Pages)
+                .ThenBy(k => k.Name, StringComparer.OrdinalIgnoreCase)
+                .Take(MaxSuggestions)
+                .ToList();
+        }
+    }
+
+    /// <summary>True when the entry names no category that exists or is already chosen.</summary>
+    private bool IsNew
+    {
+        get
+        {
+            var key = WikiCategories.Key(_entry);
+            return key.Length > 0
+                   && Known.All(k => k.Key != key)
+                   && Categories.All(c => WikiCategories.Key(c) != key);
+        }
+    }
+
+    private async Task AddAsync(string name)
+    {
+        _entry = string.Empty;
+        if (WikiCategories.Add(Categories, name))
+            await CategoriesChanged.InvokeAsync();
+    }
+
+    private async Task RemoveAsync(string category)
+    {
+        Categories.Remove(category);
+        await CategoriesChanged.InvokeAsync();
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter") return;
+        // Enter takes the existing category the entry spells, so "places" files under "Places".
+        var key = WikiCategories.Key(_entry);
+        var existing = Known.FirstOrDefault(k => k.Key == key || string.Equals(k.Name, _entry.Trim(), StringComparison.OrdinalIgnoreCase));
+        await AddAsync(existing is { HasPage: true } ? existing.Key : _entry);
+    }
+}
