@@ -136,7 +136,7 @@ public partial class Commands
 			Dictionary<DBRef, List<string>> byObject = [];
 
 			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser,
-				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0);
+				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0, executor);
 			if (!matched.TryGetValue(out var matches))
 			{
 				return grouped;
@@ -1304,7 +1304,7 @@ public partial class Commands
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomSpeechFormat), executor, locationObj.Name);
 				}
 
-				if (await locationAnyObject.HasActiveCommands(AttributeService))
+				if (await locationAnyObject.HasActiveCommands())
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomCommandsFormat), executor, locationObj.Name);
 				if (await locationAnyObject.IsAudible())
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
@@ -1341,7 +1341,7 @@ public partial class Commands
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
 					}
 
-					if (await fullObj.HasActiveCommands(AttributeService))
+					if (await fullObj.HasActiveCommands())
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
 				}
 			}
@@ -1397,7 +1397,7 @@ public partial class Commands
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
 					}
 
-					if (await fullObj.HasActiveCommands(AttributeService))
+					if (await fullObj.HasActiveCommands())
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
 				}
 			}

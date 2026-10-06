@@ -118,7 +118,7 @@ internal static class ForwardListRestriction
 
 		var lockType = isMail ? LockType.MailForward : LockType.Forward;
 
-		return forward.Object().Locks.ContainsKey(lockType.ToString())
-			&& await permissionService.PassesLock(thing, forward, lockType);
+		// getlock, so a lock inherited from a parent counts (hdrs/mushdb.h:124-133).
+		return await permissionService.PassesSetLock(thing, forward, lockType);
 	}
 }

@@ -9,6 +9,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Services;
 
 namespace SharpMUSH.Tests.Commands;
@@ -50,7 +51,7 @@ public class RealityProjectionCancellationTests
 			Arguments = new() { ["0"] = new CallState("probe") }
 		});
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
-			Factory.Services, mediator, new CommandDiscoveryService(mediator));
+			Factory.Services, mediator, new CommandDiscoveryService(mediator, Factory.Services.GetRequiredService<ILockService>()));
 		using var request = new CancellationTokenSource();
 		using var budget = ExecutionBudget.FromMilliseconds(0, request.Token);
 		using var scope = budget.Enter();

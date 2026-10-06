@@ -372,14 +372,13 @@ public static partial class HelperFunctions
 	}
 
 
-	public static async ValueTask<bool> HasActiveCommands(this AnySharpObject obj, IAttributeService attributes)
-	{
-		if (await obj.HasFlag("NO_COMMAND")) return false;
-
-		var attrs = await attributes.GetAttributePatternAsync(obj, obj, "*", true,
-			IAttributeService.AttributePatternMode.Wildcard);
-		return attrs is SharpAttribute[] all && all.Any(x => x.IsCommand());
-	}
+	/// <summary>
+	/// PennMUSH <c>Commer</c> (<c>src/game.c:1592-1601</c>), @sweep's "[commands]": any of the object's
+	/// own attributes, at any depth of a tree, holds a <c>$</c>-command not set no_command. Parents are not
+	/// consulted, and neither is the object's NO_COMMAND flag.
+	/// </summary>
+	public static async ValueTask<bool> HasActiveCommands(this AnySharpObject obj)
+		=> await obj.Object().AllAttributes.Value.AnyAsync(x => x.IsCommand());
 
 	public static bool HasType(this AnySharpObject obj, string validType) =>
 		validType switch

@@ -160,8 +160,7 @@ public static partial class MailDelivery
 		var to = new AnySharpObject(forward);
 
 		return await services.Permissions.Controls(from, to)
-					 || (forward.Object.Locks.ContainsKey(nameof(LockType.MailForward))
-							 && await services.Permissions.PassesLock(from, to, LockType.MailForward));
+					 || await services.Permissions.PassesSetLock(from, to, LockType.MailForward);
 	}
 
 	/// <summary>PennMUSH <c>real_send_mail</c>: one message into one mailbox, or a refusal.</summary>
