@@ -50,3 +50,12 @@
 	gap: 0.75rem;
 	padding: 1rem;
 }
+
+/* A bulk action's tooltip: what the button is called, then what it does */
+.adminwiki-tip {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	max-width: 18rem;
+	text-align: left;
+}

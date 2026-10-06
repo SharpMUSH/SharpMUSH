@@ -76,28 +76,28 @@
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Class="adminwiki-filter adminwiki-filter--search" />
                 <MudSpacer />
-                <MudTooltip Text="@Loc["WikiProtectHelp"]">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Warning"
-                               StartIcon="@Icons.Material.Filled.Lock"
-                               Disabled="@(_selected.Count == 0 || _busy)"
-                               OnClick="@(() => BatchProtectAsync(true))">
-                        @Loc["WikiProtect"]
-                    </MudButton>
+                <MudTooltip>
+                    <TooltipContent>
+                        <div class="adminwiki-tip"><strong>@Loc["WikiProtect"]</strong><span>@Loc["WikiProtectHelp"]</span></div>
+                    </TooltipContent>
+                    <ChildContent>
+                        <MudIconButton Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" aria-label="@Loc["WikiProtect"]"
+                                       Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => BatchProtectAsync(true))" />
+                    </ChildContent>
                 </MudTooltip>
-                <MudTooltip Text="@Loc["WikiUnprotectHelp"]">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Info"
-                               StartIcon="@Icons.Material.Filled.LockOpen"
-                               Disabled="@(_selected.Count == 0 || _busy)"
-                               OnClick="@(() => BatchProtectAsync(false))">
-                        @Loc["WikiUnprotect"]
-                    </MudButton>
+                <MudTooltip>
+                    <TooltipContent>
+                        <div class="adminwiki-tip"><strong>@Loc["WikiUnprotect"]</strong><span>@Loc["WikiUnprotectHelp"]</span></div>
+                    </TooltipContent>
+                    <ChildContent>
+                        <MudIconButton Icon="@Icons.Material.Filled.LockOpen" Color="Color.Info" aria-label="@Loc["WikiUnprotect"]"
+                                       Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => BatchProtectAsync(false))" />
+                    </ChildContent>
                 </MudTooltip>
-                <MudButton Variant="Variant.Outlined" Color="Color.Error"
-                           StartIcon="@Icons.Material.Filled.Delete"
-                           Disabled="@(_selected.Count == 0 || _busy)"
-                           OnClick="@(() => _showDeleteConfirm = true)">
-                    @Loc["WikiDelete"]
-                </MudButton>
+                <MudTooltip Text="@Loc["WikiDelete"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" aria-label="@Loc["WikiDelete"]"
+                                   Disabled="@(_selected.Count == 0 || _busy)" OnClick="@(() => _showDeleteConfirm = true)" />
+                </MudTooltip>
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Secondary" aria-label="@Loc["Refresh"]"
                                OnClick="@ReloadAsync" />
