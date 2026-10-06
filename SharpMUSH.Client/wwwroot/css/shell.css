@@ -770,13 +770,13 @@ pre.ms-preformatted {
 .ms-figure-art { margin: 0; font: inherit; white-space: pre; }
 .ms-float-left > .ms-figure-image, .ms-float-left > .ms-figure-art { float: left; max-width: 50%; margin: 0 2ch 0.5em 0; }
 .ms-float-right > .ms-figure-image, .ms-float-right > .ms-figure-art { float: right; max-width: 50%; margin: 0 0 0.5em 2ch; }
-.ms-fields { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); column-gap: 1ch; margin: 0; }
+.ms-fields { display: grid; grid-template-columns: minmax(min-content, max-content) minmax(0, 1fr); column-gap: 1ch; margin: 0; }
 .ms-field { display: contents; }
 .ms-field > dt { grid-column: 1; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ms-field > dd { grid-column: 2; margin: 0; min-width: 0; }
 .ms-fields.ms-label-right > .ms-field > dt { text-align: right; }
 .ms-fields.ms-leader > .ms-field > dt { display: flex; gap: 0.5ch; }
-.ms-fields.ms-leader > .ms-field > dt::after { content: ""; flex: 1 1 2ch; border-bottom: 1px dotted currentColor; margin-bottom: 0.3em; }
+.ms-fields.ms-leader > .ms-field > dt::after { content: ""; flex: 1 0 2ch; border-bottom: 1px dotted currentColor; margin-bottom: 0.3em; }
 .ms-tree, .ms-tree ul { list-style: none; margin: 0; padding: 0; }
 .ms-tree ul { margin-left: 1ch; }
 .ms-tree ul > li { position: relative; padding-left: 3ch; border-left: 1px solid currentColor; }
