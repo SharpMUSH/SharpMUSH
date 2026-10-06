@@ -447,9 +447,10 @@ public class WebSocketClientService : IWebSocketClientService
 
 		if (ResumeFrameParser.IsReattached(message))
 		{
-			// The session continues, still logged in: no re-login needed.
-			_verdict?.TrySetResult(ResumeVerdict.Resumed);
+			// The session continues, still logged in: no re-login needed. The event goes first, so its
+			// handlers have run by the time the verdict lets ConnectAsync return.
 			Reattached?.Invoke(this, EventArgs.Empty);
+			_verdict?.TrySetResult(ResumeVerdict.Resumed);
 			return;
 		}
 

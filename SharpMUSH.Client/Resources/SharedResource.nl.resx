@@ -3001,10 +3001,6 @@
     <value>Kleur</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pose, spreek of vertel…</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>'{0}' ({1}) verwijderen? De rol verdwijnt daarmee ook bij alle accounts die hem hebben.</value>
     <comment>MT</comment>
@@ -3063,22 +3059,6 @@
   <data name="RolLookUp" xml:space="preserve">
     <value>Opzoeken</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — RP term of art, kept; Dutch RP players use "pose" as-is.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Zeggen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MUSH term of art, kept untranslated.</comment>
   </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Naam</value>
@@ -5667,5 +5647,20 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Gepauzeerd, geen tijdstip</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Plaatsen als</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter om te verzenden</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Deze scène is gepauzeerd. Ze neemt geen poses aan tot de eigenaar haar hervat.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Deze scène loopt niet en neemt dus geen poses aan.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>
