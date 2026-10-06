@@ -4,18 +4,18 @@ using System.Text.Json.Nodes;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
 
-namespace SharpMUSH.Tests.Documentation;
+namespace SharpMUSH.Tools.ClientData;
 
 /// <summary>
-/// Builds the data files the portal's softcode editor and help drawer read from
-/// <c>SharpMUSH.Client/wwwroot/data</c>: <c>mush-defs.json</c> (signatures and help text) and the
+/// Builds the data files the portal's softcode editor and help drawer read from <c>data/</c>: <c>mush-defs.json</c> (signatures and help text) and the
 /// flat name lists <c>mush-functions.json</c> and <c>mush-commands.json</c> it falls back to.
 /// </summary>
 /// <remarks>
 /// <para>The names, arity, parameter names and switches come off the <c>[SharpFunction]</c> and
 /// <c>[SharpCommand]</c> attributes; the help text comes from the shipped helpfiles. Neither copy is
-/// edited by hand any more (#1248): while they were, a signature change left <c>lstats()</c>'s
-/// <c>parameterNames</c> stale (#1241) and the flat list never learned about <c>u</c>.</para>
+/// edited by hand (#1248): while they were, a signature change left <c>lstats()</c>'s
+/// <c>parameterNames</c> stale (#1241) and the flat list never learned about <c>u</c>. Nor are they
+/// checked in: the portal's build writes them, so a help change never leaves a stale copy to merge.</para>
 /// <para>Shipped aliases get an entry of their own carrying the target's signature, since the editor
 /// looks a call up by the name typed.</para>
 /// </remarks>
@@ -30,32 +30,29 @@ public static class ClientDataGenerator
 		Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 	};
 
-	public static string DataDirectory =>
-		Path.Join(TestPaths.RepositoryRoot, "SharpMUSH.Client", "wwwroot", "data");
-
-	/// <summary>Every generated file, by file name, as it should be checked in.</summary>
-	public static IReadOnlyDictionary<string, string> Files()
+	/// <summary>Every generated file, by file name, built from the helpfiles under <paramref name="helpfiles"/>.</summary>
+	public static IReadOnlyDictionary<string, string> Files(DirectoryInfo helpfiles)
 	{
-		var help = new Helpfiles(TestPaths.Helpfiles);
+		var help = new Helpfiles(helpfiles);
 		help.Index();
 
-		var functions = RegistryInventory.Functions
+		var functions = Registry.Functions
 			.Select(f => (f.Name, Help: FunctionHelp(help, f.Name), Entry: new JsonObject
 			{
-				["maxArgs"] = f.Attribute.MaxArgs,
-				["minArgs"] = f.Attribute.MinArgs,
-				["parameterNames"] = Array(f.Attribute.ParameterNames)
+				["maxArgs"] = f.MaxArgs,
+				["minArgs"] = f.MinArgs,
+				["parameterNames"] = Array(f.ParameterNames)
 			}))
-			.Concat(Aliases(AliasOptions.Default.FunctionAliases, RegistryInventory.Functions.Select(f => f.Name))
+			.Concat(Aliases(AliasOptions.Default.FunctionAliases, Registry.Functions.Select(f => f.Name))
 				.Select(alias => (Name: alias.Alias, Help: FunctionHelp(help, alias.Alias) ?? FunctionHelp(help, alias.Target),
 					Entry: FunctionEntry(alias.Target))))
 			.ToList();
 
-		var commands = RegistryInventory.Commands
-			.Select(c => (c.Name, Help: FullHelp(help, c.Name), Entry: CommandEntry(c.Attribute)))
-			.Concat(Aliases(AliasOptions.Default.CommandAliases, RegistryInventory.Commands.Select(c => c.Name))
+		var commands = Registry.Commands
+			.Select(c => (c.Name, Help: FullHelp(help, c.Name), Entry: CommandEntry(c)))
+			.Concat(Aliases(AliasOptions.Default.CommandAliases, Registry.Commands.Select(c => c.Name))
 				.Select(alias => (Name: alias.Alias, Help: FullHelp(help, alias.Alias) ?? FullHelp(help, alias.Target),
-					Entry: CommandEntry(RegistryInventory.Commands.First(c => c.Name.Equals(alias.Target, StringComparison.OrdinalIgnoreCase)).Attribute))))
+					Entry: CommandEntry(Registry.Commands.First(c => c.Name.Equals(alias.Target, StringComparison.OrdinalIgnoreCase))))))
 			.ToList();
 
 		var definitions = new JsonObject
@@ -74,7 +71,7 @@ public static class ClientDataGenerator
 
 	private static JsonObject FunctionEntry(string name)
 	{
-		var attribute = RegistryInventory.Functions.First(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).Attribute;
+		var attribute = Registry.Functions.First(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 		return new JsonObject
 		{
 			["maxArgs"] = attribute.MaxArgs,

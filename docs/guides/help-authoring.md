@@ -109,9 +109,9 @@ articles when validating its known-differences allowlist. Keep those section
 headings synchronized with the allowlist's `profile` references.
 
 The softcode editor's generated help drawer also consumes complete articles from
-the shared model. Regenerate `SharpMUSH.Client/wwwroot/data/mush-*.json` with
-`SHARPMUSH_REGENERATE_CLIENT_DATA=1` when help changes. The `help-integrity` job
-uploads generated editor data and fails if the checked-in snapshots differ.
+the shared model. The portal's build writes its `data/mush-*.json` files with
+`tools/ClientData`, so a help change reaches the editor on the next build with
+nothing to regenerate or commit.
 
 ## Formatting
 
