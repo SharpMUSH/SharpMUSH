@@ -133,3 +133,13 @@
 .help-candidates a:hover {
     text-decoration: underline;
 }
+
+/* A ::: center block: centred as the terminal centres it. */
+.help-entry ::deep div.center {
+    text-align: center;
+}
+
+.help-entry ::deep div.center table {
+    margin-left: auto;
+    margin-right: auto;
+}

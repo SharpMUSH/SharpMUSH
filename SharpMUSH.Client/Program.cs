@@ -89,6 +89,8 @@ builder.Services.AddSingleton<GameHelpService>();
 builder.Services.AddSingleton<IAccountSessionEndingHandler, TerminalSessionTeardown>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
+builder.Services.AddSingleton<PasskeyInterop>();
+builder.Services.AddSingleton<AccountPasskeyService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<ThemeService>();
 builder.Services.AddSingleton<IThemeService>(sp => sp.GetRequiredService<ThemeService>());
