@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Beskytt og opphev beskyttelse, rediger beskyttede sider, masseoperasjoner og wiki-administrasjonspanelet.</value>
+    <value>Angi og omgå krav for navnerom, kategorier og sider, beskytte og publisere sider, massehandlinger og wikiens administrasjonspanel.</value>
     <comment>MT — English 'Protect/unprotect' expanded to 'Beskytt og opphev beskyttelse'; slash form reads wrong in Norwegian.</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Rediger, rull tilbake og merk om eksisterende (ubeskyttede) wiki-sider.</value>
+    <value>Redigere, tilbakestille og omkategorisere wikisider der kravene deres tillater det.</value>
     <comment>MT — 'retag' as 'merke om' (change the tags).</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Se upubliserte wiki-sider og utkast (publiserte sider er offentlige for alle).</value>
+    <value>Lese wikisider. Et navnerom, en kategori eller en side kan kreve mer.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Utkast</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Lese upubliserte wikisider skrevet av andre.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Installasjon</value>
@@ -4188,10 +4194,6 @@
     <value>Beskytt</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Beskyttet</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Publisert</value>
     <comment>MT</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# side i denne kategorien} other {# sider i denne kategorien}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Begrenset</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>tillatelser gjelder</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Tillatelser</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Hva hvert navnerom, hver kategori og hver side krever i tillegg til wiki-tillatelsene. wiki.admin er unntatt.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Denne siden</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Fra {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Navnerom {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategori {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Sider i denne kategorien</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Ingenting utover wiki-tillatelsene.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Endre</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Tillatelsesnavn atskilt med mellomrom. Alle kreves.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Tillatelser lagret.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Lese</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Opprette</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Redigere</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Slette</value>
   </data>
 </root>

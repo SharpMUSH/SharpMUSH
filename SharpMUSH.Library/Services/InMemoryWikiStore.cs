@@ -19,6 +19,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 	private readonly ConcurrentDictionary<string, string> _slugIndex = new(StringComparer.OrdinalIgnoreCase);
 	private readonly ConcurrentDictionary<string, List<WikiRevision>> _revisions = new();
 	private readonly ConcurrentDictionary<(string PageId, string Locale), WikiTranslation> _translations = new();
+	private readonly ConcurrentDictionary<WikiRuleTarget, WikiRequirementSet> _requirements = new();
 
 	private int _idCounter;
 
@@ -50,14 +51,13 @@ public sealed class InMemoryWikiStore : IWikiStore
 			.Take(take)
 			.ToList());
 
-	public Task<int> CountPagesAsync(string? ns, bool includeDrafts)
-		=> Task.FromResult(InNamespace(ns).Count(p => includeDrafts || p.Published));
+	public Task<int> CountPagesAsync(string? ns, WikiVisibility visibility)
+		=> Task.FromResult(Visible(InNamespace(ns), visibility).Count());
 
-	public Task<WikiPageCounts> CountPagesByStateAsync(bool includeDrafts)
+	public Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility)
 	{
-		var counted = _pagesById.Values.Where(p => includeDrafts || p.Published).ToList();
-		return Task.FromResult(new WikiPageCounts(
-			counted.Count(p => p.Published), counted.Count(p => !p.Published), counted.Count(p => p.IsProtected)));
+		var counted = Visible(_pagesById.Values, visibility).ToList();
+		return Task.FromResult(new WikiPageCounts(counted.Count(p => p.Published), counted.Count(p => !p.Published)));
 	}
 
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
@@ -69,7 +69,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 			.ToList());
 
 	private static IEnumerable<WikiPage> Visible(IEnumerable<WikiPage> pages, WikiVisibility visibility)
-		=> pages.Where(p => visibility.Admits(p.Published, p.AuthorDbref));
+		=> pages.Where(visibility.Admits);
 
 	private IEnumerable<WikiPage> InNamespace(string? ns)
 		=> ns is null
@@ -120,6 +120,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 
 		_slugIndex.TryRemove(WikiHelpers.SlugKey(page.Namespace, page.Slug), out _);
 		_revisions.TryRemove(id, out _);
+		_requirements.TryRemove(WikiRuleTarget.ForPage(id), out _);
 
 		// Keys is a snapshot, so removing while walking it is safe.
 		foreach (var key in _translations.Keys.Where(k => k.PageId == id))
@@ -128,12 +129,16 @@ public sealed class InMemoryWikiStore : IWikiStore
 		return Task.FromResult<Found<None>>(new None());
 	}
 
-	public Task<Found<None>> SetPageProtectionAsync(string id, bool isProtected)
+	public Task<IReadOnlyList<WikiRequirementSet>> GetRequirementsAsync()
+		=> Task.FromResult<IReadOnlyList<WikiRequirementSet>>(_requirements.Values.ToList());
+
+	public Task<Found<None>> SetRequirementsAsync(WikiRequirementSet set)
 	{
-		if (!_pagesById.TryGetValue(id, out var existing))
+		if (set.Target.Scope == WikiRuleScope.Page && !_pagesById.ContainsKey(set.Target.Key))
 			return Task.FromResult<Found<None>>(new NotFound());
 
-		_pagesById[id] = existing with { IsProtected = isProtected };
+		if (set.IsEmpty) _requirements.TryRemove(set.Target, out _);
+		else _requirements[set.Target] = set;
 		return Task.FromResult<Found<None>>(new None());
 	}
 

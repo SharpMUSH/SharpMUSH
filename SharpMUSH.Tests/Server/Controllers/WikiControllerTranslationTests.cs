@@ -1,3 +1,4 @@
+using SharpMUSH.Tests.Wiki;
 using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -77,7 +78,7 @@ public class WikiControllerTranslationTests
 	{
 		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
-		await storage.SetProtectionAsync(page.Id, isProtected: true);
+		await storage.ProtectAsync(page.Id);
 
 		var result = await wiki.Translations.PutTranslation(
 			"dragons", "fr",
@@ -85,7 +86,7 @@ public class WikiControllerTranslationTests
 			ns: "main");
 
 		await Assert.That(result).IsTypeOf<ForbidResult>()
-			.Because("a translation write is gated on the source page's IsProtected, same as a page edit");
+			.Because("a translation write is gated on the source page's requirements, same as a page edit");
 	}
 
 	[Test]
@@ -93,7 +94,7 @@ public class WikiControllerTranslationTests
 	{
 		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit, PortalPermission.WikiAdmin);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
-		await storage.SetProtectionAsync(page.Id, isProtected: true);
+		await storage.ProtectAsync(page.Id);
 
 		var result = await wiki.Translations.PutTranslation(
 			"dragons", "fr",
@@ -218,7 +219,7 @@ public class WikiControllerTranslationTests
 	[Test]
 	public async Task CreatePage_StampsTheConfiguredDefaultAsTheSourceLocale()
 	{
-		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiCreate);
 
 		await wiki.Pages.CreatePage(
 			new CreatePageRequest("Dragons", "en body", Namespace: "main"));
@@ -244,9 +245,9 @@ public class WikiControllerTranslationTests
 	}
 
 	[Test]
-	public async Task GetTranslations_ShowsDraftsToAnEditor()
+	public async Task GetTranslations_ShowsDraftsToAWikiDraftsHolder()
 	{
-		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit);
+		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiDrafts);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
 		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false, expectedRevisionNumber: null);
@@ -293,7 +294,7 @@ public class WikiControllerTranslationTests
 		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiEdit);
 		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "en")).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
-		await storage.SetProtectionAsync(page.Id, isProtected: true);
+		await storage.ProtectAsync(page.Id);
 
 		var result = await wiki.Translations.DeleteTranslation("dragons", "fr", ns: "main");
 

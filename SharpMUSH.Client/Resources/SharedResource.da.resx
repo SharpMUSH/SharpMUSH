@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Beskyt/ophæv beskyttelse, rediger beskyttede sider, batchhandlinger og wiki-administrationspanelet.</value>
+    <value>Fastsætte og omgå krav for navnerum, kategorier og sider, beskytte og publicere sider, massehandlinger og wikiens administrationspanel.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Rediger, rul tilbage og omtag eksisterende (ubeskyttede) wiki-sider.</value>
+    <value>Redigere, rulle tilbage og omkategorisere wikisider, hvor deres krav tillader det.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Se ikke-udgivne wiki-sider og kladder (udgivne sider er offentlige for alle).</value>
+    <value>Læse wikisider. Et navnerum, en kategori eller en side kan kræve mere.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Kladder</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Læse upublicerede wikisider skrevet af andre.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Installation</value>
@@ -4188,10 +4194,6 @@
     <value>Beskyt</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Beskyttet</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Udgivet</value>
     <comment>MT</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# side i denne kategori} other {# sider i denne kategori}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Begrænset</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>rettigheder gælder</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Rettigheder</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Hvad hvert navnerum, hver kategori og hver side kræver ud over wiki-rettighederne. wiki.admin er undtaget.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Denne side</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Fra {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Navnerum {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategori {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Sider i denne kategori</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Intet ud over wiki-rettighederne.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Skift</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Rettighedsnavne adskilt af mellemrum. Alle kræves.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Rettigheder gemt.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Læse</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Oprette</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Redigere</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Slette</value>
   </data>
 </root>

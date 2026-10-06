@@ -19,17 +19,23 @@ namespace SharpMUSH.Server.Controllers;
 /// may see, how a page reference parses, and how a page becomes a DTO in the reader's locale.
 /// </summary>
 /// <remarks>
-/// The visibility rules are the reason this is a base class and not a helper bag. <c>CanSee</c>,
-/// <c>FilterVisible</c> and <c>IncludeDrafts</c> read the request principal, they are the page-level
-/// draft gate, and a listing endpoint that forgot one of them would leak unpublished pages while
+/// The visibility rules are the reason this is a base class and not a helper bag. <c>CanSeeAsync</c>,
+/// <c>FilterVisibleAsync</c>, <c>VisibilityAsync</c> and <c>RefusalAsync</c> read the request principal and ask
+/// <see cref="IWikiAccessService"/>; they are the page-level gates, and a listing endpoint that forgot one of them would leak unpublished pages while
 /// every other assertion about it stayed green. One declaration, inherited, cannot be forgotten.
 /// </remarks>
 public abstract class WikiControllerBase(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiAccessService access,
 	IWikiNameResolver names,
 	ILogger logger) : ControllerBase
 {
+	private WikiReader? _reader;
+
+	/// <summary>Who may read, edit and delete which page; every gate in these controllers asks it.</summary>
+	protected IWikiAccessService Access { get; } = access;
+
 	/// <summary>Resolves the author and editor dbrefs the store keeps to player names for the DTOs.</summary>
 	protected IWikiNameResolver Names { get; } = names;
 
@@ -62,18 +68,21 @@ public abstract class WikiControllerBase(
 			: (WikiNamespace.Main, reference);
 	}
 
-	/// <summary>True when the caller may see unpublished (draft) pages — i.e. holds the
-	/// <see cref="PortalPermission.WikiRead"/> scope. Anonymous callers and accounts without the
-	/// scope only see Published pages. (Player and above are granted wiki.read by default, so the
-	/// historical "any logged-in user sees drafts" behavior is preserved out of the box.)</summary>
-	protected bool CanSeeUnpublished => User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiRead);
+	/// <summary>
+	/// The caller as a wiki reader: the permission claims the request was authenticated with (rebuilt from
+	/// the account's roles on every request) and the acting character's dbref; an anonymous caller holds
+	/// what the <c>everyone</c> role grants. Read once per request.
+	/// </summary>
+	protected async Task<WikiReader> ReaderAsync()
+		=> _reader ??= User.Identity?.IsAuthenticated == true
+			? WikiReader.From(User.FindAll(PortalPermission.ClaimType).Select(claim => claim.Value), CallerDbref)
+			: await Access.AnonymousAsync(HttpContext.RequestAborted);
 
 	/// <summary>
-	/// True when the caller may see unpublished <em>translations</em>: they can already see drafts, or they
-	/// hold the edit scope and so may be previewing their own translation at <c>?lang=</c>.
+	/// True when the caller may see unpublished <em>translations</em>: they hold <c>wiki.drafts</c>, as for
+	/// draft pages. Holding <c>wiki.edit</c> is not enough, or every player would read every draft translation.
 	/// </summary>
-	protected bool IncludeDrafts =>
-		CanSeeUnpublished || User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiEdit);
+	protected async Task<bool> IncludeDraftsAsync() => (await ReaderAsync()).Has(PortalPermission.WikiDrafts);
 
 	/// <summary>
 	/// The caller's character dbref (the acting/primary character, from the <c>character_dbref</c>
@@ -83,27 +92,42 @@ public abstract class WikiControllerBase(
 	protected string? CallerDbref => User.GetActingCharacter()?.ToString();
 
 	/// <summary>
-	/// The pages the caller may view: published ones, every draft with wiki.read, and the drafts the
-	/// caller authored (authors always see their own). Listings hand it to the store, which applies it
-	/// before paging, so a page of a listing is a page of rows this caller may see.
+	/// The pages the caller may view: published ones, every draft with wiki.drafts, the drafts the caller
+	/// authored, less what the namespace, category and page read requirements keep from them. Listings hand
+	/// it to the store, which applies it before paging, so a page of a listing is a page of rows this caller
+	/// may see.
 	/// </summary>
-	protected WikiVisibility Visibility => new(CanSeeUnpublished, CallerDbref);
+	protected async Task<WikiVisibility> VisibilityAsync() => await Access.VisibilityAsync(await ReaderAsync());
 
-	/// <summary>True when the caller may view <paramref name="page"/> (<see cref="Visibility"/>).</summary>
-	protected bool CanSee(WikiPage page) => Visibility.Admits(page.Published, page.AuthorDbref);
+	/// <summary>True when the caller may view <paramref name="page"/>.</summary>
+	protected async Task<bool> CanSeeAsync(WikiPage page) => await Access.CanSeeAsync(await ReaderAsync(), page);
 
-	/// <summary>Filters out unpublished (draft) pages the caller may not see (not published, no
-	/// wiki.read scope, and not their own authored draft).</summary>
-	protected IEnumerable<WikiPage> FilterVisible(IEnumerable<WikiPage> pages) => pages.Where(CanSee);
+	/// <summary>
+	/// Null when the caller may take <paramref name="action"/> on <paramref name="page"/>; otherwise the
+	/// answer to give: 404 when they may not see it at all (so a refusal does not disclose the page), else 403.
+	/// </summary>
+	protected async Task<IActionResult?> RefusalAsync(WikiPage page, WikiAction action)
+	{
+		var reader = await ReaderAsync();
+		if (!await Access.CanSeeAsync(reader, page)) return NotFound();
+		return (await Access.DecideAsync(reader, page, action)).Allowed ? null : Forbid();
+	}
 
-	protected static WikiPageDto ToDto(WikiPage p) => new(
+	/// <summary>Filters out the pages the caller may not see.</summary>
+	protected async Task<List<WikiPage>> FilterVisibleAsync(IEnumerable<WikiPage> pages)
+	{
+		var visibility = await VisibilityAsync();
+		return pages.Where(visibility.Admits).ToList();
+	}
+
+	protected static WikiPageDto ToDto(WikiPage p, bool restricted) => new(
 		p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
-		p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
+		p.CreatedAt, p.UpdatedAt, restricted, p.RevisionNumber,
 		p.Categories, p.Published);
 
-	protected static WikiPageDto ToDto(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => new(
+	protected static WikiPageDto ToDto(LocalizedWikiPage p, IReadOnlyList<string> availableLocales, bool restricted) => new(
 		p.Page.Id, p.Page.Slug, p.Title, p.Page.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
-		p.Page.CreatedAt, p.UpdatedAt, p.Page.IsProtected, p.RevisionNumber,
+		p.Page.CreatedAt, p.UpdatedAt, restricted, p.RevisionNumber,
 		p.Page.Categories, p.Published)
 	{
 		Locale = p.Locale,
@@ -115,18 +139,40 @@ public abstract class WikiControllerBase(
 	protected static WikiRevisionDto ToDto(WikiRevision r) => new(
 		r.RevisionNumber, r.EditorDbref, r.Timestamp, r.EditSummary, r.MarkdownSource);
 
-	/// <summary>The page DTO with the facts the D1 banner needs: the last editor's name and the first image.</summary>
-	protected async Task<WikiPageDto> ToDtoAsync(WikiPage p) => ToDto(p) with
+	/// <summary>
+	/// The page DTO with the facts the D1 banner needs (the last editor's name and the first image) and
+	/// what the caller may do with the page.
+	/// </summary>
+	protected async Task<WikiPageDto> ToDtoAsync(WikiPage p) => ToDto(p, await IsRestrictedAsync(p)) with
 	{
 		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
 		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
+		Access = await AccessDtoAsync(p),
 	};
 
-	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => ToDto(p, availableLocales) with
+	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales)
+		=> ToDto(p, availableLocales, await IsRestrictedAsync(p.Page)) with
+		{
+			LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
+			Image = WikiImages.FirstImageUrl(p.RenderedHtml),
+			Access = await AccessDtoAsync(p.Page),
+		};
+
+	/// <summary>
+	/// True when any requirement applies to the page, its own or one it inherits, so the page never claims
+	/// anyone may edit it while its namespace or a category says otherwise.
+	/// </summary>
+	protected async Task<bool> IsRestrictedAsync(WikiPage page)
 	{
-		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
-		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
-	};
+		var requirements = await Access.RequirementsAsync();
+		return requirements.HasPageRules(page.Id) || requirements.Required(page, WikiAction.Delete).Count > 0;
+	}
+
+	private async Task<WikiAccessDto> AccessDtoAsync(WikiPage page)
+	{
+		var access = await Access.ForPageAsync(await ReaderAsync(), page);
+		return new WikiAccessDto(access.Read, access.Edit, access.Delete, access.Manage);
+	}
 
 	protected async Task<WikiRevisionDto> ToDtoAsync(WikiRevision r) => ToDto(r) with
 	{
@@ -153,7 +199,7 @@ public abstract class WikiControllerBase(
 	/// </summary>
 	protected async Task<WikiPageDto> LocalizedDtoAsync(WikiPage page, string? lang)
 	{
-		var includeDrafts = IncludeDrafts;
+		var includeDrafts = await IncludeDraftsAsync();
 		var localized = await Localization.LocalizeAsync(page, lang, includeDrafts);
 		var available = await Localization.GetVisibleLocalesAsync(page, includeDrafts);
 
@@ -178,19 +224,20 @@ public abstract class WikiControllerBase(
 	/// page's translation set to fill it would be N extra queries for data nothing reads.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="FilterVisible"/> runs first and is not optional — the page-level draft gate is a
+	/// <see cref="FilterVisibleAsync"/> runs first and is not optional — the page-level gate is a
 	/// different rule from translation visibility, and a localized listing that dropped it would leak
-	/// unpublished pages while every locale assertion stayed green.
+	/// unpublished or restricted pages while every locale assertion stayed green.
 	/// </remarks>
 	protected async Task<IEnumerable<WikiPageSummaryDto>> LocalizedListAsync(IEnumerable<WikiPage> pages, string? lang)
 	{
-		var visible = FilterVisible(pages).ToList();
-		var localized = await Localization.LocalizeAllAsync(visible, lang, IncludeDrafts);
+		var visible = await FilterVisibleAsync(pages);
+		var localized = await Localization.LocalizeAllAsync(visible, lang, await IncludeDraftsAsync());
+		var requirements = await Access.RequirementsAsync();
 		var dtos = new List<WikiPageSummaryDto>();
 		foreach (var page in localized)
 		{
 			dtos.Add(new WikiPageSummaryDto(
-				page.Page.Id, page.Page.Slug, page.Title, page.Page.Namespace, page.UpdatedAt, page.Page.IsProtected,
+				page.Page.Id, page.Page.Slug, page.Title, page.Page.Namespace, page.UpdatedAt, requirements.HasPageRules(page.Page.Id),
 				page.RevisionNumber, page.Page.Categories, page.Published, page.Locale, page.IsFallback,
 				WikiImages.FirstImageUrl(page.RenderedHtml),
 				await Names.NameOfAsync(page.LastEditorDbref, HttpContext.RequestAborted)));
@@ -216,7 +263,7 @@ public abstract class WikiControllerBase(
 	/// </remarks>
 	protected async Task<string> ResolveRevisionStreamAsync(WikiPage page, string? lang)
 	{
-		var localized = await Localization.LocalizeAsync(page, lang, IncludeDrafts);
+		var localized = await Localization.LocalizeAsync(page, lang, await IncludeDraftsAsync());
 
 		return string.Equals(
 			localized.Locale, Localization.SourceLocaleOf(page), StringComparison.OrdinalIgnoreCase)

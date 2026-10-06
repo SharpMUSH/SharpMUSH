@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Proteger/desproteger, editar páginas protegidas, operaciones por lotes y el panel de administración del wiki.</value>
+    <value>Definir y omitir requisitos de espacios de nombres, categorías y páginas, proteger y publicar páginas, operaciones por lotes y el panel de administración del wiki.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Editar, revertir y volver a etiquetar páginas del wiki existentes (no protegidas).</value>
+    <value>Editar, revertir y recategorizar páginas del wiki, cuando sus requisitos lo permitan.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Ver páginas del wiki no publicadas o en borrador (las páginas publicadas son públicas para todos).</value>
+    <value>Leer páginas del wiki. Un espacio de nombres, una categoría o una página puede exigir más.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Borradores</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Leer páginas del wiki sin publicar escritas por otros.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Instalación</value>
@@ -4188,10 +4194,6 @@
     <value>Proteger</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Protegida</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Publicada</value>
     <comment>MT</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# página en esta categoría} other {# páginas en esta categoría}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Restringida</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>se aplican permisos</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Permisos</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Lo que cada espacio de nombres, categoría y página exige además de los permisos del wiki. wiki.admin no está sujeto a ello.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Esta página</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>De {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Espacio de nombres {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Categoría {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Páginas de esta categoría</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Nada más allá de los permisos del wiki.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Cambiar</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Nombres de permisos separados por espacios. Se requieren todos.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Permisos guardados.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Leer</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Crear</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Editar</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Eliminar</value>
   </data>
 </root>

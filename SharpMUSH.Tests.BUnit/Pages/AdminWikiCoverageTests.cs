@@ -38,7 +38,7 @@ internal sealed class AdminWikiCoverageHandler(
 		if (path == "/api/wiki/counts")
 		{
 			var published = pages.Count(p => p.Published);
-			var counts = new WikiPageCountsDto(pages.Count, published, pages.Count - published, pages.Count(p => p.IsProtected));
+			var counts = new WikiPageCountsDto(pages.Count, published, pages.Count - published, pages.Count(p => p.IsRestricted));
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(counts) });
 		}
 
@@ -72,13 +72,13 @@ internal sealed class AdminWikiCoverageHandler(
 /// </summary>
 public class AdminWikiCoverageTests : TrackingBunitContext
 {
-	private static WikiPageSummaryDto Summary(string slug, string title, bool published = true, bool isProtected = false) => new(
+	private static WikiPageSummaryDto Summary(string slug, string title, bool published = true, bool isRestricted = false) => new(
 		Id: slug,
 		Slug: slug,
 		Title: title,
 		Namespace: "main",
 		UpdatedAt: DateTimeOffset.UnixEpoch,
-		IsProtected: isProtected,
+		IsRestricted: isRestricted,
 		RevisionNumber: 1,
 		Categories: [],
 		Published: published,
@@ -134,7 +134,7 @@ public class AdminWikiCoverageTests : TrackingBunitContext
 	public async Task Stats_come_from_the_counts_endpoint_not_from_listing_every_page()
 	{
 		var cut = RenderAdminWikiWith(
-			pages: [Summary("a", "A"), Summary("b", "B", published: false), Summary("c", "C", isProtected: true)],
+			pages: [Summary("a", "A"), Summary("b", "B", published: false), Summary("c", "C", isRestricted: true)],
 			translations: new());
 
 		cut.WaitForAssertion(
@@ -146,7 +146,7 @@ public class AdminWikiCoverageTests : TrackingBunitContext
 			TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("[data-stat='published'] .adm-stat-value").TextContent).IsEqualTo("2");
 		await Assert.That(cut.Find("[data-stat='drafts'] .adm-stat-value").TextContent).IsEqualTo("1");
-		await Assert.That(cut.Find("[data-stat='protected'] .adm-stat-value").TextContent).IsEqualTo("1");
+		await Assert.That(cut.Find("[data-stat='restricted'] .adm-stat-value").TextContent).IsEqualTo("1");
 		await Assert.That(_handler!.Requests.Any(u => u.AbsolutePath == "/api/wiki/counts")).IsTrue();
 		await Assert.That(_handler.Requests.Any(u => u.Query.Contains("take=2000", StringComparison.Ordinal))).IsFalse()
 			.Because("the stats tiles no longer page through the whole wiki to count it");

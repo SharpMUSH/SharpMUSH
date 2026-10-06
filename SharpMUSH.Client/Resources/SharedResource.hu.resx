@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Oldalak védelme és feloldása, védett oldalak szerkesztése, kötegelt műveletek és a wiki adminisztrációs felülete.</value>
+    <value>Névterek, kategóriák és oldalak követelményeinek megadása és megkerülése, oldalak védelme és közzététele, csoportos műveletek és a wiki adminisztrációs felülete.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Meglévő (nem védett) wiki-oldalak szerkesztése, visszaállítása és újracímkézése.</value>
+    <value>Wikioldalak szerkesztése, visszaállítása és átkategorizálása, ahol a követelményeik engedik.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Nem publikált és piszkozat wiki-oldalak megtekintése (a közzétett oldalak mindenki számára nyilvánosak).</value>
+    <value>Wikioldalak olvasása. Egy névtér, kategória vagy oldal többet is megkövetelhet.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Piszkozatok</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Mások által írt, közzé nem tett wikioldalak olvasása.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Telepítés</value>
@@ -4188,10 +4194,6 @@
     <value>Védelem</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Védett</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Közzétéve</value>
     <comment>MT</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# oldal ebben a kategóriában} other {# oldal ebben a kategóriában}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Korlátozott</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>jogosultságok érvényesek</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Jogosultságok</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Amit az egyes névterek, kategóriák és oldalak a wiki jogosultságain felül megkövetelnek. A wiki.admin mentes ezek alól.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Ez az oldal</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Innen: {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>{0} névtér</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>{0} kategória</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Oldalak ebben a kategóriában</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Semmi a wiki jogosultságain felül.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Módosítás</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Jogosultságnevek szóközzel elválasztva. Mindegyik szükséges.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Jogosultságok mentve.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Olvasás</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Létrehozás</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Szerkesztés</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Törlés</value>
   </data>
 </root>

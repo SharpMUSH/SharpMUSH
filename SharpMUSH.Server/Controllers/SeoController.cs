@@ -24,6 +24,7 @@ namespace SharpMUSH.Server.Controllers;
 public class SeoController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiAccessService access,
 	ILogger<SeoController> logger) : ControllerBase
 {
 	private const int PageSize = 500;
@@ -46,6 +47,8 @@ public class SeoController(
 		AppendUrl(sb, $"{baseUrl}/", now);
 		AppendUrl(sb, $"{baseUrl}/wiki", now);
 
+		// What a logged-out reader may see: no drafts, and nothing whose read requirements the everyone role misses.
+		var visibility = await access.VisibilityAsync(await access.AnonymousAsync(HttpContext.RequestAborted));
 		var skip = 0;
 		var total = 0;
 		while (true)
@@ -53,7 +56,7 @@ public class SeoController(
 			var chunk = await wikiService.GetAllPagesAsync(skip, PageSize);
 			foreach (var page in chunk)
 			{
-				if (!page.Published)
+				if (!page.Published || !visibility.Admits(page))
 					continue;
 
 				// Bot-facing, so includeDrafts: false — the sitemap must never advertise a locale whose only

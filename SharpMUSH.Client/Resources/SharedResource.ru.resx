@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Защита и снятие защиты страниц, изменение защищённых страниц, пакетные операции и панель администрирования wiki.</value>
+    <value>Задание и обход требований пространств имён, категорий и страниц, защита и публикация страниц, пакетные операции и панель администрирования вики.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Изменение, откат и смена тегов существующих (незащищённых) страниц wiki.</value>
+    <value>Правка, откат и смена категорий вики-страниц, если их требования это позволяют.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Просмотр неопубликованных и черновых страниц wiki (опубликованные страницы доступны всем).</value>
+    <value>Чтение вики-страниц. Пространство имён, категория или страница могут требовать больше.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Вики · Черновики</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Чтение неопубликованных вики-страниц, написанных другими.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Установка</value>
@@ -4188,10 +4194,6 @@
     <value>Защитить</value>
     <comment>MT — imperative button label.</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Защищено</value>
-    <comment>MT — status badge; impersonal neuter to avoid agreeing with a subject that is not in the string.</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Опубликовано</value>
     <comment>MT — status badge, impersonal neuter, consistent with WikiProtected.</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# страница в этой категории} few {# страницы в этой категории} many {# страниц в этой категории} other {# страницы в этой категории}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Ограничена</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>действуют разрешения</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Разрешения</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Что каждое пространство имён, категория и страница требуют сверх разрешений вики. wiki.admin на это не распространяется.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Эта страница</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Из {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Пространство имён {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Категория {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Страницы в этой категории</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Ничего сверх разрешений вики.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Изменить</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Названия разрешений через пробел. Требуется каждое.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Разрешения сохранены.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Чтение</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Создание</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Правка</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Удаление</value>
   </data>
 </root>

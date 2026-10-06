@@ -1009,9 +1009,6 @@
   <data name="WikiPublished" xml:space="preserve">
     <value>Published</value>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Protected</value>
-  </data>
   <data name="WikiUpdated" xml:space="preserve">
     <value>Updated</value>
   </data>
@@ -3388,7 +3385,13 @@
     <value>Wiki · Read</value>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>View unpublished/draft wiki pages (published pages are public to everyone).</value>
+    <value>Read wiki pages. A namespace, category or page can require more.</value>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Drafts</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Read unpublished wiki pages written by others.</value>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
     <value>Wiki · Create</value>
@@ -3400,7 +3403,7 @@
     <value>Wiki · Edit</value>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Edit, rollback, and retag existing (unprotected) wiki pages.</value>
+    <value>Edit, roll back and recategorize wiki pages, where their requirements allow.</value>
   </data>
   <data name="EnumPermWikiDelete" xml:space="preserve">
     <value>Wiki · Delete</value>
@@ -3412,7 +3415,7 @@
     <value>Wiki · Moderate</value>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Protect/unprotect, edit protected pages, batch operations, and the wiki admin dashboard.</value>
+    <value>Set and skip namespace, category and page requirements, protect and publish pages, batch operations, and the wiki admin dashboard.</value>
   </data>
   <data name="EnumPermMediaUpload" xml:space="preserve">
     <value>Image Library · Upload</value>
@@ -5393,5 +5396,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# page in this category} other {# pages in this category}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Restricted</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>permissions apply</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>What each namespace, category and page requires beyond the wiki permissions. wiki.admin skips these.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>This page</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>From {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Namespace {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Category {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Pages in this category</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Nothing beyond the wiki permissions.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Permission names, separated by spaces. Every one is required.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Permissions saved.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Delete</value>
   </data>
 </root>

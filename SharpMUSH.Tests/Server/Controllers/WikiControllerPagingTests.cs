@@ -48,12 +48,12 @@ public class WikiControllerPagingTests
 	private static WikiEndpoints Anonymous(WikiStoreService wiki) =>
 		WikiControllerTestHarness.Build(wiki, authenticated: false, "#42").Wiki;
 
-	/// <summary>Signed in as #42 without wiki.read: sees published pages and its own drafts.</summary>
+	/// <summary>Signed in as #42 without wiki.drafts: sees published pages and its own drafts.</summary>
 	private static WikiEndpoints Author(WikiStoreService wiki) =>
 		WikiControllerTestHarness.Build(wiki, authenticated: true, "#42").Wiki;
 
 	private static WikiEndpoints Reader(WikiStoreService wiki) =>
-		WikiControllerTestHarness.Build(wiki, authenticated: true, "#42", PortalPermission.WikiRead).Wiki;
+		WikiControllerTestHarness.Build(wiki, authenticated: true, "#42", PortalPermission.WikiDrafts).Wiki;
 
 	private static readonly Func<WikiEndpoints, int, int, Task<IActionResult>>[] Listings =
 	[

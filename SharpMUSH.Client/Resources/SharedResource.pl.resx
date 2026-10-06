@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Ochrona i zdejmowanie ochrony, edycja chronionych stron, operacje zbiorcze oraz pulpit administracyjny wiki.</value>
+    <value>Ustawianie i pomijanie wymagań przestrzeni nazw, kategorii i stron, ochrona i publikowanie stron, operacje zbiorcze oraz panel administracyjny wiki.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Edycja, przywracanie i zmiana tagów istniejących (niechronionych) stron wiki.</value>
+    <value>Edycja, przywracanie i zmiana kategorii stron wiki, o ile pozwalają na to ich wymagania.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Podgląd nieopublikowanych i roboczych stron wiki (strony opublikowane są dostępne publicznie).</value>
+    <value>Czytanie stron wiki. Przestrzeń nazw, kategoria lub strona może wymagać więcej.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Szkice</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Czytanie nieopublikowanych stron wiki napisanych przez innych.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Instalacja</value>
@@ -4188,10 +4194,6 @@
     <value>Zabezpiecz</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Zabezpieczona</value>
-    <comment>MT — assumed a status badge on a page (feminine "strona"); if the badge is also used for non-page objects, a neutral "Zabezpieczone" would be needed</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Opublikowana</value>
     <comment>MT — assumed a status badge on a page (feminine "strona"), matching WikiProtected</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# strona w tej kategorii} few {# strony w tej kategorii} many {# stron w tej kategorii} other {# strony w tej kategorii}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Ograniczona</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>obowiązują uprawnienia</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Uprawnienia</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Czego każda przestrzeń nazw, kategoria i strona wymaga poza uprawnieniami wiki. wiki.admin jest z tego zwolnione.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Ta strona</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Z {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Przestrzeń nazw {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategoria {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Strony w tej kategorii</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Nic poza uprawnieniami wiki.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Zmień</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Nazwy uprawnień oddzielone spacjami. Wymagane są wszystkie.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Uprawnienia zapisane.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Odczyt</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Tworzenie</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Edycja</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Usuwanie</value>
   </data>
 </root>

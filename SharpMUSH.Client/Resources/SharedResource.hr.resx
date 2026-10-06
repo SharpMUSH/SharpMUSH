@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Zaštita/uklanjanje zaštite, uređivanje zaštićenih stranica, skupne operacije i administratorska nadzorna ploča wikija.</value>
+    <value>Postavljanje i zaobilaženje zahtjeva imenskih prostora, kategorija i stranica, zaštita i objava stranica, skupne radnje i administracijska ploča wikija.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Uređivanje, vraćanje i ponovno označavanje postojećih (nezaštićenih) wiki stranica.</value>
+    <value>Uređivanje, vraćanje i ponovno kategoriziranje wiki stranica, gdje to njihovi zahtjevi dopuštaju.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Pregled neobjavljenih wiki stranica i skica (objavljene stranice javno su dostupne svima).</value>
+    <value>Čitanje wiki stranica. Imenski prostor, kategorija ili stranica mogu zahtijevati više.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Skice</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Čitanje neobjavljenih wiki stranica koje su napisali drugi.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Instalacija</value>
@@ -4188,10 +4194,6 @@
     <value>Zaštiti</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Zaštićeno</value>
-    <comment>MT — assumed a status label, hence the neuter form</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Objavljeno</value>
     <comment>MT — assumed a status label, hence the neuter form</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# stranica u ovoj kategoriji} few {# stranice u ovoj kategoriji} other {# stranica u ovoj kategoriji}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Ograničena</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>primjenjuju se dozvole</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Dozvole</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Što svaki imenski prostor, kategorija i stranica zahtijeva uz dozvole wikija. wiki.admin je izuzet.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Ova stranica</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Iz {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Imenski prostor {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategorija {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Stranice u ovoj kategoriji</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Ništa osim dozvola wikija.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Promijeni</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Nazivi dozvola odvojeni razmacima. Potrebna je svaka.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Dozvole spremljene.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Čitanje</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Stvaranje</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Uređivanje</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Brisanje</value>
   </data>
 </root>

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Definitions;
@@ -15,7 +16,7 @@ namespace SharpMUSH.Implementation.Commands.WikiCommand;
 /// </summary>
 /// <remarks>
 /// Both surfaces render unpublished content only under <c>/DRAFT</c> and only for a reader who passes
-/// <see cref="WikiCommandHelper.CanSeeDrafts"/>. The header still names the page and marks it
+/// <c>wiki.drafts</c>. The header still names the page and marks it
 /// <c>(draft)</c>, so a draft reads as withheld rather than as missing.
 /// </remarks>
 public static class ViewWiki
@@ -58,7 +59,7 @@ public static class ViewWiki
 	/// </param>
 	/// <param name="showDraft">
 	/// <c>/DRAFT</c>: render an unpublished body rather than withholding it. Subject to
-	/// <see cref="WikiCommandHelper.CanSeeDrafts"/> — on its own it grants nothing.
+	/// <c>wiki.drafts</c> — on its own it grants nothing.
 	/// </param>
 	/// <param name="showRaw">
 	/// <c>/MD</c>: show the stored markdown instead of the rendered body, so a builder can read the
@@ -87,10 +88,17 @@ public static class ViewWiki
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		// The page-edit gate cannot serve here: it passes every player on every unprotected page, so using
-		// it meant a mortal whose LOCALE matched an unpublished translation was handed its body in full.
-		// CanSeeDrafts is the one in-game notion of who may see unpublished content, per #740.
-		var maySeeDrafts = await WikiCommandHelper.CanSeeDrafts(executor);
+		// A page whose read requirements the reader does not meet is not there for them, header and all.
+		// Drafts are another matter (#740): the header shows, and the body needs wiki.drafts or authorship.
+		var access = WikiCommandHelper.Access(parser);
+		var reader = await WikiCommandHelper.ReaderAsync(parser, executor);
+		if (!(await access.DecideAsync(reader, page, WikiAction.Read)).Allowed)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		var maySeeDrafts = MaySeeDrafts(reader, page);
 		var localized = forceSource
 			? null
 			: await localization.LocalizeAsync(page, locale, maySeeDrafts);
@@ -104,9 +112,12 @@ public static class ViewWiki
 		var localeMarker = localized is { IsFallback: true } ? $" [{localized.Locale}]" : string.Empty;
 
 		var line = MarkupText.Plain("-").Repeat(RenderWidth);
-		var markers = $"{(published ? "" : " (draft)")}{(page.IsProtected ? " (protected)" : "")}";
+		var restricted = (await access.RequirementsAsync()).HasPageRules(page.Id);
+		var markers = $"{(published ? "" : " (draft)")}{(restricted ? " (restricted)" : "")}";
 		// A category's name is its category page's title, in the reader's language where it is translated.
-		var categoryNames = forceSource ? null : await localization.GetCategoryNamesAsync(locale);
+		var categoryNames = forceSource
+			? null
+			: await localization.GetCategoryNamesAsync(locale, await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var categories = page.Categories.Count > 0
 			? string.Join(", ", page.Categories.Select(c => WikiHelpers.CategoryLabel(c, categoryNames)))
 			: "-";
@@ -178,9 +189,15 @@ public static class ViewWiki
 		// one asked for: resolving the requested locale directly would show a `de` reader an empty history
 		// for a page they can read perfectly well in English, which is a read failing for locale reasons.
 		// This mirrors WikiController.ResolveRevisionStreamAsync exactly.
-		// Same gate as Handle, and for the same reason: CanEdit passes every player on every unprotected
-		// page, so it decided nothing.
-		var maySeeDrafts = await WikiCommandHelper.CanSeeDrafts(executor);
+		// Same gates as Handle.
+		var reader = await WikiCommandHelper.ReaderAsync(parser, executor);
+		if (!(await WikiCommandHelper.Access(parser).DecideAsync(reader, page, WikiAction.Read)).Allowed)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		var maySeeDrafts = MaySeeDrafts(reader, page);
 		var localized = forceSource ? null : await localization.LocalizeAsync(page, locale, maySeeDrafts);
 		var stream = localized is null
 			|| string.Equals(localized.Locale, localization.SourceLocaleOf(page), StringComparison.OrdinalIgnoreCase)
@@ -210,4 +227,12 @@ public static class ViewWiki
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
+
+	/// <summary>
+	/// Whether this reader may see the page's unpublished body, history and translations: it holds
+	/// <c>wiki.drafts</c> or wrote the page.
+	/// </summary>
+	private static bool MaySeeDrafts(WikiReader reader, WikiPage page)
+		=> reader.Has(PortalPermission.WikiDrafts)
+			|| (reader.Dbref is { Length: > 0 } me && string.Equals(page.AuthorDbref, me, StringComparison.Ordinal));
 }

@@ -24,7 +24,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/recent          — recently updated pages
 ///   GET  /api/wiki/ns/{ns}         — pages in a namespace
 ///   GET  /api/wiki/pages           — paginated listing of all pages (X-Total-Count header)
-///   GET  /api/wiki/counts          — page counts by state (published, draft, protected)
+///   GET  /api/wiki/counts          — page counts by state (published, draft), and restricted pages
 ///   GET  /api/wiki/category/{cat}  — pages in a category (subcategories are its category-namespace rows)
 ///   GET  /api/wiki/category-names  — each category's name in the reader's locale
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
@@ -34,8 +34,9 @@ namespace SharpMUSH.Server.Controllers;
 public class WikiBrowseController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiAccessService access,
 	IWikiNameResolver names,
-	ILogger<WikiBrowseController> logger) : WikiControllerBase(wikiService, localization, names, logger)
+	ILogger<WikiBrowseController> logger) : WikiControllerBase(wikiService, localization, access, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/recent?count=20&amp;lang=fr
@@ -44,7 +45,7 @@ public class WikiBrowseController(
 	[HttpGet("recent")]
 	public async Task<IActionResult> GetRecentChanges([FromQuery] int count = 20, [FromQuery] string? lang = null)
 	{
-		var pages = await Wiki.GetRecentChangesAsync(Math.Clamp(count, 0, MaxListTake), Visibility);
+		var pages = await Wiki.GetRecentChangesAsync(Math.Clamp(count, 0, MaxListTake), await VisibilityAsync());
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
@@ -57,7 +58,7 @@ public class WikiBrowseController(
 		string ns, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
 		(skip, take) = ClampPage(skip, take);
-		var pages = await Wiki.GetByNamespaceAsync(ParseNamespace(ns), skip, take, Visibility);
+		var pages = await Wiki.GetByNamespaceAsync(ParseNamespace(ns), skip, take, await VisibilityAsync());
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
@@ -68,14 +69,9 @@ public class WikiBrowseController(
 	/// Anonymous callers only see published pages.
 	/// </summary>
 	/// <remarks>
-	/// The count takes the same visibility flag the rows are filtered by, so the total matches the
-	/// collection and discloses no drafts; it can be sent to everyone, and has to be — a paginated listing
-	/// without a total cannot be paged through.
-	/// <para>
-	/// One caller is counted slightly short: <see cref="CanSee"/> also passes a caller's own drafts, which
-	/// no count can express. Such a caller sees rows the total does not include — their own, so nothing is
-	/// disclosed.
-	/// </para>
+	/// The count takes the same visibility the rows are filtered by, so the total matches the collection
+	/// and discloses no draft or restricted page; it can be sent to everyone, and has to be — a paginated
+	/// listing without a total cannot be paged through.
 	/// </remarks>
 	[HttpGet("pages")]
 	public async Task<IActionResult> ListAllPages(
@@ -84,23 +80,29 @@ public class WikiBrowseController(
 	{
 		var nsFilter = ParseOptionalNamespace(ns);
 		(skip, take) = ClampPage(skip, take);
-		var pages = await Wiki.GetAllPagesAsync(skip, take, nsFilter, Visibility);
-		Response.Headers["X-Total-Count"] =
-			(await Wiki.CountPagesAsync(nsFilter, CanSeeUnpublished)).ToString();
+		var visibility = await VisibilityAsync();
+		var pages = await Wiki.GetAllPagesAsync(skip, take, nsFilter, visibility);
+		Response.Headers["X-Total-Count"] = (await Wiki.CountPagesAsync(nsFilter, visibility)).ToString();
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
 	/// <summary>
 	/// GET /api/wiki/counts
-	/// Pages by state, counted from the store's indexes without reading a page. Drafts are counted only for
-	/// a caller who may see them, the same population <see cref="ListAllPages"/>' total counts; anyone else
-	/// gets published pages only (drafts zero, protected among published).
+	/// The pages the caller may see by state, the same population <see cref="ListAllPages"/>' total counts,
+	/// and how many pages carry requirements of their own.
 	/// </summary>
 	[HttpGet("counts")]
 	public async Task<IActionResult> GetCounts()
 	{
-		var counts = await Wiki.CountPagesByStateAsync(CanSeeUnpublished);
-		return Ok(new WikiPageCountsDto(counts.Total, counts.Published, counts.Drafts, counts.Protected));
+		var visibility = await VisibilityAsync();
+		var counts = await Wiki.CountPagesByStateAsync(visibility);
+		// Only pages this caller may see: counting a hidden draft's rule would tell them it exists.
+		var restricted = await (await Access.RequirementsAsync()).Sets
+			.Where(set => set.Target.Scope == WikiRuleScope.Page)
+			.ToAsyncEnumerable()
+			.CountAsync(async (set, _) => await Wiki.GetByIdAsync(set.Target.Key) is WikiPage page && visibility.Admits(page));
+
+		return Ok(new WikiPageCountsDto(counts.Total, counts.Published, counts.Drafts, restricted));
 	}
 
 	/// <summary>
@@ -113,7 +115,7 @@ public class WikiBrowseController(
 		string category, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
 		(skip, take) = ClampPage(skip, take);
-		var pages = await Wiki.GetByCategoryAsync(category, skip, take, Visibility);
+		var pages = await Wiki.GetByCategoryAsync(category, skip, take, await VisibilityAsync());
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
@@ -125,13 +127,13 @@ public class WikiBrowseController(
 	/// </summary>
 	[HttpGet("category-names")]
 	public async Task<IActionResult> GetCategoryNames([FromQuery] string? lang = null) =>
-		Ok(await Localization.GetCategoryNamesAsync(lang));
+		Ok(await Localization.GetCategoryNamesAsync(lang, await VisibilityAsync()));
 
 	/// <summary>
 	/// POST /api/wiki/exists
 	/// Batch existence check used by the client to mark redlinks at view time.
 	/// Returns a map of each requested ref to whether the page exists (and is
-	/// visible to the caller — drafts count as missing for anonymous callers).
+	/// visible to the caller — drafts and pages the caller may not read count as missing).
 	/// </summary>
 	[HttpPost("exists")]
 	[AllowAnonymous]
@@ -143,7 +145,7 @@ public class WikiBrowseController(
 		foreach (var reference in request.Refs.Distinct(StringComparer.Ordinal).Take(maxRefs))
 		{
 			var (ns, slug) = ParseRef(reference);
-			result[reference] = await Wiki.GetBySlugAsync(slug, ns) is WikiPage page && CanSee(page);
+			result[reference] = await Wiki.GetBySlugAsync(slug, ns) is WikiPage page && await CanSeeAsync(page);
 		}
 
 		return Ok(result);

@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>保护/取消保护页面、编辑受保护页面、批量操作，以及 wiki 管理面板。</value>
+    <value>设置并绕过命名空间、分类和页面的要求，保护和发布页面，批量操作，以及维基管理面板。</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>编辑、回滚和重新标记现有的（未受保护的）wiki 页面。</value>
+    <value>在页面要求允许的范围内编辑、回滚和重新分类维基页面。</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>查看未发布和草稿状态的 wiki 页面（已发布页面对所有人公开）。</value>
+    <value>阅读维基页面。命名空间、分类或页面可以有更多要求。</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>维基 · 草稿</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>阅读他人撰写的未发布维基页面。</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>安装</value>
@@ -4188,10 +4194,6 @@
     <value>保护</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>已保护</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>已发布</value>
     <comment>MT</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, other {此分类中有 # 个页面}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>受限</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>有权限要求</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>权限</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>每个命名空间、分类和页面在维基权限之外的要求。wiki.admin 不受这些限制。</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>本页面</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>来自 {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>命名空间 {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>分类 {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>此分类中的页面</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>除维基权限外无其他要求。</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>更改</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>权限名称，以空格分隔。每一项都是必需的。</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>权限已保存。</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>阅读</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>创建</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>删除</value>
   </data>
 </root>

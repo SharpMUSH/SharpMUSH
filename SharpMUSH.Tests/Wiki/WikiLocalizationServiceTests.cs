@@ -344,8 +344,8 @@ public class WikiLocalizationServiceTests
 		var page = (await storage.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "en", ["Lore", "Places of Note", "Harbour"])).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps", "#2", null, published: true, expectedRevisionNumber: null);
 
-		var french = await service.GetCategoryNamesAsync("fr");
-		var english = await service.GetCategoryNamesAsync("en");
+		var french = await service.GetCategoryNamesAsync("fr", WikiVisibility.PublishedOnly);
+		var english = await service.GetCategoryNamesAsync("en", WikiVisibility.PublishedOnly);
 
 		await Assert.That(french["lore"]).IsEqualTo("Légendes");
 		await Assert.That(french["places_of_note"]).IsEqualTo("Places of Note")

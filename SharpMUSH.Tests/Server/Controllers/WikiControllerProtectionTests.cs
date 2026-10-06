@@ -1,3 +1,4 @@
+using SharpMUSH.Tests.Wiki;
 using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,10 +23,10 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </summary>
 public class WikiControllerProtectionTests
 {
-	// Callers are identified by their granted permission scopes (the protected-page check authorizes
-	// on the wiki.admin claim, not on a role name).
+	// Callers are identified by their granted permission scopes. Every caller here holds wiki.edit, the
+	// global scope an edit needs, so what decides is the page requirement protection sets.
 	private static WikiEndpoints MakeEndpoints(WikiStoreService wiki, params string[] scopes) =>
-		WikiControllerTestHarness.Build(wiki, authenticated: true, "#42", scopes).Wiki;
+		WikiControllerTestHarness.Build(wiki, authenticated: true, "#42", [PortalPermission.WikiEdit, .. scopes]).Wiki;
 
 	private static async Task<(WikiStoreService Wiki, string Slug)> SeedProtectedPage(bool isProtected)
 	{
@@ -36,7 +37,7 @@ public class WikiControllerProtectionTests
 		}
 		if (isProtected)
 		{
-			await wiki.SetProtectionAsync(page.Id, true);
+			await wiki.ProtectAsync(page.Id);
 		}
 		return (wiki, page.Slug);
 	}

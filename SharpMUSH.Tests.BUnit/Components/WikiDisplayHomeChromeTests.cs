@@ -59,6 +59,8 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 			Locale = "en",
 			RequestedLocale = "en",
 			AvailableLocales = ["en"],
+			// What the server says this reader may do; the Edit button follows it.
+			Access = new SharpMUSH.Library.API.WikiAccessDto(Read: true, Edit: true, Delete: false, Manage: false),
 		};
 
 	private IRenderedComponent<WikiDisplay> RenderHome(bool embedded, string? image = null) =>

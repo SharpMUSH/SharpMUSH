@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Protejarea/deprotejarea, editarea paginilor protejate, operațiuni în masă și panoul de administrare wiki.</value>
+    <value>Stabilirea și ocolirea cerințelor pentru spații de nume, categorii și pagini, protejarea și publicarea paginilor, operații în lot și panoul de administrare wiki.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Editarea, revenirea și reetichetarea paginilor wiki existente (neprotejate).</value>
+    <value>Editarea, restaurarea și recategorisirea paginilor wiki, acolo unde cerințele lor permit.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Vizualizarea paginilor wiki nepublicate/ciornă (paginile publicate sunt publice pentru toată lumea).</value>
+    <value>Citirea paginilor wiki. Un spațiu de nume, o categorie sau o pagină poate cere mai mult.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Ciorne</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Citirea paginilor wiki nepublicate scrise de alții.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Instalare</value>
@@ -4188,10 +4194,6 @@
     <value>Protejare</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Protejată</value>
-    <comment>MT — assumed it describes a page (feminine); as a neutral status chip it would be "Protejat"</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Publicată</value>
     <comment>MT — assumed it describes a page (feminine)</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# pagină în această categorie} few {# pagini în această categorie} other {# de pagini în această categorie}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Restricționată</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>se aplică permisiuni</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Permisiuni</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Ce cere fiecare spațiu de nume, categorie și pagină în plus față de permisiunile wiki. wiki.admin nu este supus acestora.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Această pagină</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Din {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Spațiul de nume {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Categoria {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Pagini din această categorie</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Nimic în plus față de permisiunile wiki.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Modifică</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Nume de permisiuni separate prin spații. Fiecare este necesară.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Permisiuni salvate.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Citire</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Creare</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Editare</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Ștergere</value>
   </data>
 </root>

@@ -54,7 +54,7 @@ For each permission, the first of these that applies decides:
 
 Priority does not decide any of this, and it does not decide control. It only orders roles for management: you can manage only roles, objects and accounts below your own highest role.
 
-Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
+Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.drafts`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
 
 To take a permission away from one object, use an override (`@permission/deny`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
 
@@ -94,7 +94,7 @@ Being a wizard (`game.wizard`) is split into groups, so a custom role can hand o
 | `config.admin` | @config/set, @enable, @disable, @command, @function, @attribute and @power definitions, @hook |
 | `packages.admin` | @package |
 | `chat.admin` | Wizard channels (and Admin channels), channel privileges, @channel changes and nuking on channels you don't own, @wizwall, @wall, @rwall, the MOTDs and `wizmotd()`, @mail admin and stats, mail alias admin |
-| `wiki.admin` | protected wiki pages |
+| `wiki.admin` | wiki requirements (setting them, and skipping them), protecting and publishing pages; see [wiki permissions] |
 | `server.operate` | @shutdown, @dump, @dbck, @purge, @readcache, @backup, @storage, @log, @slave, @kick, @uptime details |
 
 Everything else a wizard does still needs `game.wizard`: wizard attributes, overrides in `examine` and `@destroy`, the preserve switches, @chownall and @chzoneall, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.

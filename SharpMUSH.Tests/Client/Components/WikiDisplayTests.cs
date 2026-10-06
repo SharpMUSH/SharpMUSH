@@ -136,7 +136,7 @@ public class WikiDisplayTests
 		await using var ctx = new BunitContext();
 		var authContext = ctx.AddAuthorization();
 		authContext.SetAuthorized("TestUser");
-		authContext.SetPolicies("wiki.edit"); // the Edit button is gated on wiki.edit
+		authContext.SetPolicies("wiki.edit");
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.Services.AddMudServices();
 		ctx.Services.AddLocalization();
@@ -150,7 +150,11 @@ public class WikiDisplayTests
 		ctx.Services.AddSingleton(sp => new WikiService(
 			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
 
-		var article = new WikiArticle("Test Article", "Content", null);
+		// The Edit button follows what the server said this reader may do with the page.
+		var article = new WikiArticle("Test Article", "Content", null)
+		{
+			Access = new SharpMUSH.Library.API.WikiAccessDto(Read: true, Edit: true, Delete: false, Manage: false),
+		};
 
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "test-article")

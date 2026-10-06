@@ -64,7 +64,8 @@ public interface IWikiLocalizationService
 	/// category's published page in the category namespace, from its published translation where there is
 	/// one. Categories belong to a page, not to a translation, so only their names are translated. A category
 	/// with no page is absent; <see cref="WikiHelpers.CategoryLabel(string, IReadOnlyDictionary{string, string}?)"/>
-	/// falls back to the key for it.
+	/// falls back to the key for it. A category page <paramref name="visibility"/> hides (a read requirement)
+	/// is absent too, so its title does not reach a reader who may not open it.
 	/// </summary>
-	Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale);
+	Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale, WikiVisibility visibility);
 }

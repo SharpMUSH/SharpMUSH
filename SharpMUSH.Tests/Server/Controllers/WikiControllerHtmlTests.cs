@@ -36,7 +36,6 @@ public class WikiControllerHtmlTests
 					LastEditorDbref: "#1",
 					CreatedAt: DateTimeOffset.UtcNow,
 					UpdatedAt: DateTimeOffset.UtcNow,
-					IsProtected: false,
 					RevisionNumber: 1)
 			{
 				SourceLocale = "en",

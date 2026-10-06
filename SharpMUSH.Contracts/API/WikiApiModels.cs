@@ -11,6 +11,8 @@ namespace SharpMUSH.Library.API;
 /// into the WASM bundle. Mapping from <c>WikiPage</c> lives on the server side of the boundary.
 /// </remarks>
 /// <param name="MarkdownSource">The page body, so the editor can round-trip an edit without a second fetch.</param>
+/// <param name="IsRestricted">Some requirement applies to the page: its own (<c>@wiki/require</c>, or protection), or
+/// one its namespace or a category puts on reading, editing or deleting it.</param>
 public record WikiPageDto(
 	string Id,
 	string Slug,
@@ -21,11 +23,17 @@ public record WikiPageDto(
 	string PlainText,
 	DateTimeOffset CreatedAt,
 	DateTimeOffset UpdatedAt,
-	bool IsProtected,
+	bool IsRestricted,
 	int RevisionNumber,
 	IReadOnlyList<string>? Categories,
 	bool Published)
 {
+	/// <summary>
+	/// What the reader may do with the page, so a client shows only the buttons that will work. Null on a
+	/// payload that predates it, which a client reads as "nothing".
+	/// </summary>
+	public WikiAccessDto? Access { get; init; }
+
 	/// <summary>
 	/// The categories the page is in, as keys. The page holds the list; its text does not set it.
 	/// Declared nullable on the constructor and normalised here so that a payload without the array
@@ -61,6 +69,7 @@ public record WikiPageDto(
 /// without its body. A listing renders link rows and metadata columns, so the Markdown, HTML and plain
 /// text stay on the server; the banner image, the one thing a row takes from the body, is found there.
 /// </summary>
+/// <param name="IsRestricted">The page carries requirements of its own.</param>
 /// <param name="Locale">The locale the row's title came from.</param>
 /// <param name="IsFallback">True when the title is a fallback rather than the requested language.</param>
 /// <param name="Image">The first image in the page, or null.</param>
@@ -71,7 +80,7 @@ public record WikiPageSummaryDto(
 	string Title,
 	string Namespace,
 	DateTimeOffset UpdatedAt,
-	bool IsProtected,
+	bool IsRestricted,
 	int RevisionNumber,
 	IReadOnlyList<string>? Categories,
 	bool Published,
@@ -88,11 +97,11 @@ public record WikiPageSummaryDto(
 }
 
 /// <summary>
-/// <c>GET /api/wiki/counts</c>: pages by state, counted from the store's indexes. A caller who may not see
-/// drafts is told only about published pages, so <see cref="Drafts"/> is zero and <see cref="Total"/>
-/// equals <see cref="Published"/> for them.
+/// <c>GET /api/wiki/counts</c>: the pages the caller may see, by state. A caller who may not see drafts is
+/// told only about published pages and their own drafts. <see cref="Restricted"/> is how many pages carry
+/// requirements of their own.
 /// </summary>
-public record WikiPageCountsDto(int Total, int Published, int Drafts, int Protected);
+public record WikiPageCountsDto(int Total, int Published, int Drafts, int Restricted);
 
 /// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
 public record WikiTranslationSummaryDto(
@@ -132,7 +141,10 @@ public record CreatePageRequest(string Title, string Markdown, string? Namespace
 /// <summary>Request body for updating an existing wiki page.</summary>
 public record UpdatePageRequest(string Markdown, string? EditSummary);
 
-/// <summary>Request body for setting page protection.</summary>
+/// <summary>
+/// Request body for protecting a page: a page requirement of <c>wiki.admin</c> to edit and delete it
+/// (true), or none (false).
+/// </summary>
 public record SetProtectionRequest(bool IsProtected);
 
 /// <summary>Request body for rolling a page back to an earlier revision.</summary>
@@ -161,3 +173,38 @@ public record WikiBatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<str
 
 /// <summary>Request body for evicting pre-render cache entries after an edit.</summary>
 public record InvalidateCacheRequest(string? Path, string? Prefix);
+
+/// <summary>What the reader may do with one page. <paramref name="Manage"/> is protecting, publishing and
+/// setting requirements: the <c>wiki.admin</c> permission.</summary>
+public record WikiAccessDto(bool Read, bool Edit, bool Delete, bool Manage);
+
+/// <summary>
+/// What a namespace, category or page requires: <paramref name="Required"/> maps an action (<c>read</c>,
+/// <c>create</c>, <c>edit</c>, <c>delete</c>) to the permissions it needs, every one of them.
+/// </summary>
+/// <param name="Scope"><c>namespace</c>, <c>category</c> or <c>page</c>.</param>
+/// <param name="Key">The namespace name, the category key, or the page id.</param>
+/// <param name="Label">What a reader calls the target: the namespace, the category, or the page title.</param>
+public record WikiRequirementSetDto(
+	string Scope,
+	string Key,
+	string Label,
+	IReadOnlyDictionary<string, IReadOnlyList<string>> Required,
+	string? UpdatedBy,
+	DateTimeOffset? UpdatedAt);
+
+/// <summary>
+/// <c>GET /api/wiki/{slug}/requirements</c>: what the page requires itself and what its namespace and
+/// categories require of it. All of them apply.
+/// </summary>
+public record WikiPageRequirementsDto(WikiRequirementSetDto Page, IReadOnlyList<WikiRequirementSetDto> Inherited);
+
+/// <summary>
+/// Request body for <c>PUT /api/wiki/requirements/{scope}/{key}</c>: the actions named are replaced, an
+/// action with an empty list requires nothing again, and actions left out keep what they had.
+/// </summary>
+public record SetRequirementsRequest(IReadOnlyDictionary<string, IReadOnlyList<string>> Required);
+
+/// <summary>One action's answer for <c>GET /api/wiki/{slug}/access</c>: whether it is allowed, and why.</summary>
+public record WikiAccessExplanationDto(string Action, bool Allowed, string Reason);
+

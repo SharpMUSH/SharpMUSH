@@ -24,7 +24,7 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 		string Title,
 		string Namespace,
 		string MarkdownSource,
-		bool IsProtected,
+		bool IsRestricted,
 		int RevisionNumber,
 		List<string>? Categories,
 		bool Published);
@@ -200,7 +200,7 @@ public class WikiAdminApiTests(ServerWebAppFactory factory)
 
 		var fetched = await http.GetFromJsonAsync<WikiPageDto>(
 			$"api/wiki/ns/main/{Uri.EscapeDataString(first.Slug)}");
-		await Assert.That(fetched!.IsProtected).IsTrue();
+		await Assert.That(fetched!.IsRestricted).IsTrue();
 	}
 
 	[Test]

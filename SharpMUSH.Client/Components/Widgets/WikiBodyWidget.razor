@@ -173,14 +173,14 @@
         </a>
         @if (_mode == WikiView.WikiMode.View && _article is not null)
         {
-            <AuthorizeView Policy="@_article.EditPolicy">
-                <Authorized>
-                    <button type="button" class="wiki-body-history wiki-body-edit" @onclick="EditAsync">
-                        <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
-                        <span>@Loc["WikiEdit"]</span>
-                    </button>
-                </Authorized>
-            </AuthorizeView>
+            @* The server decides, with the page's namespace, category and page requirements in hand. *@
+            @if (_article.Access?.Edit == true)
+            {
+                <button type="button" class="wiki-body-history wiki-body-edit" @onclick="EditAsync">
+                    <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
+                    <span>@Loc["WikiEdit"]</span>
+                </button>
+            }
         }
     };
 

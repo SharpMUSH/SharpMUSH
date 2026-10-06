@@ -80,8 +80,8 @@ public static class Tables
 	public static readonly TableDef WikiRecent = TableDef.Index("wiki.recent");
 	public static readonly TableDef WikiByNamespace = TableDef.Index("wiki.ns");
 	public static readonly TableDef WikiByCategory = TableDef.Index("wiki.cat");
-	/// <summary>Page key → visibility, for protected pages only, so the protected count reads no page row.</summary>
-	public static readonly TableDef WikiProtected = TableDef.Index("wiki.protected");
+	/// <summary>What a namespace, category or page requires, keyed by (scope, key). See <c>LightningDatabase.WikiRequirements.cs</c>.</summary>
+	public static readonly TableDef WikiRequirement = TableDef.Node("wiki.req");
 	public static readonly TableDef Layout = TableDef.Node("layout");
 	public static readonly TableDef App = TableDef.Node("app");
 	public static readonly TableDef Role = TableDef.Node("role");

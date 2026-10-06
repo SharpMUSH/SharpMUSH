@@ -15,8 +15,8 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
-/// One locale's view of a page. A translation is an edit to the page, so writes here are gated on
-/// the page-edit scope and on the source page's <c>IsProtected</c>, exactly as an edit is.
+/// One locale's view of a page. A translation is an edit to the page, so writes here are gated as
+/// edits to the page (<see cref="IWikiAccessService"/>).
 ///
 /// Routes:
 ///   GET    /api/wiki/{slug}/translations           — locales this reader may read the page in
@@ -28,9 +28,10 @@ namespace SharpMUSH.Server.Controllers;
 public class WikiTranslationsController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiAccessService access,
 	IPrerenderCacheService prerenderCache,
 	IWikiNameResolver names,
-	ILogger<WikiTranslationsController> logger) : WikiControllerBase(wikiService, localization, names, logger)
+	ILogger<WikiTranslationsController> logger) : WikiControllerBase(wikiService, localization, access, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/{slug}/translations?ns=
@@ -41,17 +42,17 @@ public class WikiTranslationsController(
 	public async Task<IActionResult> GetTranslations(
 		string slug, [FromQuery] string? ns = null)
 	{
-		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !await CanSeeAsync(page))
 			return NotFound();
 
-		var summaries = await Localization.GetVisibleTranslationsAsync(page.Id, IncludeDrafts);
+		var summaries = await Localization.GetVisibleTranslationsAsync(page.Id, await IncludeDraftsAsync());
 		return Ok(summaries.Select(ToDto));
 	}
 
 	/// <summary>
 	/// PUT /api/wiki/{slug}/translations/{locale}?ns=
-	/// Creates or updates one locale's translation. Gated on the page-edit scope and on the source page's
-	/// <c>IsProtected</c>, exactly as <see cref="UpdatePage"/> is: a translation is an edit to the page.
+	/// Creates or updates one locale's translation. Gated as an edit to the page, which a
+	/// translation is.
 	/// </summary>
 	[HttpPut("{slug}/translations/{locale}")]
 	[Authorize(Policy = PortalPermission.WikiEdit)]
@@ -66,8 +67,8 @@ public class WikiTranslationsController(
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
-		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
-			return Forbid();
+		if (await RefusalAsync(page, WikiAction.Edit) is { } refusal)
+			return refusal;
 
 		var result = await Wiki.UpsertTranslationAsync(
 			page.Id, locale, request.Title, request.Markdown,
@@ -127,8 +128,8 @@ public class WikiTranslationsController(
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page)
 			return NotFound();
 
-		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
-			return Forbid();
+		if (await RefusalAsync(page, WikiAction.Edit) is { } refusal)
+			return refusal;
 
 		if (await Wiki.DeleteTranslationAsync(page.Id, locale, editorDbref) is not None)
 			return NotFound();

@@ -41,14 +41,17 @@ public class WikiArticle
 	/// <summary>The categories the page is in, as keys. Set in the editor and saved as page metadata, not text.</summary>
 	public List<string> Categories { get; set; } = [];
 
-	/// <summary>When true, only <c>wiki.admin</c> may edit the page; the server refuses anyone else's save.</summary>
-	public bool IsProtected { get; set; }
-
-	/// <summary>The policy that may edit this page: <c>wiki.admin</c> when it is protected, <c>wiki.edit</c> otherwise.</summary>
-	public string EditPolicy => IsProtected ? "wiki.admin" : "wiki.edit";
-
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;
+
+	/// <summary>When true, some requirement applies to the page, its own or one its namespace or a category sets.</summary>
+	public bool IsRestricted { get; set; }
+
+	/// <summary>
+	/// What the reader may do with the page, as the server decided it: the page's namespace, categories and
+	/// own requirements included. Null for a page not saved yet.
+	/// </summary>
+	public SharpMUSH.Library.API.WikiAccessDto? Access { get; set; }
 
 	/// <summary>The locale whose content this article actually carries.</summary>
 	public string Locale { get; set; } = string.Empty;

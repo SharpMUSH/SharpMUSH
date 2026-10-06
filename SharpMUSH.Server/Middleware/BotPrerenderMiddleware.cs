@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -55,6 +56,23 @@ public sealed class BotPrerenderMiddleware(
 		var normalizedLang = WikiHelpers.NormalizeLocaleOrEmpty(requestedLang);
 		var cacheKey = normalizedLang.Length == 0 ? path : $"{path}#{normalizedLang}";
 
+		// W-4: Resolve IWikiService inside a per-request scope to avoid captive
+		// dependency if IWikiService is registered as Scoped.
+		await using var scope = scopeFactory.CreateAsyncScope();
+		var wikiService = scope.ServiceProvider.GetRequiredService<IWikiService>();
+		var localization = scope.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
+
+		// A prerender is anonymous, bot-facing output: it serves what a logged-out reader may see, so neither a
+		// draft nor a page whose read requirements the everyone role does not meet reaches a crawler. The check
+		// runs before the cache is read: a requirement or a role can change from places that do not clear the
+		// cache (@wiki/require, @role), and a page closed since it was cached must stop being served at once.
+		var page = await AnonymousPageAsync(scope.ServiceProvider, wikiService, path, context.RequestAborted);
+		if (page is null && IsWikiPath(path))
+		{
+			await next(context);
+			return;
+		}
+
 		var cached = prerenderCache.Get(cacheKey);
 		if (cached is not null)
 		{
@@ -63,48 +81,23 @@ public sealed class BotPrerenderMiddleware(
 			return;
 		}
 
-		// W-4: Resolve IWikiService inside a per-request scope to avoid captive
-		// dependency if IWikiService is registered as Scoped.
-		await using var scope = scopeFactory.CreateAsyncScope();
-		var wikiService = scope.ServiceProvider.GetRequiredService<IWikiService>();
-		var localization = scope.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
-
 		string? html = null;
 
-		if (path.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase))
+		if (page is not null && path.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase))
 		{
-			var segments = path["/wiki/".Length..].Trim('/').Split('/');
-			if (segments.Length == 2)
-			{
-				var ns = ParseNamespace(segments[0]);
-				var slug = segments[1];
-				// Published gate: a prerender is anonymous, bot-facing output, so a draft page must not
-				// be reachable by any crawler that asks for it.
-				if (await wikiService.GetBySlugAsync(slug, ns) is WikiPage { Published: true } page)
-				{
-					html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(
-						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
-						$"{canonicalBase}{WikiRoutes.WikiPathFor(page.Namespace, page.Slug)}",
-						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
-						localization.DefaultLocale);
-				}
-			}
+			html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(
+				await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
+				$"{canonicalBase}{WikiRoutes.WikiPathFor(page.Namespace, page.Slug)}",
+				await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
+				localization.DefaultLocale);
 		}
-		else if (path.StartsWith("/character/", StringComparison.OrdinalIgnoreCase))
+		else if (page is not null)
 		{
-			var name = path["/character/".Length..].Trim('/');
-			if (!string.IsNullOrEmpty(name))
-			{
-				if (await wikiService.GetBySlugAsync(name, WikiNamespace.Character)
-					is WikiPage { Published: true } page)
-				{
-					html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(
-						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
-						$"{canonicalBase}/character/{name}",
-						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
-						localization.DefaultLocale);
-				}
-			}
+			html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(
+				await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
+				$"{canonicalBase}/character/{path["/character/".Length..].Trim('/')}",
+				await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
+				localization.DefaultLocale);
 		}
 		else if (path.StartsWith("/help/", StringComparison.OrdinalIgnoreCase))
 		{
@@ -137,6 +130,35 @@ public sealed class BotPrerenderMiddleware(
 		}
 
 		await next(context);
+	}
+
+	private static bool IsWikiPath(string path)
+		=> path.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase)
+			|| path.StartsWith("/character/", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// The published page a <c>/wiki/{ns}/{slug}</c> or <c>/character/{name}</c> path names, when an anonymous
+	/// reader may see it; null for any other path, a missing page, a draft, or a page closed to them.
+	/// </summary>
+	private static async Task<WikiPage?> AnonymousPageAsync(IServiceProvider services, IWikiService wikiService, string path,
+		CancellationToken ct)
+	{
+		Found<WikiPage> found = new NotFound();
+		if (path.StartsWith("/wiki/", StringComparison.OrdinalIgnoreCase))
+		{
+			var segments = path["/wiki/".Length..].Trim('/').Split('/');
+			if (segments.Length == 2) found = await wikiService.GetBySlugAsync(segments[1], ParseNamespace(segments[0]));
+		}
+		else if (path.StartsWith("/character/", StringComparison.OrdinalIgnoreCase))
+		{
+			var name = path["/character/".Length..].Trim('/');
+			if (!string.IsNullOrEmpty(name)) found = await wikiService.GetBySlugAsync(name, WikiNamespace.Character);
+		}
+
+		if (found is not WikiPage { Published: true } page) return null;
+
+		var access = services.GetRequiredService<IWikiAccessService>();
+		return await access.CanSeeAsync(await access.AnonymousAsync(ct), page) ? page : null;
 	}
 
 	private static WikiNamespace ParseNamespace(string? ns) =>

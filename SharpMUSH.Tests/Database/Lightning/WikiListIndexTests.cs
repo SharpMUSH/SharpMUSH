@@ -26,14 +26,23 @@ public class WikiListIndexTests : LightningDatabaseFixture
 	[
 		WikiVisibility.All,
 		WikiVisibility.PublishedOnly,
-		new(IncludeDrafts: false, AuthorDbref: "#42")
+		new(IncludeDrafts: false, AuthorDbref: "#42"),
+		// A reader the help namespace and the rules category are closed to: the listings read each candidate
+		// row, and paging must still count only what is shown.
+		new(IncludeDrafts: true)
+		{
+			Hidden = new WikiReadRestrictions(false,
+				new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "help" },
+				new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "rules" },
+				new HashSet<string>())
+		}
 	];
 
 	private async Task<string> Add(string ns, string slug, string title, string[] categories, bool published,
 		string author = "#1", int minutes = 0)
 	{
 		var at = T0.AddMinutes(minutes);
-		var page = new WikiPage("", slug, title, ns, "md " + slug, "<p>" + slug + "</p>", slug, author, author, at, at, false, 1)
+		var page = new WikiPage("", slug, title, ns, "md " + slug, "<p>" + slug + "</p>", slug, author, author, at, at, 1)
 		{
 			Categories = categories,
 			Published = published
@@ -73,7 +82,7 @@ public class WikiListIndexTests : LightningDatabaseFixture
 	private static class Reference
 	{
 		private static IEnumerable<WikiPage> Visible(IEnumerable<WikiPage> all, WikiVisibility v)
-			=> all.Where(p => v.Admits(p.Published, p.AuthorDbref));
+			=> all.Where(v.Admits);
 
 		public static IEnumerable<string> Recent(IEnumerable<WikiPage> all, int count, WikiVisibility v)
 			=> Visible(all, v).OrderByDescending(p => p.UpdatedAt).ThenByDescending(PageKey).Take(count).Select(p => p.Id);
@@ -85,8 +94,8 @@ public class WikiListIndexTests : LightningDatabaseFixture
 				.ThenBy(p => p.Slug, StringComparer.Ordinal)
 				.Skip(skip).Take(take).Select(p => p.Id);
 
-		public static int Count(IEnumerable<WikiPage> all, string? ns, bool includeDrafts)
-			=> all.Count(p => (ns is null || p.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase)) && (includeDrafts || p.Published));
+		public static int Count(IEnumerable<WikiPage> all, string? ns, WikiVisibility v)
+			=> Visible(all, v).Count(p => ns is null || p.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase));
 
 		public static IEnumerable<string> Category(IEnumerable<WikiPage> all, string category, int skip, int take, WikiVisibility v)
 			=> Visible(all, v)
@@ -127,9 +136,9 @@ public class WikiListIndexTests : LightningDatabaseFixture
 
 		foreach (var ns in new string?[] { null, "main", "help", "nowhere" })
 		{
-			foreach (var drafts in new[] { true, false })
+			foreach (var v in Visibilities)
 			{
-				await Assert.That(await Wiki.CountPagesAsync(ns, drafts)).IsEqualTo(Reference.Count(all, ns, drafts));
+				await Assert.That(await Wiki.CountPagesAsync(ns, v)).IsEqualTo(Reference.Count(all, ns, v));
 			}
 		}
 	}
@@ -156,7 +165,7 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		await Wiki.UpdatePageBodyAsync(ids[3], new WikiBody("moved", "<p>moved</p>", "moved"), "#1", null, T0.AddMinutes(31));
 		await Wiki.SetPageMetadataAsync(ids[3], ["lore", "y", "z"], published: false);
 		await Wiki.SetPageMetadataAsync(ids[2], ["lore"], published: true);
-		await Wiki.SetPageProtectionAsync(ids[4], true);
+		await Wiki.SetRequirementsAsync(new WikiRequirementSet(WikiRuleTarget.ForPage(ids[4]), WikiRequirementSet.Protection, "#1", T0));
 		await Wiki.DeletePageAsync(ids[6]);
 		await AssertListingsMatchReference();
 
@@ -184,7 +193,7 @@ public class WikiListIndexTests : LightningDatabaseFixture
 		// Newest published: three pages tie on the timestamp and the newest-created of them wins.
 		await Assert.That((await Wiki.GetRecentPagesAsync(1, WikiVisibility.PublishedOnly)).Single().Id).IsEqualTo(ids[6]);
 		await Assert.That((await Wiki.GetPagesAsync("MAIN", 0, 1, WikiVisibility.All)).Single().Id).IsEqualTo(ids[7]);
-		await Assert.That(await Wiki.CountPagesAsync(null, includeDrafts: true)).IsEqualTo(10);
+		await Assert.That(await Wiki.CountPagesAsync(null, WikiVisibility.All)).IsEqualTo(10);
 	}
 
 	/// <summary>A row written before the published flag existed is listed as published once the index is built.</summary>
@@ -208,56 +217,38 @@ public class WikiListIndexTests : LightningDatabaseFixture
 	}
 
 	/// <summary>The counts by state as defined over decoded page rows.</summary>
-	private async Task<WikiPageCounts> ReferenceCounts(bool includeDrafts)
+	private async Task<WikiPageCounts> ReferenceCounts(WikiVisibility visibility)
 	{
-		var counted = (await AllPages()).Where(p => includeDrafts || p.Published).ToList();
-		return new WikiPageCounts(counted.Count(p => p.Published), counted.Count(p => !p.Published), counted.Count(p => p.IsProtected));
+		var counted = (await AllPages()).Where(visibility.Admits).ToList();
+		return new WikiPageCounts(counted.Count(p => p.Published), counted.Count(p => !p.Published));
 	}
 
 	/// <summary>
-	/// The counts by state follow protection, publication and deletion, and are read from the indexes alone:
-	/// once they are taken as the reference, every page row is made unreadable and the counts still answer.
+	/// The counts by state follow publication and deletion, and without read restrictions are read from the
+	/// indexes alone: once they are taken as the reference, every page row is made unreadable and the counts
+	/// still answer.
 	/// </summary>
 	[Test]
 	public async Task CountsByStateFollowWritesWithoutReadingPageRows()
 	{
 		var ids = await Seed();
-		await Wiki.SetPageProtectionAsync(ids[0], true);
-		await Wiki.SetPageProtectionAsync(ids[2], true);
-		await Wiki.SetPageProtectionAsync(ids[3], true);
-		await Wiki.SetPageProtectionAsync(ids[3], false);
-		await Wiki.SetPageProtectionAsync(ids[5], true);
 		await Wiki.SetPageMetadataAsync(ids[5], ["lore"], published: true);
 		await Wiki.DeletePageAsync(ids[0]);
 
-		var all = await ReferenceCounts(includeDrafts: true);
-		var published = await ReferenceCounts(includeDrafts: false);
-		await Assert.That(all).IsEqualTo(new WikiPageCounts(Published: 7, Drafts: 2, Protected: 2));
-		await Assert.That(published).IsEqualTo(new WikiPageCounts(Published: 7, Drafts: 0, Protected: 1));
+		var all = await ReferenceCounts(WikiVisibility.All);
+		var published = await ReferenceCounts(WikiVisibility.PublishedOnly);
+		var restricted = await ReferenceCounts(Visibilities[^1]);
+		await Assert.That(all).IsEqualTo(new WikiPageCounts(Published: 7, Drafts: 2));
+		await Assert.That(published).IsEqualTo(new WikiPageCounts(Published: 7, Drafts: 0));
+		await Assert.That(await Wiki.CountPagesByStateAsync(Visibilities[^1])).IsEqualTo(restricted);
 
 		await Db.Store.WriteAsync(tx =>
 		{
 			foreach (var key in tx.Range(Tables.WikiPage, []).Select(e => e.Key).ToList()) tx.Put(Tables.WikiPage, key, "not json"u8);
 		});
 
-		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: true)).IsEqualTo(all);
-		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: false)).IsEqualTo(published);
-	}
-
-	/// <summary>A world written before the protected-page index gets it built from its page rows.</summary>
-	[Test]
-	public async Task MigrationBuildsTheProtectedIndex()
-	{
-		var ids = await Seed();
-		await Wiki.SetPageProtectionAsync(ids[1], true);
-		await Wiki.SetPageProtectionAsync(ids[2], true);
-		await ForgetIndexAsync(LightningDatabase.WikiProtectedIndexMigrationId, Tables.WikiProtected);
-		await Assert.That((await Wiki.CountPagesByStateAsync(includeDrafts: true)).Protected).IsEqualTo(0);
-
-		await Db.Migrate();
-
-		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: true)).IsEqualTo(await ReferenceCounts(includeDrafts: true));
-		await Assert.That(await Wiki.CountPagesByStateAsync(includeDrafts: false)).IsEqualTo(await ReferenceCounts(includeDrafts: false));
+		await Assert.That(await Wiki.CountPagesByStateAsync(WikiVisibility.All)).IsEqualTo(all);
+		await Assert.That(await Wiki.CountPagesByStateAsync(WikiVisibility.PublishedOnly)).IsEqualTo(published);
 	}
 
 	[Test]

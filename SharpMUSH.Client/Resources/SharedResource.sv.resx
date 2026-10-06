@@ -1080,7 +1080,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiAdminDesc" xml:space="preserve">
-    <value>Skydda och ta bort skydd, redigera skyddade sidor, satsvisa åtgärder och wikins administrationspanel.</value>
+    <value>Ange och kringgå krav för namnrymder, kategorier och sidor, skydda och publicera sidor, massåtgärder och wikins adminpanel.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiCreate" xml:space="preserve">
@@ -1104,7 +1104,7 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiEditDesc" xml:space="preserve">
-    <value>Redigera, återställa och tagga om befintliga (oskyddade) wikisidor.</value>
+    <value>Redigera, återställa och omkategorisera wikisidor där deras krav tillåter det.</value>
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiRead" xml:space="preserve">
@@ -1112,8 +1112,14 @@
     <comment>MT</comment>
   </data>
   <data name="EnumPermWikiReadDesc" xml:space="preserve">
-    <value>Visa opublicerade wikisidor och utkast (publicerade sidor är offentliga för alla).</value>
+    <value>Läsa wikisidor. En namnrymd, kategori eller sida kan kräva mer.</value>
     <comment>MT</comment>
+  </data>
+  <data name="EnumPermWikiDrafts" xml:space="preserve">
+    <value>Wiki · Utkast</value>
+  </data>
+  <data name="EnumPermWikiDraftsDesc" xml:space="preserve">
+    <value>Läsa opublicerade wikisidor skrivna av andra.</value>
   </data>
   <data name="EnumRevisionKindInstall" xml:space="preserve">
     <value>Installation</value>
@@ -4188,10 +4194,6 @@
     <value>Skydda</value>
     <comment>MT</comment>
   </data>
-  <data name="WikiProtected" xml:space="preserve">
-    <value>Skyddad</value>
-    <comment>MT</comment>
-  </data>
   <data name="WikiPublished" xml:space="preserve">
     <value>Publicerad</value>
     <comment>MT</comment>
@@ -5483,5 +5485,56 @@
   </data>
   <data name="NavWikiCategoryPages" xml:space="preserve">
     <value>{count, plural, one {# sida i den här kategorin} other {# sidor i den här kategorin}}</value>
+  </data>
+  <data name="WikiRestricted" xml:space="preserve">
+    <value>Begränsad</value>
+  </data>
+  <data name="WikiRestrictedNote" xml:space="preserve">
+    <value>behörigheter gäller</value>
+  </data>
+  <data name="WikiRequirementsTitle" xml:space="preserve">
+    <value>Behörigheter</value>
+  </data>
+  <data name="WikiRequirementsAdminSub" xml:space="preserve">
+    <value>Vad varje namnrymd, kategori och sida kräver utöver wikibehörigheterna. wiki.admin är undantagen.</value>
+  </data>
+  <data name="WikiRequirementsThisPage" xml:space="preserve">
+    <value>Den här sidan</value>
+  </data>
+  <data name="WikiRequirementsFrom" xml:space="preserve">
+    <value>Från {0}</value>
+  </data>
+  <data name="WikiRequirementsNamespace" xml:space="preserve">
+    <value>Namnrymd {0}</value>
+  </data>
+  <data name="WikiRequirementsCategory" xml:space="preserve">
+    <value>Kategori {0}</value>
+  </data>
+  <data name="WikiRequirementsCategoryMembers" xml:space="preserve">
+    <value>Sidor i den här kategorin</value>
+  </data>
+  <data name="WikiRequirementsNone" xml:space="preserve">
+    <value>Inget utöver wikibehörigheterna.</value>
+  </data>
+  <data name="WikiRequirementsChange" xml:space="preserve">
+    <value>Ändra</value>
+  </data>
+  <data name="WikiRequirementsHelp" xml:space="preserve">
+    <value>Behörighetsnamn åtskilda med mellanslag. Alla krävs.</value>
+  </data>
+  <data name="WikiRequirementsSaved" xml:space="preserve">
+    <value>Behörigheter sparade.</value>
+  </data>
+  <data name="WikiActionRead" xml:space="preserve">
+    <value>Läsa</value>
+  </data>
+  <data name="WikiActionCreate" xml:space="preserve">
+    <value>Skapa</value>
+  </data>
+  <data name="WikiActionEdit" xml:space="preserve">
+    <value>Redigera</value>
+  </data>
+  <data name="WikiActionDelete" xml:space="preserve">
+    <value>Ta bort</value>
   </data>
 </root>

@@ -18,8 +18,8 @@ public record WikiPageSummary(
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; init; } = true;
 
-	/// <summary>When true, only Wizard-level users may edit the page.</summary>
-	public bool IsProtected { get; init; }
+	/// <summary>When true, the page carries permission requirements of its own.</summary>
+	public bool IsRestricted { get; init; }
 
 	/// <summary>The locale this row's title came from.</summary>
 	public string Locale { get; init; } = string.Empty;

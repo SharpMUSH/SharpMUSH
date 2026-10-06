@@ -15,7 +15,6 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// <param name="LastEditorDbref">DBRef string of the player who last edited this page.</param>
 /// <param name="CreatedAt">UTC timestamp of page creation.</param>
 /// <param name="UpdatedAt">UTC timestamp of the last edit.</param>
-/// <param name="IsProtected">When true, only Royalty+ (admin) users may edit this page.</param>
 /// <param name="RevisionNumber">Monotonically increasing revision counter, starting at 1.</param>
 public record WikiPage(
 	string Id,
@@ -29,7 +28,6 @@ public record WikiPage(
 	string LastEditorDbref,
 	DateTimeOffset CreatedAt,
 	DateTimeOffset UpdatedAt,
-	bool IsProtected,
 	int RevisionNumber)
 {
 	// Metadata fields are init-only properties (not positional parameters) so that

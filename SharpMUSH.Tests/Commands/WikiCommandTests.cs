@@ -1,8 +1,10 @@
+using SharpMUSH.Tests.Wiki;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -184,7 +186,7 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/protect mortal_page"));
-		await ExpectNotify(player.DbRef, "wizard-only");
+		await ExpectNotify(player.DbRef, "needs the wiki.admin permission");
 	}
 
 	[Test]
@@ -203,7 +205,7 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/edit locked_page=replacement content"));
-		await ExpectNotify(player.DbRef, "protected. Only wizards may edit it");
+		await ExpectNotify(player.DbRef, "You can't edit 'Locked Page': the page requires wiki.admin");
 	}
 
 	[Test]
@@ -420,7 +422,7 @@ public class WikiCommandTests
 			"Draft Locale Page", "en visible body", "Brouillon", "corps brouillon secret", published: false);
 
 		var page = (await WikiService.GetBySlugAsync(slug, WikiNamespace.Main)).Expect<WikiPage>();
-		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+		await WikiService.ProtectAsync(page.Id);
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view {slug}"));
@@ -1050,12 +1052,12 @@ public class WikiCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorMortal");
 		var page = await SeedSourcePageAsync("Protected Dragons", "en protected body");
-		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+		await WikiService.ProtectAsync(page.Id);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps interdit"));
 
-		await ExpectNotify(player.DbRef, $"'{page.Title}' is protected");
+		await ExpectNotify(player.DbRef, $"You can't edit '{page.Title}': the page requires wiki.admin");
 
 		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
 		await Assert.That(fr.Value).IsTypeOf<NotFound>();
@@ -1069,7 +1071,7 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorWiz");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedSourcePageAsync("Wizard Protected Dragons", "en wiz protected body");
-		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
+		await WikiService.ProtectAsync(page.Id);
 
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps autorise"));
@@ -1266,4 +1268,88 @@ public class WikiCommandTests
 	/// </summary>
 	private static bool RendersToContain(SharpMessage msg, MarkupFormat format, string contains) =>
 		msg is MString markup && markup.Render(format).Contains(contains);
+
+	private async Task<string> AsPlayerAsync(SharpMUSH.Library.Models.DBRef player, string code)
+		=> (await WebAppFactoryArg.FunctionParserFor(player).FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+
+	/// <summary>A page filed in a category of its own, created and filed by <paramref name="player"/>.</summary>
+	private async Task<(string Title, string Slug, string Category)> FiledPageAsync(TestIsolationHelpers.TestPlayer player, string prefix)
+	{
+		var title = TestIsolationHelpers.GenerateUniqueName(prefix);
+		var category = WikiHelpers.CategoryKey(TestIsolationHelpers.GenerateUniqueName(prefix + "Cat"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/create {title}=body"));
+		var page = (await WikiService.GetBySlugAsync(WikiHelpers.Slugify(title))).Expect<WikiPage>();
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/category {page.Slug}={category}"));
+		return (title, page.Slug, category);
+	}
+
+	[Test]
+	public async ValueTask WikiRequire_CategoryRequirementClosesEditsToPlayersWithoutIt()
+	{
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRequired");
+		var (title, slug, category) = await FiledPageAsync(player, "Gated");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/require category {category}=edit media.admin"));
+		await ExpectNotify(god, $"WIKI: Category {category} now requires:");
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/edit {slug}=changed"));
+		await ExpectNotify(player.DbRef, $"You can't edit '{title}': category {category} requires media.admin");
+		await Assert.That((await WikiService.GetBySlugAsync(slug)).Expect<WikiPage>().MarkdownSource).IsEqualTo("body");
+
+		await Assert.That(await AsPlayerAsync(player.DbRef, $"wikiaccess({slug}, edit)")).IsEqualTo("0");
+		await Assert.That(await AsPlayerAsync(player.DbRef, $"wikiaccess({slug}, read)")).IsEqualTo("1");
+		await Assert.That(await AsPlayerAsync(god, $"wikiaccess({slug}, edit, *{player.Name})")).IsEqualTo("0");
+		await Assert.That(await AsPlayerAsync(god, $"wikiaccess({slug}, edit)")).IsEqualTo("1");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/access {slug}=*{player.Name}"));
+		await ExpectNotify(god, $"edit    category {category} requires media.admin");
+	}
+
+	[Test]
+	public async ValueTask WikiRequire_ReadRequirementHidesThePageAsIfMissing()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHidden");
+		var (_, slug, category) = await FiledPageAsync(player, "Hidden");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/require category {category}=read media.admin"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki {slug}"));
+		await ExpectNotify(player.DbRef, $"WIKI: No such page: {slug}");
+		await Assert.That(await AsPlayerAsync(player.DbRef, $"wiki({slug}, title)")).IsEqualTo(SharpMUSH.Library.Definitions.ErrorMessages.Returns.NoSuchWikiPage);
+		await Assert.That(await AsPlayerAsync(player.DbRef, $"wikicategory({category})")).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async ValueTask WikiAccess_ADraftAnswersAsAMissingPage()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftAsker");
+		var title = TestIsolationHelpers.GenerateUniqueName("DraftAccess");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/create {title}=body"));
+		var slug = WikiHelpers.Slugify(title);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/unpublish {slug}"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/access {slug}"));
+		await ExpectNotify(player.DbRef, $"WIKI: No such page, namespace or category: {slug}");
+	}
+
+	[Test]
+	public async ValueTask WikiRequire_NeedsWikiAdminAndAKnownPermission()
+	{
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRequirer");
+		var category = WikiHelpers.CategoryKey(TestIsolationHelpers.GenerateUniqueName("Req"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/require category {category}=edit media.admin"));
+		await ExpectNotify(player.DbRef, "Setting requirements needs the wiki.admin permission");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/require category {category}=edit no.such.permission"));
+		await ExpectNotify(god, "WIKI: No such permission: no.such.permission.");
+
+		await Assert.That((await WikiService.GetRequirementsAsync()).For(WikiRuleTarget.ForCategory(category))).IsNull();
+	}
 }
