@@ -253,11 +253,15 @@ Status is a free string; the shipped defaults are **`new` → `active` ⇄ `paus
 - **`+scene/start [<id>]`** — explicit owner activation: set `status=active` and,
   for a roomless scheduled scene, bind the current room (`sceneset room=<here>`).
   Also resumes a `paused` scene.
-- **`+scene/pause`** → `status=paused`. **`+scene/finish`** → `status=finished`,
-  clears focus.
-- **`+schedule` / `+scenes`** — agenda view of `scenelist(scheduled, …)` around
-  now (title, owner, `ScheduledFor`, RSVP count). `+scene/list` covers running
-  scenes.
+- **`+scene/pause [<id>][=<when>]`** → `status=paused`, and `ScheduledFor=<when>`
+  (cleared when no time is given). **`+scene/reschedule`** of an `active` scene
+  pauses it too. **`+scene/finish`** → `status=finished`, clears focus.
+- **`+scene/upcoming`** — agenda view of `scenelist(scheduled, …)` (title,
+  `ScheduledFor`, RSVP count). The `scheduled` filter is every scene waiting to
+  run: a scene with a time that is neither `active` nor `finished`, and every
+  `paused` scene (untimed ones last, and only when the list is not windowed).
+  Bare `+scene` covers running scenes. The portal's Live list is `active`; its
+  Scheduled list is this filter.
 
 Activation is **owner-explicit only** (no engine timer). A softcode `@wait`/cron
 activator/janitor may be added later.

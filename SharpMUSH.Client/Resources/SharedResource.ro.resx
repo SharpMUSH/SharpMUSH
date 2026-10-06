@@ -5623,4 +5623,37 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>Pagina proprie a fiecărei categorii.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>ÎN PAUZĂ</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Pune scena pe pauză</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Reia scena</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Începe acum</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Oră nouă (opțional)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Ora</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>O scenă pusă pe pauză nu mai înregistrează și trece din Live în program până este reluată.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>Scena nu a fost pusă pe pauză.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Încă fără cameră</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Gazdă: {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>Pe pauză, fără oră</value>
+  </data>
 </root>

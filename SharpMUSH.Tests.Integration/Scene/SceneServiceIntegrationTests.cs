@@ -317,4 +317,45 @@ public class SceneServiceIntegrationTests
 
 		await Assert.That(await Eval($"scenelist(scheduled,{insideFrom},{insideTo})")).DoesNotContain(id);
 	}
+
+	/// <summary>
+	/// The schedule is the scenes waiting to run. A running scene is live, not waiting, whatever time it
+	/// was given; a paused one waits with or without a time, and a finished one is done. A paused scene with
+	/// no time has no place in a window, so only the unwindowed list carries it.
+	/// </summary>
+	[Test]
+	public async Task ListScheduled_IsTheScenesWaitingToRun()
+	{
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var from = now - 60_000;
+		var to = now + 60_000;
+
+		var running = await NewSceneAsync("ScheduledRunning");
+		await Eval($"sceneset({running},status,active)");
+		await Eval($"sceneset({running},scheduledfor,{now})");
+
+		var paused = await NewSceneAsync("ScheduledPaused");
+		await Eval($"sceneset({paused},status,paused)");
+
+		var pausedTimed = await NewSceneAsync("ScheduledPausedTimed");
+		await Eval($"sceneset({pausedTimed},status,paused)");
+		await Eval($"sceneset({pausedTimed},scheduledfor,{now})");
+
+		var finished = await NewSceneAsync("ScheduledFinished");
+		await Eval($"sceneset({finished},status,finished)");
+		await Eval($"sceneset({finished},scheduledfor,{now})");
+
+		var all = (await Eval("scenelist(scheduled)")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(all).DoesNotContain(running).Because("a running scene is live, not scheduled");
+		await Assert.That(all).Contains(paused).Because("a paused scene waits on the schedule even without a time");
+		await Assert.That(all).Contains(pausedTimed);
+		await Assert.That(all).DoesNotContain(finished);
+		await Assert.That(Array.IndexOf(all, pausedTimed)).IsLessThan(Array.IndexOf(all, paused))
+			.Because("scenes with a time come before the ones without");
+
+		var windowed = (await Eval($"scenelist(scheduled,{from},{to})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(windowed).Contains(pausedTimed);
+		await Assert.That(windowed).DoesNotContain(paused).Because("a scene with no time is in no window");
+		await Assert.That((await Eval("scenelist(active)")).Split(' ')).DoesNotContain(paused);
+	}
 }

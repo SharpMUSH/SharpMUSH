@@ -5623,4 +5623,37 @@
   <data name="WikiNsCategorySub" xml:space="preserve">
     <value>A página própria de cada categoria.</value>
   </data>
+  <data name="RolPausedBadge" xml:space="preserve">
+    <value>PAUSADA</value>
+  </data>
+  <data name="RolPauseScene" xml:space="preserve">
+    <value>Pausar cena</value>
+  </data>
+  <data name="RolResumeScene" xml:space="preserve">
+    <value>Retomar cena</value>
+  </data>
+  <data name="RolStartSceneNow" xml:space="preserve">
+    <value>Começar agora</value>
+  </data>
+  <data name="RolPauseNewTime" xml:space="preserve">
+    <value>Novo horário (opcional)</value>
+  </data>
+  <data name="RolPauseTime" xml:space="preserve">
+    <value>Hora</value>
+  </data>
+  <data name="RolPauseHint" xml:space="preserve">
+    <value>Uma cena pausada para de registrar e sai de Ao vivo para a agenda até ser retomada.</value>
+  </data>
+  <data name="RolSceneNotPaused" xml:space="preserve">
+    <value>A cena não foi pausada.</value>
+  </data>
+  <data name="RolScheduleNoRoom" xml:space="preserve">
+    <value>Ainda sem sala</value>
+  </data>
+  <data name="RolScheduleHostedBy" xml:space="preserve">
+    <value>Organizada por {0}</value>
+  </data>
+  <data name="RolScheduleNoTime" xml:space="preserve">
+    <value>Pausadas, sem horário</value>
+  </data>
 </root>
