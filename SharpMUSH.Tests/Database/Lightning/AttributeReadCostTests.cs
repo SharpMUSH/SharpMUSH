@@ -447,24 +447,42 @@ public class AttributeReadCostTests
 	/// A row reached with less than <see cref="SoftcodeRegex.MatchTimeout"/> left of the budget is matched
 	/// within what is left, not within the timeout the filter was built with when the scan began.
 	/// </summary>
+	/// <remarks>
+	/// The budget runs on a clock the test sets, so "50ms left" holds however long the runner stalls.
+	/// On the wall clock a stall past the deadline expired the budget before the row was matched.
+	/// </remarks>
 	[Test]
 	public async Task ARowMatchedNearTheDeadlineIsBoundedByWhatIsLeft()
 	{
 		var target = await Thing("Tree");
 		await SetMany(target, [["W"], [new string('X', 40)]]);
 
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(400));
+		var clock = new StoppedClock();
+		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(400), default, clock);
 		using var scope = budget.Enter();
 		var rows = _db.GetLazyAttributesByRegexAsync(target, "^(X|XX)+C$|^W$").GetAsyncEnumerator();
 		await Assert.That(await rows.MoveNextAsync()).IsTrue();
-		while (budget.Remaining >= TimeSpan.FromMilliseconds(90))
-		{
-			await Task.Delay(5);
-		}
+		clock.Advance(TimeSpan.FromMilliseconds(350));
 
 		var timedOut = await Assert.That(async () => await rows.MoveNextAsync()).Throws<RegexMatchTimeoutException>();
 		await Assert.That(timedOut!.MatchTimeout).IsLessThan(SoftcodeRegex.MatchTimeout);
 		await rows.DisposeAsync();
+	}
+
+	/// <summary>A clock that moves only when told to, and a deadline timer that never fires.</summary>
+	private sealed class StoppedClock : TimeProvider
+	{
+		private long _now;
+		public void Advance(TimeSpan by) => _now += by.Ticks;
+		public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+		public override long GetTimestamp() => _now;
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) => new Idle();
+		private sealed class Idle : ITimer
+		{
+			public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+			public void Dispose() { }
+			public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+		}
 	}
 
 	[Test]
