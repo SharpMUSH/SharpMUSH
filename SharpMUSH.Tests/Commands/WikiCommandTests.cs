@@ -290,7 +290,8 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/category Wyrmholt_Setting"));
 		await ExpectNotify(player.DbRef, "Category:Wyrmholt Places");
-		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt setting'");
+		// Filing a page in a new category gave it a category page titled as typed, capitals and all.
+		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt Setting'");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki wyrmholt_gate"));

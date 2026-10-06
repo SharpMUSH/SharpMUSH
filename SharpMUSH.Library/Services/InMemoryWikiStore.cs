@@ -60,6 +60,12 @@ public sealed class InMemoryWikiStore : IWikiStore
 		return Task.FromResult(new WikiPageCounts(counted.Count(p => p.Published), counted.Count(p => !p.Published)));
 	}
 
+	public Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility)
+		=> Task.FromResult<IReadOnlyDictionary<string, int>>(Visible(_pagesById.Values, visibility)
+			.SelectMany(p => p.Categories.Select(c => c.ToLowerInvariant()).Distinct())
+			.CountBy(c => c)
+			.ToDictionary(pair => pair.Key, pair => pair.Value));
+
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Visible(_pagesById.Values, visibility)
 			.Where(p => p.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))

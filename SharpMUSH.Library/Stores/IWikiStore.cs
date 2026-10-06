@@ -43,6 +43,12 @@ public interface IWikiStore
 	/// <summary>The pages <paramref name="visibility"/> admits, across namespaces, counted by state.</summary>
 	Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility);
 
+	/// <summary>
+	/// How many pages <paramref name="visibility"/> admits in each category, keyed by category key. A category
+	/// no admitted page names is absent.
+	/// </summary>
+	Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility);
+
 	/// <summary>Pages in <paramref name="category"/>, case-insensitively, ordered by title.</summary>
 	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
 	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility);

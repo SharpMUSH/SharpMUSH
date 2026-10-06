@@ -27,6 +27,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/counts          — page counts by state (published, draft), and restricted pages
 ///   GET  /api/wiki/category/{cat}  — pages in a category (subcategories are its category-namespace rows)
 ///   GET  /api/wiki/category-names  — each category's name in the reader's locale
+///   GET  /api/wiki/categories      — every category, with its name and how many pages it holds
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
 /// </summary>
 [ApiController]
@@ -128,6 +129,24 @@ public class WikiBrowseController(
 	[HttpGet("category-names")]
 	public async Task<IActionResult> GetCategoryNames([FromQuery] string? lang = null) =>
 		Ok(await Localization.GetCategoryNamesAsync(lang, await VisibilityAsync()));
+
+	/// <summary>
+	/// GET /api/wiki/categories?lang=fr
+	/// Every category a page the caller may see is filed in, and every category with a page of its own,
+	/// ordered by name.
+	/// </summary>
+	[HttpGet("categories")]
+	public async Task<IActionResult> GetCategories([FromQuery] string? lang = null)
+	{
+		var visibility = await VisibilityAsync();
+		var counts = await Wiki.CountPagesByCategoryAsync(visibility);
+		var names = await Localization.GetCategoryNamesAsync(lang, visibility);
+		return Ok(counts.Keys.Union(names.Keys)
+			.Select(key => new WikiCategorySummaryDto(key, WikiHelpers.CategoryLabel(key, names), counts.GetValueOrDefault(key),
+				names.ContainsKey(key)))
+			.OrderBy(category => category.Name, StringComparer.OrdinalIgnoreCase)
+			.ToList());
+	}
 
 	/// <summary>
 	/// POST /api/wiki/exists

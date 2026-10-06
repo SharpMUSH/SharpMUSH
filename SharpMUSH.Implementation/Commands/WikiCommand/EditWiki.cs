@@ -144,8 +144,9 @@ public static class EditWiki
 			return refused;
 
 		var names = (categoriesArg?.ToPlainText() ?? string.Empty).Split(',');
-		var filing = await WikiCommandHelper.Access(parser).DecideCategoriesAsync(
-			await WikiCommandHelper.ReaderAsync(parser, executor), page, names);
+		var access = WikiCommandHelper.Access(parser);
+		var reader = await WikiCommandHelper.ReaderAsync(parser, executor);
+		var filing = await access.DecideCategoriesAsync(reader, page, names);
 		if (!filing.Allowed)
 		{
 			await notifyService.Notify(executor, $"WIKI: You can't file '{page.Title}' there: {filing.Describe()}.", executor);
@@ -156,6 +157,11 @@ public static class EditWiki
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
+
+		// A new category keeps the name as typed, as its category page's title, when the executor may make one.
+		if ((await access.DecideCreateAsync(reader, WikiHelpers.NamespaceName(WikiNamespace.Category), [])).Allowed)
+			await wikiService.NameCategoriesAsync(names, page.Categories, WikiCommandHelper.EditorDbref(executor),
+				localization.DefaultLocale);
 
 		var categoryNames = await localization.GetCategoryNamesAsync(await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor),
 			await WikiCommandHelper.VisibilityAsync(parser, executor));

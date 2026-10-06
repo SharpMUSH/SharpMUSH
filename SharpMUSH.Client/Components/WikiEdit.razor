@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Wiki
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Library.Services
 @inject IJSRuntime JsRuntime
@@ -100,7 +101,7 @@
             @foreach (var category in Article.Categories)
             {
                 var c = category;
-                <span class="wiki-edit-tag">@WikiHelpers.CategoryLabel(c, CategoryNames)
+                <span class="wiki-edit-tag">@WikiCategories.Display(c, CategoryNames)
                     <button type="button" disabled="@IsTranslation" @onclick="@(() => RemoveCategory(c))">×</button>
                 </span>
             }
@@ -264,9 +265,8 @@
     private void AddCategory()
     {
         if (Article is null) return;
-        var category = WikiHelpers.CategoryKey(_categoryEntry);
-        if (category.Length > 0 && !Article.Categories.Contains(category))
-            Article.Categories.Add(category);
+        // Kept as typed: a new category's page is titled with it, so its capitals survive.
+        WikiCategories.Add(Article.Categories, _categoryEntry);
         _categoryEntry = string.Empty;
     }
 

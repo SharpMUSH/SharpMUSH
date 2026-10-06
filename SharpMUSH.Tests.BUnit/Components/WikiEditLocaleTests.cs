@@ -88,15 +88,16 @@ public class WikiEditLocaleTests : BunitContext
 	}
 
 	[Test]
-	public async Task Enter_in_the_category_input_adds_a_category_by_key()
+	public async Task Enter_in_the_category_input_adds_a_category_as_typed()
 	{
 		var cut = RenderEditor("en");
 
 		AddCategoryButton(cut).Input("Places of Note");
 		AddCategoryButton(cut).KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
-		await Assert.That(cut.Instance.Article!.Categories).IsEquivalentTo(["lore", "places_of_note"]);
-		await Assert.That(ShownCategories(cut)).IsEquivalentTo(["Lore", "Places of note"]);
+		// Kept as typed: the server keys it and titles the new category's page with this spelling.
+		await Assert.That(cut.Instance.Article!.Categories).IsEquivalentTo(["lore", "Places of Note"]);
+		await Assert.That(ShownCategories(cut)).IsEquivalentTo(["Lore", "Places of Note"]);
 		await Assert.That(cut.Instance.Article.Content).IsEqualTo("body").Because("categories are not written into the text");
 	}
 

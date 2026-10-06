@@ -5568,4 +5568,64 @@
   <data name="AdmModerationNoHosts" xml:space="preserve">
     <value>The sitelock has no rules.</value>
   </data>
+  <data name="WikiPagesTitle" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="WikiPagesSub" xml:space="preserve">
+    <value>Every page, by namespace, title or language. Select rows to act on several at once.</value>
+  </data>
+  <data name="WikiSelectionActions" xml:space="preserve">
+    <value>Actions on the selected pages</value>
+  </data>
+  <data name="WikiSelectedCount" xml:space="preserve">
+    <value>{count, plural, one {# page selected} other {# pages selected}}</value>
+  </data>
+  <data name="WikiAddToCategory" xml:space="preserve">
+    <value>Add to a category</value>
+  </data>
+  <data name="WikiAddToCategoryHint" xml:space="preserve">
+    <value>Each selected page joins these categories and keeps the ones it is already in.</value>
+  </data>
+  <data name="WikiClearSelection" xml:space="preserve">
+    <value>Clear selection</value>
+  </data>
+  <data name="WikiRevisionShort" xml:space="preserve">
+    <value>rev {0}</value>
+  </data>
+  <data name="WikiCategoriesSub" xml:space="preserve">
+    <value>Every category, with how many pages it holds. A dashed one is in use but has no category page yet. A new category keeps its name exactly as typed.</value>
+  </data>
+  <data name="WikiNewCategoryName" xml:space="preserve">
+    <value>New category</value>
+  </data>
+  <data name="WikiNewCategoryDescription" xml:space="preserve">
+    <value>Description (optional)</value>
+  </data>
+  <data name="WikiCreateCategory" xml:space="preserve">
+    <value>Create category</value>
+  </data>
+  <data name="WikiCategoryCreated" xml:space="preserve">
+    <value>Created category {0}.</value>
+  </data>
+  <data name="WikiCategoryCreateFailed" xml:space="preserve">
+    <value>The category could not be created: {0}</value>
+  </data>
+  <data name="WikiCategoryExists" xml:space="preserve">
+    <value>{0} already exists.</value>
+  </data>
+  <data name="WikiCategoryNoPage" xml:space="preserve">
+    <value>In use, but it has no category page yet</value>
+  </data>
+  <data name="WikiNoCategories" xml:space="preserve">
+    <value>No categories yet.</value>
+  </data>
+  <data name="WikiCategoryNew" xml:space="preserve">
+    <value>New category “{0}”</value>
+  </data>
+  <data name="WikiCategorySuggestions" xml:space="preserve">
+    <value>Existing categories</value>
+  </data>
+  <data name="WikiRemoveCategory" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
 </root>

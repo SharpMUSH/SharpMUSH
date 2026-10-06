@@ -424,8 +424,11 @@ It is an edit: the page's requirements apply, and so do the new categories'
 (see [wiki permissions]). It does not change the text, so it adds no revision.
 
 Each category has a page of its own, `Category:Lore`, in the category
-namespace. Writing that page is optional: whatever it says is shown above the
-list of the category's members. A category page that is itself in the Setting
+namespace. Filing a page in a category that has no page yet makes one, titled
+with the name exactly as you typed it, so `Places of Note` keeps its capitals
+(when you may create pages there; a name typed in lower case, like `lore`,
+makes none). Writing more on that page is optional: whatever it says is shown
+above the list of the category's members. A category page that is itself in the Setting
 category is a subcategory of Setting. `[[Category:Lore]]` in a page's text is
 an ordinary link to that page.
 
@@ -433,7 +436,7 @@ A translation is in the same categories as its page; only a category's name
 is translated. The name shown is the title of the category's page, so giving
 `Category:Lore` a French translation in the portal shows French readers its
 French title wherever the category appears. A category with no page is shown
-by its name as typed.
+by its key, with a capital first letter.
 
 `@wiki/category <name>` lists a category's subcategories and pages. Category
 names are matched as titles are: case and spaces versus underscores do not

@@ -75,6 +75,20 @@ public interface IWikiService
 	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
 	Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null);
 
+	/// <summary>How many pages <paramref name="visibility"/> admits in each category, keyed by category key.</summary>
+	Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility);
+
+	/// <summary>
+	/// Gives each category in <paramref name="names"/> that has no page a page in the category namespace,
+	/// titled with the name exactly as typed, so <c>Places of Note</c> keeps its capitals although its key is
+	/// <c>places_of_note</c>. A category in <paramref name="alreadyFiled"/> (keys or names) is skipped: the
+	/// page already carried it, and the name sent back for it is its key, not what someone typed. A category
+	/// that has a page keeps that page and its title, and a name typed exactly as its key (<c>places</c>) makes
+	/// none, since its key already gives it that label. Returns the pages created.
+	/// </summary>
+	Task<IReadOnlyList<WikiPage>> NameCategoriesAsync(IEnumerable<string> names, IEnumerable<string> alreadyFiled,
+		string authorDbref, string sourceLocale);
+
 	/// <summary>
 	/// Creates a new wiki page. The (namespace, slug) identity must be unique. Renders the Markdown to
 	/// HTML and extracts plain text at creation time. <paramref name="categories"/> are the page's

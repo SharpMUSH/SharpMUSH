@@ -85,6 +85,7 @@ public class WikiAdminController(
 
 		if (await Wiki.SetMetadataAsync(existing.Id, request.Categories ?? [], request.Published) is not WikiPage page)
 			return NotFound();
+		await NameCategoriesAsync(request.Categories ?? [], existing.Categories, CallerDbref ?? string.Empty);
 
 		Logger.LogInformation("Wiki page metadata updated: slug={Slug} categories={Categories} published={Published}",
 			LogSanitizer.Sanitize(slug), string.Join(',', page.Categories), page.Published);

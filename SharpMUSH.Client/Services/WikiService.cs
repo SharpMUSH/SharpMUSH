@@ -367,6 +367,12 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 	}
 
+	/// <summary>Every category the reader can see, with its name and page count, ordered by name.</summary>
+	public async ValueTask<ApiResult<List<WikiCategorySummaryDto>>> GetCategoriesAsync(string? lang = null) =>
+		await httpClientFactory.CreateClient("api")
+			.GetApiAsync<List<WikiCategorySummaryDto>>($"api/wiki/categories{LangQuery(lang, first: true)}",
+				"The server returned no wiki categories.");
+
 	/// <summary>
 	/// Batch page-existence check used for redlink rendering. Refs use URL-path
 	/// form: "slug" for main-namespace pages, "ns/slug" otherwise. Failures return

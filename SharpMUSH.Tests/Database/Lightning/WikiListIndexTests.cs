@@ -102,6 +102,12 @@ public class WikiListIndexTests : LightningDatabaseFixture
 				.Where(p => p.Categories.Contains(category, StringComparer.OrdinalIgnoreCase))
 				.OrderBy(p => p.Title, StringComparer.Ordinal)
 				.Skip(skip).Take(take).Select(p => p.Id);
+
+		public static Dictionary<string, int> CategoryCounts(IEnumerable<WikiPage> all, WikiVisibility v)
+			=> Visible(all, v)
+				.SelectMany(p => p.Categories.Select(c => c.ToLowerInvariant()).Distinct())
+				.CountBy(c => c)
+				.ToDictionary(pair => pair.Key, pair => pair.Value);
 	}
 
 	private async Task AssertListingsMatchReference()
@@ -123,6 +129,8 @@ public class WikiListIndexTests : LightningDatabaseFixture
 						.IsEquivalentTo(Reference.Pages(all, ns, skip, take, v), CollectionOrdering.Matching);
 				}
 			}
+
+			await Assert.That(await Wiki.CountPagesByCategoryAsync(v)).IsEquivalentTo(Reference.CategoryCounts(all, v));
 
 			foreach (var category in new[] { "lore", "LORE", "rules", "x", "Y", "", "none" })
 			{
