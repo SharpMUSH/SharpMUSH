@@ -238,15 +238,12 @@ public static class LayoutOptionGroups
 	/// <summary>Colour stops, ansi() codes split by <c>|</c>; null when one sets no foreground colour or there are none.</summary>
 	public static ImmutableArray<IColorMarkup>? Stops(MString list, Func<string, IColorMarkup?> color)
 	{
-		var stops = new List<IColorMarkup>();
-		foreach (var codes in MushText.SplitList(MarkupText.Plain("|"), list))
-		{
-			var text = codes.ToPlainText().Trim();
-			if (text.Length == 0) continue;
-			if (color(text) is not { Foreground: not null } stop) return null;
-			stops.Add(stop);
-		}
-		return stops.Count == 0 ? null : [.. stops];
+		var stops = MushText.SplitList(MarkupText.Plain("|"), list)
+			.Select(codes => codes.ToPlainText().Trim())
+			.Where(text => text.Length > 0)
+			.Select(color)
+			.ToArray();
+		return stops.Length == 0 || stops.Any(stop => stop is not { Foreground: not null }) ? null : [.. stops.OfType<IColorMarkup>()];
 	}
 
 	/// <summary>
