@@ -51,6 +51,8 @@
     <ProjectReference Include="..\SharpMUSH.SocketServer\SharpMUSH.SocketServer.csproj" />
     <!-- Lightning provider -->
     <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
+    <!-- The softcode editor's data generator, so its output is checked without a portal build -->
+    <ProjectReference Include="..\tools\ClientData\ClientData.csproj" />
   </ItemGroup>
 
   <ItemGroup>

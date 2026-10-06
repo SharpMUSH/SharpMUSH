@@ -1,13 +1,15 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SharpMUSH.Tools.ClientData;
 
 namespace SharpMUSH.Tests.Documentation;
 
 /// <summary>
 /// Every function a <c>mush-defs.json</c> entry sends the reader to has to exist. The portal's
-/// softcode editor reads that file for its function drawer, and nothing generates it, so a
-/// cross-reference in it survives the function it names being renamed or deleted — <c>oob()</c>'s
-/// "See Also" pointed at <c>wsjson()</c> for as long as it took someone to notice.
+/// softcode editor reads that file for its function drawer, and its help text is copied from the
+/// helpfiles, so a cross-reference in a helpfile survives the function it names being renamed or
+/// deleted — <c>oob()</c>'s "See Also" pointed at <c>wsjson()</c> for as long as it took someone to
+/// notice.
 /// </summary>
 /// <remarks>
 /// Only the <c>[name()]</c> form is checked. <c>[@NAME]</c> is a reference to a <em>help topic</em>,
@@ -20,9 +22,6 @@ public partial class MushDefsCrossReferenceTests
 	/// <summary>A cross-reference in the editor's data file: <c>[name()]</c>.</summary>
 	[GeneratedRegex(@"\[(?<Name>[A-Za-z_][A-Za-z_0-9]*)\(\)\]")]
 	private static partial Regex FunctionReference();
-
-	private static string DefinitionsFile =>
-		Path.Join(TestPaths.RepositoryRoot, "SharpMUSH.Client", "wwwroot", "data", "mush-defs.json");
 
 	[Test]
 	public async Task EveryFunctionCrossReferenceNamesARegisteredFunction()
@@ -47,7 +46,7 @@ public partial class MushDefsCrossReferenceTests
 
 	private static IEnumerable<string> References()
 	{
-		using var document = JsonDocument.Parse(File.ReadAllText(DefinitionsFile));
+		using var document = JsonDocument.Parse(ClientDataGenerator.Files(TestPaths.Helpfiles)["mush-defs.json"]);
 
 		return Strings(document.RootElement)
 			.SelectMany(text => FunctionReference().Matches(text).Select(match => match.Groups["Name"].Value))

@@ -400,12 +400,12 @@ public class CachingBehaviorTests
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("ContentsRace")}"));
 		var room = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
 
-		async Task<Library.Models.DBRef> Populate() => await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
-			TestIsolationHelpers.GenerateUniqueName("ContentsRacer"), "TestPassword123",
-			room, room, (int)options.CurrentValue.Limit.StartingQuota));
+		async Task<Library.Models.DBRef> Populate() => await mediator.Send(TestIsolationHelpers.CreateTestPlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("ContentsRacer"), room, room, (int)options.CurrentValue.Limit.StartingQuota));
 
-		// The window is as wide as the read is slow, and a contents read costs one round trip per occupant
-		for (var i = 0; i < 60; i++) await Populate();
+		// The window is as wide as the read is slow, and a contents read costs one round trip per occupant.
+		// Created together, so the writer commits them in a few groups instead of one sync each.
+		await Task.WhenAll(Enumerable.Range(0, 60).Select(_ => Populate()));
 
 		// One creation followed at once by a read of the room, which is what FOLLOW does.
 		using var readersRun = new CancellationTokenSource();
@@ -469,9 +469,8 @@ public class CachingBehaviorTests
 		foreach (var room in bystanders)
 			await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
 
-		await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
-			TestIsolationHelpers.GenerateUniqueName("BreadthNewcomer"), "TestPassword123",
-			elsewhere, elsewhere, (int)options.CurrentValue.Limit.StartingQuota));
+		await mediator.Send(TestIsolationHelpers.CreateTestPlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("BreadthNewcomer"), elsewhere, elsewhere, (int)options.CurrentValue.Limit.StartingQuota));
 
 		var evicted = new List<Library.Models.DBRef>();
 		foreach (var room in bystanders)
@@ -509,9 +508,8 @@ public class CachingBehaviorTests
 		var source = await Dig("TagDeclFrom");
 		var destination = await Dig("TagDeclTo");
 
-		var mover = await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
-			TestIsolationHelpers.GenerateUniqueName("TagDeclMover"), "TestPassword123",
-			source, source, (int)options.CurrentValue.Limit.StartingQuota));
+		var mover = await mediator.Send(TestIsolationHelpers.CreateTestPlayerCommand(
+			TestIsolationHelpers.GenerateUniqueName("TagDeclMover"), source, source, (int)options.CurrentValue.Limit.StartingQuota));
 
 		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>().AsContent;
 		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
@@ -557,15 +555,14 @@ public class CachingBehaviorTests
 		var destination = await Dig("MoveRaceTo");
 
 		async Task<Library.Models.DBRef> PopulateInto(Library.Models.DBRef where)
-			=> await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
-				TestIsolationHelpers.GenerateUniqueName("MoveRacer"), "TestPassword123",
-				where, where, (int)options.CurrentValue.Limit.StartingQuota));
+			=> await mediator.Send(TestIsolationHelpers.CreateTestPlayerCommand(
+				TestIsolationHelpers.GenerateUniqueName("MoveRacer"), where, where, (int)options.CurrentValue.Limit.StartingQuota));
 
-		// The window is as wide as the read is slow, so the destination has to be worth reading.
-		for (var i = 0; i < 60; i++) await PopulateInto(destination);
+		// The window is as wide as the read is slow, so the destination has to be worth reading. Created
+		// together, so the writer commits them in a few groups instead of one sync each.
+		await Task.WhenAll(Enumerable.Range(0, 60).Select(_ => PopulateInto(destination)));
 
-		var movers = new List<Library.Models.DBRef>();
-		for (var i = 0; i < 25; i++) movers.Add(await PopulateInto(source));
+		var movers = (await Task.WhenAll(Enumerable.Range(0, 25).Select(_ => PopulateInto(source)))).ToList();
 
 		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
 
