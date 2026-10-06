@@ -5679,4 +5679,16 @@
     <value>Log ind med en adgangsnøgle</value>
     <comment>MT</comment>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Linje {0}: denne ::: har intet navn og åbner derfor en tom blok. Hvis den skulle lukke en blok, så giv den omgivende blok flere koloner end blokkene i den.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Linje {0}: ::: -blokken, der åbnes her, lukkes aldrig og fortsætter til slutningen af siden eller af den omgivende blok.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Linje {0}: dette står i en flex, men uden for et ::: item, og bliver derfor sin egen kolonne.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Linje {0}: et ::: item lægges kun ud direkte inde i en flex.</value>
+  </data>
 </root>

@@ -82,6 +82,7 @@ public class WikiImagesTests
 	[Arguments("<p><img src=\"/one.jpg\" alt=\"\"></p><p>text</p>")]
 	[Arguments("<img src=\"/one.jpg\"><p>text</p>")]
 	[Arguments("\n<p>\n<img src=\"/one.jpg\"></p>")]
+	[Arguments("<div class=\"center\">\n<p><img src=\"/one.jpg\"></p>\n<h1>Welcome</h1>\n</div>")]
 	public async Task LeadImageUrl_ImageOpeningThePage_IsTheLead(string html)
 		=> await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/one.jpg");
 
@@ -90,6 +91,8 @@ public class WikiImagesTests
 	[Arguments("<p>Intro.</p><p><img src=\"/one.jpg\"></p>")]
 	[Arguments("<h2>Heading</h2><p><img src=\"/one.jpg\"></p>")]
 	[Arguments("<p>Look: <img src=\"/one.jpg\"></p>")]
+	[Arguments("<div class=\"center\">\n<p>Intro.</p>\n<p><img src=\"/one.jpg\"></p>\n</div>")]
+	[Arguments("<div class=\"md-flex\">\n<p><img src=\"/one.jpg\"></p>\n</div>")]
 	[Arguments("<p>no images</p>")]
 	[Arguments("")]
 	[Arguments(null)]

@@ -5679,4 +5679,16 @@
     <value>Belépés azonosítókulccsal</value>
     <comment>MT</comment>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>{0}. sor: ennek a :::-nak nincs neve, ezért üres blokkot nyit. Ha egy blokkot kellett volna lezárnia, adj a körülvevő blokknak több kettőspontot, mint a benne lévőknek.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>{0}. sor: az itt nyitott ::: blokk sosem záródik le, így az oldal vagy a körülvevő blokk végéig tart.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>{0}. sor: ez egy flexen belül, de ::: itemen kívül van, ezért külön oszlop lesz.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>{0}. sor: a ::: item csak közvetlenül egy flexen belül rendeződik.</value>
+  </data>
 </root>

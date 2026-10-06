@@ -236,3 +236,14 @@
     font-size: 0.6875rem;
 }
 
+
+/* ::: blocks that nest wrongly (MarkdownFenceCheck), listed under the editor while the author types. */
+.wiki-edit-fences {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.75rem 0.5rem 1.75rem;
+    border-left: 3px solid var(--mud-palette-warning, #ffb74d);
+    background: rgba(255, 183, 77, 0.08);
+    border-radius: 0 4px 4px 0;
+    color: var(--text-primary);
+    font-size: 0.75rem;
+}

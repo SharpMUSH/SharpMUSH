@@ -13,6 +13,40 @@ public class WikiSyntaxInGameRenderingTests
 	private static string Render(string markdown) =>
 		RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText();
 
+	/// <summary>A <c>::: center</c> block centres each line in the width, with no fill after it.</summary>
+	[Test]
+	public async Task CenterContainer_CentresEachLineInTheWidth()
+	{
+		var lines = RecursiveMarkdownHelper.RenderMarkdown("::: center\n# Welcome\n\nOne line.\n:::", maxWidth: 20)
+			.ToPlainText()
+			.Split('\n');
+
+		await Assert.That(lines).Contains("      Welcome");
+		await Assert.That(lines).Contains("     One line.");
+		await Assert.That(lines.Any(line => line.EndsWith(' '))).IsFalse();
+	}
+
+	/// <summary>A line wider than the width wraps at a space, and each piece is centred.</summary>
+	[Test]
+	public async Task CenterContainer_WrapsALongLineThenCentresEachPiece()
+	{
+		var lines = RecursiveMarkdownHelper.RenderMarkdown("::: center\nalpha beta gamma delta\n:::", maxWidth: 12)
+			.ToPlainText()
+			.Split('\n');
+
+		await Assert.That(lines).IsEquivalentTo([" alpha beta", "gamma delta"]);
+	}
+
+	/// <summary>Text outside a <c>::: center</c> block keeps its left edge.</summary>
+	[Test]
+	public async Task TextOutsideCenterContainer_StaysLeftAligned()
+	{
+		var text = RecursiveMarkdownHelper.RenderMarkdown("Left.\n\n::: center\nMiddle\n:::", maxWidth: 20).ToPlainText();
+
+		await Assert.That(text).StartsWith("Left.");
+		await Assert.That(text).Contains("       Middle");
+	}
+
 	[Test]
 	public async Task ImageWithSizeAttributes_AttributeBlockDoesNotLeak()
 	{
