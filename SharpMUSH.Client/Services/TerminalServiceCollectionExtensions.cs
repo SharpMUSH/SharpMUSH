@@ -32,6 +32,8 @@ public static class TerminalServiceCollectionExtensions
 		// did inject the interface — the /websocket-test dev harness — is gone.
 		// Both clients keep their resume point here, so a reload resumes their sessions.
 		services.AddSingleton<TerminalResumeStore>();
+		// Logs a terminal back in when a reconnect could not resume its session.
+		services.AddSingleton<ITerminalLoginTokens>(sp => new AccountTerminalLoginTokens(sp));
 		services.AddSingleton(sp => new TerminalServiceHost(
 			() =>
 			{
@@ -42,7 +44,8 @@ public static class TerminalServiceCollectionExtensions
 				// Literal "portal" (not PresenceClasses.Portal): the browser bundle does not reference
 				// SharpMUSH.Library — see the ProjectReference note in SharpMUSH.Client.csproj.
 				ws.PresenceClass = "portal";
-				return new TerminalService(ws, sp.GetRequiredService<ILogger<TerminalService>>());
+				return new TerminalService(ws, sp.GetRequiredService<ILogger<TerminalService>>(),
+					sp.GetRequiredService<ITerminalLoginTokens>());
 			}));
 		services.AddSingleton<ITerminalService>(sp => sp.GetRequiredService<TerminalServiceHost>());
 
@@ -51,7 +54,8 @@ public static class TerminalServiceCollectionExtensions
 		services.AddSingleton(sp => new PlayTerminalServiceHost(
 			() => new PlayTerminalService(
 				ActivatorUtilities.CreateInstance<PlayWebSocketClientService>(sp),
-				sp.GetRequiredService<ILogger<TerminalService>>())));
+				sp.GetRequiredService<ILogger<TerminalService>>(),
+				sp.GetRequiredService<ITerminalLoginTokens>())));
 		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
 
 		// Channels and pages for the Play sidebar, read off the play terminal's OOB store: the comm-feed

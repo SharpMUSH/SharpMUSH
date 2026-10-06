@@ -12,8 +12,8 @@ namespace SharpMUSH.Tests.Commands;
 /// <c>do_name</c> ends with <c>queue_event(...OBJECT`RENAME...)</c> and then
 /// <c>if (!AreQuiet(player, thing)) notify(player, T("Name set."))</c> (<c>src/set.c:151-154</c>).
 /// <c>queue_event</c> only enqueues, so <c>AreQuiet</c> is answered against the state the rename
-/// found. SharpMUSH's <c>IEventService.TriggerEventAsync</c> runs the handler inline, so a handler
-/// that sets <c>QUIET</c> would answer the check for its own rename unless the flag is read first.
+/// found. SharpMUSH queues the event the same way, so a handler that sets <c>QUIET</c> cannot answer the
+/// check for its own rename; the test waits on the queue before reading what the handler did.
 /// </summary>
 /// <remarks>
 /// <c>event_handler = 9</c> (the seeded Event Handler) in the test config. It is both the rename's
@@ -56,6 +56,8 @@ public class RenameQuietOrderingTests
 
 			var before = recorder.CountFor(god);
 			await AsGod($"@name #{EventHandlerDbRefNumber}={renamed}");
+			// OBJECT`RENAME is a queue entry of its own (#1567); it has run once the barrier is through.
+			await WebAppFactoryArg.QueueBarrierAsync();
 			var heard = recorder.For(god).Skip(before).ToList();
 
 			await Assert.That(await HandlerIsQuiet()).IsTrue()

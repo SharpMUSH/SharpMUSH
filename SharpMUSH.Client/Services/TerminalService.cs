@@ -18,7 +18,12 @@ namespace SharpMUSH.Client.Services;
 /// envelope, which the client routes here and never displays — so neither the response nor any
 /// correlation sentinel leaks into the terminal.
 /// </remarks>
-public partial class TerminalService(IWebSocketClientService wsService, ILogger<TerminalService> logger)
+/// <param name="loginTokens">
+/// Mints the token that logs a reconnect the server could not resume back in. Without it, such a
+/// reconnect stays at the login screen.
+/// </param>
+public partial class TerminalService(IWebSocketClientService wsService, ILogger<TerminalService> logger,
+	ITerminalLoginTokens? loginTokens = null)
 	: ITerminalService
 {
 	/// <summary>The most lines the buffer holds; a terminal's own transcript holds as many.</summary>
@@ -57,9 +62,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		get { lock (_lines) return _lines.ToArray(); }
 	}
 
-	public Task ConnectAsync(string serverUri) => ConnectAsync(serverUri, identity: null);
+	public Task ConnectAsync(string serverUri) => ConnectAsync(serverUri, identity: null, relogin: null);
 
-	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity)
+	/// <param name="relogin">Logs a reconnect the server could not resume back in (<see cref="IWebSocketClientService.Relogin"/>).</param>
+	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity, Func<Func<string, Task>, Task<bool>>? relogin)
 	{
 		_serverUri = serverUri;
 		// New connection/login: drop any OOB payloads from a previous session so the UI never
@@ -70,6 +76,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.ConnectionStateChanged += HandleStateChange;
 		wsService.Reattached += HandleReattached;
 		wsService.ResumeRefused += HandleResumeRefused;
+		wsService.Relogin = relogin;
 
 		_logger.LogInformation("Connecting to {ServerUri}", LogSanitizer.Sanitize(serverUri));
 		await wsService.ConnectAsync(serverUri, identity);
@@ -82,6 +89,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.ConnectionStateChanged -= HandleStateChange;
 		wsService.Reattached -= HandleReattached;
 		wsService.ResumeRefused -= HandleResumeRefused;
+		wsService.Relogin = null;
 	}
 
 	/// <inheritdoc/>
@@ -94,9 +102,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// server held early input: WebSocketInputConsumer now waits for the connection to register
 		// (ConnectionIncarnation.WaitForRegistrationAsync) before running it, so a line sent the moment
 		// the socket opens is no longer lost — and every sign-in paid the sleep.
-		await ConnectAsync(serverUri, identity);
+		await ConnectAsync(serverUri, identity,
+			identity is { } character && loginTokens is { } tokens ? send => ReloginAsync(tokens, character, send) : null);
 		// A reload resumed the session this tab held: it is still logged in, and the login line would run
-		// in it as a command. HandleReattached has already said so in the terminal.
+		// in it as a command.
 		if (wsService.Resumed)
 		{
 			_logger.LogInformation("Resumed the previous session; the OTT is not used");
@@ -111,11 +120,30 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		AddSystemLine("[OTT] Authenticating…");
 	}
 
+	/// <summary>
+	/// Logs a reconnect the server could not resume back in as the same character, with a fresh token.
+	/// Nothing is said in the terminal unless that cannot be done, when the reader has to log in themselves.
+	/// </summary>
+	private async Task<bool> ReloginAsync(ITerminalLoginTokens tokens, TerminalIdentity identity, Func<string, Task> send)
+	{
+		if (await tokens.MintAsync(identity) is not { } ott)
+		{
+			_logger.LogWarning("No login token for the reconnected terminal; it stays at the login screen");
+			AddSystemLine("Reconnected, but could not log back in. Log in again to continue.");
+			return false;
+		}
+
+		_logger.LogInformation("Logging the reconnected terminal in again");
+		await send($"connect token {ott}");
+		return true;
+	}
+
 	public async Task ConnectAsGuestAsync(string serverUri)
 	{
 		wsService.ClearSendBuffer();
 		// No pause: the server holds early input until the connection registers (ConnectWithOttAsync).
-		await ConnectAsync(serverUri);
+		// A guest has no resume point, so a reconnect is a new guest.
+		await ConnectAsync(serverUri, identity: null, relogin: async send => { await send("connect guest"); return true; });
 		AddSystemLine("[Guest] Connecting…");
 		await wsService.SendAsync("connect guest");
 	}
@@ -290,16 +318,16 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		return parts;
 	}
 
-	private void HandleStateChange(object? sender, WebSocketState state)
-	{
-		var connected = state == WebSocketState.Open;
-		ConnectionStateChanged?.Invoke(connected);
-		AddSystemLine(connected ? "Connection established." : $"Connection state: {state}");
-	}
+	/// <summary>
+	/// The socket's state is shown by the page's connection indicator, not in the scrollback: a drop and the
+	/// reconnect that follows (a network blip, a server update) leave the screen as it was.
+	/// </summary>
+	private void HandleStateChange(object? sender, WebSocketState state) =>
+		ConnectionStateChanged?.Invoke(state == WebSocketState.Open);
 
 	/// <summary>
 	/// The server rebound this reconnect to the still-live session — we are already authenticated,
-	/// so we do not re-login. The character never left.
+	/// so we do not re-login. The character never left, so nothing is said about it.
 	/// </summary>
 	private void HandleReattached(object? sender, EventArgs e)
 	{
@@ -310,8 +338,6 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 			foreach (var line in slot.TakeScrollback())
 				AddLine(line, keep: false);
 		}
-
-		AddSystemLine("Session resumed — reconnected without re-login.");
 	}
 
 	/// <summary>

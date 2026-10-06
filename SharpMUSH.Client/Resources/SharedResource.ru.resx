@@ -5375,6 +5375,102 @@
     <value>Исключение для {0} сохранено.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavFormatMenu" xml:space="preserve">
+    <value>Форматировать текст</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatText" xml:space="preserve">
+    <value>Цвет текста</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBackground" xml:space="preserve">
+    <value>Фон</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatNone" xml:space="preserve">
+    <value>Без цвета</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCustom" xml:space="preserve">
+    <value>Свой цвет (#rrggbb)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBold" xml:space="preserve">
+    <value>Жирный</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatUnderline" xml:space="preserve">
+    <value>Подчёркнутый</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatInverse" xml:space="preserve">
+    <value>Инверсия</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlink" xml:space="preserve">
+    <value>Мигание</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatClear" xml:space="preserve">
+    <value>Очистить форматирование</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcode" xml:space="preserve">
+    <value>Писать софткод</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeHint" xml:space="preserve">
+    <value>Вводите софткод так, как он отправляется; меню форматирования оборачивает выделение в [ansi()].</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
+    <value>Похоже на софткод ({0}). Он будет отправлен как текст, который вы видите.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
+    <value>Отправить как софткод</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatKeepAsText" xml:space="preserve">
+    <value>Оставить текстом</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlack" xml:space="preserve">
+    <value>Чёрный</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatRed" xml:space="preserve">
+    <value>Красный</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatGreen" xml:space="preserve">
+    <value>Зелёный</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatYellow" xml:space="preserve">
+    <value>Жёлтый</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlue" xml:space="preserve">
+    <value>Синий</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatMagenta" xml:space="preserve">
+    <value>Пурпурный</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCyan" xml:space="preserve">
+    <value>Голубой</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatWhite" xml:space="preserve">
+    <value>Белый</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBright" xml:space="preserve">
+    <value>Яркий {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavWikiUncategorized" xml:space="preserve">
     <value>Без категории</value>
   </data>

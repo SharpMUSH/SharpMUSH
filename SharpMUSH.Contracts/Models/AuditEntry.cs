@@ -127,6 +127,7 @@ public static class AuditActions
 	public const string PermissionDefine = "permission.define";
 	public const string PermissionRemove = "permission.remove";
 	public const string CategorySave = "category.save";
+	public const string CategoryRename = "category.rename";
 	public const string CategoryDelete = "category.delete";
 	public const string SitelockAdd = "sitelock.add";
 	public const string SitelockRemove = "sitelock.remove";
@@ -141,8 +142,8 @@ public static class AuditActions
 	public static readonly IReadOnlyList<string> All =
 	[
 		AccountStatus, AccountPassword, CharacterUnlink, PlayerCreate, PlayerDestroy, PlayerPassword, PlayerBoot,
-		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove, CategorySave,
-		CategoryDelete, SitelockAdd, SitelockRemove,
+		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
+		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear
 	];
 }

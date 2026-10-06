@@ -5375,6 +5375,102 @@
     <value>Uitzondering voor {0} opgeslagen.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavFormatMenu" xml:space="preserve">
+    <value>Tekst opmaken</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatText" xml:space="preserve">
+    <value>Tekstkleur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBackground" xml:space="preserve">
+    <value>Achtergrond</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatNone" xml:space="preserve">
+    <value>Geen kleur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCustom" xml:space="preserve">
+    <value>Eigen kleur (#rrggbb)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBold" xml:space="preserve">
+    <value>Vet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatUnderline" xml:space="preserve">
+    <value>Onderstreept</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatInverse" xml:space="preserve">
+    <value>Omgekeerd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlink" xml:space="preserve">
+    <value>Knipperen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatClear" xml:space="preserve">
+    <value>Opmaak wissen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcode" xml:space="preserve">
+    <value>Softcode schrijven</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeHint" xml:space="preserve">
+    <value>Typ softcode zoals die verstuurd wordt; het opmaakmenu zet de selectie in [ansi()].</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
+    <value>Dit lijkt op softcode ({0}). Het wordt verstuurd als de tekst die je ziet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
+    <value>Als softcode versturen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatKeepAsText" xml:space="preserve">
+    <value>Als tekst houden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlack" xml:space="preserve">
+    <value>Zwart</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatRed" xml:space="preserve">
+    <value>Rood</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatGreen" xml:space="preserve">
+    <value>Groen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatYellow" xml:space="preserve">
+    <value>Geel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlue" xml:space="preserve">
+    <value>Blauw</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatMagenta" xml:space="preserve">
+    <value>Magenta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCyan" xml:space="preserve">
+    <value>Cyaan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatWhite" xml:space="preserve">
+    <value>Wit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBright" xml:space="preserve">
+    <value>Fel {0}</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavWikiUncategorized" xml:space="preserve">
     <value>Zonder categorie</value>
   </data>

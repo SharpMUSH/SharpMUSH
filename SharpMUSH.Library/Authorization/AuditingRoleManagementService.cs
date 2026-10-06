@@ -5,9 +5,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Authorization;
 
 /// <summary>
-/// Records every role change <see cref="RoleManagementService"/> makes in the audit log. Every change,
-/// from the portal and from the game, already goes through that service, so recording here covers both
-/// once; a refused change is not recorded.
+/// Records every role, custom permission and category change <see cref="RoleManagementService"/> makes in
+/// the audit log. Every change, from the portal and from the game, already goes through that service, so
+/// recording here covers both once; a refused change is not recorded.
 /// </summary>
 public sealed class AuditingRoleManagementService(
 	RoleManagementService inner,
@@ -91,7 +91,7 @@ public sealed class AuditingRoleManagementService(
 		var outcome = await inner.DefinePermissionAsync(actor, scope, category, description, ct);
 		if (outcome is CustomPermission permission)
 			await RecordAsync(actor, AuditActions.PermissionDefine, AuditTargets.Of(AuditTargetKinds.Permission, permission.Scope),
-				$"category {permission.Category}", ct);
+				$"{permission.Category}: {permission.Description}", ct);
 		return outcome;
 	}
 
@@ -106,7 +106,7 @@ public sealed class AuditingRoleManagementService(
 		CancellationToken ct = default)
 	{
 		var outcome = await inner.CreateCategoryAsync(actor, kind, name, description, ct);
-		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), "created", ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), category.Description, ct);
 		return outcome;
 	}
 
@@ -114,7 +114,7 @@ public sealed class AuditingRoleManagementService(
 		CancellationToken ct = default)
 	{
 		var outcome = await inner.DescribeCategoryAsync(actor, kind, name, description, ct);
-		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), "described", ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), category.Description, ct);
 		return outcome;
 	}
 
@@ -122,8 +122,7 @@ public sealed class AuditingRoleManagementService(
 		CancellationToken ct = default)
 	{
 		var outcome = await inner.RenameCategoryAsync(actor, kind, name, newName, ct);
-		if (outcome is RoleCategory category)
-			await RecordAsync(actor, AuditActions.CategorySave, CategoryTarget(kind, category.Name), $"renamed from {name}", ct);
+		if (outcome is RoleCategory category) await RecordAsync(actor, AuditActions.CategoryRename, CategoryTarget(kind, category.Name), $"from {name}", ct);
 		return outcome;
 	}
 
@@ -146,11 +145,11 @@ public sealed class AuditingRoleManagementService(
 			? AuditTargets.Of(account)
 			: AuditTargets.Of(AuditTargetKinds.Account, accountId);
 
-	/// <summary>A category, named with its list, since a role category and a permission category may share a name.</summary>
-	private static AuditTarget CategoryTarget(CategoryKind kind, string name)
-		=> AuditTargets.Of(AuditTargetKinds.Category, $"{kind.ToString().ToLowerInvariant()}:{name}");
-
 	private static AuditTarget RoleTarget(SharpRole role) => new(AuditTargetKinds.Role, role.Slug, role.Name);
+
+	/// <summary>A category is named within its list, so the id says which list: <c>role:Staff</c>, <c>permission:Scenes</c>.</summary>
+	private static AuditTarget CategoryTarget(CategoryKind kind, string name)
+		=> new(AuditTargetKinds.Category, $"{kind.ToString().ToLowerInvariant()}:{name}", name);
 
 	private static string Describe(RoleDraft draft)
 		=> $"priority {draft.Priority}; "

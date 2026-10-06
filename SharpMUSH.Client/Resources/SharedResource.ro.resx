@@ -5375,6 +5375,102 @@
     <value>Excepția pentru {0} a fost salvată.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavFormatMenu" xml:space="preserve">
+    <value>Formatează textul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatText" xml:space="preserve">
+    <value>Culoarea textului</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBackground" xml:space="preserve">
+    <value>Fundal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatNone" xml:space="preserve">
+    <value>Fără culoare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCustom" xml:space="preserve">
+    <value>Culoare personalizată (#rrggbb)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBold" xml:space="preserve">
+    <value>Aldin</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatUnderline" xml:space="preserve">
+    <value>Subliniat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatInverse" xml:space="preserve">
+    <value>Inversat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlink" xml:space="preserve">
+    <value>Clipire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatClear" xml:space="preserve">
+    <value>Șterge formatarea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcode" xml:space="preserve">
+    <value>Scrie softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeHint" xml:space="preserve">
+    <value>Tastează softcode așa cum se trimite; meniul de formatare încadrează selecția în [ansi()].</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
+    <value>Pare softcode ({0}). Va fi trimis ca textul pe care îl vezi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
+    <value>Trimite ca softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatKeepAsText" xml:space="preserve">
+    <value>Păstrează ca text</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlack" xml:space="preserve">
+    <value>Negru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatRed" xml:space="preserve">
+    <value>Roșu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatGreen" xml:space="preserve">
+    <value>Verde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatYellow" xml:space="preserve">
+    <value>Galben</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBlue" xml:space="preserve">
+    <value>Albastru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatMagenta" xml:space="preserve">
+    <value>Magenta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatCyan" xml:space="preserve">
+    <value>Cyan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatWhite" xml:space="preserve">
+    <value>Alb</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFormatBright" xml:space="preserve">
+    <value>{0} deschis</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavWikiUncategorized" xml:space="preserve">
     <value>Fără categorie</value>
   </data>
