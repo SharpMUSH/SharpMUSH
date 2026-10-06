@@ -49,6 +49,8 @@ public class RoomAndExitCreationEventTests
 	/// <summary>The one object answering to <paramref name="name"/>.</summary>
 	private async Task<int> Only(string name)
 	{
+		// Anything the creation events queued has to have run, or a handler's own build is still pending.
+		await WebAppFactoryArg.QueueBarrierAsync();
 		var found = (await AsGod($"think lsearch(all,name,{name})"))
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(found.Length).IsEqualTo(1);
