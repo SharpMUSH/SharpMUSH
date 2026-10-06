@@ -97,16 +97,16 @@
       "canonical": "ahelp"
     },
     {
-      "file": "ahelp/capabilities.md",
-      "corpus": "ahelp",
+      "file": "capabilities.md",
+      "corpus": "help",
       "names": [
         "administrative capabilities"
       ],
       "canonical": "administrative capabilities"
     },
     {
-      "file": "ahelp/capabilities.md",
-      "corpus": "ahelp",
+      "file": "capabilities.md",
+      "corpus": "help",
       "names": [
         "administrative capabilities grant and deny resolution"
       ],
@@ -114,8 +114,8 @@
       "section": true
     },
     {
-      "file": "ahelp/capabilities.md",
-      "corpus": "ahelp",
+      "file": "capabilities.md",
+      "corpus": "help",
       "names": [
         "administrative capabilities capability scopes"
       ],
@@ -123,8 +123,8 @@
       "section": true
     },
     {
-      "file": "ahelp/capabilities.md",
-      "corpus": "ahelp",
+      "file": "capabilities.md",
+      "corpus": "help",
       "names": [
         "administrative capabilities actor identity and revocation"
       ],
@@ -132,8 +132,8 @@
       "section": true
     },
     {
-      "file": "ahelp/capabilities.md",
-      "corpus": "ahelp",
+      "file": "capabilities.md",
+      "corpus": "help",
       "names": [
         "administrative capabilities delegated role management"
       ],
@@ -141,8 +141,8 @@
       "section": true
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs",
         "@JOB"
@@ -150,8 +150,8 @@
       "canonical": "recurring jobs"
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs commands and ownership"
       ],
@@ -159,8 +159,8 @@
       "section": true
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs schedule grammar"
       ],
@@ -168,8 +168,8 @@
       "section": true
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs schedule examples"
       ],
@@ -177,8 +177,8 @@
       "section": true
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs timezones"
       ],
@@ -186,8 +186,8 @@
       "section": true
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs admission and restart"
       ],
@@ -195,8 +195,8 @@
       "section": true
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs execution permissions"
       ],
@@ -204,8 +204,8 @@
       "section": true
     },
     {
-      "file": "ahelp/jobs.md",
-      "corpus": "ahelp",
+      "file": "jobs.md",
+      "corpus": "help",
       "names": [
         "recurring jobs status reporting"
       ],
@@ -213,8 +213,8 @@
       "section": true
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality",
         "Reality layers"
@@ -222,8 +222,8 @@
       "canonical": "@reality"
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality receiving and transmitting layers"
       ],
@@ -231,8 +231,8 @@
       "section": true
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality administration"
       ],
@@ -240,8 +240,8 @@
       "section": true
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality layer descriptions"
       ],
@@ -249,8 +249,8 @@
       "section": true
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality ghost example"
       ],
@@ -258,8 +258,8 @@
       "section": true
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality perception rules"
       ],
@@ -267,8 +267,8 @@
       "section": true
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality portal visibility"
       ],
@@ -276,8 +276,8 @@
       "section": true
     },
     {
-      "file": "ahelp/reality.md",
-      "corpus": "ahelp",
+      "file": "reality.md",
+      "corpus": "help",
       "names": [
         "@reality persistence"
       ],
@@ -285,16 +285,16 @@
       "section": true
     },
     {
-      "file": "ahelp/security.md",
-      "corpus": "ahelp",
+      "file": "security.md",
+      "corpus": "help",
       "names": [
         "Security"
       ],
       "canonical": "Security"
     },
     {
-      "file": "ahelp/snapshots.md",
-      "corpus": "ahelp",
+      "file": "snapshots.md",
+      "corpus": "help",
       "names": [
         "object snapshots",
         "@SNAPSHOT"
@@ -302,8 +302,8 @@
       "canonical": "object snapshots"
     },
     {
-      "file": "ahelp/snapshots.md",
-      "corpus": "ahelp",
+      "file": "snapshots.md",
+      "corpus": "help",
       "names": [
         "object snapshots commands"
       ],
@@ -311,8 +311,8 @@
       "section": true
     },
     {
-      "file": "ahelp/snapshots.md",
-      "corpus": "ahelp",
+      "file": "snapshots.md",
+      "corpus": "help",
       "names": [
         "object snapshots preview and restore selection"
       ],
@@ -320,8 +320,8 @@
       "section": true
     },
     {
-      "file": "ahelp/snapshots.md",
-      "corpus": "ahelp",
+      "file": "snapshots.md",
+      "corpus": "help",
       "names": [
         "object snapshots captured data"
       ],
@@ -329,8 +329,8 @@
       "section": true
     },
     {
-      "file": "ahelp/snapshots.md",
-      "corpus": "ahelp",
+      "file": "snapshots.md",
+      "corpus": "help",
       "names": [
         "object snapshots retention limits"
       ],
@@ -338,8 +338,8 @@
       "section": true
     },
     {
-      "file": "ahelp/snapshots.md",
-      "corpus": "ahelp",
+      "file": "snapshots.md",
+      "corpus": "help",
       "names": [
         "object snapshots recovery"
       ],
@@ -347,8 +347,8 @@
       "section": true
     },
     {
-      "file": "ahelp/snapshots.md",
-      "corpus": "ahelp",
+      "file": "snapshots.md",
+      "corpus": "help",
       "names": [
         "object snapshots validation"
       ],

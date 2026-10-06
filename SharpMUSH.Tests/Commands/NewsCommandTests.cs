@@ -94,12 +94,12 @@ public class AhelpCommandTests
 	public async ValueTask AhelpWithTopicWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp security"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp ahelp"));
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "SharpMUSH includes comprehensive security features to protect your MUSH:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "The administrator help files, readable by wizards and royalty.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
