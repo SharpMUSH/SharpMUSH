@@ -117,9 +117,11 @@ Handler evaluation shares the configured `queue_entry_cpu_time` elapsed-time lim
 
 Inbound request body and header limits come from ASP.NET Core, Kestrel, and any reverse proxy in front of SharpMUSH. They do not use the MUSH response-capture limit described below.
 
-Incoming headers will be set in Q-registers: *%q<headers>* contains a list of all headers by name. Individual headers will be set in *%q<hdr.`[name]`>*, prefixed with hdr. e.g: *%q<hdr.host>* to obtain the value to the Host: header. Or *%q<hdr.Cookie>* for Cookies.
+Incoming headers will be set in Q-registers: *%q<headers>* contains a list of all headers by name. Individual headers will be set in *%q<hdr.`[name]`>*, prefixed with hdr. e.g: *%q<hdr.host>* to obtain the value to the Host: header.
 
-Multiple header lines will be added to the same q-register name, but %r-delimited. So two "Cookie:" lines becomes *%q<Cookies>* with two %r-delimited lines.
+Multiple header lines will be added to the same q-register name, but %r-delimited. So two "Accept:" lines becomes *%q<hdr.accept>* with two %r-delimited lines.
+
+Unlike PennMUSH, **credentials never reach softcode**: the `Authorization`, `Proxy-Authorization` and `Cookie` headers are left out of both *%q<hdr.*>* and *%q<headers>*, and an `access_token` query parameter is removed from *%0*. They carry the web portal's sign-in, a client's password, or a proxy's session, and every route's code sees the same registers. Instead, *%q<viewer>* holds the objid of the character the request signed in as (the portal account's current character), already checked by the server, or is empty for an anonymous request. A route that answers differently per player reads *%q<viewer>*; it never checks a password itself.
 
 HTTP responses are limited to 5,242,880 UTF-16 code units, the same ceiling used for function output. This is a character-buffer limit rather than a UTF-8 wire-byte limit. Anything sent to the HTTP Handler player, whether it uses `think` or `@pemit`, is added to the response buffer. Captured messages include a trailing newline. Exceeding the limit discards the partial body, status, content type, and custom headers and returns a complete plain-text 500 response.
 
