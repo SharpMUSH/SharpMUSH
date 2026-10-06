@@ -2664,6 +2664,39 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
+	/// <c>pay_queue</c> wipes and flags the runaway before it returns (<c>src/cque.c:303-313</c>), so
+	/// nothing queued after the refusal runs until the offender is halted. The wipe runs detached here,
+	/// so the consumer waits for it before starting another entry; without that, a
+	/// <c>think hasflag(obj,HALT)</c> queued behind the runaway could still read 0.
+	/// </summary>
+	[Test]
+	public async Task WorkQueuedAfterARunawayRunsOnlyOnceTheHaltHasLanded()
+	{
+		var mediator = TargetMediator();
+		var flagging = Signal(); var finish = Signal(); var ran = Signal();
+		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
+		mediator.Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>())
+			.Returns(async ValueTask<bool> (_) => { flagging.TrySetResult(); await finish.Task; return true; });
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
+		var state = ParserState.RootFor(new DBRef(10));
+		try
+		{
+			await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1))).Reason)
+				.IsEqualTo(QueueRejectionReason.OwnerLimit);
+			await flagging.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+			await Assert.That((await queue.AdmitWork(() => { ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "after", "test")).Accepted).IsTrue();
+			await Assert.That(await Task.WhenAny(ran.Task, Task.Delay(TimeSpan.FromMilliseconds(500))) == ran.Task).IsFalse()
+				.Because("the entry queued after the refusal must wait for the HALT to be written");
+
+			finish.TrySetResult();
+			await ran.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		}
+		finally { finish.TrySetResult(); }
+	}
+
+	/// <summary>
 	/// The owner's runaway notices are best-effort — a transport that is down can make them throw.
 	/// Telling nobody about a runaway is survivable; leaving one running is not, so the wipe and the
 	/// HALT come before the notices, and the refusal itself sends none.
