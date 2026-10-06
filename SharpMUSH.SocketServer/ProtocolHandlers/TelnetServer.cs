@@ -243,8 +243,12 @@ public class TelnetServer : ConnectionHandler
 			.AddPlugin<NAWSProtocol>().OnNAWS(async (newHeight, newWidth) =>
 			{
 				await AnnounceTelnetIfNegotiatedAsync();
-				await PublishAfterRegistrationAsync(
-					() => _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct));
+				await PublishAfterRegistrationAsync(() =>
+				{
+					// Kept here as well as sent to the engine: the renderer lays automatic-width boxes out at it.
+					_connectionService.UpdateCapabilities(nextPort, current => current with { Width = newWidth });
+					return _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct);
+				});
 			})
 			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))

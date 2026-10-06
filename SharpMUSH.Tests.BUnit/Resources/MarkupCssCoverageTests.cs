@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MarkupString.Ansi;
+using MarkupString.Html;
 
 namespace SharpMUSH.Tests.BUnit.Resources;
 
@@ -22,7 +23,7 @@ public class MarkupCssCoverageTests
 	/// semicolons outside braces.
 	/// </summary>
 	public static IEnumerable<Func<(string Selector, string Declaration)>> FixedDeclarations() =>
-		CssRules(AnsiCss.Fixed)
+		CssRules(AnsiCss.Fixed + LayoutCss.Fixed)
 			.SelectMany(rule => Declarations(rule.Body).Select(d => (rule.Selector, Declaration: d)))
 			.Select(Func<(string, string)> (pair) => () => pair);
 
@@ -51,6 +52,8 @@ public class MarkupCssCoverageTests
 
 		await Assert.That(selectors).Contains(".ms-bold");
 		await Assert.That(selectors).Contains(".ms-invert");
+		await Assert.That(selectors).Contains(".ms-box");
+		await Assert.That(selectors).Contains(".ms-flex");
 		await Assert.That(selectors).Contains("@keyframes ms-blink");
 		await Assert.That(selectors.Length).IsGreaterThanOrEqualTo(8);
 		await Assert.That(pairs.Select(p => p.Declaration)).Contains("font-weight: bold");

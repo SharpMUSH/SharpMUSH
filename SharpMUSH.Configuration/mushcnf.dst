@@ -945,6 +945,21 @@ use_muxcomm no
 # the @*wall and say commands.
 chat_strip_quote yes
 
+# The border box() and rule() draw with when they name none: none, ascii,
+# mush (+=|), single, double, heavy or rounded. A client that cannot show
+# box-drawing characters gets the ascii pieces instead.
+layout_border mush
+
+# Which pictures image() and figure() may show. any: every host. allow:
+# only the hosts in image_host_list. block: every host but those. off: no
+# pictures at all. The game's own pictures (a relative address) are shown
+# unless this is off. A refused picture shows its text art or description.
+image_hosts any
+
+# Hosts for image_hosts allow or block, space separated. An entry starting
+# with *. covers every subdomain.
+# image_host_list i.imgur.com *.example.com
+
 # Should object names be restricted to just ascii characters, or can
 # non-ascii (Accented letters, for example) be used as well if the
 # mush'es locale permits? Not reccomended except for

@@ -264,8 +264,11 @@
 | [TRIM()]                 | [UCSTR()]                | [URLDECODE()]            | [URLENCODE()]            |
 | [WRAP()]                 |                          |                          |                          |
 
+Boxes, titled rules, columns and pictures that the web portal draws as real layout are [LAYOUT FUNCTIONS].
+
 ::: seealso
 - [STRINGS]
+- [LAYOUT FUNCTIONS]
 :::
 # Time functions
   These functions return times or format times.

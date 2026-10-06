@@ -21,7 +21,9 @@ if (!MarkupRegistry.IsConfigured)
 {
 	// WithHtml(policy): a tag rendered here lands in a browser, so every one is held to the portal's
 	// policy as it is written — including markup built before it reached us.
-	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml(TagwrapPolicy.Portal);
+	// WithLayoutImages: a figure()'s picture is shown only when the game's image_hosts allows its host.
+	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml(TagwrapPolicy.Portal)
+		.WithLayoutImages(PortalImagePolicy.Allows);
 }
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

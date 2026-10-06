@@ -1,5 +1,6 @@
 using SharpMUSH.SocketServer.ProtocolHandlers;
 using MarkupString.Ansi;
+using MarkupString.Layout;
 using MarkupString.Mxp;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
@@ -34,7 +35,7 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 			return new RenderedOutput(Encoding.UTF8.GetBytes(envelope), ApplyOutputTransform: false);
 		}
 
-		var ms = MarkupTextSerializer.Deserialize(markup);
+		var ms = Relayout(MarkupTextSerializer.Deserialize(markup), connection.Capabilities);
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);
 		var text = connection.Capabilities.Format switch
 		{
@@ -59,6 +60,22 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		}
 
 		return new RenderedOutput(Encoding.UTF8.GetBytes(text), ApplyOutputTransform: true);
+	}
+
+	/// <summary>
+	/// <paramref name="text"/> with each intact layout block (<c>box()</c>, <c>flex()</c>, ...) laid out
+	/// for this client: an automatic-width block at the width it reported, box drawing as ASCII for a
+	/// client without UTF-8, and the content alone in reading order for a screen reader. The browser
+	/// lays blocks out itself, so this is for every other connection.
+	/// </summary>
+	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities)
+	{
+		if (text.Runs.IsDefaultOrEmpty) return text;
+
+		var options = !capabilities.SupportsUtf8 || capabilities.ScreenReader
+			? new BlockRenderOptions { AsciiOnly = !capabilities.SupportsUtf8, Linear = capabilities.ScreenReader }
+			: BlockRenderOptions.Default;
+		return BlockLayout.Relayout(text, capabilities.Width, options);
 	}
 
 	/// <summary>

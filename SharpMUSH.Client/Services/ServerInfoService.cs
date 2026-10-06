@@ -15,7 +15,7 @@ namespace SharpMUSH.Client.Services;
 public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
-		string? BuildId = null);
+		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null);
 
 	private const string DefaultMudName = "SharpMUSH";
 
@@ -129,6 +129,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	{
 		_answeredAt = DateTimeOffset.UtcNow;
 		_firstBuildId ??= info.BuildId;
+		PortalImagePolicy.Set(info.ImageHosts, info.ImageHostList);
 		return info with { MudName = string.IsNullOrWhiteSpace(info.MudName) ? DefaultMudName : info.MudName };
 	}
 }

@@ -742,6 +742,35 @@ pre.ms-preformatted {
     white-space: pre-wrap;
 }
 
+/* box(), rule(), flex(), item() and figure() arrive as <div class="ms-layout">. These rules mirror
+   MarkupString.Html's LayoutCss.Fixed verbatim (pinned by MarkupCssCoverageTests). */
+.ms-layout { display: block; max-width: 100%; white-space: normal; }
+.ms-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ms-box { margin: 0; padding: 0 1ch; min-width: 0; border: 1px solid currentColor; }
+.ms-box.ms-border-none { border: none; padding: 0; }
+.ms-box.ms-border-double { border: 3px double currentColor; }
+.ms-box.ms-border-heavy { border-width: 2px; }
+.ms-box.ms-border-rounded { border-radius: 0.5em; }
+.ms-box-title { padding: 0 1ch; margin-inline: auto; }
+.ms-box-title[data-align="left"] { margin-inline: 0 auto; }
+.ms-box-title[data-align="right"] { margin-inline: auto 0; }
+.ms-rule, .ms-divider { display: flex; align-items: center; gap: 1ch; }
+.ms-rule::before, .ms-rule::after, .ms-divider::before, .ms-divider::after { content: ""; flex: 1 1 0; border-top: 1px solid currentColor; }
+.ms-rule[data-align="left"]::before, .ms-divider[data-align="left"]::before { flex: 0 0 1ch; }
+.ms-rule[data-align="right"]::after, .ms-divider[data-align="right"]::after { flex: 0 0 1ch; }
+.ms-divider { margin: 0 -1ch; }
+.ms-border-double.ms-rule::before, .ms-border-double.ms-rule::after { border-top: 3px double currentColor; }
+.ms-border-none.ms-rule::before, .ms-border-none.ms-rule::after { border-top: none; }
+.ms-flex { display: flex; flex-wrap: wrap; }
+.ms-flex.ms-vertical { flex-direction: column; }
+.ms-item { min-width: 0; }
+.ms-flex.ms-divided > .ms-item + .ms-item { border-left: 1px solid currentColor; padding-left: 1ch; }
+.ms-figure { display: flow-root; }
+.ms-figure-image { max-width: 100%; height: auto; }
+.ms-figure-art { margin: 0; font: inherit; white-space: pre; }
+.ms-float-left > .ms-figure-image, .ms-float-left > .ms-figure-art { float: left; max-width: 50%; margin: 0 2ch 0.5em 0; }
+.ms-float-right > .ms-figure-image, .ms-float-right > .ms-figure-art { float: right; max-width: 50%; margin: 0 0 0.5em 2ch; }
+
 /* Command links (xch_cmd) — clickable, run a MUSH command. Distinct from URL links.
    The base rule mirrors HtmlCss.Fixed's .ms-cmd-link verbatim (pinned by
    MarkupCssCoverageTests); the portal-only color theming sits in its own rule below. */

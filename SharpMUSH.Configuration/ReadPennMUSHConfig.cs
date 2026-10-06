@@ -137,7 +137,10 @@ public static partial class ReadPennMushConfig
 				RequiredString(Get(nameof(CosmeticOptions.RoyaltyWallPrefix)), d.Cosmetic.RoyaltyWallPrefix).Trim(),
 				RequiredString(Get(nameof(CosmeticOptions.WallPrefix)), d.Cosmetic.WallPrefix).Trim(),
 				Boolean(Get(nameof(CosmeticOptions.AnnounceConnects)), d.Cosmetic.AnnounceConnects),
-				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), d.Cosmetic.ChatStripQuote)
+				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), d.Cosmetic.ChatStripQuote),
+				RequiredString(Get(nameof(CosmeticOptions.LayoutBorder)), d.Cosmetic.LayoutBorder).Trim().ToLowerInvariant(),
+				RequiredString(Get(nameof(CosmeticOptions.ImageHosts)), d.Cosmetic.ImageHosts).Trim().ToLowerInvariant(),
+				String(Get(nameof(CosmeticOptions.ImageHostList)), d.Cosmetic.ImageHostList)?.Trim() ?? string.Empty
 			),
 			Cost = new CostOptions(
 				UnsignedInteger(Get(nameof(CostOptions.ObjectCost)), d.Cost.ObjectCost),
