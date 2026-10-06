@@ -98,8 +98,8 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// The listener options a mush.cnf carries are marked as not used, with what sets them instead, so
-	/// nobody edits a port and waits for a restart that changes nothing (#1565).
+	/// The listener options a mush.cnf carries that nothing reads are marked as not used, with what sets
+	/// them instead, so nobody edits one and waits for a restart that changes nothing (#1565).
 	/// </summary>
 	[Test]
 	public async Task UnusedOptionsAreMarked_WithWhatSetsThemInstead()
@@ -110,14 +110,21 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		AngleSharp.Dom.IElement Row(string key) =>
 			cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == key);
 
-		var port = Row("Net.Port");
-		await Assert.That(port.QuerySelector(".cfg-row-unused")!.TextContent).IsEqualTo("Not used");
-		var note = port.QuerySelector(".cfg-row-unused-note")!;
-		await Assert.That(note.TextContent).Contains("ConnectionServer:TelnetPort");
-		await Assert.That(port.QuerySelector("input")!.GetAttribute("aria-describedby")!.Split(' ')).Contains(note.Id!);
-		foreach (var key in new[] { "Net.SslPort", "Net.PortalPort", "Net.SslPortalPort", "Net.IpAddr", "Net.SslIpAddr",
-			"Net.SocketFile", "Net.UseWebsockets", "Net.WebsocketUrl" })
+		var portal = Row("Net.PortalPort");
+		await Assert.That(portal.QuerySelector(".cfg-row-unused")!.TextContent).IsEqualTo("Not used");
+		var note = portal.QuerySelector(".cfg-row-unused-note")!;
+		await Assert.That(note.TextContent).Contains("ASPNETCORE_URLS");
+		await Assert.That(portal.QuerySelector("input")!.GetAttribute("aria-describedby")!.Split(' ')).Contains(note.Id!);
+		foreach (var key in new[] { "Net.SslPortalPort", "Net.IpAddr", "Net.SslIpAddr", "Net.SocketFile", "Net.UseWebsockets",
+			"Net.WebsocketUrl" })
 			await Assert.That(Row(key).QuerySelector(".cfg-row-unused")).IsNotNull().Because(key);
+
+		// port and ssl_port open no listener, but MSSP-REQUEST reports them, so they take effect.
+		foreach (var key in new[] { "Net.Port", "Net.SslPort" })
+		{
+			await Assert.That(Row(key).QuerySelector(".cfg-row-unused")).IsNull().Because(key);
+			await Assert.That(Row(key).QuerySelector(".cfg-row-help")!.TextContent).Contains("MSSP-REQUEST").Because(key);
+		}
 		await Assert.That(Row("Net.MudName").QuerySelector(".cfg-row-unused")).IsNull();
 	}
 

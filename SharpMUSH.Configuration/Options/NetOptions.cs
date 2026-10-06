@@ -20,10 +20,10 @@ public record NetOptions(
 	[property: SharpConfig(Name = "ssl_ip_addr", Category = "Net", Description = "IP address to bind to for SSL connections", Group = "Connection Settings", Order = 5, Unused = "The connection server listens on every address; there is no setting for one.")]
 	string? SslIpAddr,
 
-	[property: SharpConfig(Name = "port", Category = "Net", Description = "The port number the server listens on for incoming connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 1, Min = 1, Max = 65535, Unused = "Telnet listens on ConnectionServer:TelnetPort. This value is only reported to MUD crawlers (MSSP-REQUEST).")]
+	[property: SharpConfig(Name = "port", Category = "Net", Description = "The telnet port reported to MUD crawlers (MSSP-REQUEST). Telnet listens on ConnectionServer:TelnetPort, which can differ behind a port mapping", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 1, Min = 1, Max = 65535)]
 	uint Port,
 
-	[property: SharpConfig(Name = "ssl_port", Category = "Net", Description = "Port for SSL/TLS encrypted connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 2, Min = 0, Max = 65535, Tooltip = "Set to 0 to disable SSL", Unused = "TLS telnet listens on ConnectionServer:TelnetSslPort. This value is only reported to MUD crawlers (MSSP-REQUEST).")]
+	[property: SharpConfig(Name = "ssl_port", Category = "Net", Description = "The TLS telnet port reported to MUD crawlers (MSSP-REQUEST). TLS telnet listens on ConnectionServer:TelnetSslPort", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 2, Min = 0, Max = 65535, Tooltip = "0 reports no TLS port")]
 	uint SslPort,
 
 	[property: SharpConfig(Name = "portal_port", Category = "Net", Description = "Port for portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 6, Min = 0, Max = 65535, Unused = "The web portal listens where SharpMUSH.Server's Kestrel addresses say (ASPNETCORE_URLS).")]

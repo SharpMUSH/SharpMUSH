@@ -92,10 +92,12 @@ Form-based UI (not raw text editing). Sections:
 - Toggle: guest access to public content
 
 Changes write to the game's configuration store and take effect without a restart.
-The listener options a `mush.cnf` carries (`port`, `ssl_port`, `portal_port`,
+The listener options a `mush.cnf` carries that nothing reads (`portal_port`,
 `ssl_portal_port`, `ip_addr`, `ssl_ip_addr`, `socket_file`, `use_ws`, `ws_url`) are
 marked "Not used", each with what sets it instead (the ConnectionServer settings, or
-the server's Kestrel addresses), via `SharpConfigAttribute.Unused`. No other option
+the server's Kestrel addresses), via `SharpConfigAttribute.Unused`. `port` and
+`ssl_port` open no listener either, but `MSSP-REQUEST` reports them, so their
+descriptions say so instead. No other option
 needs a restart, so there is no restart marker (#1565).
 
 ### Layout Editor (`/admin/layout`)
