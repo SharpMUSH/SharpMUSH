@@ -6,13 +6,15 @@ namespace SharpMUSH.Client.Services;
 /// <summary>
 /// The icon an application names. A package writes a Material icon name (<c>support_agent</c>,
 /// <c>assignment_ind</c>, <c>Badge</c>); <see cref="MudBlazor.MudIcon"/> draws SVG markup, so the name is
-/// looked up among MudBlazor's Material icons. SVG markup passes through as it is; an unknown name or
-/// none is the fallback.
+/// looked up among MudBlazor's Material icons. SVG markup is accepted only when it is one of those
+/// icons: an icon can come from softcode (a nav_url's answer), and MudIcon writes markup into the page
+/// unescaped. An unknown name, other markup, or none is the fallback.
 /// </summary>
 public static class AppIcons
 {
 	private static readonly FrozenDictionary<string, string> Outlined = Table(typeof(MudBlazor.Icons.Material.Outlined));
 	private static readonly FrozenDictionary<string, string> Filled = Table(typeof(MudBlazor.Icons.Material.Filled));
+	private static readonly FrozenSet<string> Known = Outlined.Values.Concat(Filled.Values).ToFrozenSet(StringComparer.Ordinal);
 
 	/// <summary>The SVG for <paramref name="icon"/> in the outlined set (filled when outlined lacks it), else <paramref name="fallback"/>.</summary>
 	public static string Outline(string? icon, string fallback) => Resolve(icon, fallback, Outlined, Filled);
@@ -30,7 +32,7 @@ public static class AppIcons
 		var trimmed = icon.Trim();
 		if (trimmed.StartsWith('<'))
 		{
-			return trimmed;
+			return Known.Contains(trimmed) ? trimmed : fallback;
 		}
 
 		var key = Key(trimmed);

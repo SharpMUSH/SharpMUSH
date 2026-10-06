@@ -184,7 +184,7 @@
                 }
                 else
                 {
-                    await LoadSchemaAppAsync(generation);
+                    await LoadSchemaAppAsync(app, generation);
                 }
             }
         }
@@ -232,16 +232,17 @@
     /// requested <c>/http/profile?objid=%7Bobjid%7D</c> literally, for every persona, and reported the
     /// empty answer as "Nothing to display."
     /// </summary>
-    private async Task LoadSchemaAppAsync(int generation)
+    private async Task LoadSchemaAppAsync(PortalApplication app, int generation)
     {
         var objid = await ActingObjidAsync();
+        if (generation != _generation) return;
         var (segments, query) = PathAndQuery();
-        var schemaUrl = Substitute(_app!.SchemaUrl, objid) is { } schemaRoute ? SchemaRendering.ApplyPath(schemaRoute, segments, query) : null;
-        var dataUrl = string.IsNullOrWhiteSpace(_app.DataUrl) ? null
-            : Substitute(_app.DataUrl!, objid) is { } dataRoute ? SchemaRendering.ApplyPath(dataRoute, segments, query) : null;
+        var schemaUrl = Substitute(app.SchemaUrl, objid) is { } schemaRoute ? SchemaRendering.ApplyPath(schemaRoute, segments, query) : null;
+        var dataUrl = string.IsNullOrWhiteSpace(app.DataUrl) ? null
+            : Substitute(app.DataUrl!, objid) is { } dataRoute ? SchemaRendering.ApplyPath(dataRoute, segments, query) : null;
 
         // A route we cannot fill is not a route we should fetch.
-        if (schemaUrl is null || (_app.DataUrl is { Length: > 0 } && dataUrl is null))
+        if (schemaUrl is null || (app.DataUrl is { Length: > 0 } && dataUrl is null))
         {
             _needsCharacter = true;
             return;

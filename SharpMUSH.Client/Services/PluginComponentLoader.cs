@@ -38,7 +38,17 @@ public sealed class PluginComponentLoader(IHttpClientFactory httpClientFactory, 
 			return null;
 		}
 
-		var type = assembly.GetType(componentTypeName, throwOnError: false, ignoreCase: false);
+		Type? type;
+		try
+		{
+			type = assembly.GetType(componentTypeName, throwOnError: false, ignoreCase: false);
+		}
+		catch (ArgumentException)
+		{
+			// A malformed name throws even with throwOnError off; it names no type either way.
+			type = null;
+		}
+
 		if (type is null)
 		{
 			logger.LogWarning("Plugin component type '{Type}' not found in assembly from {Url}.",

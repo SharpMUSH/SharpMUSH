@@ -59,6 +59,7 @@
     private Dictionary<string, IReadOnlyList<AppNavGroup>> _navs = new(StringComparer.OrdinalIgnoreCase);
     private SectionPath _at = new("/", string.Empty);
     private int _generation;
+    private Task<AuthenticationState>? _navsAuth;
 
     protected override void OnInitialized()
     {
@@ -68,6 +69,13 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        // Another viewer's links (a staff view's counts, say) must not show while this viewer's links load.
+        if (!ReferenceEquals(AuthState, _navsAuth))
+        {
+            _navsAuth = AuthState;
+            _navs = new(StringComparer.OrdinalIgnoreCase);
+        }
+
         var user = AuthState is null ? null : (await AuthState).User;
         _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, Section);
         await LoadNavsAsync();

@@ -22,7 +22,10 @@ public class AppSectionSidebarTests : TrackingBunitContext
 	{
 		public int NavReads;
 
-		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		/// <summary>When set, a nav read waits for it: the answer to an earlier viewer's read is in hand, the next is not.</summary>
+		public TaskCompletionSource? NavGate;
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			const string apps = """
 				[{"slug":"jobs","displayName":"Jobs","icon":"support_agent","kind":"Page","schemaUrl":"x","dataUrl":null,"submitRoute":null,
@@ -34,14 +37,18 @@ public class AppSectionSidebarTests : TrackingBunitContext
 			if (path == "/http/jobs/nav")
 			{
 				Interlocked.Increment(ref NavReads);
+				if (NavGate is { } gate)
+				{
+					await gate.Task.WaitAsync(cancellationToken);
+				}
 			}
 
-			return Task.FromResult(path switch
+			return path switch
 			{
 				"/api/applications" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(apps, Encoding.UTF8, "application/json") },
 				"/http/jobs/nav" => new HttpResponseMessage(navStatus) { Content = new StringContent(nav, Encoding.UTF8, "application/json") },
 				_ => new HttpResponseMessage(HttpStatusCode.NotFound)
-			});
+			};
 		}
 	}
 
@@ -69,9 +76,12 @@ public class AppSectionSidebarTests : TrackingBunitContext
 			.AddSingleton(new SchemaAppService(factory, NullLogger<SchemaAppService>.Instance))
 			.AddLocalization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
-		AddAuthorization().SetAuthorized("player");
+		_auth = AddAuthorization();
+		_auth.SetAuthorized("player");
 		return handler;
 	}
+
+	private BunitAuthorizationContext _auth = null!;
 
 	private BunitNavigationManager Nav => Services.GetRequiredService<BunitNavigationManager>();
 
@@ -121,5 +131,27 @@ public class AppSectionSidebarTests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll("a.kit-row").Select(a => a.GetAttribute("href")))
 			.IsEquivalentTo(new[] { "/apps/jobs", "/apps/faq" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task A_new_viewer_does_not_see_the_last_viewers_links_while_theirs_load()
+	{
+		var handler = Setup(StaffNav);
+		Nav.NavigateTo("/apps/jobs");
+		var cut = Render<AppSectionSidebar>(p => p.Add(x => x.Section, "Support"));
+		cut.WaitForAssertion(() => cut.Find("a.kit-row[href='/apps/jobs?bucket=bugs']"), TimeSpan.FromSeconds(5));
+
+		var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.NavGate = gate;
+		_auth.SetAuthorized("someone-else");
+
+		cut.WaitForState(() => cut.FindAll("a.kit-row[href='/apps/jobs?bucket=bugs']").Count == 0, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.kit-row").Select(a => a.GetAttribute("href")))
+			.IsEquivalentTo(new[] { "/apps/jobs", "/apps/faq" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("the app keeps its own link until the new viewer's answer arrives");
+
+		gate.SetResult();
+		cut.WaitForAssertion(() => cut.Find("a.kit-row[href='/apps/jobs?bucket=bugs']"), TimeSpan.FromSeconds(5));
+		await Assert.That(handler.NavReads).IsGreaterThanOrEqualTo(2);
 	}
 }

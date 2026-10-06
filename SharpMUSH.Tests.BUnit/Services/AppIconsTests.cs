@@ -27,9 +27,17 @@ public class AppIconsTests
 	}
 
 	[Test]
-	public async Task Svg_markup_is_used_as_it_is()
+	public async Task A_material_icon_svg_is_used_as_it_is()
 	{
 		await Assert.That(AppIcons.Outline(Icons.Material.Filled.Badge, Icons.Material.Outlined.Apps)).IsEqualTo(Icons.Material.Filled.Badge);
+	}
+
+	[Test]
+	[Arguments("<svg onload=\"alert(1)\"></svg>")]
+	[Arguments("<path d=\"M0 0\"/><image href=x onerror=alert(1)>")]
+	public async Task Other_markup_is_the_fallback(string markup)
+	{
+		await Assert.That(AppIcons.Outline(markup, Icons.Material.Outlined.Apps)).IsEqualTo(Icons.Material.Outlined.Apps);
 	}
 
 	[Test]
