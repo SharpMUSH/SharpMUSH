@@ -1,6 +1,6 @@
 format: 1
 package: comm-feed
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — a player's channels, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
 license: MIT
@@ -16,7 +16,8 @@ requires_server: ">=0.1"
 # CHANNEL`MESSAGE fires after a channel line is delivered and names exactly the
 # members it was delivered to (a gagged member, a member the speaker may not be
 # heard by, one whose @chatformat silenced the line, and a muted member's
-# presence line are already left out). PAGE`MESSAGE fires after a page and
+# presence line are already left out). Connect and disconnect lines are not
+# passed on: in the portal a channel's member list says who is on it. PAGE`MESSAGE fires after a page and
 # names only the recipients it reached (not connected, HAVEN, page lock and
 # interaction refusals are already left out). So comm.message goes to that
 # list, plus the pager for a page, and never to anyone the terminal did not
@@ -89,9 +90,11 @@ objects:
       # show the handler object.
       #
       # %0 channel, %1 speaker objid, %2 style, %3 speaker name, %4 message,
-      # %5 the members it was delivered to, %6 unix-ms, %7 the line's id.
+      # %5 the members it was delivered to, %6 unix-ms, %7 the line's id. A
+      # presence line (a connect or disconnect) is not sent: the portal shows
+      # who is on a channel as its member list (comm.who) instead.
       CHANNEL`MESSAGE: |-
-        think null(oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7)))
+        think null(if(strmatch(%2,presence),,oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7))))
       # %0 pager, %1 the recipients it reached, %2 style, %3 pager name,
       # %4 message, %5 unix-ms, %6 the page's id. The pager is sent it too, as
       # their terminal shows them their own page; setunion() keeps a self-page

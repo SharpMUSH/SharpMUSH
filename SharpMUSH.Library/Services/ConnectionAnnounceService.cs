@@ -218,7 +218,7 @@ public class ConnectionAnnounceService(
 
 	/// <summary>
 	/// Tells the channels the player is on that they came or went, for their live member lists. Not gated
-	/// on <c>Cosmetic.AnnounceConnects</c> or a channel's <c>Announce</c> privilege: a member list is not an
+	/// on <c>Cosmetic.AnnounceConnects</c> or a channel's <c>Quiet</c> privilege: a member list is not an
 	/// announcement. Isolated as <see cref="BroadcastAnnouncementAsync"/> is, for the same reason.
 	/// </summary>
 	private async ValueTask PublishOnlineChangedAsync(AnySharpObject player, bool online)
@@ -273,9 +273,8 @@ public class ConnectionAnnounceService(
 
 	/// <summary>
 	/// Ports the channel-broadcast portion of chat_player_announce (src/extchat.c:3187-3205): the
-	/// connect/disconnect line is published to every channel the player belongs to that has the "Announce"
-	/// privilege. PennMUSH announces on every channel without "Quiet"; SharpMUSH channels are quiet unless
-	/// they opt in, since a channel's history is for what was said on it. A line from a hidden connection - or from a member who is hidden on
+	/// connect/disconnect line is published to every channel the player belongs to, skipping channels
+	/// with the "Quiet" privilege. A line from a hidden connection - or from a member who is hidden on
 	/// that particular channel - goes out CB_SEEALL, so only See_All members (and the player
 	/// themselves) receive it; that is PennMUSH's
 	/// <c>if (Chanuser_Hide(up) || (desc_player-&gt;hide == 1))</c> at :3190. Per-viewer
@@ -288,7 +287,7 @@ public class ConnectionAnnounceService(
 
 		await foreach (var channel in mediator.CreateStream(new GetOnChannelQuery(player)))
 		{
-			if (!channel.HasPriv("Announce"))
+			if (channel.HasPriv("Quiet"))
 			{
 				continue;
 			}
