@@ -73,4 +73,15 @@ public class NotifyServicePipeCaptureTests
 		await Assert.That(buffer.Text.ToPlainText()).IsEqualTo("12345\n1234");
 		await Assert.That(buffer.Truncated).IsTrue();
 	}
+
+	[Test]
+	public async Task AMultilineNotificationPastTheLimit_KeepsItsLinesThatFit()
+	{
+		var buffer = new PipeBuffer(10);
+
+		buffer.Append(MarkupText.Plain("first\nsecond line"));
+
+		await Assert.That(buffer.Text.ToPlainText()).IsEqualTo("first");
+		await Assert.That(buffer.Truncated).IsTrue();
+	}
 }

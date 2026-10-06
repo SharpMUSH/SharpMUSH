@@ -1009,7 +1009,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			&& context.GetChild(index) is CommandContext { Start: { } start }
 			&& context.GetChild(index - 1) is ITerminalNode { Symbol: { } separator }
 			&& separator.Type == SEMICOLON
-			&& start.StartIndex == separator.StopIndex + 1
+			// The separator token takes the spaces after the ';', so `; |x` is not a pipe: the '|' must follow
+			// the ';' itself.
+			&& start.StartIndex == separator.StartIndex + 1
 			&& start.StartIndex < source.Text.Length
 			&& source.Text[start.StartIndex] == '|';
 

@@ -37,22 +37,32 @@ public sealed class PipeBuffer(int maxLength)
 	private int _length;
 
 	/// <summary>
-	/// Appends <paramref name="line"/>. A line that would take the buffer past its limit is dropped, and
-	/// so is everything after it, so the text never ends partway through a line.
+	/// Appends <paramref name="line"/>, which may hold several lines. When it would take the buffer past its
+	/// limit, the lines of it that fit are kept and the rest, with everything after it, is dropped, so the
+	/// text never ends partway through a line.
 	/// </summary>
 	public void Append(MString line)
 	{
 		lock (_lines)
 		{
+			if (Truncated) return;
+
 			var separator = _lines.Count > 0 ? 1 : 0;
-			if (Truncated || _length + separator + line.Length > maxLength)
+			var room = maxLength - _length - separator;
+			if (line.Length <= room)
 			{
-				Truncated = true;
+				_lines.Add(line);
+				_length += separator + line.Length;
 				return;
 			}
 
-			_lines.Add(line);
-			_length += separator + line.Length;
+			Truncated = true;
+			var cut = room >= 0 ? line.Text.LastIndexOf('\n', Math.Min(room, line.Length - 1)) : -1;
+			if (cut > 0)
+			{
+				_lines.Add(line.Substring(0, cut));
+				_length += separator + cut;
+			}
 		}
 	}
 

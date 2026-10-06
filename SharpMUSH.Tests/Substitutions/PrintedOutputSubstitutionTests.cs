@@ -80,6 +80,15 @@ public class PrintedOutputSubstitutionTests
 	}
 
 	[Test]
+	public async Task ASpaceAfterTheSemicolonIsNotAPipe()
+	{
+		var marker = Unique("Spaced");
+		var heard = await Queued($"think {marker}; |think x;@pemit me=after=[strlen(%|)]");
+		await Assert.That(heard).Contains(marker);
+		await Assert.That(heard).Contains("after=0");
+	}
+
+	[Test]
 	public async Task WithoutAPipeItIsEmptyAndOutputIsShown()
 	{
 		var marker = Unique("Plain");
