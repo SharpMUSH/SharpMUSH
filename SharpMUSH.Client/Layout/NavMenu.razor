@@ -71,15 +71,30 @@
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="World" Applications="_apps" />
         </div>
 
+        @* Build & manage, grouped as its sidebar and overview group it (BuildNavCatalog). A group with
+           nothing the viewer may use hides its heading through the nav-group CSS rule. Applications
+           placed in Manage keep a group of their own. *@
+        <div class="nav-group">
+            <div class="nav-group-label">@Loc["NavBuildManage"]</div>
+            <BuildNavLinks Group="BuildNavCatalog.Group.Overview" IsCollapsed="IsCollapsed" />
+        </div>
+
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionBuild"]</div>
             <BuildNavLinks Group="BuildNavCatalog.Group.Build" IsCollapsed="IsCollapsed" />
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Build" Applications="_apps" />
         </div>
 
+        @foreach (var group in StaffGroups)
+        {
+            <div class="nav-group" @key="group">
+                <div class="nav-group-label">@Loc[BuildNavCatalog.GroupLabelKey(group)!]</div>
+                <BuildNavLinks Group="group" IsCollapsed="IsCollapsed" />
+            </div>
+        }
+
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionManage"]</div>
-            <BuildNavLinks Group="BuildNavCatalog.Group.Manage" IsCollapsed="IsCollapsed" />
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Manage" Applications="_apps" />
         </div>
 
@@ -120,6 +135,16 @@
 </div>
 
 @code {
+    /// <summary>The staff groups after Build, each under its own heading.</summary>
+    private static readonly BuildNavCatalog.Group[] StaffGroups =
+    [
+        BuildNavCatalog.Group.People,
+        BuildNavCatalog.Group.Moderation,
+        BuildNavCatalog.Group.Content,
+        BuildNavCatalog.Group.Portal,
+        BuildNavCatalog.Group.Server,
+    ];
+
     [Parameter]
     public bool IsCollapsed { get; set; } = true;
 

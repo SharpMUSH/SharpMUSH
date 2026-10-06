@@ -120,10 +120,6 @@
     <value>Onemogućen</value>
     <comment>MT — account status; masculine to agree with "račun"</comment>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>Upravljanje računima</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Pretraži korisničko ime ili e-poštu…</value>
     <comment>MT — original ellipsis character preserved</comment>
@@ -131,10 +127,6 @@
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Računi</value>
     <comment>MT</comment>
-  </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>Prilagođeni widgeti</value>
-    <comment>MT — widget kept per the locale sheet</comment>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
     <value>Aplikacije</value>
@@ -151,26 +143,6 @@
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Lik {0} odvojen je od '{1}'.</value>
     <comment>MT — added the head noun "Lik" so the unquoted character name {0} can stay in the nominative</comment>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>Prikaz likova</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>Konfiguracija stranice</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>Nadzorna ploča administratora</value>
-    <comment>MT — dashboard per the locale sheet</comment>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>Uvezi bazu podataka</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>Uvoz baze podataka</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmDisableAccount" xml:space="preserve">
     <value>Onemogući</value>
@@ -192,20 +164,8 @@
     <value>Pregledajte teme, pretražite reference i pročitajte priručnik.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>Administracija</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>Uređivač rasporeda</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>Raspored</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>Medijski resursi</value>
     <comment>MT</comment>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
@@ -224,14 +184,6 @@
     <value>Operacija nije uspjela.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Softcode paketi</value>
-    <comment>MT — softcode kept untranslated per the glossary</comment>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>Paketi</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Lozinka za '{0}' promijenjena je u: {1} — podijelite je na siguran način; korisnik je mora promijeniti pri sljedećoj prijavi.</value>
     <comment>MT — lozinka per the locale sheet; {1} follows a colon so the generated password stays uninflected; the English "they" rendered as "korisnik" since Croatian has no neutral pronoun here</comment>
@@ -244,21 +196,9 @@
     <value>Igrač #{0}</value>
     <comment>MT — assumed the entity (a numbered player record), not the Player privilege level</comment>
   </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>Prikaz igrača</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>Igrači</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPresent" xml:space="preserve">
     <value>Postoji</value>
     <comment>MT — assumed the status opposite of "Missing" (the item exists), not physical presence</comment>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>Profili likova</value>
-    <comment>MT</comment>
   </data>
   <data name="AdmProfilesConfigured" xml:space="preserve">
     <value>Konfigurirano</value>
@@ -315,16 +255,8 @@
     <value>Resetiranje…</value>
     <comment>MT — original ellipsis character preserved</comment>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>Uloge i dopuštenja</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Uloge</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>Status poslužitelja</value>
     <comment>MT</comment>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
@@ -333,10 +265,6 @@
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Status</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>Prijedlozi riječi</value>
     <comment>MT</comment>
   </data>
   <data name="AdmUnlinkFailed" xml:space="preserve">
@@ -4227,10 +4155,6 @@
     <value>Obrisano: {0}.</value>
     <comment>MT — restructured so the file name sits after a colon in nominative</comment>
   </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG, JPEG, GIF, WebP ili SVG — najviše 10 MB.</value>
-    <comment>MT — format names kept as-is</comment>
-  </data>
   <data name="WkAssetUploaded" xml:space="preserve">
     <value>Preneseno: {0}.</value>
     <comment>MT — restructured so the file name sits after a colon in nominative</comment>
@@ -4581,10 +4505,6 @@
   </data>
   <data name="WkViewRevision" xml:space="preserve">
     <value>Prikaži ovu reviziju</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Wiki resursi</value>
     <comment>MT</comment>
   </data>
   <data name="WordAddFailed" xml:space="preserve">
@@ -5103,9 +5023,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Atributi rukovatelja</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>Prenesi sliku</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Ova igra nema instaliranih tema pomoći.</value>

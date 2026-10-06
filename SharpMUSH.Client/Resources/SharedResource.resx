@@ -1491,7 +1491,7 @@
     <value>Uninstalled {0}.</value>
   </data>
   <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Build · Package authoring</value>
+    <value>Portal · Package authoring</value>
   </data>
   <data name="PkgAuthorHeading" xml:space="preserve">
     <value>Author a Package</value>
@@ -1573,7 +1573,7 @@
     <value>Classify {0}: configure refs need a key and a label.</value>
   </data>
   <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Build · Package registry</value>
+    <value>Portal · Packages</value>
   </data>
   <data name="PkgBrowseHeading" xml:space="preserve">
     <value>Browse Packages</value>
@@ -1609,7 +1609,7 @@
     <value>No release tags — only the dev channel is available.</value>
   </data>
   <data name="PkgKickerSources" xml:space="preserve">
-    <value>Build · Package sources</value>
+    <value>Portal · Package sources</value>
   </data>
   <data name="PkgRemotesHeading" xml:space="preserve">
     <value>Package Remotes</value>
@@ -1981,7 +1981,7 @@
     <value>Layout</value>
   </data>
   <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Build · Page layouts</value>
+    <value>Portal · Layout</value>
   </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Arrange the widgets on each page by dragging them between zones. Changes publish to every visitor.</value>
@@ -2236,7 +2236,7 @@
     <value>Applications</value>
   </data>
   <data name="LayAppsKicker" xml:space="preserve">
-    <value>Build · Custom widgets</value>
+    <value>Portal · Applications</value>
   </data>
   <data name="LayAppsSchemaRegistry" xml:space="preserve">
     <value>Schema registry</value>
@@ -2385,20 +2385,8 @@
   <data name="LayAppSaveFailed" xml:space="preserve">
     <value>Save failed: {0}</value>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>Administration</value>
-  </data>
   <data name="AdmBreadcrumb" xml:space="preserve">
     <value>Admin</value>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>Admin Dashboard</value>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>Players</value>
-  </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>View Players</value>
   </data>
   <data name="AdmGuestsSection" xml:space="preserve">
     <value>Guest Characters</value>
@@ -2454,74 +2442,32 @@
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Accounts</value>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>Manage Accounts</value>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>View Characters</value>
-  </data>
   <data name="AdmProfilesTitle" xml:space="preserve">
     <value>Profiles</value>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>Character Profiles</value>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>Site Config</value>
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Roles</value>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>Roles &amp; Permissions</value>
-  </data>
   <data name="AdmModerationTitle" xml:space="preserve">
     <value>Moderation</value>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>Word Suggestions</value>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
     <value>Image Library</value>
   </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>Media Assets</value>
-  </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
     <value>Applications</value>
   </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>Custom Widgets</value>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>Packages</value>
-  </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Softcode Packages</value>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>Layout</value>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>Layout Editor</value>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>Server Status</value>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>Database Import</value>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>Import Database</value>
   </data>
   <data name="AdmPlayerNumber" xml:space="preserve">
     <value>Player #{0}</value>
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
-    <value>Administration · Player</value>
+    <value>People · Character</value>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · Server</value>
+    <value>Server · Status</value>
   </data>
   <data name="AdmServerTitle" xml:space="preserve">
     <value>Server</value>
@@ -2927,14 +2873,8 @@
   <data name="WkCopyFailed" xml:space="preserve">
     <value>Could not copy to the clipboard.</value>
   </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Wiki Assets</value>
-  </data>
   <data name="WkStaffMedia" xml:space="preserve">
-    <value>Staff · Media</value>
-  </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG, JPEG, GIF, WebP or SVG — 10 MB max.</value>
+    <value>Content · Image Library</value>
   </data>
   <data name="WkCopyMarkdown" xml:space="preserve">
     <value>Copy Markdown</value>
@@ -2955,7 +2895,7 @@
     <value>Roles</value>
   </data>
   <data name="RolKicker" xml:space="preserve">
-    <value>Manage · Access control</value>
+    <value>People · Roles &amp; permissions</value>
   </data>
   <data name="RolHeading" xml:space="preserve">
     <value>Roles &amp; Permissions</value>
@@ -3412,7 +3352,7 @@
     <value>View Log</value>
   </data>
   <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Staff · Wiki</value>
+    <value>Content · Wiki</value>
   </data>
   <data name="ResWikiStatTotalPages" xml:space="preserve">
     <value>Total pages</value>
@@ -3427,10 +3367,10 @@
     <value>Draft</value>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
-    <value>Admin · server settings</value>
+    <value>Server · Configuration</value>
   </data>
   <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Admin · server configuration</value>
+    <value>Server · Configuration</value>
   </data>
   <data name="ResRoutingErrorHint" xml:space="preserve">
     <value>This message means the custom page is NOT being matched by the router.</value>
@@ -4055,9 +3995,6 @@
   <data name="AdmConfigSettingsCount" xml:space="preserve">
     <value>{count, plural, one {# setting} other {# settings}}</value>
   </data>
-  <data name="AdmConfigMoreTools" xml:space="preserve">
-    <value>More admin tools</value>
-  </data>
   <data name="AdmConfigHowChangesApply" xml:space="preserve">
     <value>How changes apply</value>
   </data>
@@ -4066,21 +4003,6 @@
   </data>
   <data name="AdmConfigMoreSections" xml:space="preserve">
     <value>+{0} more</value>
-  </data>
-  <data name="AdmConfigToolApplications" xml:space="preserve">
-    <value>Applications</value>
-  </data>
-  <data name="AdmConfigToolLayouts" xml:space="preserve">
-    <value>Layouts</value>
-  </data>
-  <data name="AdmConfigToolPackages" xml:space="preserve">
-    <value>Packages</value>
-  </data>
-  <data name="AdmConfigToolRoles" xml:space="preserve">
-    <value>Roles</value>
-  </data>
-  <data name="AdmConfigToolWiki" xml:space="preserve">
-    <value>Wiki &amp; media</value>
   </data>
   <data name="AdmConfigInThisSection" xml:space="preserve">
     <value>In this section</value>
@@ -4491,19 +4413,19 @@
     <value>Admin index</value>
   </data>
   <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administration · Spellcheck</value>
+    <value>Content · Spellcheck</value>
   </data>
   <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Database</value>
+    <value>Server · PennMUSH import</value>
   </data>
   <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Manage · Diagnostics</value>
+    <value>Build · Queue diagnostics</value>
   </data>
   <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Manage · Automation</value>
+    <value>Build · Recurring jobs</value>
   </data>
   <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Build · Recovery</value>
+    <value>Build · Object snapshots</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filter by kind</value>
@@ -4516,9 +4438,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Handler attributes</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>Upload an image</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>This game has no help topics installed.</value>
@@ -4794,7 +4713,7 @@
     <value>Saving…</value>
   </data>
   <data name="AdmSetupDoneLead" xml:space="preserve">
-    <value>Everything here can be changed later: handlers under Configuration, packages under Packages, imports under Database.</value>
+    <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and a PennMUSH database in PennMUSH import.</value>
   </data>
   <data name="AdmSetupBack" xml:space="preserve">
     <value>Back</value>
@@ -5887,6 +5806,99 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Paused, no time set</value>
+  </data>
+  <data name="AdmOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="AdmOverviewDescription" xml:space="preserve">
+    <value>Every staff page you can use, grouped by what it is for.</value>
+  </data>
+  <data name="AdmGroupPeople" xml:space="preserve">
+    <value>People</value>
+  </data>
+  <data name="AdmGroupModeration" xml:space="preserve">
+    <value>Moderation</value>
+  </data>
+  <data name="AdmGroupContent" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="AdmGroupPortal" xml:space="preserve">
+    <value>Portal</value>
+  </data>
+  <data name="AdmGroupServer" xml:space="preserve">
+    <value>Server</value>
+  </data>
+  <data name="AdmGuestsTitle" xml:space="preserve">
+    <value>Guests</value>
+  </data>
+  <data name="AdmRolesLabel" xml:space="preserve">
+    <value>Roles &amp; permissions</value>
+  </data>
+  <data name="AdmWikiLabel" xml:space="preserve">
+    <value>Wiki pages</value>
+  </data>
+  <data name="AdmSuggestionsLabel" xml:space="preserve">
+    <value>Spellcheck suggestions</value>
+  </data>
+  <data name="AdmServerStatusLabel" xml:space="preserve">
+    <value>Server status</value>
+  </data>
+  <data name="AdmImportLabel" xml:space="preserve">
+    <value>PennMUSH import</value>
+  </data>
+  <data name="AdmCardSoftcode" xml:space="preserve">
+    <value>Edit the attributes on objects you control, and try code in a console.</value>
+  </data>
+  <data name="AdmCardSnapshots" xml:space="preserve">
+    <value>Capture a recovery point for an object, and restore fields from it.</value>
+  </data>
+  <data name="AdmCardJobs" xml:space="preserve">
+    <value>Run an attribute on a schedule, as your character.</value>
+  </data>
+  <data name="AdmCardDiagnostics" xml:space="preserve">
+    <value>See queued and running work, and why recent work failed.</value>
+  </data>
+  <data name="AdmCardAccounts" xml:space="preserve">
+    <value>Reset passwords, and disable, close or delete web accounts.</value>
+  </data>
+  <data name="AdmCardCharacters" xml:space="preserve">
+    <value>Find any character by name, account, flag or whether they are online.</value>
+  </data>
+  <data name="AdmCardGuests" xml:space="preserve">
+    <value>The characters handed out to visitors who connect as a guest.</value>
+  </data>
+  <data name="AdmCardRoles" xml:space="preserve">
+    <value>Create roles, decide what each one allows, and assign them.</value>
+  </data>
+  <data name="AdmCardWiki" xml:space="preserve">
+    <value>Publish, protect, file and bulk-edit wiki pages.</value>
+  </data>
+  <data name="AdmCardMedia" xml:space="preserve">
+    <value>Upload and remove the images the wiki and portal use.</value>
+  </data>
+  <data name="AdmCardSuggestions" xml:space="preserve">
+    <value>The word lists that suggest a fix for a mistyped help topic or function name.</value>
+  </data>
+  <data name="AdmCardApplications" xml:space="preserve">
+    <value>The pages and widgets your softcode adds to the portal.</value>
+  </data>
+  <data name="AdmCardLayout" xml:space="preserve">
+    <value>Arrange the widgets on each portal page.</value>
+  </data>
+  <data name="AdmCardPackages" xml:space="preserve">
+    <value>Install, upgrade and remove softcode packages.</value>
+  </data>
+  <data name="AdmCardProfiles" xml:space="preserve">
+    <value>Check and reset the softcode that serves character profiles.</value>
+  </data>
+  <data name="AdmCardServer" xml:space="preserve">
+    <value>Uptime, connections, queue, storage and backups, read live.</value>
+  </data>
+  <data name="AdmCardConfig" xml:space="preserve">
+    <value>Every server setting, by section, with import and export.</value>
+  </data>
+  <data name="AdmCardImport" xml:space="preserve">
+    <value>Bring a PennMUSH database into this game.</value>
   </data>
   <data name="RolEditScene" xml:space="preserve">
     <value>Edit scene</value>

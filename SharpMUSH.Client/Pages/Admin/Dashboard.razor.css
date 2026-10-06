@@ -14,3 +14,9 @@
 	color: var(--accent);
 	font-weight: 600;
 }
+
+.adm-dash-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}

@@ -120,20 +120,12 @@
     <value>已停用</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>管理账号</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>搜索用户名或邮箱…</value>
     <comment>MT</comment>
   </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>账号</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>自定义小组件</value>
     <comment>MT</comment>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
@@ -150,26 +142,6 @@
   </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>已将 {0} 与“{1}”解除关联。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>查看角色</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>站点配置</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>管理面板</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>导入数据库</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>数据库导入</value>
     <comment>MT</comment>
   </data>
   <data name="AdmDisableAccount" xml:space="preserve">
@@ -192,20 +164,8 @@
     <value>浏览主题、搜索参考资料并阅读手册。</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>管理</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>布局编辑器</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>布局</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>媒体资源</value>
     <comment>MT</comment>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
@@ -224,14 +184,6 @@
     <value>操作失败。</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Softcode 软件包</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>软件包</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>“{0}”的密码已重置为：{1} — 请通过安全方式转达；对方在下次登录时必须更改密码。</value>
     <comment>MT</comment>
@@ -244,20 +196,8 @@
     <value>玩家 #{0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>查看玩家</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>玩家</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPresent" xml:space="preserve">
     <value>存在</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>角色资料</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesConfigured" xml:space="preserve">
@@ -315,16 +255,8 @@
     <value>正在重置…</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>权限组与权限</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>权限组</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>服务器状态</value>
     <comment>MT</comment>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
@@ -333,10 +265,6 @@
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>状态</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>词条建议</value>
     <comment>MT</comment>
   </data>
   <data name="AdmUnlinkFailed" xml:space="preserve">
@@ -4227,10 +4155,6 @@
     <value>已删除 {0}。</value>
     <comment>MT</comment>
   </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG、JPEG、GIF、WebP 或 SVG — 最大 10 MB。</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkAssetUploaded" xml:space="preserve">
     <value>已上传 {0}。</value>
     <comment>MT</comment>
@@ -4581,10 +4505,6 @@
   </data>
   <data name="WkViewRevision" xml:space="preserve">
     <value>查看此修订版</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Wiki 资源</value>
     <comment>MT</comment>
   </data>
   <data name="WordAddFailed" xml:space="preserve">
@@ -5103,9 +5023,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>处理器属性</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>上传图片</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>此游戏未安装帮助主题。</value>

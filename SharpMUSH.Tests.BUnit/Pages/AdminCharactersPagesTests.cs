@@ -92,7 +92,7 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-chars-link"), TimeSpan.FromSeconds(5));
 		var links = cut.FindAll("a.adm-chars-link");
-		await Assert.That(links.Select(a => a.GetAttribute("href"))).IsEquivalentTo(["/admin/players/7", "/admin/players/9"]);
+		await Assert.That(links.Select(a => a.GetAttribute("href"))).IsEquivalentTo(["/admin/characters/7", "/admin/characters/9"]);
 		await Assert.That(cut.Find(".adm-chars-total").TextContent).IsEqualTo("AdmCharactersTotal(2)");
 		await Assert.That(cut.Markup).Contains("AdmCharactersNoAccount").Because("Bob has no account");
 		await Assert.That(cut.Markup).Contains("AdmCharactersNever").Because("Bob never connected");
@@ -147,8 +147,8 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find(".adm-char-boot"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".adm-char-unlink").Count).IsEqualTo(1);
-		await Assert.That(cut.Find("a.kit-capsule[href^='/admin/moderation/audit']").GetAttribute("href"))
-			.IsEqualTo("/admin/moderation/audit?text=%237%3A1700000000000");
+		await Assert.That(cut.Find("a.kit-capsule[href^='/admin/audit']").GetAttribute("href"))
+			.IsEqualTo("/admin/audit?text=%237%3A1700000000000");
 	}
 
 	[Test]
@@ -181,7 +181,7 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 		var cut = RenderPage<AuditLog>();
 
 		cut.WaitForAssertion(() => cut.Find(".adm-audit-more"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find("a.adm-audit-link").GetAttribute("href")).IsEqualTo("/admin/players/7");
+		await Assert.That(cut.Find("a.adm-audit-link").GetAttribute("href")).IsEqualTo("/admin/characters/7");
 		await Assert.That(cut.Markup).Contains("AdmAuditSourcePortal");
 
 		cut.Find(".adm-audit-more").Click();
@@ -198,7 +198,7 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 	{
 		Auth.SetPolicies("players.view", "players.moderate");
 		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>()
-			.NavigateTo("/admin/moderation/audit?text=%237%3A1700000000000");
+			.NavigateTo("/admin/audit?text=%237%3A1700000000000");
 		_api.Bodies["api/admin/audit"] = """{"entries":[],"next":null}""";
 		var cut = RenderPage<AuditLog>();
 

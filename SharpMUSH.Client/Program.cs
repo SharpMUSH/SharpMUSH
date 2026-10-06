@@ -7,6 +7,7 @@ using Microsoft.JSInterop;
 using MudBlazor.Services;
 using SharpMUSH.Client;
 using SharpMUSH.Client.Authentication;
+using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
@@ -153,7 +154,9 @@ else
 }
 
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddAuthorizationCore();
+builder.Services.AddAuthorizationCore(options => options.AddPolicy(BuildNavCatalog.OverviewPolicy, policy => policy
+	.RequireAuthenticatedUser()
+	.RequireAssertion(context => BuildNavCatalog.MayOpenOverview(context.User))));
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 

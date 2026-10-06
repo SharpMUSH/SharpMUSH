@@ -146,6 +146,10 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 
 		await Assert.That(LinkCount(Group(cut, "NavSectionManage"))).IsEqualTo(0);
 		await Assert.That(LinkCount(Group(cut, "NavSectionBuild"))).IsEqualTo(0);
+		await Assert.That(LinkCount(Group(cut, "NavBuildManage"))).IsEqualTo(0)
+			.Because("the overview is offered only to someone with a staff page to show on it");
+		foreach (var staff in new[] { "AdmGroupPeople", "AdmGroupModeration", "AdmGroupContent", "AdmGroupPortal", "AdmGroupServer" })
+			await Assert.That(LinkCount(Group(cut, staff))).IsEqualTo(0).Because(staff);
 	}
 
 	[Test]
@@ -161,7 +165,7 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	[Test]
-	public async Task An_admin_still_sees_Build_and_Manage()
+	public async Task An_admin_sees_the_overview_Build_and_their_staff_groups()
 	{
 		Auth.SetAuthorized("headwiz");
 		Auth.SetClaims(new Claim(ClaimTypes.Role, "Wizard"));
@@ -169,8 +173,11 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = RenderNav();
 
+		await Assert.That(Group(cut, "NavBuildManage").QuerySelector("a[href='/admin']")).IsNotNull();
 		await Assert.That(LinkCount(Group(cut, "NavSectionBuild"))).IsGreaterThan(0);
-		await Assert.That(LinkCount(Group(cut, "NavSectionManage"))).IsGreaterThan(0);
+		await Assert.That(Group(cut, "AdmGroupPeople").QuerySelectorAll("a.phosphor-nav-link").Select(a => a.GetAttribute("href")))
+			.IsEquivalentTo(new[] { "/admin/accounts", "/admin/characters", "/admin/guests", "/admin/roles" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(LinkCount(Group(cut, "AdmGroupServer"))).IsEqualTo(0);
 	}
 
 	/// <summary>

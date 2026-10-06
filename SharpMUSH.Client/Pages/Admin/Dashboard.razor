@@ -1,16 +1,16 @@
 @page "/admin"
-@attribute [Authorize(Policy = "players.view")]
+@attribute [Authorize(Policy = BuildNavCatalog.OverviewPolicy)]
 @inject IStringLocalizer<SharedResource> Loc
 @inject IAuthorizationService Authorization
 @inject SetupWizardService SetupWizard
 
-<PageTitle>@Loc["AdmDashboardTitle"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["AdmOverview"] — @Loc["NavBuildManage"] — @Loc["AppTitle"]</PageTitle>
 
-@* D1 §6.5: the plain header over a grid of linked tool cards, laid out like the configuration home
-   (board 27). Each card sits behind the same gate as the page it opens, so a viewer is only offered
-   the tools they can actually use. *@
+@* D1 §6.5: the plain header over the section's groups, each a grid of linked tool cards. The cards
+   are BuildNavCatalog's entries, the same list and gates as the sidebar, so the overview offers
+   exactly the pages the sidebar does, in the same groups. *@
 <div class="page-stack page-stack--padded adm-dash">
-    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmDashboardTitle"]" />
+    <PlainPageHeader Kicker="@Loc["NavBuildManage"]" Title="@Loc["AdmOverview"]" Description="@Loc["AdmOverviewDescription"]" />
 
     @* The first-run wizard is unfinished: an administrator who closed the tab after claiming the game
        finds the way back here, since nothing else sends them to /setup once the game is claimed. *@
@@ -22,71 +22,39 @@
         </MudAlert>
     }
 
-    <div class="adm-dash-grid">
-        @foreach (var card in _visible)
-        {
-            <LinkCard Class="adm-dash-card" Href="@card.Href" Icon="@card.Icon" Title="@Loc[card.TitleKey]" Description="@Loc[card.ActionKey]" />
-        }
-    </div>
+    @foreach (var group in _groups)
+    {
+        <section class="adm-dash-group" aria-label="@Loc[BuildNavCatalog.GroupLabelKey(group.Key)!]">
+            <SectionLabel>@Loc[BuildNavCatalog.GroupLabelKey(group.Key)!]</SectionLabel>
+            <div class="adm-dash-grid">
+                @foreach (var card in group)
+                {
+                    <LinkCard Class="adm-dash-card" Href="@card.Href" Icon="@card.Icon" Title="@Loc[card.LabelKey]" Description="@Loc[card.DescriptionKey]" />
+                }
+            </div>
+        </section>
+    }
 </div>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    /// <summary>A tool and its gate: visible when the viewer satisfies any one policy or holds any one role.</summary>
-    private sealed record AdminCard(string TitleKey, string ActionKey, string Href, string Icon, string[] Policies, string[]? Roles = null);
-
-    private static readonly AdminCard[] Cards =
-    [
-        new("DiagTitle", "DiagDescription", "/admin/diagnostics", Icons.Material.Filled.QueryStats, ["queue.inspect", "queue.inspect.own"]),
-        new("AdmPlayersTitle", "AdmPlayersAction", "/admin/players", Icons.Material.Filled.Group, ["players.view"]),
-        new("Characters", "AdmCharactersAction", "/admin/characters", Icons.Material.Filled.Person, ["players.view"]),
-        new("AdmModerationTitle", "AdmModerationCardAction", "/admin/moderation", Icons.Material.Filled.Gavel, ["players.moderate"]),
-        new("AdmAuditTitle", "AdmAuditCardAction", "/admin/moderation/audit", Icons.Material.Filled.History, ["players.moderate"]),
-        new("AdmAccountsTitle", "AdmAccountsAction", "/admin/accounts", Icons.Material.Filled.ManageAccounts, [], ["Wizard", "God"]),
-        new("AdmProfilesTitle", "AdmProfilesAction", "/admin/profiles", Icons.Material.Filled.Badge, ["players.moderate"]),
-        new("Configuration", "AdmConfigAction", "/admin/config", Icons.Material.Filled.Settings, ["config.admin"]),
-        new("AdmRolesTitle", "AdmRolesAction", "/admin/roles", Icons.Material.Filled.Shield, ["roles.admin"]),
-        new("Suggestions", "AdmSuggestionsAction", "/admin/suggestions", Icons.Material.Filled.Lightbulb, ["config.admin"]),
-        new("WikiAdmin", "WikiAdmin", "/admin/wiki", Icons.Material.Filled.MenuBook, ["wiki.admin"]),
-        new("AdmMediaTitle", "AdmMediaAction", "/admin/media", Icons.Material.Filled.PermMedia, ["media.admin"]),
-        new("AdmApplicationsTitle", "AdmApplicationsAction", "/admin/applications", Icons.Material.Filled.Apps, ["applications.admin"]),
-        new("AdmPackagesTitle", "AdmPackagesAction", "/admin/packages", Icons.Material.Filled.Inventory2, ["packages.admin"]),
-        new("AdmLayoutTitle", "AdmLayoutAction", "/admin/layout", Icons.Material.Filled.Dashboard, ["layout.admin"]),
-        new("AdmServerTitle", "AdmServerAction", "/admin/server", Icons.Material.Filled.Dns, ["server.admin"]),
-        new("AdmDatabaseImportTitle", "AdmDatabaseImportAction", "/admin/database/import", Icons.Material.Filled.CloudUpload, ["server.admin"]),
-    ];
-
-    private IReadOnlyList<AdminCard> _visible = [];
+    private IReadOnlyList<IGrouping<BuildNavCatalog.Group, BuildNavCatalog.Entry>> _groups = [];
 
     /// <summary>The viewer administers the server and the first-run wizard is unfinished.</summary>
     private bool _setupPending;
 
     protected override async Task OnInitializedAsync()
     {
-        // Every card used to render for anyone who could open /admin, so a viewer with players.view
-        // alone was offered configuration, roles and the database import, and met a refusal on each.
         if (AuthState is null) return;
         var user = (await AuthState).User;
         var setup = (await Authorization.AuthorizeAsync(user, "server.admin")).Succeeded
             ? SetupWizard.GetAsync()
             : null;
-        var visible = new List<AdminCard>();
-        foreach (var card in Cards)
-        {
-            if (await MayOpenAsync(user, card)) visible.Add(card);
-        }
-        _visible = visible;
+        _groups = (await BuildNavCatalog.VisibleAsync(Authorization, user))
+            .Where(e => e.Group != BuildNavCatalog.Group.Overview)
+            .GroupBy(e => e.Group)
+            .ToList();
         _setupPending = setup is not null && await setup is SetupWizardResponse { Pending: true };
-    }
-
-    private async Task<bool> MayOpenAsync(System.Security.Claims.ClaimsPrincipal user, AdminCard card)
-    {
-        if (card.Roles?.Any(user.IsInRole) == true) return true;
-        foreach (var policy in card.Policies)
-        {
-            if ((await Authorization.AuthorizeAsync(user, policy)).Succeeded) return true;
-        }
-        return false;
     }
 }

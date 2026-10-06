@@ -822,7 +822,7 @@ limits, feature toggles. Writes to config store, hot-reload where possible.
 ### 12.3 Audit Trail
 
 **Decision:** Every staff action logged: who, what, target, when. Viewable
-at `/admin/moderation/audit`. Searchable, filterable. No silent changes.
+at `/admin/audit`. Searchable, filterable. No silent changes.
 
 ### 12.4 Layout Editor Location
 

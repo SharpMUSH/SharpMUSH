@@ -20,7 +20,7 @@ file sealed class RefusingHandler : HttpMessageHandler
 /// <summary>
 /// The four config pages with their own markup (Sitelock, Banned names, Restrictions, Import) share
 /// the D1 plain page header with the resx kicker, instead of four copies of the same header CSS
-/// and a literal "Admin · server settings".
+/// and a literal kicker.
 /// </summary>
 public class CustomConfigPagesTests : TrackingBunitContext
 {
@@ -44,7 +44,7 @@ public class CustomConfigPagesTests : TrackingBunitContext
 	private async Task AssertPlainHeader<T>(IRenderedComponent<T> cut, string title) where T : Microsoft.AspNetCore.Components.IComponent
 	{
 		await Assert.That(cut.Find(".kit-page-head h1").TextContent).IsEqualTo(title);
-		await Assert.That(cut.Find(".kit-page-kicker").TextContent).IsEqualTo("Admin · server settings");
+		await Assert.That(cut.Find(".kit-page-kicker").TextContent).IsEqualTo("Server · Configuration");
 		await Assert.That(cut.FindAll(".config-section-header").Count).IsEqualTo(0);
 	}
 

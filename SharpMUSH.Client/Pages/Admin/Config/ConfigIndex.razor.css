@@ -103,12 +103,6 @@
 	padding: 0 4px;
 }
 
-.config-home-tools {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-}
-
 .config-home-how {
 	margin: 0;
 	font-size: 12px;

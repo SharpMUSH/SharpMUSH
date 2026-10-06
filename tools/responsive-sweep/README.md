@@ -97,8 +97,8 @@ identical runs. The quiescence wait instead asks "has the DOM stopped changing,"
 
 It's polled from Node rather than parked as a single in-page `MutationObserver` awaited
 through one `page.evaluate()` call: several routes redirect shortly after their first render
-(see "complete first-run setup" above, and the legacy `/admin/bannednames`-style aliases under
-Route coverage below), and a navigation mid-observation destroys the JS execution context the
+(see "complete first-run setup" above, and the aliases under Route coverage below), and a
+navigation mid-observation destroys the JS execution context the
 observer lived in, which left that approach's evaluate-returning-promise permanently
 unsettled — hanging the sweep outright the first time this ran against a live server rather
 than a static test page. Each poll here is a short, separate round-trip; one landing mid
@@ -136,7 +136,7 @@ Every failure line names the container it came from, so a reader can tell a page
 from a shell-level one:
 
 ```
-390px /admin/players: .phosphor-page scrollWidth 812 > clientWidth 390 — widest: table.mud-table +422px
+390px /admin/guests: .phosphor-page scrollWidth 812 > clientWidth 390 — widest: table.mud-table +422px
 ```
 
 A route where **none** of the three containers is present is recorded as `NOT MEASURED` and
@@ -342,9 +342,6 @@ The current allowlist, each entry verified against its component's own `Navigate
 
 | Route | Destination | Source |
 |---|---|---|
-| `/admin/restrictions` | `/admin/config/restrictions` | `RestrictionsRedirect.razor` |
-| `/admin/sitelock` | `/admin/config/sitelock` | `SitelockRedirect.razor` |
-| `/admin/bannednames` | `/admin/config/bannednames` | `BannedNamesRedirect.razor` |
 | `/settings/characters` | `/account` | `SettingsCharactersRedirect.razor` |
 | `/register` | `/login` | `Register.razor` (`/login?tab=register`) |
 | `/setup` | `/` | `Setup.razor`, once the game is claimed |

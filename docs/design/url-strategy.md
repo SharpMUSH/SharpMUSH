@@ -42,19 +42,47 @@ non-API routes (standard WASM hosting pattern).
 /settings/theme             Color/theme preference
 ```
 
-### Admin Panel (Wizard+)
+### Build & manage (staff and builders)
+
+One catalogue (`SharpMUSH.Client/Layout/BuildNavCatalog.cs`) lists every page below with its group
+and gate; the rail, the section sidebar, the phone drawer, the command palette and the overview all
+read it. The overview is shown to anyone with a page outside Build, and the rail opens it.
 
 ```
-/admin                      Admin dashboard
-/admin/players              Player/account list
-/admin/players/42           Character detail (boot, unlink, audit trail)
+/admin                      Overview: every page below the viewer may use, as grouped cards
+
+Build (a builder's own tools)
+/softcode                   Softcode editor
+/admin/snapshots            Object snapshots
+/admin/jobs                 Recurring jobs
+/admin/diagnostics          Queue diagnostics
+
+People
+/admin/accounts             Web accounts (Wizard)
 /admin/characters           Character list
-/admin/config               Site configuration
+/admin/characters/42        Character detail (boot, unlink, audit trail)
+/admin/guests               Guest characters
+/admin/roles                Roles & permissions
+
+Moderation
+/admin/moderation           Warn, boot, ban, unlink; bans and host rules
+/admin/audit                Audit log of staff actions, portal and in-game
+
+Content
+/admin/wiki                 Wiki pages (protection, publication, bulk ops)
+/admin/media                Image library (wiki and portal uploads)
+/admin/suggestions          Spellcheck suggestion lists
+
+Portal
+/admin/applications         Applications (softcode-defined pages and widgets)
 /admin/layout               Layout/widget editor
-/admin/moderation           Bans and moderation actions
-/admin/moderation/audit     Audit log of staff actions, portal and in-game
-/admin/wiki                 Wiki admin (protected pages, bulk ops)
-/admin/server               Server settings (God only)
+/admin/packages             Softcode packages
+/admin/profiles             Profile handler
+
+Server
+/admin/server               Server status
+/admin/config               Configuration (its own section tree; /admin/config/{section})
+/admin/import               PennMUSH database import
 ```
 
 ### API Routes (Not Client-Routed)
@@ -170,7 +198,6 @@ One deliberate limit on the alias:
 /wiki?search=dragon         Omnisearch focused on wiki
 /characters?search=elf      Character directory filter
 /scenes?page=2              Pagination
-/admin/players?q=gandalf    Admin search
 ```
 
 ## Deep Linking

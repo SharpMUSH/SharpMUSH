@@ -10,7 +10,7 @@
 
 @* D1 §6.4 configuration home (board 27): a plain header, a two-column grid of linked group cards
    (accent icon tile, name, count, an Important tag on Security, description, section chips), and
-   an aside of the admin tools the viewer may use plus how changes apply. Counts come from the
+   an aside on how changes apply (the other staff pages are in the Build & manage sidebar). Counts come from the
    schema; when it cannot be read the cards stay usable and the alert says why. *@
 <div class="config-home">
     <div class="page-stack config-home-main">
@@ -65,25 +65,6 @@
     </div>
 
     <aside class="config-home-aside">
-        <KitCard Aside="true" Title="@Loc["AdmConfigMoreTools"]">
-            <div class="config-home-tools">
-                <AuthorizeView Policy="applications.admin">
-                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Apps" Label="@Loc["AdmConfigToolApplications"]" Href="/admin/applications" /></Authorized>
-                </AuthorizeView>
-                <AuthorizeView Policy="layout.admin">
-                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Dashboard" Label="@Loc["AdmConfigToolLayouts"]" Href="/admin/layout" /></Authorized>
-                </AuthorizeView>
-                <AuthorizeView Policy="packages.admin">
-                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Inventory2" Label="@Loc["AdmConfigToolPackages"]" Href="/admin/packages" /></Authorized>
-                </AuthorizeView>
-                <AuthorizeView Policy="roles.admin">
-                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.AdminPanelSettings" Label="@Loc["AdmConfigToolRoles"]" Href="/admin/roles" /></Authorized>
-                </AuthorizeView>
-                <AuthorizeView Policy="wiki.admin">
-                    <Authorized><SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["AdmConfigToolWiki"]" Href="/admin/wiki" /></Authorized>
-                </AuthorizeView>
-            </div>
-        </KitCard>
         <KitCard Aside="true" Title="@Loc["AdmConfigHowChangesApply"]">
             <p class="config-home-how">@Loc["AdmConfigHowChangesApplyBody"]</p>
         </KitCard>

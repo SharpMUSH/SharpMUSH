@@ -120,20 +120,12 @@
     <value>Deaktiveret</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmAccountsAction" xml:space="preserve">
-    <value>Administrer konti</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Søg efter brugernavn eller e-mail…</value>
     <comment>MT</comment>
   </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Konti</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmApplicationsAction" xml:space="preserve">
-    <value>Brugerdefinerede widgets</value>
     <comment>MT</comment>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
@@ -150,26 +142,6 @@
   </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Fjernede tilknytningen mellem {0} og '{1}'.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmCharactersAction" xml:space="preserve">
-    <value>Vis karakterer</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmConfigAction" xml:space="preserve">
-    <value>Sitekonfiguration</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDashboardTitle" xml:space="preserve">
-    <value>Administrationspanel</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportAction" xml:space="preserve">
-    <value>Importer database</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmDatabaseImportTitle" xml:space="preserve">
-    <value>Databaseimport</value>
     <comment>MT</comment>
   </data>
   <data name="AdmDisableAccount" xml:space="preserve">
@@ -192,20 +164,8 @@
     <value>Gennemse emner, søg i referencer og læs manualen.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmKicker" xml:space="preserve">
-    <value>Administration</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmLayoutAction" xml:space="preserve">
-    <value>Layouteditor</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmLayoutTitle" xml:space="preserve">
     <value>Layout</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmMediaAction" xml:space="preserve">
-    <value>Mediefiler</value>
     <comment>MT</comment>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
@@ -224,14 +184,6 @@
     <value>Handlingen mislykkedes.</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPackagesAction" xml:space="preserve">
-    <value>Softcode-pakker</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPackagesTitle" xml:space="preserve">
-    <value>Pakker</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPasswordReset" xml:space="preserve">
     <value>Adgangskoden for '{0}' er nulstillet til: {1} — del den sikkert; den skal ændres ved næste login.</value>
     <comment>MT</comment>
@@ -244,20 +196,8 @@
     <value>Spiller #{0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmPlayersAction" xml:space="preserve">
-    <value>Vis spillere</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmPlayersTitle" xml:space="preserve">
-    <value>Spillere</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmPresent" xml:space="preserve">
     <value>Til stede</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmProfilesAction" xml:space="preserve">
-    <value>Karakterprofiler</value>
     <comment>MT</comment>
   </data>
   <data name="AdmProfilesConfigured" xml:space="preserve">
@@ -315,16 +255,8 @@
     <value>Nulstiller…</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmRolesAction" xml:space="preserve">
-    <value>Roller og rettigheder</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Roller</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerAction" xml:space="preserve">
-    <value>Serverstatus</value>
     <comment>MT</comment>
   </data>
   <data name="AdmServerKicker" xml:space="preserve">
@@ -333,10 +265,6 @@
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Status</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmSuggestionsAction" xml:space="preserve">
-    <value>Ordforslag</value>
     <comment>MT</comment>
   </data>
   <data name="AdmUnlinkFailed" xml:space="preserve">
@@ -4227,10 +4155,6 @@
     <value>Slettede {0}.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkAssetUploadHint" xml:space="preserve">
-    <value>PNG, JPEG, GIF, WebP eller SVG — maks. 10 MB.</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkAssetUploaded" xml:space="preserve">
     <value>Uploadede {0}.</value>
     <comment>MT</comment>
@@ -4581,10 +4505,6 @@
   </data>
   <data name="WkViewRevision" xml:space="preserve">
     <value>Vis denne revision</value>
-    <comment>MT</comment>
-  </data>
-  <data name="WkWikiAssets" xml:space="preserve">
-    <value>Wiki-filer</value>
     <comment>MT</comment>
   </data>
   <data name="WordAddFailed" xml:space="preserve">
@@ -5103,9 +5023,6 @@
   </data>
   <data name="AdmProfilesAttributesTitle" xml:space="preserve">
     <value>Handlerens attributter</value>
-  </data>
-  <data name="AdmAssetsUploadTitle" xml:space="preserve">
-    <value>Upload et billede</value>
   </data>
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Dette spil har ingen hjælpeemner installeret.</value>

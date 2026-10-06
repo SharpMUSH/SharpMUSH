@@ -1,4 +1,4 @@
-@page "/admin/moderation/audit"
+@page "/admin/audit"
 @attribute [Authorize(Policy = "players.moderate")]
 @using System.Globalization
 @using SharpMUSH.Library.Models
@@ -8,7 +8,7 @@
 <PageTitle>@Loc["AdmAuditTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="page-stack page-stack--padded adm-audit">
-    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmAuditTitle"]" Description="@Loc["AdmAuditBlurb"]" />
+    <PlainPageHeader Kicker="@Loc["AdmGroupModeration"]" Title="@Loc["AdmAuditTitle"]" Description="@Loc["AdmAuditBlurb"]" />
 
     <KitCard>
         <div class="adm-audit-body">
@@ -207,7 +207,7 @@
     /// <summary>A link to the target's own admin page, for the kinds that have one.</summary>
     private static string? TargetHref(AuditTarget target) => target.Kind switch
     {
-        AuditTargetKinds.Character when DbrefNumber(target.Id) is { } number => $"/admin/players/{number}",
+        AuditTargetKinds.Character when DbrefNumber(target.Id) is { } number => $"/admin/characters/{number}",
         AuditTargetKinds.Role or AuditTargetKinds.Permission or AuditTargetKinds.Category => "/admin/roles",
         _ => null
     };
