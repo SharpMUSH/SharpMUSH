@@ -3001,10 +3001,6 @@
     <value>Farge</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pose, si eller fortell…</value>
-    <comment>MT — 'Pose' kept as the MUSH compose mode.</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Slette «{0}» ({1})? Dette fjerner den fra alle kontoer som har den.</value>
     <comment>MT</comment>
@@ -5667,5 +5663,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>På pause, uten tidspunkt</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Post som</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter for å sende</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>Hva du gjør, etter navnet ditt…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Rett etter navnet ditt…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Denne scenen er satt på pause. Den tar ikke imot poser før eieren gjenopptar den.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Denne scenen pågår ikke, så den tar ikke imot poser.</value>
   </data>
 </root>

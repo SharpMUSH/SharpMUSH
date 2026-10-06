@@ -3001,10 +3001,6 @@
     <value>Farbe</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Posen, sprechen oder erzählen…</value>
-    <comment>MT — prose placeholder is translated even though the Pose/Say mode buttons keep their English names.</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>'{0}' ({1}) löschen? Dadurch wird sie aus allen Konten entfernt, die sie besitzen.</value>
     <comment>MT — "sie" agrees with the feminine Rolle.</comment>
@@ -5667,5 +5663,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pausiert, ohne Zeitpunkt</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Posten als</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Strg+Enter zum Senden</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>Was du tust, nach deinem Namen…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Direkt an deinen Namen…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Diese Szene ist pausiert. Sie nimmt keine Posen an, bis ihr Besitzer sie fortsetzt.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Diese Szene läuft nicht und nimmt daher keine Posen an.</value>
   </data>
 </root>

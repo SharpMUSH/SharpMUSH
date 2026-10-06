@@ -3001,10 +3001,6 @@
     <value>Kolor</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Poza, wypowiedź lub narracja…</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Usunąć rolę '{0}' ({1})? Zostanie ona odebrana wszystkim kontom, które ją posiadają.</value>
     <comment>MT — head noun 'rolę' carries the accusative so the quoted name {0} stays in the nominative; {1} assumed to be the role slug</comment>
@@ -5667,5 +5663,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Wstrzymane, bez terminu</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Opublikuj jako</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter, aby wysłać</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>Co robisz, po twoim imieniu…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Doklejone do imienia…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Ta scena jest wstrzymana. Nie przyjmuje póz, dopóki właściciel jej nie wznowi.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Ta scena nie trwa, więc nie przyjmuje póz.</value>
   </data>
 </root>

@@ -3001,10 +3001,6 @@
     <value>Cor</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pose, fale ou narre…</value>
-    <comment>MT — "pose" kept as the MU* verb, matching the Pose/Say mode buttons</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Excluir '{0}' ({1})? Isso a remove de todas as contas que a possuem.</value>
     <comment>MT</comment>
@@ -5667,5 +5663,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pausadas, sem horário</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Publicar como</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter para enviar</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>O que você faz, depois do seu nome…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Colado ao seu nome…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Esta cena está pausada. Ela não aceita poses até que o dono a retome.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Esta cena não está em andamento, então não aceita poses.</value>
   </data>
 </root>

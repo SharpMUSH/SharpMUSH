@@ -2200,9 +2200,6 @@
   <data name="RolModeSemipose" xml:space="preserve">
     <value>Semipose</value>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Posez, parlez ou narrez…</value>
-  </data>
   <data name="RolEditPose" xml:space="preserve">
     <value>Modifier</value>
   </data>
@@ -4937,5 +4934,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>En pause, sans horaire</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Publier en</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Entrée pour envoyer</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>Ce que vous faites, après votre nom…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Collé à votre nom…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Cette scène est en pause. Elle n'accepte aucune pose tant que son propriétaire ne l'a pas reprise.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Cette scène n'est pas en cours, elle n'accepte donc aucune pose.</value>
   </data>
 </root>

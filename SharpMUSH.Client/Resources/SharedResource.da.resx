@@ -3001,10 +3001,6 @@
     <value>Farve</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pose, tal eller fortæl…</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Slet '{0}' ({1})? Det fjerner den fra alle konti, der har den.</value>
     <comment>MT</comment>
@@ -5667,5 +5663,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Sat på pause, intet tidspunkt</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Send som</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter for at sende</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>Hvad du gør, efter dit navn…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Sat direkte på dit navn…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Denne scene er sat på pause. Den tager ikke imod poses, før ejeren genoptager den.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Denne scene kører ikke, så den tager ikke imod poses.</value>
   </data>
 </root>

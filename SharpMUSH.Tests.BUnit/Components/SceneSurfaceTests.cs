@@ -4,6 +4,7 @@ using System.Text;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -366,9 +367,9 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(cut.Find(".scene-live-compose button.scene-live-send").HasAttribute("disabled")).IsFalse();
 	}
 
-	/// <summary>Enter is a newline. A pose is prose; only the button sends it.</summary>
+	/// <summary>Enter is a newline: a pose is prose. Ctrl/⌘+Enter, which inserts nothing, sends it.</summary>
 	[TUnit.Core.Test]
-	public async Task SceneLive_EnterDoesNotSend()
+	public async Task SceneLive_EnterIsANewline_CtrlEnterSends()
 	{
 		_terminal.IsConnected.Returns(true);
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
@@ -376,10 +377,34 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		var box = cut.Find(".scene-live-compose textarea");
 		box.Input("half a thought");
+		box.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+		box.KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
 
-		await Assert.That(box.HasAttribute("blazor:onkeydown")).IsFalse()
-			.Because("nothing listens for Enter on the field: only the button sends");
 		await _terminal.DidNotReceive().SendAsync(Arg.Any<string>());
+
+		cut.Find(".scene-live-compose textarea").KeyDown(new KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+
+		await _terminal.Received().SendAsync("+scene/emit S1=half a thought");
+	}
+
+	/// <summary>
+	/// OOC is one of the modes: it goes out as the scene package's <c>+scene/ooc</c>, which the scene records
+	/// tagged <c>ooc</c>, and the composer takes the OOC band's look while it is chosen.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_OocMode_SendsSceneOoc_AndLooksOoc()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		cut.FindAll(".scene-live-compose .kit-chip").Single(c => c.TextContent == "NavPlayTypeOoc").Click();
+		await Assert.That(cut.Find(".scene-live-compose").ClassList).Contains("scene-live-compose--ooc");
+
+		cut.Find(".scene-live-compose textarea").Input("brb, tea");
+		cut.Find(".scene-live-compose button.scene-live-send").Click();
+
+		await _terminal.Received().SendAsync("+scene/ooc S1=brb\\, tea");
 	}
 
 	/// <summary>
@@ -573,7 +598,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Assert.That(markup).Contains("Barroom Brawl");
 		await Assert.That(markup).Contains("draws a blade");
 		// Nothing renders a pose but the round-trip event, and this connection is in no scene group.
-		await Assert.That(cut.Find("button.mud-icon-button").HasAttribute("disabled")).IsTrue();
+		await Assert.That(cut.Find("button.scene-live-send").HasAttribute("disabled")).IsTrue();
 		await Assert.That(_hub.Joined).IsEmpty();
 	}
 

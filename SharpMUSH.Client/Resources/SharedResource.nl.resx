@@ -3001,10 +3001,6 @@
     <value>Kleur</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Pose, spreek of vertel…</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>'{0}' ({1}) verwijderen? De rol verdwijnt daarmee ook bij alle accounts die hem hebben.</value>
     <comment>MT</comment>
@@ -5667,5 +5663,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Gepauzeerd, geen tijdstip</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Plaatsen als</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter om te verzenden</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>Wat je doet, na je naam…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Vast aan je naam…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Deze scène is gepauzeerd. Ze neemt geen poses aan tot de eigenaar haar hervat.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Deze scène loopt niet en neemt dus geen poses aan.</value>
   </data>
 </root>

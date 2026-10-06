@@ -3001,10 +3001,6 @@
     <value>Culoare</value>
     <comment>MT</comment>
   </data>
-  <data name="RolComposePlaceholder" xml:space="preserve">
-    <value>Poză, replică sau narațiune…</value>
-    <comment>MT — English verbs rendered as nouns; Romanian imperatives would be awkward in a compose-box placeholder</comment>
-  </data>
   <data name="RolDeleteConfirm" xml:space="preserve">
     <value>Ștergeți „{0}” ({1})? Aceasta îl elimină din toate conturile care îl dețin.</value>
     <comment>MT</comment>
@@ -5667,5 +5663,23 @@
   </data>
   <data name="RolScheduleNoTime" xml:space="preserve">
     <value>Pe pauză, fără oră</value>
+  </data>
+  <data name="RolComposeMode" xml:space="preserve">
+    <value>Postează ca</value>
+  </data>
+  <data name="RolComposeSendHint" xml:space="preserve">
+    <value>Ctrl+Enter pentru a trimite</value>
+  </data>
+  <data name="RolComposePlaceholderPose" xml:space="preserve">
+    <value>Ce faci, după numele tău…</value>
+  </data>
+  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
+    <value>Lipit de numele tău…</value>
+  </data>
+  <data name="RolComposePaused" xml:space="preserve">
+    <value>Această scenă este în pauză. Nu primește poze până când proprietarul nu o reia.</value>
+  </data>
+  <data name="RolComposeNotRunning" xml:space="preserve">
+    <value>Această scenă nu este în desfășurare, deci nu primește poze.</value>
   </data>
 </root>
