@@ -185,22 +185,6 @@ public class SessionExpiryIndexTests : LightningDatabaseFixture
 	}
 
 	[Test]
-	public async Task MigrationBuildsTheIndexForSessionsWrittenBeforeIt()
-	{
-		await Db.UpsertSessionAsync(Session("legacy-expired", 1_000));
-		await Db.UpsertSessionAsync(Session("legacy-live", 90_000));
-		var built = Dump(Tables.SessionExpiry);
-		await ForgetIndexAsync(LightningDatabase.SessionExpiryIndexMigrationId, Tables.SessionExpiry);
-		await Assert.That(Dump(Tables.SessionExpiry)).IsEmpty();
-
-		await Db.Migrate();
-
-		await Assert.That(Dump(Tables.SessionExpiry)).IsEquivalentTo(built, CollectionOrdering.Matching);
-		await Assert.That(await Db.DeleteExpiredSessionsAsync(5_000, 100)).IsEqualTo(1);
-		await Assert.That(await Db.GetSessionAsync("legacy-live")).IsNotNull();
-	}
-
-	[Test]
 	public async Task OriginIpsAreDistinctIgnoringCase()
 	{
 		await Db.UpsertSessionAsync(Session("ip-1", 90_000, ip: "10.0.0.1"));

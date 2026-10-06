@@ -24,7 +24,7 @@ internal static class QueuedCommandMatch
 			body,
 			current.SnapshotForQueuedAction() with
 			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.LongName),
 				Registers = new([[]]),
 				IterationRegisters = [],
 				RegexRegisters = [],
@@ -37,7 +37,7 @@ internal static class QueuedCommandMatch
 				Caller = matcher,
 				HttpResponse = null
 			},
-			new DbRefAttribute(obj.Object().DBRef, attr.LongName?.Split('`') ?? [attr.Name]),
+			new DbRefAttribute(obj.Object().DBRef, attr.LongName.Split('`')),
 			-1), cancellationToken);
 	}
 }

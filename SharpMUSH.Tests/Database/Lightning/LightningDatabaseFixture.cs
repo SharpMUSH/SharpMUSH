@@ -52,15 +52,6 @@ public abstract class LightningDatabaseFixture
 		await Db.Migrate();
 	}
 
-	/// <summary>Empties <paramref name="tables"/> and forgets <paramref name="migrationId"/>, leaving the world as
-	/// one written before that index existed; the next <c>Migrate</c> rebuilds it.</summary>
-	protected async Task ForgetIndexAsync(string migrationId, params TableDef[] tables)
-		=> await Db.Store.WriteAsync(tx =>
-		{
-			foreach (var table in tables) tx.DeletePrefix(table, []);
-			tx.Delete(Tables.Meta, Keys.Str("mig:" + migrationId));
-		});
-
 	protected string[] Dump(TableDef table) => Db.Store.Read(tx => tx.Range(table, [])
 		.Select(entry => Convert.ToHexString(entry.Key) + ":" + Convert.ToHexString(entry.Value))
 		.ToArray());

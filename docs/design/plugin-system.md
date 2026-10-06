@@ -319,7 +319,7 @@ package: my-plugin
 version: "1.0.0"
 kind: managed
 binaries:
-  min_server_version: ">=3.0"        # plugin/server contract version constraint (refused if too new)
+  min_server_version: ">=1.1"        # plugin/server contract version constraint (refused if too new)
   files:
     - file: MyPlugin.dll             # flat file name — no path separators or '..'
       sha256: <64-hex SHA-256>       # the installer rejects a mismatch

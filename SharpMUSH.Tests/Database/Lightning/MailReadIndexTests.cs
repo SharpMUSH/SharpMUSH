@@ -225,23 +225,4 @@ public class MailReadIndexTests : LightningDatabaseFixture
 		// Mail the deleted player sent stays in the other mailbox, at its ordinal.
 		await Assert.That(await Nth(other, "INBOX", 0)).IsEqualTo("survives");
 	}
-
-	[Test]
-	public async Task MigrationBuildsTheIndexesForMailWrittenBeforeThem()
-	{
-		var sender = await NewPlayer("LegacySender");
-		var to = await NewPlayer("LegacyRecipient");
-		await Send(sender, to, "x", "A");
-		await Send(sender, to, "y", "B");
-		await Send(to, sender, "z");
-		var folders = Dump(Tables.MailFolder);
-		var sentTo = Dump(Tables.MailSentTo);
-		await ForgetIndexAsync(LightningDatabase.MailReadIndexMigrationId, Tables.MailFolder, Tables.MailSentTo);
-
-		await Db.Migrate();
-
-		await Assert.That(Dump(Tables.MailFolder)).IsEquivalentTo(folders, CollectionOrdering.Matching);
-		await Assert.That(Dump(Tables.MailSentTo)).IsEquivalentTo(sentTo, CollectionOrdering.Matching);
-		await Assert.That(await Nth(to, "B", 0)).IsEqualTo("y");
-	}
 }

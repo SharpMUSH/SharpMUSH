@@ -781,8 +781,8 @@ public partial class Functions
 		var results = candidates
 			.Where(async (obj, _) => classObj is null
 				|| (await obj.Owner.WithCancellation(CancellationToken.None)).Object.DBRef == classObj.Object().DBRef)
-			.Where(async (obj, _) => await obj.Attributes.Value.AnyAsync(attr =>
-				(attributePattern == "*" || attr.Name.Contains(attributePattern, StringComparison.OrdinalIgnoreCase))
+			.Where(async (obj, _) => await obj.AllAttributes.Value.AnyAsync(attr =>
+				(attributePattern == "*" || attr.LongName.Contains(attributePattern, StringComparison.OrdinalIgnoreCase))
 				&& attr.Value.ToPlainText().Contains(pattern, StringComparison.OrdinalIgnoreCase)))
 			.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
 
@@ -1626,7 +1626,7 @@ public partial class Functions
 
 		// Format results as "dbref/attribute" pairs
 		var results = matches.Select(match =>
-			$"{match.SObject.Object().DBRef}/{match.Attribute.Name}");
+			$"{match.SObject.Object().DBRef}/{match.Attribute.LongName}");
 
 		return string.Join(" ", results);
 	}

@@ -27,7 +27,7 @@
 - [x] Wiki content CSS — links, redlinks, headings, tables, code, blockquotes in `wwwroot/css/custom.css`
 
 ## Admin & Semantic Layer
-- [x] Categories the MediaWiki way — a page holds a list of categories, keyed by `WikiHelpers.CategoryKey`, set in the editor's category chips, by `PUT api/wiki/{slug}/metadata` (`IWikiService.SetMetadataAsync`) or by `@wiki/category page=names`; `[[Category:Name]]` in text is a link to the category page. Identity is `(namespace, slug)`; category pages live in the `category` namespace at `/wiki/category/{key}`. Tags were merged into categories. Lightning migration `0012_wiki_categories` merged each page's old category (unless `general`) and tags into its category list, without a revision
+- [x] Categories the MediaWiki way — a page holds a list of categories, keyed by `WikiHelpers.CategoryKey`, set in the editor's category chips, by `PUT api/wiki/{slug}/metadata` (`IWikiService.SetMetadataAsync`) or by `@wiki/category page=names`; `[[Category:Name]]` in text is a link to the category page. Identity is `(namespace, slug)`; category pages live in the `category` namespace at `/wiki/category/{key}`. Tags were merged into categories.
 - [x] Published(draft) on `WikiPage` — `SetMetadataAsync` in every implementation (does not create a revision)
 - [x] Listing APIs — `GET /api/wiki/pages` (X-Total-Count header), `GET /api/wiki/category/{cat}`; anonymous callers only see Published pages (drafts 404/are filtered)
 - [x] Batch administration — `POST /api/wiki/batch/protect` + `batch/delete` (Wizard), `{Succeeded, Failed}` result; `/admin/wiki` is a full multi-select grid (paging, namespace filter, protect/unprotect/delete, per-row metadata dialog)

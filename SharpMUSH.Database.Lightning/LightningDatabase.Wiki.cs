@@ -228,10 +228,6 @@ public partial class LightningDatabase : IWikiStore
 		return TryReadWikiPage(tx, key) is { } record ? (key, record) : null;
 	}
 
-	private static IEnumerable<(long Key, WikiPageRecord Record)> AllWikiPages(ITx tx)
-		=> tx.Range(Tables.WikiPage, [])
-			.Select(entry => (Keys.ReadDbref(entry.Key), Codec.Deserialize<WikiPageRecord>(entry.Value)));
-
 	private static WikiPage MapWikiPage(long key, WikiPageRecord r) => new(
 		Id: WikiPageId(key),
 		Slug: r.Slug,
