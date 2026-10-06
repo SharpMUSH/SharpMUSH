@@ -769,8 +769,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find("button.kit-banner-minimise").Click();
 		cut.WaitForState(() => cut.FindAll(".kit-banner, .kit-banner-strip").Count == 0, TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimise folds it back into the header, not to a strip");
-		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments)
-			.Where(a => (string?)a[0] == "play.banner").Select(a => (string?)a[1]).ToList();
+		// Read the invocations on the renderer's dispatcher: other components are still making JS calls there.
+		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.banner").Select(a => (string?)a[1]).ToList());
 		await Assert.That(stored).IsEquivalentTo(new[] { "open", "folded" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -805,7 +806,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find(".play-sheet--details button.kit-banner-minimise").Click();
 		await Assert.That(cut.FindAll(".play-sheet, .kit-banner, .kit-banner-strip").Count).IsEqualTo(0).Because("minimising closes it");
 
-		var stored = JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments).ToList();
+		var stored = await cut.InvokeAsync(() =>
+			JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem").Select(i => i.Arguments).ToList());
 		await Assert.That(stored.Any(a => (string?)a[0] == "play.banner")).IsFalse()
 			.Because("a choice made on a sideways phone must not change the banner on a taller screen");
 	}
