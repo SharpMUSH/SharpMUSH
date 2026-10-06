@@ -17,6 +17,18 @@ namespace SharpMUSH.Library.API;
 /// <param name="Ts">Milliseconds since 1970.</param>
 public sealed record ChannelRecallLine(long Id, string Channel, string From, string? FromObjid, string Text, string Style, long Ts);
 
+/// <summary>
+/// Who is on a channel now, as <c>@channel/who</c> lists them for the acting character: connected players
+/// and things, a member hiding on the channel only to a viewer who may see them. The <c>comm.who</c> push
+/// keeps it current (docs/softcode/comm-feed-handler.md).
+/// </summary>
+/// <param name="Channel">The channel's name.</param>
+/// <param name="Members">In the order the channel holds them.</param>
+public sealed record ChannelWhoList(string Channel, IReadOnlyList<ChannelWhoMember> Members);
+
+/// <summary>One member <c>@channel/who</c> lists.</summary>
+public sealed record ChannelWhoMember(string Name, string Objid);
+
 /// <summary>Where the acting character has read up to, on every channel they are on and every conversation they marked.</summary>
 /// <param name="Character">The objid of the character these are for. A client holding a different character's
 /// feed ignores them.</param>

@@ -281,7 +281,7 @@ public class ConnectionAnnounceIntegrationTests
 	[Test]
 	public async ValueTask ConnectDark_ViaCd_SetsDarkFlagAndBroadcastsHiddenConnectedOnChannel()
 	{
-		var (chanName, channel) = await CreateChannelAsync("AnnounceChan6", "Open");
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan6", "Open", "Announce");
 
 		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceWitness6");
@@ -341,12 +341,12 @@ public class ConnectionAnnounceIntegrationTests
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasHiddenDisconnected}");
 	}
 
-	// --- Test 8: channel announcement on a non-Quiet channel -------------------------------------------
+	// --- Test 8: channel announcement on a channel with the Announce privilege ---------------------------
 
 	[Test]
-	public async ValueTask Connect_OnNonQuietChannel_BroadcastsToChannelMembers()
+	public async ValueTask Connect_OnAnnounceChannel_BroadcastsToChannelMembers()
 	{
-		var (chanName, channel) = await CreateChannelAsync("AnnounceChan8", "Open");
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan8", "Open", "Announce");
 
 		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceWitness8");
@@ -367,12 +367,12 @@ public class ConnectionAnnounceIntegrationTests
 			$"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
 
-	// --- Test 9: a Quiet channel suppresses the channel announcement, room broadcast still fires ---------
+	// --- Test 9: a channel without Announce (every channel by default) carries no announcement, room broadcast still fires
 
 	[Test]
-	public async ValueTask Connect_OnQuietChannel_SuppressesChannelBroadcastButRoomBroadcastStillHappens()
+	public async ValueTask Connect_OnChannelWithoutAnnounce_SuppressesChannelBroadcastButRoomBroadcastStillHappens()
 	{
-		var (_, channel) = await CreateChannelAsync("AnnounceQuietChan9", "Open", "Quiet");
+		var (_, channel) = await CreateChannelAsync("AnnounceQuietChan9", "Open");
 
 		// Its window is checked for emptiness, so it must not stand in the shared DefaultHome, where
 		// other tests' "has connected."/"has disconnected." would land in it.
@@ -402,7 +402,7 @@ public class ConnectionAnnounceIntegrationTests
 		var roomMessages = await MessagesTo(roomWitness.DbRef, roomBefore);
 
 		await Assert.That(chanMessages).IsEmpty()
-			.Because("channels with the Quiet privilege must not carry the connect announcement");
+			.Because("a channel without the Announce privilege must not carry the connect announcement");
 		await Assert.That(roomMessages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
 
@@ -642,12 +642,12 @@ public class ConnectionAnnounceIntegrationTests
 	/// delivers it only to members who are See_All, plus the connecting player. Until this was ported,
 	/// a hidden player's channel memberships leaked exactly the arrival that the room broadcast, the
 	/// HEAR_CONNECT broadcast and the WHO family all withheld — every ordinary member of every
-	/// non-Quiet channel they belonged to was told "&lt;Name&gt; has HIDDEN-connected."
+	/// announcing channel they belonged to was told "&lt;Name&gt; has HIDDEN-connected."
 	/// </summary>
 	[Test]
 	public async ValueTask ConnectHidden_ChannelLineReachesSeeAllMembersOnly()
 	{
-		var (chanName, channel) = await CreateChannelAsync("AnnounceChan14", "Open");
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan14", "Open", "Announce");
 
 		var mortalWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMortalWitness14");
@@ -704,7 +704,7 @@ public class ConnectionAnnounceIntegrationTests
 	[Test]
 	public async ValueTask Connect_NotHidden_ChannelLineStillReachesOrdinaryMembers()
 	{
-		var (chanName, channel) = await CreateChannelAsync("AnnounceChan15", "Open");
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan15", "Open", "Announce");
 
 		var mortalWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMortalWitness15");
@@ -734,7 +734,7 @@ public class ConnectionAnnounceIntegrationTests
 	[Test]
 	public async ValueTask Connect_MutedMemberIsNotToldAndUnmutedMemberIs()
 	{
-		var (chanName, channel) = await CreateChannelAsync("AnnounceChan16", "Open");
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan16", "Open", "Announce");
 
 		var muted = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMuted16");
@@ -773,7 +773,7 @@ public class ConnectionAnnounceIntegrationTests
 	{
 		// "Player" as well as "Open": speaking answers to Chan_Ok_Type, which the connect
 		// announcements above never reach.
-		var (chanName, channel) = await CreateChannelAsync("AnnounceChan17", "Player", "Open");
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan17", "Player", "Open", "Announce");
 
 		var muted = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMuted17");

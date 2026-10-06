@@ -5319,6 +5319,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Încă nimic aici.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Membri</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Conectați acum ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Nimeni nu este conectat acum.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Acest joc nu păstrează istoricul mesajelor, așa că se văd doar mesajele din această vizită.</value>
   </data>

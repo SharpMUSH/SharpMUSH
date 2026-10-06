@@ -14,9 +14,9 @@ using SharpMUSH.Tests.Infrastructure;
 namespace SharpMUSH.Tests.Integration.Packages;
 
 /// <summary>
-/// The bundled <c>comm-feed</c> package turns the engine's <c>CHANNEL`MESSAGE</c>, <c>PAGE`MESSAGE</c>
-/// and <c>PLAYER`CHANNELS</c> events into the <c>comm.message</c> and <c>comm.channels</c> OOB pushes the
-/// portal's Play sidebar reads (docs/softcode/comm-feed-handler.md).
+/// The bundled <c>comm-feed</c> package turns the engine's <c>CHANNEL`MESSAGE</c>, <c>PAGE`MESSAGE</c>,
+/// <c>PLAYER`CHANNELS</c> and <c>CHANNEL`WHO</c> events into the <c>comm.message</c>, <c>comm.channels</c>
+/// and <c>comm.who</c> OOB pushes the portal's Play sidebar reads (docs/softcode/comm-feed-handler.md).
 ///
 /// <para>Every test runs the real path: players on websocket connections, the command they would type,
 /// the event the engine raises, the package's attributes as installed at boot, and <c>oob()</c> publishing
@@ -71,10 +71,13 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
 
 	/// <summary>A player-joinable channel with <paramref name="members"/> on it, made by God.</summary>
-	private async Task<string> ChannelAsync(string prefix, params Viewer[] members)
+	private Task<string> ChannelAsync(string prefix, params Viewer[] members) =>
+		ChannelAsync(prefix, "player open hide_ok", members);
+
+	private async Task<string> ChannelAsync(string prefix, string privileges, params Viewer[] members)
 	{
 		var name = UniqueChannel(prefix);
-		await God($"@channel/add {name}=player open hide_ok");
+		await God($"@channel/add {name}={privileges}");
 		foreach (var member in members)
 		{
 			await God($"@channel/on {name}={member.Number}");
@@ -180,6 +183,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		await Assert.That(names).Contains("CHANNEL`MESSAGE");
 		await Assert.That(names).Contains("PAGE`MESSAGE");
 		await Assert.That(names).Contains("PLAYER`CHANNELS");
+		await Assert.That(names).Contains("CHANNEL`WHO");
 		await Assert.That((await Registry.GetPackageObjectsAsync("comm-feed")).Count).IsEqualTo(0);
 
 		var configured = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
@@ -444,9 +448,10 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// A connect line from a member hidden on the channel goes only to See_All members (PennMUSH's
-	/// CB_SEEALL), and a connect line never goes to a member who muted the channel (CB_CHECKQUIET). The
-	/// payload follows the terminal: the mortal and the muted member are sent nothing.
+	/// On a channel with the <c>announce</c> privilege, a connect line from a member hidden on the channel
+	/// goes only to See_All members (PennMUSH's CB_SEEALL), and a connect line never goes to a member who
+	/// muted the channel (CB_CHECKQUIET). The payload follows the terminal: the mortal and the muted member
+	/// are sent nothing.
 	/// </summary>
 	[Test]
 	public async Task HiddenMembersConnectLine_ReachesOnlySeeAllMembers_AndNotAMutedOne()
@@ -457,7 +462,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var muted = await ViewerAsync("CommPresenceMuted");
 		await God($"@power {seer.Number}=See_All");
 		await God($"@power {muted.Number}=See_All");
-		var channel = await ChannelAsync("CommPresence", hider, mortal, seer, muted);
+		var channel = await ChannelAsync("CommPresence", "player open hide_ok announce", hider, mortal, seer, muted);
 		await Run(hider, $"@channel/hide {channel}=yes");
 		await Run(muted, $"@channel/mute {channel}=yes");
 		var socket = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "websocket");
@@ -475,6 +480,88 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var line = Frames(sent[seer.Handle], "comm.message").Single();
 		await Assert.That(line["style"]!.GetValue<string>()).IsEqualTo("presence");
 		await Assert.That(line["channel"]!.GetValue<string>()).IsEqualTo(channel);
+	}
+
+	/// <summary>
+	/// A channel is quiet by default (#1579): connecting sends its members no line, and their member list
+	/// is told instead. The list follows <c>@channel/who</c>: a member hiding on the channel comes on only for
+	/// a See_All member, and nobody else hears of it.
+	/// </summary>
+	[Test]
+	public async Task Connecting_SendsNoLine_OnAQuietChannel_AndPutsTheMemberOnItsList()
+	{
+		var comer = await ViewerAsync("CommWhoComer");
+		var hider = await ViewerAsync("CommWhoHider");
+		var mortal = await ViewerAsync("CommWhoMortal");
+		var seer = await ViewerAsync("CommWhoSeer");
+		await God($"@power {seer.Number}=See_All");
+		var channel = await ChannelAsync("CommWhoConnect", comer, hider, mortal, seer);
+		await Run(hider, $"@channel/hide {channel}=yes");
+		var comerSocket = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "websocket");
+		var hiderSocket = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "websocket");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(async () =>
+			{
+				await factory.CommandParser.CommandParse(comerSocket, ConnectionService,
+					MarkupText.Plain($"connect {comer.Name} TestPassword123"));
+				await factory.CommandParser.CommandParse(hiderSocket, ConnectionService,
+					MarkupText.Plain($"connect {hider.Name} TestPassword123"));
+			},
+			Run, mortal, seer);
+
+		await Assert.That(Frames(sent[mortal.Handle], "comm.message")).IsEmpty()
+			.Because("a channel without announce carries no connect line");
+		await Assert.That(Frames(sent[seer.Handle], "comm.message")).IsEmpty();
+
+		var comerObjid = await Objid(comer);
+		var hiderObjid = await Objid(hider);
+		var mortalSaw = Frames(sent[mortal.Handle], "comm.who");
+		await Assert.That(mortalSaw.Select(f => f["member"]!["objid"]!.GetValue<string>())).IsEquivalentTo(new[] { comerObjid })
+			.Because("a mortal does not list a member hiding on the channel");
+		var update = mortalSaw.Single();
+		await Assert.That(update["v"]!.GetValue<int>()).IsEqualTo(2);
+		await Assert.That(update["channel"]!.GetValue<string>()).IsEqualTo(channel);
+		await Assert.That(update["member"]!["name"]!.GetValue<string>()).IsEqualTo(comer.Name);
+		await Assert.That(update["online"]!.GetValue<bool>()).IsTrue();
+
+		await Assert.That(Frames(sent[seer.Handle], "comm.who").Select(f => f["member"]!["objid"]!.GetValue<string>()))
+			.IsEquivalentTo(new[] { comerObjid, hiderObjid });
+	}
+
+	/// <summary>
+	/// Joining puts a connected member on the list, hiding takes them off it for those who may not see
+	/// hidden members (and changes nothing for those who may), and leaving takes them off for whoever still
+	/// listed them.
+	/// </summary>
+	[Test]
+	public async Task JoiningHidingAndLeaving_UpdateTheMemberList_ForWhoeverSeesTheChange()
+	{
+		var subject = await ViewerAsync("CommWhoSubject");
+		var mortal = await ViewerAsync("CommWhoWatcher");
+		var seer = await ViewerAsync("CommWhoStaff");
+		await God($"@power {seer.Number}=See_All");
+		var channel = await ChannelAsync("CommWhoJoin", mortal, seer);
+		var objid = await Objid(subject);
+
+		static IEnumerable<(string, bool)> Changes(List<JsonObject> frames) =>
+			frames.Select(f => (f["member"]!["objid"]!.GetValue<string>(), f["online"]!.GetValue<bool>()));
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+
+		var joined = await watch.SentWhile(() => Run(subject, $"@channel/on {channel}"), Run, mortal, seer);
+		await Assert.That(Changes(Frames(joined[mortal.Handle], "comm.who"))).IsEquivalentTo(new[] { (objid, true) });
+		await Assert.That(Changes(Frames(joined[seer.Handle], "comm.who"))).IsEquivalentTo(new[] { (objid, true) });
+
+		var hid = await watch.SentWhile(() => Run(subject, $"@channel/hide {channel}=yes"), Run, mortal, seer);
+		await Assert.That(Changes(Frames(hid[mortal.Handle], "comm.who"))).IsEquivalentTo(new[] { (objid, false) });
+		await Assert.That(Frames(hid[seer.Handle], "comm.who")).IsEmpty()
+			.Because("a See_All member lists a hidden member all the same");
+
+		var left = await watch.SentWhile(() => Run(subject, $"@channel/off {channel}"), Run, mortal, seer);
+		await Assert.That(Frames(left[mortal.Handle], "comm.who")).IsEmpty()
+			.Because("the mortal stopped listing them when they hid");
+		await Assert.That(Changes(Frames(left[seer.Handle], "comm.who"))).IsEquivalentTo(new[] { (objid, false) });
 	}
 
 	[Test]

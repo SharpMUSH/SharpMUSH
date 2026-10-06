@@ -16,6 +16,9 @@ public interface ICommHistory
 	/// </summary>
 	Task<ApiResult<IReadOnlyList<ChannelRecallLine>>> RecallAsync(string channel, int lines, long? after = null);
 
+	/// <summary>Who is on the channel now, as <c>@channel/who</c> lists them for the acting character.</summary>
+	Task<ApiResult<ChannelWhoList>> WhoAsync(string channel);
+
 	/// <summary>The acting character's read markers.</summary>
 	Task<ApiResult<CommReadMarkers>> MarkersAsync();
 
@@ -49,6 +52,10 @@ public sealed class CommHistoryService(IHttpClientFactory httpClientFactory) : I
 		Client.GetApiAsync<IReadOnlyList<ChannelRecallLine>>(
 			$"api/comm/channels/{Uri.EscapeDataString(channel)}/recall?lines={lines}{(after is { } id ? $"&after={id}" : string.Empty)}",
 			"The server returned no channel history.");
+
+	public Task<ApiResult<ChannelWhoList>> WhoAsync(string channel) =>
+		Client.GetApiAsync<ChannelWhoList>($"api/comm/channels/{Uri.EscapeDataString(channel)}/who",
+			"The server returned no member list.");
 
 	public Task<ApiResult<CommReadMarkers>> MarkersAsync() =>
 		Client.GetApiAsync<CommReadMarkers>("api/comm/markers", "The server returned no read markers.");

@@ -5319,6 +5319,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Nada aqui ainda.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Membros</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Online agora ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Ninguém está online agora.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Este jogo não guarda o histórico de mensagens privadas, então só aparecem as mensagens desta visita.</value>
   </data>

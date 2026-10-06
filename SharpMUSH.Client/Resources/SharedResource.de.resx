@@ -5319,6 +5319,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Noch nichts hier.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Mitglieder</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Jetzt online ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>Gerade ist niemand online.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dieses Spiel speichert keinen Page-Verlauf, daher werden nur Pages aus diesem Besuch angezeigt.</value>
   </data>

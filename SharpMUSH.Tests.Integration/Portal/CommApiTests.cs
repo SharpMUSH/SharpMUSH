@@ -39,6 +39,9 @@ public class CommApiTests(ServerWebAppFactory factory)
 	private static string UniqueChannel(string prefix) =>
 		TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
 
+	private async Task<string> ObjidOf(DBRef who) =>
+		(await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid(#{who.Number})")))!.Message!.ToPlainText();
+
 	private async Task<string> GodObjid() =>
 		(await factory.FunctionParser.FunctionParse(MarkupText.Plain("objid(#1)")))!.Message!.ToPlainText();
 
@@ -109,6 +112,52 @@ public class CommApiTests(ServerWebAppFactory factory)
 		var result = await (await As(outsider)).Recall(channel, null, null, CancellationToken.None);
 
 		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status403Forbidden);
+	}
+
+	/// <summary>
+	/// The member list is <c>@channel/who</c>'s: connected players and things, a member hiding on the channel
+	/// only for a viewer who may see hidden members, and nobody who is not connected.
+	/// </summary>
+	[Test]
+	public async Task Who_ListsTheConnectedMembers_AsChannelWhoDoes()
+	{
+		var viewer = await NewPlayerAsync("CommWhoViewer");
+		var online = await NewPlayerAsync("CommWhoOnline");
+		var offline = await NewPlayerAsync("CommWhoOffline");
+		var hider = await NewPlayerAsync("CommWhoHidden");
+		await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, online);
+		var hiderHandle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, hider);
+		var channel = UniqueChannel("CommWho");
+		await God($"@channel/add {channel}=player open hide_ok");
+		foreach (var member in new[] { viewer, online, offline, hider })
+		{
+			await God($"@channel/on {channel}=#{member.Number}");
+		}
+		await factory.CommandParser.CommandParse(hiderHandle, ConnectionService,
+			MarkupText.Plain($"@channel/hide {channel}=yes"));
+
+		var mortal = Value(await (await As(viewer)).Who(channel, CancellationToken.None));
+		var staff = Value(await (await As(new DBRef(1))).Who(channel, CancellationToken.None));
+
+		var (onlineObjid, hiderObjid) = (await ObjidOf(online), await ObjidOf(hider));
+
+		await Assert.That(mortal.Channel).IsEqualTo(channel);
+		await Assert.That(mortal.Members.Select(m => m.Objid)).IsEquivalentTo(new[] { onlineObjid })
+			.Because("the viewer is not connected, the offline member is not, and the hider is hidden from a mortal");
+		await Assert.That(staff.Members.Select(m => m.Objid)).IsEquivalentTo(new[] { onlineObjid, hiderObjid });
+	}
+
+	[Test]
+	public async Task Who_OnAChannelTheActorCannotSee_IsNotFound()
+	{
+		var outsider = await NewPlayerAsync("CommWhoBlind");
+		var hidden = UniqueChannel("CommWhoHiddenChan");
+		await God($"@channel/add {hidden}=player wizard");
+		await God($"@clock/join {hidden}=#1");
+
+		var result = await (await As(outsider)).Who(hidden, CancellationToken.None);
+
+		await Assert.That(Status(result)).IsEqualTo(StatusCodes.Status404NotFound);
 	}
 
 	/// <summary>A channel the actor may not see is answered exactly as one that does not exist.</summary>

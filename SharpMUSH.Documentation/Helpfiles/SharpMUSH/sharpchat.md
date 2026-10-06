@@ -181,7 +181,7 @@ Admin                              3       17 [-P-A--- js---- ] [Off    ]   0
 - **Name** is the channel's name, padded to 30 columns. A longer name overflows the column rather than being truncated.
 - **Users** is how many of its members are listed by [@channel joining] — connected players, things, and members hiding on the channel only if you may see them.
 - **Msgs** is how many messages the channel's recall buffer holds.
-- **Chan Type** is two groups in one bracket. The first seven characters are the channel's privileges, a `-` where the privilege is absent: `D`isabled, `P`layer, Object (`T`), `A`dmin or `W`izard, `Q`uiet, `H`ide_ok, `o`pen. The next six are its locks and your relationship to it: `j`oin, `s`peak, `m`od, see (`v`), `h`ide, and `*` if you own the channel.
+- **Chan Type** is two groups in one bracket. The first seven characters are the channel's privileges, a `-` where the privilege is absent: `D`isabled, `P`layer, Object (`T`), `A`dmin or `W`izard, `a`nnounce, `H`ide_ok, `o`pen. The next six are its locks and your relationship to it: `j`oin, `s`peak, `m`od, see (`v`), `h`ide, and `*` if you own the channel.
 - **Status** is `On`, `Off`, or `Gag` if you are gagging the channel, followed by a character each for your own `Q` (muted), `H` (hidden) and `C` (combined) flags on it.
 - **Buf** is the channel's configured buffer size.
 
@@ -204,14 +204,14 @@ which reads `(None)` when nothing matched.
 
 Channel privileges say who a channel admits and how its messages are rendered. They are set with `@channel/privs`, and on a brand new channel with `@channel/add <channel>=<privlist>`.
 
-*<privlist>* is a space-separated list of privilege names, or of the single-letter abbreviations below. The list **replaces** the channel's current privileges rather than adding to them, so name every privilege the channel is to keep. Names match without regard to case; the letters do not, because `O` is Object and `o` is Open.
+*<privlist>* is a space-separated list of privilege names, or of the single-letter abbreviations below. The list **replaces** the channel's current privileges rather than adding to them, so name every privilege the channel is to keep. Names match without regard to case; the letters do not, because `O` is Object and `o` is Open, and `A` is Admin and `a` is Announce.
 
 Available privileges:
 - **player** (`P`): Players may use the channel
 - **object** (`O`): Non-players may use the channel
 - **admin** (`A`): Only royalty, wizards, and holders of the `chat_privs` power may use the channel
 - **wizard** (`W`): Only wizards may use the channel
-- **quiet** (`Q`): The channel does not show connection messages
+- **announce** (`a`): The channel shows its members' connect and disconnect messages, and keeps them in its recall buffer. Without it a channel says nothing when a member connects or disconnects; [@channel joining]'s `@channel/who` shows who is on it now.
 - **open** (`o`): You may speak on the channel even when you are not listening to it
 - **hide_ok** (`H`): You may hide yourself from the channel's who list
 - **notitles** (`T`): Channel titles are not shown in channel messages
@@ -222,13 +222,15 @@ Available privileges:
 
 These are privileges, not locks. A privilege says which *kind* of thing the channel is open to; a lock says which particular objects get through. Joining, speaking, seeing, hiding and modifying are each governed by a lock of their own — see [@CHANNEL CLOCK].
 
+PennMUSH has the opposite privilege, `quiet`, and announces connections on every channel without it. SharpMUSH has no `quiet`: a channel is quiet unless it has `announce`, and a PennMUSH channel imports quiet.
+
 `loud` is not a channel privilege and cannot be given to a channel. It is a flag set on an object — see [FLAG LIST].
 
 **Examples**
 ```sharp
-@channel/privs Public=player quiet open nocemit
+@channel/privs Public=player announce open nocemit
 @channel/privs Admin=player admin
-@channel/privs Public=P Q o C
+@channel/privs Public=P a o C
 ```
 
 ::: seealso

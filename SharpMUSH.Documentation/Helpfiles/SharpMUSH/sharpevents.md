@@ -40,7 +40,7 @@ Event Types:
 - **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail
 - **http**: http\`blocked http\`fail http\`command
 - **room**: room\`contents
-- **channel**: channel\`message
+- **channel**: channel\`message, channel\`who
 - **page**: page\`message
 
 The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what.
@@ -172,7 +172,10 @@ To mimic old behaviour:
 
 # EVENT CHANNEL
 - **channel\`message** (*channel*, *speaker objid*, *style*, *speaker name*, *message*, *recipients*, *time*, *id*)
-- Triggered after a channel line has been delivered. *<recipients>* is the objids of exactly the members it was delivered to: a member who has gagged the channel, one the speaker may not be heard by, one whose `@chatformat` silenced the line, and a muted member's copy of a connect or disconnect line are not among them. Nobody received it, nothing is triggered. *<style>* is one of say, pose, semipose, emit or presence (a connect or disconnect line). *<speaker name>* and *<message>* are plain text, as the channel's mogrifier left them. *<speaker objid>* is empty for a line with no speaker, and both it and *<speaker name>* are empty for an `@cemit` line, which does not name its emitter (%# is still the emitter). *<time>* is milliseconds since 1970. *<id>* is the line's id, the one `@channel/recall`'s buffer holds it under (and the web portal reads it back by); ids rise with time, so a later line has a larger one.
+- Triggered after a channel line has been delivered. *<recipients>* is the objids of exactly the members it was delivered to: a member who has gagged the channel, one the speaker may not be heard by, one whose `@chatformat` silenced the line, and a muted member's copy of a connect or disconnect line are not among them. Nobody received it, nothing is triggered. *<style>* is one of say, pose, semipose, emit or presence (a connect or disconnect line, which only a channel with the announce privilege carries). *<speaker name>* and *<message>* are plain text, as the channel's mogrifier left them. *<speaker objid>* is empty for a line with no speaker, and both it and *<speaker name>* are empty for an `@cemit` line, which does not name its emitter (%# is still the emitter). *<time>* is milliseconds since 1970. *<id>* is the line's id, the one `@channel/recall`'s buffer holds it under (and the web portal reads it back by); ids rise with time, so a later line has a larger one.
+
+- **channel\`who** (*channel*, *member objid*, *member name*, *on|off*, *viewers*, *cause*)
+- Triggered when a member comes onto or goes off a channel's member list, as `@channel/who` lists it: a thing always, a player while connected, and a member hiding on the channel only to a viewer who may see hidden members. *<viewers>* is the objids of the connected player members whose view of the list changed, and *on* or *off* is what changed for them; a change seen differently by different members (someone starting `@channel/hide`) triggers once for each. *<cause>* is one of connect, disconnect (the last connection closing), join, leave or status (hiding or no longer hiding). %# is the member.
 
 # EVENT PAGE
 - **page\`message** (*pager objid*, *recipients*, *style*, *pager name*, *message*, *time*, *id*)

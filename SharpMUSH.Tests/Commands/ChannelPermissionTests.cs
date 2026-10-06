@@ -464,13 +464,13 @@ public class ChannelPermissionTests
 	public async Task ChannelPrivsAddsToExistingPrivilegesAndNegates()
 	{
 		var name = UniqueChannel("PrivOr");
-		await CreateChannel(name, "Player", "Quiet");
+		await CreateChannel(name, "Player", "Announce");
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/privs {name}=Wizard"));
 
 		var afterAdd = await Mediator.Send(new GetChannelQuery(name));
 		await Assert.That(afterAdd!.Privs).Contains("Player");
-		await Assert.That(afterAdd.Privs).Contains("Quiet");
+		await Assert.That(afterAdd.Privs).Contains("Announce");
 		await Assert.That(afterAdd.Privs).Contains("Wizard");
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/privs {name}=!Wizard"));

@@ -15,11 +15,14 @@ public class CommViewTests : TrackingBunitContext
 {
 	private readonly TestCommFeed _feed = new();
 	private readonly List<string> _sent = [];
+	private readonly OobChannelStore _store = new();
+	private readonly FakeCommHistory _server = new();
 
 	public CommViewTests()
 	{
 		CharactersApiFake.Install(this);
 		Services.AddSingleton<ICommFeed>(_feed);
+		Services.AddSingleton<IChannelWho>(new ChannelWhoFeed(_store, _server));
 	}
 
 	// Noon today, not the clock: lines minutes before "now" must fall on today however soon after
@@ -213,6 +216,53 @@ public class CommViewTests : TrackingBunitContext
 		_feed.Viewing = null; // a reconnect clears the feed
 		_feed.Raise();
 		await Assert.That(_feed.Viewing).IsEqualTo("Public");
+	}
+
+	/// <summary>
+	/// The channel's member list sits beside its lines: read when the view opens, and kept current by
+	/// <c>comm.who</c> while it is open.
+	/// </summary>
+	[Test]
+	public async Task AChannel_ListsWhoIsOnIt_AndKeepsTheListCurrent()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		_server.Who["Public"] = [new("Wren Halloway", "#12:1"), new("Dace Kellan", "#13:1")];
+		var cut = RenderView("Public");
+
+		cut.WaitForState(() => cut.FindAll(".comm-member-name").Count == 2, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".comm-member-name").Select(e => e.TextContent).ToList())
+			.IsEquivalentTo(new[] { "Dace Kellan", "Wren Halloway" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.Find(".comm-members-count").TextContent).IsEqualTo("2");
+
+		await cut.InvokeAsync(() => _store.Set(CommPayloadParser.WhoPackage,
+			"""{"v":2,"channel":"Public","member":{"name":"Ilsa Varn","objid":"#19:1"},"online":true}"""));
+		await cut.InvokeAsync(() => _store.Set(CommPayloadParser.WhoPackage,
+			"""{"v":2,"channel":"Public","member":{"name":"Wren Halloway","objid":"#12:1"},"online":false}"""));
+
+		await Assert.That(cut.FindAll(".comm-member-name").Select(e => e.TextContent).ToList())
+			.IsEquivalentTo(new[] { "Dace Kellan", "Ilsa Varn" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task AConversation_HasNoMemberList()
+	{
+		_feed.ConversationList = [new CommConversation("page #5:1 #12:1", ["Wren Halloway"], ["#12:1"], 0, Now)];
+		var cut = RenderView("page #5:1 #12:1");
+
+		await Assert.That(cut.FindAll(".comm-members").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".comm-members-toggle").Count).IsEqualTo(0);
+		await Assert.That(_server.WhoRead).IsEmpty();
+	}
+
+	[Test]
+	public async Task TheMembersButton_FlipsTheList()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		var cut = RenderView("Public");
+
+		await Assert.That(cut.Find(".comm").ClassList.Contains("comm--members-toggled")).IsFalse();
+		cut.Find("button.comm-members-toggle").Click();
+		await Assert.That(cut.Find(".comm").ClassList.Contains("comm--members-toggled")).IsTrue();
 	}
 
 	[Test]

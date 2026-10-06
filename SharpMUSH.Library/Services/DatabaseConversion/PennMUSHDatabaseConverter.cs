@@ -1691,13 +1691,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <summary>
 	/// The <c>CHANNEL_*</c> bits (<c>hdrs/extchat.h</c>) and the privilege each is in SharpMUSH, named as
 	/// <c>ChannelHelper</c>'s table names them, since the permission checks compare those names.
+	/// <see cref="PennChannelQuiet"/> has no entry: SharpMUSH channels are quiet unless given <c>Announce</c>.
 	/// </summary>
 	private static readonly (int Bit, string Name)[] ChannelPrivilegeBits =
 	[
 		(0x1, "Player"),
 		(0x2, "Object"),
 		(0x4, "Disabled"),
-		(0x8, "Quiet"),
 		(0x10, "Admin"),
 		(0x20, "Wizard"),
 		(0x40, "Hide_Ok"),
@@ -1707,6 +1707,14 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		(0x400, "NoCemit"),
 		(0x800, "Interact")
 	];
+
+	/// <summary>
+	/// <c>CHANNEL_QUIET</c>: no connect and disconnect lines, which is every SharpMUSH channel's default. Read
+	/// and dropped, so it is neither a privilege nor an unknown bit. A PennMUSH channel without it announced
+	/// connections; it imports quiet all the same, and <c>@channel/privs &lt;channel&gt;=announce</c> turns
+	/// them back on.
+	/// </summary>
+	private const int PennChannelQuiet = 0x8;
 
 	/// <summary>The <c>CU_*</c> bits (<c>hdrs/extchat.h</c>).</summary>
 	private const int ChannelUserQuiet = 0x1, ChannelUserHide = 0x2, ChannelUserCombine = 0x8;
@@ -1768,7 +1776,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 
 			var privileges = ChannelPrivilegeBits.Where(p => (pennChannel.Flags & p.Bit) != 0).Select(p => p.Name).ToArray();
-			var unknownBits = pennChannel.Flags & ~ChannelPrivilegeBits.Sum(p => p.Bit);
+			var unknownBits = pennChannel.Flags & ~(ChannelPrivilegeBits.Sum(p => p.Bit) | PennChannelQuiet);
 			if (unknownBits != 0)
 			{
 				context.Warnings.Add($"{label}: unknown channel flag bits 0x{unknownBits:x} were dropped");

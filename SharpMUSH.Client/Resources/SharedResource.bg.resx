@@ -5319,6 +5319,15 @@
   <data name="NavPlayNothingYet" xml:space="preserve">
     <value>Още няма нищо.</value>
   </data>
+  <data name="NavPlayMembers" xml:space="preserve">
+    <value>Членове</value>
+  </data>
+  <data name="NavPlayMembersOnline" xml:space="preserve">
+    <value>Сега на линия ({0})</value>
+  </data>
+  <data name="NavPlayNobodyOn" xml:space="preserve">
+    <value>В момента никой не е на линия.</value>
+  </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Тази игра не пази история на личните съобщения, затова се показват само съобщенията от това посещение.</value>
   </data>
