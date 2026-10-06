@@ -94,12 +94,12 @@ public class AhelpCommandTests
 	public async ValueTask AhelpWithTopicWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp ahelp"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp staff procedures"));
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "The administrator help files, readable by wizards.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "A game's own staff topic.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
