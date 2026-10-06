@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using Mediator;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
@@ -24,6 +25,27 @@ public static class TestIsolationHelpers
 
 	/// <summary>Allocates a connection handle shared by all helpers and connection-level tests.</summary>
 	public static long GenerateUniqueHandle() => Interlocked.Increment(ref _nextHandle);
+
+	/// <summary>The password every test player is created with.</summary>
+	public const string TestPassword = "TestPassword123";
+
+	/// <summary>
+	/// <see cref="TestPassword"/>, hashed once for the whole run. A player created with a plaintext password
+	/// is hashed inside the database writer's transaction (PBKDF2, tens of milliseconds of CPU), which holds
+	/// up every other test's writes; a stored hash with an empty salt skips that and leaves the same record.
+	/// The hasher ignores its user argument, so one hash verifies for every player.
+	/// </summary>
+	public static string TestPasswordHash => TestPasswordHashValue.Value;
+
+	private static readonly Lazy<string> TestPasswordHashValue = new(() =>
+		new PasswordHasher<string>().HashPassword(string.Empty, TestPassword));
+
+	/// <summary>
+	/// A <see cref="CreatePlayerCommand"/> for a test player whose password is <see cref="TestPassword"/>,
+	/// stored already hashed (<see cref="TestPasswordHash"/>).
+	/// </summary>
+	public static CreatePlayerCommand CreateTestPlayerCommand(string name, DBRef location, DBRef home, int quota) =>
+		new(name, TestPasswordHash, location, home, quota, Salt: string.Empty);
 
 	private static long _nextName;
 	private static readonly string RunId = System.Buffers.Text.Base64Url.EncodeToString(
@@ -67,12 +89,7 @@ public static class TestIsolationHelpers
 		var defaultHome = initialHome ?? new DBRef((int)options.CurrentValue.Database.DefaultHome);
 		var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
 
-		return await mediator.Send(new CreatePlayerCommand(
-			name,
-			"TestPassword123",
-			defaultHome,
-			defaultHome,
-			startingQuota));
+		return await mediator.Send(CreateTestPlayerCommand(name, defaultHome, defaultHome, startingQuota));
 	}
 
 	/// <summary>
