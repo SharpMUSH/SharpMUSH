@@ -1,6 +1,6 @@
 format: 1
 package: comm-feed
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — a player's channels, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
 license: MIT

@@ -79,7 +79,8 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
   connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
   for a page. The bundled handler sends no `comm.message` for a presence line,
   and the portal's recall endpoint leaves them out: the portal shows who is on
-  a channel as its member list instead.
+  a channel as its member list instead. (Before `comm-feed` 1.4.0 the handler
+  sent them.)
 - The name and message are **plain text**, and for a channel, what the
   channel's mogrifier (`MOGRIFY`*`) made of them. A member's own
   `@chatformat` changes only their terminal line.
