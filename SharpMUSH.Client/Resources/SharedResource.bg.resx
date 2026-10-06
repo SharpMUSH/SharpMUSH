@@ -5663,4 +5663,16 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Ред {0}: този ::: няма име, затова отваря празен блок. Ако е трябвало да затвори блок, дайте на обхващащия блок повече двоеточия от блоковете в него.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Ред {0}: блокът ::: , отворен тук, никога не се затваря и стига до края на страницата или на обхващащия блок.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Ред {0}: това е във flex, но извън ::: item, затова става отделна колона.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Ред {0}: ::: item се подрежда само непосредствено вътре във flex.</value>
+  </data>
 </root>

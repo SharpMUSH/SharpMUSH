@@ -5663,4 +5663,16 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Línea {0}: este ::: no tiene nombre, así que abre un bloque vacío. Si debía cerrar un bloque, dale al bloque que lo rodea más dos puntos que a los bloques que contiene.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Línea {0}: el bloque ::: abierto aquí nunca se cierra y llega hasta el final de la página o del bloque que lo rodea.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Línea {0}: esto está dentro de un flex pero fuera de cualquier ::: item, así que se convierte en una columna propia.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Línea {0}: un ::: item solo se distribuye directamente dentro de un flex.</value>
+  </data>
 </root>

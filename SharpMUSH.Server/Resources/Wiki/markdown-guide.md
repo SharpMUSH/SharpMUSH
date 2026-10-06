@@ -120,6 +120,51 @@ Headings, paragraphs, images and lists inside the block are all centred; a
 list keeps its bullets beside its items. Text outside the block stays
 left-aligned, including on the home page.
 
+## Layout (SharpMUSH extension)
+
+A `flex` block sets its `item` blocks side by side: as columns on the web, and
+as columns of text in-game. A block that holds others needs **more colons**
+than the blocks inside it, and each block closes with the same number of
+colons it opened with:
+
+```
+:::: flex {gap=2}
+::: item {grow=2}
+## Lore
+The wide column.
+:::
+::: item
+![Map](/assets/Logo.svg)
+:::
+::::
+```
+
+An item can hold anything, including a live listing, a `::: center` block or
+another `flex` (give that one more colons again: `:::::` around `::::`
+around `:::`). If the colons don't nest, the editor lists the line under the
+text area.
+
+Settings go in braces after the name. Anything not listed here is ignored.
+
+| On `flex` | Values | Default |
+|-----------|--------|---------|
+| `direction` | `row`, `column` | `row` |
+| `gap` | `0` to `4` | `2` |
+| `align` | `start`, `center`, `end`, `stretch` | `stretch` |
+| `justify` | `start`, `center`, `end`, `between` | `start` |
+| `wrap` | `yes`, `no` | `yes` |
+
+| On `item` | Values | Default |
+|-----------|--------|---------|
+| `grow` | `1` to `12`: its share of the width | `1` |
+| `basis` | a fixed width: `10%` to `100%`, or `4` to `200` characters | none |
+| `min` | `4` to `200` characters | `24` |
+| `align` | as on `flex`, for this item only | the flex's |
+
+When an item would be narrower than its `min`, the items stack one under
+another instead, on a phone and in a narrow MU* client alike. `wrap=no` keeps
+them side by side.
+
 ## Categories
 
 A page's categories are set in the editor's **Categories** field (below the text

@@ -1097,6 +1097,51 @@
     text-align: left;
 }
 
+/* ── Flex layouts (`flex` / `item`, MarkdownFlexExtension) ── */
+/* Shared by wiki pages and help entries. Settings arrive as classes; an item's grow, basis and minimum
+   width as custom properties holding validated numbers. The minimum is in character columns, the same
+   number the terminal renderer stacks at, so a layout that stacks on a phone stacks on a narrow client. */
+.md-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 0 0 1em;
+}
+
+.md-flex.md-column { flex-direction: column; }
+.md-flex.md-nowrap { flex-wrap: nowrap; }
+.md-flex.md-gap-0 { gap: 0; }
+.md-flex.md-gap-1 { gap: 0.5rem; }
+.md-flex.md-gap-2 { gap: 1rem; }
+.md-flex.md-gap-3 { gap: 1.5rem; }
+.md-flex.md-gap-4 { gap: 2rem; }
+.md-flex.md-align-start { align-items: flex-start; }
+.md-flex.md-align-center { align-items: center; }
+.md-flex.md-align-end { align-items: flex-end; }
+.md-flex.md-align-stretch { align-items: stretch; }
+.md-flex.md-justify-start { justify-content: flex-start; }
+.md-flex.md-justify-center { justify-content: center; }
+.md-flex.md-justify-end { justify-content: flex-end; }
+.md-flex.md-justify-between { justify-content: space-between; }
+
+.md-item {
+    flex: var(--md-grow, 1) 1 0%;
+    min-width: min(100%, calc(var(--md-min, 24) * 1ch));
+}
+
+.md-item.md-fixed {
+    flex: 0 0 var(--md-basis);
+    max-width: 100%;
+}
+
+.md-flex.md-column > .md-item { min-width: 0; }
+.md-item.md-self-start { align-self: flex-start; }
+.md-item.md-self-center { align-self: center; }
+.md-item.md-self-end { align-self: flex-end; }
+.md-item.md-self-stretch { align-self: stretch; }
+.md-item > :first-child { margin-top: 0; }
+.md-item > :last-child { margin-bottom: 0; }
+
 /* ── Wiki directive blocks (dynamic listings: category / tag / pagelist / recent) ── */
 
 .wiki-directive-block {

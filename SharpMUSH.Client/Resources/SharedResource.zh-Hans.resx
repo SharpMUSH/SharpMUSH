@@ -5663,4 +5663,16 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>第 {0} 行：这个 ::: 没有名称，因此会打开一个空块。如果它本应关闭一个块，请让外层块的冒号比内层块更多。</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>第 {0} 行：此处打开的 ::: 块从未关闭，会一直延续到页面或外层块的末尾。</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>第 {0} 行：这段内容在 flex 内，但不在任何 ::: item 中，因此会单独成为一列。</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>第 {0} 行：::: item 只有直接放在 flex 内才会排布。</value>
+  </data>
 </root>

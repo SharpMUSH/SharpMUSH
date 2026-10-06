@@ -5663,4 +5663,16 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WkFenceUnnamed" xml:space="preserve">
+    <value>Строка {0}: у этого ::: нет имени, поэтому он открывает пустой блок. Если он должен был закрыть блок, дайте внешнему блоку больше двоеточий, чем блокам внутри него.</value>
+  </data>
+  <data name="WkFenceUnclosed" xml:space="preserve">
+    <value>Строка {0}: открытый здесь блок ::: не закрывается и тянется до конца страницы или внешнего блока.</value>
+  </data>
+  <data name="WkFenceOutsideItem" xml:space="preserve">
+    <value>Строка {0}: это находится внутри flex, но вне ::: item, поэтому становится отдельной колонкой.</value>
+  </data>
+  <data name="WkFenceItemOutsideFlex" xml:space="preserve">
+    <value>Строка {0}: ::: item раскладывается только непосредственно внутри flex.</value>
+  </data>
 </root>

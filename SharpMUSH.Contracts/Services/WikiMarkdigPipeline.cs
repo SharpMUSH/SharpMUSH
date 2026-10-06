@@ -32,6 +32,7 @@ public sealed class WikiMarkdigPipeline
 	///   <item><see cref="WikiImageExtension"/> for lazy-loading, lightbox-ready images</item>
 	///   <item><see cref="WikiDirectiveExtension"/> for dynamic-listing directives
 	///     (<c>::: category …</c>, <c>::: pagelist …</c>, <c>::: recent N</c>)</item>
+	///   <item><see cref="MarkdownFlexExtension"/> for <c>flex</c> / <c>item</c> layouts</item>
 	///   <item>DisableHtml — raw HTML in wiki source is blocked for security</item>
 	///   <item><see cref="WikiSafetyExtension"/> — attribute blocks and link URLs cannot carry script either</item>
 	/// </list>
@@ -42,6 +43,7 @@ public sealed class WikiMarkdigPipeline
 			.Use<WikiLinkExtension>()
 			.Use<WikiImageExtension>()
 			.Use<WikiDirectiveExtension>()
+			.UseFlexLayout()
 			.DisableHtml()
 			.Use<WikiSafetyExtension>()
 			.Build();
