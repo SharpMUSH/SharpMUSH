@@ -76,6 +76,7 @@ public static class SceneCalendar
 	{
 		var octets = 0;
 		var limit = 75;
+		Span<char> chars = stackalloc char[2];
 		foreach (var rune in line.EnumerateRunes())
 		{
 			var size = rune.Utf8SequenceLength;
@@ -86,7 +87,7 @@ public static class SceneCalendar
 				limit = 74;
 			}
 
-			ics.Append(rune.ToString());
+			ics.Append(chars[..rune.EncodeToUtf16(chars)]);
 			octets += size;
 		}
 
