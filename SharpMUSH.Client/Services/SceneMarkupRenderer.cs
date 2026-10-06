@@ -29,21 +29,24 @@ public static class SceneMarkupRenderer
 	}
 
 	/// <summary>
-	/// A pose as the softcode that writes it, <c>decompose()</c>'s answer: what the Edit box starts from, so
-	/// saving it unchanged keeps every colour. <paramref name="content"/>, the plain text, stands in when
-	/// <paramref name="markup"/> is not a serialized MString envelope.
+	/// A pose as styled text, what the Edit box starts from: the serialized MString in <paramref name="markup"/>,
+	/// or <paramref name="content"/>, the plain text, when that is not one.
 	/// </summary>
-	public static string ToSoftcode(string? markup, string content)
+	public static MarkupText ToMarkupText(string? markup, string content)
 	{
-		MarkupText text;
 		try
 		{
-			text = string.IsNullOrEmpty(markup) ? MarkupText.Plain(content) : MarkupTextSerializer.Deserialize(markup);
+			return string.IsNullOrEmpty(markup) ? MarkupText.Plain(content) : MarkupTextSerializer.Deserialize(markup);
 		}
 		catch (System.Text.Json.JsonException)
 		{
-			text = MarkupText.Plain(content);
+			return MarkupText.Plain(content);
 		}
-		return SoftcodeDecomposer.Decompose(text);
 	}
+
+	/// <summary>
+	/// A pose as the softcode that writes it, <c>decompose()</c>'s answer, so saving it unchanged keeps every
+	/// colour.
+	/// </summary>
+	public static string ToSoftcode(string? markup, string content) => SoftcodeDecomposer.Decompose(ToMarkupText(markup, content));
 }

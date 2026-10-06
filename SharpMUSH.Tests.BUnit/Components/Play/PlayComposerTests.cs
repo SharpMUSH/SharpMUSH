@@ -1,13 +1,16 @@
 using Bunit;
+using MarkupString;
+using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 using SharpMUSH.Client.Components.Play;
 
 namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
 /// README §5.8 / §4.11 composer: Say · OOC · Emit · Command chips, the field and Send. The types map to
-/// say, the game's ooc command, @emit and the raw command; composed text is encoded so the parser hands
-/// it back unchanged. The draft and mode are kept per character, and Command walks the command history.
+/// say, the game's ooc command, @emit and the raw command; composed text is sent as decompose() writes it, so
+/// the parser hands back exactly what was shown, and the softcode switch sends what was typed as softcode. The draft and mode are kept per character, and Command walks the command history.
 /// </summary>
 public class PlayComposerTests : BunitContext
 {
@@ -16,6 +19,7 @@ public class PlayComposerTests : BunitContext
 	public PlayComposerTests()
 	{
 		Services.AddLocalization();
+		Services.AddMudServices();
 		Services.AddSingleton<SharpMUSH.Client.Services.CommandHistory>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -44,7 +48,7 @@ public class PlayComposerTests : BunitContext
 		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Write what happens…");
 		Type(cut, "Ilsa leans back; waits.\n  Then speaks.");
 		cut.Find("button.composer-send").Click();
-		await Assert.That(_sent).IsEquivalentTo(new[] { "@emit Ilsa leans back%; waits.%r%b%bThen speaks." });
+		await Assert.That(_sent).IsEquivalentTo(new[] { @"@emit Ilsa leans back\; waits.%r %bThen speaks." });
 		await Assert.That(cut.Find("textarea").GetAttribute("value") ?? string.Empty).IsEmpty();
 	}
 
@@ -57,7 +61,7 @@ public class PlayComposerTests : BunitContext
 		cut.FindAll("[role=radio]")[1].Click();
 		Type(cut, "brb, making tea");
 		cut.Find("button.composer-send").Click();
-		await Assert.That(_sent).IsEquivalentTo(new[] { "say hello", "ooc brb, making tea" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(_sent).IsEquivalentTo(new[] { "say hello", @"ooc brb\, making tea" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
@@ -94,6 +98,8 @@ public class PlayComposerTests : BunitContext
 		await Assert.That(JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
 				.Any(i => (string?)i.Arguments[0] == "play.draft.Tomas" && ((string?)i.Arguments[1] ?? "").Contains("Ilsa")))
 			.IsFalse().Because("Ilsa's words are never kept as Tomas's");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.draft.Tomas"))
+			.IsFalse().Because("emptying the field for the switch must not delete the draft about to be read");
 
 		cut.Render(p => p.Add(x => x.DraftKey, "play.draft.Carol"));
 		cut.WaitForAssertion(() =>
@@ -130,9 +136,9 @@ public class PlayComposerTests : BunitContext
 		cut.Find("button.composer-send").Click();
 		await Assert.That(_sent).IsEquivalentTo(new[]
 		{
-			"say Lorem ipsum dolor sit amet, consectetur adipiscing elit.%r%r"
+			@"say Lorem ipsum dolor sit amet\, consectetur adipiscing elit.%r%r"
 			+ "Sed do eiusmod tempor incididunt ut labore.%r%r"
-			+ "Ut enim ad minim veniam, quis nostrud exercitation."
+			+ @"Ut enim ad minim veniam\, quis nostrud exercitation."
 		});
 	}
 
@@ -159,9 +165,9 @@ public class PlayComposerTests : BunitContext
 		cut.Find("button.composer-send").Click();
 		await Assert.That(_sent).IsEquivalentTo(new[]
 		{
-			"say Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+			@"say Lorem ipsum dolor sit amet\, consectetur adipiscing elit.",
 			"say Sed do eiusmod tempor incididunt ut labore.",
-			"say Ut enim ad minim veniam, quis nostrud exercitation.",
+			@"say Ut enim ad minim veniam\, quis nostrud exercitation.",
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
 		JSInterop.Setup<string?>("localStorage.getItem", "play.composer.breaks").SetResult("off");
@@ -244,5 +250,44 @@ public class PlayComposerTests : BunitContext
 		await cut.InvokeAsync(() => cut.Instance.StartPageAsync("Tomas Reyes"));
 		await Assert.That(cut.FindAll("[role=radio]")[3].GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(cut.Find("textarea").GetAttribute("value")).IsEqualTo("page Tomas Reyes=");
+	}
+
+	[Test]
+	public async Task TypedText_IsSentAsShown_EvenWhenItLooksLikeSoftcode()
+	{
+		var cut = RenderComposer();
+		Type(cut, "100% [OOC] sure");
+		await Assert.That(cut.FindAll(".fi-notice").Count).IsEqualTo(0).Because("brackets and a percent sign are prose");
+		cut.Find("button.composer-send").Click();
+		await Assert.That(_sent).IsEquivalentTo(new[] { @"say 100\% \[OOC\] sure" });
+	}
+
+	[Test]
+	public async Task Softcode_IsNoticed_AndTheSwitchSendsItAsTyped_AndIsKept()
+	{
+		var cut = RenderComposer();
+		Type(cut, "[ansi(hr,Hello)]%rthere");
+		await Assert.That(cut.Find(".fi-notice").TextContent).Contains("[ansi(");
+		cut.Find(".fi-notice-action").Click();
+		var kept = JSInterop.Invocations.Last(i => i.Identifier == "localStorage.setItem" && (string?)i.Arguments[0] == "play.composer.raw").Arguments;
+		await Assert.That((string?)kept[1]).IsEqualTo("on");
+		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0);
+		cut.Find("button.composer-send").Click();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "say [ansi(hr,Hello)]%rthere" });
+	}
+
+	[Test]
+	public async Task AStyledDraft_IsKeptStyled_AndReadBack()
+	{
+		var styled = MarkupText.Concat(MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(2, false)), "green"), MarkupText.Plain(" words"));
+		var json = System.Text.Json.JsonSerializer.Serialize(new { Type = "say", Text = "green words", Markup = MarkupTextSerializer.Serialize(styled) });
+		JSInterop.Setup<string?>("localStorage.getItem", "play.draft.Ilsa").SetResult(json);
+		var cut = RenderComposer(draftKey: "play.draft.Ilsa");
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find("textarea").GetAttribute("value") != "green words") throw new InvalidOperationException("draft not read back yet");
+		}, TimeSpan.FromSeconds(5));
+		cut.Find("button.composer-send").Click();
+		await Assert.That(_sent).IsEquivalentTo(new[] { "say [ansi(g,green)]%bwords" });
 	}
 }

@@ -2,6 +2,7 @@ using Bunit;
 using MarkupString;
 using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 using SharpMUSH.Client.Components.Scenes;
 using SharpMUSH.Client.Models;
 
@@ -16,6 +17,7 @@ public class StoryPoseTests : BunitContext
 	public StoryPoseTests()
 	{
 		Services.AddLocalization();
+		Services.AddMudServices();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -86,7 +88,8 @@ public class StoryPoseTests : BunitContext
 
 		cut.Find("textarea.story-editor-input").Input("leans on the crates, waiting.");
 		cut.Find("button.story-editor-save").Click();
-		await Assert.That(saved).IsEqualTo(("P1", "leans on the crates, waiting."));
+		await Assert.That(saved).IsEqualTo(("P1", @"leans on the crates\, waiting."))
+			.Because("the box is the pose as shown, and goes back as decompose() writes it");
 		await Assert.That(cut.FindAll(".story-editor").Count).IsEqualTo(0);
 	}
 
@@ -98,11 +101,11 @@ public class StoryPoseTests : BunitContext
 			.Add(x => x.OnEdit, e => saved = e));
 		await Assert.That(cut.FindAll(".story-row--ooc").Count).IsEqualTo(1);
 		cut.Find("button.story-edit-btn").Click();
-		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo(@"brb\, making tea")
-			.Because("the box holds decompose() of the pose, which escapes the comma");
+		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("brb, making tea")
+			.Because("the box holds the pose as it shows");
 		cut.Find("textarea.story-editor-input").Input("back, tea made");
 		cut.Find("button.story-editor-save").Click();
-		await Assert.That(saved).IsEqualTo(("P1", "back, tea made"));
+		await Assert.That(saved).IsEqualTo(("P1", @"back\, tea made"));
 	}
 
 	[Test]
@@ -172,11 +175,11 @@ public class StoryPoseTests : BunitContext
 	}
 
 	/// <summary>
-	/// Edit starts from decompose() of the pose: its colours are ansi() calls in the box, so a save that changed
+	/// Edit shows the pose styled, colours and all, and saves it as decompose() writes it, so a save that changed
 	/// only the words keeps them.
 	/// </summary>
 	[Test]
-	public async Task Edit_StartsFromTheDecomposedPose_ColoursIncluded()
+	public async Task Edit_ShowsThePoseStyled_AndSavesItDecomposed()
 	{
 		(string PoseId, string Text)? saved = null;
 		var styled = MarkupText.Concat(
@@ -186,11 +189,33 @@ public class StoryPoseTests : BunitContext
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, pose).Add(x => x.CanEdit, true).Add(x => x.OnEdit, e => saved = e));
 
 		cut.Find("button.story-edit-btn").Click();
-		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value"))
-			.IsEqualTo("[ansi(r,Tomas)]%bleans on a stack of crates");
+		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("Tomas leans on a stack of crates");
+		await Assert.That(cut.Find(".story-editor .fi-overlay").InnerHtml).Contains("Tomas</span>")
+			.Because("the layer over the field shows the name in its colour");
 
-		cut.Find("textarea.story-editor-input").Input("[ansi(r,Tomas)]%bleans on the crates.");
+		cut.Find("textarea.story-editor-input").Input("Tomas leans on the crates.");
 		cut.Find("button.story-editor-save").Click();
 		await Assert.That(saved).IsEqualTo(("P1", "[ansi(r,Tomas)]%bleans on the crates."));
+	}
+
+	/// <summary>
+	/// Softcode typed into the box would be posted as text; the box says so and offers to send it as softcode,
+	/// which then goes as typed.
+	/// </summary>
+	[Test]
+	public async Task SoftcodeTypedInTheBox_IsNoticed_AndCanBeSentAsSoftcode()
+	{
+		(string PoseId, string Text)? saved = null;
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.CanEdit, true).Add(x => x.OnEdit, e => saved = e));
+		cut.Find("button.story-edit-btn").Click();
+		await Assert.That(cut.FindAll(".fi-notice").Count).IsEqualTo(0);
+
+		cut.Find("textarea.story-editor-input").Input("[ansi(r,Tomas)] waves.");
+		await Assert.That(cut.Find(".fi-notice").TextContent).Contains("[ansi(");
+		cut.Find(".fi-notice-action").Click();
+
+		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0).Because("a softcode box has no styled layer");
+		cut.Find("button.story-editor-save").Click();
+		await Assert.That(saved).IsEqualTo(("P1", "[ansi(r,Tomas)] waves."));
 	}
 }

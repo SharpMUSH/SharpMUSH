@@ -26,6 +26,51 @@
     flex-shrink: 0;
 }
 
+/* The field (FormattedInput) renders the textarea, so the rules reach it through ::deep. Two lines tall to
+   start, growing to about four before it scrolls. */
+.scene-live-compose ::deep .scene-live-field {
+    flex: 1;
+}
+
+.scene-live-compose ::deep .scene-live-input {
+    min-height: calc(2lh + 18px);
+    max-height: calc(4lh + 18px);
+    field-sizing: content;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.45;
+    resize: none;
+    outline: none;
+}
+
+.scene-live-compose ::deep .scene-live-input:focus-visible {
+    border-color: var(--accent);
+}
+
+.scene-live-compose ::deep .scene-live-tool {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.scene-live-compose ::deep .scene-live-tool:hover,
+.scene-live-compose ::deep .scene-live-tool[aria-expanded="true"] {
+    background: var(--surface-3);
+    color: var(--text);
+}
+
 /* Mobile: let the live header wrap, and trim the generous --cpad horizontal
    padding on the header / pose-log / compose bar so content isn't cramped. */
 @container page (max-width: 48rem) {

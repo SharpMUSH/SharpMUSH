@@ -5154,6 +5154,78 @@
   <data name="EnumPermPowerUnkillableDesc" xml:space="preserve">
     <value>Cannot be killed.</value>
   </data>
+  <data name="NavFormatMenu" xml:space="preserve">
+    <value>Format text</value>
+  </data>
+  <data name="NavFormatText" xml:space="preserve">
+    <value>Text color</value>
+  </data>
+  <data name="NavFormatBackground" xml:space="preserve">
+    <value>Background</value>
+  </data>
+  <data name="NavFormatNone" xml:space="preserve">
+    <value>No color</value>
+  </data>
+  <data name="NavFormatCustom" xml:space="preserve">
+    <value>Custom color (#rrggbb)</value>
+  </data>
+  <data name="NavFormatBold" xml:space="preserve">
+    <value>Bold</value>
+  </data>
+  <data name="NavFormatUnderline" xml:space="preserve">
+    <value>Underline</value>
+  </data>
+  <data name="NavFormatInverse" xml:space="preserve">
+    <value>Inverse</value>
+  </data>
+  <data name="NavFormatBlink" xml:space="preserve">
+    <value>Blink</value>
+  </data>
+  <data name="NavFormatClear" xml:space="preserve">
+    <value>Clear formatting</value>
+  </data>
+  <data name="NavFormatSoftcode" xml:space="preserve">
+    <value>Write softcode</value>
+  </data>
+  <data name="NavFormatSoftcodeHint" xml:space="preserve">
+    <value>Type softcode as it is sent; the format menu wraps the selection in [ansi()].</value>
+  </data>
+  <data name="NavFormatSoftcodeNotice" xml:space="preserve">
+    <value>This looks like softcode ({0}). It will be sent as the text you see.</value>
+  </data>
+  <data name="NavFormatSendAsSoftcode" xml:space="preserve">
+    <value>Send as softcode</value>
+  </data>
+  <data name="NavFormatKeepAsText" xml:space="preserve">
+    <value>Keep as text</value>
+  </data>
+  <data name="NavFormatBlack" xml:space="preserve">
+    <value>Black</value>
+  </data>
+  <data name="NavFormatRed" xml:space="preserve">
+    <value>Red</value>
+  </data>
+  <data name="NavFormatGreen" xml:space="preserve">
+    <value>Green</value>
+  </data>
+  <data name="NavFormatYellow" xml:space="preserve">
+    <value>Yellow</value>
+  </data>
+  <data name="NavFormatBlue" xml:space="preserve">
+    <value>Blue</value>
+  </data>
+  <data name="NavFormatMagenta" xml:space="preserve">
+    <value>Magenta</value>
+  </data>
+  <data name="NavFormatCyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="NavFormatWhite" xml:space="preserve">
+    <value>White</value>
+  </data>
+  <data name="NavFormatBright" xml:space="preserve">
+    <value>Bright {0}</value>
+  </data>
   <data name="AdmCharactersSearchPlaceholder" xml:space="preserve">
     <value>Search by name</value>
   </data>
