@@ -3060,22 +3060,6 @@
     <value>Pretraži</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Poza</value>
-    <comment>MT — compose-mode label (noun), per the sheet's pose → poza</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Govor</value>
-    <comment>MT — compose-mode label rendered as a noun to parallel 'Poza'</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Polupoza</value>
-    <comment>MT — compose-mode label parallel to 'Poza'</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Ime</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter za slanje</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Što radite, nakon vašeg imena…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Spojeno s vašim imenom…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Ova scena je pauzirana. Ne prima poze dok je vlasnik ne nastavi.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Ova scena nije u tijeku pa ne prima poze.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

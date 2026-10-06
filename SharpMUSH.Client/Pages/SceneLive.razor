@@ -172,7 +172,7 @@ else
 
     protected override void OnInitialized()
     {
-        _modes = [(Emit, Label(Emit)), (Pose, Label(Pose)), (Semipose, Label(Semipose)), (Say, Label(Say)), (Ooc, Label(Ooc))];
+        _modes = [(Ic, Label(Ic)), (Ooc, Label(Ooc))];
         Watch(_draft);
     }
 
@@ -187,38 +187,21 @@ else
         _menuFor = _field;
         if (_field is not null) StateHasChanged();
     }
-    private const string Emit = "emit";
-    private const string Pose = "pose";
-    private const string Semipose = "semipose";
-    private const string Say = "say";
+    // In character is free-written: the words go out as +scene/emit, verbatim with no name glued to the
+    // front, so a player writes the whole pose themselves. Out of character is +scene/ooc. The key is the
+    // verb the mode sends.
+    private const string Ic = "emit";
     private const string Ooc = "ooc";
 
-    // Emit by default: it renders the author's words verbatim, with no name glued to the front.
-    // That is what a compose box on one scene's own page is for — the other modes stay available
-    // for the times a player wants the built-in framing, or to step out of character.
-    private string _mode = Emit;
+    private string _mode = Ic;
 
     private IReadOnlyList<(string Key, string Label)> _modes = [];
 
     private bool CanSend => !_draft.IsEmpty && Terminal.IsConnected && !_liveUnavailable;
 
-    private string Label(string mode) => mode switch
-    {
-        Pose => Loc["RolModePose"],
-        Semipose => Loc["RolModeSemipose"],
-        Say => Loc["RolModeSay"],
-        Ooc => Loc["NavPlayTypeOoc"],
-        _ => Loc["RolModeEmit"],
-    };
+    private string Label(string mode) => mode == Ooc ? Loc["NavPlayTypeOoc"] : Loc["RolModeIc"];
 
-    private string Placeholder => _mode switch
-    {
-        Pose => Loc["RolComposePlaceholderPose"],
-        Semipose => Loc["RolComposePlaceholderSemipose"],
-        Say => Loc["NavPlayPlaceholderSay"],
-        Ooc => Loc["NavPlayPlaceholderOoc"],
-        _ => Loc["NavPlayPlaceholderEmit"],
-    };
+    private string Placeholder => _mode == Ooc ? Loc["NavPlayPlaceholderOoc"] : Loc["NavPlayPlaceholderEmit"];
 
     private Task OnModeChanged(string mode)
     {
@@ -247,7 +230,7 @@ else
     private async Task SaveDraftAsync()
     {
         if (_reading || _loadedKey != DraftKey) return;
-        if (_draft.Value.Length == 0 && _mode == Emit)
+        if (_draft.Value.Length == 0 && _mode == Ic)
         {
             await JS.RemoveItemAsync(BrowserStore.Local, DraftKey);
             return;
@@ -266,7 +249,7 @@ else
         if (switched)
         {
             _reading = true;
-            _mode = Emit;
+            _mode = Ic;
             _draft.Clear();
             _reading = false;
             StateHasChanged();
@@ -280,7 +263,7 @@ else
         {
             if (JsonSerializer.Deserialize<Draft>(json) is not { } draft) return;
             _reading = true;
-            _mode = _modes.Any(m => m.Key == draft.Mode) ? draft.Mode : Emit;
+            _mode = _modes.Any(m => m.Key == draft.Mode) ? draft.Mode : Ic;
             _draft.Load(Styled(draft) ?? MarkupText.Plain(draft.Text ?? string.Empty), _draft.Raw);
             StateHasChanged();
         }

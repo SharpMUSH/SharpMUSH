@@ -3060,22 +3060,6 @@
     <value>Keresés</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Póz</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Beszéd</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Félpóz</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Név</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter a küldéshez</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Mit teszel, a neved után…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>A nevedhez tapadva…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Ez a jelenet szünetel. Nem fogad pózokat, amíg a tulajdonosa nem folytatja.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Ez a jelenet nem fut, ezért nem fogad pózokat.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

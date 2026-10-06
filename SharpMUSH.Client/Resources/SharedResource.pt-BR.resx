@@ -3060,22 +3060,6 @@
     <value>Consultar</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Falar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — kept as the MU* term, parallel to "Pose"</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Nome</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter para enviar</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>O que você faz, depois do seu nome…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Colado ao seu nome…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Esta cena está pausada. Ela não aceita poses até que o dono a retome.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Esta cena não está em andamento, então não aceita poses.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

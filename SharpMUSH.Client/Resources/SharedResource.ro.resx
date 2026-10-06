@@ -3060,22 +3060,6 @@
     <value>Căutare</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Poză</value>
-    <comment>MT — compose-mode label for the RP pose; the underlying game command stays `pose`</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Replică</value>
-    <comment>MT — compose-mode label for the RP say; the underlying game command stays `say`</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipoză</value>
-    <comment>MT — compose-mode label; the underlying game command stays `semipose`</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Nume</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter pentru a trimite</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Ce faci, după numele tău…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Lipit de numele tău…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Această scenă este în pauză. Nu primește poze până când proprietarul nu o reia.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Această scenă nu este în desfășurare, deci nu primește poze.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

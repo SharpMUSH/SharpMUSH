@@ -3060,22 +3060,6 @@
     <value>Wyszukaj</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Poza</value>
-    <comment>MT — compose-mode label; noun to match RolModeSay</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Wypowiedź</value>
-    <comment>MT — compose-mode label; noun to match RolModePose</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipoza</value>
-    <comment>MT — MUSH term of art (semipose); kept as a loanword, matching 'poza' for pose</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Nazwa</value>
     <comment>MT — name of a role (a thing), so 'nazwa' per corpus, not 'imię'</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter, aby wysłać</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Co robisz, po twoim imieniu…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Doklejone do imienia…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Ta scena jest wstrzymana. Nie przyjmuje póz, dopóki właściciel jej nie wznowi.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Ta scena nie trwa, więc nie przyjmuje póz.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

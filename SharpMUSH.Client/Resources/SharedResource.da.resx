@@ -3060,22 +3060,6 @@
     <value>Slå op</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — mode button named after the pose command; kept English, matching the German and French locales</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-    <comment>MT — mode button named after the say command; kept English for consistency with Pose/Semipose</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — mode button named after the semipose command; kept English</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Navn</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter for at sende</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Hvad du gør, efter dit navn…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Sat direkte på dit navn…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Denne scene er sat på pause. Den tager ikke imod poses, før ejeren genoptager den.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Denne scene kører ikke, så den tager ikke imod poses.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

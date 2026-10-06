@@ -3060,22 +3060,6 @@
     <value>Buscar</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Decir</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MUSH pose-mode name, kept as in English alongside "pose"</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Nombre</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Intro para enviar</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Lo que haces, tras tu nombre…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Pegado a tu nombre…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Esta escena está en pausa. No admite poses hasta que su dueño la reanude.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Esta escena no está en curso, así que no admite poses.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

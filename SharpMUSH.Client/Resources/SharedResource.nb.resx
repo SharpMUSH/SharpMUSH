@@ -3060,22 +3060,6 @@
     <value>Slå opp</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — compose mode named after the MUSH 'pose' command; kept.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-    <comment>MT — compose mode named after the MUSH 'say' command; kept so it matches what the player types in the terminal.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MUSH compose mode; kept.</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Navn</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter for å sende</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Hva du gjør, etter navnet ditt…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Rett etter navnet ditt…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Denne scenen er satt på pause. Den tar ikke imot poser før eieren gjenopptar den.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Denne scenen pågår ikke, så den tar ikke imot poser.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

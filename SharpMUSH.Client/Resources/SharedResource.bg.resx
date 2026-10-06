@@ -3060,22 +3060,6 @@
     <value>Потърси</value>
     <comment>MT — plain imperative, button</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Емит</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Поза</value>
-    <comment>MT — compose-mode label, noun to match RolModeSay</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Реплика</value>
-    <comment>MT — compose-mode label; noun («line of speech») to pair with «Поза»</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Полупоза</value>
-    <comment>MT — MUSH semipose; formed by analogy with «поза»</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Име</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter за изпращане</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Какво правите, след името ви…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Залепено за името ви…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Тази сцена е на пауза. Не приема пози, докато собственикът ѝ не я поднови.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Тази сцена не е активна, затова не приема пози.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

@@ -3060,22 +3060,6 @@
     <value>Sök upp</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — compose mode named after the game command 'pose'; kept English, as de.resx does.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-    <comment>MT — compose mode named after the game command 'say'; kept English, as de.resx does.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MU* term of art, kept English like Pose/Say.</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Namn</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter för att skicka</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Vad du gör, efter ditt namn…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Direkt efter ditt namn…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Den här scenen är pausad. Den tar inte emot poser förrän ägaren återupptar den.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Den här scenen pågår inte, så den tar inte emot poser.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

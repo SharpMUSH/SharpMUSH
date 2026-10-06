@@ -3060,22 +3060,6 @@
     <value>Nachschlagen</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Emit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Pose</value>
-    <comment>MT — mode button named after the pose command; kept English, matching the existing French.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Say</value>
-    <comment>MT — mode button named after the say command; kept English, matching the existing French.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Semipose</value>
-    <comment>MT — MUSH pose-mode term of art, left untranslated like Pose/Semipose elsewhere.</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Name</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Strg+Enter zum Senden</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Was du tust, nach deinem Namen…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Direkt an deinen Namen…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Diese Szene ist pausiert. Sie nimmt keine Posen an, bis ihr Besitzer sie fortsetzt.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Diese Szene läuft nicht und nimmt daher keine Posen an.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

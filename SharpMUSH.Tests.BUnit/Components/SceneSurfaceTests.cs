@@ -388,7 +388,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// OOC is one of the modes: it goes out as the scene package's <c>+scene/ooc</c>, which the scene records
+	/// The composer is IC or OOC. OOC goes out as the scene package's <c>+scene/ooc</c>, which the scene records
 	/// tagged <c>ooc</c>, and the composer takes the OOC band's look while it is chosen.
 	/// </summary>
 	[TUnit.Core.Test]
@@ -398,6 +398,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
 		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
 
+		await Assert.That(cut.FindAll(".scene-live-compose .kit-chip").Select(c => c.TextContent)).IsEquivalentTo(["RolModeIc", "NavPlayTypeOoc"])
+			.Because("poses are free-written: the only choice is in or out of character");
 		cut.FindAll(".scene-live-compose .kit-chip").Single(c => c.TextContent == "NavPlayTypeOoc").Click();
 		await Assert.That(cut.Find(".scene-live-compose").ClassList).Contains("scene-live-compose--ooc");
 

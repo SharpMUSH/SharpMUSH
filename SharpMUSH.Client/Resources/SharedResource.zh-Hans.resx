@@ -3060,22 +3060,6 @@
     <value>查找</value>
     <comment>MT</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>旁白</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>姿态</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>说话</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>半姿态</value>
-    <comment>MT</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>名称</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter 发送</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>你的动作，接在名字之后…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>紧接你的名字…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>此场景已暂停。在其所有者恢复之前不接受动作。</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>此场景未在进行，因此不接受动作。</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>

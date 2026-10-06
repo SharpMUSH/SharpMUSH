@@ -3060,22 +3060,6 @@
     <value>Найти</value>
     <comment>MT — imperative button next to the username field.</comment>
   </data>
-  <data name="RolModeEmit" xml:space="preserve">
-    <value>Эмит</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolModePose" xml:space="preserve">
-    <value>Поза</value>
-    <comment>MT — compose-mode label; pose → поза per the sheet.</comment>
-  </data>
-  <data name="RolModeSay" xml:space="preserve">
-    <value>Речь</value>
-    <comment>MT — compose-mode label paired with «Поза»; kept as a noun to match the mode-toggle pattern.</comment>
-  </data>
-  <data name="RolModeSemipose" xml:space="preserve">
-    <value>Полупоза</value>
-    <comment>MT — compose-mode label alongside «Поза»/«Речь»; semipose is the MUSH pose variant without a space after the name.</comment>
-  </data>
   <data name="RolNameLabel" xml:space="preserve">
     <value>Имя</value>
     <comment>MT</comment>
@@ -5670,16 +5654,13 @@
   <data name="RolComposeSendHint" xml:space="preserve">
     <value>Ctrl+Enter — отправить</value>
   </data>
-  <data name="RolComposePlaceholderPose" xml:space="preserve">
-    <value>Что вы делаете — после вашего имени…</value>
-  </data>
-  <data name="RolComposePlaceholderSemipose" xml:space="preserve">
-    <value>Слитно с вашим именем…</value>
-  </data>
   <data name="RolComposePaused" xml:space="preserve">
     <value>Сцена приостановлена. Позы не принимаются, пока владелец её не возобновит.</value>
   </data>
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Сцена не идёт, поэтому позы не принимаются.</value>
+  </data>
+  <data name="RolModeIc" xml:space="preserve">
+    <value>IC</value>
   </data>
 </root>
