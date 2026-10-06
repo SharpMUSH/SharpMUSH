@@ -13,7 +13,7 @@ public class ParserBehaviorUnitTests
 	/// Text following a leading function call keeps the space between them.
 	/// <para>
 	/// <c>evaluationString</c> is <c>function explicitEvaluationString?</c>
-	/// (<c>SharpMUSHParser.g4:65-67</c>), so the text after a leading call is parsed as a *second*
+	/// (in every <c>evaluationString__*</c> copy), so the text after a leading call is parsed as a *second*
 	/// <c>explicitEvaluationString</c> whose first element is a <c>beginGenericText</c>. The
 	/// leading-space strip in <c>VisitBeginGenericText</c> keys off being a direct child of an
 	/// <c>explicitEvaluationString</c>, which that node is — so it used to be treated as the start of

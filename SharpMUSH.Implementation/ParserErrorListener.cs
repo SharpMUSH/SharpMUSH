@@ -1,4 +1,5 @@
 using Antlr4.Runtime;
+using Antlr4.Runtime.Misc;
 using SharpMUSH.Library.Models;
 using LspRange = SharpMUSH.Library.Models.Range;
 
@@ -25,6 +26,7 @@ public class ParserErrorListener : BaseErrorListener, IAntlrErrorListener<int>
 		["CPAREN"] = ")",
 		["CBRACK"] = "]",
 		["CBRACE"] = "}",
+		["CCARET"] = ">",
 		["OPAREN"] = "(",
 		["OBRACK"] = "[",
 		["OBRACE"] = "{",
@@ -58,11 +60,12 @@ public class ParserErrorListener : BaseErrorListener, IAntlrErrorListener<int>
 		string msg,
 		RecognitionException e)
 	{
-		List<string>? expectedTokens = null;
-		if (recognizer is Parser parser && e is not null)
+		var expectedTokens = recognizer switch
 		{
-			expectedTokens = GetExpectedTokens(parser, e);
-		}
+			SharpMUSHParser softcode => SoftcodeExpected(softcode, e),
+			Parser parser when e is not null => GetExpectedTokens(parser, e),
+			_ => null
+		};
 
 		// Fallback: when the ATN-based extraction comes back empty, parse ANTLR's generated
 		// message string. ANTLR produces:
@@ -139,27 +142,96 @@ public class ParserErrorListener : BaseErrorListener, IAntlrErrorListener<int>
 		try
 		{
 			var expectedTokenSet = e.GetExpectedTokens();
-			if (expectedTokenSet is null || expectedTokenSet.Count == 0)
-				return null;
-
-			var vocabulary = parser.Vocabulary;
-			// IntervalSet has no IEnumerable<int>; .ToArray() is its own method returning int[].
-			var expectedTokens = expectedTokenSet.ToArray()
-				.Select(tokenType =>
-				{
-					var symbolicName = vocabulary.GetSymbolicName(tokenType);
-					var literalName = vocabulary.GetLiteralName(tokenType)?.Trim('\'');
-					var raw = symbolicName ?? literalName ?? $"<token {tokenType}>";
-					return MapTokenName(raw) ?? literalName ?? raw;
-				})
-				.ToList();
-
-			return expectedTokens.Count > 0 ? expectedTokens : null;
+			return expectedTokenSet is null || expectedTokenSet.Count == 0 ? null : GetExpectedTokens(parser, expectedTokenSet);
 		}
 		catch (Exception ex) when (ex is NullReferenceException or InvalidOperationException)
 		{
 			return null;
 		}
+	}
+
+	/// <summary>
+	/// What softcode could have had where the parse failed, said the way its author thinks of it. ANTLR
+	/// lists every token that could come next, and where text may come next that is a dozen tokens
+	/// that start text (<c>\ or [ or { or ... or OTHER</c>), which says nothing. What the author
+	/// needs is what closes the innermost construct still open: <c>)</c> or <c>,</c> in a call,
+	/// <c>]</c>, <c>}</c>, or the <c>&gt;</c> of a register name. When the set has none of those, the
+	/// construct needs something inside it first (<c>[]</c>, <c>%q&lt;&gt;</c>).
+	/// </summary>
+	/// <param name="parser">The parser, still at the rule where it failed.</param>
+	/// <param name="e">
+	/// The failure, or <see langword="null"/> when ANTLR reports a token it would have inserted
+	/// ("missing X"), where the parser's own state says what it expected.
+	/// </param>
+	private static List<string>? SoftcodeExpected(SharpMUSHParser parser, RecognitionException? e)
+	{
+		IntervalSet expected;
+		try
+		{
+			expected = e?.GetExpectedTokens() ?? parser.GetExpectedTokens();
+		}
+		catch (Exception ex) when (ex is NullReferenceException or InvalidOperationException)
+		{
+			return null;
+		}
+
+		if (expected is null || expected.Count == 0)
+		{
+			return null;
+		}
+
+		if (expected.Contains(SharpMUSHLexer.ANY))
+		{
+			return ["a character after \\"];
+		}
+
+		if (expected.Contains(SharpMUSHLexer.OTHER_SUB))
+		{
+			return ["a substitution after %"];
+		}
+
+		if (!expected.Contains(SharpMUSHLexer.OTHER))
+		{
+			return GetExpectedTokens(parser, expected);
+		}
+
+		for (RuleContext? rule = e?.Context ?? parser.Context; rule is not null; rule = rule.Parent)
+		{
+			(int[] Closers, string Content)? open = rule switch
+			{
+				SharpMUSHParser.IFunctionContext => ([SharpMUSHLexer.CPAREN, SharpMUSHLexer.COMMAWS], "an argument"),
+				SharpMUSHParser.IBracketPatternContext => ([SharpMUSHLexer.CBRACK], "an expression inside []"),
+				SharpMUSHParser.IBracePatternContext => ([SharpMUSHLexer.CBRACE], "text inside {}"),
+				SharpMUSHParser.IComplexSubstitutionSymbolContext or SharpMUSHParser.IRegexpCaptureContext
+					=> ([SharpMUSHLexer.CCARET], "a name inside <>"),
+				_ => null
+			};
+			if (open is not { } construct)
+			{
+				continue;
+			}
+
+			var closers = construct.Closers.Where(expected.Contains).Select(type => DisplayName(parser, type)).ToList();
+			return closers.Count > 0 ? closers : [construct.Content];
+		}
+
+		return ["text"];
+	}
+
+	private static List<string>? GetExpectedTokens(Parser parser, IntervalSet expected)
+	{
+		// IntervalSet has no IEnumerable<int>; .ToArray() is its own method returning int[].
+		var names = expected.ToArray().Select(type => DisplayName(parser, type)).ToList();
+		return names.Count > 0 ? names : null;
+	}
+
+	private static string DisplayName(Parser parser, int tokenType)
+	{
+		var vocabulary = parser.Vocabulary;
+		var symbolicName = vocabulary.GetSymbolicName(tokenType);
+		var literalName = vocabulary.GetLiteralName(tokenType)?.Trim('\'');
+		var raw = symbolicName ?? literalName ?? $"<token {tokenType}>";
+		return MapTokenName(raw) ?? literalName ?? raw;
 	}
 
 	/// <summary>

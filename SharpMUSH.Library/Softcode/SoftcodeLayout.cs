@@ -95,10 +95,11 @@ public readonly record struct SoftcodeDelimiter(int Offset, int Depth);
 /// </description></item>
 /// <item><description>
 /// After a <c>SEMICOLON</c> at root <em>of text that will be parsed as a command list</em>. Only
-/// <c>startCommandString</c> sets <c>inCommandList</c> (<c>SharpMUSHParser.g4:29</c>), and only under
-/// that flag does <c>commandList</c> (<c>:55</c>) treat <c>;</c> as a separator; in every other
-/// dialect <c>beginGenericText</c> (<c>:158</c>) claims it as text. A <c>;</c> inside a function's
-/// arguments is literal in all dialects.
+/// <c>startCommandString</c> enters <c>commandList</c>, the only rule that treats <c>;</c> as a
+/// separator; in every other dialect the <c>beginGenericText</c> copy in use lists <c>SEMICOLON</c> as
+/// text. A <c>;</c> inside a function's arguments is never a break position: <c>commandList</c> only
+/// separates at root (in a command list, the <c>function__Call_*</c> copies neither take it as text nor
+/// separate on it).
 /// </description></item>
 /// <item><description>
 /// After an <c>OBRACK</c>. Confirmed by the equivalence corpus (Ruling 7 settled): unlike
@@ -134,10 +135,11 @@ public readonly record struct SoftcodeDelimiter(int Offset, int Depth);
 /// </description></item>
 /// <item><description>
 /// A brace group is recursed into, but almost nothing inside it is structural. Function names inside
-/// braces are generic text — <c>braceExplicitEvaluationString</c> routes through <c>genericText</c>
-/// rather than <c>beginGenericText</c> (<c>SharpMUSHParser.g4:81-86</c>) — and a <c>,</c> or <c>;</c>
-/// there is prose in every dialect (<c>:158-159</c>, both predicates satisfied by
-/// <c>inBraceDepth &gt; 0</c>). So the only positions a brace group offers are its own <c>{</c> and any
+/// braces are generic text — <c>braceExplicitEvaluationString</c> has no <c>function</c> alternative
+/// and routes through <c>genericText</c>, which takes <c>FUNCHAR</c> as text — and a <c>,</c> or <c>;</c>
+/// there is prose in every dialect: a brace starts the context over outside any call, and every
+/// <c>beginGenericText</c> copy reached inside one lists <c>COMMAWS</c> and <c>SEMICOLON</c> as text.
+/// So the only positions a brace group offers are its own <c>{</c> and any
 /// <c>[...]</c> inside it, which re-enables recognition for what that bracket encloses.
 /// </description></item>
 /// <item><description>
@@ -456,11 +458,11 @@ public static class SoftcodeLayout
 	/// <summary>
 	/// Whether a root-level <c>;</c> is a command separator in this dialect, and so a break position.
 	/// <para>
-	/// Only <see cref="ParseType.CommandList"/>. The grammar's <c>inCommandList</c> flag is set by
-	/// exactly one start rule — <c>startCommandString</c> (<c>SharpMUSHParser.g4:29</c>), which
-	/// <c>MUSHCodeParser</c> selects for <see cref="ParseType.CommandList"/> alone — and it is the only
-	/// thing that stops <c>beginGenericText</c> (<c>:158</c>,
-	/// <c>{ !inCommandList || inBraceDepth &gt; 0 }?</c>) from claiming the <c>;</c> as text.
+	/// Only <see cref="ParseType.CommandList"/>. Exactly one start rule enters <c>commandList</c> —
+	/// <c>startCommandString</c>, which <c>MUSHCodeParser</c> selects for
+	/// <see cref="ParseType.CommandList"/> alone — and its rule copies (<c>commandList__Top_RCEA</c>
+	/// and those it reaches outside braces) are the only ones whose <c>beginGenericText</c> does not
+	/// list <c>SEMICOLON</c> as text.
 	/// </para>
 	/// <para>
 	/// <see cref="ParseType.Command"/> does <b>not</b> qualify despite the name:
@@ -544,8 +546,8 @@ public static class SoftcodeLayout
 						"OBRACK" => false,
 						// Anything but a call that evaluates its arguments is text at its own delimiters.
 						"FUNCHAR" => enclosingSuppresses || isTextAtItsDelimiters,
-						// Inside braces a function name is generic text: braceExplicitEvaluationString routes
-						// through genericText rather than beginGenericText (SharpMUSHParser.g4:81-86), so a
+						// Inside braces a function name is generic text: braceExplicitEvaluationString has no
+						// function alternative and its genericText takes FUNCHAR as text, so a
 						// name( there is never dispatched and opens no break position. Only a [...] inside
 						// re-enables recognition, which the OBRACK arm above already does.
 						"OBRACE" => true,
@@ -571,8 +573,8 @@ public static class SoftcodeLayout
 			}
 			else if (OpenerClosedBy(type) is { } closedOpener)
 			{
-				// A closer that does not match the innermost group is text, not structure. bracePattern
-				// (SharpMUSHParser.g4:96) resets inFunction, so a stray ')' inside {...} is plain text to
+				// A closer that does not match the innermost group is text, not structure. A brace starts
+				// the context over outside any call, so a stray ')' inside {...} is plain text to
 				// the grammar — popping the brace group on it would hand the brace's own commas to the
 				// enclosing call and make them break points inside literal text. Ignore such a closer,
 				// exactly as a closer that would unwind the root is ignored.

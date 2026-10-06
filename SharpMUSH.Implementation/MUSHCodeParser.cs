@@ -145,18 +145,16 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// Parses <paramref name="entryPoint"/> over an already-lexed token stream, applying the
 	/// configured prediction strategy.
 	/// <para>
-	/// Under <see cref="ParserPredictionMode.TwoStage"/> (the default) it first parses with SLL, the
-	/// grammar's predicates resolved where each decision starts (see
-	/// <see cref="PredicateResolvingSimulator"/>), and a <see cref="BailErrorStrategy"/> that aborts
-	/// on the first error instead of recovering. If
+	/// Under <see cref="ParserPredictionMode.TwoStage"/> (the default) it first parses with SLL and a
+	/// <see cref="BailErrorStrategy"/> that aborts on the first error instead of recovering. If
 	/// that succeeds with no syntax error the result stands — ANTLR guarantees SLL then matches LL.
 	/// Only if SLL errors is the token stream rewound and re-parsed with LL, which is authoritative;
 	/// its result and its (strict- or lenient-) recovered tree are what the caller sees. On
 	/// error-free input, the common case, this is a single SLL pass. The SLL and LL settings force
 	/// one mode for diagnostics.
 	/// </para>
-	/// A fresh parser is built per attempt so the grammar's mutable member state starts clean, and
-	/// the token stream is sought back to the start between attempts.
+	/// A fresh parser is built per attempt, and the token stream is sought back to the start between
+	/// attempts.
 	/// </summary>
 	private (TContext Context, ParserErrorListener Errors) ParseTwoStage<TContext>(
 		BufferedTokenSpanStream tokens,
@@ -164,19 +162,18 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		string inputText,
 		bool lenient,
 		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)>? functions = null)
-		where TContext : ParserRuleContext
+		where TContext : class, SharpMUSHParser.ISoftcodeContext
 	{
 		// Token inspection precedes ANTLR tracing, including malformed input with no visitor.
 		// Literal indirect chains use the same restricted-entry classification as dispatch.
 		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null
 			&& !ContainsRestrictedEntryPoint(tokens, functions ?? FunctionLibrary);
 
-		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy,
-			bool resolvePredicates = false)
+		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
 		{
 			tokens.Seek(0);
 			var parser = SoftcodeParsePipeline.CreateParser(tokens, Configuration.CurrentValue.Compatibility.ParenGroups,
-				mode, trace: debug, resolvePredicates);
+				mode, trace: debug);
 			parser.ErrorHandler = strategy;
 			var errors = new ParserErrorListener(inputText);
 			parser.AddErrorListener(errors);
@@ -195,7 +192,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		if (Configuration.CurrentValue.Debug.ParserPredictionMode == ParserPredictionMode.TwoStage)
 		{
-			var (sllParser, sllErrors) = Build(PredictionMode.SLL, new BailErrorStrategy(), resolvePredicates: true);
+			var (sllParser, sllErrors) = Build(PredictionMode.SLL, new BailErrorStrategy());
 			try
 			{
 				var sllContext = entryPoint(sllParser);
@@ -240,7 +237,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		string methodName,
 		IMUSHCodeParser? parser = null,
 		bool lenient = false)
-		where TContext : ParserRuleContext
+		where TContext : class, SharpMUSHParser.ISoftcodeContext
 	{
 		var (result, _) = await ParseInternalCore(text, entryPoint, methodName, parser, lenient);
 		return result;
@@ -255,7 +252,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		string methodName,
 		IMUSHCodeParser? parser = null,
 		bool lenient = false)
-		where TContext : ParserRuleContext
+		where TContext : class, SharpMUSHParser.ISoftcodeContext
 	{
 		parser ??= this;
 		using var precisionScope = Configurable.UseFloatPrecisionOf(Configuration);
@@ -374,7 +371,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var parser = ForTrackedEvaluation();
 
-		var (result, _) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+		var (result, _) = await ParseInternalCore(text, p => p.StartPlainString(), nameof(FunctionParse), parser);
 
 		return result;
 	}
@@ -398,7 +395,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			budget.ThrowIfExceeded();
 			var parser = ForTrackedEvaluation();
 			var rawText = text.ToPlainText();
-			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.StartPlainString(), nameof(FunctionParse), parser);
 			budget.ThrowIfExceeded();
 
 			await EvaluationDiagnostics.EmitSubstitutionOnlyDebugTraceAsync(_services.Mediator, _services.NotifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
@@ -432,7 +429,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CommandText = CurrentState.CommandText ?? CurrentState.NewCommandText(),
 			InplaceDepth = depth
 		});
-		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse), freshParser);
+		return ParseInternal(text, p => p.StartCommandString(), nameof(CommandListParse), freshParser);
 	}
 
 	/// <summary>
@@ -465,12 +462,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true });
 		}
 
-		SharpMUSHParser.StartCommandStringContext chatContext;
+		SharpMUSHParser.IStartCommandStringContext chatContext;
 		ParserErrorListener errorListener;
 		try
 		{
 			(chatContext, errorListener) = ParseTwoStage(
-				bufferedTokenSpanStream, p => p.startCommandString(), plaintext, lenient: false);
+				bufferedTokenSpanStream, p => p.StartCommandString(), plaintext, lenient: false);
 		}
 		catch (OperationCanceledException) when (ExecutionBudget.Current?.IsExpired == true)
 		{
@@ -528,7 +525,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (current?.Ref != player || current?.Metadata.GetValueOrDefault("SessionId") != session) return CallState.Empty;
 		var newParser = Push(ParserState.ForTypedLine(player, handle, expectedSession, outputLimit));
 
-		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
+		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
 
 		return result ?? CallState.Empty;
 	}
@@ -543,7 +540,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		var outputLimit = await OutputLimitForAsync(player);
 		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit));
-		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
+		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
 		return result ?? CallState.Empty;
 	}
 
@@ -570,7 +567,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Flags = derivedFlags,
 			CommandText = CurrentState.CommandText ?? CurrentState.NewCommandText()
 		});
-		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), parserToUse);
+		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), parserToUse);
 		return result ?? CallState.Empty;
 	}
 
@@ -578,19 +575,19 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	// commaCommandArgs on its own can stop early and report success on a prefix, silently dropping
 	// whatever followed instead of surfacing it to the lenient recovery path.
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
-		=> ParseInternal(text, p => p.startPlainCommaCommandArgs(), nameof(CommandCommaArgsParse),
+		=> ParseInternal(text, p => p.StartPlainCommaCommandArgs(), nameof(CommandCommaArgsParse),
 			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
-		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse),
+		=> ParseInternal(text, p => p.StartPlainSingleCommandArg(), nameof(CommandSingleArgParse),
 			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse),
+		=> ParseInternal(text, p => p.StartEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse),
 			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse),
+		=> ParseInternal(text, p => p.StartEqSplitCommand(), nameof(CommandEqSplitParse),
 			lenient: !CurrentState.Flags.HasFlag(ParserStateFlags.StrictParse));
 
 	/// <summary>The tooling half, over this parser's current function library and options.</summary>

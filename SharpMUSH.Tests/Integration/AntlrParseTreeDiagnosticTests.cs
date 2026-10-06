@@ -164,7 +164,7 @@ public class AntlrParseTreeDiagnosticTests
 		parser.AddParseListener(traceCapture);
 
 		// Parse as function (startPlainString entry point, same as FunctionParse)
-		var context = parser.startPlainString();
+		var context = parser.StartPlainString();
 
 		var parseTree = context.ToStringTree(parser);
 
@@ -185,11 +185,6 @@ public class AntlrParseTreeDiagnosticTests
 			sb.AppendLine($"  ⚠️ {fullContextListener.FullContextAttempts.Count} Full Context Scan(s) detected:");
 			foreach (var attempt in fullContextListener.FullContextAttempts)
 				sb.AppendLine(attempt);
-			sb.AppendLine();
-			sb.AppendLine("  NOTE: Full Context Scans are expected with semantic predicates.");
-			sb.AppendLine("  ANTLR4's LL prediction mode uses full context to evaluate predicates");
-			sb.AppendLine("  like { inFunction == 0 }? which depend on parser state at parse time.");
-			sb.AppendLine("  This is correct behavior, not a performance bug.");
 		}
 
 		sb.AppendLine();
@@ -234,12 +229,6 @@ public class AntlrParseTreeDiagnosticTests
 				sb.AppendLine(error);
 		}
 
-		sb.AppendLine();
-		sb.AppendLine("PARSER STATE AFTER PARSE:");
-		sb.AppendLine($"  inFunction    = {parser.inFunction}");
-		sb.AppendLine($"  inBraceDepth  = {parser.inBraceDepth}");
-		sb.AppendLine($"  inBracketDepth= {parser.inBracketDepth}");
-
 		return new DiagnosticResult(
 			sb.ToString(),
 			fullContextListener.FullContextAttempts.Count,
@@ -251,19 +240,20 @@ public class AntlrParseTreeDiagnosticTests
 	/// <summary>
 	/// Shows the parse tree for ulambda(lit(#lambda/add(1,2)))
 	/// 
-	/// PennMUSH-compatible behavior (no inParenDepth):
+	/// PennMUSH-compatible behavior (paren_groups off):
 	/// The lexer tokenizes #lambda/add as OTHER and ( as OPAREN (not FUNCHAR).
 	/// This means there are only 2 function opens (ulambda, lit) but 4 tokens 
-	/// that could be CPARENs. The first ) after "2" closes lit() because
-	/// inFunction > 0 and there's no paren depth counter to override.
+	/// that could be CPARENs. The first ) after "2" closes lit(): inside a call,
+	/// the function__Call_* rules take ) as the call's closer, never as text, and
+	/// a bare ( opens no group of its own.
 	///
 	/// Parse tree analysis:
 	/// - Token [3] OPAREN "(" → consumed as beginGenericText (just text)
 	/// - Token [5] COMMAWS "," → lit()'s 2nd argument separator
-	/// - Token [7] CPAREN ")" → predicate {inFunction==0} = FALSE (inFunction=2)
-	///   → NOT generic text → closes lit()
+	/// - Token [7] CPAREN ")" → inside lit(), whose rule copies do not list ) as text
+	///   → closes lit()
 	/// - Token [8] CPAREN ")" → closes ulambda()
-	/// - Token [9] CPAREN ")" → inFunction=0 → generic text
+	/// - Token [9] CPAREN ")" → back in a Top_R* rule, where ) is text → generic text
 	///
 	/// Note: To pass add(1,2) literally to lit(), use escaped parens:
 	///   ulambda(#lambda/add\(1\,2\)) — produces "3"
@@ -306,7 +296,7 @@ public class AntlrParseTreeDiagnosticTests
 	/// #lambda/add(1,2)
 	/// 
 	/// When parsed standalone (outside a function), ( and ) are always generic text
-	/// because inFunction == 0. This produces the full text "#lambda/add(1,2)".
+	/// because the Top_R* rules list ) as text. This produces the full text "#lambda/add(1,2)".
 	/// </summary>
 	[Test]
 	public async Task ParseTree_InnerExpression()
@@ -330,9 +320,9 @@ public class AntlrParseTreeDiagnosticTests
 	/// lit((text))
 	/// 
 	/// Without paren depth tracking (PennMUSH-compatible):
-	/// - ( → OPAREN, just generic text (no counter)
-	/// - ) after "text" → CPAREN, inFunction=1 so NOT generic text → closes lit()
-	/// - Final ) → CPAREN, inFunction=0 so generic text (trailing paren)
+	/// - ( → OPAREN, just generic text (opens no group)
+	/// - ) after "text" → CPAREN, in a function__Call_* rule so NOT generic text → closes lit()
+	/// - Final ) → CPAREN, back in a Top_R* rule so generic text (trailing paren)
 	///
 	/// In PennMUSH, ) always closes the innermost function. Bare ( doesn't create
 	/// a matching scope. Use escaped parens \(\) or bracket evaluation [...] instead.
@@ -365,9 +355,9 @@ public class AntlrParseTreeDiagnosticTests
 	/// Full Context Scan analysis across common MUSH patterns.
 	/// Documents which patterns trigger Full Context Scans and why.
 	/// 
-	/// Full Context Scans occur in LL mode when the parser encounters semantic
-	/// predicates that create context-dependent alternatives. This is EXPECTED
-	/// behavior with the predicate-based approach used in Fixes A and B.
+	/// Full Context Scans occur in LL mode where SLL prediction cannot settle a
+	/// decision on its own. The grammar has no semantic predicates (each rule exists
+	/// once per context), so a scan is not expected by design, nor a bug by itself.
 	/// </summary>
 	[Test]
 	public async Task FullContextScan_Analysis()
@@ -444,11 +434,10 @@ public class AntlrParseTreeDiagnosticTests
 				TestDiagnostics.WriteLine($"  {description}: \"{input}\" ({count} scan(s))");
 			}
 
-			TestDiagnostics.WriteLine("\nNOTE: Full Context Scans with semantic predicates are expected behavior.");
-			TestDiagnostics.WriteLine("They occur because ANTLR4's LL prediction must evaluate predicates");
-			TestDiagnostics.WriteLine("in full parser context to determine which alternative to choose.");
-			TestDiagnostics.WriteLine("This is NOT a performance bug - it's how predicate-based");
-			TestDiagnostics.WriteLine("context-sensitive parsing works.");
+			TestDiagnostics.WriteLine("\nNOTE: The grammar has no semantic predicates; each rule exists once per context.");
+			TestDiagnostics.WriteLine("A Full Context Scan means SLL prediction could not settle a decision");
+			TestDiagnostics.WriteLine("and ANTLR4 fell back to full LL context for it.");
+			TestDiagnostics.WriteLine("That is NOT a performance bug by itself.");
 		}
 
 		await Assert.That(syntaxErrorInputs).IsEmpty()
@@ -500,19 +489,18 @@ public class AntlrParseTreeDiagnosticTests
 	/// <summary>
 	/// Analysis of BBS line 57 pattern with bare parentheses before bracket patterns.
 	///
-	/// Without inParenDepth (PennMUSH-compatible): bare ( is just text, and ) always
-	/// closes the innermost function. No paren depth leakage is possible because
-	/// there's no paren depth counter to leak. Bracket patterns naturally isolate
-	/// their function scope via inFunction tracking.
+	/// With paren_groups off (PennMUSH-compatible): bare ( is just text, and ) always
+	/// closes the innermost function. No paren state can leak because none is kept:
+	/// whether ) is text depends only on which rule copy the token lands in.
 	///
 	/// Minimal reproduction: "(text [name(%0)])"
 	/// 1. "(" → OPAREN, just generic text
 	/// 2. "[" → OBRACK, enters bracketPattern
-	/// 3. "name(" → FUNCHAR, ++inFunction to 1
+	/// 3. "name(" → FUNCHAR, call begins; its argument parses in function__Call_* rules
 	/// 4. "%0" → substitution
-	/// 5. ")" → CPAREN, inFunction=1 so NOT generic text → closes name() correctly
+	/// 5. ")" → CPAREN, in a function__Call_* rule so NOT generic text → closes name() correctly
 	/// 6. "]" → CBRACK, exits bracketPattern
-	/// 7. ")" → CPAREN, inFunction=0 so generic text → trailing paren text
+	/// 7. ")" → CPAREN, back in a Top_R* rule so generic text → trailing paren text
 	/// </summary>
 	[Test]
 	public async Task Line57_BareParensBeforeBrackets_Analysis()
@@ -572,10 +560,10 @@ public class AntlrParseTreeDiagnosticTests
 		TestDiagnostics.WriteLine($"Patterns with errors: {failingCount}/{results.Count}");
 		TestDiagnostics.WriteLine();
 
-		// Without inParenDepth, there's no scope leakage possible.
-		// The { inFunction == 0 }? predicate is purely based on function nesting,
-		// which is correctly tracked by the parser.
+		// No paren state is kept, so no scope leakage is possible.
+		// Whether ) is text follows from the rule copy it lands in: a function__Call_*
+		// rule closes the call on it, a Top_R* rule takes it as text.
 		await Assert.That(failingCount).IsEqualTo(0)
-			.Because("Without inParenDepth, bare parens don't affect CPAREN predicate - no scope leakage possible");
+			.Because("With paren_groups off, bare parens don't change how CPAREN parses - no scope leakage possible");
 	}
 }

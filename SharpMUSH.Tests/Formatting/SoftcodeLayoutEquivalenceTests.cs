@@ -113,8 +113,8 @@ public class SoftcodeLayoutEquivalenceTests
 		// Bracket groups that break at the '[' itself. A '[' hands its break to a call it leads, so
 		// '[u(...)]' cuddles and exercises no OBRACK break; a bracket over prose is the shape that still
 		// does, and the one Corpus_ExercisesEachBreakPosition counts for that position. The comma in the
-		// first belongs at root: inside an argument list, inFunction > 0 makes a comma between brackets a
-		// parse error (see UnparseableCorpus).
+		// first belongs at root: inside an argument list a bracket keeps the call's context, where a comma is
+		// neither text nor a separator, so a comma between brackets is a parse error (see UnparseableCorpus).
 		() => "[aaaaaaaaaaaa,bbbbbbbbbbbb]",
 		() => "strcat(one,[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa],two)",
 
@@ -247,8 +247,8 @@ public class SoftcodeLayoutEquivalenceTests
 	/// </summary>
 	public static IEnumerable<Func<string>> UnparseableCorpus() =>
 	[
-		// The `,y` sits inside [...] inside an argument list, where inFunction > 0 and
-		// beginGenericText's COMMAWS predicate (SharpMUSHParser.g4:159) is false. Position 41.
+		// The `,y` sits inside [...] inside an argument list: bracketPattern__Call_* keeps the call's
+		// context, and its beginGenericText does not list COMMAWS as text. Position 41.
 		() => "switch(a,[ansi(hr,a long stretch of text),y],{b,c},trailing prose, and more)",
 		() => "switch(a,b,c",
 		() => "add(1,add(1,add(1,add(1,5)))",
@@ -278,7 +278,7 @@ public class SoftcodeLayoutEquivalenceTests
 	/// <summary>
 	/// Ruling 11. The command-list dialect, where a root <c>;</c> genuinely separates commands and so is
 	/// a break position. Evaluated through <see cref="IMUSHCodeParser.CommandListParse"/> — the entry
-	/// point that selects <c>startCommandString</c>, the one rule that sets <c>inCommandList</c>.
+	/// point that selects <c>startCommandString</c>, the one start rule that enters <c>commandList</c>.
 	/// <para>
 	/// Every entry uses <c>think</c>, which returns its evaluated argument in the resulting
 	/// <c>CallState</c>, so a newline inserted anywhere in a command shows up in the output rather than
@@ -424,8 +424,8 @@ public class SoftcodeLayoutEquivalenceTests
 
 	/// <summary>
 	/// Ruling 11, and the regression guard for finding 3. A root <c>;</c> is a command separator only
-	/// under <c>startCommandString</c>; in the function dialect <c>beginGenericText</c>
-	/// (<c>SharpMUSHParser.g4:158</c>) claims it as text and its absorbed whitespace is emitted.
+	/// under <c>startCommandString</c>; in the function dialect the <c>beginGenericText</c> copy in use
+	/// (<c>beginGenericText__Top_RSCEA</c> at root) claims it as text and its absorbed whitespace is emitted.
 	/// <para>
 	/// The last assertion is what makes this bite: it shows the command-list layout of the very same
 	/// text really does change the result when evaluated as a function expression, so the first half is
@@ -461,7 +461,7 @@ public class SoftcodeLayoutEquivalenceTests
 	/// <summary>
 	/// Ruling 11 across every member of <see cref="ParseType"/>, so a new dialect cannot be added
 	/// without someone deciding which side of this line it falls on. Only <c>startCommandString</c>
-	/// (<c>SharpMUSHParser.g4:29</c>) sets <c>inCommandList</c>, and <c>MUSHCodeParser</c> selects it
+	/// enters <c>commandList</c>, and <c>MUSHCodeParser</c> selects it
 	/// for <see cref="ParseType.CommandList"/> alone — <see cref="ParseType.Command"/> is
 	/// <c>startSingleCommandString</c>, which is <c>command EOF</c> and never enters <c>commandList</c>.
 	/// </summary>

@@ -20,7 +20,7 @@ namespace SharpMUSH.Tests.Integration;
 /// - SLL vs LL parse time comparison
 /// - Full context scan count and locations (SLL→LL fallback in ANTLR4)
 /// - Ambiguity reports (rules with multiple viable alternatives)
-/// - Context sensitivity events (predicate-dependent decisions)
+/// - Context sensitivity events (decisions SLL could not settle and full LL did)
 /// - Syntax error comparison between modes
 /// </summary>
 public class ParserPerformanceDiagnosticTests
@@ -137,7 +137,7 @@ public class ParserPerformanceDiagnosticTests
 		parser.AddErrorListener(new DiagnosticErrorListener(false));
 
 		var sw = Stopwatch.StartNew();
-		_ = parser.startCommandString();
+		_ = parser.StartCommandString();
 		sw.Stop();
 
 		return new LineParseResult(
@@ -440,10 +440,10 @@ public class ParserPerformanceDiagnosticTests
 
 		Log("");
 		Log("  NOTE ON FULL CONTEXT SCANS:");
-		Log("  Full context scans are expected with semantic predicates like");
-		Log("  { inFunction == 0 }? and { inBracketDepth == 0 }?. These predicates");
-		Log("  depend on parser state at parse time, requiring ANTLR4 to evaluate them");
-		Log("  in full context. This is correct behavior, not a performance bug.");
+		Log("  The grammar has no semantic predicates: each rule exists once per context");
+		Log("  (function__Call_*, beginGenericText__Top_*, ...), so what a token is follows");
+		Log("  from the rule it lands in. A full context scan still happens where SLL");
+		Log("  cannot decide on its own; that is not a performance bug by itself.");
 		Log("  The scans are O(n) in the size of the ambiguous region and are typically");
 		Log("  very fast for the short token spans involved in MUSH code.");
 

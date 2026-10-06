@@ -167,7 +167,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_StandaloneAngleBracket_IsText()
 	{
-		// A bare '>' that is NOT part of %q<...> lives in BeginGenericTextContext → Text.
+		// A bare '>' that is NOT part of %q<...> lives in IBeginGenericTextContext → Text.
 		// It is a literal character in MUSH code, not a language operator.
 		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("a>b"), ParseType.Function);
 

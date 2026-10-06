@@ -225,17 +225,17 @@ public class AntlrParserErrorAnalysis
 		Log("");
 		Log("  The problem arises in sequences like '\\[or(hasflag(\\%0,%2),...)]':");
 		Log("  1. '\\[' -> ESCAPE ANY  (correctly escaped bracket)");
-		Log("  2. 'or(' -> FUNCHAR    (function call begins, inFunction++ to 1)");
-		Log("  3. 'hasflag(' -> FUNCHAR (nested function, inFunction++ to 2)");
+		Log("  2. 'or(' -> FUNCHAR    (call begins; its arguments parse in function__Call_* rules)");
+		Log("  3. 'hasflag(' -> FUNCHAR (nested call at the start of or()'s first argument)");
 		Log("  4. '\\%' -> ESCAPE ANY  (escapes the percent)");
 		Log("  5. '0' -> OTHER");
 		Log("  6. ',' -> COMMAWS      (function argument separator)");
 		Log("  7. '%' -> enters SUBSTITUTION mode");
 		Log("  8. '2' -> ARG_NUM (pops back)");
-		Log("  9. ')' -> CPAREN       (closes hasflag, inFunction-- to 1)");
+		Log("  9. ')' -> CPAREN       (closes hasflag; back in or()'s argument)");
 		Log("  10. ',' -> COMMAWS     (next arg in or())");
 		Log("  11. ... more function processing ...");
-		Log("  12. ')' -> CPAREN      (closes or(), inFunction-- to 0)");
+		Log("  12. ')' -> CPAREN      (closes or(); back in the enclosing Top_* rules)");
 		Log("  13. ']' -> CBRACK      (but we opened with ESCAPE ANY, not OBRACK!)");
 		Log("");
 		Log("  At step 13, CBRACK appears but there was no matching OBRACK.");
@@ -248,7 +248,7 @@ public class AntlrParserErrorAnalysis
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		TestDiagnostics.WriteLine($"\n[ANALYSIS] Full output written to: {outputPath}");
 
-		// After Fix B (brace function semantics), inFunction scope isolation,
+		// After Fix B (brace function semantics), a brace starting the context over outside any call,
 		// and token stream rewriting (RewriteOrphanedBracketClosers),
 		// all BBS lines parse without ANTLR errors. The token stream rewriting
 		// converts orphaned CBRACK tokens to OTHER after escaped bracket openers (\[).

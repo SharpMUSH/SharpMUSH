@@ -142,8 +142,8 @@ public class SoftcodeLayoutTests
 	[Test]
 	public async Task BraceGroup_LeavesAFunctionNameInsideItAlone()
 	{
-		// Inside braces a name( is generic text (braceExplicitEvaluationString routes through genericText,
-		// SharpMUSHParser.g4:81-86), so it is never dispatched and its delimiters carry their whitespace
+		// Inside braces a name( is generic text (braceExplicitEvaluationString has no function alternative;
+		// its genericText takes FUNCHAR as text), so it is never dispatched and its delimiters carry their whitespace
 		// into the output. Breaking there would change what the brace body contains.
 		const string src = "switch(%0,1,{a literal strcat(alpha bravo,charlie delta) written out},2,b)";
 		var tokens = Lex(src);
@@ -449,7 +449,7 @@ public class SoftcodeLayoutTests
 	[Test]
 	public async Task MismatchedCloserInsideBraces_DoesNotPopTheBraceGroup()
 	{
-		// bracePattern (SharpMUSHParser.g4:96) resets inFunction, so the ')' between the braces is plain
+		// A brace starts the context over outside any call (bracePattern__Top_*), so the ')' between the braces is plain
 		// text to the grammar and closes nothing. Popping the brace group on it would hand the comma
 		// that follows to f's argument list, making it a break point inside literal text.
 		const string src = "f(aaaa,{prose ) here, comma},b)";

@@ -64,7 +64,7 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 	/// <param name="rootCommand">The root command (e.g., @DESCRIBE, @DESC)</param>
 	/// <returns>Some(CallState) if handled, None if not a standard attribute command</returns>
 	public async ValueTask<Option<CallState>> TryRunAsync(
-		IMUSHCodeParser prs, MString src, CommandContext context, string rootCommand)
+		IMUSHCodeParser prs, MString src, ICommandContext context, string rootCommand)
 	{
 		if (!rootCommand.StartsWith('@'))
 		{

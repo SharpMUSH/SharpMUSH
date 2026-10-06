@@ -81,26 +81,14 @@ internal static class SoftcodeParsePipeline
 	/// A parser over <paramref name="tokens"/> with no error listeners. Callers attach the listener
 	/// and error strategy their pass needs.
 	/// </summary>
-	/// <param name="resolvePredicates">
-	/// Predict with <see cref="PredicateResolvingSimulator"/>, which settles the grammar's predicates
-	/// before the lookahead instead of after it. Without it, a large bracketed expression in a later
-	/// argument (<c>if(c,A,[...])</c>) takes time exponential in the calls inside the bracket. The
-	/// SLL pass of two-stage prediction uses it; the LL pass that reports a syntax error does not,
-	/// so its errors and recovery stay ANTLR's own.
-	/// </param>
 	public static SharpMUSHParser CreateParser(BufferedTokenSpanStream tokens, bool parenGroups, PredictionMode mode,
-		bool trace = false, bool resolvePredicates = false)
+		bool trace = false)
 	{
 		var parser = new SharpMUSHParser(tokens)
 		{
-			parenGroups = parenGroups,
+			ParenGroups = parenGroups,
 			Trace = trace
 		};
-		if (resolvePredicates)
-		{
-			parser.ResolvePredicatesAtDecisionStart();
-		}
-
 		parser.Interpreter.PredictionMode = mode;
 		parser.RemoveErrorListeners();
 
@@ -108,15 +96,14 @@ internal static class SoftcodeParsePipeline
 	}
 
 	/// <summary>
-	/// The SLL pass of two-stage prediction, for a <paramref name="parser"/> built with SLL and
-	/// <c>resolvePredicates</c>: runs <paramref name="entryPoint"/> under a
-	/// <see cref="BailErrorStrategy"/> and returns the tree only if nothing went wrong. A tree from
-	/// here is the one LL would build, so it stands; on <see langword="null"/>, the caller seeks the
-	/// tokens back to the start and parses again with LL, which decides whether the input really has
-	/// a syntax error and reports it.
+	/// The SLL pass of two-stage prediction, for a <paramref name="parser"/> built with SLL: runs
+	/// <paramref name="entryPoint"/> under a <see cref="BailErrorStrategy"/> and returns the tree only
+	/// if nothing went wrong. A tree from here is the one LL would build, so it stands; on
+	/// <see langword="null"/>, the caller seeks the tokens back to the start and parses again with LL,
+	/// which decides whether the input really has a syntax error and reports it.
 	/// </summary>
 	public static TContext? ParseClean<TContext>(SharpMUSHParser parser, Func<SharpMUSHParser, TContext> entryPoint,
-		ParserErrorListener errors) where TContext : ParserRuleContext
+		ParserErrorListener errors) where TContext : class, SharpMUSHParser.ISoftcodeContext
 	{
 		parser.ErrorHandler = new BailErrorStrategy();
 		parser.AddErrorListener(errors);
@@ -135,15 +122,15 @@ internal static class SoftcodeParsePipeline
 	/// Runs the grammar rule that starts a parse of <paramref name="parseType"/>. Every one of these
 	/// rules is anchored at EOF, so a successful parse consumed the whole input.
 	/// </summary>
-	public static ParserRuleContext Enter(SharpMUSHParser parser, ParseType parseType) => parseType switch
+	public static SharpMUSHParser.ISoftcodeContext Enter(SharpMUSHParser parser, ParseType parseType) => parseType switch
 	{
-		ParseType.Command => parser.startSingleCommandString(),
-		ParseType.CommandList => parser.startCommandString(),
-		ParseType.CommandSingleArg => parser.startPlainSingleCommandArg(),
-		ParseType.CommandCommaArgs => parser.startPlainCommaCommandArgs(),
-		ParseType.CommandEqSplitArgs => parser.startEqSplitCommandArgs(),
-		ParseType.CommandEqSplit => parser.startEqSplitCommand(),
-		_ => parser.startPlainString()
+		ParseType.Command => parser.StartSingleCommandString(),
+		ParseType.CommandList => parser.StartCommandString(),
+		ParseType.CommandSingleArg => parser.StartPlainSingleCommandArg(),
+		ParseType.CommandCommaArgs => parser.StartPlainCommaCommandArgs(),
+		ParseType.CommandEqSplitArgs => parser.StartEqSplitCommandArgs(),
+		ParseType.CommandEqSplit => parser.StartEqSplitCommand(),
+		_ => parser.StartPlainString()
 	};
 
 	/// <summary>
@@ -206,7 +193,7 @@ internal static class SoftcodeParsePipeline
 	/// parser errors on unmatched brackets.
 	///
 	/// When the lexer encounters \[, it produces ESCAPE + ANY (not OBRACK),
-	/// so inBracketDepth never increments. The matching ] still becomes CBRACK
+	/// so no bracketPattern opens. The matching ] still becomes CBRACK
 	/// with no open bracketPattern to close, causing a syntax error.
 	/// This method fixes that by converting orphaned CBRACKs to OTHER.
 	///

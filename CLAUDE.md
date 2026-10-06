@@ -332,6 +332,7 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 - `engine-data-trunk.md` — engine reads/writes through the Mediator, stores, cache coherence, single-process assumptions
 - `guided-input-ordering.md` — per-handle publication order; guided-input prompts and lifecycle notices display in commit order
 - `messaging-retention.md` — bus vs replay retention, stream byte budgets, handler retry/terminate semantics, bounded replay reads
+- `softcode-grammar.md` — the softcode parser grammar is generated: edit `SharpMUSH.Parser.Generated/generate-parser.py` and run it, never `SharpMUSHParser.g4` or `SharpMUSHParser.Contexts.cs` by hand
 
 `docs/todo/area-NN-*.md` files track implementation status for each portal area.
 

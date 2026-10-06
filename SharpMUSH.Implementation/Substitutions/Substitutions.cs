@@ -130,7 +130,7 @@ public static partial class Substitutions
 
 	public static async ValueTask<CallState> ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,
 		IAttributeService attributeService, IMediator mediator,
-		ComplexSubstitutionSymbolContext context)
+		IComplexSubstitutionSymbolContext context)
 	{
 		ArgumentNullException.ThrowIfNull(symbol);
 

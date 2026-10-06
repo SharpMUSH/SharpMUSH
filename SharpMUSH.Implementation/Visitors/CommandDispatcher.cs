@@ -39,7 +39,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	/// <param name="context">Command Context</param>
 	/// <returns>An empty Call State</returns>
 	public async ValueTask<Option<CallState>> DispatchAsync(SharpMUSHParserVisitor visitor, MString src,
-		CommandContext context)
+		ICommandContext context)
 	{
 		// Every command leaves a %>. A built-in records its own as its CommandOutput declares; anything that
 		// recorded nothing — a command with no output, a $-command, a refusal before the command ran —
@@ -58,7 +58,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	}
 
 	private async ValueTask<Option<CallState>> DispatchCommandAsync(SharpMUSHParserVisitor visitor, MString src,
-		CommandContext context)
+		ICommandContext context)
 	{
 		var parser = visitor.Parser;
 

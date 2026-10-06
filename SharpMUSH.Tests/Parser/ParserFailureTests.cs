@@ -198,4 +198,31 @@ public class ParserFailureTests
 		TestDiagnostics.WriteLine($@"strcat(a,\),b) → '{result}'");
 		await Assert.That(result).IsEqualTo("a)b");
 	}
+
+	/// <summary>An empty bracket is not an error: PennMUSH evaluates it to nothing.</summary>
+	[Test]
+	[Arguments("a[]b", "ab")]
+	[Arguments("[]", "")]
+	[Arguments("strcat(a,[],b)", "ab")]
+	public async Task EmptyBracketEvaluatesToNothing(string input, string expected)
+	{
+		await Assert.That(await Eval(input)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The failure names what closes the innermost construct still open, or what it needs inside it,
+	/// rather than every token that could start text.
+	/// </summary>
+	[Test]
+	[Arguments("add(1,", "#-1 PARSER FAILURE: Expected ) or , at end of expression")]
+	[Arguments("if(1,a,[setq(0,1)][strcat(a,b)", "#-1 PARSER FAILURE: Expected ] at end of expression")]
+	[Arguments("%q<abc", "#-1 PARSER FAILURE: Expected > at end of expression")]
+	[Arguments("add(1,%q<a)", "#-1 PARSER FAILURE: Expected > at position 10 (near \"add(1,%q<a)\")")]
+	[Arguments("%q<>", "#-1 PARSER FAILURE: Expected a name inside <> at position 3 (near \"%q<>\")")]
+	[Arguments("100%", "#-1 PARSER FAILURE: Expected a substitution after % at end of expression")]
+	[Arguments("lit(a\\", "#-1 PARSER FAILURE: Expected a character after \\ at end of expression")]
+	public async Task FailureNamesWhatIsMissing(string input, string expected)
+	{
+		await Assert.That(await Eval(input)).IsEqualTo(expected);
+	}
 }

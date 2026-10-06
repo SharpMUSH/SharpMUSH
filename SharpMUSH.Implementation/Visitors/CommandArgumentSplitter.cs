@@ -27,7 +27,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// <param name="noEvalSwitch">Whether the command was given <c>/NOEVAL</c>.</param>
 	/// <param name="singleArgument">Whether a switch makes the command take its arguments as one.</param>
 	public async ValueTask<Result<CommandArguments>> SplitAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
-		MString src, CommandContext context, CommandDefinition libraryCommandDefinition, string? rootCommand = null,
+		MString src, ICommandContext context, CommandDefinition libraryCommandDefinition, string? rootCommand = null,
 		bool noEvalSwitch = false, bool singleArgument = false)
 	{
 		var argCallState = CallState.EmptyArgument;
@@ -78,7 +78,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		var spaceInContext = realSubtext.IndexOf(" ");
 
 		// The exact text the NoParse pass below parses to produce argCallState. Retained
-		// EvaluationStringContext nodes on argCallState.ArgumentContexts have token offsets
+		// IEvaluationStringContext nodes on argCallState.ArgumentContexts have token offsets
 		// relative to THIS text (not the command's full source line), so re-visiting them later
 		// in EvaluateArgumentSubtree requires a visitor whose `source` field is this same MString.
 		var parsedArgumentText = MarkupText.Empty;
@@ -280,7 +280,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// evaluating it must be constructed with this exact text as its own `source`.
 	/// </param>
 	/// <param name="retainedContext">The <see cref="CallState.ArgumentContexts"/> slot for this
-	/// argument (an <c>EvaluationStringContext</c> boxed as <see cref="object"/>), or null.</param>
+	/// argument (an <c>IEvaluationStringContext</c> boxed as <see cref="object"/>), or null.</param>
 	/// <param name="argument">The raw argument text — same value FunctionParse's `text` parameter
 	/// would receive on the fallback path.</param>
 	/// <param name="emitSubstDebug">Mirrors <see cref="IMUSHCodeParser.FunctionParse(MString, bool)"/>'s
@@ -304,7 +304,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	{
 		// A syntax error anywhere in the split (splitHadErrors) falls back to the strict re-parse —
 		// see the parameter doc above and CallState.HadErrors.
-		if (retainedContext is not EvaluationStringContext ctx
+		if (retainedContext is not IEvaluationStringContext ctx
 				|| splitHadErrors)
 		{
 			return await prs.FunctionParse(argument, emitSubstDebug);
