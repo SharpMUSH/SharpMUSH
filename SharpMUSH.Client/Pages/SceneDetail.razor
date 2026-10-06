@@ -290,6 +290,11 @@
         _cast = [];
         _activeTag = null;
         _scene = null;
+        // A form open on the scene this page showed before holds that scene's values; saving them here would
+        // write them onto this one.
+        _editing = false;
+        _pausing = false;
+        _actionError = null;
 
         var found = await SceneService.GetSceneAsync(Id);
         if (!_reload.IsCurrent(ticket)) return;

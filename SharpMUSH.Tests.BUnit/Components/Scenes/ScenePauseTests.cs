@@ -194,6 +194,22 @@ public class ScenePauseTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task GoingToAnotherScene_ClosesTheForm()
+	{
+		var cut = await RenderAsActingAsync(313, "active");
+		cut.Find(".scene-detail-edit").Click();
+		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
+
+		_api.Extra["/api/scenes/S2"] = SceneJson.Scene("S2", "Ash and Salt");
+		_api.Extra["/api/scenes/S2/poses"] = "[]";
+		cut.Render(p => p.Add(c => c.Id, "S2"));
+
+		cut.WaitForState(() => cut.Find(".kit-page-head h1").TextContent.Contains("Ash and Salt"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-edit").Count).IsEqualTo(0)
+			.Because("the form held the other scene's values, and saving them would write them onto this one");
+	}
+
+	[Test]
 	public async Task SomeoneElse_CannotEdit()
 	{
 		var cut = await RenderAsActingAsync(314, "active");
