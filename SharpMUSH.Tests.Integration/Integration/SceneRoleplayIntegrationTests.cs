@@ -160,6 +160,16 @@ public class SceneRoleplayIntegrationTests
 		return MessagesSince(before);
 	}
 
+	/// <summary>
+	/// Runs a command as a handle and returns only what <paramref name="player"/> heard. The substitute is shared
+	/// with every test running alongside, so an assertion that something is absent reads the receiver's own lines.
+	/// </summary>
+	private async Task<IReadOnlyList<string>> RunAndCollectHeardBy(long handle, string player, string command) =>
+		(await RunAndCollectNotificationsAs(handle, command))
+			.Where(n => n.Recipient == Num(player))
+			.Select(n => n.Message)
+			.ToList();
+
 	/// <summary>Runs a command as a handle and returns the full (recipient, message, sender) notifications.</summary>
 	private async Task<IReadOnlyList<Notification>> RunAndCollectNotificationsAs(long handle, string command)
 	{
@@ -403,7 +413,7 @@ public class SceneRoleplayIntegrationTests
 			.Because("+scene/undo should restore the pre-edit content");
 
 		// +scene/recall <count> prints the last <count> pose contents (Alice is focused).
-		var recapMsgs = await RunAndCollectAs(aliceHandle, "+scene/recall 10");
+		var recapMsgs = await RunAndCollectHeardBy(aliceHandle, alice, "+scene/recall 10");
 		var recap = string.Join("\n", recapMsgs);
 		Log($"[RECAP]\n{recap}");
 		await Assert.That(recap).Contains("lights a candle on the bar.")
@@ -449,7 +459,7 @@ public class SceneRoleplayIntegrationTests
 		// over a list — a nested one, in the tracker's case, sorting members by how long since each
 		// last posed. Both name their element with %iL rather than ##; an empty table body is what a
 		// substitution that resolved to nothing would look like.
-		var potMsgs = await RunAndCollectAs(aliceHandle, "+pot");
+		var potMsgs = await RunAndCollectHeardBy(aliceHandle, alice, "+pot");
 		var pot = string.Join("\n", potMsgs);
 		Log($"[POT]\n{pot}");
 		await Assert.That(pot).Contains("Pose Tracker").Because("the tracker prints its header");
