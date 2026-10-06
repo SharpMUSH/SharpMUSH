@@ -113,8 +113,18 @@
 			<ClientDataHost>$(DOTNET_HOST_PATH)</ClientDataHost>
 			<ClientDataHost Condition="'$(ClientDataHost)' == ''">dotnet</ClientDataHost>
 		</PropertyGroup>
+		<!-- Every helpfile, every assembly beside the tool (an attribute change rebuilds the
+		     implementation without relinking the tool), and a list of the helpfile names, which
+		     changes when one is added or deleted. -->
 		<ItemGroup>
-			<_ClientDataInput Include="$(ClientDataHelpfiles)\**\*.md;$(ClientDataTool)" />
+			<_ClientDataHelpfile Include="$(ClientDataHelpfiles)\**\*.md" />
+		</ItemGroup>
+		<WriteLinesToFile File="$(IntermediateOutputPath)clientdata.inputs" Lines="@(_ClientDataHelpfile)"
+			Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup>
+			<FileWrites Include="$(IntermediateOutputPath)clientdata.inputs" />
+			<_ClientDataInput Include="@(_ClientDataHelpfile);$(IntermediateOutputPath)clientdata.inputs" />
+			<_ClientDataInput Include="$([System.IO.Path]::GetDirectoryName('$(ClientDataTool)'))\*.dll" />
 		</ItemGroup>
 	</Target>
 
