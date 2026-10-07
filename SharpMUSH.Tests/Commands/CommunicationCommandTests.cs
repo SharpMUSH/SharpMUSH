@@ -624,11 +624,11 @@ public class CommunicationCommandTests
 		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var player = await CreatePlayerAsync("CListBasic");
 
-		// @clist is @channel/list, which prints PennMUSH's column table (src/extchat.c:2622): the channel
-		// name in a 30-column field under a header naming the columns.
+		// @clist is @channel/list, which prints PennMUSH's columns (src/extchat.c:2622) as a table: each
+		// channel's name under headings naming the columns.
 		var said = await NotifiedWhile(player, command);
 
-		await Assert.That(said.Any(message => message.Contains("Public") && message.Contains("Chan Type"))).IsTrue();
+		await Assert.That(said.Any(message => message.Contains("Public") && message.Contains("Locks"))).IsTrue();
 	}
 
 	[Test]

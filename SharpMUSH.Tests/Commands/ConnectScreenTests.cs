@@ -41,6 +41,29 @@ public class ConnectScreenTests
 	}
 
 	/// <summary>
+	/// A WHO crawler reads one line per player, so a long <c>@doing</c> is cut to PennMUSH's 40
+	/// characters on the player's own line rather than wrapped onto the next.
+	/// </summary>
+	[Test]
+	public async Task WhoKeepsEachPlayerOnOneLine()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WhoOneLine");
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("&DOING me=alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo"));
+
+		var anonymous = await AnonymousHandleAsync();
+		await Parser.CommandParse(anonymous, ConnectionService, MarkupText.Plain("WHO"));
+
+		var lines = LastNotificationTo(anonymous)!.Split('\n');
+		var row = Array.FindIndex(lines, line => line.StartsWith(player.Name, StringComparison.Ordinal));
+
+		await Assert.That(row).IsGreaterThan(0);
+		await Assert.That(lines[row]).EndsWith("alpha bravo charlie delta echo foxtrot");
+		await Assert.That(lines[row + 1]).DoesNotStartWith(" ");
+	}
+
+	/// <summary>
 	/// An anonymous viewer must get the mortal layout. The wizard layout carries host names and
 	/// descriptors, which is exactly what a nobody at the connect screen must not be handed.
 	/// </summary>

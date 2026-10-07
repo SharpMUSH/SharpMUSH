@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -56,7 +57,7 @@ public class CustomPermissionTests : ServerTestBase
 		await Assert.That(await AsWizard($"permission({Ref(_helper)},{_scope})")).IsEqualTo("#-1 NO SUCH PERMISSION");
 
 		await Assert.That(await Heard(_wizard, $"@permission/define {_scope}=Staff/Finish any scene")).Contains($"Permission {_scope} defined");
-		await Assert.That(await Heard(_wizard, "@permission")).Contains($"{_scope}  Finish any scene");
+		await Assert.That(Regex.IsMatch(await Heard(_wizard, "@permission"), $@"{Regex.Escape(_scope)}\s+Finish any scene")).IsTrue();
 		await Assert.That(await AsWizard($"permission({Ref(_helper)},{_scope})")).IsEqualTo("0");
 		await Assert.That(await AsWizard($"permission(#1,{_scope})")).IsEqualTo("1");
 
@@ -128,12 +129,14 @@ public class CustomPermissionTests : ServerTestBase
 		await Assert.That(await Heard(_wizard, $"@permission/category/create {category}=Scene permissions")).Contains($"Permission category {category} created");
 		await Heard(_wizard, $"@permission/define {_scope}=Staff/Finish any scene");
 		await Assert.That(await Heard(_wizard, $"@permission/category {_scope}={category}")).Contains($"{_scope} is now in {category}");
-		await Assert.That(await Heard(_wizard, "@permission")).Contains($" {category}\n  {_scope}  Finish any scene");
+		await Assert.That(Regex.IsMatch(await Heard(_wizard, "@permission"), $@"{Regex.Escape(category)}\s+{Regex.Escape(_scope)}\s+Finish any scene")).IsTrue();
 		await Assert.That(await Heard(_wizard, $"@permission/category wiki.read={category}")).Contains("built-in");
 
-		await Assert.That(await Heard(_wizard, "@role/categories")).Contains("Role categories:").And.Contains("People who close scenes").And.DoesNotContain("Scene permissions");
-		await Assert.That(await Heard(_wizard, "@permission/categories")).Contains("Permission categories:").And.Contains("Scene permissions");
-		await Assert.That(await Heard(_wizard, $"@permission {_scope}")).Contains($"Category: {category}").And.Contains($"Allowed by: none");
+		await Assert.That(await Heard(_wizard, "@role/categories")).Contains("Role categories").And.Contains("People who close scenes").And.DoesNotContain("Scene permissions");
+		await Assert.That(await Heard(_wizard, "@permission/categories")).Contains("Permission categories").And.Contains("Scene permissions");
+		var info = await Heard(_wizard, $"@permission {_scope}");
+		await Assert.That(Regex.IsMatch(info, $@"Category:\s+{Regex.Escape(category)}")).IsTrue();
+		await Assert.That(Regex.IsMatch(info, @"Allowed by:\s+none")).IsTrue();
 		await Assert.That(await Heard(_wizard, $"@role/category/delete {category}")).Contains($"still holds {_role}");
 		await Assert.That(await Heard(_wizard, $"@permission/category/delete {category}")).Contains($"still holds {_scope}");
 
@@ -141,7 +144,7 @@ public class CustomPermissionTests : ServerTestBase
 		var renamed = category + "x";
 		await Assert.That(await Heard(_wizard, $"@role/category/rename {category}={renamed}")).Contains($"is now {renamed}");
 		await Assert.That(await Heard(_wizard, $"@role {_role}")).Contains($"Category: {renamed}");
-		await Assert.That(await Heard(_wizard, "@permission")).Contains($" {category}\n  {_scope}");
+		await Assert.That(Regex.IsMatch(await Heard(_wizard, "@permission"), $@"{Regex.Escape(category)}\s+{Regex.Escape(_scope)}")).IsTrue();
 		await Assert.That(await Heard(_wizard, $"@role/category {_role}=Staff")).Contains("is now in Staff");
 		await Assert.That(await Heard(_wizard, $"@role/category/delete {renamed}")).Contains("deleted");
 		await Heard(_wizard, $"@permission/category {_scope}=Staff");

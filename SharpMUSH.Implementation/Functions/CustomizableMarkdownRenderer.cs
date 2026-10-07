@@ -197,6 +197,20 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		return custom ?? base.RenderCodeBlock(code);
 	}
 
+	/// <summary>
+	/// With a <c>RENDERMARKUP`LISTITEM</c> template, each item as the template draws it, one per line;
+	/// without one, the built-in list.
+	/// </summary>
+	protected override MString RenderList(ListBlock list)
+	{
+		if (!HasTemplate("LISTITEM")) return base.RenderList(list);
+
+		var index = FirstItemIndex(list);
+		return MarkupText.Join(MarkupText.NewLine, list
+			.OfType<ListItemBlock>()
+			.Select(listItem => RenderListItem(listItem, index++, list.IsOrdered)));
+	}
+
 	protected override MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
 	{
 		// Content only: the template supplies the marker, and taking it from base.RenderListItem

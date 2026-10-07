@@ -1742,10 +1742,10 @@
     <value>Disabled.</value>
   </data>
   <data name="ConfigCategoriesHeader" xml:space="preserve">
-    <value>Configuration Categories:</value>
+    <value>Configuration categories</value>
   </data>
-  <data name="ConfigCategoryItemFormat" xml:space="preserve">
-    <value>  {0}</value>
+  <data name="ConfigAllCategories" xml:space="preserve">
+    <value>All categories</value>
   </data>
   <data name="ConfigUseCategoryHelp" xml:space="preserve">
     <value>Use '@config &lt;category&gt;' to see options in a category.</value>
@@ -1757,7 +1757,7 @@
     <value>No options found in category '{0}'.</value>
   </data>
   <data name="ConfigOptionsInCategoryFormat" xml:space="preserve">
-    <value>Options in {0}:</value>
+    <value>Configuration: {0}</value>
   </data>
   <data name="ConfigOptionValueFormat" xml:space="preserve">
     <value> {0,-40} {1}</value>
