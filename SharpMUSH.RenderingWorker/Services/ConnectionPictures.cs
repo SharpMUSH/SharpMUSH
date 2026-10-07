@@ -16,11 +16,16 @@ public sealed class ConnectionPictures
 
 	private readonly ConcurrentDictionary<string, Sent> _connections = new(StringComparer.Ordinal);
 
-	/// <summary>The images the terminal on <paramref name="connection"/> holds.</summary>
-	internal Sent For(string connection)
+	/// <summary>
+	/// The images the terminal on <paramref name="connection"/> holds, when it is sent <paramref name="moving"/>
+	/// pictures moving or not. When that changes they are forgotten, so each is sent again under its id, which
+	/// replaces what the terminal holds (frames and all) with the other kind.
+	/// </summary>
+	internal Sent For(string connection, bool moving)
 	{
 		var sent = _connections.GetOrAdd(connection, static _ => new Sent());
 		sent.LastUsed = Environment.TickCount64;
+		sent.Use(moving);
 		if (_connections.Count > MaxConnections)
 		{
 			foreach (var (key, _) in _connections.OrderBy(pair => pair.Value.LastUsed).Take(_connections.Count - MaxConnections))
@@ -33,7 +38,18 @@ public sealed class ConnectionPictures
 	internal sealed class Sent
 	{
 		private readonly HashSet<uint> _ids = [];
+		private bool _moving;
 		public long LastUsed;
+
+		public void Use(bool moving)
+		{
+			lock (_ids)
+			{
+				if (_moving == moving) return;
+				_moving = moving;
+				_ids.Clear();
+			}
+		}
 
 		public bool Contains(uint id)
 		{

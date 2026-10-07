@@ -41,6 +41,12 @@ public sealed class TerminalPictureStore : IDisposable
 	/// <summary>How long a failed fetch is remembered before the address is tried again.</summary>
 	private static readonly TimeSpan FailureMemory = TimeSpan.FromMinutes(10);
 
+	/// <summary>The most frames a moving picture keeps; one with more is shown still.</summary>
+	public const int MaxFrames = 120;
+
+	/// <summary>The most bytes of pixels a moving picture's frames hold together; past it they are shrunk.</summary>
+	public const long MaxMovingBytes = 16L * 1024 * 1024;
+
 	/// <summary>How many failed addresses are remembered at most.</summary>
 	public const int MaxFailures = 1024;
 
@@ -153,7 +159,7 @@ public sealed class TerminalPictureStore : IDisposable
 			var bytes = await ReadBoundedAsync(stream);
 			var picture = Decode(bytes);
 			entry.Picture = picture;
-			Interlocked.Add(ref _bytes, picture.Rgba.Length);
+			Interlocked.Add(ref _bytes, SizeOf(picture));
 			Trim();
 		}
 		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException
@@ -181,7 +187,8 @@ public sealed class TerminalPictureStore : IDisposable
 
 	/// <summary>
 	/// <paramref name="bytes"/> decoded to RGBA and shrunk to <see cref="MaxStoredSide"/>, keyed by a hash of
-	/// the file. PNG, JPEG, GIF (its first frame), BMP, TGA and PSD read; anything else throws.
+	/// the file. PNG, JPEG, GIF, BMP, TGA and PSD read; anything else throws. A GIF of more than one frame is a
+	/// moving picture (<see cref="DecodeMoving"/>).
 	/// </summary>
 	public static TerminalPicture Decode(byte[] bytes)
 	{
@@ -191,10 +198,51 @@ public sealed class TerminalPictureStore : IDisposable
 		if (info.Width is <= 0 or > MaxDecodedSide || info.Height is <= 0 or > MaxDecodedSide)
 			throw new InvalidDataException($"A {info.Width}x{info.Height} picture is over {MaxDecodedSide} pixels a side.");
 
+		var key = Convert.ToHexString(SHA256.HashData(bytes), 0, 16);
+		if (IsGif(bytes) && DecodeMoving(bytes, key) is { } moving) return moving;
+
 		var image = ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha);
 		var (width, height, rgba) = Shrink(image.Width, image.Height, image.Data, MaxStoredSide);
-		var key = Convert.ToHexString(SHA256.HashData(bytes), 0, 16);
 		return new TerminalPicture(key, width, height, rgba);
+	}
+
+	/// <summary>The bytes of pixels <paramref name="picture"/> holds: every frame of a moving one.</summary>
+	public static long SizeOf(TerminalPicture picture) =>
+		picture.Frames.Count > 0 ? picture.Frames.Sum(frame => (long)frame.Rgba.Length) : picture.Rgba.Length;
+
+	private static bool IsGif(byte[] bytes) => bytes.AsSpan().StartsWith("GIF8"u8);
+
+	/// <summary>
+	/// A GIF's frames, each shrunk so that all of them together hold no more than <see cref="MaxMovingBytes"/>,
+	/// or null for a GIF of one frame or more than <see cref="MaxFrames"/>, which is shown still.
+	/// </summary>
+	private static TerminalPicture? DecodeMoving(byte[] bytes, string key)
+	{
+		using var stream = new MemoryStream(bytes, writable: false);
+		var decoded = new List<(int Width, int Height, byte[] Rgba, int DelayInMs)>();
+		foreach (var frame in ImageResult.AnimatedGifFramesFromStream(stream, ColorComponents.RedGreenBlueAlpha))
+		{
+			if (decoded.Count == MaxFrames) return null;
+			// Each frame is shrunk to the still limit as it arrives (which also copies it, since the decoder may hand
+			// back the same buffer every time), so a GIF of many large frames never holds them at full size.
+			var (frameWidth, frameHeight, rgba) = Shrink(frame.Width, frame.Height, frame.Data, MaxStoredSide);
+			decoded.Add((frameWidth, frameHeight, ReferenceEquals(rgba, frame.Data) ? rgba.ToArray() : rgba, frame.DelayInMs));
+		}
+
+		if (decoded.Count < 2) return null;
+
+		var (fullWidth, fullHeight) = (decoded[0].Width, decoded[0].Height);
+		var side = (int)Math.Min(MaxStoredSide, Math.Sqrt((double)MaxMovingBytes / (4L * decoded.Count)));
+		var frames = new List<TerminalPictureFrame>(decoded.Count);
+		var (width, height) = (fullWidth, fullHeight);
+		foreach (var frame in decoded)
+		{
+			(width, height, var rgba) = Shrink(frame.Width, frame.Height, frame.Rgba, Math.Max(1, side));
+			// A frame naming no delay is shown for 100ms by the writer, as browsers do.
+			frames.Add(new TerminalPictureFrame(rgba, TimeSpan.FromMilliseconds(Math.Max(0, frame.DelayInMs))));
+		}
+
+		return new TerminalPicture(key, width, height, frames);
 	}
 
 	/// <summary>
@@ -258,7 +306,7 @@ public sealed class TerminalPictureStore : IDisposable
 		{
 			if (Interlocked.Read(ref _bytes) <= MaxCacheBytes) break;
 			if (_entries.TryRemove(address, out var removed) && removed.Picture is { } dropped)
-				Interlocked.Add(ref _bytes, -dropped.Rgba.Length);
+				Interlocked.Add(ref _bytes, -SizeOf(dropped));
 		}
 	}
 

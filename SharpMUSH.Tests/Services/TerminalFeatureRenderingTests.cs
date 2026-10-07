@@ -22,17 +22,21 @@ public class TerminalFeatureRenderingTests
 	private static readonly byte[] Png = Convert.FromBase64String(
 		"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
+	/// <summary>A 4x2 GIF of two frames: red for 100ms, then blue for 250ms.</summary>
+	private static readonly byte[] MovingGif = Convert.FromBase64String(
+		"R0lGODlhBAACAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACwAAAAABAACAAAIBwABCBwoMCAAIfkEARkAAQAsAAAAAAQAAgCBAAD/AAAAAAAAAAAACAcAAQgcKDAgADs=");
+
 	private const string KittyStart = "\u001b_G";
 	private const string KittyPlaceholder = "\U0010EEEE";
 
-	private sealed class PictureHandler(HttpStatusCode status) : HttpMessageHandler
+	private sealed class PictureHandler(HttpStatusCode status, byte[]? picture = null) : HttpMessageHandler
 	{
 		public int Requests;
 
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			Interlocked.Increment(ref Requests);
-			return Task.FromResult(new HttpResponseMessage(status) { Content = new ByteArrayContent(Png) });
+			return Task.FromResult(new HttpResponseMessage(status) { Content = new ByteArrayContent(picture ?? Png) });
 		}
 	}
 
@@ -51,7 +55,7 @@ public class TerminalFeatureRenderingTests
 		var handler = new PictureHandler(HttpStatusCode.OK);
 		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance, handler);
 		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
-		var context = Context(new ProtocolCapabilities(SupportsTruecolor: true, GraphicsPin: TerminalGraphics.Kitty));
+		var context = Context(new ProtocolCapabilities(SupportsTruecolor: true, Pins: new TerminalPins(Graphics: TerminalGraphics.Kitty)));
 		var markup = FigureMarkup("https://pictures.example/cat.png");
 
 		var first = await RenderAsync(renderer, markup, context);
@@ -65,12 +69,59 @@ public class TerminalFeatureRenderingTests
 	}
 
 	[Test]
+	[Arguments(TerminalGraphics.Kitty, false, "a=f", false)]
+	[Arguments(TerminalGraphics.Kitty, true, "a=f", true)]
+	[Arguments(TerminalGraphics.Iterm2, false, "R0lGOD", false)]
+	[Arguments(TerminalGraphics.Iterm2, true, "R0lGOD", true)]
+	public async Task AMovingPicture_PlaysOnlyWithAnimationOn(string graphics, bool animation, string moving, bool plays)
+	{
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance,
+			new PictureHandler(HttpStatusCode.OK, MovingGif));
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+		var context = Context(new ProtocolCapabilities(SupportsTruecolor: true,
+			Pins: new TerminalPins(Graphics: graphics, Animation: animation)));
+
+		var text = await RenderAsync(renderer, FigureMarkup("https://pictures.example/cat.gif"), context);
+
+		await Assert.That(text.Contains(moving)).IsEqualTo(plays);
+		await Assert.That(text).DoesNotContain("(=^.^=)").Because("the first frame is drawn either way");
+	}
+
+	[Test]
+	public async Task TurningAnimationOnOrOff_SendsThePictureAgain()
+	{
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance,
+			new PictureHandler(HttpStatusCode.OK, MovingGif));
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+		var markup = FigureMarkup("https://pictures.example/cat.gif");
+		RenderContext With(bool animation) => Context(new ProtocolCapabilities(SupportsTruecolor: true,
+			Pins: new TerminalPins(Graphics: TerminalGraphics.Kitty, Animation: animation)));
+
+		var still = await RenderAsync(renderer, markup, With(false));
+		var moving = await RenderAsync(renderer, markup, With(true));
+		var stillAgain = await RenderAsync(renderer, markup, With(false));
+
+		await Assert.That(still).Contains(KittyStart).And.DoesNotContain("a=f");
+		await Assert.That(moving).Contains("a=f").Because("the terminal holds the still picture, not its frames");
+		await Assert.That(stillAgain).Contains(KittyStart).And.DoesNotContain("a=f")
+			.Because("the still picture replaces the moving one, which would otherwise keep playing");
+	}
+
+	[Test]
+	public async Task AMovingPicture_CountsEveryFrameAgainstTheCache()
+	{
+		var picture = TerminalPictureStore.Decode(MovingGif);
+
+		await Assert.That(TerminalPictureStore.SizeOf(picture)).IsEqualTo(2L * 4 * 2 * 4);
+	}
+
+	[Test]
 	public async Task APictureThatCannotBeFetched_IsItsTextArt()
 	{
 		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance,
 			new PictureHandler(HttpStatusCode.NotFound));
 		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
-		var context = Context(new ProtocolCapabilities(GraphicsPin: TerminalGraphics.Kitty));
+		var context = Context(new ProtocolCapabilities(Pins: new TerminalPins(Graphics: TerminalGraphics.Kitty)));
 
 		var text = await RenderAsync(renderer, FigureMarkup("https://pictures.example/missing.png"), context);
 
@@ -151,7 +202,7 @@ public class TerminalFeatureRenderingTests
 
 		var plain = Encoding.UTF8.GetString(renderer.Render(markup, Context(new ProtocolCapabilities())).Data);
 		var linked = Encoding.UTF8.GetString(renderer.Render(markup,
-			Context(new ProtocolCapabilities(HyperlinksPin: true, CommandLinksPin: true))).Data);
+			Context(new ProtocolCapabilities(Pins: new TerminalPins(Hyperlinks: true, CommandLinks: true)))).Data);
 
 		await Assert.That(plain).DoesNotContain("\u001b]8;").And.DoesNotContain("\u001b]68;");
 		await Assert.That(linked).Contains("\u001b]8;;https://example.com/").And.Contains("\u001b]68;1;SEND;look");
@@ -186,5 +237,17 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(pixels.Length).IsEqualTo(512 * 128 * 4);
 		await Assert.That(pixels.All(b => b == 255)).IsTrue();
 		await Assert.That(TerminalPictureStore.Decode(Png).Width).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AGifOfSeveralFrames_IsAMovingPicture()
+	{
+		var picture = TerminalPictureStore.Decode(MovingGif);
+
+		await Assert.That(picture.Frames.Count).IsEqualTo(2);
+		await Assert.That(picture.Frames.Select(frame => frame.Duration.TotalMilliseconds)).IsEquivalentTo(new[] { 100.0, 250.0 });
+		await Assert.That(picture.Frames[0].Rgba.Span[..4].ToArray()).IsEquivalentTo(new byte[] { 255, 0, 0, 255 });
+		await Assert.That(picture.Frames[1].Rgba.Span[..4].ToArray()).IsEquivalentTo(new byte[] { 0, 0, 255, 255 });
+		await Assert.That(TerminalPictureStore.Decode(Png).Frames).IsEmpty();
 	}
 }

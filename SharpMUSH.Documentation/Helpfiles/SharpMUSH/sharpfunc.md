@@ -5815,7 +5815,8 @@ a          b          areallylon d
   stripaccents     client is receiving 7-bit ascii, no accented characters<br>
   hyperlinks       web links are sent as clickable OSC 8 links; see [HYPERLINKS]<br>
   commandlinks     command links are sent as clickable MSLP links; see [HYPERLINKS]<br>
-  kitty, iterm2, sixel or blocks  how pictures are drawn; see [GRAPHICS]
+  kitty, iterm2, sixel or blocks  how pictures are drawn; see [GRAPHICS]<br>
+  animation        moving pictures play; see [ANIMATION]
 
   One of the color styles shown in [COLORSTYLE] will also be included.
 

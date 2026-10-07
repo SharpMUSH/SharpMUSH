@@ -97,12 +97,7 @@ public class UpdatePlayerPreferencesConsumer(
 			return Task.CompletedTask;
 		}
 
-		connectionService.UpdateCapabilities(message.Handle, current => current with
-		{
-			HyperlinksPin = message.Hyperlinks,
-			CommandLinksPin = message.CommandLinks,
-			GraphicsPin = message.Graphics
-		});
+		connectionService.UpdateCapabilities(message.Handle, current => current with { Pins = message.Pins });
 
 		return Task.CompletedTask;
 	}

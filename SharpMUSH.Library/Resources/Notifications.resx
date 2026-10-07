@@ -2815,6 +2815,18 @@
   <data name="SocksetGraphicsDetecting" xml:space="preserve">
     <value>Asking your terminal what it can draw. Its answer arrives with the next line you send.</value>
   </data>
+  <data name="SocksetAnimationSetFormat" xml:space="preserve">
+    <value>Animation set to '{0}'</value>
+  </data>
+  <data name="SocksetUnknownAnimationSetting" xml:space="preserve">
+    <value>Unknown setting. Valid settings: 'on', 'off'.</value>
+  </data>
+  <data name="SocksetTerminalSetFormat" xml:space="preserve">
+    <value>Terminal set to '{0}'</value>
+  </data>
+  <data name="SocksetUnknownTerminalFormat" xml:space="preserve">
+    <value>Unknown terminal '{0}'. Known terminals: {1}, or 'auto'.</value>
+  </data>
   <data name="SocksetInvalidOptionFormat" xml:space="preserve">
     <value>@sockset option '{0}' is not a valid option.</value>
   </data>

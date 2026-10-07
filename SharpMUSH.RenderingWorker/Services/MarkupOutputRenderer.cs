@@ -88,11 +88,12 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	private RenderPictureSource? PicturesFor(RenderContext connection)
 	{
 		if (pictureStore is null || connectionPictures is null || connection.Capabilities.Format != OutputFormat.Ansi
-			|| (connection.Capabilities.Features & TerminalOutputFeatures.Pictures) == 0)
+			|| (connection.Capabilities.Features & TerminalFeatures.Pictures) == 0)
 			return null;
 
 		return new RenderPictureSource(pictureStore,
-			connectionPictures.For($"{connection.Handle}:{connection.SessionId}"));
+			connectionPictures.For($"{connection.Handle}:{connection.SessionId}",
+				connection.Capabilities.Features.HasFlag(TerminalFeatures.MovingPictures)));
 	}
 
 	private static RenderedOutput Render(string markup, RenderContext connection, bool prompt, RenderPictureSource? pictures)
@@ -188,21 +189,13 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// </summary>
 	private static AnsiOutputOptions AnsiOptionsFor(ProtocolCapabilities capabilities, AnsiColorDepth depth,
 		RenderPictureSource? pictures) =>
-		new(depth, FeaturesOf(capabilities.Format == OutputFormat.Ansi ? capabilities.Features : TerminalOutputFeatures.None))
+		new(depth, capabilities.Format == OutputFormat.Ansi ? capabilities.Features : TerminalFeatures.None)
 		{
+			Terminal = capabilities.Format == OutputFormat.Ansi ? capabilities.Terminal : null,
 			Pictures = pictures,
 			CellWidth = capabilities.CellWidth > 0 ? capabilities.CellWidth : 10,
 			CellHeight = capabilities.CellHeight > 0 ? capabilities.CellHeight : 20
 		};
-
-	/// <summary>The markup package's flags for <paramref name="features"/>, which are the same bits.</summary>
-	private static TerminalFeatures FeaturesOf(TerminalOutputFeatures features) =>
-		(features.HasFlag(TerminalOutputFeatures.Hyperlinks) ? TerminalFeatures.Hyperlinks : 0)
-		| (features.HasFlag(TerminalOutputFeatures.CommandLinks) ? TerminalFeatures.CommandLinks : 0)
-		| (features.HasFlag(TerminalOutputFeatures.KittyGraphics) ? TerminalFeatures.KittyGraphics : 0)
-		| (features.HasFlag(TerminalOutputFeatures.InlineImages) ? TerminalFeatures.InlineImages : 0)
-		| (features.HasFlag(TerminalOutputFeatures.Sixel) ? TerminalFeatures.Sixel : 0)
-		| (features.HasFlag(TerminalOutputFeatures.BlockArt) ? TerminalFeatures.BlockArt : 0);
 
 	/// <summary>
 	/// The registry for an ANSI client: shared across connections sent the same colour and features, and made

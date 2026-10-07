@@ -1,38 +1,9 @@
 // NOTE: lives here beside TerminalCapabilityReader, for the same reason: the ConnectionServer and the
 // engine both read it, and the ConnectionServer must not take a dependency on the full Library.
 
+using MarkupString.Ansi;
+
 namespace SharpMUSH.Library.Utilities;
-
-/// <summary>
-/// What a connection's terminal is sent beyond colour. The same flags as MarkupString's
-/// <c>TerminalFeatures</c>, kept apart so this assembly need not reference the markup packages.
-/// </summary>
-[Flags]
-public enum TerminalOutputFeatures
-{
-	None = 0,
-
-	/// <summary>A URL link as an OSC 8 hyperlink.</summary>
-	Hyperlinks = 1,
-
-	/// <summary>A command link as an MSLP link, which the client sends back when clicked.</summary>
-	CommandLinks = 2,
-
-	/// <summary>Pictures through the Kitty graphics protocol.</summary>
-	KittyGraphics = 4,
-
-	/// <summary>Pictures through iTerm2's inline images.</summary>
-	InlineImages = 8,
-
-	/// <summary>Pictures as sixel graphics.</summary>
-	Sixel = 16,
-
-	/// <summary>Pictures as coloured half-block characters.</summary>
-	BlockArt = 32,
-
-	/// <summary>Every way of drawing a picture.</summary>
-	Pictures = KittyGraphics | InlineImages | Sixel | BlockArt,
-}
 
 /// <summary>What a terminal answered when it was asked (<c>SOCKSET graphics=detect</c>).</summary>
 /// <param name="KittyGraphics">Whether it answered the Kitty graphics query; null when that was not settled.</param>
@@ -42,34 +13,69 @@ public enum TerminalOutputFeatures
 /// <param name="CellHeight">Its character cell's height in pixels, or zero when it did not say.</param>
 public sealed record TerminalProbeResult(bool? KittyGraphics, bool Sixel, string? Version, int CellWidth, int CellHeight);
 
+/// <summary>
+/// What the player set with <c>SOCKSET</c> about their terminal. Links are worked out from the terminal unless
+/// pinned; pictures and moving pictures are sent only once the player turns them on.
+/// </summary>
+/// <param name="Hyperlinks">A <c>SOCKSET hyperlinks</c> pin, or null for auto.</param>
+/// <param name="CommandLinks">A <c>SOCKSET commandlinks</c> pin, or null for auto.</param>
+/// <param name="Graphics">A <c>SOCKSET graphics</c> setting (<see cref="TerminalGraphics"/>), or null for off.</param>
+/// <param name="Animation">Whether <c>SOCKSET animation</c> is on.</param>
+/// <param name="Terminal">The terminal the player named with <c>SOCKSET terminal</c> (a <see cref="TerminalProfile.Id"/>), or null.</param>
+public sealed record TerminalPins(
+	bool? Hyperlinks = null,
+	bool? CommandLinks = null,
+	string? Graphics = null,
+	bool Animation = false,
+	string? Terminal = null)
+{
+	/// <summary>Nothing set: links worked out from the terminal, no pictures.</summary>
+	public static TerminalPins None { get; } = new();
+
+	/// <summary>The pins stored in a connection's <paramref name="metadata"/>.</summary>
+	public static TerminalPins Of(IReadOnlyDictionary<string, string> metadata)
+	{
+		ArgumentNullException.ThrowIfNull(metadata);
+		return new TerminalPins(
+			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.HyperlinksKey),
+			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.CommandLinksKey),
+			metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey),
+			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.AnimationKey) == true,
+			metadata.GetValueOrDefault(TerminalFeatureReader.TerminalKey));
+	}
+}
+
 /// <summary>The values <c>SOCKSET graphics</c> takes.</summary>
 public static class TerminalGraphics
 {
+	/// <summary>Every way the terminal can draw a picture; the renderer picks the best.</summary>
+	public const string Auto = "auto";
 	public const string Kitty = "kitty";
 	public const string Iterm2 = "iterm2";
 	public const string Sixel = "sixel";
 	public const string Blocks = "blocks";
 	public const string Off = "off";
 
-	/// <summary>The feature a pinned method turns on, or null for a value that is not one.</summary>
-	public static TerminalOutputFeatures? FeatureOf(string? method) => method switch
+	/// <summary>The feature a method turns on, or null for a value that is not one.</summary>
+	public static TerminalFeatures? FeatureOf(string? method) => method switch
 	{
-		Kitty => TerminalOutputFeatures.KittyGraphics,
-		Iterm2 => TerminalOutputFeatures.InlineImages,
-		Sixel => TerminalOutputFeatures.Sixel,
-		Blocks => TerminalOutputFeatures.BlockArt,
-		Off => TerminalOutputFeatures.None,
+		Kitty => TerminalFeatures.KittyGraphics,
+		Iterm2 => TerminalFeatures.InlineImages,
+		Sixel => TerminalFeatures.Sixel,
+		Blocks => TerminalFeatures.BlockArt,
+		Off => TerminalFeatures.None,
 		_ => null
 	};
 }
 
 /// <summary>
-/// Works out what a connection's terminal is sent beyond colour: from the terminal types it reported,
-/// from what it answered when asked, and from what the player pinned with <c>SOCKSET</c>.
+/// Works out what a connection's terminal is sent beyond colour: which terminal it is (from what it reported,
+/// what it answered when asked, or what the player named), what that terminal can do, and what the player
+/// turned on with <c>SOCKSET</c>.
 /// <para>
-/// Nothing here is sent on a guess. Each of these sequences is ignored by a terminal that does not know
-/// it, but a MUD client that is not a terminal emulator may print it, so a feature is on only for a
-/// terminal that names itself as one known to have it, one that answered the question, or a pin.
+/// Links are sent to a terminal known to draw them. Pictures and moving pictures are sent only when the player
+/// asks for them: a terminal is often reached through something that changes what it shows (a multiplexer, an
+/// ssh hop, a setting left off), and only the player sees the result.
 /// </para>
 /// <para>
 /// Like <see cref="TerminalCapabilityReader.ResolveColorStyle"/>, the engine and the renderer both call
@@ -84,8 +90,14 @@ public static class TerminalFeatureReader
 	/// <summary>The metadata key holding a <c>SOCKSET commandlinks</c> pin: <c>1</c> or <c>0</c>.</summary>
 	public const string CommandLinksKey = "COMMANDLINKS";
 
-	/// <summary>The metadata key holding a <c>SOCKSET graphics</c> pin: one of <see cref="TerminalGraphics"/>.</summary>
+	/// <summary>The metadata key holding a <c>SOCKSET graphics</c> setting: one of <see cref="TerminalGraphics"/>.</summary>
 	public const string GraphicsKey = "GRAPHICS";
+
+	/// <summary>The metadata key holding <c>SOCKSET animation</c>: <c>1</c>, or absent for off.</summary>
+	public const string AnimationKey = "ANIMATION";
+
+	/// <summary>The metadata key holding <c>SOCKSET terminal</c>: a <see cref="TerminalProfile.Id"/>.</summary>
+	public const string TerminalKey = "TERMINAL";
 
 	/// <summary>Metadata keys holding what the terminal answered when asked.</summary>
 	public const string ProbeKittyKey = "TerminalKitty";
@@ -96,66 +108,74 @@ public static class TerminalFeatureReader
 	/// <summary>The MTTS capability name for bit 1024, as TelnetNegotiationCore expands it.</summary>
 	private const string MttsMslp = "MSLP";
 
-	/// <summary>Terminals that draw OSC 8 hyperlinks, by the names they report.</summary>
-	private static readonly string[] HyperlinkTerminals =
-		["xterm-kitty", "kitty", "xterm-ghostty", "ghostty", "wezterm", "foot", "alacritty", "contour", "mudlet"];
+	/// <summary>Clients that are not terminals but draw OSC 8 hyperlinks, by the names they report.</summary>
+	private static readonly string[] HyperlinkClients = ["mudlet"];
 
-	/// <summary>Terminals that speak the Kitty graphics protocol, by name.</summary>
-	private static readonly string[] KittyTerminals = ["xterm-kitty", "kitty", "xterm-ghostty", "ghostty"];
-
-	/// <summary>Terminals that draw sixel, by name.</summary>
-	private static readonly string[] SixelTerminals = ["foot", "mlterm", "contour"];
+	private const TerminalFeatures Links = TerminalFeatures.Hyperlinks | TerminalFeatures.CommandLinks;
 
 	/// <summary>
-	/// What <paramref name="terminalTypes"/> and <paramref name="probe"/> say the terminal can do. A probe's
-	/// answer about Kitty wins over the name: a terminal that called itself kitty and did not answer the
-	/// question is reached through something that does not pass the protocol on, such as a multiplexer.
-	/// Half-block art is never detected, since it is only text and only the player knows whether they want it.
+	/// The terminal: the one the player named in <paramref name="terminalPin"/>, else the one that answered
+	/// XTVERSION in <paramref name="probe"/>, else the first of <paramref name="terminalTypes"/> that names one.
 	/// </summary>
-	public static TerminalOutputFeatures Detect(IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe)
+	public static TerminalProfile? Identify(IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe, string? terminalPin)
+	{
+		ArgumentNullException.ThrowIfNull(terminalTypes);
+		return TerminalProfile.Find(terminalPin)
+			?? TerminalProfile.Identify(probe?.Version)
+			?? terminalTypes.Select(TerminalProfile.Identify).FirstOrDefault(profile => profile is not null);
+	}
+
+	/// <summary>
+	/// What the terminal can do: what <paramref name="terminal"/> is known for, corrected by what it answered in
+	/// <paramref name="probe"/>. A Kitty or sixel answer wins over the name, since a terminal that has the
+	/// protocol and did not answer is reached through something that does not pass it on, such as a
+	/// multiplexer. Half-block art is any UTF-8 terminal's.
+	/// </summary>
+	public static TerminalFeatures Detect(TerminalProfile? terminal, IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe)
 	{
 		ArgumentNullException.ThrowIfNull(terminalTypes);
 
-		var features = TerminalOutputFeatures.None;
-		if (terminalTypes.Any(type => Named(type, HyperlinkTerminals))) features |= TerminalOutputFeatures.Hyperlinks;
-		if (terminalTypes.Any(type => string.Equals(type.Trim(), MttsMslp, StringComparison.OrdinalIgnoreCase)))
-			features |= TerminalOutputFeatures.CommandLinks;
+		var features = (terminal?.Features ?? TerminalFeatures.None) | TerminalFeatures.BlockArt;
+		if (terminalTypes.Any(type => Named(type, HyperlinkClients))) features |= TerminalFeatures.Hyperlinks;
+		if (terminalTypes.Any(type => Named(type, [MttsMslp]))) features |= TerminalFeatures.CommandLinks;
 
-		var kitty = probe?.KittyGraphics ?? terminalTypes.Any(type => Named(type, KittyTerminals));
-		if (kitty) features |= TerminalOutputFeatures.KittyGraphics;
-
-		var version = probe?.Version ?? string.Empty;
-		if (terminalTypes.Any(type => Named(type, ["wezterm"]))
-			|| version.Contains("iTerm2", StringComparison.OrdinalIgnoreCase)
-			|| version.Contains("WezTerm", StringComparison.OrdinalIgnoreCase))
-			features |= TerminalOutputFeatures.InlineImages | TerminalOutputFeatures.Hyperlinks;
-
-		if (probe?.Sixel == true || terminalTypes.Any(type => Named(type, SixelTerminals)))
-			features |= TerminalOutputFeatures.Sixel;
+		if (probe is not null)
+		{
+			features = Set(features, TerminalFeatures.Sixel, probe.Sixel);
+			if (probe.KittyGraphics is { } kitty) features = Set(features, TerminalFeatures.KittyGraphics, kitty);
+		}
 
 		return features;
 	}
 
 	/// <summary>
-	/// What the connection is sent: <paramref name="detected"/>, with each pin in place of what was detected.
-	/// A screen reader is sent no feature it did not pin, and pictures not at all, since it reads the
-	/// picture's description. Kitty pictures and half-block art are characters outside Latin-1, so output
-	/// not written in UTF-8 (<paramref name="utf8"/>) carries neither, pinned or not.
+	/// What the connection is sent. Links are <paramref name="detected"/>'s, with each pin in place of what was
+	/// detected. Pictures are none until the player sets <c>graphics</c>: <c>auto</c> sends every way the terminal
+	/// draws them, a method sends that one. Moving pictures need <c>animation</c> on as well, and a terminal not
+	/// known to lack them. A screen reader is sent no link it did not pin and no picture, since it reads the
+	/// picture's description. Kitty pictures and half-block art are characters outside Latin-1, so output not
+	/// written in UTF-8 (<paramref name="utf8"/>) carries neither.
 	/// </summary>
-	public static TerminalOutputFeatures Resolve(TerminalOutputFeatures detected, bool? hyperlinksPin,
-		bool? commandLinksPin, string? graphicsPin, bool utf8, bool screenReader)
+	public static TerminalFeatures Resolve(TerminalFeatures detected, TerminalProfile? terminal, TerminalPins pins,
+		bool utf8, bool screenReader)
 	{
-		var features = screenReader ? TerminalOutputFeatures.None : detected;
-		features = Pin(features, TerminalOutputFeatures.Hyperlinks, hyperlinksPin);
-		features = Pin(features, TerminalOutputFeatures.CommandLinks, commandLinksPin);
+		ArgumentNullException.ThrowIfNull(pins);
 
-		if (TerminalGraphics.FeatureOf(graphicsPin) is { } pinned)
-			features = (features & ~TerminalOutputFeatures.Pictures) | pinned;
+		var features = screenReader ? TerminalFeatures.None : detected & Links;
+		features = Pin(features, TerminalFeatures.Hyperlinks, pins.Hyperlinks);
+		features = Pin(features, TerminalFeatures.CommandLinks, pins.CommandLinks);
 
-		if (screenReader) features &= ~TerminalOutputFeatures.Pictures;
-		if (!utf8) features &= ~(TerminalOutputFeatures.KittyGraphics | TerminalOutputFeatures.BlockArt);
+		var pictures = pins.Graphics == TerminalGraphics.Auto
+			? detected & TerminalFeatures.Pictures
+			: TerminalGraphics.FeatureOf(pins.Graphics) ?? TerminalFeatures.None;
+		if (screenReader) pictures = TerminalFeatures.None;
+		if (!utf8) pictures &= ~(TerminalFeatures.KittyGraphics | TerminalFeatures.BlockArt);
 
-		return features;
+		if (pins.Animation && (pictures & (TerminalFeatures.KittyGraphics | TerminalFeatures.InlineImages)) != 0
+			&& (terminal is null || terminal.Features.HasFlag(TerminalFeatures.MovingPictures)))
+			pictures |= TerminalFeatures.MovingPictures;
+
+		return features | pictures;
 	}
 
 	/// <summary>
@@ -163,24 +183,32 @@ public static class TerminalFeatureReader
 	/// takes: the method the renderer picks first (Kitty, then iTerm2, then sixel, then half-blocks), or
 	/// <c>off</c> for text art.
 	/// </summary>
-	public static string GraphicsName(TerminalOutputFeatures features) =>
-		features.HasFlag(TerminalOutputFeatures.KittyGraphics) ? TerminalGraphics.Kitty
-		: features.HasFlag(TerminalOutputFeatures.InlineImages) ? TerminalGraphics.Iterm2
-		: features.HasFlag(TerminalOutputFeatures.Sixel) ? TerminalGraphics.Sixel
-		: features.HasFlag(TerminalOutputFeatures.BlockArt) ? TerminalGraphics.Blocks
+	public static string GraphicsName(TerminalFeatures features) =>
+		features.HasFlag(TerminalFeatures.KittyGraphics) ? TerminalGraphics.Kitty
+		: features.HasFlag(TerminalFeatures.InlineImages) ? TerminalGraphics.Iterm2
+		: features.HasFlag(TerminalFeatures.Sixel) ? TerminalGraphics.Sixel
+		: features.HasFlag(TerminalFeatures.BlockArt) ? TerminalGraphics.Blocks
 		: TerminalGraphics.Off;
 
+	/// <summary>The terminal a connection is, read from its metadata the way the renderer reads its capabilities.</summary>
+	public static TerminalProfile? TerminalOf(IReadOnlyDictionary<string, string> metadata)
+	{
+		ArgumentNullException.ThrowIfNull(metadata);
+		return Identify(TypesOf(metadata), ProbeOf(metadata), metadata.GetValueOrDefault(TerminalKey));
+	}
+
 	/// <summary>What a connection is sent, read from its metadata the way the renderer reads its capabilities.</summary>
-	public static TerminalOutputFeatures For(IReadOnlyDictionary<string, string> metadata)
+	public static TerminalFeatures For(IReadOnlyDictionary<string, string> metadata)
 	{
 		ArgumentNullException.ThrowIfNull(metadata);
 
-		var types = metadata.GetValueOrDefault(TerminalCapabilityReader.TerminalTypesKey, "")
-			.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-		var terminal = TerminalCapabilityReader.Read(types);
+		var types = TypesOf(metadata);
+		var probe = ProbeOf(metadata);
+		var pins = TerminalPins.Of(metadata);
+		var terminal = Identify(types, probe, pins.Terminal);
 
-		return Resolve(Detect(types, ProbeOf(metadata)), PinOf(metadata, HyperlinksKey), PinOf(metadata, CommandLinksKey),
-			metadata.GetValueOrDefault(GraphicsKey), Utf8(metadata), terminal.ScreenReader);
+		return Resolve(Detect(terminal, types, probe), terminal, pins, Utf8(metadata),
+			TerminalCapabilityReader.Read(types).ScreenReader);
 	}
 
 	/// <summary>The terminal's answers recorded in <paramref name="metadata"/>, or null when it was never asked.</summary>
@@ -207,6 +235,10 @@ public static class TerminalFeatureReader
 			_ => null
 		};
 
+	private static string[] TypesOf(IReadOnlyDictionary<string, string> metadata) =>
+		metadata.GetValueOrDefault(TerminalCapabilityReader.TerminalTypesKey, "")
+			.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 	/// <summary>
 	/// Whether the connection's output is written in UTF-8: the charset it negotiated when one is recorded,
 	/// and otherwise yes, which is what the socket server writes by default. Not the MTTS UTF-8 claim, which
@@ -216,13 +248,11 @@ public static class TerminalFeatureReader
 		metadata.GetValueOrDefault("CHARSET") is not { Length: > 0 } charset
 		|| charset.Replace("-", "").Equals("UTF8", StringComparison.OrdinalIgnoreCase);
 
-	private static TerminalOutputFeatures Pin(TerminalOutputFeatures features, TerminalOutputFeatures feature, bool? pin) =>
-		pin switch
-		{
-			true => features | feature,
-			false => features & ~feature,
-			null => features
-		};
+	private static TerminalFeatures Pin(TerminalFeatures features, TerminalFeatures feature, bool? pin) =>
+		pin is { } on ? Set(features, feature, on) : features;
+
+	private static TerminalFeatures Set(TerminalFeatures features, TerminalFeatures feature, bool on) =>
+		on ? features | feature : features & ~feature;
 
 	/// <summary>Whether <paramref name="type"/> is one of <paramref name="names"/>, ignoring case.</summary>
 	private static bool Named(string type, string[] names) =>

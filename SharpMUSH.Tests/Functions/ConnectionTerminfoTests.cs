@@ -112,7 +112,8 @@ public class ConnectionTerminfoTests
 
 	/// <summary>
 	/// Not PennMUSH tokens: what a connection is sent beyond colour, read the way the renderer reads it.
-	/// A kitty terminal is sent hyperlinks and Kitty pictures; a pin turns one off.
+	/// A kitty terminal is sent hyperlinks; pictures and moving pictures once the player turns them on; a pin
+	/// turns a link off.
 	/// </summary>
 	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
 	public async Task Terminfo_ReportsTerminalFeatures()
@@ -128,7 +129,13 @@ public class ConnectionTerminfoTests
 		{
 			var tokens = (await TerminfoAsync(playerRef)).Split(' ');
 			await Assert.That(tokens).Contains("hyperlinks");
+			await Assert.That(tokens).DoesNotContain(TerminalGraphics.Kitty).Because("pictures are opt-in");
+
+			connectionService.Update(handle, TerminalFeatureReader.GraphicsKey, TerminalGraphics.Auto);
+			connectionService.Update(handle, TerminalFeatureReader.AnimationKey, "1");
+			tokens = (await TerminfoAsync(playerRef)).Split(' ');
 			await Assert.That(tokens).Contains(TerminalGraphics.Kitty);
+			await Assert.That(tokens).Contains("animation");
 
 			connectionService.Update(handle, TerminalFeatureReader.HyperlinksKey, "0");
 			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).DoesNotContain("hyperlinks");

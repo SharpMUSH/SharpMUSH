@@ -131,6 +131,18 @@
   <data name="SocksetGraphicsDetecting" xml:space="preserve">
     <value>Votre terminal est interrogé sur ce qu'il sait afficher. Sa réponse arrive avec la prochaine ligne que vous envoyez.</value>
   </data>
+  <data name="SocksetAnimationSetFormat" xml:space="preserve">
+    <value>Animation définie sur « {0} »</value>
+  </data>
+  <data name="SocksetUnknownAnimationSetting" xml:space="preserve">
+    <value>Réglage inconnu. Réglages valides : 'on', 'off'.</value>
+  </data>
+  <data name="SocksetTerminalSetFormat" xml:space="preserve">
+    <value>Terminal défini sur « {0} »</value>
+  </data>
+  <data name="SocksetUnknownTerminalFormat" xml:space="preserve">
+    <value>Terminal inconnu « {0} ». Terminaux connus : {1}, ou 'auto'.</value>
+  </data>
   <data name="SocksetInvalidOptionFormat" xml:space="preserve">
     <value>L'option @sockset « {0} » n'est pas valide.</value>
   </data>

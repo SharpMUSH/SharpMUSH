@@ -65,6 +65,13 @@ public static partial class ErrorMessages
 		public const string SocksetGraphicsDetecting =
 			"Asking your terminal what it can draw. Its answer arrives with the next line you send.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetAnimationSetFormat = "Animation set to '{0}'";
+		public const string SocksetUnknownAnimationSetting = "Unknown setting. Valid settings: 'on', 'off'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetTerminalSetFormat = "Terminal set to '{0}'";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetUnknownTerminalFormat = "Unknown terminal '{0}'. Known terminals: {1}, or 'auto'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetInvalidOptionFormat = "@sockset option '{0}' is not a valid option.";
 		public const string SocksetInvalidDescriptor = "Invalid descriptor.";
 
