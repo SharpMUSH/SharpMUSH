@@ -628,7 +628,7 @@ public partial class MarkupOutputRendererTests
 		var themed = StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "fantasy" }));
 		var plain = StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour));
 
-		await Assert.That(themed).StartsWith("\u2554\u2550");
+		await Assert.That(themed).StartsWith("\u2756\u2550");
 		await Assert.That(plain).StartsWith("+=");
 	}
 

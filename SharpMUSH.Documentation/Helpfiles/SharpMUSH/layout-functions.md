@@ -151,7 +151,7 @@ That box is drawn in Nord's blue, its title in Nord's purple and bold. The examp
 
 A theme is one of these:
 - a name from [THEMES()]: `"theme":"nord"`. `terminal` uses only the sixteen standard colours, so each player sees it in the colours their own client is set to.
-- a genre: `adult`, `fantasy`, `historical`, `horror`, `modern`, `mystery`, `romance`, `science-fiction` or `spiritual`, one for each MSSP genre. A genre theme changes the shapes as well as the colours: `fantasy` draws double lines with a diamond either side of a title, a fleuron for a bullet and a gauge of solid and shaded blocks; `horror` heavy lines with daggers; `romance` rounded corners with hearts; `science-fiction` heavy lines with triangle bullets and a segmented gauge.
+- a genre: `fantasy`, `historical`, `horror`, `modern`, `mystery`, `romance`, `science-fiction` or `spiritual`, one for each MSSP genre (`romance` serves MSSP's Adult as well). A genre theme changes the shapes as well as the colours, down to a box's corners: `fantasy` draws double lines with diamond corners and fleurons either side of a title, and a gauge of solid and shaded blocks; `horror` a cracked heavy line with daggers at the corners; `mystery` dashed lines with hollow diamonds; `romance` rounded lines with hearts; `science-fiction` heavy lines with bracket corners, triangle bullets and a segmented gauge. A client without Unicode gets each in ASCII.
 - a theme made from one colour: `"theme":{"seed":"#7aa2f7","harmony":"triadic"}`. The other colours take their hues from the seed: `monochrome` (one hue), `analogous` (its neighbours, the default), `complementary` (the opposite hue), `split` (either side of the opposite), `triadic` (three evenly round) or `tetradic` (four). Each is made lighter or darker until it stands out from the background: 3 to 1 for lines, 4.5 to 1 for text, by the measure the web accessibility guidelines use. `"contrast"` from 0 to 1 raises both toward 7 to 1. `"mode":"light"` makes it for a light background; dark is the default.
 - a base16 scheme: `"theme":{"base16":["#2e3440", ... sixteen colours]}`. Hundreds of these exist for editors and terminals.
 - any of these with colours changed: `"theme":{"preset":"nord","colors":{"primary":"#bf616a"}}`.
@@ -186,7 +186,7 @@ A colour is `"#rrggbb"`, a standard colour from 0 to 15, or both as `{"rgb":"#88
 +==================+
 ```
 
-That is how a client without Unicode sees it. With Unicode the corners and edges are double lines, the title sits between two diamonds, and each bullet is a fleuron.
+That is how a client without Unicode sees it. With Unicode the edges are double lines with a diamond at each corner, the title sits between two fleurons, and each bullet is a fleuron.
 
 **Sixteen-colour clients.** Each colour carries the standard colour a client with only the sixteen is sent instead, picked by its hue, so a pale blue is sent as blue rather than the grey nearest it. A client without colour is sent the layout as it is; nothing in a layout depends on colour alone. A client without Unicode gets ASCII borders in the same colours.
 
@@ -209,7 +209,7 @@ The names of the built-in themes, for the `"theme"` layout option and the `layou
 ### Example
 ```sharp
 > think themes()
-terminal adult fantasy historical horror modern mystery romance science-fiction spiritual catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night
+terminal fantasy historical horror modern mystery romance science-fiction spiritual catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night
 ```
 
 ::: seealso
