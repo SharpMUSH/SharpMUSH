@@ -202,10 +202,11 @@ public static class ThemeStyles
 	/// <summary>The hue of a colour in degrees, for tinting pictures toward it.</summary>
 	private static double Hue(ThemeColor c)
 	{
-		double r = c.R / 255.0, g = c.G / 255.0, b = c.B / 255.0;
-		double max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b)), d = max - min;
+		// Compared as the byte channels, so no floating-point equality is involved.
+		int r = c.R, g = c.G, b = c.B;
+		int max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b)), d = max - min;
 		if (d == 0) return 0;
-		var h = max == r ? (g - b) / d % 6 : max == g ? (b - r) / d + 2 : (r - g) / d + 4;
+		var h = max == r ? (double)(g - b) / d % 6 : max == g ? (double)(b - r) / d + 2 : (double)(r - g) / d + 4;
 		return Math.Round((h * 60 + 360) % 360);
 	}
 
