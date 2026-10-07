@@ -56,7 +56,18 @@ public class OptionsService(
 	{
 		var filled = new List<string>();
 		var defaults = JsonSerializer.SerializeToNode(Default())!.AsObject();
-		Fill(stored, defaults, string.Empty, filled);
+		foreach (var (category, defaultOptions) in defaults)
+		{
+			if (!stored.TryGetPropertyValue(category, out var storedOptions))
+			{
+				stored[category] = defaultOptions?.DeepClone();
+				filled.Add(category);
+			}
+			else if (storedOptions is JsonObject storedCategory && defaultOptions is JsonObject defaultCategory)
+			{
+				Fill(storedCategory, defaultCategory, category, filled);
+			}
+		}
 
 		var options = stored.Deserialize<SharpMUSHOptions>()!;
 		if (filled.Count == 0)
@@ -72,19 +83,19 @@ public class OptionsService(
 		return options;
 	}
 
-	private static void Fill(JsonObject stored, JsonObject defaults, string path, List<string> filled)
+	/// <summary>
+	/// One category's absent options. An option that is there is kept whole: a dictionary option the game
+	/// removed an entry from is a value, not a gap the defaults should fill.
+	/// </summary>
+	private static void Fill(JsonObject stored, JsonObject defaults, string category, List<string> filled)
 	{
-		foreach (var (key, value) in defaults)
+		foreach (var (option, value) in defaults)
 		{
 			// Only an absent option: a stored null is a value the game chose for an option that allows one.
-			if (!stored.TryGetPropertyValue(key, out var storedValue))
+			if (!stored.ContainsKey(option))
 			{
-				stored[key] = value?.DeepClone();
-				filled.Add(path + key);
-			}
-			else if (storedValue is JsonObject storedObject && value is JsonObject defaultObject)
-			{
-				Fill(storedObject, defaultObject, $"{path}{key}.", filled);
+				stored[option] = value?.DeepClone();
+				filled.Add($"{category}.{option}");
 			}
 		}
 	}

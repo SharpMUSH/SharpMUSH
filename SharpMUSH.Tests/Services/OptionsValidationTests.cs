@@ -171,6 +171,26 @@ public class OptionsValidationTests
 			.IsEqualTo(JsonSerializer.Serialize(SharpMUSHOptions.Default().Cosmetic));
 	}
 
+	/// <summary>
+	/// An entry the game removed from a dictionary option is its choice, not a gap: the defaults fill whole
+	/// options only, so a removed alias stays removed.
+	/// </summary>
+	[Test]
+	public async Task AnEntryRemovedFromADictionaryOptionStaysRemoved()
+	{
+		var stored = JsonSerializer.SerializeToNode(SomeStoredConfiguration())!.AsObject();
+		stored["Alias"]!["FunctionAliases"]!.AsObject().Remove("flip");
+		var store = StoreWith(stored);
+		var service = new OptionsService(store, [new StubValidator(ValidateOptionsResult.Success)]);
+
+		var options = service.Create(Options.DefaultName);
+
+		await Assert.That(options.Alias.FunctionAliases.ContainsKey("flip")).IsFalse();
+		await Assert.That(options.Alias.FunctionAliases.ContainsKey("iter")).IsTrue();
+		await store.DidNotReceive().SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(),
+			Arg.Any<CancellationToken>());
+	}
+
 	[Test]
 	public async Task ACompleteStoredDocumentIsNotStoredAgain()
 	{
