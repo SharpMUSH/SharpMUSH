@@ -156,15 +156,10 @@ public static class BuiltInThemes
 			[ThemeTokens.LinkMissing] = "#c0362c",
 		}, BuiltIn: true);
 
-	// One theme per MSSP genre (MsspCatalog's GENRE choices, less "None"), with the ids the telnet layout themes
-	// use, so a game's portal theme and layout_theme can share one name; Adult's is "passion". Colours are listed in
-	// ThemeTokens.Editable order: bg, surface, surface-2, surface-3, rail-bg, text, text-dim, text-faint, border, border-soft, accent,
-	// warn, link-missing.
-
-	/// <summary>Passion (MSSP's Adult): wine and gold, crushed velvet, gilded italic titles and art deco corners.</summary>
-	public static readonly PortalTheme Passion = Genre("passion", "Passion", dark: true,
-		["#160a10", "#1f0f17", "#29141e", "#190b12", "#0e060a", "#f5e6ec", "#c9abb6", "#ab8d99", "#43263a", "#2d1824", "#e2b865", "#ffb07a", "#ff8fa3"],
-		display: "playfair", body: "ui", corners: "soft", texture: "velvet", ornament: "deco", frame: "deco", titles: "italic", effect: "gilt", imagery: "tint");
+	// One theme per MSSP genre (MsspCatalog's GENRE choices, less "None"; Romance covers Adult too), with the ids the
+	// telnet layout themes use, so a game's portal theme and layout_theme can share one name. Colours are listed in
+	// ThemeTokens.Editable order: bg, surface, surface-2, surface-3, rail-bg, text, text-dim, text-faint, border,
+	// border-soft, accent, warn, link-missing.
 
 	/// <summary>Fantasy: scorched parchment, inscribed capitals in rubric red, fleurons and flourished corners.</summary>
 	public static readonly PortalTheme Fantasy = Genre("fantasy", "Fantasy", dark: false,
@@ -207,7 +202,7 @@ public static class BuiltInThemes
 		display: "marcellus", body: "ui", corners: "round", texture: "mandala", ornament: "lotus", frame: "halo", titles: "normal", effect: "glow", imagery: "tint");
 
 	public static readonly IReadOnlyList<PortalTheme> All =
-		[Phosphor, Daylight, Passion, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual];
+		[Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual];
 
 	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
 		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery)

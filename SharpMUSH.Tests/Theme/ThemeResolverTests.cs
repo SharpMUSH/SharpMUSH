@@ -133,7 +133,7 @@ public class ThemeResolverTests
 	[Test]
 	public async Task ThereIsAThemeForEveryMsspGenre()
 	{
-		var genres = new[] { "passion", "fantasy", "historical", "horror", "modern", "mystery", "romance", "science-fiction", "spiritual" };
+		var genres = new[] { "fantasy", "historical", "horror", "modern", "mystery", "romance", "science-fiction", "spiritual" };
 
 		foreach (var genre in genres)
 		{
