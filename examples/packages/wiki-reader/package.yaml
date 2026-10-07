@@ -158,11 +158,11 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`TABLE:
         value: |-
-          [@@(%0 page references — a table of each page and its title, joined with %r and split on a newline so a title holding a | stays one cell)][datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12)),Page%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],Title%r[iter(%0,wiki(%i0,title),%b,%r)])]
+          [@@(%0 page references — a table of each page and its title, joined with %r and split on a newline so a title holding a | stays one cell)][datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12)),Page%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],Title%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)])]
         flags: [funsyntax]
       FUN`DISPLAY`RECENTTABLE:
         value: |-
-          [@@(%0 page references — same as TABLE with the last edit's age)][datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r1%r2)),Page%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],Title%r[iter(%0,wiki(%i0,title),%b,%r)],Edited%r[iter(%0,[trim(timestring(sub(secs(),wiki(%i0,updated))))] ago,%b,%r)])]
+          [@@(%0 page references — same as TABLE with the last edit's age)][datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r1%r2)),Page%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],Title%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)],Edited%r[iter(%0,[trim(timestring(sub(secs(),wiki(%i0,updated))))] ago,%b,%r)])]
         flags: [funsyntax]
 
       FUN`DISPLAY`LISTING:

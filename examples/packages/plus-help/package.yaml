@@ -234,7 +234,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SRCTABLE:
         value: |-
-          [@@(%0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and split on a newline, so a description holding a | stays one cell)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20)),[ansi(h,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[ansi(h,Covers)]%r[iter(%0,u(%!/FUN`GET`SRCDESC,%i0),%b,%r)])]
+          [@@(%0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and split on a newline, so a description holding a | stays one cell)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20)),[ansi(h,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[ansi(h,Covers)]%r[iter(%0,edit(u(%!/FUN`GET`SRCDESC,%i0),%r,%b),%b,%r)])]
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-

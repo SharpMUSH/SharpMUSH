@@ -625,7 +625,7 @@ objects:
       # ---- buckets --------------------------------------------------------------
       # Buckets %0 as person %1 sees them; a * marks one they work.
       FUN`BTABLE: |-
-        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,%r%r12)),Bucket%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)],,%r)],>Open%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],What it is for%r[iter(%0,get(%i0/DESCRIPTION),,%r)])]
+        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,%r%r12)),Bucket%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)],,%r)],>Open%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],What it is for%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
       INC`BUCKET`LIST: |-
         @pemit %#=[box([u({{jobs}}/FUN`BTABLE,u({{jobs}}/FUN`BUCKETS`SEEN,%#),%#)]%r[rule()]%r[if(u({{jobs}}/WEB`STAFF,%#),* you work it [chr(183)]%b)]+request <bucket>/<title>=<text>,Job buckets)]
       INC`BUCKET`INFO: |-
