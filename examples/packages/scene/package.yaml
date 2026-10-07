@@ -562,12 +562,13 @@ objects:
         30
       DATA`DENY_BAD_DAYS: |-
         How many days ahead? Give a whole number of 1 or more, or all.
-      # FUN`SCHED_RENDER(<days>|all). scenelist(scheduled) is already in time order, untimed scenes
-      # last. The window keeps every scene due before its end: one whose time has passed but that has
-      # not started yet is still waiting, and an untimed one has no time to be beyond it. In
+      # FUN`SCHED_RENDER(<days>|all). scenelist(upcoming) is the schedule in time order, untimed scenes
+      # last, without a scene more than an hour past its time that never started, as on the portal.
+      # The window keeps every scene due before its end: one a little past its time is "late" but may
+      # still start, and an untimed one has no time to be beyond it. In
       # FUN`SCHED_TABLE, %q<pday> is the day of the row before, so a day is named only where it changes.
       FUN`SCHED_RENDER: |-
-        [setq(all,scenelist(scheduled))][setq(lim,if(isint(%0),mul(add(secs(),mul(%0,86400)),1000)))][setq(lst,if(strlen(%q<lim>),squish(iter(%q<all>,if(lt(firstof(scene(%i0,scheduledfor),0),%q<lim>),%i0))),%q<all>))][box([if(words(%q<lst>),u(%!/FUN`SCHED_TABLE,%q<lst>),Nothing is scheduled[if(isint(%0),%bin the next %0 days)].)],Scheduled Scenes,,u(%!/FUN`FRAME))]%r[u(%!/FUN`SCHED_FOOT,%0,words(%q<lst>),sub(words(%q<all>),words(%q<lst>)))]
+        [setq(all,scenelist(upcoming))][setq(lim,if(isint(%0),mul(add(secs(),mul(%0,86400)),1000)))][setq(lst,if(strlen(%q<lim>),squish(iter(%q<all>,if(lt(firstof(scene(%i0,scheduledfor),0),%q<lim>),%i0))),%q<all>))][box([if(words(%q<lst>),u(%!/FUN`SCHED_TABLE,%q<lst>),Nothing is scheduled[if(isint(%0),%bin the next %0 days)].)],Scheduled Scenes,,u(%!/FUN`FRAME))]%r[u(%!/FUN`SCHED_FOOT,%0,words(%q<lst>),sub(words(%q<all>),words(%q<lst>)))]
       # "2 in the next 30 days", and how to see the rest when the window hides some.
       FUN`SCHED_FOOT: |-
         [if(isint(%0),%1 in the next %0 days[if(%2,[chr(44)] %2 later: +scenes <days>)],%1 scheduled)]

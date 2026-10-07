@@ -778,6 +778,7 @@ public class SceneRoleplayIntegrationTests
 		var later = await Schedule($"Later_{Tag}", At(10, 12));
 		await Schedule($"Far_{Tag}", At(60, 12));
 		await Schedule($"Missed_{Tag}", DateTimeOffset.UtcNow.AddMinutes(-10).ToUnixTimeSeconds());
+		await Schedule($"Gone_{Tag}", DateTimeOffset.UtcNow.AddHours(-2).ToUnixTimeSeconds());
 
 		static List<string> Lines(IEnumerable<string> said) =>
 			said.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
@@ -803,6 +804,7 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(Row($"Far_{Tag}")).IsEqualTo(-1).Because("by default the schedule looks 30 days ahead");
 		await Assert.That(table[Row($"Missed_{Tag}")]).Contains(" late ").Because("a scene past its time that never started reads late, as on the portal");
 		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(" scheduled ");
+		await Assert.That(Row($"Gone_{Tag}")).IsEqualTo(-1).Because("a scene more than an hour past its time that never started leaves the schedule, as on the portal");
 		var footer = table.Single(l => l.Contains("in the next 30 days"));
 		await Assert.That(footer).Contains("later: +scenes <days>").Because("the footer says how far it looked, and how to see what it left out");
 
