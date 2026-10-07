@@ -103,10 +103,17 @@ public static class ThemeTokens
 	[
 		(Text, Background),
 		(Text, Surface),
+		(Text, Surface3),
+		(TextDim, Background),
 		(TextDim, Surface),
+		(TextDim, Surface3),
+		(TextFaint, Background),
 		(TextFaint, Surface),
+		(TextFaint, Surface3),
 		(Accent, Background),
 		(Accent, Surface),
+		(Accent, Surface2),
+		(Accent, Surface3),
 		(Warn, Surface),
 		(LinkMissing, Surface),
 	];
@@ -163,17 +170,17 @@ public static class BuiltInThemes
 
 	/// <summary>Fantasy: scorched parchment, inscribed capitals in rubric red, fleurons and flourished corners.</summary>
 	public static readonly PortalTheme Fantasy = Genre("fantasy", "Fantasy", dark: false,
-		["#ecdfc2", "#f7eed6", "#eee0c0", "#e4d3ae", "#d9c59a", "#2b1d0e", "#5a4630", "#6b5640", "#c9b083", "#dfcda5", "#8c1c13", "#8a4b00", "#a32a1d"],
+		["#ecdfc2", "#f7eed6", "#eee0c0", "#e4d3ae", "#d9c59a", "#2b1d0e", "#5a4630", "#5e4a35", "#c9b083", "#dfcda5", "#8c1c13", "#8a4b00", "#a32a1d"],
 		display: "cinzel", body: "serif", corners: "soft", texture: "parchment", ornament: "fleuron", frame: "filigree", titles: "normal", effect: "gilt", imagery: "sepia");
 
 	/// <summary>Historical: a foxed old page, an old-style face pressed into it, double rules and engraved frames.</summary>
 	public static readonly PortalTheme Historical = Genre("historical", "Historical", dark: false,
-		["#e9e2d1", "#f5f0e3", "#ebe4d3", "#e2d9c4", "#d6cbb2", "#2a2620", "#57503f", "#6a6250", "#c6b99b", "#ddd3bd", "#6b3e26", "#7f4f00", "#a33a2a"],
+		["#e9e2d1", "#f5f0e3", "#ebe4d3", "#e2d9c4", "#d6cbb2", "#2a2620", "#4f4839", "#524b3c", "#c6b99b", "#ddd3bd", "#6b3e26", "#7f4f00", "#a33a2a"],
 		display: "fell", body: "serif", corners: "sharp", texture: "foxing", ornament: "double", frame: "engraved", titles: "normal", effect: "emboss", imagery: "sepia");
 
 	/// <summary>Horror: near-black pooled with blood, blackletter between daggers, glowing like embers, cards that drip.</summary>
 	public static readonly PortalTheme Horror = Genre("horror", "Horror", dark: true,
-		["#0c0707", "#150d0d", "#1d1212", "#100909", "#080404", "#ecdede", "#ad9a9a", "#928080", "#3a2222", "#261616", "#e0453a", "#d9a441", "#ff8a7a"],
+		["#0c0707", "#150d0d", "#1d1212", "#100909", "#080404", "#ecdede", "#b5a3a3", "#a08e8e", "#3a2222", "#261616", "#f05a4e", "#d9a441", "#ff8a7a"],
 		display: "grenze", body: "ui", corners: "sharp", texture: "blood", ornament: "cross", frame: "drip", titles: "normal", effect: "ember", imagery: "tint");
 
 	/// <summary>Modern: Swiss style, white and cobalt, a geometric sans in capitals on a layout grid, black and white pictures.</summary>
@@ -188,7 +195,7 @@ public static class BuiltInThemes
 
 	/// <summary>Romance: blush and rose, scattered petals, an italic garamond between hearts, lace-edged cards.</summary>
 	public static readonly PortalTheme Romance = Genre("romance", "Romance", dark: false,
-		["#f9edf0", "#fffafb", "#f8e9ee", "#f2e0e6", "#edd4dc", "#2d1a20", "#6b4b55", "#7d5c66", "#e6c9d3", "#f0dde3", "#b0306a", "#8f4b00", "#b3261e"],
+		["#f9edf0", "#fffafb", "#f8e9ee", "#f2e0e6", "#edd4dc", "#2d1a20", "#6b4b55", "#735560", "#e6c9d3", "#f0dde3", "#b0306a", "#8f4b00", "#b3261e"],
 		display: "cormorant", body: "serif", corners: "round", texture: "petals", ornament: "heart", frame: "scallop", titles: "italic", effect: "gilt", imagery: "tint");
 
 	/// <summary>Science fiction: deep space and cyan, wide glowing capitals in brackets, scanlines and targeting corners.</summary>
@@ -289,10 +296,12 @@ public static class ThemeResolver
 		var (tokens, style) = Complete(theme.Tokens);
 		var bg = ThemeColor.Parse(tokens[ThemeTokens.Background]);
 		var surface = ThemeColor.Parse(tokens[ThemeTokens.Surface]);
+		// A chosen accent is drawn on the page, cards, the current sidebar row and the sidebar itself.
+		ThemeColor[] grounds = [bg, surface, ThemeColor.Parse(tokens[ThemeTokens.Surface2]), ThemeColor.Parse(tokens[ThemeTokens.Surface3])];
 
 		var requested = ThemeColor.TryParse(accent, out var chosen) ? chosen : (ThemeColor?)null;
 		var accentColor = requested is { } own
-			? ReadableAgainst(own, theme.Dark, ThemeTokens.TextContrast, bg, surface)
+			? ReadableAgainst(own, theme.Dark, ThemeTokens.TextContrast, grounds)
 			: ThemeColor.Parse(tokens[ThemeTokens.Accent]);
 		tokens[ThemeTokens.Accent] = accentColor.Hex;
 

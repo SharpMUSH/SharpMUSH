@@ -119,7 +119,7 @@ public static class ThemeStyles
 			"corners" => (CornerTicks(accent), "solid", "1px", "none"),
 			"glow" => (null, "solid", "1px", $"0 0 0 1px {Rgba(accent, 0.22)}, 0 0 22px {Rgba(accent, 0.14)}"),
 			"inset" => (null, "solid", "1px", $"inset 0 0 0 3px var(--surface), inset 0 0 0 4px {border.Hex}"),
-			"filigree" => (Corners4(Filigree(accent), 30, 2), "solid", "1px", "none"),
+			"filigree" => (Corners4(Filigree(accent), 30, 2, shown: 24), "solid", "1px", "none"),
 			"engraved" => (null, "solid", "2px", $"inset 0 0 0 3px var(--surface), inset 0 0 0 4px {Rgba(text, 0.45)}"),
 			"drip" => ($"{Drips(accent)} left top / 120px 14px repeat-x", "solid", "1px", $"0 0 18px {Rgba(accent, 0.10)}"),
 			"tape" => (Corners4(Tape(dark), 40, 0, mirror: true, topOnly: true), "solid", "1px", dark ? "0 8px 18px rgba(0,0,0,0.45)" : "0 6px 14px rgba(0,0,0,0.10)"),
@@ -211,17 +211,19 @@ public static class ThemeStyles
 
 	/// <summary>
 	/// A corner drawing (drawn for the top-left) placed on the corners of a card, turned for each, or with
-	/// <paramref name="mirror"/> flipped instead. <paramref name="topOnly"/> keeps it to the two top corners.
+	/// <paramref name="mirror"/> flipped instead. <paramref name="topOnly"/> keeps it to the two top corners, and
+	/// <paramref name="shown"/> draws it smaller than it was drawn, to keep it clear of a card's text.
 	/// </summary>
-	private static string Corners4(string drawing, int size, int inset, bool mirror = false, bool topOnly = false)
+	private static string Corners4(string drawing, int size, int inset, bool mirror = false, bool topOnly = false, int? shown = null)
 	{
+		var px = shown ?? size;
 		var c = F(size / 2.0);
 		string[] turns = mirror
 			? ["", $"translate({size} 0) scale(-1 1)", $"translate({size} {size}) scale(-1 -1)", $"translate(0 {size}) scale(1 -1)"]
 			: ["", $"rotate(90 {c} {c})", $"rotate(180 {c} {c})", $"rotate(270 {c} {c})"];
 		string[] places = [$"left {inset}px top {inset}px", $"right {inset}px top {inset}px", $"right {inset}px bottom {inset}px", $"left {inset}px bottom {inset}px"];
 		return string.Join(", ", turns.Zip(places, (turn, place) =>
-			$"{Svg($"<g transform='{turn}'>{drawing}</g>", size, size)} {place} / {size}px {size}px no-repeat").Take(topOnly ? 2 : 4));
+			$"{Svg($"<g transform='{turn}'>{drawing}</g>", px, px, $"0 0 {size} {size}")} {place} / {px}px {px}px no-repeat").Take(topOnly ? 2 : 4));
 	}
 
 	/// <summary>A scrolled flourish for a corner, kept to the card's edge.</summary>
@@ -321,10 +323,10 @@ public static class ThemeStyles
 				+ $"radial-gradient(70% 70% at 100% 100%, {Rgba(ink, 0.05)}, {Rgba(ink, 0)} 70%), "
 				+ $"{Noise(accent, 0.16, 0.012, 600)}, {Noise(ink, 0.05)}", "100% 100%, 100% 100%, 100% 100%, 180px 180px"),
 			// Parchment: edges browned as if near a flame, stains, and fibres.
-			"parchment" => ($"radial-gradient(ellipse 75% 70% at 50% 45%, {Rgba(ink, 0)} 50%, {Rgba(accent, dark ? 0.2 : 0.16)} 85%, {Rgba(ink, dark ? 0.3 : 0.24)} 100%), "
-				+ $"{Noise(ink, dark ? 0.12 : 0.16, 0.018, 500)}, {Noise(ink, dark ? 0.07 : 0.10)}", "100% 100%, 100% 100%, 180px 180px"),
+			"parchment" => ($"radial-gradient(ellipse 75% 70% at 50% 45%, {Rgba(ink, 0)} 50%, {Rgba(accent, dark ? 0.12 : 0.09)} 85%, {Rgba(ink, dark ? 0.2 : 0.15)} 100%), "
+				+ $"{Noise(ink, dark ? 0.08 : 0.10, 0.018, 500)}, {Noise(ink, dark ? 0.07 : 0.10)}", "100% 100%, 100% 100%, 180px 180px"),
 			// Foxing: the brown spots of an old book, on a faint weave, browning at the edges.
-			"foxing" => ($"radial-gradient(ellipse at 50% 45%, {Rgba(ink, 0)} 55%, {Rgba(ink, dark ? 0.2 : 0.14)} 100%), "
+			"foxing" => ($"radial-gradient(ellipse at 50% 45%, {Rgba(ink, 0)} 55%, {Rgba(ink, dark ? 0.14 : 0.09)} 100%), "
 				+ $"radial-gradient(circle at 40px 70px, {Rgba(accent, 0.14)} 0 2px, {Rgba(accent, 0)} 9px), "
 				+ $"radial-gradient(circle at 210px 30px, {Rgba(accent, 0.10)} 0 3px, {Rgba(accent, 0)} 12px), "
 				+ $"radial-gradient(circle at 270px 240px, {Rgba(accent, 0.12)} 0 1.5px, {Rgba(accent, 0)} 7px), "
@@ -334,8 +336,8 @@ public static class ThemeStyles
 				"100% 100%, 317px 289px, 411px 373px, 523px 467px, 389px 541px, 180px 180px, auto"),
 			// Blood: a red pooling from below and the corner, stained and grainy.
 			"blood" => ($"radial-gradient(120% 70% at 50% 115%, {Rgba(accent, 0.24)}, {Rgba(accent, 0)} 60%), "
-				+ $"radial-gradient(60% 50% at 0% 0%, {Rgba(accent, 0.12)}, {Rgba(accent, 0)} 70%), "
-				+ $"{Noise(accent, 0.14, 0.02, 400)}, {Noise(ink, 0.06)}", "100% 100%, 100% 100%, 100% 100%, 180px 180px"),
+				+ $"radial-gradient(60% 50% at 100% 100%, {Rgba(accent, 0.08)}, {Rgba(accent, 0)} 70%), "
+				+ $"{Noise(accent, 0.10, 0.02, 400)}, {Noise(ink, 0.06)}", "100% 100%, 100% 100%, 100% 100%, 180px 180px"),
 			// Light through venetian blinds, falling off into the dark away from the window.
 			"blinds" => ($"radial-gradient(75% 90% at 90% 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,{(dark ? "0.6" : "0.12")}) 100%), "
 				+ $"repeating-linear-gradient(-32deg, {Rgba(ink, 0)} 0 34px, {Rgba(ink, dark ? 0.075 : 0.06)} 34px 58px), "
