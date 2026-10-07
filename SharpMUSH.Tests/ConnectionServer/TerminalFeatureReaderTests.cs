@@ -84,4 +84,22 @@ public class TerminalFeatureReaderTests
 		await Assert.That(TerminalFeatureReader.GraphicsName(TerminalOutputFeatures.Sixel | TerminalOutputFeatures.BlockArt))
 			.IsEqualTo(TerminalGraphics.Sixel);
 	}
+
+	[Test]
+	public async Task ProbeOf_ReadsAnUnansweredQuestionAsUnknown()
+	{
+		// A second report that did not settle Kitty replaces an earlier yes with an empty value.
+		var metadata = new Dictionary<string, string>
+		{
+			[TerminalCapabilityReader.TerminalTypesKey] = "XTERM-256COLOR",
+			[TerminalFeatureReader.ProbeKittyKey] = "",
+			[TerminalFeatureReader.ProbeSixelKey] = "0",
+			[TerminalFeatureReader.ProbeVersionKey] = "",
+			[TerminalFeatureReader.ProbeCellSizeKey] = ""
+		};
+
+		await Assert.That(TerminalFeatureReader.ProbeOf(metadata))
+			.IsEqualTo(new TerminalProbeResult(null, false, null, 0, 0));
+		await Assert.That(TerminalFeatureReader.For(metadata)).IsEqualTo(TerminalOutputFeatures.None);
+	}
 }

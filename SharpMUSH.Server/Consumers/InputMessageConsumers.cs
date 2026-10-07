@@ -420,23 +420,15 @@ public class TerminalReportConsumer(
 			return;
 		}
 
+		// Every key is written, an unanswered question as empty, since a new report replaces the last one
+		// whole: a key left from an earlier answer would keep a feature the terminal no longer has.
 		var report = message.Report;
-		if (report.KittyGraphics is { } kitty)
-		{
-			connectionService.Update(message.Handle, TerminalFeatureReader.ProbeKittyKey, kitty ? "1" : "0");
-		}
-
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeKittyKey,
+			report.KittyGraphics switch { true => "1", false => "0", null => string.Empty });
 		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeSixelKey, report.Sixel ? "1" : "0");
-		if (!string.IsNullOrEmpty(report.Version))
-		{
-			connectionService.Update(message.Handle, TerminalFeatureReader.ProbeVersionKey, report.Version);
-		}
-
-		if (report is { CellWidth: > 0, CellHeight: > 0 })
-		{
-			connectionService.Update(message.Handle, TerminalFeatureReader.ProbeCellSizeKey,
-				$"{report.CellWidth}x{report.CellHeight}");
-		}
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeVersionKey, report.Version ?? string.Empty);
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeCellSizeKey,
+			report is { CellWidth: > 0, CellHeight: > 0 } ? $"{report.CellWidth}x{report.CellHeight}" : string.Empty);
 	}
 }
 

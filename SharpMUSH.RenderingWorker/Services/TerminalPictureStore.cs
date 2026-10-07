@@ -41,6 +41,9 @@ public sealed class TerminalPictureStore : IDisposable
 	/// <summary>How long a failed fetch is remembered before the address is tried again.</summary>
 	private static readonly TimeSpan FailureMemory = TimeSpan.FromMinutes(10);
 
+	/// <summary>How many failed addresses are remembered at most.</summary>
+	public const int MaxFailures = 1024;
+
 	private readonly ConcurrentDictionary<string, Entry> _entries = new(StringComparer.Ordinal);
 	private readonly HttpClient _remote;
 	private readonly HttpClient? _local;
@@ -58,8 +61,9 @@ public sealed class TerminalPictureStore : IDisposable
 	/// <param name="maxCacheBytes">How many bytes of pixels to hold.</param>
 	/// <param name="logger">Where failed fetches are logged.</param>
 	/// <param name="remoteHandler">What fetches pictures from elsewhere; the guarded handler outside tests.</param>
+	/// <param name="localHandler">What fetches the game's own pictures; one that follows no redirect outside tests.</param>
 	public TerminalPictureStore(string? baseAddress, long maxCacheBytes, ILogger<TerminalPictureStore> logger,
-		HttpMessageHandler remoteHandler)
+		HttpMessageHandler remoteHandler, HttpMessageHandler? localHandler = null)
 	{
 		_logger = logger;
 		MaxCacheBytes = maxCacheBytes;
@@ -67,12 +71,20 @@ public sealed class TerminalPictureStore : IDisposable
 		if (Uri.TryCreate(baseAddress, UriKind.Absolute, out var root) && root.Scheme is "http" or "https")
 		{
 			_baseAddress = root;
-			_local = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+			// Unguarded, since the game's pictures may well be on a private address; so it reaches only that
+			// origin, and a redirect from it is not followed anywhere else.
+			_local = new HttpClient(localHandler ?? new SocketsHttpHandler { AllowAutoRedirect = false })
+			{
+				Timeout = TimeSpan.FromSeconds(10)
+			};
 		}
 	}
 
 	/// <summary>How many bytes of pixels are held at most.</summary>
 	public long MaxCacheBytes { get; }
+
+	/// <summary>How many addresses are held: pictures, fetches under way and remembered failures.</summary>
+	public int AddressCount => _entries.Count;
 
 	/// <summary>
 	/// The picture at <paramref name="source"/>, when it is held. When it is not, a fetch is started and
@@ -111,18 +123,27 @@ public sealed class TerminalPictureStore : IDisposable
 	private Uri? Resolve(string source)
 	{
 		if (string.IsNullOrWhiteSpace(source)) return null;
-		if (Uri.TryCreate(source, UriKind.Absolute, out var absolute))
+		// A path from the root is relative here; on Unix Uri would read it as an absolute file address.
+		if (!source.StartsWith('/') && Uri.TryCreate(source, UriKind.Absolute, out var absolute))
 			return absolute.Scheme is "http" or "https" ? absolute : null;
 		// Relative: one of the game's own pictures, which is fetched only from where the game says they are.
 		if (_baseAddress is null || source.StartsWith("//", StringComparison.Ordinal)) return null;
-		return Uri.TryCreate(_baseAddress, source, out var local) && local.Host == _baseAddress.Host ? local : null;
+		return Uri.TryCreate(_baseAddress, source, out var local) && IsGameOrigin(local) ? local : null;
 	}
+
+	/// <summary>
+	/// Whether <paramref name="address"/> is on the game's own origin: the same scheme, host and port as
+	/// <c>Rendering:ImageBaseAddress</c>. Only those are fetched without the guard.
+	/// </summary>
+	private bool IsGameOrigin(Uri address) =>
+		_baseAddress is not null && Uri.Compare(address, _baseAddress, UriComponents.SchemeAndServer | UriComponents.Port,
+			UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0;
 
 	private async Task FetchAsync(Uri address, Entry entry)
 	{
 		try
 		{
-			var client = _baseAddress is not null && address.Host == _baseAddress.Host && _local is not null ? _local : _remote;
+			var client = _local is not null && IsGameOrigin(address) ? _local : _remote;
 			using var response = await client.GetAsync(address, HttpCompletionOption.ResponseHeadersRead);
 			response.EnsureSuccessStatusCode();
 			if (response.Content.Headers.ContentLength > MaxDownloadBytes)
@@ -140,6 +161,7 @@ public sealed class TerminalPictureStore : IDisposable
 		{
 			entry.FailedAt = Environment.TickCount64;
 			_logger.LogDebug(ex, "Could not fetch the picture at {Address}", address);
+			ForgetOldestFailures();
 		}
 	}
 
@@ -238,13 +260,19 @@ public sealed class TerminalPictureStore : IDisposable
 			if (_entries.TryRemove(address, out var removed) && removed.Picture is { } dropped)
 				Interlocked.Add(ref _bytes, -dropped.Rgba.Length);
 		}
+	}
 
-		// Failures are small but unbounded in number; keep only the recent ones.
-		if (_entries.Count > 4096)
-		{
-			foreach (var (address, entry) in _entries.Where(pair => pair.Value.Picture is null && pair.Value.Fetch?.IsCompleted == true))
-				if (Environment.TickCount64 - entry.FailedAt > FailureMemory.TotalMilliseconds) _entries.TryRemove(address, out _);
-		}
+	/// <summary>
+	/// Drops the oldest remembered failures past <see cref="MaxFailures"/>. A failure holds no pixels, so
+	/// <see cref="Trim"/> never counts it, but every address that failed would otherwise be kept.
+	/// </summary>
+	private void ForgetOldestFailures()
+	{
+		var failures = _entries.Where(pair => pair.Value.Picture is null && pair.Value.Fetch?.IsCompleted == true).ToArray();
+		if (failures.Length <= MaxFailures) return;
+
+		foreach (var (address, _) in failures.OrderBy(pair => pair.Value.FailedAt).Take(failures.Length - MaxFailures))
+			_entries.TryRemove(address, out _);
 	}
 
 	/// <summary>

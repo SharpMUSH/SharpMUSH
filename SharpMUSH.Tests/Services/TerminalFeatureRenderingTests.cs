@@ -89,6 +89,43 @@ public class TerminalFeatureRenderingTests
 	}
 
 	[Test]
+	public async Task OnlyTheGamesExactOrigin_IsFetchedWithoutTheGuard()
+	{
+		var guarded = new PictureHandler(HttpStatusCode.OK);
+		var local = new PictureHandler(HttpStatusCode.OK);
+		using var store = new TerminalPictureStore("http://game.example:8080/", 1 << 20,
+			NullLogger<TerminalPictureStore>.Instance, guarded, local);
+
+		foreach (var source in new[]
+			{
+				"/pictures/cat.png", "https://game.example:8080/cat.png", "http://game.example:9000/cat.png",
+				"http://game.example/cat.png"
+			})
+		{
+			store.TryGet(source, out _, out var pending);
+			if (pending is not null) await pending;
+		}
+
+		await Assert.That(local.Requests).IsEqualTo(1).Because("only the relative address is on the game's origin");
+		await Assert.That(guarded.Requests).IsEqualTo(3).Because("another scheme or port is someone else's server");
+	}
+
+	[Test]
+	public async Task FailedAddresses_AreForgottenPastTheLimit()
+	{
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance,
+			new PictureHandler(HttpStatusCode.NotFound));
+
+		for (var i = 0; i < TerminalPictureStore.MaxFailures + 50; i++)
+		{
+			store.TryGet($"https://pictures.example/{i}.png", out _, out var pending);
+			if (pending is not null) await pending;
+		}
+
+		await Assert.That(store.AddressCount).IsLessThanOrEqualTo(TerminalPictureStore.MaxFailures + 1);
+	}
+
+	[Test]
 	public async Task NoPictureFeature_LeavesTheArtAndFetchesNothing()
 	{
 		var handler = new PictureHandler(HttpStatusCode.OK);

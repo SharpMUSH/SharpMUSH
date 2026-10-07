@@ -186,9 +186,10 @@ public static class TerminalFeatureReader
 	/// <summary>The terminal's answers recorded in <paramref name="metadata"/>, or null when it was never asked.</summary>
 	public static TerminalProbeResult? ProbeOf(IReadOnlyDictionary<string, string> metadata)
 	{
-		var kitty = metadata.GetValueOrDefault(ProbeKittyKey);
+		// A question the terminal left unanswered is stored empty.
+		var kitty = metadata.GetValueOrDefault(ProbeKittyKey) is { Length: > 0 } k ? k : null;
 		var sixel = metadata.GetValueOrDefault(ProbeSixelKey);
-		var version = metadata.GetValueOrDefault(ProbeVersionKey);
+		var version = metadata.GetValueOrDefault(ProbeVersionKey) is { Length: > 0 } v ? v : null;
 		if (kitty is null && sixel is null && version is null) return null;
 
 		var size = metadata.GetValueOrDefault(ProbeCellSizeKey, "").Split('x');
