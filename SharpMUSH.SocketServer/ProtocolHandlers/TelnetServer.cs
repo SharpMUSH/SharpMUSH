@@ -29,6 +29,7 @@ public class TelnetServer : ConnectionHandler
 	private readonly ITelnetInterpreterFactory _telnetFactory;
 	private readonly ConnectionServerOptions _options;
 	private readonly MsspReportHolder _mssp;
+	private readonly TerminalProbes _probes;
 
 	/// <summary>
 	/// How much a client may type before its connection is registered. Registration normally takes
@@ -44,7 +45,8 @@ public class TelnetServer : ConnectionHandler
 		IDescriptorGeneratorService descriptorGenerator,
 		ITelnetInterpreterFactory telnetFactory,
 		ConnectionServerOptions options,
-		MsspReportHolder mssp)
+		MsspReportHolder mssp,
+		TerminalProbes probes)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
@@ -54,6 +56,7 @@ public class TelnetServer : ConnectionHandler
 		_telnetFactory = telnetFactory;
 		_options = options;
 		_mssp = mssp;
+		_probes = probes;
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -174,7 +177,10 @@ public class TelnetServer : ConnectionHandler
 		async ValueTask AnnounceTelnetIfNegotiatedAsync()
 		{
 			if (Volatile.Read(ref telnetAnnounced) != 0
-					|| telnetInterpreter?.PluginManager?.GetAllPlugins().Any(plugin => plugin.IsNegotiated) != true
+					// The terminal-query plugin counts itself negotiated as soon as it is registered — it is not a
+					// telnet option and nothing is exchanged — so it says nothing about whether the client speaks telnet.
+					|| telnetInterpreter?.PluginManager?.GetAllPlugins()
+						.Any(plugin => plugin.IsNegotiated && plugin is not TerminalQueryProtocol) != true
 					|| Interlocked.Exchange(ref telnetAnnounced, 1) != 0)
 			{
 				return;
@@ -186,6 +192,9 @@ public class TelnetServer : ConnectionHandler
 		}
 
 		IReadOnlyList<string> publishedTerminalTypes = [];
+		// What the terminal last answered when asked, kept so a later terminal-type report and a later
+		// answer each work out the terminal's features from both.
+		TerminalProbeResult? probeResult = null;
 		var terminalTypeProtocol = new TerminalTypeProtocol().OnTerminalTypes(
 			async terminalTypes =>
 			{
@@ -204,7 +213,7 @@ public class TelnetServer : ConnectionHandler
 				// say it, that they could display them.
 				await PublishAfterRegistrationAsync(async () =>
 				{
-					TryApplyTerminalCapabilities(nextPort, snapshot);
+					TryApplyTerminalCapabilities(nextPort, snapshot, probeResult);
 					await _publishEndpoint.Publish(
 						new TerminalTypeNegotiatedMessage(nextPort, snapshot), ct);
 				});
@@ -255,7 +264,25 @@ public class TelnetServer : ConnectionHandler
 			.AddPlugin<MCCPProtocol>()
 			// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 			// terminfo() reports as the client. Without it every connection is "unknown".
-			.AddPlugin(terminalTypeProtocol);
+			.AddPlugin(terminalTypeProtocol)
+			// Asks the terminal what it can draw, only when the player asks for it (SOCKSET graphics=detect):
+			// a client in line mode echoes the answers, so asking unprompted would print them at everyone.
+			.AddPlugin<TerminalQueryProtocol>().OnTerminalReport(async report =>
+			{
+				var answered = new TerminalProbeResult(report.KittyGraphics, report.Sixel == true, report.Version,
+					report.CellWidth ?? 0, report.CellHeight ?? 0);
+				probeResult = answered;
+				await PublishAfterRegistrationAsync(async () =>
+				{
+					_connectionService.UpdateCapabilities(nextPort, current => current with
+					{
+						DetectedFeatures = TerminalFeatureReader.Detect(publishedTerminalTypes, answered),
+						CellWidth = answered.CellWidth,
+						CellHeight = answered.CellHeight
+					});
+					await _publishEndpoint.Publish(new TerminalReportMessage(nextPort, answered), ct);
+				});
+			});
 
 		// The handshake itself — the hello, consuming PUEBLOCLIENT, and the start sequence that moves the
 		// client into HTML mode — is TelnetNegotiationCore's. What is left here is the part that is this
@@ -319,6 +346,11 @@ public class TelnetServer : ConnectionHandler
 		// with the client's first packet — before an assignment below it would have run, and every callback
 		// that reaches for the interpreter would find null.
 		telnetInterpreter = telnet;
+		if (telnet.PluginManager?.GetPlugin<TerminalQueryProtocol>() is { } terminalQueries)
+		{
+			_probes.Register(nextPort, () => terminalQueries.ProbeAsync());
+		}
+
 		var readTask = ReadAndObserveNegotiationAsync(
 			telnet, connection.Transport.Input, AnnounceTelnetIfNegotiatedAsync, ct);
 		try
@@ -399,6 +431,7 @@ public class TelnetServer : ConnectionHandler
 		}
 		finally
 		{
+			_probes.Unregister(nextPort);
 			await StopTelnetAsync(readLifetime, readTask, telnet, connection.ConnectionId);
 		}
 	}
@@ -488,7 +521,7 @@ public class TelnetServer : ConnectionHandler
 	/// negotiation read loop on a retry loop would not be.
 	/// </para>
 	/// </summary>
-	private void TryApplyTerminalCapabilities(long handle, IReadOnlyList<string> terminalTypes)
+	private void TryApplyTerminalCapabilities(long handle, IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe)
 	{
 		var connection = _connectionService.Get(handle);
 		if (connection is null)
@@ -506,7 +539,8 @@ public class TelnetServer : ConnectionHandler
 			SupportsXterm256 = reported.Xterm256 && !reported.ScreenReader,
 			SupportsTruecolor = reported.Truecolor && !reported.ScreenReader,
 			SupportsUtf8 = reported.Utf8,
-			ScreenReader = reported.ScreenReader
+			ScreenReader = reported.ScreenReader,
+			DetectedFeatures = TerminalFeatureReader.Detect(terminalTypes, probe)
 		});
 
 		if (updated)

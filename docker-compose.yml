@@ -58,7 +58,10 @@ services:
       - Rendering__SocketPath=/run/sharpmush/render.sock
     volumes:
       - render-socket:/run/sharpmush
-    network_mode: none
+    # A network of its own, so it can fetch the pictures terminals draw (SOCKSET graphics) while reaching
+    # none of the other services. The fetch also refuses private and loopback addresses.
+    networks:
+      - renderer-egress
     restart: unless-stopped
 
   sharpmush-server:
@@ -96,5 +99,7 @@ volumes:
   app-data:   # LMDB world + wiki assets
 
 networks:
+  renderer-egress:
+    driver: bridge
   sharpmush-net:
     driver: bridge

@@ -325,18 +325,19 @@ public partial class Commands
 
 		var result = SocketOptions.Set(connection, argument[..separator], argument[(separator + 1)..]);
 		await NotifyService.NotifyLocalized(handle, result.Key, result.Arguments);
-		await PublishColorStyleAsync(connection);
+		await PublishSocketPinsAsync(connection, result.Probe);
 
 		return new None();
 	}
 
 	/// <summary>
-	/// A colour-style pin changes nothing until the socket owner knows about it — that process, not
-	/// this one, renders output. The value is read back off the descriptor rather than out of the
-	/// <see cref="SocketOptions.SocksetResult"/>, which carries the message and not the setting, so
-	/// this stays correct for any option name that ends up writing the key.
+	/// A colour-style or terminal-feature pin changes nothing until the socket owner knows about it — that
+	/// process, not this one, renders output. The values are read back off the descriptor rather than out
+	/// of the <see cref="SocketOptions.SocksetResult"/>, which carries the message and not the setting, so
+	/// this stays correct for any option name that ends up writing the keys.
 	/// </summary>
-	private async ValueTask PublishColorStyleAsync(IConnectionService.ConnectionData connection)
+	/// <param name="probe">Also have the socket owner ask the terminal what it can draw.</param>
+	private async ValueTask PublishSocketPinsAsync(IConnectionService.ConnectionData connection, bool probe)
 	{
 		if (MessageBus is null)
 		{
@@ -346,6 +347,15 @@ public partial class Commands
 		// Absent means "auto": the flags and the negotiated terminal decide again.
 		await MessageBus.Publish(new UpdateColorStyleMessage(connection.Handle,
 			connection.Metadata.GetValueOrDefault(SocketOptions.ColorStyleKey)));
+		await MessageBus.Publish(new UpdateTerminalFeaturesMessage(connection.Handle,
+			TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.HyperlinksKey),
+			TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.CommandLinksKey),
+			connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey)));
+
+		if (probe)
+		{
+			await MessageBus.Publish(new ProbeTerminalMessage(connection.Handle));
+		}
 	}
 
 	/// <summary>
@@ -401,15 +411,17 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		var probe = false;
 		for (var i = 0; i + 1 < pairs.Length; i += 2)
 		{
 			var result = SocketOptions.Set(target, pairs[i], pairs[i + 1]);
 			await NotifyService.NotifyLocalized(executor, result.Key, result.Arguments);
+			probe |= result.Probe;
 		}
 
 		// Once, after the whole run: several pairs may be set in one command, and only the descriptor's
 		// final state is worth telling the socket owner about.
-		await PublishColorStyleAsync(target);
+		await PublishSocketPinsAsync(target, probe);
 
 		// An odd trailing element means the last option arrived without a value; PennMUSH answers the
 		// same way it answers an empty option name.
@@ -692,19 +704,33 @@ public static class SocketOptions
 		Row("Color Style", colorStyle
 			?? $"auto ({TerminalCapabilityReader.ColorStyleFor(connection.Metadata, colorFlags)})");
 
+		// The same "auto (...)" convention as the colour style: what is pinned, or what the terminal's
+		// reports and answers give, read through the calculation the renderer uses.
+		var features = TerminalFeatureReader.For(connection.Metadata);
+		Row("Hyperlinks", PinnedOrAuto(TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.HyperlinksKey),
+			features.HasFlag(TerminalOutputFeatures.Hyperlinks)));
+		Row("Command Links", PinnedOrAuto(TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.CommandLinksKey),
+			features.HasFlag(TerminalOutputFeatures.CommandLinks)));
+		Row("Graphics", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey)
+			?? $"auto ({TerminalFeatureReader.GraphicsName(features)})");
+
 		builder.Append($"{"Prompt Newlines",-15}:  {YesNo(connection.Metadata.GetValueOrDefault(PromptNewlinesKey) == "1")}");
 
 		return builder.ToString();
 
 		static string YesNo(bool value) => value ? "Yes" : "No";
+		static string OnOff(bool value) => value ? "on" : "off";
+		static string PinnedOrAuto(bool? pin, bool resolved) => pin is { } pinned ? OnOff(pinned) : $"auto ({OnOff(resolved)})";
 	}
+
 
 	/// <summary>
 	/// The message an option assignment produced, as a resource key plus its format arguments, so the
 	/// caller can render it in the reader's locale. The socket <c>SOCKSET</c> answers a descriptor and
 	/// <c>@sockset</c> answers an object; both go through <c>NotifyLocalized</c>.
 	/// </summary>
-	public readonly record struct SocksetResult(string Key, object[] Arguments)
+	/// <param name="Probe">The option asks the terminal what it can draw (<c>graphics=detect</c>).</param>
+	public readonly record struct SocksetResult(string Key, object[] Arguments, bool Probe = false)
 	{
 		public static SocksetResult Of(string key) => new(key, []);
 		public static SocksetResult Of(string key, params object[] arguments) => new(key, arguments);
@@ -765,6 +791,17 @@ public static class SocketOptions
 			case "COLORSTYLE":
 			case "COLOURSTYLE":
 				return SetColorStyle(value);
+
+			case "HYPERLINKS":
+				return SetLinkPin(TerminalFeatureReader.HyperlinksKey, value,
+					nameof(ErrorMessages.Notifications.SocksetHyperlinksSetFormat));
+
+			case "COMMANDLINKS":
+				return SetLinkPin(TerminalFeatureReader.CommandLinksKey, value,
+					nameof(ErrorMessages.Notifications.SocksetCommandLinksSetFormat));
+
+			case "GRAPHICS":
+				return SetGraphics(value);
 
 			default:
 				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetInvalidOptionFormat), name);
@@ -833,6 +870,65 @@ public static class SocketOptions
 			}
 
 			return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetColorStyleSetFormat), style);
+		}
+
+		// on, off or auto for a feature the terminal may or may not have. Stored as 1 or 0; auto removes
+		// the pin and hands the decision back to what the terminal reported or answered.
+		SocksetResult SetLinkPin(string key, string newValue, string setKey)
+		{
+			var setting = newValue.Trim().ToLowerInvariant() switch
+			{
+				"auto" => "auto",
+				"on" or "yes" or "1" => "on",
+				"off" or "no" or "0" => "off",
+				_ => null
+			};
+
+			switch (setting)
+			{
+				case null:
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetUnknownLinkSetting));
+				case "auto":
+					connection.Metadata.TryRemove(key, out _);
+					break;
+				default:
+					connection.Metadata[key] = setting == "on" ? "1" : "0";
+					break;
+			}
+
+			return SocksetResult.Of(setKey, setting);
+		}
+
+		// A method pins how pictures are drawn; auto leaves it to the terminal; detect does too, and also asks
+		// the terminal, whose answer comes back with the player's next line.
+		SocksetResult SetGraphics(string newValue)
+		{
+			var setting = newValue.Trim().ToLowerInvariant() switch
+			{
+				"auto" => "auto",
+				"detect" => "detect",
+				"kitty" => TerminalGraphics.Kitty,
+				"iterm2" or "iterm" => TerminalGraphics.Iterm2,
+				"sixel" => TerminalGraphics.Sixel,
+				"blocks" or "block" => TerminalGraphics.Blocks,
+				"off" or "none" or "no" => TerminalGraphics.Off,
+				_ => null
+			};
+
+			switch (setting)
+			{
+				case null:
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetUnknownGraphics));
+				case "auto":
+					connection.Metadata.TryRemove(TerminalFeatureReader.GraphicsKey, out _);
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting);
+				case "detect":
+					connection.Metadata.TryRemove(TerminalFeatureReader.GraphicsKey, out _);
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsDetecting)) with { Probe = true };
+				default:
+					connection.Metadata[TerminalFeatureReader.GraphicsKey] = setting;
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting);
+			}
 		}
 	}
 

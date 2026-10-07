@@ -68,7 +68,7 @@ public class TelnetServerNegotiationTests
 		using var cancellation = new CancellationTokenSource();
 		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), cancellation.Token);
 		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
-			descriptors, new ServerBuilderFactory(plugin), new ConnectionServerOptions(), new MsspReportHolder());
+			descriptors, new ServerBuilderFactory(plugin), new ConnectionServerOptions(), new MsspReportHolder(), new TerminalProbes());
 		try
 		{
 			await Assert.That(async () => await server.OnConnectedAsync(context).WaitAsync(Timeout)).Throws<IOException>();
@@ -164,7 +164,8 @@ public class TelnetServerNegotiationTests
 			descriptors,
 			new ServerBuilderFactory(),
 			options ?? new ConnectionServerOptions(),
-			new MsspReportHolder());
+			new MsspReportHolder(),
+			new TerminalProbes());
 
 		var context = new FakeConnectionContext(
 			new PipeDuplex(clientToServer.Reader, serverToClient.Writer), cts.Token);

@@ -2356,6 +2356,8 @@ With no args, SOCKSET shows the current value of the socket options. With an `<o
 
 Options:
 - colorstyle: See [COLORSTYLE]
+- hyperlinks, commandlinks: See [HYPERLINKS]
+- graphics: See [GRAPHICS]
 - outputprefix: Same as OUTPUTPREFIX
 - outputsuffix: Same as OUTPUTSUFFIX
 - pueblo: Sets Pueblo-related options. If value has md5=...", then it will set the pueblo checksum. If empty, Pueblo mode is turned off.
@@ -2375,6 +2377,8 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 - [TERMINFO()]
 - [pueblo]
 - [COLORSTYLE]
+- [HYPERLINKS]
+- [GRAPHICS]
 - [@prompt]
 :::
 # colorstyle
@@ -2402,6 +2406,63 @@ In the event that your client receives a color that it is unable to display, Sha
 - [COLOR]
 - [XTERM256]
 - [@SOCKSET]
+:::
+# hyperlinks
+# commandlinks
+`SOCKSET hyperlinks=<on|off|auto>`<br>
+`SOCKSET commandlinks=<on|off|auto>`
+
+Some terminals can make links clickable. With hyperlinks on, a web link is sent as an OSC 8 hyperlink, which opens in your browser when clicked. With commandlinks on, a command link (one that runs a command, such as the topics at the end of a help file) is sent as an MSLP link, which your client sends back to the game as a command when clicked.
+
+Neither is sent unless SharpMUSH knows your client reads it, because a client that does not may print the codes as text. 'auto' (the default) decides from your client:
+
+- hyperlinks: on for terminals known to draw them (kitty, Ghostty, WezTerm, foot, Alacritty, Contour, Mudlet).
+- commandlinks: on when your client reports MSLP in its MTTS capabilities.
+
+Use 'on' or 'off' to override that, and 'auto' to go back to it. SOCKSET shows the setting in effect, as "auto (on)" or "auto (off)" when nothing is set. terminfo() includes 'hyperlinks' and 'commandlinks' while they are on.
+
+Example:
+```
+> SOCKSET hyperlinks=on
+Hyperlinks set to 'on'
+```
+
+
+::: seealso
+- [@SOCKSET]
+- [GRAPHICS]
+- [TERMINFO()]
+:::
+# graphics
+`SOCKSET graphics=<value>`<br>
+`@SOCKSET [me|<descriptor>]=graphics,<value>`
+
+Pictures in the game (such as those placed with figure()) are shown as their text art unless your terminal can draw them. The graphics setting says how your terminal draws a picture:
+
+- kitty: the Kitty graphics protocol (kitty, Ghostty, WezTerm). The picture is sent once per connection and drawn in its cells as text, so it scrolls and wraps like text.
+- iterm2: iTerm2 inline images (iTerm2, WezTerm).
+- sixel: sixel graphics (foot, mlterm, Contour, xterm started with sixel support).
+- blocks: coloured half-block characters, two pixels to a cell. Any UTF-8 terminal with colour shows these.
+- off: always the text art.
+- auto: decide from your terminal (the default). Kitty and Ghostty get kitty, WezTerm gets iterm2, and foot, mlterm and Contour get sixel; any other terminal gets the text art.
+- detect: like auto, and also asks your terminal what it can draw. The answer arrives with the next line you send, so send any command afterwards. Use this when your terminal is not one SharpMUSH knows by name.
+
+Kitty pictures and half blocks are only sent to a connection receiving UTF-8. A connection identified as a screen reader always receives the picture's description instead. SOCKSET shows the method in use, as "auto (<method>)" when nothing is set, and terminfo() includes it.
+
+A picture appears in the space its text art takes, so whatever is laid out around it stays where it is. The first time a picture is shown it may appear as its text art while the game fetches it.
+
+Example:
+```
+> SOCKSET graphics=blocks
+Graphics set to 'blocks'
+```
+
+
+::: seealso
+- [@SOCKSET]
+- [HYPERLINKS]
+- [TERMINFO()]
+- [FIGURE()]
 :::
 # @speechmod
 `@speechmod <object>[=<modifier>]`

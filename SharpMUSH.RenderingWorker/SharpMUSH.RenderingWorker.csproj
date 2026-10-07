@@ -13,5 +13,6 @@
     <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Mxp" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Pueblo" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
   </ItemGroup>
 </Project>

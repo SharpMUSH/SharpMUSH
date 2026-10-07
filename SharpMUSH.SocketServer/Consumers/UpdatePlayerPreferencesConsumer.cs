@@ -14,7 +14,8 @@ public class UpdatePlayerPreferencesConsumer(
 	: IMessageConsumer<UpdatePlayerPreferencesMessage>,
 		IMessageConsumer<ClearPlayerOutputPreferencesMessage>,
 		IMessageConsumer<UpdateColorStyleMessage>,
-		IMessageConsumer<UpdateThemeMessage>
+		IMessageConsumer<UpdateThemeMessage>,
+		IMessageConsumer<UpdateTerminalFeaturesMessage>
 {
 	public Task HandleAsync(UpdatePlayerPreferencesMessage message, CancellationToken cancellationToken = default)
 	{
@@ -84,6 +85,24 @@ public class UpdatePlayerPreferencesConsumer(
 		{
 			logger.LogWarning("Could not set the theme for unknown connection handle: {Handle}", message.Handle);
 		}
+
+		return Task.CompletedTask;
+	}
+
+	public Task HandleAsync(UpdateTerminalFeaturesMessage message, CancellationToken cancellationToken = default)
+	{
+		if (connectionService.Get(message.Handle) is null)
+		{
+			logger.LogWarning("Could not set terminal features for unknown connection handle: {Handle}", message.Handle);
+			return Task.CompletedTask;
+		}
+
+		connectionService.UpdateCapabilities(message.Handle, current => current with
+		{
+			HyperlinksPin = message.Hyperlinks,
+			CommandLinksPin = message.CommandLinks,
+			GraphicsPin = message.Graphics
+		});
 
 		return Task.CompletedTask;
 	}

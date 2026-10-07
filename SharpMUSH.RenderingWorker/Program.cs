@@ -36,16 +36,19 @@ public static class Program
 			options.Limits.MaxRequestBodySize = 16 * 1024 * 1024;
 			options.ListenUnixSocket(socketPath, listen => listen.Protocols = HttpProtocols.Http2);
 		});
-		builder.Services.AddSingleton<MarkupOutputRenderer>();
+		builder.Services.AddSingleton<TerminalPictureStore>();
+		builder.Services.AddSingleton<ConnectionPictures>();
+		builder.Services.AddSingleton(sp => new MarkupOutputRenderer(
+			sp.GetRequiredService<TerminalPictureStore>(), sp.GetRequiredService<ConnectionPictures>()));
 		var app = builder.Build();
 		app.MapGet("/health", () => Results.Ok());
-		app.MapPost("/render", (RenderRequest request, MarkupOutputRenderer renderer) =>
+		app.MapPost("/render", async (RenderRequest request, MarkupOutputRenderer renderer, CancellationToken ct) =>
 		{
 			if (request.Context is null || request.Context.Capabilities is null ||
 				(request.Markup is null) == (request.Data is null))
 				return Results.BadRequest();
 			var rendered = request.Markup is not null
-				? renderer.Render(request.Markup, request.Context, request.Prompt)
+				? await renderer.RenderAsync(request.Markup, request.Context, request.Prompt, ct)
 				: new RenderedOutput(request.Data!, true);
 			var bytes = rendered.ApplyOutputTransform
 				? OutputTransformService.Transform(rendered.Data, request.Context.Capabilities)

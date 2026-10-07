@@ -217,6 +217,33 @@ public class SocketCommandTests
 		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault("WIDTH")).IsEqualTo("100");
 	}
 
+	/// <summary>
+	/// The terminal-feature pins: each is stored, shown, and "auto" hands the feature back to what the
+	/// terminal reported. An unknown value is refused rather than stored.
+	/// </summary>
+	[Test]
+	public async Task SocksetPinsTerminalFeatures()
+	{
+		var handle = await LoggedInHandleAsync("SocksetFeatures");
+		var metadata = ConnectionService.Get(handle)!.Metadata;
+
+		await Assert.That(await RunAsync(handle, "SOCKSET HYPERLINKS=on")).Contains("Hyperlinks set to 'on'");
+		await Assert.That(await RunAsync(handle, "SOCKSET GRAPHICS=blocks")).Contains("Graphics set to 'blocks'");
+		await Assert.That(metadata.GetValueOrDefault("HYPERLINKS")).IsEqualTo("1");
+		await Assert.That(metadata.GetValueOrDefault("GRAPHICS")).IsEqualTo("blocks");
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Graphics")).IsNotNull().And.Contains("blocks");
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Hyperlinks")).IsNotNull().And.Contains("on");
+
+		await Assert.That(await RunAsync(handle, "SOCKSET GRAPHICS=auto")).Contains("Graphics set to 'auto'");
+		await Assert.That(metadata.ContainsKey("GRAPHICS")).IsFalse();
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Graphics")).IsNotNull().And.Contains("auto (off)");
+
+		await Assert.That(await RunAsync(handle, "SOCKSET GRAPHICS=hologram"))
+			.Contains("Unknown graphics setting. Valid settings: 'auto', 'detect', 'kitty', 'iterm2', 'sixel', 'blocks', 'off'.");
+		await Assert.That(await RunAsync(handle, "SOCKSET COMMANDLINKS=maybe"))
+			.Contains("Unknown setting. Valid settings: 'on', 'off', 'auto'.");
+	}
+
 	[Test]
 	[Arguments("SOCKSET WIDTH=-1", "Width expects a positive integer.")]
 	[Arguments("SOCKSET WIDTH=wide", "Width expects a positive integer.")]
