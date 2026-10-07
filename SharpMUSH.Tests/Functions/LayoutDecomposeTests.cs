@@ -65,6 +65,21 @@ public class LayoutDecomposeTests
 	public async Task ALayoutRebuildsFromItsDecomposition(string call)
 		=> await AssertRebuilds(call, (await Eval($"decompose({call})")).ToPlainText());
 
+	/// <summary>
+	/// A layout the server laid out under its own look, or wrapped in an alignment no call sets, has no call
+	/// that draws it the same, so it is written as the text it drew.
+	/// </summary>
+	[Test]
+	[Arguments("rendermarkdown(---)")]
+	[Arguments("rendermarkdown(::: center%rHello%r:::)")]
+	public async Task ALayoutNoCallBuildsIsWrittenAsItsText(string call)
+	{
+		var original = await Eval(call);
+		var softcode = (await Eval($"decompose({call})")).ToPlainText();
+		await Assert.That(softcode).DoesNotContain("[rule(").And.DoesNotContain("[box(");
+		await Assert.That((await Eval(softcode)).ToPlainText()).IsEqualTo(original.ToPlainText());
+	}
+
 	/// <summary>The softcode draws what the call drew, for a terminal and a browser, and reads back the same.</summary>
 	private async Task AssertRebuilds(string call, string softcode)
 	{

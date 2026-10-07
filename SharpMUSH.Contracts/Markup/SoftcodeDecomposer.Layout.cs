@@ -50,9 +50,14 @@ public static partial class SoftcodeDecomposer
 			: null;
 	}
 
-	/// <summary>The call that builds <paramref name="layout"/>, or its text escaped when no call does.</summary>
-	private static string LayoutCall(LayoutMarkup layout, MarkupText drawn) =>
-		Softcode(layout.Root, layout.Fluid ? null : layout.Width, null) ?? Escape(drawn.ToPlainText());
+	/// <summary>
+	/// The call that builds <paramref name="layout"/>, or its text escaped when no call does: one laid out
+	/// under a look other than <paramref name="house"/> (a striped one is given a stripe colour of its own).
+	/// </summary>
+	private static string LayoutCall(LayoutMarkup layout, MarkupText drawn, LayoutTheme? house) =>
+		(layout.Root is Themed { Fallback: true } under && house is not null && under.Theme with { StripeColor = house.StripeColor } != house
+			? null
+			: Softcode(layout.Root, layout.Fluid ? null : layout.Width, null)) ?? Escape(drawn.ToPlainText());
 
 	/// <summary>
 	/// The softcode for <paramref name="block"/>: a call, or its text. <paramref name="width"/> is the width
@@ -79,10 +84,7 @@ public static partial class SoftcodeDecomposer
 		Grid grid => GridCall(grid, width, theme),
 		Table table => TableCall(table, width, theme),
 		Shaded shaded => ShadeCall(shaded, width, theme),
-		Colored { Markup: AnsiMarkup ansi } colored when AnsiCodeWriter.Write(ansi.Style) is { Length: > 0 } codes =>
-			Call("ansi", codes, Child(colored.Content, width, theme)),
-		Colored colored => Softcode(colored.Content, width, theme),
-		Aligned aligned => Softcode(aligned.Content, width, theme),
+		// Colour or alignment laid over a whole block: no call keeps it when the block is laid out again.
 		_ => null,
 	};
 

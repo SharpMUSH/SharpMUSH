@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
+using MarkupString.Layout;
 
 namespace SharpMUSH.Library.Markup;
 
@@ -29,7 +30,16 @@ namespace SharpMUSH.Library.Markup;
 public static partial class SoftcodeDecomposer
 {
 	/// <inheritdoc cref="SoftcodeDecomposer"/>
-	public static string Decompose(MarkupText text)
+	public static string Decompose(MarkupText text) => Decompose(text, null);
+
+	/// <inheritdoc cref="SoftcodeDecomposer"/>
+	/// <param name="text">The text.</param>
+	/// <param name="house">
+	/// The game's look, which the layout functions lay their layouts under: a layout laid under another
+	/// (the server's own listings) is written as its text, since no call would draw it the same. Null takes
+	/// any layout to be the game's.
+	/// </param>
+	public static string Decompose(MarkupText text, LayoutTheme? house)
 	{
 		var builder = new StringBuilder(text.Length + 16);
 		// The calls open around the text written so far, outermost first, with what closes each.
@@ -60,7 +70,7 @@ public static partial class SoftcodeDecomposer
 			if (LayoutAt(text, r) is var (layout, last, outside))
 			{
 				// A layout is the call that builds it, once for all the runs it covers; the colours inside it are its own.
-				Write(outside, LayoutCall(layout, text.Substring(run.Start, runs[last].End - run.Start)));
+				Write(outside, LayoutCall(layout, text.Substring(run.Start, runs[last].End - run.Start), house));
 				position = runs[last].End;
 				r = last;
 				continue;
