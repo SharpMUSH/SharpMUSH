@@ -25,10 +25,18 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary>A block being built and the <c>width:</c> it was given, with the game's border for pieces set without a preset.</summary>
-	private sealed record Laid<T>(T Block, MString Width, BorderStyle House) where T : Block;
+	private sealed record Laid<T>(T Block, MString Width, BorderStyle House) where T : Block
+	{
+		/// <summary>The border the call's options chose, for the block and every box and rule inside it that names none.</summary>
+		public BorderStyle? Border { get; init; }
+	}
+
+	/// <summary>The border options on a layout that holds others: they set the border of the boxes and rules inside it.</summary>
+	private static OptionSchema<Laid<T>> InnerBorder<T>(OptionSchema<Laid<T>> schema) where T : Block =>
+		schema.Border(laid => laid.Border ?? laid.House, (laid, border) => laid with { Border = border });
 
 	private static OptionSchema<Laid<Frame>> BoxSchema { get; } = OptionSchema<Laid<Frame>>.Empty
-		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border } })
+		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border }, Border = border })
 		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
 		.Int("pad", 0, 10, (laid, pad) => laid with { Block = laid.Block with { Padding = pad } });
 
@@ -36,7 +44,7 @@ public partial class Functions
 		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border } })
 		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } });
 
-	private static OptionSchema<Laid<Flex>> FlexSchema { get; } = OptionSchema<Laid<Flex>>.Empty
+	private static OptionSchema<Laid<Flex>> FlexSchema { get; } = InnerBorder(OptionSchema<Laid<Flex>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
 		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } })
 		.Text("sep", (laid, separator) => laid with { Block = laid.Block with { Separator = separator } })
@@ -50,7 +58,7 @@ public partial class Functions
 		}, (laid, align) => laid with { Block = laid.Block with { Align = align } })
 		.Flag("vertical", (laid, vertical) => laid with { Block = laid.Block with { Vertical = vertical } });
 
-	private static OptionSchema<Laid<Fields>> FieldsSchema { get; } = OptionSchema<Laid<Fields>>.Empty
+	private static OptionSchema<Laid<Fields>> FieldsSchema { get; } = InnerBorder(OptionSchema<Laid<Fields>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
 		.Choice("align", new Dictionary<string, Alignment> { ["left"] = Alignment.Left, ["right"] = Alignment.Right },
 			(laid, alignment) => laid with { Block = laid.Block with { LabelAlignment = alignment } })
@@ -59,7 +67,7 @@ public partial class Functions
 		.Int("cols", 1, 10, (laid, columns) => laid with { Block = laid.Block with { Columns = columns } })
 		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } });
 
-	private static OptionSchema<Laid<Tree>> TreeSchema { get; } = OptionSchema<Laid<Tree>>.Empty
+	private static OptionSchema<Laid<Tree>> TreeSchema { get; } = InnerBorder(OptionSchema<Laid<Tree>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
 		.Custom("guide", (laid, value) => TreeGuide.Preset(value.ToPlainText().Trim()) is { } preset
 			? laid with { Block = laid.Block with { Guide = preset } }
@@ -209,7 +217,7 @@ public partial class Functions
 		var tree = new Tree([.. Rest(args, 1).SelectMany(TreeItemsOf)]);
 		return ValueTask.FromResult(TreeSchema.Apply(Arg(args, 0), new Laid<Tree>(tree, MarkupText.Empty, DefaultBorder())) switch
 		{
-			Laid<Tree> laid => Finish(parser, laid.Block with { Guide = laid.Block.Guide is { } guide ? Even(guide) : null }, laid.Width),
+			Laid<Tree> laid => Finish(parser, laid.Block with { Guide = laid.Block.Guide is { } guide ? Even(guide) : null }, laid.Width, laid.Border),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
@@ -250,12 +258,17 @@ public partial class Functions
 	/// </summary>
 	private CallState Laidout<T>(IMUSHCodeParser parser, OptionSchema<Laid<T>> schema, MString options, T block, MString? width = null) where T : Block =>
 		schema.Apply(options, new Laid<T>(block, width ?? MarkupText.Empty, DefaultBorder()),
-			laid => Finish(parser, laid.Block, laid.Width),
+			laid => Finish(parser, laid.Block, laid.Width, laid.Border),
 			error => new CallState(error.Value));
 
-	private CallState Finish(IMUSHCodeParser parser, Block block, MString widthArg) =>
+	/// <summary>
+	/// <paramref name="block"/> laid out at the width <paramref name="widthArg"/> names, under
+	/// <paramref name="border"/> when its options chose one: the boxes and rules inside it that name no
+	/// border of their own take that one instead of <c>layout_border</c>.
+	/// </summary>
+	private CallState Finish(IMUSHCodeParser parser, Block block, MString widthArg, BorderStyle? border = null) =>
 		LayoutWidth(parser, widthArg) is (int width, bool fluid)
-			? new CallState(Build(block, width, fluid))
+			? new CallState(Build(border is null ? block : block.Themed(new LayoutTheme { Border = border }), width, fluid))
 			: new CallState(ErrorMessages.Returns.ArgRange);
 
 	/// <summary>

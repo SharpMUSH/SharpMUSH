@@ -33,14 +33,14 @@ public partial class Functions
 
 	private static OptionSchema<Laid<Gauge>> GaugeSchema { get; } = GaugeOptions(_ => null);
 
-	private static OptionSchema<Laid<Bullets>> BulletsSchema { get; } = OptionSchema<Laid<Bullets>>.Empty
+	private static OptionSchema<Laid<Bullets>> BulletsSchema { get; } = InnerBorder(OptionSchema<Laid<Bullets>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
 		.Choice("style", Names<BulletStyle>().Where(name => name.Value != BulletStyle.Custom).ToDictionary(),
 			(laid, style) => laid with { Block = laid.Block with { Style = style } })
 		.NonEmptyText("marker", (laid, marker) => laid with { Block = laid.Block with { Style = BulletStyle.Custom, Marker = marker } })
 		.Int("start", 1, 100000, (laid, start) => laid with { Block = laid.Block with { Start = start } });
 
-	private static OptionSchema<Laid<Grid>> GridSchema { get; } = OptionSchema<Laid<Grid>>.Empty
+	private static OptionSchema<Laid<Grid>> GridSchema { get; } = InnerBorder(OptionSchema<Laid<Grid>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
 		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } })
 		.Flag("across", (laid, across) => laid with { Block = laid.Block with { Across = across } });
@@ -49,12 +49,16 @@ public partial class Functions
 	/// A table's options. The per-column lists are kept as written: they are read once the delimiter
 	/// (applied first) has split the headings into columns.
 	/// </summary>
-	private sealed record TableSettings(Table Table, MString Width, MString Delimiter)
+	private sealed record TableSettings(Table Table, MString Width, MString Delimiter, BorderStyle House)
 	{
 		public ImmutableList<(string Key, MString List)> ColumnLists { get; init; } = [];
+
+		/// <summary>The border the options chose for the boxes and rules in the cells.</summary>
+		public BorderStyle? Border { get; init; }
 	}
 
 	private static OptionSchema<TableSettings> DataTableSchema { get; } = OptionSchema<TableSettings>.Empty
+		.Border(settings => settings.Border ?? settings.House, (settings, border) => settings with { Border = border })
 		.Width((settings, width) => settings with { Width = width })
 		.NonEmptyText("delim", (settings, delimiter) => settings with { Delimiter = delimiter })
 		.Int("gap", 0, LayoutOptionGroups.MaxGap, (settings, gap) => settings with { Table = settings.Table with { Gap = gap } })
@@ -100,7 +104,7 @@ public partial class Functions
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
 		return ValueTask.FromResult(BulletsSchema.Apply(Arg(args, 2), new Laid<Bullets>(new Bullets([.. items.Select(item => Body(item))]), MarkupText.Empty, DefaultBorder())) switch
 		{
-			Laid<Bullets> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width),
+			Laid<Bullets> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
@@ -116,7 +120,7 @@ public partial class Functions
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
 		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items]), MarkupText.Empty, DefaultBorder())) switch
 		{
-			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width),
+			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
@@ -161,7 +165,7 @@ public partial class Functions
 
 	/// <summary>A table from its options and, once the delimiter is known, its headings and rows of cells.</summary>
 	private CallState BuildDataTable(IMUSHCodeParser parser, MString options, Func<MString, (MString[] Headings, MString[][] Rows)> read) =>
-		DataTableSchema.Apply(options, new TableSettings(new Table([], []), MarkupText.Empty, MarkupText.Plain("|"))) switch
+		DataTableSchema.Apply(options, new TableSettings(new Table([], []), MarkupText.Empty, MarkupText.Plain("|"), DefaultBorder())) switch
 		{
 			TableSettings settings => BuildDataTable(parser, settings, read),
 			Error<string> error => new CallState(error.Value),
@@ -177,7 +181,7 @@ public partial class Functions
 		}
 
 		var rows = cells.Select(row => row.Select(cell => Body(cell)).ToImmutableArray()).ToImmutableArray();
-		return Finish(parser, settings.Table with { Columns = [.. columns], Rows = rows }, settings.Width);
+		return Finish(parser, settings.Table with { Columns = [.. columns], Rows = rows }, settings.Width, settings.Border);
 	}
 
 	/// <summary>

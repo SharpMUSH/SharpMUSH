@@ -8,14 +8,17 @@ namespace SharpMUSH.Library.Markup;
 
 /// <summary>
 /// The options one layout function takes, each a key and what its value does to the settings
-/// <typeparamref name="T"/> the function builds from. An option list is <c>key:value</c> pairs split by
-/// spaces, a value in double quotes when it holds a space (<c>open:"&lt;&lt; "</c>); a value keeps its
-/// markup, so a border piece can be coloured.
+/// <typeparamref name="T"/> the function builds from. The options are a JSON object,
+/// <c>{"border":"double","pad":1}</c>, written in softcode inside a second pair of braces or built with
+/// <c>json()</c>. A string value keeps its markup, so a border piece can be coloured.
 /// </summary>
 /// <remarks>
 /// Options apply in the order given, except those declared <c>first</c> (a preset another option
-/// changes a piece of), which apply before the rest. Every function reports a bad list the same way:
-/// <c>#-1 UNKNOWN LAYOUT OPTION &lt;KEY&gt;</c> for a key it does not take, <see cref="ErrorMessages.Returns.ArgRange"/>
+/// changes a piece of), which apply before the rest. A number option takes a JSON number, an on-or-off
+/// option <c>true</c> or <c>false</c>, and every other option a string (or a number, read as its text).
+/// Every function reports bad options the same way: <see cref="NotAnObject"/> for text that is not one
+/// JSON object of plain values, <c>#-1 UNKNOWN LAYOUT OPTION &lt;KEY&gt;</c> for a key it does not take,
+/// <c>#-1 DUPLICATE LAYOUT OPTION &lt;KEY&gt;</c> for a key given twice, <see cref="ErrorMessages.Returns.ArgRange"/>
 /// for a number out of range, and <see cref="ErrorMessages.Returns.InvalidArgument"/> for any other bad value.
 /// </remarks>
 /// <typeparam name="T">The settings the options change.</typeparam>
@@ -28,6 +31,9 @@ public sealed class OptionSchema<T> where T : class
 	/// <summary>A schema with no options.</summary>
 	public static OptionSchema<T> Empty { get; } = new([]);
 
+	/// <summary>What the options answer when they are not one JSON object of strings, numbers and booleans.</summary>
+	public const string NotAnObject = "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT";
+
 	/// <summary>The keys this schema takes, in the order they were declared.</summary>
 	public IEnumerable<string> Keys => _options.Select(option => option.Key);
 
@@ -36,7 +42,10 @@ public sealed class OptionSchema<T> where T : class
 	/// <param name="apply">The settings with the value applied, or an error.</param>
 	/// <param name="first">Whether it applies before the options that are not first, wherever it is written.</param>
 	public OptionSchema<T> Custom(string key, Func<T, MString, Result<T>> apply, bool first = false) =>
-		new(_options.Add(new Option(key, first, apply)));
+		Typed(key, ValueKind.String | ValueKind.Number, apply, first);
+
+	private OptionSchema<T> Typed(string key, ValueKind accepts, Func<T, MString, Result<T>> apply, bool first = false) =>
+		new(_options.Add(new Option(key, first, accepts, apply)));
 
 	/// <summary>An option that takes any text, empty included.</summary>
 	public OptionSchema<T> Text(string key, Func<T, MString, T> set) =>
@@ -48,7 +57,7 @@ public sealed class OptionSchema<T> where T : class
 
 	/// <summary>An option that takes a whole number from <paramref name="min"/> to <paramref name="max"/>.</summary>
 	public OptionSchema<T> Int(string key, int min, int max, Func<T, int, T> set) =>
-		Custom(key, (settings, value) => int.TryParse(value.ToPlainText().Trim(), out var number)
+		Typed(key, ValueKind.Number, (settings, value) => int.TryParse(value.ToPlainText().Trim(), out var number)
 			? number >= min && number <= max ? set(settings, number) : OutOfRange
 			: Invalid);
 
@@ -58,27 +67,31 @@ public sealed class OptionSchema<T> where T : class
 			? set(settings, choice)
 			: Invalid);
 
-	/// <summary>An option that is on when written bare, or as <c>yes</c>, <c>on</c>, <c>true</c> or <c>1</c>, and off as <c>no</c>, <c>off</c>, <c>false</c> or <c>0</c>.</summary>
+	/// <summary>An option that is on as <c>true</c> and off as <c>false</c>.</summary>
 	public OptionSchema<T> Flag(string key, Func<T, bool, T> set) =>
-		Custom(key, (settings, value) => value.ToPlainText().Trim().ToLowerInvariant() switch
-		{
-			"" or "yes" or "on" or "true" or "1" => set(settings, true),
-			"no" or "off" or "false" or "0" => set(settings, false),
-			_ => Invalid,
-		});
+		Typed(key, ValueKind.Boolean, (settings, value) => set(settings, value.Text == "true"));
 
 	/// <summary>This schema's options followed by <paramref name="group"/>'s.</summary>
 	public OptionSchema<T> Including(Func<OptionSchema<T>, OptionSchema<T>> group) => group(this);
 
 	/// <summary><paramref name="settings"/> with the options in <paramref name="text"/> applied, or the first error.</summary>
-	public Result<T> Apply(MString text, T settings)
+	public Result<T> Apply(MString text, T settings) => OptionObject.Read(text) switch
+	{
+		IReadOnlyList<OptionObject.Member> members => Apply(members, settings),
+		Error<string> error => error,
+	};
+
+	private Result<T> Apply(IReadOnlyList<OptionObject.Member> members, T settings)
 	{
 		var pairs = new List<(Option Option, MString Value)>();
-		foreach (var (key, value) in Pairs(text))
+		foreach (var member in members)
 		{
-			if (_options.FirstOrDefault(option => option.Key == key) is not { } option)
-				return new Error<string>($"#-1 UNKNOWN LAYOUT OPTION {key.ToUpperInvariant()}");
-			pairs.Add((option, value));
+			if (_options.FirstOrDefault(option => option.Key == member.Key) is not { } option)
+				return new Error<string>($"#-1 UNKNOWN LAYOUT OPTION {member.Key.ToUpperInvariant()}");
+			if (pairs.Any(pair => pair.Option == option))
+				return new Error<string>($"#-1 DUPLICATE LAYOUT OPTION {member.Key.ToUpperInvariant()}");
+			if ((option.Accepts & member.Kind) == 0) return Invalid;
+			pairs.Add((option, member.Value));
 		}
 
 		return Run([.. pairs.Where(pair => pair.Option.First), .. pairs.Where(pair => !pair.Option.First)], 0, settings);
@@ -110,38 +123,155 @@ public sealed class OptionSchema<T> where T : class
 				_ => throw new InvalidOperationException("A layout option returned neither settings nor an error."),
 			};
 
-	/// <summary>The pairs in <paramref name="text"/>, in order, keys lower-cased, a bare key with an empty value.</summary>
-	private static IEnumerable<(string Key, MString Value)> Pairs(MString text)
-	{
-		var source = text.Text;
-		var position = 0;
-		while (position < source.Length)
-		{
-			while (position < source.Length && source[position] == ' ') position++;
-			if (position >= source.Length) yield break;
-
-			var start = position;
-			var quoted = false;
-			while (position < source.Length && (quoted || source[position] != ' '))
-			{
-				if (source[position] == '"') quoted = !quoted;
-				position++;
-			}
-
-			var token = text.Substring(start, position - start);
-			var colon = token.Text.IndexOf(':');
-			var key = (colon < 0 ? token.Text : token.Text[..colon]).ToLowerInvariant();
-			var value = colon < 0 ? MarkupText.Empty : token.Substring(colon + 1);
-			if (value.Length >= 2 && value.Text[0] == '"' && value.Text[^1] == '"') value = value.Substring(1, value.Length - 2);
-			yield return (key, value);
-		}
-	}
-
 	private static Result<T> Invalid => new Error<string>(ErrorMessages.Returns.InvalidArgument);
 
 	private static Result<T> OutOfRange => new Error<string>(ErrorMessages.Returns.ArgRange);
 
-	private sealed record Option(string Key, bool First, Func<T, MString, Result<T>> Apply);
+	private sealed record Option(string Key, bool First, ValueKind Accepts, Func<T, MString, Result<T>> Apply);
+}
+
+/// <summary>The kinds of JSON value a layout option may be given.</summary>
+[Flags]
+public enum ValueKind
+{
+	/// <summary>A JSON string.</summary>
+	String = 1,
+
+	/// <summary>A JSON number.</summary>
+	Number = 2,
+
+	/// <summary><c>true</c> or <c>false</c>.</summary>
+	Boolean = 4,
+}
+
+/// <summary>
+/// A layout function's options read as one JSON object. Read over the marked-up text rather than its
+/// plain text, so a string value keeps the colour it was written in; an escape becomes a plain character.
+/// </summary>
+public static class OptionObject
+{
+	/// <summary>One member: its key, lower-cased, the kind of value, and the value as text.</summary>
+	public sealed record Member(string Key, ValueKind Kind, MString Value);
+
+	/// <summary>The members of the object <paramref name="text"/> holds, in order; none for empty text.</summary>
+	public static Result<IReadOnlyList<Member>> Read(MString text)
+	{
+		var source = text.Text;
+		var position = 0;
+		var members = new List<Member>();
+		SkipSpace(source, ref position);
+		if (position == source.Length) return members;
+		if (source[position++] != '{') return NotAnObject;
+
+		SkipSpace(source, ref position);
+		if (position < source.Length && source[position] == '}')
+		{
+			position++;
+		}
+		else
+		{
+			while (true)
+			{
+				SkipSpace(source, ref position);
+				if (ReadString(text, ref position) is not { } key) return NotAnObject;
+				SkipSpace(source, ref position);
+				if (position == source.Length || source[position++] != ':') return NotAnObject;
+				SkipSpace(source, ref position);
+				if (ReadValue(text, ref position) is not var (kind, value)) return NotAnObject;
+				members.Add(new Member(key.ToPlainText().ToLowerInvariant(), kind, value));
+				SkipSpace(source, ref position);
+				if (position == source.Length) return NotAnObject;
+				var next = source[position++];
+				if (next == '}') break;
+				if (next != ',') return NotAnObject;
+			}
+		}
+
+		SkipSpace(source, ref position);
+		return position == source.Length ? members : NotAnObject;
+	}
+
+	private static Error<string> NotAnObject => new(OptionSchema<object>.NotAnObject);
+
+	private static void SkipSpace(string source, ref int position)
+	{
+		while (position < source.Length && source[position] is ' ' or '\t' or '\n' or '\r') position++;
+	}
+
+	private static (ValueKind Kind, MString Value)? ReadValue(MString text, ref int position)
+	{
+		var source = text.Text;
+		if (position == source.Length) return null;
+		if (source[position] == '"') return ReadString(text, ref position) is { } value ? (ValueKind.String, value) : null;
+
+		foreach (var literal in (ReadOnlySpan<string>)["true", "false"])
+		{
+			if (string.CompareOrdinal(source, position, literal, 0, literal.Length) != 0) continue;
+			position += literal.Length;
+			return (ValueKind.Boolean, MarkupText.Plain(literal));
+		}
+
+		var start = position;
+		if (position < source.Length && source[position] == '-') position++;
+		var digits = position;
+		while (position < source.Length && (char.IsAsciiDigit(source[position]) || source[position] is '.' or 'e' or 'E' or '+' or '-')) position++;
+		var number = source[start..position];
+		return position > digits && double.TryParse(number, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)
+			? (ValueKind.Number, MarkupText.Plain(number))
+			: null;
+	}
+
+	/// <summary>The string at <paramref name="position"/>, its unescaped runs cut from the text with their markup.</summary>
+	private static MString? ReadString(MString text, ref int position)
+	{
+		var source = text.Text;
+		if (position == source.Length || source[position] != '"') return null;
+		position++;
+
+		var parts = new List<MString>();
+		var run = position;
+		while (position < source.Length)
+		{
+			var c = source[position];
+			if (c == '"')
+			{
+				parts.Add(text.Substring(run, position - run));
+				position++;
+				return MarkupText.Concat([.. parts]);
+			}
+
+			if (char.IsControl(c)) return null;
+			if (c != '\\')
+			{
+				position++;
+				continue;
+			}
+
+			parts.Add(text.Substring(run, position - run));
+			if (++position == source.Length) return null;
+			var escaped = source[position++] switch
+			{
+				'"' => "\"",
+				'\\' => "\\",
+				'/' => "/",
+				'b' => "\b",
+				'f' => "\f",
+				'n' => "\n",
+				'r' => "\r",
+				't' => "\t",
+				'u' when position + 4 <= source.Length
+					&& int.TryParse(source.AsSpan(position, 4), System.Globalization.NumberStyles.AllowHexSpecifier, null, out var code)
+					=> ((char)code).ToString(),
+				_ => null,
+			};
+			if (escaped is null) return null;
+			if (source[position - 1] == 'u') position += 4;
+			parts.Add(MarkupText.Plain(escaped));
+			run = position;
+		}
+
+		return null;
+	}
 }
 
 /// <summary>Option groups more than one layout function takes, and the readers they share.</summary>
