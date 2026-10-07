@@ -1,4 +1,5 @@
 using SharpMUSH.Client.Models;
+using SharpMUSH.Library.API;
 
 namespace SharpMUSH.Client.Models.Widgets;
 
@@ -14,7 +15,19 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// account that owns the character, or staff.</param>
 /// <param name="Dbref">The character's dbref once the page has resolved it, so widgets need not ask
 /// the directory again; null until then.</param>
-public record ProfilePageContext(string CharacterName, bool CanEdit, string? Dbref = null);
+/// <param name="Gallery">The gallery as the page's own last write left it (its banner and avatar
+/// controls), for a gallery widget to show; null until the page writes.</param>
+/// <param name="GalleryChanged">Tells the page a widget changed the gallery, so the banner and the
+/// avatar follow it.</param>
+/// <param name="Owned">The viewer's account owns the character, so may write its biography without any
+/// wiki permission.</param>
+public record ProfilePageContext(
+	string CharacterName,
+	bool CanEdit,
+	string? Dbref = null,
+	IReadOnlyList<GalleryEntry>? Gallery = null,
+	Action<IReadOnlyList<GalleryEntry>>? GalleryChanged = null,
+	bool Owned = false);
 
 /// <summary>
 /// What the Play page offers the widgets in its <c>"play"</c> layout scope (README §7.4): opening a

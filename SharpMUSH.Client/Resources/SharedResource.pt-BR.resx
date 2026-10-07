@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Remover capa</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Trocar capa</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Trocar avatar</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Enviar uma nova imagem</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Ou escolher da galeria</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Ainda não há imagens na galeria.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Não foi possível mudar a capa: {0}</value>
   </data>

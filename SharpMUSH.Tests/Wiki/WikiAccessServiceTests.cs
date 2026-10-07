@@ -1,3 +1,5 @@
+using SharpMUSH.Library;
+using NSubstitute;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -36,7 +38,7 @@ public class WikiAccessServiceTests
 			await roles.UpsertCustomPermissionAsync(new CustomPermission(scope, "Wiki", scope, 0));
 		}
 
-		return (wiki, new WikiAccessService(wiki, roles, new PermissionResolver()), roles);
+		return (wiki, new WikiAccessService(wiki, roles, new PermissionResolver(), Substitute.For<IAccountStore>()), roles);
 	}
 
 	private static Dictionary<WikiAction, IReadOnlyList<string>> Require(WikiAction action, params string[] scopes)
@@ -46,6 +48,36 @@ public class WikiAccessServiceTests
 	{
 		var page = (await wiki.CreateAsync(title, "body", "#1")).Expect<WikiPage>();
 		return (await wiki.SetMetadataAsync(page.Id, categories, published: true)).Expect<WikiPage>();
+	}
+
+	/// <summary>
+	/// An account edits its own characters' biographies by owning them, whichever character is acting:
+	/// no wiki.create or wiki.edit, and no requirement on the namespace or the page, stands in the way.
+	/// </summary>
+	[Test]
+	public async Task AnAccountEditsItsOwnCharactersBiographies_WithoutAnyPermission()
+	{
+		var (wiki, access, _) = await BuildAsync();
+		var bio = (await wiki.CreateAsync("Tomas Reyes", "body", "#1", WikiNamespace.Character)).Expect<WikiPage>();
+		var other = (await wiki.CreateAsync("Ilsa Varn", "body", "#1", WikiNamespace.Character)).Expect<WikiPage>();
+		await access.SetRequirementsAsync(Admin, "#1", WikiRuleTarget.ForPage(bio.Id), WikiRequirementSet.Protection);
+
+		// Playing Pell, whose account also holds Tomas; the account has no wiki permission at all.
+		var owner = WikiReader.From([], "#317", ["tomas_reyes", "pell_marsh"]);
+
+		var edit = await access.DecideAsync(owner, bio, WikiAction.Edit);
+		await Assert.That(edit.Allowed).IsTrue();
+		await Assert.That(edit.Describe()).IsEqualTo("allowed (your own character's biography)");
+		await Assert.That((await access.ForPageAsync(owner, bio)).Edit).IsTrue();
+		await Assert.That((await access.DecideCreateAsync(owner, "character", [], "Pell Marsh")).Allowed).IsTrue();
+		await Assert.That((await access.DecideCategoriesAsync(owner, bio, ["lore"])).Allowed).IsTrue();
+
+		await Assert.That((await access.DecideAsync(owner, bio, WikiAction.Delete)).Allowed).IsFalse()
+			.Because("owning a biography is reading, writing and editing it, not deleting it");
+		await Assert.That((await access.DecideAsync(owner, other, WikiAction.Edit)).Allowed).IsFalse()
+			.Because("Ilsa is on another account");
+		await Assert.That((await access.DecideCreateAsync(owner, "main", [], "Tomas Reyes")).Allowed).IsFalse()
+			.Because("only the character namespace holds biographies");
 	}
 
 	[Test]

@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Убрать обложку</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Сменить обложку</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Сменить аватар</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Загрузить новое изображение</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Или выбрать из галереи</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>В галерее пока нет изображений.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Не удалось сменить обложку: {0}</value>
   </data>

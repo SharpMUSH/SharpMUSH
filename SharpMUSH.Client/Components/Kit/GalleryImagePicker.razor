@@ -1,0 +1,94 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Choosing a character's banner or avatar: upload a new file, or pick one of the images already in
+   the gallery. A modal over the page like the image viewer; Escape or a click outside closes it.
+   The image in that role now is marked and pressed. *@
+@if (Open)
+{
+    <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Class="kit-picker-overlay" Style="@ScrimStyle">
+    <div class="kit-picker" role="dialog" aria-modal="true" aria-label="@Title" tabindex="-1"
+         @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true">
+        <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+        <div class="kit-picker-frame">
+            <div class="kit-picker-bar">
+                <span class="kit-picker-title">@Title</span>
+                <span class="kit-picker-spacer"></span>
+                <CapsuleButton Class="kit-picker-close" Icon="@Icons.Material.Outlined.Close" AriaLabel="@Loc["NavViewerClose"]" OnClick="CloseAsync" />
+            </div>
+            <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" Class="kit-picker-upload">
+                <CustomContent>
+                    <CapsuleButton Class="kit-picker-upload-button" Primary="true" Icon="@Icons.Material.Outlined.FileUpload" Disabled="Busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavPickerUpload"]</CapsuleButton>
+                </CustomContent>
+            </MudFileUpload>
+            <div class="kit-picker-label">@Loc["NavPickerFromGallery"]</div>
+            @if (Items.Count == 0)
+            {
+                <div class="kit-picker-empty">@Loc["NavPickerGalleryEmpty"]</div>
+            }
+            else
+            {
+                <div class="kit-picker-grid">
+                    @foreach (var item in Items)
+                    {
+                        var current = item.AssetId == SelectedAssetId;
+                        <button type="button" class="@($"kit-picker-item{(current ? " kit-picker-item--current" : "")}")"
+                                aria-pressed="@(current ? "true" : "false")" aria-label="@(item.Caption ?? item.AssetId)"
+                                disabled="@Busy" @onclick="@(() => PickAsync(item))">
+                            @if (ImageUrlPolicy.IsRenderable(item.Url))
+                            {
+                                <img src="@ApiUrl.Resolve(item.Url)" alt="" />
+                            }
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+        </MudFocusTrap>
+    </div>
+    </MudOverlay>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    /// <summary>The dialog's heading and accessible name ("Change banner").</summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    /// <summary>The gallery's images, in order.</summary>
+    [Parameter] public IReadOnlyList<GalleryEntry> Items { get; set; } = [];
+
+    /// <summary>The image in this role now, marked in the grid.</summary>
+    [Parameter] public string? SelectedAssetId { get; set; }
+
+    /// <summary>A write is running; the choices wait for it.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>A new file was chosen. The picker closes first.</summary>
+    [Parameter] public EventCallback<IBrowserFile> OnUpload { get; set; }
+
+    /// <summary>An image already in the gallery was chosen. The picker closes first.</summary>
+    [Parameter] public EventCallback<GalleryEntry> OnPick { get; set; }
+
+    private const string ScrimStyle = "background: rgba(var(--scrim-ink), 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);";
+
+    private async Task UploadAsync(IBrowserFile? file)
+    {
+        if (file is null) return;
+        await CloseAsync();
+        await OnUpload.InvokeAsync(file);
+    }
+
+    private async Task PickAsync(GalleryEntry item)
+    {
+        await CloseAsync();
+        await OnPick.InvokeAsync(item);
+    }
+
+    private Task CloseAsync() => OpenChanged.InvokeAsync(false);
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await CloseAsync();
+    }
+}

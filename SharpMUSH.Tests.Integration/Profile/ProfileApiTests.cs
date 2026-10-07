@@ -409,8 +409,8 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	/// <summary>
 	/// profile-handler 1.5 (spec 2026-09-29 §3): the profile carries the seeded image attributes and
 	/// the opt-in name colour, in the same {value, visible} shape as every other field, and every
-	/// directory row carries the portrait. banner falls back to IMAGE so a character with a portrait
-	/// and no wide art still gets a picture behind the name. All three are read with get(): a URL is
+	/// directory row carries the portrait. banner never falls back to IMAGE: the avatar and the banner
+	/// are separate pictures, and no banner is the portal's hue gradient. All three are read with get(): a URL is
 	/// text the player typed, and evaluating it would run whatever they hid in it as the handler.
 	/// </summary>
 	[Test]
@@ -458,7 +458,8 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		{
 			var fields = portrait.RootElement.GetProperty("fields");
 			await Assert.That(fields.GetProperty("image").GetProperty("value").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
-			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
+			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo(string.Empty)
+				.Because("the avatar is not the banner");
 			await Assert.That(fields.GetProperty("color").GetProperty("value").GetString()).IsEqualTo("#ffb454");
 		}
 
@@ -480,13 +481,13 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 
 		// The handler is a wizard, so get() reads a private attribute too. Only a visual image is
 		// published: the seeded flags are defaults, and an IMAGE set before they existed, or with
-		// visual cleared, keeps its owner's choice. A private banner falls back to a public IMAGE.
+		// visual cleared, keeps its owner's choice. A private banner reads as none, not as the IMAGE.
 		await Cmd($"@set #{player.Object.Key}/IMAGE`BANNER=!visual");
 
 		using (var privateBanner = await Profile())
 		{
 			var fields = privateBanner.RootElement.GetProperty("fields");
-			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
+			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo(string.Empty);
 		}
 
 		await Cmd($"@set #{player.Object.Key}/IMAGE=!visual");

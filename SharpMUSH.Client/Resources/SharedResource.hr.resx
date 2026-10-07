@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Ukloni naslovnu</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Promijeni naslovnu</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Promijeni avatar</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Učitaj novu sliku</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Ili odaberi iz galerije</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>U galeriji još nema slika.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Naslovna se nije mogla promijeniti: {0}</value>
   </data>

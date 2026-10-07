@@ -139,8 +139,22 @@
         _viewerOpen = true;
     }
 
+    /// <summary>The page's last gallery write this widget took on, so each is taken once.</summary>
+    private IReadOnlyList<GalleryEntry>? _fromPage;
+
+    /// <summary>Bumped when the page's gallery is taken on: a read begun before it is older and is dropped.</summary>
+    private int _generation;
+
     protected override async Task OnParametersSetAsync()
     {
+        // The banner's Change banner and Change avatar write the gallery from the page: show what they left.
+        if (PageContext?.Gallery is { } fromPage && !ReferenceEquals(fromPage, _fromPage))
+        {
+            _fromPage = fromPage;
+            _generation++;
+            (_items, _error, _loading) = (fromPage, null, false);
+        }
+
         var name = CharacterName ?? PageContext?.CharacterName ?? ConfigCharacter();
         if (string.IsNullOrWhiteSpace(name) || name == _resolvedName)
         {
@@ -148,7 +162,9 @@
         }
         _resolvedName = name;
         _loading = true;
+        var generation = ++_generation;
         var result = await Gallery.ListAsync(name);
+        if (generation != _generation) return;
         (_items, _error) = result switch
         {
             List<GalleryEntry> items => (items, (string?)null),
@@ -209,6 +225,7 @@
                 _items = updated;
                 _error = null;
                 if (_items.Count == 0) _viewerOpen = false;
+                PageContext?.GalleryChanged?.Invoke(updated);
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc[failedKey, failure.Message], Severity.Error);

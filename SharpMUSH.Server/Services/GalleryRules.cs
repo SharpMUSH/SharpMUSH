@@ -14,8 +14,9 @@ public static class GalleryRules
 
 	/// <summary>
 	/// Orders by <see cref="GalleryEntry.Order"/> and renumbers from 0; keeps the first icon and the
-	/// first banner. A gallery with images but no icon gets the first image as its icon, because the
-	/// portrait must come from somewhere; a gallery without a banner keeps none.
+	/// first banner. A gallery with no icon gets its first image that is not the banner as its icon, so
+	/// the avatar comes from somewhere without the banner standing in for it; a gallery holding only its
+	/// banner has no avatar (the profile draws initials), and a gallery without a banner keeps none.
 	/// </summary>
 	public static IReadOnlyList<GalleryEntry> Normalize(IEnumerable<GalleryEntry> entries)
 	{
@@ -32,9 +33,10 @@ public static class GalleryRules
 			ordered[i] = entry with { IsIcon = isIcon, IsBanner = isBanner };
 		}
 
-		if (!iconSeen && ordered.Count > 0)
+		var firstNotBanner = ordered.FindIndex(e => !e.IsBanner);
+		if (!iconSeen && firstNotBanner >= 0)
 		{
-			ordered[0] = ordered[0] with { IsIcon = true };
+			ordered[firstNotBanner] = ordered[firstNotBanner] with { IsIcon = true };
 		}
 
 		return ordered;

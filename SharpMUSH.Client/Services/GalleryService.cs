@@ -24,8 +24,11 @@ public class GalleryService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<List<GalleryEntry>>> ListAsync(string name) =>
 		Client.GetApiAsync<List<GalleryEntry>>(GalleryUrl(name), NoGallery);
 
-	/// <summary>Uploads an image and answers with the updated gallery.</summary>
-	public async Task<ApiResult<List<GalleryEntry>>> UploadAsync(string name, IBrowserFile file)
+	/// <summary>
+	/// Uploads an image and answers with the updated gallery. As <see cref="GalleryUse.Banner"/> or
+	/// <see cref="GalleryUse.Avatar"/> it takes that place from whichever image held it.
+	/// </summary>
+	public async Task<ApiResult<List<GalleryEntry>>> UploadAsync(string name, IBrowserFile file, GalleryUse use = GalleryUse.Image)
 	{
 		// OpenReadStream throws for a file over the limit before anything is sent. Said here, rather than
 		// surfacing as "could not reach the server" from ApiCall's transport catch.
@@ -56,7 +59,13 @@ public class GalleryService(IHttpClientFactory httpClientFactory)
 			streamContent.Headers.ContentType = mediaType;
 		}
 
-		return await Client.PostContentApiAsync<List<GalleryEntry>>(GalleryUrl(name), content, NoGallery);
+		var url = use switch
+		{
+			GalleryUse.Banner => $"{GalleryUrl(name)}?use=banner",
+			GalleryUse.Avatar => $"{GalleryUrl(name)}?use=avatar",
+			_ => GalleryUrl(name),
+		};
+		return await Client.PostContentApiAsync<List<GalleryEntry>>(url, content, NoGallery);
 	}
 
 	/// <summary>Deletes an image and answers with the updated gallery.</summary>
@@ -76,4 +85,12 @@ public class GalleryService(IHttpClientFactory httpClientFactory)
 		[.. items.Select(i => i with { IsBanner = i.AssetId == assetId })];
 
 	private static string GalleryUrl(string name) => $"api/profile/{Uri.EscapeDataString(name)}/gallery";
+}
+
+/// <summary>What an uploaded image is for: one more gallery image, the profile's banner, or its avatar.</summary>
+public enum GalleryUse
+{
+	Image,
+	Banner,
+	Avatar,
 }
