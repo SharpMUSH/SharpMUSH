@@ -56,6 +56,24 @@ public class ConfigListOptionTests
 		await Assert.That(ConfigValueDisplay.Format(new[] { "guest", "admin" }, Metadata(flag: false))).IsEqualTo("guest admin");
 	}
 
+	/// <summary>A mapping option prints <c>key=values</c> in key order, separated by <c>|</c>.</summary>
+	[Test]
+	public async Task FormatterWritesMappings()
+	{
+		var map = new Dictionary<string, string[]> { { "page", ["p"] }, { "@edit", ["@gedit", "@ged"] } };
+
+		await Assert.That(ConfigValueDisplay.Format(map, Metadata(flag: false))).IsEqualTo("@edit=@gedit @ged|page=p");
+		await Assert.That(ConfigValueDisplay.Format(new Dictionary<string, string[]>(), Metadata(flag: false))).IsEqualTo(string.Empty);
+	}
+
+	[Test]
+	public async Task ConfigFunctionPrintsAMapping()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[config(command_aliases)]")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).Contains("@ATRLOCK=@attrlock|");
+	}
+
 	private static SharpConfigAttribute Metadata(bool flag) => new()
 	{
 		Name = "test_option",

@@ -27,7 +27,10 @@ public static class ConfigValueDisplay
 	/// A list option prints its words space-separated, never the array's type name. A default-flag
 	/// list (<see cref="SharpConfigAttribute.Flag"/>) also keeps the leading space <c>cf_flag</c>
 	/// stores: PennMUSH 1.8.8 (<c>80a1d5b9</c>, shipped <c>mushcnf.dst</c>) prints
-	/// <c>config(player_flags)</c> as <c>" enter_ok ansi no_command"</c>.
+	/// <c>config(player_flags)</c> as <c>" enter_ok ansi no_command"</c>. A mapping option
+	/// (<c>command_aliases</c>, <c>command_restrictions</c>, <c>sitelock_rules</c>, <c>mssp</c>, ...) has no
+	/// PennMUSH counterpart, which writes these as repeated <c>mush.cnf</c> directives; it prints as
+	/// <c>key=values</c> for each of its <see cref="Entries"/>, separated by <c>|</c>.
 	/// </remarks>
 	public static string Format(object? value, SharpConfigAttribute metadata)
 		=> metadata.Dbref
@@ -37,9 +40,19 @@ public static class ConfigValueDisplay
 				bool flag => flag ? "Yes" : "No",
 				null => string.Empty,
 				string text => text,
+				IEnumerable<KeyValuePair<string, string[]>> map => string.Join('|', Entries(map).Select(entry => $"{entry.Key}={entry.Values}")),
 				IEnumerable<string> words => FormatList(words.ToArray(), metadata.Flag),
 				_ => value.ToString() ?? string.Empty
 			};
+
+	/// <summary>
+	/// A mapping option's entries in key order, each key with its values space-separated, as
+	/// <c>@config</c> lists them one per line.
+	/// </summary>
+	public static IEnumerable<(string Key, string Values)> Entries(IEnumerable<KeyValuePair<string, string[]>> map)
+		=> map
+			.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
+			.Select(entry => (entry.Key, string.Join(' ', entry.Value ?? [])));
 
 	private static string FormatList(string[] words, bool flagList)
 		=> words.Length == 0 ? string.Empty
