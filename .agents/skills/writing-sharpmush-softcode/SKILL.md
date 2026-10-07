@@ -118,7 +118,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 - **An empty table still draws its headings** — `if(words(%q<l>),<table>,No scenes.)`.
 - **Build the layout last.** `left()`, `edit()` or other text surgery on a layout leaves plain text: no per-reader width, no portal structure. Colour goes in the cells, a border piece (`"top":"[ansi(hb,=)]"`) or `gradient()`.
 - **Don't pick the game's border.** `layout_border` is the default style; pass `"border"` only where a box should differ from the rest.
-- `rendermarkdown(<md>[, <width>])` renders CommonMark to ANSI; width is clamped 10–1000 and a smaller value errors, so guard a computed width with `max(10,…)`. Inside a box, render at `max(10,sub(width(%#,78),4))` (two borders, two pads). `rendermarkdowncustom(<md>, <obj>[, <width>])` adds `` RENDERMARKUP`<ELEMENT> `` templates held on `<obj>`.
+- `rendermarkdown(<md>[, <width>])` renders CommonMark to ANSI; a width outside 10–1000 is an error, not clamped, so guard a computed width with `max(10,…)`. Inside a box, render at `max(10,sub(width(%#,78),4))` (two borders, two pads). `rendermarkdowncustom(<md>, <obj>[, <width>])` adds `` RENDERMARKUP`<ELEMENT> `` templates held on `<obj>`.
 - `align(<widths>, <col>…)` remains for fixed-width text that must stay text (a log line, a channel message): ANSI belongs in the spec (`28X(hc)`), not round the content.
 
 ## Pre-populated world (do NOT create or configure these)
