@@ -103,6 +103,16 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task PinsThatCannotBeReadShowEveryCategory()
+	{
+		_fake.FailPins = true;
+		var cut = RenderHome();
+		var names = cut.FindAll(".wiki-cat-card .wiki-cat-name").Select(n => n.TextContent).ToList();
+		await Assert.That(names).IsEquivalentTo(["Guides", "Lore", "Uncategorized"])
+			.Because("the home must not say nothing is pinned when it could not ask");
+	}
+
+	[Test]
 	public async Task AWikiAdminUnpinsACategoryFromItsCard()
 	{
 		var reader = RenderHome();

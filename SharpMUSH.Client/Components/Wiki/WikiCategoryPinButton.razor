@@ -55,6 +55,8 @@
         if (key == _loadedFor) return;
         _loadedFor = key;
         _pinned = await Wiki.GetPinnedCategoriesAsync() is List<string> pinned ? pinned.Contains(key) : null;
+        // A failed read leaves no button; the next render for this category asks again.
+        if (_pinned is null) _loadedFor = null;
     }
 
     private async Task ToggleAsync()

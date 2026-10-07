@@ -135,6 +135,9 @@
     /// <summary>The keys of the categories pinned to the wiki home: the only ones with a card unless searching.</summary>
     private HashSet<string> _pinned = new(StringComparer.Ordinal);
 
+    /// <summary>True when the pins could not be read; every category gets a card then.</summary>
+    private bool _pinsUnavailable;
+
     private bool Searching => !string.IsNullOrWhiteSpace(_search);
 
     private static string NewPageHref => "/wiki/main/new-page/edit";
@@ -151,7 +154,10 @@
         var pinned = Wiki.GetPinnedCategoriesAsync().AsTask();
         var (items, _) = await Wiki.GetAllPagesAsync(skip: 0, take: 500);
         _names = await names;
+        // Without the pins the home cannot tell which categories to show, so it shows them all rather than
+        // claiming none is pinned.
         if (await pinned is List<string> keys) _pinned = keys.ToHashSet(StringComparer.Ordinal);
+        else _pinsUnavailable = true;
         _pages = items;
         _loading = false;
 
@@ -194,7 +200,9 @@
         get
         {
             if (!Searching)
-                return WikiCategories.Group(_pages).Where(g => _pinned.Contains(g.Key)).ToList();
+                return _pinsUnavailable
+                    ? WikiCategories.Group(_pages)
+                    : WikiCategories.Group(_pages).Where(g => _pinned.Contains(g.Key)).ToList();
 
             return WikiCategories.Group(_pages.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c, _names).Contains(_search, StringComparison.OrdinalIgnoreCase))));

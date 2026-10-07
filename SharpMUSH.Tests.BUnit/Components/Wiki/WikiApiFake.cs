@@ -42,6 +42,9 @@ internal sealed class WikiApiFake : HttpMessageHandler
 	/// <summary>The categories pinned to the wiki home; a pin request changes them as the API does.</summary>
 	public List<string> Pinned { get; } = ["guides", "lore"];
 
+	/// <summary>When set, the pinned-categories read fails as an unreachable server would.</summary>
+	public bool FailPins { get; set; }
+
 	/// <summary>Pages a category listing the way the API does: <c>skip</c> and <c>take</c> from the query.</summary>
 	public static string Paged(HttpRequestMessage request, string[] pages)
 	{
@@ -65,7 +68,7 @@ internal sealed class WikiApiFake : HttpMessageHandler
 
 		string? body = path switch
 		{
-			"/api/wiki/pinned-categories" => System.Text.Json.JsonSerializer.Serialize(Pinned),
+			"/api/wiki/pinned-categories" when !FailPins => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			_ when request.Method == HttpMethod.Put && path.EndsWith("/pin", StringComparison.Ordinal) => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			"/api/wiki/pages" => "[" + string.Join(",", AllPages) + "]",
 			"/api/wiki/recent" => "[" + string.Join(",", AllPages.Reverse()) + "]",
