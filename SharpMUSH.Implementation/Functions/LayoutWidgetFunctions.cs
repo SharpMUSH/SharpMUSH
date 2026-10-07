@@ -150,11 +150,12 @@ public partial class Functions
 		return ValueTask.FromResult(BuildDataTable(parser, Arg(args, 0), delimiter =>
 		{
 			var columns = Rest(args, 1).Select(column => MushText.SplitList(delimiter, column)).ToArray();
-			var height = columns.Max(column => column.Length) - 1;
+			// A space-delimited column that is empty splits into nothing at all, not an empty heading.
+			var height = Math.Max(0, columns.Max(column => column.Length) - 1);
 			var rows = Enumerable.Range(1, height)
 				.Select(r => columns.Select(column => r < column.Length ? column[r] : MarkupText.Empty).ToArray())
 				.ToArray();
-			return ([.. columns.Select(column => column[0])], rows);
+			return ([.. columns.Select(column => column.Length > 0 ? column[0] : MarkupText.Empty)], rows);
 		}));
 	}
 

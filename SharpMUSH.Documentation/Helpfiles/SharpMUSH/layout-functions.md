@@ -566,7 +566,7 @@ Mannaz    0s  Hooooo?
 Raya      5m
 ```
 
-With lists from other functions, change the delimiter to the space they use: `datacolumns(delim:%b,Name [lwho()],Idle [iter(lwho(),idle(##))])`. A cell holding a space then needs another delimiter.
+With lists from other functions, change the delimiter to the space they use: `datacolumns(delim:" ",Name [lwho()],Idle [iter(lwho(),idle(##))])`. The space is quoted: `delim:%b` would leave the option empty. A cell holding a space then needs another delimiter.
 
 ::: seealso
 - [DATATABLE()]

@@ -263,6 +263,21 @@ public class LayoutFunctionTests
 	public async Task TheHelpExamplesShowWhatTheyDraw(string code, string expected)
 		=> await Assert.That(TrimLines(await Eval(code))).IsEqualTo(expected);
 
+	/// <summary>
+	/// A quoted space is the delimiter of the space lists other functions return, and an empty
+	/// column under it splits into nothing: it is a column with no heading and no cells.
+	/// </summary>
+	[Test]
+	[Arguments("datacolumns(delim:\" \",,Name Mannaz Raya)", "Mannaz")]
+	[Arguments("datacolumns(delim:\" \",Name Mannaz Raya,)", "Raya")]
+	[Arguments("datacolumns(delim:\" \",,)", "")]
+	public async Task DataColumnsTakeAQuotedSpaceAndAnEmptyColumn(string code, string cell)
+	{
+		var text = (await Eval(code)).ToPlainText();
+		await Assert.That(text).DoesNotStartWith("#-1");
+		await Assert.That(text).Contains(cell);
+	}
+
 	[Test]
 	[Arguments("box(x,,20,colour:red)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("box(x,,20,border:wavy)", "#-1 UNKNOWN BORDER STYLE")]

@@ -17,11 +17,13 @@ public static class ImageHostPolicy
 	{
 		mode = mode?.Trim().ToLowerInvariant();
 		if (mode == "off" || string.IsNullOrWhiteSpace(source)) return false;
-		source = source.Trim();
+		// Read the way a browser reads it: tabs and line breaks dropped wherever they are, and a
+		// backslash taken as a slash, so "/\\host" and "/<tab>/host" are the address "//host".
+		source = string.Concat(source.Trim().Where(c => c is not ('\t' or '\n' or '\r'))).Replace('\\', '/');
 
 		// Checked by hand: on Unix a rooted path parses as an absolute file: address, and "//host"
 		// as one on another host.
-		if (source.StartsWith("//", StringComparison.Ordinal) || source.StartsWith('\\')) return false;
+		if (source.StartsWith("//", StringComparison.Ordinal)) return false;
 		if (source.StartsWith('/')) return true;
 		if (!Uri.TryCreate(source, UriKind.RelativeOrAbsolute, out var uri)) return false;
 		if (!uri.IsAbsoluteUri) return true;
