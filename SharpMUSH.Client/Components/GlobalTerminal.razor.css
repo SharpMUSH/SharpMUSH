@@ -25,7 +25,7 @@
     font-family: var(--font-ui);
     font-size: 12px;
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow);
     cursor: pointer;
 }
 

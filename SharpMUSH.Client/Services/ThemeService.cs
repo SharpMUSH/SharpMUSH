@@ -208,7 +208,8 @@ public static class ResolvedThemeExtensions
 			palette.ActionDefault = t[ThemeTokens.TextDim];
 			palette.Warning = t[ThemeTokens.Warn];
 			palette.Error = t[ThemeTokens.LinkMissing];
-			palette.Info = theme.Dark ? "#5aa9ff" : "#1f63b8";
+			// A theme cached before these tokens existed lacks them until the game's themes load.
+			palette.Info = t.GetValueOrDefault("info", theme.Dark ? "#5aa9ff" : "#1f63b8");
 			palette.Success = theme.Accent;
 			palette.LinesDefault = t[ThemeTokens.Border];
 			palette.LinesInputs = t[ThemeTokens.Border];

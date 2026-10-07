@@ -286,9 +286,9 @@ else
 
     private static string SheetOverlayStyle(MobileSheet sheet) => sheet switch
     {
-        MobileSheet.Details => "background: rgba(8, 9, 10, 0.55); align-items: flex-start; justify-content: stretch;",
-        MobileSheet.Room => "background: rgba(8, 9, 10, 0.55); align-items: stretch; justify-content: flex-end;",
-        _ => "background: rgba(8, 9, 10, 0.55); align-items: stretch; justify-content: flex-start;",
+        MobileSheet.Details => "background: rgba(var(--scrim-ink), 0.55); align-items: flex-start; justify-content: stretch;",
+        MobileSheet.Room => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-end;",
+        _ => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-start;",
     };
 
     private static string SheetClass(MobileSheet sheet) => sheet switch

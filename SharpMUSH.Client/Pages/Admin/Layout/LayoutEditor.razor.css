@@ -118,7 +118,7 @@
     border: 1px solid transparent; background: transparent; color: var(--text-faint); cursor: pointer;
 }
 .le-item-btn:hover { color: var(--text); border-color: var(--border); }
-.le-item-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
+.le-item-btn--danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
 
 ::deep .mud-drop-zone-drag-block-target { outline: 2px dashed rgba(var(--glow), 0.5); outline-offset: -4px; }
 

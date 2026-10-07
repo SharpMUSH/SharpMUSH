@@ -459,6 +459,16 @@ public class AccountPanelTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task Theme_routes_to_the_per_character_theme_page()
+	{
+		var cut = RenderPanel(initialOpen: true);
+
+		var link = cut.FindAll(".account-panel-item").Single(el => el.TextContent.Contains("NavTheme"));
+		await Assert.That(link.TagName).IsEqualTo("A");
+		await Assert.That(link.GetAttribute("href")).IsEqualTo("/settings/theme");
+	}
+
+	[Test]
 	public async Task Account_Management_routes_to_slash_account()
 	{
 		var cut = RenderPanel(initialOpen: true);

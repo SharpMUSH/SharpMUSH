@@ -66,6 +66,22 @@ public class PortalThemeServiceTests
 	}
 
 	[Test]
+	public async Task AThemesStylesheetIsStoredWithItAndOneThatLoadsFromElsewhereRefused()
+	{
+		var service = new PortalThemeService(new InMemoryData());
+		const string css = ".kit-card.kit-card { border-radius: 0; }";
+
+		var created = (await service.CreateAsync(Request("Square") with { Stylesheet = css })).Expect<PortalTheme>();
+		var listed = (await service.GetThemesAsync(includeUnpublished: true)).Themes.Single(t => t.Id == created.Id);
+		var cleared = (await service.UpdateAsync(created.Id, Request("Square") with { Stylesheet = "  " })).Expect<PortalTheme>();
+		var refused = await service.CreateAsync(Request("Leaky") with { Stylesheet = ".x { background: url(https://example.com/a.png); }" });
+
+		await Assert.That(listed.Stylesheet).IsEqualTo(css);
+		await Assert.That(cleared.Stylesheet).IsNull();
+		await Assert.That(refused.Value is Error<string> { Value: var why } && why.Contains("elsewhere")).IsTrue();
+	}
+
+	[Test]
 	public async Task ACreatedThemeGetsAnIdFromItsNameAndNormalisedColours()
 	{
 		var service = new PortalThemeService(new InMemoryData());

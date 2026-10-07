@@ -5790,4 +5790,7 @@
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>De volgende {0} scènes worden getoond.</value>
   </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Thema voor {0}</value>
+  </data>
 </root>

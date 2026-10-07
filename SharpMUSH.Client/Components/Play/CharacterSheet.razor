@@ -136,7 +136,7 @@
 
     /// <summary>The scrim, and the overlay's flex root set to hold the sheet at the right edge at full height:
     /// MudOverlay centres a zero-size content box, and scoped CSS cannot reach it.</summary>
-    private const string ScrimStyle = "background: rgba(8, 9, 10, 0.6); justify-content: flex-end; align-items: stretch;";
+    private const string ScrimStyle = "background: rgba(var(--scrim-ink), 0.6); justify-content: flex-end; align-items: stretch;";
 
     private string? Portrait => Occupant?.Image?.Url ?? _profile?.Image ?? _gallery.FirstOrDefault(g => g.IsIcon)?.Url;
 

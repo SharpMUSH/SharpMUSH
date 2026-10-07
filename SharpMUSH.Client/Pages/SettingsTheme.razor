@@ -27,7 +27,7 @@
             var look = Resolve(character);
             var busy = _saving.Contains(character.DbrefNumber);
             <KitCard Class="settings-theme-card">
-                <div class="settings-theme-char" data-character="@character.DbrefNumber">
+                <div class="settings-theme-char" id="@($"theme-{character.DbrefNumber}")" data-character="@character.DbrefNumber">
                     <div class="settings-theme-head">
                         <ThemeSwatch Theme="look" />
                         <div class="settings-theme-name">

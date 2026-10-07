@@ -1011,20 +1011,15 @@ the radii, and the glass-banner and mention tokens. `DesignTokensTests` pins the
 D1 additions and the AA contrast of `--text-faint`. New CSS reads these
 variables and never hard-codes the Phosphor green.
 
-**The theme service.** `IThemeService` (`ThemeService.cs`) is
-localStorage-backed (`sharp-theme-preset`) and offers five accent presets
-(Phosphor, Amber, Violet, Rose, Signal). Choosing one changes only the MudBlazor
-`MudTheme` palette through `ThemeProvider`; the CSS variables above are static,
-so plain-CSS chrome stays Phosphor whichever preset is chosen. Wiring
-`ThemeProvider` to emit `--accent`, `--accent-dim`, `--accent-on` and `--glow`
-from `ThemeService.DeriveAccent` is the open step before `/settings/theme` can
-ship (README §2 has the derived on-accent values and their contrast).
-
-**Not built (earlier vision, kept for the record):** a `--sharp-*` token layer,
-DB-stored admin theme presets (Catppuccin, Dracula, Nord, Solarized, Tokyo
-Night, High Contrast), an admin colour-picker editor with import/export, and a
-light mode. `docs/design/theme-editor.md` and `docs/todo/area-18-theme.md`
-carry that design; nothing in the code implements it yet.
+**The theme service.** Themes are built (PR #1644 and after); `docs/guides/portal-themes.md`
+is the guide. A theme is thirteen colour tokens and a set of style choices, resolved by
+`ThemeResolver.Resolve` into a `:root` rule that `ThemeProvider` writes after `tokens.css`; every other
+colour (status, code, syntax, shadows) is derived from the thirteen so it stays readable. Staff edit
+themes at `/admin/themes` (`layout.admin`): colours (or generated from a MarkupString `ThemePalette`),
+style choices, and an optional stylesheet checked by `ThemeStylesheet.Validate`. Each character picks a
+theme and accent at `/settings/theme` (the account menu's Theme item); the game's defaults follow the
+browser's light or dark preference. Component CSS reads the variables and writes no colour of its own
+(`ThemeVariableTests`).
 
 **Player-level customization (NOT layout — just visual):**
 - Pick from presets the admin has enabled (dropdown in user settings)

@@ -10,13 +10,19 @@ namespace SharpMUSH.Library.API;
 /// <param name="Dark">Whether the theme is dark: picks MudBlazor's dark or light palette and the derived shades.</param>
 /// <param name="Published">Whether players may choose it. An unpublished theme is visible to theme editors only.</param>
 /// <param name="BuiltIn">One that SharpMUSH ships. It cannot be edited or deleted; duplicate it instead.</param>
+/// <param name="Stylesheet">
+/// Staff-written CSS laid over the tokens (<see cref="Models.Portal.ThemeStylesheet"/>): checked on save, so it loads
+/// nothing from another site and cannot leave its <c>&lt;style&gt;</c>. Colour tokens it sets in <c>:root</c> count as
+/// the theme's own, so contrast is checked against them.
+/// </param>
 public sealed record PortalTheme(
 	string Id,
 	string Name,
 	bool Dark,
 	bool Published,
 	IReadOnlyDictionary<string, string> Tokens,
-	bool BuiltIn = false);
+	bool BuiltIn = false,
+	string? Stylesheet = null);
 
 /// <summary>
 /// The themes a viewer may use, and the game's defaults: what a visitor, or a character that chose none, sees when
@@ -34,7 +40,7 @@ public sealed record PortalThemeDefaults(string DarkThemeId, string LightThemeId
 }
 
 /// <summary>Creates or replaces a theme. The id comes from the route on a replace and from the name on a create.</summary>
-public sealed record PortalThemeRequest(string Name, bool Dark, bool Published, Dictionary<string, string> Tokens);
+public sealed record PortalThemeRequest(string Name, bool Dark, bool Published, Dictionary<string, string> Tokens, string? Stylesheet = null);
 
 /// <summary>
 /// Makes <paramref name="ThemeId"/> the default for its own mode: a dark theme for browsers that prefer dark, a light

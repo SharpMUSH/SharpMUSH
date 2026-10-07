@@ -217,6 +217,35 @@
 	--warn-tint: rgba(255, 180, 84, 0.14);
 	--unread-alert: #ff8a8a;        /* rail mail badge fill (text uses --bg) */
 	--switch-knob-off: #c3cad0;     /* an off switch's knob carries the 3:1 non-text contrast on its --border track */
+	/* Status and kind colours; a theme derives its own, readable on its surfaces (ThemeResolver.StatusColors).
+	   A tint is color-mix(in srgb, var(--danger) 12%, transparent), never a second hard-coded colour. */
+	--danger: #e57373;              /* deletes, denials, errors */
+	--success: #6cde9a;             /* allows, results */
+	--info: #5aa9ff;                /* notices, pages */
+	--special: #b39cff;             /* roles, forms, other marked kinds */
+
+	/* ── code and syntax (ThemeResolver.SyntaxColors): help, the softcode console, highlighted softcode ── */
+	--code-bg: #090a0b;
+	--code-text: #e9edf0;
+	--syntax-command: #c792ea;      /* $-command patterns */
+	--syntax-function: #82aaff;
+	--syntax-substitution: #f78c6c; /* %-substitutions */
+	--syntax-dbref: #89ddff;
+	--syntax-reference: #c3e88d;    /* attribute references */
+	--syntax-at-command: #ffcb6b;
+	--syntax-danger: #ff5350;
+	--syntax-string: #ce9178;       /* help: inline code */
+	--syntax-link: #4ec9b0;         /* help: links to other topics */
+	--syntax-heading: #9cdcfe;
+	--syntax-emphasis: #dcdcaa;
+	/* Monaco paints with its own dark theme (mush-monaco.js 'mush-dark') whatever the portal's, so the
+	   editor's frame matches that, not the theme. */
+	--editor-bg: #1a1a2e;
+
+	/* ── depth ── */
+	--shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.4);  /* menus, popovers, drawers */
+	--overlay: rgba(0, 0, 0, 0.55);                /* behind a drawer or dialog */
+	--scrim-ink: 10, 11, 13;                       /* rgba(var(--scrim-ink), a): the dark wash under text over images */
 
 	/* ── OOC band (Play story) ── */
 	--ooc-band-bg: #2e2748;         /* --text on it: 11.89:1 */
