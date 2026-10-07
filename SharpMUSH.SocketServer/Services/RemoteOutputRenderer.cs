@@ -48,7 +48,8 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 	public async ValueTask<RenderedOutput> RenderAsync(string markup,
 		ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default) =>
 		new(await SendAsync(new RenderRequest(markup, null,
-			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences), prompt), ct), false);
+			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences,
+				connection.Handle, connection.SessionId), prompt), ct), false);
 
 	public ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
 		CancellationToken ct = default) =>

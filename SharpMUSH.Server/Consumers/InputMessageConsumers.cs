@@ -404,6 +404,35 @@ public class TerminalTypeNegotiatedConsumer(
 }
 
 /// <summary>
+/// Records what a terminal answered when asked what it can draw (<c>SOCKSET graphics=detect</c>), which
+/// <c>terminfo()</c> and <c>SOCKSET</c> report.
+/// </summary>
+public class TerminalReportConsumer(
+	ILogger<TerminalReportConsumer> logger,
+	IConnectionService connectionService)
+	: IMessageConsumer<TerminalReportMessage>
+{
+	public async Task HandleAsync(TerminalReportMessage message, CancellationToken cancellationToken = default)
+	{
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping terminal report for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		// Every key is written, an unanswered question as empty, since a new report replaces the last one
+		// whole: a key left from an earlier answer would keep a feature the terminal no longer has.
+		var report = message.Report;
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeKittyKey,
+			report.KittyGraphics switch { true => "1", false => "0", null => string.Empty });
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeSixelKey, report.Sixel ? "1" : "0");
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeVersionKey, report.Version ?? string.Empty);
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeCellSizeKey,
+			report is { CellWidth: > 0, CellHeight: > 0 } ? $"{report.CellWidth}x{report.CellHeight}" : string.Empty);
+	}
+}
+
+/// <summary>
 /// Consumes connection closed messages from NATS JetStream
 /// </summary>
 public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, IConnectionService connectionService)

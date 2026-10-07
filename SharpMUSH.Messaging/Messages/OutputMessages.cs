@@ -114,3 +114,17 @@ public record UpdateColorStyleMessage(long Handle, string? Style) : IHandleMessa
 /// which leaves the game's own look.
 /// </summary>
 public record UpdateThemeMessage(long Handle, string? Theme) : IHandleMessage;
+
+/// <summary>
+/// Carries the <c>SOCKSET hyperlinks</c>, <c>commandlinks</c> and <c>graphics</c> pins to the socket owner.
+/// Each is null for "auto", which leaves the feature to what the terminal reported or answered.
+/// <paramref name="Graphics"/> is one of the <see cref="SharpMUSH.Library.Utilities.TerminalGraphics"/> values.
+/// </summary>
+public record UpdateTerminalFeaturesMessage(long Handle, bool? Hyperlinks, bool? CommandLinks, string? Graphics)
+	: IHandleMessage;
+
+/// <summary>
+/// Asks the socket owner to ask the connection's terminal what it can draw (<c>SOCKSET graphics=detect</c>).
+/// The answers come back as a <see cref="TerminalReportMessage"/>.
+/// </summary>
+public record ProbeTerminalMessage(long Handle) : IHandleMessage;

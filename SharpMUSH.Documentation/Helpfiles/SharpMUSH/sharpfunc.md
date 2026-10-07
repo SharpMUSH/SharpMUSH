@@ -5812,7 +5812,10 @@ a          b          areallylon d
   websocket        present if the client is connected via WebSocket.<br>
   portal           present if the connection is a background portal (system) session.<br>
   prompt_newlines  see [PROMPT_NEWLINES]<br>
-  stripaccents     client is receiving 7-bit ascii, no accented characters
+  stripaccents     client is receiving 7-bit ascii, no accented characters<br>
+  hyperlinks       web links are sent as clickable OSC 8 links; see [HYPERLINKS]<br>
+  commandlinks     command links are sent as clickable MSLP links; see [HYPERLINKS]<br>
+  kitty, iterm2, sixel or blocks  how pictures are drawn; see [GRAPHICS]
 
   One of the color styles shown in [COLORSTYLE] will also be included.
 

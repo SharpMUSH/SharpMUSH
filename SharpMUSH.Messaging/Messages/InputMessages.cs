@@ -87,6 +87,13 @@ public record MxpNegotiatedMessage(long Handle) : IHandleMessage;
 public record TerminalTypeNegotiatedMessage(long Handle, IReadOnlyList<string> TerminalTypes) : IHandleMessage;
 
 /// <summary>
+/// Message sent from ConnectionServer to MainProcess when a terminal answers the questions
+/// <see cref="ProbeTerminalMessage"/> had it asked, which <c>terminfo()</c> and <c>SOCKSET</c> report.
+/// </summary>
+public record TerminalReportMessage(long Handle, SharpMUSH.Library.Utilities.TerminalProbeResult Report)
+	: IHandleMessage;
+
+/// <summary>
 /// Message sent from ConnectionServer to MainProcess the first time a client genuinely answers a
 /// telnet option — PennMUSH's CONN_TELNET, and the "telnet" token in <c>terminfo()</c>. Arriving on
 /// the telnet port is not enough on its own: a raw socket never negotiates anything.

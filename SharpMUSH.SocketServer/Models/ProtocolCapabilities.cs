@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using SharpMUSH.Library.Utilities;
+
 namespace SharpMUSH.SocketServer.Models;
 
 /// <summary>
@@ -55,6 +58,15 @@ public static class OutputFormatNegotiation
 /// <c>box()</c>, <c>flex()</c> and the like at an automatic width is laid out again at this width
 /// before it is sent.
 /// </param>
+/// <param name="DetectedFeatures">
+/// What the terminal can do beyond colour, from the terminal types it reported and what it answered
+/// when asked (<see cref="TerminalFeatureReader.Detect"/>). The pins below override it.
+/// </param>
+/// <param name="HyperlinksPin">A <c>SOCKSET hyperlinks</c> pin, or null for auto.</param>
+/// <param name="CommandLinksPin">A <c>SOCKSET commandlinks</c> pin, or null for auto.</param>
+/// <param name="GraphicsPin">A <c>SOCKSET graphics</c> pin (<see cref="TerminalGraphics"/>), or null for auto.</param>
+/// <param name="CellWidth">The terminal's character cell width in pixels, or zero when it never said.</param>
+/// <param name="CellHeight">The terminal's character cell height in pixels, or zero when it never said.</param>
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
@@ -66,5 +78,21 @@ public record ProtocolCapabilities(
 	bool ScreenReader = false,
 	string? ColorStylePin = null,
 	string? MxpSupported = null,
-	int Width = 0
-);
+	int Width = 0,
+	TerminalOutputFeatures DetectedFeatures = TerminalOutputFeatures.None,
+	bool? HyperlinksPin = null,
+	bool? CommandLinksPin = null,
+	string? GraphicsPin = null,
+	int CellWidth = 0,
+	int CellHeight = 0
+)
+{
+	/// <summary>
+	/// What this connection is sent beyond colour: <see cref="DetectedFeatures"/> under the pins, through
+	/// <see cref="TerminalFeatureReader.Resolve"/>, the calculation <c>terminfo()</c> also reports.
+	/// </summary>
+	[JsonIgnore]
+	public TerminalOutputFeatures Features => TerminalFeatureReader.Resolve(DetectedFeatures, HyperlinksPin,
+		CommandLinksPin, GraphicsPin, Charset.Replace("-", "").Equals("UTF8", StringComparison.OrdinalIgnoreCase),
+		ScreenReader);
+}
