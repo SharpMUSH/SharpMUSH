@@ -49,8 +49,7 @@ public class FlagUnsetPermissionTests
 		("FIXED", "wizard"),
 		("TRUST", "trusted"),
 		("JUDGE", "royalty"),
-		("UNREGISTERED", "royalty"),
-		("APPROVED", "royalty")
+		("UNREGISTERED", "royalty")
 	];
 
 	[Test]

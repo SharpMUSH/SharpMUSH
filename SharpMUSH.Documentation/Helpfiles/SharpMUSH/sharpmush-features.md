@@ -58,7 +58,7 @@ line names the help topic that explains it. For where SharpMUSH still differs fr
   [ROLES()], [HASROLE()] and [PERMISSION()].
 - [administrative capabilities] lists the scopes that guard snapshots, jobs, queues and the
   reality layers. [security] gives an overview of how access is decided.
-- The [APPROVED] flag and [ISAPPROVED()] mark characters that have met the game's own bar.
+- The `approved` role and [ISAPPROVED()] mark characters that have met the game's own bar.
 
 ## The wiki
 
