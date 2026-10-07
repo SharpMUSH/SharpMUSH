@@ -103,11 +103,19 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 		};
 	}
 
-	/// <summary>The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first.</summary>
-	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5)
+	/// <summary>
+	/// The scenes <paramref name="dbref"/> belongs to that the caller may see, newest first: those in
+	/// <paramref name="state"/> (<c>live</c>, <c>upcoming</c>, <c>finished</c>) whose title, pitch or room holds
+	/// <paramref name="search"/>, after the first <paramref name="offset"/> of them.
+	/// </summary>
+	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> GetParticipantScenesAsync(string dbref, int count = 5,
+		int offset = 0, string? state = null, string? search = null)
 	{
-		var result = await Client.GetApiAsync<List<SceneDto>>(
-			$"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}", "The server returned no scene list.");
+		var url = $"api/scenes?participant={Uri.EscapeDataString(dbref)}&count={count}";
+		if (offset > 0) url += $"&offset={offset}";
+		if (!string.IsNullOrWhiteSpace(state)) url += $"&state={Uri.EscapeDataString(state)}";
+		if (!string.IsNullOrWhiteSpace(search)) url += $"&search={Uri.EscapeDataString(search.Trim())}";
+		var result = await Client.GetApiAsync<List<SceneDto>>(url, "The server returned no scene list.");
 
 		return result switch
 		{

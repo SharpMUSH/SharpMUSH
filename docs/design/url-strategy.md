@@ -17,6 +17,7 @@ non-API routes (standard WASM hosting pattern).
 /wiki/Page_Name/edit        Wiki page editor
 /wiki/Page_Name/history     Page revision history
 /character/CharacterName    Character profile (cleaner than /wiki/Character:X)
+/character/CharacterName/scenes  Every scene the character was in (paged, by state and search)
 /characters                 Character directory (public profiles)
 /scenes                     Scene archive (completed, public)
 /scenes/42                  Scene archive detail (numeric ID permalink)

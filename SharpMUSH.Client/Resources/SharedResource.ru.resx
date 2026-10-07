@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>идёт сейчас</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Сцены с участием: {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Назад к профилю: {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Поиск сцен</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Состояние сцены</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Все</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>В эфире</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Предстоящие</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Завершённые</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Показать ещё</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Смотреть все</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Часто играет с</value>
   </data>

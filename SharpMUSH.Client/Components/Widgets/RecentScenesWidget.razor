@@ -9,33 +9,42 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.3 Recent scenes (board 25): the character's last three scenes the viewer may see, a live one
-   marked "live now" and linking to the live view, the rest with when they last moved. *@
+   marked "live now" and linking to the live view, the rest with when they last moved. View all opens
+   every scene of the character's, /character/{name}/scenes. *@
 <FeatureGate Feature="@GameFeatures.Scenes">
 <div class="recent-scenes-widget">
     <KitCard Aside="true" Title="@Loc["NavRecentScenes"]">
-        @if (_loading)
-        {
-            <MudSkeleton Height="40px" />
-        }
-        else if (_scenes is null)
-        {
-            <div class="recent-scenes-empty">@Loc["WidUnavailable"]</div>
-        }
-        else if (_scenes.Count == 0)
-        {
-            <div class="recent-scenes-empty">@Loc["NavNoScenesYet"]</div>
-        }
-        else
-        {
-            <CardRows Class="recent-scenes-rows">
-                @foreach (var scene in _scenes)
-                {
-                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@ImageOf(scene)"
-                                Name="@TitleOf(scene)" Label="@TitleOf(scene)" Sub="@(scene.IsLive ? $"● {Loc["NavLiveNowShort"]}" : Loc.Format(scene.LastActivityAtUtc))"
-                                Href="@(scene.IsLive ? $"/scenes/{scene.Id}/live" : $"/scenes/{scene.Id}")" />
-                }
-            </CardRows>
-        }
+        <Controls>
+            @if (_scenes is { Count: > 0 } && _name is { } name)
+            {
+                <a class="recent-scenes-view-all" href="@($"/character/{Uri.EscapeDataString(name)}/scenes")">@Loc["NavCharScenesViewAll"]</a>
+            }
+        </Controls>
+        <ChildContent>
+            @if (_loading)
+            {
+                <MudSkeleton Height="40px" />
+            }
+            else if (_scenes is null)
+            {
+                <div class="recent-scenes-empty">@Loc["WidUnavailable"]</div>
+            }
+            else if (_scenes.Count == 0)
+            {
+                <div class="recent-scenes-empty">@Loc["NavNoScenesYet"]</div>
+            }
+            else
+            {
+                <CardRows Class="recent-scenes-rows">
+                    @foreach (var scene in _scenes)
+                    {
+                        <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@ImageOf(scene)"
+                                    Name="@TitleOf(scene)" Label="@TitleOf(scene)" Sub="@(scene.IsLive ? $"● {Loc["NavLiveNowShort"]}" : Loc.Format(scene.LastActivityAtUtc))"
+                                    Href="@(scene.IsLive ? $"/scenes/{scene.Id}/live" : $"/scenes/{scene.Id}")" />
+                    }
+                </CardRows>
+            }
+        </ChildContent>
     </KitCard>
 </div>
 </FeatureGate>
@@ -51,6 +60,9 @@
     private IReadOnlyList<SceneSummary>? _scenes;
     private bool _loading = true;
     private string? _loadedFor;
+
+    /// <summary>The character the scenes are of, for View all.</summary>
+    private string? _name;
 
     /// <summary>The scenes listed are the ones the acting character may see; a switch, or a scene this tab started, reads them again.</summary>
     private readonly ViewerScopedReload _reload = new();
@@ -68,6 +80,7 @@
     private async Task LoadAsync()
     {
         if (ProfileCharacter.NameFrom(Config, PageContext) is not { } name) return;
+        _name = name;
         var ticket = _reload.Begin();
         _loading = true;
         var scenes = await ProfileCharacter.DbrefOfAsync(Directory, name, PageContext) is { } dbref

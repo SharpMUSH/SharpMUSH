@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>en curso</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Escenas con {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Volver a {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Buscar escenas</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Estado de la escena</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Todas</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>En vivo</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Próximas</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Terminadas</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Mostrar más</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Ver todo</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Juega a menudo con</value>
   </data>
