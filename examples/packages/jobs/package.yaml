@@ -1,0 +1,1567 @@
+format: 1.2
+package: jobs
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [jobs, requests, tickets, staff, anomaly]
+requires_server: ">=0.1"
+
+# plus-help carries the +help topics; common-functions draws header(), line() and footer();
+# http-handler owns the GET/POST verb routers the portal routes hang off.
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+  - package: common-functions
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/common-functions/
+      branch: main
+  - package: http-handler
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+
+# Who works which bucket is a permission, so it moves with roles. softcode.jobs.admin works every
+# bucket and manages them; softcode.jobs.<bucket> works one. Each comes with a role a game assigns:
+# @role/assign <player>=job-admin, or =job-admin-applications. Nobody holds a custom permission
+# until something allows it, wizards included; God and administrator holders hold them all.
+categories:
+  roles:
+    - name: Jobs
+      description: Roles for the people who work the job queue.
+  permissions:
+    - name: Jobs
+      description: Working the job queue and its buckets.
+permissions:
+  - name: softcode.jobs.admin
+    category: Jobs
+    description: Work every bucket's jobs, delete jobs, and create, change and remove buckets.
+  - name: softcode.jobs.applications
+    category: Jobs
+    description: Work the Applications bucket's jobs and change its settings.
+  - name: softcode.jobs.requests
+    category: Jobs
+    description: Work the Requests bucket's jobs and change its settings.
+  - name: softcode.jobs.building
+    category: Jobs
+    description: Work the Building bucket's jobs and change its settings.
+  - name: softcode.jobs.bugs
+    category: Jobs
+    description: Work the Bugs bucket's jobs and change its settings.
+  - name: softcode.jobs.plots
+    category: Jobs
+    description: Work the Plots bucket's jobs and change its settings.
+  - name: softcode.jobs.feedback
+    category: Jobs
+    description: Work the Feedback bucket's jobs and change its settings.
+  - name: softcode.jobs.staff
+    category: Jobs
+    description: Work the Staff bucket's jobs and change its settings.
+roles:
+  - slug: job-admin
+    name: Job Admin
+    category: Jobs
+    priority: 12
+    permissions:
+      softcode.jobs.admin: allow
+  - slug: job-admin-applications
+    name: Job Admin - Applications
+    category: Jobs
+    priority: 11
+    permissions:
+      softcode.jobs.applications: allow
+  - slug: job-admin-requests
+    name: Job Admin - Requests
+    category: Jobs
+    priority: 11
+    permissions:
+      softcode.jobs.requests: allow
+  - slug: job-admin-building
+    name: Job Admin - Building
+    category: Jobs
+    priority: 11
+    permissions:
+      softcode.jobs.building: allow
+  - slug: job-admin-bugs
+    name: Job Admin - Bugs
+    category: Jobs
+    priority: 11
+    permissions:
+      softcode.jobs.bugs: allow
+  - slug: job-admin-plots
+    name: Job Admin - Plots
+    category: Jobs
+    priority: 11
+    permissions:
+      softcode.jobs.plots: allow
+  - slug: job-admin-feedback
+    name: Job Admin - Feedback
+    category: Jobs
+    priority: 11
+    permissions:
+      softcode.jobs.feedback: allow
+  - slug: job-admin-staff
+    name: Job Admin - Staff
+    category: Jobs
+    priority: 11
+    permissions:
+      softcode.jobs.staff: allow
+
+objects:
+  # The command object. WIZARD because it creates and changes the job objects, adds the commands
+  # (@command/add, @hook) and defines a new bucket's permission and role. Every $-command it carries
+  # is an @hook/override/inline target of a command STARTUP adds with /noparse/rsnoparse, so what a
+  # player types reaches the code exactly as typed: a /softcode message keeps its brackets and
+  # percent signs, and nothing a player wrote is ever evaluated.
+  #
+  # Every reference to this object is {{jobs}}, never %!, because the portal routes on the HTTP
+  # handler @include the same INC`DO` attributes, and there %! is the handler.
+  #
+  # Trees: CMD` the hooked commands, INC`JOB` / INC`BUCKET` one per switch, INC`NEED` the guards
+  # those share, INC`DO` the writes (shared with the portal routes and the API), FUN` reads,
+  # DATA` configuration.
+  - ref: jobs
+    type: thing
+    name: Jobs
+    flags: [WIZARD]
+    attributes:
+      # ---- configuration --------------------------------------------------------
+      # Where +request files when no bucket is named, and where +job/query opens a job.
+      DATA`DEFAULT`BUCKET: |-
+        Requests
+      # +bug, +typo, +pitch and +apply each file in one bucket.
+      DATA`SHORTCUT`BUG: |-
+        Bugs
+      DATA`SHORTCUT`TYPO: |-
+        Building
+      DATA`SHORTCUT`PITCH: |-
+        Plots
+      DATA`SHORTCUT`APPLY: |-
+        Applications
+      # Seconds between the checks for overdue jobs and for closed jobs past their bucket's keep.
+      DATA`TICK: |-
+        300
+      # The bucket hooks, each an ON`<name> attribute on every bucket.
+      DATA`HOOKS: |-
+        FILE REPLY CLAIM TURN APPROVE DENY COMPLETE CANCEL REOPEN TRANSFER DUE PRIORITY OVERDUE DELETE
+      # What +bucket/create writes on a new bucket.
+      DATA`HOOKDOC`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      DATA`HOOKDOC`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      DATA`HOOKDOC`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      DATA`HOOKDOC`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      DATA`HOOKDOC`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example: @pemit %2=Your job %0 was approved.}
+      DATA`HOOKDOC`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      DATA`HOOKDOC`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      DATA`HOOKDOC`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      DATA`HOOKDOC`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      DATA`HOOKDOC`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      DATA`HOOKDOC`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      DATA`HOOKDOC`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      DATA`HOOKDOC`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      DATA`HOOKDOC`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+      # Switch spellings from AnomalyJobs and Volund that mean a switch with another name here.
+      # /add and /comment are staff-only notes, /tag watches, /revive reopens, /bucket moves, /esc sets the
+      # priority. approve, deny, complete and cancel share one routine.
+      DATA`SW`ADD: |-
+        note
+      DATA`SW`COMMENT: |-
+        note
+      DATA`SW`TAG: |-
+        watch
+      DATA`SW`UNTAG: |-
+        unwatch
+      DATA`SW`REVIVE: |-
+        reopen
+      DATA`SW`BUCKET: |-
+        trans
+      DATA`SW`ESC: |-
+        priority
+      DATA`SW`APPROVE: |-
+        close
+      DATA`SW`DENY: |-
+        close
+      DATA`SW`COMPLETE: |-
+        close
+      DATA`SW`CANCEL: |-
+        close
+      DATA`SW`READ: |-
+        view
+      DATA`SW`VIEW: |-
+        view
+      # What +bucket/set says about a value it refuses.
+      DATA`SETTINGS: |-
+        description turnaround reopen anonymous hidden priority keep
+      DATA`SETTING`DESCRIPTION: |-
+        A description is up to 200 characters.
+      DATA`SETTING`TURNAROUND: |-
+        Turnaround is the number of days staff have to answer a new job, 0 for no due date.
+      DATA`SETTING`REOPEN: |-
+        Reopen is the number of days after closing that the filer's reply opens a job again, 0 for never.
+      DATA`SETTING`ANONYMOUS: |-
+        Anonymous is none, filer (staff do not see who filed) or staff (players do not see staff names).
+      DATA`SETTING`HIDDEN: |-
+        Hidden is yes or no. Only the people who work a hidden bucket see it.
+      DATA`SETTING`PRIORITY: |-
+        Priority is low, normal or high.
+      DATA`SETTING`KEEP: |-
+        Keep is how many days closed jobs stay, or empty to keep them forever.
+
+      # ---- commands -------------------------------------------------------------
+      # +job, +jobs, +myjob, +myjobs, +ticket and +tickets: one command. Which word is typed changes
+      # nothing; what a person sees and may do comes from their permissions and the job. %1 is the
+      # switches, %2 what follows, both exactly as typed.
+      CMD`JOB:
+        value: |-
+          $(?is)^\+(?\:my)?(?\:jobs?|tickets?)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)]; @assert regmatch(%q<sw>,^\[a-z\]*$)=@pemit %#=[u({{jobs}}/FUN`ERR`SWITCH,%q<sw>)]; @assert strlen(setr(route,u({{jobs}}/FUN`ROUTE,%q<sw>,%q<arg>)))=@pemit %#=[u({{jobs}}/FUN`ERR`SWITCH,%q<sw>)]; @include {{jobs}}/INC`JOB`%q<route>
+        flags: [REGEXP]
+      # +request [<bucket>/]<title>=<text>. What comes before the first / names a bucket only when it is
+      # a bucket's full name, so "+request Help w/ exits=..." is a title in the default bucket.
+      CMD`REQUEST:
+        value: |-
+          $(?is)^\+request(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)]; @assert not(strlen(%q<sw>))=@pemit %#=+request has no /%q<sw> switch. Add /softcode to show your text as typed.; @assert cand(%q<eq>,strlen(%q<lhs>))=@pemit %#=File a request with +request [chr(91)]<bucket>/[chr(93)]<title>=<text>.; think [setq(fb,if(strmatch(%q<lhs>,*/*),u({{jobs}}/FUN`BUCKET`SEEN,before(%q<lhs>,/),%#)))][setq(title,if(strlen(%q<fb>),trim(after(%q<lhs>,/)),%q<lhs>))][setq(fb,firstof(%q<fb>,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`DEFAULT`BUCKET))))][setq(text,%q<rhs>)]; @include {{jobs}}/INC`FILE`CHECKED
+        flags: [REGEXP]
+      # +bug, +typo, +pitch and +apply <title>=<text>: +request into a set bucket (DATA`SHORTCUT`<word>).
+      CMD`SHORTCUT:
+        value: |-
+          $(?is)^\+(bug|typo|pitch|apply)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%2,%3)]; @assert not(strlen(%q<sw>))=@pemit %#=+[lcstr(%1)] has no /%q<sw> switch.; @assert strlen(%q<arg>)=@pemit %#=+[lcstr(%1)] <title>=<text>; think [setq(fb,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`SHORTCUT`%1)))][setq(title,if(%q<eq>,%q<lhs>,left(%q<arg>,60)))][setq(text,if(%q<eq>,%q<rhs>,%q<arg>))]; @include {{jobs}}/INC`FILE`CHECKED
+        flags: [REGEXP]
+      # +buckets lists buckets, +bucket <name> shows one, and +bucket/<switch> manages them.
+      CMD`BUCKET:
+        value: |-
+          $(?is)^\+buckets?(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)][setq(route,firstof(%q<sw>,if(strlen(%q<arg>),info,list)))]; @assert cand(regmatch(%q<route>,^\[a-z\]+$),hasattr({{jobs}},INC`BUCKET`%q<route>))=@pemit %#=+bucket has no /%q<sw> switch. +help buckets lists them.; @include {{jobs}}/INC`BUCKET`%q<route>
+        flags: [REGEXP]
+
+      # ---- parsing --------------------------------------------------------------
+      # %0 switches, %1 the argument, both raw. Sets %q<sw> (the first switch that is not /softcode or
+      # /markdown), %q<fmt>, %q<arg>, %q<lhs> and %q<rhs> around the first =, %q<eq> (1 when there was an
+      # =), %q<me> (the actor's key) and %q<actor>.
+      FUN`PARSE: |-
+        [setq(sws,lcstr(trim(edit(%0,/,%b))))][setq(fmt,if(member(%q<sws>,softcode),softcode,markdown))][setq(sw,first(trim(iter(%q<sws>,if(t(match(softcode markdown,%i0)),,%i0)))))][setq(arg,trim(%1))][setq(eq,strmatch(%1,*=*))][setq(lhs,trim(before(%1,=)))][setq(rhs,trim(after(%1,=)))][setq(me,u({{jobs}}/FUN`KEY,%#))][setq(actor,objid(%#))]
+      # %0 switch, %1 argument. The INC`JOB` routine to run, or nothing. No switch reads a job when given
+      # a number and lists otherwise; /all with a number reads a job with its log.
+      FUN`ROUTE: |-
+        [switch(1,not(strlen(%0)),if(isint(%1),view,list),cand(strmatch(%0,all),isint(%q<lhs>)),view,t(strlen(get({{jobs}}/DATA`SW`%0))),get({{jobs}}/DATA`SW`%0),hasattr({{jobs}},INC`JOB`%0),%0,)]
+      FUN`ERR`SWITCH: |-
+        +job has no /%0 switch. +help jobs commands lists them.
+
+      # ---- reads ----------------------------------------------------------------
+      # A person's key in attribute names: their objid with # dropped and : as _.
+      FUN`KEY: |-
+        [edit(objid(%0),#,,:,_)]
+      FUN`UNKEY: |-
+        #[edit(%0,_,:)]
+      # The job object numbered %0, or nothing.
+      FUN`JOB: |-
+        [if(isint(%0),if(cand(hastype(get({{store}}/INDEX`%0),THING),not(hasflag(get({{store}}/INDEX`%0),GOING))),get({{store}}/INDEX`%0)))]
+      # The bucket whose full name is %0, matched without regard to case, or nothing.
+      FUN`BUCKET: |-
+        [first(squish(iter(lcon({{buckets}}),if(not(comp(lcstr(name(%i0)),lcstr(trim(%0)))),objid(%i0)))))]
+      # The same, unless the bucket is hidden from %1.
+      FUN`BUCKET`SEEN: |-
+        [setq(_b,u({{jobs}}/FUN`BUCKET,%0))][if(cand(strlen(%q<_b>),cor(not(t(get(%q<_b>/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%q<_b>,%1))),%q<_b>)]
+      FUN`BUCKETS`SEEN: |-
+        [sortkey({{jobs}}/FUN`NAMEKEY,squish(iter(lcon({{buckets}}),if(cor(not(t(get(%i0/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%i0,%0)),objid(%i0)))))]
+      FUN`NAMEKEY: |-
+        [name(%0)]
+      # Bucket %0, person %1. The bucket's work and file locks decide.
+      FUN`CAN`WORK: |-
+        [t(elock(%0/work,%1))]
+      FUN`CAN`FILE: |-
+        [t(elock(%0/file,%1))]
+      FUN`IS`ADMIN: |-
+        [t(permission(%0,softcode.jobs.admin))]
+      # Whether %1 may learn who filed job %0: anyone, unless its bucket hides the filer; then the filer,
+      # a Job Admin, or the bucket's own hooks.
+      FUN`FILER`SHOWN: |-
+        [cor(not(strmatch(get(get(%0/BUCKET)/ANONYMOUS),filer)),strmatch(get(%0/FILED`BY),objid(%1)),u({{jobs}}/FUN`IS`ADMIN,%1),strmatch(objid(loc(%1)),{{buckets}}))]
+      # Whether a closed job %0 still opens again on its filer's reply: its bucket reopens (not 0) and the
+      # job closed within that many days.
+      FUN`CAN`REOPEN: |-
+        [cand(gt(firstof(get(get(%0/BUCKET)/REOPEN),0),0),lte(sub(secs(),get(%0/CLOSED`AT)),mul(86400,firstof(get(get(%0/BUCKET)/REOPEN),0))))]
+      # Job %0, person %1: the filer or a helper, who read the public side of a job and reply to it.
+      FUN`IS`PARTY: |-
+        [cor(strmatch(get(%0/FILED`BY),objid(%1)),hasattr(%0,HELPER`[u({{jobs}}/FUN`KEY,%1)]))]
+      FUN`CAN`SEE: |-
+        [cor(u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1),u({{jobs}}/FUN`IS`PARTY,%0,%1))]
+      # How person %0 on job %1 is named to %2. A bucket can hide the filer (ANONYMOUS filer) from
+      # everyone else, or staff names (ANONYMOUS staff) from the people who do not work it. You always see
+      # your own name. FUN`WHO`AS takes the viewer as two answers: works the bucket, is the person.
+      FUN`WHO: |-
+        [u({{jobs}}/FUN`WHO`AS,%0,%1,u({{jobs}}/FUN`CAN`WORK,get(%1/BUCKET),%2),strmatch(%0,objid(%2)))]
+      FUN`WHO`AS: |-
+        [switch(1,not(strlen(%0)),Nobody,%3,name(%0),cand(strmatch(%0,get(%1/FILED`BY)),strmatch(get(get(%1/BUCKET)/ANONYMOUS),filer)),Anonymous,cand(not(%2),strmatch(get(get(%1/BUCKET)/ANONYMOUS),staff),not(strmatch(%0,get(%1/FILED`BY)))),Staff,hastype(%0,PLAYER),name(%0),Someone)]
+      # Job %0 state as the list shows it; %1 is 1 for someone who works the bucket.
+      FUN`STATE`TEXT: |-
+        [switch(get(%0/STATE),new,if(%1,New,With staff),staff,if(%1,Needs staff,With staff),player,if(%1,With player,Waiting on you),held,On hold,closed,capstr(get(%0/OUTCOME)),?)]
+      FUN`STATE`NAME: |-
+        [switch(%0,new,new,staff,needs staff,player,waiting on the player,held,on hold,closed,closed,%0)]
+      # Overdue only counts while it is staff's turn, so a job waiting on its player is never overdue.
+      FUN`IS`OVERDUE: |-
+        [cand(t(match(new staff,get(%0/STATE))),isint(get(%0/DUE)),lt(get(%0/DUE),secs()))]
+      FUN`WHEN: |-
+        [if(isint(%0),timefmt($b $d $H:$M,%0),-)]
+      FUN`DATE: |-
+        [if(isint(%0),timefmt($b $d,%0),-)]
+      # Unread is per person: anything newer than their last read that they may see.
+      FUN`UNREAD: |-
+        [gt(firstof(get(%0/[if(u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)]),0),firstof(get(%0/READ`[u({{jobs}}/FUN`KEY,%1)]),0))]
+      FUN`DUE`DEFAULT: |-
+        [if(gt(setr(_t,firstof(get(%0/TURNAROUND),0)),0),add(secs(),mul(%q<_t>,86400)))]
+      # none, +<n>h, +<n>d, +<n>w, or a date convtime() reads. Seconds, none, or #-1.
+      FUN`DUE`PARSE: |-
+        [setq(_x,edit(trim(lcstr(%0)),+,,%b,))][switch(1,t(match(none clear,%q<_x>)),none,cand(isint(left(%q<_x>,dec(strlen(%q<_x>)))),t(match(h d w,right(%q<_x>,1)))),add(secs(),mul(left(%q<_x>,dec(strlen(%q<_x>))),switch(right(%q<_x>,1),h,3600,w,604800,86400))),isint(setr(_c,convtime(%0))),%q<_c>,#-1)]
+      FUN`PRIORITY`PARSE: |-
+        [switch(lcstr(trim(%0)),low,low,green,low,normal,normal,yellow,normal,high,high,red,high,)]
+      FUN`OUTCOME`HOOK: |-
+        [switch(%0,approved,APPROVE,denied,DENY,completed,COMPLETE,canceled,CANCEL)]
+      # A handler is a person (HANDLER`<key>) or every holder of a role (HROLE`<role>).
+      FUN`HATTR: |-
+        [if(strmatch(%0,role:*),HROLE`[after(%0,:)],HANDLER`[u({{jobs}}/FUN`KEY,%0)])]
+      FUN`HNAME: |-
+        [if(strmatch(%0,role:*),+[after(%0,:)],name(%0))]
+      # Job %0, HANDLER, WATCHER or HELPER: the objids (and role:<role> handlers).
+      FUN`HLIST: |-
+        [trim([iter(lattr(%0/%1`*),u({{jobs}}/FUN`UNKEY,last(%i0,`)))] [if(strmatch(%1,HANDLER),iter(lattr(%0/HROLE`*),role:[lcstr(last(%i0,`))]))])]
+      FUN`NAMES: |-
+        [setq(_n,iter(u({{jobs}}/FUN`HLIST,%0,%2),if(strmatch(%i0,role:*),+[after(%i0,:)],u({{jobs}}/FUN`WHO,%i0,%0,%1)),%b,|))][if(strlen(%q<_n>),itemize(%q<_n>,|),Nobody)]
+      # A bare [text] in a message is text, not a help link; [text](url) stays a link.
+      DATA`RE`BRACKET: |-
+        \[([^\]\[\n]*)\](?![(\[])
+      DATA`RE`BRACKETTO: |-
+        \[$1\]
+      # Messages are stored as typed. A markdown one turns %r (a line break), %t and %b into what they stand for, and escapes bare [text], before rendering.
+      FUN`MDTEXT: |-
+        [regreplace(edit(%0,\%r,[space(2)]%r,\%R,[space(2)]%r,\%t,%t,\%b,space(1)),get({{jobs}}/DATA`RE`BRACKET),get({{jobs}}/DATA`RE`BRACKETTO))]
+      # Job %0 entry %1 at width %2: markdown rendered, or a softcode message exactly as typed.
+      FUN`BODY: |-
+        [if(strmatch(get(%0/ENTRY`%1`FORMAT),softcode),get(%0/ENTRY`%1`TEXT),rendermarkdown(u({{jobs}}/FUN`MDTEXT,get(%0/ENTRY`%1`TEXT)),%2))]
+
+      # ---- lists ----------------------------------------------------------------
+      # Every job person %0 gets from predicate FUN`P`%1 (job, person, %2).
+      FUN`SELECT: |-
+        [squish(iter(lcon({{store}}),if(cand(not(hasflag(%i0,GOING)),u({{jobs}}/FUN`P`%1,%i0,%0,%2)),%i0)))]
+      # Needs staff, in a bucket the person works.
+      FUN`P`QUEUE: |-
+        [cand(t(match(new staff,get(%0/STATE))),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
+      # Open, and theirs.
+      FUN`P`OWN: |-
+        [cand(not(strmatch(get(%0/STATE),closed)),u({{jobs}}/FUN`IS`PARTY,%0,%1))]
+      # What +jobs shows: the queue, and your own open jobs.
+      FUN`P`DEFAULT: |-
+        [cor(u({{jobs}}/FUN`P`QUEUE,%0,%1),u({{jobs}}/FUN`P`OWN,%0,%1))]
+      FUN`P`OPEN: |-
+        [cand(not(strmatch(get(%0/STATE),closed)),u({{jobs}}/FUN`CAN`SEE,%0,%1))]
+      FUN`P`SEEN: |-
+        [u({{jobs}}/FUN`CAN`SEE,%0,%1)]
+      FUN`P`BUCKET: |-
+        [cand(strmatch(get(%0/BUCKET),%2),u({{jobs}}/FUN`P`OPEN,%0,%1))]
+      FUN`P`INBUCKET: |-
+        [strmatch(get(%0/BUCKET),%2)]
+      FUN`P`MINE: |-
+        [cand(not(strmatch(get(%0/STATE),closed)),hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%1)]))]
+      FUN`P`NEW: |-
+        [cand(strmatch(get(%0/STATE),new),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
+      FUN`P`OVERDUE: |-
+        [cand(u({{jobs}}/FUN`IS`OVERDUE,%0),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
+      FUN`P`PLAYER: |-
+        [cand(strmatch(get(%0/STATE),player),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
+      FUN`P`HELD: |-
+        [cand(strmatch(get(%0/STATE),held),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
+      FUN`P`WHO: |-
+        [cand(u({{jobs}}/FUN`P`OPEN,%0,%1),hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%2)]))]
+      FUN`P`FROM: |-
+        [cand(strmatch(get(%0/FILED`BY),%2),u({{jobs}}/FUN`CAN`SEE,%0,%1),u({{jobs}}/FUN`FILER`SHOWN,%0,%1))]
+      FUN`P`OLD: |-
+        [cand(strmatch(get(%0/STATE),closed),u({{jobs}}/FUN`CAN`SEE,%0,%1),cor(not(strlen(%2)),strmatch(get(%0/BUCKET),%2)))]
+      FUN`P`UNREAD: |-
+        [cand(u({{jobs}}/FUN`CAN`SEE,%0,%1),u({{jobs}}/FUN`UNREAD,%0,%1))]
+      # The title or any message the person may read contains %2.
+      FUN`P`SEARCH: |-
+        [cand(u({{jobs}}/FUN`CAN`SEE,%0,%1),cor(t(pos(lcstr(%2),lcstr(get(%0/TITLE)))),t(words(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(cand(u({{jobs}}/FUN`ENTRY`VISIBLE,%0,%i0,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1),),t(pos(lcstr(%2),lcstr(get(%0/ENTRY`%i0`TEXT))))),%i0))))))]
+      # High priority first, then whoever has waited longest for their turn.
+      FUN`SORT: |-
+        [sortkey({{jobs}}/FUN`SORTKEY,%0)]
+      FUN`SORTKEY: |-
+        [switch(get(%0/PRIORITY),high,1,low,3,2)][rjust(firstof(get(%0/TURN`AT),0),12,0)]
+      # Newest first.
+      FUN`SORT`NUM: |-
+        [revwords(sortkey({{jobs}}/FUN`NUMKEY,%0,n))]
+      FUN`NUMKEY: |-
+        [get(%0/NUM)]
+      FUN`COLS: |-
+        >5 <12 <[sub(%0,46)] <14 <9
+      # Job %0 for person %1 at width %2. A * before the number marks something unread.
+      FUN`ROW: |-
+        [align(u({{jobs}}/FUN`COLS,%2),[if(u({{jobs}}/FUN`UNREAD,%0,%1),*)][get(%0/NUM)],name(get(%0/BUCKET)),get(%0/TITLE),if(cand(u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1),u({{jobs}}/FUN`IS`OVERDUE,%0)),ansi(hr,Overdue),u({{jobs}}/FUN`STATE`TEXT,%0,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))),u({{jobs}}/FUN`DATE,get(%0/[if(u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)])))]
+      # Jobs %0 for person %1 at width %2, titled %3, with footer %4.
+      FUN`LIST: |-
+        [header(%3,%2)]%r[align(u({{jobs}}/FUN`COLS,%2),#,Bucket,Title,Status,Updated)]%r[if(words(%0),iter(%0,u({{jobs}}/FUN`ROW,%i0,%1,%2),%b,%r),No jobs.)]%r[footer(%4,%2)]
+      # Lists predicate %q<sel> (with %q<selarg>) under %q<ltitle> and %q<lfoot>.
+      INC`SHOW`LIST: |-
+        @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,%q<sel>,%q<selarg>)),%#,width(%#),%q<ltitle>,%q<lfoot>)]
+
+      # ---- one job --------------------------------------------------------------
+      FUN`FIELD: |-
+        [ansi(h,rjust(%0:,11))] %1
+      # Job %0 entry %1, %2 1 for staff, %3 the mode. Replies are public, notes staff-only, and the action
+      # log shows with /all and /act.
+      FUN`ENTRY`VISIBLE: |-
+        [switch(get(%0/ENTRY`%1`KIND),reply,not(strmatch(%3,act)),note,cand(%2,not(strmatch(%3,act))),action,cand(%2,t(match(all act,%3))),0)]
+      FUN`ENTRY: |-
+        [line([u({{jobs}}/FUN`WHO,get(%0/ENTRY`%1`BY),%0,%2)][switch(get(%0/ENTRY`%1`KIND),note,%b[chr(40)]staff only[chr(41)],action,%b[chr(40)]log[chr(41)],)] [chr(183)] [u({{jobs}}/FUN`WHEN,get(%0/ENTRY`%1`AT))] [chr(183)] #%1,%3)]%r[u({{jobs}}/FUN`BODY,%0,%1,%3)]
+      # Job %0 for person %1 at width %2. %3: empty, all (with the log), act (the log only) or last:<n>.
+      FUN`SHOW: |-
+        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_v,squish(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(u({{jobs}}/FUN`ENTRY`VISIBLE,%0,%i0,%q<_s>,%3),%i0))))][if(strmatch(%3,last:*),setq(_v,revwords(extract(revwords(%q<_v>),1,after(%3,:)))))][header(Job [get(%0/NUM)]: [get(%0/TITLE)],%2)]%r[u({{jobs}}/FUN`FIELD,Bucket,name(get(%0/BUCKET)))]%r[u({{jobs}}/FUN`FIELD,Status,[u({{jobs}}/FUN`STATE`TEXT,%0,%q<_s>)][if(cand(%q<_s>,u({{jobs}}/FUN`IS`OVERDUE,%0)),%b[ansi(hr,Overdue)])])]%r[u({{jobs}}/FUN`FIELD,Priority,capstr(get(%0/PRIORITY)))]%r[u({{jobs}}/FUN`FIELD,Filed,[u({{jobs}}/FUN`WHEN,get(%0/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%0/FILED`BY),%0,%1)])]%r[if(%q<_s>,[u({{jobs}}/FUN`FIELD,Due,if(isint(get(%0/DUE)),u({{jobs}}/FUN`WHEN,get(%0/DUE)),None))]%r)][u({{jobs}}/FUN`FIELD,Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER))]%r[if(%q<_s>,[u({{jobs}}/FUN`FIELD,Watchers,u({{jobs}}/FUN`NAMES,%0,%1,WATCHER))]%r)][if(words(lattr(%0/HELPER`*)),[u({{jobs}}/FUN`FIELD,Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER))]%r)][iter(%q<_v>,u({{jobs}}/FUN`ENTRY,%0,%i0,%1,%2),%b,%r)]%r[footer(+job/reply [get(%0/NUM)]=<text> answers,%2)]
+
+      # ---- guards ---------------------------------------------------------------
+      # The job numbered %q<lhs>, as %q<jo>, %q<n>, its bucket %q<b> and %q<staff>. A job the person may
+      # not see reads as missing. An @assert here ends the command that included it.
+      INC`NEED`JOB: |-
+        @assert isint(%q<lhs>)=@pemit %#=Which job? Give its number, as in +job 12.; @assert cand(strlen(setr(jo,u({{jobs}}/FUN`JOB,%q<lhs>))),u({{jobs}}/FUN`CAN`SEE,%q<jo>,%#))=@pemit %#=There is no job %q<lhs>.; think [setq(n,get(%q<jo>/NUM))][setq(b,get(%q<jo>/BUCKET))][setq(staff,u({{jobs}}/FUN`CAN`WORK,get(%q<jo>/BUCKET),%#))]
+      INC`NEED`STAFF: |-
+        @assert %q<staff>=@pemit %#=Only staff who work the [name(%q<b>)] bucket can do that.
+      INC`NEED`ADMIN: |-
+        @assert u({{jobs}}/FUN`IS`ADMIN,%#)=@pemit %#=Only a Job Admin can do that.
+      INC`NEED`OPEN: |-
+        @assert not(strmatch(get(%q<jo>/STATE),closed))=@pemit %#=Job %q<n> is closed. +job/reopen %q<n> opens it again.
+      INC`NEED`TEXT: |-
+        @assert cand(%q<eq>,strlen(%q<rhs>))=@pemit %#=Give the text after an =, as in +job/%q<sw> %q<n>=<text>.
+      # <job>/<entry>: the message %q<ent> as well as the job.
+      INC`NEED`ENTRY: |-
+        think [setq(ent,trim(after(%q<lhs>,/)))][setq(lhs,trim(before(%q<lhs>,/)))]; @include {{jobs}}/INC`NEED`JOB; @assert cand(isint(%q<ent>),hasattr(%q<jo>,ENTRY`%q<ent>`KIND),u({{jobs}}/FUN`ENTRY`VISIBLE,%q<jo>,%q<ent>,%q<staff>,),not(strmatch(get(%q<jo>/ENTRY`%q<ent>`KIND),action)))=@pemit %#=Job %q<n> has no message %q<ent>. +job %q<n> numbers them.
+
+      # ---- +job lists ------------------------------------------------------------
+      # +jobs: what needs staff in the buckets you work, and your own open jobs. +jobs <bucket> (and +jobs/list <bucket>): one bucket.
+      INC`JOB`LIST: |-
+        @break strlen(%q<arg>)=@include {{jobs}}/INC`JOB`BUCKETLIST; think [setq(sel,DEFAULT)][setq(selarg,)][setq(ltitle,Jobs)][setq(lfoot,+job <#> reads one [chr(183)] [if(u({{jobs}}/WEB`STAFF,%#),+jobs/all lists every open job,+job/old lists your closed ones)])]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`BUCKETLIST: |-
+        @assert strlen(setr(selarg,u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))=@pemit %#=There is no bucket called %q<arg>. +buckets lists them.; think [setq(sel,BUCKET)][setq(ltitle,Open jobs in [name(%q<selarg>)])][setq(lfoot,+job/old [name(%q<selarg>)] lists its closed jobs)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`ALL: |-
+        think [setq(sel,OPEN)][setq(selarg,)][setq(ltitle,All open jobs)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`MINE: |-
+        think [setq(sel,MINE)][setq(selarg,)][setq(ltitle,Jobs you handle)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`NEW: |-
+        think [setq(sel,NEW)][setq(selarg,)][setq(ltitle,New jobs)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`OVERDUE: |-
+        think [setq(sel,OVERDUE)][setq(selarg,)][setq(ltitle,Overdue jobs)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`PLAYER: |-
+        think [setq(sel,PLAYER)][setq(selarg,)][setq(ltitle,Jobs waiting on players)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`HELD: |-
+        think [setq(sel,HELD)][setq(selarg,)][setq(ltitle,Jobs on hold)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`SCAN: |-
+        think [setq(sel,UNREAD)][setq(selarg,)][setq(ltitle,Jobs with something new)][setq(lfoot,+job/next reads the first)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`SEARCH: |-
+        @assert strlen(%q<arg>)=@pemit %#=Search for what? +jobs/search <text>; think [setq(sel,SEARCH)][setq(selarg,%q<arg>)][setq(ltitle,Jobs mentioning %q<arg>)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`WHO: |-
+        @assert isdbref(setr(tp,pmatch(%q<arg>)))=@pemit %#=I don't know a player called %q<arg>.; think [setq(sel,WHO)][setq(selarg,[objid(%q<tp>)])][setq(ltitle,Jobs [name(%q<tp>)] handles)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
+      INC`JOB`FROM: |-
+        @assert isdbref(setr(tp,pmatch(%q<arg>)))=@pemit %#=I don't know a player called %q<arg>.; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,FROM,objid(%q<tp>))),%#,width(%#),Jobs filed by [name(%q<tp>)],)]
+      # +myjobs/old and +job/old [<bucket>]: closed jobs, newest first.
+      INC`JOB`OLD: |-
+        think [setq(selarg,if(strlen(%q<arg>),u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))]; @assert cor(not(strlen(%q<arg>)),strlen(%q<selarg>))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,OLD,%q<selarg>)),%#,width(%#),Closed jobs[if(strlen(%q<selarg>),%bin [name(%q<selarg>)])],+job <#> reads one)]
+      INC`JOB`NEXT: |-
+        @assert words(setr(nx,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,UNREAD))))=@pemit %#=Nothing is unread.; think [setq(lhs,get(first(%q<nx>)/NUM))][setq(sw,)]; @include {{jobs}}/INC`JOB`VIEW
+      INC`JOB`BRIEF: |-
+        @pemit %#=[ansi(h,JOBS:)] [words(u({{jobs}}/FUN`SELECT,%#,QUEUE))] need staff, [words(u({{jobs}}/FUN`SELECT,%#,OVERDUE))] overdue, [words(u({{jobs}}/FUN`SELECT,%#,UNREAD))] unread, [words(u({{jobs}}/FUN`SELECT,%#,OWN))] of yours open.
+      INC`JOB`CATCHUP: |-
+        @dolist/inline [u({{jobs}}/FUN`SELECT,%#,UNREAD)]=&READ`%q<me> ##=[secs()]; @pemit %#=Every job is marked read.
+
+      # ---- +job, reading one -------------------------------------------------------
+      INC`JOB`VIEW: |-
+        @include {{jobs}}/INC`NEED`JOB; @pemit %#=[u({{jobs}}/FUN`SHOW,%q<jo>,%#,width(%#),if(strmatch(%q<sw>,all),all,))]; &READ`%q<me> %q<jo>=[secs()]
+      INC`JOB`LAST: |-
+        @include {{jobs}}/INC`NEED`JOB; @assert isint(setr(cnt,firstof(%q<rhs>,5)))=@pemit %#=+job/last %q<n>=<how many>; @pemit %#=[u({{jobs}}/FUN`SHOW,%q<jo>,%#,width(%#),last:%q<cnt>)]; &READ`%q<me> %q<jo>=[secs()]
+      INC`JOB`ACT: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @pemit %#=[u({{jobs}}/FUN`SHOW,%q<jo>,%#,width(%#),act)]
+      # Who filed a job, even in a bucket that hides it.
+      INC`JOB`SOURCE: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`ADMIN; @pemit %#=Job %q<n> was filed by [name(get(%q<jo>/FILED`BY))] [chr(40)][get(%q<jo>/FILED`BY)][chr(41)].
+
+      # ---- +job, writing ----------------------------------------------------------
+      # A public reply. Staff replying hands the turn to the player; the filer or a helper replying hands
+      # it to staff, and opens a closed job again within its bucket's reopen window.
+      INC`JOB`REPLY: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`TEXT; @assert cor(%q<staff>,not(strmatch(get(%q<jo>/STATE),closed)),u({{jobs}}/FUN`CAN`REOPEN,%q<jo>))=@pemit %#=Job %q<n> [if(gt(firstof(get(%q<b>/REOPEN),0),0),closed more than [firstof(get(%q<b>/REOPEN),0)] days ago,is closed)]. File a new one with +request and mention job %q<n>.; think [setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))][setq(kind,reply)][setq(text,%q<rhs>)][setq(mailforce,0)]; @include {{jobs}}/INC`DO`REPLY; @pemit %#=You replied to job %q<n>[if(cand(%q<wasclosed>,not(%q<staff>)),%band opened it again)].
+      # /note, and /add and /comment: staff only.
+      INC`JOB`NOTE: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`TEXT; think [setq(kind,note)][setq(text,%q<rhs>)][setq(mailforce,0)]; @include {{jobs}}/INC`DO`REPLY; @pemit %#=You added a staff note to job %q<n>.
+      # A public reply mailed to the filer even when they turned job mail off.
+      INC`JOB`MAIL: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`TEXT; think [setq(kind,reply)][setq(text,%q<rhs>)][setq(mailforce,1)]; @include {{jobs}}/INC`DO`REPLY; @pemit %#=You replied to job %q<n> and mailed it.
+      # /approve, /deny, /complete, /cancel [=<text>]. The filer may cancel their own job.
+      INC`JOB`CLOSE: |-
+        @include {{jobs}}/INC`NEED`JOB; think [setq(outcome,switch(%q<sw>,approve,approved,deny,denied,complete,completed,canceled))]; @assert cor(%q<staff>,cand(strmatch(%q<outcome>,canceled),u({{jobs}}/FUN`IS`PARTY,%q<jo>,%#)))=@pemit %#=Only staff who work the [name(%q<b>)] bucket can %q<sw> a job.; @include {{jobs}}/INC`NEED`OPEN; think [setq(text,%q<rhs>)]; @include {{jobs}}/INC`DO`CLOSE; @pemit %#=Job %q<n> is closed: %q<outcome>.
+      # /reopen, and /revive.
+      INC`JOB`REOPEN: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert strmatch(get(%q<jo>/STATE),closed)=@pemit %#=Job %q<n> is open.; think [setq(byp,0)]; @include/nobreak {{jobs}}/INC`DO`REOPEN; @pemit %#=Job %q<n> is open again and waiting on staff.
+      INC`JOB`STATE: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert t(match(staff player held,setr(to,lcstr(%q<rhs>))))=@pemit %#=+job/state %q<n>=staff, player or held.; @include/nobreak {{jobs}}/INC`DO`TURN; @pemit %#=Job %q<n> is [u({{jobs}}/FUN`STATE`NAME,%q<to>)].
+      INC`JOB`HOLD: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; think [setq(to,held)]; @include/nobreak {{jobs}}/INC`DO`TURN; @pemit %#=Job %q<n> is on hold.
+      INC`JOB`CLAIM: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert not(hasattr(%q<jo>,HANDLER`%q<me>))=@pemit %#=You already handle job %q<n>.; think [setq(who,%q<actor>)][setq(add,1)]; @include {{jobs}}/INC`DO`CLAIM; @pemit %#=You handle job %q<n> now.
+      INC`JOB`UNCLAIM: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert hasattr(%q<jo>,HANDLER`%q<me>)=@pemit %#=You don't handle job %q<n>.; think [setq(who,%q<actor>)][setq(add,0)]; @include {{jobs}}/INC`DO`CLAIM; @pemit %#=You no longer handle job %q<n>.
+      # /assign <#>=<names>: replaces the handlers. +<role> assigns every holder of a role.
+      INC`JOB`ASSIGN: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert strlen(%q<rhs>)=@pemit %#=+job/assign %q<n>=<players and +roles>; think [setq(hl,iter(edit(%q<rhs>,chr(44),%b),if(strmatch(%i0,+*),if(valid(rolename,lcstr(rest(%i0,+))),role:[lcstr(rest(%i0,+))],#-1),firstof(objid(pmatch(%i0)),#-1))))]; @assert not(t(member(%q<hl>,#-1)))=@pemit %#=Assign players by name and roles as +<role>.; @dolist/inline [lattr(%q<jo>/HANDLER`*)] [lattr(%q<jo>/HROLE`*)]=&## %q<jo>=; @dolist/inline %q<hl>={think [setq(who,##)][setq(add,1)]; @include {{jobs}}/INC`DO`CLAIM}; @pemit %#=Job %q<n> is handled by [u({{jobs}}/FUN`NAMES,%q<jo>,%#,HANDLER)].
+      # /watch, and /tag: told of every change without handling it.
+      INC`JOB`WATCH: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; &WATCHER`%q<me> %q<jo>=[secs()]; @pemit %#=You watch job %q<n>.
+      INC`JOB`UNWATCH: |-
+        @include {{jobs}}/INC`NEED`JOB; &WATCHER`%q<me> %q<jo>=; @pemit %#=You no longer watch job %q<n>.
+      # A helper reads the public side of a job and replies to it, as the filer does.
+      INC`JOB`ADDHELPER: |-
+        @include {{jobs}}/INC`NEED`JOB; @assert cor(%q<staff>,strmatch(get(%q<jo>/FILED`BY),%q<actor>))=@pemit %#=Only staff or whoever filed job %q<n> can add helpers.; @assert isdbref(setr(tp,pmatch(%q<rhs>)))=@pemit %#=I don't know a player called %q<rhs>.; &HELPER`[u({{jobs}}/FUN`KEY,%q<tp>)] %q<jo>=[secs()]; think [setq(logtext,Helper added: [name(%q<tp>)].)][setq(logcode,helper)]; @include {{jobs}}/INC`DO`LOG; @pemit %#=[name(%q<tp>)] can read and answer job %q<n> now.
+      INC`JOB`REMHELPER: |-
+        @include {{jobs}}/INC`NEED`JOB; @assert cor(%q<staff>,strmatch(get(%q<jo>/FILED`BY),%q<actor>))=@pemit %#=Only staff or whoever filed job %q<n> can remove helpers.; @assert isdbref(setr(tp,pmatch(%q<rhs>)))=@pemit %#=I don't know a player called %q<rhs>.; &HELPER`[u({{jobs}}/FUN`KEY,%q<tp>)] %q<jo>=; @pemit %#=[name(%q<tp>)] is no longer a helper on job %q<n>.
+      INC`JOB`DUE: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert %q<eq>=@pemit %#=+job/due %q<n>=<date>, +<n>d, or none; @assert not(strmatch(setr(due,u({{jobs}}/FUN`DUE`PARSE,%q<rhs>)),#-1))=@pemit %#=I can't read %q<rhs> as a date. Try +3d, +12h or none.; think [setq(due,if(strmatch(%q<due>,none),,%q<due>))]; @include {{jobs}}/INC`DO`DUE; @pemit %#=Job %q<n> is [if(strlen(%q<due>),due [u({{jobs}}/FUN`WHEN,%q<due>)],not due on any date)].
+      # /priority, and /esc with green, yellow or red.
+      INC`JOB`PRIORITY: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert strlen(setr(prio,u({{jobs}}/FUN`PRIORITY`PARSE,%q<rhs>)))=@pemit %#=Priority is low, normal or high (or green, yellow, red).; @include {{jobs}}/INC`DO`PRIORITY; @pemit %#=Job %q<n> is [lcstr(%q<prio>)] priority.
+      INC`JOB`NAME: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert cand(strlen(%q<rhs>),lte(strlen(%q<rhs>),80))=@pemit %#=A title is 1 to 80 characters.; &TITLE %q<jo>=%q<rhs>; think [setq(logtext,Retitled.)][setq(logcode,name)]; @include {{jobs}}/INC`DO`LOG; @pemit %#=Job %q<n> is titled: %q<rhs>
+      # /trans, and /bucket.
+      INC`JOB`TRANS: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert strlen(setr(nb,u({{jobs}}/FUN`BUCKET,%q<rhs>)))=@pemit %#=There is no bucket called %q<rhs>.; @assert not(strmatch(%q<nb>,%q<b>))=@pemit %#=Job %q<n> is in [name(%q<nb>)] already.; @include {{jobs}}/INC`DO`TRANSFER; @pemit %#=Job %q<n> is in [name(%q<nb>)] now.
+      # Job Admin only. The number is never used again.
+      INC`JOB`DELETE: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`ADMIN; think [setq(title,get(%q<jo>/TITLE))]; &INDEX`%q<n> {{store}}=; @tel %q<jo>={{jobs}}; @nuke %q<jo>; @trigger %q<b>/ON`DELETE=%q<n>,%q<actor>,%q<title>; @pemit %#=Job %q<n> is deleted.
+      # /merge <from>=<into>: the messages, handlers, watchers and helpers of one job move into another.
+      INC`JOB`MERGE: |-
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; think [setq(src,%q<jo>)][setq(srcn,%q<n>)][setq(srct,get(%q<jo>/TITLE))][setq(lhs,%q<rhs>)]; @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert not(strmatch(%q<src>,%q<jo>))=@pemit %#=A job can't be merged into itself.; @dolist/inline [lnum(1,firstof(get(%q<src>/ENTRIES),0))]={think [setq(ne,inc(firstof(get(%q<jo>/ENTRIES),0)))]; &ENTRIES %q<jo>=%q<ne>; &ENTRY`%q<ne>`KIND %q<jo>=[get(%q<src>/ENTRY`##`KIND)]; &ENTRY`%q<ne>`BY %q<jo>=[get(%q<src>/ENTRY`##`BY)]; &ENTRY`%q<ne>`AT %q<jo>=[get(%q<src>/ENTRY`##`AT)]; &ENTRY`%q<ne>`TEXT %q<jo>=[get(%q<src>/ENTRY`##`TEXT)]; &ENTRY`%q<ne>`FORMAT %q<jo>=[get(%q<src>/ENTRY`##`FORMAT)]; &ENTRY`%q<ne>`ACTION %q<jo>=[get(%q<src>/ENTRY`##`ACTION)]}; @dolist/inline [lattr(%q<src>/HANDLER`*)] [lattr(%q<src>/HROLE`*)] [lattr(%q<src>/WATCHER`*)] [lattr(%q<src>/HELPER`*)]=&## %q<jo>=[get(%q<src>/##)]; think [setq(logtext,Job %q<srcn> merged into this one: %q<srct>)][setq(logcode,merge)]; @include {{jobs}}/INC`DO`LOG; &INDEX`%q<srcn> {{store}}=; @tel %q<src>={{jobs}}; @nuke %q<src>; @pemit %#=Job %q<srcn> is merged into job %q<n>.
+      # /edit <#>/<entry>=<old>/<new>: your own messages.
+      INC`JOB`EDIT: |-
+        @include {{jobs}}/INC`NEED`ENTRY; @assert strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>)=@pemit %#=You can only edit your own messages.; @assert cand(%q<eq>,strmatch(%q<rhs>,*/*))=@pemit %#=+job/edit %q<n>/%q<ent>=<old text>/<new text>; &ENTRY`%q<ent>`TEXT %q<jo>=[edit(get(%q<jo>/ENTRY`%q<ent>`TEXT),before(%q<rhs>,/),after(%q<rhs>,/))]; &ENTRY`%q<ent>`EDITED %q<jo>=[secs()]; @pemit %#=Message %q<ent> on job %q<n> is changed.
+      # /format <#>/<entry>=markdown|softcode: how one message shows. The text is untouched.
+      INC`JOB`FORMAT: |-
+        @include {{jobs}}/INC`NEED`ENTRY; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=@pemit %#=Only its author or staff can change how a message shows.; @assert t(match(markdown softcode,setr(fmt,lcstr(%q<rhs>))))=@pemit %#=+job/format %q<n>/%q<ent>=markdown or softcode; @include {{jobs}}/INC`DO`FORMAT; @pemit %#=Message %q<ent> on job %q<n> shows as %q<fmt>.
+      # /create <bucket>/<title>=<text>: staff open a job of their own.
+      INC`JOB`CREATE: |-
+        @assert cand(%q<eq>,strmatch(%q<lhs>,*/*))=@pemit %#=+job/create <bucket>/<title>=<text>; @assert strlen(setr(fb,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=There is no bucket called [before(%q<lhs>,/)].; @assert u({{jobs}}/FUN`CAN`WORK,%q<fb>,%#)=@pemit %#=Only staff who work the [name(%q<fb>)] bucket can open a job in it.; think [setq(title,trim(after(%q<lhs>,/)))][setq(text,%q<rhs>)]; @include {{jobs}}/INC`FILE`CHECKED
+      # /query <player>/<title>=<text>: staff ask a player something. The job is the player's, waiting on them.
+      INC`JOB`QUERY: |-
+        @assert cand(%q<eq>,strmatch(%q<lhs>,*/*))=@pemit %#=+job/query <player>/<title>=<text>; @assert isdbref(setr(tp,pmatch(before(%q<lhs>,/))))=@pemit %#=I don't know a player called [before(%q<lhs>,/)].; @assert strlen(setr(fb,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`DEFAULT`BUCKET))))=@pemit %#=There is no [get({{jobs}}/DATA`DEFAULT`BUCKET)] bucket.; @assert u({{jobs}}/FUN`CAN`WORK,%q<fb>,%#)=@pemit %#=Only staff who work the [name(%q<fb>)] bucket can open a job for a player.; @assert cand(strlen(setr(title,trim(after(%q<lhs>,/)))),strlen(%q<rhs>))=@pemit %#=+job/query <player>/<title>=<text>; think [setq(author,%q<actor>)][setq(actor,objid(%q<tp>))][setq(text,%q<rhs>)][setq(how,query)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; think [setq(actor,%q<author>)][setq(who,%q<author>)][setq(add,1)]; @include {{jobs}}/INC`DO`CLAIM; think [setq(to,player)]; @include/nobreak {{jobs}}/INC`DO`TURN; @pemit %#=Opened job %q<n> for [name(%q<tp>)]: %q<title>
+      # Each person turns job @mail on or off. Staff /mail reaches them either way.
+      INC`JOB`OPTIONS: |-
+        @break not(strlen(%q<arg>))=@pemit %#=Job mail is [firstof(get({{store}}/OPT`MAIL`%q<me>),on)]. +job/options mail=off stops it.; @assert cand(strmatch(%q<lhs>,mail),t(match(on off,lcstr(%q<rhs>))))=@pemit %#=+job/options mail=on or mail=off; &OPT`MAIL`%q<me> {{store}}=[if(strmatch(%q<rhs>,off),off)]; @pemit %#=Job mail is [lcstr(%q<rhs>)].
+      # Registers fb (bucket), title, text and fmt, from +request, +bug and friends, and /create.
+      INC`FILE`CHECKED: |-
+        @assert strlen(%q<fb>)=@pemit %#=There is no such bucket. +buckets lists them.; @assert cand(u({{jobs}}/FUN`CAN`FILE,%q<fb>,%#),cor(not(t(get(%q<fb>/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%q<fb>,%#)))=@pemit %#=You can't file in [name(%q<fb>)].; @assert strlen(%q<title>)=@pemit %#=Give it a title: +request <title>=<text>; @assert lte(strlen(%q<title>),80)=@pemit %#=Keep the title to 80 characters. The rest goes after the =.; @assert strlen(%q<text>)=@pemit %#=Say what you need after the =.; think [setq(actor,objid(%#))][setq(how,command)][setq(author,)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; @pemit %#=Filed job %q<n> in [name(%q<fb>)]: %q<title>. +job %q<n> shows it.
+
+      # ---- writes, shared with the portal routes and the API -------------------
+      # Each takes registers, never arguments, so text with commas in it arrives whole. %q<actor> is
+      # who acted (an objid), %q<jo> the job. They write, tell the people involved, and queue the
+      # bucket's hook last, so a slow hook never holds up the command or the portal.
+      # Appends message %q<text> (%q<kind> reply or note, %q<fmt>, %q<action>) to %q<jo>; its number is %q<entry>.
+      INC`DO`ENTRY: |-
+        think [setq(entry,inc(firstof(get(%q<jo>/ENTRIES),0)))]; &ENTRIES %q<jo>=%q<entry>; &ENTRY`%q<entry>`KIND %q<jo>=%q<kind>; &ENTRY`%q<entry>`BY %q<jo>=[firstof(%q<author>,%q<actor>)]; &ENTRY`%q<entry>`AT %q<jo>=[secs()]; &ENTRY`%q<entry>`TEXT %q<jo>=%q<text>; &ENTRY`%q<entry>`FORMAT %q<jo>=[if(strmatch(%q<fmt>,softcode),softcode)]; &ENTRY`%q<entry>`ACTION %q<jo>=%q<action>; &UPDATED`AT %q<jo>=[secs()]; @if strmatch(%q<kind>,reply)={&PUBLIC`AT %q<jo>=[secs()]}; &READ`[u({{jobs}}/FUN`KEY,firstof(%q<author>,%q<actor>))] %q<jo>=[secs()]
+      # A line in the job's log (%q<logtext>, %q<logcode>), which staff read with +job/all.
+      INC`DO`LOG: |-
+        think [setq(le,inc(firstof(get(%q<jo>/ENTRIES),0)))]; &ENTRIES %q<jo>=%q<le>; &ENTRY`%q<le>`KIND %q<jo>=action; &ENTRY`%q<le>`BY %q<jo>=%q<actor>; &ENTRY`%q<le>`AT %q<jo>=[secs()]; &ENTRY`%q<le>`TEXT %q<jo>=%q<logtext>; &ENTRY`%q<le>`ACTION %q<jo>=%q<logcode>; &UPDATED`AT %q<jo>=[secs()]
+      # Files a job: %q<actor> (the filer), %q<fb> (bucket objid), %q<title>, %q<text>, %q<fmt>, %q<how>,
+      # %q<prio> (optional) and %q<author> (who wrote the opening text, when not the filer). Leaves %q<n>
+      # and %q<jo>.
+      INC`DO`FILE: |-
+        think [setq(n,inc(firstof(get({{store}}/COUNTER),0)))]; &COUNTER {{store}}=%q<n>; think [setq(jo,objid(create(Job %q<n>)))]; @tel %q<jo>={{store}}; @set %q<jo>=NO_COMMAND; &INDEX`%q<n> {{store}}=%q<jo>; &NUM %q<jo>=%q<n>; &BUCKET %q<jo>=%q<fb>; &TITLE %q<jo>=%q<title>; &STATE %q<jo>=new; &PRIORITY %q<jo>=[firstof(%q<prio>,get(%q<fb>/PRIORITY),normal)]; &FILED`AT %q<jo>=[secs()]; &FILED`BY %q<jo>=%q<actor>; &TURN`AT %q<jo>=[secs()]; &DUE %q<jo>=[u({{jobs}}/FUN`DUE`DEFAULT,%q<fb>)]; think [setq(kind,reply)][setq(action,)]; @include {{jobs}}/INC`DO`ENTRY; think [setq(_fa,%q<actor>)][setq(actor,firstof(%q<author>,%q<actor>))][setq(smsg,u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,if(strlen(%q<author>),opened,filed)))][setq(pmsg,if(strlen(%q<author>),u({{jobs}}/FUN`PMSG,%q<jo>,%q<author>,opened)))][setq(mail,t(strlen(%q<author>)))][setq(mailtext,%q<text>)][setq(mailforce,0)]; @include/nobreak {{jobs}}/INC`DO`NOTIFY; think [setq(actor,%q<_fa>)]; @trigger %q<fb>/ON`FILE=%q<n>,%q<actor>,%q<title>,[firstof(%q<how>,command)]
+      # A reply or staff note (%q<kind>) on %q<jo>, with the turn and reopening rules of +job/reply.
+      INC`DO`REPLY: |-
+        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(astaff,u({{jobs}}/FUN`CAN`WORK,get(%q<jo>/BUCKET),%q<actor>))][setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))][setq(action,)][setq(author,)]; @include {{jobs}}/INC`DO`ENTRY; think [setq(rentry,%q<entry>)][setq(byp,1)]; @if cand(strmatch(%q<kind>,reply),%q<wasclosed>,not(%q<astaff>))={@include/nobreak {{jobs}}/INC`DO`REOPEN}; think [setq(to,if(cand(strmatch(%q<kind>,reply),not(t(match(closed held,get(%q<jo>/STATE))))),if(%q<astaff>,player,staff)))]; @include/nobreak {{jobs}}/INC`DO`TURN; think [setq(smsg,u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,if(strmatch(%q<kind>,note),added a staff note to,replied to)))][setq(pmsg,if(strmatch(%q<kind>,reply),u({{jobs}}/FUN`PMSG,%q<jo>,%q<actor>,replied to)))][setq(mail,1)][setq(mailtext,%q<text>)]; @include/nobreak {{jobs}}/INC`DO`NOTIFY; @trigger %q<b>/ON`REPLY=%q<n>,%q<actor>,%q<rentry>,[if(strmatch(%q<kind>,reply),1,0)]
+      # Moves %q<jo> to state %q<to>; nothing when it is there already. Include with /nobreak.
+      INC`DO`TURN: |-
+        @break cor(not(strlen(%q<to>)),strmatch(get(%q<jo>/STATE),%q<to>)); think [setq(from,get(%q<jo>/STATE))][setq(logtext,Moved from [u({{jobs}}/FUN`STATE`NAME,%q<from>)] to [u({{jobs}}/FUN`STATE`NAME,%q<to>)].)][setq(logcode,state:%q<to>)]; &STATE %q<jo>=%q<to>; &TURN`AT %q<jo>=[secs()]; @include {{jobs}}/INC`DO`LOG; @trigger [get(%q<jo>/BUCKET)]/ON`TURN=[get(%q<jo>/NUM)],%q<actor>,%q<from>,%q<to>
+      # Opens closed %q<jo> again, waiting on staff with a fresh due date. %q<byp> 1 when its filer did it. Include with /nobreak.
+      INC`DO`REOPEN: |-
+        @break not(strmatch(get(%q<jo>/STATE),closed)); &OUTCOME %q<jo>=; &CLOSED`AT %q<jo>=; &STATE %q<jo>=staff; &TURN`AT %q<jo>=[secs()]; &OVERDUE`FIRED %q<jo>=; &DUE %q<jo>=[u({{jobs}}/FUN`DUE`DEFAULT,get(%q<jo>/BUCKET))]; think [setq(logtext,Opened again.)][setq(logcode,reopen)]; @include {{jobs}}/INC`DO`LOG; @trigger [get(%q<jo>/BUCKET)]/ON`REOPEN=[get(%q<jo>/NUM)],%q<actor>,[if(%q<byp>,1,0)]
+      # Closes %q<jo> with %q<outcome> (approved, denied, completed, canceled) and the public %q<text>.
+      INC`DO`CLOSE: |-
+        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(kind,reply)][setq(text,firstof(%q<text>,[capstr(%q<outcome>)].))][setq(fmt,firstof(%q<fmt>,markdown))][setq(action,outcome:%q<outcome>)][setq(author,)][setq(hk,u({{jobs}}/FUN`OUTCOME`HOOK,%q<outcome>))]; @include {{jobs}}/INC`DO`ENTRY; &STATE %q<jo>=closed; &OUTCOME %q<jo>=%q<outcome>; &CLOSED`AT %q<jo>=[secs()]; &TURN`AT %q<jo>=[secs()]; think [setq(smsg,u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,%q<outcome>))][setq(pmsg,u({{jobs}}/FUN`PMSG,%q<jo>,%q<actor>,%q<outcome>))][setq(mail,1)][setq(mailtext,%q<text>)]; @include/nobreak {{jobs}}/INC`DO`NOTIFY; @trigger %q<b>/ON`%q<hk>=%q<n>,%q<actor>,[get(%q<jo>/FILED`BY)],%q<entry>
+      # Adds (%q<add> 1) or removes handler %q<who>: an objid or role:<role>. A new job someone claims needs staff.
+      INC`DO`CLAIM: |-
+        think [setq(_ha,u({{jobs}}/FUN`HATTR,%q<who>))]; &%q<_ha> %q<jo>=[if(%q<add>,secs())]; think [setq(logtext,[if(%q<add>,Handler added,Handler removed)]: [u({{jobs}}/FUN`HNAME,%q<who>)].)][setq(logcode,[if(%q<add>,claim,unclaim)])]; @include {{jobs}}/INC`DO`LOG; think [setq(to,if(cand(%q<add>,strmatch(get(%q<jo>/STATE),new)),staff))]; @include/nobreak {{jobs}}/INC`DO`TURN; @trigger [get(%q<jo>/BUCKET)]/ON`CLAIM=[get(%q<jo>/NUM)],%q<actor>,%q<who>,%q<add>
+      INC`DO`DUE: |-
+        think [setq(_od,get(%q<jo>/DUE))]; &DUE %q<jo>=%q<due>; &OVERDUE`FIRED %q<jo>=; think [setq(logtext,Due [if(strlen(%q<due>),u({{jobs}}/FUN`WHEN,%q<due>),on no date)].)][setq(logcode,due)]; @include {{jobs}}/INC`DO`LOG; @trigger [get(%q<jo>/BUCKET)]/ON`DUE=[get(%q<jo>/NUM)],%q<actor>,%q<_od>,%q<due>
+      INC`DO`PRIORITY: |-
+        think [setq(_op,get(%q<jo>/PRIORITY))]; &PRIORITY %q<jo>=%q<prio>; think [setq(logtext,Priority %q<prio>.)][setq(logcode,priority)]; @include {{jobs}}/INC`DO`LOG; @trigger [get(%q<jo>/BUCKET)]/ON`PRIORITY=[get(%q<jo>/NUM)],%q<actor>,%q<_op>,%q<prio>
+      # Moves %q<jo> to bucket %q<nb>. Both buckets' ON`TRANSFER run.
+      INC`DO`TRANSFER: |-
+        think [setq(_ob,get(%q<jo>/BUCKET))]; &BUCKET %q<jo>=%q<nb>; think [setq(logtext,Moved from [name(%q<_ob>)] to [name(%q<nb>)].)][setq(logcode,trans)]; @include {{jobs}}/INC`DO`LOG; @trigger %q<_ob>/ON`TRANSFER=[get(%q<jo>/NUM)],%q<actor>,%q<_ob>,%q<nb>; @trigger %q<nb>/ON`TRANSFER=[get(%q<jo>/NUM)],%q<actor>,%q<_ob>,%q<nb>
+      INC`DO`FORMAT: |-
+        &ENTRY`%q<ent>`FORMAT %q<jo>=[if(strmatch(%q<fmt>,softcode),softcode)]
+      # The line staff see: job %0, actor %1, verb %2.
+      FUN`MSG: |-
+        [ansi(h,JOBS:)] [u({{jobs}}/FUN`WHO`AS,%1,%0,1,0)] %2 job [get(%0/NUM)] [chr(40)][name(get(%0/BUCKET))][chr(41)]: [get(%0/TITLE)]
+      # The line the filer and helpers see.
+      FUN`PMSG: |-
+        [ansi(h,JOBS:)] [u({{jobs}}/FUN`WHO`AS,%1,%0,0,0)] %2 your job [get(%0/NUM)]: [get(%0/TITLE)]. +job [get(%0/NUM)] shows it.
+      # Tells staff (%q<smsg>: handlers, watchers, and everyone connected who works the bucket) and the
+      # filer and helpers (%q<pmsg>, when the change is theirs to see), never the actor. Mails the filer
+      # the public ones (%q<mail>) unless they turned job mail off and this is not a /mail (%q<mailforce>).
+      INC`DO`NOTIFY: |-
+        think [setq(_nb,get(%q<jo>/BUCKET))][setq(_st,setdiff(setunion(iter(u({{jobs}}/FUN`HLIST,%q<jo>,HANDLER) [u({{jobs}}/FUN`HLIST,%q<jo>,WATCHER)],if(strmatch(%i0,role:*),,%i0)),iter(lwho(),if(u({{jobs}}/FUN`CAN`WORK,%q<_nb>,%i0),objid(%i0)))),%q<actor>))][setq(_pt,if(strlen(%q<pmsg>),setdiff(setunion(get(%q<jo>/FILED`BY),u({{jobs}}/FUN`HLIST,%q<jo>,HELPER)),%q<actor> %q<_st>)))][setq(_fb,get(%q<jo>/FILED`BY))]; @dolist/inline %q<_st>=@pemit ##=%q<smsg>; @dolist/inline %q<_pt>=@pemit ##=%q<pmsg>; @if cand(strlen(%q<pmsg>),%q<mail>,not(strmatch(%q<_fb>,%q<actor>)),cor(%q<mailforce>,not(strmatch(get({{store}}/OPT`MAIL`[u({{jobs}}/FUN`KEY,%q<_fb>)]),off))))={think [mailsend(%q<_fb>,Job [get(%q<jo>/NUM)]: [edit(get(%q<jo>/TITLE),/,-)]/%q<pmsg>%r%r[firstof(%q<mailtext>,)])]}
+
+      # ---- buckets --------------------------------------------------------------
+      FUN`BCOLS: |-
+        <16 >5 <[sub(%0,23)]
+      FUN`BROW: |-
+        [align(u({{jobs}}/FUN`BCOLS,%2),[name(%0)][if(u({{jobs}}/FUN`CAN`WORK,%0,%1),*)],words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%0)),get(%0/DESCRIPTION))]
+      INC`BUCKET`LIST: |-
+        @pemit %#=[header(Job buckets,width(%#))]%r[align(u({{jobs}}/FUN`BCOLS,width(%#)),Bucket,Open,What it is for)]%r[iter(u({{jobs}}/FUN`BUCKETS`SEEN,%#),u({{jobs}}/FUN`BROW,%i0,%#,width(%#)),%b,%r)]%r[footer([if(u({{jobs}}/WEB`STAFF,%#),* you work it [chr(183)]%b)]+request <bucket>/<title>=<text>,width(%#))]
+      INC`BUCKET`INFO: |-
+        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[header(Bucket: [name(%q<bk>)],width(%#))]%r[u({{jobs}}/FUN`FIELD,About,get(%q<bk>/DESCRIPTION))]%r[u({{jobs}}/FUN`FIELD,Turnaround,[firstof(get(%q<bk>/TURNAROUND),0)] days)]%r[u({{jobs}}/FUN`FIELD,Reopen,[firstof(get(%q<bk>/REOPEN),0)] days)]%r[u({{jobs}}/FUN`FIELD,Anonymous,firstof(get(%q<bk>/ANONYMOUS),none))]%r[u({{jobs}}/FUN`FIELD,Hidden,if(t(get(%q<bk>/HIDDEN)),yes,no))]%r[u({{jobs}}/FUN`FIELD,Priority,firstof(get(%q<bk>/PRIORITY),normal))]%r[u({{jobs}}/FUN`FIELD,Keep,if(get(%q<bk>/KEEP),[get(%q<bk>/KEEP)] days,forever))]%r[u({{jobs}}/FUN`FIELD,Permission,softcode.jobs.[get(%q<bk>/SLUG)])]%r[u({{jobs}}/FUN`FIELD,Role,job-admin-[get(%q<bk>/SLUG)])]%r[u({{jobs}}/FUN`FIELD,File lock,lock(%q<bk>/file))]%r[u({{jobs}}/FUN`FIELD,Work lock,lock(%q<bk>/work))]%r[u({{jobs}}/FUN`FIELD,Hooks,firstof(itemize(squish(iter(lattr(%q<bk>/ON`*),if(strmatch(get(%q<bk>/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]%r[footer(+bucket/set [name(%q<bk>)]/<setting>=<value>,width(%#))]
+      FUN`SETTING`OK: |-
+        [switch(%0,description,lte(strlen(%1),200),turnaround,cand(isint(%1),gte(%1,0)),reopen,cand(isint(%1),gte(%1,0)),keep,cor(not(strlen(%1)),cand(isint(%1),gt(%1,0))),anonymous,t(match(none filer staff,lcstr(%1))),hidden,t(match(yes no on off 1 0,lcstr(%1))),priority,t(strlen(u({{jobs}}/FUN`PRIORITY`PARSE,%1))),0)]
+      FUN`SETTING`VALUE: |-
+        [switch(%0,hidden,t(match(yes on 1,lcstr(%1))),anonymous,lcstr(%1),priority,u({{jobs}}/FUN`PRIORITY`PARSE,%1),%1)]
+      # Settings only. Hook code (ON`*) is written by whoever controls the bucket object, not through here.
+      INC`BUCKET`SET: |-
+        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=+bucket/set <bucket>/<setting>=<value>; @assert cor(u({{jobs}}/FUN`IS`ADMIN,%#),u({{jobs}}/FUN`CAN`WORK,%q<bk>,%#))=@pemit %#=Only a Job Admin or someone who works [name(%q<bk>)] can change it.; @assert t(match(description turnaround reopen anonymous hidden priority keep,setr(set,lcstr(trim(after(%q<lhs>,/))))))=@pemit %#=The settings are description, turnaround, reopen, anonymous, hidden, priority and keep.; @assert u({{jobs}}/FUN`SETTING`OK,%q<set>,%q<rhs>)=@pemit %#=[get({{jobs}}/DATA`SETTING`%q<set>)]; &%q<set> %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,%q<set>,%q<rhs>)]; @pemit %#=[name(%q<bk>)] %q<set> is [firstof(get(%q<bk>/%q<set>),nothing)].
+      # +bucket/create <name>=<description>: the bucket, its permission softcode.jobs.<slug>, and the role job-admin-<slug> allowing it.
+      INC`BUCKET`CREATE: |-
+        @include {{jobs}}/INC`NEED`ADMIN; think [setq(bname,trim(%q<lhs>))][setq(slug,lcstr(edit(%q<bname>,%b,_,-,_)))]; @assert cand(strlen(%q<bname>),lte(strlen(%q<bname>),20),valid(name,%q<bname>),valid(permission,softcode.jobs.%q<slug>))=@pemit %#=A bucket name is up to 20 letters, digits, spaces and dashes, starting with a letter.; @assert not(strlen(u({{jobs}}/FUN`BUCKET,%q<bname>)))=@pemit %#=There is a %q<bname> bucket already.; think [setq(bk,objid(create(%q<bname>)))]; @tel %q<bk>={{buckets}}; @parent %q<bk>={{buckets}}; &DESCRIPTION %q<bk>=%q<rhs>; &SLUG %q<bk>=%q<slug>; @lock/user:file %q<bk>=#TRUE; @lock/user:work %q<bk>=perm^softcode.jobs.admin|perm^softcode.jobs.%q<slug>; @dolist/inline [get({{jobs}}/DATA`HOOKS)]=&ON`## %q<bk>=[get({{jobs}}/DATA`HOOKDOC`##)]; @permission/define softcode.jobs.%q<slug>=Jobs/Work jobs in the %q<bname> bucket.; @role/create job-admin-%q<slug>=Jobs/Job Admin - %q<bname>; @role/allow job-admin-%q<slug>=softcode.jobs.%q<slug>; @pemit %#=Bucket %q<bname> is ready. The role job-admin-%q<slug> works it: @role/assign <player>=job-admin-%q<slug>
+      INC`BUCKET`RENAME: |-
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<lhs>)))=@pemit %#=There is no bucket called %q<lhs>.; @assert cand(lte(strlen(%q<rhs>),20),valid(name,%q<rhs>),not(strlen(u({{jobs}}/FUN`BUCKET,%q<rhs>))))=@pemit %#=Pick a free name of up to 20 characters.; @name %q<bk>=%q<rhs>; @role/rename job-admin-[get(%q<bk>/SLUG)]=Job Admin - %q<rhs>; @pemit %#=The bucket is called %q<rhs> now. Its permission and role keep their names.
+      # Empty buckets only.
+      INC`BUCKET`DELETE: |-
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<arg>)))=@pemit %#=There is no bucket called %q<arg>.; @assert not(words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%q<bk>)))=@pemit %#=[name(%q<bk>)] still has jobs. Move or delete them first.; @assert comp(lcstr(name(%q<bk>)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))=@pemit %#=[name(%q<bk>)] is where +request files. Point DATA`DEFAULT`BUCKET elsewhere first.; think [setq(slug,get(%q<bk>/SLUG))][setq(bname,name(%q<bk>))]; @role/delete job-admin-%q<slug>; @permission/undefine softcode.jobs.%q<slug>; @tel %q<bk>={{jobs}}; @nuke %q<bk>; @pemit %#=Bucket %q<bname> is deleted, with its role and permission.
+      # +bucket/lock <bucket>/file|work=<lock>: ordinary locks, so perm^, role^ and the rest all work.
+      INC`BUCKET`LOCK: |-
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=+bucket/lock <bucket>/file|work=<lock>; @assert t(match(file work,setr(lk,lcstr(trim(after(%q<lhs>,/))))))=@pemit %#=A bucket has a file lock (who may file) and a work lock (who works it).; @lock/user:%q<lk> %q<bk>=%q<rhs>; @pemit %#=[name(%q<bk>)] %q<lk> lock: [lock(%q<bk>/%q<lk>)]
+
+      # ---- timer, login, functions, API ----------------------------------------------
+      FUN`DUE`NOW: |-
+        [squish(iter(lcon({{store}}),if(cand(u({{jobs}}/FUN`IS`OVERDUE,%i0),not(get(%i0/OVERDUE`FIRED))),%i0)))]
+      FUN`EXPIRED: |-
+        [squish(iter(lcon({{store}}),if(cand(strmatch(get(%i0/STATE),closed),gt(setr(_k,firstof(get(get(%i0/BUCKET)/KEEP),0)),0),lt(get(%i0/CLOSED`AT),sub(secs(),mul(%q<_k>,86400)))),%i0)))]
+      # Every DATA`TICK seconds: run ON`OVERDUE once for each job newly overdue and tell its handlers,
+      # and remove closed jobs older than their bucket's keep. %0 is the run's id; a second STARTUP starts a
+      # new run and the old one stops at its next tick.
+      TICK: |-
+        @assert strmatch(%0,get({{jobs}}/TICK`ID)); @dolist/inline [u({{jobs}}/FUN`DUE`NOW)]={&OVERDUE`FIRED ##=[secs()]; @trigger [get(##/BUCKET)]/ON`OVERDUE=[get(##/NUM)],,[get(##/DUE)]; think [setq(_tj,##)][setq(_th,squish(iter(u({{jobs}}/FUN`HLIST,##,HANDLER),if(strmatch(%i0,role:*),,%i0))))][if(strlen(%q<_th>),pemit(%q<_th>,[ansi(h,JOBS:)] Job [get(%q<_tj>/NUM)] is overdue: [get(%q<_tj>/TITLE)]))]}; @dolist/inline [u({{jobs}}/FUN`EXPIRED)]={&INDEX`[get(##/NUM)] {{store}}=; @tel ##={{jobs}}; @nuke ##}; @wait [get({{jobs}}/DATA`TICK)]=@trigger {{jobs}}/TICK=%0
+      # One line at login: what needs staff, for those who work a bucket, and what is new for everyone.
+      ACONNECT: |-
+        think [setq(_q,words(u({{jobs}}/FUN`SELECT,%#,QUEUE)))][setq(_o,words(u({{jobs}}/FUN`SELECT,%#,OVERDUE)))][setq(_u,words(u({{jobs}}/FUN`SELECT,%#,UNREAD)))]; @assert cor(%q<_q>,%q<_u>); @pemit %#=[ansi(h,JOBS:)] [if(%q<_q>,%q<_q> need staff[if(%q<_o>,%b[chr(40)]%q<_o> overdue[chr(41)])])][if(cand(%q<_q>,%q<_u>),[chr(44)]%b)][if(%q<_u>,%q<_u> with something new)]. +jobs lists them.
+      # Whether calling object %1 may read job %0 through job(), jobs() and jobentries(): someone who may
+      # see it, a see_all holder, or a bucket's own hook.
+      FUN`CALLER`OK: |-
+        [cor(u({{jobs}}/FUN`CAN`SEE,%0,%1),t(permission(%1,game.see_all)),strmatch(objid(loc(%1)),{{buckets}}))]
+      # job(<#>, <field>): see +help jobs api.
+      FUN`API`JOB: |-
+        [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,switch(lcstr(%1),number,get(%q<_j>/NUM),bucket,name(get(%q<_j>/BUCKET)),title,get(%q<_j>/TITLE),state,get(%q<_j>/STATE),outcome,get(%q<_j>/OUTCOME),priority,get(%q<_j>/PRIORITY),filer,if(u({{jobs}}/FUN`FILER`SHOWN,%q<_j>,%@),get(%q<_j>/FILED`BY)),filed,get(%q<_j>/FILED`AT),due,get(%q<_j>/DUE),updated,get(%q<_j>/UPDATED`AT),overdue,u({{jobs}}/FUN`IS`OVERDUE,%q<_j>),handlers,u({{jobs}}/FUN`HLIST,%q<_j>,HANDLER),watchers,u({{jobs}}/FUN`HLIST,%q<_j>,WATCHER),helpers,u({{jobs}}/FUN`HLIST,%q<_j>,HELPER),entries,get(%q<_j>/ENTRIES),#-1 NO SUCH FIELD))]
+      # jobs([<bucket>[, open|all|<state>]]): job numbers, newest first.
+      FUN`API`JOBS: |-
+        [setq(_ab,if(strlen(%0),u({{jobs}}/FUN`BUCKET,%0)))][setq(_as,lcstr(firstof(%1,open)))][u({{jobs}}/FUN`SORT`NUM,squish(iter(lcon({{store}}),if(cand(not(hasflag(%i0,GOING)),cor(not(strlen(%0)),strmatch(get(%i0/BUCKET),%q<_ab>)),switch(%q<_as>,all,1,open,not(strmatch(get(%i0/STATE),closed)),strmatch(get(%i0/STATE),%q<_as>)),u({{jobs}}/FUN`CALLER`OK,%i0,%@)),get(%i0/NUM)))))]
+      # jobentries(<#>[, <viewer>]): the numbers of the messages <viewer> may read.
+      FUN`API`JOBENTRIES: |-
+        [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,squish(iter(lnum(1,firstof(get(%q<_j>/ENTRIES),0)),if(u({{jobs}}/FUN`ENTRY`VISIBLE,%q<_j>,%i0,u({{jobs}}/FUN`CAN`WORK,get(%q<_j>/BUCKET),firstof(%1,%@)),),%i0))))]
+      # @include Jobs/INC`API`FILE=<player>,<bucket> files %q<title> / %q<text> for a player and leaves
+      # the number in %q<job>. Text goes in registers because @include splits its arguments at commas.
+      # Needs a privileged executor (a wizard object), since it writes the job store.
+      INC`API`FILE: |-
+        think [setq(actor,if(hastype(%0,PLAYER),objid(%0),objid(pmatch(%0))))][setq(fb,u({{jobs}}/FUN`BUCKET,%1))][setq(fmt,firstof(%q<fmt>,markdown))][setq(how,api)][setq(author,)][setq(prio,)][setq(job,)]; @assert cand(strlen(%q<actor>),strlen(%q<fb>),strlen(%q<title>),strlen(%q<text>)); @include {{jobs}}/INC`DO`FILE; think [setq(job,%q<n>)]
+      # @include Jobs/INC`API`REPLY=<job>,<actor>: a public reply of %q<text>.
+      INC`API`REPLY: |-
+        think [setq(jo,u({{jobs}}/FUN`JOB,%0))][setq(actor,objid(%1))][setq(kind,reply)][setq(fmt,firstof(%q<fmt>,markdown))][setq(mailforce,0)]; @assert cand(strlen(%q<jo>),strlen(%q<actor>),strlen(%q<text>)); @include {{jobs}}/INC`DO`REPLY
+      # @include Jobs/INC`API`NOTE=<job>,<actor>: a staff note of %q<text>.
+      INC`API`NOTE: |-
+        think [setq(jo,u({{jobs}}/FUN`JOB,%0))][setq(actor,objid(%1))][setq(kind,note)][setq(fmt,firstof(%q<fmt>,markdown))][setq(mailforce,0)]; @assert cand(strlen(%q<jo>),strlen(%q<actor>),strlen(%q<text>)); @include {{jobs}}/INC`DO`REPLY
+      # @include Jobs/INC`API`CLOSE=<job>,<actor>,<approved|denied|completed|canceled>, with %q<text> the closing message.
+      INC`API`CLOSE: |-
+        think [setq(jo,u({{jobs}}/FUN`JOB,%0))][setq(actor,objid(%1))][setq(outcome,lcstr(%2))]; @assert cand(strlen(%q<jo>),strlen(%q<actor>),t(match(approved denied completed canceled,%q<outcome>)),not(strmatch(get(%q<jo>/STATE),closed))); @include {{jobs}}/INC`DO`CLOSE
+
+      # ---- portal -----------------------------------------------------------------
+      # The jobs-app package shows these at /apps/jobs. The routes on the HTTP handler (below) hand
+      # over %q<viewer>, the character the portal signed in as, and run WEB`DATA and WEB`ACT here with
+      # @force, so writes run as this object and their "Set." lines never reach the response.
+      # Schemas and data are JSON built with json(); lists of JSON values go to WEB`ARR %r-separated,
+      # since a row holds spaces and commas but never a line break.
+      # A JSON array of the %r-separated JSON values in %0.
+      WEB`ARR: |-
+        [if(strlen(%0),json_array(%0,%r),json_array())]
+      # An empty JSON object.
+      WEB`EMPTY: |-
+        [chr(123)][chr(125)]
+      WEB`B: |-
+        [json(boolean,if(t(%0),true,false))]
+      # One datum: JSON value %0, shown when %1 is true.
+      WEB`V: |-
+        [json(object,value,if(t(%1),%0,json(string,)),visible,u({{jobs}}/WEB`B,%1))]
+      # Field %0 of the posted JSON in %q<body>, unquoted.
+      WEB`GET: |-
+        [setq(_g,json_query(%q<body>,get,%0))][if(strmatch(%q<_g>,"*),json_query(%q<_g>,unescape),%q<_g>)]
+      # Whether %0 works any bucket.
+      WEB`STAFF: |-
+        [t(words(squish(iter(lcon({{buckets}}),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))))]
+      # A schema document: kind %0, title %1, sections %2 (%r-separated), actions object %3.
+      WEB`DOC: |-
+        [json(object,kind,json(string,%0),schema_version,json(number,1),title,json(string,%1),pages,json(array,json(object,key,json(string,main),title,json(string,%1),order,json(number,1),sections,u({{jobs}}/WEB`ARR,%2))),actions,firstof(%3,u({{jobs}}/WEB`EMPTY)))]
+      # A section: name %0, order %1, elements %2 (%r-separated), %3 columns.
+      WEB`SEC: |-
+        [json(object,name,json(string,%0),order,json(number,%1),columns,json(number,firstof(%3,1)),elements,u({{jobs}}/WEB`ARR,%2))]
+      WEB`MD: |-
+        [json(object,kind,json(string,markdown),value,json(string,%0))]
+      # A button posting values %1 (a JSON object) to the act action: label %0, color %2, and %3 a question asked first.
+      WEB`BTN: |-
+        [json(object,kind,json(string,button),label,json(string,%0),action,json(string,act),values,%1,color,json(string,firstof(%2,secondary)),variant,json(string,if(strmatch(%2,primary),filled,outlined)),confirm,json(string,%3))]
+      WEB`ACTION: |-
+        [json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/jobs/act),payload,json(string,fields),on_success,json(object,reset_fields,json(boolean,true)),on_error,json(object,bind_field_errors,json(boolean,true)))]
+      WEB`OPT: |-
+        [json(object,value,json(string,%0),label,json(string,%1))]
+      WEB`ERR: |-
+        [json(object,ok,json(boolean,false),errors,json(object,_global,json(string,%0)))]
+      # An error shown on field %0.
+      WEB`ERRF: |-
+        [json(object,ok,json(boolean,false),errors,json(object,%0,json(string,%1)))]
+      WEB`GO: |-
+        [json(object,ok,json(boolean,true),redirect,json(string,%0))]
+      # After a change to job %q<n>: message %0, the reply box emptied, and the page drawn again.
+      WEB`DONE: |-
+        [json(object,ok,json(boolean,true),message,json(string,%0),fields,u({{jobs}}/WEB`EMPTY),schema,u({{jobs}}/WEB`SCHEMA`JOB,%q<viewer>,%q<n>),data,u({{jobs}}/WEB`DATA`JOB,%q<viewer>,%q<n>))]
+
+      # schemas: GET /http/jobs/schema?at=<path>[&filter=<filter>|&bucket=<slug>]
+      # Viewer %0, sub-path %1: the queue (filter %2 or bucket %3), new, a job number, buckets, or buckets/<slug>.
+      WEB`SCHEMA: |-
+        [switch(1,not(strlen(%0)),u({{jobs}}/WEB`SCHEMA`ANON),isint(%1),u({{jobs}}/WEB`SCHEMA`JOB,%0,%1),strmatch(%1,new),u({{jobs}}/WEB`SCHEMA`NEW,%0),strmatch(%1,buckets),u({{jobs}}/WEB`SCHEMA`BUCKETS,%0),strmatch(%1,buckets/*),u({{jobs}}/WEB`SCHEMA`BUCKET,%0,after(%1,/)),u({{jobs}}/WEB`SCHEMA`QUEUE,%0,%2,%3))]
+      WEB`SCHEMA`ANON: |-
+        [setq(_an,u({{jobs}}/WEB`MD,Sign in with a character to file and read jobs.))][u({{jobs}}/WEB`DOC,view,,u({{jobs}}/WEB`SEC,,1,%q<_an>))]
+      WEB`FILTERS: |-
+        [if(u({{jobs}}/WEB`STAFF,%0),default mine new overdue all old,default old)]
+      WEB`FLABEL: |-
+        [switch(%0,default,if(%1,Needs attention,My open jobs),mine,Handled by me,new,New,overdue,Overdue,all,All open,old,Closed)]
+      WEB`FPRED: |-
+        [switch(%0,mine,MINE,new,NEW,overdue,OVERDUE,all,OPEN,old,OLD,DEFAULT)]
+      WEB`COLS: |-
+        [json(array,json(object,key,json(string,num),label,json(string,#),link,json(string,/apps/jobs/\{number\})),json(object,key,json(string,title),label,json(string,Title),link,json(string,/apps/jobs/\{number\})),json(object,key,json(string,unread),label,json(string,),type,json(string,chip),color_key,json(string,unread_color)),json(object,key,json(string,bucket),label,json(string,Bucket)),json(object,key,json(string,status),label,json(string,Status),type,json(string,chip),color_key,json(string,color)),json(object,key,json(string,priority),label,json(string,Priority)),json(object,key,json(string,updated),label,json(string,Updated)))]
+      # The queue for viewer %0: filter %1, or the open jobs of the bucket whose slug is %2, titled with
+      # what it shows. The sidebar (WEB`NAV) moves between them.
+      WEB`SCHEMA`QUEUE: |-
+        [setq(_qk,u({{jobs}}/WEB`QBUCKET,%0,%2))][setq(_qt,json(object,kind,json(string,table),rows_field,json(string,jobs),columns,u({{jobs}}/WEB`COLS),empty,json(string,No jobs here.)))][u({{jobs}}/WEB`DOC,view,if(strlen(%q<_qk>),Open jobs in [name(%q<_qk>)],u({{jobs}}/WEB`FLABEL,u({{jobs}}/WEB`QFILTER,%0,%1),u({{jobs}}/WEB`STAFF,%0))),u({{jobs}}/WEB`SEC,,1,%q<_qt>))]
+      # Filter %1 when viewer %0 has it, else default.
+      WEB`QFILTER: |-
+        [if(t(match(u({{jobs}}/WEB`FILTERS,%0),%1)),%1,default)]
+      # The bucket whose slug is %1, when viewer %0 works it.
+      WEB`QBUCKET: |-
+        [if(strlen(%1),first(squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(cand(strmatch(get(%i0/SLUG),%1),u({{jobs}}/FUN`CAN`WORK,%i0,%0)),%i0)))))]
+      # The buckets viewer %0 works.
+      WEB`WORKED: |-
+        [squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))]
+      # The new-request form. Its hidden op field makes the submit a file.
+      WEB`SCHEMA`NEW: |-
+        [setq(_n1,json(object,kind,json(string,field),key,json(string,op),type,json(string,hidden),default,json(string,file)))][setq(_no,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`FILEABLE,%0),u({{jobs}}/WEB`OPT,name(%i0),[name(%i0)]: [get(%i0/DESCRIPTION)]),%b,%r)))][setq(_n2,json(object,kind,json(string,field),key,json(string,bucket),label,json(string,Bucket),type,json(string,select),options,%q<_no>,default,json(string,get({{jobs}}/DATA`DEFAULT`BUCKET))))][setq(_n3,json(object,kind,json(string,field),key,json(string,title),label,json(string,Title),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,80))))][setq(_n4,json(object,kind,json(string,field),key,json(string,text),label,json(string,What do you need?),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP)),validation,json(object,required,json(boolean,true))))][setq(_n5,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean),help,json(string,get({{jobs}}/DATA`WEB`CODEHELP))))][setq(_ns,u({{jobs}}/WEB`SEC,,1,%q<_n1>%r%q<_n2>%r%q<_n3>%r%q<_n4>%r%q<_n5>))][u({{jobs}}/WEB`DOC,form,New request,%q<_ns>,json(object,submit,u({{jobs}}/WEB`ACTION)))]
+      DATA`WEB`MDHELP: |-
+        Markdown works: **bold**, *italic*, lists and links.
+      DATA`WEB`CODEHELP: |-
+        For code, or anything full of brackets and percent signs: shown as typed, not as markdown.
+      # The buckets %0 may file in.
+      WEB`FILEABLE: |-
+        [squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`CAN`FILE,%i0,%0),%i0)))]
+      # Job %1 for viewer %0: its details, its messages, a reply box, and the buttons the viewer may use.
+      WEB`SCHEMA`JOB: |-
+        [setq(_j,u({{jobs}}/FUN`JOB,%1))][if(cand(strlen(%q<_j>),u({{jobs}}/FUN`CAN`SEE,%q<_j>,%0)),u({{jobs}}/WEB`SCHEMA`JOB`SEEN,%0,%q<_j>),u({{jobs}}/WEB`SCHEMA`NOJOB,%1))]
+      WEB`SCHEMA`NOJOB: |-
+        [setq(_nj,u({{jobs}}/WEB`MD,There is no job %0.))][u({{jobs}}/WEB`DOC,view,Job %0,u({{jobs}}/WEB`SEC,,1,%q<_nj>))]
+      # Job object %1 for viewer %0: its details, the messages, the reply box and the buttons.
+      WEB`SCHEMA`JOB`SEEN: |-
+        [u({{jobs}}/WEB`DOC,form,Job [get(%1/NUM)]: [get(%1/TITLE)],[u({{jobs}}/WEB`SEC,,1,json(object,kind,json(string,keyvalue),fields,u({{jobs}}/WEB`KEYS,%1,%0)))]%r[u({{jobs}}/WEB`SEC,Messages,2,json(object,kind,json(string,timeline),rows_field,json(string,entries),empty,json(string,No messages.)))]%r[u({{jobs}}/WEB`SEC`REPLY,%1,%0)][if(strlen(setr(_ab,u({{jobs}}/WEB`BUTTONS,%1,%0))),%r[u({{jobs}}/WEB`SEC,,4,%q<_ab>,4)])],json(object,act,u({{jobs}}/WEB`ACTION)))]
+      WEB`KEYS: |-
+        [setq(_ks,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][u({{jobs}}/WEB`ARR,iter(squish(Bucket Status Priority Filed [if(%q<_ks>,Due)] Handlers [if(%q<_ks>,Watchers)] [if(words(lattr(%0/HELPER`*)),Helpers)]),json(string,%i0),%b,%r))]
+      # The reply box; a player whose job closed longer ago than the bucket reopens gets a note instead.
+      WEB`SEC`REPLY: |-
+        [setq(_rs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_rc,strmatch(get(%0/STATE),closed))][setq(_rt,json(object,kind,json(string,field),key,json(string,text),label,json(string,Message),type,json(string,textarea),help,json(string,get({{jobs}}/DATA`WEB`MDHELP))))][setq(_rk,if(%q<_rs>,json(object,kind,json(string,field),key,json(string,kind),label,json(string,Send as),type,json(string,select),options,json(array,u({{jobs}}/WEB`OPT,reply,A reply the player sees),u({{jobs}}/WEB`OPT,note,A staff note)),default,json(string,reply))))][setq(_rf,json(object,kind,json(string,field),key,json(string,softcode),label,json(string,Show exactly as typed),type,json(string,boolean)))][setq(_rb,u({{jobs}}/WEB`BTN,Send,json(object,op,json(string,reply),job,json(number,get(%0/NUM))),primary))][setq(_rl,%q<_rt>%r[if(%q<_rs>,%q<_rk>%r)]%q<_rf>%r%q<_rb>)][setq(_rm,u({{jobs}}/WEB`MD,This job closed too long ago to answer. File a new request and mention job [get(%0/NUM)].))][if(cand(%q<_rc>,not(%q<_rs>),not(u({{jobs}}/FUN`CAN`REOPEN,%0))),u({{jobs}}/WEB`SEC,,3,%q<_rm>),u({{jobs}}/WEB`SEC,if(cand(%q<_rc>,not(%q<_rs>)),Reply to open it again,Reply),3,%q<_rl>))]
+      # Staff: claim or unclaim, then approve, deny and complete; the filer: cancel; staff on a closed job: reopen.
+      WEB`BUTTONS: |-
+        [setq(_bs,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_bn,get(%0/NUM))][setq(_bo,not(strmatch(get(%0/STATE),closed)))][setq(_bc,if(hasattr(%0,HANDLER`[u({{jobs}}/FUN`KEY,%1)]),Unclaim,Claim))][switch(1,cand(%q<_bs>,%q<_bo>),u({{jobs}}/WEB`BUTTONS`STAFF,%q<_bn>,%q<_bc>),cand(%q<_bo>,u({{jobs}}/FUN`IS`PARTY,%0,%1)),u({{jobs}}/WEB`BTN,Cancel job,json(object,op,json(string,close),outcome,json(string,canceled),job,json(number,%q<_bn>)),default,Cancel job %q<_bn>?),%q<_bs>,u({{jobs}}/WEB`BTN,Reopen,json(object,op,json(string,reopen),job,json(number,%q<_bn>))),)]
+
+      # data: GET /http/jobs/data?at=<path>[&filter=<filter>|&bucket=<slug>]
+      # Job %0 to staff on an open job: %1 (Claim or Unclaim), then approve, deny and complete.
+      WEB`BUTTONS`STAFF: |-
+        [u({{jobs}}/WEB`BTN,%1,json(object,op,json(string,lcstr(%1)),job,json(number,%0)))]%r[iter(approved denied completed,u({{jobs}}/WEB`BTN,capstr(switch(%i0,approved,approve,denied,deny,complete)),json(object,op,json(string,close),outcome,json(string,%i0),job,json(number,%0)),switch(%i0,denied,error,success),Close job %0 as %i0? What is in the message box goes to the player with it.),%b,%r)]
+      # Leaves the data in %q<out>. Opening a job marks it read.
+      WEB`DATA: |-
+        think [setq(out,switch(1,not(strlen(%q<viewer>)),json(object,fields,u({{jobs}}/WEB`EMPTY)),isint(%q<form.at>),u({{jobs}}/WEB`DATA`JOB,%q<viewer>,%q<form.at>),strmatch(%q<form.at>,new),json(object,fields,u({{jobs}}/WEB`EMPTY)),strmatch(%q<form.at>,buckets),u({{jobs}}/WEB`DATA`BUCKETS,%q<viewer>),strmatch(%q<form.at>,buckets/*),u({{jobs}}/WEB`DATA`BUCKET,%q<viewer>,after(%q<form.at>,/)),u({{jobs}}/WEB`DATA`QUEUE,%q<viewer>,%q<form.filter>,%q<form.bucket>)))]; @assert cand(strlen(%q<viewer>),isint(%q<form.at>),strlen(setr(jo,u({{jobs}}/FUN`JOB,%q<form.at>))),u({{jobs}}/FUN`CAN`SEE,%q<jo>,%q<viewer>)); &READ`[u({{jobs}}/FUN`KEY,%q<viewer>)] %q<jo>=[secs()]
+      WEB`DATA`QUEUE: |-
+        [setq(_qk,u({{jobs}}/WEB`QBUCKET,%0,%2))][setq(_qs,if(strlen(%q<_qk>),u({{jobs}}/FUN`SELECT,%0,BUCKET,%q<_qk>),u({{jobs}}/FUN`SELECT,%0,u({{jobs}}/WEB`FPRED,u({{jobs}}/WEB`QFILTER,%0,%1)),)))][json(object,fields,json(object,jobs,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/FUN`SORT,%q<_qs>),u({{jobs}}/WEB`ROW,%i0,%0),%b,%r)),1)))]
+      # Job %0 as a queue row for %1. unread reads Unread when something is new to %1, the * of +jobs.
+      WEB`ROW: |-
+        [setq(_w,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][json(object,number,json(number,get(%0/NUM)),num,json(string,get(%0/NUM)),unread,json(string,if(u({{jobs}}/FUN`UNREAD,%0,%1),Unread)),unread_color,json(string,info),title,json(string,get(%0/TITLE)),bucket,json(string,name(get(%0/BUCKET))),status,json(string,if(cand(%q<_w>,u({{jobs}}/FUN`IS`OVERDUE,%0)),Overdue,u({{jobs}}/FUN`STATE`TEXT,%0,%q<_w>))),color,json(string,u({{jobs}}/WEB`COLOR,%0,%q<_w>)),priority,json(string,capstr(get(%0/PRIORITY))),updated,json(string,u({{jobs}}/FUN`DATE,get(%0/[if(%q<_w>,UPDATED`AT,PUBLIC`AT)]))))]
+      # Whatever waits on the viewer is warning; overdue is error.
+      WEB`COLOR: |-
+        [switch(get(%0/STATE),closed,switch(get(%0/OUTCOME),approved,success,completed,success,denied,error,default),held,secondary,player,if(%1,info,warning),if(cand(%1,u({{jobs}}/FUN`IS`OVERDUE,%0)),error,if(%1,warning,info)))]
+      # Job %1 for viewer %0. Staff-only details go out hidden to everyone else.
+      WEB`DATA`JOB: |-
+        [setq(_j,u({{jobs}}/FUN`JOB,%1))][if(cand(strlen(%q<_j>),u({{jobs}}/FUN`CAN`SEE,%q<_j>,%0)),u({{jobs}}/WEB`DATA`JOB`SEEN,%0,%q<_j>),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
+      # Job object %1 for viewer %0. Staff-only details go out hidden to everyone else.
+      WEB`DATA`JOB`SEEN: |-
+        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%1/BUCKET),%0))][setq(_d1,[u({{jobs}}/FUN`STATE`TEXT,%1,%q<_s>)][if(cand(%q<_s>,u({{jobs}}/FUN`IS`OVERDUE,%1)),%b[chr(40)]overdue[chr(41)])])][setq(_d2,[u({{jobs}}/FUN`WHEN,get(%1/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%1/FILED`BY),%1,%0)])][setq(_d3,if(isint(get(%1/DUE)),u({{jobs}}/FUN`WHEN,get(%1/DUE)),None))][setq(_d4,u({{jobs}}/WEB`ENTRIES,%1,%0,%q<_s>))][json(object,fields,json(object,Bucket,u({{jobs}}/WEB`V,json(string,name(get(%1/BUCKET))),1),Status,u({{jobs}}/WEB`V,json(string,%q<_d1>),1),Priority,u({{jobs}}/WEB`V,json(string,capstr(get(%1/PRIORITY))),1),Filed,u({{jobs}}/WEB`V,json(string,%q<_d2>),1),Due,u({{jobs}}/WEB`V,json(string,%q<_d3>),%q<_s>),Handlers,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`NAMES,%1,%0,HANDLER)),1),Watchers,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`NAMES,%1,%0,WATCHER)),%q<_s>),Helpers,u({{jobs}}/WEB`V,json(string,u({{jobs}}/FUN`NAMES,%1,%0,HELPER)),1),entries,u({{jobs}}/WEB`V,%q<_d4>,1)))]
+      # The messages viewer %1 may read (%2: works the bucket, and so also sees notes and the log).
+      WEB`ENTRIES: |-
+        [setq(_ev,squish(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(u({{jobs}}/FUN`ENTRY`VISIBLE,%0,%i0,%2,if(%2,all,)),%i0))))][u({{jobs}}/WEB`ARR,iter(%q<_ev>,u({{jobs}}/WEB`ENTRY,%0,%i0,%1,%2),%b,%r))]
+      # Job %0 message %1 as a timeline row for viewer %2 (%3: staff). Notes and log lines carry a tag.
+      WEB`ENTRY: |-
+        [setq(_k,get(%0/ENTRY`%1`KIND))][setq(_c,strmatch(get(%0/ENTRY`%1`FORMAT),softcode))][setq(_ea,u({{jobs}}/WEB`EACTS,%0,%1,%2,%3))][json(object,author,json(string,u({{jobs}}/FUN`WHO,get(%0/ENTRY`%1`BY),%0,%2)),time,json(number,firstof(get(%0/ENTRY`%1`AT),0)),body,json(string,u({{jobs}}/WEB`BODY,%0,%1)),format,json(string,if(%q<_c>,code,markdown)),tag,json(string,switch(%q<_k>,note,Staff only,action,Log,)),tag_color,json(string,if(strmatch(%q<_k>,note),warning,default)),actions,%q<_ea>)]
+      WEB`BODY: |-
+        [if(strmatch(get(%0/ENTRY`%1`FORMAT),softcode),get(%0/ENTRY`%1`TEXT),u({{jobs}}/FUN`MDTEXT,get(%0/ENTRY`%1`TEXT)))]
+      # Its author and staff can switch a message between markdown and as typed, like +job/format.
+      WEB`EACTS: |-
+        [if(cand(not(strmatch(%q<_k>,action)),cor(%3,strmatch(get(%0/ENTRY`%1`BY),%2))),json(array,json(object,label,json(string,if(%q<_c>,Show as markdown,Show as typed)),action,json(string,act),values,json(object,op,json(string,format),job,json(number,get(%0/NUM)),entry,json(number,%1),fmt,json(string,if(%q<_c>,markdown,softcode))))),json_array())]
+
+      # actions: POST /http/jobs/act, the posted fields in %q<body>
+      # Runs the posted op as %q<viewer> and leaves the answer in %q<out>. Checks mirror the +job and
+      # +bucket commands; the writes are the same INC`DO` routines and settings.
+      WEB`ACT: |-
+        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%q<viewer>)][setq(me,if(strlen(%q<viewer>),u({{jobs}}/FUN`KEY,%q<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(t(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode)))),softcode,markdown))][setq(mailforce,0)]; @assert strlen(%q<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert t(match(file reply claim unclaim close reopen format bucket,%q<op>))=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
+      WEB`ACT`FILE: |-
+        think [setq(fb,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`GET,bucket),%q<viewer>))][setq(title,trim(u({{jobs}}/WEB`GET,title)))]; @assert cand(strlen(%q<fb>),u({{jobs}}/FUN`CAN`FILE,%q<fb>,%q<viewer>))=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,Pick a bucket you can file in.))]; @assert strlen(%q<title>)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Give it a title.))]; @assert lte(strlen(%q<title>),80)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Keep the title to 80 characters.))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Say what you need.))]; think [setq(how,portal)][setq(author,)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Filed job %q<n>.),redirect,json(string,/apps/jobs/%q<n>)))]
+      # The posted job, as INC`NEED`JOB finds one for a command.
+      WEB`NEED`JOB: |-
+        @assert cand(isint(%q<wn>),strlen(setr(jo,u({{jobs}}/FUN`JOB,%q<wn>))),u({{jobs}}/FUN`CAN`SEE,%q<jo>,%q<viewer>))=think [setq(out,u({{jobs}}/WEB`ERR,There is no job %q<wn>.))]; think [setq(n,get(%q<jo>/NUM))][setq(b,get(%q<jo>/BUCKET))][setq(staff,u({{jobs}}/FUN`CAN`WORK,%q<b>,%q<viewer>))]
+      WEB`NEED`STAFF: |-
+        @assert %q<staff>=think [setq(out,u({{jobs}}/WEB`ERR,Only staff who work the [name(%q<b>)] bucket can do that.))]
+      WEB`NEED`OPEN: |-
+        @assert not(strmatch(get(%q<jo>/STATE),closed))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> is closed.))]
+      WEB`ACT`REPLY: |-
+        @include {{jobs}}/WEB`NEED`JOB; think [setq(kind,if(cand(%q<staff>,strmatch(u({{jobs}}/WEB`GET,kind),note)),note,reply))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Write something first.))]; @assert cor(%q<staff>,not(strmatch(get(%q<jo>/STATE),closed)),u({{jobs}}/FUN`CAN`REOPEN,%q<jo>))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> closed too long ago to answer. File a new request.))]; @include {{jobs}}/INC`DO`REPLY; think [setq(out,u({{jobs}}/WEB`DONE,if(strmatch(%q<kind>,note),Note added.,Reply sent.)))]
+      WEB`ACT`CLAIM: |-
+        @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @include {{jobs}}/WEB`NEED`OPEN; @assert not(hasattr(%q<jo>,HANDLER`%q<me>))=think [setq(out,u({{jobs}}/WEB`ERR,You already handle job %q<n>.))]; think [setq(who,%q<actor>)][setq(add,1)]; @include {{jobs}}/INC`DO`CLAIM; think [setq(out,u({{jobs}}/WEB`DONE,You handle job %q<n> now.))]
+      WEB`ACT`UNCLAIM: |-
+        @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @assert hasattr(%q<jo>,HANDLER`%q<me>)=think [setq(out,u({{jobs}}/WEB`ERR,You do not handle job %q<n>.))]; think [setq(who,%q<actor>)][setq(add,0)]; @include {{jobs}}/INC`DO`CLAIM; think [setq(out,u({{jobs}}/WEB`DONE,You no longer handle job %q<n>.))]
+      # The message box, when filled, is the closing message, as with +job/approve <#>=<text>.
+      WEB`ACT`CLOSE: |-
+        @include {{jobs}}/WEB`NEED`JOB; think [setq(outcome,lcstr(u({{jobs}}/WEB`GET,outcome)))]; @assert t(match(approved denied completed canceled,%q<outcome>))=think [setq(out,u({{jobs}}/WEB`ERR,A job closes as approved/denied/completed or canceled.))]; @assert cor(%q<staff>,cand(strmatch(%q<outcome>,canceled),u({{jobs}}/FUN`IS`PARTY,%q<jo>,%q<viewer>)))=think [setq(out,u({{jobs}}/WEB`ERR,Only staff who work the [name(%q<b>)] bucket can do that.))]; @include {{jobs}}/WEB`NEED`OPEN; @include {{jobs}}/INC`DO`CLOSE; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is closed: %q<outcome>.))]
+      WEB`ACT`REOPEN: |-
+        @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @assert strmatch(get(%q<jo>/STATE),closed)=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> is open.))]; think [setq(byp,0)]; @include/nobreak {{jobs}}/INC`DO`REOPEN; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is open again.))]
+      WEB`ACT`FORMAT: |-
+        @include {{jobs}}/WEB`NEED`JOB; think [setq(ent,u({{jobs}}/WEB`GET,entry))][setq(fmt,lcstr(u({{jobs}}/WEB`GET,fmt)))]; @assert cand(isint(%q<ent>),hasattr(%q<jo>,ENTRY`%q<ent>`KIND),not(strmatch(get(%q<jo>/ENTRY`%q<ent>`KIND),action)),u({{jobs}}/FUN`ENTRY`VISIBLE,%q<jo>,%q<ent>,%q<staff>,))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> has no message %q<ent>.))]; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=think [setq(out,u({{jobs}}/WEB`ERR,Only its author or staff can change how a message shows.))]; @assert t(match(markdown softcode,%q<fmt>))=think [setq(out,u({{jobs}}/WEB`ERR,A message shows as markdown or softcode.))]; @include {{jobs}}/INC`DO`FORMAT; think [setq(out,u({{jobs}}/WEB`DONE,Message %q<ent> shows [if(strmatch(%q<fmt>,softcode),as typed,as markdown)] now.))]
+
+      # The bucket page's Save: every setting at once, checked as +bucket/set checks one.
+      WEB`ACT`BUCKET: |-
+        think [setq(bk,u({{jobs}}/WEB`QBUCKET,%q<viewer>,u({{jobs}}/WEB`GET,bucket)))]; @assert strlen(%q<bk>)=think [setq(out,u({{jobs}}/WEB`ERR,Only a Job Admin or someone who works that bucket can change it.))]; think [setq(bad,first(squish(iter(get({{jobs}}/DATA`SETTINGS),if(u({{jobs}}/FUN`SETTING`OK,%i0,u({{jobs}}/WEB`SETTING,%i0)),,%i0)))))]; @assert not(strlen(%q<bad>))=think [setq(out,u({{jobs}}/WEB`ERRF,%q<bad>,get({{jobs}}/DATA`SETTING`%q<bad>)))]; @dolist/inline [get({{jobs}}/DATA`SETTINGS)]=&## %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,##,u({{jobs}}/WEB`SETTING,##))]; think [setq(out,json(object,ok,json(boolean,true),message,json(string,[name(%q<bk>)] is saved.)))]
+      # Setting %0 as posted, in the words +bucket/set takes.
+      WEB`SETTING: |-
+        [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(t(match(true 1 yes on,lcstr(%q<_v>))),yes,no),if(strmatch(%q<_v>,null),,%q<_v>))]
+
+      # sidebar: GET /http/jobs/nav
+      # Viewer %0's sidebar: staff get the queue's views and the buckets they work, players their own
+      # jobs, with counts. Nobody signed in gets no links, and the portal shows the app's own.
+      WEB`NAV: |-
+        [json(object,groups,if(strlen(%0),u({{jobs}}/WEB`ARR,u({{jobs}}/WEB`NAV`[if(u({{jobs}}/WEB`STAFF,%0),STAFF,PLAYER)],%0)),json_array()))]
+      WEB`NAV`STAFF: |-
+        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,Needs attention,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Handled by me,/apps/jobs?filter=mine,person,u({{jobs}}/WEB`COUNT,%0,MINE)),u({{jobs}}/WEB`LINK,New,/apps/jobs?filter=new,fiber_new,u({{jobs}}/WEB`COUNT,%0,NEW)),u({{jobs}}/WEB`LINK,Overdue,/apps/jobs?filter=overdue,alarm,u({{jobs}}/WEB`COUNT,%0,OVERDUE)),u({{jobs}}/WEB`LINK,All open,/apps/jobs?filter=all,view_list,u({{jobs}}/WEB`COUNT,%0,OPEN)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]%r[json(object,label,json(string,Buckets),items,u({{jobs}}/WEB`ARR,[iter(u({{jobs}}/WEB`WORKED,%0),u({{jobs}}/WEB`LINK,name(%i0),/apps/jobs?bucket=[get(%i0/SLUG)],folder_open,u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),%b,%r)]%r[u({{jobs}}/WEB`LINK,Bucket settings,/apps/jobs/buckets,tune)]))]
+      WEB`NAV`PLAYER: |-
+        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,My open jobs,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]
+      # A sidebar link: label %0, path %1, Material icon %2, and count %3 when there is one.
+      WEB`LINK: |-
+        [if(strlen(%3),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2),count,json(number,%3)),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2)))]
+      # How many jobs predicate %1 (with %2) selects for viewer %0.
+      WEB`COUNT: |-
+        [words(u({{jobs}}/FUN`SELECT,%0,%1,%2))]
+
+      # Bucket settings: /apps/jobs/buckets lists the buckets the viewer works; buckets/<slug> edits one.
+      WEB`SCHEMA`BUCKETS: |-
+        [setq(_bt,json(object,kind,json(string,table),rows_field,json(string,buckets),columns,json(array,json(object,key,json(string,name),label,json(string,Bucket),link,json(string,/apps/jobs/buckets/\{slug\})),json(object,key,json(string,open),label,json(string,Open)),json(object,key,json(string,turnaround),label,json(string,Turnaround)),json(object,key,json(string,about),label,json(string,What it is for))),empty,json(string,You work no buckets.)))][u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,%q<_bt>))]
+      WEB`DATA`BUCKETS: |-
+        [json(object,fields,json(object,buckets,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`WORKED,%0),json(object,slug,json(string,get(%i0/SLUG)),name,json(string,name(%i0)),open,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),turnaround,json(string,if(gt(firstof(get(%i0/TURNAROUND),0),0),[get(%i0/TURNAROUND)] days,None)),about,json(string,get(%i0/DESCRIPTION))),%b,%r)),1)))]
+      # The settings form for the bucket whose slug is %1, for viewer %0 who works it.
+      WEB`SCHEMA`BUCKET: |-
+        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),u({{jobs}}/WEB`SCHEMA`BUCKET`SEEN,%q<_bk>),u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,u({{jobs}}/WEB`MD,You do not work a bucket called %1.))))]
+      WEB`SCHEMA`BUCKET`SEEN: |-
+        [setq(_s1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Open jobs),json(string,Permission),json(string,Role),json(string,Hooks))))][setq(_s2,[u({{jobs}}/WEB`FIELD,description,About,text,Shown in +buckets and the new-request form.)]%r[u({{jobs}}/WEB`FIELD,turnaround,Turnaround in days,number,A new job is due this many days after it is filed. 0 sets no due date.)]%r[u({{jobs}}/WEB`FIELD,reopen,Reopen window in days,number,A player's reply opens a closed job again for this many days. 0 never.)]%r[u({{jobs}}/WEB`SELECT,anonymous,Hide who is talking,none None|filer The filer\, from staff|staff Staff\, from the filer)]%r[u({{jobs}}/WEB`SELECT,priority,Priority of new jobs,low Low|normal Normal|high High)]%r[u({{jobs}}/WEB`FIELD,keep,Keep closed jobs for days,text,Empty keeps them forever.)]%r[u({{jobs}}/WEB`FIELD,hidden,Hidden from players,boolean,Players do not see the bucket or file in it.)])][setq(_s3,json(object,kind,json(string,button),label,json(string,Save),action,json(string,save),values,json(object,op,json(string,bucket),bucket,json(string,get(%0/SLUG))),color,json(string,primary),variant,json(string,filled)))][u({{jobs}}/WEB`DOC,form,name(%0),[u({{jobs}}/WEB`SEC,,1,%q<_s1>)]%r[u({{jobs}}/WEB`SEC,Settings,2,%q<_s2>)]%r[u({{jobs}}/WEB`SEC,,3,%q<_s3>)],json(object,save,u({{jobs}}/WEB`ACTION`KEEP)))]
+      # A form field: key %0, label %1, type %2, help %3.
+      WEB`FIELD: |-
+        [json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,%2),help,json(string,%3))]
+      # A select field: key %0, label %1, options %2 as |-separated "<value> <label>".
+      WEB`SELECT: |-
+        [json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,select),options,u({{jobs}}/WEB`ARR,iter(%2,u({{jobs}}/WEB`OPT,first(%i0),rest(%i0)),|,%r)))]
+      # The act action without emptying the form, for a form that shows what it saved.
+      WEB`ACTION`KEEP: |-
+        [json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/jobs/act),payload,json(string,fields),on_error,json(object,bind_field_errors,json(boolean,true)))]
+      WEB`DATA`BUCKET: |-
+        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),json(object,fields,json(object,Open jobs,u({{jobs}}/WEB`V,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%q<_bk>)),1),Permission,u({{jobs}}/WEB`V,json(string,softcode.jobs.[get(%q<_bk>/SLUG)]),1),Role,u({{jobs}}/WEB`V,json(string,job-admin-[get(%q<_bk>/SLUG)]),1),Hooks,u({{jobs}}/WEB`V,json(string,firstof(itemize(squish(iter(lattr(%q<_bk>/ON`*),if(strmatch(get(%q<_bk>/%i0),@@*),,lcstr(after(%i0,`)))))),None written)),1),description,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/DESCRIPTION)),1),turnaround,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/TURNAROUND),0)),1),reopen,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/REOPEN),0)),1),anonymous,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/ANONYMOUS),none)),1),priority,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/PRIORITY),normal)),1),keep,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/KEEP)),1),hidden,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/HIDDEN)),1))),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # Commands added with @command/add and their hooks, and @functions, last until a restart, so STARTUP
+      # sets them on every boot. /noparse and /rsnoparse hand the hooks the text as typed; /inline runs them
+      # in place, as a built-in command would run.
+      STARTUP: |-
+        @dolist/inline +job +jobs +myjob +myjobs +ticket +tickets={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`JOB}; @command/add/noparse/rsnoparse +request; @hook/override/inline +request={{jobs}},CMD`REQUEST; @dolist/inline +bug +typo +pitch +apply={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`SHORTCUT}; @dolist/inline +bucket +buckets={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`BUCKET}; @function job={{jobs}},FUN`API`JOB; @function jobs={{jobs}},FUN`API`JOBS; @function jobentries={{jobs}},FUN`API`JOBENTRIES; &TICK`ID {{jobs}}=[secs()][rand(100000)]; @trigger {{jobs}}/TICK=[get({{jobs}}/TICK`ID)]
+      AINSTALL: |-
+        @teleport {{jobs}}=#2; @trigger {{jobs}}/STARTUP
+
+  # One THING per job, named Job <n>, lives in here. NO_COMMAND on every job, and INDEX`<n> maps a
+  # number to its object. COUNTER is the last number given out; numbers are never reused.
+  # OPT`MAIL`<key> holds a person's job-mail choice.
+  - ref: store
+    type: thing
+    name: Job Store
+    location: "{{jobs}}"
+    flags: [NO_COMMAND]
+    attributes:
+      COUNTER: |-
+        0
+
+  # The buckets live in here, and it is their parent, so a setting a bucket leaves unset comes from
+  # these defaults. +bucket/set changes a bucket's own copy.
+  - ref: buckets
+    type: thing
+    name: Job Buckets
+    location: "{{jobs}}"
+    flags: [NO_COMMAND]
+    attributes:
+      DESCRIPTION: |-
+        A job bucket.
+      # Days staff have to answer a new job; 0 sets no due date.
+      TURNAROUND: |-
+        7
+      # Days after closing that the filer's reply opens a job again; 0 never.
+      REOPEN: |-
+        7
+      # none, filer (staff do not see who filed) or staff (players do not see staff names).
+      ANONYMOUS: |-
+        none
+      HIDDEN: |-
+        0
+      PRIORITY: |-
+        normal
+
+  # A bucket. Its work lock says who works its jobs, its file lock who may file in it. Every
+  # ON`<EVENT> hook starts as a comment naming its arguments, with an example: replace the comment
+  # with code and it runs, as this bucket, after that change is written. The bucket holds only the
+  # privileges a game gives it (@permission/allow Applications=<permission>, @role/assign), and only
+  # its controllers write its hooks; +bucket/set never does.
+  - ref: applications
+    type: thing
+    name: Applications
+    location: "{{buckets}}"
+    parent: "{{buckets}}"
+    flags: [NO_COMMAND]
+    locks:
+      work: "perm^softcode.jobs.admin|perm^softcode.jobs.applications"
+      file: "#TRUE"
+    attributes:
+      DESCRIPTION: |-
+        Character applications.
+      SLUG: |-
+        applications
+      TURNAROUND: |-
+        3
+      ON`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      ON`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      ON`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      ON`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      ON`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example, granting the filer an approved role (allow it on this bucket first: @permission/allow Applications=<permission>): @role/assign %2=approved; @pemit %2=Your application, job %0, was approved.}
+      ON`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      ON`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      ON`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      ON`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      ON`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      ON`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      ON`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      ON`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      ON`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+
+  - ref: requests
+    type: thing
+    name: Requests
+    location: "{{buckets}}"
+    parent: "{{buckets}}"
+    flags: [NO_COMMAND]
+    locks:
+      work: "perm^softcode.jobs.admin|perm^softcode.jobs.requests"
+      file: "#TRUE"
+    attributes:
+      DESCRIPTION: |-
+        Anything you need from staff.
+      SLUG: |-
+        requests
+      TURNAROUND: |-
+        3
+      ON`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      ON`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      ON`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      ON`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      ON`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example: @pemit %2=Your job %0 was approved.}
+      ON`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      ON`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      ON`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      ON`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      ON`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      ON`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      ON`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      ON`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      ON`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+
+  - ref: building
+    type: thing
+    name: Building
+    location: "{{buckets}}"
+    parent: "{{buckets}}"
+    flags: [NO_COMMAND]
+    locks:
+      work: "perm^softcode.jobs.admin|perm^softcode.jobs.building"
+      file: "#TRUE"
+    attributes:
+      DESCRIPTION: |-
+        Rooms, objects, descriptions and typos.
+      SLUG: |-
+        building
+      ON`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      ON`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      ON`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      ON`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      ON`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example: @pemit %2=Your job %0 was approved.}
+      ON`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      ON`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      ON`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      ON`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      ON`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      ON`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      ON`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      ON`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      ON`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+
+  - ref: bugs
+    type: thing
+    name: Bugs
+    location: "{{buckets}}"
+    parent: "{{buckets}}"
+    flags: [NO_COMMAND]
+    locks:
+      work: "perm^softcode.jobs.admin|perm^softcode.jobs.bugs"
+      file: "#TRUE"
+    attributes:
+      DESCRIPTION: |-
+        Problems with code or the server.
+      SLUG: |-
+        bugs
+      PRIORITY: |-
+        high
+      ON`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      ON`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      ON`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      ON`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      ON`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example: @pemit %2=Your job %0 was approved.}
+      ON`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      ON`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      ON`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      ON`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      ON`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      ON`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      ON`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      ON`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      ON`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+
+  - ref: plots
+    type: thing
+    name: Plots
+    location: "{{buckets}}"
+    parent: "{{buckets}}"
+    flags: [NO_COMMAND]
+    locks:
+      work: "perm^softcode.jobs.admin|perm^softcode.jobs.plots"
+      file: "#TRUE"
+    attributes:
+      DESCRIPTION: |-
+        Plot and scene proposals.
+      SLUG: |-
+        plots
+      ON`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      ON`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      ON`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      ON`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      ON`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example: @pemit %2=Your job %0 was approved.}
+      ON`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      ON`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      ON`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      ON`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      ON`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      ON`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      ON`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      ON`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      ON`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+
+  - ref: feedback
+    type: thing
+    name: Feedback
+    location: "{{buckets}}"
+    parent: "{{buckets}}"
+    flags: [NO_COMMAND]
+    locks:
+      work: "perm^softcode.jobs.admin|perm^softcode.jobs.feedback"
+      file: "#TRUE"
+    attributes:
+      DESCRIPTION: |-
+        Suggestions and complaints. Staff do not see who sent them.
+      SLUG: |-
+        feedback
+      ANONYMOUS: |-
+        filer
+      ON`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      ON`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      ON`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      ON`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      ON`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example: @pemit %2=Your job %0 was approved.}
+      ON`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      ON`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      ON`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      ON`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      ON`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      ON`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      ON`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      ON`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      ON`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+
+  - ref: staff
+    type: thing
+    name: Staff
+    location: "{{buckets}}"
+    parent: "{{buckets}}"
+    flags: [NO_COMMAND]
+    locks:
+      work: "perm^softcode.jobs.admin|perm^softcode.jobs.staff"
+      file: "perm^softcode.jobs.admin|perm^softcode.jobs.staff"
+    attributes:
+      DESCRIPTION: |-
+        Work among staff. Players do not see it.
+      SLUG: |-
+        staff
+      HIDDEN: |-
+        1
+      ON`FILE: |-
+        @@ {Runs after a job is filed in this bucket. %0: job number. %1: objid of whoever filed it. %2: the job's title. %3: how it was filed: command, query, portal or api. Example, thanking the filer: @pemit %1=Thanks. Staff answer [name(me)] jobs within [get(me/TURNAROUND)] days.}
+      ON`REPLY: |-
+        @@ {Runs after someone writes on a job in this bucket. %0: job number. %1: objid of the writer. %2: number of the new entry. %3: 1 for a public reply, 0 for a staff-only note. Example, telling a staff channel about public replies: @if %3=@cemit Staff=Job %0 has a new reply.}
+      ON`CLAIM: |-
+        @@ {Runs after a handler is added to or removed from a job in this bucket. %0: job number. %1: objid of whoever did it. %2: the handler, an objid or role:<role>. %3: 1 when added, 0 when removed. Example, telling a new handler: @if %3=@pemit %2=You now handle job %0.}
+      ON`TURN: |-
+        @@ {Runs after a job in this bucket changes whose turn it is. %0: job number. %1: objid of whoever acted. %2: the old state. %3: the new state: new, staff, player or held. Example, nudging the filer: @if strmatch(%3,player)=@pemit [job(%0,filer)]=Staff are waiting on you about job %0.}
+      ON`APPROVE: |-
+        @@ {Runs after a job in this bucket is approved. %0: job number. %1: objid of whoever approved it. %2: objid of whoever filed it. %3: number of the entry holding the approval text. Example: @pemit %2=Your job %0 was approved.}
+      ON`DENY: |-
+        @@ {Runs after a job in this bucket is denied. %0: job number. %1: objid of whoever denied it. %2: objid of whoever filed it. %3: number of the entry holding the reason. Example: @pemit %2=Your job %0 was denied. +job %0 says why.}
+      ON`COMPLETE: |-
+        @@ {Runs after a job in this bucket is completed. %0: job number. %1: objid of whoever completed it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example, posting to a channel: @cemit Staff=Job %0 is done.}
+      ON`CANCEL: |-
+        @@ {Runs after a job in this bucket is canceled. %0: job number. %1: objid of whoever canceled it. %2: objid of whoever filed it. %3: number of the entry holding the closing text. Example: @pemit %2=Job %0 is canceled.}
+      ON`REOPEN: |-
+        @@ {Runs after a closed job in this bucket opens again. %0: job number. %1: objid of whoever reopened it. %2: 1 when the filer reopened it by replying, 0 when staff did. Example: @if %2=@cemit Staff=Job %0 was reopened by its filer.}
+      ON`TRANSFER: |-
+        @@ {Runs on both buckets after a job moves between them. %0: job number. %1: objid of whoever moved it. %2: objid of the old bucket. %3: objid of the new bucket. Example: @pemit [job(%0,filer)]=Job %0 moved to [name(%3)].}
+      ON`DUE: |-
+        @@ {Runs after a job's due date in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old due date, in seconds, or empty. %3: the new one, or empty. Example: @if strlen(%3)=@pemit %1=Job %0 is due [convsecs(%3)].}
+      ON`PRIORITY: |-
+        @@ {Runs after a job's priority in this bucket changes. %0: job number. %1: objid of whoever changed it. %2: the old priority. %3: the new one: low, normal or high. Example: @if strmatch(%3,high)=@cemit Staff=Job %0 is now high priority.}
+      ON`OVERDUE: |-
+        @@ {Runs once when a job in this bucket passes its due date while waiting on staff. %0: job number. %1: empty, since nobody acted. %2: the due date, in seconds. Example, telling the job's handlers: @dolist [job(%0,handlers)]=@pemit ##=Job %0 is overdue.}
+      ON`DELETE: |-
+        @@ {Runs after a job in this bucket is deleted. %0: job number. %1: objid of whoever deleted it. %2: the job's title. Example: @cemit Staff=Job %0 was deleted by [name(%1)].}
+
+  # ---- portal routes ------------------------------------------------------------------
+  # Routes on the HTTP handler, as children of http-handler's GET and POST verbs. The portal's jobs
+  # application (the jobs-app package) reads /http/jobs/schema and /http/jobs/data with ?at= set to
+  # the address after /apps/jobs/, reads its sidebar from /http/jobs/nav, and posts its buttons to
+  # /http/jobs/act. %q<viewer> is the
+  # character the portal signed in as. The handler must be WIZARD (the seeded one is) to @force the
+  # Jobs object, which does the work so its "Set." lines never land in the response.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`JOBS`SCHEMA: |-
+        @respond/type application/json; think [u({{jobs}}/WEB`SCHEMA,%q<viewer>,%q<form.at>,%q<form.filter>,%q<form.bucket>)]
+      GET`JOBS`NAV: |-
+        @respond/type application/json; think [u({{jobs}}/WEB`NAV,%q<viewer>)]
+      GET`JOBS`DATA: |-
+        @force {{jobs}}=@include/nobreak {{jobs}}/WEB`DATA; @respond/type application/json; think %q<out>
+      POST`JOBS`ACT: |-
+        think [setq(body,%0)]; @force {{jobs}}=@include/nobreak {{jobs}}/WEB`ACT; @respond/type application/json; think %q<out>
+
+  # ---- help storage -------------------------------------------------------------------
+  # A plain thing, not the WIZARD Jobs object: the librarian cannot u() a privileged object's
+  # attributes. Bodies are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: jobs_help
+    type: thing
+    name: Jobs Help
+    location: "{{jobs}}"
+    attributes:
+      HELP: |-
+        Jobs: asking staff for things, and the queue staff work.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree.
+      SEE`JOBS: |-
+        request|jobs staff|jobs format|buckets
+      SEE`REQUEST: |-
+        jobs|jobs format
+      SEE`JOBS`STAFF: |-
+        jobs commands|buckets
+      SEE`JOBS`HOOKS: |-
+        buckets|jobs api
+      SEE`BUCKETS: |-
+        jobs roles|jobs hooks
+      SEE`JOBS`ROLES: |-
+        buckets
+      HELP`JOBS: |-
+        Jobs are how you ask staff for something and how staff keep track of it: an application, a
+        room fix, a bug, a plot idea. Each job lives in a **bucket**, and each has a running conversation.
+
+        ## Whose turn it is
+
+        A job is always waiting on someone:
+
+        - **New**: just filed, nobody has picked it up.
+        - **With staff**: staff owe the next answer.
+        - **Waiting on you**: staff answered and are waiting for your reply.
+        - **On hold**: parked on purpose.
+        - **Closed**: approved, denied, completed or canceled.
+
+        Replying passes the turn. When you reply to a job closed a short while ago, it opens again.
+
+        ## Commands
+
+        - `+request <title>=<text>`: ask staff for something. `+request Building/Broken exit=...` files in a bucket by name.
+        - `+jobs`: your open jobs, and for staff, what needs them.
+        - `+job <#>`: read one. `+job/reply <#>=<text>` answers it.
+
+        `+job`, `+jobs`, `+myjob`, `+myjobs`, `+ticket` and `+tickets` are the same command, so use the one you know.
+      HELP`REQUEST: |-
+        ## Filing
+
+        - `+request <title>=<text>`: files in the Requests bucket.
+        - `+request <bucket>/<title>=<text>`: files in a bucket by its full name, such as `+request Applications/Ready for review=...`. The part before the `/` is a bucket only when it is a bucket's whole name, so `+request Help w/ exits=...` is just a title.
+        - `+bug`, `+typo`, `+pitch` and `+apply <title>=<text>` file in Bugs, Building, Plots and Applications.
+        - `+buckets` lists the buckets you can file in.
+
+        ## Following up
+
+        - `+jobs`: your open jobs. A `*` marks something new.
+        - `+jobs/old`: your closed jobs.
+        - `+job <#>`: read one.
+        - `+job/reply <#>=<text>` \(or `/add`\): answer. Within a few days of a job closing, a reply opens it again.
+        - `+job/cancel <#>`: withdraw a job you filed.
+        - `+job/addhelper <#>=<player>`: let someone else read and answer it.
+        - `+jobs/catchup`: mark everything read.
+        - `+job/options mail=off`: stop the @mail copies of staff replies.
+
+        Messages are markdown. Add `/softcode` to show yours exactly as typed: see \[jobs format\].
+      HELP`JOBS`STAFF: |-
+        ## The queue
+
+        `+jobs` opens on what needs staff in the buckets you work, oldest wait first and high priority on
+        top, followed by your own open jobs. A job waiting on its player is never overdue, because the due
+        date only counts while it is staff's turn.
+
+        - `+jobs <bucket>`: one bucket. `+jobs/all`: everything open.
+        - `+jobs/new`, `/mine`, `/overdue`, `/player`, `/held`.
+        - `+jobs/who <player>` \(jobs they handle\), `/from <player>` \(jobs they filed\), `/search <text>`.
+        - `+job/old \[<bucket>\]`: closed jobs.
+        - `+job/next` reads the next unread job, `+job/scan` lists them, `+job/brief` counts.
+
+        ## Working a job
+
+        - `+job <#>`, `+job/all <#>` \(with the log\), `+job/last <#>=<n>`.
+        - `+job/reply <#>=<text>`: the player sees it, and it becomes their turn.
+        - `+job/note <#>=<text>` \(or `/add`, `/comment`\): staff only.
+        - `+job/claim <#>`, `/unclaim`, `/assign <#>=<players and +roles>`.
+        - `+job/watch <#>` \(or `/tag`\): hear about every change without handling it.
+        - `+job/approve`, `/deny`, `/complete`, `/cancel <#>\[=<text>\]`; `+job/reopen <#>`.
+        - `+job/due <#>=+3d`, `+job/priority <#>=high`, `+job/trans <#>=<bucket>`.
+
+        Every switch is in \[jobs commands\].
+      HELP`JOBS`COMMANDS: |-
+        Every `+job` switch, with the AnomalyJobs and Volund spellings it also takes. `<#>` is a job number.
+
+        | Switch | What it does |
+        |---|---|
+        | \(none\) | `+jobs` lists; `+job <#>` reads; `+jobs <bucket>` lists a bucket |
+        | `/list <bucket>` | one bucket's open jobs |
+        | `/all` | every open job; `/all <#>` reads one with its log |
+        | `/mine` `/new` `/overdue` `/player` `/held` | lists |
+        | `/who <player>` `/from <player>` `/search <text>` `/old \[<bucket>\]` | lists |
+        | `/next` `/scan` `/brief` `/catchup` | unread jobs |
+        | `/last <#>=<n>` `/act <#>` | the last few messages; the log |
+        | `/reply <#>=<text>` | public reply |
+        | `/note`, `/add`, `/comment <#>=<text>` | staff-only note |
+        | `/mail <#>=<text>` | public reply, mailed even to someone who turned mail off |
+        | `/claim` `/unclaim <#>` | handle a job, or stop |
+        | `/assign <#>=<names>` | set the handlers; `+<role>` assigns a role |
+        | `/watch`, `/tag` and `/unwatch`, `/untag <#>` | follow a job |
+        | `/addhelper` `/remhelper <#>=<player>` | someone who may read and answer it |
+        | `/source <#>` | who filed it \(Job Admin\) |
+        | `/state <#>=staff/player/held`, `/hold <#>` | whose turn it is |
+        | `/approve` `/deny` `/complete` `/cancel <#>\[=<text>\]` | close it |
+        | `/reopen`, `/revive <#>` | open it again |
+        | `/delete <#>` | remove it \(Job Admin\) |
+        | `/due <#>=<when>` | `+3d`, `+12h`, `+1w`, a date, or `none` |
+        | `/priority`, `/esc <#>=<level>` | low, normal, high \(green, yellow, red\) |
+        | `/name <#>=<title>` | retitle |
+        | `/trans`, `/bucket <#>=<bucket>` | move to another bucket |
+        | `/merge <from>=<into>` | fold one job into another |
+        | `/edit <#>/<entry>=<old>/<new>` | fix your own message |
+        | `/format <#>/<entry>=markdown/softcode` | how a message shows |
+        | `/create <bucket>/<title>=<text>` | staff open a job |
+        | `/query <player>/<title>=<text>` | ask a player something |
+        | `/options mail=on/off` | job mail |
+
+        Checkout, job locks and progress percentages are not kept: handlers and states say the same.
+      HELP`JOBS`FORMAT: |-
+        Every message, the one a job is filed with and every reply and note, shows as **markdown**:
+        `**bold**`, `*italic*`, lists, links and code. `%%r` starts a new line, as everywhere else.
+
+        Nothing anyone writes in a job is evaluated, so brackets and percent signs are safe.
+
+        ## Softcode view
+
+        Some text has to stay exactly as typed: code, `examine` output, anything full of brackets and
+        backticks. Add `/softcode` to the command that writes it and it shows as typed, with nothing rendered:
+
+        - `+request/softcode <title>=<text>`, `+bug/softcode ...`
+        - `+job/reply/softcode <#>=<text>`, `+job/note/softcode ...`, `+job/approve/softcode ...`
+
+        `/markdown` is what no switch means.
+
+        ## Changing one later
+
+        `+job/format <#>/<entry>=softcode` or `=markdown` changes how one message shows; its text is
+        untouched. Its author or staff who work the bucket can do it. `+job <#>` numbers the messages.
+      HELP`BUCKETS: |-
+        A **bucket** groups jobs of one kind and says who works them. The game starts with:
+
+        | Bucket | For |
+        |---|---|
+        | Applications | character applications |
+        | Requests | anything else you need from staff; where `+request` goes |
+        | Building | rooms, objects, typos \(`+typo`\) |
+        | Bugs | code and server problems \(`+bug`\) |
+        | Plots | plot and scene proposals \(`+pitch`\) |
+        | Feedback | suggestions and complaints; staff do not see who sent them |
+        | Staff | staff-only work, hidden from players |
+
+        A bucket is always named by its full name, in any case.
+
+        ## Looking
+
+        - `+buckets`: the buckets you can see, with their open jobs.
+        - `+bucket <name>`: its settings, locks, role and the hooks it runs.
+
+        ## Settings
+
+        `+bucket/set <bucket>/<setting>=<value>`, by a Job Admin or someone who works the bucket:
+
+        - `description`
+        - `turnaround`: days to answer a new job before it is overdue; 0 for none
+        - `reopen`: days after closing in which the filer's reply opens a job again; 0 for never
+        - `anonymous`: `none`, `filer` \(staff do not see who filed\), or `staff` \(players do not see staff names\)
+        - `hidden`: `yes` shows the bucket only to those who work it
+        - `priority`: what new jobs start at
+        - `keep`: days a closed job stays; empty keeps them
+
+        ## Making and removing
+
+        Job Admin only:
+
+        - `+bucket/create <name>=<description>`: makes the bucket, its permission `softcode.jobs.<name>` and its role `job-admin-<name>`.
+        - `+bucket/rename <bucket>=<new name>`
+        - `+bucket/delete <bucket>`: empty buckets only. Its role and permission go with it.
+        - `+bucket/lock <bucket>/file=<lock>` and `/work=<lock>`: who may file, and who works it. They are ordinary locks.
+      HELP`JOBS`ROLES: |-
+        Who works which jobs comes from permissions, held through roles:
+
+        | Permission | Lets you |
+        |---|---|
+        | `softcode.jobs.admin` | work every bucket, delete jobs, and create and change buckets |
+        | `softcode.jobs.<bucket>` | work one bucket's jobs and change its settings |
+
+        The package brings a role for each:
+
+        - `job-admin` \(**Job Admin**\) allows `softcode.jobs.admin`.
+        - `job-admin-applications` \(**Job Admin - Applications**\) allows `softcode.jobs.applications`, and so on for every bucket.
+
+        Give someone a bucket with `@role/assign <player>=job-admin-applications`. A role of your own
+        can allow the same permission: `@role/allow helper=softcode.jobs.requests`.
+
+        Nobody holds these until something allows them, and that includes wizards.
+
+        A bucket's **work lock** is what is actually checked: by default
+        `perm^softcode.jobs.admin|perm^softcode.jobs.<bucket>`. Change it with `+bucket/lock` to add
+        anything a lock can test.
+      HELP`JOBS`HOOKS: |-
+        A bucket runs code when its jobs change. Every bucket has one attribute per event, `` ON`<EVENT> ``,
+        which starts out as a comment naming its arguments, with an example. Replace the comment with code
+        and it runs, queued, after the change is written.
+
+        The code runs **as the bucket**, so it can do only what the bucket may. Give the bucket what a hook
+        needs with `@permission/allow <bucket>=<permission>` or `@role/assign <bucket>=<role>`. Only the
+        bucket's controllers can write its hooks. `+bucket/set` never changes them, so a bucket admin
+        cannot write code that runs with the bucket's privileges.
+
+        - `` ON`FILE ``: Runs after a job is filed in this bucket. %%0: job number. %%1: objid of whoever filed it. %%2: the job's title. %%3: how it was filed: command, query, portal or api.
+        - `` ON`REPLY ``: Runs after someone writes on a job in this bucket. %%0: job number. %%1: objid of the writer. %%2: number of the new entry. %%3: 1 for a public reply, 0 for a staff-only note.
+        - `` ON`CLAIM ``: Runs after a handler is added to or removed from a job in this bucket. %%0: job number. %%1: objid of whoever did it. %%2: the handler, an objid or role:\\<role>. %%3: 1 when added, 0 when removed.
+        - `` ON`TURN ``: Runs after a job in this bucket changes whose turn it is. %%0: job number. %%1: objid of whoever acted. %%2: the old state. %%3: the new state: new, staff, player or held.
+        - `` ON`APPROVE ``: Runs after a job in this bucket is approved. %%0: job number. %%1: objid of whoever approved it. %%2: objid of whoever filed it. %%3: number of the entry holding the approval text.
+        - `` ON`DENY ``: Runs after a job in this bucket is denied. %%0: job number. %%1: objid of whoever denied it. %%2: objid of whoever filed it. %%3: number of the entry holding the reason.
+        - `` ON`COMPLETE ``: Runs after a job in this bucket is completed. %%0: job number. %%1: objid of whoever completed it. %%2: objid of whoever filed it. %%3: number of the entry holding the closing text.
+        - `` ON`CANCEL ``: Runs after a job in this bucket is canceled. %%0: job number. %%1: objid of whoever canceled it. %%2: objid of whoever filed it. %%3: number of the entry holding the closing text.
+        - `` ON`REOPEN ``: Runs after a closed job in this bucket opens again. %%0: job number. %%1: objid of whoever reopened it. %%2: 1 when the filer reopened it by replying, 0 when staff did.
+        - `` ON`TRANSFER ``: Runs on both buckets after a job moves between them. %%0: job number. %%1: objid of whoever moved it. %%2: objid of the old bucket. %%3: objid of the new bucket.
+        - `` ON`DUE ``: Runs after a job's due date in this bucket changes. %%0: job number. %%1: objid of whoever changed it. %%2: the old due date, in seconds, or empty. %%3: the new one, or empty.
+        - `` ON`PRIORITY ``: Runs after a job's priority in this bucket changes. %%0: job number. %%1: objid of whoever changed it. %%2: the old priority. %%3: the new one: low, normal or high.
+        - `` ON`OVERDUE ``: Runs once when a job in this bucket passes its due date while waiting on staff. %%0: job number. %%1: empty, since nobody acted. %%2: the due date, in seconds.
+        - `` ON`DELETE ``: Runs after a job in this bucket is deleted. %%0: job number. %%1: objid of whoever deleted it. %%2: the job's title.
+
+        `job\(%%0, <field>\)` reads the job from inside a hook: see \[jobs api\].
+
+        ## Examples
+
+        Grant an approved role when an application is approved \(first `@permission/allow Applications=roles.admin`, or the narrowest permission that lets it assign the role\):
+
+        ```
+        &ON`APPROVE Applications=@role/assign %%2=approved; @pemit %%2=Your application, job %%0, was approved.
+        ```
+
+        Tell a job's handlers when it goes overdue:
+
+        ```
+        &ON`OVERDUE Requests=@dolist \[job\(%%0,handlers\)\]=@pemit ##=Job %%0 is overdue.
+        ```
+
+        Post completed bugs to a channel:
+
+        ```
+        &ON`COMPLETE Bugs=@cemit Staff=Bug %%0 is fixed: \[job\(%%0,title\)\]
+        ```
+      HELP`JOBS`API: |-
+        ## Reading
+
+        - `job\(<#>, <field>\)`: `number`, `bucket`, `title`, `state`, `outcome`, `priority`, `filer` \(empty when the bucket hides the filer, except to the filer, a Job Admin or the bucket's hooks\), `filed`, `due`, `updated`, `overdue`, `handlers`, `watchers`, `helpers`, `entries`.
+        - `jobs\(\[<bucket>\[, open/all/<state>\]\]\)`: job numbers, newest first.
+        - `jobentries\(<#>\[, <viewer>\]\)`: the numbers of the messages `<viewer>` may read.
+
+        They answer for jobs the calling object may see, for holders of `game.see_all`, and for a bucket's own hooks.
+
+        ## Filing from other code
+
+        From a wizard object, such as a chargen's submit command, put the title and text in registers and include the API, which leaves the new number in `%%q<job>`:
+
+        ```
+        think \[setq\(title,Application for %%n\)\]\[setq\(text,v\(sheet\)\)\]; @include Jobs/INC`API`FILE=%%#,Applications; @pemit %%#=Filed as job %%q<job>.
+        ```
+
+        `` INC`API`REPLY=<#>,<actor> `` and `` INC`API`NOTE=<#>,<actor> `` add `%%q<text>`; `` INC`API`CLOSE=<#>,<actor>,<outcome> `` closes with it. Text goes in registers because `@include` splits its arguments at commas.
+
+        ## The portal
+
+        The jobs-app package puts the same queue in the web portal at `/apps/jobs`, reading these jobs through the HTTP handler.
+
+  # ---- +help registration -------------------------------------------------------------
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`JOBS: |-
+        {{jobs_help}}

@@ -113,6 +113,8 @@ public sealed record PackageBinaryFile(string FileName, string Sha256);
 /// <param name="Order">Sort order within nav / listings.</param>
 /// <param name="Scope">Layout scope the widget belongs to (e.g. <c>play</c>), or null.</param>
 /// <param name="OobPackage">OOB package whose latest payload is the widget's data (e.g. <c>weather.now</c>), or null.</param>
+/// <param name="Permission">Permission scope the viewer must hold, besides <paramref name="MinimumRole"/> (may be a configure ref), or null.</param>
+/// <param name="NavUrl">Relative route returning the page app's own sidebar entries for the viewer, or null.</param>
 public sealed record PackageApplicationSpec(
 	string Slug,
 	string DisplayName,
@@ -126,7 +128,9 @@ public sealed record PackageApplicationSpec(
 	IReadOnlyList<string> Zones,
 	int Order,
 	string? Scope = null,
-	string? OobPackage = null);
+	string? OobPackage = null,
+	string? Permission = null,
+	string? NavUrl = null);
 
 /// <summary>How an application surfaces in the portal (mirrors <c>ApplicationKind</c>).</summary>
 public enum PackageApplicationDisplay

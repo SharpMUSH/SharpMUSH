@@ -206,18 +206,26 @@
     {
         // Independent of the role and the application list, so it is not queued behind them.
         var serverInfo = LoadServerInfoAsync();
+        await LoadSectionsAsync();
+        await serverInfo;
+    }
 
-        var role = AuthState is null
-            ? PortalRole.Guest
-            : PortalRoleHelper.CurrentRole((await AuthState).User);
+    // Signing in or out hands down a new AuthState; the sections depend on who is looking.
+    protected override Task OnParametersSetAsync() =>
+        ReferenceEquals(AuthState, _sectionsAuth) ? Task.CompletedTask : LoadSectionsAsync();
+
+    private Task<AuthenticationState>? _sectionsAuth;
+
+    private async Task LoadSectionsAsync()
+    {
+        _sectionsAuth = AuthState;
+        var user = AuthState is null ? null : (await AuthState).User;
 
         // The startup catalog, not a second GET api/applications of our own: the list is the same
         // for every viewer (the caller filters by role), and the catalog is already fetching it.
         await Applications.Loaded;
         _apps = Applications.All;
-        _novelSections = PortalNavSections.NovelSections(_apps, role);
-
-        await serverInfo;
+        _novelSections = PortalNavSections.NovelSections(_apps, user);
     }
 
     private async Task LoadServerInfoAsync()

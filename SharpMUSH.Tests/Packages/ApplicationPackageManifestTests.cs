@@ -68,6 +68,71 @@ public class ApplicationPackageManifestTests
 
 		await Assert.That(app.Scope).IsNull();
 		await Assert.That(app.OobPackage).IsNull();
+		await Assert.That(app.Permission).IsNull();
+	}
+
+	[Test]
+	public async Task ApplicationNavUrl_Parses()
+	{
+		var parsed = _service.ParseManifest(
+			"""
+			format: 1.1
+			package: jobs-app
+			version: 1.0.0
+			kind: application
+			application:
+			  slug: jobs
+			  display_name: Jobs
+			  schema_url: http/jobs/schema
+			  minimum_role: player
+			  nav_placement: Support
+			  nav_url: http/jobs/nav
+			""").Expect<ParsedPackageManifest>();
+
+		await Assert.That(parsed.Warnings.Count).IsEqualTo(0).Because("nav_url is a known application key");
+		await Assert.That(parsed.Manifest.Application!.NavUrl).IsEqualTo("http/jobs/nav");
+	}
+
+	[Test]
+	public async Task ApplicationPermission_ParsesLiteralAndConfigureRef()
+	{
+		var literal = _service.ParseManifest(
+			"""
+			format: 1.1
+			package: jobs-app
+			version: 1.0.0
+			kind: application
+			application:
+			  slug: jobs-staff
+			  display_name: Job Queue
+			  schema_url: http/jobs/schema
+			  minimum_role: player
+			  permission: jobs.staff
+			""").Expect<ParsedPackageManifest>();
+
+		await Assert.That(literal.Warnings.Count).IsEqualTo(0);
+		await Assert.That(literal.Manifest.Application!.Permission).IsEqualTo("jobs.staff");
+
+		var configured = _service.ParseManifest(
+			"""
+			format: 1.1
+			package: jobs-app
+			version: 1.0.0
+			kind: application
+			configure:
+			  staff_scope:
+			    label: "Permission that opens the queue"
+			    type: string
+			    default: jobs.staff
+			application:
+			  slug: jobs-staff
+			  display_name: Job Queue
+			  schema_url: http/jobs/schema
+			  permission: "{{?staff_scope}}"
+			""").Expect<ParsedPackageManifest>();
+
+		await Assert.That(configured.Warnings.Count).IsEqualTo(0);
+		await Assert.That(configured.Manifest.Application!.Permission).IsEqualTo("{{?staff_scope}}");
 	}
 
 	[Test]

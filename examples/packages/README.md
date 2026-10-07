@@ -27,6 +27,7 @@ which games can add as a remote in the admin panel.
 | [`starter-area/`](starter-area/) | Rooms and exits (`location:` / `destination:`) |
 | [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
 | [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
+| [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
 
 ## The manifest: `package.yaml`
 
@@ -402,18 +403,43 @@ configure:
 application:                      # required for kind: application; forbidden otherwise
   slug: chargen                   # URL key; the app renders at /apps/chargen (defaults to the package id)
   display_name: Character Application
-  icon: assignment_ind            # optional Material icon
+  icon: assignment_ind            # optional Material icon name
   type: page                      # page | widget
   schema_url: http/chargen/schema # GET → Portal Schema Document
   data_url: http/chargen          # optional GET → data (view display / form prefill)
   submit_route: http/chargen      # optional POST base for actions
   minimum_role: "{{?access}}"     # guest|player|builder|royalty|wizard|god, or a {{?configure}} ref
-  nav_placement: main             # optional nav section (page apps)
+  nav_placement: Play             # optional nav section (page apps): Play, World, Build, Manage, or a new name
+  nav_url: http/chargen/nav       # optional GET → the app's own sidebar links (page apps in a section of their own)
   zones: [MainContent]            # optional layout zones (widget apps)
   scope: play                     # optional layout scope the widget belongs to (e.g. play)
   oob_package: chargen.status     # optional OOB package whose latest push is the widget's data
+  permission: chargen.review      # optional permission scope the viewer must also hold
   order: 50                       # optional sort order
 ```
+
+`permission` gates the application beyond `minimum_role`: the nav entry is
+hidden and `/apps/{slug}` shows the no-access card unless the viewer holds that
+scope (a built-in one or a custom permission from `@role`). It is portal-side
+only, like `minimum_role`; the softcode routes still decide for themselves.
+
+`nav_url` gives a page app in a section of its own (a `nav_placement` that is
+not Play, World, Build or Manage) its own sidebar. The portal reads the route
+for the viewer on every visit to the section and draws its links in place of
+the app's single link:
+
+```json
+{ "groups": [
+  { "label": "", "items": [
+    { "label": "Needs attention", "path": "/apps/jobs", "icon": "inbox", "count": 3 },
+    { "label": "Closed", "path": "/apps/jobs?filter=old", "icon": "inventory_2" } ] },
+  { "label": "Buckets", "items": [ … ] } ] }
+```
+
+`path` must be a portal address (it starts with one `/`); `icon` is a Material
+icon name and `count` is optional. A link is current when both its path and its
+query match the address. No groups, or a route that fails, leaves the app's
+single link.
 
 `scope` names the page a widget belongs to: the Play page lists the `play`
 apps for its right-hand zone and its sidebar. `oob_package` replaces
@@ -423,8 +449,8 @@ package (a `{ "fields": { … } }` data document) and re-renders on every new
 push. A missing or malformed payload shows the widget's empty state.
 
 The string fields (`display_name`, `icon`, `schema_url`, `data_url`,
-`submit_route`, `minimum_role`, `nav_placement`, `scope`, `oob_package`,
-`zones`) accept the same
+`submit_route`, `minimum_role`, `nav_placement`, `nav_url`, `scope`, `oob_package`,
+`permission`, `zones`) accept the same
 `{{?configure}}` / `{{$well_known}}` / `{{dependency/ref}}` refs as attribute
 values, resolved at apply — so one published application package adapts its
 role, placement, and endpoints to each game it is installed on. Applying the

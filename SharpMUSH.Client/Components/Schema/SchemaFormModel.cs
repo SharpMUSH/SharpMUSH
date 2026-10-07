@@ -186,6 +186,29 @@ public sealed class SchemaFormModel
 		}
 	}
 
+	/// <summary>
+	/// What an action posts: the values entered, with <paramref name="overrides"/> (a button's or timeline
+	/// entry's <c>values</c>) merged over them. The entered values themselves are left as they are.
+	/// </summary>
+	public IReadOnlyDictionary<string, object?> Payload(IReadOnlyDictionary<string, JsonElement>? overrides)
+	{
+		if (overrides is null || overrides.Count == 0)
+		{
+			return _values;
+		}
+
+		var payload = new Dictionary<string, object?>(_values, StringComparer.Ordinal);
+		foreach (var (key, value) in overrides)
+		{
+			payload[key] = value;
+		}
+
+		return payload;
+	}
+
+	/// <summary>Clears every value entered, ahead of merging an action's answer (<c>reset_fields</c>).</summary>
+	public void ResetValues() => _values.Clear();
+
 	/// <summary>Takes the values a successful action answered with.</summary>
 	public void MergeFields(IReadOnlyDictionary<string, JsonElement> fields)
 	{

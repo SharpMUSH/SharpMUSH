@@ -123,9 +123,13 @@ One document type, `kind: "form" | "view"`, generalizing the profile schema's
   "help": "Roll 4d6 drop lowest.",
   "validation": { "required": true, "min": 3, "max": 18, "max_length": 120,
                   "pattern": "^[A-Za-z ]+$" },
-  "visible_to": "public"       // softcode-owned audience tag (opaque to portal)
+  "visible_to": "public",      // softcode-owned audience tag (opaque to portal)
+  "triggers_action": "filter"  // optional: dispatch this action whenever the value changes
 }
 ```
+
+`triggers_action` is how a filter select re-asks softcode the moment it changes: the action posts
+the current values like a button would, and its answer (typically `data`, below) redraws the page.
 
 **Control mapping.** Each `type` maps to a MudBlazor control by extending the existing
 switch in `DynamicConfig.razor:346-429` — which already covers `switch`→boolean,
@@ -150,15 +154,56 @@ validator** and returns binding errors in the action response.
 ```jsonc
 { "kind": "markdown",  "value": "## Welcome, adventurer" }
 { "kind": "image",     "src_field": "portrait", "alt": "Portrait" }
-{ "kind": "table",     "rows_field": "inventory", "columns": [ {"key":"item","label":"Item"} ] }
+{ "kind": "table",     "rows_field": "inventory", "columns": [ {"key":"item","label":"Item"} ],
+                       "empty": "Nothing carried." }
 { "kind": "keyvalue",  "fields": [ "fullname", "alias", "faction" ] }
+{ "kind": "timeline",  "rows_field": "entries", "empty": "No comments yet." }
 { "kind": "divider" }
 { "kind": "button",    "label": "Roll Stats", "action": "roll" }
 ```
 
 The current read-only profile renderer (a `keyvalue` over `sections`) is one
 specialization of `view`. `src_field`/`rows_field` reference data keys from the
-`data_source` payload.
+`data_source` payload; a datum softcode marks `visible: false` is not shown by any of them.
+
+Both renderers draw these through one shared component (`SchemaDisplay`), so a `form` shows
+tables, timelines, images and keyvalues exactly as a `view` does, beside its inputs.
+
+**Markdown** (the `markdown` element and timeline bodies) renders CommonMark with tables,
+emphasis extras, task lists and bare-URL links; raw HTML is escaped and a link whose scheme is
+not `http`, `https` or `mailto` points nowhere.
+
+**Table columns** take three optional keys beyond `key`/`label`:
+
+```jsonc
+{ "key": "id",     "label": "#",      "link": "/apps/jobs/{id}" }       // anchor; {field} ← row value, URL-escaped
+{ "key": "status", "label": "Status", "type": "chip", "color_key": "status_color" }
+```
+
+`link` is a portal-relative href template (an `/apps/...` link navigates in place); `type` is
+`text` (default) or `chip`; `color_key` names the row field holding a color. Colors, here and
+below, are MudBlazor names: `default`, `primary`, `secondary`, `tertiary`, `info`, `success`,
+`warning`, `error`, `dark` — anything else is `default`. A table's `empty` text shows when it has
+no rows.
+
+**Timeline rows** (`rows_field` → an array of objects):
+
+```jsonc
+{ "author": "Ada", "time": 1760000000,          // unix seconds (number or string) → local date/time
+  "body": "Looks fixed **now**.",
+  "format": "markdown",                          // default; "code" → verbatim <pre><code>, no markdown
+  "tag": "Staff only", "tag_color": "warning",   // optional chip beside the author
+  "actions": [ { "label": "Delete", "action": "delete_comment", "values": { "comment": 4 },
+                 "confirm": "Delete this comment?" } ] }   // confirm optional
+```
+
+An entry action dispatches the named document action with its `values` merged over the field
+values (in a `view`, which has none, it posts `values` alone).
+
+**Buttons** take `confirm` (a question; a dialog asks it before anything is sent), `values`
+(merged over the field values in the payload, so two buttons can post to one route with different
+intent), `color` and `variant` (`filled` | `outlined` | `text`; default `outlined`, `secondary`).
+A `view`'s buttons dispatch too, posting their `values` only.
 
 ### Actions (HTTP-handler POST)
 
@@ -173,6 +218,8 @@ Buttons and submits reference an action by name:
     "on_success": { "navigate": "/character/%name%", "toast": "Created!" },
     "on_error":   { "bind_field_errors": true }
   },
+  "comment": { "transport": "http", "method": "POST", "route": "/http/jobs/comment",
+               "payload": "fields", "on_success": { "reset_fields": true } },
   "roll": { "transport": "http", "method": "POST", "route": "/http/chargen/roll",
             "payload": "fields", "on_success": { "merge_fields": true } }
 }
@@ -190,6 +237,7 @@ transport (fire-and-forget into the live session via SignalR) is a non-breaking 
   "errors":   { "strength": "Must be 3–18.", "_global": "Roll failed." },
   "fields":   { "strength": 14, "dexterity": 9 },   // merged back when merge_fields
   "schema":   { /* a replacement Portal Schema Document */ },
+  "data":     { "fields": { "entries": { "value": [ /* rows */ ], "visible": true } } },
   "redirect": "/character/Gandalf",
   "message":  "Character created."
 }
@@ -197,8 +245,12 @@ transport (fire-and-forget into the live session via SignalR) is a non-breaking 
 
 The `errors` shape **deliberately matches** the one `DynamicConfig.razor:585-599` already
 parses — `_global` → snackbar, keyed entries → per-field errors — so the renderer reuses
-that logic verbatim. `on_success.merge_fields` merges returned `fields`; a returned
-`schema` **replaces** the current document and the renderer re-renders.
+that logic verbatim. `on_success.merge_fields` merges returned `fields`; with
+`on_success.reset_fields` every input is cleared first and the returned `fields` merged in (a
+comment box empties after posting). A returned `data` payload **replaces** the page's data, so
+tables and timelines redraw without a reload; a returned `schema` **replaces** the current
+document and the renderer re-renders. A `redirect` to `/apps/...` navigates within the portal and
+reloads that application.
 
 ### Softcode-driven progression (the key principle)
 
@@ -251,6 +303,8 @@ RegisteredApplication {
   zones[]?,           // allowed widget zones (Widget kind)
   scope?,             // layout scope the widget belongs to, e.g. "play" (package key `scope`)
   oobPackage?,        // OOB package whose latest push is the data, in place of dataUrl (package key `oob_package`)
+  permission?,        // permission scope the viewer must also hold (package key `permission`)
+  navUrl?,            // GET → the page app's own sidebar links for the viewer (package key `nav_url`)
   order
 }
 ```
@@ -275,9 +329,15 @@ schema).
    hitting relative `http/...` paths (as `ProfileService.cs:48-49,71-72` does). C# records
    mirror the envelope (schema document, data payload, action result), reusing the
    `FieldValue`/`ProfileData` shapes.
-3. **Full-page route `/apps/{slug}`** — resolves the registry entry, picks the form or view
-   renderer by the schema's `kind`, and is role-gated by `allowedRoles`. Nav entries are
-   surfaced in `NavMenu.razor` from the registry, role-gated.
+3. **Full-page route `/apps/{slug}`** and **`/apps/{slug}/{**rest}`** — resolves the registry
+   entry, picks the form or view renderer by the schema's `kind`, and is gated by `allowedRoles`
+   and `permission`. Nav entries are surfaced in `NavMenu.razor` from the registry, gated the same
+   way. Besides `{objid}`/`{character}`, the app's `schemaUrl` and `dataUrl` take a `{path}` token:
+   the sub-path after the slug, each segment URL-escaped, joined by `/` (empty at `/apps/{slug}`).
+   The page's query string is appended to both routes (`&` when the route already has one). So
+   `/apps/jobs/12?mine=1` with `dataUrl: http/jobs/{path}` fetches `http/jobs/12?mine=1`. Moving
+   between `/apps/jobs`, `/apps/jobs/12` and `/apps/jobs?mine=1` refetches schema and data and
+   starts the form afresh. A widget has no sub-path: its `{path}` is empty.
 4. **Dynamic widget** — one compile-time `SchemaWidgetDescriptor`/`SchemaWidget`,
    registered in `SharpMUSH.Client/Program.cs` alongside the existing five descriptors
    (`:61-65`). Its `JsonElement Config` carries `{ schemaUrl, dataUrl }`. It plugs into the
@@ -321,7 +381,9 @@ registration in `/admin/applications` remains for one-offs (such records have a 
   labels, or ordering.
 - **App-level access uses the role hierarchy** (`architectural-decisions.md:77-100`):
   `allowedRoles` gates both the nav entry and the `/apps/{slug}` route; registration is
-  Wizard+ (decision 10.3). The viewer's JWT identity is already forwarded to the HTTP
+  Wizard+ (decision 10.3). An optional `permission` scope narrows it further: the viewer must
+  also hold that permission claim (compared case-insensitively), else the nav entry is hidden and
+  the route shows the no-access card. Widget placements are gated by role only. The viewer's JWT identity is already forwarded to the HTTP
   handler, so softcode does the **authoritative** per-field gating regardless of what the
   client renders.
 

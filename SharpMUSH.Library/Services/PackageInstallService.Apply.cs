@@ -650,7 +650,9 @@ public partial class PackageInstallService
 			spec.Order,
 			packageId,
 			Scope: Sub(spec.Scope),
-			OobPackage: Sub(spec.OobPackage));
+			OobPackage: Sub(spec.OobPackage),
+			Permission: Sub(spec.Permission)?.Trim() is { Length: > 0 } permission ? permission : null,
+			NavUrl: Sub(spec.NavUrl));
 
 		return application;
 	}

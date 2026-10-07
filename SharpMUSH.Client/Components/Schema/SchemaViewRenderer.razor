@@ -1,12 +1,17 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models.Applications
-@using Markdig
+@using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject IServiceProvider Services
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
 
 @* Renders a read-only Portal Schema Document (kind:"view"). Pure renderer: all values and their
-   per-viewer visibility come from softcode via the data payload. See dynamic-applications.md. *@
+   per-viewer visibility come from softcode via the data payload. See dynamic-applications.md.
+   A view has no inputs, but its buttons and timeline actions still dispatch: they post their own
+   values, and the answer may replace the data, the document, or move the page. *@
 
-@if (Document?.Pages is null || !HasAnythingToShow)
+@if (_document?.Pages is null || !HasAnythingToShow)
 {
     @* No document, or every field was filtered out (e.g. a character with no profile data set) — show
        a placeholder instead of collapsing to nothing, so the widget/page never silently disappears. *@
@@ -15,14 +20,14 @@
 else
 {
     <div class="schema-view">
-        @if (!string.IsNullOrWhiteSpace(Document.Title))
+        @if (!string.IsNullOrWhiteSpace(_document.Title))
         {
-            <h2 class="schema-title">@Document.Title</h2>
+            <h2 class="schema-title">@_document.Title</h2>
         }
 
-        @foreach (var page in Document.Pages.OrderBy(p => p.Order))
+        @foreach (var page in _document.Pages.OrderBy(p => p.Order))
         {
-            @if (!string.IsNullOrWhiteSpace(page.Title) && Document.Pages.Count > 1)
+            @if (!string.IsNullOrWhiteSpace(page.Title) && _document.Pages.Count > 1)
             {
                 <h3 class="schema-page-title">@(page.Title)</h3>
             }
@@ -58,10 +63,97 @@ else
     /// <summary>Data values keyed by field key (value + per-viewer visibility), à la the profile API.</summary>
     [Parameter] public SchemaData? Data { get; set; }
 
+    // What is showing: the parameters, until an action answers with a replacement document or data.
+    private PortalSchemaDocument? _document;
+    private SchemaData? _data;
+    private PortalSchemaDocument? _documentParameter;
+    private SchemaData? _dataParameter;
+    private bool _busy;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(Document, _documentParameter))
+        {
+            _document = _documentParameter = Document;
+        }
+
+        if (!ReferenceEquals(Data, _dataParameter))
+        {
+            _data = _dataParameter = Data;
+        }
+    }
+
+    /// <summary>
+    /// Posts a button's or timeline entry's values to its action route and applies the answer: replacement
+    /// data or document, a toast, a redirect; errors surface as snackbars (a view has no fields to bind them to).
+    /// </summary>
+    private async Task DispatchAsync(SchemaActionRequest request)
+    {
+        if (_document?.Actions is not { } actions || !actions.TryGetValue(request.Action, out var action)
+            || string.IsNullOrWhiteSpace(action.Route))
+        {
+            return;
+        }
+
+        // One action at a time: a second click, or a confirmation answered while the first is in
+        // flight, is dropped rather than posted twice.
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        var payload = (request.Values ?? new Dictionary<string, JsonElement>())
+            .ToDictionary(kv => kv.Key, kv => (object?)kv.Value, StringComparer.Ordinal);
+        SchemaActionResult result;
+        try
+        {
+            result = await Services.GetRequiredService<SchemaAppService>().SubmitAsync(action.Route!, payload);
+        }
+        finally
+        {
+            _busy = false;
+        }
+
+        if (!result.Ok)
+        {
+            foreach (var (key, message) in result.Errors ?? new Dictionary<string, string> { ["_global"] = Loc["WidActionFailed"] })
+            {
+                Snackbar.Add(key == "_global" ? message : $"{key}: {message}", Severity.Error);
+            }
+
+            return;
+        }
+
+        if (result.Data is not null)
+        {
+            _data = result.Data;
+        }
+
+        if (result.Schema is not null)
+        {
+            _document = result.Schema;
+        }
+
+        if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Toast) || !string.IsNullOrWhiteSpace(result.Message))
+        {
+            Snackbar.Add(action.OnSuccess?.Toast ?? result.Message!, Severity.Success);
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.Redirect))
+        {
+            Nav.NavigateTo(result.Redirect!);
+        }
+        else if (!string.IsNullOrWhiteSpace(action.OnSuccess?.Navigate))
+        {
+            Nav.NavigateTo(action.OnSuccess!.Navigate!);
+        }
+    }
+
     /// <summary>True if a title or any visible element exists; otherwise the view would render empty.</summary>
     private bool HasAnythingToShow =>
-        !string.IsNullOrWhiteSpace(Document?.Title)
-        || (Document?.Pages?.Any(p => (p.Sections ?? []).Any(s => VisibleElements(s).Any())) ?? false);
+        !string.IsNullOrWhiteSpace(_document?.Title)
+        || (_document?.Pages?.Any(p => (p.Sections ?? []).Any(s => VisibleElements(s).Any())) ?? false);
 
     private IEnumerable<SchemaElement> VisibleElements(SchemaSection section)
         => (section.Elements ?? []).Where(IsVisible);
@@ -99,8 +191,8 @@ else
     // value is empty it shows only when ShowWhenEmpty (default true), rendering Default in its place.
     private bool IsFieldVisible(SchemaElement element)
     {
-        if (Data?.Fields is null || element.Key is null
-            || !Data.Fields.TryGetValue(element.Key, out var v) || !v.Visible)
+        if (_data?.Fields is null || element.Key is null
+            || !_data.Fields.TryGetValue(element.Key, out var v) || !v.Visible)
         {
             return false;
         }
@@ -109,8 +201,8 @@ else
     }
 
     private bool IsKeyVisible(string key)
-        => Data?.Fields is not null
-           && Data.Fields.TryGetValue(key, out var v)
+        => _data?.Fields is not null
+           && _data.Fields.TryGetValue(key, out var v)
            && v.Visible
            && !string.IsNullOrEmpty(ValueToString(v.Value));
 
@@ -118,36 +210,8 @@ else
     {
         switch ((element.Kind ?? "field").ToLowerInvariant())
         {
-            case "divider":
-                <MudDivider Class="my-2" />
-                break;
-
-            case "markdown":
-                <div>@((MarkupString)Markdown.ToHtml(element.Value ?? string.Empty))</div>
-                break;
-
-            case "image":
-                var src = element.SrcField is not null ? ValueToString(Lookup(element.SrcField)) : element.Value;
-                @if (ImageUrlPolicy.IsRenderable(src))
-                {
-                    <img class="schema-image" src="@ApiUrl.Resolve(src!)" alt="@(element.Alt ?? string.Empty)" loading="lazy" />
-                }
-                break;
-
-            case "table":
-                @RenderTable(element)
-                break;
-
-            case "keyvalue":
-                <dl class="schema-kv">
-                    @foreach (var key in (element.Fields ?? []).Where(IsKeyVisible))
-                    {
-                        <div class="schema-kv-row">
-                            <dt class="schema-label">@key</dt>
-                            <dd class="schema-value">@ValueToString(Lookup(key))</dd>
-                        </div>
-                    }
-                </dl>
+            case var kind when SchemaDisplay.Kinds.Contains(kind):
+                <SchemaDisplay Element="element" Data="_data" Actions="_document?.Actions" Busy="_busy" OnAction="DispatchAsync" />
                 break;
 
             default:
@@ -172,39 +236,8 @@ else
         }
     };
 
-    private RenderFragment RenderTable(SchemaElement element) => __builder =>
-    {
-        var rows = element.RowsField is not null ? Lookup(element.RowsField) : null;
-        if (rows is not { ValueKind: JsonValueKind.Array } || element.Columns is null)
-        {
-            return;
-        }
-
-        <MudSimpleTable Dense="true" Striped="true">
-            <thead>
-                <tr>
-                    @foreach (var col in element.Columns)
-                    {
-                        <th>@col.Label</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var row in rows.Value.EnumerateArray())
-                {
-                    <tr>
-                        @foreach (var col in element.Columns)
-                        {
-                            <td>@(row.TryGetProperty(col.Key, out var cell) ? ValueToString(cell) : string.Empty)</td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </MudSimpleTable>
-    };
-
     private JsonElement? Lookup(string key)
-        => Data?.Fields is not null && Data.Fields.TryGetValue(key, out var v) ? v.Value : null;
+        => _data?.Fields is not null && _data.Fields.TryGetValue(key, out var v) ? v.Value : null;
 
     // Render a serialized MString to safe HTML the way the terminal does
     // (MarkupText.Render(MarkupFormat.Html)). Falls back to HTML-encoded text when the

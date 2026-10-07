@@ -200,10 +200,13 @@ else
         return resolved is string objid ? objid : null;
     }
 
-    /// <summary>Replaces {objid}/{character} tokens. Returns null if an {objid} token can't be filled.</summary>
+    /// <summary>
+    /// Replaces {objid}/{character} tokens, and {path} with nothing (a widget has no sub-path). Returns null if
+    /// an {objid} token can't be filled.
+    /// </summary>
     private string? Substitute(string route, string? objid)
     {
-        var result = route;
+        var result = SchemaRendering.ApplyPath(route, [], null);
 
         if (result.Contains("{objid}", StringComparison.Ordinal))
         {

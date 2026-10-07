@@ -76,7 +76,7 @@
         <nav class="play-side-apps" aria-label="@Loc["NavPlayApps"]">
             @foreach (var app in _apps)
             {
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(app.Icon) ? Icons.Material.Outlined.Apps : app.Icon)"
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(app.Icon, Icons.Material.Outlined.Apps)"
                             Label="@app.DisplayName" Href="@($"/apps/{Uri.EscapeDataString(app.Slug)}")" Collapsed="@Collapsed" />
             }
         </nav>
@@ -121,8 +121,20 @@
         {
             _directory = rows;
         }
-        var role = AuthState is null ? SharpMUSH.Library.Authorization.PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
-        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), role, "Play")
+        await LoadAppsAsync();
+    }
+
+    // Signing in or out hands down a new AuthState; which apps show depends on who is looking.
+    protected override Task OnParametersSetAsync() =>
+        ReferenceEquals(AuthState, _appsAuth) ? Task.CompletedTask : LoadAppsAsync();
+
+    private Task<AuthenticationState>? _appsAuth;
+
+    private async Task LoadAppsAsync()
+    {
+        _appsAuth = AuthState;
+        var user = AuthState is null ? null : (await AuthState).User;
+        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, "Play")
             .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Page)
             .ToList();
     }

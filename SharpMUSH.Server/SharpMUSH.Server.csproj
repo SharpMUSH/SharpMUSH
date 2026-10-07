@@ -167,6 +167,14 @@
       <Link>BundledPackages\wiki-reader.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.wiki-reader.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\jobs\package.yaml">
+      <Link>BundledPackages\jobs.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.jobs.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\jobs-app\package.yaml">
+      <Link>BundledPackages\jobs-app.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.jobs-app.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\messages\package.yaml">
       <Link>BundledPackages\messages.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.messages.package.yaml</LogicalName>

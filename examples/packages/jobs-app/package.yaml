@@ -1,0 +1,38 @@
+format: 1.2
+package: jobs-app
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers the job queue (the jobs package) as a portal page at /apps/jobs: the queue, each job's conversation with its staff buttons, and a new-request form."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [portal, application, jobs, requests, tickets]
+requires_server: ">=0.1"
+
+# An application package owns no objects. The jobs package serves the routes it points at:
+# GET /http/jobs/schema, /http/jobs/data and /http/jobs/nav, and POST /http/jobs/act. Everything the page
+# shows, and every button on it, is decided by that softcode for the character viewing it.
+depends:
+  - package: jobs
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      path: jobs/
+
+# Every player may open it: players file and follow their own requests there, and staff work
+# the buckets they hold the permission for. {path} is what follows /apps/jobs/ (a job number, "new",
+# "buckets" or buckets/<slug>); the page's query string (?filter= or ?bucket=) is passed on to both
+# routes. The Support section's sidebar comes from nav_url: the queue's views with their counts and
+# the buckets the viewer works.
+application:
+  slug: jobs
+  display_name: Jobs
+  icon: support_agent
+  type: page
+  schema_url: http/jobs/schema?at={path}
+  data_url: http/jobs/data?at={path}
+  submit_route: http/jobs/act
+  minimum_role: player
+  nav_placement: Support
+  nav_url: http/jobs/nav
+  order: 40

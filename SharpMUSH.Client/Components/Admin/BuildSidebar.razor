@@ -45,7 +45,7 @@
             @foreach (var app in _apps)
             {
                 var a = app;
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(a.Icon, Icons.Material.Outlined.Apps)"
                             Label="@a.DisplayName" Href="@($"/apps/{a.Slug}")" IsCurrent="@IsCurrent($"/apps/{a.Slug}", false)" Collapsed="@Collapsed" />
             }
         </SidebarGroup>
@@ -78,9 +78,8 @@
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _entries = await BuildNavCatalog.VisibleAsync(Authorization, user);
-        var role = PortalRoleHelper.CurrentRole(user);
         var all = await Registry.ListAsync();
-        _apps = [.. PortalNavSections.AppsForSection(all, role, "Build"), .. PortalNavSections.AppsForSection(all, role, "Manage")];
+        _apps = [.. PortalNavSections.AppsForSection(all, user, "Build"), .. PortalNavSections.AppsForSection(all, user, "Manage")];
     }
 
     /// <summary>

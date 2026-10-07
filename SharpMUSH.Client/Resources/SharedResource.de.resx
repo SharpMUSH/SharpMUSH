@@ -5611,6 +5611,9 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WidConfirm" xml:space="preserve">
+    <value>Bestätigen</value>
+  </data>
   <data name="AuthClaimExistingCharacter" xml:space="preserve">
     <value>Vorhandenen Charakter übernehmen</value>
   </data>

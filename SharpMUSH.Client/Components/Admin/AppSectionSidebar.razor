@@ -1,27 +1,52 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.DiscriminatedUnions
 @using Microsoft.AspNetCore.Components.Routing
 @inject ApplicationRegistryClient Registry
+@inject SchemaAppService Schema
 @inject NavigationManager Nav
 @implements IDisposable
 
 @* The sidebar of a section that exists only because applications name it (README §3: a novel
-   section gets a rail item and its apps are its sidebar). *@
+   section gets a rail item and its apps are its sidebar). An app with a nav_url draws the links its
+   route serves for the viewer in place of its own single link. *@
 <SidebarPanel Class="app-section-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
         <SidebarHead Title="@Section" />
     }
-    <SidebarGroup Label="@Section">
-        @foreach (var app in _apps)
+    @foreach (var app in _apps)
+    {
+        var a = app;
+        if (_navs.TryGetValue(a.Slug, out var groups))
         {
-            var a = app;
-            var href = $"/apps/{a.Slug}";
-            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@(string.IsNullOrWhiteSpace(a.Icon) ? Icons.Material.Outlined.Apps : a.Icon)"
-                        Label="@a.DisplayName" Href="@href" IsCurrent="@IsCurrent(href)" Collapsed="@Collapsed" />
+            foreach (var group in groups)
+            {
+                var label = string.IsNullOrWhiteSpace(group.Label) ? a.DisplayName : group.Label;
+                if (!Collapsed && !string.IsNullOrWhiteSpace(group.Label))
+                {
+                    <SectionLabel>@group.Label</SectionLabel>
+                }
+                <SidebarGroup Label="@label">
+                    @foreach (var item in group.Items!)
+                    {
+                        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(item.Icon, AppIcons.Outline(a.Icon, Icons.Material.Outlined.Apps))"
+                                    Label="@item.Label" Href="@item.Path" Count="@item.Count"
+                                    IsCurrent="@IsCurrentLink(item.Path)" Collapsed="@Collapsed" />
+                    }
+                </SidebarGroup>
+            }
         }
-    </SidebarGroup>
+        else
+        {
+            var href = $"/apps/{a.Slug}";
+            <SidebarGroup Label="@a.DisplayName">
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(a.Icon, Icons.Material.Outlined.Apps)"
+                            Label="@a.DisplayName" Href="@href" IsCurrent="@IsCurrent(href)" Collapsed="@Collapsed" />
+            </SidebarGroup>
+        }
+    }
 </SidebarPanel>
 
 @code {
@@ -31,31 +56,86 @@
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
     private IReadOnlyList<PortalApplication> _apps = [];
-    private string _path = "/";
+    private Dictionary<string, IReadOnlyList<AppNavGroup>> _navs = new(StringComparer.OrdinalIgnoreCase);
+    private SectionPath _at = new("/", string.Empty);
+    private int _generation;
+    private Task<AuthenticationState>? _navsAuth;
 
     protected override void OnInitialized()
     {
         Nav.LocationChanged += OnLocationChanged;
-        Locate();
+        _at = SectionPath.Of(Nav);
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        var role = AuthState is null ? PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
-        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), role, Section);
+        // Another viewer's links (a staff view's counts, say) must not show while this viewer's links load.
+        if (!ReferenceEquals(AuthState, _navsAuth))
+        {
+            _navsAuth = AuthState;
+            _navs = new(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var user = AuthState is null ? null : (await AuthState).User;
+        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, Section);
+        await LoadNavsAsync();
     }
+
+    /// <summary>
+    /// Reads every nav_url in the section again: counts move as jobs are worked, so the links are
+    /// fetched on each visit to the section rather than once. An app whose route fails keeps its single link.
+    /// </summary>
+    private async Task LoadNavsAsync()
+    {
+        var generation = ++_generation;
+        var reads = _apps.Where(a => !string.IsNullOrWhiteSpace(a.NavUrl))
+            .Select(async a => (a.Slug, Nav: await Schema.GetNavAsync(a.NavUrl!)))
+            .ToList();
+        var navs = new Dictionary<string, IReadOnlyList<AppNavGroup>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (slug, nav) in await Task.WhenAll(reads))
+        {
+            if (nav is AppNav { Groups: { } groups } && Usable(groups) is { Count: > 0 } usable)
+            {
+                navs[slug] = usable;
+            }
+        }
+
+        if (generation == _generation)
+        {
+            _navs = navs;
+        }
+    }
+
+    /// <summary>The groups with their links kept to portal addresses; a group left with no link is dropped.</summary>
+    private static List<AppNavGroup> Usable(IEnumerable<AppNavGroup> groups) =>
+        groups.Select(g => g with
+            {
+                Items = (g.Items ?? []).Where(i => !string.IsNullOrWhiteSpace(i.Label) && IsPortalPath(i.Path)).ToList()
+            })
+            .Where(g => g.Items!.Count > 0)
+            .ToList();
+
+    private static bool IsPortalPath(string? path) =>
+        path is { Length: > 0 } && path[0] == '/' && !path.StartsWith("//", StringComparison.Ordinal) && !path.Contains('\\');
 
     private bool IsCurrent(string href) =>
-        _path.Equals(href, StringComparison.OrdinalIgnoreCase) || _path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase);
+        _at.Path.Equals(href, StringComparison.OrdinalIgnoreCase) || _at.Path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase);
 
-    private void Locate()
+    /// <summary>A served link is current only where both its path and its query match the address.</summary>
+    private bool IsCurrentLink(string path)
     {
-        _path = SectionPath.Of(Nav).Path;
+        var q = path.IndexOf('?');
+        var linkPath = (q >= 0 ? path[..q] : path).TrimEnd('/');
+        var linkQuery = q >= 0 ? path[q..] : string.Empty;
+        return _at.Path.Equals(linkPath.Length == 0 ? "/" : linkPath, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(_at.Query, linkQuery, StringComparison.Ordinal);
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(async () =>
     {
-        Locate();
+        _at = SectionPath.Of(Nav);
+        StateHasChanged();
+        await LoadNavsAsync();
         StateHasChanged();
     });
 

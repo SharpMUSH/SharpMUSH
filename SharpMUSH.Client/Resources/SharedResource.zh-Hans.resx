@@ -5611,6 +5611,9 @@
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
+  <data name="WidConfirm" xml:space="preserve">
+    <value>确认</value>
+  </data>
   <data name="AuthClaimExistingCharacter" xml:space="preserve">
     <value>认领已有角色</value>
   </data>

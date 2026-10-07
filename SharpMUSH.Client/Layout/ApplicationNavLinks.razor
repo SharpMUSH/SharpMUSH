@@ -11,7 +11,7 @@
 @foreach (var app in _apps)
 {
     <NavLink class="phosphor-nav-link" href="@($"/apps/{app.Slug}")" Match="NavLinkMatch.Prefix">
-        <MudIcon Icon="@(string.IsNullOrWhiteSpace(app.Icon) ? Icons.Material.Filled.Apps : app.Icon)"
+        <MudIcon Icon="@AppIcons.Fill(app.Icon, Icons.Material.Filled.Apps)"
                  Class="phosphor-nav-icon" />
         @if (!IsCollapsed)
         {
@@ -35,11 +35,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var role = AuthState is null
-            ? SharpMUSH.Library.Authorization.PortalRole.Guest
-            : PortalRoleHelper.CurrentRole((await AuthState).User);
+        var user = AuthState is null ? null : (await AuthState).User;
 
         var all = Applications ?? await Registry.ListAsync();
-        _apps = PortalNavSections.AppsForSection(all, role, Section);
+        _apps = PortalNavSections.AppsForSection(all, user, Section);
     }
 }
