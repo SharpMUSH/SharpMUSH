@@ -5,6 +5,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Tests.Server;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -40,8 +41,9 @@ public class MushCnfImportServiceTests
 	{
 		var before = TestSharpMushOptions.Create();
 		var store = new MemoryStore();
-		var service = new MushCnfImportService(new TestSharpMushOptions.FixedWrapper(before), store,
-			new ConfigurationReloadService(), NullLogger<MushCnfImportService>.Instance);
+		var service = new MushCnfImportService(
+			StoreConfigOptionWriter.Create(store, new TestSharpMushOptions.FixedWrapper(before), new ConfigurationReloadService()),
+			store, NullLogger<MushCnfImportService>.Instance);
 
 		var snapshot = await service.SnapshotAsync();
 		var imported = await service.ApplyAsync(await service.ReadAsync("mud_name Elsewhere\nevent_handler 42\n"));

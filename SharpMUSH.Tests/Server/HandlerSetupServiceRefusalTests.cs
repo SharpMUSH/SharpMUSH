@@ -32,7 +32,7 @@ public class HandlerSetupServiceRefusalTests
 
 		var service = new HandlerSetupService(mediator, Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), registry,
 			Substitute.For<IPackageInstallService>(), Substitute.For<IBundledPackageBootstrap>(),
-			Substitute.For<IPackageManifestService>(), new ConfigurationReloadService(),
+			Substitute.For<IPackageManifestService>(), Substitute.For<IConfigOptionWriter>(),
 			NullLogger<HandlerSetupService>.Instance);
 
 		var result = await service.SetAsync(HandlerKinds.Http, new SetHandlerRequest(HandlerModes.Create, null),
@@ -70,7 +70,7 @@ public class HandlerSetupServiceRefusalTests
 		options = options with { Database = options.Database with { HttpHandler = 8 } };
 
 		var service = new HandlerSetupService(Substitute.For<IMediator>(), new TestSharpMushOptions.FixedWrapper(options),
-			registry, installer, bundled, Substitute.For<IPackageManifestService>(), new ConfigurationReloadService(),
+			registry, installer, bundled, Substitute.For<IPackageManifestService>(), Substitute.For<IConfigOptionWriter>(),
 			NullLogger<HandlerSetupService>.Instance);
 
 		var result = await service.SetAsync(HandlerKinds.Http, new SetHandlerRequest(HandlerModes.None, null),

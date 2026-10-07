@@ -7,6 +7,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Tests.Server;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -20,7 +21,7 @@ public class MsspControllerTests
 		var report = Substitute.For<IMsspReportService>();
 		report.BuildAsync().Returns(new ValueTask<IReadOnlyList<MsspReportedVariable>>([]));
 		var reload = new ConfigurationReloadService();
-		return (new MsspController(options, store, reload, report, Substitute.For<IAuditLog>()), store, reload);
+		return (new MsspController(options, StoreConfigOptionWriter.Create(store, options, reload), report, Substitute.For<IAuditLog>()), store, reload);
 	}
 
 	[Test]

@@ -323,70 +323,45 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// The freshest known <see cref="SharpMUSHOptions"/>: whatever is actually persisted in the
-	/// database, falling back to <see cref="Configuration"/>'s in-memory snapshot only if nothing has
-	/// been persisted yet. Read-modify-write mutations (<see cref="AddSitelockRuleAsync"/>,
-	/// <see cref="RemoveSitelockRuleAsync"/>) must base their merge on this rather than on
-	/// <c>Configuration.CurrentValue</c> alone: <c>IOptionsWrapper&lt;SharpMUSHOptions&gt;</c>
-	/// re-reads lazily off the reload change-token, and a rule persisted moments earlier by a
-	/// *different* mutation (e.g. via the web admin UI, or a prior command in the same turn) could
-	/// otherwise be silently dropped by an overwrite based on a stale in-memory copy.
-	/// </summary>
-	private async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
-		=> await ObjectDataService.GetExpandedServerDataAsync<SharpMUSHOptions>()
-			?? Configuration.CurrentValue;
-
-	/// <summary>
 	/// Adds or replaces the sitelock rule for <paramref name="pattern"/> with <paramref name="flags"/>,
-	/// persists it via <see cref="IExpandedObjectDataService.SetExpandedServerDataAsync{T}"/>, signals a reload via
-	/// <see cref="ConfigurationReloadService.SignalChange"/>, and immediately enforces it via
+	/// stores it through <see cref="IConfigOptionWriter.UpdateAsync"/>, and immediately enforces it via
 	/// <see cref="IBanEnforcer.EnforceHostRuleAsync"/> so live connections matching the new rule are
 	/// dropped right away. Mirrors <c>SitelockController.AddSitelockRule</c> (SharpMUSH.Server).
 	/// </summary>
 	private async ValueTask AddSitelockRuleAsync(AnySharpObject executor, string pattern, string[] flags)
 	{
-		var currentOptions = await CurrentPersistedOptionsAsync();
-		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules)
+		await ConfigWriter.UpdateAsync(current => current with
 		{
-			[pattern] = flags
-		};
-
-		var updatedOptions = currentOptions with
-		{
-			SitelockRules = new SitelockRulesOptions(newRules)
-		};
-
-		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
-		ConfigReloadService.SignalChange();
+			SitelockRules = new SitelockRulesOptions(new Dictionary<string, string[]>(current.SitelockRules.Rules)
+			{
+				[pattern] = flags
+			})
+		});
 		await Audit.RecordAsync(executor, AuditActions.SitelockAdd, AuditTargets.Of(AuditTargetKinds.Host, pattern),
 			string.Join(" ", flags));
 		await BanEnforcer.EnforceHostRuleAsync(pattern);
 	}
 
 	/// <summary>
-	/// Removes the sitelock rule for <paramref name="pattern"/>, persists via
-	/// <see cref="IExpandedObjectDataService.SetExpandedServerDataAsync{T}"/>, and signals a reload via
-	/// <see cref="ConfigurationReloadService.SignalChange"/>. Mirrors
+	/// Removes the sitelock rule for <paramref name="pattern"/> through <see cref="IConfigOptionWriter.UpdateAsync"/>. Mirrors
 	/// <c>SitelockController.DeleteSitelockRule</c> (SharpMUSH.Server). Returns <see langword="false"/>
 	/// without persisting anything when no rule for <paramref name="pattern"/> exists.
 	/// </summary>
 	private async ValueTask<bool> RemoveSitelockRuleAsync(AnySharpObject executor, string pattern)
 	{
-		var currentOptions = await CurrentPersistedOptionsAsync();
-		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules);
+		var removed = false;
+		await ConfigWriter.UpdateAsync(current =>
+		{
+			var rules = new Dictionary<string, string[]>(current.SitelockRules.Rules);
+			removed = rules.Remove(pattern);
+			return removed ? current with { SitelockRules = new SitelockRulesOptions(rules) } : current;
+		});
 
-		if (!newRules.Remove(pattern))
+		if (!removed)
 		{
 			return false;
 		}
 
-		var updatedOptions = currentOptions with
-		{
-			SitelockRules = new SitelockRulesOptions(newRules)
-		};
-
-		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
-		ConfigReloadService.SignalChange();
 		await Audit.RecordAsync(executor, AuditActions.SitelockRemove, AuditTargets.Of(AuditTargetKinds.Host, pattern));
 		return true;
 	}
@@ -403,7 +378,7 @@ public partial class Commands
 		if (pattern.Length == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameListHeader), executor);
-			foreach (var banned in (await CurrentPersistedOptionsAsync()).BannedNames.BannedNames)
+			foreach (var banned in (await ConfigWriter.CurrentAsync()).BannedNames.BannedNames)
 			{
 				await NotifyService.Notify(executor, banned, executor);
 			}
@@ -411,29 +386,26 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var currentOptions = await CurrentPersistedOptionsAsync();
-		var names = currentOptions.BannedNames.BannedNames;
-
 		if (pattern.StartsWith('!'))
 		{
 			var unban = pattern[1..];
-			if (!names.Contains(unban, StringComparer.OrdinalIgnoreCase))
+			var unbanned = await ChangeBannedNamesAsync(names => names.Contains(unban, StringComparer.OrdinalIgnoreCase)
+				? [.. names.Where(name => !name.Equals(unban, StringComparison.OrdinalIgnoreCase))]
+				: names);
+			if (!unbanned)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameNotBannedFormat), executor, unban);
 				return new CallState(ErrorMessages.Returns.NoMatch);
 			}
 
-			await SetBannedNamesAsync(currentOptions,
-				[.. names.Where(name => !name.Equals(unban, StringComparison.OrdinalIgnoreCase))]);
 			await Audit.RecordAsync(executor, AuditActions.BannedNameRemove, AuditTargets.Of(AuditTargetKinds.Name, unban));
 			Logger.LogInformation("*** UNLOCKED NAME *** {Pattern} by {Executor}", unban, executor.Object().Name);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRemoved), executor);
 			return CallState.Empty;
 		}
 
-		if (!names.Contains(pattern, StringComparer.OrdinalIgnoreCase))
+		if (await ChangeBannedNamesAsync(names => names.Contains(pattern, StringComparer.OrdinalIgnoreCase) ? names : [.. names, pattern]))
 		{
-			await SetBannedNamesAsync(currentOptions, [.. names, pattern]);
 			await Audit.RecordAsync(executor, AuditActions.BannedNameAdd, AuditTargets.Of(AuditTargetKinds.Name, pattern));
 		}
 
@@ -442,10 +414,20 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	private async ValueTask SetBannedNamesAsync(SharpMUSHOptions currentOptions, string[] names)
+	/// <summary>
+	/// Stores what <paramref name="change"/> makes of the banned names, unless it returns the same list. Whether
+	/// anything was stored.
+	/// </summary>
+	private async ValueTask<bool> ChangeBannedNamesAsync(Func<string[], string[]> change)
 	{
-		await ObjectDataService.SetExpandedServerDataAsync(currentOptions with { BannedNames = new BannedNamesOptions(names) });
-		ConfigReloadService.SignalChange();
+		var changed = false;
+		await ConfigWriter.UpdateAsync(current =>
+		{
+			var names = change(current.BannedNames.BannedNames);
+			changed = !ReferenceEquals(names, current.BannedNames.BannedNames);
+			return changed ? current with { BannedNames = new BannedNamesOptions(names) } : current;
+		});
+		return changed;
 	}
 
 	/// <summary>

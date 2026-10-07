@@ -26,8 +26,8 @@ public sealed class ConfigOptionWriter(
 		nameof(NetOptions.SqlUsername), nameof(NetOptions.SqlPassword), nameof(NetOptions.SqlDatabase)
 	};
 
-	// Every write reads the stored options, changes one value and stores them all: two at once must not
-	// each drop the other's change.
+	// Every write reads the stored options, changes part of them and stores them all: two at once must not
+	// each drop the other's change. Every writer of the options document goes through this lock.
 	private readonly SemaphoreSlim _writeLock = new(1, 1);
 
 	/// <inheritdoc />
@@ -154,6 +154,31 @@ public sealed class ConfigOptionWriter(
 				SharpMUSHOptions updated => await StoreAsync(updated, corrections),
 				Error<string> refused => refused
 			};
+		}
+		finally
+		{
+			_writeLock.Release();
+		}
+	}
+
+	/// <inheritdoc />
+	public async ValueTask<SharpMUSHOptions> UpdateAsync(Func<SharpMUSHOptions, SharpMUSHOptions> change,
+		CancellationToken cancellationToken = default)
+	{
+		await _writeLock.WaitAsync(cancellationToken);
+		try
+		{
+			var current = await CurrentAsync();
+			var updated = change(current);
+			if (!ReferenceEquals(updated, current))
+			{
+				// Checked last: a request cancelled while it waited for the lock stores nothing.
+				cancellationToken.ThrowIfCancellationRequested();
+				await serverData.SetExpandedServerDataAsync(updated);
+				reload.SignalChange();
+			}
+
+			return updated;
 		}
 		finally
 		{

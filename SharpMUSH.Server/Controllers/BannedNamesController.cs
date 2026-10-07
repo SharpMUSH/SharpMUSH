@@ -17,8 +17,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class BannedNamesController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	IExpandedDataStore database,
-	ConfigurationReloadService configReloadService,
+	IConfigOptionWriter config,
 	IAuditLog audit,
 	ILogger<BannedNamesController> logger)
 	: ControllerBase
@@ -48,23 +47,19 @@ public class BannedNamesController(
 				return BadRequest("Name cannot be empty");
 			}
 
-			var currentOptions = options.CurrentValue;
-			var currentNames = currentOptions.BannedNames.BannedNames.ToList();
+			var added = false;
+			await config.UpdateAsync(current =>
+			{
+				var names = current.BannedNames.BannedNames;
+				added = !names.Contains(name, StringComparer.OrdinalIgnoreCase);
+				return added ? current with { BannedNames = new BannedNamesOptions([.. names, name]) } : current;
+			});
 
-			if (currentNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+			if (!added)
 			{
 				return Conflict($"Name '{name}' is already banned");
 			}
 
-			currentNames.Add(name);
-
-			var updatedOptions = currentOptions with
-			{
-				BannedNames = new BannedNamesOptions(currentNames.ToArray())
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
 			await audit.RecordPortalAsync(User, AuditActions.BannedNameAdd, AuditTargets.Of(AuditTargetKinds.Name, name));
 
 			logger.LogInformation("Added banned name: {Name}", LogSanitizer.Sanitize(name));
@@ -82,24 +77,19 @@ public class BannedNamesController(
 	{
 		try
 		{
-			var currentOptions = options.CurrentValue;
-			var currentNames = currentOptions.BannedNames.BannedNames.ToList();
-
-			var removed = currentNames.RemoveAll(n =>
-				n.Equals(name, StringComparison.OrdinalIgnoreCase)) > 0;
+			var removed = false;
+			await config.UpdateAsync(current =>
+			{
+				var names = current.BannedNames.BannedNames.ToList();
+				removed = names.RemoveAll(n => n.Equals(name, StringComparison.OrdinalIgnoreCase)) > 0;
+				return removed ? current with { BannedNames = new BannedNamesOptions([.. names]) } : current;
+			});
 
 			if (!removed)
 			{
 				return NotFound($"Banned name '{name}' not found");
 			}
 
-			var updatedOptions = currentOptions with
-			{
-				BannedNames = new BannedNamesOptions(currentNames.ToArray())
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
 			await audit.RecordPortalAsync(User, AuditActions.BannedNameRemove, AuditTargets.Of(AuditTargetKinds.Name, name));
 
 			logger.LogInformation("Deleted banned name: {Name}", LogSanitizer.Sanitize(name));

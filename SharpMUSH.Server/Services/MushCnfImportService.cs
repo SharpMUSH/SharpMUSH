@@ -16,9 +16,8 @@ public sealed record ConfigurationSnapshot(SharpMUSHOptions Options, MushCnfObje
 /// imported after it keeps them (<see cref="MushCnfObjectReferences"/>).
 /// </summary>
 public class MushCnfImportService(
-	IOptionsWrapper<SharpMUSHOptions> options,
+	IConfigOptionWriter config,
 	IExpandedDataStore database,
-	ConfigurationReloadService reload,
 	ILogger<MushCnfImportService> logger)
 {
 	/// <summary>
@@ -49,27 +48,24 @@ public class MushCnfImportService(
 	/// <summary>Persists <paramref name="import"/> over the current options and tells their readers.</summary>
 	public async Task<SharpMUSHOptions> ApplyAsync(PennMushConfigImport import, CancellationToken cancellationToken = default)
 	{
-		var imported = import.Over(options.CurrentValue);
-		await database.SetExpandedServerData(nameof(SharpMUSHOptions), imported, cancellationToken);
+		var imported = await config.UpdateAsync(import.Over, cancellationToken);
 		await database.SetExpandedServerData(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(import),
 			cancellationToken);
-		reload.SignalChange();
 		logger.LogInformation("Configuration imported and persisted successfully");
 		return imported;
 	}
 
 	/// <summary>What <see cref="RestoreAsync"/> puts back.</summary>
 	public async Task<ConfigurationSnapshot> SnapshotAsync(CancellationToken cancellationToken = default)
-		=> new(options.CurrentValue,
+		=> new(await config.CurrentAsync(),
 			await database.GetExpandedServerData<MushCnfObjectReferences>(nameof(MushCnfObjectReferences), cancellationToken)
 			?? new MushCnfObjectReferences());
 
 	/// <summary>Puts the options and object references back as <paramref name="snapshot"/> had them.</summary>
 	public async Task RestoreAsync(ConfigurationSnapshot snapshot, CancellationToken cancellationToken = default)
 	{
-		await database.SetExpandedServerData(nameof(SharpMUSHOptions), snapshot.Options, cancellationToken);
 		await database.SetExpandedServerData(nameof(MushCnfObjectReferences), snapshot.References, cancellationToken);
-		reload.SignalChange();
+		await config.UpdateAsync(_ => snapshot.Options, cancellationToken);
 		logger.LogInformation("Configuration restored to what it was before the import");
 	}
 }

@@ -82,9 +82,7 @@ public class BanEnforcementWiringTests(ServerWebAppFactory factory)
 	[Test, NotInParallel("PersistedOptions")]
 	public async Task AddSitelockRule_AbortsLiveSignalRConnectionForMatchingIp()
 	{
-		var database = factory.Services.GetRequiredService<ISharpDatabase>();
 		var optionsWrapper = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var configReloadService = factory.Services.GetRequiredService<ConfigurationReloadService>();
 		var banEnforcer = factory.Services.GetRequiredService<IBanEnforcer>();
 		var logger = factory.Services.GetRequiredService<ILogger<SitelockController>>();
 		var registry = factory.Services.GetRequiredService<HubConnectionRegistry>();
@@ -92,7 +90,7 @@ public class BanEnforcementWiringTests(ServerWebAppFactory factory)
 		// Constructed directly (bypassing HTTP/[Authorize]), same pattern as
 		// SharpMUSH.Tests.Configuration.ConfigurationControllerTests: real DI-resolved
 		// collaborators, calling the action method straight.
-		var controller = new SitelockController(optionsWrapper, database, configReloadService, banEnforcer,
+		var controller = new SitelockController(optionsWrapper, factory.Services.GetRequiredService<IConfigOptionWriter>(), banEnforcer,
 			factory.Services.GetRequiredService<IAuditLog>(), logger);
 
 		var hostPattern = $"203.0.113.{Random.Shared.Next(1, 254)}";

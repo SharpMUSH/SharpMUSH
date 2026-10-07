@@ -17,8 +17,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class RestrictionsController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	IExpandedDataStore database,
-	ConfigurationReloadService configReloadService,
+	IConfigOptionWriter config,
 	IAuditLog audit,
 	ILogger<RestrictionsController> logger)
 	: ControllerBase
@@ -45,22 +44,16 @@ public class RestrictionsController(
 	{
 		try
 		{
-			var currentOptions = options.CurrentValue;
-			var newRestrictions = new Dictionary<string, string[]>(currentOptions.Restriction.CommandRestrictions)
+			await config.UpdateAsync(current => current with
 			{
-				[commandName] = restrictions
-			};
-
-			var updatedOptions = currentOptions with
-			{
-				Restriction = currentOptions.Restriction with
+				Restriction = current.Restriction with
 				{
-					CommandRestrictions = newRestrictions
+					CommandRestrictions = new Dictionary<string, string[]>(current.Restriction.CommandRestrictions)
+					{
+						[commandName] = restrictions
+					}
 				}
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
+			});
 			await audit.RecordPortalAsync(User, AuditActions.RestrictionSet, AuditTargets.Of(AuditTargetKinds.Command, commandName), string.Join(" ", restrictions));
 
 			logger.LogInformation("Added/updated command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
@@ -78,24 +71,21 @@ public class RestrictionsController(
 	{
 		try
 		{
-			var currentOptions = options.CurrentValue;
-			var newRestrictions = new Dictionary<string, string[]>(currentOptions.Restriction.CommandRestrictions);
+			var removed = false;
+			await config.UpdateAsync(current =>
+			{
+				var restrictions = new Dictionary<string, string[]>(current.Restriction.CommandRestrictions);
+				removed = restrictions.Remove(commandName);
+				return removed
+					? current with { Restriction = current.Restriction with { CommandRestrictions = restrictions } }
+					: current;
+			});
 
-			if (!newRestrictions.Remove(commandName))
+			if (!removed)
 			{
 				return NotFound($"Command restriction '{commandName}' not found");
 			}
 
-			var updatedOptions = currentOptions with
-			{
-				Restriction = currentOptions.Restriction with
-				{
-					CommandRestrictions = newRestrictions
-				}
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
 			await audit.RecordPortalAsync(User, AuditActions.RestrictionClear, AuditTargets.Of(AuditTargetKinds.Command, commandName));
 
 			logger.LogInformation("Deleted command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
@@ -132,22 +122,16 @@ public class RestrictionsController(
 	{
 		try
 		{
-			var currentOptions = options.CurrentValue;
-			var newRestrictions = new Dictionary<string, string[]>(currentOptions.Restriction.FunctionRestrictions)
+			await config.UpdateAsync(current => current with
 			{
-				[functionName] = restrictions
-			};
-
-			var updatedOptions = currentOptions with
-			{
-				Restriction = currentOptions.Restriction with
+				Restriction = current.Restriction with
 				{
-					FunctionRestrictions = newRestrictions
+					FunctionRestrictions = new Dictionary<string, string[]>(current.Restriction.FunctionRestrictions)
+					{
+						[functionName] = restrictions
+					}
 				}
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
+			});
 			await audit.RecordPortalAsync(User, AuditActions.RestrictionSet, AuditTargets.Of(AuditTargetKinds.Function, functionName), string.Join(" ", restrictions));
 
 			logger.LogInformation("Added/updated function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));
@@ -165,24 +149,21 @@ public class RestrictionsController(
 	{
 		try
 		{
-			var currentOptions = options.CurrentValue;
-			var newRestrictions = new Dictionary<string, string[]>(currentOptions.Restriction.FunctionRestrictions);
+			var removed = false;
+			await config.UpdateAsync(current =>
+			{
+				var restrictions = new Dictionary<string, string[]>(current.Restriction.FunctionRestrictions);
+				removed = restrictions.Remove(functionName);
+				return removed
+					? current with { Restriction = current.Restriction with { FunctionRestrictions = restrictions } }
+					: current;
+			});
 
-			if (!newRestrictions.Remove(functionName))
+			if (!removed)
 			{
 				return NotFound($"Function restriction '{functionName}' not found");
 			}
 
-			var updatedOptions = currentOptions with
-			{
-				Restriction = currentOptions.Restriction with
-				{
-					FunctionRestrictions = newRestrictions
-				}
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
 			await audit.RecordPortalAsync(User, AuditActions.RestrictionClear, AuditTargets.Of(AuditTargetKinds.Function, functionName));
 
 			logger.LogInformation("Deleted function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));

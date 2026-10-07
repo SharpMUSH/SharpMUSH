@@ -38,10 +38,9 @@ public class SitelockControllerReadBasisTests(ServerWebAppFactory factory)
 	private SitelockController CreateController()
 	{
 		var options = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var configReloadService = factory.Services.GetRequiredService<ConfigurationReloadService>();
 		var banEnforcer = factory.Services.GetRequiredService<IBanEnforcer>();
 		var logger = factory.Services.GetRequiredService<ILogger<SitelockController>>();
-		return new SitelockController(options, Database, configReloadService, banEnforcer,
+		return new SitelockController(options, factory.Services.GetRequiredService<IConfigOptionWriter>(), banEnforcer,
 			factory.Services.GetRequiredService<IAuditLog>(), logger);
 	}
 
