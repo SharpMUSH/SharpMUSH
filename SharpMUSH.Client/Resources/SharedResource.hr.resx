@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>uživo</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scene s likom {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Natrag na profil: {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Pretraži scene</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Stanje scene</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Sve</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Uživo</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Nadolazeće</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Završene</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Prikaži više</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Često igra s</value>
   </data>

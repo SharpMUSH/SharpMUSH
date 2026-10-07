@@ -4220,6 +4220,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>live now</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scenes with {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Back to {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Search scenes</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Scene state</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Upcoming</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Finished</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Show more</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>View all</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Often plays with</value>
   </data>

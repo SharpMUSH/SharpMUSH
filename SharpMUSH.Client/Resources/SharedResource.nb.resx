@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>pågår nå</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scener med {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Tilbake til {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Søk i scener</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Scenestatus</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Direkte</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Kommende</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Avsluttede</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Vis flere</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Se alle</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Spiller ofte med</value>
   </data>

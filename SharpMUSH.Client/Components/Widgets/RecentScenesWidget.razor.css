@@ -2,3 +2,18 @@
 	font-size: 13px;
 	color: var(--text-dim);
 }
+
+.recent-scenes-view-all {
+	padding: 4px 6px;
+	border-radius: var(--radius-row);
+	color: var(--accent);
+	font-size: 12px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.recent-scenes-view-all:hover,
+.recent-scenes-view-all:focus-visible {
+	background: var(--surface-2);
+	outline: none;
+}

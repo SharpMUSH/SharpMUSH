@@ -149,6 +149,56 @@ public class SceneControllerParticipantTests
 	}
 
 	[Test]
+	public async Task Participant_Offset_PagesThroughTheVisibleScenes()
+	{
+		var world = new Dictionary<Scene, string[]>();
+		for (var i = 0; i < 6; i++) world[SceneOf($"open{i}", isPublic: true, lastActivity: 10 + i)] = [Tomas];
+		for (var i = 0; i < 4; i++) world[SceneOf($"hidden{i}", isPublic: false, lastActivity: 100 + i)] = [Tomas];
+		var service = new MemberSceneService(world);
+
+		var result = await ControllerFor(service, caller: null).ListScenes(count: 2, participant: Tomas, offset: 2);
+
+		var scenes = ((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id).ToList();
+		await Assert.That(scenes).IsEquivalentTo(new[] { "open3", "open2" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("the offset counts the scenes the caller may see, not the hidden ones before them");
+	}
+
+	[Test]
+	public async Task Participant_StateAndSearch_NarrowTheList()
+	{
+		static Scene With(string id, string status, long lastActivity, string title, string room = "", string? pitch = null) =>
+			SceneOf(id, isPublic: true, lastActivity) with
+			{
+				Status = status,
+				RoomName = room,
+				Meta = pitch is null
+					? new Dictionary<string, string> { ["title"] = title }
+					: new Dictionary<string, string> { ["title"] = title, ["summary"] = pitch },
+			};
+
+		var service = new MemberSceneService(new Dictionary<Scene, string[]>
+		{
+			[With("live", "active", 50, "Salt Market at Dusk")] = [Tomas],
+			[With("paused", "paused", 40, "Night Watch", room: "Lower Docks")] = [Tomas],
+			[With("planned", "new", 30, "Ferry Steps")] = [Tomas],
+			[With("done", "finished", 20, "The Lamplighters", pitch: "A meeting at the docks")] = [Tomas],
+		});
+		var controller = ControllerFor(service, caller: null);
+
+		async Task<List<string>> Ids(string? state, string? search) =>
+			((IEnumerable<SceneController.SceneDto>)((OkObjectResult)await controller.ListScenes(participant: Tomas, state: state, search: search)).Value!)
+				.Select(s => s.Id).ToList();
+
+		await Assert.That(await Ids("live", null)).IsEquivalentTo(new[] { "live" });
+		await Assert.That(await Ids("upcoming", null)).IsEquivalentTo(new[] { "paused", "planned" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await Ids("finished", null)).IsEquivalentTo(new[] { "done" });
+		await Assert.That(await Ids(null, "DOCKS")).IsEquivalentTo(new[] { "paused", "done" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("the room of one and the pitch of the other hold the text");
+		await Assert.That(await Ids("finished", "market")).IsEmpty();
+		await Assert.That(await controller.ListScenes(participant: Tomas, state: "someday")).IsTypeOf<BadRequestObjectResult>();
+	}
+
+	[Test]
 	public async Task Partners_CountOverTheLast50VisibleScenes_NotTheLast50Scenes()
 	{
 		var scenes = new Dictionary<Scene, string[]> { [SceneOf("public", isPublic: true, lastActivity: 1)] = [Tomas, Ilsa] };

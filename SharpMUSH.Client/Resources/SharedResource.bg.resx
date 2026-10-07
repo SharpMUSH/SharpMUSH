@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>на живо</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Сцени с участие на {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Обратно към профила: {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Търсене на сцени</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Състояние на сцената</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Всички</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>На живо</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Предстоящи</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Приключили</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Покажи още</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Виж всички</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Често играе с</value>
   </data>

@@ -92,6 +92,12 @@
 			"note": "renders the profile shell with empty sections when the character is absent"
 		},
 		{
+			"route": "/character/{name}/scenes",
+			"samples": ["/character/One/scenes"],
+			"content": "placeholder",
+			"note": "says no character has that name when the character is absent"
+		},
+		{
 			"route": "/wiki/{ns}/{slug}",
 			"samples": ["/wiki/main/welcome"],
 			"content": "placeholder",

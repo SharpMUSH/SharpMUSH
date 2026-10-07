@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>进行中</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>{0} 参与的场景</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>返回 {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>搜索场景</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>场景状态</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>即将开始</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>已结束</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>显示更多</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>常一起游戏</value>
   </data>

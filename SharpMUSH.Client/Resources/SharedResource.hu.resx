@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>most zajlik</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>{0} jelenetei</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Vissza: {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Jelenetek keresése</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Jelenet állapota</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Élő</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Közelgő</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Befejezett</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Több mutatása</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Gyakran játszik vele</value>
   </data>

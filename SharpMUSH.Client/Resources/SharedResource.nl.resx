@@ -4802,6 +4802,36 @@
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>nu bezig</value>
   </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scènes met {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Terug naar {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Scènes zoeken</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Scènestatus</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Gepland</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Afgelopen</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Meer tonen</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Alles bekijken</value>
+  </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Speelt vaak met</value>
   </data>
