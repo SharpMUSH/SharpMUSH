@@ -240,7 +240,8 @@ public class AdminCharactersController(
 			owner?.Username,
 			await connections.Get(playerRef).AnyAsync(c => c.State == IConnectionService.ConnectionState.LoggedIn, ct),
 			string.Join(' ', flags),
-			await AttributeAsync(playerRef, "LAST", ct));
+			await AttributeAsync(playerRef, "LAST", ct),
+			owner is not null && await accounts.IsGodsAccountAsync(owner.Id!, ct));
 	}
 
 	private async Task<string?> AttributeAsync(DBRef dbref, string name, CancellationToken ct)

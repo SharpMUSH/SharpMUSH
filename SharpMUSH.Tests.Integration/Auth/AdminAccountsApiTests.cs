@@ -43,7 +43,8 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 	private record AccountLoginRequest(string UsernameOrEmail, string Password);
-	private record AdminAccountRow(string Id, string Username, string? Email, string Status, bool MustChangePassword, bool IsReserved);
+	private record AdminAccountRow(string Id, string Username, string? Email, string Status, bool MustChangePassword, bool IsReserved,
+		bool IsGodsAccount);
 	private record CreateCharacterRequest(string Name, string Password);
 	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
 
@@ -195,6 +196,35 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		using var response = await http.SendAsync(request);
 
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+	}
+
+	/// <summary>God's account is reported as such, and refuses both the disable route and a status change.</summary>
+	[Test, NotInParallel("SetupFlow", Order = 9)]
+	public async Task GodsAccount_RefusesDisableAndClose()
+	{
+		var (http, sessionToken) = await LoginAsGodAccountAsync();
+
+		using var listRequest = new HttpRequestMessage(HttpMethod.Get, "api/admin/accounts");
+		listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var listResponse = await http.SendAsync(listRequest);
+		var rows = await listResponse.Content.ReadFromJsonAsync<List<AdminAccountRow>>();
+		var gods = rows!.Single(r => r.IsGodsAccount);
+
+		using var disableRequest = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{gods.Id}/disable");
+		disableRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var disableResponse = await http.SendAsync(disableRequest);
+		await Assert.That(disableResponse.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+
+		using var closeRequest = new HttpRequestMessage(HttpMethod.Post, $"api/admin/accounts/{gods.Id}/status")
+		{
+			Content = JsonContent.Create(new { status = "Closed" })
+		};
+		closeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		using var closeResponse = await http.SendAsync(closeRequest);
+		await Assert.That(closeResponse.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+
+		var reloaded = await factory.Services.GetRequiredService<IAccountService>().GetByIdAsync($"node_accounts/{gods.Id}");
+		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Active);
 	}
 
 	[Test, NotInParallel("SetupFlow", Order = 10)]

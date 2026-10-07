@@ -11,6 +11,7 @@ namespace SharpMUSH.Library.API;
 /// <param name="Online">Whether it has a logged-in connection now.</param>
 /// <param name="Flags">Its flag names, space-separated.</param>
 /// <param name="LastConnect">Its <c>LAST</c> attribute, as the game wrote it, or null before its first connect.</param>
+/// <param name="GodsAccount">Whether its account holds God (#1), which can never be banned.</param>
 public sealed record AdminCharacterRow(
 	int DbrefNumber,
 	long CreationTime,
@@ -19,7 +20,8 @@ public sealed record AdminCharacterRow(
 	string? AccountName,
 	bool Online,
 	string Flags,
-	string? LastConnect);
+	string? LastConnect,
+	bool GodsAccount);
 
 /// <summary>One page of the admin character list, after the filters.</summary>
 /// <param name="Characters">The page's rows, by name.</param>

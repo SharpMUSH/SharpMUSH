@@ -218,7 +218,8 @@ public class AccountController(
 		var (accountId, failure) = await GetAccountIdFromBearerAsync();
 		if (failure is not null) return failure;
 
-		await accountService.UnlinkCharacterAsync(accountId!, new DBRef(dbrefNumber));
+		if (await accountService.UnlinkCharacterAsync(accountId!, new DBRef(dbrefNumber)) is Error<string> refused)
+			return Conflict(refused.Value);
 		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", LogSanitizer.Sanitize(accountId), dbrefNumber);
 		return NoContent();
 	}

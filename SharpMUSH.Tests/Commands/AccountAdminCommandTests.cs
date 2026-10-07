@@ -120,6 +120,22 @@ public class AccountAdminCommandTests
 	}
 
 	[Test]
+	[Arguments("disable")]
+	[Arguments("close")]
+	[Arguments("delete")]
+	public async ValueTask AccountStatusChange_GodsAccount_IsRefused(string change)
+	{
+		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		var gods = await accountService.GetAccountForCharacterAsync(new DBRef(1));
+		await Assert.That(gods).IsNotNull().Because("bootstrap links the pre-generated admin account to God");
+
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/{change} {gods!.Username}"));
+
+		var reloaded = await accountService.GetByIdAsync(gods.Id!);
+		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Active);
+	}
+
+	[Test]
 	public async ValueTask AccountNewPassword_TooShort_RefusesAndLeavesPasswordUnchanged()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
