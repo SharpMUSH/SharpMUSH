@@ -742,19 +742,19 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>Opens the schedule form and fills it in, picking the date and time through the pickers' bindings.</summary>
-	private void FillScheduleForm(IRenderedComponent<SharpMUSH.Client.Pages.Scenes> cut, string title, DateTime when,
+	private static async Task FillScheduleForm(IRenderedComponent<SharpMUSH.Client.Pages.Scenes> cut, string title, DateTime when,
 		string pitch = "", bool watchable = true)
 	{
 		cut.WaitForAssertion(() => cut.Find(".scene-schedule-open"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-schedule-open").Click();
+		await cut.Find(".scene-schedule-open").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-schedule-title input"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-schedule-title input").Input(title);
+		await cut.Find(".scene-schedule-title input").InputAsync(title);
 		var date = cut.FindComponent<MudDatePicker>();
-		cut.InvokeAsync(() => date.Instance.DateChanged.InvokeAsync(when.Date)).GetAwaiter().GetResult();
+		await cut.InvokeAsync(() => date.Instance.DateChanged.InvokeAsync(when.Date));
 		var time = cut.FindComponent<MudTimePicker>();
-		cut.InvokeAsync(() => time.Instance.TimeChanged.InvokeAsync(when.TimeOfDay)).GetAwaiter().GetResult();
-		if (pitch.Length > 0) cut.Find(".scene-schedule-pitch textarea").Change(pitch);
-		if (!watchable) cut.Find(".scene-schedule-public input").Change(false);
+		await cut.InvokeAsync(() => time.Instance.TimeChanged.InvokeAsync(when.TimeOfDay));
+		if (pitch.Length > 0) await cut.Find(".scene-schedule-pitch textarea").ChangeAsync(pitch);
+		if (!watchable) await cut.Find(".scene-schedule-public input").ChangeAsync(false);
 	}
 
 	/// <summary>
@@ -772,8 +772,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var when = DateTime.Today.AddDays(3).AddHours(20);
 		var at = new DateTimeOffset(DateTime.SpecifyKind(when, DateTimeKind.Local)).ToUnixTimeSeconds();
 
-		FillScheduleForm(cut, "Lanterns at Midnight", when, pitch: "Bring your own intrigue.");
-		cut.Find(".scene-schedule-submit").Click();
+		await FillScheduleForm(cut, "Lanterns at Midnight", when, pitch: "Bring your own intrigue.");
+		await cut.Find(".scene-schedule-submit").ClickAsync();
 
 		WaitForCommand($"+scene/pitch {SceneSurfaceApiHandler.ScheduledId}=Bring your own intrigue.");
 		var sent = _api.RequestsSent();
@@ -801,8 +801,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		FillScheduleForm(cut, "Truce = Trouble", DateTime.Today.AddDays(2).AddHours(19), watchable: false);
-		cut.Find(".scene-schedule-submit").Click();
+		await FillScheduleForm(cut, "Truce = Trouble", DateTime.Today.AddDays(2).AddHours(19), watchable: false);
+		await cut.Find(".scene-schedule-submit").ClickAsync();
 
 		WaitForCommand($"+scene/private {SceneSurfaceApiHandler.ScheduledId}");
 		var commands = _api.CommandsRun();
@@ -820,8 +820,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		FillScheduleForm(cut, "Not Approved Yet", DateTime.Today.AddDays(1).AddHours(20), pitch: "Never sent.");
-		cut.Find(".scene-schedule-submit").Click();
+		await FillScheduleForm(cut, "Not Approved Yet", DateTime.Today.AddDays(1).AddHours(20), pitch: "Never sent.");
+		await cut.Find(".scene-schedule-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-schedule-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-schedule-error").TextContent).Contains(SceneSurfaceApiHandler.Refusal);
@@ -835,8 +835,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		FillScheduleForm(cut, "Too Late", DateTime.Now.AddMinutes(-5));
-		cut.Find(".scene-schedule-submit").Click();
+		await FillScheduleForm(cut, "Too Late", DateTime.Now.AddMinutes(-5));
+		await cut.Find(".scene-schedule-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-schedule-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(_api.CommandsRun()).IsEmpty();
@@ -853,8 +853,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		FillScheduleForm(cut, "Meant To Be Quiet", DateTime.Today.AddDays(2).AddHours(20), pitch: "Never sent.", watchable: false);
-		cut.Find(".scene-schedule-submit").Click();
+		await FillScheduleForm(cut, "Meant To Be Quiet", DateTime.Today.AddDays(2).AddHours(20), pitch: "Never sent.", watchable: false);
+		await cut.Find(".scene-schedule-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-schedule-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-schedule-error").TextContent).Contains(SceneSurfaceApiHandler.PrivacyRefusal);
@@ -874,8 +874,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		FillScheduleForm(cut, "Twin Plans", DateTime.Today.AddDays(2).AddHours(20), pitch: "Which one?", watchable: false);
-		cut.Find(".scene-schedule-submit").Click();
+		await FillScheduleForm(cut, "Twin Plans", DateTime.Today.AddDays(2).AddHours(20), pitch: "Which one?", watchable: false);
+		await cut.Find(".scene-schedule-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-scheduled-note"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".scene-schedule")).IsEmpty();

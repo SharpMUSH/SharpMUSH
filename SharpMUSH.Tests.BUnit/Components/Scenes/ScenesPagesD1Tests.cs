@@ -236,7 +236,7 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		await Assert.That(toggle.GetAttribute("aria-expanded")).IsEqualTo("false");
 		await Assert.That(cut.Find(".scene-detail-aside").ClassList).DoesNotContain("scene-detail-aside-open");
 
-		toggle.Click();
+		await toggle.ClickAsync();
 
 		await Assert.That(cut.Find(".scene-detail-about-toggle").GetAttribute("aria-expanded")).IsEqualTo("true");
 		await Assert.That(cut.Find(".scene-detail-aside").ClassList).Contains("scene-detail-aside-open");
