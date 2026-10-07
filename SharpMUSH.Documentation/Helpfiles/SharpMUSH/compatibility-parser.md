@@ -271,7 +271,7 @@ argument instead. `strlen()` is one.
 the player with the same text.<br>
 **Why.** Producing no output at all is indistinguishable from a command that did nothing on
 purpose.<br>
-**Workaround.** See `help exception` for the payload and what a mortal versus a wizard is shown.<br>
+**Workaround.** See [exception] for the payload and what a mortal versus a wizard is shown.<br>
 **No example.** A command that crashes is a defect, and none is kept around to show this with. Once
 one is found it is fixed, so there is no command whose output could stand as the example.
 
@@ -328,7 +328,7 @@ b
 rejects that as no player before its all-mail branch is reached. The Wizard is told ": No such
 player." and gets nothing back.<br>
 **SharpMUSH** gives a Wizard their own statistics, as it gives everyone else.<br>
-**Why.** `help mailstats()` documents `mailstats([<player>])` as your own statistics, and PennMUSH's
+**Why.** [mailstats()] documents `mailstats([<player>])` as your own statistics, and PennMUSH's
 answer is an error nobody could have relied on.<br>
 **Workaround.** None needed: `mailstats(me)` means the same on both servers.
 
@@ -344,7 +344,7 @@ answer is an error nobody could have relied on.<br>
 **PennMUSH** has no `%>` substitution, so it evaluates `%>` to a plain `>`.<br>
 **SharpMUSH** substitutes the output of the last command run in the same queue entry: after
 `@dig Kitchen`, `%>` is the new room's dbref. A typed line starts with it empty. See
-`help command output`.<br>
+[command output].<br>
 **Why.** It lets one command's result feed the next without a search or a register.<br>
 **Workaround.** Write a plain `>`, which means the same on both servers. Importing a
 PennMUSH database names every attribute that uses `%>`.
@@ -366,7 +366,7 @@ a>b
 followed by a command that starts with `|` (`; |` too).<br>
 **SharpMUSH** pipes as TinyMUX does: in an action list, a command followed by `;|` has what it
 shows you passed to the next command, which reads it as `%|`. Everywhere else `%|` is empty. See
-`help piping`.<br>
+[piping].<br>
 **Why.** It lets softcode use what a command shows, which has no function of its own (`look`),
 and TinyMUX code that pipes runs unchanged.<br>
 **Workaround.** Write a plain `|`, which means the same on both servers. No command starts with `|`

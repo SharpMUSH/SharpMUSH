@@ -47,81 +47,116 @@
 -->
 # Recurring Jobs
 
-A recurring job calls one attribute as the linked active player who creates it. It keeps
-its ID, owning account, full player/target identities, attribute, description, timezone,
-next firing, last firing attempt and last error in the provider-neutral world store.
-World backups include these definitions. No external cron files need copying.
+A recurring job runs one attribute on a schedule, as the player who created it. Its definition lives in the world database, so world backups carry it and there are no cron files to copy.
+
+A job records its ID, owning account, player and target, attribute, description, schedule and timezone, next firing, last attempt and last error. An account may hold up to 32 jobs, and a world up to 256.
+
+The sections below cover:
+
+- [recurring jobs commands and ownership] - the `@job` command and who may change a job
+- [recurring jobs schedule grammar] and [recurring jobs schedule examples] - writing a schedule
+- [recurring jobs timezones] - daylight saving and wall-clock time
+- [recurring jobs admission and restart] - missed, late and overlapping firings
+- [recurring jobs execution permissions] - what is checked each time a job runs
+- [recurring jobs status reporting] - what the last firing fields mean
 
 ## Commands and ownership
-```sharp
 
-    @job/create #number:creation/ATTRIBUTE=0 9 * * 1-5|America/New_York|Weekday event
-    @job/list
-    @job/list/all
-    @job/disable job-id
-    @job/enable job-id
-    @job/schedule job-id=*/15 * * * *|UTC
-    @job/delete job-id
-```
+- `@job/create <objid>/<attribute>=<schedule>|<timezone>[|<description>]` - create a job
+- `@job/list` - list your account's jobs
+- `@job/list/all` - list every account's jobs
+- `@job/disable <job-id>` and `@job/enable <job-id>` - stop or resume firing
+- `@job/schedule <job-id>=<schedule>|<timezone>` - change when it fires
+- `@job/delete <job-id>` - remove it
 
-Use /all with administrator edits to select another account's job. The portal's Recurring
-jobs page provides the same controls. jobs.manage.own permits your account's jobs;
-jobs.manage permits other accounts' jobs. Both remain subject to the existing role
-priority and explicit-denial rules. Creating a job always records your own active player;
-editing another account's schedule never changes its execution identity.
+`<objid>` is the object's full identity, `#<number>:<creation>`, as [OBJID()] returns it; a bare dbref or a name is refused.
+
+Add `/all` to `/disable`, `/enable`, `/schedule` or `/delete` to select another account's job. The portal's Recurring jobs page has the same controls.
+
+| Permission | Allows |
+| --- | --- |
+| `jobs.manage.own` | your account's jobs |
+| `jobs.manage` | every account's jobs |
+
+Both are resolved like any other permission (see [administrative capabilities]). A job always runs as the active player who created it; editing another account's schedule never changes who it runs as.
+
+Output: the message `@job` shows, such as `Created recurring job <id>`.
 
 ## Schedule grammar
 
-The five fields are minute (0-59), hour (0-23), day of month (1-31), month (1-12), and
-weekday (0-7, Sunday is 0 or 7). Each accepts *, comma lists, ascending ranges and /steps.
+A schedule is five fields separated by spaces:
+
+| Field | Values |
+| --- | --- |
+| minute | 0-59 |
+| hour | 0-23 |
+| day of month | 1-31 |
+| month | 1-12 |
+| weekday | 0-7 (Sunday is 0 or 7) |
+
+Each field accepts:
+
+- `*` - every value
+- a comma list - `1,15` is either value
+- an ascending range - `9-17` is 9 through 17
+- a step - `*/15` is every fifteenth value
+
+Names, seconds, `?`, `L`, `W`, `#` and ranges that wrap around are not accepted.
+
+When both day fields are restricted (neither is a literal `*`), either one may match. A minute that matches both fires once.
+
 ## Schedule examples
 
-Examples: */15 means every fifteen units; 9-17 means 9 through 17; 1,15 means either value.
-Names, seconds, ?, L, W, # and wraparound ranges are not accepted. If both day fields are
-restricted (neither is the literal *), either may match. Matching both produces one firing.
-
-Examples:
-```sharp
-
-    0 9 * * 1-5       Weekdays at 09:00
-    */15 * * * *     Every fifteen minutes
-    0 0 1,15 * *     Midnight on the first and fifteenth
-    0 12 15 * 0      Noon on Sundays or the fifteenth
+```
+0 9 * * 1-5      Weekdays at 09:00
+*/15 * * * *     Every fifteen minutes
+0 0 1,15 * *     Midnight on the first and fifteenth
+0 12 15 * 0      Noon on Sundays and on the fifteenth
 ```
 
 ## Timezones
 
-Schedules use the named timezone's wall clock. A nonexistent daylight-saving time is
-skipped. A repeated wall time fires once, at its earlier UTC occurrence. Changing timezone
-or schedule computes a new future firing and invalidates any unstarted old callback.
-Invalid schedules, unknown zones and schedules with no future date are rejected.
+A schedule follows the named timezone's wall clock.
+
+- A wall time that does not exist, because the clocks jump forward, is skipped.
+- A wall time that happens twice, because the clocks go back, fires once, at the earlier one.
+- Changing the timezone or the schedule works out a new next firing, and any firing still waiting under the old one is dropped.
+
+An invalid schedule, an unknown timezone, or a schedule that never fires again is refused.
 
 ## Admission and restart
 
-The engine records each firing claim before normal queue admission. Admission rejection
-is recorded, with no retry of that firing. A delayed poll admits at most one current firing
-per job and advances directly to a future occurrence. A firing is skipped while an earlier
-firing owns a queue reservation, including canceled work waiting to drain. This prevents
-a backlog of superseded callbacks. Restart retains definitions, clears interrupted
-claims and skips past firings. Repeated startup initialization does not register duplicates.
-There are at most 32 definitions per account and 256 per world.
+Each firing is recorded as claimed before it joins the queue. If the queue refuses it, the refusal is recorded and that firing is not retried.
+
+- A job that falls behind fires at most once for the current time, then moves on to its next future firing.
+- A firing is skipped while an earlier firing of the same job still holds a place in the queue, even one that was cancelled and has not yet drained, so superseded firings never pile up.
+- After a restart, definitions are kept, interrupted claims are cleared and firings missed while the server was down are skipped. Starting twice never registers a job twice.
 
 ## Execution permissions
 
-Immediately before dispatch, the engine reloads the enabled definition and its original
-account/player identities, rechecks the current jobs capability, normal control of the
-target and execution access to the exact local attribute. Unlinking/disabling the account,
-revoking its role, destroying/recycling the player or target, deleting the attribute,
-disabling/deleting the job, or changing its schedule prevents old callbacks from executing.
-The attribute runs through the normal serialized queue with a fresh execution budget;
-no submitting command budget or captured role claims are retained. A command already
-running finishes under its existing budget. Definitions do not bypass Penn game powers.
+Just before a job runs, the server reloads it and its account and player, and checks again that:
+
+- the job is enabled and its schedule unchanged;
+- the account is still linked and enabled, and still holds the jobs permission;
+- the player and target still exist, and the player still controls the target;
+- the player may still run that exact attribute on the target.
+
+Unlinking or disabling the account, revoking its role, destroying the player or target, deleting the attribute, or disabling, deleting or rescheduling the job all stop a firing that is already waiting.
+
+The attribute runs on the normal queue with a fresh [execution budget]; it keeps nothing from the command that created the job. A command already running finishes under its own budget. A job grants no PennMUSH powers the player lacks.
 
 ## Status reporting
 
-The engine is the single writer of these definitions. Last firing attempt means the time
-of admission attempt; rejected and failed attempts remain visible. Attribute errors and
-budget failures are recorded without exposing provider internals. Pre-dispatch
-authority and attribute reads share the firing's execution budget. Final status
-persistence gets one separate, bounded attempt; an unacknowledged firing is never
-replayed just because its status update failed.
+The server is the only writer of job definitions.
+
+- *Last firing* is when the server last tried to run the job; refused and failed attempts show there too.
+- *Last error* names an attribute error or a budget failure, without server internals.
+
+Checking permissions and reading the attribute count against the firing's own execution budget. Saving the status afterwards gets one separate attempt; a firing whose status could not be saved is never run a second time because of it.
+
+::: seealso
+- [administrative capabilities]
+- [execution budget]
+- [timezones]
+- [@queue]
+:::

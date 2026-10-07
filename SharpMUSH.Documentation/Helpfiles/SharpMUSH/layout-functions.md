@@ -2,32 +2,77 @@
 
 Boxes, titled rules, columns, labelled fields, trees and pictures, described once. A telnet client gets box art, the same kind [ALIGN()], [CENTER()] and [REPEAT()] draw. The web portal draws the same layout as page structure: a bordered card, columns that wrap on a narrow screen, a definition list, a nested list, a real picture.
 
-Available functions:
-- box() - a frame with a title in its top edge
-- rule() - a line across, with a title in it
-- flex() and item() - things side by side
-- fields() - labels and values, the values lined up
-- tree() and node() - items under their parents
-- figure() - a picture, with text art for a terminal
-- gauge() - a bar filled to a value
-- bullets() - a bulleted or numbered list
-- grid() - short items in as many columns as fit
-- datatable() and datacolumns() - a table that gives way on a narrow screen, given by rows or by columns
-- gradient() - text shaded through colours
-- badge() - a coloured status tag
-- themes(), theme() and swatch() - colour themes for layouts; see [LAYOUT THEMES]
+This topic covers the functions, how layouts nest, their width, what each kind of reader is sent, and the options every layout function takes, then ends with examples.
+
+## Functions
+
+| Function | Draws |
+|---|---|
+| [BOX()] | a frame with a title in its top edge |
+| [RULE()] | a line across, with a title in it |
+| [FLEX()] and [ITEM()] | things side by side |
+| [FIELDS()] | labels and values, the values lined up |
+| [TREE()] and [NODE()] | items under their parents |
+| [FIGURE()] | a picture, with text art for a terminal |
+| [GAUGE()] | a bar filled to a value |
+| [BULLETS()] | a bulleted or numbered list |
+| [GRID()] | short items in as many columns as fit |
+| [DATATABLE()] and [DATACOLUMNS()] | a table that gives way on a narrow screen, given by rows or by columns |
+| [GRADIENT()] | text shaded through colours |
+| [BADGE()] | a coloured status tag |
+| [THEMES()], [THEME()] and [SWATCH()] | colour themes for layouts; see [LAYOUT THEMES] |
+
+## Text and nesting
 
 The result is text, so `strlen()`, `mid()`, `edit()` and listen patterns all work on the box art. A layout cut or edited by another function is shown as the text it now is, in the portal too.
 
 Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `box()` body becomes columns, fields or a tree inside the box, and a `rule()` becomes a divider meeting the box's sides.
 
-**Width.** Every layout function takes a width. Leave it empty, or write `auto`, and the layout is drawn at the width of the connection that ran the command (78 if it never said). Each telnet reader is then sent it again at the width their own client reported. A number fixes the width for everyone.
+## Width
 
-**Readers.** A client that cannot show Unicode is sent ASCII borders; see [LAYOUT BORDERS]. A client that says it is a screen reader is sent the content alone, in reading order: no borders, fields as `Label: value` lines, tree levels as indentation.
+Every layout function takes a width. Leave it empty, or write `auto`, and the layout is drawn at the width of the connection that ran the command (78 if it never said). Each telnet reader is then sent it again at the width their own client reported. A number fixes the width for everyone.
 
-**Options.** The layout functions take their options as one JSON object: `{"border":"double","pad":2}`. Written straight into an argument it needs a second pair of braces, because the outer pair only keeps its commas together: `box(Hello,,30,{{"border":"double","pad":2}})`. It can also be built with [JSON()]: `box(Hello,,30,json(object,border,"double",pad,2))`. A number option takes a JSON number, an on-or-off option (`"vertical"`, `"across"`, `"mirror"`) takes `true` or `false`, `"stripe"` takes `true`, `false` or a string, `"theme"` takes a string or an object (see [LAYOUT THEMES]), and every other option takes a string. A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`. Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order. Every function answers bad options the same way: `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` for text that is not one JSON object, `#-1 UNKNOWN LAYOUT OPTION <KEY>` for a key it does not take, `#-1 DUPLICATE LAYOUT OPTION <KEY>` for a key given twice, `#-1 ARGUMENT OUT OF RANGE` for a number outside its range, and `#-1 INVALID ARGUMENT` for any other value it cannot read.
+## Readers
 
-### Example: a finger sheet
+A client that cannot show Unicode is sent ASCII borders; see [LAYOUT BORDERS]. A client that says it is a screen reader is sent the content alone, in reading order: no borders, fields as `Label: value` lines, tree levels as indentation.
+
+## Options
+
+The layout functions take their options as one JSON object: `{"border":"double","pad":2}`. Write it in one of two ways:
+
+- straight into the argument, inside a second pair of braces, because the outer pair only keeps its commas together: `box(Hello,,30,{{"border":"double","pad":2}})`
+- built with [JSON()]: `box(Hello,,30,json(object,border,"double",pad,2))`
+
+### Values
+
+| Option | Takes |
+|---|---|
+| a number option | a JSON number |
+| an on-or-off option (`"vertical"`, `"across"`, `"mirror"`) | `true` or `false` |
+| `"stripe"` | `true`, `false` or a string |
+| `"theme"` | a string or an object; see [LAYOUT THEMES] |
+| every other option | a string |
+
+A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`.
+
+Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order.
+
+### Errors
+
+Every function answers bad options the same way:
+
+| Error | When |
+|---|---|
+| `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` | the text is not one JSON object |
+| `#-1 UNKNOWN LAYOUT OPTION <KEY>` | a key the function does not take |
+| `#-1 DUPLICATE LAYOUT OPTION <KEY>` | a key given twice |
+| `#-1 ARGUMENT OUT OF RANGE` | a number outside its range |
+| `#-1 INVALID ARGUMENT` | any other value it cannot read |
+
+## Examples
+
+### A finger sheet
+
 ```sharp
 > think box(fields({{"cols":2}},Sex,Male,Species,Human,Job,Dark Warrior,Online,1h)%r[rule(Quote)]%rHooooo?,Mannaz Byron,60)
 +=====================< Mannaz Byron >=====================+
@@ -38,7 +83,8 @@ Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `
 +==========================================================+
 ```
 
-### Example: a stat sheet
+### A stat sheet
+
 ```sharp
 > think box(fields({{"leader":".","cols":2}},Strength,3,Dexterity,4,Stamina,3,Charisma,2,Manipulation,1,Appearance,3),Attributes,56)
 +====================< Attributes >====================+
@@ -48,7 +94,8 @@ Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `
 +======================================================+
 ```
 
-### Example: a who list
+### A who list
+
 ```sharp
 > think box(flex({{"gap":1}},item(Mannaz%rRaya%rTomas,12),item(0s%r5m%r2h,5),item(Hooooo?%rWriting a scene%rAFK)),Who's Online,50)
 +================< Who's Online >================+
@@ -58,7 +105,8 @@ Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `
 +================================================+
 ```
 
-### Example: a picture beside a sheet
+### A picture beside a sheet
+
 ```sharp
 > think box(figure(https://example.com/mannaz.png,Mannaz,/|_/|%r=^.^=%r%b> <,left,fields(,Sex,Male,Species,Human,Job,Dark Warrior)),Mannaz Byron,44)
 +=============< Mannaz Byron >=============+
@@ -93,6 +141,27 @@ In the portal the picture shows in place of the cat, with the fields beside it.
 
 box() and rule() draw with a border style. The game's default is the `layout_border` option; `"border":"<style>"` picks another.
 
+## Styles
+
+```
++=====< Title >====+  +-----< Title >----+
+| mush             |  | ascii            |
++==================+  +------------------+
+```
+
+The other styles are drawn with Unicode box-drawing lines:
+
+- `single` - light lines
+- `double` - double lines
+- `heavy` - thick lines
+- `rounded` - light lines with rounded corners
+
+Each sets its title between small tee brackets in the top edge. A client without Unicode is sent them in ASCII, as described under ASCII clients below. The examples in these topics show the ASCII form.
+
+`"border":"none"` draws no frame, only the title and the padded body.
+
+## Borders inside other layouts
+
 The border options are not only for box() and rule(). Given to any layout that holds others, such as box(), flex(), fields(), tree(), bullets(), grid() or datatable(), they set the border of every box and rule inside it that names none, the way `layout_border` does for the whole game. A box or rule that names its own keeps it.
 
 ```sharp
@@ -102,15 +171,7 @@ The border options are not only for box() and rule(). Given to any layout that h
 +------------------------------------+  +====================================+
 ```
 
-```
-+=====< Title >====+  +-----< Title >----+
-| mush             |  | ascii            |
-+==================+  +------------------+
-```
-
-The other styles are drawn with Unicode box-drawing lines: `single` with light lines, `double` with double lines, `heavy` with thick lines, and `rounded` with light lines and rounded corners. Each sets its title between small tee brackets in the top edge. A client without Unicode is sent them in ASCII, as **ASCII clients** below says. The examples in these topics show the ASCII form.
-
-`"border":"none"` draws no frame, only the title and the padded body.
+## Border pieces
 
 Any part of the style can be replaced, after `"border"` picks the starting point:
 - `corner` (all four), or `tl`, `tr`, `bl`, `br` one at a time
@@ -127,7 +188,16 @@ An edge is a pattern repeated along it, so `"top":"=-"` alternates and `"top":"[
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
-**ASCII clients.** A telnet client that did not agree to UTF-8 is sent each box-drawing character as the nearest ASCII one: a light line as `-`, a double or heavy line as `=`, an upright as `|`, and a corner or tee as `+`. A double box stays recognisably double, and colour is kept. A piece that is not box drawing at all, such as an emoji or the tee bracket round a title in the Unicode styles, becomes the `ascii` style's piece instead. Tree guides become `|-` and `` `- ``. A `"sep"` between flex items is translated the same way. The text inside a layout is never changed. The portal ignores border characters and draws borders itself.
+## ASCII clients
+
+A telnet client that did not agree to UTF-8 is sent each box-drawing character as the nearest ASCII one:
+
+- a light line as `-`
+- a double or heavy line as `=`
+- an upright as `|`
+- a corner or tee as `+`
+
+A double box stays recognisably double, and colour is kept. A piece that is not box drawing at all, such as an emoji or the tee bracket round a title in the Unicode styles, becomes the `ascii` style's piece instead. Tree guides become `|-` and `` `- ``. A `"sep"` between flex items is translated the same way. The text inside a layout is never changed. The portal ignores border characters and draws borders itself.
 
 ::: seealso
 - [BOX()]
@@ -149,12 +219,46 @@ A theme colours the parts of a layout: borders and gauge bars, titles, table hea
 
 That box is drawn in Nord's blue, its title in Nord's purple and bold. The examples in these topics show the text a client is sent, without its colour.
 
+## Kinds of theme
+
 A theme is one of these:
-- a name from [THEMES()]: `"theme":"nord"`. `terminal` uses only the sixteen standard colours, so each player sees it in the colours their own client is set to.
-- a genre: `fantasy`, `historical`, `horror`, `modern`, `mystery`, `romance`, `science-fiction` or `spiritual`, one for each MSSP genre (`romance` serves MSSP's Adult as well). A genre theme changes the shapes as well as the colours, down to a box's corners: `fantasy` draws double lines with diamond corners and fleurons either side of a title, and a gauge of solid and shaded blocks; `horror` a cracked heavy line with daggers at the corners; `mystery` dashed lines with hollow diamonds; `romance` rounded lines with hearts; `science-fiction` heavy lines with bracket corners, triangle bullets and a segmented gauge. A client without Unicode gets each in ASCII.
-- a theme made from one colour: `"theme":{"seed":"#7aa2f7","harmony":"triadic"}`. The other colours take their hues from the seed: `monochrome` (one hue), `analogous` (its neighbours, the default), `complementary` (the opposite hue), `split` (either side of the opposite), `triadic` (three evenly round) or `tetradic` (four). Each is made lighter or darker until it stands out from the background: 3 to 1 for lines, 4.5 to 1 for text, by the measure the web accessibility guidelines use. `"contrast"` from 0 to 1 raises both toward 7 to 1. `"mode":"light"` makes it for a light background; dark is the default.
-- a base16 scheme: `"theme":{"base16":["#2e3440", ... sixteen colours]}`. Hundreds of these exist for editors and terminals.
-- any of these with colours changed: `"theme":{"preset":"nord","colors":{"primary":"#bf616a"}}`.
+
+| Kind | Written |
+|---|---|
+| a name from [THEMES()] | `"theme":"nord"` |
+| a genre | `"theme":"fantasy"` |
+| a theme made from one colour | `"theme":{"seed":"#7aa2f7","harmony":"triadic"}` |
+| a base16 scheme | `"theme":{"base16":["#2e3440", ... sixteen colours]}` |
+| any of these with colours changed | `"theme":{"preset":"nord","colors":{"primary":"#bf616a"}}` |
+
+`terminal` uses only the sixteen standard colours, so each player sees it in the colours their own client is set to. Hundreds of base16 schemes exist for editors and terminals.
+
+### Genres
+
+There is one genre for each MSSP genre: `fantasy`, `historical`, `horror`, `modern`, `mystery`, `romance`, `science-fiction` and `spiritual` (`romance` serves MSSP's Adult as well). A genre theme changes the shapes as well as the colours, down to a box's corners:
+
+- `fantasy` - double lines with diamond corners and fleurons either side of a title, and a gauge of solid and shaded blocks
+- `horror` - a cracked heavy line with daggers at the corners
+- `mystery` - dashed lines with hollow diamonds
+- `romance` - rounded lines with hearts
+- `science-fiction` - heavy lines with bracket corners, triangle bullets and a segmented gauge
+
+A client without Unicode gets each in ASCII.
+
+### Themes from one colour
+
+The other colours take their hues from the seed, by `"harmony"`:
+
+- `monochrome` - one hue
+- `analogous` - its neighbours (the default)
+- `complementary` - the opposite hue
+- `split` - either side of the opposite
+- `triadic` - three evenly round
+- `tetradic` - four
+
+Each is made lighter or darker until it stands out from the background: 3 to 1 for lines, 4.5 to 1 for text, by the measure the web accessibility guidelines use. `"contrast"` from 0 to 1 raises both toward 7 to 1. `"mode":"light"` makes it for a light background; dark is the default.
+
+## Colours
 
 The colours, which `"colors"` sets by name:
 - `primary` - borders, rules, gauge bars and table headings
@@ -167,7 +271,9 @@ The colours, which `"colors"` sets by name:
 
 A colour is `"#rrggbb"`, a standard colour from 0 to 15, or both as `{"rgb":"#88c0d0","slot":6}`. `null` leaves one out.
 
-**Looks.** `"look"` sets a theme's shapes:
+## Looks
+
+`"look"` sets a theme's shapes:
 - `"border"` - a border style from [LAYOUT BORDERS]
 - `"title"` - the pieces either side of a title, joining it to the line: `["< ", " >"]`
 - `"guide"` - a tree guide style, see [TREE()]
@@ -188,7 +294,11 @@ A colour is `"#rrggbb"`, a standard colour from 0 to 15, or both as `{"rgb":"#88
 
 That is how a client without Unicode sees it. With Unicode the edges are double lines with a diamond at each corner, the title sits between two fleurons, and each bullet is a fleuron.
 
-**Sixteen-colour clients.** Each colour carries the standard colour a client with only the sixteen is sent instead, picked by its hue, so a pale blue is sent as blue rather than the grey nearest it. A client without colour is sent the layout as it is; nothing in a layout depends on colour alone. A client without Unicode gets ASCII borders in the same colours.
+## Sixteen-colour clients
+
+Each colour carries the standard colour a client with only the sixteen is sent instead, picked by its hue, so a pale blue is sent as blue rather than the grey nearest it. A client without colour is sent the layout as it is; nothing in a layout depends on colour alone. A client without Unicode gets ASCII borders in the same colours.
+
+## Using themes
 
 Written straight into options, a theme object goes inside them as it is: `box(Hi,,30,{{"theme":{"seed":"#d08770"}}})`. Each player can also pick a theme of their own for every layout they read with [@THEME]. [THEME()] writes any theme out in full, to keep in an attribute, and [SWATCH()] shows one's colours and how well each stands out.
 
@@ -275,20 +385,26 @@ info        Sample  #88c0d0  6 cyan          6.2:1
 
 # @theme
 
-`@theme[/light|/dark] <player>=<theme>`<br>
-`@theme <player>=`
+- `@theme[/light|/dark] <player>=<theme>`
+- `@theme <player>=`
 
 Sets the theme every layout is drawn in for that player: boxes, tables, gauges and the rest, from any function in [LAYOUT FUNCTIONS]. *<theme>* is anything the `"theme"` option takes (see [LAYOUT THEMES]): a name from [THEMES()], or a theme written out as JSON inside a second pair of braces, as for a layout function's options: `@theme me={{"seed":"#7aa2f7","harmony":"triadic"}}`. With nothing after the `=`, the theme is cleared.
 
+Output: none.
+
+## Light and dark
+
 `/light` makes the theme for a client with a light background, and `/dark` for a dark one. A theme made from one colour, which includes the genre themes, is made again for that background; a well-known scheme such as `nord` stays as it is.
+
+## Which theme wins
 
 A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it; the web portal has themes of its own. You must control *<player>*. The theme is kept in the player's `THEME` attribute.
 
+## Themes that do not read
+
 `@theme` refuses a theme it cannot read and says why, leaving the old one in place. A `THEME` attribute set some other way that does not read, or that names a theme since removed, is ignored: layouts use the game's theme, and the player is told at login why theirs was not used.
 
-Output: none.
-
-### Examples
+## Examples
 ```sharp
 > @theme me=fantasy
 Theme set.
@@ -572,11 +688,19 @@ Mail
 
 A picture, the text art a terminal shows instead of it, and the text that goes beside it.
 
-*<address>* is the picture, as for [IMAGE()]. *<description>* says what it shows, for a reader who cannot see it. *<art>* is the text art a telnet client sees; its lines keep their own spacing. *<float>* is `none` (the default: the picture on its own lines, *<beside>* under it), `left` or `right`. Floated, *<beside>* flows down the other side of the art in a telnet client and wraps back to the full width once past it; in the web portal, it flows round the picture. *<beside>* can be a layout, such as [FIELDS()].
+- *<address>* - the picture, as for [IMAGE()].
+- *<description>* - what it shows, for a reader who cannot see it.
+- *<art>* - the text art a telnet client sees; its lines keep their own spacing.
+- *<float>* - `none` (the default: the picture on its own lines, *<beside>* under it), `left` or `right`.
+- *<beside>* - the text beside the picture. It can be a layout, such as [FIELDS()].
+
+Floated, *<beside>* flows down the other side of the art in a telnet client and wraps back to the full width once past it; in the web portal, it flows round the picture.
+
+## Who sees the picture
 
 The picture is shown only when the caller is a Wizard or has the Send_OOB @power, as for image(), and the `image_hosts` option allows its host. Otherwise the portal shows the art too, or the description when there is none.
 
-### Example
+## Example
 ```sharp
 > think figure(https://example.com/cat.png,A cat,/|_/|%r=^.^=%r%b> <,left,The cat sits by the fire and watches the door all night long.,24)
 /|_/|  The cat sits by
@@ -708,7 +832,11 @@ Bram
 
 Rows under headings, the headings and each row's cells split by `|`. Each column is as wide as its widest cell. Begin a heading with `<`, `-` or `>`, as in [ALIGN()], to place its column's text left, centred or right.
 
+## Narrow screens
+
 When the table is too wide, the columns that wrap give way first, widest first, down to their least widths. If it is still too wide, the least important column is left out, then the next. A column that does not wrap is shown whole or not at all. When not even one column fits, each row is shown as labelled values instead. In the web portal it is a table; on a narrow screen it hides the columns of priority 2 or more, the least important first.
+
+## Options
 
 Options (the first argument, which may be empty). The lists are split like the cells, and a list may stop short or leave a column's place empty:
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
@@ -724,7 +852,7 @@ Options (the first argument, which may be empty). The lists are split like the c
 - `"stripe":true` - lays every second row on a background of its own, to help the eye along a row: the theme's `surface` colour, or dark grey when the theme has none. `"stripe":"<codes>"` uses that colour instead, in [ANSI()] codes: `"stripe":"/#203040"`. Rows shown as labelled values are not striped.
 - `"delim":"<text>"` - what splits the headings, cells and lists. `|` by default.
 
-### Examples
+## Examples
 ```sharp
 > think datatable({{"width":30,"nowrap":"2","min":"6||8"}},Name|>Idle|Doing,Mannaz|0s|Hooooo?,Raya|5m|Writing a scene in the garden)
 Name    Idle  Doing
@@ -768,6 +896,8 @@ Mannaz    0s  Hooooo?
 Raya      5m
 ```
 
+### Lists from other functions
+
 With lists from other functions, change the delimiter to the space they use: `datacolumns({{"delim":" "}},Name [lwho()],Idle [iter(lwho(),idle(##))])`. The space is quoted: `"delim":"%b"` would leave the option empty. A cell holding a space then needs another delimiter.
 
 ::: seealso
@@ -789,14 +919,18 @@ Options (the last argument):
 - `"mirror":true` - run there and back: red to blue to red.
 - `"repeat":<n>` - run through the colours *<n>* times, 1 to 1000.
 
+## Colour spaces
+
 The colours blend in a space built to look even to the eye, not in plain RGB, whose midpoints go grey and dark (red to green through a muddy olive):
 - `oklch` (the default) keeps the middle as bright and vivid as the ends; red to green passes through yellow.
 - `oklab` goes straight across, with no swing through other hues; colours far apart meet in a softer middle.
 - `hsl` is a brighter, less even rainbow sweep.
 
+## Clients with fewer colours
+
 A blend needs a client with 256 colours or more, which gets each shade's nearest. A client with only the sixteen standard colours gets bands of the colours you named instead, each character in the one it lies nearest: `r|b` shows as a red half and a blue half. The portal shows the full blend.
 
-### Examples
+## Examples
 ```sharp
 > think gradient(Mannaz Byron,#ff4040|#ffd040|#40c0ff)
 Mannaz Byron
