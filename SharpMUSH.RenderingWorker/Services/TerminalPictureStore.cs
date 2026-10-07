@@ -163,7 +163,8 @@ public sealed class TerminalPictureStore : IDisposable
 	/// </summary>
 	public static TerminalPicture Decode(byte[] bytes)
 	{
-		var info = ImageInfo.FromStream(new MemoryStream(bytes, writable: false))
+		using var stream = new MemoryStream(bytes, writable: false);
+		var info = ImageInfo.FromStream(stream)
 			?? throw new InvalidDataException("Not a picture this server reads.");
 		if (info.Width is <= 0 or > MaxDecodedSide || info.Height is <= 0 or > MaxDecodedSide)
 			throw new InvalidDataException($"A {info.Width}x{info.Height} picture is over {MaxDecodedSide} pixels a side.");
