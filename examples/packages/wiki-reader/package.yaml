@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -79,11 +79,11 @@ objects:
 
       INC`DISPLAY`ERROR:
         value: |-
-          @@ %0 the message — every failure in this package is reported through here; @pemit %#=[ansi(hr,Wiki>)] %0
+          @@ %0 the message — every failure in this package is reported through here; @pemit %#=[notice(WIKI,%0,error)]
         flags: [cmdsyntax]
       INC`DISPLAY`INFO:
         value: |-
-          @@ %0 the message — for an empty result, which is not a failure; @pemit %#=[ansi(hc,Wiki>)] %0
+          @@ %0 the message — for an empty result, which is not a failure; @pemit %#=[notice(WIKI,%0)]
         flags: [cmdsyntax]
 
       # The namespaces @wiki knows (WikiNamespace). Named once so the index, the listing
