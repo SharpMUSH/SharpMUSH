@@ -11,8 +11,10 @@ namespace SharpMUSH.Tests.Packages;
 /// <summary>
 /// A package's <c>settings:</c>, planned, installed, upgraded and uninstalled against the real world. Each test
 /// sets <c>portal_port</c>, which nothing reads, and they take turns since the option is the world's.
+/// Unkeyed, so they also wait on <see cref="Commands.ConfigSetCommandTests"/> and the other classes that put a
+/// saved copy of the whole options document back, which would undo a package's setting mid-test.
 /// </summary>
-[NotInParallel(nameof(PackageSettingInstallTests))]
+[NotInParallel]
 public class PackageSettingInstallTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

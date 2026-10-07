@@ -128,7 +128,7 @@ public class GameFeatureServiceTests
 
 		await Assert.That(packages.Select(p => p.Id)).IsEquivalentTo(BundledPackages.All.Select(p => p.PackageId));
 		var scene = packages.Single(p => p.Id == "scene");
-		await Assert.That(scene.DependsOn).IsEquivalentTo(["plus-help", "common-functions"]);
+		await Assert.That(scene.DependsOn).IsEquivalentTo(["plus-help"]);
 		await Assert.That(scene.Description).IsNotEmpty();
 		await Assert.That(packages.Single(p => p.Id == "profile-handler").Requires).IsEqualTo(HandlerKinds.Http);
 		await Assert.That(packages.Single(p => p.Id == "room-contents").Requires).IsEqualTo(HandlerKinds.Event);
@@ -161,20 +161,20 @@ public class GameFeatureServiceTests
 		var result = await game.Features().ApplyPackagesAsync(["scene"], CancellationToken.None);
 
 		await Assert.That(result is Success).IsTrue();
-		await Assert.That(game.Calls).IsEquivalentTo(["+common-functions", "+plus-help", "+scene"],
+		await Assert.That(game.Calls).IsEquivalentTo(["+plus-help", "+scene"],
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
 	public async Task PackagesNotAskedFor_AreRemoved_DependentsFirst()
 	{
-		var game = new Game("common-functions", "plus-help", "scene", "wiki-reader");
+		var game = new Game("plus-help", "scene", "wiki-reader");
 
 		await game.Features().ApplyPackagesAsync(["wiki-reader"], CancellationToken.None);
 
 		await Assert.That(game.Calls).IsEquivalentTo(["-scene"])
-			.Because("plus-help and common-functions stay: the wiki reader depends on them");
-		await Assert.That(game.Installed).IsEquivalentTo(["common-functions", "plus-help", "wiki-reader"]);
+			.Because("plus-help stays: the wiki reader depends on it");
+		await Assert.That(game.Installed).IsEquivalentTo(["plus-help", "wiki-reader"]);
 	}
 
 	/// <summary>

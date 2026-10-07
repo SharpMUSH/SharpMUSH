@@ -277,6 +277,8 @@ public class PlusHelpIntegrationTests
 
 		await Assert.That(bare).Contains("+help/write");
 		await Assert.That(qualified).Contains("+help/write");
+		await Assert.That(bare.Split('\n').Where(l => l.TrimStart().StartsWith('|'))).IsEmpty()
+			.Because("a topic has no side borders, so a copied line carries none");
 	}
 
 	/// <summary>
@@ -315,6 +317,21 @@ public class PlusHelpIntegrationTests
 
 		var refused = Joined(await RunAs(await ReaderAsync(), "+help/list nosuchsource"));
 		await Assert.That(refused).Contains("No such help source");
+	}
+
+	/// <summary>
+	/// A listing's summary is the topic's first paragraph rendered, not its markdown source:
+	/// no code-span backticks or bold asterisks, and a topic opening with a heading is summarised
+	/// by the paragraph under it.
+	/// </summary>
+	[Test]
+	public async Task List_SummariesAreRenderedMarkdown()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var listed = Joined(await RunAs(await ReaderAsync(), "+help/list plus-help"));
+
+		await Assert.That(listed).Contains("+help is this game's own help");
+		await Assert.That(listed).DoesNotContain("`").And.DoesNotContain("**");
 	}
 
 	/// <summary>

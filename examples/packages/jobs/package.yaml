@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -8,7 +8,7 @@ homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [jobs, requests, tickets, staff, anomaly]
 requires_server: ">=0.1"
 
-# plus-help carries the +help topics; common-functions draws header(), line() and footer();
+# plus-help carries the +help topics;
 # http-handler owns the GET/POST verb routers the portal routes hang off.
 depends:
   - package: plus-help
@@ -16,12 +16,6 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
-      branch: main
-  - package: common-functions
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/common-functions/
       branch: main
   - package: http-handler
     version: ">=1.0 <2.0"
@@ -411,30 +405,34 @@ objects:
         [revwords(sortkey({{jobs}}/FUN`NUMKEY,%0,n))]
       FUN`NUMKEY: |-
         [get(%0/NUM)]
-      FUN`COLS: |-
-        >5 <12 <[sub(%0,46)] <14 <9
-      # Job %0 for person %1 at width %2. A * before the number marks something unread.
-      FUN`ROW: |-
-        [align(u({{jobs}}/FUN`COLS,%2),[if(u({{jobs}}/FUN`UNREAD,%0,%1),*)][get(%0/NUM)],name(get(%0/BUCKET)),get(%0/TITLE),if(cand(u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1),u({{jobs}}/FUN`IS`OVERDUE,%0)),ansi(hr,Overdue),u({{jobs}}/FUN`STATE`TEXT,%0,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))),u({{jobs}}/FUN`DATE,get(%0/[if(u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)])))]
-      # Jobs %0 for person %1 at width %2, titled %3, with footer %4.
+      # Jobs %0 for person %1, a column at a time. A * before the number marks something unread. Cells are
+      # joined with %r and split on a newline, so a title holding a | stays one cell; the title wraps and
+      # every other column is shown whole or, on a narrow screen, left out (Bucket and Updated first).
+      FUN`TABLE: |-
+        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2%r4%r5),min,json(string,%r%r12),priority,json(string,1%r2%r1%r1%r2)),>#%r[iter(%0,[if(u({{jobs}}/FUN`UNREAD,%i0,%1),*)][get(%i0/NUM)],,%r)],Bucket%r[iter(%0,name(get(%i0/BUCKET)),,%r)],Title%r[iter(%0,get(%i0/TITLE),,%r)],Status%r[iter(%0,if(cand(setr(_w,u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1)),u({{jobs}}/FUN`IS`OVERDUE,%i0)),ansi(hr,Overdue),u({{jobs}}/FUN`STATE`TEXT,%i0,%q<_w>)),,%r)],Updated%r[iter(%0,u({{jobs}}/FUN`DATE,get(%i0/[if(u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)])),,%r)])]
+      # Jobs %0 for person %1 in a box titled %2, with footer %3. No width: each reader gets their own.
       FUN`LIST: |-
-        [header(%3,%2)]%r[align(u({{jobs}}/FUN`COLS,%2),#,Bucket,Title,Status,Updated)]%r[if(words(%0),iter(%0,u({{jobs}}/FUN`ROW,%i0,%1,%2),%b,%r),No jobs.)]%r[footer(%4,%2)]
+        [box([if(words(%0),u({{jobs}}/FUN`TABLE,%0,%1),No jobs.)][if(strlen(%3),%r[rule()]%r%3)],%2)]
       # Lists predicate %q<sel> (with %q<selarg>) under %q<ltitle> and %q<lfoot>.
       INC`SHOW`LIST: |-
-        @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,%q<sel>,%q<selarg>)),%#,width(%#),%q<ltitle>,%q<lfoot>)]
+        @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,%q<sel>,%q<selarg>)),%#,%q<ltitle>,%q<lfoot>)]
 
       # ---- one job --------------------------------------------------------------
-      FUN`FIELD: |-
-        [ansi(h,rjust(%0:,11))] %1
       # Job %0 entry %1, %2 1 for staff, %3 the mode. Replies are public, notes staff-only, and the action
       # log shows with /all and /act.
       FUN`ENTRY`VISIBLE: |-
         [switch(get(%0/ENTRY`%1`KIND),reply,not(strmatch(%3,act)),note,cand(%2,not(strmatch(%3,act))),action,cand(%2,t(match(all act,%3))),0)]
       FUN`ENTRY: |-
-        [line([u({{jobs}}/FUN`WHO,get(%0/ENTRY`%1`BY),%0,%2)][switch(get(%0/ENTRY`%1`KIND),note,%b[chr(40)]staff only[chr(41)],action,%b[chr(40)]log[chr(41)],)] [chr(183)] [u({{jobs}}/FUN`WHEN,get(%0/ENTRY`%1`AT))] [chr(183)] #%1,%3)]%r[u({{jobs}}/FUN`BODY,%0,%1,%3)]
-      # Job %0 for person %1 at width %2. %3: empty, all (with the log), act (the log only) or last:<n>.
+        [rule([u({{jobs}}/FUN`WHO,get(%0/ENTRY`%1`BY),%0,%2)][switch(get(%0/ENTRY`%1`KIND),note,%b[chr(40)]staff only[chr(41)],action,%b[chr(40)]log[chr(41)],)] [chr(183)] [u({{jobs}}/FUN`WHEN,get(%0/ENTRY`%1`AT))] [chr(183)] #%1)]%r[u({{jobs}}/FUN`BODY,%0,%1,%3)]
+      # Job %0 for person %1 whose screen is %2 wide. %3: empty, all (with the log), act (the log only) or
+      # last:<n>. A box: the fields, then each message under a rule naming who wrote it. Messages render at
+      # the width inside the box. Staff also see Due and Watchers; fields() takes its pairs as arguments,
+      # so the two readers get two calls (FUN`SHOW`FIELDS).
       FUN`SHOW: |-
-        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_v,squish(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(u({{jobs}}/FUN`ENTRY`VISIBLE,%0,%i0,%q<_s>,%3),%i0))))][if(strmatch(%3,last:*),setq(_v,revwords(extract(revwords(%q<_v>),1,after(%3,:)))))][header(Job [get(%0/NUM)]: [get(%0/TITLE)],%2)]%r[u({{jobs}}/FUN`FIELD,Bucket,name(get(%0/BUCKET)))]%r[u({{jobs}}/FUN`FIELD,Status,[u({{jobs}}/FUN`STATE`TEXT,%0,%q<_s>)][if(cand(%q<_s>,u({{jobs}}/FUN`IS`OVERDUE,%0)),%b[ansi(hr,Overdue)])])]%r[u({{jobs}}/FUN`FIELD,Priority,capstr(get(%0/PRIORITY)))]%r[u({{jobs}}/FUN`FIELD,Filed,[u({{jobs}}/FUN`WHEN,get(%0/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%0/FILED`BY),%0,%1)])]%r[if(%q<_s>,[u({{jobs}}/FUN`FIELD,Due,if(isint(get(%0/DUE)),u({{jobs}}/FUN`WHEN,get(%0/DUE)),None))]%r)][u({{jobs}}/FUN`FIELD,Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER))]%r[if(%q<_s>,[u({{jobs}}/FUN`FIELD,Watchers,u({{jobs}}/FUN`NAMES,%0,%1,WATCHER))]%r)][if(words(lattr(%0/HELPER`*)),[u({{jobs}}/FUN`FIELD,Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER))]%r)][iter(%q<_v>,u({{jobs}}/FUN`ENTRY,%0,%i0,%1,%2),%b,%r)]%r[footer(+job/reply [get(%0/NUM)]=<text> answers,%2)]
+        [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_v,squish(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(u({{jobs}}/FUN`ENTRY`VISIBLE,%0,%i0,%q<_s>,%3),%i0))))][if(strmatch(%3,last:*),setq(_v,revwords(extract(revwords(%q<_v>),1,after(%3,:)))))][box([u({{jobs}}/FUN`SHOW`FIELDS,%0,%1,%q<_s>)][iter(%q<_v>,%r[u({{jobs}}/FUN`ENTRY,%0,%i0,%1,max(10,sub(%2,4)))],%b,)]%r[rule()]%r+job/reply [get(%0/NUM)]=<text> answers,Job [get(%0/NUM)]: [get(%0/TITLE)])]
+      # Job %0's fields for person %1; %2 is 1 for someone who works its bucket.
+      FUN`SHOW`FIELDS: |-
+        [setq(_st,[u({{jobs}}/FUN`STATE`TEXT,%0,%2)][if(cand(%2,u({{jobs}}/FUN`IS`OVERDUE,%0)),%b[ansi(hr,Overdue)])])][setq(_fi,[u({{jobs}}/FUN`WHEN,get(%0/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%0/FILED`BY),%0,%1)])][if(%2,fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Due,if(isint(get(%0/DUE)),u({{jobs}}/FUN`WHEN,get(%0/DUE)),None),Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Watchers,u({{jobs}}/FUN`NAMES,%0,%1,WATCHER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)),fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)))]
 
       # ---- guards ---------------------------------------------------------------
       # The job numbered %q<lhs>, as %q<jo>, %q<n>, its bucket %q<b> and %q<staff>. A job the person may
@@ -478,10 +476,10 @@ objects:
       INC`JOB`WHO: |-
         @assert isdbref(setr(tp,pmatch(%q<arg>)))=@pemit %#=I don't know a player called %q<arg>.; think [setq(sel,WHO)][setq(selarg,[objid(%q<tp>)])][setq(ltitle,Jobs [name(%q<tp>)] handles)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
       INC`JOB`FROM: |-
-        @assert isdbref(setr(tp,pmatch(%q<arg>)))=@pemit %#=I don't know a player called %q<arg>.; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,FROM,objid(%q<tp>))),%#,width(%#),Jobs filed by [name(%q<tp>)],)]
+        @assert isdbref(setr(tp,pmatch(%q<arg>)))=@pemit %#=I don't know a player called %q<arg>.; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,FROM,objid(%q<tp>))),%#,Jobs filed by [name(%q<tp>)],)]
       # +myjobs/old and +job/old [<bucket>]: closed jobs, newest first.
       INC`JOB`OLD: |-
-        think [setq(selarg,if(strlen(%q<arg>),u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))]; @assert cor(not(strlen(%q<arg>)),strlen(%q<selarg>))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,OLD,%q<selarg>)),%#,width(%#),Closed jobs[if(strlen(%q<selarg>),%bin [name(%q<selarg>)])],+job <#> reads one)]
+        think [setq(selarg,if(strlen(%q<arg>),u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))]; @assert cor(not(strlen(%q<arg>)),strlen(%q<selarg>))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,OLD,%q<selarg>)),%#,Closed jobs[if(strlen(%q<selarg>),%bin [name(%q<selarg>)])],+job <#> reads one)]
       INC`JOB`NEXT: |-
         @assert words(setr(nx,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,UNREAD))))=@pemit %#=Nothing is unread.; think [setq(lhs,get(first(%q<nx>)/NUM))][setq(sw,)]; @include {{jobs}}/INC`JOB`VIEW
       INC`JOB`BRIEF: |-
@@ -625,14 +623,13 @@ objects:
         think [setq(_nb,get(%q<jo>/BUCKET))][setq(_st,setdiff(setunion(iter(u({{jobs}}/FUN`HLIST,%q<jo>,HANDLER) [u({{jobs}}/FUN`HLIST,%q<jo>,WATCHER)],if(strmatch(%i0,role:*),,%i0)),iter(lwho(),if(u({{jobs}}/FUN`CAN`WORK,%q<_nb>,%i0),objid(%i0)))),%q<actor>))][setq(_pt,if(strlen(%q<pmsg>),setdiff(setunion(get(%q<jo>/FILED`BY),u({{jobs}}/FUN`HLIST,%q<jo>,HELPER)),%q<actor> %q<_st>)))][setq(_fb,get(%q<jo>/FILED`BY))]; @dolist/inline %q<_st>=@pemit ##=%q<smsg>; @dolist/inline %q<_pt>=@pemit ##=%q<pmsg>; @if cand(strlen(%q<pmsg>),%q<mail>,not(strmatch(%q<_fb>,%q<actor>)),cor(%q<mailforce>,not(strmatch(get({{store}}/OPT`MAIL`[u({{jobs}}/FUN`KEY,%q<_fb>)]),off))))={think [mailsend(%q<_fb>,Job [get(%q<jo>/NUM)]: [edit(get(%q<jo>/TITLE),/,-)]/%q<pmsg>%r%r[firstof(%q<mailtext>,)])]}
 
       # ---- buckets --------------------------------------------------------------
-      FUN`BCOLS: |-
-        <16 >5 <[sub(%0,23)]
-      FUN`BROW: |-
-        [align(u({{jobs}}/FUN`BCOLS,%2),[name(%0)][if(u({{jobs}}/FUN`CAN`WORK,%0,%1),*)],words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%0)),get(%0/DESCRIPTION))]
+      # Buckets %0 as person %1 sees them; a * marks one they work.
+      FUN`BTABLE: |-
+        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,%r%r12)),Bucket%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)],,%r)],>Open%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],What it is for%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
       INC`BUCKET`LIST: |-
-        @pemit %#=[header(Job buckets,width(%#))]%r[align(u({{jobs}}/FUN`BCOLS,width(%#)),Bucket,Open,What it is for)]%r[iter(u({{jobs}}/FUN`BUCKETS`SEEN,%#),u({{jobs}}/FUN`BROW,%i0,%#,width(%#)),%b,%r)]%r[footer([if(u({{jobs}}/WEB`STAFF,%#),* you work it [chr(183)]%b)]+request <bucket>/<title>=<text>,width(%#))]
+        @pemit %#=[box([u({{jobs}}/FUN`BTABLE,u({{jobs}}/FUN`BUCKETS`SEEN,%#),%#)]%r[rule()]%r[if(u({{jobs}}/WEB`STAFF,%#),* you work it [chr(183)]%b)]+request <bucket>/<title>=<text>,Job buckets)]
       INC`BUCKET`INFO: |-
-        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[header(Bucket: [name(%q<bk>)],width(%#))]%r[u({{jobs}}/FUN`FIELD,About,get(%q<bk>/DESCRIPTION))]%r[u({{jobs}}/FUN`FIELD,Turnaround,[firstof(get(%q<bk>/TURNAROUND),0)] days)]%r[u({{jobs}}/FUN`FIELD,Reopen,[firstof(get(%q<bk>/REOPEN),0)] days)]%r[u({{jobs}}/FUN`FIELD,Anonymous,firstof(get(%q<bk>/ANONYMOUS),none))]%r[u({{jobs}}/FUN`FIELD,Hidden,if(t(get(%q<bk>/HIDDEN)),yes,no))]%r[u({{jobs}}/FUN`FIELD,Priority,firstof(get(%q<bk>/PRIORITY),normal))]%r[u({{jobs}}/FUN`FIELD,Keep,if(get(%q<bk>/KEEP),[get(%q<bk>/KEEP)] days,forever))]%r[u({{jobs}}/FUN`FIELD,Permission,softcode.jobs.[get(%q<bk>/SLUG)])]%r[u({{jobs}}/FUN`FIELD,Role,job-admin-[get(%q<bk>/SLUG)])]%r[u({{jobs}}/FUN`FIELD,File lock,lock(%q<bk>/file))]%r[u({{jobs}}/FUN`FIELD,Work lock,lock(%q<bk>/work))]%r[u({{jobs}}/FUN`FIELD,Hooks,firstof(itemize(squish(iter(lattr(%q<bk>/ON`*),if(strmatch(get(%q<bk>/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]%r[footer(+bucket/set [name(%q<bk>)]/<setting>=<value>,width(%#))]
+        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[box([fields(,About,get(%q<bk>/DESCRIPTION),Turnaround,[firstof(get(%q<bk>/TURNAROUND),0)] days,Reopen,[firstof(get(%q<bk>/REOPEN),0)] days,Anonymous,firstof(get(%q<bk>/ANONYMOUS),none),Hidden,if(t(get(%q<bk>/HIDDEN)),yes,no),Priority,firstof(get(%q<bk>/PRIORITY),normal),Keep,if(get(%q<bk>/KEEP),[get(%q<bk>/KEEP)] days,forever),Permission,softcode.jobs.[get(%q<bk>/SLUG)],Role,job-admin-[get(%q<bk>/SLUG)],File lock,lock(%q<bk>/file),Work lock,lock(%q<bk>/work),Hooks,firstof(itemize(squish(iter(lattr(%q<bk>/ON`*),if(strmatch(get(%q<bk>/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]%r[rule()]%r+bucket/set [name(%q<bk>)]/<setting>=<value>,Bucket: [name(%q<bk>)])]
       FUN`SETTING`OK: |-
         [switch(%0,description,lte(strlen(%1),200),turnaround,cand(isint(%1),gte(%1,0)),reopen,cand(isint(%1),gte(%1,0)),keep,cor(not(strlen(%1)),cand(isint(%1),gt(%1,0))),anonymous,t(match(none filer staff,lcstr(%1))),hidden,t(match(yes no on off 1 0,lcstr(%1))),priority,t(strlen(u({{jobs}}/FUN`PRIORITY`PARSE,%1))),0)]
       FUN`SETTING`VALUE: |-

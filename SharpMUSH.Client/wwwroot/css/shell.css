@@ -615,6 +615,15 @@
     padding: 0.0625rem 0;
 }
 
+/* A layout block in the terminal's pre-wrap text. As a block it already ends its line, so the newline
+   softcode writes after a box() (before its footer) left an empty line under it. Laid inline across the
+   whole line, the box is still on a line of its own and that newline only ends it. */
+.sharp-terminal-output .ms-layout {
+    display: inline-block;
+    width: 100%;
+    vertical-align: top;
+}
+
 /* Sent (echoed) commands — dim cyan, prefixed with an accent caret in markup */
 .terminal-sent {
     color: #7fb0c4;

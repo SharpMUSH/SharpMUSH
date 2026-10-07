@@ -13,7 +13,8 @@ namespace SharpMUSH.Tests.Integration.Packages;
 /// The bundled "Common Functions" package is delivered by the package manager
 /// (create mode): a single owned thing carries the HEADER/FOOTER/LINE softcode
 /// that the global functions header()/footer()/line() evaluate, registered by
-/// the package's AINSTALL (once) and STARTUP (every boot). These assertions are
+/// the package's AINSTALL (once) and STARTUP (every boot). All three are rule()
+/// underneath, drawn in the game's layout_border style. These assertions are
 /// read-only / additive so they run safely alongside the other tests.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -30,7 +31,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	{
 		if (await Registry.GetInstalledPackageAsync("common-functions") is not InstalledPackageRecord package)
 			throw new InvalidOperationException("common-functions is not installed.");
-		await Assert.That(package.Version).IsEqualTo("1.0.0");
+		await Assert.That(package.Version).IsEqualTo("1.1.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("common-functions");
 		await Assert.That(objects.Count).IsEqualTo(1);
@@ -46,7 +47,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
-	/// Functional end-to-end check that header() resolves to a centered rule: the
+	/// Functional end-to-end check that header() resolves to a full-width rule: the
 	/// bundled-package bootstrap (<c>DefaultPackagesBootstrapService</c>) installs the
 	/// package, whose AINSTALL registers header() as a global <c>@function</c>. The test
 	/// enactor (God) reports no client width, so width(%#) falls back to 78.
@@ -62,7 +63,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 		await Assert.That(result).Contains("=");
 	}
 
-	/// <summary>type=left brackets the title and pushes it to the left edge after a short border.</summary>
+	/// <summary>type=left sets the title in brackets at the left edge, after one border character.</summary>
 	[Test]
 	public async Task Header_LeftType_BracketsAndLeftJustifies()
 	{
@@ -70,11 +71,10 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsEqualTo(40);
-		await Assert.That(result).Contains("[ Test ]");
-		await Assert.That(result).StartsWith("==");
+		await Assert.That(result).StartsWith("=< Test >=");
 	}
 
-	/// <summary>type=right brackets the title and pushes it to the right edge before a short border.</summary>
+	/// <summary>type=right sets the title in brackets at the right edge, before one border character.</summary>
 	[Test]
 	public async Task Footer_RightType_BracketsAndRightJustifies()
 	{
@@ -82,8 +82,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsEqualTo(40);
-		await Assert.That(result).Contains("[ Test ]");
-		await Assert.That(result).EndsWith("==");
+		await Assert.That(result).EndsWith("=< Test >=");
 	}
 
 	/// <summary>A title far wider than the rule is clipped to fit — never overflowing onto a new line.</summary>

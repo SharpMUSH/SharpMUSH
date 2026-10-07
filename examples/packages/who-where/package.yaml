@@ -1,8 +1,8 @@
 format: 1
 package: who-where
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "+who and +where commands with a shared formatting object."
+description: "+who and +where commands with a shared formatting object, drawn as layout tables."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [who, where, social]
@@ -10,12 +10,6 @@ convention_prefix: WW_
 requires_server: ">=0.1"
 
 depends:
-  - package: common-functions
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/common-functions/
-      branch: main
   - package: plus-help
     version: ">=1.0 <2.0"
     source:
@@ -30,20 +24,29 @@ objects:
     parent: "{{ww_functions}}"
     attributes:
       CMD_+WHO: |-
-        $+who:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Who)][iter(mwho(),%r[ljust(name(%i0),20)][conn(%i0)],,)]
+        $+who:@pemit %#=[u({{ww_functions}}/WW_FN_WHO,mwho())]
       CMD_+WHERE: |-
-        $+where:@pemit %#=[u({{ww_functions}}/WW_FN_HEADER,Where)][iter(mwho(),%r[ljust(name(%i0),20)][name(loc(%i0))],,)]
+        $+where:@pemit %#=[u({{ww_functions}}/WW_FN_WHERE,mwho())]
 
   - ref: ww_functions
     type: thing
     name: Who-Where Function Object
     flags: [no_command]
     attributes:
-      # header() is common-functions'. The hand-rolled rule this replaces was a fixed 76 columns
-      # whatever the reader's screen was, so it wrapped on a narrow client and stopped short on a
-      # wide one; header() sizes from width(%#).
-      WW_FN_HEADER: |-
-        [header(%0,width(%#))]
+      # Each screen is a box() round a datacolumns() table, one iter() per column. No width is given,
+      # so every reader gets it at their own width, and the web portal draws a card with a table.
+      # Columns are joined with %r and the delimiter is a newline (WW_FN_OPTS), so a room name with a |
+      # in it stays one cell; WW_FN_OPTS takes the nowrap columns and the priorities split the same way.
+      # Every column is nowrap, so a narrow screen drops the lower-priority columns instead of breaking
+      # names across lines.
+      WW_FN_OPTS: |-
+        json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1))
+      WW_FN_FOOT: |-
+        %r[rule()]%r[words(%0)] connected
+      WW_FN_WHO: |-
+        box(datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2),Name%r[iter(%0,name(%i0),,%r)],>Idle%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>Connected%r[iter(%0,trim(timestring(conn(%i0))),,%r)])[u(%!/WW_FN_FOOT,%0)],Who's Online)
+      WW_FN_WHERE: |-
+        box(datacolumns(u(%!/WW_FN_OPTS,1%r2,1%r2),Name%r[iter(%0,name(%i0),,%r)],Location%r[iter(%0,firstof(name(loc(%i0)),-),,%r)])[u(%!/WW_FN_FOOT,%0)],Where)
 
   # ---- +help topics ---------------------------------------------------------
   # On the function object, which is unflagged — the librarian cannot u() a privileged object's
