@@ -99,7 +99,8 @@ public class PackageInstallAdmissionTests
 				services.GetRequiredService<IPackageOperationGate>(),
 				services.GetRequiredService<ILockService>(),
 				services.GetRequiredService<IPackageDeclarationService>(),
-				services.GetRequiredService<IPackageSettingService>())
+				services.GetRequiredService<IPackageSettingService>(),
+				services.GetRequiredService<Lazy<IRuntimeRegistrationService>>())
 		};
 	}
 

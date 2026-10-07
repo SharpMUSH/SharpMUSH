@@ -212,6 +212,10 @@ internal static class EngineRegistration
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ISortService, SortService>();
 		services.AddSingleton<IHookService, HookService>();
+		// Forgets the hooks, global functions and added commands that target objects which are going
+		// (package uninstall, the PennMUSH import's package removal). Reached through Lazy<T>: it holds
+		// the command library, which reaches nearly every service.
+		services.AddSingleton<IRuntimeRegistrationService, Implementation.Services.RuntimeRegistrationService>();
 		services.AddSingleton<IEventService, EventService>();
 		// Inbound HTTP: run http_handler <METHOD> attributes as commands (see help sharphttp).
 		services.AddSingleton<IHttpOutputCapture, HttpOutputCapture>();

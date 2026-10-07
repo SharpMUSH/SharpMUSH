@@ -21,8 +21,8 @@ public partial class PennMUSHDatabaseConverter
 	/// <remarks>
 	/// Runs while the seeded Package Manager (#7) is still there, since the uninstall writes as it. An
 	/// uninstall only marks a package's objects GOING, which keeps their numbers, so they are deleted here
-	/// outright, and every hook that pointed at one is cleared: its number is about to be a source
-	/// object's. Anything the package objects still own or hold goes to God with the seeds' holdings.
+	/// outright, and every runtime registration that pointed at one is forgotten: its number is about to be a
+	/// source object's. Anything the package objects still own or hold goes to God with the seeds' holdings.
 	/// </remarks>
 	/// <returns>The numbers of the objects the packages created, for the caller to delete.</returns>
 	private async Task<HashSet<int>> UninstallPackagesAsync(PennMUSHConversionContext context,
@@ -65,7 +65,8 @@ public partial class PennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Deletes the objects the uninstalled packages created and clears the hooks that pointed at them.
+	/// Deletes the objects the uninstalled packages created and forgets the hooks, global functions and
+	/// added commands that pointed at them.
 	/// </summary>
 	private async Task DeletePackageObjectsAsync(PennMUSHConversionContext context, IReadOnlySet<int> packageObjects,
 		CancellationToken cancellationToken)
@@ -83,9 +84,10 @@ public partial class PennMUSHDatabaseConverter
 			}
 		}
 
-		if (_hooks is not null && await _hooks.ClearHooksOnAsync(packageObjects) is var cleared and > 0)
+		if (_registrations is not null
+			&& await _registrations.Value.ForgetRegistrationsOnAsync([.. packageObjects.Select(number => new DBRef(number))]) is { IsEmpty: false } forgotten)
 		{
-			context.Warnings.Add($"Cleared {cleared} command hook(s) that pointed at the removed package objects.");
+			context.Warnings.Add($"{forgotten.Describe()} They pointed at the removed package objects.");
 		}
 
 		if (deleted.Count > 0)

@@ -4,6 +4,11 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
+/// <summary>A hook <see cref="IHookService.ClearHooksOnAsync"/> took off a command.</summary>
+/// <param name="Command">The command the hook was on, in capitals.</param>
+/// <param name="HookType">The hook's type: IGNORE, OVERRIDE, BEFORE, AFTER or EXTEND.</param>
+public sealed record ClearedHook(string Command, string HookType);
+
 public interface IHookService
 {
 	/// <summary>
@@ -39,10 +44,11 @@ public interface IHookService
 
 	/// <summary>
 	/// Clears every hook, on any command, whose target is one of <paramref name="targetObjects"/>: those
-	/// objects are going, and their numbers may be given to other objects.
+	/// objects are going, and their numbers may be given to other objects. A full objid matches only
+	/// that object (<see cref="DBRef.Matches"/>); a bare dbref matches the number.
 	/// </summary>
-	/// <returns>How many hooks were cleared.</returns>
-	ValueTask<int> ClearHooksOnAsync(IReadOnlySet<int> targetObjects);
+	/// <returns>Every hook that was cleared, by the command it was on and its type.</returns>
+	ValueTask<IReadOnlyList<ClearedHook>> ClearHooksOnAsync(IReadOnlyCollection<DBRef> targetObjects);
 
 	/// <summary>
 	/// Gets all hooks for a specific command.

@@ -41,7 +41,8 @@ public class PackageOperationGateTests
 			gate,
 			services.GetRequiredService<ILockService>(),
 			services.GetRequiredService<IPackageDeclarationService>(),
-			services.GetRequiredService<IPackageSettingService>());
+			services.GetRequiredService<IPackageSettingService>(),
+			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>());
 	}
 
 	private static PackageManifest Manifest(string id, string version) =>
