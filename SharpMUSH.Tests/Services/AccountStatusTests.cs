@@ -195,6 +195,64 @@ public class AccountStatusTests
 	}
 
 	[Test]
+	[Arguments(AccountStatus.Disabled)]
+	[Arguments(AccountStatus.Closed)]
+	[Arguments(AccountStatus.Deleted)]
+	public async ValueTask SetAccountStatus_GodsAccount_IsRefusedWithoutPersisting(AccountStatus status)
+	{
+		var (svc, db, _, sessions) = Build();
+		var account = MakeAccount();
+		db.GetAccountByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
+		db.GetAccountForCharacterAsync(Arg.Is<DBRef>(d => d.Number == 1), Arg.Any<CancellationToken>()).Returns(account);
+
+		var refused = (await svc.SetAccountStatusAsync(account.Id!, status)).Expect<Error<string>>();
+
+		await Assert.That(refused.Value).IsEqualTo("God's account cannot be disabled, closed or deleted.");
+		await db.DidNotReceive().UpdateAccountStatusAsync(
+			Arg.Any<string>(), Arg.Any<AccountStatus>(), Arg.Any<CancellationToken>());
+		await sessions.DidNotReceive().RevokeAllForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask SetAccountStatus_GodsAccount_CanBeRestored()
+	{
+		var (svc, db, _, _) = Build();
+		var account = MakeAccount(AccountStatus.Disabled);
+		db.GetAccountByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
+		db.GetAccountForCharacterAsync(Arg.Is<DBRef>(d => d.Number == 1), Arg.Any<CancellationToken>()).Returns(account);
+
+		await Assert.That((await svc.SetAccountStatusAsync(account.Id!, AccountStatus.Active)).Value).IsTypeOf<Success>();
+		await db.Received(1).UpdateAccountStatusAsync(account.Id!, AccountStatus.Active, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask SetAccountStatus_AccountWithoutGod_CanBeClosed()
+	{
+		var (svc, db, _, _) = Build();
+		var account = MakeAccount();
+		db.GetAccountByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
+		db.GetAccountForCharacterAsync(Arg.Is<DBRef>(d => d.Number == 1), Arg.Any<CancellationToken>())
+			.Returns(new SharpAccount { Id = "node_accounts/2", Username = "Other", PasswordHash = "hash" });
+
+		await Assert.That((await svc.SetAccountStatusAsync(account.Id!, AccountStatus.Closed)).Value).IsTypeOf<Success>();
+	}
+
+	[Test]
+	public async ValueTask Ban_GodsAccount_IsRefusedWithoutPersisting()
+	{
+		var (svc, db, _, _) = Build();
+		var account = MakeAccount();
+		db.GetAccountByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
+		db.GetAccountForCharacterAsync(Arg.Is<DBRef>(d => d.Number == 1), Arg.Any<CancellationToken>()).Returns(account);
+
+		var refused = (await svc.BanAsync(new AccountBan(account.Id!, "testing", null, DateTimeOffset.UtcNow, null)))
+			.Expect<Error<string>>();
+
+		await Assert.That(refused.Value).IsEqualTo("God's account cannot be banned.");
+		await db.DidNotReceive().BanAccountAsync(Arg.Any<AccountBan>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async ValueTask CreateAccount_ReservedSystemUsername_ReturnsErrorWithoutCreating()
 	{
 		var (svc, db, _, _) = Build();

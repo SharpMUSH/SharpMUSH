@@ -74,6 +74,12 @@ public interface IAccountService
 
 	ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default);
 
+	/// <summary>
+	/// Whether the account holds God (#1). That account can never be disabled, closed, deleted or banned,
+	/// so the game always has a way in.
+	/// </summary>
+	ValueTask<bool> IsGodsAccountAsync(string accountId, CancellationToken ct = default);
+
 	ValueTask<SharpAccount?> GetByIdAsync(string accountId, CancellationToken ct = default);
 
 	ValueTask<SharpAccount?> GetByUsernameAsync(string username, CancellationToken ct = default);
@@ -85,7 +91,8 @@ public interface IAccountService
 	/// Sets the account's lifecycle status. Accounts are never removed, so this is how an account is
 	/// disabled, closed, deleted, or restored. Any transition away from
 	/// <see cref="AccountStatus.Active"/> revokes live sessions.
-	/// Returns an error if the account is not found, or if it is the reserved system account.
+	/// Returns an error if the account is not found, if it is the reserved system account, or if it is
+	/// God's account (<see cref="IsGodsAccountAsync"/>) and the status is anything but active.
 	/// </summary>
 	ValueTask<Result<Success>> SetAccountStatusAsync(string accountId, AccountStatus status, CancellationToken ct = default);
 
@@ -115,7 +122,7 @@ public interface IAccountService
 	/// <summary>
 	/// Bans the account: disables it, keeps the ban's reason, author and expiry, and revokes its sessions
 	/// and live connections as a disable does. Replaces any ban it already had.
-	/// Returns an error if the account is not found, or if it is the reserved system account.
+	/// Returns an error if the account is not found, or if it is the reserved system account or God's.
 	/// </summary>
 	ValueTask<Result<Success>> BanAsync(AccountBan ban, CancellationToken ct = default);
 

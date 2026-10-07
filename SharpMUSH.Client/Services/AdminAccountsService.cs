@@ -14,7 +14,7 @@ public class AdminAccountsService(IHttpClientFactory httpClientFactory)
 	public record AdminCharacterSummary(int DbrefNumber, string Name);
 
 	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
-		bool MustChangePassword, bool IsReserved, IReadOnlyList<AdminCharacterSummary> Characters);
+		bool MustChangePassword, bool IsReserved, bool IsGodsAccount, IReadOnlyList<AdminCharacterSummary> Characters);
 
 	private record ResetPasswordRequest(string NewPassword);
 

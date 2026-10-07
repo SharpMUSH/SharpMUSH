@@ -228,6 +228,9 @@ public class AccountService(
 	public ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default)
 		=> database.GetAccountForCharacterAsync(characterRef, ct);
 
+	public async ValueTask<bool> IsGodsAccountAsync(string accountId, CancellationToken ct = default)
+		=> await database.GetAccountForCharacterAsync(new DBRef(1), ct) is { } holder && holder.Id == accountId;
+
 	public ValueTask<SharpAccount?> GetByIdAsync(string accountId, CancellationToken ct = default)
 		=> database.GetAccountByIdAsync(accountId, ct);
 
@@ -246,6 +249,9 @@ public class AccountService(
 		if (SystemAccount.IsReserved(account.Username))
 			return new Error<string>("The system account's status cannot be changed.");
 
+		if (status is not AccountStatus.Active && await IsGodsAccountAsync(accountId, ct))
+			return new Error<string>("God's account cannot be disabled, closed or deleted.");
+
 		await database.UpdateAccountStatusAsync(accountId, status, ct);
 		await StatusChangedAsync(accountId, status, ct);
 		return new Success();
@@ -259,6 +265,9 @@ public class AccountService(
 
 		if (SystemAccount.IsReserved(account.Username))
 			return new Error<string>("The system account cannot be banned.");
+
+		if (await IsGodsAccountAsync(ban.AccountId, ct))
+			return new Error<string>("God's account cannot be banned.");
 
 		if (!await database.BanAccountAsync(ban, ct))
 			return new Error<string>("Account not found.");

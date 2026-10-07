@@ -85,6 +85,17 @@ file sealed class AdminAccountsApiHandler : HttpMessageHandler
 								},
 								new
 								{
+										Id = "5",
+										Username = "gods-account",
+										Email = (string?)null,
+										Status = "Active",
+										MustChangePassword = false,
+										IsReserved = false,
+										IsGodsAccount = true,
+										Characters = Array.Empty<object>(),
+								},
+								new
+								{
 										Id = "9",
 										Username = "system",
 										Email = (string?)null,
@@ -210,7 +221,7 @@ public class AdminAccountsPageTests : TrackingBunitContext, IAsyncDisposable
 	/// <summary>
 	/// The reserved row offers no status actions, matching the server-side guard rather than
 	/// relying on it alone. Four actionable rows: Active offers three targets, the other three
-	/// offer one each.
+	/// offer one each. God's account offers none.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task ReservedAccountRow_OffersNoStatusActions()
@@ -227,6 +238,25 @@ public class AdminAccountsPageTests : TrackingBunitContext, IAsyncDisposable
 		});
 
 		await Assert.That(cut.FindAll("button[data-testid='account-status-action']").Count).IsEqualTo(6);
+	}
+
+	/// <summary>God's account offers no way to disable, close or delete it.</summary>
+	[TUnit.Core.Test]
+	public async Task GodsAccountRow_OffersNoStatusActions()
+	{
+		Auth.SetAuthorized("headwiz");
+		Auth.SetRoles("Wizard");
+
+		var cut = Render<SharpMUSH.Client.Pages.Admin.AdminAccounts>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("gods-account"))
+				throw new InvalidOperationException("account rows not rendered yet");
+		});
+
+		var row = cut.FindAll("tr").Single(tr => tr.TextContent.Contains("gods-account"));
+		await Assert.That(row.QuerySelectorAll("button[data-testid='account-status-action']").Length).IsEqualTo(0);
 	}
 
 	[TUnit.Core.Test]
