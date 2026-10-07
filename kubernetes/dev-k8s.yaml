@@ -399,13 +399,6 @@ spec:
                 name: sharpmush
                 port:
                   number: 8080
-          - path: /metrics
-            pathType: Exact
-            backend:
-              service:
-                name: sharpmush
-                port:
-                  number: 9092
           - path: /*
             pathType: ImplementationSpecific
             backend:
