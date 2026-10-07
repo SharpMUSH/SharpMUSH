@@ -171,9 +171,9 @@ public class AdminKeyValueListTests : TrackingBunitContext
 				return Task.FromResult<ApiResult<Success>>(new Success());
 			});
 
-		component.FindAll("input")[0].Input("  *.example.com  ");
-		component.FindAll("input")[1].Input("!connect , register ,");
-		component.Find("button.kit-capsule--primary").Click();
+		await component.FindAll("input")[0].InputAsync("  *.example.com  ");
+		await component.FindAll("input")[1].InputAsync("!connect , register ,");
+		await component.Find("button.kit-capsule--primary").ClickAsync();
 
 		await Assert.That(addedKey).IsEqualTo("*.example.com");
 		await Assert.That(addedValues).IsEquivalentTo(new[] { "!connect", "register" });
@@ -193,9 +193,9 @@ public class AdminKeyValueListTests : TrackingBunitContext
 			(_, _) => Task.FromResult<ApiResult<Success>>(
 				new ApiFailure(ApiFailureKind.Forbidden, "Permission denied.")));
 
-		component.FindAll("input")[0].Input("*.example.com");
-		component.FindAll("input")[1].Input("!connect");
-		component.Find("button.kit-capsule--primary").Click();
+		await component.FindAll("input")[0].InputAsync("*.example.com");
+		await component.FindAll("input")[1].InputAsync("!connect");
+		await component.Find("button.kit-capsule--primary").ClickAsync();
 
 		await Assert.That(loads).IsEqualTo(1);
 		await Assert.That(component.FindAll("input")[0].GetAttribute("value")).IsEqualTo("*.example.com");
@@ -217,7 +217,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 				return Task.FromResult<ApiResult<Success>>(new Success());
 			});
 
-		component.Find("button.config-delete").Click();
+		await component.Find("button.config-delete").ClickAsync();
 
 		await Assert.That(deleted).IsEqualTo("alpha.example");
 		await Assert.That(loads).IsEqualTo(2);
@@ -248,9 +248,9 @@ public class AdminKeyValueListTests : TrackingBunitContext
 		var component = Render(TextWithValues(), () => Entries(),
 			(_, _) => { calls++; return Task.FromResult<ApiResult<Success>>(new Success()); });
 
-		component.FindAll("input")[0].Input("*.example.com");
-		component.FindAll("input")[1].Input(" , , ");
-		component.Find("button.kit-capsule--primary").Click();
+		await component.FindAll("input")[0].InputAsync("*.example.com");
+		await component.FindAll("input")[1].InputAsync(" , , ");
+		await component.Find("button.kit-capsule--primary").ClickAsync();
 
 		await Assert.That(calls).IsEqualTo(0);
 		await Assert.That(Services.GetRequiredService<ISnackbar>().ShownSnackbars

@@ -203,7 +203,7 @@ public class SchemaFormRendererShapeTests : BunitContext
 			Page(1, "Basics", Field("n", "Name", "text")),
 			Page(2, "Stats", Field("s", "Strength", "number"))));
 
-		cut.FindAll("button").First(b => b.TextContent.Contains("WidNext")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("WidNext")).ClickAsync();
 
 		await Assert.That(cut.Markup).Contains("WidFormStepOf(2, 2)");
 		await Assert.That(cut.Markup).Contains("Strength");

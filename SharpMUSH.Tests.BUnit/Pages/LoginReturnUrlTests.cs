@@ -86,16 +86,16 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	/// <summary>Renders Login already navigated to <paramref name="startingUri"/> and submits the Sign In form.</summary>
-	private IRenderedComponent<SharpMUSH.Client.Pages.Login> SubmitLoginFrom(string startingUri)
+	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.Login>> SubmitLoginFrom(string startingUri)
 	{
 		SeedServices();
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 		nav.NavigateTo(startingUri);
 
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
-		cut.Find("#login-username").Change("headwiz");
-		cut.Find("#login-password").Change("hunter2");
-		cut.Find("button.login-submit").Click();
+		await cut.Find("#login-username").ChangeAsync("headwiz");
+		await cut.Find("#login-password").ChangeAsync("hunter2");
+		await cut.Find("button.login-submit").ClickAsync();
 		return cut;
 	}
 
@@ -151,7 +151,7 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 	[TUnit.Core.Test]
 	public async Task ValidRelativeReturnUrl_NavigatesThereOnSuccess()
 	{
-		var cut = SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("/play")}");
+		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("/play")}");
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 		var expected = new Uri(new Uri(nav.BaseUri), "/play").ToString();
 
@@ -168,7 +168,7 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 	public async Task AbsoluteExternalReturnUrl_FallsBackToHome()
 	{
 		var externalUrl = "https://evil.example/steal";
-		var cut = SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString(externalUrl)}");
+		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString(externalUrl)}");
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 
 		var homeUri = new Uri(new Uri(nav.BaseUri), "/").ToString();
@@ -186,7 +186,7 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 	{
 		// "//evil.example/steal" is not absolute by RFC 3986 (no scheme) but browsers treat a
 		// leading "//" as protocol-relative -- i.e. still an off-site redirect.
-		var cut = SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("//evil.example/steal")}");
+		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("//evil.example/steal")}");
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 
 		var homeUri = new Uri(new Uri(nav.BaseUri), "/").ToString();
@@ -202,7 +202,7 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 	[TUnit.Core.Test]
 	public async Task NoReturnUrl_NavigatesHomeAsBefore()
 	{
-		var cut = SubmitLoginFrom("/login");
+		var cut = await SubmitLoginFrom("/login");
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 
 		var homeUri = new Uri(new Uri(nav.BaseUri), "/").ToString();

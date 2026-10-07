@@ -109,7 +109,7 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	public async Task Typing_FiltersTheCards_AndNoMatchSaysSo()
 	{
 		var cut = RenderHome();
-		cut.Find(".wiki-hero-search input").Input("zzz");
+		await cut.Find(".wiki-hero-search input").InputAsync("zzz");
 		await Assert.That(cut.FindAll(".wiki-cat-card").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".wiki-empty").TextContent).Contains("zzz");
 	}

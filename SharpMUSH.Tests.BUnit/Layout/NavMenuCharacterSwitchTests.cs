@@ -171,21 +171,21 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 	/// <summary>Opens the account panel, opens the character submenu, and clicks the "Beta" row —
 	/// the exact user gesture that should invoke <c>CharacterSwitchService.SwitchAsync</c> via
 	/// <c>NavMenu.HandleSwitchCharacterAsync</c>.</summary>
-	private static void ClickSwitchToBetaViaPanel(IRenderedComponent<MudHarness> cut)
+	private static async Task ClickSwitchToBetaViaPanel(IRenderedComponent<MudHarness> cut)
 	{
-		cut.Find("button.phosphor-profile-card").Click();
+		await cut.Find("button.phosphor-profile-card").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.FindAll(".account-panel-switch-btn").Count == 0)
 				throw new InvalidOperationException("panel not open yet");
 		});
-		cut.Find(".account-panel-switch-btn").Click();
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.FindAll(".account-panel-character").Count == 0)
 				throw new InvalidOperationException("submenu not open yet");
 		});
-		cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta")).Click();
+		await cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta")).ClickAsync();
 	}
 
 	private IRenderedComponent<MudHarness> RenderNavMenu(bool isCollapsed = false)
@@ -202,7 +202,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 
 		var cut = RenderNavMenu();
 
-		await cut.InvokeAsync(() => ClickSwitchToBetaViaPanel(cut));
+		await ClickSwitchToBetaViaPanel(cut);
 		cut.WaitForAssertion(() =>
 		{
 			if (auth.ActiveCharacter?.DbrefNumber != 2)
@@ -229,7 +229,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 
 		var cut = RenderNavMenu();
 
-		await cut.InvokeAsync(() => ClickSwitchToBetaViaPanel(cut));
+		await ClickSwitchToBetaViaPanel(cut);
 
 		cut.WaitForAssertion(() => _connection.Received(1).ReconnectAsync());
 	}
@@ -243,7 +243,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 
 		var cut = RenderNavMenu();
 
-		await cut.InvokeAsync(() => ClickSwitchToBetaViaPanel(cut));
+		await ClickSwitchToBetaViaPanel(cut);
 
 		cut.WaitForAssertion(() =>
 		{

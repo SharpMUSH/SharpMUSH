@@ -178,7 +178,7 @@ public class ProfileBannerTests : TrackingBunitContext
 		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{"banner":"/api/wiki-assets/d/docks.jpg"}}""";
 		var cut = RenderProfile();
 		cut.WaitForAssertion(() => cut.Find("button.char-profile-full"), TimeSpan.FromSeconds(5));
-		cut.Find("button.char-profile-full").Click();
+		await cut.Find("button.char-profile-full").ClickAsync();
 		await Assert.That(cut.Find("[role='dialog'] img.kit-viewer-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/d/docks.jpg");
 	}
 }

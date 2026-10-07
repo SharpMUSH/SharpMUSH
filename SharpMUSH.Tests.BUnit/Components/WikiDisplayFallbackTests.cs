@@ -104,7 +104,7 @@ public class WikiDisplayFallbackTests : TrackingBunitContext
 	{
 		var cut = RenderDisplay(Article(isFallback: true));
 
-		cut.Find(".wiki-fallback-dismiss").Click();
+		await cut.Find(".wiki-fallback-dismiss").ClickAsync();
 
 		await Assert.That(cut.Markup).DoesNotContain("WikiFallbackNotice");
 	}

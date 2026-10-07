@@ -217,7 +217,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("failure state not rendered yet");
 		});
 
-		cut.Find("button.mud-button-root").Click();
+		await cut.Find("button.mud-button-root").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{

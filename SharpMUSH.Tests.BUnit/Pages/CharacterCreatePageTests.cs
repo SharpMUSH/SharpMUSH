@@ -73,8 +73,8 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[\"*\"]");
 	}
 
-	private static void ClickCreate(IRenderedComponent<SharpMUSH.Client.Pages.CharacterCreate> cut)
-		=> cut.FindAll("button").First(b => b.TextContent.Trim() == "NavCreateCharacter").Click();
+	private static Task ClickCreate(IRenderedComponent<SharpMUSH.Client.Pages.CharacterCreate> cut)
+		=> cut.FindAll("button").First(b => b.TextContent.Trim() == "NavCreateCharacter").ClickAsync();
 
 	[TUnit.Core.Test]
 	public async Task Renders_the_create_character_form()
@@ -94,9 +94,9 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		var nav = Services.GetRequiredService<NavigationManager>();
 
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
-		cut.FindAll("input").First().Change("Bob");
+		await cut.FindAll("input").First().ChangeAsync("Bob");
 
-		await cut.InvokeAsync(() => ClickCreate(cut));
+		await ClickCreate(cut);
 
 		cut.WaitForAssertion(() =>
 		{
@@ -115,9 +115,9 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
 		await Assert.That(cut.Markup).Contains("NavClaimACharacter");
-		cut.FindAll("input").First().Change("imported bob");
+		await cut.FindAll("input").First().ChangeAsync("imported bob");
 
-		await cut.InvokeAsync(() => cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").Click());
+		await cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -136,9 +136,9 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		nav.NavigateTo("/characters/claim");
 
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
-		cut.FindAll("input").First().Change("Bob");
+		await cut.FindAll("input").First().ChangeAsync("Bob");
 
-		await cut.InvokeAsync(() => cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").Click());
+		await cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{

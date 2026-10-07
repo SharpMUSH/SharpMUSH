@@ -84,7 +84,7 @@ public class ApplicationEditDialogTests : TrackingBunitContext
 	{
 		var provider = await ShowAsync(Weather);
 
-		provider.FindAll("button").First(b => b.TextContent.Contains("Save")).Click();
+		await provider.FindAll("button").First(b => b.TextContent.Contains("Save")).ClickAsync();
 		provider.WaitForAssertion(() =>
 		{
 			if (_http.Posted is null)

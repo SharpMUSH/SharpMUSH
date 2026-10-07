@@ -118,12 +118,12 @@ public class GameMessagesPageTests : TrackingBunitContext
 
 		await Assert.That(cut.Find("#messages-save").HasAttribute("disabled")).IsTrue();
 
-		cut.Find("textarea").Input("== Welcome back");
+		await cut.Find("textarea").InputAsync("== Welcome back");
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.Find("#messages-save").HasAttribute("disabled")) throw new InvalidOperationException("still clean");
 		});
-		cut.Find("#messages-save").Click();
+		await cut.Find("#messages-save").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (api.Puts.Count == 0) throw new InvalidOperationException("not saved yet");
@@ -142,7 +142,7 @@ public class GameMessagesPageTests : TrackingBunitContext
 	{
 		var (cut, api) = RenderPage();
 
-		cut.Find("[data-source='Object']").Click();
+		await cut.Find("[data-source='Object']").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (api.Puts.Count == 0) throw new InvalidOperationException("not sent yet");

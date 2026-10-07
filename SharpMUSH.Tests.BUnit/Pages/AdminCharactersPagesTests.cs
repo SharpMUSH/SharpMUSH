@@ -184,7 +184,7 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 		await Assert.That(cut.Find("a.adm-audit-link").GetAttribute("href")).IsEqualTo("/admin/characters/7");
 		await Assert.That(cut.Markup).Contains("AdmAuditSourcePortal");
 
-		cut.Find(".adm-audit-more").Click();
+		await cut.Find(".adm-audit-more").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -255,12 +255,12 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 		await Assert.That(cut.Find(".adm-mod-ban").HasAttribute("disabled")).IsTrue().Because("a ban needs a reason");
 		await Assert.That(cut.Find(".adm-mod-boot").HasAttribute("disabled")).IsFalse().Because("Alice is online");
 
-		cut.Find("#moderation-reason").Input("off-topic");
+		await cut.Find("#moderation-reason").InputAsync("off-topic");
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.Find(".adm-mod-warn").HasAttribute("disabled")) throw new InvalidOperationException("still disabled");
 		}, TimeSpan.FromSeconds(5));
-		cut.Find(".adm-mod-warn").Click();
+		await cut.Find(".adm-mod-warn").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -283,7 +283,7 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 		var cut = RenderPage<Moderation>();
 
 		cut.WaitForAssertion(() => cut.Find(".adm-mod-unlink"), TimeSpan.FromSeconds(5));
-		cut.Find("#moderation-reason").Input("reason");
+		await cut.Find("#moderation-reason").InputAsync("reason");
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.Find(".adm-mod-warn").HasAttribute("disabled")) throw new InvalidOperationException("still disabled");
