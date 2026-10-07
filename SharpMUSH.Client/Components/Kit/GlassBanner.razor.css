@@ -80,7 +80,7 @@
 	top: 56px;
 	bottom: 64px;
 	overflow: auto;
-	color: var(--text);
+	color: var(--text-over-image);
 	font-size: 14px;
 	line-height: 1.5;
 	text-shadow: var(--on-image-shadow);
@@ -106,7 +106,7 @@
 .kit-banner-text {
 	flex: 1 1 auto;
 	min-width: 0;
-	color: var(--text);
+	color: var(--text-over-image);
 	text-shadow: var(--on-image-shadow);
 }
 
@@ -211,7 +211,7 @@
 	align-items: center;
 	gap: 10px;
 	padding: 0 6px 0 14px;
-	color: var(--text);
+	color: var(--text-over-image);
 	text-shadow: var(--on-image-shadow);
 }
 

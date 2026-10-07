@@ -2025,10 +2025,6 @@
     <value>Design</value>
     <comment>MT — Design is the usual German UI word for a visual theme; "Thema" would read as a subject/topic.</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Design-Einstellungen kommen in Kürze.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Navigation umschalten</value>
     <comment>MT</comment>
@@ -5715,5 +5711,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Zeile {0}: Ein ::: item wird nur direkt innerhalb eines flex angeordnet.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Gib jedem Charakter ein eigenes Design und eine eigene Akzentfarbe, damit du ihre Fenster auf einen Blick unterscheiden kannst. Das Aussehen wird mit dem Charakter gespeichert und folgt ihm auf jedes Gerät.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Verknüpfe einen Charakter mit deinem Konto, um ihm ein eigenes Aussehen zu geben.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Wird gespielt</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Design</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Standard des Spiels ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Akzentfarbe</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Wie im Design</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Eigene Farbe</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Wird als {0} angezeigt, damit sie in diesem Design lesbar bleibt.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Konnte nicht gespeichert werden: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Dunkel</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Hell</value>
   </data>
 </root>

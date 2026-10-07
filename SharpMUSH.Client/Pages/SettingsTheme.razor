@@ -1,14 +1,145 @@
 @page "/settings/theme"
 @layout SettingsLayout
 @attribute [Authorize]
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
+@inject AccountAuthService AccountAuth
+@inject IThemeService Themes
+@inject ISnackbar Snackbar
+
+@* Each of the account's characters with its own theme and accent. The look is stored with the character, so
+   it follows the player to every device, and the acting character's is the one the portal wears. An accent
+   that would be too faint on the chosen theme is shown moved toward white or black until it reads. *@
 
 <PageTitle>@Loc["NavTheme"] — @Loc["Settings"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="settings-theme-page">
-    <PlainPageHeader Kicker="@($"{Loc["AppTitle"]} · {Loc["Settings"]}")" Title="@Loc["NavTheme"]" Description="@Loc["NavSettingsThemeDescription"]" />
+    <PlainPageHeader Kicker="@($"{Loc["AppTitle"]} · {Loc["Settings"]}")" Title="@Loc["NavTheme"]" Description="@Loc["NavThemeIntro"]" />
 
-    <KitCard Title="@Loc["ComingSoon"]">
-        <p class="settings-theme-text">@Loc["NavThemeComingSoon"]</p>
-    </KitCard>
+    @if (AccountAuth.Characters.Count == 0)
+    {
+        <EmptyBox>@Loc["NavThemeNoCharacters"]</EmptyBox>
+    }
+    else
+    {
+        @foreach (var character in Ordered)
+        {
+            var look = Resolve(character);
+            var busy = _saving.Contains(character.DbrefNumber);
+            <KitCard Class="settings-theme-card">
+                <div class="settings-theme-char" data-character="@character.DbrefNumber">
+                    <div class="settings-theme-head">
+                        <ThemeSwatch Theme="look" />
+                        <div class="settings-theme-name">
+                            <span class="settings-theme-title">@character.Name</span>
+                            <span class="settings-theme-sub">@look.Name · @Loc[look.Dark ? "NavThemeDark" : "NavThemeLight"]</span>
+                        </div>
+                        @if (character.IsActing)
+                        {
+                            <Pill Tag="true" Dot="@look.Accent">@Loc["NavThemeActing"]</Pill>
+                        }
+                    </div>
+
+                    <div class="settings-theme-field">
+                        <span class="settings-theme-label" id="@($"theme-label-{character.DbrefNumber}")">@Loc["NavThemeTheme"]</span>
+                        <div class="settings-theme-choices" role="radiogroup" aria-labelledby="@($"theme-label-{character.DbrefNumber}")">
+                            @ThemeChoice(character, null, Loc["NavThemeGameDefault", DefaultName].Value, busy)
+                            @foreach (var theme in Published)
+                            {
+                                @ThemeChoice(character, theme.Id, theme.Name, busy)
+                            }
+                        </div>
+                    </div>
+
+                    <div class="settings-theme-field">
+                        <span class="settings-theme-label" id="@($"accent-label-{character.DbrefNumber}")">@Loc["NavThemeAccent"]</span>
+                        <div class="settings-theme-accents" role="radiogroup" aria-labelledby="@($"accent-label-{character.DbrefNumber}")">
+                            <button type="button" role="radio" class="settings-theme-own @(character.Accent is null ? "is-on" : null)"
+                                    aria-checked="@(character.Accent is null ? "true" : "false")" disabled="@busy"
+                                    @onclick="() => SaveAsync(character, character.ThemeId, null)">
+                                @Loc["NavThemeAccentThemeOwn"]
+                            </button>
+                            @foreach (var (name, hex) in BuiltInThemes.AccentSwatches)
+                            {
+                                var on = string.Equals(character.Accent, hex, StringComparison.OrdinalIgnoreCase);
+                                <button type="button" role="radio" class="settings-theme-dot @(on ? "is-on" : null)" title="@name"
+                                        aria-label="@name" aria-checked="@(on ? "true" : "false")" disabled="@busy"
+                                        style="@($"--dot:{hex}")" @onclick="() => SaveAsync(character, character.ThemeId, hex)"></button>
+                            }
+                            <label class="settings-theme-custom @(IsCustom(character) ? "is-on" : null)" title="@Loc["NavThemeAccentCustom"]">
+                                <input type="color" value="@(character.Accent ?? look.Accent)" aria-label="@Loc["NavThemeAccentCustom"]" disabled="@busy"
+                                       @onchange="e => SaveAsync(character, character.ThemeId, e.Value?.ToString())" />
+                                <span>@Loc["NavThemeAccentCustom"]</span>
+                            </label>
+                        </div>
+                        @if (look.AccentAdjusted)
+                        {
+                            <span class="settings-theme-note" data-adjusted="@look.Accent">@Loc["NavThemeAccentAdjusted", look.Accent]</span>
+                        }
+                    </div>
+                </div>
+            </KitCard>
+        }
+    }
 </div>
+
+@code {
+    private readonly HashSet<int> _saving = [];
+
+    private IEnumerable<AccountAuthService.CharacterSummary> Ordered =>
+        AccountAuth.Characters.OrderByDescending(c => c.IsActing).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase);
+
+    private IEnumerable<PortalTheme> Published => Themes.Themes.Where(t => t.Published);
+
+    private string DefaultName =>
+        Themes.Themes.FirstOrDefault(t => t.Id == Themes.DefaultThemeId)?.Name ?? BuiltInThemes.Phosphor.Name;
+
+    protected override void OnInitialized()
+    {
+        Themes.OnThemeChanged += Changed;
+        AccountAuth.AppearanceChanged += Changed;
+    }
+
+    protected override async Task OnInitializedAsync() => await AccountAuth.GetCharactersAsync();
+
+    private ResolvedTheme Resolve(AccountAuthService.CharacterSummary character) =>
+        ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.DefaultThemeId, character.ThemeId), character.Accent);
+
+    private static bool IsCustom(AccountAuthService.CharacterSummary character) =>
+        character.Accent is { } accent && !BuiltInThemes.AccentSwatches.Any(s => string.Equals(s.Hex, accent, StringComparison.OrdinalIgnoreCase));
+
+    private RenderFragment ThemeChoice(AccountAuthService.CharacterSummary character, string? themeId, string label, bool busy) => __builder =>
+    {
+        var on = character.ThemeId == themeId;
+        var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.DefaultThemeId, themeId), character.Accent);
+        <button type="button" role="radio" class="settings-theme-choice @(on ? "is-on" : null)" aria-checked="@(on ? "true" : "false")"
+                data-theme="@(themeId ?? "default")" disabled="@busy" @onclick="() => SaveAsync(character, themeId, character.Accent)">
+            <ThemeSwatch Theme="theme" Class="settings-theme-choice-swatch" />
+            <span>@label</span>
+        </button>
+    };
+
+    private async Task SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent)
+    {
+        if (!_saving.Add(character.DbrefNumber)) return;
+        try
+        {
+            if (await AccountAuth.SetAppearanceAsync(character.DbrefNumber, new CharacterAppearance(themeId, accent)) is ApiFailure failure)
+            {
+                Snackbar.Add(Loc["NavThemeSaveFailed", failure.Message], Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving.Remove(character.DbrefNumber);
+        }
+    }
+
+    private void Changed() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Themes.OnThemeChanged -= Changed;
+        AccountAuth.AppearanceChanged -= Changed;
+    }
+}

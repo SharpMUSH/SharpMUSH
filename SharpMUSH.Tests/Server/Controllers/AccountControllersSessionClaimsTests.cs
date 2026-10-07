@@ -50,6 +50,7 @@ public class AccountControllersSessionClaimsTests
 			new PasskeyService(Substitute.For<SharpMUSH.Library.IAccountStore>(),
 				new PasskeyRelyingParty(new ConfigurationBuilder().Build(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>()),
 				new PasskeyCeremonyStore(TimeProvider.System), TimeProvider.System, NullLogger<PasskeyService>.Instance),
+			Substitute.For<SharpMUSH.Library.Services.Interfaces.IPortalThemeService>(),
 			NullLogger<AccountController>.Instance)
 		{ ControllerContext = Context(user, bearer) };
 

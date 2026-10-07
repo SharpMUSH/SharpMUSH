@@ -108,6 +108,7 @@
 	--rail-bg: #0a0b0c;             /* icon rail, darker than --surface-3 (page sidebar) */
 
 	/* ── text roles ── */
+	--text-over-image: #e9edf0;     /* primary lines and glass controls over banner images; not themed, as the scrim under them is always dark */
 	--text-on-image: #d2d8dd;       /* secondary lines over banner images (with the scrim below) */
 	--link-missing: #ff8a8a;        /* wiki redlinks, 1px dashed underline; 7.84:1 on --surface */
 

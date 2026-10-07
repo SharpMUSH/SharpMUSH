@@ -1,151 +1,172 @@
+using System.Text.Json;
 using Microsoft.JSInterop;
 using MudBlazor;
-using SharpMUSH.Library.Models;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Client-side theme service that persists the active preset to localStorage
-/// and raises <see cref="OnThemeChanged"/> so components can re-render.
+/// Resolves the portal's theme: the acting character's chosen theme (or the game's default) with the
+/// character's accent laid over it. The last theme applied is kept in localStorage, where <c>index.html</c>
+/// reads it before the runtime loads, so a reload paints the right colours from the first frame.
 /// </summary>
-public sealed class ThemeService : IThemeService
+public sealed class ThemeService : IThemeService, IDisposable
 {
-	private const string LocalStorageKey = "sharp-theme-preset";
-
-	private static readonly IReadOnlyList<ThemePreset> BuiltInPresets =
-	[
-		GetDefaultPreset(),
-		MakeAccentPreset("Amber",  "#ffb454"),
-		MakeAccentPreset("Violet", "#b39cff"),
-		MakeAccentPreset("Rose",   "#ff7a9c"),
-		MakeAccentPreset("Signal", "#5aa9ff"),
-	];
+	/// <summary>The last applied theme, as JSON. <c>index.html</c> reads its <c>Css</c> member.</summary>
+	public const string CacheKey = "sharp-theme";
 
 	private readonly IJSRuntime _js;
-	private ThemePreset _current = GetDefaultPreset();
+	private readonly IHttpClientFactory _http;
+	private readonly IAccountAuthState _account;
+	private readonly ILogger<ThemeService> _logger;
+
+	private IReadOnlyList<PortalTheme> _themes = BuiltInThemes.All;
+	private string _defaultThemeId = BuiltInThemes.PhosphorId;
+	private bool _loaded;
+	private ResolvedTheme _resolved = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
+	private ResolvedTheme? _preview;
+	private Task? _initialized;
 
 	public event Action? OnThemeChanged;
 
-	public ThemeService(IJSRuntime js) => _js = js;
-
-	/// <summary>C# port of <c>deriveAccent(hex)</c> from the prototype's app.jsx.</summary>
-	public static (string Primary, string Secondary, string OnAccent) DeriveAccent(string hex)
+	public ThemeService(IJSRuntime js, IHttpClientFactory http, IAccountAuthState account, ILogger<ThemeService> logger)
 	{
-		var (r, g, b) = ParseHex(hex);
-		var lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
-		var secondary = $"rgb({(int)(r * 0.78)},{(int)(g * 0.78)},{(int)(b * 0.78)})";
-		var onAccent = lum > 0.55
-			? $"rgb({(int)(r * 0.12)},{(int)(g * 0.12)},{(int)(b * 0.12)})"
-			: "#ffffff";
-		return (hex, secondary, onAccent);
+		_js = js;
+		_http = http;
+		_account = account;
+		_logger = logger;
+		_account.ActiveCharacterChanged += Apply;
+		_account.AppearanceChanged += Apply;
 	}
 
-	private static (int r, int g, int b) ParseHex(string hex)
-	{
-		var h = hex.TrimStart('#');
-		if (h.Length == 3)
-			h = string.Concat(h[0], h[0], h[1], h[1], h[2], h[2]);
-		if (!int.TryParse(h, System.Globalization.NumberStyles.HexNumber, null, out var n))
-			return (0, 245, 183);
-		return ((n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF);
-	}
+	public ResolvedTheme Current => _preview ?? _resolved;
 
-	/// <inheritdoc/>
-	public static ThemePreset GetDefaultPreset() => MakeAccentPreset("Phosphor", "#00f5b7");
+	public IReadOnlyList<PortalTheme> Themes => _themes;
 
-	private static ThemePreset MakeAccentPreset(string name, string accentHex)
-	{
-		var (primary, secondary, _) = DeriveAccent(accentHex);
-		return new ThemePreset(
-			Name: name,
-			PrimaryColor: primary,
-			SecondaryColor: secondary,
-			TertiaryColor: secondary,
-			BackgroundColor: "#0e0f11",
-			SurfaceColor: "#16181b",
-			AppBarColor: "#101113",
-			DrawerBackgroundColor: "#101113",
-			IsDarkMode: true);
-	}
-
-	/// <inheritdoc/>
-	public Task<ThemePreset> GetCurrentThemeAsync() => Task.FromResult(_current);
-
-	/// <inheritdoc/>
-	public Task<IReadOnlyList<ThemePreset>> GetAvailablePresetsAsync()
-		=> Task.FromResult(BuiltInPresets);
-
-	/// <inheritdoc/>
-	public async Task ApplyPresetAsync(string presetName)
-	{
-		var preset = BuiltInPresets.FirstOrDefault(p => p.Name == presetName)
-			?? throw new ArgumentException($"Unknown theme preset: '{presetName}'", nameof(presetName));
-
-		_current = preset;
-
-		await _js.SetItemAsync(BrowserStore.Local, LocalStorageKey, presetName);
-
-		OnThemeChanged?.Invoke();
-	}
-
-	private Task? _initialized;
+	public string DefaultThemeId => _defaultThemeId;
 
 	/// <summary>
-	/// Restores the persisted preset from localStorage. Runs once: Program.cs awaits it before the
-	/// first render, so by the time <c>ThemeProvider</c> asks, the task is complete and the provider
-	/// renders the stored theme without a second pass. Falls back to the default silently on any
-	/// failure.
+	/// Restores the last applied theme from localStorage, then reads the game's themes in the background.
+	/// Program.cs awaits this before the first render; it touches no network, so that wait is a storage read.
 	/// </summary>
 	public Task InitializeAsync() => _initialized ??= RestoreAsync();
 
 	private async Task RestoreAsync()
 	{
-		var saved = await _js.GetItemAsync(BrowserStore.Local, LocalStorageKey);
-		var match = BuiltInPresets.FirstOrDefault(p => p.Name == saved);
-		if (match is not null)
-			_current = match;
+		try
+		{
+			if (await _js.GetItemAsync(BrowserStore.Local, CacheKey) is { Length: > 0 } json
+					&& JsonSerializer.Deserialize<ResolvedTheme>(json) is { Tokens: not null } cached)
+			{
+				_resolved = cached;
+			}
+		}
+		catch (Exception ex) when (ex is JsonException or JSException or InvalidOperationException)
+		{
+			_logger.LogDebug(ex, "No usable cached theme; starting from Phosphor");
+		}
+
+		_ = ReloadAsync();
+	}
+
+	public async Task ReloadAsync()
+	{
+		var result = await _http.CreateClient("api").GetApiAsync<PortalThemesResponse>("api/themes", "The server listed no themes.");
+		if (result is PortalThemesResponse themes)
+		{
+			_themes = themes.Themes;
+			_defaultThemeId = themes.DefaultThemeId;
+			_loaded = true;
+			Apply();
+		}
+		else if (result is ApiFailure failure)
+		{
+			_logger.LogWarning("Could not read the portal's themes: {Message}", failure.Message);
+		}
+	}
+
+	public void Preview(ResolvedTheme? theme)
+	{
+		_preview = theme;
+		OnThemeChanged?.Invoke();
+	}
+
+	/// <summary>
+	/// Resolves the theme for the acting character. Waits for the game's themes: until they arrive the cached
+	/// theme stands, rather than flashing Phosphor at a character whose theme is one the game made.
+	/// </summary>
+	private void Apply()
+	{
+		if (!_loaded) return;
+
+		var character = _account.ActiveCharacter;
+		var resolved = ThemeResolver.Resolve(
+			ThemeResolver.Pick(_themes, _defaultThemeId, character?.ThemeId), character?.Accent);
+		if (resolved.Css == _resolved.Css && resolved.ThemeId == _resolved.ThemeId) return;
+
+		_resolved = resolved;
+		_ = SaveAsync(resolved);
+		OnThemeChanged?.Invoke();
+	}
+
+	private async Task SaveAsync(ResolvedTheme theme)
+	{
+		try
+		{
+			await _js.SetItemAsync(BrowserStore.Local, CacheKey, JsonSerializer.Serialize(theme));
+		}
+		catch (JSException ex)
+		{
+			_logger.LogDebug(ex, "Could not keep the theme for the next visit");
+		}
+	}
+
+	public void Dispose()
+	{
+		_account.ActiveCharacterChanged -= Apply;
+		_account.AppearanceChanged -= Apply;
 	}
 }
 
-/// <summary>
-/// Extension methods that convert a <see cref="ThemePreset"/> to a MudBlazor <see cref="MudTheme"/>.
-/// </summary>
-public static class ThemePresetExtensions
+/// <summary>Converts a <see cref="ResolvedTheme"/> to a MudBlazor <see cref="MudTheme"/>.</summary>
+public static class ResolvedThemeExtensions
 {
 	private static readonly string[] UiFontFamily = ["Hanken Grotesk", "sans-serif"];
 	private static readonly string[] MonoFontFamily = ["var(--font-mono)"];
 
-	public static MudTheme ToMudTheme(this ThemePreset preset)
+	public static MudTheme ToMudTheme(this ResolvedTheme theme)
 	{
-		var (_, _, onAccent) = ThemeService.DeriveAccent(preset.PrimaryColor);
-
-		var palette = new PaletteDark
+		var t = theme.Tokens;
+		Palette Fill(Palette palette)
 		{
-			Primary = preset.PrimaryColor,
-			Secondary = preset.SecondaryColor,
-			Tertiary = preset.TertiaryColor,
-			Background = preset.BackgroundColor,
-			Surface = preset.SurfaceColor,
-			AppbarBackground = preset.AppBarColor,
-			DrawerBackground = preset.DrawerBackgroundColor,
-			TextPrimary = "#e9edf0",
-			TextSecondary = "#9aa3ab",
-			TextDisabled = "#7d8790",
-			AppbarText = preset.PrimaryColor,
-			DrawerText = "#e9edf0",
-			DrawerIcon = preset.PrimaryColor,
-			Warning = "#d9a23a",
-			Error = "#e57373",
-			Info = "#5aa9ff",
-			Success = preset.PrimaryColor,
-			LinesDefault = "#262a2f",
-			LinesInputs = "#262a2f",
-			TableLines = "#262a2f",
-			Divider = "#1d2024",
-			PrimaryContrastText = onAccent,
-			SecondaryContrastText = onAccent,
-		};
+			palette.Primary = theme.Accent;
+			palette.Secondary = t["accent-dim"];
+			palette.Tertiary = t["accent-dim"];
+			palette.Background = t[ThemeTokens.Background];
+			palette.Surface = t[ThemeTokens.Surface];
+			palette.AppbarBackground = t[ThemeTokens.Surface3];
+			palette.DrawerBackground = t[ThemeTokens.Surface3];
+			palette.TextPrimary = t[ThemeTokens.Text];
+			palette.TextSecondary = t[ThemeTokens.TextDim];
+			palette.TextDisabled = t[ThemeTokens.TextFaint];
+			palette.AppbarText = theme.Accent;
+			palette.DrawerText = t[ThemeTokens.Text];
+			palette.DrawerIcon = theme.Accent;
+			palette.ActionDefault = t[ThemeTokens.TextDim];
+			palette.Warning = t[ThemeTokens.Warn];
+			palette.Error = t[ThemeTokens.LinkMissing];
+			palette.Info = theme.Dark ? "#5aa9ff" : "#1f63b8";
+			palette.Success = theme.Accent;
+			palette.LinesDefault = t[ThemeTokens.Border];
+			palette.LinesInputs = t[ThemeTokens.Border];
+			palette.TableLines = t[ThemeTokens.Border];
+			palette.Divider = t[ThemeTokens.BorderSoft];
+			palette.PrimaryContrastText = t["accent-on"];
+			palette.SecondaryContrastText = t["accent-on"];
+			return palette;
+		}
 
 		var typography = new Typography
 		{
@@ -176,7 +197,8 @@ public static class ThemePresetExtensions
 
 		return new MudTheme
 		{
-			PaletteDark = palette,
+			PaletteDark = (PaletteDark)Fill(new PaletteDark()),
+			PaletteLight = (PaletteLight)Fill(new PaletteLight()),
 			Typography = typography,
 			LayoutProperties = layout,
 		};

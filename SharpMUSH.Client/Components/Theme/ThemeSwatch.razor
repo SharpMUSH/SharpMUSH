@@ -1,0 +1,19 @@
+@* A small picture of a theme: its page, a card on it with a line of text in each text colour, and an
+   accent button. Painted from the resolved tokens directly, so it shows a theme that is not the one in use. *@
+<span class="theme-swatch @Class" style="@Style" aria-hidden="true">
+    <span class="theme-swatch-card">
+        <span class="theme-swatch-line theme-swatch-line--text"></span>
+        <span class="theme-swatch-line theme-swatch-line--dim"></span>
+        <span class="theme-swatch-button"></span>
+    </span>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public ResolvedTheme Theme { get; set; } = default!;
+    [Parameter] public string? Class { get; set; }
+
+    private string Style =>
+        $"--sw-bg:{Theme.Token(ThemeTokens.Background)};--sw-surface:{Theme.Token(ThemeTokens.Surface)};" +
+        $"--sw-border:{Theme.Token(ThemeTokens.Border)};--sw-text:{Theme.Token(ThemeTokens.Text)};" +
+        $"--sw-dim:{Theme.Token(ThemeTokens.TextDim)};--sw-accent:{Theme.Accent}";
+}

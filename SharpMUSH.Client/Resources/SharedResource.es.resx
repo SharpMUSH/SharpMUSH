@@ -2025,10 +2025,6 @@
     <value>Tema</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Las preferencias de tema están en camino.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Alternar la navegación</value>
     <comment>MT</comment>
@@ -5715,5 +5711,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Línea {0}: un ::: item solo se distribuye directamente dentro de un flex.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Da a cada personaje su propio tema y color de acento para distinguir sus ventanas de un vistazo. El aspecto se guarda con el personaje y lo sigue a cualquier dispositivo.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Vincula un personaje a tu cuenta para darle su propio aspecto.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Jugando ahora</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Predeterminado del juego ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Acento</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>La del tema</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Color propio</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Se muestra como {0} para que siga siendo legible en este tema.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>No se pudo guardar: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Oscuro</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Claro</value>
   </data>
 </root>

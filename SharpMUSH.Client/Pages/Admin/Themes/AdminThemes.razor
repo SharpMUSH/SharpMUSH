@@ -1,0 +1,388 @@
+@page "/admin/themes"
+@attribute [Authorize(Policy = "layout.admin")]
+@implements IDisposable
+@inject IStringLocalizer<SharedResource> Loc
+@inject PortalThemesAdminService Api
+@inject IThemeService Themes
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+@* The theme editor: the game's themes as named sets of the design tokens, which one a character that chose
+   none sees, and which ones players may choose. Built-in themes are read-only; "Duplicate" starts an
+   editable copy. "Try on the portal" paints the whole portal with the unsaved draft until it is turned
+   off or the page is left. *@
+
+<PageTitle>@Loc["AdmThemesTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
+<div class="page-stack page-stack--padded adm-theme">
+    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["AdmThemesTitle"]" Description="@Loc["AdmThemesDescription"]">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" id="theme-new"
+                       Disabled="@(_state is null || _busy)" OnClick="New">@Loc["AdmThemesNew"]</MudButton>
+        </Actions>
+    </PlainPageHeader>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+    }
+
+    @if (_state is null)
+    {
+        @if (_error is null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+    }
+    else
+    {
+        <div class="adm-theme-layout">
+            <nav class="adm-theme-list" aria-label="@Loc["AdmThemesTitle"]">
+                @foreach (var theme in _state.Themes)
+                {
+                    var current = _draft?.Id == theme.Id;
+                    <button type="button" class="adm-theme-item @(current ? "adm-theme-item--current" : null)" data-theme="@theme.Id"
+                            aria-current="@(current ? "true" : null)" @onclick="() => Select(theme)">
+                        <ThemeSwatch Theme="ThemeResolver.Resolve(theme)" />
+                        <span class="adm-theme-item-text">
+                            <span class="adm-theme-item-name">@theme.Name</span>
+                            <span class="adm-theme-item-tags">
+                                @if (theme.Id == _state.DefaultThemeId)
+                                {
+                                    <span class="adm-theme-tag adm-theme-tag--default">@Loc["AdmThemesDefault"]</span>
+                                }
+                                @if (theme.BuiltIn)
+                                {
+                                    <span class="adm-theme-tag">@Loc["AdmThemesBuiltIn"]</span>
+                                }
+                                @if (!theme.Published)
+                                {
+                                    <span class="adm-theme-tag adm-theme-tag--draft">@Loc["AdmThemesUnpublished"]</span>
+                                }
+                            </span>
+                        </span>
+                    </button>
+                }
+                @if (_draft is { Id: null })
+                {
+                    <div class="adm-theme-item adm-theme-item--current adm-theme-item--new">
+                        <ThemeSwatch Theme="Draft" />
+                        <span class="adm-theme-item-text">
+                            <span class="adm-theme-item-name">@(string.IsNullOrWhiteSpace(_draft.Name) ? Loc["AdmThemesUntitled"] : _draft.Name)</span>
+                            <span class="adm-theme-item-tags"><span class="adm-theme-tag adm-theme-tag--draft">@Loc["AdmThemesNotSaved"]</span></span>
+                        </span>
+                    </div>
+                }
+            </nav>
+
+            @if (_draft is not null)
+            {
+                var locked = _draft.BuiltIn;
+                <KitCard Class="adm-theme-editor" Title="@(string.IsNullOrWhiteSpace(_draft.Name) ? Loc["AdmThemesUntitled"] : _draft.Name)"
+                         Sub="@Loc[_draft.Id is null ? "AdmThemesNewSub" : locked ? "AdmThemesBuiltInSub" : "AdmThemesEditSub"]">
+                    <div class="adm-theme-body">
+                        @if (locked)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" id="theme-builtin">@Loc["AdmThemesBuiltInNote"]</MudAlert>
+                        }
+
+                        <div class="adm-theme-meta">
+                            <MudTextField T="string" @bind-Value="_draft.Name" @bind-Value:after="Edited" Label="@Loc["AdmThemesName"]"
+                                          MaxLength="40" Disabled="locked" Variant="Variant.Outlined" Margin="Margin.Dense" id="theme-name" />
+                            <div class="adm-theme-mode" role="radiogroup" aria-label="@Loc["AdmThemesMode"]">
+                                <button type="button" role="radio" class="adm-theme-mode-choice @(_draft.Dark ? "is-on" : null)" disabled="@locked"
+                                        aria-checked="@(_draft.Dark ? "true" : "false")" @onclick="() => SetDark(true)">
+                                    <MudIcon Icon="@Icons.Material.Outlined.DarkMode" Size="Size.Small" />@Loc["AdmThemesDark"]
+                                </button>
+                                <button type="button" role="radio" class="adm-theme-mode-choice @(!_draft.Dark ? "is-on" : null)" disabled="@locked"
+                                        aria-checked="@(!_draft.Dark ? "true" : "false")" @onclick="() => SetDark(false)">
+                                    <MudIcon Icon="@Icons.Material.Outlined.LightMode" Size="Size.Small" />@Loc["AdmThemesLight"]
+                                </button>
+                            </div>
+                            <MudSwitch T="bool" @bind-Value="_draft.Published" @bind-Value:after="Edited" Color="Color.Primary" Disabled="locked"
+                                       Label="@Loc["AdmThemesPublished"]" id="theme-published" />
+                        </div>
+
+                        @foreach (var (groupKey, tokens) in Groups)
+                        {
+                            <section class="adm-theme-group">
+                                <h3 class="adm-theme-group-title">@Loc[groupKey]</h3>
+                                <div class="adm-theme-tokens">
+                                    @foreach (var token in tokens)
+                                    {
+                                        <label class="adm-theme-token" data-token="@token">
+                                            <input type="color" class="adm-theme-color" value="@_draft.Tokens[token]" disabled="@locked"
+                                                   aria-label="@Loc[TokenKey(token)]" @onchange="e => SetToken(token, e.Value?.ToString())" />
+                                            <span class="adm-theme-token-text">
+                                                <span class="adm-theme-token-name">@Loc[TokenKey(token)]</span>
+                                                <input type="text" class="adm-theme-hex" value="@_draft.Tokens[token]" disabled="@locked" spellcheck="false"
+                                                       maxlength="7" aria-label="@($"{Loc[TokenKey(token)]} (hex)")"
+                                                       @onchange="e => SetToken(token, e.Value?.ToString())" />
+                                            </span>
+                                        </label>
+                                    }
+                                </div>
+                            </section>
+                        }
+
+                        <section class="adm-theme-group">
+                            <h3 class="adm-theme-group-title">@Loc["AdmThemesContrast"]</h3>
+                            <p class="adm-theme-hint">@Loc["AdmThemesContrastHint"]</p>
+                            <ul class="adm-theme-contrast" id="theme-contrast">
+                                @foreach (var (fg, bg, ratio) in ThemeResolver.Contrasts(_draft.Tokens))
+                                {
+                                    var ok = ratio >= ThemeTokens.TextContrast;
+                                    <li class="@(ok ? null : "adm-theme-contrast--low")" data-pair="@($"{fg}/{bg}")">
+                                        <span class="adm-theme-contrast-sample" style="@($"color:{_draft.Tokens[fg]};background:{_draft.Tokens[bg]};border-color:{_draft.Tokens[ThemeTokens.Border]}")">Aa</span>
+                                        <span class="adm-theme-contrast-pair">@Loc["AdmThemesOn", Loc[TokenKey(fg)], Loc[TokenKey(bg)]]</span>
+                                        <span class="adm-theme-contrast-ratio">@ratio.ToString("0.0")</span>
+                                        <MudIcon Icon="@(ok ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)" Size="Size.Small"
+                                                 Class="@(ok ? "adm-theme-ok" : "adm-theme-low")" Title="@Loc[ok ? "AdmThemesContrastOk" : "AdmThemesContrastLow"]" />
+                                    </li>
+                                }
+                            </ul>
+                        </section>
+
+                        <div class="adm-theme-actions">
+                            <MudSwitch T="bool" Value="_trying" ValueChanged="Try" Color="Color.Primary" Label="@Loc["AdmThemesTry"]" id="theme-try" />
+                            <span class="adm-theme-spacer"></span>
+                            @if (locked)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Duplicate" id="theme-duplicate">@Loc["AdmThemesDuplicate"]</MudButton>
+                            }
+                            else
+                            {
+                                @if (_draft.Id is not null)
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" Disabled="@(_busy || _draft.Id == _state.DefaultThemeId)"
+                                               OnClick="DeleteAsync" id="theme-delete">@Loc["AdmThemesDelete"]</MudButton>
+                                    <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="Duplicate" id="theme-duplicate">@Loc["AdmThemesDuplicate"]</MudButton>
+                                }
+                                <MudButton Variant="Variant.Text" Disabled="@(_busy || !_dirty)" OnClick="Revert" id="theme-revert">@Loc["AdmThemesRevert"]</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || !_dirty)" OnClick="SaveAsync" id="theme-save">
+                                    @Loc["Save"]
+                                </MudButton>
+                            }
+                            @if (_draft.Id is not null && _draft.Id != _state.DefaultThemeId)
+                            {
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@(_busy || _dirty || !_draft.Published)"
+                                           OnClick="MakeDefaultAsync" id="theme-default">@Loc["AdmThemesMakeDefault"]</MudButton>
+                            }
+                        </div>
+                    </div>
+                </KitCard>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private sealed class ThemeDraft
+    {
+        public string? Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool Dark { get; set; } = true;
+        public bool Published { get; set; }
+        public bool BuiltIn { get; set; }
+        public Dictionary<string, string> Tokens { get; set; } = [];
+
+        public static ThemeDraft From(PortalTheme theme) => new()
+        {
+            Id = theme.Id,
+            Name = theme.Name,
+            Dark = theme.Dark,
+            Published = theme.Published,
+            BuiltIn = theme.BuiltIn,
+            Tokens = ThemeTokens.Editable.ToDictionary(t => t, t => theme.Tokens.TryGetValue(t, out var v) ? v : BuiltInThemes.Phosphor.Tokens[t]),
+        };
+
+        public PortalTheme ToTheme() => new(Id ?? "draft", Name, Dark, Published, Tokens);
+
+        public PortalThemeRequest ToRequest() => new(Name.Trim(), Dark, Published, new Dictionary<string, string>(Tokens));
+    }
+
+    private static readonly (string Group, string[] Tokens)[] Groups =
+    [
+        ("AdmThemesGroupSurfaces", [ThemeTokens.Background, ThemeTokens.Surface, ThemeTokens.Surface2, ThemeTokens.Surface3, ThemeTokens.Rail]),
+        ("AdmThemesGroupText", [ThemeTokens.Text, ThemeTokens.TextDim, ThemeTokens.TextFaint]),
+        ("AdmThemesGroupLines", [ThemeTokens.Border, ThemeTokens.BorderSoft]),
+        ("AdmThemesGroupColours", [ThemeTokens.Accent, ThemeTokens.Warn, ThemeTokens.LinkMissing]),
+    ];
+
+    private PortalThemesResponse? _state;
+    private ThemeDraft? _draft;
+    private bool _dirty;
+    private bool _busy;
+    private bool _trying;
+    private string? _error;
+
+    private ResolvedTheme Draft => ThemeResolver.Resolve(_draft!.ToTheme());
+
+    /// <summary>"surface-2" is "AdmThemeTokenSurface2".</summary>
+    private static string TokenKey(string token) =>
+        "AdmThemeToken" + string.Concat(token.Split('-').Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch (await Api.GetAsync())
+        {
+            case PortalThemesResponse state:
+                _state = state;
+                Select(state.Themes.FirstOrDefault(t => t.Id == state.DefaultThemeId) ?? state.Themes[0]);
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private void Select(PortalTheme theme)
+    {
+        _draft = ThemeDraft.From(theme);
+        _dirty = false;
+        Refresh(dirty: false);
+    }
+
+    private void New() => StartCopy(_draft?.ToTheme() ?? BuiltInThemes.Phosphor, string.Empty);
+
+    private void Duplicate() => StartCopy(_draft!.ToTheme(), Loc["AdmThemesCopyOf", _draft.Name]);
+
+    private void StartCopy(PortalTheme source, string name)
+    {
+        _draft = ThemeDraft.From(source with { Name = name, Published = false, BuiltIn = false });
+        _draft.Id = null;
+        _draft.BuiltIn = false;
+        Edited();
+    }
+
+    private void Revert()
+    {
+        if (_draft?.Id is { } id && _state?.Themes.FirstOrDefault(t => t.Id == id) is { } saved)
+        {
+            Select(saved);
+        }
+        else if (_state is not null)
+        {
+            Select(_state.Themes[0]);
+        }
+    }
+
+    private void SetDark(bool dark)
+    {
+        _draft!.Dark = dark;
+        Edited();
+    }
+
+    private void SetToken(string token, string? value)
+    {
+        if (SharpMUSH.Library.Models.Portal.ThemeColor.TryParse(value, out var color))
+        {
+            _draft!.Tokens[token] = color.Hex;
+        }
+
+        Edited();
+    }
+
+    private void Edited() => Refresh(dirty: true);
+
+    private void Refresh(bool dirty)
+    {
+        _dirty |= dirty;
+        if (_trying && _draft is not null)
+        {
+            Themes.Preview(Draft);
+        }
+    }
+
+    private void Try(bool on)
+    {
+        _trying = on;
+        Themes.Preview(on && _draft is not null ? Draft : null);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_draft is null) return;
+        _busy = true;
+        _error = null;
+        var result = _draft.Id is { } id ? await Api.SaveAsync(id, _draft.ToRequest()) : await Api.CreateAsync(_draft.ToRequest());
+        switch (result)
+        {
+            case PortalTheme saved:
+                await ReloadAsync(saved.Id);
+                Snackbar.Add(Loc["AdmThemesSaved", saved.Name], Severity.Success);
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private async Task MakeDefaultAsync()
+    {
+        if (_draft?.Id is not { } id) return;
+        _busy = true;
+        _error = null;
+        switch (await Api.SetDefaultAsync(id))
+        {
+            case PortalThemesResponse state:
+                _state = state;
+                await Themes.ReloadAsync();
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_draft?.Id is not { } id) return;
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Loc["AdmThemesDeleteTitle", _draft.Name], Loc["AdmThemesDeleteBody"],
+            yesText: Loc["AdmThemesDelete"], cancelText: Loc["Cancel"]);
+        if (confirmed != true) return;
+
+        _busy = true;
+        _error = null;
+        switch (await Api.DeleteAsync(id))
+        {
+            case PortalThemesResponse state:
+                _state = state;
+                Select(state.Themes.First(t => t.Id == state.DefaultThemeId));
+                await Themes.ReloadAsync();
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private async Task ReloadAsync(string selectId)
+    {
+        if (await Api.GetAsync() is PortalThemesResponse state)
+        {
+            _state = state;
+            if (state.Themes.FirstOrDefault(t => t.Id == selectId) is { } theme)
+            {
+                Select(theme);
+            }
+        }
+
+        await Themes.ReloadAsync();
+    }
+
+    public void Dispose()
+    {
+        if (_trying)
+        {
+            Themes.Preview(null);
+        }
+    }
+}

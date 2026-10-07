@@ -2025,10 +2025,6 @@
     <value>Тема</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Настройки темы скоро появятся.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Показать/скрыть навигацию</value>
     <comment>MT — Russian has no single verb for "toggle"; the slash form is the standard UI rendering.</comment>
@@ -5715,5 +5711,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Строка {0}: ::: item раскладывается только непосредственно внутри flex.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Задайте каждому персонажу свою тему и акцентный цвет, чтобы различать их окна с первого взгляда. Оформление хранится вместе с персонажем и следует за ним на любом устройстве.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Привяжите персонажа к своей учётной записи, чтобы задать ему собственное оформление.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Сейчас в игре</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Тема</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>По умолчанию в игре ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Акцент</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Из темы</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Свой цвет</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Показывается как {0}, чтобы оставаться читаемым в этой теме.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Тёмная</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Светлая</value>
   </data>
 </root>

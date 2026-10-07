@@ -2025,10 +2025,6 @@
     <value>Téma</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>A témabeállítások hamarosan elérhetők.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Navigáció be- és kikapcsolása</value>
     <comment>MT</comment>
@@ -5715,5 +5711,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>{0}. sor: a ::: item csak közvetlenül egy flexen belül rendeződik.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Adj minden karakternek saját témát és kiemelőszínt, hogy egy pillantással megkülönböztesd az ablakaikat. A megjelenés a karakterrel együtt tárolódik, és minden eszközre követi.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Kapcsolj egy karaktert a fiókodhoz, hogy saját megjelenést adhass neki.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Most játszott</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Téma</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>A játék alapértelmezése ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Kiemelőszín</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>A témáé</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Egyéni szín</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>{0} színnel jelenik meg, hogy ezen a témán is olvasható maradjon.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Nem sikerült menteni: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Sötét</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Világos</value>
   </data>
 </root>

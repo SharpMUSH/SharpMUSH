@@ -3,7 +3,12 @@ using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
+using NSubstitute;
+using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Tests.BUnit.Resources;
@@ -51,12 +56,19 @@ public class SettingsRoutesTests : BunitContext
 	}
 
 	[Test]
-	public async Task Theme_is_a_card_under_the_plain_header()
+	public async Task Theme_is_under_the_plain_header_and_asks_for_a_character_first()
 	{
+		Services.AddSingleton(new AccountAuthService(Substitute.For<IHttpClientFactory>(), JSInterop.JSRuntime,
+			NullLogger<AccountAuthService>.Instance, []));
+		var themes = Substitute.For<IThemeService>();
+		themes.Themes.Returns(BuiltInThemes.All);
+		themes.DefaultThemeId.Returns(BuiltInThemes.PhosphorId);
+		Services.AddSingleton(themes);
+
 		var cut = Render<SettingsTheme>();
 
 		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("NavTheme");
-		await Assert.That(cut.Find(".kit-card .kit-card-title").TextContent).IsEqualTo("ComingSoon");
+		await Assert.That(cut.Markup).Contains("NavThemeNoCharacters");
 	}
 
 	[Test]

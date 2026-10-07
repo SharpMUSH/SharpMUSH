@@ -37,6 +37,9 @@ public interface IAccountAuthState
 	/// <summary>Raised whenever <see cref="ActiveCharacter"/> changes to a different character.</summary>
 	event Action? ActiveCharacterChanged;
 
+	/// <summary>Raised when a character's portal theme or accent changes.</summary>
+	event Action? AppearanceChanged;
+
 	/// <summary>
 	/// Single-flight, idempotent hydration from storage. Must be safe to call from any auth-state
 	/// query (concurrently or repeatedly) before consulting <see cref="IsLoggedIn"/>,

@@ -2025,10 +2025,6 @@
     <value>Tema</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Postavke teme uskoro stižu.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Uključi/isključi navigaciju</value>
     <comment>MT</comment>
@@ -5715,5 +5711,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Redak {0}: ::: item raspoređuje se samo izravno unutar flexa.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Dajte svakom liku vlastitu temu i boju naglaska kako biste njihove prozore razlikovali na prvi pogled. Izgled se sprema uz lik i prati ga na svaki uređaj.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Povežite lik sa svojim računom kako biste mu dali vlastiti izgled.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Igra se sada</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Zadano za igru ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Naglasak</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Iz teme</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Vlastita boja</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Prikazuje se kao {0} kako bi ostala čitljiva na ovoj temi.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Spremanje nije uspjelo: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Tamna</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Svijetla</value>
   </data>
 </root>

@@ -2025,10 +2025,6 @@
     <value>Tema</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Temaindstillinger er på vej.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Slå navigation til/fra</value>
     <comment>MT</comment>
@@ -5715,5 +5711,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Linje {0}: et ::: item lægges kun ud direkte inde i en flex.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Giv hver karakter sit eget tema og sin egen accentfarve, så du kan kende deres vinduer fra hinanden med det samme. Udseendet gemmes med karakteren og følger den til alle enheder.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Knyt en karakter til din konto for at give den sit eget udseende.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Spiller nu</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Spillets standard ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Accentfarve</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Temaets egen</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Egen farve</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Vises som {0}, så den er til at læse på dette tema.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Kunne ikke gemme: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Mørkt</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Lyst</value>
   </data>
 </root>

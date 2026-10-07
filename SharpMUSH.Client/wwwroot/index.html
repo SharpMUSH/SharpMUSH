@@ -22,6 +22,20 @@
     <link rel="preload" href="/fonts/hanken-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <link href="css/custom.css" rel="stylesheet" />
     <link href="SharpMUSH.Client.styles.css" rel="stylesheet" />
+    <!-- The theme this browser last used (ThemeService.CacheKey), applied before the runtime starts so the
+         loading screen and the first render are already in it. ThemeProvider's own copy follows in the body
+         and overrides this one once the game's themes and the character's accent are read. -->
+    <script>
+        try {
+            const theme = JSON.parse(localStorage.getItem('sharp-theme') || 'null');
+            if (theme && typeof theme.Css === 'string') {
+                const style = document.createElement('style');
+                style.id = 'sharp-theme-boot';
+                style.textContent = theme.Css;
+                document.head.appendChild(style);
+            }
+        } catch { /* storage unavailable or unreadable: tokens.css stands */ }
+    </script>
     <script type="importmap"></script>
 </head>
 

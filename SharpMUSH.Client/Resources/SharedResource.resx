@@ -3651,9 +3651,6 @@
   <data name="NavSettingsThemeDescription" xml:space="preserve">
     <value>Appearance and accent preferences</value>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Theme preferences are on the way.</value>
-  </data>
   <data name="NavMailFolders" xml:space="preserve">
     <value>Folders</value>
   </data>
@@ -6232,5 +6229,188 @@
   </data>
   <data name="LayAppNavUrlHelper" xml:space="preserve">
     <value>A route returning this app's own sidebar links, e.g. http/jobs/nav</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Give each character its own theme and accent, so you can tell their windows apart at a glance. The look is stored with the character and follows it to any device.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Link a character to your account to give it its own look.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Playing now</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Game default ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Theme's own</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Custom colour</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Shown as {0} so it stays readable on this theme.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Could not save: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="AdmThemesTitle" xml:space="preserve">
+    <value>Themes</value>
+  </data>
+  <data name="AdmCardThemes" xml:space="preserve">
+    <value>The portal's colour themes, and which one players get</value>
+  </data>
+  <data name="AdmThemesDescription" xml:space="preserve">
+    <value>The portal's colour themes. Players pick among the published ones for each of their characters; a character that picked none gets the default.</value>
+  </data>
+  <data name="AdmThemesNew" xml:space="preserve">
+    <value>New theme</value>
+  </data>
+  <data name="AdmThemesDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="AdmThemesBuiltIn" xml:space="preserve">
+    <value>Built-in</value>
+  </data>
+  <data name="AdmThemesUnpublished" xml:space="preserve">
+    <value>Unpublished</value>
+  </data>
+  <data name="AdmThemesUntitled" xml:space="preserve">
+    <value>Untitled theme</value>
+  </data>
+  <data name="AdmThemesNotSaved" xml:space="preserve">
+    <value>Not saved</value>
+  </data>
+  <data name="AdmThemesNewSub" xml:space="preserve">
+    <value>Players can't pick it until it is saved and published.</value>
+  </data>
+  <data name="AdmThemesBuiltInSub" xml:space="preserve">
+    <value>Ships with SharpMUSH</value>
+  </data>
+  <data name="AdmThemesEditSub" xml:space="preserve">
+    <value>Players see changes when you save.</value>
+  </data>
+  <data name="AdmThemesBuiltInNote" xml:space="preserve">
+    <value>SharpMUSH ships this theme, so it can't be changed. Duplicate it to make one of your own.</value>
+  </data>
+  <data name="AdmThemesName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AdmThemesMode" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="AdmThemesDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="AdmThemesLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="AdmThemesPublished" xml:space="preserve">
+    <value>Players can pick it</value>
+  </data>
+  <data name="AdmThemesGroupSurfaces" xml:space="preserve">
+    <value>Surfaces</value>
+  </data>
+  <data name="AdmThemesGroupText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="AdmThemesGroupLines" xml:space="preserve">
+    <value>Lines</value>
+  </data>
+  <data name="AdmThemesGroupColours" xml:space="preserve">
+    <value>Colours</value>
+  </data>
+  <data name="AdmThemeTokenBg" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="AdmThemeTokenSurface" xml:space="preserve">
+    <value>Card</value>
+  </data>
+  <data name="AdmThemeTokenSurface2" xml:space="preserve">
+    <value>Raised</value>
+  </data>
+  <data name="AdmThemeTokenSurface3" xml:space="preserve">
+    <value>Sidebar and top bar</value>
+  </data>
+  <data name="AdmThemeTokenRailBg" xml:space="preserve">
+    <value>Icon rail</value>
+  </data>
+  <data name="AdmThemeTokenText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="AdmThemeTokenTextDim" xml:space="preserve">
+    <value>Secondary text</value>
+  </data>
+  <data name="AdmThemeTokenTextFaint" xml:space="preserve">
+    <value>Faint text</value>
+  </data>
+  <data name="AdmThemeTokenBorder" xml:space="preserve">
+    <value>Border</value>
+  </data>
+  <data name="AdmThemeTokenBorderSoft" xml:space="preserve">
+    <value>Soft border</value>
+  </data>
+  <data name="AdmThemeTokenAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="AdmThemeTokenWarn" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="AdmThemeTokenLinkMissing" xml:space="preserve">
+    <value>Errors and missing links</value>
+  </data>
+  <data name="AdmThemesContrast" xml:space="preserve">
+    <value>Contrast</value>
+  </data>
+  <data name="AdmThemesContrastHint" xml:space="preserve">
+    <value>Each pair should reach 4.5:1, WCAG AA for body text. A character's own accent is moved until it does; the theme's colours are used as you set them.</value>
+  </data>
+  <data name="AdmThemesOn" xml:space="preserve">
+    <value>{0} on {1}</value>
+  </data>
+  <data name="AdmThemesContrastOk" xml:space="preserve">
+    <value>Readable</value>
+  </data>
+  <data name="AdmThemesContrastLow" xml:space="preserve">
+    <value>Below 4.5:1</value>
+  </data>
+  <data name="AdmThemesTry" xml:space="preserve">
+    <value>Try on the portal</value>
+  </data>
+  <data name="AdmThemesDuplicate" xml:space="preserve">
+    <value>Duplicate</value>
+  </data>
+  <data name="AdmThemesDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="AdmThemesRevert" xml:space="preserve">
+    <value>Revert</value>
+  </data>
+  <data name="AdmThemesMakeDefault" xml:space="preserve">
+    <value>Make default</value>
+  </data>
+  <data name="AdmThemesCopyOf" xml:space="preserve">
+    <value>{0} copy</value>
+  </data>
+  <data name="AdmThemesSaved" xml:space="preserve">
+    <value>Saved {0}.</value>
+  </data>
+  <data name="AdmThemesDeleteTitle" xml:space="preserve">
+    <value>Delete {0}?</value>
+  </data>
+  <data name="AdmThemesDeleteBody" xml:space="preserve">
+    <value>Characters that picked it go back to the default theme.</value>
   </data>
 </root>

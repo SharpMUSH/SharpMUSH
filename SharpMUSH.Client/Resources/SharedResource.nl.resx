@@ -2025,10 +2025,6 @@
     <value>Thema</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Themavoorkeuren zijn in de maak.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Navigatie in-/uitklappen</value>
     <comment>MT</comment>
@@ -5715,5 +5711,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Regel {0}: een ::: item wordt alleen direct binnen een flex uitgelijnd.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Geef elk personage een eigen thema en accentkleur, zodat je hun vensters in één oogopslag uit elkaar houdt. Het uiterlijk wordt bij het personage bewaard en volgt het naar elk apparaat.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Koppel een personage aan je account om het een eigen uiterlijk te geven.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Nu in gebruik</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Thema</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Standaard van het spel ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Accentkleur</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Van het thema</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Eigen kleur</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Wordt getoond als {0} zodat hij leesbaar blijft op dit thema.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Opslaan mislukt: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Donker</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Licht</value>
   </data>
 </root>

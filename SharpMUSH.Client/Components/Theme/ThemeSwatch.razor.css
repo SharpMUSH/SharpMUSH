@@ -1,0 +1,46 @@
+.theme-swatch {
+	display: inline-flex;
+	flex: none;
+	width: 72px;
+	height: 48px;
+	padding: 7px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--sw-bg);
+}
+
+.theme-swatch-card {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	justify-content: center;
+	gap: 4px;
+	padding: 0 6px;
+	border: 1px solid var(--sw-border);
+	border-radius: 6px;
+	background: var(--sw-surface);
+}
+
+.theme-swatch-line {
+	display: block;
+	height: 3px;
+	border-radius: 2px;
+}
+
+.theme-swatch-line--text {
+	width: 80%;
+	background: var(--sw-text);
+}
+
+.theme-swatch-line--dim {
+	width: 55%;
+	background: var(--sw-dim);
+}
+
+.theme-swatch-button {
+	display: block;
+	width: 40%;
+	height: 6px;
+	border-radius: 3px;
+	background: var(--sw-accent);
+}

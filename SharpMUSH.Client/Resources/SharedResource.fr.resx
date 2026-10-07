@@ -2604,9 +2604,6 @@
   <data name="NavSettingsThemeDescription" xml:space="preserve">
     <value>Préférences d'apparence et de couleur d'accent</value>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Les préférences de thème arrivent bientôt.</value>
-  </data>
   <data name="NavMailFolders" xml:space="preserve">
     <value>Dossiers</value>
   </data>
@@ -5008,5 +5005,41 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Ligne {0} : un ::: item ne se dispose que directement dans un flex.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Donnez à chaque personnage son propre thème et sa propre couleur d'accent pour distinguer leurs fenêtres d'un coup d'œil. L'apparence est enregistrée avec le personnage et le suit sur tous vos appareils.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Liez un personnage à votre compte pour lui donner sa propre apparence.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>En jeu</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Thème</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Par défaut du jeu ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Celle du thème</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Couleur personnalisée</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Affichée en {0} pour rester lisible sur ce thème.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Enregistrement impossible : {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Sombre</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Clair</value>
   </data>
 </root>
