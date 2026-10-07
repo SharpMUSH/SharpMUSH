@@ -287,6 +287,9 @@ public static class SceneFunctions
 	/// Returns a field of a pose; an empty &lt;scene&gt; finds the pose by its id alone. Fields: content (default), markup, id, scene,
 	/// author, authorname, showas, origin, originname, source, tags, createdat,
 	/// deleted, editcount, lasteditedat, lasteditor, lasteditorname, or any meta key.
+	/// <para><c>content</c> is the pose as it was written, colours, boxes and pictures included, so a
+	/// recall prints it the way the room saw it and lays it out again at the reader's width;
+	/// <c>markup</c> is the same pose serialised.</para>
 	/// </summary>
 	[SharpFunction(Name = "scenepose", MinArgs = 2, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -325,7 +328,7 @@ public static class SceneFunctions
 
 		return field switch
 		{
-			"content" => new CallState(pose.Content),
+			"content" => new CallState(Written(pose)),
 			"markup" => new CallState(pose.Markup),
 			"id" => new CallState(pose.Id),
 			"scene" => new CallState(pose.SceneId),
@@ -346,6 +349,20 @@ public static class SceneFunctions
 				? metaVal
 				: "#-1 UNKNOWN POSE FIELD"),
 		};
+	}
+
+	/// <summary>The pose as styled text: its stored markup, or its plain text when that is not markup.</summary>
+	private static MString Written(ScenePose pose)
+	{
+		if (pose.Markup.Length == 0) return MarkupText.Plain(pose.Content);
+		try
+		{
+			return MarkupTextSerializer.Deserialize(pose.Markup);
+		}
+		catch (System.Text.Json.JsonException)
+		{
+			return MarkupText.Plain(pose.Content);
+		}
 	}
 
 	/// <summary>
