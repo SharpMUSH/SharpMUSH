@@ -25,7 +25,7 @@ Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `
 
 **Readers.** A client that cannot show Unicode is sent ASCII borders; see [LAYOUT BORDERS]. A client that says it is a screen reader is sent the content alone, in reading order: no borders, fields as `Label: value` lines, tree levels as indentation.
 
-**Options.** The layout functions take their options as one JSON object: `{"border":"double","pad":2}`. Written straight into an argument it needs a second pair of braces, because the outer pair only keeps its commas together: `box(Hello,,30,{{"border":"double","pad":2}})`. It can also be built with [JSON()]: `box(Hello,,30,json(object,border,"double",pad,2))`. A number option takes a JSON number, an on-or-off option (`"vertical"`, `"across"`, `"mirror"`) takes `true` or `false`, `"theme"` takes a string or an object (see [LAYOUT THEMES]), and every other option takes a string. A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`. Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order. Every function answers bad options the same way: `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` for text that is not one JSON object, `#-1 UNKNOWN LAYOUT OPTION <KEY>` for a key it does not take, `#-1 DUPLICATE LAYOUT OPTION <KEY>` for a key given twice, `#-1 ARGUMENT OUT OF RANGE` for a number outside its range, and `#-1 INVALID ARGUMENT` for any other value it cannot read.
+**Options.** The layout functions take their options as one JSON object: `{"border":"double","pad":2}`. Written straight into an argument it needs a second pair of braces, because the outer pair only keeps its commas together: `box(Hello,,30,{{"border":"double","pad":2}})`. It can also be built with [JSON()]: `box(Hello,,30,json(object,border,"double",pad,2))`. A number option takes a JSON number, an on-or-off option (`"vertical"`, `"across"`, `"mirror"`) takes `true` or `false`, `"stripe"` takes `true`, `false` or a string, `"theme"` takes a string or an object (see [LAYOUT THEMES]), and every other option takes a string. A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`. Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order. Every function answers bad options the same way: `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` for text that is not one JSON object, `#-1 UNKNOWN LAYOUT OPTION <KEY>` for a key it does not take, `#-1 DUPLICATE LAYOUT OPTION <KEY>` for a key given twice, `#-1 ARGUMENT OUT OF RANGE` for a number outside its range, and `#-1 INVALID ARGUMENT` for any other value it cannot read.
 
 ### Example: a finger sheet
 ```sharp
@@ -161,6 +161,7 @@ The colours, which `"colors"` sets by name:
 - `tertiary` - list bullets
 - `muted` - tree guides, separators, the line under table headings, a gauge's empty part
 - `success`, `warning`, `error`, `info` - [BADGE()] uses these
+- `surface` - the background behind every second row of a striped table or field list (`"stripe":true`)
 - `background`, `foreground` - what the others are measured against; neither is painted
 
 A colour is `"#rrggbb"`, a standard colour from 0 to 15, or both as `{"rgb":"#88c0d0","slot":6}`. `null` leaves one out.
@@ -232,6 +233,7 @@ A table of *<theme>*'s colours: each colour's name, a sample drawn in it, the co
 Role        Sample  Colour   16-colour       Contrast
 --------------------------------------------------------------
 background  -       #2e3440  0 black         -
+surface     Sample  #3b4252  8 bright black  -
 foreground  Sample  #e5e9f0  7 white         10.3:1
 primary     Sample  #81a1c1  4 blue          4.6:1
 secondary   Sample  #b48ead  5 magenta       4.4:1 (needs 4.5)
@@ -403,6 +405,7 @@ Options (the first argument, which may be empty):
 - `"leader":"<text>"` - fills from a short label to the separator: `"leader":"."` draws `Name.....: `.
 - `"cols":<n>` - deal the fields into that many columns side by side, down each column first. The columns stack when they do not fit.
 - `"gap":<n>` - spaces between those columns. Three by default.
+- `"stripe":true` - lays every second field on a background of its own, to help the eye along a row: the theme's `surface` colour, or dark grey when the theme has none. `"stripe":"<codes>"` uses that colour instead, in [ANSI()] codes: `"stripe":"/#203040"`.
 
 ### Examples
 ```sharp
@@ -664,6 +667,7 @@ Options (the first argument, which may be empty). The lists are split like the c
 - `"gap":<n>` - spaces between the columns. Two by default.
 - `"sep":"<text>"` - drawn between the columns instead of spaces.
 - `"rule":"<text>"` - the line under the headings. `-` by default; `"rule":""` for none.
+- `"stripe":true` - lays every second row on a background of its own, to help the eye along a row: the theme's `surface` colour, or dark grey when the theme has none. `"stripe":"<codes>"` uses that colour instead, in [ANSI()] codes: `"stripe":"/#203040"`. Rows shown as labelled values are not striped.
 - `"delim":"<text>"` - what splits the headings, cells and lists. `|` by default.
 
 ### Examples

@@ -33,6 +33,9 @@ public partial class Functions
 
 		/// <summary>The colours the call's <c>theme</c> option chose, for the block and everything inside it.</summary>
 		public LayoutTheme? Theme { get; init; }
+
+		/// <summary>The ansi() codes of the <c>stripe</c> option's colour, empty for the theme's.</summary>
+		public MString? Stripe { get; init; }
 	}
 
 	/// <summary>
@@ -75,7 +78,8 @@ public partial class Functions
 		.Text("sep", (laid, separator) => laid with { Block = laid.Block with { Separator = separator } })
 		.Text("leader", (laid, leader) => laid with { Block = laid.Block with { Leader = leader.Length == 0 ? null : leader } })
 		.Int("cols", 1, 10, (laid, columns) => laid with { Block = laid.Block with { Columns = columns } })
-		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } });
+		.Int("gap", 0, LayoutOptionGroups.MaxGap, (laid, gap) => laid with { Block = laid.Block with { Gap = gap } })
+		.Stripe((laid, codes) => laid with { Block = laid.Block with { Striped = codes is not null }, Stripe = codes });
 
 	private static OptionSchema<Laid<Tree>> TreeSchema { get; } = InnerBorder(OptionSchema<Laid<Tree>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
@@ -268,26 +272,43 @@ public partial class Functions
 	/// </summary>
 	private CallState Laidout<T>(IMUSHCodeParser parser, OptionSchema<Laid<T>> schema, MString options, T block, MString? width = null) where T : Block =>
 		schema.Apply(options, new Laid<T>(block, width ?? MarkupText.Empty, DefaultBorder()),
-			laid => Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
+			laid => Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme, StripeOf(laid.Stripe)),
 			error => new CallState(error.Value));
 
 	/// <summary>
 	/// <paramref name="block"/> laid out at the width <paramref name="widthArg"/> names, under
-	/// <paramref name="border"/> and <paramref name="theme"/> when its options chose them: the boxes and
-	/// rules inside it that name no border of their own take that one instead of <c>layout_border</c>,
-	/// and its parts take the theme's colours instead of <c>layout_theme</c>'s.
+	/// <paramref name="border"/>, <paramref name="theme"/> and <paramref name="stripe"/> when its options
+	/// chose them: the boxes and rules inside it that name no border of their own take that one instead
+	/// of <c>layout_border</c>, and its parts take the theme's colours instead of <c>layout_theme</c>'s.
 	/// </summary>
-	private CallState Finish(IMUSHCodeParser parser, Block block, MString widthArg, BorderStyle? border = null, LayoutTheme? theme = null) =>
+	private CallState Finish(IMUSHCodeParser parser, Block block, MString widthArg, BorderStyle? border = null, LayoutTheme? theme = null, IMarkup? stripe = null) =>
 		LayoutWidth(parser, widthArg) is (int width, bool fluid)
-			? new CallState(Build(border is null && theme is null ? block : block.Themed((theme ?? LayoutTheme.Default) with { Border = border }), width, fluid))
+			? new CallState(Build(border is null && theme is null && stripe is null
+				? block
+				: block.Themed((theme ?? LayoutTheme.Default) with { Border = border, StripeColor = stripe ?? theme?.StripeColor }), width, fluid, block is Table { Striped: true } or Fields { Striped: true }))
 			: new CallState(ErrorMessages.Returns.ArgRange);
+
+	/// <summary>The <c>stripe</c> option's colour, from its ansi() codes, or null for the theme's.</summary>
+	private IMarkup? StripeOf(MString? codes) => codes is { Length: > 0 } ? AnsiCodes(codes.ToPlainText()) : null;
+
+	/// <summary>
+	/// The stripe when neither the call, the reader nor <c>layout_theme</c> names one: a dark grey, for the dark
+	/// background most clients have. Only a striped layout carries it, so no other sets the colour in a browser.
+	/// </summary>
+	private static readonly IMarkup DefaultStripe = new AnsiMarkup(new AnsiStyle { Background = new AnsiColor.Rgb(48, 48, 48) });
 
 	/// <summary>
 	/// <paramref name="block"/> laid out under the game's look (<c>layout_border</c>, <c>layout_theme</c>),
 	/// which a block that takes it in as a child sheds again so the outer one's look carries through
 	/// (<see cref="Adopt"/>). The game's look sits under any a reader brings (<see cref="Themed.Fallback"/>).
 	/// </summary>
-	private MString Build(Block block, int width, bool fluid) => BlockLayout.Build(block.ThemedUnder(HouseTheme()), width, fluid);
+	/// <param name="striped">Whether it is striped, so the game's look needs a stripe colour even when <c>layout_theme</c> has none.</param>
+	private MString Build(Block block, int width, bool fluid, bool striped = false)
+	{
+		var house = HouseTheme();
+		if (striped && house.StripeColor is null) house = house with { StripeColor = DefaultStripe };
+		return BlockLayout.Build(block.ThemedUnder(house), width, fluid);
+	}
 
 	/// <summary>The <c>layout_border</c> and <c>layout_theme</c> the house look was last made from, and the look.</summary>
 	private (string? Border, string? Theme, ThemePalette? Palette, LayoutTheme Look)? _house;

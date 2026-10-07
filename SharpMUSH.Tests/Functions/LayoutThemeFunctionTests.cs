@@ -103,4 +103,31 @@ public class LayoutThemeFunctionTests
 
 		await Assert.That(ascii.Render(MarkupFormat.Ansi)).Contains(NordBlue + "+");
 	}
+
+	[Test]
+	public async Task AStripedTable_LaysEverySecondRowOnTheThemesSurface()
+	{
+		var lines = (await Eval("datatable({{\"theme\":\"nord\",\"stripe\":true,\"width\":20}},Name|Note,one|x,two|y,three|z)"))
+			.Render(MarkupFormat.Ansi).Split('\n');
+
+		await Assert.That(lines[2]).DoesNotContain("48;2;");
+		await Assert.That(lines[3]).Contains("48;2;59;66;82m");
+		await Assert.That(lines[4]).DoesNotContain("48;2;");
+	}
+
+	[Test]
+	public async Task AStripe_TakesAColourOrTheDefault()
+	{
+		var coloured = (await Eval("fields({{\"stripe\":\"/#203040\",\"width\":20}},A,1,B,2)")).Render(MarkupFormat.Ansi);
+		var plain = (await Eval("fields({{\"stripe\":true,\"width\":20}},A,1,B,2)")).Render(MarkupFormat.Ansi);
+		var off = (await Eval("fields({{\"stripe\":false,\"width\":20}},A,1,B,2)")).Render(MarkupFormat.Ansi);
+
+		await Assert.That(coloured.Split('\n')[1]).Contains("48;2;32;48;64m");
+		await Assert.That(plain.Split('\n')[1]).Contains("48;2;48;48;48m");
+		await Assert.That(off).DoesNotContain("48;");
+	}
+
+	[Test]
+	public async Task Swatch_ShowsTheSurfaceAsABackground()
+		=> await Assert.That((await Eval("swatch(nord,78)")).Render(MarkupFormat.Ansi)).Contains("48;2;59;66;82mSample");
 }

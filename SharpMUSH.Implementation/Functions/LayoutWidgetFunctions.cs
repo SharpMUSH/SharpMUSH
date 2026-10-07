@@ -59,6 +59,9 @@ public partial class Functions
 
 		/// <summary>The colours the options chose.</summary>
 		public LayoutTheme? Theme { get; init; }
+
+		/// <summary>The ansi() codes of the <c>stripe</c> option's colour, empty for the theme's.</summary>
+		public MString? Stripe { get; init; }
 	}
 
 	private static OptionSchema<TableSettings> DataTableSchema { get; } = OptionSchema<TableSettings>.Empty
@@ -72,7 +75,8 @@ public partial class Functions
 		.Text("min", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("min", list)) })
 		.Text("max", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("max", list)) })
 		.Text("nowrap", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("nowrap", list)) })
-		.Theme((settings, theme) => settings with { Theme = theme });
+		.Theme((settings, theme) => settings with { Theme = theme })
+		.Stripe((settings, codes) => settings with { Table = settings.Table with { Striped = codes is not null }, Stripe = codes });
 
 	/// <summary>A gradient's colours and the way it runs.</summary>
 	private sealed record Shading(ColorGradient Gradient, GradientFlow Flow);
@@ -186,7 +190,7 @@ public partial class Functions
 		}
 
 		var rows = cells.Select(row => row.Select(cell => Body(cell)).ToImmutableArray()).ToImmutableArray();
-		return Finish(parser, settings.Table with { Columns = [.. columns], Rows = rows }, settings.Width, settings.Border, settings.Theme);
+		return Finish(parser, settings.Table with { Columns = [.. columns], Rows = rows }, settings.Width, settings.Border, settings.Theme, StripeOf(settings.Stripe));
 	}
 
 	/// <summary>
@@ -251,7 +255,7 @@ public partial class Functions
 		if (kind is not var (codes, role)) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
 
 		// layout_theme's colour for the kind when it has one; the classic codes otherwise.
-		IMarkup colour = HousePalette()?[role] is { } themed ? AnsiTheme.Paint(themed, bold: role != ThemeRole.Muted) : AnsiCodeParser.Parse(codes);
+		IMarkup colour = HousePalette()?[role] is { } themed ? AnsiTheme.Paint(themed, role == ThemeRole.Muted ? ThemePaint.Text : ThemePaint.Bold) : AnsiCodeParser.Parse(codes);
 		var text = MarkupText.Concat([MarkupText.Plain("["), Arg(args, 0), MarkupText.Plain("]")]);
 		return ValueTask.FromResult(new CallState(MarkupText.Wrap(colour, text)));
 	}

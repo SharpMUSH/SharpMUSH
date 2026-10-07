@@ -76,6 +76,15 @@ public sealed class OptionSchema<T> where T : class
 	public OptionSchema<T> Flag(string key, Func<T, bool, T> set) =>
 		Typed(key, ValueKind.Boolean, (settings, value) => set(settings, value.Text == "true"));
 
+	/// <summary>An option that takes <c>true</c> or <c>false</c>, or text: what <paramref name="set"/> is given for each, the text empty for <c>true</c> and null for <c>false</c>.</summary>
+	public OptionSchema<T> FlagOrText(string key, Func<T, MString?, T> set) =>
+		Typed(key, ValueKind.Boolean | ValueKind.String, (settings, value) => value.ToPlainText() switch
+		{
+			"true" => set(settings, MarkupText.Empty),
+			"false" => set(settings, null),
+			_ => set(settings, value),
+		});
+
 	/// <summary>This schema's options followed by <paramref name="group"/>'s.</summary>
 	public OptionSchema<T> Including(Func<OptionSchema<T>, OptionSchema<T>> group) => group(this);
 
@@ -354,6 +363,13 @@ public static class LayoutOptionGroups
 			ThemePalette palette => set(settings, palette.ToLayoutTheme()),
 			Error<string> error => error,
 		});
+
+	/// <summary>
+	/// <c>stripe:</c> <c>true</c> lays every second row on the theme's stripe colour, and ansi() codes
+	/// (<c>/#303030</c>) on that colour instead; the codes are kept as written for the function to read.
+	/// </summary>
+	public static OptionSchema<T> Stripe<T>(this OptionSchema<T> schema, Func<T, MString?, T> set) where T : class =>
+		schema.FlagOrText("stripe", set);
 
 	/// <summary><c>width:</c>, kept as written: the function reads it once it knows the connection.</summary>
 	public static OptionSchema<T> Width<T>(this OptionSchema<T> schema, Func<T, MString, T> set) where T : class =>

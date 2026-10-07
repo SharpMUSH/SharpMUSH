@@ -60,7 +60,8 @@ public partial class Functions
 		{
 			if (palette[role] is not { } color) continue;
 			var shortfall = shortfalls.FirstOrDefault(found => found.Role == role);
-			var ratio = role == ThemeRole.Background ? "-"
+			// The surface is a background too: its sample is a stripe, and it has no contrast to meet.
+			var ratio = role is ThemeRole.Background or ThemeRole.Surface ? "-"
 				// A standard colour looks however the reader's client makes it.
 				: color.Rgb is null || palette[ThemeRole.Background] is { Rgb: null } ? "client"
 				: ColorMath.Contrast(color.Resolved, background).ToString("0.0", CultureInfo.InvariantCulture) + ":1"
@@ -68,7 +69,12 @@ public partial class Functions
 			rows.Add(
 			[
 				MarkupText.Plain(ThemePalette.RoleName(role)),
-				role == ThemeRole.Background ? MarkupText.Plain("-") : MarkupText.Wrap(AnsiTheme.Paint(color), "Sample"),
+				role switch
+				{
+					ThemeRole.Background => MarkupText.Plain("-"),
+					ThemeRole.Surface => MarkupText.Wrap(AnsiTheme.Paint(color, ThemePaint.Background), "Sample"),
+					_ => MarkupText.Wrap(AnsiTheme.Paint(color), "Sample"),
+				},
 				MarkupText.Plain(color.Rgb?.ToHex() ?? "-"),
 				MarkupText.Plain(color.Slot is { } slot ? StandardName(slot) : "-"),
 				MarkupText.Plain(ratio),
