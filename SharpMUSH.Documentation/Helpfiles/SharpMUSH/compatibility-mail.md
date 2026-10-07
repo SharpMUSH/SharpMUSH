@@ -19,14 +19,20 @@
       "id": "an-empty-mailforwardlist-is-no-list",
       "heading": "An empty `MAILFORWARDLIST` is no list",
       "lookup": "compatibility mail an empty mailforwardlist is no list"
+    },
+    {
+      "id": "mail-listings-are-drawn-as-panels",
+      "heading": "Mail listings are drawn as panels",
+      "lookup": "compatibility mail mail listings are drawn as panels"
     }
   ]
 }
 -->
 # COMPATIBILITY MAIL
 
-`@mail` matches PennMUSH's commands and switches. Three differences are deliberate, and all three are
-about what happens to a message between the sender's `@mail` and the recipient's folder.
+`@mail` matches PennMUSH's commands and switches. Four differences are deliberate. Three are about
+what happens to a message between the sender's `@mail` and the recipient's folder; the fourth is how
+the listings look.
 
 ## A `MAILFILTER` that mails its owner does not recurse
 
@@ -71,3 +77,20 @@ list is read without parents either way, so a parent's list never forwards a chi
 **Workaround.** Nothing to change in code that never wrote an empty list. Do not reach for an empty
 `MAILFORWARDLIST` as a way to stop receiving mail: it stops nothing here.<br>
 **Example.** The parity case `choice.mail-forwardlist` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
+
+## Mail listings are drawn as panels
+
+**A choice.**
+
+**PennMUSH** prints the message list, a read message, `@mail/folder`, `@mail/stats` and `@malias`
+as lines of its own (`MAIL: 2 messages in folder 0 [INBOX] (2 unread, 0 cleared).`) between rows of
+dashes.<br>
+**SharpMUSH** draws each as a titled panel: a table of columns for a list, labelled fields for a
+message's header, and a summary line under a divider. A client without UTF-8 gets the same panel in
+`+`, `-` and `|`, and a narrow client gets it laid out again at its own width.<br>
+**Why.** The same listing reads as a table on a terminal, in the web portal and to a screen reader;
+padded lines only line up on the terminal they were padded for.<br>
+**Workaround.** Code that reads mail goes through `mail()`, `mailstats()`, `folderstats()` and
+`maillist()`, which answer as PennMUSH's do. Do not parse what `@mail` prints.<br>
+**Example.** The parity case `mail.folder-numbers` in `tools/parity/scenarios/50-mail.scn` runs
+`@mail/folder` on both servers.
