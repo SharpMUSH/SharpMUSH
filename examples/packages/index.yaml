@@ -49,12 +49,12 @@ packages:
     description: "Global UI-helper functions: header(), footer(), line()"
   - path: scene/
     package: scene
-    version: 1.1.0
+    version: 1.1.1
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.1.0
+    version: 1.1.1
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: hello-ui/
     name: Hello UI
@@ -69,7 +69,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.1.0
+    version: 1.1.1
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal

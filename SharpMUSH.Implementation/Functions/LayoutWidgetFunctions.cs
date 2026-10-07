@@ -75,6 +75,7 @@ public partial class Functions
 		.Text("min", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("min", list)) })
 		.Text("max", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("max", list)) })
 		.Text("nowrap", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("nowrap", list)) })
+		.Text("grow", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("grow", list)) })
 		.Theme((settings, theme) => settings with { Theme = theme })
 		.Stripe((settings, codes) => settings with { Table = settings.Table with { Striped = codes is not null }, Stripe = codes });
 
@@ -194,8 +195,8 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// A per-column list applied to <paramref name="columns"/>: <c>priority</c>, <c>min</c> and <c>max</c>
-	/// give a number for each column in turn (empty to leave one as it is), <c>nowrap</c> names columns
+	/// A per-column list applied to <paramref name="columns"/>: <c>priority</c>, <c>min</c>, <c>max</c>
+	/// and <c>grow</c> give a number for each column in turn (empty to leave one as it is), <c>nowrap</c> names columns
 	/// by their place. The error, or null.
 	/// </summary>
 	private static string? ApplyColumnList(TableColumn[] columns, string key, MString[] list)
@@ -221,6 +222,7 @@ public partial class Functions
 				"priority" when number is >= 1 and <= 99 => columns[c] with { Priority = number },
 				"min" when number is >= 1 and <= MaxLayoutWidth => columns[c] with { Min = number },
 				"max" when number is >= 0 and <= MaxLayoutWidth => columns[c] with { Max = number },
+				"grow" when number is >= 0 and <= 100 => columns[c] with { Grow = number },
 				_ => null,
 			};
 			if (changed is null) return ErrorMessages.Returns.ArgRange;

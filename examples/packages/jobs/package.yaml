@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -409,7 +409,7 @@ objects:
       # joined with %r and split on a newline, so a title holding a | stays one cell; the title wraps and
       # every other column is shown whole or, on a narrow screen, left out (Bucket and Updated first).
       FUN`TABLE: |-
-        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2%r4%r5),min,json(string,%r%r12),priority,json(string,1%r2%r1%r1%r2)),>#%r[iter(%0,[if(u({{jobs}}/FUN`UNREAD,%i0,%1),*)][get(%i0/NUM)],,%r)],Bucket%r[iter(%0,name(get(%i0/BUCKET)),,%r)],Title%r[iter(%0,get(%i0/TITLE),,%r)],Status%r[iter(%0,if(cand(setr(_w,u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1)),u({{jobs}}/FUN`IS`OVERDUE,%i0)),ansi(hr,Overdue),u({{jobs}}/FUN`STATE`TEXT,%i0,%q<_w>)),,%r)],Updated%r[iter(%0,u({{jobs}}/FUN`DATE,get(%i0/[if(u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)])),,%r)])]
+        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2%r4%r5),min,json(string,%r%r12),priority,json(string,1%r2%r1%r1%r2)),>#%r[iter(%0,[if(u({{jobs}}/FUN`UNREAD,%i0,%1),*)][get(%i0/NUM)],,%r)],Bucket%r[iter(%0,name(get(%i0/BUCKET)),,%r)],Title%r[iter(%0,edit(get(%i0/TITLE),%r,%b),,%r)],Status%r[iter(%0,if(cand(setr(_w,u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1)),u({{jobs}}/FUN`IS`OVERDUE,%i0)),ansi(hr,Overdue),u({{jobs}}/FUN`STATE`TEXT,%i0,%q<_w>)),,%r)],Updated%r[iter(%0,u({{jobs}}/FUN`DATE,get(%i0/[if(u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)])),,%r)])]
       # Jobs %0 for person %1 in a box titled %2, with footer %3. No width: each reader gets their own.
       FUN`LIST: |-
         [box([if(words(%0),u({{jobs}}/FUN`TABLE,%0,%1),No jobs.)][if(strlen(%3),%r[rule()]%r%3)],%2)]

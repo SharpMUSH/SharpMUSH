@@ -823,11 +823,12 @@ pre.ms-preformatted {
 .ms-shaded :is(.ms-box, .ms-gauge-bar), .ms-shaded :is(.ms-rule, .ms-divider)::before, .ms-shaded :is(.ms-rule, .ms-divider)::after { border-image: var(--ms-shade) 1; }
 .ms-table-wrap { max-width: 100%; overflow-x: auto; }
 .ms-table { border-collapse: collapse; }
+.ms-table.ms-fill { width: 100%; }
 .ms-table th, .ms-table td { padding: 0 1ch; vertical-align: top; text-align: left; }
 .ms-table th { border-bottom: 1px solid var(--ms-header-rule, var(--ms-header-rule-default, currentColor)); color: var(--ms-heading, var(--ms-heading-default, inherit)); }
 .ms-table.ms-striped > tbody > tr:nth-child(even) { background: var(--ms-stripe, var(--ms-stripe-default, rgba(127, 127, 127, 0.12))); }
 .ms-table .ms-nowrap, .ms-table .ms-nowrap .ms-text { white-space: pre; overflow-wrap: normal; }
-@media (max-width: 48em) { .ms-table .ms-p3 { display: none; } }
+@media (max-width: 48em) { .ms-table .ms-p3 { display: none; } .ms-table.ms-fill > colgroup > col { width: auto !important; } }
 @media (max-width: 32em) { .ms-table .ms-p2 { display: none; } }
 /* Portal-only: LayoutCss.Fixed leaves its title gap in a rule or divider with no title, which splits the line in two. */
 .ms-rule:empty, .ms-divider:empty { gap: 0; }
