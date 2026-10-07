@@ -17,16 +17,6 @@ public class GeneratedFunctionTests
 	#region version() Function Tests
 
 	[Test]
-	public async Task Version_ReturnsNonEmptyString()
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("version()")))?.Message!;
-		var versionText = result.ToPlainText();
-
-		await Assert.That(versionText).IsNotEmpty();
-		await Assert.That(versionText).IsNotNull();
-	}
-
-	[Test]
 	public async Task Version_ReturnsConsistentValue()
 	{
 		var result1 = (await Parser.FunctionParse(MarkupText.Plain("version()")))?.Message!;

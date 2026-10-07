@@ -163,13 +163,4 @@ public class WarningCommandTests
 				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Checking objects you own...")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires wizard permissions")]
-	public async Task WCheckCommand_WithAll_RequiresWizard()
-	{
-		// This test would need to set up a wizard player
-		await ValueTask.CompletedTask;
-	}
 }

@@ -85,46 +85,6 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask ShutdownCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@shutdown"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "SHUTDOWN initiated.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask RestartCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@restart"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "All objects restarted.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask PurgeCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@purge"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Purge complete.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
 	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PoorCommand()
@@ -136,48 +96,6 @@ public class AdminCommandTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "The quota system is disabled") ||
-				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask ReadcacheCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@readcache"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Reindexing text files")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
-	public async ValueTask ChownallCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chownall #1002=#2002"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
-	public async ValueTask ChzoneallCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chzoneall #1003=#2003"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

@@ -22,9 +22,6 @@ namespace SharpMUSH.Tests;
 
 public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 {
-	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
-	public required DockerNetwork DockerNetwork { get; init; }
-
 	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]
 	public required NatsTestServer NatsTestServer { get; init; }
 

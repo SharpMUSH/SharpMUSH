@@ -6,7 +6,8 @@ namespace SharpMUSH.Tests.ConnectionServer;
 
 public class SocketServerCapacityTests
 {
-	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerClass)]
+	// The session's broker: building the host only reads its URL, and nothing here consumes a stream.
+	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]
 	public required NatsTestServer Broker { get; init; }
 
 	[Test]

@@ -20,18 +20,6 @@ public class ListenPatternMatcherTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with objects and ^-listen attributes configured")]
-	public async ValueTask MatchListenPatternsAsync_WithNoMonitorFlag_ReturnsEmpty()
-	{
-		// This test would require:
-		// 1. An object without MONITOR flag
-		// 2. ^-listen pattern attributes on the object
-		// 3. Verification that no patterns match (because MONITOR is not set)
-		await ValueTask.CompletedTask;
-	}
-
 	/// <summary>
 	/// A wildcard <c>^</c>-pattern binds each star in pattern order, beginning at %0.
 	/// </summary>
@@ -51,41 +39,5 @@ public class ListenPatternMatcherTests
 		await Assert.That(matches[0].Attribute.Name).IsEqualTo("LISTEN1");
 		await Assert.That(matches[0].Behavior).IsEqualTo(ListenBehavior.AHear);
 		await Assert.That(matches[0].CapturedGroups).IsEquivalentTo(new[] { "God", "hello" });
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with AAHEAR flag")]
-	public async ValueTask MatchListenPatternsAsync_WithAAHEARFlag_MatchesForAnySpeaker()
-	{
-		// This test would require:
-		// 1. An object with ^-listen pattern
-		// 2. Attribute with AAHEAR flag set
-		// 3. Verification that pattern matches for both self and others
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with AMHEAR flag")]
-	public async ValueTask MatchListenPatternsAsync_WithAMHEARFlag_MatchesOnlyForSelf()
-	{
-		// This test would require:
-		// 1. An object with ^-listen pattern
-		// 2. Attribute with AMHEAR flag set
-		// 3. Verification that pattern only matches when speaker is the listener itself
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with default ^-listen behavior")]
-	public async ValueTask MatchListenPatternsAsync_WithDefaultBehavior_MatchesOnlyForOthers()
-	{
-		// This test would require:
-		// 1. An object with ^-listen pattern
-		// 2. Attribute without AAHEAR or AMHEAR flags (default behavior)
-		// 3. Verification that pattern only matches when speaker is NOT the listener
-		await ValueTask.CompletedTask;
 	}
 }

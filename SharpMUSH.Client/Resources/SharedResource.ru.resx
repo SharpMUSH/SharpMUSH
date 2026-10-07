@@ -5560,9 +5560,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>Сцена не была приостановлена.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Комната ещё не выбрана</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Ведущий: {0}</value>
   </data>
@@ -5715,5 +5712,47 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Строка {0}: ::: item раскладывается только непосредственно внутри flex.</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Запланировать сцену</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>У сцены нет комнаты до начала: она проходит там, где ведущий находится в момент запуска.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Выберите время, которое ещё не прошло.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Сцена не была запланирована.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Сцена в расписании, но сохранено не всё: {0} Отредактируйте её на её странице.</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Ведущий</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Эта сцена начнётся {0}. Её журнал начнётся тогда же.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Эта сцена ещё не началась. Её журнал начнётся вместе с ней.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Сцена в расписании, но в тот же момент для вас была запланирована ещё одна, поэтому описание и приватность не заданы. Проверьте обе сцены на их страницах.</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Подробности и участники</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Опаздывает</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Сегодня</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Завтра</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Показаны следующие {0} сцен.</value>
   </data>
 </root>

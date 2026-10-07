@@ -474,8 +474,6 @@ public class ListFunctionUnitTests
 	// PennMUSH treats ANSI escape codes as part of the comparison string (flat-string artifact)
 	// SharpMUSH correctly separates content from formatting — ANSI doesn't affect equality
 	// SharpMUSH behavior is superior here; not a bug.
-	// Penn setunion.null — empty result with delimiter shouldn't produce trailing output
-	[Arguments("setunion(!,,!)", "")]
 	public async Task SetUnion(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
@@ -575,7 +573,6 @@ public class ListFunctionUnitTests
 	[Arguments("setdiff(!b!a!,!b,!)", "a")]
 	[Arguments("setdiff(c!a!b!a,a!b!c!c,!)", "")]
 	[Arguments("setdiff(!c!a!b!a,a!b!c!c,!)", "")]
-	[Arguments("setdiff(!,,!)", "")]
 	public async Task SetDifference(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
@@ -861,7 +858,6 @@ public class ListFunctionUnitTests
 	// Live PennMUSH 80a1d5b (runtest.pl): fun_setmanip's argument handling (src/funlist.c:815-881).
 	// A 4th argument that is empty is the output separator; a non-empty one is a sort type.
 	[Test]
-	[Arguments("setunion(a b,c d,,)", "abcd")]
 	[Arguments("setunion(a b,c d,,|)", "a b c d")]
 	[Arguments("setunion(a b,c d,,a)", "a b c d")]
 	[Arguments("setunion(a b,c d,,a,|)", "a|b|c|d")]

@@ -7,15 +7,12 @@ namespace SharpMUSH.Tests.Formatting;
 /// <summary>
 /// <see cref="SoftcodeSource"/> decides where an attribute's match data ends and its code begins, and
 /// validates only the latter. A real <see cref="IMUSHCodeParser"/> is required (via
-/// <see cref="ServerWebAppFactory"/>) because the claim under test is about what the production
+/// <see cref="SyntaxOnlyParser"/>) because the claim under test is about what the production
 /// grammar reports, not about a stand-in.
 /// </summary>
 public class SoftcodeSourceTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private static IMUSHCodeParser Parser => SyntaxOnlyParser.Instance;
 
 	/// <summary>
 	/// The pattern half ends at the first colon the command regex accepts — which is not the first

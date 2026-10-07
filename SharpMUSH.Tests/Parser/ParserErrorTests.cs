@@ -4,10 +4,7 @@ namespace SharpMUSH.Tests.Parser;
 
 public class ParserErrorTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private static IMUSHCodeParser Parser => SyntaxOnlyParser.Instance;
 
 	[Test]
 	public async Task ValidInput_ShouldHaveNoErrors()

@@ -395,49 +395,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask PsCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@ps"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "@ps")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask PsWithTarget()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@ps #1"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "@ps")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask TriggerCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&TRIGGER_TEST_WIZ_UNIQUE #1=think Triggered!"));
-
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@trigger #1/TRIGGER_TEST_WIZ_UNIQUE"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Triggered!"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
 	public async ValueTask ForceCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

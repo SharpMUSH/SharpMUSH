@@ -204,14 +204,14 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 	public async Task ASceneLog_HasAPlainHeader_TheLogInACard_AndItsDetails()
 	{
 		var cut = RenderDetail("S1");
-		cut.WaitForAssertion(() => cut.Find(".scene-log"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-log .story-row"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Lower Docks");
 		await Assert.That(cut.Find(".kit-page-head h1").TextContent).IsEqualTo("Salt Market at Dusk");
 		await Assert.That(cut.Find(".kit-page-head .scene-detail-live").TextContent).Contains("LIVE");
 		var actions = cut.FindAll(".kit-page-actions a");
 		await Assert.That(actions.Select(a => a.GetAttribute("href"))).IsEquivalentTo(new[] { "/scenes/S1/live", "/scenes" });
-		await Assert.That(cut.Find(".kit-card .scene-log")).IsNotNull();
+		await Assert.That(cut.FindAll(".kit-card .scene-detail-log .story-row").Count).IsEqualTo(2);
 
 		var details = cut.Find(".scene-detail-aside").TextContent;
 		await Assert.That(details).Contains("2 poses");
@@ -221,11 +221,72 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 			.IsEquivalentTo(new[] { "/character/Ilsa%20Varn", "/character/Wren%20Halloway" });
 	}
 
+	/// <summary>
+	/// On a phone the details and cast come before the log, folded into one line naming the cast, so a long
+	/// log does not put them out of reach; the line unfolds them.
+	/// </summary>
+	[Test]
+	public async Task TheDetailsAndCast_FoldIntoOneLine_ThatNamesTheCast_AndUnfolds()
+	{
+		var cut = RenderDetail("S1");
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-log .story-row"), TimeSpan.FromSeconds(5));
+
+		var toggle = cut.Find(".scene-detail-about-toggle");
+		await Assert.That(toggle.QuerySelector(".scene-detail-about-cast")!.TextContent).IsEqualTo("Ilsa Varn, Wren Halloway");
+		await Assert.That(toggle.GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(cut.Find(".scene-detail-aside").ClassList).DoesNotContain("scene-detail-aside-open");
+
+		toggle.Click();
+
+		await Assert.That(cut.Find(".scene-detail-about-toggle").GetAttribute("aria-expanded")).IsEqualTo("true");
+		await Assert.That(cut.Find(".scene-detail-aside").ClassList).Contains("scene-detail-aside-open");
+	}
+
+	/// <summary>
+	/// A scene that has not run has no start, length or log to show: its page leads with when it is due and
+	/// who hosts it, and the log's place says when it begins.
+	/// </summary>
+	[Test]
+	public async Task AScheduledScene_ShowsWhenItStarts_AndItsHost_NotAnEmptyLog()
+	{
+		var due = DateTimeOffset.UtcNow.AddDays(3);
+		_api.Extra["/api/scenes/S6"] = SceneJson.Scene("S6", "Harbor Watch", status: "scheduled", room: "", poses: 0,
+			scheduledFor: due.ToUnixTimeMilliseconds());
+		_api.Extra["/api/scenes/S6/poses"] = "[]";
+		var cut = RenderDetail("S6");
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-not-started"), TimeSpan.FromSeconds(5));
+
+		var when = due.ToLocalTime().ToString("MMM d, yyyy HH:mm");
+		await Assert.That(cut.Find(".scene-detail-not-started").TextContent).Contains(when);
+		await Assert.That(cut.Find(".kit-page-head .scene-detail-upcoming")).IsNotNull();
+		await Assert.That(cut.Find(".kit-page-head .scene-detail-due").TextContent).IsEqualTo(when);
+		var details = cut.Find(".scene-detail-aside").TextContent;
+		await Assert.That(details).Contains("Host");
+		await Assert.That(details).DoesNotContain("0 poses");
+		await Assert.That(cut.Find(".kit-page-head").TextContent).DoesNotContain("0 poses");
+	}
+
+	/// <summary>An upcoming scene's card says when it is due, with no room it does not have and no "0 poses".</summary>
+	[Test]
+	public async Task AnUpcomingCard_LeavesOutTheRoomAndPoses_AndShowsItsPitch()
+	{
+		_api.Extra[SceneJson.Recent] = SceneJson.List(
+			SceneJson.Scene("S6", "Harbor Watch", status: "scheduled", room: "", poses: 0,
+				scheduledFor: DateTimeOffset.UtcNow.AddDays(3).ToUnixTimeMilliseconds(), summary: "A crate goes missing."));
+		var cut = RenderAt<SharpMUSH.Client.Pages.Scenes>("/scenes", CharactersApiFake.Anonymous(this));
+		cut.WaitForAssertion(() => cut.Find(".scene-card"), TimeSpan.FromSeconds(5));
+
+		var meta = cut.Find(".scene-card-meta");
+		await Assert.That(meta.QuerySelectorAll("span").Length).IsEqualTo(1).Because("only when it is due, with no separator before it");
+		await Assert.That(meta.TextContent).DoesNotContain("poses");
+		await Assert.That(cut.Find(".scene-card-pitch").TextContent).IsEqualTo("A crate goes missing.");
+	}
+
 	[Test]
 	public async Task ASceneLog_FiltersByTag_WithChips()
 	{
 		var cut = RenderDetail("S1");
-		cut.WaitForAssertion(() => cut.Find(".scene-log"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-log .story-row"), TimeSpan.FromSeconds(5));
 
 		var chips = cut.FindAll(".kit-chips button");
 		await Assert.That(chips.Select(c => c.TextContent)).IsEquivalentTo(new[] { "All", "combat", "dialogue" });

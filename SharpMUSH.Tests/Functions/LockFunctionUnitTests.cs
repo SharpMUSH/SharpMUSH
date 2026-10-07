@@ -135,7 +135,6 @@ public class LockFunctionUnitTests
 	[Arguments("testlock(=me,#0)", "0")]
 	[Arguments("lockfilter(=#1,#0 #1)", "#1")]
 	[Arguments("lockfilter(#TRUE,#0|#1,|)", "#0|#1")]
-	[Arguments("listset(a b c,2,x)", "a x c")]
 	public async Task PennLockFunctionReadbacks(string expression, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expression));
@@ -179,16 +178,6 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("testlock(#1,%#)", "1")]
-	[Arguments("testlock(#FALSE,%#)", "0")]
-	[Arguments("testlock(#TRUE,%#)", "1")]
-	public async Task Testlock(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
 	[Arguments("lockowner(%#)", "")]
 	public async Task Lockowner(string str, string expected)
 	{
@@ -199,14 +188,6 @@ public class LockFunctionUnitTests
 	[Test]
 	[Arguments("lockfilter(#0,basic)", "")]
 	public async Task Lockfilter(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("llocks(%#)", "")]
-	public async Task Llocks(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();

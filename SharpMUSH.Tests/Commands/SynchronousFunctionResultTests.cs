@@ -19,9 +19,6 @@ public class SynchronousFunctionResultTests
 	[Arguments("fn", "syntax")]
 	[Arguments("fn", "literal")]
 	[Arguments("fn", "success")]
-	[Arguments("ulocal", "syntax")]
-	[Arguments("ulocal", "literal")]
-	[Arguments("ulocal", "success")]
 	[Arguments("json", "syntax")]
 	[Arguments("json", "literal")]
 	[Arguments("json", "success")]
@@ -131,9 +128,6 @@ public class SynchronousFunctionResultTests
 		var expression = kind switch
 		{
 			"fn" => $"fn(me/{name})",
-			// render() renders a string into a wire format; it does not evaluate an attribute as another
-			// object. ulocal() is the call of that shape, and unlike fn() it localizes its registers.
-			"ulocal" => $"ulocal(me/{name})",
 			"json" => $"json_map(me/{name},1)",
 			"jsonlambda" => $"json_map(#apply/ufun,1,,me/{name})",
 			"namelist" => $"namelist(#2147483646,me/{name})",

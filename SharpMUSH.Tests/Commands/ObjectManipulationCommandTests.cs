@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -80,19 +79,6 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask UseCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("use test object"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
 	public async ValueTask InventoryCommand()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("inventory"));
@@ -136,44 +122,5 @@ public class ObjectManipulationCommandTests
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give Sack=Chest"));
 
 		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask DestroyCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@destroy #100"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask NukeCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@nuke #100"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask UndestroyCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@undestroy #100"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "I don't see that here.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
