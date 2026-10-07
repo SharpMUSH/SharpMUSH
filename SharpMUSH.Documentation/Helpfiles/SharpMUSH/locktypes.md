@@ -21,7 +21,7 @@
   }
 }
 -->
-# locktypes
+# Lock Types
 
 These are the standard lock types supported by SharpMUSH. For more detailed information about any lock type, see `[@lock/<lock>]`.
 

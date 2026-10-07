@@ -55,11 +55,12 @@ When both are set, the object's override beats the account's. `@power <object>=S
 
 An override cannot touch `administrator`, and nothing overrides a role that allows `administrator`. Setting one follows the rules of [@role rank].
 
-Examples:
+### Examples
+
 ```sharp
-@permission/deny Twink=wiki.edit media.upload
-@permission/clear Twink=wiki.edit
-@permission/allow/account Ariel=wiki.delete
+> @permission/deny Twink=wiki.edit media.upload
+> @permission/clear Twink=wiki.edit
+> @permission/allow/account Ariel=wiki.delete
 ```
 
 ## Custom permissions
@@ -72,11 +73,12 @@ A name is two or more parts joined by `.`, each of lowercase letters, digits and
 
 A new custom permission is held only by #1 and holders of `administrator` until a role or override allows it. A holder of `game.wizard` may allow any custom permission. Defining or removing one needs the `roles.admin` permission.
 
-Examples:
+### Examples
+
 ```sharp
-@permission/define bbs.moderate=Staff/Moderate any board
-@role/allow helper=bbs.moderate
-think permission(*Ariel,bbs.moderate)
+> @permission/define bbs.moderate=Staff/Moderate any board
+> @role/allow helper=bbs.moderate
+> think permission(*Ariel,bbs.moderate)
 ```
 
 ## Permission categories
@@ -87,10 +89,11 @@ Custom permissions have a category list of their own, apart from the role catego
 
 `@permission/category/describe` changes the description, and `@permission/category/rename` the name, taking every permission in it along. `@permission/category/delete` removes an empty category. All of these need the `roles.admin` permission.
 
-Examples:
+### Examples
+
 ```sharp
-@permission/category/create Boards=Permissions the board softcode checks
-@permission/define bbs.moderate=Boards/Moderate any board
+> @permission/category/create Boards=Permissions the board softcode checks
+> @permission/define bbs.moderate=Boards/Moderate any board
 ```
 
 ::: seealso

@@ -66,7 +66,13 @@ Article IDs are unique within a corpus. Section IDs are unique within their
 article. Canonical lookups, aliases, and redirects share one case-insensitive
 namespace within a corpus. Aliases never carry their own text or web article.
 
-H1 is the display title; an article has exactly one. Every H2 is an explicitly
+H1 is the display title; an article has exactly one. A command or function title is
+written the way it is typed: `@mail/read`, `strlen()`. A topic about an idea is in
+Title Case (`Attribute Trees`, `Types of Objects`), keeping acronyms such as `JSON`.
+A one-word title may also be a typed command (`look`) or a flag or attribute the game
+spells in capitals (`WIZARD`). `HelpTitleTests` checks every title. In an aggregate
+file the first H1 of a group is the title, so a group whose lookup reads badly as a
+header (`MAIL-READING`) puts a readable alias first (`Reading Mail`). Every H2 is an explicitly
 declared lookup. H3 is a local subsection by default. To expose a narrower H3,
 declare its unique heading and identity in `sections`; surrounding local H3s
 stay in the enclosing section. Declarations identify headings by their exact

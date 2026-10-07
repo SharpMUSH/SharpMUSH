@@ -28,7 +28,7 @@
   }
 }
 -->
-# attribute flags
+# Attribute Flags
 
 Attribute flags are set on an object's attributes using `@set`, or applied to attributes globally using `@attribute`. Their names (and, when applicable, the character used in examine as shorthand for the flag) are shown below.
 

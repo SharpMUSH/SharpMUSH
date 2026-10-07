@@ -15,7 +15,7 @@
   ]
 }
 -->
-# messages
+# Messages
 
 The server shows a connection a few fixed texts: the connect screen, the message of the day and the rest. PennMUSH reads these from files named in `mush.cnf`; SharpMUSH keeps them in the database and edits them on the web portal's Messages page (Admin > Content > Messages), which needs the `config.admin` permission. Text is edited as it will look, in a monospaced field, and stored with its colours.
 

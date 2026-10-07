@@ -7,7 +7,7 @@
   "sections": []
 }
 -->
-# execution budget
+# Execution Budget
 
 `queue_entry_cpu_time` is the legacy configuration name for an **elapsed-time**
 limit in milliseconds. Its default is 2000 milliseconds (two seconds).

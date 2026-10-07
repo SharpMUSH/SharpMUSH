@@ -16,7 +16,7 @@
   }
 }
 -->
-# event examples
+# Event Examples
 
 Suppose you want random dbsave messages:
 ```sharp

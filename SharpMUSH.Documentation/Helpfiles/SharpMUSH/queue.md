@@ -16,9 +16,7 @@
   }
 }
 -->
-# queue
-
-QUEUE
+# Queue
 
 The queue is the waiting line for action lists to be executed by the MUSH.  Each time you enter an action list, it goes into the queue and stays there until its turn comes up, at which time the MUSH processes the commands and you see the results. The MUSH can execute thousands of commands every second, so normally you see results right away.
 

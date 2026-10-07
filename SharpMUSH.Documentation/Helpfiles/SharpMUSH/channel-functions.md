@@ -91,7 +91,7 @@
   ]
 }
 -->
-# Channel functions
+# Channel Functions
 
 Functions inspect membership, privileges, history, and channel metadata. For channel emission, see [@CEMIT].
 

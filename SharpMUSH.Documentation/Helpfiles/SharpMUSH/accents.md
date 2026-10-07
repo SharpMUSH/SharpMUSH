@@ -16,7 +16,7 @@
   }
 }
 -->
-# accents
+# Accents
 
 Below is the table of possible accents which can be used with accent() and @nameformat.
 

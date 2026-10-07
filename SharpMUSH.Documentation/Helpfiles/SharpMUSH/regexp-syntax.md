@@ -53,7 +53,7 @@
 }
 -->
 
-# regexp syntax
+# Regular Expression Syntax
 
 SharpMUSH uses `System.Text.RegularExpressions`, the .NET regular expression engine. PennMUSH uses PCRE2. Common patterns work in both, but POSIX bracket classes, Python-style named groups, and some advanced PCRE constructs need changes when porting code.
 

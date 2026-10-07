@@ -22,7 +22,7 @@
   }
 }
 -->
-# zones
+# Zones
 
 Zones are areas of the MUSH that can have the same user-defined commands without having to `@parent` every object in the zone or make the commands MUSH-wide globals.
 

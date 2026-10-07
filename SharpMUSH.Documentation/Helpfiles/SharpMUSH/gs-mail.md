@@ -16,7 +16,7 @@
   }
 }
 -->
-# gs mail
+# Getting Started: Mail
 
 SharpMUSH has a built-in mail system that lets you send messages to players, even if they aren't online. You can keep mail you receive for as long as you like, and re-read it any time.
 

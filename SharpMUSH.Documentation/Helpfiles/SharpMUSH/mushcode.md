@@ -18,7 +18,7 @@
   }
 }
 -->
-# mushcode
+# MUSHcode
 
 MUSHcode is the programming language available within the MUSH itself with which you can create user-defined commands and macros. It is sometimes called "softcode" to distinguish it from "hardcode", which is the language that the source code for the MUSH server is written in. SharpMUSH's server is written in C#; PennMUSH's server is written in C.
 

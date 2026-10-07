@@ -18,7 +18,7 @@
   }
 }
 -->
-# regexp
+# Regular Expressions
 
 (This help text is largely from TinyMUSH 2.2.4, with permission)
 
