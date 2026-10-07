@@ -32,59 +32,6 @@ public class NotificationCommandTests
 	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
-	public async ValueTask RespondCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond #1=Response"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Status code must be a 3-digit number.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask RwallCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@rwall Test message"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Announcement:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask WarningsCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@warnings"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Usage: @warnings <object>=<warning list>", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask WcheckCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wcheck #1"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "@wcheck complete.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SuggestCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

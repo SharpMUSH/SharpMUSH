@@ -3,8 +3,10 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// Tests ported from PennMUSH .t files: testtr.t, testlnum.t, testjust.t, teststrreplace.t, teststringsecs.t
-/// Only covers cases NOT already in existing test files.
+/// Tests ported from PennMUSH .t files testlnum.t and testjust.t, for cases not covered elsewhere.
+/// testtr.t is in <c>StringFunctionUnitTests.Tr</c>, teststringsecs.t in
+/// <c>TimeFunctionUnitTests.Stringsecs</c>, and testjust.t's center() rows in
+/// <c>FormattingFunctionUnitTests.Center</c>.
 /// </summary>
 public class PennMUSHStringFunctionTests
 {
@@ -12,28 +14,6 @@ public class PennMUSHStringFunctionTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-
-	// === tr() - Penn testtr.t (NO existing tests) ===
-	[Test]
-	[Arguments("tr(test STRING,,)", "test STRING")]
-	[Arguments("tr(test STRING,t,f)", "fesf STRING")]
-	[Arguments("tr(test STRING,tT,fF)", "fesf SFRING")]
-	[Arguments("tr(test STRING,Tt,Ff)", "fesf SFRING")]
-	[Arguments("tr(test STRING,te,et)", "etse STRING")]
-	public async Task Tr(string expr, string expected)
-	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
-	[Arguments("tr(test STRING,t,)", "#-1")]
-	[Arguments("tr(test STRING,,t)", "#-1")]
-	public async Task TrErrors(string expr, string expected)
-	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).StartsWith(expected);
-	}
 
 	// === lnum() - Penn testlnum.t (NO dedicated tests) ===
 	[Test]
@@ -71,40 +51,11 @@ public class PennMUSHStringFunctionTests
 		await Assert.That(result!.Message!.ToPlainText()).StartsWith("#-1");
 	}
 
-	// === ljust/rjust/center edge cases from testjust.t not already covered ===
+	// === ljust/rjust edge cases from testjust.t not already covered ===
 	[Test]
 	[Arguments("ljust(foo bar baz,5,=,1)", "foo b")]
 	[Arguments("rjust(foo bar baz,5,=,1)", "foo b")]
 	public async Task JustTruncate(string expr, string expected)
-	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
-	[Arguments("center(foo, 5, =, ~)", "=foo~")]
-	public async Task CenterAsymmetric(string expr, string expected)
-	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
-	}
-
-	// === stringsecs - Penn teststringsecs.t (check against existing TimeFunctionUnitTests) ===
-	[Test]
-	[Arguments("stringsecs(10s)", "10")]
-	[Arguments("stringsecs(5m 10s)", "310")]
-	[Arguments("stringsecs(10s 5m)", "310")]
-	[Arguments("stringsecs(1d 2h 3m 4s)", "93784")]
-	public async Task StringSecs(string expr, string expected)
-	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
-	[Arguments("stringsecs(a)", "#-1 INVALID TIMESTRING")]
-	[Arguments("stringsecs(h)", "#-1 INVALID TIMESTRING")]
-	public async Task StringSecsErrors(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);

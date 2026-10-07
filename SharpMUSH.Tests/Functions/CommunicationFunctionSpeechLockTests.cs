@@ -326,9 +326,11 @@ public class CommunicationFunctionSpeechLockTests
 		await Command(1, $"@chzone {second.Room}={zone}");
 		await Command(1, $"@lock/speech {second.Room}=#FALSE");
 		var name = noSpoof ? "nszemit" : "zemit";
+		// Spelled out so the registry coverage scan (RegistryCoverageInventoryTests) sees both calls.
+		string Call(string arguments) => noSpoof ? $"nszemit({arguments})" : $"zemit({arguments})";
 		async Task Emit(string token)
 		{
-			if (function) await Eval(first.Speaker.Handle, $"{name}({zone},{token})");
+			if (function) await Eval(first.Speaker.Handle, Call($"{zone},{token}"));
 			else await Command(first.Speaker.Handle, $"@{name}/silent {zone}={token}");
 		}
 		var denied = Token("uncontrolled");
@@ -344,7 +346,7 @@ public class CommunicationFunctionSpeechLockTests
 		await Command(1, $"@teleport/silent {first.Speaker.DbRef}={carrier}");
 		await Command(1, $"@lock/interact {carrier}=#FALSE");
 		var nested = Token("nestedzone");
-		if (function) await Eval(first.Speaker.Handle, $"{name}({zone},{nested})");
+		if (function) await Eval(first.Speaker.Handle, Call($"{zone},{nested}"));
 		else await Command(first.Speaker.Handle, $"@{name}/noisy {zone}={nested}");
 		await AssertNotHeardAsync(first.Speaker.DbRef, nested, "enumerating the immediate carrier suppresses the zone echo even if it cannot hear");
 		var zoneName = await Eval(1, $"name({zone})");

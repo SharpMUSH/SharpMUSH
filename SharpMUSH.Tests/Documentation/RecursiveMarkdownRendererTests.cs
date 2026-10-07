@@ -815,21 +815,19 @@ public class RecursiveMarkdownRendererTests
 }
 
 /// <summary>
-/// These tests require the full server DI stack to produce a <see cref="IMUSHCodeParser"/>.
+/// These tests colour code blocks with a real <see cref="IMUSHCodeParser"/>'s semantic tokens, which
+/// need the built-in function library but no world (<see cref="SyntaxOnlyParser"/>).
 /// </summary>
 public class RecursiveMarkdownRendererWithParserTests
 {
 	private const string ESC = "\u001b";
 	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
 	[Test]
 	public async Task RenderSharpCodeBlock_WithRealParser_ShouldApplyFunctionColour()
 	{
 		var markdown = "```sharp\nname(%#)\n```";
-		var parser = WebAppFactoryArg.FunctionParser;
+		var parser = SyntaxOnlyParser.Instance;
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
@@ -849,7 +847,7 @@ public class RecursiveMarkdownRendererWithParserTests
 	public async Task RenderSharpCodeBlock_WithRealParser_ShouldApplyObjectReferenceColour()
 	{
 		var markdown = "```sharp\nget(#1/ATTR)\n```";
-		var parser = WebAppFactoryArg.FunctionParser;
+		var parser = SyntaxOnlyParser.Instance;
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
@@ -873,7 +871,7 @@ public class RecursiveMarkdownRendererWithParserTests
 			```
 			""";
 
-		var parser = WebAppFactoryArg.FunctionParser;
+		var parser = SyntaxOnlyParser.Instance;
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
@@ -920,7 +918,7 @@ public class RecursiveMarkdownRendererWithParserTests
 			```
 			""";
 
-		var parser = WebAppFactoryArg.FunctionParser;
+		var parser = SyntaxOnlyParser.Instance;
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
@@ -950,7 +948,7 @@ public class RecursiveMarkdownRendererWithParserTests
 		var helpDir = FindHelpfilesDirectory();
 		if (helpDir is null) return; // running outside the repo
 
-		var parser = WebAppFactoryArg.FunctionParser;
+		var parser = SyntaxOnlyParser.Instance;
 		var files = Directory.EnumerateFiles(helpDir, "*.md", SearchOption.AllDirectories).Order().ToList();
 
 		await Assert.That(files).IsNotEmpty();

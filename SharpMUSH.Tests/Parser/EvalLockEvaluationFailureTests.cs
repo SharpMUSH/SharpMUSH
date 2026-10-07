@@ -1,9 +1,9 @@
 using Mediator;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using SharpMUSH.Implementation;
+using SharpMUSH.Tests.Services;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -30,10 +30,8 @@ namespace SharpMUSH.Tests.Parser;
 /// </summary>
 public class EvalLockEvaluationFailureTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	/// <summary>The gated object and unlocker; the substituted services never read past its dbref.</summary>
+	private static AnySharpObject God() => new TestObjectFactory().CreatePlayer(1, "God");
 
 	/// <summary>
 	/// The evaluation seam must report a failed evaluation as <see cref="LockEvaluationFailure"/>. Returning a
@@ -43,7 +41,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvaluationThatThrows_IsReportedAsAFailure_NotAsAValue()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
+		var one = God();
 
 		var attributeService = Substitute.For<IAttributeService>();
 		attributeService.EvaluateAttributeFunctionAsync(
@@ -79,7 +77,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvalLock_WhoseEvaluationFailed_DoesNotPass()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
+		var one = God();
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())
@@ -100,7 +98,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvalLock_WhoseEvaluationMatched_Passes()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
+		var one = God();
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())

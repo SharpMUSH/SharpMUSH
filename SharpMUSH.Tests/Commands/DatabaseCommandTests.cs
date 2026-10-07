@@ -448,19 +448,6 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask ListCommand()
-	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list commands"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Current Message of the Day settings:"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
 	public async ValueTask DisableCommand()
 	{
 		var option = TestIsolationHelpers.GenerateUniqueName("NoSuchOption");

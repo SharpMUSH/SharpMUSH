@@ -111,20 +111,4 @@ public class VerbCommandTests
 		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef))
 			.Contains("Usage: @verb <victim>=<actor>,<what>,<whatd>,<owhat>,<owhatd>,<awhat>[,<args>]");
 	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires proper permission setup")]
-	public async ValueTask VerbPermissionDenied()
-	{
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires AWHAT command list execution verification")]
-	public async ValueTask VerbExecutesAwhat()
-	{
-		await ValueTask.CompletedTask;
-	}
 }

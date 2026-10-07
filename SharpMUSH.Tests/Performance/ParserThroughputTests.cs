@@ -8,9 +8,10 @@ namespace SharpMUSH.Tests.Performance;
 /// <summary>
 /// Observational throughput diagnostics for the MUSH parser hot paths.
 /// Reports ops/sec and P50/P95/P99 latency percentiles to the console.
-/// These tests are always-run (not Explicit) to provide warm-path diagnostics in CI output,
-/// but contain no assertions — they are informational only.
+/// They contain no assertions and print through <see cref="TestDiagnostics"/>, which is muted unless
+/// SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING is set, so they run only when asked for by name.
 /// </summary>
+[Explicit]
 public class ParserThroughputTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

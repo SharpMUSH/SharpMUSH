@@ -74,8 +74,7 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 		TestDiagnostics.ConfigureHost(builder);
 
 		// Point the Server at the shared NATS instance.
-		// Setting the env var here (inside ConfigureWebHost) mirrors the approach used by
-		// ConnectionServerTestWebApplicationBuilderFactory and ensures the value is in place
+		// Setting the env var here (inside ConfigureWebHost) ensures the value is in place
 		// before Program.Main() calls NatsStrategyProvider.GetStrategy(), which reads it.
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
@@ -143,8 +142,11 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]
 	public required NatsTestServer NatsTestServer { get; init; }
 
-	/// <summary>Dedicated MySQL for this test class.</summary>
-	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerClass)]
+	/// <summary>
+	/// The session's MySQL: the host needs a connection string, but no telnet test runs SQL, so a
+	/// container of its own would only add a start-up.
+	/// </summary>
+	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
 	/// <summary>Telnet port assigned to the ConnectionServer during initialisation.</summary>
@@ -164,9 +166,8 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		var natsPort = NatsTestServer.Instance.GetMappedPublicPort(4222);
 		var natsUrl = $"nats://localhost:{natsPort}";
 
-		// natsUrl is passed to the factory so it can be set inside ConfigureWebHost —
-		// which runs immediately before Program.Main() — mirroring the approach used
-		// by ConnectionServerTestWebApplicationBuilderFactory.
+		// natsUrl is passed to the factory so it can be set inside ConfigureWebHost,
+		// which runs immediately before Program.Main().
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		_serverFactory = new TelnetIntegrationServerBuilderFactory<SharpMUSH.Server.Program>(
 			MySqlTestServer.Instance.GetConnectionString(),
