@@ -45,20 +45,20 @@ Negate a whole class with a leading `^`, for example `[^0-9]`. Use `\D`, `\S`, `
 
 Choose ASCII or Unicode deliberately. `[A-Za-z]` excludes accented letters; `\p{L}` includes letters from other scripts. `\d` includes non-ASCII decimal digits, while `[0-9]` is appropriate for an ASCII-only numeric format. `\w` includes more than ASCII letters, digits, and underscore.
 
-In evaluated MUSH function arguments, `lit()` keeps the character-class brackets and regex backslashes literal:
+In evaluated MUSH function arguments, `lit()` keeps the character-class brackets and regex backslashes literal. Below, `accent(cafe,___')` is "cafe" with an acute accent on the e, and `chr(1635)` is the Arabic-Indic digit three:
 
 ```sharp
 > think regmatch(foo_bar,lit(\A\w+\z))
 1
 > think regmatch(foo bar,lit(\A\w+\z))
 0
-> think regmatch(café,lit(\A\p{L}+\z))
+> think regmatch(accent(cafe,___'),lit(\A\p{L}+\z))
 1
-> think regmatch(café,lit(\A[A-Za-z]+\z))
+> think regmatch(accent(cafe,___'),lit(\A[A-Za-z]+\z))
 0
-> think regmatch(٣,lit(\A\d\z))
+> think regmatch(chr(1635),lit(\A\d\z))
 1
-> think regmatch(٣,lit(\A[0-9]\z))
+> think regmatch(chr(1635),lit(\A[0-9]\z))
 0
 ```
 

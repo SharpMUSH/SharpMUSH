@@ -35,7 +35,7 @@ reglmatchall() returns the positions of all elements in `<list>` which match `<r
 
 In all cases, the elements of `<list>` are separated by `<delimiter>`, which defaults to a space. The elements outputted by reglmatchall() are separated by `<output separator>`, if one is given, or by `<delimiter>` if not.
 
-SharpMUSH also registers regmatchalli() for reglmatchalli(). Despite the name it searches a list and returns positions, as the rest of this family does — it is not a case-insensitive [regmatch()].
+SharpMUSH also registers regmatchalli() for reglmatchalli(). Despite the name it searches a list and returns positions, as the rest of this family does; it is not a case-insensitive [regmatch()].
 
 ::: seealso
 - [regmatch()]

@@ -55,7 +55,7 @@ To add more categories and commands (like 'news'), read "game/txt/README"
 
 
 ::: seealso
-- [TEXTFILE()] — `textfile()` reads an entry, `textentries()` lists matching topic names, and `textsearch()` searches entry content.
+- [TEXTFILE()]: `textfile()` reads an entry, `textentries()` lists matching topic names, and `textsearch()` searches entry content.
 :::
 
 ## Content search

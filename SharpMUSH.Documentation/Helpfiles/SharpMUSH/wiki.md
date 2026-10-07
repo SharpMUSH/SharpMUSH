@@ -110,7 +110,7 @@ A page is identified by its namespace and title alone; categories are labels
 it carries (see [wiki categories]).
 
 Listings (`@wiki/list`, `@wiki/search`, `@wiki/recent`) print every page's
-identifier fully qualified as `<namespace>:<slug>` — `home` in the main
+identifier fully qualified as `<namespace>:<slug>`; `home` in the main
 namespace lists as `main:home`. One column, one grammar, and the identifier
 printed is always one you can paste straight back into `@wiki`. Typing a
 target is unchanged: the short form still works, so `@wiki home` and
@@ -156,7 +156,7 @@ gives a translator the source locale's markdown to work from before writing
 ## Reading drafts
 An unpublished page is a draft, and `@wiki` does not render a draft's body or
 its revision history to anybody by default. You are told the page is a draft
-rather than told it does not exist — the header still names it and marks it
+rather than told it does not exist; the header still names it and marks it
 `(draft)`.
 
 * `@wiki/view/draft <page>` - render the draft's body as well
@@ -204,7 +204,7 @@ brackets after the line, and if several locales matched, yours is the one
 shown. `@wiki/search/source <text>` matches source text only.
 
 Drafts stay out of the way: unpublished pages and unpublished translations are
-shown only to their author and to holders of `wiki.drafts` — for everybody else
+shown only to their author and to holders of `wiki.drafts`; for everybody else
 `@wiki/list`, `@wiki/search` and `@wiki/recent` omit them, and `wiki()`,
 `wikilist()`, `wikisearch()` and `wikirecent()` never return them to anybody.
 `@wiki/list`'s totals count only what you are allowed to see, so the count does
@@ -216,7 +216,7 @@ is in, or the page itself requires a permission you lack (see
 [wiki permissions]): it is left out of every listing and answers as a page that
 does not exist.
 
-Even a `wiki.drafts` holder reads a draft's body or history only by adding `/DRAFT` — see
+Even a `wiki.drafts` holder reads a draft's body or history only by adding `/DRAFT`; see
 [wiki]. A page that is itself unpublished stays withheld however its
 individual translations are flagged, so publishing one language does not
 publish the article.
@@ -270,7 +270,7 @@ follow one.
 derived from the title (lower-case, spaces become underscores).
 
 @wiki/edit replaces a page's entire Markdown body. @wiki/append adds the given
-Markdown as a new paragraph at the end — handy for building up a page from a
+Markdown as a new paragraph at the end, handy for building up a page from a
 telnet client one block at a time. Every edit records a revision; see
 [wiki administration].
 
@@ -280,7 +280,7 @@ revision rather than rewriting history, so a rollback can itself be rolled
 back. The web portal offers the same action via the Restore button in each
 page's history dialog.
 
-@wiki/translate writes one locale's translation of a page — the same rows the
+@wiki/translate writes one locale's translation of a page: the same rows the
 web portal's language selector edits. The language is part of the target,
 after a slash: `@wiki/translate combat_primer/fr=...`. It is required, and it
 is never taken from your `LOCALE`; without it (or with a language tag SharpMUSH
@@ -295,7 +295,7 @@ draft/published state it already had, and a brand-new one starts published,
 under the source page's title. Retitle it on the web portal.
 
 If somebody else saves the same translation between your reading it and your
-sending the command, you are told so and *nothing is written* — re-read the
+sending the command, you are told so and *nothing is written*; re-read the
 page and re-apply your text. The command never retries by itself, because a
 retry would put your older text on top of theirs.
 
@@ -447,7 +447,12 @@ matter. From softcode, `wikicategory(<name>)` returns a category's pages and
 > @wiki/category combat_primer=Rules, Combat
 WIKI: 'Combat Primer' categories: Combat, Rules.
 > @wiki/category rules
-WIKI: Category 'Rules' — 1 page(s), 0 subcategory(ies):
+```
+
+The reply opens with a header line, `WIKI: Category 'Rules'` followed by a
+dash and `1 page(s), 0 subcategory(ies):`, then one line per member:
+
+```sharp
   main:combat_primer             Combat Primer (rev 2, 2026-10-05)
 ```
 

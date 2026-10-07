@@ -59,7 +59,7 @@
 -->
 # http
 
-Unlike PennMUSH, **SharpMUSH pre-populates the HTTP handler**: a new database is seeded with an **HTTP Handler object (#8)**, the "http_handler" config already points at it, and the default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) are already installed on it — see [http routing]. You extend the API by adding routed sub-attributes, not by creating a handler. This is low level, and a little tricky to understand.
+Unlike PennMUSH, **SharpMUSH pre-populates the HTTP handler**: a new database is seeded with an **HTTP Handler object (#8)**, the "http_handler" config already points at it, and the default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) are already installed on it; see [http routing]. You extend the API by adding routed sub-attributes, not by creating a handler. This is low level, and a little tricky to understand.
 
 If the HTTP Handler is unset, or no matching method/route attribute exists on the handler object, SharpMUSH responds with a plain `404 Not Found`.
 
@@ -67,13 +67,13 @@ If the HTTP Handler is unset, or no matching method/route attribute exists on th
 
 That limit is one budget for the whole game, not an allowance per caller: the game serves up to "http_per_second" requests a second and may burst up to the same number after a quiet moment. A request arriving with the budget spent is answered **429 Too Many Requests** with a `Retry-After` header. Setting it to 0 turns the HTTP surface off entirely, and every request is then answered `404 Not Found` exactly as an unset "http_handler" is. Changes take effect on the next request.
 
-The web portal draws on this same budget — its character directory, online list, profiles and Dynamic Application routes are all handler routes — so the shipped default is higher than PennMUSH's. Raise it if a busy portal starts seeing 429s. The server's own internal use of a handler route (validating an application's schema endpoint when a wizard registers it) does not go through the HTTP surface and is neither counted nor sitelocked.
+The web portal draws on this same budget (its character directory, online list, profiles and Dynamic Application routes are all handler routes), so the shipped default is higher than PennMUSH's. Raise it if a busy portal starts seeing 429s. The server's own internal use of a handler route (validating an application's schema endpoint when a wizard registers it) does not go through the HTTP surface and is neither counted nor sitelocked.
 
 The HTTP surface is served under a dedicated **`/http/`** path (so it can't shadow the web portal's own routes). When a request to `http://<mush>/http/<path>` arrives, SharpMUSH invisibly runs the HTTP Handler object (`@config http_handler`), executing an `@include me/<method>`. e.g: \`@include me/get\`.
 
 Immediately when the `@include` finishes, the http request is complete. Any queued entries (such as `@wait`, `$-commands`, etc) are not going to be sent to the HTTP client - you'll need to code using `@include`, `/inline` switches, and the like.
 
-- *%0* will be the pathname **with the `/http` prefix stripped** — a request to `/http/path/to?foo=bar` arrives as *%0* = "/path/to?foo=bar". So *%0* is "/", "/path/to", "/foo?bar=baz", etc.
+- *%0* will be the pathname **with the `/http` prefix stripped**: a request to `/http/path/to?foo=bar` arrives as *%0* = "/path/to?foo=bar". So *%0* is "/", "/path/to", "/foo?bar=baz", etc.
 - *%1* will be the body of the request. If it's json, use json_query to deal with it. If it's form-encoded, look at [FORMDECODE()]
 
 Anything sent to the HTTP Handler player during evaluation of this code is included in the body sent to the HTTP Client. SharpMUSH buffers up to 5,242,880 UTF-16 code units, including the newline appended to each captured message. The buffer grows as output arrives; the limit does not preallocate its maximum size. If the handler exceeds the limit, SharpMUSH discards the partial response and returns **500 Internal Server Error** with `#-1 OUTPUT EXCEEDED MAXIMUM SIZE`.
@@ -136,19 +136,19 @@ HTTP responses are limited to 5,242,880 UTF-16 code units, the same ceiling used
 
 ## Routing
 
-SharpMUSH seeds default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) onto the http_handler (#8) at first startup. They are seeded once and **never overwritten** — edit them freely.
+SharpMUSH seeds default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) onto the http_handler (#8) at first startup. They are seeded once and **never overwritten**; edit them freely.
 
-Each default verb attribute routes by URL path to a backtick-namespaced sub-attribute. (Paths below are as the handler sees them — i.e. the browser URL `/http/api/users` with the `/http` mount prefix already stripped.)
+Each default verb attribute routes by URL path to a backtick-namespaced sub-attribute. (Paths below are as the handler sees them, i.e. the browser URL `/http/api/users` with the `/http` mount prefix already stripped.)
 
 ```sharp
 GET /api/users?name=Joe+Smith   =>   @include me/GET`API`USERS=<body>
 ```
 
 Before dispatching, the router sets:
-- *%q<attrpath>* — the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (``api`users``)
-- *%q<fields>* — the [FORMQ()]-decoded query parameter name list; each parameter is readable as *%q<form.*>*
+- *%q<attrpath>*: the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (``api`users``)
+- *%q<fields>*: the [FORMQ()]-decoded query parameter name list; each parameter is readable as *%q<form.*>*
 
-The sub-attribute receives *%0* = the raw request body. The body is left raw on purpose — check *%q<hdr.content-type>* and use [FORMQ()] or [json_query()] on *%0* as appropriate. The raw query string remains available as `after(%0,?)` only at the verb level; sub-attributes read the decoded *%q<form.*>* registers instead.
+The sub-attribute receives *%0* = the raw request body. The body is left raw on purpose: check *%q<hdr.content-type>* and use [FORMQ()] or [json_query()] on *%0* as appropriate. The raw query string remains available as `after(%0,?)` only at the verb level; sub-attributes read the decoded *%q<form.*>* registers instead.
 
 To serve `GET /api/users`:
 
@@ -156,7 +156,7 @@ To serve `GET /api/users`:
 > &GET`API`USERS #8=@respond/type application/json ; think json(object,hello,json(string,%q<form.name>))
 ```
 
-The router guards the dispatch with `@assert`: a request whose path maps to no sub-attribute — including the bare root `/` — answers **404 API NOT FOUND** and stops. The seeded router for each verb is:
+The router guards the dispatch with `@assert`: a request whose path maps to no sub-attribute (including the bare root `/`) answers **404 API NOT FOUND** and stops. The seeded router for each verb is:
 
 ```sharp
 think setq(fields,formq(after(%0,?)))
@@ -166,14 +166,14 @@ think setq(fields,formq(after(%0,?)))
 
 ### Stock routes
 
-SharpMUSH also seeds these routed sub-attributes (used by the web portal; edit freely — seeded once, never overwritten):
+SharpMUSH also seeds these routed sub-attributes (used by the web portal; edit freely: seeded once, never overwritten):
 
-- `GET /http/characters` (``&GET`CHARACTERS``) — the **roster**: a JSON array of listed players, ``[{name, objid, created, category, image}, ...]``. `image` is the player's `IMAGE` attribute (see `help IMAGE`), read with `get()` and blank when unset. It says who *exists*, not who is connected — for that see `/http/online`. Built with `json_array(iter(filter(me/FN`CHARVIS, lsearch(all,type,player)), u(me/FN`CHARROW,%i0), , %r), %r)`. `category` comes from ``&FN`CHARCAT`` — by default flag-based, first match wins: `Wizard` (WIZARD flag), `Royalty` (ROYALTY flag), `Guest` (the Guest power); everyone else is blank. Who is listed at all comes from ``&FN`CHARVIS`` (1 to list, 0 to hide) — the default hides the `Guest` category and the `package_manager` principal, which is seeded as a real player (it owns softcode-package objects) but is nobody's character. Both are MUSH-side policy: redefine them freely; the portal hard-codes nothing — it lists exactly what comes back, grouping by label (alphabetically) and pooling blanks in an untitled section at the bottom.
-- `GET /http/online` (``&GET`ONLINE``) — the **connection list**, same row shape as `/http/characters` (`{name, objid, created, category, image}`). Built on `lwho()`, the same registry `WHO` reads, so an object that never binds a connection cannot appear here however it is flagged. Visibility comes from ``&FN`ONLINEVIS``, which by default applies the ``&FN`CHARVIS`` rules plus hiding DARK players — note `lwho()` evaluates `CanSee()` against the *caller*, and the handler is wizard-flagged, so DARK players would otherwise be listed to anonymous web visitors. Redefine it to suit your game's policy.
+- `GET /http/characters` (``&GET`CHARACTERS``): the **roster**: a JSON array of listed players, ``[{name, objid, created, category, image}, ...]``. `image` is the player's `IMAGE` attribute (see `help IMAGE`), read with `get()` and blank when unset. It says who *exists*, not who is connected; for that see `/http/online`. Built with `json_array(iter(filter(me/FN`CHARVIS, lsearch(all,type,player)), u(me/FN`CHARROW,%i0), , %r), %r)`. `category` comes from ``&FN`CHARCAT``, by default flag-based, first match wins: `Wizard` (WIZARD flag), `Royalty` (ROYALTY flag), `Guest` (the Guest power); everyone else is blank. Who is listed at all comes from ``&FN`CHARVIS`` (1 to list, 0 to hide); the default hides the `Guest` category and the `package_manager` principal, which is seeded as a real player (it owns softcode-package objects) but is nobody's character. Both are MUSH-side policy: redefine them freely. The portal hard-codes nothing; it lists exactly what comes back, grouping by label (alphabetically) and pooling blanks in an untitled section at the bottom.
+- `GET /http/online` (``&GET`ONLINE``): the **connection list**, same row shape as `/http/characters` (`{name, objid, created, category, image}`). Built on `lwho()`, the same registry `WHO` reads, so an object that never binds a connection cannot appear here however it is flagged. Visibility comes from ``&FN`ONLINEVIS``, which by default applies the ``&FN`CHARVIS`` rules plus hiding DARK players. Note `lwho()` evaluates `CanSee()` against the *caller*, and the handler is wizard-flagged, so DARK players would otherwise be listed to anonymous web visitors. Redefine it to suit your game's policy.
 
-Both routes pass `%r` as the `json_array()` separator rather than taking the default. `json_array()` splits its input *before* parsing each element, and rows embed player names, which routinely contain spaces — with the default separator a name like `Package Manager` is shredded into fragments that are no longer valid JSON. Keep the separator to something your rows cannot contain if you rewrite these.
-- `GET /http/profile/schema` (``&GET`PROFILE`SCHEMA``) — the profile field/section schema.
-- `GET /http/profile?objid=#1:123` (``&GET`PROFILE``) — one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in ``PROFILE`<key>`` attributes on the character. `fields` always carries `created` and `objid` (the two the shipped schema declares) plus three the portal reads directly without a schema entry: `image` (`IMAGE`), `banner` (``IMAGE`BANNER``, falling back to `IMAGE`) and `color` (``PROFILE`COLOR``, the game-defined name colour, accepted only as `#rrggbb` because the page puts it in a CSS custom property) — each `{value, visible}`, blank when the character has set nothing or set something that does not pass.
+Both routes pass `%r` as the `json_array()` separator rather than taking the default. `json_array()` splits its input *before* parsing each element, and rows embed player names, which routinely contain spaces; with the default separator a name like `Package Manager` is shredded into fragments that are no longer valid JSON. Keep the separator to something your rows cannot contain if you rewrite these.
+- `GET /http/profile/schema` (``&GET`PROFILE`SCHEMA``): the profile field/section schema.
+- `GET /http/profile?objid=#1:123` (``&GET`PROFILE``): one character's public profile. Characters are addressed by **objid** (stable across renames, safe against dbref recycling); an unknown objid answers `404 NO SUCH CHARACTER`. Profile values live in ``PROFILE`<key>`` attributes on the character. `fields` always carries `created` and `objid` (the two the shipped schema declares) plus three the portal reads directly without a schema entry: `image` (`IMAGE`), `banner` (``IMAGE`BANNER``, falling back to `IMAGE`) and `color` (``PROFILE`COLOR``, the game-defined name colour, accepted only as `#rrggbb` because the page puts it in a CSS custom property); each `{value, visible}`, blank when the character has set nothing or set something that does not pass.
 
 ::: seealso
 - [http]
@@ -290,7 +290,7 @@ For path restrictions, `@sitelock` checks the pattern "*<IP>\`<METHOD>\`<PATH>*"
 
 Both IP and the "IP\`Method\`Path" approach check for "connect" option.
 
-A blocked request is answered **403 Forbidden** and no handler code runs at all. The address matched is the one SharpMUSH resolved for the connection: behind a reverse proxy that means the real client, but only when that proxy is listed in the server's "ForwardedHeaders:KnownProxies"/"KnownNetworks" configuration — an `X-Forwarded-For` from an untrusted caller is ignored, so nobody can pick which rule applies to them. Where no address can be established at all, rules are matched against the literal `unknown`.
+A blocked request is answered **403 Forbidden** and no handler code runs at all. The address matched is the one SharpMUSH resolved for the connection: behind a reverse proxy that means the real client, but only when that proxy is listed in the server's "ForwardedHeaders:KnownProxies"/"KnownNetworks" configuration; an `X-Forwarded-For` from an untrusted caller is ignored, so nobody can pick which rule applies to them. Where no address can be established at all, rules are matched against the literal `unknown`.
 
 ### Examples
 

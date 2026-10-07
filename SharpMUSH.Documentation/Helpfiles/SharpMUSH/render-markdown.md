@@ -50,14 +50,14 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 - **Block Quotes**: `> Quote` rendered with 2-space indentation
 - **See Also footers**: a `::: seealso` block holding a list of `[topic]` or `` `code` `` names prints as one line, `See Also: @lock, @unlock`, wrapped under the first topic. If any item says more than its name, the list prints as a list under the label
 - **Centred blocks**: everything between `::: center` and a closing `:::` is wrapped to `<width>` and each line centred in it. The wiki and the web portal centre the same block on the page
-- **Layout**: a `:::: flex` block holding `::: item` blocks prints its items side by side as columns, each rendered at its own width (`grow`, `basis`, `min`, `gap`, `align`, `justify`, `direction`, `wrap` in `{…}` after the name). A block holding others needs more colons than they have. Items narrower than their `min` (24 by default) stack instead. The wiki's Markdown Guide lists every setting
+- **Layout**: a `:::: flex` block holding `::: item` blocks prints its items side by side as columns, each rendered at its own width (`grow`, `basis`, `min`, `gap`, `align`, `justify`, `direction`, `wrap` in `{...}` after the name). A block holding others needs more colons than they have. Items narrower than their `min` (24 by default) stack instead. The wiki's Markdown Guide lists every setting
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
 
 ## Syntax Highlighting in Code Blocks
 Fenced code blocks support ANSI syntax highlighting when a language tag is specified.
 
-Use `` ```sharp `` for SharpMUSH/MUSH softcode — the full semantic token pipeline<br>
-(functions, substitutions, object references, registers, etc.) is used:
+Use `` ```sharp `` for SharpMUSH/MUSH softcode, which gets the full semantic token pipeline<br>
+(functions, substitutions, object references, registers, etc.):
 
 ```sharp
 name(%#)              -- function call + substitution

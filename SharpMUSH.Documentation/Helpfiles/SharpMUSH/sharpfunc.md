@@ -307,7 +307,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [UPTIME()]         | [VALID()]          | [WIPE()]           |                    |
 
 # Wiki functions
-  Wiki functions read the shared wiki — the same pages the web portal serves.
+  Wiki functions read the shared wiki: the same pages the web portal serves.
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
@@ -1439,9 +1439,9 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 
   some() returns 1 if ANY element passes, and 0 otherwise. An empty list returns 0.
 
-  If `<register>` is given, the q-register of that name is set to the delimiter-joined list of the elements that did NOT pass the predicate (an empty string when none failed) — the same reject-capture convention as filterq(). Without a register, evaluation short-circuits (every() stops at the first failure, some() at the first success); requesting a register evaluates the whole list so every failure is collected.
+  If `<register>` is given, the q-register of that name is set to the delimiter-joined list of the elements that did NOT pass the predicate (an empty string when none failed), the same reject-capture convention as filterq(). Without a register, evaluation short-circuits (every() stops at the first failure, some() at the first success); requesting a register evaluates the whole list so every failure is collected.
 
-  Example — validate input and name the offenders:
+  Example: validate input and name the offenders:
 ```sharp
 > &ISNUM me=isnum(%0)
 > think [every(ISNUM, 12 apples 7 pears, , bad)]: %q<bad>
@@ -1753,7 +1753,7 @@ You say, "1 3 5"
 # FILTERQ()
 `filterq(<register>, [<object>/]<attribute>, <list>[, <delimiter>[, <osep>[, <arg1>[, ... , <argN>]]]])`
 
-  filterq() is filter() with reject-capture: it returns the elements of `<list>` for which `<attribute>` evaluates to exactly 1, osep-joined — and ALSO sets the q-register `<register>` to the elements that were filtered OUT (osep-joined; an empty string when nothing was rejected).
+  filterq() is filter() with reject-capture: it returns the elements of `<list>` for which `<attribute>` evaluates to exactly 1, osep-joined, and ALSO sets the q-register `<register>` to the elements that were filtered OUT (osep-joined; an empty string when nothing was rejected).
 
   The register is the FIRST argument, following the setq()/setr() convention, because filter()'s positions after `<osep>` already carry extra predicate arguments (available to each evaluation as %1, %2, ...) for PennMUSH compatibility. filterq() keeps those extra arguments, shifted one position to the right.
 
@@ -1940,7 +1940,7 @@ think fmod(6.1,2.5)
   lowest terms. Dividing the numerator by the denominator gives back exactly `<number>`.
 
   PennMUSH answers the *simplest* fraction within one part in 10^10 instead, which is not always
-  the number you gave it — `fraction(pi())` is `348987/111086` there. Round `<number>` first if
+  the number you gave it; `fraction(pi())` is `348987/111086` there. Round `<number>` first if
   you want a simpler fraction than the one it names.
 
   If `<whole>` is true, and `<number>` is greater than 1.0 (or less than -1.0), the return value will be a whole number followed by the fraction representation of the decimal.
@@ -2404,7 +2404,7 @@ You say, "meep GOOP bleep gleep"
 
   Returns 1 if `<object>` is royalty or above, or carries the APPROVED flag, and 0 otherwise. A guest is never approved, whatever else is set on it.
 
-  APPROVED is the engine's general "this character has cleared whatever bar this game sets for full participation" flag. The engine ships the flag and this predicate and deliberately ships no policy for what earns it — a game decides that and sets the flag however it likes (royalty and above can set and unset it).
+  APPROVED is the engine's general "this character has cleared whatever bar this game sets for full participation" flag. The engine ships the flag and this predicate and deliberately ships no policy for what earns it; a game decides that and sets the flag however it likes (royalty and above can set and unset it).
 
   Softcode and the server answer this question with the same code, so a game's `+`-verbs cannot drift from the engine's own checks. Games that want a different rule should wrap this in one function attribute and call that everywhere, rather than re-implementing the test.
 
@@ -2573,9 +2573,9 @@ You say, "Test 1! Test 2! Test 3!"
 # JITER()
 `jiter(<attribute list>, <input>[, <osep>])`
 
-  jiter() — juxtapositioned iteration — evaluates each attribute in the space-separated `<attribute list>` with the SAME `<input>` passed as %0, and returns the results side by side, joined by `<osep>` (default: one space).
+  jiter() (juxtapositioned iteration) evaluates each attribute in the space-separated `<attribute list>` with the SAME `<input>` passed as %0, and returns the results side by side, joined by `<osep>` (default: one space).
 
-  Where iter() and map() walk a list of data through one function, and chain() threads one value THROUGH a list of attributes (each step receiving the previous step's result), jiter() fans one input ACROSS a list of attributes — every step receives the original input. The classic use is computing the fields of a record from a single object.
+  Where iter() and map() walk a list of data through one function, and chain() threads one value THROUGH a list of attributes (each step receiving the previous step's result), jiter() fans one input ACROSS a list of attributes: every step receives the original input. The classic use is computing the fields of a record from a single object.
 
   Each attribute is evaluated as by ufun(). Object names in the list may not contain spaces (use "me" or a dbref), since spaces separate the attributes.
 
@@ -5469,7 +5469,7 @@ My name
 
 `strdistance(<source>, <target>)`
 
-  Returns the minimum number of grapheme insertions, deletions, or substitutions needed to change source into target. Each edit costs one; transposing two graphemes costs two. Comparison is ordinal and case-sensitive. Markup is ignored, and Unicode normalization is not applied: composed `é` and decomposed `é` each contain one grapheme but differ from each other. No optional flags are supported.
+  Returns the minimum number of grapheme insertions, deletions, or substitutions needed to change source into target. Each edit costs one; transposing two graphemes costs two. Comparison is ordinal and case-sensitive. Markup is ignored, and Unicode normalization is not applied: composed `chr(233)` (e with an acute accent) and decomposed `e[chr(769)]` (e followed by a combining acute accent) each contain one grapheme but differ from each other. No optional flags are supported.
 
   Identical inputs return zero. When one input is empty, the result is the other input's grapheme count. These cases remain subject to the same bounds: each input may contain at most 65,536 UTF-16 code units and 4,096 graphemes, and the product of the two grapheme counts may not exceed 4,000,000. Exceeding any bound returns `#-1 STRING DISTANCE WORK LIMIT EXCEEDED`. The work check happens before allocating comparison rows; row storage grows with the shorter input.
 
@@ -5479,11 +5479,11 @@ My name
 
 ```sharp
 strdistance(kitten,sitting)
-strdistance(ansi(r,界😀),界😺)
-strdistance(,é😀)
+strdistance(ansi(r,[chr(30028)][chr(128512)]),[chr(30028)][chr(128570)])
+strdistance(,e[chr(769)][chr(128512)])
 ```
 
-  These return `3`, `1`, and `2`, respectively.
+  These return `3`, `1`, and `2`, respectively. `chr(30028)` is a wide CJK character, `chr(128512)` and `chr(128570)` are two different emoji (a grinning face and a grinning cat face), and `e[chr(769)]` is e with a combining acute accent.
 
 ::: seealso
 - [SUGGEST()]
@@ -5508,7 +5508,7 @@ strdistance(,é😀)
 ```sharp
 printf(lit(%-8s %4d),Ore,12)
 printf(lit(%+08.2f),12.345)
-printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
+printf(lit(%4s|%-4s),ansi(r,chr(30028)),ansi(b,chr(128512)))
 ```
 
 ::: seealso
@@ -5525,7 +5525,7 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 
   A display column differs from a Unicode scalar (one code point), a grapheme cluster (a base plus its combining marks, or a joined emoji sequence), and a UTF-16 code unit (the indexing unit used by the .NET string API). Use [GRAPHEMECOUNT()] and [GRAPHEMES()] for cluster operations. These functions do not normalize or repair text.
 
-  Examples: `displaywidth(界)` returns `2`; `graphemecount(界)` returns `1`.
+  Examples: `displaywidth(chr(30028))` returns `2`; `graphemecount(chr(30028))` returns `1`. `chr(30028)` is a wide CJK character.
 
 ::: seealso
 - [STRLEN()]
@@ -5538,7 +5538,7 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 
   Returns the number of extended grapheme clusters in the text, ignoring markup. Combining accents, emoji modifiers, joined emoji, and paired flag indicators remain with their cluster. Empty text returns 0. Segmentation follows the released MarkupString library and the runtime Unicode rules, so the original composed or decomposed spelling is retained.
 
-  Examples: `graphemecount(é)` returns `1`; `graphemecount(👩‍👩‍👧‍👦)` returns `1`.
+  Examples: `graphemecount(e[chr(769)])` returns `1`, an e and its combining accent; `graphemecount([chr(128105)][chr(8205)][chr(128105)][chr(8205)][chr(128103)][chr(8205)][chr(128102)])` returns `1`, a family emoji built from four emoji and three zero-width joiners.
 
 ::: seealso
 - [DISPLAYWIDTH()]
@@ -5550,7 +5550,7 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 
   Inserts the output separator between whole grapheme clusters, retaining ANSI, HTML, and custom markup. The default separator is one space. Any separator text is accepted, including multiple characters and markup; an explicitly empty separator returns the original text with its markup. Empty input returns empty output. No separator is inserted before the first or after the last cluster, and existing spaces in the input remain clusters. There is no escaping or quoting of clusters containing the separator; choose a separator suitable for your data.
 
-  Examples: `graphemes(é界,|)` returns `é|界`; `graphemes(é界,)` returns `é界`.
+  Examples: `graphemes(e[chr(769)][chr(30028)],|)` returns the accented e, a `|`, then the CJK character; `graphemes(e[chr(769)][chr(30028)],)` returns its input unchanged.
 
   All three Unicode functions take normally evaluated arguments and use the usual function invocation and recursion limits. The evaluator permits at most 5,242,880 UTF-16 code units per function result. GRAPHEMES checks the expanded length before constructing its output and returns `#-1 OUTPUT EXCEEDED MAXIMUM SIZE` if it would exceed that ceiling. Cluster length itself has no separate fixed limit. Text is not normalized; malformed UTF-16 is retained under the library's segmentation policy.
 
@@ -5893,11 +5893,11 @@ think isjson("quoted")
 # JSON_GROUP_BY()
 `json_group_by([<object>/]<attribute>, <list>[, <delimiter>])`
 
-  json_group_by() buckets the elements of `<list>` by a computed key: `<attribute>` (or a #lambda) is evaluated once per element — the element passed as %0, as in filter() and map() — and its result becomes that element's group key. The result is a JSON object mapping each key, in first-seen order, to a JSON array of the elements that produced it.
+  json_group_by() buckets the elements of `<list>` by a computed key: `<attribute>` (or a #lambda) is evaluated once per element (the element passed as %0, as in filter() and map()), and its result becomes that element's group key. The result is a JSON object mapping each key, in first-seen order, to a JSON array of the elements that produced it.
 
   Because the key is computed by an attribute, it can be anything derived from the element: an attribute fetched off a dbref, a substring, a classification. An empty list yields {}. Use json_query() to take the result apart.
 
-  Example — group the contents of a room by faction:
+  Example: group the contents of a room by faction:
 ```sharp
 > &FACTIONOF me=get(%0/FACTION)
 > think json_group_by(FACTIONOF, lcon(here))
@@ -6167,9 +6167,10 @@ ROOM
 ```sharp
 say ucstr(Foo BAR baz)
 You say, "FOO BAR BAZ"
-say ucstr2(grüßen)
-You say, "GRÜSSEN
+say ucstr2(gr[chr(252)]n)
 ```
+
+  The second example says "GRUN" with an umlaut on the U; `chr(252)` is u with an umlaut.
 
 
 ::: seealso
