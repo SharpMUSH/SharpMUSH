@@ -48,7 +48,7 @@ public class MushCnfImportService(
 	/// <summary>Persists <paramref name="import"/> over the current options and tells their readers.</summary>
 	public async Task<SharpMUSHOptions> ApplyAsync(PennMushConfigImport import, CancellationToken cancellationToken = default)
 	{
-		var imported = await config.UpdateAsync(import.Over);
+		var imported = await config.UpdateAsync(import.Over, cancellationToken);
 		await database.SetExpandedServerData(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(import),
 			cancellationToken);
 		logger.LogInformation("Configuration imported and persisted successfully");
@@ -65,7 +65,7 @@ public class MushCnfImportService(
 	public async Task RestoreAsync(ConfigurationSnapshot snapshot, CancellationToken cancellationToken = default)
 	{
 		await database.SetExpandedServerData(nameof(MushCnfObjectReferences), snapshot.References, cancellationToken);
-		await config.UpdateAsync(_ => snapshot.Options);
+		await config.UpdateAsync(_ => snapshot.Options, cancellationToken);
 		logger.LogInformation("Configuration restored to what it was before the import");
 	}
 }

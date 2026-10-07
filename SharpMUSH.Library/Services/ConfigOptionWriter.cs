@@ -162,15 +162,18 @@ public sealed class ConfigOptionWriter(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<SharpMUSHOptions> UpdateAsync(Func<SharpMUSHOptions, SharpMUSHOptions> change)
+	public async ValueTask<SharpMUSHOptions> UpdateAsync(Func<SharpMUSHOptions, SharpMUSHOptions> change,
+		CancellationToken cancellationToken = default)
 	{
-		await _writeLock.WaitAsync();
+		await _writeLock.WaitAsync(cancellationToken);
 		try
 		{
 			var current = await CurrentAsync();
 			var updated = change(current);
 			if (!ReferenceEquals(updated, current))
 			{
+				// Checked last: a request cancelled while it waited for the lock stores nothing.
+				cancellationToken.ThrowIfCancellationRequested();
 				await serverData.SetExpandedServerDataAsync(updated);
 				reload.SignalChange();
 			}

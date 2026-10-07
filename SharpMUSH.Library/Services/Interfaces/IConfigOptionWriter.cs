@@ -58,6 +58,8 @@ public interface IConfigOptionWriter
 	/// takes, and announces it. <paramref name="change"/> gets the stored options and returns the same instance to store
 	/// nothing. Not validated: the caller checks what it changes. Every read-modify-write of the options document goes
 	/// through here or <see cref="SetAsync"/>; one that reads and stores them itself can erase a change made meanwhile.
+	/// A cancelled <paramref name="cancellationToken"/> stores nothing.
 	/// </summary>
-	ValueTask<SharpMUSHOptions> UpdateAsync(Func<SharpMUSHOptions, SharpMUSHOptions> change);
+	ValueTask<SharpMUSHOptions> UpdateAsync(Func<SharpMUSHOptions, SharpMUSHOptions> change,
+		CancellationToken cancellationToken = default);
 }

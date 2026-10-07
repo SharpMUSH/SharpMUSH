@@ -248,7 +248,7 @@ public class HandlerSetupService(
 			Database = kind == HandlerKinds.Http
 				? settings.Database with { HttpHandler = target }
 				: settings.Database with { EventHandler = target }
-		});
+		}, cancellationToken);
 		logger.LogInformation("Setup wizard set the {Kind} handler to {Target}.", LogSanitizer.Sanitize(kind),
 			target is { } t ? $"#{t}" : "none");
 
