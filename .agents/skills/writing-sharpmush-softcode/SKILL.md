@@ -109,7 +109,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 | Names in columns / a list / a tree | `grid()` / `bullets()` / `tree()` + `node()` |
 | Side by side | `flex(<opts>, item(<content>, <width>), …)` |
 | Bar / status tag | `gauge(<v>, <max>, <label>)` / `badge(<text>, ok\|warn\|error\|info\|muted)` |
-| A command's message to the player | `notice(<SOURCE>, <text>, ok\|warn\|error\|info)` - `[JOBS] Error: There is no job 12.`; one source name per package, in capitals |
+| A command's message to the player | `notice(<SOURCE>, <text>, ok\|warn\|error\|info)` - `[JOBS] Warning: There is no job 12.`; `warn` for a typing mistake, `error` only for permission refusals and real failures; one source name per package, in capitals |
 
 - **Leave the width empty.** Empty means the width of the connection that ran the command, and each telnet reader is re-sent it at their own; that is what makes `@remit` right for a whole room. `width(%#)` pins every reader to the enactor's width; a number pins everyone. No column arithmetic (`sub(width(%#),37)`): table columns size from their content.
 - **Options are one JSON object**: inline with doubled braces, `box(x,T,,{{"title":"left"}})`, or `json(object,…)` when a value is computed. A misspelled key errors (`#-1 UNKNOWN LAYOUT OPTION`). An inline `\n` is eaten by evaluation and silently becomes `n`; build a newline with `json(string,%r)`.

@@ -292,6 +292,8 @@ public class LayoutFunctionTests
 
 		await Assert.That((await Eval("notice(,Saved.,ok)")).ToPlainText()).IsEqualTo("Done: Saved.");
 		await Assert.That((await Eval("notice(JOBS,Quiet.,muted)")).ToPlainText()).IsEqualTo("[JOBS] Quiet.");
+		await Assert.That((await Eval("notice(JOBS,Priority is low\\, normal or high \\(or green\\, red\\).,error)")).ToPlainText())
+			.IsEqualTo("[JOBS] Error: Priority is low, normal or high (or green, red).");
 	}
 
 	/// <summary>

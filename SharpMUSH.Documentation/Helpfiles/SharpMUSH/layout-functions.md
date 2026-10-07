@@ -1090,11 +1090,11 @@ A message from a system, such as `+job` or `+scene`: *<source>* as a badge, then
 
 - `info` - nothing; the message is news
 - `ok` - `Done:`; the thing asked for happened
-- `warn` - `Warning:`; it happened, but look at this
-- `error` - `Error:`; it did not happen
+- `warn` - `Warning:`; something typed was wrong (no such job, a missing title) or needs a second look
+- `error` - `Error:`; a real error: the player may not do this, or something broke
 - `muted` - nothing, in grey
 
-A client that says it is a screen reader is sent the badge without its brackets and the word in lower case, `JOBS error: There is no job 12.`, and an info notice as `JOBS: Job 12 is due Friday.` The portal keeps the brackets from its screen reader the same way.
+A client that says it is a screen reader is sent the badge without its brackets and the word in lower case, `JOBS error: Only a Job Admin can do that.`, and an info notice as `JOBS: Job 12 is due Friday.` The portal keeps the brackets from its screen reader the same way.
 
 The word takes the badge's colour. When the game sets `layout_theme`, the kinds take that theme's colours, as [BADGE()]'s do. An empty *<source>* leaves the badge out.
 
@@ -1106,10 +1106,10 @@ A package says its own name once and uses it for every message, so its players l
 [JOBS] Job 12 is due Friday.
 > think notice(JOBS,Job 12 is closed.,ok)
 [JOBS] Done: Job 12 is closed.
-> think notice(SCENE,Scene 40 has had no pose for an hour.,warn)
-[SCENE] Warning: Scene 40 has had no pose for an hour.
-> think notice(WIKI,There is no page called Lore/Dragons.,error)
-[WIKI] Error: There is no page called Lore/Dragons.
+> think notice(WIKI,There is no page called Lore/Dragons.,warn)
+[WIKI] Warning: There is no page called Lore/Dragons.
+> think notice(JOBS,Only a Job Admin can do that.,error)
+[JOBS] Error: Only a Job Admin can do that.
 ```
 
 ::: seealso
