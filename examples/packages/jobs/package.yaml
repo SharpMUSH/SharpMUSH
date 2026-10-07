@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -280,6 +280,19 @@ objects:
         [sortkey({{jobs}}/FUN`NAMEKEY,squish(iter(lcon({{buckets}}),if(cor(not(t(get(%i0/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%i0,%0)),objid(%i0)))))]
       FUN`NAMEKEY: |-
         [name(%0)]
+      # Whether bucket %0 takes new jobs: filed in it or moved into it. +bucket/disable stops it; the jobs
+      # already there stay and are worked as before.
+      FUN`TAKES`JOBS: |-
+        [not(t(get(%0/DISABLED)))]
+      # The slug a bucket called %0 gets: its permission is softcode.jobs.<slug>, its role job-admin-<slug>.
+      FUN`SLUG: |-
+        [lcstr(edit(trim(%0),%b,_,-,_))]
+      # The bucket whose slug is %0, or nothing.
+      FUN`BUCKET`BYSLUG: |-
+        [first(squish(iter(lcon({{buckets}}),if(strmatch(get(%i0/SLUG),%0),objid(%i0)))))]
+      # %0 jobs, in words.
+      FUN`NJOBS: |-
+        %0 job[if(neq(%0,1),s)]
       # Bucket %0, person %1. The bucket's work and file locks decide.
       FUN`CAN`WORK: |-
         [t(elock(%0/work,%1))]
@@ -545,7 +558,7 @@ objects:
         @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert cand(strlen(%q<rhs>),lte(strlen(%q<rhs>),80))=@pemit %#=A title is 1 to 80 characters.; &TITLE %q<jo>=%q<rhs>; think [setq(logtext,Retitled.)][setq(logcode,name)]; @include {{jobs}}/INC`DO`LOG; @pemit %#=Job %q<n> is titled: %q<rhs>
       # /trans, and /bucket.
       INC`JOB`TRANS: |-
-        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert strlen(setr(nb,u({{jobs}}/FUN`BUCKET,%q<rhs>)))=@pemit %#=There is no bucket called %q<rhs>.; @assert not(strmatch(%q<nb>,%q<b>))=@pemit %#=Job %q<n> is in [name(%q<nb>)] already.; @include {{jobs}}/INC`DO`TRANSFER; @pemit %#=Job %q<n> is in [name(%q<nb>)] now.
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert strlen(setr(nb,u({{jobs}}/FUN`BUCKET,%q<rhs>)))=@pemit %#=There is no bucket called %q<rhs>.; @assert not(strmatch(%q<nb>,%q<b>))=@pemit %#=Job %q<n> is in [name(%q<nb>)] already.; @assert u({{jobs}}/FUN`TAKES`JOBS,%q<nb>)=@pemit %#=[name(%q<nb>)] is not taking new jobs.; @include {{jobs}}/INC`DO`TRANSFER; @pemit %#=Job %q<n> is in [name(%q<nb>)] now.
       # Job Admin only. The number is never used again.
       INC`JOB`DELETE: |-
         @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`ADMIN; think [setq(title,get(%q<jo>/TITLE))]; &INDEX`%q<n> {{store}}=; @tel %q<jo>={{jobs}}; @nuke %q<jo>; @trigger %q<b>/ON`DELETE=%q<n>,%q<actor>,%q<title>; @pemit %#=Job %q<n> is deleted.
@@ -569,7 +582,7 @@ objects:
         @break not(strlen(%q<arg>))=@pemit %#=Job mail is [firstof(get({{store}}/OPT`MAIL`%q<me>),on)]. +job/options mail=off stops it.; @assert cand(strmatch(%q<lhs>,mail),t(match(on off,lcstr(%q<rhs>))))=@pemit %#=+job/options mail=on or mail=off; &OPT`MAIL`%q<me> {{store}}=[if(strmatch(%q<rhs>,off),off)]; @pemit %#=Job mail is [lcstr(%q<rhs>)].
       # Registers fb (bucket), title, text and fmt, from +request, +bug and friends, and /create.
       INC`FILE`CHECKED: |-
-        @assert strlen(%q<fb>)=@pemit %#=There is no such bucket. +buckets lists them.; @assert cand(u({{jobs}}/FUN`CAN`FILE,%q<fb>,%#),cor(not(t(get(%q<fb>/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%q<fb>,%#)))=@pemit %#=You can't file in [name(%q<fb>)].; @assert strlen(%q<title>)=@pemit %#=Give it a title: +request <title>=<text>; @assert lte(strlen(%q<title>),80)=@pemit %#=Keep the title to 80 characters. The rest goes after the =.; @assert strlen(%q<text>)=@pemit %#=Say what you need after the =.; think [setq(actor,objid(%#))][setq(how,command)][setq(author,)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; @pemit %#=Filed job %q<n> in [name(%q<fb>)]: %q<title>. +job %q<n> shows it.
+        @assert strlen(%q<fb>)=@pemit %#=There is no such bucket. +buckets lists them.; @assert cand(u({{jobs}}/FUN`CAN`FILE,%q<fb>,%#),cor(not(t(get(%q<fb>/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%q<fb>,%#)))=@pemit %#=You can't file in [name(%q<fb>)].; @assert u({{jobs}}/FUN`TAKES`JOBS,%q<fb>)=@pemit %#=[name(%q<fb>)] is not taking new jobs. +buckets lists the buckets.; @assert strlen(%q<title>)=@pemit %#=Give it a title: +request <title>=<text>; @assert lte(strlen(%q<title>),80)=@pemit %#=Keep the title to 80 characters. The rest goes after the =.; @assert strlen(%q<text>)=@pemit %#=Say what you need after the =.; think [setq(actor,objid(%#))][setq(how,command)][setq(author,)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; @pemit %#=Filed job %q<n> in [name(%q<fb>)]: %q<title>. +job %q<n> shows it.
 
       # ---- writes, shared with the portal routes and the API -------------------
       # Each takes registers, never arguments, so text with commas in it arrives whole. %q<actor> is
@@ -625,11 +638,11 @@ objects:
       # ---- buckets --------------------------------------------------------------
       # Buckets %0 as person %1 sees them; a * marks one they work.
       FUN`BTABLE: |-
-        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,%r%r12),grow,json(string,%r%r1)),Bucket%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)],,%r)],>Open%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],What it is for%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
+        [datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,%r%r12),grow,json(string,%r%r1)),Bucket%r[iter(%0,[name(%i0)][if(u({{jobs}}/FUN`CAN`WORK,%i0,%1),*)][if(not(u({{jobs}}/FUN`TAKES`JOBS,%i0)),%b[chr(40)]disabled[chr(41)])],,%r)],>Open%r[iter(%0,words(u({{jobs}}/FUN`SELECT,%1,BUCKET,%i0)),,%r)],What it is for%r[iter(%0,edit(get(%i0/DESCRIPTION),%r,%b),,%r)])]
       INC`BUCKET`LIST: |-
         @pemit %#=[box([u({{jobs}}/FUN`BTABLE,u({{jobs}}/FUN`BUCKETS`SEEN,%#),%#)]%r[rule()]%r[if(u({{jobs}}/WEB`STAFF,%#),* you work it [chr(183)]%b)]+request <bucket>/<title>=<text>,Job buckets)]
       INC`BUCKET`INFO: |-
-        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[box([fields(,About,get(%q<bk>/DESCRIPTION),Turnaround,[firstof(get(%q<bk>/TURNAROUND),0)] days,Reopen,[firstof(get(%q<bk>/REOPEN),0)] days,Anonymous,firstof(get(%q<bk>/ANONYMOUS),none),Hidden,if(t(get(%q<bk>/HIDDEN)),yes,no),Priority,firstof(get(%q<bk>/PRIORITY),normal),Keep,if(get(%q<bk>/KEEP),[get(%q<bk>/KEEP)] days,forever),Permission,softcode.jobs.[get(%q<bk>/SLUG)],Role,job-admin-[get(%q<bk>/SLUG)],File lock,lock(%q<bk>/file),Work lock,lock(%q<bk>/work),Hooks,firstof(itemize(squish(iter(lattr(%q<bk>/ON`*),if(strmatch(get(%q<bk>/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]%r[rule()]%r+bucket/set [name(%q<bk>)]/<setting>=<value>,Bucket: [name(%q<bk>)])]
+        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))=@pemit %#=There is no bucket called %q<arg>.; @pemit %#=[box([fields(,About,get(%q<bk>/DESCRIPTION),Turnaround,[firstof(get(%q<bk>/TURNAROUND),0)] days,Reopen,[firstof(get(%q<bk>/REOPEN),0)] days,Anonymous,firstof(get(%q<bk>/ANONYMOUS),none),Hidden,if(t(get(%q<bk>/HIDDEN)),yes,no),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>),yes,no),Priority,firstof(get(%q<bk>/PRIORITY),normal),Keep,if(get(%q<bk>/KEEP),[get(%q<bk>/KEEP)] days,forever),Permission,softcode.jobs.[get(%q<bk>/SLUG)],Role,job-admin-[get(%q<bk>/SLUG)],File lock,lock(%q<bk>/file),Work lock,lock(%q<bk>/work),Hooks,firstof(itemize(squish(iter(lattr(%q<bk>/ON`*),if(strmatch(get(%q<bk>/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]%r[rule()]%r+bucket/set [name(%q<bk>)]/<setting>=<value>,Bucket: [name(%q<bk>)])]
       FUN`SETTING`OK: |-
         [switch(%0,description,lte(strlen(%1),200),turnaround,cand(isint(%1),gte(%1,0)),reopen,cand(isint(%1),gte(%1,0)),keep,cor(not(strlen(%1)),cand(isint(%1),gt(%1,0))),anonymous,t(match(none filer staff,lcstr(%1))),hidden,t(match(yes no on off 1 0,lcstr(%1))),priority,t(strlen(u({{jobs}}/FUN`PRIORITY`PARSE,%1))),0)]
       FUN`SETTING`VALUE: |-
@@ -637,14 +650,43 @@ objects:
       # Settings only. Hook code (ON`*) is written by whoever controls the bucket object, not through here.
       INC`BUCKET`SET: |-
         @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=+bucket/set <bucket>/<setting>=<value>; @assert cor(u({{jobs}}/FUN`IS`ADMIN,%#),u({{jobs}}/FUN`CAN`WORK,%q<bk>,%#))=@pemit %#=Only a Job Admin or someone who works [name(%q<bk>)] can change it.; @assert t(match(description turnaround reopen anonymous hidden priority keep,setr(set,lcstr(trim(after(%q<lhs>,/))))))=@pemit %#=The settings are description, turnaround, reopen, anonymous, hidden, priority and keep.; @assert u({{jobs}}/FUN`SETTING`OK,%q<set>,%q<rhs>)=@pemit %#=[get({{jobs}}/DATA`SETTING`%q<set>)]; &%q<set> %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,%q<set>,%q<rhs>)]; @pemit %#=[name(%q<bk>)] %q<set> is [firstof(get(%q<bk>/%q<set>),nothing)].
+      # What is wrong with %0 as the name of a new bucket, or of bucket %1 renamed; nothing when it will do.
+      FUN`ERR`NAME: |-
+        [setq(_en,u({{jobs}}/FUN`BUCKET,%0))][switch(1,not(cand(strlen(%0),lte(strlen(%0),20),valid(name,%0),valid(permission,softcode.jobs.[u({{jobs}}/FUN`SLUG,%0)]))),A bucket name is up to 20 letters\, digits\, spaces and dashes\, starting with a letter.,cand(strlen(%q<_en>),comp(%q<_en>,%1)),There is a [name(%q<_en>)] bucket already.,cand(not(strlen(%1)),strlen(u({{jobs}}/FUN`BUCKET`BYSLUG,u({{jobs}}/FUN`SLUG,%0)))),[name(u({{jobs}}/FUN`BUCKET`BYSLUG,u({{jobs}}/FUN`SLUG,%0)))] already has the permission softcode.jobs.[u({{jobs}}/FUN`SLUG,%0)]. Pick another name.,)]
+      # Why bucket %0 can't stop taking jobs, or nothing.
+      FUN`ERR`DISABLE: |-
+        [switch(1,not(u({{jobs}}/FUN`TAKES`JOBS,%0)),[name(%0)] is not taking new jobs already.,not(comp(lcstr(name(%0)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))),[name(%0)] is where +request files. Point DATA`DEFAULT`BUCKET elsewhere first.,)]
+      # Why bucket %0 can't be deleted with its jobs moved to bucket %1 (typed as %2, empty to move none), or nothing.
+      FUN`ERR`DELETE: |-
+        [setq(_ej,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%0)))][switch(1,not(comp(lcstr(name(%0)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))),[name(%0)] is where +request files. Point DATA`DEFAULT`BUCKET elsewhere first.,cand(strlen(%2),not(strlen(%1))),There is no bucket called %2.,cand(strlen(%1),not(comp(%1,%0))),Pick another bucket to move the jobs to.,cand(strlen(%1),not(u({{jobs}}/FUN`TAKES`JOBS,%1))),[name(%1)] is not taking new jobs.,cand(%q<_ej>,not(strlen(%1))),[name(%0)] still has [u({{jobs}}/FUN`NJOBS,%q<_ej>)]. Pick a bucket to move them to.,)]
       # +bucket/create <name>=<description>: the bucket, its permission softcode.jobs.<slug>, and the role job-admin-<slug> allowing it.
       INC`BUCKET`CREATE: |-
-        @include {{jobs}}/INC`NEED`ADMIN; think [setq(bname,trim(%q<lhs>))][setq(slug,lcstr(edit(%q<bname>,%b,_,-,_)))]; @assert cand(strlen(%q<bname>),lte(strlen(%q<bname>),20),valid(name,%q<bname>),valid(permission,softcode.jobs.%q<slug>))=@pemit %#=A bucket name is up to 20 letters, digits, spaces and dashes, starting with a letter.; @assert not(strlen(u({{jobs}}/FUN`BUCKET,%q<bname>)))=@pemit %#=There is a %q<bname> bucket already.; think [setq(bk,objid(create(%q<bname>)))]; @tel %q<bk>={{buckets}}; @parent %q<bk>={{buckets}}; &DESCRIPTION %q<bk>=%q<rhs>; &SLUG %q<bk>=%q<slug>; @lock/user:file %q<bk>=#TRUE; @lock/user:work %q<bk>=perm^softcode.jobs.admin|perm^softcode.jobs.%q<slug>; @dolist/inline [get({{jobs}}/DATA`HOOKS)]=&ON`## %q<bk>=[get({{jobs}}/DATA`HOOKDOC`##)]; @permission/define softcode.jobs.%q<slug>=Jobs/Work jobs in the %q<bname> bucket.; @role/create job-admin-%q<slug>=Jobs/Job Admin - %q<bname>; @role/allow job-admin-%q<slug>=softcode.jobs.%q<slug>; @pemit %#=Bucket %q<bname> is ready. The role job-admin-%q<slug> works it: @role/assign <player>=job-admin-%q<slug>
+        @include {{jobs}}/INC`NEED`ADMIN; think [setq(bname,trim(%q<lhs>))][setq(desc,%q<rhs>)]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`NAME,%q<bname>,))))=@pemit %#=%q<err>; @assert u({{jobs}}/FUN`SETTING`OK,description,%q<desc>)=@pemit %#=[get({{jobs}}/DATA`SETTING`DESCRIPTION)]; @include {{jobs}}/INC`DO`BUCKET`CREATE; @pemit %#=Bucket %q<bname> is ready. The role job-admin-%q<slug> works it: @role/assign <player>=job-admin-%q<slug>
       INC`BUCKET`RENAME: |-
-        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<lhs>)))=@pemit %#=There is no bucket called %q<lhs>.; @assert cand(lte(strlen(%q<rhs>),20),valid(name,%q<rhs>),not(strlen(u({{jobs}}/FUN`BUCKET,%q<rhs>))))=@pemit %#=Pick a free name of up to 20 characters.; @name %q<bk>=%q<rhs>; @role/rename job-admin-[get(%q<bk>/SLUG)]=Job Admin - %q<rhs>; @pemit %#=The bucket is called %q<rhs> now. Its permission and role keep their names.
-      # Empty buckets only.
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<lhs>)))=@pemit %#=There is no bucket called %q<lhs>.; think [setq(bname,trim(%q<rhs>))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`NAME,%q<bname>,%q<bk>))))=@pemit %#=%q<err>; @include {{jobs}}/INC`DO`BUCKET`RENAME; @pemit %#=The bucket is called %q<bname> now. Its permission and role keep their names.
+      # +bucket/disable <bucket>: nothing new is filed in it or moved into it. Its jobs stay and are worked as before.
+      INC`BUCKET`DISABLE: |-
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<arg>)))=@pemit %#=There is no bucket called %q<arg>.; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DISABLE,%q<bk>))))=@pemit %#=%q<err>; think [setq(off,1)]; @include {{jobs}}/INC`DO`BUCKET`STATE; @pemit %#=[name(%q<bk>)] takes no new jobs now. Its jobs stay there and are worked as before. +bucket/enable [name(%q<bk>)] takes them again.
+      INC`BUCKET`ENABLE: |-
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<arg>)))=@pemit %#=There is no bucket called %q<arg>.; @assert not(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>))=@pemit %#=[name(%q<bk>)] takes new jobs already.; think [setq(off,0)]; @include {{jobs}}/INC`DO`BUCKET`STATE; @pemit %#=[name(%q<bk>)] takes new jobs again.
+      # +bucket/delete <bucket>[=<bucket>]: a bucket that still has jobs, open or closed, is deleted only
+      # once they have somewhere to go; each moves there as +job/trans moves it.
       INC`BUCKET`DELETE: |-
-        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<arg>)))=@pemit %#=There is no bucket called %q<arg>.; @assert not(words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%q<bk>)))=@pemit %#=[name(%q<bk>)] still has jobs. Move or delete them first.; @assert comp(lcstr(name(%q<bk>)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))=@pemit %#=[name(%q<bk>)] is where +request files. Point DATA`DEFAULT`BUCKET elsewhere first.; think [setq(slug,get(%q<bk>/SLUG))][setq(bname,name(%q<bk>))]; @role/delete job-admin-%q<slug>; @permission/undefine softcode.jobs.%q<slug>; @tel %q<bk>={{jobs}}; @nuke %q<bk>; @pemit %#=Bucket %q<bname> is deleted, with its role and permission.
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<lhs>)))=@pemit %#=There is no bucket called %q<lhs>.; think [setq(mv,if(strlen(%q<rhs>),u({{jobs}}/FUN`BUCKET,%q<rhs>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%q<bk>)))]; @assert cor(strlen(%q<rhs>),not(%q<_nj>))=@pemit %#=[name(%q<bk>)] still has [u({{jobs}}/FUN`NJOBS,%q<_nj>)]. +bucket/delete [name(%q<bk>)]=<bucket> moves them there first.; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<rhs>))))=@pemit %#=%q<err>; @include {{jobs}}/INC`DO`BUCKET`DELETE; @pemit %#=Bucket %q<bname> is deleted, with its role and permission.[if(%q<moved>,%b[u({{jobs}}/FUN`NJOBS,%q<moved>)] moved to [name(%q<mv>)].)]
+      # The writes those share with the portal's bucket pages. Registers in, as INC`DO` takes them.
+      # %q<bname>, %q<desc>: makes the bucket, its permission and role. Leaves %q<bk> and %q<slug>.
+      INC`DO`BUCKET`CREATE: |-
+        think [setq(slug,u({{jobs}}/FUN`SLUG,%q<bname>))][setq(bk,objid(create(%q<bname>)))]; @tel %q<bk>={{buckets}}; @parent %q<bk>={{buckets}}; @set %q<bk>=NO_COMMAND; &DESCRIPTION %q<bk>=%q<desc>; &SLUG %q<bk>=%q<slug>; @lock/user:file %q<bk>=#TRUE; @lock/user:work %q<bk>=perm^softcode.jobs.admin|perm^softcode.jobs.%q<slug>; @dolist/inline [get({{jobs}}/DATA`HOOKS)]=&ON`## %q<bk>=[get({{jobs}}/DATA`HOOKDOC`##)]; @permission/define softcode.jobs.%q<slug>=Jobs/Work jobs in the %q<bname> bucket.; @role/create job-admin-%q<slug>=Jobs/Job Admin - %q<bname>; @role/allow job-admin-%q<slug>=softcode.jobs.%q<slug>
+      # %q<bk> is called %q<bname> from now on; its slug, permission and role id stay.
+      INC`DO`BUCKET`RENAME: |-
+        @name %q<bk>=%q<bname>; @role/rename job-admin-[get(%q<bk>/SLUG)]=Job Admin - %q<bname>
+      # %q<bk> stops taking new jobs (%q<off> 1) or takes them again (0).
+      INC`DO`BUCKET`STATE: |-
+        &DISABLED %q<bk>=[if(%q<off>,1)]
+      # Moves every job in %q<bk> to %q<mv>, then removes the bucket, its role and its permission. Leaves
+      # %q<bname> and %q<moved>, how many jobs moved.
+      INC`DO`BUCKET`DELETE: |-
+        think [setq(slug,get(%q<bk>/SLUG))][setq(bname,name(%q<bk>))][setq(_dj,u({{jobs}}/FUN`SELECT,%q<actor>,INBUCKET,%q<bk>))][setq(moved,words(%q<_dj>))][setq(nb,%q<mv>)]; @dolist/inline %q<_dj>={think [setq(jo,##)]; @include {{jobs}}/INC`DO`TRANSFER}; @role/delete job-admin-%q<slug>; @permission/undefine softcode.jobs.%q<slug>; @tel %q<bk>={{jobs}}; @nuke %q<bk>
       # +bucket/lock <bucket>/file|work=<lock>: ordinary locks, so perm^, role^ and the rest all work.
       INC`BUCKET`LOCK: |-
         @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=+bucket/lock <bucket>/file|work=<lock>; @assert t(match(file work,setr(lk,lcstr(trim(after(%q<lhs>,/))))))=@pemit %#=A bucket has a file lock (who may file) and a work lock (who works it).; @lock/user:%q<lk> %q<bk>=%q<rhs>; @pemit %#=[name(%q<bk>)] %q<lk> lock: [lock(%q<bk>/%q<lk>)]
@@ -679,7 +721,7 @@ objects:
       # the number in %q<job>. Text goes in registers because @include splits its arguments at commas.
       # Needs a privileged executor (a wizard object), since it writes the job store.
       INC`API`FILE: |-
-        think [setq(actor,if(hastype(%0,PLAYER),objid(%0),objid(pmatch(%0))))][setq(fb,u({{jobs}}/FUN`BUCKET,%1))][setq(fmt,firstof(%q<fmt>,markdown))][setq(how,api)][setq(author,)][setq(prio,)][setq(job,)]; @assert cand(strlen(%q<actor>),strlen(%q<fb>),strlen(%q<title>),strlen(%q<text>)); @include {{jobs}}/INC`DO`FILE; think [setq(job,%q<n>)]
+        think [setq(actor,if(hastype(%0,PLAYER),objid(%0),objid(pmatch(%0))))][setq(fb,u({{jobs}}/FUN`BUCKET,%1))][setq(fmt,firstof(%q<fmt>,markdown))][setq(how,api)][setq(author,)][setq(prio,)][setq(job,)]; @assert cand(strlen(%q<actor>),strlen(%q<fb>),u({{jobs}}/FUN`TAKES`JOBS,%q<fb>),strlen(%q<title>),strlen(%q<text>)); @include {{jobs}}/INC`DO`FILE; think [setq(job,%q<n>)]
       # @include Jobs/INC`API`REPLY=<job>,<actor>: a public reply of %q<text>.
       INC`API`REPLY: |-
         think [setq(jo,u({{jobs}}/FUN`JOB,%0))][setq(actor,objid(%1))][setq(kind,reply)][setq(fmt,firstof(%q<fmt>,markdown))][setq(mailforce,0)]; @assert cand(strlen(%q<jo>),strlen(%q<actor>),strlen(%q<text>)); @include {{jobs}}/INC`DO`REPLY
@@ -775,7 +817,7 @@ objects:
         For code, or anything full of brackets and percent signs: shown as typed, not as markdown.
       # The buckets %0 may file in.
       WEB`FILEABLE: |-
-        [squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`CAN`FILE,%i0,%0),%i0)))]
+        [squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(cand(u({{jobs}}/FUN`TAKES`JOBS,%i0),u({{jobs}}/FUN`CAN`FILE,%i0,%0)),%i0)))]
       # Job %1 for viewer %0: its details, its messages, a reply box, and the buttons the viewer may use.
       WEB`SCHEMA`JOB: |-
         [setq(_j,u({{jobs}}/FUN`JOB,%1))][if(cand(strlen(%q<_j>),u({{jobs}}/FUN`CAN`SEE,%q<_j>,%0)),u({{jobs}}/WEB`SCHEMA`JOB`SEEN,%0,%q<_j>),u({{jobs}}/WEB`SCHEMA`NOJOB,%1))]
@@ -830,9 +872,9 @@ objects:
       # Runs the posted op as %q<viewer> and leaves the answer in %q<out>. Checks mirror the +job and
       # +bucket commands; the writes are the same INC`DO` routines and settings.
       WEB`ACT: |-
-        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%q<viewer>)][setq(me,if(strlen(%q<viewer>),u({{jobs}}/FUN`KEY,%q<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(t(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode)))),softcode,markdown))][setq(mailforce,0)]; @assert strlen(%q<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert t(match(file reply claim unclaim close reopen format bucket,%q<op>))=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
+        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%q<viewer>)][setq(me,if(strlen(%q<viewer>),u({{jobs}}/FUN`KEY,%q<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(t(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode)))),softcode,markdown))][setq(mailforce,0)]; @assert strlen(%q<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert t(match(file reply claim unclaim close reopen format bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<op>))=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
       WEB`ACT`FILE: |-
-        think [setq(fb,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`GET,bucket),%q<viewer>))][setq(title,trim(u({{jobs}}/WEB`GET,title)))]; @assert cand(strlen(%q<fb>),u({{jobs}}/FUN`CAN`FILE,%q<fb>,%q<viewer>))=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,Pick a bucket you can file in.))]; @assert strlen(%q<title>)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Give it a title.))]; @assert lte(strlen(%q<title>),80)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Keep the title to 80 characters.))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Say what you need.))]; think [setq(how,portal)][setq(author,)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Filed job %q<n>.),redirect,json(string,/apps/jobs/%q<n>)))]
+        think [setq(fb,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`GET,bucket),%q<viewer>))][setq(title,trim(u({{jobs}}/WEB`GET,title)))]; @assert cand(strlen(%q<fb>),u({{jobs}}/FUN`CAN`FILE,%q<fb>,%q<viewer>))=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,Pick a bucket you can file in.))]; @assert u({{jobs}}/FUN`TAKES`JOBS,%q<fb>)=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,[name(%q<fb>)] is not taking new jobs.))]; @assert strlen(%q<title>)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Give it a title.))]; @assert lte(strlen(%q<title>),80)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Keep the title to 80 characters.))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Say what you need.))]; think [setq(how,portal)][setq(author,)][setq(prio,)]; @include {{jobs}}/INC`DO`FILE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Filed job %q<n>.),redirect,json(string,/apps/jobs/%q<n>)))]
       # The posted job, as INC`NEED`JOB finds one for a command.
       WEB`NEED`JOB: |-
         @assert cand(isint(%q<wn>),strlen(setr(jo,u({{jobs}}/FUN`JOB,%q<wn>))),u({{jobs}}/FUN`CAN`SEE,%q<jo>,%q<viewer>))=think [setq(out,u({{jobs}}/WEB`ERR,There is no job %q<wn>.))]; think [setq(n,get(%q<jo>/NUM))][setq(b,get(%q<jo>/BUCKET))][setq(staff,u({{jobs}}/FUN`CAN`WORK,%q<b>,%q<viewer>))]
@@ -857,6 +899,29 @@ objects:
       # The bucket page's Save: every setting at once, checked as +bucket/set checks one.
       WEB`ACT`BUCKET: |-
         think [setq(bk,u({{jobs}}/WEB`QBUCKET,%q<viewer>,u({{jobs}}/WEB`GET,bucket)))]; @assert strlen(%q<bk>)=think [setq(out,u({{jobs}}/WEB`ERR,Only a Job Admin or someone who works that bucket can change it.))]; think [setq(bad,first(squish(iter(get({{jobs}}/DATA`SETTINGS),if(u({{jobs}}/FUN`SETTING`OK,%i0,u({{jobs}}/WEB`SETTING,%i0)),,%i0)))))]; @assert not(strlen(%q<bad>))=think [setq(out,u({{jobs}}/WEB`ERRF,%q<bad>,get({{jobs}}/DATA`SETTING`%q<bad>)))]; @dolist/inline [get({{jobs}}/DATA`SETTINGS)]=&## %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,##,u({{jobs}}/WEB`SETTING,##))]; think [setq(out,json(object,ok,json(boolean,true),message,json(string,[name(%q<bk>)] is saved.)))]
+      # Field %0 as posted, empty when it was not.
+      WEB`GETS: |-
+        [setq(_v,u({{jobs}}/WEB`GET,%0))][if(strmatch(%q<_v>,null),,%q<_v>)]
+      WEB`NEED`ADMIN: |-
+        @assert u({{jobs}}/FUN`IS`ADMIN,%q<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Only a Job Admin can do that.))]
+      # The posted bucket, as %q<bk>.
+      WEB`NEED`BUCKET: |-
+        @assert strlen(setr(bk,u({{jobs}}/WEB`QBUCKET,%q<viewer>,u({{jobs}}/WEB`GETS,bucket))))=think [setq(out,u({{jobs}}/WEB`ERR,There is no such bucket.))]
+      # After a change to bucket %q<bk>: message %0 and its page drawn again. The redirect reloads the sidebar.
+      WEB`BDONE: |-
+        [json(object,ok,json(boolean,true),message,json(string,%0),schema,u({{jobs}}/WEB`SCHEMA`BUCKET`SEEN,%q<bk>,%q<viewer>),data,u({{jobs}}/WEB`DATA`BUCKET,%q<viewer>,get(%q<bk>/SLUG)),redirect,json(string,/apps/jobs/buckets/[get(%q<bk>/SLUG)]))]
+      # The bucket list's Create bucket, as +bucket/create.
+      WEB`ACT`NEWBUCKET: |-
+        @include {{jobs}}/WEB`NEED`ADMIN; think [setq(bname,trim(u({{jobs}}/WEB`GETS,new_name)))][setq(desc,trim(u({{jobs}}/WEB`GETS,new_description)))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`NAME,%q<bname>,))))=think [setq(out,u({{jobs}}/WEB`ERRF,new_name,%q<err>))]; @assert u({{jobs}}/FUN`SETTING`OK,description,%q<desc>)=think [setq(out,u({{jobs}}/WEB`ERRF,new_description,get({{jobs}}/DATA`SETTING`DESCRIPTION)))]; @include {{jobs}}/INC`DO`BUCKET`CREATE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Bucket %q<bname> is ready. The role job-admin-%q<slug> works it.),redirect,json(string,/apps/jobs/buckets/%q<slug>)))]
+      # The bucket page's Manage section, as +bucket/rename, /disable, /enable and /delete.
+      WEB`ACT`RENAMEBUCKET: |-
+        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; think [setq(bname,trim(u({{jobs}}/WEB`GETS,rename)))]; @assert comp(%q<bname>,name(%q<bk>))=think [setq(out,u({{jobs}}/WEB`ERRF,rename,It is called that already.))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`NAME,%q<bname>,%q<bk>))))=think [setq(out,u({{jobs}}/WEB`ERRF,rename,%q<err>))]; @include {{jobs}}/INC`DO`BUCKET`RENAME; think [setq(out,u({{jobs}}/WEB`BDONE,The bucket is called %q<bname> now.))]
+      WEB`ACT`DISABLEBUCKET: |-
+        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DISABLE,%q<bk>))))=think [setq(out,u({{jobs}}/WEB`ERR,%q<err>))]; think [setq(off,1)]; @include {{jobs}}/INC`DO`BUCKET`STATE; think [setq(out,u({{jobs}}/WEB`BDONE,[name(%q<bk>)] takes no new jobs now.))]
+      WEB`ACT`ENABLEBUCKET: |-
+        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; @assert not(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>))=think [setq(out,u({{jobs}}/WEB`ERR,[name(%q<bk>)] takes new jobs already.))]; think [setq(off,0)]; @include {{jobs}}/INC`DO`BUCKET`STATE; think [setq(out,u({{jobs}}/WEB`BDONE,[name(%q<bk>)] takes new jobs again.))]
+      WEB`ACT`DELETEBUCKET: |-
+        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; think [setq(_to,u({{jobs}}/WEB`GETS,moveto))][setq(mv,if(strlen(%q<_to>),u({{jobs}}/FUN`BUCKET`BYSLUG,%q<_to>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%q<viewer>,INBUCKET,%q<bk>)))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<_to>))))=think [setq(out,u({{jobs}}/WEB`ERRF,if(%q<_nj>,moveto,_global),%q<err>))]; @include {{jobs}}/INC`DO`BUCKET`DELETE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Bucket %q<bname> is deleted.[if(%q<moved>,%b[u({{jobs}}/FUN`NJOBS,%q<moved>)] moved to [name(%q<mv>)].)]),redirect,json(string,/apps/jobs/buckets)))]
       # Setting %0 as posted, in the words +bucket/set takes.
       WEB`SETTING: |-
         [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(t(match(true 1 yes on,lcstr(%q<_v>))),yes,no),if(strmatch(%q<_v>,null),,%q<_v>))]
@@ -867,7 +932,7 @@ objects:
       WEB`NAV: |-
         [json(object,groups,if(strlen(%0),u({{jobs}}/WEB`ARR,u({{jobs}}/WEB`NAV`[if(u({{jobs}}/WEB`STAFF,%0),STAFF,PLAYER)],%0)),json_array()))]
       WEB`NAV`STAFF: |-
-        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,Needs attention,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Handled by me,/apps/jobs?filter=mine,person,u({{jobs}}/WEB`COUNT,%0,MINE)),u({{jobs}}/WEB`LINK,New,/apps/jobs?filter=new,fiber_new,u({{jobs}}/WEB`COUNT,%0,NEW)),u({{jobs}}/WEB`LINK,Overdue,/apps/jobs?filter=overdue,alarm,u({{jobs}}/WEB`COUNT,%0,OVERDUE)),u({{jobs}}/WEB`LINK,All open,/apps/jobs?filter=all,view_list,u({{jobs}}/WEB`COUNT,%0,OPEN)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]%r[json(object,label,json(string,Buckets),items,u({{jobs}}/WEB`ARR,[iter(u({{jobs}}/WEB`WORKED,%0),u({{jobs}}/WEB`LINK,name(%i0),/apps/jobs?bucket=[get(%i0/SLUG)],folder_open,u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),%b,%r)]%r[u({{jobs}}/WEB`LINK,Bucket settings,/apps/jobs/buckets,tune)]))]
+        [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,Needs attention,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Handled by me,/apps/jobs?filter=mine,person,u({{jobs}}/WEB`COUNT,%0,MINE)),u({{jobs}}/WEB`LINK,New,/apps/jobs?filter=new,fiber_new,u({{jobs}}/WEB`COUNT,%0,NEW)),u({{jobs}}/WEB`LINK,Overdue,/apps/jobs?filter=overdue,alarm,u({{jobs}}/WEB`COUNT,%0,OVERDUE)),u({{jobs}}/WEB`LINK,All open,/apps/jobs?filter=all,view_list,u({{jobs}}/WEB`COUNT,%0,OPEN)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]%r[json(object,label,json(string,Buckets),items,u({{jobs}}/WEB`ARR,[iter(u({{jobs}}/WEB`WORKED,%0),u({{jobs}}/WEB`LINK,name(%i0),/apps/jobs?bucket=[get(%i0/SLUG)],if(u({{jobs}}/FUN`TAKES`JOBS,%i0),folder_open,folder_off),u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),%b,%r)]%r[u({{jobs}}/WEB`LINK,Bucket settings,/apps/jobs/buckets,tune)]))]
       WEB`NAV`PLAYER: |-
         [json(object,label,json(string,),items,json(array,u({{jobs}}/WEB`LINK,My open jobs,/apps/jobs,inbox,u({{jobs}}/WEB`COUNT,%0,DEFAULT)),u({{jobs}}/WEB`LINK,Closed,/apps/jobs?filter=old,inventory_2),u({{jobs}}/WEB`LINK,New request,/apps/jobs/new,add)))]
       # A sidebar link: label %0, path %1, Material icon %2, and count %3 when there is one.
@@ -879,14 +944,26 @@ objects:
 
       # Bucket settings: /apps/jobs/buckets lists the buckets the viewer works; buckets/<slug> edits one.
       WEB`SCHEMA`BUCKETS: |-
-        [setq(_bt,json(object,kind,json(string,table),rows_field,json(string,buckets),columns,json(array,json(object,key,json(string,name),label,json(string,Bucket),link,json(string,/apps/jobs/buckets/\{slug\})),json(object,key,json(string,open),label,json(string,Open)),json(object,key,json(string,turnaround),label,json(string,Turnaround)),json(object,key,json(string,about),label,json(string,What it is for))),empty,json(string,You work no buckets.)))][u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,%q<_bt>))]
+        [setq(_bt,json(object,kind,json(string,table),rows_field,json(string,buckets),columns,json(array,json(object,key,json(string,name),label,json(string,Bucket),link,json(string,/apps/jobs/buckets/\{slug\})),json(object,key,json(string,status),label,json(string,Status),type,json(string,chip),color_key,json(string,status_color)),json(object,key,json(string,open),label,json(string,Open)),json(object,key,json(string,turnaround),label,json(string,Turnaround)),json(object,key,json(string,about),label,json(string,What it is for))),empty,json(string,You work no buckets.)))][if(u({{jobs}}/FUN`IS`ADMIN,%0),u({{jobs}}/WEB`DOC,form,Bucket settings,[u({{jobs}}/WEB`SEC,,1,%q<_bt>)]%r[u({{jobs}}/WEB`SEC,New bucket,2,[u({{jobs}}/WEB`FIELD,new_name,Name,text,Up to 20 letters\, digits\, spaces and dashes. Its permission and role are named after it.)]%r[u({{jobs}}/WEB`FIELD,new_description,What it is for,text,Shown in +buckets and the new-request form.)]%r[u({{jobs}}/WEB`BBTN,Create bucket,json(object,op,json(string,newbucket)),primary)])],json(object,save,u({{jobs}}/WEB`ACTION`KEEP))),u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,%q<_bt>)))]
       WEB`DATA`BUCKETS: |-
-        [json(object,fields,json(object,buckets,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`WORKED,%0),json(object,slug,json(string,get(%i0/SLUG)),name,json(string,name(%i0)),open,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),turnaround,json(string,if(gt(firstof(get(%i0/TURNAROUND),0),0),[get(%i0/TURNAROUND)] days,None)),about,json(string,get(%i0/DESCRIPTION))),%b,%r)),1)))]
+        [json(object,fields,json(object,buckets,u({{jobs}}/WEB`V,u({{jobs}}/WEB`ARR,iter(u({{jobs}}/WEB`WORKED,%0),json(object,slug,json(string,get(%i0/SLUG)),name,json(string,name(%i0)),status,json(string,if(u({{jobs}}/FUN`TAKES`JOBS,%i0),Taking jobs,Disabled)),status_color,json(string,if(u({{jobs}}/FUN`TAKES`JOBS,%i0),success,default)),open,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%i0)),turnaround,json(string,if(gt(firstof(get(%i0/TURNAROUND),0),0),[get(%i0/TURNAROUND)] days,None)),about,json(string,get(%i0/DESCRIPTION))),%b,%r)),1)))]
       # The settings form for the bucket whose slug is %1, for viewer %0 who works it.
       WEB`SCHEMA`BUCKET: |-
-        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),u({{jobs}}/WEB`SCHEMA`BUCKET`SEEN,%q<_bk>),u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,u({{jobs}}/WEB`MD,You do not work a bucket called %1.))))]
+        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),u({{jobs}}/WEB`SCHEMA`BUCKET`SEEN,%q<_bk>,%0),u({{jobs}}/WEB`DOC,view,Bucket settings,u({{jobs}}/WEB`SEC,,1,u({{jobs}}/WEB`MD,You do not work a bucket called %1.))))]
+      # Bucket %0's page for viewer %1: what it is, its settings, and for a Job Admin, managing it.
       WEB`SCHEMA`BUCKET`SEEN: |-
-        [setq(_s1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Open jobs),json(string,Permission),json(string,Role),json(string,Hooks))))][setq(_s2,[u({{jobs}}/WEB`FIELD,description,About,text,Shown in +buckets and the new-request form.)]%r[u({{jobs}}/WEB`FIELD,turnaround,Turnaround in days,number,A new job is due this many days after it is filed. 0 sets no due date.)]%r[u({{jobs}}/WEB`FIELD,reopen,Reopen window in days,number,A player's reply opens a closed job again for this many days. 0 never.)]%r[u({{jobs}}/WEB`SELECT,anonymous,Hide who is talking,none None|filer The filer\, from staff|staff Staff\, from the filer)]%r[u({{jobs}}/WEB`SELECT,priority,Priority of new jobs,low Low|normal Normal|high High)]%r[u({{jobs}}/WEB`FIELD,keep,Keep closed jobs for days,text,Empty keeps them forever.)]%r[u({{jobs}}/WEB`FIELD,hidden,Hidden from players,boolean,Players do not see the bucket or file in it.)])][setq(_s3,json(object,kind,json(string,button),label,json(string,Save),action,json(string,save),values,json(object,op,json(string,bucket),bucket,json(string,get(%0/SLUG))),color,json(string,primary),variant,json(string,filled)))][u({{jobs}}/WEB`DOC,form,name(%0),[u({{jobs}}/WEB`SEC,,1,%q<_s1>)]%r[u({{jobs}}/WEB`SEC,Settings,2,%q<_s2>)]%r[u({{jobs}}/WEB`SEC,,3,%q<_s3>)],json(object,save,u({{jobs}}/WEB`ACTION`KEEP)))]
+        [setq(_s1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Status),json(string,Open jobs),json(string,Permission),json(string,Role),json(string,Hooks))))][setq(_s2,[u({{jobs}}/WEB`FIELD,description,About,text,Shown in +buckets and the new-request form.)]%r[u({{jobs}}/WEB`FIELD,turnaround,Turnaround in days,number,A new job is due this many days after it is filed. 0 sets no due date.)]%r[u({{jobs}}/WEB`FIELD,reopen,Reopen window in days,number,A player's reply opens a closed job again for this many days. 0 never.)]%r[u({{jobs}}/WEB`SELECT,anonymous,Hide who is talking,none None|filer The filer\, from staff|staff Staff\, from the filer)]%r[u({{jobs}}/WEB`SELECT,priority,Priority of new jobs,low Low|normal Normal|high High)]%r[u({{jobs}}/WEB`FIELD,keep,Keep closed jobs for days,text,Empty keeps them forever.)]%r[u({{jobs}}/WEB`FIELD,hidden,Hidden from players,boolean,Players do not see the bucket or file in it.)])][setq(_s3,json(object,kind,json(string,button),label,json(string,Save),action,json(string,save),values,json(object,op,json(string,bucket),bucket,json(string,get(%0/SLUG))),color,json(string,primary),variant,json(string,filled)))][u({{jobs}}/WEB`DOC,form,name(%0),[u({{jobs}}/WEB`SEC,,1,%q<_s1>)]%r[u({{jobs}}/WEB`SEC,Settings,2,%q<_s2>)]%r[u({{jobs}}/WEB`SEC,,3,%q<_s3>)][if(u({{jobs}}/FUN`IS`ADMIN,%1),%r[u({{jobs}}/WEB`SEC,Manage,4,u({{jobs}}/WEB`MANAGE,%0))])],json(object,save,u({{jobs}}/WEB`ACTION`KEEP)))]
+      # The Manage section's elements for bucket %0: rename it, stop or start its new jobs, delete it.
+      # The bucket +request files in can do neither of the last two.
+      WEB`MANAGE: |-
+        [setq(_mn,name(%0))][setq(_ms,get(%0/SLUG))][setq(_mj,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%0)))][setq(_md,not(comp(lcstr(%q<_mn>),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))))][u({{jobs}}/WEB`FIELD,rename,Name,text,Up to 20 characters. Its permission and role keep their names.)]%r[u({{jobs}}/WEB`BBTN,Rename,json(object,op,json(string,renamebucket),bucket,json(string,%q<_ms>)))]%r[json(object,kind,json(string,divider))]%r[if(%q<_md>,u({{jobs}}/WEB`MD,%q<_mn> is where +request files\, so it always takes new jobs and cannot be deleted.),[u({{jobs}}/WEB`MD,if(u({{jobs}}/FUN`TAKES`JOBS,%0),**Taking new jobs.** Disable it and nobody can file in %q<_mn> or move a job into it. Its jobs stay and are worked as before.,**Disabled.** Nobody can file in %q<_mn> or move a job into it. Its jobs stay and are worked as before.))]%r[if(u({{jobs}}/FUN`TAKES`JOBS,%0),u({{jobs}}/WEB`BBTN,Disable,json(object,op,json(string,disablebucket),bucket,json(string,%q<_ms>)),warning,Stop %q<_mn> taking new jobs?),u({{jobs}}/WEB`BBTN,Take new jobs again,json(object,op,json(string,enablebucket),bucket,json(string,%q<_ms>)),success))]%r[json(object,kind,json(string,divider))]%r[u({{jobs}}/WEB`MD,if(%q<_mj>,Deleting %q<_mn> moves its [u({{jobs}}/FUN`NJOBS,%q<_mj>)]\, open and closed\, to the bucket you pick\, then removes the role job-admin-%q<_ms> and the permission softcode.jobs.%q<_ms>.,Deleting %q<_mn> removes it with the role job-admin-%q<_ms> and the permission softcode.jobs.%q<_ms>.))]%r[if(%q<_mj>,[u({{jobs}}/WEB`SELECT,moveto,Move its jobs to,iter(setdiff(u({{jobs}}/WEB`MOVABLE),%0),[get(%i0/SLUG)] [name(%i0)],%b,|))]%r)][u({{jobs}}/WEB`BBTN,Delete bucket,json(object,op,json(string,deletebucket),bucket,json(string,%q<_ms>)),error,Delete %q<_mn>? [if(%q<_mj>,Its jobs move to the bucket you picked\, and its,Its)] role and permission go with it.)])]
+      # The buckets a deleted bucket's jobs can move to: every one taking new jobs. The select names them by slug.
+      WEB`MOVABLE: |-
+        [squish(iter(lcon({{buckets}}),if(u({{jobs}}/FUN`TAKES`JOBS,%i0),objid(%i0))))]
+      # A button on a bucket page, which keeps what is typed when it fails: label %0, values %1 (a JSON
+      # object), color %2, and %3 a question asked first.
+      WEB`BBTN: |-
+        [json(object,kind,json(string,button),label,json(string,%0),action,json(string,save),values,%1,color,json(string,firstof(%2,secondary)),variant,json(string,if(strmatch(%2,primary),filled,outlined)),confirm,json(string,%3))]
       # A form field: key %0, label %1, type %2, help %3.
       WEB`FIELD: |-
         [json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,%2),help,json(string,%3))]
@@ -897,7 +974,7 @@ objects:
       WEB`ACTION`KEEP: |-
         [json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/jobs/act),payload,json(string,fields),on_error,json(object,bind_field_errors,json(boolean,true)))]
       WEB`DATA`BUCKET: |-
-        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),json(object,fields,json(object,Open jobs,u({{jobs}}/WEB`V,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%q<_bk>)),1),Permission,u({{jobs}}/WEB`V,json(string,softcode.jobs.[get(%q<_bk>/SLUG)]),1),Role,u({{jobs}}/WEB`V,json(string,job-admin-[get(%q<_bk>/SLUG)]),1),Hooks,u({{jobs}}/WEB`V,json(string,firstof(itemize(squish(iter(lattr(%q<_bk>/ON`*),if(strmatch(get(%q<_bk>/%i0),@@*),,lcstr(after(%i0,`)))))),None written)),1),description,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/DESCRIPTION)),1),turnaround,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/TURNAROUND),0)),1),reopen,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/REOPEN),0)),1),anonymous,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/ANONYMOUS),none)),1),priority,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/PRIORITY),normal)),1),keep,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/KEEP)),1),hidden,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/HIDDEN)),1))),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
+        [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),json(object,fields,json(object,Status,u({{jobs}}/WEB`V,json(string,if(u({{jobs}}/FUN`TAKES`JOBS,%q<_bk>),Taking new jobs,Disabled: no new jobs)),1),rename,u({{jobs}}/WEB`V,json(string,name(%q<_bk>)),1),Open jobs,u({{jobs}}/WEB`V,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%q<_bk>)),1),Permission,u({{jobs}}/WEB`V,json(string,softcode.jobs.[get(%q<_bk>/SLUG)]),1),Role,u({{jobs}}/WEB`V,json(string,job-admin-[get(%q<_bk>/SLUG)]),1),Hooks,u({{jobs}}/WEB`V,json(string,firstof(itemize(squish(iter(lattr(%q<_bk>/ON`*),if(strmatch(get(%q<_bk>/%i0),@@*),,lcstr(after(%i0,`)))))),None written)),1),description,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/DESCRIPTION)),1),turnaround,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/TURNAROUND),0)),1),reopen,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/REOPEN),0)),1),anonymous,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/ANONYMOUS),none)),1),priority,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/PRIORITY),normal)),1),keep,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/KEEP)),1),hidden,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/HIDDEN)),1))),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
 
       # ---- lifecycle ------------------------------------------------------------
       # Commands added with @command/add and their hooks, and @functions, last until a restart, so STARTUP
@@ -1463,8 +1540,14 @@ objects:
         Job Admin only:
 
         - `+bucket/create <name>=<description>`: makes the bucket, its permission `softcode.jobs.<name>` and its role `job-admin-<name>`.
-        - `+bucket/rename <bucket>=<new name>`
-        - `+bucket/delete <bucket>`: empty buckets only. Its role and permission go with it.
+        - `+bucket/rename <bucket>=<new name>`: its permission and role keep their names.
+        - `+bucket/disable <bucket>`: nothing new is filed in it or moved into it. Its jobs stay and are worked as before. `+bucket/enable <bucket>` takes new jobs again.
+        - `+bucket/delete <bucket>`: an empty bucket. Its role and permission go with it.
+        - `+bucket/delete <bucket>=<other bucket>`: moves its jobs, open and closed, to the other bucket first.
+
+        The bucket `+request` files in can be neither disabled nor deleted.
+
+        The portal's **Bucket settings** page does the same: **New bucket** under the list, and **Manage** on each bucket's page.
         - `+bucket/lock <bucket>/file=<lock>` and `/work=<lock>`: who may file, and who works it. They are ordinary locks.
       HELP`JOBS`ROLES: |-
         Who works which jobs comes from permissions, held through roles:

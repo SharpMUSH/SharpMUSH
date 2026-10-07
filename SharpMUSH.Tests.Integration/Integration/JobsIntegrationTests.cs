@@ -225,13 +225,151 @@ public class JobsIntegrationTests
 			await Assert.That(await God($"think [job({bye},state)]")).IsEqualTo("closed");
 
 			var deleted = await As(admin, "+bucket/delete Mod Mail");
-			await Assert.That(deleted).Contains("still has jobs");
+			await Assert.That(deleted).Contains("Mod Mail still has 2 jobs. +bucket/delete Mod Mail=<bucket> moves them there first.");
 		}
 		finally
 		{
 			await UninstallAsync();
 		}
 	}
+
+	[Test]
+	public async Task ADisabledBucketKeepsItsJobsAndADeletedOneMovesThem()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var admin = await Player("JobsMgA", "job-admin");
+			var worker = await Player("JobsMgW", "job-admin-plots");
+			var player = await Player("JobsMgP");
+
+			await Assert.That(await As(player, "+pitch Heist=A bank job.")).Contains("Filed job 1 in Plots");
+			await Assert.That(await As(player, "+bug Exit=Broken exit.")).Contains("Filed job 2 in Bugs");
+
+			await Assert.That(await As(worker, "+bucket/disable Plots")).Contains("Only a Job Admin can do that.");
+			await Assert.That(await As(admin, "+bucket/disable Requests")).Contains("Requests is where +request files.");
+			await Assert.That(await As(admin, "+bucket/disable Plots"))
+				.Contains("Plots takes no new jobs now. Its jobs stay there and are worked as before.");
+			await Assert.That(await As(admin, "+bucket/disable Plots")).Contains("Plots is not taking new jobs already.");
+
+			await Assert.That(await As(player, "+request Plots/Another=One more.")).Contains("Plots is not taking new jobs.");
+			await Assert.That(await As(player, "+pitch Again=Still pitching.")).Contains("Plots is not taking new jobs.");
+			await Assert.That(await As(admin, "+job/trans 2=Plots")).Contains("Plots is not taking new jobs.");
+			await Assert.That(await God("think [job(2,bucket)]")).IsEqualTo("Bugs");
+			await Assert.That(await As(worker, "+job/reply 1=Tell me more.")).DoesNotContain("not taking")
+				.Because("the jobs a disabled bucket holds are still worked");
+			await Assert.That(await God("think [job(1,state)]")).IsEqualTo("player");
+			await Assert.That(await As(player, "+buckets")).Contains("Plots (disabled)");
+			await Assert.That(await As(admin, "+bucket Plots")).Contains("Taking jobs");
+
+			await Assert.That(await As(admin, "+bucket/enable Plots")).Contains("Plots takes new jobs again.");
+			await Assert.That(await As(player, "+pitch Again=Still pitching.")).Contains("Filed job 3 in Plots");
+
+			await Assert.That(await As(admin, "+bucket/delete Plots")).Contains("Plots still has 2 jobs.");
+			await Assert.That(await As(admin, "+bucket/delete Plots=Plots")).Contains("Pick another bucket to move the jobs to.");
+			await Assert.That(await As(admin, "+bucket/delete Plots=Nowhere")).Contains("There is no bucket called Nowhere.");
+			await Assert.That(await As(admin, "+bucket/delete Plots=Requests"))
+				.Contains("Bucket Plots is deleted, with its role and permission. 2 jobs moved to Requests.");
+			await Assert.That(await God("think [job(1,bucket)]/[job(3,bucket)]")).IsEqualTo("Requests/Requests");
+			await Assert.That(await As(admin, "+bucket Plots")).Contains("There is no bucket called Plots.");
+			await Assert.That(await God($"think [permission({await Objid(worker)},softcode.jobs.plots)]")).IsNotEqualTo("1")
+				.Because("the bucket's permission goes with it");
+
+			await Assert.That(await As(admin, "+bucket/create Mod-Mail=Moderators.")).Contains("Bucket Mod-Mail is ready.");
+			await Assert.That(await As(admin, "+bucket/create Mod Mail=Moderators.")).Contains("Mod-Mail already has the permission softcode.jobs.mod_mail.")
+				.Because("two names with one slug would share a permission");
+			await Assert.That(await As(admin, "+bucket/rename Mod-Mail=Requests")).Contains("There is a Requests bucket already.");
+			await Assert.That(await As(admin, "+bucket/rename Mod-Mail=Moderators")).Contains("The bucket is called Moderators now.");
+			await Assert.That(await As(admin, "+bucket/delete Moderators")).Contains("Bucket Moderators is deleted");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task ThePortalCreatesDisablesAndDeletesBuckets()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			await InstallAsync("jobs-app");
+			var admin = await Player("JobsWbA", "job-admin");
+			var worker = await Player("JobsWbW", "job-admin-bugs");
+			var player = await Player("JobsWbP");
+
+			var list = await Http("GET", "/jobs/schema?at=buckets", "", admin);
+			await Assert.That(list.GetProperty("kind").GetString()).IsEqualTo("form");
+			await Assert.That(Elements(list).Any(e => e.TryGetProperty("label", out var l) && l.GetString() == "Create bucket")).IsTrue();
+			var workerList = await Http("GET", "/jobs/schema?at=buckets", "", worker);
+			await Assert.That(workerList.GetProperty("kind").GetString()).IsEqualTo("view")
+				.Because("only a Job Admin makes buckets");
+
+			var refused = await Http("POST", "/jobs/act", """{"op":"newbucket","new_name":"Ideas","new_description":"Ideas."}""", worker);
+			await Assert.That(refused.GetProperty("errors").GetProperty("_global").GetString()).IsEqualTo("Only a Job Admin can do that.");
+			var badName = await Http("POST", "/jobs/act", """{"op":"newbucket","new_name":"","new_description":""}""", admin);
+			await Assert.That(badName.GetProperty("errors").GetProperty("new_name").GetString()).StartsWith("A bucket name is up to 20");
+			var taken = await Http("POST", "/jobs/act", """{"op":"newbucket","new_name":"bugs","new_description":""}""", admin);
+			await Assert.That(taken.GetProperty("errors").GetProperty("new_name").GetString()).IsEqualTo("There is a Bugs bucket already.");
+			var made = await Http("POST", "/jobs/act", """{"op":"newbucket","new_name":"Ideas","new_description":"Ideas for the game."}""", admin);
+			await Assert.That(made.GetProperty("ok").GetBoolean()).IsTrue().Because(made.ToString());
+			await Assert.That(made.GetProperty("redirect").GetString()).IsEqualTo("/apps/jobs/buckets/ideas");
+			await Assert.That(await As(admin, "+bucket Ideas")).Contains("Ideas for the game.").And.Contains("job-admin-ideas");
+
+			var filed = await Http("POST", "/jobs/act", """{"op":"file","bucket":"Ideas","title":"Dragons","text":"More dragons."}""", player);
+			await Assert.That(filed.GetProperty("ok").GetBoolean()).IsTrue().Because(filed.ToString());
+
+			var page = await Http("GET", "/jobs/schema?at=buckets/ideas", "", admin);
+			var labels = Elements(page).Where(e => e.TryGetProperty("label", out _)).Select(e => e.GetProperty("label").GetString()).ToList();
+			await Assert.That(labels).Contains("Rename").And.Contains("Disable").And.Contains("Delete bucket").And.Contains("Move its jobs to");
+			var moveTo = Elements(page).Single(e => e.TryGetProperty("key", out var k) && k.GetString() == "moveto");
+			await Assert.That(moveTo.GetProperty("options").EnumerateArray().Select(o => o.GetProperty("value").GetString()))
+				.Contains("requests").And.DoesNotContain("ideas");
+			await Assert.That(Elements(await Http("GET", "/jobs/schema?at=buckets/bugs", "", worker))
+				.Any(e => e.TryGetProperty("label", out var l) && l.GetString() == "Delete bucket")).IsFalse()
+				.Because("someone who only works a bucket changes its settings, not whether it exists");
+			await Assert.That(Elements(await Http("GET", "/jobs/schema?at=buckets/requests", "", admin))
+				.Any(e => e.TryGetProperty("label", out var l) && l.GetString() is "Delete bucket" or "Disable")).IsFalse()
+				.Because("the bucket +request files in is never disabled or deleted");
+
+			var off = await Http("POST", "/jobs/act", """{"op":"disablebucket","bucket":"ideas"}""", admin);
+			await Assert.That(off.GetProperty("ok").GetBoolean()).IsTrue().Because(off.ToString());
+			await Assert.That(off.GetProperty("data").GetProperty("fields").GetProperty("Status").GetProperty("value").GetString()).IsEqualTo("Disabled: no new jobs");
+			var nav = (await Http("GET", "/jobs/nav", "", admin)).GetProperty("groups")[1].GetProperty("items");
+			await Assert.That(nav.EnumerateArray().Single(i => i.GetProperty("label").GetString() == "Ideas").GetProperty("icon").GetString()).IsEqualTo("folder_off");
+			var rows = (await Http("GET", "/jobs/data?at=buckets", "", admin)).GetProperty("fields").GetProperty("buckets").GetProperty("value");
+			await Assert.That(rows.EnumerateArray().Single(r => r.GetProperty("slug").GetString() == "ideas").GetProperty("status").GetString()).IsEqualTo("Disabled");
+			var notNow = await Http("POST", "/jobs/act", """{"op":"file","bucket":"Ideas","title":"Griffins","text":"Also griffins."}""", player);
+			await Assert.That(notNow.GetProperty("errors").GetProperty("bucket").GetString()).IsEqualTo("Ideas is not taking new jobs.");
+			var newForm = Elements(await Http("GET", "/jobs/schema?at=new", "", player)).Single(e => e.TryGetProperty("key", out var k) && k.GetString() == "bucket");
+			await Assert.That(newForm.GetProperty("options").EnumerateArray().Select(o => o.GetProperty("value").GetString())).DoesNotContain("Ideas");
+			var on = await Http("POST", "/jobs/act", """{"op":"enablebucket","bucket":"ideas"}""", admin);
+			await Assert.That(on.GetProperty("message").GetString()).IsEqualTo("Ideas takes new jobs again.");
+
+			var renamed = await Http("POST", "/jobs/act", """{"op":"renamebucket","bucket":"ideas","rename":"Big Ideas"}""", admin);
+			await Assert.That(renamed.GetProperty("ok").GetBoolean()).IsTrue().Because(renamed.ToString());
+			await Assert.That(renamed.GetProperty("schema").GetProperty("title").GetString()).IsEqualTo("Big Ideas");
+
+			var mustMove = await Http("POST", "/jobs/act", """{"op":"deletebucket","bucket":"ideas"}""", admin);
+			await Assert.That(mustMove.GetProperty("errors").GetProperty("moveto").GetString()).IsEqualTo("Big Ideas still has 1 job. Pick a bucket to move them to.");
+			var gone = await Http("POST", "/jobs/act", """{"op":"deletebucket","bucket":"ideas","moveto":"requests"}""", admin);
+			await Assert.That(gone.GetProperty("ok").GetBoolean()).IsTrue().Because(gone.ToString());
+			await Assert.That(gone.GetProperty("message").GetString()).IsEqualTo("Bucket Big Ideas is deleted. 1 job moved to Requests.");
+			await Assert.That(gone.GetProperty("redirect").GetString()).IsEqualTo("/apps/jobs/buckets");
+			await Assert.That(await God("think [job(1,bucket)]")).IsEqualTo("Requests");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>Every element of every section of a schema document.</summary>
+	private static IEnumerable<JsonElement> Elements(JsonElement schema) =>
+		schema.GetProperty("pages").EnumerateArray()
+			.SelectMany(p => p.GetProperty("sections").EnumerateArray())
+			.SelectMany(s => s.GetProperty("elements").EnumerateArray());
 
 	[Test]
 	public async Task ABucketHookRunsWithItsArguments()
