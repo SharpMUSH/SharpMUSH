@@ -1,6 +1,7 @@
 ﻿using Mediator;
 using MarkupString;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
@@ -14,7 +15,6 @@ public static class ReviewMail
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService, IMediator mediator, INotifyService notifyService, MString? arg0, MString? msgListArg, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var line = MarkupText.Plain("-").Repeat(78);
 		var name = arg0?.ToPlainText() ?? string.Empty;
 
 		// Review is of the mail the executor SENT (PennMUSH do_mail_review selects on the sender), so a
@@ -27,7 +27,7 @@ public static class ReviewMail
 				return MarkupText.Empty;
 			}
 
-			return await ReviewSentAsync(notifyService, mediator, executor, line, msgListArg, recipient: null);
+			return await ReviewSentAsync(notifyService, mediator, executor, msgListArg, recipient: null);
 		}
 
 		// extmail.c's lookup_player resolves "#1" as readily as a name, so a dbref must match too.
@@ -45,41 +45,26 @@ public static class ReviewMail
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		return await ReviewSentAsync(notifyService, mediator, executor, line, msgListArg, recipient);
+		return await ReviewSentAsync(notifyService, mediator, executor, msgListArg, recipient);
 	}
 
 	private static async ValueTask<MString> ReviewSentAsync(INotifyService notifyService, IMediator mediator,
-		AnySharpObject executor, MString line, MString? msgListArg, SharpPlayer? recipient)
+		AnySharpObject executor, MString? msgListArg, SharpPlayer? recipient)
 		=> MessageListHelper.HandleSent(mediator, msgListArg, executor, recipient) switch
 		{
-			IAsyncEnumerable<SharpMail> mailList => await ReviewAsync(notifyService, executor, line, mailList),
+			IAsyncEnumerable<SharpMail> mailList => await ReviewAsync(notifyService, executor, mailList),
 			Error<string> error => MarkupText.Plain(error.Value)
 		};
 
 	private static async ValueTask<MString> ReviewAsync(INotifyService notifyService, AnySharpObject executor,
-		MString line, IAsyncEnumerable<SharpMail> mailList)
+		IAsyncEnumerable<SharpMail> mailList)
 	{
 		var i = 0;
 
 		await foreach (var actualMail in mailList)
 		{
 			i++;
-			var dateline = MarkupText.Plain(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")).Pad(MarkupText.Space, 25, PadType.Right, TruncationType.Truncate);
-
-			var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
-			var messageBuilder = new List<MString>
-			{
-				line,
-				MarkupText.Plain($"From: {mailFrom.Object()!.Name}"),
-				MarkupText.Plain($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {i,5}"),
-				MarkupText.Plain($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
-				MarkupText.Concat(MarkupText.Plain("Subject: "), actualMail.Subject),
-				line,
-				actualMail.Content,
-				line
-			};
-
-			var output = MarkupText.Join(MarkupText.NewLine, messageBuilder);
+			var output = await MailLayout.Message(actualMail, $"Sent message {i} ({actualMail.Folder})");
 			await notifyService.Notify(executor, output, executor);
 		}
 

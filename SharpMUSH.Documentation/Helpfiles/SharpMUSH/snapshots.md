@@ -80,7 +80,7 @@ administrative workflow. Normal attribute and object flag restrictions still app
 
 ## Retention limits
 
-Histories retain 1–20 snapshots per object (10 by default), with an additional pending
+Histories retain 1-20 snapshots per object (10 by default), with an additional pending
 recovery image protected from pruning. Each image is limited to 1024 readable attributes
 and 2 MiB. Histories use the existing database expanded-object store; they survive restarts
 and travel in provider world backups. No external file directory needs copying.
@@ -93,11 +93,11 @@ are stored. If a mutation, cancellation or process failure interrupts restoratio
 marker identifies the recovery image. Preview and restore that image before another
 restore. Recovery uses exactly the fields selected by the interrupted operation and explicitly
 removes attributes or locks that operation created. Default recovery selections include only
-the interrupted operation’s attributes and locks, preserving unrelated later edits. The portal fixes the fields and switches to the recorded recovery selection; game commands require the original switches. Correct any newly applied SAFE/privileged restrictions through their normal
+the interrupted operation's attributes and locks, preserving unrelated later edits. The portal fixes the fields and switches to the recorded recovery selection; game commands require the original switches. Correct any newly applied SAFE/privileged restrictions through their normal
 commands first. Storage failure while clearing the marker is also reported as requiring
 recovery. If the original account can no longer recover (for example after ownership or
 account changes), a current controller with snapshots.restore can explicitly acknowledge
-the current object using /resolve and the exact pending recovery ID, or the portal’s
+the current object using /resolve and the exact pending recovery ID, or the portal's
 Acknowledge current state action. This clears the marker without undoing partial changes,
 retains the image, and records the resolving account, character and time.
 

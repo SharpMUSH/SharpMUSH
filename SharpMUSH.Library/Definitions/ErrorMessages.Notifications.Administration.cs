@@ -83,15 +83,14 @@ public static partial class ErrorMessages
 		public const string ConfigInvalidValueFormat = "'{1}' is not a valid value for {0}.";
 		public const string ConfigOptionEnabled = "Enabled.";
 		public const string ConfigOptionDisabled = "Disabled.";
-		public const string ConfigCategoriesHeader = "Configuration Categories:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigCategoryItemFormat = "  {0}";
+		public const string ConfigCategoriesHeader = "Configuration categories";
+		public const string ConfigAllCategories = "All categories";
 		public const string ConfigUseCategoryHelp = "Use '@config <category>' to see options in a category.";
 		public const string ConfigUseOptionHelp = "Use '@config <option>' to see the value of an option.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigNoOptionsInCategoryFormat = "No options found in category '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionsInCategoryFormat = "Options in {0}:";
+		public const string ConfigOptionsInCategoryFormat = "Configuration: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigOptionValueFormat = " {0,-40} {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

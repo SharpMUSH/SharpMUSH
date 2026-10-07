@@ -26,18 +26,18 @@ command returns, and you are notified with:
 
 The payload is a single-line JSON object. Everyone sees three fields:
 
-* `id` — a correlation id. The full error, including its stack trace, is in the
+* `id`: a correlation id. The full error, including its stack trace, is in the
   server log under this same id. Quote it when you report the bug; a wizard can
   find the entry from it without you having to reproduce anything.
-* `command` — the command word that failed.
-* `type` — the class of error.
+* `command`: the command word that failed.
+* `type`: the class of error.
 
 A wizard or royalty additionally sees `message` (the error text) and `inner` (the
 chain of underlying errors). Those are withheld from everyone else because an
 error message can quote a file path or a database connection string. Stack traces
 are never sent to anyone in-game; they stay in the log, reachable by `id`.
 
-This is a real error return, so softcode can test for it — `#-1 EXCEPTION:` is
+This is a real error return, so softcode can test for it: `#-1 EXCEPTION:` is
 always the prefix, and the rest is always valid JSON.
 
 ::: seealso

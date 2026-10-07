@@ -28,7 +28,7 @@ If no `<base case>` is provided, fold() passes the first element of `<list>` as 
 
 If a base case is provided, it is passed as %0, and the first element of list is passed as %1, to the user-defined function. The process for the no-base-case fold() is then used.
 
-If `<list>` is empty, `<attr>` is never called: fold() returns the `<base case>` when one was given, and nothing when one wasn't. Folding an empty list is the base case — it is the answer when there is nothing to combine into it, not merely a seed for a first call.
+If `<list>` is empty, `<attr>` is never called: fold() returns the `<base case>` when one was given, and nothing when one wasn't. Folding an empty list is the base case: it is the answer when there is nothing to combine into it, not merely a seed for a first call.
 
 The number of times `<attr>` has been called is passed as %2, starting from 0.
 

@@ -89,36 +89,4 @@ public class MessageFunctionTests
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageArgs_Value_63018")),
 				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires attribute setup")]
-	public async Task MessageHashHashReplacement()
-	{
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires configuration setup")]
-	public async Task MessageNoSideFxDisabled()
-	{
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires room setup")]
-	public async Task MessageRemitSwitch()
-	{
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires multiple objects setup")]
-	public async Task MessageOemitSwitch()
-	{
-		await ValueTask.CompletedTask;
-	}
 }

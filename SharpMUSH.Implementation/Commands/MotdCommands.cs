@@ -16,6 +16,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
 using SharpMUSH.Library.Markup;
+using MarkupString.Layout;
 using SharpMUSH.Library.Common;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -217,6 +218,18 @@ public partial class Commands
 			? $"{holder.Object().Name}(#{holder.Object().DBRef.Number}) (messages_object)"
 			: "the stored messages (the Messages page)";
 
+	/// <summary>
+	/// The <c>DOING</c> listing's columns, one cell apart, with two before <c>Doing</c> (the idle cell ends in a
+	/// space). One line per player, the same for every client, like <c>WHO</c>.
+	/// </summary>
+	private static readonly ImmutableArray<TableColumn> DoingColumns =
+	[
+		new(MarkupText.Plain("Player Name")) { Min = 18, Wrap = false },
+		new(MarkupText.Plain("On For")) { Min = 10, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Idle ")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Doing")) { Max = DoingCells, Wrap = false },
+	];
+
 	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -230,10 +243,7 @@ public partial class Commands
 		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
 
 		var everyone = ConnectionService.GetAll();
-		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
-		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
-
-		var playerList = new List<string>();
+		var playerList = new List<ImmutableArray<Block>>();
 		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
 		{
 			if (!isAdmin && connection.PresenceClass == PresenceClasses.Portal)
@@ -261,16 +271,16 @@ public partial class Commands
 
 			var doingText = await GetDoingText(parser, executor, obj);
 
-			playerList.Add(string.Format(
-				fmt,
-				playerName,
-				TimeHelpers.TimeString(connection.Connected!.Value, accuracy: 3),
-				TimeHelpers.TimeString(connection.Idle!.Value),
-				doingText));
+			playerList.Add([
+				MarkupText.Plain(playerName),
+				MarkupText.Plain(TimeHelpers.TimeString(connection.Connected!.Value, accuracy: 3)),
+				MarkupText.Plain(TimeHelpers.TimeString(connection.Idle!.Value) + " "),
+				MarkupText.Plain(doingText)]);
 		}
 
 		var footer = $"{playerList.Count} players logged in.";
-		var message = $"{header}\n{string.Join('\n', playerList)}\n{footer}";
+		var listing = ServerLayout.Build(new Table(DoingColumns, [.. playerList]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, fluid: false);
+		var message = MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]);
 
 		await NotifyService.Notify(executor, message, executor);
 

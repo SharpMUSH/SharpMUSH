@@ -48,8 +48,8 @@ form. The sections below explain these differences and the portable alternatives
 ## Time precision
 
 SharpMUSH stores object creation and modification times to the millisecond. PennMUSH stores whole
-seconds. Every function that reports one of those times answers whole seconds by default — see
-[compatibility arguments] — so a PennMUSH call gets a PennMUSH answer.
+seconds. Every function that reports one of those times answers whole seconds by default (see
+[compatibility arguments]), so a PennMUSH call gets a PennMUSH answer.
 
 The consequence worth knowing: an objid carries the millisecond value, so
 `[num(<obj>)]:[csecs(<obj>)]` does **not** reconstruct one here, where in PennMUSH it does. Ask for
@@ -147,7 +147,7 @@ PennMUSH answers `-0` to the first line:
 
 **PennMUSH** answers the *simplest* fraction within one part in 10^10: `frac()` walks the
 convergents of a continued fraction and stops at the first one inside that tolerance, which its own
-help states — "dividing the numerator by the denominator of the results will not always return the
+help states: "dividing the numerator by the denominator of the results will not always return the
 original `<number>`, but something close to it".<br>
 **SharpMUSH** answers the **exact** rational of its argument, reduced. Where no simpler fraction is
 within PennMUSH's tolerance the two agree, which covers every number of six decimal places or fewer;

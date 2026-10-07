@@ -20,10 +20,7 @@ namespace SharpMUSH.Tests.Formatting;
 /// </summary>
 public class BracketDepthColouringTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private static IMUSHCodeParser Parser => SyntaxOnlyParser.Instance;
 
 	private MString Format(string src, IReadOnlyList<ParseError>? errors = null)
 		=> SoftcodeFormatter.Format(MarkupText.Plain(src), TestLexer.Lex(src), [], errors ?? [], 78, Parser);

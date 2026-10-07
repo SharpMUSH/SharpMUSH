@@ -34,14 +34,14 @@ Below is the table of possible accents which can be used with accent() and @name
 
 These are non-accent special characters, mostly punctuation and non-roman letters.
 
-| Description         | Template Character | String Character(s)  |
-|---------------------|--------------------|----------------------|
-| Upside-down ? (¿)   | u                  | ?                    |
-| Upside-down ! (¡)   | u                  | !                    |
-| << quote mark («)   | "                  | <                    |
-| >> quote mark (»)   | "                  | >                    |
-| German sharp s (ß)  | B                  | s                    |
-| Capital thorn (Þ)   | \|                 | P                    |
-| Lower-case thorn (þ)| \|                 | p                    |
-| Capital eth (Ð)     | -                  | D                    |
-| Lower-case eth (ð)  | &                  | o                    |
+| Description             | Template Character | String Character(s)  |
+|-------------------------|--------------------|----------------------|
+| Upside-down ?           | u                  | ?                    |
+| Upside-down !           | u                  | !                    |
+| << quote mark           | "                  | <                    |
+| >> quote mark           | "                  | >                    |
+| German sharp s          | B                  | s                    |
+| Capital thorn           | \|                 | P                    |
+| Lower-case thorn        | \|                 | p                    |
+| Capital eth             | -                  | D                    |
+| Lower-case eth          | &                  | o                    |

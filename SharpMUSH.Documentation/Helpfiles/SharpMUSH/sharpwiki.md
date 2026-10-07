@@ -30,7 +30,7 @@ treated as if you had passed none.
 
 Unpublished pages and unpublished translations are never reachable from
 `wiki()`. Softcode has no reader to check drafts against, so a draft page
-answers exactly as a missing one does — there is no field, not even `title`,
+answers exactly as a missing one does; there is no field, not even `title`,
 that reveals it. Read a draft with `@wiki/view/draft` instead.
 
 Pages you may not read (see [wiki permissions]) are treated the same way.
@@ -93,7 +93,7 @@ help
 
 Returns a space-separated list of wiki page references, optionally restricted
 to one namespace. Main-namespace pages appear as their slug; other pages as
-`namespace:slug` — both forms are valid inputs to [WIKI()] and `@wiki`.
+`namespace:slug`; both forms are valid inputs to [WIKI()] and `@wiki`.
 
 A page reference is its canonical slug, which does not change between locales,
 so this list is the same whatever your `LOCALE` is. Pass a reference from it to

@@ -25,6 +25,8 @@ using SharpMUSH.Library.Requests;
 using System.Collections.Immutable;
 using System.Buffers;
 using System.Runtime.InteropServices;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -1065,13 +1067,15 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor);
-			foreach (var cat in allCategories)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoryItemFormat), executor, cat);
-			}
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseCategoryHelp), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseOptionHelp), executor);
+			var counts = getAllOptions().CountBy(opt => opt.Category).ToDictionary(StringComparer.OrdinalIgnoreCase);
+			var categories = ServerLayout.KeyValues(allCategories.Select(cat =>
+				(ServerLayout.CommandLink(cat, $"@config {cat}"), MarkupText.Plain(counts.GetValueOrDefault(cat) == 1 ? "1 option" : $"{counts.GetValueOrDefault(cat)} options")))) with
+			{ Columns = 2 };
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
+				MarkupText.Plain(ErrorMessages.Notifications.ConfigCategoriesHeader),
+				categories,
+				new Rule(),
+				new TextBlock(MarkupText.Plain($"{ErrorMessages.Notifications.ConfigUseCategoryHelp}\n{ErrorMessages.Notifications.ConfigUseOptionHelp}"))), 78), executor);
 			return CallState.Empty;
 		}
 
@@ -1093,13 +1097,16 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, matchingCategory);
-			foreach (var opt in categoryOptions)
+			var options = ServerLayout.KeyValues(categoryOptions.Select(opt =>
 			{
 				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				var value = ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
-			}
+				return (ServerLayout.CommandLink(name, $"@config {name}"), MarkupText.Plain(ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr)));
+			}));
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
+				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat, matchingCategory)),
+				options,
+				new Rule(),
+				new TextBlock(ServerLayout.CommandLink(ErrorMessages.Notifications.ConfigAllCategories, "@config"))), 78), executor);
 			return CallState.Empty;
 		}
 

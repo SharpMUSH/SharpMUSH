@@ -12,6 +12,9 @@ public static class ScenesFilter
 	public const string Scheduled = "scheduled";
 	public const string Finished = "finished";
 
+	/// <summary>The list the schedule asks the API for: the scheduled scenes without the ones long past due.</summary>
+	public const string Upcoming = "upcoming";
+
 	/// <summary>How many scenes a list asks for; the API's own default.</summary>
 	public const int PageSize = 50;
 

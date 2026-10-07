@@ -125,10 +125,11 @@ unescaped comma being kept needs it escaped: `strlen(a\,0)`.
 
 For Latin-1 text the two servers count alike. Beyond it, PennMUSH counts the bytes of the UTF-8
 encoding and SharpMUSH counts display columns: a wide CJK character is two and a combining mark is
-none. PennMUSH answers `6` here:
+none. `[chr(28450)][chr(23383)]` is two wide CJK characters (the word "kanji"); PennMUSH would answer
+`6` for those two characters:
 
 ```sharp
-> think strlen(漢字)
+> think strlen([chr(28450)][chr(23383)])
 4
 ```
 

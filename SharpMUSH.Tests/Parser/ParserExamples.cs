@@ -8,10 +8,7 @@ namespace SharpMUSH.Tests.Parser;
 /// </summary>
 public class ParserExamples
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private static IMUSHCodeParser Parser => SyntaxOnlyParser.Instance;
 
 	[Test]
 	public async Task Example_ValidateInput_WithErrors()

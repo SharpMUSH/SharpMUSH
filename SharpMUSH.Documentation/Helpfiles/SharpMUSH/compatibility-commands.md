@@ -135,7 +135,7 @@ word that changes how it runs (`nosidefx`, `logargs`, `noparse` and the like), o
 clears one of a built-in's own restrictions, is kept but has no effect, and the import names it. A line that cannot be carried (an include that cannot be read, a restriction with no value,
 a `restrict_attribute`) is logged by name, and so is every `include` in a `mush.cnf` uploaded through
 the portal, which is not followed because it would name a file on the server.<br>
-**Why.** Those lines are one site's policy, not the engine's behaviour — `restrict.cnf` is a file the
+**Why.** Those lines are one site's policy, not the engine's behaviour; `restrict.cnf` is a file the
 administrator edits, and two PennMUSH games rarely ship the same one. Taking `@destroy` away from
 ordinary players on a fresh install is the game's decision to make, and SharpMUSH does not make it for
 a world nobody has configured yet.<br>
@@ -197,9 +197,9 @@ other.<br>
 
 **A choice.**
 
-**PennMUSH** keeps a typed line out of the queue entirely — `run_user_input` hands its
+**PennMUSH** keeps a typed line out of the queue entirely (`run_user_input` hands its
 `QUEUE_SOCKET` entry straight to `do_entry` (`cque.c:1076-1088`), so it never touches the tally
-`queue_limit` reads — and bounds it on the descriptor instead: a burst of `COMMAND_BURST_SIZE`
+`queue_limit` reads) and bounds it on the descriptor instead: a burst of `COMMAND_BURST_SIZE`
 commands that replenishes at `COMMANDS_PER_SECOND` (`conf.h:99-100`, `bsd.c:197,1000-1004`).<br>
 **SharpMUSH** also keeps typed input out of `player_queue_limit`, so a full owner queue never stops
 its owner typing and a typed line is never why another of that owner's commands is refused. It

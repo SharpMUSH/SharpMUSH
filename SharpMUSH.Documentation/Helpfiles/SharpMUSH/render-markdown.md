@@ -38,26 +38,27 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 
 ### Parameters
 - `<markdown>` - The markdown/CommonMark text to render. Supports all standard CommonMark features.
-- `<width>` - Optional. Maximum width for rendered output (default: 78). Must be between 10-1000. Tables automatically fit to this width with proportional column spacing.
+- `<width>` - Optional. Maximum width for rendered output (default: 78). Must be between 10-1000. Tables, lists, rules and flex layouts are laid out to this width, and a client that reports a different width is sent them laid out again to its own.
 
 ## Supported Markdown Features
 - **Text Formatting**: `**bold**`, `*italic*`, `` `code` ``
 - **Headings**: `# H1`, `## H2`, `### H3` (rendered with ANSI underline and bold)
 - **Links**: `[text](url)` or `<url>` (rendered as ANSI OSC 8 hyperlinks, clickable in compatible terminals)
-- **Lists**: Ordered (`1. Item`) and unordered (`- Item`) with proper indentation and ANSI-styled bullets
-- **Tables**: Pipe-delimited tables with column alignment (`:---` left, `:---:` center, `---:` right)
+- **Lists**: Ordered (`1. Item`) and unordered (`- Item`); a long item wraps under its own text, not under its marker
+- **Tables**: Pipe-delimited tables with column alignment (`:---` left, `:---:` center, `---:` right). Each column is as wide as its widest cell; on a narrow client the widest columns wrap first, then the rightmost columns are left out. The web portal shows a real table
+- **Rules**: `---` on a line of its own draws a line across the width
 - **Code Blocks**: Triple-backtick fenced code blocks with optional language tag for syntax highlighting (see below)
 - **Block Quotes**: `> Quote` rendered with 2-space indentation
 - **See Also footers**: a `::: seealso` block holding a list of `[topic]` or `` `code` `` names prints as one line, `See Also: @lock, @unlock`, wrapped under the first topic. If any item says more than its name, the list prints as a list under the label
 - **Centred blocks**: everything between `::: center` and a closing `:::` is wrapped to `<width>` and each line centred in it. The wiki and the web portal centre the same block on the page
-- **Layout**: a `:::: flex` block holding `::: item` blocks prints its items side by side as columns, each rendered at its own width (`grow`, `basis`, `min`, `gap`, `align`, `justify`, `direction`, `wrap` in `{…}` after the name). A block holding others needs more colons than they have. Items narrower than their `min` (24 by default) stack instead. The wiki's Markdown Guide lists every setting
+- **Layout**: a `:::: flex` block holding `::: item` blocks prints its items side by side as columns, each rendered at its own width (`grow`, `basis`, `min`, `gap`, `align`, `justify`, `direction`, `wrap` in `{...}` after the name). A block holding others needs more colons than they have. Items narrower than their `min` (24 by default) stack instead. The wiki's Markdown Guide lists every setting
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
 
 ## Syntax Highlighting in Code Blocks
 Fenced code blocks support ANSI syntax highlighting when a language tag is specified.
 
-Use `` ```sharp `` for SharpMUSH/MUSH softcode — the full semantic token pipeline<br>
-(functions, substitutions, object references, registers, etc.) is used:
+Use `` ```sharp `` for SharpMUSH/MUSH softcode, which gets the full semantic token pipeline<br>
+(functions, substitutions, object references, registers, etc.):
 
 ```sharp
 name(%#)              -- function call + substitution
@@ -129,26 +130,26 @@ Tables:
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |%r| Bob | 25 |)
 ```
 Output:
-```markdown
-| Name                          | Age                           |
-|-------------------------------|-------------------------------|
-| Alice                         | 30                            |
-| Bob                           | 25                            |
+```text
+Name  | Age
+-----------
+Alice | 30
+Bob   | 25
 ```
-(table expands to use default 78 character width, borders styled with ANSI faint)
+(the separators and the line under the headings are ANSI faint)
 
-Tables with custom width:
+Tables wider than the width:
 ```sharp
-think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |, 50)
+think rendermarkdown(| Topic | Summary |%r|---|---|%r| @lock | Sets a lock on an object, which decides who may pass it. |, 40)
 ```
 Output:
-```markdown
-| Name              | Age               |
-|-------------------|-------------------|
-| Alice             | 30                |
-| Bob               | 25                |
+```text
+Topic | Summary
+----------------------------------------
+@lock | Sets a lock on an object, which
+      | decides who may pass it.
 ```
-(table fits within 50 character width)
+(the widest column wraps to fit 40 characters)
 
 Code blocks with syntax highlighting (use `sharp` tag for SharpMUSH softcode):
 ```sharp
@@ -178,22 +179,21 @@ Ordered lists:
 think rendermarkdown(1. First item%r2. Second item%r3. Third item)
 ```
 Output:
-```markdown
+```text
 1. First item
 2. Second item
 3. Third item
 ```
-(numbers styled with ANSI faint)
 
 Unordered lists:
 ```sharp
 think rendermarkdown(- First item%r- Second item%r- Third item)
 ```
 Output:
-```markdown
-- First item
-- Second item
-- Third item
+```text
+* First item
+* Second item
+* Third item
 ```
 (bullets styled with ANSI faint)
 
@@ -213,9 +213,8 @@ Output:
 - Returns `#-1 ERROR RENDERING MARKDOWN: <error>` if markdown parsing fails
 
 ### Notes
-- Tables automatically expand to use full available width for professional spacing
 - Links use ANSI OSC 8 hyperlinks, making them clickable in compatible terminals (iTerm2, Windows Terminal, etc.)
-- All structural elements (borders, bullets) use ANSI faint/dim styling for visual distinction
+- Table separators, rules and bullets use ANSI faint/dim styling for visual distinction
 - Output is proper MarkupString with embedded ANSI codes
 
 ::: seealso

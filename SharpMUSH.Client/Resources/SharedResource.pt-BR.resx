@@ -5560,9 +5560,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>A cena não foi pausada.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Ainda sem sala</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Organizada por {0}</value>
   </data>
@@ -5715,5 +5712,47 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Linha {0}: um ::: item só é organizado diretamente dentro de um flex.</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Agendar uma cena</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>A cena não tem sala até começar: ela acontece onde o anfitrião estiver ao iniciá-la.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Escolha um horário que ainda não passou.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>A cena não foi agendada.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>A cena está na agenda, mas nem tudo foi salvo: {0} Edite-a na página dela.</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Anfitrião</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Esta cena começa em {0}. O registro começa quando ela começar.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Esta cena ainda não começou. O registro começa quando ela começar.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>A cena está na agenda, mas outra foi agendada para você no mesmo momento, então o resumo e a privacidade não foram definidos. Confira as duas cenas nas páginas delas.</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Detalhes e elenco</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Atrasada</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Hoje</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Amanhã</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Mostrando as próximas {0} cenas.</value>
   </data>
 </root>

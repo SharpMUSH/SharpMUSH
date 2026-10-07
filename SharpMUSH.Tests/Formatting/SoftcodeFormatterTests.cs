@@ -13,19 +13,15 @@ namespace SharpMUSH.Tests.Formatting;
 /// These tests exercise the composition — round-tripping, character preservation, break insertion and
 /// the error summary — not the rules those two services already have their own test suites for.
 /// <para>
-/// A real <see cref="IMUSHCodeParser"/> is required (via <see cref="ServerWebAppFactory"/>) because
+/// A real <see cref="IMUSHCodeParser"/> is required (<see cref="SyntaxOnlyParser"/>) because
 /// <see cref="SoftcodeFormatter.Format"/> builds its classifier from
 /// <see cref="SoftcodeLayout.ClassifierFor"/>, which needs the real function library to tell an
-/// evaluating call from a source-copying one — <c>SoftcodeLayoutEquivalenceTests</c> relies on the same
-/// fixture for the same reason.
+/// evaluating call from a source-copying one. Formatting never evaluates, so no host is needed.
 /// </para>
 /// </summary>
 public class SoftcodeFormatterTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private static IMUSHCodeParser Parser => SyntaxOnlyParser.Instance;
 
 	private MString Format(string src, IReadOnlyList<SemanticToken>? sem = null,
 		IReadOnlyList<ParseError>? errors = null, int width = 78)

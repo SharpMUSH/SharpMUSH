@@ -72,8 +72,8 @@ editing another account's schedule never changes its execution identity.
 
 ## Schedule grammar
 
-The five fields are minute (0–59), hour (0–23), day of month (1–31), month (1–12), and
-weekday (0–7, Sunday is 0 or 7). Each accepts *, comma lists, ascending ranges and /steps.
+The five fields are minute (0-59), hour (0-23), day of month (1-31), month (1-12), and
+weekday (0-7, Sunday is 0 or 7). Each accepts *, comma lists, ascending ranges and /steps.
 ## Schedule examples
 
 Examples: */15 means every fifteen units; 9-17 means 9 through 17; 1,15 means either value.

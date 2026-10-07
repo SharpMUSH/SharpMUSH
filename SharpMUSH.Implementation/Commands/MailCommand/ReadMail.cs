@@ -3,6 +3,7 @@ using MarkupString;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
@@ -47,26 +48,10 @@ public static class ReadMail
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchMail);
 		}
 
-		var line = MarkupText.Plain("-").Repeat(78);
 		var outputs = new List<MString>();
 		foreach (var (actualMail, folder, number) in messages)
 		{
-			var dateline = MarkupText.Plain(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")).Pad(MarkupText.Space, 25, PadType.Right, TruncationType.Truncate);
-
-			var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
-			var messageBuilder = new List<MString>
-			{
-				line,
-				MarkupText.Plain($"From: {mailFrom.Object()!.Name}"),
-				MarkupText.Plain($"Date: {dateline,-20} Folder: {folder,2} Message: {number,5}"),
-				MarkupText.Plain($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
-				MarkupText.Concat(MarkupText.Plain("Subject: "), actualMail.Subject),
-				line,
-				actualMail.Content,
-				line
-			};
-
-			var output = MarkupText.Join(MarkupText.NewLine, messageBuilder);
+			var output = await MailLayout.Message(actualMail, $"Message {folder}:{number}");
 			await notifyService.Notify(executor, output, executor);
 			outputs.Add(output);
 

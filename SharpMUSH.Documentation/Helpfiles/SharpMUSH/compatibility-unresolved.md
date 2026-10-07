@@ -68,7 +68,7 @@ scheduler. Same shape of question as #1132, same lack of a decision.
 
 ## Argument-count error wording
 
-PennMUSH writes four different messages depending on the function's declared range — `EXPECTS <n>`,
+PennMUSH writes four different messages depending on the function's declared range: `EXPECTS <n>`,
 `EXPECTS <min> OR <max>`, `EXPECTS AT LEAST <min>`, `EXPECTS BETWEEN <min> AND <max>` (parse.c:2981).
 SharpMUSH writes `EXPECTS AT LEAST <min>` or `EXPECTS AT MOST <max>`. Softcode that matches on the
 text of an arity error will not port. No decision has been recorded on whether to adopt PennMUSH's

@@ -1,3 +1,7 @@
+using System.Globalization;
+using MarkupString;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -205,8 +209,8 @@ public static class FolderMail
 	}
 
 	/// <summary>
-	/// <c>do_mail_change_folder</c> with no folder (<c>extmail.c:313-321</c>): each folder that holds mail, highest
-	/// number first, then the current folder.
+	/// <c>do_mail_change_folder</c> with no folder (<c>extmail.c:313-321</c>): each folder that holds mail, with
+	/// its counts, then the current folder.
 	/// </summary>
 	private static async ValueTask<MString> GetMailFolderInfo(IMediator mediator, INotifyService notifyService,
 		AnySharpObject executor, SharpPlayer player, ExpandedMailData folderInfo)
@@ -219,22 +223,34 @@ public static class FolderMail
 			tallies[held.Folder] = (total + 1, unread + (!held.Cleared && !held.Read ? 1 : 0), cleared + (held.Cleared ? 1 : 0));
 		}
 
-		for (var number = ExpandedMailData.MaxFolder; number >= 0; number--)
-		{
-			var folder = MailFolders.Folder(folderInfo, number);
-			if (!tallies.TryGetValue(folder.Name, out var tally))
-			{
-				continue;
-			}
-
-			await notifyService.Notify(executor,
-				$"MAIL: {tally.Total} messages in folder {number} [{folder.DisplayName}] ({tally.Unread} unread, {tally.Cleared} cleared).");
-		}
-
 		var current = folderInfo.NumberOf(folderInfo.ActiveFolder ?? ExpandedMailData.Inbox) is int active ? active : 0;
 		var currentFolder = MailFolders.Folder(folderInfo, current);
-		await notifyService.Notify(executor,
-			$"MAIL: Current folder is {current} [{currentFolder.DisplayName}].", executor);
+		var rows = new List<string[]>();
+		for (var number = 0; number <= ExpandedMailData.MaxFolder; number++)
+		{
+			var folder = MailFolders.Folder(folderInfo, number);
+			if (tallies.TryGetValue(folder.Name, out var tally))
+			{
+				rows.Add([number.ToString(CultureInfo.InvariantCulture), folder.DisplayName,
+					tally.Total.ToString(CultureInfo.InvariantCulture), tally.Unread.ToString(CultureInfo.InvariantCulture), tally.Cleared.ToString(CultureInfo.InvariantCulture)]);
+			}
+		}
+
+		Block folders = rows.Count == 0
+			? new TextBlock(MarkupText.Plain("No folder holds mail."))
+			: ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("#")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Folder")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Messages")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Unread")) { Alignment = Alignment.Right, Wrap = false, Priority = 2 },
+					new TableColumn(MarkupText.Plain("Cleared")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+				],
+				rows);
+		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain("Mail folders"),
+			folders,
+			new Rule(),
+			new TextBlock(MarkupText.Plain($"Current folder: {current} ({currentFolder.DisplayName})"))), 78), executor);
 		return MarkupText.Plain(current.ToString());
 	}
 }

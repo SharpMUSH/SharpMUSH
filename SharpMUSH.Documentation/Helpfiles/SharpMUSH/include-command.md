@@ -47,7 +47,7 @@ When including attribute contents, @include ignores any ^...: or $...: at the st
 
 The including environment (%0-%9) is available to the included actions. If arguments are provided to @include, they are substituted for the environment's %0, %1, etc. while the included action list is running. The environment is then restored after the @include.
 
-In-place action lists — those run by @include, @trigger, @force, @switch/inplace, @dolist/inplace and the like — nest at most 50 deep within one queue entry. A list nested any deeper is skipped without a message, and the list that included it carries on with its next command. An attribute that includes itself therefore runs 50 times.
+In-place action lists (those run by @include, @trigger, @force, @switch/inplace, @dolist/inplace and the like) nest at most 50 deep within one queue entry. A list nested any deeper is skipped without a message, and the list that included it carries on with its next command. An attribute that includes itself therefore runs 50 times.
 
 ## Include switches
 
@@ -76,7 +76,7 @@ Three things set a chain apart from writing several separate @includes:
 - **The links share q-registers.** A value stored with setq() (readable as `%q<name>`) in one link is visible to the next. This is how a chain passes results from one step to the next.
 - **The chain short-circuits on @break.** Each link runs until one calls @break (or a failing @assert); the remaining links are then skipped. This lets an early step reject bad input and stop the pipeline cleanly.
 
-The /nobreak, /localize and /clearregs switches behave as they do for a single @include. /nobreak confines an @break/@assert to the link it fires in, so instead of short-circuiting, the chain simply continues to the next link. /localize and /clearregs save and restore, or clear, the q-registers around the whole chain — within the chain the links still share registers.
+The /nobreak, /localize and /clearregs switches behave as they do for a single @include. /nobreak confines an @break/@assert to the link it fires in, so instead of short-circuiting, the chain simply continues to the next link. /localize and /clearregs save and restore, or clear, the q-registers around the whole chain; within the chain the links still share registers.
 
 ### Example
 A `+set <number>` command that validates its input through a three-step chain:
@@ -89,7 +89,7 @@ A `+set <number>` command that validates its input through a three-step chain:
 
 `+set 40` walks all three links: VALIDATE confirms `40` is a number and stores it in `%q<n>`; RANGE reads `%q<n>` and confirms it is at most 100; APPLY reads `%q<n>` and reports it back.
 
-`+set high` stops at the first link: VALIDATE's @assert fails, so it @pemits the error and @breaks — RANGE and APPLY never run.
+`+set high` stops at the first link: VALIDATE's @assert fails, so it @pemits the error and @breaks; RANGE and APPLY never run.
 
 
 ::: seealso

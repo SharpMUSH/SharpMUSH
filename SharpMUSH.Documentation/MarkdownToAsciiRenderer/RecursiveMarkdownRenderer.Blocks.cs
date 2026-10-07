@@ -2,6 +2,9 @@ using Markdig.Extensions.CustomContainers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using MarkupString;
+using MarkupString.Layout;
+using Block = MarkupString.Layout.Block;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -88,24 +91,47 @@ public partial class RecursiveMarkdownRenderer
 		}
 	}
 
-	/// <summary>One item per line, each with a marker; an ordered list numbers from its own start.</summary>
-	private MString RenderList(ListBlock list)
+	/// <summary>
+	/// A list as <see cref="Bullets"/>: each item after its marker, an ordered list numbering from its own
+	/// start, and a wrapped line hanging under the item's text rather than its marker.
+	/// </summary>
+	protected virtual MString RenderList(ListBlock list)
 	{
-
-		var itemIndex = FirstItemIndex(list);
 		var items = list
 			.OfType<ListItemBlock>()
-			.Select(listItem => RenderListItem(listItem, itemIndex++, list.IsOrdered))
-			.ToList();
+			.Select(listItem => ItemBody(MarkupText.Join(MarkupText.NewLine, listItem
+				.Select(Render)
+				.Where(IsNonWhitespace)
+				// Text keeps no spaces round it; a nested layout is left whole, so it is still a layout.
+				.Select(rendered => BlockLayout.AsBlock(rendered) is TextBlock ? rendered.Trim(TrimType.TrimBoth, " ") : rendered))))
+			.ToImmutableArray();
+		if (items.IsEmpty) return MarkupText.Empty;
 
-		return MarkupText.Join(MarkupText.Plain("\n"), items);
+		// Star, not a styled custom marker: the portal draws a custom marker as an inline box ahead of the
+		// item's text block, which puts the text on the line below it.
+		return Laid(new Bullets(items) { Style = list.IsOrdered ? BulletStyle.Number : BulletStyle.Star, Start = FirstItemIndex(list) + 1 });
+	}
+
+	/// <summary>
+	/// Rendered markdown as one block: each layout it holds (a nested list, a table) as its tree, so it is
+	/// drawn again at the width it is given, and the text between them as text.
+	/// </summary>
+	protected static Block ItemBody(MString rendered)
+	{
+		var blocks = BlockLayout.Blocks(rendered);
+		return blocks.Count switch
+		{
+			0 => new TextBlock(MarkupText.Empty),
+			1 => blocks[0],
+			_ => new Stack([.. blocks])
+		};
 	}
 
 	/// <summary>
 	/// The zero-based index the first item counts from, so the 1-based number every consumer derives
 	/// as <c>index + 1</c> is the one the source asked for. Falls back to 1.
 	/// </summary>
-	private static int FirstItemIndex(ListBlock list)
+	protected static int FirstItemIndex(ListBlock list)
 		=> list.IsOrdered && int.TryParse(list.OrderedStart, out var start) ? start - 1 : 0;
 
 	protected MString ListMarker(int index, bool isOrdered)
@@ -151,7 +177,7 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	private MString RenderThematicBreak()
-		=> MarkupText.Wrap(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
+		=> Laid(new Rule().Colored(_dimStyle));
 
 	/// <summary>Wiki directive names that render live listings on the web portal.</summary>
 	private static readonly HashSet<string> WikiDirectiveNames =
@@ -192,24 +218,11 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// Each line of <paramref name="content"/> wrapped to the render width and centred in it, with no
-	/// trailing fill. A line that is already as wide as the width stays where it is.
+	/// <paramref name="content"/> wrapped to the render width with each line centred in it: its text
+	/// centred, and each layout it holds drawn with its text centred.
 	/// </summary>
 	private MString Centered(MString content)
-	{
-		if (content.Length == 0) return content;
-
-		var lines = content
-			.Split("\n")
-			.SelectMany(line => line.Length == 0 ? [line] : line.WrapLines(_maxWidth))
-			.Select(line => line
-				.Trim(TrimType.TrimBoth, " ")
-				.Center(MarkupText.Space, MarkupText.Space, _maxWidth, TruncationType.Overflow)
-				.Trim(TrimType.TrimEnd, " "))
-			.ToArray();
-
-		return MarkupText.Join(MarkupText.NewLine, lines);
-	}
+		=> content.Length == 0 ? content : Laid(ItemBody(content).Aligned(Alignment.Center));
 
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{

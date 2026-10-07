@@ -108,7 +108,7 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - `@channel/title <channel>=<title>`
 - `@channel/buffer <channel>=<size>`
 
-`@channel/recall` displays the last *\<count\>* messages sent on *\<channel\>*, oldest first, between a `CHAT: Recall from channel <name>` header and a `CHAT: End recall` footer, with each line stamped with the time it was said. If *\<count\>* is not given, it shows the last 10; `=0` shows the whole buffer. A second right-hand argument (`@channel/recall <channel>=<count>,<start>`) starts the replay at the *\<start\>*th line of the buffer. The /quiet switch drops the timestamps, keeping the header and footer. You need not be a member to recall from a channel — being able to join it is enough.
+`@channel/recall` displays the last *\<count\>* messages sent on *\<channel\>*, oldest first, between a `CHAT: Recall from channel <name>` header and a `CHAT: End recall` footer, with each line stamped with the time it was said. If *\<count\>* is not given, it shows the last 10; `=0` shows the whole buffer. A second right-hand argument (`@channel/recall <channel>=<count>,<start>`) starts the replay at the *\<start\>*th line of the buffer. The /quiet switch drops the timestamps, keeping the header and footer. You need not be a member to recall from a channel; being able to join it is enough.
 
 `@channel/title` sets your title on *\<channel\>*. Your title appears in front of your name when you speak on the channel, if the channel is set to show titles. `@channel/title <channel>=` with nothing after the `=` clears it, and `@channel/title <channel>` with no `=` at all tells you what it currently is. A title may not be longer than the `chan_title_len` configuration setting, and may not contain a newline, a tab or a bell.
 
@@ -143,7 +143,7 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - `@channel/decompile[/brief] <channel>`
 - `@clock/join|/speak|/see|/hide|/mod <channel>[=<lock>]`
 
-`@channel/add` creates a new channel with the privileges in *<privlist>* — the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_channels` limit allows unless you are staff.
+`@channel/add` creates a new channel with the privileges in *<privlist>*, the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_channels` limit allows unless you are staff.
 
 `@channel/delete` removes a channel. Only channel admins can do this.
 
@@ -179,7 +179,7 @@ Admin                              3       17 [-P-A--- js---- ] [Off    ]   0
 ```
 
 - **Name** is the channel's name, padded to 30 columns. A longer name overflows the column rather than being truncated.
-- **Users** is how many of its members are listed by [@channel joining] — connected players, things, and members hiding on the channel only if you may see them.
+- **Users** is how many of its members are listed by [@channel joining]: connected players, things, and members hiding on the channel only if you may see them.
 - **Msgs** is how many messages the channel's recall buffer holds.
 - **Chan Type** is two groups in one bracket. The first seven characters are the channel's privileges, a `-` where the privilege is absent: `D`isabled, `P`layer, Object (`T`), `A`dmin or `W`izard, `Q`uiet, `H`ide_ok, `o`pen. The next six are its locks and your relationship to it: `j`oin, `s`peak, `m`od, see (`v`), `h`ide, and `*` if you own the channel.
 - **Status** is `On`, `Off`, or `Gag` if you are gagging the channel, followed by a character each for your own `Q` (muted), `H` (hidden) and `C` (combined) flags on it.
@@ -220,9 +220,9 @@ Available privileges:
 - **interact** (`I`): Channel output is filtered through the game's interaction rules
 - **disabled** (`D`): No one can join or speak on the channel
 
-These are privileges, not locks. A privilege says which *kind* of thing the channel is open to; a lock says which particular objects get through. Joining, speaking, seeing, hiding and modifying are each governed by a lock of their own — see [@CHANNEL CLOCK].
+These are privileges, not locks. A privilege says which *kind* of thing the channel is open to; a lock says which particular objects get through. Joining, speaking, seeing, hiding and modifying are each governed by a lock of their own; see [@CHANNEL CLOCK].
 
-`loud` is not a channel privilege and cannot be given to a channel. It is a flag set on an object — see [FLAG LIST].
+`loud` is not a channel privilege and cannot be given to a channel. It is a flag set on an object; see [FLAG LIST].
 
 **Examples**
 ```sharp
@@ -248,7 +248,7 @@ These are privileges, not locks. A privilege says which *kind* of thing the chan
 `@clock/hide <channel>[=<lock>]`<br>
 `@clock/mod <channel>[=<lock>]`
 
-Channel locks are set with `@clock`, which is its own command — there is no `@channel/clock` switch. Each switch names the one lock it sets, and omitting *<lock>* removes that lock. With no switch at all, `@clock` sets the join lock. See [lock keys] for what may go in a *<lock>*.
+Channel locks are set with `@clock`, which is its own command; there is no `@channel/clock` switch. Each switch names the one lock it sets, and omitting *<lock>* removes that lock. With no switch at all, `@clock` sets the join lock. See [lock keys] for what may go in a *<lock>*.
 
 There are five locks:
 - **join**: Restricts who can join the channel

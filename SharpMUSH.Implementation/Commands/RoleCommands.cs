@@ -1,4 +1,8 @@
+using System.Collections.Immutable;
+using System.Globalization;
 using System.Text;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
@@ -38,11 +42,11 @@ public partial class Commands
 		var right = (args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "").Trim();
 		var hasRight = args.ContainsKey("1");
 
-		string output;
+		MString output;
 		if (switches.Length > 1)
-			output = "Choose one @role operation.";
+			output = MarkupText.Plain("Choose one @role operation.");
 		else if (switches.FirstOrDefault() == "DESCRIBE")
-			output = $"Usage: @role/category/describe {CategoryUsage("CATEGORY/DESCRIBE")}. See help @role.";
+			output = MarkupText.Plain($"Usage: @role/category/describe {CategoryUsage("CATEGORY/DESCRIBE")}. See help @role.");
 		else
 		{
 			var operation = switches.FirstOrDefault() ?? (left.Length == 0 ? "LIST" : "INFO");
@@ -52,8 +56,8 @@ public partial class Commands
 				"INFO" => await RoleInfoAsync(parser, left),
 				"CATEGORIES" => await CategoriesAsync(parser, CategoryKind.Role),
 				"PLAYER" => await RoleExplainAsync(parser, executor, left.Length == 0 ? "me" : left),
-				_ when operation.StartsWith("CATEGORY/") => await CategoryChangeAsync(parser, executor, CategoryKind.Role, operation, left, right, hasRight),
-				_ => await RoleChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight)
+				_ when operation.StartsWith("CATEGORY/") => MarkupText.Plain(await CategoryChangeAsync(parser, executor, CategoryKind.Role, operation, left, right, hasRight)),
+				_ => MarkupText.Plain(await RoleChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight))
 			};
 		}
 
@@ -67,80 +71,87 @@ public partial class Commands
 			? [$"CATEGORY/{onCategory}"]
 			: switches;
 
-	private static async ValueTask<string> RoleListAsync(IMUSHCodeParser parser)
+	private static async ValueTask<MString> RoleListAsync(IMUSHCodeParser parser)
 	{
 		var roles = await RoleRegistry(parser).GetRolesAsync(ExecutionBudget.CurrentToken);
-		var slugWidth = Math.Max(4, roles.Max(r => r.Slug.Length));
-		var categoryWidth = Math.Max(8, roles.Max(r => r.Category.Length));
-		var output = new StringBuilder("Roles, highest first:");
-		foreach (var role in roles)
-			output.Append($"\n{role.Priority,4}  {role.Slug.PadRight(slugWidth)}  {role.Category.PadRight(categoryWidth)}  {role.Name}{(role.IsSystem ? "  (system)" : "")}");
-		return output.ToString();
+		var table = ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("Priority")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+				new TableColumn(MarkupText.Plain("Role")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Category")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Name")) { Min = 10 },
+			],
+			roles.Select(role => new[] { role.Priority.ToString(CultureInfo.InvariantCulture), role.Slug, role.Category, role.IsSystem ? $"{role.Name} (system)" : role.Name }));
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Roles, highest first"), table), 78);
 	}
 
-	private static async ValueTask<string> RoleInfoAsync(IMUSHCodeParser parser, string slug)
+	private static async ValueTask<MString> RoleInfoAsync(IMUSHCodeParser parser, string slug)
 	{
 		if (await RoleRegistry(parser).GetRoleAsync(slug, ExecutionBudget.CurrentToken) is not SharpRole role)
-			return $"No role named '{slug}'. See @role/list.";
-		var output = new StringBuilder($"Role: {role.Name} ({role.Slug})  Category: {role.Category}  Priority: {role.Priority}");
-		if (role.Color is not null) output.Append($"  Colour: {role.Color}");
-		if (role.IsSystem) output.Append(role.Slug switch
+			return MarkupText.Plain($"No role named '{slug}'. See @role/list.");
+		var system = !role.IsSystem ? null : role.Slug switch
 		{
-			BuiltInRoles.EveryoneSlug => "  System: held by everything",
-			BuiltInRoles.PlayerSlug => "  System: held by every player that is not a guest",
-			BuiltInRoles.GodSlug => "  System: held by #1",
-			_ when RoleFlags.ForRole(role.Slug) is { } flag => $"  System: the {flag.Name} flag",
-			_ when GamePowers.ForRole(role.Slug) is { } power => $"  System: the {power.Name} power",
-			_ => "  System"
-		});
-		output.Append($"\nAllows: {ScopeList(role.Permissions, PermissionState.Allow)}");
-		output.Append($"\nDenies: {ScopeList(role.Permissions, PermissionState.Deny)}");
-		return output.ToString();
+			BuiltInRoles.EveryoneSlug => "held by everything",
+			BuiltInRoles.PlayerSlug => "held by every player that is not a guest",
+			BuiltInRoles.GodSlug => "held by #1",
+			_ when RoleFlags.ForRole(role.Slug) is { } flag => $"the {flag.Name} flag",
+			_ when GamePowers.ForRole(role.Slug) is { } power => $"the {power.Name} power",
+			_ => "yes"
+		};
+		(string, MString)[] fields =
+		[
+			("Role", MarkupText.Plain(role.Slug)),
+			("Category", MarkupText.Plain(role.Category)),
+			("Priority", MarkupText.Plain(role.Priority.ToString(CultureInfo.InvariantCulture))),
+			.. role.Color is null ? [] : new[] { ("Colour", MarkupText.Plain(role.Color)) },
+			.. system is null ? [] : new[] { ("System", MarkupText.Plain(system)) },
+			("Allows", MarkupText.Plain(ScopeList(role.Permissions, PermissionState.Allow))),
+			("Denies", MarkupText.Plain(ScopeList(role.Permissions, PermissionState.Deny))),
+		];
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(role.Name), ServerLayout.KeyValues(fields)), 78);
 	}
 
 	/// <summary><c>@role/categories</c> and <c>@permission/categories</c>: one category list, what each category holds and its description.</summary>
-	private static async ValueTask<string> CategoriesAsync(IMUSHCodeParser parser, CategoryKind kind)
+	private static async ValueTask<MString> CategoriesAsync(IMUSHCodeParser parser, CategoryKind kind)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		var registry = RoleRegistry(parser);
 		var members = kind == CategoryKind.Role
 			? (await registry.GetRolesAsync(ct)).Select(r => r.Category).ToArray()
 			: (await registry.GetCustomPermissionsAsync(ct)).Select(p => p.Category).ToArray();
-		var output = new StringBuilder();
-		AppendCategories(output, kind == CategoryKind.Role ? "Role categories:" : "Permission categories:",
-			await registry.GetCategoriesAsync(kind, ct),
-			category => Counted(members.Count(m => string.Equals(m, category, StringComparison.OrdinalIgnoreCase)), kind == CategoryKind.Role ? "role" : "permission"),
-			$"{CategoryCommand(kind)}/category/create <name>=<description>");
-		return output.ToString();
+		var heading = kind == CategoryKind.Role ? "Role categories" : "Permission categories";
+		var categories = await registry.GetCategoriesAsync(kind, ct);
+		if (categories.Count == 0)
+			return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(heading),
+				new TextBlock(MarkupText.Plain($"None. Create one with {CategoryCommand(kind)}/category/create <name>=<description>."))), 78);
+
+		var table = ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("Category")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Holds")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Description")) { Min = 10 },
+			],
+			categories.Select(category => new[]
+			{
+				category.Name,
+				Counted(members.Count(m => string.Equals(m, category.Name, StringComparison.OrdinalIgnoreCase)), kind == CategoryKind.Role ? "role" : "permission"),
+				category.Description
+			}));
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(heading), table), 78);
 	}
 
 	/// <summary>The command that manages the category list <paramref name="kind"/>.</summary>
 	private static string CategoryCommand(CategoryKind kind) => kind == CategoryKind.Role ? "@role" : "@permission";
 
-	private static void AppendCategories(StringBuilder output, string heading, IReadOnlyList<RoleCategory> categories,
-		Func<string, string> held, string create)
-	{
-		output.Append(heading);
-		if (categories.Count == 0)
-		{
-			output.Append($"\n  none. Create one with {create}.");
-			return;
-		}
-
-		var width = categories.Max(c => c.Name.Length);
-		foreach (var category in categories)
-			output.Append($"\n  {category.Name.PadRight(width)}  {held(category.Name),-14}  {category.Description}");
-	}
-
 	private static string Counted(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 
 	/// <summary><c>@role/player &lt;object&gt;</c>: every role the object holds and where from, its overrides, and what they resolve to.</summary>
-	private async ValueTask<string> RoleExplainAsync(IMUSHCodeParser parser, AnySharpObject executor, string name)
+	private async ValueTask<MString> RoleExplainAsync(IMUSHCodeParser parser, AnySharpObject executor, string name)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All)
 				is not AnySharpObject target)
-			return "";
+			return MarkupText.Empty;
 
 		var capabilities = Capabilities(parser);
 		var mine = await capabilities.GetObjectGrantsAsync(executor, ct);
@@ -148,24 +159,25 @@ public partial class Commands
 				&& !mine.Has(PortalPermission.PlayersView)
 				&& !mine.Has(PortalPermission.RolesAdmin)
 				&& !await PermissionService.CanExamine(executor, target))
-			return $"Seeing another object's permissions needs the {PortalPermission.PlayersView} permission.";
+			return MarkupText.Plain($"Seeing another object's permissions needs the {PortalPermission.PlayersView} permission.");
 
 		var grants = await capabilities.GetObjectGrantsAsync(target, ct);
 		var account = target.IsPlayer ? await AccountService.GetAccountForCharacterAsync(target.Object().DBRef, ct) : null;
-		var output = new StringBuilder(target.Object().Name);
-		if (account is not null) output.Append($" (account {account.Username})");
-		if (grants.IsOwner) output.Append(" is the owner and holds every permission.");
 		var roles = RoleHierarchy.Ranked(grants.Roles.Select(held => held.Role).DistinctBy(role => role.Slug).ToArray())
 			.Select(role => $"{role.Name} ({role.Priority}{SourceNote(grants, role.Slug)})")
 			.ToArray();
-		output.Append($"\nRoles: {(roles.Length > 0 ? string.Join(", ", roles) : "none")}, plus everyone");
-		output.Append($"\nOverrides: allow {ScopeList(grants.Context.ObjectOverrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.ObjectOverrides, PermissionState.Deny)}");
-		if (account is not null)
-			output.Append($"\nAccount overrides: allow {ScopeList(grants.Context.Overrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.Overrides, PermissionState.Deny)}");
 		var scopes = PortalPermission.AllScopes.Concat(grants.Context.CustomScopes).ToArray();
-		output.Append($"\nHolds: {Joined(scopes.Where(grants.Has))}");
-		output.Append($"\nLacks: {Joined(scopes.Where(scope => !grants.Has(scope)))}");
-		return output.ToString();
+		(string, MString)[] fields =
+		[
+			.. account is null ? [] : new[] { ("Account", MarkupText.Plain(account.Username)) },
+			.. !grants.IsOwner ? [] : new[] { ("Owner", MarkupText.Plain("yes, and holds every permission")) },
+			("Roles", MarkupText.Plain($"{(roles.Length > 0 ? string.Join(", ", roles) : "none")}, plus everyone")),
+			("Overrides", MarkupText.Plain($"allow {ScopeList(grants.Context.ObjectOverrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.ObjectOverrides, PermissionState.Deny)}")),
+			.. account is null ? [] : new[] { ("Account overrides", MarkupText.Plain($"allow {ScopeList(grants.Context.Overrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.Overrides, PermissionState.Deny)}")) },
+			("Holds", MarkupText.Plain(Joined(scopes.Where(grants.Has)))),
+			("Lacks", MarkupText.Plain(Joined(scopes.Where(scope => !grants.Has(scope))))),
+		];
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(target.Object().Name), ServerLayout.KeyValues(fields)), 78);
 	}
 
 	private static string SourceNote(ObjectGrants grants, string slug)

@@ -213,15 +213,6 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("stext()", "")]
-	public async Task Stext(string str, string expected)
-	{
-		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
-		await Assert.That(result).IsNotNull();
-	}
-
-	[Test]
 	[Arguments("llocks(%#)", "")]
 	public async Task Llocks(string str, string expected)
 	{

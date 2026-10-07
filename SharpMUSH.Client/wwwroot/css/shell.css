@@ -821,6 +821,10 @@ pre.ms-preformatted {
 .ms-table th { border-bottom: 1px solid currentColor; }
 @media (max-width: 48em) { .ms-table .ms-p3 { display: none; } }
 @media (max-width: 32em) { .ms-table .ms-p2 { display: none; } }
+/* Portal-only: LayoutCss.Fixed leaves its title gap in a rule or divider with no title, which splits the line in two. */
+.ms-rule:empty, .ms-divider:empty { gap: 0; }
+/* Portal-only: a cell breaks a word only when the word cannot fit, so a table sizes its columns to whole words. */
+.ms-table .ms-text { overflow-wrap: break-word; }
 
 /* Command links (xch_cmd) — clickable, run a MUSH command. Distinct from URL links.
    The base rule mirrors HtmlCss.Fixed's .ms-cmd-link verbatim (pinned by
@@ -933,83 +937,6 @@ pre.ms-preformatted {
     margin: 0 0 0.5rem;
 }
 .mush-help-md strong { color: #dcdcaa; }
-
-/* ── Scene log ── */
-
-/* Scrollable transcript container */
-.scene-log {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    font-family: Consolas, 'Courier New', monospace;
-    font-size: 0.8125rem;
-    line-height: 1.55;
-    background: #111;
-    color: #d4d4d4;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-    flex: 1;
-    min-height: 0;
-}
-
-/* Live variant: fills available height and scrolls to bottom */
-.scene-log--live {
-    border: 1px solid #333;
-}
-
-/* Single transcript line */
-.scene-line {
-    padding: 0.125rem 0;
-    word-break: break-word;
-}
-
-/* ── Per-type scene line colours ── */
-
-/* A pose is prose: it is composed in a multi-line box and stored with real newlines, and HTML
-   collapses whitespace, so without pre-wrap every line of a pose ran together in the archive.
-   pre-wrap keeps the author's breaks and still wraps long lines. */
-.scene-pose-body {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.scene-line--pose {
-    color: #c8c8c8;
-    font-style: italic;
-}
-
-.scene-line--say {
-    color: #9cdcfe;
-}
-
-.scene-line--whisper {
-    color: #888;
-    font-style: italic;
-}
-
-.scene-line--ooc {
-    color: #a3be8c;
-}
-
-.scene-line--system {
-    color: #d7ba7d;
-    font-size: 0.6875rem;
-    opacity: 0.75;
-}
-
-.scene-line--normal {
-    color: #d4d4d4;
-}
-
-/* Archived lines (visible in live view once scene closes) */
-.scene-line--archived {
-    opacity: 0.65;
-}
-
-/* Lines actively arriving in a live scene */
-.scene-line--live {
-    color: #d4d4d4;
-}
 
 /* ── Wiki rendered content ── */
 /* Applied to the MudCard wrapping rendered wiki HTML (WikiDisplay.razor).      */

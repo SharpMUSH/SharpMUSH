@@ -1,3 +1,8 @@
+using System.Collections.Immutable;
+using System.Globalization;
+using MarkupString;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -16,9 +21,17 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// </summary>
 public static class ChannelList
 {
-	/// <summary>PennMUSH's header, <c>"%-30s %-5s %8s %-16s %-9s %-3s"</c> (<c>src/extchat.c:2622</c>).</summary>
-	private static readonly string Header =
-		$"{"Name".PadRight(ChannelHelper.MaxChannelNameLength)} {"Users",-5} {"Msgs",8} {"Chan Type",-16} {"Status",-9} {"Buf",-3}";
+	/// <summary>PennMUSH's columns (<c>src/extchat.c:2622</c>), the privileges and locks apart; a narrow client loses the counts first.</summary>
+	private static readonly ImmutableArray<TableColumn> Columns =
+	[
+		new(MarkupText.Plain("Name")) { Wrap = false },
+		new(MarkupText.Plain("Users")) { Alignment = Alignment.Right, Wrap = false, Priority = 2 },
+		new(MarkupText.Plain("Msgs")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+		new(MarkupText.Plain("Type")) { Wrap = false, Priority = 2 },
+		new(MarkupText.Plain("Locks")) { Wrap = false, Priority = 3 },
+		new(MarkupText.Plain("Status")) { Wrap = false },
+		new(MarkupText.Plain("Buf")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+	];
 
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
 		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
@@ -43,7 +56,7 @@ public static class ChannelList
 		// sharpchat.md:181 — "If a <prefix> is given, only channels whose names begin with <prefix> are shown."
 		var prefix = arg0.ToPlainText().Trim();
 
-		var rows = new List<MString>();
+		var rows = new List<ImmutableArray<Block>>();
 		var names = new List<string>();
 
 		await foreach (var channel in Mediator.CreateStream(new GetChannelListQuery()))
@@ -81,14 +94,16 @@ public static class ChannelList
 			var owned = owner is not null
 									&& owner.Object.DBRef.Number == executor.Object().DBRef.Number;
 
-			rows.Add(MarkupText.Concat([
+			rows.Add(
+			[
 				channel.Name,
-				MarkupText.Plain(new string(' ',
-					Math.Max(ChannelHelper.MaxChannelNameLength - channelName.Length, 0))),
-				MarkupText.Plain($" {users,5} {messageCount,8}"
-												 + $" [{ChannelTypeColumn(channel)} {LockColumn(channel, owned)}]"
-												 + $" [{StatusColumn(status)}] {channel.Buffer,3}")
-			]));
+				MarkupText.Plain(users.ToString(CultureInfo.InvariantCulture)),
+				MarkupText.Plain(messageCount.ToString(CultureInfo.InvariantCulture)),
+				MarkupText.Plain(ChannelTypeColumn(channel)),
+				MarkupText.Plain(LockColumn(channel, owned)),
+				MarkupText.Plain(StatusColumn(status)),
+				MarkupText.Plain(channel.Buffer.ToString(CultureInfo.InvariantCulture)),
+			]);
 		}
 
 		if (quietSwitch)
@@ -100,9 +115,10 @@ public static class ChannelList
 			return new CallState(quiet);
 		}
 
-		// The header prints whether or not anything matched, exactly as Penn's does — it is written before
-		// the loop runs.
-		var result = MarkupText.Join(MarkupText.NewLine, [MarkupText.Plain(Header), .. rows]);
+		Block body = rows.Count == 0
+			? new TextBlock(MarkupText.Plain("No channels."))
+			: ServerLayout.Listing(Columns, rows);
+		var result = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Channels"), body), 78);
 		await NotifyService.Notify(executor, result, executor);
 		return new CallState(result);
 	}
@@ -147,12 +163,12 @@ public static class ChannelList
 	{
 		if (membership is null)
 		{
-			return $"{"Off",-3}    ";
+			return "Off";
 		}
 
 		var status = membership.Status;
 		var state = (status.Gagged ?? false) ? "Gag" : "On";
 
-		return $"{state,-3} {((status.Mute ?? false) ? 'Q' : ' ')}{((status.Hide ?? false) ? 'H' : ' ')}{((status.Combine ?? false) ? 'C' : ' ')}";
+		return $"{state} {((status.Mute ?? false) ? "Q" : "")}{((status.Hide ?? false) ? "H" : "")}{((status.Combine ?? false) ? "C" : "")}".TrimEnd();
 	}
 }

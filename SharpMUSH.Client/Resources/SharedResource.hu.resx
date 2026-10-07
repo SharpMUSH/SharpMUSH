@@ -5560,9 +5560,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>A jelenet nem lett szüneteltetve.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Még nincs helyszín</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Házigazda: {0}</value>
   </data>
@@ -5715,5 +5712,47 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>{0}. sor: a ::: item csak közvetlenül egy flexen belül rendeződik.</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Jelenet ütemezése</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>A jelenetnek nincs szobája, amíg el nem kezdődik: ott zajlik, ahol a házigazda az indításkor van.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Válassz olyan időpontot, amely még nem múlt el.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>A jelenet nem lett ütemezve.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>A jelenet az ütemtervben van, de nem minden lett mentve: {0} Szerkeszd az oldalán.</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Házigazda</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Ez a jelenet {0}-kor kezdődik. A naplója akkor indul.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Ez a jelenet még nem kezdődött el. A naplója az indulásakor kezdődik.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>A jelenet az ütemtervben van, de ugyanabban a pillanatban egy másikat is ütemeztek neked, ezért a leírása és a láthatósága nincs beállítva. Ellenőrizd mindkét jelenetet az oldalukon.</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Részletek és szereplők</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Késik</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Ma</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Holnap</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>A következő {0} jelenet látható.</value>
   </data>
 </root>
