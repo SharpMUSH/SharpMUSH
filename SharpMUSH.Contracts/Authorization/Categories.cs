@@ -24,7 +24,7 @@ public static class Categories
 	/// <summary>The role categories a new world starts with.</summary>
 	public static readonly IReadOnlyList<RoleCategory> RoleSeeds =
 	[
-		new(System, "Roles the server defines: everyone, player, guest, builder, royalty, wizard and god.", 0),
+		new(System, "Roles the server defines: everyone, player, approved, guest, builder, royalty, wizard and god.", 0),
 		new(Staff, "Roles for the people who help run the game.", 0)
 	];
 

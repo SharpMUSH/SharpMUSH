@@ -8,9 +8,11 @@ namespace SharpMUSH.Library.Authorization;
 /// <para><b>System roles</b> (<see cref="All"/>) cannot be deleted, re-slugged or re-prioritised. Three
 /// are implicit and never assigned by hand: <c>everyone</c> (Discord's @everyone) is held by every
 /// holder, <c>player</c> by every player character that is not a guest, and <c>god</c> by player #1.
-/// The others are PennMUSH's privileges: <c>wizard</c> is the WIZARD flag, <c>royalty</c> the ROYALTY
+/// PennMUSH's privileges are roles too: <c>wizard</c> is the WIZARD flag, <c>royalty</c> the ROYALTY
 /// flag, <c>builder</c> the Builder power and <c>guest</c> the Guest power, so <c>@set</c> and
-/// <c>@power</c> assign them and so can <c>@role</c>. Their name, colour and permissions stay editable.</para>
+/// <c>@power</c> assign them and so can <c>@role</c>. <c>approved</c> marks a character that has met the
+/// game's own bar for full participation, what <c>isapproved()</c> reads; it is assigned with
+/// <c>@role</c>. Their name, colour and permissions stay editable.</para>
 ///
 /// <para><b>Starter roles</b> (<see cref="Starters"/>) are ordinary staff roles seeded once into a new
 /// world. They are assigned by hand and may be edited or deleted like any other role.</para>
@@ -26,6 +28,15 @@ public static class BuiltInRoles
 	public const string RoyaltySlug = "royalty";
 	public const string WizardSlug = "wizard";
 	public const string GodSlug = "god";
+
+	/// <summary>A character the game has approved for full participation: what <c>isapproved()</c> reads.</summary>
+	public const string ApprovedSlug = "approved";
+
+	/// <summary>
+	/// The approved role's priority: just above <c>player</c> and below the starter staff roles, so a
+	/// moderator may assign it, and so may a helper given <c>roles.admin</c>.
+	/// </summary>
+	public const int ApprovedPriority = (int)PortalRole.Player + 1;
 
 	/// <summary>True when <paramref name="role"/> is the <c>everyone</c> role.</summary>
 	public static bool IsEveryone(SharpRole role) => role.Slug == EveryoneSlug;
@@ -181,6 +192,8 @@ public static class BuiltInRoles
 			};
 			roles.Add(Template(SlugFor(role), role.ToString(), (int)role, ColorFor(role), true, scopes));
 		}
+
+		roles.Add(Template(ApprovedSlug, "Approved", ApprovedPriority, "#8bc34a", true, []));
 
 		return roles;
 	}

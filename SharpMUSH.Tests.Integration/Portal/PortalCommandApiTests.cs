@@ -123,7 +123,7 @@ public class PortalCommandApiTests(ServerWebAppFactory factory)
 	{
 		var number = await TestIsolationHelpers.CreateTestPlayerAsync(factory.Services, Mediator, "PortalStarter");
 		var character = (await Mediator.Send(new GetObjectNodeQuery(number))).Expect<SharpPlayer>().Object.DBRef;
-		await RunAsync(CreateClient(), $"@set #{character.Number}=APPROVED");
+		await RunAsync(CreateClient(), $"@role/assign #{character.Number}=approved");
 		var controller = await CommandsControllerAs(character);
 		var title = TestIsolationHelpers.GenerateUniqueName("PortalScene");
 

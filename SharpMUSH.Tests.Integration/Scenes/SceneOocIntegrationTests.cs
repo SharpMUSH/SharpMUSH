@@ -67,7 +67,7 @@ public class SceneOocIntegrationTests
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
-		await God1($"@set {dbref}=APPROVED");
+		await God1($"@role/assign {dbref}=approved");
 		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed.Value);
 		_actors[handle] = parsed.Value;
 		return (dbref, handle, name);
@@ -171,13 +171,13 @@ public class SceneOocIntegrationTests
 
 	/// <summary>
 	/// Approval is re-checked on every write, as the scene package's capture hooks do: focus and
-	/// membership survive a revoked APPROVED flag, so they cannot stand in for it.
+	/// membership survive a revoked approved role, so they cannot stand in for it.
 	/// </summary>
 	[Test]
 	public async Task Ooc_from_a_player_no_longer_approved_is_heard_and_not_recorded()
 	{
 		var (sceneId, poser, witness) = await SceneRoomAsync("Una");
-		await God1($"@set {poser.Dbref}=!APPROVED");
+		await God1($"@role/unassign {poser.Dbref}=approved");
 		var before = await PoseCountAsync(sceneId);
 		var witnessBefore = HeardCount(witness);
 

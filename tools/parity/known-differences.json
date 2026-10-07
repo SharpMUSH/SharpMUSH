@@ -86,11 +86,11 @@
       "scenario": "20-admin-commands",
       "case": "admin.lists",
       "step": 0,
-      "reason": "SharpMUSH defines the APPROVED, SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
+      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these four are the only difference accepted.",
       "tracking": "#1406",
       "profile": "SharpMUSH-only flags and powers",
       "command": "@list flags",
-      "sharp": "Flags: ABODE (A), ANSI (A), APPROVED (+), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SCENE_ROOM (S), SHARED (Z), STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUECOLOR, TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)",
+      "sharp": "Flags: ABODE (A), ANSI (A), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SCENE_ROOM (S), SHARED (Z), STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUECOLOR, TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)",
       "penn": "Flags: ABODE (A), ANSI (A), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SHARED (Z), STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)"
     },
     {
@@ -98,7 +98,7 @@
       "scenario": "20-admin-commands",
       "case": "admin.lists",
       "step": 1,
-      "reason": "SharpMUSH defines the APPROVED, SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
+      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these four are the only difference accepted.",
       "tracking": "#1406",
       "profile": "SharpMUSH-only flags and powers",
       "command": "@list powers",
