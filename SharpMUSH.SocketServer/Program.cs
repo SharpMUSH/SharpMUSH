@@ -27,6 +27,9 @@ public class Program
 
 		try
 		{
+			// First, so the /ws handler sees the player's address rather than the proxy's (TrustedProxies).
+			app.UseForwardedHeaders();
+
 			var metricsPort = app.Services.GetRequiredService<ConnectionServerOptions>().MetricsPort;
 			app.Use((context, next) =>
 			{
@@ -165,6 +168,8 @@ public class Program
 			sp.GetRequiredService<ISessionResumeAuthorizationService>()));
 
 		builder.Services.AddSingleton<WebSocketServer>();
+		// Read inside the delegate so configuration a test host adds after this runs is still seen.
+		builder.Services.Configure<ForwardedHeadersOptions>(options => TrustedProxies.Configure(options, builder.Configuration));
 
 		// Register the telnet interpreter factory (server mode) with the DI system.
 		// This resolves the logger from DI automatically. Protocol plugins and per-connection

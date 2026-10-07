@@ -1,5 +1,6 @@
 ﻿using DotNext.Collections.Generic;
 using System.Globalization;
+using System.Net;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -103,10 +104,14 @@ public partial class Commands
 				var location = known.IsContent
 					? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
 					: "#-1";
-				// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH).
+				// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH). A bare
+				// address (a website connection's) is never cut: an IPv6 one runs to 39 characters, and the
+				// whole of it is what a @sitelock rule needs.
+				var hostName = player.HostName;
+				var keepWhole = IPAddress.TryParse(hostName, out _);
 				var host = isHiddenRow
-					? (player.HostName.Length > 20 ? player.HostName[..20] : player.HostName) + " (Dark)"
-					: (player.HostName.Length > 27 ? player.HostName[..27] : player.HostName);
+					? (hostName.Length > 20 && !keepWhole ? hostName[..20] : hostName) + " (Dark)"
+					: hostName.Length > 27 && !keepWhole ? hostName[..27] : hostName;
 				// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
 				cells = [name, location, onFor, idle, player.CommandCount.ToString(CultureInfo.InvariantCulture),
 					$"{player.Handle,3}{ConnType(player)}", host];

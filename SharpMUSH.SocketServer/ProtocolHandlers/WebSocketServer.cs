@@ -1,3 +1,4 @@
+using System.Net;
 using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.SocketServer.ProtocolHandlers;
@@ -27,14 +28,25 @@ public class WebSocketServer(
 			KeepAliveTimeout = keepAlive.WsTimeout
 		});
 		var handle = await descriptorGenerator.GetNextWebSocketDescriptorAsync(context.RequestAborted);
-		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-		var hostname = context.Request.Headers.Host.ToString();
+		// The player's address: behind a proxy listed in ForwardedHeaders:KnownProxies, UseForwardedHeaders
+		// has already put the X-Forwarded-For client here (TrustedProxies). It is the host as well, the
+		// way a telnet connection's is its peer address; the Host header names this server, not the
+		// player, and a sitelock host rule matched against it would hit every web connection at once.
+		var remoteIp = ClientAddress(context.Connection.RemoteIpAddress);
+		var hostname = remoteIp;
 
 		// Request.IsHttps, so a wss:// connection reports SSL. Behind a TLS-terminating proxy this is
-		// only true once the proxy's X-Forwarded-Proto is honoured (UseForwardedHeaders with the proxy
-		// in KnownProxies); without that it under-reports rather than over-reports, which is the right
-		// way round for a security claim.
+		// only true once the proxy's X-Forwarded-Proto is honoured (the proxy in KnownProxies); without
+		// that it under-reports rather than over-reports, which is the right way round for a security
+		// claim.
 		var transport = new WebSocketTransport(webSocket, remoteIp, hostname, context.Request.IsHttps);
 		await pump.RunAsync(transport, handle, context.RequestAborted);
 	}
+
+	/// <summary>
+	/// The address a connection is recorded under. Kestrel's dual-stack listener reports an IPv4 peer as
+	/// <c>::ffff:a.b.c.d</c>, which a sitelock rule naming <c>a.b.c.d</c> would not equal.
+	/// </summary>
+	internal static string ClientAddress(IPAddress? address)
+		=> (address is { IsIPv4MappedToIPv6: true } ? address.MapToIPv4() : address)?.ToString() ?? "unknown";
 }
