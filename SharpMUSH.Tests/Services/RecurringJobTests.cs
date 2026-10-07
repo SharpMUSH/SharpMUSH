@@ -510,6 +510,22 @@ public class RecurringJobTests
 	}
 
 	[Test]
+	public async Task GameCommandFindsTheTargetAndStoresItsObjid()
+	{
+		var context = await Setup();
+		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@job/create #{context.Target.Number}/RUN=* * * * *|UTC"));
+		await Assert.That((await context.Service.ListAsync(context.Actor)).Single().Target).IsEqualTo(context.Target.ToString());
+	}
+
+	[Test]
+	public async Task GameCommandCreatesNothingWhenTheTargetIsNotFound()
+	{
+		var context = await Setup();
+		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@job/create {TestIsolationHelpers.GenerateUniqueName("nojob")}/RUN=* * * * *|UTC"));
+		await Assert.That((await context.Service.ListAsync(context.Actor)).Length).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task ExecutionRechecksDisabledAndUnlinkedAccounts(bool unlink)
