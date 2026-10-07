@@ -255,9 +255,14 @@ else
     private ProfilePageContext NewContext(bool canEdit) =>
         new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged);
 
-    /// <summary>The gallery widget changed the gallery: the banner and the avatar follow it.</summary>
+    /// <summary>
+    /// A gallery widget changed the gallery: the banner and the avatar follow it, and so does every
+    /// other gallery placement, whose next write would otherwise drop what this one added.
+    /// </summary>
     private void OnGalleryChanged(IReadOnlyList<GalleryEntry> gallery)
     {
+        _written = gallery;
+        _context = _context with { Gallery = gallery };
         ShowGallery(gallery);
         StateHasChanged();
     }
