@@ -277,6 +277,8 @@ public class PlusHelpIntegrationTests
 
 		await Assert.That(bare).Contains("+help/write");
 		await Assert.That(qualified).Contains("+help/write");
+		await Assert.That(bare.Split('\n').Where(l => l.TrimStart().StartsWith('|'))).IsEmpty()
+			.Because("a topic has no side borders, so a copied line carries none");
 	}
 
 	/// <summary>

@@ -545,7 +545,7 @@ public class SceneRoleplayIntegrationTests
 		// Quinn deliberately never poses → oldest (never) → up next.
 		await RunAndCollectAs(patHandle, "pose stretches and yawns by the fire.");   // captured for Pat
 
-		var potMsgs = await RunAndCollectAs(patHandle, "+pot");
+		var potMsgs = await RunAndCollectHeardBy(patHandle, pat, "+pot");
 		var lines = potMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
 		var table = string.Join("\n", lines);
 		TestDiagnostics.WriteLine("=== +pot ===\n" + table);
@@ -557,6 +557,10 @@ public class SceneRoleplayIntegrationTests
 		var quinnLine = lines.First(l => l.Contains($"Quinn_{Tag}"));
 		await Assert.That(quinnLine.ToLowerInvariant()).Contains("up")
 			.Because("the never-posed member (Quinn) is oldest, so the up-next marker is on Quinn's row");
+		await Assert.That(lines.Any(l => l.Contains("Last pose"))).IsTrue().Because("the column says how long ago each last posed");
+		await Assert.That(table).DoesNotContain("Words").Because("the tracker does not count words");
+		await Assert.That(lines.First(l => l.Contains($"Pat_{Tag}"))).Contains(" ago").Because("Pat posed, so the row says how long ago");
+		await Assert.That(quinnLine).DoesNotContain(" ago").Because("Quinn never posed");
 	}
 
 	/// <summary>+scene (bare) — the align()'d scene browser (active list). A created+started scene must
@@ -744,8 +748,8 @@ public class SceneRoleplayIntegrationTests
 
 	/// <summary>
 	/// +scene/upcoming reads like a calendar: one table in time order, each day named on its first scene,
-	/// and only the next 30 days unless a number of days (or all) is given. Every screen is a box no
-	/// wider than width(%#), without a blank row, and its table has a heading row. The owner verbs that
+	/// and only the next 30 days unless a number of days (or all) is given. Every screen fits in no
+	/// wider than width(%#), without a blank row or a side border, and its table has a heading row. The owner verbs that
 	/// name a scene (+scene/pitch &lt;id&gt;=, +scene/title &lt;id&gt;=, +scene/private &lt;id&gt;) work without
 	/// focusing it.
 	/// </summary>
@@ -765,7 +769,7 @@ public class SceneRoleplayIntegrationTests
 		long At(int days, int hours) => new DateTimeOffset(DateTime.Today.AddDays(days).AddHours(hours)).ToUnixTimeSeconds();
 		async Task<string> Schedule(string title, long when)
 		{
-			var said = await RunAndCollectAs(xanHandle, $"+scene/schedule {title}=" + when);
+			var said = await RunAndCollectHeardBy(xanHandle, xan, $"+scene/schedule {title}=" + when);
 			return said.First(m => m.Contains("Scheduled scene")).Replace("Scheduled scene ", "").Split(' ')[0];
 		}
 
@@ -773,14 +777,16 @@ public class SceneRoleplayIntegrationTests
 		var morning = await Schedule($"Morning_{Tag}", At(3, 9));
 		var later = await Schedule($"Later_{Tag}", At(10, 12));
 		await Schedule($"Far_{Tag}", At(60, 12));
+		await Schedule($"Missed_{Tag}", DateTimeOffset.UtcNow.AddMinutes(-10).ToUnixTimeSeconds());
 
 		static List<string> Lines(IEnumerable<string> said) =>
 			said.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
 
-		var table = Lines(await RunAndCollectAs(xanHandle, "+scene/upcoming"));
+		var table = Lines(await RunAndCollectHeardBy(xanHandle, xan, "+scene/upcoming"));
 		TestDiagnostics.WriteLine("=== +scene/upcoming ===\n" + string.Join("\n", table));
 		await Assert.That(table.Where(l => l.Length > width)).IsEmpty().Because($"no line may be wider than {width}");
 		await Assert.That(table.Where(string.IsNullOrWhiteSpace)).IsEmpty().Because("a table has no blank rows");
+		await Assert.That(table.Where(l => l.StartsWith('|'))).IsEmpty().Because("no side border is copied with a row");
 
 		int Row(string title) => table.FindIndex(l => l.Contains(title));
 		var day = await Eval($"u({loggerDbref}/FUN`SCHED_DAY,{morning})");
@@ -795,6 +801,8 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(" 09:00 ").Because("a row carries the time of day");
 		await Assert.That(Row($"Later_{Tag}")).IsGreaterThan(Row($"Evening_{Tag}"));
 		await Assert.That(Row($"Far_{Tag}")).IsEqualTo(-1).Because("by default the schedule looks 30 days ahead");
+		await Assert.That(table[Row($"Missed_{Tag}")]).Contains(" late ").Because("a scene past its time that never started reads late, as on the portal");
+		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(" scheduled ");
 		var footer = table.Single(l => l.Contains("in the next 30 days"));
 		await Assert.That(footer).Contains("later: +scenes <days>").Because("the footer says how far it looked, and how to see what it left out");
 
@@ -815,20 +823,22 @@ public class SceneRoleplayIntegrationTests
 		await RunAndCollectAs(xanHandle, $"+scene/public {later}");
 		await Assert.That(await Eval($"scene({later}, public)")).IsEqualTo("1");
 
-		var card = Lines(await RunAndCollectAs(xanHandle, $"+scene {later}"));
+		var card = Lines(await RunAndCollectHeardBy(xanHandle, xan, $"+scene {later}"));
 		TestDiagnostics.WriteLine("=== +scene <id> ===\n" + string.Join("\n", card));
 		await Assert.That(card.Where(l => l.Length > width)).IsEmpty();
 		await Assert.That(card.Where(string.IsNullOrWhiteSpace)).IsEmpty();
 		await Assert.That(card.Any(l => l.Contains("Status") && l.Contains("Name") && l.Contains("Poses"))).IsTrue()
 			.Because("the Players table has a heading row");
 		await Assert.That(card.Single(l => l.Contains("< Pitch >")).Length).IsEqualTo(width)
-			.Because("the Pitch divider meets both sides of the card");
+			.Because("the Pitch rule spans the screen");
+		await Assert.That(card).Contains("Lanterns over the water. Bring a coat=or two.")
+			.Because("the pitch is a line of its own, with no border to trim off when it is copied");
 
 		// +scene/list (and +scene/mine) fit too, with a status as long as "scheduled".
-		var mine = Lines(await RunAndCollectAs(xanHandle, "+scene/mine"));
+		var mine = Lines(await RunAndCollectHeardBy(xanHandle, xan, "+scene/mine"));
 		TestDiagnostics.WriteLine("=== +scene/mine ===\n" + string.Join("\n", mine));
 		await Assert.That(mine.Where(l => l.Length > width)).IsEmpty();
-		await Assert.That(mine.Single(l => l.Contains($"Far_{Tag}"))).Contains(" scheduled ").Because("a status is never broken across lines");
+		await Assert.That(mine.Single(l => l.Contains($"Far_{Tag}"))).EndsWith(" scheduled").Because("a status is never broken across lines");
 	}
 
 	/// <summary>+scene/deactivate keeps membership but clears focus; +scene/activate restores it.
