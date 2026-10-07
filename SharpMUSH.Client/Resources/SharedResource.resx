@@ -5201,6 +5201,12 @@
   <data name="EnumPermPowerSeeOobDesc" xml:space="preserve">
     <value>Can see out-of-band traffic from other connections.</value>
   </data>
+  <data name="EnumPermPowerSendImage" xml:space="preserve">
+    <value>Power · Send_Image</value>
+  </data>
+  <data name="EnumPermPowerSendImageDesc" xml:space="preserve">
+    <value>Can show pictures with image(), figure() and Markdown, from the hosts image_hosts allows.</value>
+  </data>
   <data name="EnumPermPowerSendOob" xml:space="preserve">
     <value>Power · Send_OOB</value>
   </data>
