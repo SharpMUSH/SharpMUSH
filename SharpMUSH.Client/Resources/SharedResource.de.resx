@@ -4790,6 +4790,12 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Banner entfernen</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Banner ändern</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Avatar ändern</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Das Banner konnte nicht geändert werden: {0}</value>
   </data>

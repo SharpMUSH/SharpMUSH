@@ -4790,6 +4790,12 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Премахни банера</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Смени банера</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Смени аватара</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Банерът не можа да бъде сменен: {0}</value>
   </data>

@@ -1,6 +1,7 @@
 @page "/character/{Name}"
 @layout CharactersLayout
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
@@ -11,6 +12,7 @@
 @inject SceneService Scenes
 @inject AccountAuthService AccountAuth
 @inject ServerInfoService ServerInfo
+@inject ISnackbar Snackbar
 @implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -18,7 +20,9 @@
 
 @* D1 §6.3 character profile (boards 25–26). The banner's picture is the profile's banner field
    (IMAGE`BANNER), else the gallery's banner, else a gradient on the name's hue; the portrait is the
-   image field (IMAGE), else the gallery's icon, else initials. Below it the "profile" layout scope:
+   image field (IMAGE), else the gallery's icon, else initials. Whoever may edit the profile changes
+   either from here (Change banner, Remove banner, and Change avatar on the portrait); each is an
+   upload into the gallery, which the gallery widget then shows. Below it the "profile" layout scope:
    MainContent (the character-header application as Details, WikiBody as Biography) beside the
    RightSidebar zone (Gallery, Recent scenes, Often plays with). *@
 @if (_missing)
@@ -40,14 +44,24 @@ else
         <GlassBanner Title="@DisplayName" ImageUrl="@BannerUrl" Alt="@DisplayName" Height="236" TitleSize="character" HeadingLevel="1"
                      TitleColor="@_profile?.Color" Hue="@NameHue.Of(DisplayName)" Minimisable="false">
             <Lead>
-                @if (ImageUrlPolicy.IsRenderable(PortraitUrl))
-                {
-                    <img class="char-profile-portrait" src="@ApiUrl.Resolve(PortraitUrl!)" alt="@DisplayName" />
-                }
-                else
-                {
-                    <span class="char-profile-initials" style="@($"--portrait-hue:{NameHue.Of(DisplayName)};")" aria-hidden="true">@Initials.From(DisplayName)</span>
-                }
+                <div class="char-profile-avatar">
+                    @if (ImageUrlPolicy.IsRenderable(PortraitUrl))
+                    {
+                        <img class="char-profile-portrait" src="@ApiUrl.Resolve(PortraitUrl!)" alt="@DisplayName" />
+                    }
+                    else
+                    {
+                        <span class="char-profile-initials" style="@($"--portrait-hue:{NameHue.Of(DisplayName)};")" aria-hidden="true">@Initials.From(DisplayName)</span>
+                    }
+                    @if (CanEditImages)
+                    {
+                        <MudFileUpload T="IBrowserFile" FilesChanged="@(f => UploadAsync(f, GalleryUse.Avatar))" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" Class="char-profile-avatar-upload">
+                            <CustomContent>
+                                <CapsuleButton Class="char-profile-change-avatar" Icon="@Icons.Material.Outlined.PhotoCamera" AriaLabel="@Loc["NavCharChangeAvatar"]" Disabled="_busy" OnClick="@context.OpenFilePickerAsync" />
+                            </CustomContent>
+                        </MudFileUpload>
+                    }
+                </div>
             </Lead>
             <Secondary>
                 @if (_profile?.Role is { } role)
@@ -74,6 +88,18 @@ else
                 </div>
             </Secondary>
             <Actions>
+                @if (CanEditImages)
+                {
+                    <MudFileUpload T="IBrowserFile" FilesChanged="@(f => UploadAsync(f, GalleryUse.Banner))" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" Class="char-profile-banner-upload">
+                        <CustomContent>
+                            <CapsuleButton Class="char-profile-change-banner" Icon="@Icons.Material.Outlined.Panorama" Disabled="_busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavCharChangeBanner"]</CapsuleButton>
+                        </CustomContent>
+                    </MudFileUpload>
+                    @if (_gallery.Any(g => g.IsBanner))
+                    {
+                        <CapsuleButton Class="char-profile-remove-banner" Icon="@Icons.Material.Outlined.HideImage" AriaLabel="@Loc["NavGalleryRemoveBanner"]" Disabled="_busy" OnClick="RemoveBannerAsync" />
+                    }
+                }
                 @if (_viewerItems.Count > 0)
                 {
                     <CapsuleButton Class="char-profile-full" Icon="@Icons.Material.Outlined.OpenInFull" OnClick="@(() => _viewerOpen = true)">@Loc["NavCharFullImage"]</CapsuleButton>
@@ -112,6 +138,10 @@ else
     private Task<AuthenticationState>? AuthState { get; set; }
 
     private ProfilePageContext _context = new(string.Empty, false);
+
+    /// <summary>The gallery as this page's last write left it, handed to the gallery widget; null until one.</summary>
+    private IReadOnlyList<GalleryEntry>? _written;
+    private bool _busy;
     private CharacterProfileData? _profile;
     private IReadOnlyList<GalleryEntry> _gallery = [];
     private SceneSummary? _liveScene;
@@ -130,6 +160,9 @@ else
     private string? BannerUrl => _profile?.Banner ?? _gallery.FirstOrDefault(g => g.IsBanner)?.Url;
 
     private string? PortraitUrl => _profile?.Image ?? _gallery.FirstOrDefault(g => g.IsIcon)?.Url;
+
+    /// <summary>A profile that could not be read has no gallery known to be the one to write.</summary>
+    private bool CanEditImages => _context.CanEdit && _profile is not null;
 
     protected override void OnInitialized() =>
         _liveSceneReload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await LoadLiveSceneAsync(); StateHasChanged(); }), Scenes);
@@ -158,12 +191,16 @@ else
         var mine = user?.Identity?.IsAuthenticated == true && await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> own
             ? own
             : [];
-        _context = new ProfilePageContext(Name, ProfileEditRights.CanEdit(user, mine, Name), _profile?.Dbref);
+        var canEdit = ProfileEditRights.CanEdit(user, mine, Name);
 
         if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
         {
+            _context = NewContext(canEdit);
             return;
         }
+
+        _written = null;
+        _context = NewContext(canEdit);
 
         _loadedFor = Name;
         var generation = ++_generation;
@@ -214,6 +251,58 @@ else
         ? _liveSceneReload.LoadAsync(() => Scenes.GetParticipantScenesAsync(dbref, 5),
             scenes => _liveScene = scenes is IReadOnlyList<SceneSummary> list ? list.FirstOrDefault(s => s.IsLive) : null)
         : Task.CompletedTask;
+
+    private ProfilePageContext NewContext(bool canEdit) =>
+        new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged);
+
+    /// <summary>The gallery widget changed the gallery: the banner and the avatar follow it.</summary>
+    private void OnGalleryChanged(IReadOnlyList<GalleryEntry> gallery)
+    {
+        ShowGallery(gallery);
+        StateHasChanged();
+    }
+
+    private Task UploadAsync(IBrowserFile? file, GalleryUse use) =>
+        file is null ? Task.CompletedTask : WriteAsync(Gallery.UploadAsync(Name, file, use), "GalleryUploadFailed");
+
+    private Task RemoveBannerAsync() =>
+        WriteAsync(Gallery.ReplaceAsync(Name, GalleryService.WithBanner(_gallery, null)), "GallerySetBannerFailed");
+
+    private async Task WriteAsync(Task<ApiResult<List<GalleryEntry>>> write, string failedKey)
+    {
+        _busy = true;
+        ApiResult<List<GalleryEntry>> result;
+        try { result = await write; }
+        finally { _busy = false; }
+
+        switch (result)
+        {
+            case List<GalleryEntry> updated:
+                _written = updated;
+                _context = _context with { Gallery = updated };
+                ShowGallery(updated);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc[failedKey, failure.Message], Severity.Error);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The server mirrors the gallery's avatar and banner into <c>IMAGE</c> and <c>IMAGE`BANNER</c>, which
+    /// the profile's image and banner fields read, so the page shows the gallery's without reading the
+    /// profile again.
+    /// </summary>
+    private void ShowGallery(IReadOnlyList<GalleryEntry> gallery)
+    {
+        _gallery = gallery;
+        _profile = _profile is null ? null : _profile with
+        {
+            Image = gallery.FirstOrDefault(g => g.IsIcon)?.Url,
+            Banner = gallery.FirstOrDefault(g => g.IsBanner)?.Url,
+        };
+        _viewerItems = ViewerItems();
+    }
 
     /// <summary>The banner, the portrait, then the rest of the gallery, each once and each renderable.</summary>
     private IReadOnlyList<ImageViewer.Item> ViewerItems()

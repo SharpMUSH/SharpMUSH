@@ -4790,6 +4790,12 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Ta bort banderoll</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Byt banderoll</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Byt avatar</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Banderollen kunde inte ändras: {0}</value>
   </data>

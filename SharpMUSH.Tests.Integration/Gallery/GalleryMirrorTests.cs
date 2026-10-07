@@ -36,14 +36,15 @@ public class GalleryMirrorTests(ServerWebAppFactory factory)
 
 	private sealed record GalleryNameRow(string Name, string Objid);
 
-	private static async Task<List<GalleryEntry>> UploadAsync(HttpClient http, string name, string fileName)
+	private static async Task<List<GalleryEntry>> UploadAsync(HttpClient http, string name, string fileName, string? use = null)
 	{
 		using var content = new MultipartFormDataContent();
 		// The smallest valid PNG: the store checks the declared type, not the bytes.
 		var bytes = new ByteArrayContent(Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="));
 		bytes.Headers.ContentType = new MediaTypeHeaderValue("image/png");
 		content.Add(bytes, "file", fileName);
-		var response = await http.PostAsync($"api/profile/{Uri.EscapeDataString(name)}/gallery", content);
+		var query = use is null ? "" : $"?use={use}";
+		var response = await http.PostAsync($"api/profile/{Uri.EscapeDataString(name)}/gallery{query}", content);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<List<GalleryEntry>>())!;
 	}
@@ -104,6 +105,55 @@ public class GalleryMirrorTests(ServerWebAppFactory factory)
 				await http.DeleteAsync($"{url}/{Uri.EscapeDataString(entry.AssetId)}");
 			}
 		}
+	}
+
+	[Test]
+	public async Task UploadsAsBannerAndAvatar_TakeThosePlaces_AndTheBannerIsNotTheAvatar()
+	{
+		var http = factory.CreateHttpClient();
+		var name = await GodNameAsync(http);
+		var url = $"api/profile/{Uri.EscapeDataString(name)}/gallery";
+		var before = await http.GetFromJsonAsync<List<GalleryEntry>>(url) ?? [];
+
+		try
+		{
+			var afterBanner = await UploadAsync(http, name, $"banner-{Guid.NewGuid():N}.png", "banner");
+			var banner = afterBanner[^1];
+			await Assert.That(banner.IsBanner).IsTrue();
+			await Assert.That(banner.IsIcon).IsFalse().Because("an image uploaded as the banner does not stand in for the avatar");
+			await Assert.That(afterBanner.Count(e => e.IsBanner)).IsEqualTo(1);
+
+			var afterAvatar = await UploadAsync(http, name, $"avatar-{Guid.NewGuid():N}.png", "avatar");
+			var avatar = afterAvatar[^1];
+			await Assert.That(avatar.IsIcon).IsTrue();
+			await Assert.That(avatar.IsBanner).IsFalse();
+			await Assert.That(afterAvatar.Count(e => e.IsIcon)).IsEqualTo(1);
+			await Assert.That(afterAvatar.Single(e => e.IsBanner).AssetId).IsEqualTo(banner.AssetId);
+
+			await Assert.That(await ReadAttributeAsync("IMAGE")).IsEqualTo(avatar.Url);
+			await Assert.That(await ReadAttributeAsync("IMAGE`BANNER")).IsEqualTo(banner.Url);
+		}
+		finally
+		{
+			var now = await http.GetFromJsonAsync<List<GalleryEntry>>(url) ?? [];
+			foreach (var entry in now.Where(e => before.All(b => b.AssetId != e.AssetId)))
+			{
+				await http.DeleteAsync($"{url}/{Uri.EscapeDataString(entry.AssetId)}");
+			}
+		}
+	}
+
+	[Test]
+	public async Task Upload_ForAnUnknownUse_IsRefused()
+	{
+		var http = factory.CreateHttpClient();
+		var name = await GodNameAsync(http);
+		using var content = new MultipartFormDataContent();
+		var bytes = new ByteArrayContent([1]);
+		bytes.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+		content.Add(bytes, "file", "x.png");
+		var response = await http.PostAsync($"api/profile/{Uri.EscapeDataString(name)}/gallery?use=wallpaper", content);
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 	}
 
 	[Test]

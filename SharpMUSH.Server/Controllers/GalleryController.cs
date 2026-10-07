@@ -28,7 +28,8 @@ namespace SharpMUSH.Server.Controllers;
 ///
 /// Routes:
 ///   GET    /api/profile/{name}/gallery          — list gallery entries (anonymous)
-///   POST   /api/profile/{name}/gallery          — upload an image (owner/staff)
+///   POST   /api/profile/{name}/gallery          — upload an image (owner/staff); <c>?use=banner</c> or
+///                                                 <c>?use=avatar</c> makes it the banner or the avatar
 ///   PUT    /api/profile/{name}/gallery          — replace order/captions/icon/banner (owner/staff)
 ///   DELETE /api/profile/{name}/gallery/{assetId} — remove an image (owner/staff)
 /// </summary>
@@ -66,8 +67,13 @@ public class GalleryController(
 	[HttpPost]
 	[Authorize]
 	[RequestSizeLimit(10_485_760)]
-	public async Task<IActionResult> Upload(string name, IFormFile file, CancellationToken ct)
+	public async Task<IActionResult> Upload(string name, IFormFile file, [FromQuery] string? use, CancellationToken ct)
 	{
+		if (ParseUse(use) is not { } role)
+		{
+			return BadRequest(new { error = $"'{use}' is not a use for an image. Use 'banner' or 'avatar'." });
+		}
+
 		var (character, allowed) = await ResolveAndAuthorizeAsync(name, ct);
 		if (character is null) return NotFound();
 		if (!allowed) return Forbid();
@@ -90,24 +96,44 @@ public class GalleryController(
 		await using var content = file.OpenReadStream();
 		return await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct) switch
 		{
-			WikiAsset asset => await AddToGalleryAsync(name, character, asset, uploaderDbref),
+			WikiAsset asset => await AddToGalleryAsync(name, character, asset, role, uploaderDbref),
 			Error<string> saveError => StatusCode(StatusCodes.Status500InternalServerError, new { error = saveError.Value }),
 		};
 	}
 
-	/// <summary>
-	/// Append a stored image to the character's gallery, as its icon when it is the first.
-	/// </summary>
-	private async Task<IActionResult> AddToGalleryAsync(string name, AnySharpObject character, WikiAsset asset, string uploaderDbref)
+	/// <summary>What an upload is for: a gallery image, the banner, or the avatar.</summary>
+	private enum UploadRole { Gallery, Banner, Avatar }
+
+	/// <summary>The role <c>?use=</c> names; null for a word that is not one.</summary>
+	private static UploadRole? ParseUse(string? use) => use?.Trim().ToLowerInvariant() switch
 	{
-		var entries = (await ReadGalleryAsync(character)).ToList();
+		null or "" => UploadRole.Gallery,
+		"banner" => UploadRole.Banner,
+		"avatar" => UploadRole.Avatar,
+		_ => null,
+	};
+
+	/// <summary>
+	/// Append a stored image to the character's gallery. Uploaded as the banner or the avatar, it takes
+	/// that place from whichever image held it; a plain upload is the avatar only when it is the first.
+	/// </summary>
+	private async Task<IActionResult> AddToGalleryAsync(string name, AnySharpObject character, WikiAsset asset, UploadRole role, string uploaderDbref)
+	{
+		var entries = (await ReadGalleryAsync(character))
+			.Select(e => e with
+			{
+				IsIcon = e.IsIcon && role != UploadRole.Avatar,
+				IsBanner = e.IsBanner && role != UploadRole.Banner,
+			})
+			.ToList();
 		entries.Add(new GalleryEntry(
 			AssetId: asset.Id,
 			FileName: asset.FileName,
 			Url: $"/api/wiki-assets/{asset.Id}/{asset.FileName}",
 			Caption: null,
 			Order: entries.Count == 0 ? 0 : entries.Max(e => e.Order) + 1,
-			IsIcon: entries.Count == 0));
+			IsIcon: role == UploadRole.Avatar || (role == UploadRole.Gallery && entries.Count == 0),
+			IsBanner: role == UploadRole.Banner));
 
 		var normalized = GalleryRules.Normalize(entries);
 		var write = await WriteGalleryAsync(character, normalized);
@@ -159,7 +185,7 @@ public class GalleryController(
 			return NotFound();
 		}
 
-		// Removing the icon promotes the new first image; removing the banner leaves none.
+		// Removing the icon promotes the first image that is not the banner; removing the banner leaves none.
 		var normalized = GalleryRules.Normalize(entries);
 		var write = await WriteGalleryAsync(character, normalized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);

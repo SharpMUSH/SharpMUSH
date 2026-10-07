@@ -4,7 +4,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Gallery;
 
 /// <summary>
-/// The gallery's invariants (spec §2): one icon while any image exists, at most one banner, and the
+/// The gallery's invariants (spec §2): one icon while any image other than the banner exists, at most one banner, and the
 /// three IMAGE attributes a gallery write mirrors, so softcode and OOB payloads see the same picture
 /// the portal does.
 /// </summary>
@@ -38,6 +38,30 @@ public class GalleryRulesTests
 		await Assert.That(result[0].IsIcon).IsTrue();
 		await Assert.That(result.Any(e => e.IsBanner)).IsFalse()
 			.Because("no banner means the profile's hue gradient, which is a choice the owner makes");
+	}
+
+	[Test]
+	public async Task Normalize_PromotesTheFirstImageThatIsNotTheBanner()
+	{
+		var result = GalleryRules.Normalize([Entry("a", 0, banner: true), Entry("b", 1)]);
+		await Assert.That(result[0].IsIcon).IsFalse();
+		await Assert.That(result[1].IsIcon).IsTrue();
+	}
+
+	[Test]
+	public async Task Normalize_AGalleryOfOnlyTheBanner_HasNoAvatar()
+	{
+		var result = GalleryRules.Normalize([Entry("a", 0, banner: true)]);
+		await Assert.That(result[0].IsIcon).IsFalse().Because("the banner does not stand in for the avatar; the profile draws initials");
+		await Assert.That(result[0].IsBanner).IsTrue();
+	}
+
+	[Test]
+	public async Task Normalize_KeepsAnImageChosenAsBothBannerAndAvatar()
+	{
+		var result = GalleryRules.Normalize([Entry("a", 0, icon: true, banner: true), Entry("b", 1)]);
+		await Assert.That(result[0].IsIcon).IsTrue();
+		await Assert.That(result[1].IsIcon).IsFalse();
 	}
 
 	[Test]

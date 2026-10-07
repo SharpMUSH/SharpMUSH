@@ -139,8 +139,18 @@
         _viewerOpen = true;
     }
 
+    /// <summary>The page's last gallery write this widget took on, so each is taken once.</summary>
+    private IReadOnlyList<GalleryEntry>? _fromPage;
+
     protected override async Task OnParametersSetAsync()
     {
+        // The banner's Change banner and Change avatar write the gallery from the page: show what they left.
+        if (PageContext?.Gallery is { } fromPage && !ReferenceEquals(fromPage, _fromPage))
+        {
+            _fromPage = fromPage;
+            (_items, _error, _loading) = (fromPage, null, false);
+        }
+
         var name = CharacterName ?? PageContext?.CharacterName ?? ConfigCharacter();
         if (string.IsNullOrWhiteSpace(name) || name == _resolvedName)
         {
@@ -209,6 +219,7 @@
                 _items = updated;
                 _error = null;
                 if (_items.Count == 0) _viewerOpen = false;
+                PageContext?.GalleryChanged?.Invoke(updated);
                 break;
             case ApiFailure failure:
                 Snackbar.Add(Loc[failedKey, failure.Message], Severity.Error);
