@@ -22,6 +22,12 @@ public class ConnectionServerOptions
 	public int HttpPort { get; set; } = 4202;
 
 	/// <summary>
+	/// Port a Prometheus scraper reads <c>/metrics</c> from, or 0 for none. It answers <c>/metrics</c> only, so it
+	/// can be published to a monitoring network without exposing the WebSocket endpoint a second time.
+	/// </summary>
+	public int MetricsPort { get; set; } = 9091;
+
+	/// <summary>
 	/// Port for TLS-encrypted Telnet connections (PennMUSH's <c>ssl_port</c>), or 0 to open no such
 	/// listener. Defaults to 0: opening it needs a certificate, and Kestrel fails to start rather
 	/// than serving an endpoint without one, so it stays opt-in.
