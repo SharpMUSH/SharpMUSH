@@ -56,7 +56,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// cannot parse. <see langword="null"/> under the SLL and LL settings, or when SLL failed; the
 	/// tokens are sought back to the start either way.
 	/// </summary>
-	private ParserRuleContext? TryCleanParse(BufferedTokenSpanStream tokens, string plaintext, ParseType parseType)
+	private SharpMUSHParser.ISoftcodeContext? TryCleanParse(BufferedTokenSpanStream tokens, string plaintext, ParseType parseType)
 	{
 		var options = configuration.CurrentValue;
 		if (options.Debug.ParserPredictionMode != ParserPredictionMode.TwoStage)
@@ -64,8 +64,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			return null;
 		}
 
-		var parser = SoftcodeParsePipeline.CreateParser(tokens, options.Compatibility.ParenGroups, PredictionMode.SLL,
-			resolvePredicates: true);
+		var parser = SoftcodeParsePipeline.CreateParser(tokens, options.Compatibility.ParenGroups, PredictionMode.SLL);
 		var context = SoftcodeParsePipeline.ParseClean(parser, p => SoftcodeParsePipeline.Enter(p, parseType),
 			new ParserErrorListener(plaintext));
 		tokens.Seek(0);
@@ -119,7 +118,8 @@ public sealed class SoftcodeSyntaxAnalyzer(
 
 		// Report over-deep nesting as a diagnostic rather than parsing it and overflowing the
 		// stack — this path feeds the LSP/MCP analyzer, which must survive hostile documents.
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out var offending))
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
+			configuration.CurrentValue.Compatibility.ParenGroups, out var offending))
 		{
 			return
 			[
@@ -188,7 +188,8 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		// orphaned-closer rewrite above — so an orphaned ']' or '}' is classified as a closer on this
 		// path and as literal text on the normal one. Inconsistent, but left alone deliberately:
 		// changing Tokenize affects every caller and needs its own task.
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out _))
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
+			configuration.CurrentValue.Compatibility.ParenGroups, out _))
 		{
 			return ConvertSyntacticToSemanticTokens(Tokenize(text));
 		}
@@ -225,7 +226,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// Analyzes the parse tree to extract semantic tokens.
 	/// </summary>
 	private IReadOnlyList<SemanticToken> AnalyzeSemanticTokens(
-		ParserRuleContext context,
+		SharpMUSHParser.ISoftcodeContext context,
 		BufferedTokenSpanStream tokenStream,
 		string sourceText)
 	{
@@ -308,25 +309,25 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			// they are NOT serving as argument separators, delimiters or register-close markers.
 			// OTHER inside beginGenericText still needs content-based classification
 			// (e.g. #1234 is ObjectReference, "42" is Number).
-			SharpMUSHParser.BeginGenericTextContext when token.Type != SharpMUSHParser.OTHER
+			SharpMUSHParser.IBeginGenericTextContext when token.Type != SharpMUSHParser.OTHER
 				=> SemanticTokenType.Text,
-			SharpMUSHParser.BeginGenericTextContext
+			SharpMUSHParser.IBeginGenericTextContext
 				=> ClassifyOther(token.Text, sourceText),
 
 			// A FUNCHAR appearing in genericText (not inside a function call) is plain text.
-			SharpMUSHParser.GenericTextContext
+			SharpMUSHParser.IGenericTextContext
 				=> SemanticTokenType.Text,
 
 			// FUNCHAR is the open-paren+name; COMMAWS and CPAREN inside the function are operators.
-			SharpMUSHParser.FunctionContext when token.Type == SharpMUSHParser.FUNCHAR
+			SharpMUSHParser.IFunctionContext when token.Type == SharpMUSHParser.FUNCHAR
 				=> ClassifyFunction(token.Text),
-			SharpMUSHParser.FunctionContext
+			SharpMUSHParser.IFunctionContext
 				=> SemanticTokenType.Operator,
 
-			SharpMUSHParser.BracketPatternContext
+			SharpMUSHParser.IBracketPatternContext
 				=> SemanticTokenType.BracketSubstitution,
 
-			SharpMUSHParser.BracePatternContext
+			SharpMUSHParser.IBracePatternContext
 				=> SemanticTokenType.BraceGroup,
 
 			SharpMUSHParser.AnsiContext
@@ -336,30 +337,30 @@ public sealed class SoftcodeSyntaxAnalyzer(
 				=> SemanticTokenType.EscapeSequence,
 
 			// %q<register> — opening token (q<) and closing > are both Register
-			SharpMUSHParser.ComplexSubstitutionSymbolContext
+			SharpMUSHParser.IComplexSubstitutionSymbolContext
 				=> SemanticTokenType.Register,
 
 			// $0-$9 and $<name> read regexp captures; $< and its > are Register too.
-			SharpMUSHParser.RegexpCaptureContext
+			SharpMUSHParser.IRegexpCaptureContext
 				=> SemanticTokenType.Register,
 
 			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
 			SharpMUSHParser.SubstitutionSymbolContext
 				=> SemanticTokenType.Substitution,
 
-			// PERCENT is the only direct terminal child of ExplicitEvaluationStringContext.
-			SharpMUSHParser.ExplicitEvaluationStringContext
-			or SharpMUSHParser.BraceExplicitEvaluationStringContext
+			// PERCENT is the only direct terminal child of IExplicitEvaluationStringContext.
+			SharpMUSHParser.IExplicitEvaluationStringContext
+			or SharpMUSHParser.IBraceExplicitEvaluationStringContext
 				=> SemanticTokenType.Substitution,
 
-			SharpMUSHParser.StartEqSplitCommandContext
-			or SharpMUSHParser.StartEqSplitCommandArgsContext
+			SharpMUSHParser.IStartEqSplitCommandContext
+			or SharpMUSHParser.IStartEqSplitCommandArgsContext
 				=> SemanticTokenType.Operator,
 
-			SharpMUSHParser.CommaCommandArgsContext
+			SharpMUSHParser.ICommaCommandArgsContext
 				=> SemanticTokenType.Operator,
 
-			SharpMUSHParser.CommandListContext
+			SharpMUSHParser.ICommandListContext
 				=> SemanticTokenType.Operator,
 
 			_ => ClassifyByTokenType(token, sourceText)

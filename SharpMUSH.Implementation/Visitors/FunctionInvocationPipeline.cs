@@ -36,7 +36,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 	/// <param name="args">Arguments</param>
 	/// <returns>The resulting CallState.</returns>
 	public async ValueTask<CallState> InvokeAsync(SharpMUSHParserVisitor visitor, string name,
-		FunctionContext context, EvaluationStringContext?[] args)
+		IFunctionContext context, IEvaluationStringContext?[] args)
 	{
 		var parser = visitor.Parser;
 		var configuration = visitor.Configuration;

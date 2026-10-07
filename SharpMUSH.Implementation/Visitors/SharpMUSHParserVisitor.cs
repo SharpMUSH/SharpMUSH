@@ -23,7 +23,7 @@ using SharpMUSH.Library.Markup;
 namespace SharpMUSH.Implementation.Visitors;
 
 /// <summary>
-/// This class implements the SharpMUSHParserBaseVisitor from the Generated code.
+/// This class implements the SharpMUSHParserRuleVisitor bridge over the generated visitor.
 /// If additional pieces of the parse-tree are added, the Generated project must be re-generated 
 /// and new Visitors may need to be added.
 /// 
@@ -40,7 +40,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// <para><b>Performance:</b> no service is located per visit; argument and result merging run as plain
 /// loops over spans; literal text is sliced from the markup-carrying source.</para>
 /// </summary>
-public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
+public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallState?>>
 {
 	private readonly IMUSHCodeParser parser;
 	private readonly MString source;
@@ -49,7 +49,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	private int _debugNestDepth;
 	private bool _didEmitFunctionDebug;
 	private bool _containsRestrictedWrapper;
-	private readonly Dictionary<FunctionContext, bool> _restrictedScanResults = new();
+	private readonly Dictionary<IFunctionContext, bool> _restrictedScanResults = new();
 	internal bool SuppressSubstitutionOnlyDebugTrace => _didEmitFunctionDebug || _containsRestrictedWrapper;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
@@ -119,14 +119,14 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// Determines if a bracePattern is inside a function's argument list.
 	/// PennMUSH has two brace modes: command braces (full evaluation) and function-arg
 	/// braces (suppress function recognition). This detects function-arg braces by
-	/// checking if the parse tree has a FunctionContext ancestor.
+	/// checking if the parse tree has a IFunctionContext ancestor.
 	/// </summary>
-	private static bool IsInsideFunctionArg(ParserRuleContext context)
+	private static bool IsInsideFunctionArg(ISoftcodeContext context)
 	{
 		var parent = context.Parent;
 		while (parent is not null)
 		{
-			if (parent is FunctionContext)
+			if (parent is IFunctionContext)
 				return true;
 			parent = parent.Parent;
 		}
@@ -147,15 +147,15 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// Walking outward, whichever context appears first decides: a bracket means the call site
 	/// demands a function, an enclosing call means we are inside its argument list and it does not.
 	/// </summary>
-	internal static bool IsUnknownFunctionAnError(ParserRuleContext context)
+	internal static bool IsUnknownFunctionAnError(ISoftcodeContext context)
 	{
 		for (var parent = context.Parent; parent is not null; parent = parent.Parent)
 		{
 			switch (parent)
 			{
-				case BracketPatternContext:
+				case IBracketPatternContext:
 					return true;
-				case FunctionContext:
+				case IFunctionContext:
 					return false;
 			}
 		}
@@ -172,12 +172,12 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// Literal spans are sliced from the source rather than taken from <c>GetText()</c> so that
 	/// markup survives.
 	/// </summary>
-	internal async ValueTask<CallState> LiteralFunctionCall(FunctionContext context)
+	internal async ValueTask<CallState> LiteralFunctionCall(IFunctionContext context)
 	{
 		var visitor = this;
 		var parts = new MString[context.ChildCount];
 		var hadErrors = false;
-		async ValueTask<MString> EvaluateArgument(EvaluationStringContext argument)
+		async ValueTask<MString> EvaluateArgument(IEvaluationStringContext argument)
 		{
 			var result = await visitor.Visit(argument);
 			hadErrors |= result?.HadErrors == true;
@@ -192,7 +192,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			{
 				var part = context.GetChild(i) switch
 				{
-					EvaluationStringContext argument => await EvaluateArgument(argument),
+					IEvaluationStringContext argument => await EvaluateArgument(argument),
 					ITerminalNode terminal => SliceSource(terminal.Symbol),
 					_ => MarkupText.Empty
 				};
@@ -218,7 +218,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// — not at the end of the token, which would swallow spaces the caller wrote.
 	/// </para>
 	/// </summary>
-	internal MString LiteralArgumentText(FunctionContext context)
+	internal MString LiteralArgumentText(IFunctionContext context)
 	{
 		var funChar = context.FUNCHAR()?.Symbol;
 		var closeParen = context.CPAREN()?.Symbol;
@@ -399,7 +399,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// <param name="context">The parser rule context to extract text from</param>
 	/// <returns>The text content as an MString</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal MString GetContextText(ParserRuleContext context)
+	internal MString GetContextText(ISoftcodeContext context)
 	{
 		var length = context.Stop?.StopIndex is null
 			? 0
@@ -419,7 +419,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// <returns>A function that evaluates the context when called</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static Func<ValueTask<CallState?>> CreateDeferredEvaluation(
-		EvaluationStringContext context,
+		IEvaluationStringContext context,
 		SharpMUSHParserVisitor visitor,
 		bool stripAnsi) => async () =>
 	{
@@ -428,7 +428,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		return result with { Message = stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message };
 	};
 
-	internal bool BeginsRestrictedEvaluation(FunctionContext context)
+	internal bool BeginsRestrictedEvaluation(IFunctionContext context)
 	{
 		var name = FunctionNameOf(context);
 		if (!parser.FunctionLibrary.TryGetValue(name, out var definition)) return false;
@@ -438,17 +438,17 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 				RestrictedTargetNames(context), parser.FunctionLibrary);
 	}
 
-	private IEnumerable<string> RestrictedTargetNames(FunctionContext context)
+	private IEnumerable<string> RestrictedTargetNames(IFunctionContext context)
 	{
 		for (var index = 0; index < context.ChildCount; index++)
 		{
 			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
-			if (context.GetChild(index) is EvaluationStringContext argument)
+			if (context.GetChild(index) is IEvaluationStringContext argument)
 				yield return GetContextText(argument).ToPlainText();
 		}
 	}
 
-	private static void DemandBoundedArguments(FunctionContext context)
+	private static void DemandBoundedArguments(IFunctionContext context)
 	{
 		var count = 1;
 		for (var index = 0; index < context.ChildCount; index++)
@@ -468,7 +468,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		while (pending.TryPeek(out var frame))
 		{
 			ExecutionBudget.Current?.ThrowIfExceeded();
-			if (frame.Node is FunctionContext function && frame.NextChild == 0)
+			if (frame.Node is IFunctionContext function && frame.NextChild == 0)
 			{
 				var found = _restrictedScanResults.TryGetValue(function, out var cached)
 					? cached : BeginsRestrictedEvaluation(function);
@@ -477,7 +477,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 					foreach (var ancestor in pending)
 					{
 						ExecutionBudget.Current?.ThrowIfExceeded();
-						if (ancestor.Node is FunctionContext ancestorFunction) _restrictedScanResults[ancestorFunction] = true;
+						if (ancestor.Node is IFunctionContext ancestorFunction) _restrictedScanResults[ancestorFunction] = true;
 					}
 					return true;
 				}
@@ -485,7 +485,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			}
 			if (frame.NextChild >= frame.Node.ChildCount)
 			{
-				if (frame.Node is FunctionContext completed) _restrictedScanResults[completed] = false;
+				if (frame.Node is IFunctionContext completed) _restrictedScanResults[completed] = false;
 				pending.Pop();
 				continue;
 			}
@@ -501,7 +501,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// whitespace the lexer folded in, and the opening parenthesis; this slices the name out of it
 	/// and lower-cases it in one allocation, which is what the library and the telemetry key on.
 	/// </summary>
-	private static string FunctionNameOf(FunctionContext context)
+	private static string FunctionNameOf(IFunctionContext context)
 	{
 		var funChar = context.FUNCHAR().GetText();
 		var length = funChar.AsSpan().TrimEnd().Length - 1;
@@ -524,7 +524,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		return arguments;
 	}
 
-	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
+	public override async ValueTask<CallState?> VisitFunction([NotNull] IFunctionContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
@@ -551,7 +551,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		var evalStrings = context.evaluationString();
 		var commas = context.COMMAWS();
 
-		EvaluationStringContext?[] arguments;
+		IEvaluationStringContext?[] arguments;
 		if (evalStrings is null || evalStrings is [] && commas is [])
 		{
 			// PennMUSH treats func() as having 1 empty arg, not 0 args.
@@ -560,7 +560,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		else
 		{
 			var argCount = commas.Length + 1;
-			arguments = new EvaluationStringContext?[argCount];
+			arguments = new IEvaluationStringContext?[argCount];
 			var evalIdx = 0;
 			for (var i = 0; i < argCount; i++)
 			{
@@ -611,7 +611,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			// PennMUSH wraps the function expression in [...] when the function was invoked
 			// inside bracket evaluation (e.g. think [add(1,2)]), but not for nested calls
 			// within function arguments (e.g. iter(a b, strlen(##)) — strlen is bare).
-			var isBracketed = context.Parent?.Parent is BracketPatternContext;
+			var isBracketed = context.Parent?.Parent is IBracketPatternContext;
 			var debugExpr = isBracketed ? $"[{context.GetText()}]" : context.GetText();
 			await SendDebugOrVerboseOutput(executorObj, $"#{dbrefNumber}! {indent}{debugExpr} :");
 			_didEmitFunctionDebug = true;
@@ -628,7 +628,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			return result;
 		}
 
-		var isBracketedPost = context.Parent?.Parent is BracketPatternContext;
+		var isBracketedPost = context.Parent?.Parent is IBracketPatternContext;
 		var debugExprPost = isBracketedPost ? $"[{context.GetText()}]" : context.GetText();
 		await SendDebugOrVerboseOutput(executorObj,
 			$"#{dbrefNumber}! {indent}{debugExprPost} => {result.Message?.ToPlainText() ?? ""}");
@@ -637,12 +637,12 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitEvaluationString(
-		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
+		[NotNull] IEvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
 		GetContextText(context),
 		context.Depth());
 
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
-		[NotNull] ExplicitEvaluationStringContext context)
+		[NotNull] IExplicitEvaluationStringContext context)
 	{
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
@@ -657,9 +657,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		{
 			// Only strip if the last child is literal text (genericText/beginGenericText)
 			// Function output (brackets) trailing spaces should be preserved within the expression
-			var children = context.children;
-			var lastChild = children[^1];
-			if (lastChild is GenericTextContext or BeginGenericTextContext)
+			var lastChild = context.GetChild(context.ChildCount - 1);
+			if (lastChild is IGenericTextContext or IBeginGenericTextContext)
 				result = result with { Message = result.Message.Trim(global::MarkupString.TrimType.TrimEnd, " ") };
 		}
 
@@ -667,7 +666,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitBraceExplicitEvaluationString(
-		[NotNull] BraceExplicitEvaluationStringContext context) =>
+		[NotNull] IBraceExplicitEvaluationStringContext context) =>
 		await VisitChildren(context)
 		?? new CallState(GetContextText(context),
 			context.Depth());
@@ -678,7 +677,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// otherwise a literal <c>$</c> followed by the rest, with a name still evaluated. A capture is
 	/// output, never source: nothing here is parsed again.
 	/// </summary>
-	public override async ValueTask<CallState?> VisitRegexpCapture([NotNull] RegexpCaptureContext context)
+	public override async ValueTask<CallState?> VisitRegexpCapture([NotNull] IRegexpCaptureContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
@@ -711,14 +710,14 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitBracePattern(
-		[NotNull] BracePatternContext context)
+		[NotNull] IBracePatternContext context)
 	{
 		_braceDepthCounter++;
 
 		// PennMUSH has two brace modes:
 		// 1. Command braces: full evaluation (functions work normally)
 		// 2. Function-arg braces: suppress function recognition (but % subs and [...] still work)
-		// Detect function-arg braces by checking if this brace has a FunctionContext ancestor.
+		// Detect function-arg braces by checking if this brace has a IFunctionContext ancestor.
 		var isFunctionArgBrace = IsInsideFunctionArg(context);
 		if (isFunctionArgBrace)
 			_suppressFunctionEval++;
@@ -761,7 +760,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitBracketPattern(
-		[NotNull] BracketPatternContext context)
+		[NotNull] IBracketPatternContext context)
 	{
 		// PennMUSH: [...] bracket evaluation inside braces RE-ENABLES PE_FUNCTION_CHECK.
 		// So {[add(1,2)]} evaluates add() to 3, even inside function-arg braces.
@@ -782,7 +781,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 
 		if (evaluates)
 		{
-			return result ?? new CallState(GetContextText(context), context.Depth());
+			// PennMUSH evaluates an empty [] to nothing.
+			return result ?? new CallState(context.evaluationString() is null ? MarkupText.Empty : GetContextText(context),
+				context.Depth());
 		}
 
 		if (result is null)
@@ -800,7 +801,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		};
 	}
 
-	public override async ValueTask<CallState?> VisitGenericText([NotNull] GenericTextContext context)
+	public override async ValueTask<CallState?> VisitGenericText([NotNull] IGenericTextContext context)
 	{
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
@@ -815,7 +816,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitBeginGenericText(
-		[NotNull] BeginGenericTextContext context)
+		[NotNull] IBeginGenericTextContext context)
 	{
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
@@ -831,12 +832,12 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			//
 			// Being that first element is necessary but NOT sufficient, because an
 			// explicitEvaluationString is not always the start of the string it belongs to:
-			// `evaluationString: function explicitEvaluationString?` (SharpMUSHParser.g4:65-67)
+			// `evaluationString: function explicitEvaluationString?` (every evaluationString__* copy)
 			// parses the text *after* a leading call as a second explicitEvaluationString, whose
 			// first element is exactly such a node. `add(1,2) x` used to lose that space and yield
 			// "3x"; the space separates the call's result from what follows it and is no more
 			// leading than the "3" is. So a tail-of-a-call node is excluded here.
-			if (context.Parent is ExplicitEvaluationStringContext or BraceExplicitEvaluationStringContext
+			if (context.Parent is IExplicitEvaluationStringContext or IBraceExplicitEvaluationStringContext
 					&& !FollowsACallInTheSameEvaluationString(context.Parent))
 				compressed = compressed.Trim(global::MarkupString.TrimType.TrimStart, " ");
 			return result with { Message = compressed };
@@ -856,11 +857,11 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// </para>
 	/// </summary>
 	private static bool FollowsACallInTheSameEvaluationString(Antlr4.Runtime.Tree.IParseTree explicitEvaluationString)
-		=> explicitEvaluationString.Parent is EvaluationStringContext evaluationString
+		=> explicitEvaluationString.Parent is IEvaluationStringContext evaluationString
 			 && evaluationString.function() is not null;
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
-		[NotNull] ValidSubstitutionContext context)
+		[NotNull] IValidSubstitutionContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
@@ -904,7 +905,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// when the first output character is not a letter. Applying it here, once, covers every
 	/// substitution kind; it is idempotent for any output that is already capitalized.
 	/// </summary>
-	private static CallState? CapitalizeForUpperSelector(ValidSubstitutionContext context, CallState? result)
+	private static CallState? CapitalizeForUpperSelector(IValidSubstitutionContext context, CallState? result)
 	{
 		if (result?.Message is null || result.Message.Length < 1)
 		{
@@ -937,7 +938,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 		return result with { Message = MarkupText.Concat(firstChar, rest) };
 	}
 
-	public override async ValueTask<CallState?> VisitCommand([NotNull] CommandContext context)
+	public override async ValueTask<CallState?> VisitCommand([NotNull] ICommandContext context)
 	{
 		if (parser.CurrentState.ParseMode == ParseMode.NoParse)
 		{
@@ -949,7 +950,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(
-		[NotNull] StartCommandStringContext context)
+		[NotNull] IStartCommandStringContext context)
 	{
 		var result = await VisitChildren(context);
 		if (result != null)
@@ -964,7 +965,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	private bool BreakTriggered()
 		=> parser.CurrentState.ExecutionStack.TryPeek(out var result) && result.CommandListBreak;
 
-	public override async ValueTask<CallState?> VisitCommandList([NotNull] CommandListContext context)
+	public override async ValueTask<CallState?> VisitCommandList([NotNull] ICommandListContext context)
 	{
 		// Claim the one-shot before the children run, so only THIS list — the outermost of the parse
 		// the caller started — reports its break upward. Lists nested deeper inside it find the flag
@@ -1004,10 +1005,10 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// command that starts with <c>|</c> (<c>look ;| say %|</c>). <c>|</c> is no command of its own, so
 	/// <c>; |</c> pipes the same way.
 	/// </summary>
-	private bool IsPipedInto(CommandListContext context, int index)
+	private bool IsPipedInto(ICommandListContext context, int index)
 		=> index > 0
 			&& index < context.ChildCount
-			&& context.GetChild(index) is CommandContext { Start: { } start }
+			&& context.GetChild(index) is ICommandContext { Start: { } start }
 			&& context.GetChild(index - 1) is ITerminalNode { Symbol: { } separator }
 			&& separator.Type == SEMICOLON
 			// The separator token takes the spaces after the ';', so this is the command's first character.
@@ -1015,7 +1016,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			&& start.StartIndex < source.Text.Length
 			&& source.Text[start.StartIndex] == '|';
 
-	private bool HasPipe(CommandListContext context)
+	private bool HasPipe(ICommandListContext context)
 	{
 		for (var i = 2; i < context.ChildCount; i++)
 		{
@@ -1030,7 +1031,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// executor is taken instead of shown, and the next command, run without its <c>|</c>, reads it as
 	/// <c>%|</c>. Otherwise the list runs as <see cref="VisitChildrenOrBreak"/> runs it.
 	/// </summary>
-	private async ValueTask<CallState?> VisitPipedCommandList(CommandListContext context)
+	private async ValueTask<CallState?> VisitPipedCommandList(ICommandListContext context)
 	{
 		List<CallState>? results = null;
 		MString? printed = null;
@@ -1042,7 +1043,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			var child = context.GetChild(i);
 			if (child is null) continue;
 
-			var pipesOn = child is CommandContext && IsPipedInto(context, i + 2);
+			var pipesOn = child is ICommandContext && IsPipedInto(context, i + 2);
 			var buffer = pipesOn && parser.CurrentState.Executor is { } executor && _services.PipeCapture is { } capture
 				? (Buffer: new PipeBuffer(parser.CurrentState.OutputLimit), Capture: capture, Executor: executor.Number)
 				: default;
@@ -1050,12 +1051,12 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 			CallState? childResult;
 			using (buffer.Buffer is not null ? buffer.Capture.BeginCapture(buffer.Executor, buffer.Buffer) : null)
 			{
-				childResult = child is CommandContext command && IsPipedInto(context, i)
+				childResult = child is ICommandContext command && IsPipedInto(context, i)
 					? await RunPipedInto(command, printed ?? MarkupText.Empty)
 					: await child.Accept(this);
 			}
 
-			if (child is CommandContext)
+			if (child is ICommandContext)
 			{
 				printed = buffer.Buffer?.Text;
 			}
@@ -1079,7 +1080,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// Runs a command after <c>;|</c> without its <c>|</c>, with <paramref name="printed"/> as its
 	/// <c>%|</c> and the list's own <c>%|</c> back afterwards.
 	/// </summary>
-	private async ValueTask<CallState?> RunPipedInto(CommandContext command, MString printed)
+	private async ValueTask<CallState?> RunPipedInto(ICommandContext command, MString printed)
 	{
 		var start = command.Start.StartIndex + 1;
 		var text = source.Substring(start, command.Stop.StopIndex - start + 1);
@@ -1099,7 +1100,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitStartSingleCommandString(
-		[NotNull] StartSingleCommandStringContext context)
+		[NotNull] IStartSingleCommandStringContext context)
 	{
 		var result = await VisitChildren(context);
 		if (result is not null)
@@ -1136,7 +1137,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitStartPlainSingleCommandArg(
-		[NotNull] StartPlainSingleCommandArgContext context)
+		[NotNull] IStartPlainSingleCommandArgContext context)
 	{
 		var evalString = context.evaluationString();
 		if (evalString is null)
@@ -1164,7 +1165,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitStartEqSplitCommandArgs(
-		[NotNull] StartEqSplitCommandArgsContext context)
+		[NotNull] IStartEqSplitCommandArgsContext context)
 	{
 		var evalString = context.evaluationString();
 		var baseArg = evalString is not null ? await Visit(evalString) : CallState.Empty;
@@ -1188,7 +1189,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitStartEqSplitCommand(
-		[NotNull] StartEqSplitCommandContext context)
+		[NotNull] IStartEqSplitCommandContext context)
 	{
 		var evalStrings = context.evaluationString();
 		var equalsToken = context.EQUALS();
@@ -1231,7 +1232,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitCommaCommandArgs(
-		[NotNull] CommaCommandArgsContext context)
+		[NotNull] ICommaCommandArgsContext context)
 	{
 		var evalStrings = context.evaluationString();
 		var commas = context.COMMAWS();
@@ -1265,7 +1266,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserBaseVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
-		[NotNull] ComplexSubstitutionSymbolContext context)
+		[NotNull] IComplexSubstitutionSymbolContext context)
 	{
 		if (context.ChildCount > 1)
 			return await VisitChildren(context);

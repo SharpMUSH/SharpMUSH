@@ -81,26 +81,14 @@ internal static class SoftcodeParsePipeline
 	/// A parser over <paramref name="tokens"/> with no error listeners. Callers attach the listener
 	/// and error strategy their pass needs.
 	/// </summary>
-	/// <param name="resolvePredicates">
-	/// Predict with <see cref="PredicateResolvingSimulator"/>, which settles the grammar's predicates
-	/// before the lookahead instead of after it. Without it, a large bracketed expression in a later
-	/// argument (<c>if(c,A,[...])</c>) takes time exponential in the calls inside the bracket. The
-	/// SLL pass of two-stage prediction uses it; the LL pass that reports a syntax error does not,
-	/// so its errors and recovery stay ANTLR's own.
-	/// </param>
 	public static SharpMUSHParser CreateParser(BufferedTokenSpanStream tokens, bool parenGroups, PredictionMode mode,
-		bool trace = false, bool resolvePredicates = false)
+		bool trace = false)
 	{
 		var parser = new SharpMUSHParser(tokens)
 		{
-			parenGroups = parenGroups,
+			ParenGroups = parenGroups,
 			Trace = trace
 		};
-		if (resolvePredicates)
-		{
-			parser.ResolvePredicatesAtDecisionStart();
-		}
-
 		parser.Interpreter.PredictionMode = mode;
 		parser.RemoveErrorListeners();
 
@@ -108,15 +96,14 @@ internal static class SoftcodeParsePipeline
 	}
 
 	/// <summary>
-	/// The SLL pass of two-stage prediction, for a <paramref name="parser"/> built with SLL and
-	/// <c>resolvePredicates</c>: runs <paramref name="entryPoint"/> under a
-	/// <see cref="BailErrorStrategy"/> and returns the tree only if nothing went wrong. A tree from
-	/// here is the one LL would build, so it stands; on <see langword="null"/>, the caller seeks the
-	/// tokens back to the start and parses again with LL, which decides whether the input really has
-	/// a syntax error and reports it.
+	/// The SLL pass of two-stage prediction, for a <paramref name="parser"/> built with SLL: runs
+	/// <paramref name="entryPoint"/> under a <see cref="BailErrorStrategy"/> and returns the tree only
+	/// if nothing went wrong. A tree from here is the one LL would build, so it stands; on
+	/// <see langword="null"/>, the caller seeks the tokens back to the start and parses again with LL,
+	/// which decides whether the input really has a syntax error and reports it.
 	/// </summary>
 	public static TContext? ParseClean<TContext>(SharpMUSHParser parser, Func<SharpMUSHParser, TContext> entryPoint,
-		ParserErrorListener errors) where TContext : ParserRuleContext
+		ParserErrorListener errors) where TContext : class, SharpMUSHParser.ISoftcodeContext
 	{
 		parser.ErrorHandler = new BailErrorStrategy();
 		parser.AddErrorListener(errors);
@@ -135,27 +122,29 @@ internal static class SoftcodeParsePipeline
 	/// Runs the grammar rule that starts a parse of <paramref name="parseType"/>. Every one of these
 	/// rules is anchored at EOF, so a successful parse consumed the whole input.
 	/// </summary>
-	public static ParserRuleContext Enter(SharpMUSHParser parser, ParseType parseType) => parseType switch
+	public static SharpMUSHParser.ISoftcodeContext Enter(SharpMUSHParser parser, ParseType parseType) => parseType switch
 	{
-		ParseType.Command => parser.startSingleCommandString(),
-		ParseType.CommandList => parser.startCommandString(),
-		ParseType.CommandSingleArg => parser.startPlainSingleCommandArg(),
-		ParseType.CommandCommaArgs => parser.startPlainCommaCommandArgs(),
-		ParseType.CommandEqSplitArgs => parser.startEqSplitCommandArgs(),
-		ParseType.CommandEqSplit => parser.startEqSplitCommand(),
-		_ => parser.startPlainString()
+		ParseType.Command => parser.StartSingleCommandString(),
+		ParseType.CommandList => parser.StartCommandString(),
+		ParseType.CommandSingleArg => parser.StartPlainSingleCommandArg(),
+		ParseType.CommandCommaArgs => parser.StartPlainCommaCommandArgs(),
+		ParseType.CommandEqSplitArgs => parser.StartEqSplitCommandArgs(),
+		ParseType.CommandEqSplit => parser.StartEqSplitCommand(),
+		_ => parser.StartPlainString()
 	};
 
 	/// <summary>
-	/// Whether the token stream nests recursion-causing delimiters — <c>[</c>, <c>{</c>, and a
-	/// function-call <c>name(</c> — deeper than <paramref name="limit"/>. These are exactly the
-	/// three constructs whose parser rules recurse (<c>bracketPattern</c>, <c>bracePattern</c>,
-	/// <c>function</c>); a bare <c>(</c> is plain text and does not open a rule, so it is tracked
-	/// only to match its closing <c>)</c> and never counts toward the depth. Escaped delimiters
-	/// never reach here as openers — the lexer emits <c>ESCAPE</c> + <c>ANY</c> for <c>\[</c> — so
-	/// they add no depth, matching what the parser would have done.
+	/// Whether the token stream nests recursion-causing delimiters — <c>[</c>, <c>{</c>, a
+	/// function-call <c>name(</c>, and with <paramref name="parenGroups"/> a bare <c>(</c> — deeper
+	/// than <paramref name="limit"/>. These are exactly the constructs whose parser rules recurse
+	/// (<c>bracketPattern</c>, <c>bracePattern</c>, <c>function</c>, and the paren-group rules).
+	/// Without paren_groups a bare <c>(</c> is plain text and opens no rule, so it is tracked only to
+	/// match its closing <c>)</c>. Escaped delimiters never reach here as openers — the lexer emits
+	/// <c>ESCAPE</c> + <c>ANY</c> for <c>\[</c> — so they add no depth, matching what the parser
+	/// would have done.
 	/// </summary>
-	public static bool ExceedsNestingLimit(BufferedTokenSpanStream tokenStream, int limit, out IToken? offendingToken)
+	public static bool ExceedsNestingLimit(BufferedTokenSpanStream tokenStream, int limit, bool parenGroups,
+		out IToken? offendingToken)
 	{
 		offendingToken = null;
 		// Most lines open nothing at all, so the matching stack exists only once one does.
@@ -178,6 +167,10 @@ internal static class SoftcodeParsePipeline
 					(open ??= new Stack<char>()).Push('(');
 					if (++depth > limit) { offendingToken = token; return true; }
 					break;
+				case SharpMUSHLexer.OPAREN when parenGroups:
+					(open ??= new Stack<char>()).Push('g');
+					if (++depth > limit) { offendingToken = token; return true; }
+					break;
 				case SharpMUSHLexer.OPAREN:
 					(open ??= new Stack<char>()).Push('o');
 					break;
@@ -188,9 +181,9 @@ internal static class SoftcodeParsePipeline
 					if (open is not null && open.TryPeek(out var c) && c == '{') { open.Pop(); depth--; }
 					break;
 				case SharpMUSHLexer.CPAREN:
-					if (open is not null && open.TryPeek(out var p) && p is '(' or 'o')
+					if (open is not null && open.TryPeek(out var p) && p is '(' or 'g' or 'o')
 					{
-						if (p == '(') depth--;
+						if (p is '(' or 'g') depth--;
 						open.Pop();
 					}
 					break;
@@ -206,7 +199,7 @@ internal static class SoftcodeParsePipeline
 	/// parser errors on unmatched brackets.
 	///
 	/// When the lexer encounters \[, it produces ESCAPE + ANY (not OBRACK),
-	/// so inBracketDepth never increments. The matching ] still becomes CBRACK
+	/// so no bracketPattern opens. The matching ] still becomes CBRACK
 	/// with no open bracketPattern to close, causing a syntax error.
 	/// This method fixes that by converting orphaned CBRACKs to OTHER.
 	///

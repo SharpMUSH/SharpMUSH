@@ -56,7 +56,7 @@ public class ParseDepthGuardTests
 	}
 
 	/// <summary>
-	/// A bare <c>(</c> is plain text, not a recursive rule, so <see cref="MUSHCodeParser"/>
+	/// Without paren_groups a bare <c>(</c> is plain text, not a recursive rule, so <see cref="MUSHCodeParser"/>
 	/// deliberately does not count it toward the nesting depth. This case runs a run of bare
 	/// parentheses well past both the guard (1000) and the observed crash depth: it must parse
 	/// as literal text — never the call-limit error — which is exactly the assumption that keeps
@@ -74,6 +74,25 @@ public class ParseDepthGuardTests
 		var input = new string('(', depth) + "x" + new string(')', depth);
 
 		await Assert.That(await EvalPlain(input)).IsEqualTo(input);
+	}
+
+	/// <summary>
+	/// With paren_groups on, a bare <c>(</c> opens a group, which is a recursive rule, so it counts
+	/// toward the depth like a bracket. Closed and left open alike: an unclosed group nests too.
+	/// </summary>
+	[Test]
+	[Arguments("closed", 2000)]
+	[Arguments("closed", 12000)]
+	[Arguments("open", 12000)]
+	public async Task RefusesOverDeepParenGroups(string kind, int depth)
+	{
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { ParenGroups = true }
+		});
+		var input = new string('(', depth) + "x" + (kind == "closed" ? new string(')', depth) : "");
+
+		await Assert.That(await EvalPlain(input)).IsEqualTo("#-1 CALL LIMIT EXCEEDED");
 	}
 
 	/// <summary>

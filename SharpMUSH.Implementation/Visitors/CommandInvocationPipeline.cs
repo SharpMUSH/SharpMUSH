@@ -28,7 +28,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// switch and lock checks.
 	/// </summary>
 	public async ValueTask<Option<CallState>> InternalAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
-		MString src, CommandContext context, string rootCommand, string[] switches,
+		MString src, ICommandContext context, string rootCommand, string[] switches,
 		CommandDefinition libraryCommandDefinition)
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
@@ -563,7 +563,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 	/// <summary>A <c>SOCKET</c> command: one the connection answers itself, logged in or not.</summary>
 	public async ValueTask<Option<CallState>> SocketAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs, MString src,
-		CommandContext context, string command, CommandDefinition librarySocketCommandDefinition)
+		ICommandContext context, string command, CommandDefinition librarySocketCommandDefinition)
 	{
 		// The typed token is passed as the root command so SplitAsync's no-space branch strips it.
 		// Without it a bare "IDLE" splits to a single argument equal to "IDLE" itself, and every socket
@@ -596,7 +596,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 	/// <summary>A single-token command (<c>&amp;</c>, <c>]</c>, <c>~</c>, ...): the token is the command and what is glued to it its first argument.</summary>
 	public async ValueTask<Option<CallState>> SingleTokenAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
-		MString src, CommandContext context, string command, MString tokenText, CommandDefinition singleLibraryCommandDefinition)
+		MString src, ICommandContext context, string command, MString tokenText, CommandDefinition singleLibraryCommandDefinition)
 	{
 		var singleRootCommand = command[..1];
 
@@ -660,7 +660,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 	/// <summary>A chat alias (<c>+channel message</c>): runs <c>@CHAT</c> on the matched channel.</summary>
 	public async Task<Option<CallState>> ChannelAsync(IMUSHCodeParser prs, SharpChannel channel,
-		CommandContext context, MString src)
+		ICommandContext context, MString src)
 	{
 		var full = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
 		var aliasStart = CommandArgumentSplitter.SkipSpaces(full, 0);

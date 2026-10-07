@@ -72,7 +72,7 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 
 	/// <summary>
 	/// Parallel to <see cref="Arguments"/>: the retained NoParse-pass parse-tree node for each
-	/// command-argument slot (a <c>SharpMUSHParser.EvaluationStringContext</c>, boxed as
+	/// command-argument slot (a <c>SharpMUSHParser.IEvaluationStringContext</c>, boxed as
 	/// <see cref="object"/> so this shared/plugin-packaged contract type does not have to reference
 	/// the ANTLR-generated parser assembly — see the <c>PrivateAssets="all"</c> note on the
 	/// <c>SharpMUSH.Parser.Generated</c> reference in SharpMUSH.Library.csproj), or <see langword="null"/>

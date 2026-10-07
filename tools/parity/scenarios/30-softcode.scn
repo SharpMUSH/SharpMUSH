@@ -92,3 +92,7 @@ think a>b
 ::as wiz
 think a%|b
 think a|b
+
+::case sc.empty-bracket  an empty [] evaluates to nothing
+::as wiz
+think a[]b|[strcat(x,[],y)]|[]

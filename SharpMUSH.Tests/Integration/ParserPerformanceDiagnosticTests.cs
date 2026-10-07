@@ -20,7 +20,7 @@ namespace SharpMUSH.Tests.Integration;
 /// - SLL vs LL parse time comparison
 /// - Full context scan count and locations (SLL→LL fallback in ANTLR4)
 /// - Ambiguity reports (rules with multiple viable alternatives)
-/// - Context sensitivity events (predicate-dependent decisions)
+/// - Context sensitivity events (decisions SLL could not settle and full LL did)
 /// - Syntax error comparison between modes
 /// </summary>
 public class ParserPerformanceDiagnosticTests
@@ -137,7 +137,7 @@ public class ParserPerformanceDiagnosticTests
 		parser.AddErrorListener(new DiagnosticErrorListener(false));
 
 		var sw = Stopwatch.StartNew();
-		_ = parser.startCommandString();
+		_ = parser.StartCommandString();
 		sw.Stop();
 
 		return new LineParseResult(
@@ -440,10 +440,10 @@ public class ParserPerformanceDiagnosticTests
 
 		Log("");
 		Log("  NOTE ON FULL CONTEXT SCANS:");
-		Log("  Full context scans are expected with semantic predicates like");
-		Log("  { inFunction == 0 }? and { inBracketDepth == 0 }?. These predicates");
-		Log("  depend on parser state at parse time, requiring ANTLR4 to evaluate them");
-		Log("  in full context. This is correct behavior, not a performance bug.");
+		Log("  The grammar has no semantic predicates: each rule exists once per context");
+		Log("  (function__Call_*, beginGenericText__Top_*, ...), so what a token is follows");
+		Log("  from the rule it lands in. A full context scan still happens where SLL");
+		Log("  cannot decide on its own; that is not a performance bug by itself.");
 		Log("  The scans are O(n) in the size of the ambiguous region and are typically");
 		Log("  very fast for the short token spans involved in MUSH code.");
 
@@ -451,12 +451,12 @@ public class ParserPerformanceDiagnosticTests
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		TestDiagnostics.WriteLine($"\n[DIAGNOSTICS] Full output written to: {outputPath}");
 
-		// Assertions — 2 syntax errors expected from BBS lines 74 and 96
-		// (orphaned CBRACK after escaped brackets — Fix A reverted to prevent AdaptivePredict hang)
-		await Assert.That(llTotalSyntaxErrors).IsEqualTo(2)
-			.Because("BBS lines 74 and 96 have syntax errors from orphaned CBRACK (Fix A reverted)");
-		await Assert.That(sllTotalSyntaxErrors).IsEqualTo(2)
-			.Because("BBS lines 74 and 96 have syntax errors from orphaned CBRACK (Fix A reverted)");
+		// Assertions — BBS lines 74 and 96 each hold two `\[...]` whose `]` has no opener. This test
+		// lexes without SoftcodeParsePipeline's orphaned-closer rewrite, so each `]` is an error.
+		await Assert.That(llTotalSyntaxErrors).IsEqualTo(4)
+			.Because("BBS lines 74 and 96 each have two orphaned ] after an escaped [");
+		await Assert.That(sllTotalSyntaxErrors).IsEqualTo(4)
+			.Because("BBS lines 74 and 96 each have two orphaned ] after an escaped [");
 		await Assert.That(differingLines).IsEmpty()
 			.Because("SLL and LL modes should produce identical error results on every line");
 	}
