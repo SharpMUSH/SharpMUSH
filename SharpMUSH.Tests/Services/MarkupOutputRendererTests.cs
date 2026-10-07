@@ -668,4 +668,36 @@ public partial class MarkupOutputRendererTests
 	public async Task AThemeThatCannotBeText_LeavesTheLayoutAlone()
 		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "{\"look\":{\"bullet\":\"\\ud800\"}}" })))
 			.StartsWith("+=");
+
+	/// <summary>A notice() as it reaches the renderer: its lead, then the message.</summary>
+	private static MarkupText Notice(string? word, string message) =>
+		MarkupText.Concat([NoticeMarkup.Build(MarkupText.Plain("JOBS"), word, BoldRed), MarkupText.Space, MarkupText.Plain(message)]);
+
+	[Test]
+	[Arguments("Error", "There is no job 12.", "JOBS error: There is no job 12.")]
+	[Arguments(null, "Job 12 is due Friday.", "JOBS: Job 12 is due Friday.")]
+	public async Task ANotice_ReadsWithoutBracketsForAScreenReader(string? word, string message, string spoken)
+		=> await Assert.That(StripAnsi(Render(Notice(word, message), new ProtocolCapabilities(ScreenReader: true), null))).IsEqualTo(spoken);
+
+	[Test]
+	[Arguments(OutputFormat.Ansi)]
+	[Arguments(OutputFormat.Pueblo)]
+	[Arguments(OutputFormat.Mxp)]
+	public async Task ANotice_KeepsItsBracketsAndDropsItsTags(OutputFormat format)
+	{
+		var rendered = StripAnsi(Render(Notice("Error", "There is no job 12."), new ProtocolCapabilities(SupportsAnsi: true, Format: format), AllColour));
+
+		await Assert.That(rendered).Contains("[JOBS] Error: There is no job 12.");
+		await Assert.That(rendered).DoesNotContain("span").And.DoesNotContain("aria-hidden");
+	}
+
+	[Test]
+	public async Task ANotice_KeepsItsColourForAScreenReaderThatAsksForIt()
+		=> await Assert.That(Render(Notice("Error", "x"), new ProtocolCapabilities(ScreenReader: true, ColorStylePin: ColorStyles.SixteenColor), null))
+			.StartsWith("\u001b[");
+
+	[Test]
+	public async Task ThePortal_KeepsANoticesBracketsFromItsScreenReader()
+		=> await Assert.That(TagwrapPolicy.Portal.TryCreate("span", "aria-hidden=\"true\"", out var tag) ? tag.Attributes : null)
+			.IsEqualTo("aria-hidden=\"true\"");
 }

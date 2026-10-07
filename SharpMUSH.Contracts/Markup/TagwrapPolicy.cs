@@ -30,10 +30,11 @@ public static class TagwrapPolicy
 	/// <summary>
 	/// The presentational attributes the tags above take. Event handlers (<c>on*</c>) and <c>style</c>
 	/// are absent because a browser runs or lays them out, and <c>XCH_CMD</c> and <c>SEND</c> because
-	/// PennMUSH withholds them: a command link is <c>cmdlink()</c>'s, behind the same power.
+	/// PennMUSH withholds them: a command link is <c>cmdlink()</c>'s, behind the same power. <c>aria-hidden</c>
+	/// keeps decoration, such as a <c>notice()</c> badge's brackets, from a screen reader.
 	/// </summary>
 	public static readonly FrozenSet<string> Attributes = FrozenSet.Create(StringComparer.OrdinalIgnoreCase,
-		"align", "alt", "bgcolor", "border", "cellpadding", "cellspacing", "class", "color", "cols", "colspan",
+		"align", "alt", "aria-hidden", "bgcolor", "border", "cellpadding", "cellspacing", "class", "color", "cols", "colspan",
 		"face", "height", "href", "lang", "rows", "rowspan", "size", "span", "src", "start", "title", "type",
 		"valign", "value", "width", "xch_hint");
 

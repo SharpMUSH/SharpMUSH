@@ -1,6 +1,7 @@
 using MarkupString.Layout;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -285,7 +286,7 @@ public class LayoutFunctionTests
 	public async Task ANoticeColoursItsBadgeAndWordForItsKind()
 	{
 		var error = (await Eval("notice(JOBS,There is [ansi(u,no)] job 12.,error)")).Render(MarkupFormat.Ansi);
-		var lead = (await Eval("notice(JOBS,x,error)")).Render(MarkupFormat.Ansi);
+		var lead = NoticeMarkup.ForTelnet(await Eval("notice(JOBS,x,error)"), false).Render(MarkupFormat.Ansi);
 		await Assert.That(lead).IsEqualTo((await Eval("ansi(hr,\\[JOBS\\] Error:) x")).Render(MarkupFormat.Ansi));
 		await Assert.That(error).Contains("There is ").And.Contains((await Eval("ansi(u,no)")).Render(MarkupFormat.Ansi));
 

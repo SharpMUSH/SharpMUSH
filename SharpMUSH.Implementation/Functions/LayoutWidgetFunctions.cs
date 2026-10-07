@@ -252,7 +252,8 @@ public partial class Functions
 	/// <summary>
 	/// <c>notice(&lt;source&gt;, &lt;text&gt;[, &lt;kind&gt;])</c> — a message from a system, led by the system's
 	/// badge in its kind's colour and, for every kind but <c>info</c> and <c>muted</c>, the kind as a word
-	/// (<c>Done:</c>, <c>Warning:</c>, <c>Error:</c>), so a reader without colour still knows it.
+	/// (<c>Done:</c>, <c>Warning:</c>, <c>Error:</c>), so a reader without colour still knows it. A screen
+	/// reader is sent the lead without its brackets (<see cref="NoticeMarkup"/>).
 	/// </summary>
 	[SharpFunction(Name = "notice", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["source", "text", "kind"])]
 	public ValueTask<CallState> Notice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -260,15 +261,9 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (BadgeKindOf(Arg(args, 2)) is not { } kind) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
 
-		// The badge and the word are one run of colour, so a terminal is sent them as one.
-		var source = Arg(args, 0);
-		var lead = new List<MString>();
-		if (source.ToPlainText().Trim().Length > 0) lead.Add(MarkupText.Concat([MarkupText.Plain("["), source, MarkupText.Plain("]")]));
-		if (kind.Word is { } word) lead.Add(MarkupText.Plain(word + ":"));
+		var lead = NoticeMarkup.Build(Arg(args, 0), kind.Word, BadgeColour(kind));
 		var text = Arg(args, 1);
-		return ValueTask.FromResult(new CallState(lead.Count == 0
-			? text
-			: MarkupText.Concat([MarkupText.Wrap(BadgeColour(kind), MarkupText.Join(MarkupText.Space, lead)), MarkupText.Space, text])));
+		return ValueTask.FromResult(new CallState(lead.Length == 0 ? text : MarkupText.Concat([lead, MarkupText.Space, text])));
 	}
 
 	/// <summary>A badge's kind: the classic colour codes, the theme colour that replaces them, and the word that says it.</summary>
