@@ -139,6 +139,8 @@ reached at one stable HTTPS address and the proxy passes the browser's `Host` th
 | 4203 | Telnet over TLS — *configured but not yet implemented* | not yet |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
 | 4202 | Connection server HTTP / `/ws` WebSocket | no — internal, reached via Caddy's `/ws` route |
+| 9092 | Server `/metrics` for Prometheus (plain HTTP, answers nothing else; `Metrics:Port`, 0 turns it off) | no — scrape it from the compose network |
+| 9091 | Connection server `/metrics` (same; `ConnectionServer:MetricsPort`) | no — scrape it from the compose network |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
 
 > **Telnet is unencrypted today.** Everything a player types on `4201`, including their password
@@ -438,7 +440,7 @@ tenth of the copy, and never less than 16 MiB. If there is not enough room, the 
 the disk fills during a copy anyway, the partial `.incoming-*` copy is deleted and the copies already
 kept are left as they were.
 
-Suggested alerts, on the server's `/metrics`:
+Suggested alerts, on the server's `/metrics` (scrape `sharpmush-server:9092`; port 8080 redirects to HTTPS):
 
 ```
 sharpmush_storage_backup_fits == 0                                     # next backup will refuse to start
