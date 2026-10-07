@@ -373,6 +373,33 @@ public class MarkupTagFunctionTests
 		await Assert.That(said.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 	}
 
+	/// <summary>
+	/// A markdown image is a picture for whoever may call <c>image()</c>, and only the placeholder for
+	/// anyone else, so <c>rendermarkdown()</c> is no way around the gate.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdown_ShowsAPictureOnlyForWhoeverMaySendOne()
+	{
+		var wizard = await Eval("rendermarkdown(!%[A map%]%(/assets/map.png%))");
+		var mortal = await MortalAsync("MarkdownImageMortal");
+		var said = await ThinkAs(mortal, "rendermarkdown(!%[A map%]%(/assets/map.png%))");
+
+		await Assert.That(wizard.Render(MarkupFormat.Html)).Contains("src=\"/assets/map.png\"");
+		await Assert.That(wizard.ToPlainText()).Contains("[image: A map]");
+		await Assert.That(said.Render(MarkupFormat.Html)).DoesNotContain("<img");
+		await Assert.That(said.ToPlainText()).Contains("[image: A map]");
+	}
+
+	/// <summary><c>+wiki</c> draws its article in a <c>box()</c>; the picture has to come out the other side.</summary>
+	[Test]
+	public async Task RenderMarkdown_PictureSurvivesABox()
+	{
+		var boxed = await Eval("box(rendermarkdown(!%[A map%]%(/assets/map.png%)),Title)");
+
+		await Assert.That(boxed.Render(MarkupFormat.Html)).Contains("src=\"/assets/map.png\"");
+		await Assert.That(boxed.Render(MarkupFormat.Ansi)).Contains("[image: A map]");
+	}
+
 	[Test]
 	public async Task AMortalMayStillSayHowTextIsLaidOut()
 	{

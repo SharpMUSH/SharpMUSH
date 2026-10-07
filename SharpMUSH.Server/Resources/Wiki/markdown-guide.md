@@ -57,6 +57,12 @@ plain numbers (pixels) or percentages:
 Only `width`, `height`, and CSS class names (`{.my-class}`) are honoured in
 attribute blocks; anything else is stripped.
 
+In the game, `@wiki` and `+wiki` show the picture to a client that can draw one
+(the web terminal, MXP, Pueblo), at its pixel size when it has one. An image on a
+line of its own is a figure, as `figure()` draws it. Any other
+client reads `[image: alt text]`, which is why the alt text is worth writing.
+Pictures from other sites follow the game's `image_hosts` setting.
+
 ## Tables
 
 ```

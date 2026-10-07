@@ -356,6 +356,11 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		Template("IMAGE", Args(Text(content.ToPlainText().Trim()), Text(link.Url)))
 			?? base.RenderImage(link, content);
 
+	/// <summary>An image alone in its paragraph goes to <c>IMAGE</c> too, so a template sees every image.</summary>
+	protected override MString RenderFigure(LinkInline link, MString content) =>
+		Template("IMAGE", Args(Text(content.ToPlainText().Trim()), Text(link.Url)))
+			?? base.RenderFigure(link, content);
+
 	/// <summary>
 	/// <c>RENDERMARKUP`WIKILINK</c>: <c>%0</c> display text, <c>%1</c> the <c>@wiki</c> page reference,
 	/// <c>%2</c> the target page's title. All three are plain by construction.

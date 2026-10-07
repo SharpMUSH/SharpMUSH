@@ -1,5 +1,6 @@
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,8 +17,9 @@ public partial class Functions
 	/// <param name="_2">Function attribute metadata</param>
 	/// <returns>Rendered markdown as MarkupString</returns>
 	[SharpFunction(Name = "rendermarkdown", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
-	public ValueTask<CallState> RenderMarkdown(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> RenderMarkdown(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		var markdown = "";
@@ -32,18 +34,18 @@ public partial class Functions
 			var widthStr = widthArg.Message!.ToPlainText();
 			if (!int.TryParse(widthStr, out width) || width < 10 || width > 1000)
 			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidWidth));
+				return new CallState(ErrorMessages.Returns.InvalidWidth);
 			}
 		}
 
 		try
 		{
-			var result = RecursiveMarkdownHelper.RenderMarkdown(markdown, width, parser);
-			return ValueTask.FromResult(new CallState(result));
+			var renderer = new RecursiveMarkdownRenderer(width, parser) { ImageAllowed = await MarkdownImagePolicy(executor) };
+			return new CallState(RecursiveMarkdownHelper.RenderMarkdown(markdown, renderer));
 		}
 		catch (Exception ex)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.MarkdownRenderErrorFormat, ex.Message)));
+			return new CallState(string.Format(ErrorMessages.Returns.MarkdownRenderErrorFormat, ex.Message));
 		}
 	}
 
@@ -78,6 +80,7 @@ public partial class Functions
 			}
 		}
 
+		var imageAllowed = await MarkdownImagePolicy(executor);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, templateObjRef, LocateFlags.All,
 			async templateObj =>
@@ -85,7 +88,8 @@ public partial class Functions
 				try
 				{
 					var customRenderer = new CustomizableMarkdownRenderer(
-						parser, executor, templateObj, AttributeService, width);
+						parser, executor, templateObj, AttributeService, width)
+					{ ImageAllowed = imageAllowed };
 					var result = customRenderer.RenderMarkdown(markdown);
 					return new CallState(result);
 				}
@@ -95,4 +99,12 @@ public partial class Functions
 				}
 			});
 	}
+
+	/// <summary>
+	/// Which of a markdown image's addresses render as a picture: the ones <c>image()</c> would show for
+	/// <paramref name="executor"/>. Without Send_OOB the markdown's images stay their placeholders, so
+	/// <c>rendermarkdown()</c> is no way around what <c>image()</c> asks.
+	/// </summary>
+	private async ValueTask<Func<string, bool>?> MarkdownImagePolicy(AnySharpObject executor)
+		=> await CanSendOob(executor) ? ImageAllowed : null;
 }

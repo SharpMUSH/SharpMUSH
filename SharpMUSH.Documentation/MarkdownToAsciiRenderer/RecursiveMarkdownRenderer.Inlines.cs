@@ -1,5 +1,6 @@
 using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
+using Markdig.Renderers.Html;
 using Markdig.Syntax.Inlines;
 using MarkupString.Ansi;
 using MarkupString.Html;
@@ -63,9 +64,8 @@ public partial class RecursiveMarkdownRenderer
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
-		// Images have no meaningful textual representation in a terminal context.
-		// Render as "[image: <alt>]" using the alt text extracted from the inline
-		// content, falling back to "[image]" when no alt text is provided.
+		// A terminal sees "[image: <alt>]" (or "[image]"); RenderImage wraps that in the picture
+		// for clients that show one when the surface allows it.
 		if (link.IsImage)
 			return RenderImage(link, content);
 
@@ -138,17 +138,68 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
+	/// Decides whether an image's address may be shown as a picture; null (the default) shows none.
+	/// </summary>
+	/// <remarks>
+	/// A surface that knows the markdown's author may send pictures sets this, holding the address to
+	/// <c>image_hosts</c> the way <c>image()</c> does. Help files and markdown from softcode that may not
+	/// send out-of-band markup keep the placeholder only.
+	/// </remarks>
+	public Func<string, bool>? ImageAllowed { get; init; }
+
+	/// <summary>
 	/// Renders an image reference as a plain-text placeholder suitable for
 	/// terminal/MUSH display: <c>[image: alt text]</c> or <c>[image]</c> when
-	/// no alt text is available.
+	/// no alt text is available. When <see cref="ImageAllowed"/> lets the address through, the
+	/// placeholder is wrapped in the picture itself, so a client that shows pictures (the web
+	/// terminal, MXP, Pueblo) draws it in the line and every other client keeps the placeholder.
 	/// </summary>
 	protected virtual MString RenderImage(LinkInline link, MString content)
 	{
 		var alt = content.ToPlainText().Trim();
-		var placeholder = string.IsNullOrWhiteSpace(alt)
-			? "[image]"
-			: $"[image: {alt}]";
-		return MarkupText.Wrap(_dimStyle, placeholder);
+		var placeholder = ImagePlaceholder(alt);
+		return ShownImage(link, alt) is { } image ? MarkupText.Wrap(image, placeholder) : placeholder;
+	}
+
+	/// <summary>
+	/// An image alone in its paragraph, drawn as a <see cref="MarkupString.Layout.Figure"/> (what <c>figure()</c> builds): the
+	/// portal shows it as a figure of its own and a screen reader hears "Image: alt". The figure's art is
+	/// the inline picture, so MXP and Pueblo still draw it and a terminal reads the placeholder. An image
+	/// <see cref="ImageAllowed"/> refuses is <see cref="RenderImage"/>'s placeholder.
+	/// </summary>
+	protected virtual MString RenderFigure(LinkInline link, MString content)
+	{
+		var alt = content.ToPlainText().Trim();
+		return ShownImage(link, alt) is { } image
+			? Laid(new MarkupString.Layout.Figure(image, MarkupText.Wrap(image, ImagePlaceholder(alt))))
+			: RenderImage(link, content);
+	}
+
+	private MString ImagePlaceholder(string alt)
+		=> MarkupText.Wrap(_dimStyle, string.IsNullOrWhiteSpace(alt) ? "[image]" : $"[image: {alt}]");
+
+	/// <summary>The picture <paramref name="link"/> names, when <see cref="ImageAllowed"/> lets it be shown.</summary>
+	private ImageMarkup? ShownImage(LinkInline link, string alt)
+	{
+		var source = link.Url?.Trim();
+		if (string.IsNullOrEmpty(source) || source.Any(char.IsControl) || ImageAllowed?.Invoke(source) is not true)
+		{
+			return null;
+		}
+
+		var attributes = link.TryGetAttributes()?.Properties;
+		return new ImageMarkup(source, alt.Length > 0 ? alt : null, Pixels(attributes, "width"), Pixels(attributes, "height"));
+	}
+
+	/// <summary>A <c>{width=120}</c> or <c>{width=120px}</c> attribute in pixels; a percentage has no pixel count.</summary>
+	private static int? Pixels(List<KeyValuePair<string, string?>>? attributes, string name)
+	{
+		var value = attributes?.FirstOrDefault(a => string.Equals(a.Key, name, StringComparison.OrdinalIgnoreCase)).Value?.Trim();
+		if (value is null) return null;
+		if (value.EndsWith("px", StringComparison.OrdinalIgnoreCase)) value = value[..^2];
+		return int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var pixels) && pixels > 0
+			? pixels
+			: null;
 	}
 
 	/// <summary>
