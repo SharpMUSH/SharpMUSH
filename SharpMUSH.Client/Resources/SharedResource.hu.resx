@@ -5560,9 +5560,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>A jelenet nem lett szüneteltetve.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Még nincs helyszín</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Házigazda: {0}</value>
   </data>

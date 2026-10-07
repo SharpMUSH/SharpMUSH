@@ -4853,9 +4853,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>La scène n’a pas été mise en pause.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Pas encore de salle</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Organisée par {0}</value>
   </data>

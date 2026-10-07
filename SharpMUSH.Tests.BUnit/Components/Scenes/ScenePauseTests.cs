@@ -253,7 +253,8 @@ public class ScenePauseTests : TrackingBunitContext
 		var first = new DateTimeOffset(2030, 3, 4, 18, 30, 0, TimeSpan.Zero);
 		var second = first.AddDays(1);
 		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
-			SceneJson.Scene("S4", "Night of Lamps", status: "scheduled", room: "", scheduledFor: first.ToUnixTimeMilliseconds()),
+			SceneJson.Scene("S4", "Night of Lamps", status: "scheduled", room: "", scheduledFor: first.ToUnixTimeMilliseconds(),
+				summary: "Every lamp on the quay is lit at once."),
 			SceneJson.Scene("S5", "The Harbour Ball", status: "paused", scheduledFor: second.ToUnixTimeMilliseconds()),
 			SceneJson.Scene("S1", "Salt Market at Dusk", status: "paused"));
 		Services.AddSingleton(CharactersApiFake.Anonymous(this));
@@ -270,10 +271,12 @@ public class ScenePauseTests : TrackingBunitContext
 		var rows = cut.FindAll(".schedule-row");
 		await Assert.That(rows[0].QuerySelector(".schedule-time")!.TextContent).IsEqualTo(first.ToLocalTime().ToString("t", CultureInfo.CurrentCulture));
 		await Assert.That(rows[0].QuerySelector(".schedule-title")!.GetAttribute("href")).IsEqualTo("/scenes/S4");
-		await Assert.That(rows[0].QuerySelector(".schedule-meta")!.TextContent).Contains("No room yet");
+		await Assert.That(rows[0].QuerySelector(".schedule-pitch")!.TextContent).IsEqualTo("Every lamp on the quay is lit at once.");
+		await Assert.That(rows[0].TextContent).DoesNotContain("No room yet").Because("a scheduled scene has no room until it starts");
+		await Assert.That(rows[1].QuerySelector(".schedule-pitch")).IsNull().Because("a scene with no pitch shows none");
 		await Assert.That(rows[0].QuerySelector(".schedule-meta")!.TextContent).Contains("Hosted by Ilsa Varn");
 		await Assert.That(rows[1].QuerySelector(".schedule-paused")!.TextContent.Trim()).IsEqualTo("PAUSED");
 		await Assert.That(rows[2].QuerySelector(".schedule-title")!.TextContent).IsEqualTo("Salt Market at Dusk");
-		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(0).Because("the schedule is an agenda, not the archive's cards");
+		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(0).Because("the schedule has cards of its own, by day, not the archive's");
 	}
 }
