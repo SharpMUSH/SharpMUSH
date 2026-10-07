@@ -116,6 +116,10 @@
     else if (_filter == ScenesFilter.Scheduled)
     {
         <ScheduleAgenda Scenes="_scenes" />
+        @if (_scenes.Count >= ScenesFilter.PageSize)
+        {
+            <p class="scenes-list-capped">@string.Format(Loc["RolScheduleCapped"], _scenes.Count)</p>
+        }
     }
     else
     {
@@ -215,7 +219,9 @@
         {
             ScenesFilter.Mine when _acting is { } acting => Listed(await SceneService.GetParticipantScenesAsync($"#{acting.DbrefNumber}", ScenesFilter.PageSize)),
             ScenesFilter.Mine => (null, null),
-            ScenesFilter.Scheduled or ScenesFilter.Finished => Listed(await SceneService.ListScenesAsync(filter, ScenesFilter.PageSize)),
+            // The schedule leaves out a scene whose time passed (an hour's grace for a late start) and that never ran.
+            ScenesFilter.Scheduled => Listed(await SceneService.ListScenesAsync(ScenesFilter.Upcoming, ScenesFilter.PageSize)),
+            ScenesFilter.Finished => Listed(await SceneService.ListScenesAsync(filter, ScenesFilter.PageSize)),
             _ => Listed(await SceneService.GetRecentScenesAsync(ScenesFilter.PageSize)),
         };
 

@@ -67,3 +67,11 @@
 		justify-content: center;
 	}
 }
+
+/* the schedule asked for one page of scenes and got a full one: say the list stops there */
+.scenes-list-capped {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: var(--text-faint);
+	text-align: center;
+}

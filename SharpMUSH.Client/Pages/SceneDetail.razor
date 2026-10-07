@@ -196,71 +196,85 @@
                 }
             </div>
 
-            <aside class="scene-detail-aside">
-                <KitCard Aside="true" Title="@Loc["NavSceneDetails"]">
-                    @* A scene that has not started has no start, length or activity to tell: when it is due and
-                       who hosts it are what a reader comes for. *@
-                    <dl class="scene-detail-facts">
-                        @if (!NotStarted(scene))
-                        {
-                            <dt>@Loc["NavSceneStarted"]</dt>
-                            <dd>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
-                        }
-                        @if (!scene.IsLive && scene.ScheduledForUtc is { } due)
-                        {
-                            <dt>@Loc["NavScenesScheduled"]</dt>
-                            <dd class="scene-detail-scheduled">@due.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
-                        }
-                        @if (NotStarted(scene))
-                        {
-                            @if (!string.IsNullOrWhiteSpace(scene.OwnerName))
-                            {
-                                <dt>@Loc["NavSceneHost"]</dt>
-                                <dd><Mention Name="@scene.OwnerName" /></dd>
-                            }
-                        }
-                        else
-                        {
-                            <dt>@Loc["NavSceneLastActivity"]</dt>
-                            <dd>@Loc.Format(scene.LastActivityAtUtc)</dd>
-                            @if (!string.IsNullOrWhiteSpace(scene.StarterName))
-                            {
-                                <dt>@Loc["NavSceneStartedBy"]</dt>
-                                <dd><Mention Name="@scene.StarterName" /></dd>
-                            }
-                            <dt>@Loc["NavSceneLength"]</dt>
-                            <dd>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</dd>
-                        }
-                    </dl>
-                    @if (CalendarStart(scene) is { } start)
+            @* On a phone the aside comes before the log, folded into one line that names the cast, so a long log
+               does not push it out of reach; on a wide page it sits beside the log and stays in view. *@
+            <aside class="scene-detail-aside @(_aboutOpen ? "scene-detail-aside-open" : null)">
+                <button type="button" class="scene-detail-about-toggle" aria-expanded="@(_aboutOpen ? "true" : "false")"
+                        aria-controls="scene-detail-about" @onclick="@(() => _aboutOpen = !_aboutOpen)">
+                    <span class="scene-detail-about-label">@Loc["RolSceneAboutToggle"]</span>
+                    @if (_cast.Count > 0)
                     {
-                        var title = Loc.Title(scene);
-                        var details = CalendarDetails(scene);
-                        var location = string.IsNullOrWhiteSpace(scene.RoomName) ? Loc["AppTitle"].Value : scene.RoomName;
-                        <div class="scene-calendar">
-                            <span class="scene-calendar-label">@Loc["RolAddToCalendar"]</span>
-                            <a class="scene-calendar-google" href="@SceneCalendar.GoogleUrl(title, details, location, start)"
-                               target="_blank" rel="noopener">
-                                <MudIcon Icon="@Icons.Material.Outlined.Event" Size="Size.Small" />@Loc["RolGoogleCalendar"]
-                            </a>
-                            <a class="scene-calendar-ics" download="@($"scene-{scene.Id}.ics")"
-                               href="@SceneCalendar.DataUri(SceneCalendar.Ics($"scene-{scene.Id}@{new Uri(Navigation.BaseUri).Host}", title, details, location, SceneUrl(scene), start, DateTimeOffset.UtcNow))">
-                                <MudIcon Icon="@Icons.Material.Outlined.Download" Size="Size.Small" />@Loc["RolIcsDownload"]
-                            </a>
-                        </div>
+                        <span class="scene-detail-about-cast">@string.Join(", ", _cast)</span>
                     }
-                </KitCard>
-                @if (_cast.Count > 0)
-                {
-                    <KitCard Aside="true" Title="@Loc.Plural("NavSceneCast", "count", _cast.Count)">
-                        <ul class="scene-detail-cast">
-                            @foreach (var name in _cast)
+                    <MudIcon Class="scene-detail-about-chevron" Size="Size.Small"
+                             Icon="@(_aboutOpen ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.ExpandMore)" />
+                </button>
+                <div id="scene-detail-about" class="scene-detail-about">
+                    <KitCard Aside="true" Title="@Loc["NavSceneDetails"]">
+                        @* A scene that has not started has no start, length or activity to tell: when it is due and
+                           who hosts it are what a reader comes for. *@
+                        <dl class="scene-detail-facts">
+                            @if (!NotStarted(scene))
                             {
-                                <li><Mention Name="@name" /></li>
+                                <dt>@Loc["NavSceneStarted"]</dt>
+                                <dd>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
                             }
-                        </ul>
+                            @if (!scene.IsLive && scene.ScheduledForUtc is { } due)
+                            {
+                                <dt>@Loc["NavScenesScheduled"]</dt>
+                                <dd class="scene-detail-scheduled">@due.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
+                            }
+                            @if (NotStarted(scene))
+                            {
+                                @if (!string.IsNullOrWhiteSpace(scene.OwnerName))
+                                {
+                                    <dt>@Loc["NavSceneHost"]</dt>
+                                    <dd><Mention Name="@scene.OwnerName" /></dd>
+                                }
+                            }
+                            else
+                            {
+                                <dt>@Loc["NavSceneLastActivity"]</dt>
+                                <dd>@Loc.Format(scene.LastActivityAtUtc)</dd>
+                                @if (!string.IsNullOrWhiteSpace(scene.StarterName))
+                                {
+                                    <dt>@Loc["NavSceneStartedBy"]</dt>
+                                    <dd><Mention Name="@scene.StarterName" /></dd>
+                                }
+                                <dt>@Loc["NavSceneLength"]</dt>
+                                <dd>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</dd>
+                            }
+                        </dl>
+                        @if (CalendarStart(scene) is { } start)
+                        {
+                            var title = Loc.Title(scene);
+                            var details = CalendarDetails(scene);
+                            var location = string.IsNullOrWhiteSpace(scene.RoomName) ? Loc["AppTitle"].Value : scene.RoomName;
+                            <div class="scene-calendar">
+                                <span class="scene-calendar-label">@Loc["RolAddToCalendar"]</span>
+                                <a class="scene-calendar-google" href="@SceneCalendar.GoogleUrl(title, details, location, start)"
+                                   target="_blank" rel="noopener">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Event" Size="Size.Small" />@Loc["RolGoogleCalendar"]
+                                </a>
+                                <a class="scene-calendar-ics" download="@($"scene-{scene.Id}.ics")"
+                                   href="@SceneCalendar.DataUri(SceneCalendar.Ics($"scene-{scene.Id}@{new Uri(Navigation.BaseUri).Host}", title, details, location, SceneUrl(scene), start, DateTimeOffset.UtcNow))">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Download" Size="Size.Small" />@Loc["RolIcsDownload"]
+                                </a>
+                            </div>
+                        }
                     </KitCard>
-                }
+                    @if (_cast.Count > 0)
+                    {
+                        <KitCard Aside="true" Title="@Loc.Plural("NavSceneCast", "count", _cast.Count)">
+                            <ul class="scene-detail-cast">
+                                @foreach (var name in _cast)
+                                {
+                                    <li><Mention Name="@name" /></li>
+                                }
+                            </ul>
+                        </KitCard>
+                    }
+                </div>
             </aside>
         </div>
     }
@@ -483,6 +497,9 @@
 
     /// <summary>The edit form is open.</summary>
     private bool _editing;
+
+    /// <summary>Whether the details and cast are unfolded on a narrow page; a wide page always shows them.</summary>
+    private bool _aboutOpen;
     private string _editTitle = "";
     private string _editPitch = "";
     private bool _editPublic;

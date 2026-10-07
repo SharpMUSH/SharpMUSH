@@ -5740,4 +5740,19 @@
   <data name="RolSceneScheduledUnidentified" xml:space="preserve">
     <value>Scena je u rasporedu, ali je u istom trenutku zakazana još jedna za vas, pa njezin opis i privatnost nisu postavljeni. Provjerite obje scene na njihovim stranicama.</value>
   </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Detalji i glumci</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Kasni</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Danas</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Sutra</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Prikazano je sljedećih {0} scena.</value>
+  </data>
 </root>

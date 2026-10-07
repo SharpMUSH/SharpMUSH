@@ -5740,4 +5740,19 @@
   <data name="RolSceneScheduledUnidentified" xml:space="preserve">
     <value>A jelenet az ütemtervben van, de ugyanabban a pillanatban egy másikat is ütemeztek neked, ezért a leírása és a láthatósága nincs beállítva. Ellenőrizd mindkét jelenetet az oldalukon.</value>
   </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Részletek és szereplők</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Késik</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Ma</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Holnap</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>A következő {0} jelenet látható.</value>
+  </data>
 </root>

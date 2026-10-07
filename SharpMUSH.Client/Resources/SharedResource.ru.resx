@@ -5740,4 +5740,19 @@
   <data name="RolSceneScheduledUnidentified" xml:space="preserve">
     <value>Сцена в расписании, но в тот же момент для вас была запланирована ещё одна, поэтому описание и приватность не заданы. Проверьте обе сцены на их страницах.</value>
   </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Подробности и участники</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Опаздывает</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Сегодня</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Завтра</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Показаны следующие {0} сцен.</value>
+  </data>
 </root>

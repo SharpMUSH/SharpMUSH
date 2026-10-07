@@ -279,4 +279,36 @@ public class ScenePauseTests : TrackingBunitContext
 		await Assert.That(rows[2].QuerySelector(".schedule-title")!.TextContent).IsEqualTo("Salt Market at Dusk");
 		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(0).Because("the schedule has cards of its own, by day, not the archive's");
 	}
+
+	/// <summary>
+	/// Today and tomorrow are named as such; a scene whose time came without it starting is marked late; and
+	/// a full page of scenes says the list stops there.
+	/// </summary>
+	[Test]
+	public async Task TheSchedule_NamesTodayAndTomorrow_MarksALateScene_AndSaysWhenItIsFull()
+	{
+		var now = DateTimeOffset.Now;
+		var endOfToday = new DateTimeOffset(now.Date.AddDays(1).AddSeconds(-1), now.Offset);
+		var tomorrowNoon = new DateTimeOffset(now.Date.AddDays(1).AddHours(12), now.Offset);
+		var later = Enumerable.Range(0, 47).Select(i => SceneJson.Scene($"L{i}", $"Later {i}", status: "scheduled", room: "",
+			scheduledFor: now.AddDays(3 + i).ToUnixTimeMilliseconds()));
+		_api.Extra[SceneJson.Scheduled] = SceneJson.List([
+			SceneJson.Scene("S7", "Running Behind", status: "scheduled", room: "", scheduledFor: now.AddMinutes(-5).ToUnixTimeMilliseconds()),
+			SceneJson.Scene("S8", "Last Bell", status: "scheduled", room: "", scheduledFor: endOfToday.ToUnixTimeMilliseconds()),
+			SceneJson.Scene("S9", "Morning Market", status: "scheduled", room: "", scheduledFor: tomorrowNoon.ToUnixTimeMilliseconds()),
+			.. later]);
+		Services.AddSingleton(CharactersApiFake.Anonymous(this));
+		Nav.NavigateTo("/scenes?scheduled=1");
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		cut.WaitForAssertion(() => cut.Find(".schedule-row"), TimeSpan.FromSeconds(5));
+		var days = cut.FindAll(".schedule-day-head").Select(h => h.TextContent.Trim()).ToList();
+		await Assert.That(days).Contains($"Today · {endOfToday.ToString("D", CultureInfo.CurrentCulture)}");
+		await Assert.That(days).Contains($"Tomorrow · {tomorrowNoon.ToString("D", CultureInfo.CurrentCulture)}");
+
+		var rows = cut.FindAll(".schedule-row");
+		await Assert.That(rows[0].QuerySelector(".schedule-late")).IsNotNull().Because("its time came and it has not started");
+		await Assert.That(rows[2].QuerySelector(".schedule-late")).IsNull();
+		await Assert.That(cut.Find(".scenes-list-capped").TextContent).Contains("50");
+	}
 }

@@ -5033,4 +5033,19 @@
   <data name="RolSceneScheduledUnidentified" xml:space="preserve">
     <value>La scène est au programme, mais une autre a été planifiée pour vous au même moment : son accroche et sa confidentialité n'ont donc pas été définies. Vérifiez les deux scènes sur leurs pages.</value>
   </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Détails et distribution</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>En retard</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Aujourd'hui</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Demain</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Affichage des {0} prochaines scènes.</value>
+  </data>
 </root>

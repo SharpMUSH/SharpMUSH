@@ -30,11 +30,22 @@
 	min-width: 0;
 }
 
+/* beside a long log the details and cast stay in view */
 .scene-detail-aside {
+	position: sticky;
+	top: 0;
+	min-width: 0;
+}
+
+.scene-detail-about {
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
-	min-width: 0;
+}
+
+/* the fold is for a narrow page only */
+.scene-detail-about-toggle {
+	display: none;
 }
 
 .scene-detail-log {
@@ -72,10 +83,67 @@
 	font-size: 13px;
 }
 
-/* narrow: the aside stacks under the log, and the log keeps less of its padding */
+/* narrow: the aside comes before the log, folded into one line that names the cast; the log keeps less of
+   its padding */
 @container page (max-width: 48rem) {
 	.scene-detail-grid {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.scene-detail-aside {
+		position: static;
+		order: -1;
+	}
+
+	.scene-detail-about-toggle {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		padding: 10px 14px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		color: var(--text);
+		font: inherit;
+		font-size: 13px;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.scene-detail-about-label {
+		flex: 0 0 auto;
+		font-weight: 600;
+	}
+
+	.scene-detail-about-cast {
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		color: var(--text-dim);
+	}
+
+	.scene-detail-about-toggle ::deep .scene-detail-about-chevron {
+		flex: 0 0 auto;
+		margin-left: auto;
+		color: var(--text-dim);
+	}
+
+	.scene-detail-about {
+		display: none;
+	}
+
+	.scene-detail-aside-open .scene-detail-about {
+		display: flex;
+		margin-top: 10px;
+	}
+
+	.scene-detail-cast {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 6px 14px;
 	}
 
 	.scene-detail-log {

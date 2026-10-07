@@ -5740,4 +5740,19 @@
   <data name="RolSceneScheduledUnidentified" xml:space="preserve">
     <value>Сцената е в графика, но в същия момент беше насрочена и друга за вас, затова описанието и поверителността ѝ не бяха зададени. Проверете и двете сцени на страниците им.</value>
   </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Подробности и участници</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Закъснява</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Днес</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Утре</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Показани са следващите {0} сцени.</value>
+  </data>
 </root>

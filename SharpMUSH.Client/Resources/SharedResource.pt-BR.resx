@@ -5740,4 +5740,19 @@
   <data name="RolSceneScheduledUnidentified" xml:space="preserve">
     <value>A cena está na agenda, mas outra foi agendada para você no mesmo momento, então o resumo e a privacidade não foram definidos. Confira as duas cenas nas páginas delas.</value>
   </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Detalhes e elenco</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Atrasada</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Hoje</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Amanhã</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Mostrando as próximas {0} cenas.</value>
+  </data>
 </root>

@@ -5,7 +5,9 @@
    its start time, its title into the scene's page, who hosts it and what it is about (the pitch). Where it
    happens is left out: a scheduled scene has no room until it starts. The list arrives in time order (the
    server's scheduled filter), with the paused scenes that have no time last; those close the agenda under a
-   heading of their own rather than a date. Days and times are the reader's own. *@
+   heading of their own rather than a date. Days and times are the reader's own; today and tomorrow say so,
+   and a day's heading stays in view while its scenes scroll under it. A scene whose time came without it
+   starting is marked late (the server drops it from the list an hour on). *@
 <div class="schedule-agenda">
     @foreach (var day in Days())
     {
@@ -19,6 +21,10 @@
                         <div class="schedule-main">
                             <div class="schedule-top">
                                 <a class="schedule-title" href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}")">@Loc.Title(scene)</a>
+                                @if (IsLate(scene))
+                                {
+                                    <Pill Tag="true" Warn="true" Class="schedule-late">@Loc["RolScheduleLate"]</Pill>
+                                }
                                 @if (scene.IsPaused)
                                 {
                                     <Pill Tag="true" Class="schedule-paused">@Loc["RolPausedBadge"]</Pill>
@@ -51,6 +57,19 @@
     private static string? Pitch(SceneSummary scene) =>
         scene.Meta.TryGetValue("summary", out var pitch) && !string.IsNullOrWhiteSpace(pitch) ? pitch.Trim() : null;
 
+    /// <summary>A scene that has not started though its time has come.</summary>
+    private static bool IsLate(SceneSummary scene) =>
+        !scene.IsPaused && scene.ScheduledForUtc is { } due && due < DateTimeOffset.UtcNow;
+
+    /// <summary>The day's date, after "Today" or "Tomorrow" when it is one of those.</summary>
+    private string Heading(DateTimeOffset local, DateOnly date, DateOnly today)
+    {
+        var full = local.ToString("D", CultureInfo.CurrentCulture);
+        return date == today ? $"{Loc["RolScheduleToday"]} · {full}"
+            : date == today.AddDays(1) ? $"{Loc["RolScheduleTomorrow"]} · {full}"
+            : full;
+    }
+
     private sealed record Day(string Heading, List<SceneSummary> Scenes);
 
     /// <summary>The scenes by local day, in the order they came; the untimed ones last, under their own heading.</summary>
@@ -58,6 +77,7 @@
     {
         var days = new List<Day>();
         var untimed = new List<SceneSummary>();
+        var today = DateOnly.FromDateTime(DateTimeOffset.Now.DateTime);
         DateOnly? current = null;
         foreach (var scene in Scenes)
         {
@@ -71,7 +91,7 @@
             var date = DateOnly.FromDateTime(local.DateTime);
             if (date != current)
             {
-                days.Add(new Day(local.ToString("D", CultureInfo.CurrentCulture), []));
+                days.Add(new Day(Heading(local, date, today), []));
                 current = date;
             }
             days[^1].Scenes.Add(scene);

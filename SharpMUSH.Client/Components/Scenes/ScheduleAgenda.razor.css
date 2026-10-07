@@ -10,8 +10,15 @@
 	gap: 6px;
 }
 
+/* the day stays in view while its scenes scroll under it */
 .schedule-day-head {
+	position: sticky;
+	top: 0;
+	z-index: 1;
 	margin: 0;
+	padding: 6px 0;
+	background: color-mix(in srgb, var(--bg) 85%, transparent);
+	backdrop-filter: blur(8px);
 	font-size: 12px;
 	font-weight: 700;
 	letter-spacing: 0.04em;
@@ -48,7 +55,7 @@
 
 .schedule-time {
 	flex: 0 0 auto;
-	min-width: 4.5rem;
+	min-width: 5.5rem;
 	padding: 6px 8px;
 	border-radius: 8px;
 	background: var(--surface-2);

@@ -222,6 +222,27 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// On a phone the details and cast come before the log, folded into one line naming the cast, so a long
+	/// log does not put them out of reach; the line unfolds them.
+	/// </summary>
+	[Test]
+	public async Task TheDetailsAndCast_FoldIntoOneLine_ThatNamesTheCast_AndUnfolds()
+	{
+		var cut = RenderDetail("S1");
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-log .story-row"), TimeSpan.FromSeconds(5));
+
+		var toggle = cut.Find(".scene-detail-about-toggle");
+		await Assert.That(toggle.QuerySelector(".scene-detail-about-cast")!.TextContent).IsEqualTo("Ilsa Varn, Wren Halloway");
+		await Assert.That(toggle.GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(cut.Find(".scene-detail-aside").ClassList).DoesNotContain("scene-detail-aside-open");
+
+		toggle.Click();
+
+		await Assert.That(cut.Find(".scene-detail-about-toggle").GetAttribute("aria-expanded")).IsEqualTo("true");
+		await Assert.That(cut.Find(".scene-detail-aside").ClassList).Contains("scene-detail-aside-open");
+	}
+
+	/// <summary>
 	/// A scene that has not run has no start, length or log to show: its page leads with when it is due and
 	/// who hosts it, and the log's place says when it begins.
 	/// </summary>

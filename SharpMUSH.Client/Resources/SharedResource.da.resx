@@ -5740,4 +5740,19 @@
   <data name="RolSceneScheduledUnidentified" xml:space="preserve">
     <value>Scenen er på planen, men en anden blev planlagt for dig i samme øjeblik, så dens pitch og privatliv blev ikke sat. Tjek begge scener på deres sider.</value>
   </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Detaljer og medvirkende</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Forsinket</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>I dag</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>I morgen</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Viser de næste {0} scener.</value>
+  </data>
 </root>
