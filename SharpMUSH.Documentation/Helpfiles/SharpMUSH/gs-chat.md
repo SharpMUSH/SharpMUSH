@@ -18,7 +18,7 @@
   }
 }
 -->
-# gs chat
+# Getting Started: Chat
 
 SharpMUSH has a built-in channel system, which allows you to talk with players who are on the same channels as you, even if you're in different rooms.
 

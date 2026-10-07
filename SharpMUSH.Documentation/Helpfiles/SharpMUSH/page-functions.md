@@ -25,7 +25,7 @@
   ]
 }
 -->
-# Page functions
+# Page Functions
 
 These functions read your own page log, the same reads as `page/recall` and `page/conversations` (see [page recall]). They are SharpMUSH extensions: PennMUSH keeps no page log. They only read: they send nothing and trigger nothing. While the `page_log` @config option is off, both return `#-1 PAGE LOGGING IS OFF`.
 

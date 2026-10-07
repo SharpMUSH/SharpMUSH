@@ -1,4 +1,4 @@
-# LAYOUT FUNCTIONS
+# Layout Functions
 
 Boxes, titled rules, columns, labelled fields, trees and pictures, described once. A telnet client gets box art, the same kind [ALIGN()], [CENTER()] and [REPEAT()] draw. The web portal draws the same layout as page structure: a bordered card, columns that wrap on a narrow screen, a definition list, a nested list, a real picture.
 
@@ -89,7 +89,7 @@ In the portal the picture shows in place of the cat, with the fields beside it.
 - [ALIGN()]
 :::
 
-# LAYOUT BORDERS
+# Layout Borders
 
 box() and rule() draw with a border style. The game's default is the `layout_border` option; `"border":"<style>"` picks another.
 
@@ -136,7 +136,7 @@ An edge is a pattern repeated along it, so `"top":"=-"` alternates and `"top":"[
 - [LAYOUT FUNCTIONS]
 :::
 
-# LAYOUT THEMES
+# Layout Themes
 
 A theme colours the parts of a layout: borders and gauge bars, titles, table headings, field labels, list bullets, tree guides, and the quiet lines between things. The text inside is left as it is written. A layout takes a theme from its `"theme"` option, and one that names none takes the game's `layout_theme` option. Unset, layouts have no colour. A layout's theme reaches every layout inside it, the way its `"border"` does.
 
@@ -200,7 +200,7 @@ Written straight into options, a theme object goes inside them as it is: `box(Hi
 - [LAYOUT FUNCTIONS]
 :::
 
-# THEMES()
+# themes()
 
 `themes()`
 
@@ -218,7 +218,7 @@ terminal fantasy historical horror modern mystery romance science-fiction spirit
 - [LAYOUT THEMES]
 :::
 
-# THEME()
+# theme()
 
 `theme(<theme>)`
 
@@ -243,7 +243,7 @@ The result is read back as it is, so it can be edited and passed on.
 - [LAYOUT THEMES]
 :::
 
-# SWATCH()
+# swatch()
 
 `swatch(<theme>[, <width>])`
 
@@ -273,7 +273,7 @@ info        Sample  #88c0d0  6 cyan          6.2:1
 - [LAYOUT THEMES]
 :::
 
-# @THEME
+# @theme
 
 `@theme[/light|/dark] <player>=<theme>`<br>
 `@theme <player>=`
@@ -304,7 +304,7 @@ Theme cleared.
 - [SWATCH()]
 :::
 
-# BOX()
+# box()
 
 `box(<body>[, <title>[, <width>[, <options>]]])`
 
@@ -355,7 +355,7 @@ A Unicode client sees this box in light lines with rounded corners. A client wit
 - [LAYOUT FUNCTIONS]
 :::
 
-# RULE()
+# rule()
 
 `rule([<title>[, <width>[, <options>]]])`
 
@@ -380,7 +380,7 @@ Options:
 - [LAYOUT FUNCTIONS]
 :::
 
-# FLEX()
+# flex()
 
 `flex(<options>, <item1>[, ... , <itemN>])`
 
@@ -422,7 +422,7 @@ Three      |
 - [LAYOUT FUNCTIONS]
 :::
 
-# ITEM()
+# item()
 
 `item(<content>[, <width>[, <min>[, <grow>]]])`
 
@@ -441,7 +441,7 @@ Used on its own, item() draws its content as a single column.
 - [LAYOUT FUNCTIONS]
 :::
 
-# FIELDS()
+# fields()
 
 `fields(<options>, <label1>, <value1>[, ... , <labelN>, <valueN>])`
 
@@ -496,7 +496,7 @@ Species:
 - [LAYOUT FUNCTIONS]
 :::
 
-# TREE()
+# tree()
 
 `tree(<options>, <item1>[, ... , <itemN>])`
 
@@ -547,7 +547,7 @@ Mail
 - [LAYOUT FUNCTIONS]
 :::
 
-# NODE()
+# node()
 
 `node(<content>[, <child1>[, ... , <childN>]])`
 
@@ -566,7 +566,7 @@ Mail
 - [LAYOUT FUNCTIONS]
 :::
 
-# FIGURE()
+# figure()
 
 `figure(<address>[, <description>[, <art>[, <float>[, <beside>[, <width>]]]]])`
 
@@ -591,7 +591,7 @@ all night long.
 - [LAYOUT FUNCTIONS]
 :::
 
-# GAUGE()
+# gauge()
 
 `gauge(<value>, <maximum>[, <label>[, <options>]])`
 
@@ -630,7 +630,7 @@ The last bar runs from red through yellow to green, and the portal draws it with
 - [LAYOUT FUNCTIONS]
 :::
 
-# BULLETS()
+# bullets()
 
 `bullets(<list>[, <delimiter>[, <options>]])`
 
@@ -671,7 +671,7 @@ ii. South
 - [LAYOUT FUNCTIONS]
 :::
 
-# GRID()
+# grid()
 
 `grid(<list>[, <delimiter>[, <options>]])`
 
@@ -702,7 +702,7 @@ Bram
 - [LAYOUT FUNCTIONS]
 :::
 
-# DATATABLE()
+# datatable()
 
 `datatable(<options>, <headings>[, <row1>, ... , <rowN>])`
 
@@ -753,7 +753,7 @@ Raya    Writing a
 - [LAYOUT FUNCTIONS]
 :::
 
-# DATACOLUMNS()
+# datacolumns()
 
 `datacolumns(<options>, <column1>[, ... , <columnN>])`
 
@@ -775,7 +775,7 @@ With lists from other functions, change the delimiter to the space they use: `da
 - [LAYOUT FUNCTIONS]
 :::
 
-# GRADIENT()
+# gradient()
 
 `gradient(<text>, <colors>[, <options>])`
 
@@ -812,7 +812,7 @@ Mannaz Byron
 - [LAYOUT FUNCTIONS]
 :::
 
-# BADGE()
+# badge()
 
 `badge(<text>[, <kind>])`
 

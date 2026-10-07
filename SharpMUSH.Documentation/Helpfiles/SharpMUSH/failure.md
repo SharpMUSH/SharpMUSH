@@ -16,9 +16,7 @@
   }
 }
 -->
-# failure
-
-FAILURE
+# Failure
 
 A "failure" usually occurs when you try to do something that is governed by an `@lock` and you don't pass the lock. If you try to take a player or thing, or pass through an exit, and you don't pass its Basic `@lock`, you will set off their `@failure`/`@ofailure`/`@afailure` attributes. A few failures have special attributes, while others use ``<locktype>_LOCK`FAILURE``, ``<locktype>_LOCK`OFAILURE`` and ``<locktype>_LOCK`AFAILURE`` attributes.
 

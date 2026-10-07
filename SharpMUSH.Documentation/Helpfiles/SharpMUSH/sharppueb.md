@@ -15,7 +15,7 @@ Pueblo and MXP are different dialects, not one extending the other. Most formatt
 - [HTML()]
 :::
 
-# PUEBLO()
+# pueblo()
 
 `pueblo(<player|descriptor>)`
 
@@ -37,7 +37,7 @@ When used with a *<player>* argument, the most recently active connection is use
 - [pueblo]
 :::
 
-# HTML FUNCTIONS
+# HTML Functions
 
 HTML Functions are used to output HTML tags to HTML capable users: Pueblo and MXP clients, and the web portal. These tags will be stripped by the system for anything non-HTML related.
 
@@ -58,7 +58,7 @@ Things a client may have that are not tags (a sound, a picture, a pane, a screen
 
 Mortals are restricted in the tags they may use. Most standard HTML tags are ok; command links (cmdlink(), and the SEND and XCH_CMD parameters) can only be sent by Wizards or those with the Send_OOB @power.
 
-# HTML()
+# html()
 
 `html(<string>)`
 
@@ -71,7 +71,7 @@ In PennMUSH this wizard-only function outputs *<string>* as a single HTML tag. S
 - [HTML FUNCTIONS]
 :::
 
-# TAG()
+# tag()
 
 `tag(<name>[, <param1>[, ... , <paramN>]])`
 
@@ -84,7 +84,7 @@ In PennMUSH this outputs an opening HTML/Pueblo tag. SharpMUSH's markup is a spa
 - [HTML()]
 :::
 
-# ENDTAG()
+# endtag()
 
 `endtag(<name>)`
 
@@ -97,7 +97,7 @@ In PennMUSH this outputs a closing HTML/Pueblo tag. As with [TAG()], SharpMUSH r
 - [HTML()]
 :::
 
-# TAGWRAP()
+# tagwrap()
 
 `tagwrap(<name>[, <parameters>], <string>)`
 
@@ -129,7 +129,7 @@ A particularly important use of this function is `tagwrap(pre, <string>)`. Becau
 - [HTML()]
 :::
 
-# CMDLINK()
+# cmdlink()
 
 `cmdlink(<string>, <command>[, <hint>])`
 
@@ -149,7 +149,7 @@ cmdlink() is SharpMUSH's own. It needs a Wizard or the Send_OOB @power, as PennM
 - [HTML FUNCTIONS]
 :::
 
-# MEDIA FUNCTIONS
+# Media Functions
 
 Sounds, pictures, panes and the rest are said once, and each client is told about them in the way that client has. An MXP client gets MXP's elements, a Pueblo client its `xch_` ones, the web portal an HTML element it can act on, and a plain telnet client either nothing or the words that stand in for what it cannot show.
 
@@ -172,7 +172,7 @@ All but preformat() need a Wizard or the Send_OOB @power, as [CMDLINK()] does: t
 - [HTML FUNCTIONS]
 :::
 
-# SOUND()
+# sound()
 
 `sound(<file>[, <volume>[, <repeats>]])`
 
@@ -191,7 +191,7 @@ MXP gets `<SOUND>`, Pueblo `<img xch_sound>`, the web portal an `<audio>` elemen
 - [MEDIA FUNCTIONS]
 :::
 
-# MUSIC()
+# music()
 
 `music(<file>[, <volume>[, <repeats>]])`
 
@@ -202,7 +202,7 @@ As [SOUND()], for background music: one piece plays at a time, and MXP has a cha
 - [STOPSOUND()]
 :::
 
-# STOPSOUND()
+# stopsound()
 
 `stopsound([<channel>])`
 
@@ -213,7 +213,7 @@ Silences what is playing. *<channel>* is `effects` or `music`; with none, both s
 - [MUSIC()]
 :::
 
-# IMAGE()
+# image()
 
 `image(<address>[, <description>[, <width>[, <height>]]])`
 
@@ -229,7 +229,7 @@ Put it inside [CMDLINK()] for a picture that runs a command when clicked.
 > @pemit %#=cmdlink(image(map.png,A map),look map)
 ```
 
-# PANE()
+# pane()
 
 `pane(<text>, <name>[, <title>])`
 
@@ -242,7 +242,7 @@ A client with no panes shows the text where it is, which is why the text is insi
 > @pemit %#=pane(u(fun`map),map,The Map)
 ```
 
-# PREFORMAT()
+# preformat()
 
 `preformat(<text>)`
 
@@ -263,19 +263,19 @@ A client reading the stream as HTML (a Pueblo client, the portal) collapses runs
 - [pueblo client enhancements]
 :::
 
-# CLEARSCREEN()
+# clearscreen()
 
 `clearscreen()`
 
 Clears what the player has been shown. A terminal is sent the ANSI sequence for it, Pueblo `<xch_page clear="text">`, and the portal an element it acts on. MXP has no such instruction, and an MXP client is sent nothing.
 
-# PREFETCH()
+# prefetch()
 
 `prefetch(<address>)`
 
 Asks the client to fetch something now that it will want soon, so it is already there when it is used. Pueblo and the portal act on it; every other client is sent nothing.
 
-# EXPIRELINKS()
+# expirelinks()
 
 `expirelinks([<group>])`
 
@@ -285,7 +285,7 @@ Makes links already on the player's screen stop working: those in *<group>*, or 
 - [CMDLINK()]
 :::
 
-# WEBSOCKETS
+# WebSockets
 
 WebSockets are a network protocol used by JavaScript-enabled web browsers to make persistent network connections, similar to the telnet connection you use to connect to SharpMUSH. With WebSockets enabled in mush.cnf, it is possible to connect from MUSH clients embedded in HTML pages using JavaScript. A WebSocket client can natively render HTML, but can also parse Pueblo links into HTML links that send a command to the MUSH when clicked. For safety, we separate plain text from the other kinds of HTML/Pueblo code that we want rendered. In order to render HTML/Pueblo, a player with the Pueblo_Send power uses special functions to embed HTML/Pueblo markup. Players without the PUEBLO_SEND power can not use these markup functions. Any HTML code strings that are not properly marked up will simply show up as unrendered plain text.
 
@@ -321,7 +321,7 @@ See [@prompt] for information about sending telnet GOAHEAD prompts. Support for 
 - [OOB()]
 :::
 
-# WSHTML()
+# wshtml()
 
 `wshtml(<html>[, <default>])`
 

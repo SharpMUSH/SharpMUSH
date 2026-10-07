@@ -16,7 +16,7 @@
   }
 }
 -->
-# topics
+# Topics
 
 Help is available on the following topics:
 

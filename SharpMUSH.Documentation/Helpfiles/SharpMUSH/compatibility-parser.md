@@ -83,7 +83,7 @@
   ]
 }
 -->
-# COMPATIBILITY PARSER
+# Compatibility Parser
 
 Deliberate differences in how a line is parsed, dispatched and evaluated. SharpMUSH does not intend
 to change any of these to match PennMUSH.

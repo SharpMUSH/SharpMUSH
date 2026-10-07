@@ -222,11 +222,11 @@ public class LayoutFunctionTests
 	public async Task TheHelpListsEveryOptionEachFunctionTakes()
 	{
 		var help = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"));
-		var borderPieces = OptionKeys(Topic(help, "LAYOUT BORDERS").SkipWhile(line => !line.StartsWith("Any part of the style", StringComparison.Ordinal)).Skip(1));
+		var borderPieces = OptionKeys(Topic(help, "Layout Borders").SkipWhile(line => !line.StartsWith("Any part of the style", StringComparison.Ordinal)).Skip(1));
 
 		foreach (var (function, keys) in SharpMUSH.Implementation.Functions.Functions.LayoutOptionKeys)
 		{
-			var topic = Topic(help, function == "datacolumns" ? "DATATABLE()" : $"{function.ToUpperInvariant()}()");
+			var topic = Topic(help, function == "datacolumns" ? "datatable()" : $"{function}()");
 			var options = topic.SkipWhile(line => !line.StartsWith("Options", StringComparison.Ordinal)).Skip(1).ToArray();
 			var documented = OptionKeys(options);
 			if (options.TakeWhile(line => line.StartsWith("- ", StringComparison.Ordinal)).Any(line => line.Contains("[LAYOUT BORDERS]")))

@@ -20,7 +20,7 @@
   }
 }
 -->
-# verbs
+# Verbs
 
 Verb attributes are ones which are shown (or triggered) when you use a particular command, or perform a certain action. There are normally three: the 'verb' attribute (shown to the enactor), the 'overb' attribute (shown to others in the enactor's location), and the 'averb' attribute (an action list which is triggered). One example is `@use`, `@ouse`, and `@ause`, which are shown/triggered when the 'use' command is run on an object.
 

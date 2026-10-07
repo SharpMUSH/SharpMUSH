@@ -28,7 +28,7 @@
   ]
 }
 -->
-# COMPATIBILITY MAIL
+# Compatibility Mail
 
 `@mail` matches PennMUSH's commands and switches. Four differences are deliberate. Three are about
 what happens to a message between the sender's `@mail` and the recipient's folder; the fourth is how

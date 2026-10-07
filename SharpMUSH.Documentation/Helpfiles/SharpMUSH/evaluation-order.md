@@ -16,7 +16,7 @@
   }
 }
 -->
-# evaluation order
+# Evaluation Order
 
 Whenever some text is entered by an object, the MUSH attempts to match it against a valid game command in the following order of possible commands:
 

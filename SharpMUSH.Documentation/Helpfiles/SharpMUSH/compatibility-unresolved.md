@@ -43,7 +43,7 @@
   ]
 }
 -->
-# COMPATIBILITY UNRESOLVED
+# Compatibility Unresolved
 
 Known differences with **no decision recorded**. Do not write code that depends on either behaviour;
 either may change.

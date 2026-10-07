@@ -28,7 +28,7 @@
   ]
 }
 -->
-# Administrative capabilities
+# Administrative Capabilities
 
 Roles are the shared source for delegated administrative operations, in the game and in the
 portal. They use the account role assignments and per-account overrides, and persist in world

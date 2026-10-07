@@ -16,7 +16,7 @@
   }
 }
 -->
-# pueblo
+# Pueblo
 
 Pueblo is a client made by Chaco (a now defunct company). It attempts to mix HTML with MUSH. There are other clients (notably MUSHclient) that also offer Pueblo features. SharpMUSH can offer support for some of the enhanced features of Pueblo, enabled via the 'pueblo' @config option.
 

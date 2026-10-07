@@ -45,7 +45,7 @@
   ]
 }
 -->
-# Recurring jobs
+# Recurring Jobs
 
 A recurring job calls one attribute as the linked active player who creates it. It keeps
 its ID, owning account, full player/target identities, attribute, description, timezone,

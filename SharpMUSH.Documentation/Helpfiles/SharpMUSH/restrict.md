@@ -22,7 +22,7 @@
   }
 }
 -->
-# restrict
+# Restrict
 
 Commands, functions and attributes can have their permission levels controlled in the mush config files, or by wizards from the game via `@command`, `@function` and `@attribute`.
 

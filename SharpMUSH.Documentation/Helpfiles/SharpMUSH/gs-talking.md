@@ -21,7 +21,7 @@
   }
 }
 -->
-# gs talking
+# Getting Started: Talking
 
 You can talk to others in the room with you (those listed in the 'Contents' of the room) in a number of ways. The easiest is to use the 'say' command.
 

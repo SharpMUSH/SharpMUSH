@@ -1,5 +1,5 @@
-# code
-# contact
+# Contact
+# Code
 SharpMUSH is developed by a team of developers whose names are listed in [changes]. Suggestions, comments, and bug reports are welcome.
 
 The main SharpMUSH web page is at http://sharpmush.com
@@ -12,10 +12,10 @@ For information about downloading SharpMUSH, see [download].<br>
 For information about changes in versions of the code, see [changes].<br>
 For what SharpMUSH adds to PennMUSH, see [sharpmush features].
 
-# download
+# Download
 The latest version of this MUSH code is available from https://github.com/SharpMUSH/SharpMUSH/releases. 
 
-# exception
+# Exception
 # #-1 exception
 When an internal error escapes a command, SharpMUSH does **not** stay silent. The
 command returns, and you are notified with:
@@ -44,10 +44,10 @@ always the prefix, and the rest is always valid JSON.
 - [pennmush compatibility]
 :::
 
-# i18n
-# internationalization
-# locale
-# translation
+# Internationalization
+# I18n
+# Locale
+# Translation
 SharpMUSH supports Unicode: server strings use UTF-16 internally, and network
 text supports UTF-8. The `accent()` and `stripaccents()` functions and the
 NOACCENTS flag provide compatibility with older clients.
@@ -62,9 +62,9 @@ Date/time formatting and string collation use the applicable locale facilities.
 Choose a locale through the existing player and portal preferences; do not assume
 that setting a process environment variable translates every presentation.
 
-# copyright
-# copyrite
-# license
+# Copyright
+# Copyrite
+# License
 Copyright, License, and Credits for SharpMUSH 1.x.
 
 I. Copyrights

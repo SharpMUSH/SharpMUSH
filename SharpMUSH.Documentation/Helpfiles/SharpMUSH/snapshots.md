@@ -40,7 +40,7 @@
   ]
 }
 -->
-# Object snapshots
+# Object Snapshots
 
 Object snapshots recover mistakes on a room, exit or code object without restoring the
 world. The active player needs snapshots.capture to capture and snapshots.restore

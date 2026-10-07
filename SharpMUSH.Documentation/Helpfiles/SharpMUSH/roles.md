@@ -37,7 +37,7 @@
   }
 }
 -->
-# roles
+# Roles
 
 A role is a named set of permissions. Roles decide what an object may do: in the game (being a wizard, the PennMUSH powers, controlling other objects) and in the web portal (wiki, media, packages, configuration, and so on). They work like the roles on a Discord server.
 

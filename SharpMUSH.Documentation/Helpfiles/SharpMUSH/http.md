@@ -57,7 +57,7 @@
   }
 }
 -->
-# http
+# HTTP
 
 Unlike PennMUSH, **SharpMUSH pre-populates the HTTP handler**: a new database is seeded with an **HTTP Handler object (#8)**, the "http_handler" config already points at it, and the default verb attributes (`&GET`, `&POST`, `&PUT`, `&DELETE`, `&PATCH`, `&HEAD`) are already installed on it; see [http routing]. You extend the API by adding routed sub-attributes, not by creating a handler. This is low level, and a little tricky to understand.
 

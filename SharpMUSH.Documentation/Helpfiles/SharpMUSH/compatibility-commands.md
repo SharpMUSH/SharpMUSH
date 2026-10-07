@@ -48,7 +48,7 @@
   ]
 }
 -->
-# COMPATIBILITY COMMANDS
+# Compatibility Commands
 
 Deliberate differences in the command table, the configuration and the objects the game starts with.
 

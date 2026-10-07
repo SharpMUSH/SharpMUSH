@@ -37,7 +37,7 @@
   }
 }
 -->
-# parent
+# Parents
 
 Objects may have "parent" objects, from which they can inherit attributes. Once an object is given a parent, it may use the attributes on the parent just as if the attributes were on the object itself, including checking for `$-commands`. Use the `@parent` command to change the parent of an object.
 

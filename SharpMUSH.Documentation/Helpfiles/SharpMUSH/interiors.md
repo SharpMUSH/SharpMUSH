@@ -16,7 +16,7 @@
   }
 }
 -->
-# interiors
+# Interiors
 
 Here's a quick description of how to make things that can be entered:
 

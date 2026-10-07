@@ -16,7 +16,7 @@
   }
 }
 -->
-# puppets
+# Puppets
 
 A thing is turned into a puppet by setting the PUPPET flag on it. A puppet object is an extension of its owner and relays everything it sees and hears to its owner, except if it is in the same room as the owner (a puppet with the VERBOSE flag will relay even if it's in the same room). Things relayed by the puppet will be prefixed by the name of the puppet.
 
