@@ -134,15 +134,17 @@ internal static class SoftcodeParsePipeline
 	};
 
 	/// <summary>
-	/// Whether the token stream nests recursion-causing delimiters — <c>[</c>, <c>{</c>, and a
-	/// function-call <c>name(</c> — deeper than <paramref name="limit"/>. These are exactly the
-	/// three constructs whose parser rules recurse (<c>bracketPattern</c>, <c>bracePattern</c>,
-	/// <c>function</c>); a bare <c>(</c> is plain text and does not open a rule, so it is tracked
-	/// only to match its closing <c>)</c> and never counts toward the depth. Escaped delimiters
-	/// never reach here as openers — the lexer emits <c>ESCAPE</c> + <c>ANY</c> for <c>\[</c> — so
-	/// they add no depth, matching what the parser would have done.
+	/// Whether the token stream nests recursion-causing delimiters — <c>[</c>, <c>{</c>, a
+	/// function-call <c>name(</c>, and with <paramref name="parenGroups"/> a bare <c>(</c> — deeper
+	/// than <paramref name="limit"/>. These are exactly the constructs whose parser rules recurse
+	/// (<c>bracketPattern</c>, <c>bracePattern</c>, <c>function</c>, and the paren-group rules).
+	/// Without paren_groups a bare <c>(</c> is plain text and opens no rule, so it is tracked only to
+	/// match its closing <c>)</c>. Escaped delimiters never reach here as openers — the lexer emits
+	/// <c>ESCAPE</c> + <c>ANY</c> for <c>\[</c> — so they add no depth, matching what the parser
+	/// would have done.
 	/// </summary>
-	public static bool ExceedsNestingLimit(BufferedTokenSpanStream tokenStream, int limit, out IToken? offendingToken)
+	public static bool ExceedsNestingLimit(BufferedTokenSpanStream tokenStream, int limit, bool parenGroups,
+		out IToken? offendingToken)
 	{
 		offendingToken = null;
 		// Most lines open nothing at all, so the matching stack exists only once one does.
@@ -165,6 +167,10 @@ internal static class SoftcodeParsePipeline
 					(open ??= new Stack<char>()).Push('(');
 					if (++depth > limit) { offendingToken = token; return true; }
 					break;
+				case SharpMUSHLexer.OPAREN when parenGroups:
+					(open ??= new Stack<char>()).Push('g');
+					if (++depth > limit) { offendingToken = token; return true; }
+					break;
 				case SharpMUSHLexer.OPAREN:
 					(open ??= new Stack<char>()).Push('o');
 					break;
@@ -175,9 +181,9 @@ internal static class SoftcodeParsePipeline
 					if (open is not null && open.TryPeek(out var c) && c == '{') { open.Pop(); depth--; }
 					break;
 				case SharpMUSHLexer.CPAREN:
-					if (open is not null && open.TryPeek(out var p) && p is '(' or 'o')
+					if (open is not null && open.TryPeek(out var p) && p is '(' or 'g' or 'o')
 					{
-						if (p == '(') depth--;
+						if (p is '(' or 'g') depth--;
 						open.Pop();
 					}
 					break;

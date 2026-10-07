@@ -118,7 +118,8 @@ public sealed class SoftcodeSyntaxAnalyzer(
 
 		// Report over-deep nesting as a diagnostic rather than parsing it and overflowing the
 		// stack — this path feeds the LSP/MCP analyzer, which must survive hostile documents.
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out var offending))
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
+			configuration.CurrentValue.Compatibility.ParenGroups, out var offending))
 		{
 			return
 			[
@@ -187,7 +188,8 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		// orphaned-closer rewrite above — so an orphaned ']' or '}' is classified as a closer on this
 		// path and as literal text on the normal one. Inconsistent, but left alone deliberately:
 		// changing Tokenize affects every caller and needs its own task.
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out _))
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
+			configuration.CurrentValue.Compatibility.ParenGroups, out _))
 		{
 			return ConvertSyntacticToSemanticTokens(Tokenize(text));
 		}

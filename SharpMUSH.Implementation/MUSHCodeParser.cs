@@ -274,7 +274,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Refuse pathologically nested input before the recursive-descent parser overflows the
 		// stack (see SoftcodeParsePipeline.MaxParseNestingDepth). Reported as the call-limit error,
 		// matching PennMUSH's call_limit, which is the same guard against the same crash.
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out _))
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
+			Configuration.CurrentValue.Compatibility.ParenGroups, out _))
 		{
 			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, true);
 		}
@@ -457,7 +458,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var plaintext = text.ToPlainText();
 		var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plaintext, nameof(CommandListParseVisitor));
 
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth, out _))
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
+			Configuration.CurrentValue.Compatibility.ParenGroups, out _))
 		{
 			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true });
 		}
