@@ -3,6 +3,7 @@
 @inject IChannelWho Who
 @inject CharacterDirectoryService Directory
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 @implements IDisposable
 
 @* D1 §5.1 / board 06 the channel view: one channel, or one page conversation, in main. Lines are grouped
@@ -13,7 +14,9 @@
    pulls its recent lines from the server, and opening a conversation its logged pages; live lines then append,
    a line already held kept once. A game that keeps no page log (page_log off) is said so in a conversation.
    A channel lists who is on it now beside the lines (@channel/who's list, kept live by comm.who): shown by
-   default where there is room, behind the header's members button where there is not. *@
+   default where there is room, behind the header's members button where there is not. The line is the page's
+   main text box (input-focus.js): focused when a channel or conversation opens, and where typing on the page
+   and a click in the lines go. *@
 <section class="comm @(_membersToggled ? "comm--members-toggled" : null)" aria-labelledby="comm-title">
     <header class="comm-head">
         @Lead
@@ -37,7 +40,7 @@
         </button>
     </header>
     <div class="comm-main">
-        <div class="comm-scroll">
+        <div class="comm-scroll" data-input-region>
             <div class="comm-lines">
                 @if (IsConversation && Feed.PageLogging == false)
                 {
@@ -105,9 +108,9 @@
     <div class="comm-compose">
         <BottomBar>
             <div class="comm-compose-row">
-                <input class="comm-input" type="text" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
+                <input @ref="_input" class="comm-input" type="text" data-primary-input="end" enterkeyhint="send" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
                        value="@_text" @oninput="e => _text = e.Value?.ToString() ?? string.Empty" @onkeydown="OnKeyAsync" />
-                <button type="button" class="comm-send" disabled="@string.IsNullOrWhiteSpace(_text)" @onclick="SendAsync">@Loc["Send"]</button>
+                <button type="button" class="comm-send" disabled="@string.IsNullOrWhiteSpace(_text)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
             </div>
         </BottomBar>
     </div>
@@ -173,6 +176,7 @@
         // The "New" divider marks the lines that were unread when the view opened; they are read from now.
         if (_openedKey is not null) Who.Unwatch(_openedKey);
         _openedKey = Key;
+        _arrived = false;
         _text = string.Empty;
         _lines = Feed.Messages(Key);
         var unread = Conversation?.Unread ?? Feed.Channels.FirstOrDefault(c => c.Name == Key)?.Unread ?? 0;
@@ -184,6 +188,22 @@
         // The channel's recent lines from the server; they arrive through Changed, filed with the live ones.
         _ = Feed.LoadHistoryAsync(Key);
         if (!IsConversation) _ = Who.WatchAsync(Key);
+    }
+
+    private bool _arrived;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_arrived) return;
+        _arrived = true;
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushInputFocus.arrive", _input);
+        }
+        catch (JSException)
+        {
+            // No focus script: the line is still there to click.
+        }
     }
 
     private int FirstUnreadIndex() => _firstUnread is null ? -1 : IndexOf(_lines, _firstUnread);
@@ -248,6 +268,22 @@
 
     // Enter in a one-line input inserts nothing, so it needs no preventDefault.
     private Task OnKeyAsync(KeyboardEventArgs e) => e.Key == "Enter" ? SendAsync() : Task.CompletedTask;
+
+    private ElementReference _input;
+
+    /// <summary>Send, clicked: the button goes disabled with the line emptied, so focus goes back to the line.</summary>
+    private async Task SendFromButtonAsync()
+    {
+        await SendAsync();
+        try
+        {
+            await _input.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // Closed in the meantime: nothing to focus.
+        }
+    }
 
     private async Task SendAsync()
     {

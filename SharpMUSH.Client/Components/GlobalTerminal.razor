@@ -14,8 +14,9 @@
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
 
+    @* With an input line, a plain click in the output focuses it, as a terminal does (input-focus.js). *@
     <div id="@_outputId"
-         class="sharp-terminal-output"
+         class="sharp-terminal-output" data-input-region="@Interactive"
          style="flex:1;min-height:0;overflow:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
            floor width of that many characters. On a narrow screen the output scrolls
@@ -76,13 +77,15 @@
     {
         <div class="sharp-terminal-input">
             <span class="term-prompt">›</span>
-            <input class="term-input" @ref="_inputRef"
+            @* The page's main text box (input-focus.js): focused once the connection is up, and where typing on the
+               page goes. Enter sends, so a touch keyboard labels it Send. *@
+            <input class="term-input" @ref="_inputRef" data-primary-input="end" enterkeyhint="send"
                    value="@_input"
                    @oninput="OnInput"
                    @onkeydown="OnInputKeyDown"
                    disabled="@(!_connected)"
                    placeholder="@Loc["TermInputPlaceholder"]" />
-            <button type="button" class="term-send" @onclick="SendAsync" disabled="@(!_connected)" title="@Loc["Send"]">
+            <button type="button" class="term-send" @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]">
                 <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:0.875rem;" />
             </button>
             @if (ShowClearButton)
@@ -323,7 +326,17 @@
 
         if (_autoScroll)
             await ScrollToBottomAsync();
+
+        // The input line is enabled once the connection is up: that is when the page is ready to type in.
+        if (Interactive && _connected && !_arrived)
+        {
+            _arrived = true;
+            try { await JsRuntime.InvokeVoidAsync("sharpmushInputFocus.arrive", _inputRef); }
+            catch (JSException) { /* no focus script: the input is still there to click */ }
+        }
     }
+
+    private bool _arrived;
 
     /// <summary>
     /// Invoked from JS when a command link (&lt;a xch_cmd="..."&gt;) is clicked in the
@@ -404,6 +417,20 @@
     {
         SetPlayerName(null);
         await Terminal.DisconnectAsync();
+    }
+
+    /// <summary>Send, clicked: focus goes back to the input line for the next command.</summary>
+    private async Task SendFromButtonAsync()
+    {
+        await SendAsync();
+        try
+        {
+            await _inputRef.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // Not on the page any more: nothing to focus.
+        }
     }
 
     private async Task SendAsync()

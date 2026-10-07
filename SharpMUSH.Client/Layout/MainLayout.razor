@@ -22,6 +22,13 @@
 @* Forces a hard browser refresh whenever the server unloads/reloads a plugin DLL (generic signal). *@
 <PluginChangeReloader />
 
+@* WCAG 2.4.1: the first two tab stops skip the navigation, to the page or to its main text box
+   (input-focus.js handles both, so the router does not treat them as navigation). *@
+<div class="skip-links">
+    <a class="skip-link" href="#main-content" data-skip="main">@Loc["NavSkipToContent"]</a>
+    <a class="skip-link skip-link--input" href="#main-content" data-skip="input">@Loc["NavSkipToTextBox"]</a>
+</div>
+
 <div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_pagebarOpen ? "phosphor-shell--pagebar-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
 
     @* Touch chrome only: tapping the dimmed backdrop closes the off-canvas drawer or section panel. *@
@@ -80,7 +87,7 @@
             </div>
         }
 
-        <main class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
+        <main id="main-content" tabindex="-1" class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
             <div class="phosphor-page">
                 <CascadingValue Value="_shellNavigation" IsFixed="true">
                     @Body

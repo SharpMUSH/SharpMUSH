@@ -8,10 +8,12 @@
    by MarkupString (the same HTML the Story uses), kept on the textarea's box and scroll by layout.js. The
    draft (ComposerDraft) is the model: each input is worked out from the field's value and caret, and the
    format menu (FormatMenu) applies to the textarea's selection. In raw mode there is no layer: the field is
-   the softcode as typed. *@
+   the softcode as typed. A field that is its page's main text box sets Primary (input-focus.js): typing on
+   the page, a click in the output and the skip link bring the reader to it, and Autofocus focuses it when it
+   comes on screen. *@
 <div class="fi @Class @(Draft.Raw ? "fi--raw" : "fi--rich") @(Wrap ? null : "fi--nowrap")">
     <textarea @ref="_input" class="fi-input @InputClass" rows="@Rows" aria-label="@AriaLabel" placeholder="@Placeholder"
-              wrap="@(Wrap ? "soft" : "off")"
+              wrap="@(Wrap ? "soft" : "off")" data-primary-input="@Primary" enterkeyhint="@EnterKeyHint"
               value="@Draft.Value" @oninput="OnInput" @onkeydown="OnKeyDown" spellcheck="true"></textarea>
     @if (!Draft.Raw)
     {
@@ -50,6 +52,18 @@
     [Parameter] public bool Wrap { get; set; } = true;
 
     [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+
+    /// <summary>
+    /// Marks the field as its page's main text box (<c>data-primary-input</c>): <c>end</c> puts the caret after
+    /// the text the first time it is focused, <c>start</c> keeps it at the top. Null for any other field.
+    /// </summary>
+    [Parameter] public string? Primary { get; set; }
+
+    /// <summary>Focuses the field when it first comes on screen, on a page that is for writing (input-focus.js).</summary>
+    [Parameter] public bool Autofocus { get; set; }
+
+    /// <summary>The label of a touch keyboard's Enter key: <c>send</c> where Enter sends.</summary>
+    [Parameter] public string? EnterKeyHint { get; set; }
 
     /// <summary>
     /// Switches the owner to raw mode. With it, a rich draft that looks like softcode (<see cref="ComposerDraft.SoftcodeLookalike"/>)
@@ -166,6 +180,7 @@
                 _self ??= DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("sharpmushLayout.formattedInput", _input, _self);
                 _attached = true;
+                if (Autofocus) await JS.InvokeVoidAsync("sharpmushInputFocus.arrive", _input);
             }
             // The layer comes and goes with the mode; layout.js lays it over the textarea each time it appears.
             var shown = !Draft.Raw;

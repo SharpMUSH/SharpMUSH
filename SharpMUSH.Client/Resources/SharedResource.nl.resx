@@ -5823,4 +5823,13 @@
   <data name="NavThemeForCharacter" xml:space="preserve">
     <value>Thema voor {0}</value>
   </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Naar hoofdinhoud</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Naar het tekstvak</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Paginatekst (Markdown)</value>
+  </data>
 </root>

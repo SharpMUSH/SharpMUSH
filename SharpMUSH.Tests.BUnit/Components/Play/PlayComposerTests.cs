@@ -41,6 +41,31 @@ public class PlayComposerTests : BunitContext
 	}
 
 	[Test]
+	public async Task TheField_IsThePagesMainTextBox_AndArrives()
+	{
+		var cut = RenderComposer();
+		var field = cut.Find("textarea");
+		await Assert.That(field.GetAttribute("data-primary-input")).IsEqualTo("end");
+		await Assert.That(field.GetAttribute("enterkeyhint")).IsEqualTo("send");
+		await Assert.That(cut.Find(".composer-scope").HasAttribute("data-input-region")).IsTrue();
+		cut.WaitForAssertion(() => JSInterop.VerifyInvoke("sharpmushInputFocus.arrive"));
+	}
+
+	[Test]
+	public async Task Send_HandsFocusBackToTheField()
+	{
+		var cut = RenderComposer();
+		await Type(cut, "hello");
+		var focused = JSInterop.Invocations.Count(i => i.Identifier == "Blazor._internal.domWrapper.focus");
+		await cut.Find("button.composer-send").ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (JSInterop.Invocations.Count(i => i.Identifier == "Blazor._internal.domWrapper.focus") <= focused)
+				throw new InvalidOperationException("the field was not focused after Send");
+		});
+	}
+
+	[Test]
 	public async Task AnEmit_IsSentEncoded_AndTheFieldEmpties()
 	{
 		var cut = RenderComposer();
