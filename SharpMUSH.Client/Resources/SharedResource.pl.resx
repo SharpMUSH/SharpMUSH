@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Wiersz {0}: ::: item układa się tylko bezpośrednio wewnątrz flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Zaplanuj scenę</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Scena nie ma pokoju, dopóki się nie zacznie: odbywa się tam, gdzie gospodarz jest w chwili jej rozpoczęcia.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Wybierz czas, który jeszcze nie minął.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Scena nie została zaplanowana.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Scena jest w harmonogramie, ale nie wszystko zostało zapisane: {0} Edytuj ją na jej stronie.</value>
+  </data>
 </root>

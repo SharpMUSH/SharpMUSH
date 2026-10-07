@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>第 {0} 行：::: item 只有直接放在 flex 内才会排布。</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>安排场景</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>场景开始前没有房间：主持人开始场景时身在何处，场景就在何处进行。</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>请选择一个尚未过去的时间。</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>场景未能安排。</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>场景已加入日程，但部分内容未保存：{0} 请在其页面中编辑。</value>
+  </data>
 </root>

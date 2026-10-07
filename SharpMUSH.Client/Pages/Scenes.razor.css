@@ -27,6 +27,30 @@
 	gap: 8px;
 }
 
+.scene-schedule-form {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px 16px 16px;
+}
+
+.scene-schedule-when {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+}
+
+.scene-schedule-when ::deep .scene-schedule-date,
+.scene-schedule-when ::deep .scene-schedule-time {
+	flex: 1 1 12rem;
+}
+
+.scene-schedule-hint {
+	margin: 0;
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
 /* narrow: the start form stacks, and its buttons split the row */
 @container page (max-width: 48rem) {
 	.scene-start-form {

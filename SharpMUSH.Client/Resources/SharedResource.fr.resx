@@ -5009,4 +5009,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Ligne {0} : un ::: item ne se dispose que directement dans un flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Planifier une scène</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>La scène n'a pas de salle avant de commencer : elle se joue là où se trouve son hôte au moment du lancement.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Choisissez une heure qui n'est pas encore passée.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>La scène n'a pas été planifiée.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>La scène est au programme, mais tout n'a pas été enregistré : {0} Modifiez-la depuis sa page.</value>
+  </data>
 </root>

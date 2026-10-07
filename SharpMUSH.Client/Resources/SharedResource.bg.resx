@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Ред {0}: ::: item се подрежда само непосредствено вътре във flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Насрочи сцена</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Сцената няма стая, докато не започне: провежда се там, където е домакинът, когато я започне.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Изберете време, което още не е минало.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Сцената не беше насрочена.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Сцената е в графика, но не всичко беше запазено: {0} Редактирайте я от нейната страница.</value>
+  </data>
 </root>

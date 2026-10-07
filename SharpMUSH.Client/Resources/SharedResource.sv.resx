@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Rad {0}: ett ::: item läggs bara ut direkt inuti en flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Planera en scen</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Scenen har inget rum förrän den startar: den spelas där värden är när de startar den.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Välj en tid som inte har passerat än.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Scenen planerades inte.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Scenen finns i schemat, men allt sparades inte: {0} Redigera den från dess sida.</value>
+  </data>
 </root>

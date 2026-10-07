@@ -6233,4 +6233,19 @@
   <data name="LayAppNavUrlHelper" xml:space="preserve">
     <value>A route returning this app's own sidebar links, e.g. http/jobs/nav</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Schedule a scene</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>The scene has no room until it starts: it runs wherever its host is when they start it.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Pick a time that has not passed yet.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>The scene was not scheduled.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>The scene is on the schedule, but not everything was saved: {0} Edit it from its page.</value>
+  </data>
 </root>

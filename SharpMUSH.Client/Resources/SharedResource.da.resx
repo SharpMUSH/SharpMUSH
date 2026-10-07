@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Linje {0}: et ::: item lægges kun ud direkte inde i en flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Planlæg en scene</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Scenen har intet rum, før den starter: den foregår, hvor værten er, når de starter den.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Vælg et tidspunkt, der ikke er passeret endnu.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Scenen blev ikke planlagt.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Scenen er på planen, men ikke alt blev gemt: {0} Rediger den fra dens side.</value>
+  </data>
 </root>

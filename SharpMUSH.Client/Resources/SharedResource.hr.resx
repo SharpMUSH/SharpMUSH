@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Redak {0}: ::: item raspoređuje se samo izravno unutar flexa.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Zakaži scenu</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Scena nema sobu dok ne počne: odvija se gdje je domaćin kad je pokrene.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Odaberite vrijeme koje još nije prošlo.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Scena nije zakazana.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Scena je u rasporedu, ali nije sve spremljeno: {0} Uredite je na njezinoj stranici.</value>
+  </data>
 </root>

@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Строка {0}: ::: item раскладывается только непосредственно внутри flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Запланировать сцену</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>У сцены нет комнаты до начала: она проходит там, где ведущий находится в момент запуска.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Выберите время, которое ещё не прошло.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Сцена не была запланирована.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Сцена в расписании, но сохранено не всё: {0} Отредактируйте её на её странице.</value>
+  </data>
 </root>

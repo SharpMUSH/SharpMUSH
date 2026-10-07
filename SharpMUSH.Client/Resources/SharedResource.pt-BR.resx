@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Linha {0}: um ::: item só é organizado diretamente dentro de um flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Agendar uma cena</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>A cena não tem sala até começar: ela acontece onde o anfitrião estiver ao iniciá-la.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Escolha um horário que ainda não passou.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>A cena não foi agendada.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>A cena está na agenda, mas nem tudo foi salvo: {0} Edite-a na página dela.</value>
+  </data>
 </root>

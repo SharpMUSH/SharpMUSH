@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Rândul {0}: un ::: item se așază doar direct în interiorul unui flex.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Programează o scenă</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Scena nu are o cameră până nu începe: se joacă acolo unde se află gazda când o pornește.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Alege o oră care nu a trecut încă.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Scena nu a fost programată.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Scena este în program, dar nu s-a salvat totul: {0} Edit-o din pagina ei.</value>
+  </data>
 </root>

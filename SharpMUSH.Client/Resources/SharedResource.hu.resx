@@ -5716,4 +5716,19 @@
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>{0}. sor: a ::: item csak közvetlenül egy flexen belül rendeződik.</value>
   </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Jelenet ütemezése</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>A jelenetnek nincs szobája, amíg el nem kezdődik: ott zajlik, ahol a házigazda az indításkor van.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Válassz olyan időpontot, amely még nem múlt el.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>A jelenet nem lett ütemezve.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>A jelenet az ütemtervben van, de nem minden lett mentve: {0} Szerkeszd az oldalán.</value>
+  </data>
 </root>
