@@ -352,10 +352,13 @@
     /// <summary>The scenes the character belongs to, which a scene it schedules joins as owner.</summary>
     private const string MemberScenes = "scenelist(mine)";
 
+    /// <summary>What the form asked for, read once when it is sent: later edits to the form change nothing in flight.</summary>
+    private sealed record ScheduleRequest(string Title, long At, string Pitch, bool Public);
+
     /// <summary>
-    /// Runs +scene/schedule as the acting character, then the pitch and privacy the form asked for, each on
-    /// the new scene by id. Every step names the character the form was opened as, so a tab that switches
-    /// character part-way has the rest refused rather than run as someone else.
+    /// Runs +scene/schedule as the acting character, then the privacy, title and pitch the form asked for,
+    /// each on the new scene by id. Every step names the character the form was opened as, so a tab that
+    /// switches character part-way has the rest refused rather than run as someone else.
     /// </summary>
     private async Task ScheduleSceneAsync()
     {
@@ -367,6 +370,7 @@
             return;
         }
 
+        var request = new ScheduleRequest(title, at, _schedPitch.Trim(), _schedPublic);
         _busy = true;
         _scheduleError = null;
         try
@@ -377,7 +381,7 @@
             var character = $"#{acting.DbrefNumber}:{acting.CreationTime}";
             _scheduleError = await Commands.RunAsync("think", MemberScenes, character) switch
             {
-                PortalCommandResponse asked => await CreateScheduledAsync(title, at, asked.Result ?? string.Empty, character),
+                PortalCommandResponse asked => await CreateScheduledAsync(request, asked.Result ?? string.Empty, character),
                 ApiFailure failure => failure.Message,
             };
         }
@@ -389,21 +393,28 @@
 
     /// <summary>Runs the schedule, and answers why no scene came of it, or null when one did.</summary>
     /// <param name="before">The ids of the character's scenes just before.</param>
-    private async Task<string?> CreateScheduledAsync(string title, long at, string before, string character)
+    private async Task<string?> CreateScheduledAsync(ScheduleRequest request, string before, string character)
     {
         // The verb is `+scene/schedule <title>=<when>` and splits at the first =, so a title carrying one goes
         // out without it and is set whole by +scene/title afterwards, which takes the scene id first.
-        var scheduled = MushComposeEncoder.Encode(title.Replace('=', ' ').Trim());
+        var scheduled = MushComposeEncoder.Encode(request.Title.Replace('=', ' ').Trim());
         var known = before.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(IsSceneId);
-        return await Commands.RunAsync($"+scene/schedule {scheduled}={at}",
+        return await Commands.RunAsync($"+scene/schedule {scheduled}={request.At}",
                 NewlyScheduled(known), character) switch
             {
-                PortalCommandResponse { Result: { } added } when IsSceneId(added.Trim()) =>
-                    await SceneScheduledAsync(added.Trim(), title, character),
+                PortalCommandResponse { Result: { } added } when Ids(added) is [var id] =>
+                    await SceneScheduledAsync(id, request, character),
+                // Another tab scheduled a scene for this character in the same moment: one of these is this
+                // form's, but not which. It exists, so the form must not be sent again.
+                PortalCommandResponse { Result: { } added } when Ids(added).Length > 1 =>
+                    await FinishScheduleAsync(Loc["RolSceneScheduledUnidentified"]),
                 PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotScheduled"]),
                 ApiFailure failure => failure.Message,
             };
     }
+
+    private static string[] Ids(string list) =>
+        [.. list.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(IsSceneId)];
 
     /// <summary>
     /// The ids on the character's list that were not there before and are a scheduled scene it owns: a scene
@@ -413,43 +424,56 @@
         $"squish(iter(setdiff({MemberScenes},{string.Join(' ', before)}),if(and(strmatch(scene(##,status),scheduled),strmatch(scene(##,owner),%#)),##)))";
 
     /// <summary>
-    /// Sends what <c>+scene/schedule</c> does not take: the title when it held an =, the pitch, and privacy.
+    /// Sends what <c>+scene/schedule</c> does not take: privacy, the title when it held an =, and the pitch.
     /// Each is asked back from the scene in the same queue entry, since a verb refuses in its output.
     /// </summary>
-    private async Task<string?> SceneScheduledAsync(string id, string title, string character)
+    private async Task<string?> SceneScheduledAsync(string id, ScheduleRequest request, string character)
     {
-        // Privacy goes first: the steps stop at the first that fails, and a scene asked to be private must
-        // not stay watchable because a pitch was refused.
+        // A scene asked to be private must never be left watchable: if it cannot be made private it is
+        // cancelled, and the form stays open with the reason, so sending it again makes no duplicate.
+        if (!request.Public && await ApplyAsync(($"+scene/private {id}", $"scene({id},public)", "0"), character) is { } refused)
+        {
+            return await ApplyAsync(($"+scene/cancel {id}", $"scene({id},status)", "cancelled"), character) is null
+                ? refused
+                : await FinishScheduleAsync(string.Format(Loc["RolSceneScheduledPartly"], refused));
+        }
+
         var changes = new List<(string Command, string Result, string Expected)>();
-        if (!_schedPublic)
-            changes.Add(($"+scene/private {id}", $"scene({id},public)", "0"));
-        if (title.Contains('='))
-            changes.Add(($"+scene/title {id}={MushComposeEncoder.Encode(title)}", $"scene({id},title)", title));
-        var pitch = _schedPitch.Trim();
-        if (pitch.Length > 0)
-            changes.Add(($"+scene/pitch {id}={MushComposeEncoder.Encode(pitch)}", $"scene({id},summary)", pitch));
+        if (request.Title.Contains('='))
+            changes.Add(($"+scene/title {id}={MushComposeEncoder.Encode(request.Title)}", $"scene({id},title)", request.Title));
+        if (request.Pitch.Length > 0)
+            changes.Add(($"+scene/pitch {id}={MushComposeEncoder.Encode(request.Pitch)}", $"scene({id},summary)", request.Pitch));
 
         string? note = null;
-        foreach (var (command, result, expected) in changes)
+        foreach (var change in changes)
         {
-            note = await Commands.RunAsync(command, result, character) switch
-            {
-                PortalCommandResponse { Result: { } value } when Same(value, expected) => null,
-                PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotSaved"]),
-                ApiFailure failure => failure.Message,
-            };
+            note = await ApplyAsync(change, character);
             if (note is not null) break;
         }
 
         // The scene exists either way, so the form closes: sending it again would schedule a second one.
         // What did not take is said on the page, and the scene's own page edits it.
-        _scheduledNote = note is null ? null : string.Format(Loc["RolSceneScheduledPartly"], note);
+        return await FinishScheduleAsync(note is null ? null : string.Format(Loc["RolSceneScheduledPartly"], note));
+    }
+
+    /// <summary>Runs one +scene verb and reads its field back: null when it took, else why not.</summary>
+    private async Task<string?> ApplyAsync((string Command, string Result, string Expected) change, string character) =>
+        await Commands.RunAsync(change.Command, change.Result, character) switch
+        {
+            PortalCommandResponse { Result: { } value } when Same(value, change.Expected) => null,
+            PortalCommandResponse refused => Refusal(refused, Loc["RolSceneNotSaved"]),
+            ApiFailure failure => failure.Message,
+        };
+
+    /// <summary>A scene was scheduled: the form closes, the page says <paramref name="note"/>, and the schedule shows.</summary>
+    private async Task<string?> FinishScheduleAsync(string? note)
+    {
+        _scheduledNote = note;
         CloseSchedule();
         SceneService.ReportChanged();
 
-        var scheduled = ScenesFilter.Href(ScenesFilter.Scheduled);
         if (_filter == ScenesFilter.Scheduled) await LoadAsync();
-        else Nav.NavigateTo(scheduled);
+        else Nav.NavigateTo(ScenesFilter.Href(ScenesFilter.Scheduled));
         return null;
     }
 

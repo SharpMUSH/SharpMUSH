@@ -114,6 +114,9 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// <summary>The ids of the acting character's scenes, as <c>scenelist(mine)</c> answers.</summary>
 	public string MemberScenes { get; set; } = "1 3";
 
+	/// <summary>Another tab schedules a scene for the same character in the same moment, with this id.</summary>
+	public string? ConcurrentScheduleId { get; set; }
+
 	/// <summary>The id <c>+scene/schedule</c> gives the scene it makes.</summary>
 	public const string ScheduledId = "9";
 
@@ -214,6 +217,7 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 				_scheduled["title"] = title;
 				_scheduled["public"] = "1";
 				MemberScenes = $"{ScheduledId} {MemberScenes}";
+				if (ConcurrentScheduleId is { } other) MemberScenes = $"{other} {MemberScenes}";
 				output = [$"Scheduled scene {ScheduledId} \"{title}\"."];
 			}
 			else
@@ -228,6 +232,10 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 		else if (command.Command.StartsWith($"+scene/pitch {ScheduledId}=", StringComparison.Ordinal))
 		{
 			_scheduled["summary"] = command.Command[$"+scene/pitch {ScheduledId}=".Length..];
+		}
+		else if (command.Command == $"+scene/cancel {ScheduledId}")
+		{
+			_scheduled["status"] = "cancelled";
 		}
 		else if (command.Command == $"+scene/private {ScheduledId}")
 		{
@@ -835,24 +843,45 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// Once the scene exists the form closes even when a detail sent after it did not take, since sending it
-	/// again would schedule a second scene; the page says what was not saved.
+	/// A scene asked to be private is never left watchable: when +scene/private is refused the new scene is
+	/// cancelled, and the form stays open with the engine's reason, so sending it again makes no duplicate.
 	/// </summary>
 	[TUnit.Core.Test]
-	public async Task Scenes_ScheduledButPrivacyRefused_ClosesTheForm_AndSaysWhatWasNotSaved()
+	public async Task Scenes_ScheduledButPrivacyRefused_CancelsTheScene_AndKeepsTheFormOpen()
 	{
 		_api.PrivacyRefused = true;
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		FillScheduleForm(cut, "Meant To Be Quiet", DateTime.Today.AddDays(2).AddHours(20), pitch: "Sent after.", watchable: false);
+		FillScheduleForm(cut, "Meant To Be Quiet", DateTime.Today.AddDays(2).AddHours(20), pitch: "Never sent.", watchable: false);
+		cut.Find(".scene-schedule-submit").Click();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-schedule-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-schedule-error").TextContent).Contains(SceneSurfaceApiHandler.PrivacyRefusal);
+		await Assert.That(_api.CommandsRun()).Contains($"+scene/cancel {SceneSurfaceApiHandler.ScheduledId}");
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/pitch", StringComparison.Ordinal))).IsFalse()
+			.Because("privacy goes first, and nothing more is sent to a scene that was cancelled");
+	}
+
+	/// <summary>
+	/// Two scenes scheduled for the character in the same moment can't be told apart, but one is this form's:
+	/// the form closes rather than inviting a duplicate, and the page says the details were not set.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_AConcurrentSchedule_ClosesTheForm_AndSetsNothingOnAGuess()
+	{
+		_api.ConcurrentScheduleId = "10";
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		FillScheduleForm(cut, "Twin Plans", DateTime.Today.AddDays(2).AddHours(20), pitch: "Which one?", watchable: false);
 		cut.Find(".scene-schedule-submit").Click();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-scheduled-note"), TimeSpan.FromSeconds(5));
-		await Assert.That(_api.CommandsRun()).Contains($"+scene/private {SceneSurfaceApiHandler.ScheduledId}");
-		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/pitch", StringComparison.Ordinal))).IsFalse()
-			.Because("privacy goes first, and the steps stop at the first refusal");
 		await Assert.That(cut.FindAll(".scene-schedule")).IsEmpty();
+		await Assert.That(_api.CommandsRun().Count(c => c.StartsWith("+scene/schedule", StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/pitch", StringComparison.Ordinal)
+			|| c.StartsWith("+scene/private", StringComparison.Ordinal))).IsFalse();
 	}
 
 	private void WaitForCommand(string command) =>

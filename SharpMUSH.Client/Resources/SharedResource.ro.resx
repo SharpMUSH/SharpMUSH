@@ -5726,7 +5726,7 @@
     <value>Scena nu a fost programată.</value>
   </data>
   <data name="RolSceneScheduledPartly" xml:space="preserve">
-    <value>Scena este în program, dar nu s-a salvat totul: {0} Edit-o din pagina ei.</value>
+    <value>Scena este în program, dar nu s-a salvat totul: {0} Editeaz-o din pagina ei.</value>
   </data>
   <data name="NavSceneHost" xml:space="preserve">
     <value>Gazdă</value>
@@ -5736,5 +5736,8 @@
   </data>
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Această scenă nu a început încă. Jurnalul ei începe odată cu ea.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Scena este în program, dar în același moment a fost programată încă una pentru tine, așa că descrierea și confidențialitatea nu au fost setate. Verifică ambele scene pe paginile lor.</value>
   </data>
 </root>

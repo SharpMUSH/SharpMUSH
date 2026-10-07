@@ -5717,7 +5717,7 @@
     <value>Planera en scen</value>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
-    <value>Scenen har inget rum förrän den startar: den spelas där värden är när de startar den.</value>
+    <value>Scenen har inget rum förrän den startar: den spelas där värden är när scenen startar.</value>
   </data>
   <data name="RolScheduleTimePast" xml:space="preserve">
     <value>Välj en tid som inte har passerat än.</value>
@@ -5736,5 +5736,8 @@
   </data>
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Den här scenen har inte börjat än. Loggen börjar när den gör det.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Scenen finns i schemat, men en annan planerades åt dig i samma ögonblick, så beskrivningen och sekretessen sattes inte. Kontrollera båda scenerna på deras sidor.</value>
   </data>
 </root>

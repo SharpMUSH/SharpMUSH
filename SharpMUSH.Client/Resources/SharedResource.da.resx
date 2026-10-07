@@ -5717,7 +5717,7 @@
     <value>Planlæg en scene</value>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
-    <value>Scenen har intet rum, før den starter: den foregår, hvor værten er, når de starter den.</value>
+    <value>Scenen har intet rum, før den starter: den foregår, hvor værten er, når scenen starter.</value>
   </data>
   <data name="RolScheduleTimePast" xml:space="preserve">
     <value>Vælg et tidspunkt, der ikke er passeret endnu.</value>
@@ -5736,5 +5736,8 @@
   </data>
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Scenen er ikke startet endnu. Dens log begynder, når den gør.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Scenen er på planen, men en anden blev planlagt for dig i samme øjeblik, så dens pitch og privatliv blev ikke sat. Tjek begge scener på deres sider.</value>
   </data>
 </root>

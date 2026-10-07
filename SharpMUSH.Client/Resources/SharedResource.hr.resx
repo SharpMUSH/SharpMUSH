@@ -5737,4 +5737,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Ova scena još nije počela. Njezin zapis počinje kad počne.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Scena je u rasporedu, ali je u istom trenutku zakazana još jedna za vas, pa njezin opis i privatnost nisu postavljeni. Provjerite obje scene na njihovim stranicama.</value>
+  </data>
 </root>

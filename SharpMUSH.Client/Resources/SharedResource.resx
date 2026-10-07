@@ -6254,4 +6254,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>This scene has not started yet. Its log begins when it does.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>The scene is on the schedule, but another was scheduled for you at the same moment, so its pitch and privacy were not set. Check both scenes on their pages.</value>
+  </data>
 </root>

@@ -5030,4 +5030,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Cette scène n'a pas encore commencé. Son journal commencera avec elle.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>La scène est au programme, mais une autre a été planifiée pour vous au même moment : son accroche et sa confidentialité n'ont donc pas été définies. Vérifiez les deux scènes sur leurs pages.</value>
+  </data>
 </root>

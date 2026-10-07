@@ -5737,4 +5737,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Эта сцена ещё не началась. Её журнал начнётся вместе с ней.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Сцена в расписании, но в тот же момент для вас была запланирована ещё одна, поэтому описание и приватность не заданы. Проверьте обе сцены на их страницах.</value>
+  </data>
 </root>

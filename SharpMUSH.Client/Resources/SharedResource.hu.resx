@@ -5737,4 +5737,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Ez a jelenet még nem kezdődött el. A naplója az indulásakor kezdődik.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>A jelenet az ütemtervben van, de ugyanabban a pillanatban egy másikat is ütemeztek neked, ezért a leírása és a láthatósága nincs beállítva. Ellenőrizd mindkét jelenetet az oldalukon.</value>
+  </data>
 </root>

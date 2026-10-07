@@ -5737,4 +5737,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Тази сцена още не е започнала. Дневникът ѝ започва, когато тя започне.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Сцената е в графика, но в същия момент беше насрочена и друга за вас, затова описанието и поверителността ѝ не бяха зададени. Проверете и двете сцени на страниците им.</value>
+  </data>
 </root>

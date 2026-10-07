@@ -5737,4 +5737,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Diese Szene hat noch nicht begonnen. Ihr Protokoll beginnt, sobald sie startet.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Die Szene steht im Plan, aber im selben Moment wurde eine weitere für dich geplant, daher wurden Pitch und Sichtbarkeit nicht gesetzt. Prüfe beide Szenen auf ihren Seiten.</value>
+  </data>
 </root>

@@ -5737,4 +5737,7 @@
   <data name="RolSceneNotStartedYet" xml:space="preserve">
     <value>Esta cena ainda não começou. O registro começa quando ela começar.</value>
   </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>A cena está na agenda, mas outra foi agendada para você no mesmo momento, então o resumo e a privacidade não foram definidos. Confira as duas cenas nas páginas delas.</value>
+  </data>
 </root>
