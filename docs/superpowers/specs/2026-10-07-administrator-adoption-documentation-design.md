@@ -4,7 +4,7 @@
 
 Give an experienced MUSH administrator enough current, repository-owned evidence to rehearse a PennMUSH import, operate and recover a SharpMUSH deployment, and understand the service boundaries without relying on marketing claims or an external diagram service.
 
-The work improves the authoritative documentation in this repository. Publishing selected material on `sharpmush.com` is a separate repository concern; these documents must nevertheless stand alone and be suitable as that site's source material.
+The work spans two repositories. `SharpMUSH` owns facts coupled to the runtime, deployment files, and tests. `SharpMUSH.Guide` publishes administrator-facing copies alongside its generated command, function, and configuration reference. The Guide sync imports these selected source documents from SharpMUSH so operational truth is edited once rather than drifting between repositories. Publishing material on `sharpmush.com` remains a separate site concern; the Guide copies must nevertheless stand alone and be suitable as that site's source material.
 
 ## Scope
 
@@ -14,7 +14,8 @@ This slice delivers:
 - an operator handbook that connects the existing deployment facts into one task-oriented path;
 - a first-party architecture diagram stored as text in the repository;
 - links to existing portal screenshots only where they represent the shipped interface;
-- automated documentation checks for internal links and framework-version claims.
+- automated documentation checks for internal links and framework-version claims;
+- a guarded SharpMUSH.Guide sync for the three maintained administrator documents.
 
 It does not:
 
@@ -96,6 +97,12 @@ Arrows name protocols or data ownership. The prose states the failure boundary f
 
 Existing screenshots under `docs/design/d1/boards/` may be linked from the operator or architecture documents only when the corresponding UI is shipped and the caption identifies the represented route. Design-only or stale boards remain design references and are not presented as current product proof.
 
+### SharpMUSH.Guide publication
+
+`SharpMUSH.Guide` receives the three documents under `Guides/` through its scheduled synchronization workflow. The workflow sparse-checks out the exact SharpMUSH source paths, stages them separately from generated help entries, and fails before changing the Guide when any expected source is absent. The Guide README identifies which folders are generated and where corrections belong.
+
+The sync preserves hand-written Guide material and never treats the administrator documents as command/function help entries. Its local fixture test proves that an absent source refuses the update and that a successful update copies all three files without removing unrelated guides.
+
 ## Verification
 
 Documentation verification belongs in `SharpMUSH.Tests` so it runs with the existing suite.
@@ -110,6 +117,8 @@ Add focused tests that:
 - require the architecture document to name every deployed service, NATS, Lightning/LMDB, wiki assets, backups, and observation endpoints.
 
 Tests assert durable contractual concepts, not exact paragraphs or formatting. Existing documentation tests and `dotnet format whitespace` remain green.
+
+`SharpMUSH.Guide` also tests the repository-to-repository copy using local fixtures; its tests require no network access and do not mutate generated command, function, or configuration output.
 
 ## Writing rules
 
@@ -128,5 +137,5 @@ Tests assert durable contractual concepts, not exact paragraphs or formatting. E
 3. Add the operator handbook until its contract passes.
 4. Add the architecture reference and diagram until its contract passes.
 5. Repair stale `.NET 10` guidance covered by the version test.
-6. Run focused documentation tests, formatting verification, the dependent test project, and link validation.
-
+6. Extend and test SharpMUSH.Guide's guarded sync for these documents.
+7. Run focused documentation tests, formatting verification, both repositories' local workflow tests, and link validation.
