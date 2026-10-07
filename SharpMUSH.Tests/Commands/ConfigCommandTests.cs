@@ -112,6 +112,34 @@ public class ConfigCommandTests
 		await Assert.That(shown).IsEquivalentTo(new[] { " room_flags                                no_command" });
 	}
 
+	/// <summary>
+	/// A mapping option lists one entry per line in key order, the first beside the option's name and
+	/// the rest in its value column, never the dictionary's type name.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfigCommand_MappingOption_ListsOneEntryPerLine()
+	{
+		var shown = await AsWizard("@config command_aliases");
+
+		await Assert.That(shown[0]).IsEqualTo(" command_aliases                          @ATRCHOWN: @attrchown");
+		await Assert.That(shown).Contains($"{new string(' ', 42)}@ATRLOCK: @attrlock");
+		await Assert.That(string.Join('\n', shown)).DoesNotContain("System.");
+	}
+
+	/// <summary>The category listing shows a mapping option's entries as labelled values of their own.</summary>
+	[Test]
+	[Arguments("Alias", "@attrlock")]
+	[Arguments("Restriction", "function_restrictions")]
+	[Arguments("SitelockRules", "sitelock_rules")]
+	[Arguments("Mssp", "telnet.sharpmush.com 4201")]
+	public async ValueTask ConfigCommand_MappingCategory_ShowsEntries(string category, string expected)
+	{
+		var shown = string.Join('\n', await AsWizard($"@config {category}"));
+
+		await Assert.That(shown).Contains(expected);
+		await Assert.That(shown).DoesNotContain("System.");
+	}
+
 	/// <summary>A word that begins no option name is matched anywhere in one: <c>*names*</c>.</summary>
 	[Test]
 	public async ValueTask ConfigCommand_NoPrefixMatch_FallsBackToAWildcard()

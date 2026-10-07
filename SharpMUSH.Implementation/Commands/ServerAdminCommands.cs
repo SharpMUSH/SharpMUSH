@@ -1097,11 +1097,11 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			var options = ServerLayout.KeyValues(categoryOptions.Select(opt =>
+			var options = new Fields([.. categoryOptions.Select(opt =>
 			{
 				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				return (ServerLayout.CommandLink(name, $"@config {name}"), MarkupText.Plain(ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr)));
-			}));
+				return new Field(ServerLayout.CommandLink(name, $"@config {name}"), ConfigValueBlock(opt.Value, opt.ConfigAttr));
+			})]);
 			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
 				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat, matchingCategory)),
 				options,
@@ -1130,6 +1130,24 @@ public partial class Commands
 			{
 				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
 				lastValue = ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr);
+				if (opt.Value is IEnumerable<KeyValuePair<string, string[]>> map)
+				{
+					// One entry per line, the name on the first and the rest kept to its value column.
+					var label = name;
+					foreach (var (key, values) in ConfigValueDisplay.Entries(map))
+					{
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, label, $"{key}: {values}");
+						label = string.Empty;
+					}
+
+					if (label.Length > 0)
+					{
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, string.Empty);
+					}
+
+					continue;
+				}
+
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, lastValue);
 			}
 
@@ -1139,6 +1157,15 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);
 		return new CallState(ErrorMessages.Returns.NotFound);
 	}
+
+	/// <summary>
+	/// An option's value in the <c>@config &lt;category&gt;</c> listing: a mapping option's entries as
+	/// labelled values of their own, anything else as the text <c>config()</c> returns.
+	/// </summary>
+	private static Block ConfigValueBlock(object? value, SharpConfigAttribute metadata)
+		=> value is IEnumerable<KeyValuePair<string, string[]>> map
+			? ServerLayout.KeyValues(ConfigValueDisplay.Entries(map).Select(entry => (entry.Key, MarkupText.Plain(entry.Values))))
+			: ServerLayout.Body(MarkupText.Plain(ConfigValueDisplay.Format(value, metadata)));
 
 	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "PERM^server.operate",
 		MinArgs = 0, ParameterNames = ["object"])]
