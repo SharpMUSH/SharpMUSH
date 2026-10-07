@@ -27,11 +27,12 @@ public static class ServerLayout
 	public static MarkupText HeadingRule { get; } = MarkupText.Plain("─");
 
 	/// <summary>
-	/// <paramref name="parts"/> in a <see cref="PanelBorder"/> frame titled <paramref name="title"/>. A
-	/// <see cref="Rule"/> among the parts is drawn as a divider meeting the frame's sides.
+	/// <paramref name="parts"/> in a frame titled <paramref name="title"/>, drawn in the reader's border or
+	/// <see cref="PanelBorder"/> (<see cref="House"/>). A <see cref="Rule"/> among the parts is drawn as a
+	/// divider meeting the frame's sides.
 	/// </summary>
 	public static Block Panel(MarkupText title, params ReadOnlySpan<Block> parts) =>
-		new Frame(parts.Length == 1 ? parts[0] : new Stack([.. parts])) { Border = PanelBorder, Title = title };
+		new Frame(parts.Length == 1 ? parts[0] : new Stack([.. parts])) { Title = title };
 
 	/// <summary>
 	/// The lines round a section that is read as text and copied from (mail): double lines to a client that
@@ -50,9 +51,16 @@ public static class ServerLayout
 			.. parts,
 			new Rule { Border = SectionBorder }]);
 
+	/// <summary>
+	/// The look <see cref="Build"/> lays server output out under: <see cref="PanelBorder"/> frames and the
+	/// <see cref="HeadingRule"/>. It is a fallback, so a player's <c>@theme</c> with a look of its own
+	/// (a genre's border and heading rule) draws server listings in that look instead.
+	/// </summary>
+	public static LayoutTheme House { get; } = new() { Border = PanelBorder, HeaderRule = HeadingRule };
+
 	/// <summary>A table with the house heading rule and two cells between columns.</summary>
 	public static Table Listing(ImmutableArray<TableColumn> columns, IEnumerable<ImmutableArray<Block>> rows) =>
-		new(columns, [.. rows]) { HeaderRule = HeadingRule };
+		new(columns, [.. rows]);
 
 	/// <summary>A table of plain-text rows with the house heading rule.</summary>
 	public static Table Listing(ImmutableArray<TableColumn> columns, IEnumerable<IEnumerable<string>> rows) =>
@@ -109,6 +117,7 @@ public static class ServerLayout
 	public static MarkupText Build(Block block, int width, bool fluid = true)
 	{
 		ArgumentNullException.ThrowIfNull(block);
+		block = block.ThemedUnder(House);
 		var text = MarkupText.Join(MarkupText.NewLine,
 			BlockLayout.Lines(block, width).Select(line => line.Trim(TrimType.TrimEnd, " ")));
 		return text.Length == 0

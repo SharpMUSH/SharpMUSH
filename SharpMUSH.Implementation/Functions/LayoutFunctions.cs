@@ -357,7 +357,7 @@ public partial class Functions
 	}
 
 	private BorderStyle DefaultBorder() =>
-		BorderStyle.Preset(Configuration.CurrentValue.Cosmetic.LayoutBorder ?? string.Empty) ?? BorderStyle.Mush;
+		BorderStyle.Preset(Configuration.CurrentValue.Cosmetic.LayoutBorder ?? string.Empty) ?? BorderStyle.Double;
 
 	/// <summary>An argument as a flex item: the sized item an <c>item()</c> made, or the content at an automatic width.</summary>
 	private Block FlexItemOf(MString content) =>
