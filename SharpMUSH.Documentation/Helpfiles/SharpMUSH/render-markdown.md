@@ -59,6 +59,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 
 - **Text Formatting**: `**bold**`, `*italic*`, `` `code` ``
 - **Links**: `[text](url)` or `<url>` (rendered as ANSI OSC 8 hyperlinks, clickable in compatible terminals such as iTerm2 and Windows Terminal)
+- **Images**: `![alt](url)` reads `[image: alt]` (or `[image]`). When the caller may use [image()], a client that draws pictures (the web terminal, MXP, Pueblo) is shown the picture instead, held to `image_hosts` the same way. An image alone in its paragraph is laid out as a [figure()]; one inside a sentence stays in the line. A pixel size in `{width=200 height=100}` after the image is kept; a percentage is not.
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
 
 ### Blocks

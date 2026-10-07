@@ -1,4 +1,6 @@
 using SharpMUSH.Library.Authorization;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using Mediator;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Definitions;
@@ -142,8 +144,13 @@ public static class ViewWiki
 		else
 		{
 			// WikiCommandRenderer rather than the shared default: a [[wiki link]] in the body is only
-			// followable from a surface that can navigate the wiki, and this is that surface.
-			rendered = RecursiveMarkdownHelper.RenderMarkdown(markdown, new WikiCommandRenderer(RenderWidth, parser));
+			// followable from a surface that can navigate the wiki, and this is that surface. A page's
+			// pictures are the wiki's own, shown wherever image_hosts allows them, as the portal shows them.
+			var cosmetic = parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Cosmetic;
+			rendered = RecursiveMarkdownHelper.RenderMarkdown(markdown, new WikiCommandRenderer(RenderWidth, parser)
+			{
+				ImageAllowed = source => ImageHostPolicy.Allows(source, cosmetic.ImageHosts, cosmetic.ImageHostList),
+			});
 		}
 
 		var output = MarkupText.Join(MarkupText.NewLine, [

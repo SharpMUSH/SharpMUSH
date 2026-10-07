@@ -66,6 +66,82 @@ public class WikiSyntaxInGameRenderingTests
 		await Assert.That(text).DoesNotContain("20%");
 	}
 
+	/// <summary>
+	/// A surface that may show pictures (<c>@wiki</c>, or markdown rendered for an object with
+	/// Send_OOB) wraps the placeholder in the picture: a client that shows pictures draws it, and a
+	/// terminal still reads the placeholder.
+	/// </summary>
+	[Test]
+	public async Task ImageAllowed_ShowsThePictureAndKeepsThePlaceholderForATerminal()
+	{
+		var rendered = RecursiveMarkdownHelper.RenderMarkdown(
+			"![SharpMUSH logo](/assets/Logo.svg){width=200px height=100}",
+			new RecursiveMarkdownRenderer { ImageAllowed = _ => true });
+
+		var html = rendered.Render(MarkupFormat.Html);
+		await Assert.That(html).Contains("src=\"/assets/Logo.svg\"");
+		await Assert.That(html).Contains("alt=\"SharpMUSH logo\"");
+		await Assert.That(html).Contains("width=\"200\"");
+		await Assert.That(html).Contains("height=\"100\"");
+		await Assert.That(html).DoesNotContain("[image:");
+		await Assert.That(rendered.Render(MarkupFormat.Mxp)).Contains("<IMAGE");
+		await Assert.That(rendered.Render(MarkupFormat.Ansi)).Contains("[image: SharpMUSH logo]");
+		await Assert.That(rendered.ToPlainText()).Contains("[image: SharpMUSH logo]");
+	}
+
+	/// <summary>
+	/// An image alone in its paragraph is a figure, as <c>figure()</c> draws one; an image in a sentence
+	/// stays in the line.
+	/// </summary>
+	[Test]
+	public async Task ImageAllowed_AloneIsAFigureAndInASentenceStaysInline()
+	{
+		var renderer = () => new RecursiveMarkdownRenderer { ImageAllowed = _ => true };
+		var alone = RecursiveMarkdownHelper.RenderMarkdown("![A map](/m.png)", renderer());
+		var inline = RecursiveMarkdownHelper.RenderMarkdown("See ![A map](/m.png) here.", renderer());
+
+		await Assert.That(alone.Render(MarkupFormat.Html)).Contains("class=\"ms-figure-image\"");
+		await Assert.That(alone.Render(MarkupFormat.Mxp)).Contains("<IMAGE /m.png");
+		await Assert.That(inline.Render(MarkupFormat.Html)).Contains("See <img class=\"ms-image\" src=\"/m.png\"");
+		await Assert.That(inline.ToPlainText()).IsEqualTo("See [image: A map] here.");
+	}
+
+	/// <summary>A lone image inside <c>::: center</c> is centred for a terminal too, like the text around it.</summary>
+	[Test]
+	public async Task ImageAllowed_AloneInACentredBlockIsCentred()
+	{
+		var lines = RecursiveMarkdownHelper.RenderMarkdown("::: center\n![logo](/l.svg)\n:::",
+			new RecursiveMarkdownRenderer(20) { ImageAllowed = _ => true }).ToPlainText().Split('\n');
+
+		await Assert.That(lines[0].TrimEnd()).IsEqualTo("   [image: logo]");
+	}
+
+	/// <summary>A percentage has no pixel count, so the picture is left its own size.</summary>
+	[Test]
+	public async Task ImageAllowed_PercentWidthIsNotAPixelWidth()
+	{
+		var html = RecursiveMarkdownHelper.RenderMarkdown(
+			"![logo](/assets/Logo.svg){width=20%}",
+			new RecursiveMarkdownRenderer { ImageAllowed = _ => true }).Render(MarkupFormat.Html);
+
+		await Assert.That(html).Contains("src=\"/assets/Logo.svg\"");
+		await Assert.That(html).DoesNotContain("width=");
+	}
+
+	/// <summary>An address the policy refuses, and every image when there is no policy, stays the placeholder.</summary>
+	[Test]
+	public async Task ImageRefusedOrNoPolicy_IsOnlyThePlaceholder()
+	{
+		const string markdown = "![logo](https://elsewhere.example/logo.png)";
+		var refused = RecursiveMarkdownHelper.RenderMarkdown(markdown,
+			new RecursiveMarkdownRenderer { ImageAllowed = source => source.StartsWith('/') });
+		var unset = RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		await Assert.That(refused.Render(MarkupFormat.Html)).DoesNotContain("<img");
+		await Assert.That(unset.Render(MarkupFormat.Html)).DoesNotContain("<img");
+		await Assert.That(refused.ToPlainText()).Contains("[image: logo]");
+	}
+
 	[Test]
 	public async Task HeadingWithAttributeBlock_DoesNotLeak()
 	{

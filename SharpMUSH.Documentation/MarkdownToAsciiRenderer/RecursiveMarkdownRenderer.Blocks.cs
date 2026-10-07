@@ -25,10 +25,36 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderParagraph(ParagraphBlock para)
 	{
+		if (LoneImage(para) is { } image)
+		{
+			return RenderFigure(image, RenderInlines(image.FirstChild));
+		}
+
 		// Trim trailing whitespace because EnableTrackTrivia appends a soft
 		// LineBreakInline (rendered as " ") at the end of many paragraphs.
 		var content = RenderInlines(para.Inline);
 		return content.Trim(TrimType.TrimEnd, " ");
+	}
+
+	/// <summary>The image a paragraph holds and nothing else but space, or null.</summary>
+	private static LinkInline? LoneImage(ParagraphBlock para)
+	{
+		LinkInline? image = null;
+		for (var inline = para.Inline?.FirstChild; inline is not null; inline = inline.NextSibling)
+		{
+			switch (inline)
+			{
+				case LinkInline { IsImage: true } link when image is null:
+					image = link;
+					break;
+				case LineBreakInline:
+				case LiteralInline literal when literal.Content.IsEmptyOrWhitespace():
+					break;
+				default:
+					return null;
+			}
+		}
+		return image;
 	}
 
 	/// <summary>
