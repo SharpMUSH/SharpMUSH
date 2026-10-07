@@ -751,25 +751,26 @@ pre.ms-preformatted {
    MarkupString.Html's LayoutCss.Fixed verbatim (pinned by MarkupCssCoverageTests). */
 .ms-layout { display: block; max-width: 100%; white-space: normal; }
 .ms-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.ms-box { margin: 0; padding: 0 1ch; min-width: 0; border: 1px solid currentColor; }
+.ms-box { margin: 0; padding: 0 1ch; min-width: 0; border: 1px solid var(--ms-border, var(--ms-border-default, currentColor)); }
 .ms-box.ms-border-none { border: none; padding: 0; }
-.ms-box.ms-border-double { border: 3px double currentColor; }
+.ms-box.ms-border-double { border: 3px double var(--ms-border, var(--ms-border-default, currentColor)); }
 .ms-box.ms-border-heavy { border-width: 2px; }
 .ms-box.ms-border-rounded { border-radius: 0.5em; }
 .ms-box-title { padding: 0 1ch; margin-inline: auto; }
+.ms-box-title, .ms-rule-title { color: var(--ms-title, var(--ms-title-default, inherit)); }
 .ms-box-title[data-align="left"] { margin-inline: 0 auto; }
 .ms-box-title[data-align="right"] { margin-inline: auto 0; }
 .ms-rule, .ms-divider { display: flex; align-items: center; gap: 1ch; }
-.ms-rule::before, .ms-rule::after, .ms-divider::before, .ms-divider::after { content: ""; flex: 1 1 0; border-top: 1px solid currentColor; }
+.ms-rule::before, .ms-rule::after, .ms-divider::before, .ms-divider::after { content: ""; flex: 1 1 0; border-top: 1px solid var(--ms-border, var(--ms-border-default, currentColor)); }
 .ms-rule[data-align="left"]::before, .ms-divider[data-align="left"]::before { flex: 0 0 1ch; }
 .ms-rule[data-align="right"]::after, .ms-divider[data-align="right"]::after { flex: 0 0 1ch; }
 .ms-divider { margin: 0 -1ch; }
-.ms-border-double.ms-rule::before, .ms-border-double.ms-rule::after { border-top: 3px double currentColor; }
+.ms-border-double.ms-rule::before, .ms-border-double.ms-rule::after { border-top: 3px double var(--ms-border, var(--ms-border-default, currentColor)); }
 .ms-border-none.ms-rule::before, .ms-border-none.ms-rule::after { border-top: none; }
 .ms-flex { display: flex; flex-wrap: wrap; }
 .ms-flex.ms-vertical { flex-direction: column; }
 .ms-item { min-width: 0; }
-.ms-flex.ms-divided > .ms-item + .ms-item { border-left: 1px solid currentColor; padding-left: 1ch; }
+.ms-flex.ms-divided > .ms-item + .ms-item { border-left: 1px solid var(--ms-separator, var(--ms-separator-default, currentColor)); padding-left: 1ch; }
 .ms-figure { display: flow-root; }
 .ms-figure-image { max-width: 100%; height: auto; }
 .ms-figure-art { margin: 0; font: inherit; white-space: pre; }
@@ -777,25 +778,29 @@ pre.ms-preformatted {
 .ms-float-right > .ms-figure-image, .ms-float-right > .ms-figure-art { float: right; max-width: 50%; margin: 0 0 0.5em 2ch; }
 .ms-fields { display: grid; grid-template-columns: minmax(min-content, max-content) minmax(0, 1fr); column-gap: 1ch; margin: 0; }
 .ms-field { display: contents; }
-.ms-field > dt { grid-column: 1; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ms-field > dt { grid-column: 1; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ms-label, var(--ms-label-default, inherit)); }
 .ms-field > dd { grid-column: 2; margin: 0; min-width: 0; }
 .ms-fields.ms-label-right > .ms-field > dt { text-align: right; }
 .ms-fields.ms-leader > .ms-field > dt { display: flex; gap: 0.5ch; }
 .ms-fields.ms-leader > .ms-field > dt::after { content: ""; flex: 1 0 2ch; border-bottom: 1px dotted currentColor; margin-bottom: 0.3em; }
+.ms-fields.ms-striped { column-gap: 0; }
+.ms-fields.ms-striped > .ms-field > dt { padding-right: 1ch; }
+.ms-fields.ms-striped > .ms-field:nth-child(even) > * { background: var(--ms-stripe, var(--ms-stripe-default, rgba(127, 127, 127, 0.12))); }
 .ms-tree, .ms-tree ul { list-style: none; margin: 0; padding: 0; }
 .ms-tree ul { margin-left: 1ch; }
-.ms-tree ul > li { position: relative; padding-left: 3ch; border-left: 1px solid currentColor; }
+.ms-tree ul > li { position: relative; padding-left: 3ch; border-left: 1px solid var(--ms-guide, var(--ms-guide-default, currentColor)); }
 .ms-tree ul > li:last-child { border-left-color: transparent; }
-.ms-tree ul > li::before { content: ""; position: absolute; left: -1px; top: 0; width: 2ch; height: 0.7em; border-left: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+.ms-tree ul > li::before { content: ""; position: absolute; left: -1px; top: 0; width: 2ch; height: 0.7em; border-left: 1px solid var(--ms-guide, var(--ms-guide-default, currentColor)); border-bottom: 1px solid var(--ms-guide, var(--ms-guide-default, currentColor)); }
 .ms-tree.ms-guide-rounded ul > li:last-child::before { border-bottom-left-radius: 0.4em; }
 .ms-tree.ms-guide-heavy ul > li, .ms-tree.ms-guide-heavy ul > li::before { border-width: 2px; }
 .ms-tree.ms-guide-double ul > li, .ms-tree.ms-guide-double ul > li::before { border-left-style: double; border-left-width: 3px; }
 .ms-tree.ms-guide-none ul > li, .ms-tree.ms-guide-none ul > li::before { border-color: transparent; }
 .ms-gauge { display: flex; align-items: center; gap: 1ch; }
-.ms-gauge > meter { flex: 1 1 8ch; min-width: 4ch; }
-.ms-gauge-bar { flex: 1 1 8ch; min-width: 4ch; height: 1em; display: flex; border: 1px solid currentColor; box-sizing: border-box; }
+.ms-gauge > meter { flex: 1 1 8ch; min-width: 4ch; accent-color: var(--ms-gauge, var(--ms-gauge-default, auto)); }
+.ms-gauge-bar { flex: 1 1 8ch; min-width: 4ch; height: 1em; display: flex; border: 1px solid var(--ms-border, var(--ms-border-default, currentColor)); box-sizing: border-box; }
 .ms-gauge-fill { height: 100%; }
 .ms-bullets { margin: 0; padding-left: 3ch; }
+.ms-bullets > li::marker, .ms-bullets .ms-marker { color: var(--ms-bullet, var(--ms-bullet-default, inherit)); }
 .ms-bullet-dash { list-style-type: "- "; }
 .ms-bullet-star { list-style-type: "* "; }
 .ms-bullet-none, .ms-bullet-custom { list-style: none; }
@@ -810,7 +815,9 @@ pre.ms-preformatted {
 .ms-table-wrap { max-width: 100%; overflow-x: auto; }
 .ms-table { border-collapse: collapse; }
 .ms-table th, .ms-table td { padding: 0 1ch; vertical-align: top; text-align: left; }
-.ms-table th { border-bottom: 1px solid currentColor; }
+.ms-table th { border-bottom: 1px solid var(--ms-header-rule, var(--ms-header-rule-default, currentColor)); color: var(--ms-heading, var(--ms-heading-default, inherit)); }
+.ms-table.ms-striped > tbody > tr:nth-child(even) { background: var(--ms-stripe, var(--ms-stripe-default, rgba(127, 127, 127, 0.12))); }
+.ms-table .ms-nowrap, .ms-table .ms-nowrap .ms-text { white-space: pre; overflow-wrap: normal; }
 @media (max-width: 48em) { .ms-table .ms-p3 { display: none; } }
 @media (max-width: 32em) { .ms-table .ms-p2 { display: none; } }
 /* Portal-only: LayoutCss.Fixed leaves its title gap in a rule or divider with no title, which splits the line in two. */

@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
+using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor;
 
 namespace SharpMUSH.Implementation.Services;
 

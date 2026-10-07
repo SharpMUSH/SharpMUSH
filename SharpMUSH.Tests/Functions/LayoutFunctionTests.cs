@@ -331,7 +331,7 @@ public class LayoutFunctionTests
 	[Arguments("box(x,,20,{{\"colour\":\"red\"}})", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("box(x,,20,border:double)", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
 	[Arguments("box(x,,20,{{[\"border\"]}})", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
-	[Arguments("box(x,,20,{{\"pad\":{\"n\":1}}})", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
+	[Arguments("box(x,,20,{{\"pad\":{\"n\":1}}})", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("box(x,,20,{{\"pad\":1}} extra)", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
 	[Arguments("box(x,,20,{{\"pad\":1,\"PAD\":2}})", "#-1 DUPLICATE LAYOUT OPTION PAD")]
 	[Arguments("flex({{\"gap\":\"2\"}},a,b)", ErrorMessages.Returns.InvalidArgument)]

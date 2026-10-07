@@ -15,6 +15,7 @@ Available functions:
 - datatable() and datacolumns() - a table that gives way on a narrow screen, given by rows or by columns
 - gradient() - text shaded through colours
 - badge() - a coloured status tag
+- themes(), theme() and swatch() - colour themes for layouts; see [LAYOUT THEMES]
 
 The result is text, so `strlen()`, `mid()`, `edit()` and listen patterns all work on the box art. A layout cut or edited by another function is shown as the text it now is, in the portal too.
 
@@ -24,7 +25,7 @@ Layouts nest. A `flex()`, `fields()` or `tree()` on a line of its own inside a `
 
 **Readers.** A client that cannot show Unicode is sent ASCII borders; see [LAYOUT BORDERS]. A client that says it is a screen reader is sent the content alone, in reading order: no borders, fields as `Label: value` lines, tree levels as indentation.
 
-**Options.** The layout functions take their options as one JSON object: `{"border":"double","pad":2}`. Written straight into an argument it needs a second pair of braces, because the outer pair only keeps its commas together: `box(Hello,,30,{{"border":"double","pad":2}})`. It can also be built with [JSON()]: `box(Hello,,30,json(object,border,"double",pad,2))`. A number option takes a JSON number, an on-or-off option (`"vertical"`, `"across"`, `"mirror"`) takes `true` or `false`, and every other option takes a string. A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`. Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order. Every function answers bad options the same way: `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` for text that is not one object of strings, numbers and booleans, `#-1 UNKNOWN LAYOUT OPTION <KEY>` for a key it does not take, `#-1 DUPLICATE LAYOUT OPTION <KEY>` for a key given twice, `#-1 ARGUMENT OUT OF RANGE` for a number outside its range, and `#-1 INVALID ARGUMENT` for any other value it cannot read.
+**Options.** The layout functions take their options as one JSON object: `{"border":"double","pad":2}`. Written straight into an argument it needs a second pair of braces, because the outer pair only keeps its commas together: `box(Hello,,30,{{"border":"double","pad":2}})`. It can also be built with [JSON()]: `box(Hello,,30,json(object,border,"double",pad,2))`. A number option takes a JSON number, an on-or-off option (`"vertical"`, `"across"`, `"mirror"`) takes `true` or `false`, `"stripe"` takes `true`, `false` or a string, `"theme"` takes a string or an object (see [LAYOUT THEMES]), and every other option takes a string. A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`. Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order. Every function answers bad options the same way: `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` for text that is not one JSON object, `#-1 UNKNOWN LAYOUT OPTION <KEY>` for a key it does not take, `#-1 DUPLICATE LAYOUT OPTION <KEY>` for a key given twice, `#-1 ARGUMENT OUT OF RANGE` for a number outside its range, and `#-1 INVALID ARGUMENT` for any other value it cannot read.
 
 ### Example: a finger sheet
 ```sharp
@@ -84,6 +85,7 @@ In the portal the picture shows in place of the cat, with the fields beside it.
 - [GRADIENT()]
 - [BADGE()]
 - [LAYOUT BORDERS]
+- [LAYOUT THEMES]
 - [ALIGN()]
 :::
 
@@ -134,6 +136,174 @@ An edge is a pattern repeated along it, so `"top":"=-"` alternates and `"top":"[
 - [LAYOUT FUNCTIONS]
 :::
 
+# LAYOUT THEMES
+
+A theme colours the parts of a layout: borders and gauge bars, titles, table headings, field labels, list bullets, tree guides, and the quiet lines between things. The text inside is left as it is written. A layout takes a theme from its `"theme"` option, and one that names none takes the game's `layout_theme` option. Unset, layouts have no colour. A layout's theme reaches every layout inside it, the way its `"border"` does.
+
+```sharp
+> think box(Hi there,Sheet,30,{{"theme":"nord"}})
++==========< Sheet >=========+
+| Hi there                   |
++============================+
+```
+
+That box is drawn in Nord's blue, its title in Nord's purple and bold. The examples in these topics show the text a client is sent, without its colour.
+
+A theme is one of these:
+- a name from [THEMES()]: `"theme":"nord"`. `terminal` uses only the sixteen standard colours, so each player sees it in the colours their own client is set to.
+- a genre: `fantasy`, `historical`, `horror`, `modern`, `mystery`, `romance`, `science-fiction` or `spiritual`, one for each MSSP genre (`romance` serves MSSP's Adult as well). A genre theme changes the shapes as well as the colours, down to a box's corners: `fantasy` draws double lines with diamond corners and fleurons either side of a title, and a gauge of solid and shaded blocks; `horror` a cracked heavy line with daggers at the corners; `mystery` dashed lines with hollow diamonds; `romance` rounded lines with hearts; `science-fiction` heavy lines with bracket corners, triangle bullets and a segmented gauge. A client without Unicode gets each in ASCII.
+- a theme made from one colour: `"theme":{"seed":"#7aa2f7","harmony":"triadic"}`. The other colours take their hues from the seed: `monochrome` (one hue), `analogous` (its neighbours, the default), `complementary` (the opposite hue), `split` (either side of the opposite), `triadic` (three evenly round) or `tetradic` (four). Each is made lighter or darker until it stands out from the background: 3 to 1 for lines, 4.5 to 1 for text, by the measure the web accessibility guidelines use. `"contrast"` from 0 to 1 raises both toward 7 to 1. `"mode":"light"` makes it for a light background; dark is the default.
+- a base16 scheme: `"theme":{"base16":["#2e3440", ... sixteen colours]}`. Hundreds of these exist for editors and terminals.
+- any of these with colours changed: `"theme":{"preset":"nord","colors":{"primary":"#bf616a"}}`.
+
+The colours, which `"colors"` sets by name:
+- `primary` - borders, rules, gauge bars and table headings
+- `secondary` - titles and field labels
+- `tertiary` - list bullets
+- `muted` - tree guides, separators, the line under table headings, a gauge's empty part
+- `success`, `warning`, `error`, `info` - [BADGE()] uses these
+- `surface` - the background behind every second row of a striped table or field list (`"stripe":true`)
+- `background`, `foreground` - what the others are measured against; neither is painted
+
+A colour is `"#rrggbb"`, a standard colour from 0 to 15, or both as `{"rgb":"#88c0d0","slot":6}`. `null` leaves one out.
+
+**Looks.** `"look"` sets a theme's shapes:
+- `"border"` - a border style from [LAYOUT BORDERS]
+- `"title"` - the pieces either side of a title, joining it to the line: `["< ", " >"]`
+- `"guide"` - a tree guide style, see [TREE()]
+- `"bullet"` - the mark before each item of [BULLETS()]
+- `"gauge"` - [GAUGE()]'s pieces: `["[", "#", "-", "]"]`, the opening, the filled part, the empty part and the close
+- `"separator"` - after each label of [FIELDS()]
+- `"rule"` - the line under [DATATABLE()]'s headings
+
+`"theme":{"preset":"fantasy","look":{"bullet":"+"}}` keeps the rest of fantasy's look; `"look":null` drops it. A theme's border wins over the game's `layout_border`, and a layout's own `"border"` wins over both. A client without Unicode gets the plain ASCII form of each piece.
+
+```sharp
+> think box(bullets(Sword|Shield,|),Kit,20,{{"theme":"fantasy"}})
++======< Kit >=====+
+| * Sword          |
+| * Shield         |
++==================+
+```
+
+That is how a client without Unicode sees it. With Unicode the edges are double lines with a diamond at each corner, the title sits between two fleurons, and each bullet is a fleuron.
+
+**Sixteen-colour clients.** Each colour carries the standard colour a client with only the sixteen is sent instead, picked by its hue, so a pale blue is sent as blue rather than the grey nearest it. A client without colour is sent the layout as it is; nothing in a layout depends on colour alone. A client without Unicode gets ASCII borders in the same colours.
+
+Written straight into options, a theme object goes inside them as it is: `box(Hi,,30,{{"theme":{"seed":"#d08770"}}})`. Each player can also pick a theme of their own for every layout they read with [@THEME]. [THEME()] writes any theme out in full, to keep in an attribute, and [SWATCH()] shows one's colours and how well each stands out.
+
+::: seealso
+- [THEMES()]
+- [THEME()]
+- [SWATCH()]
+- [LAYOUT BORDERS]
+- [LAYOUT FUNCTIONS]
+:::
+
+# THEMES()
+
+`themes()`
+
+The names of the built-in themes, for the `"theme"` layout option and the `layout_theme` game option. `terminal` uses the sixteen standard colours, which each client draws in its own palette. Then comes one for each genre a game can name in its MSSP settings, each with its own border, title ornaments, bullet and gauge as well as colours (see [LAYOUT THEMES]); the rest are well-known colour schemes.
+
+### Example
+```sharp
+> think themes()
+terminal fantasy historical horror modern mystery romance science-fiction spiritual catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night
+```
+
+::: seealso
+- [THEME()]
+- [SWATCH()]
+- [LAYOUT THEMES]
+:::
+
+# THEME()
+
+`theme(<theme>)`
+
+Writes *<theme>* out in full as JSON: its name, whether it is for a dark or light background, and each colour with the standard colour a sixteen-colour client is sent. *<theme>* is anything the `"theme"` option takes; see [LAYOUT THEMES]. A theme made from a seed colour can be made once and kept:
+
+```
+&THEME me=[theme({{"seed":"#d08770","harmony":"split"}})]
+think box(Hello,,30,json(object,theme,v(THEME)))
+```
+
+The result is read back as it is, so it can be edited and passed on.
+
+### Example
+```sharp
+> think json_query(theme(nord),get,colors,primary,rgb)
+"#81a1c1"
+```
+
+::: seealso
+- [THEMES()]
+- [SWATCH()]
+- [LAYOUT THEMES]
+:::
+
+# SWATCH()
+
+`swatch(<theme>[, <width>])`
+
+A table of *<theme>*'s colours: each colour's name, a sample drawn in it, the colour, the standard colour a sixteen-colour client is sent, and how far it stands out from the background. A colour that stands out less than its use needs is marked with what it needs. A standard colour on its own shows `client`, since it looks however the reader's client draws it. The table is drawn in the theme.
+
+### Example
+```sharp
+> think swatch(nord,64)
+Role        Sample  Colour   16-colour       Contrast
+--------------------------------------------------------------
+background  -       #2e3440  0 black         -
+surface     Sample  #3b4252  8 bright black  -
+foreground  Sample  #e5e9f0  7 white         10.3:1
+primary     Sample  #81a1c1  4 blue          4.6:1
+secondary   Sample  #b48ead  5 magenta       4.4:1 (needs 4.5)
+tertiary    Sample  #88c0d0  6 cyan          6.2:1
+muted       Sample  #4c566a  8 bright black  1.7:1 (needs 3)
+success     Sample  #a3be8c  2 green         6.1:1
+warning     Sample  #ebcb8b  3 yellow        8.0:1
+error       Sample  #bf616a  1 red           3.1:1 (needs 4.5)
+info        Sample  #88c0d0  6 cyan          6.2:1
+```
+
+::: seealso
+- [THEMES()]
+- [THEME()]
+- [LAYOUT THEMES]
+:::
+
+# @THEME
+
+`@theme[/light|/dark] <player>=<theme>`<br>
+`@theme <player>=`
+
+Sets the theme every layout is drawn in for that player: boxes, tables, gauges and the rest, from any function in [LAYOUT FUNCTIONS]. *<theme>* is anything the `"theme"` option takes (see [LAYOUT THEMES]): a name from [THEMES()], or a theme written out as JSON inside a second pair of braces, as for a layout function's options: `@theme me={{"seed":"#7aa2f7","harmony":"triadic"}}`. With nothing after the `=`, the theme is cleared.
+
+`/light` makes the theme for a client with a light background, and `/dark` for a dark one. A theme made from one colour, which includes the genre themes, is made again for that background; a well-known scheme such as `nord` stays as it is.
+
+A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it; the web portal has themes of its own. You must control *<player>*. The theme is kept in the player's `THEME` attribute.
+
+`@theme` refuses a theme it cannot read and says why, leaving the old one in place. A `THEME` attribute set some other way that does not read, or that names a theme since removed, is ignored: layouts use the game's theme, and the player is told at login why theirs was not used.
+
+Output: none.
+
+### Examples
+```sharp
+> @theme me=fantasy
+Theme set.
+> @theme/light me=fantasy
+Theme set.
+> @theme me=
+Theme cleared.
+```
+
+::: seealso
+- [LAYOUT THEMES]
+- [THEMES()]
+- [SWATCH()]
+:::
+
 # BOX()
 
 `box(<body>[, <title>[, <width>[, <options>]]])`
@@ -144,6 +314,7 @@ Draws a frame round *<body>*, with *<title>* set into the top edge. A [RULE()] o
 
 Options:
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS].
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"title":"left"`, `"title":"center"` or `"title":"right"` - where the title sits. Centred by default.
 - `"pad":<n>` - spaces between each side and the body, 0 to 10. One by default.
 
@@ -192,6 +363,7 @@ A line across the width, with *<title>* set into it. On a line of its own inside
 
 Options:
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. Inside a box, a rule with none of these takes the box's border.
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"title":"left"`, `"title":"center"` or `"title":"right"` - where the title sits. Centred by default.
 
 ### Examples
@@ -216,6 +388,7 @@ Puts the items side by side, sharing the width. When they do not fit, because an
 
 Options (the first argument, which may be empty):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - the width of the whole row; see [LAYOUT FUNCTIONS] for leaving it out.
 - `"gap":<n>` - spaces between items, 0 to 20. Two by default.
 - `"sep":"<text>"` - drawn between items on every line instead of the gap, for example `"sep":" | "`.
@@ -278,12 +451,14 @@ When the value column would be narrower than ten cells, each label goes on a lin
 
 Options (the first argument, which may be empty):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
 - `"align":"left"` or `"align":"right"` - where each label sits in its column. Left by default.
 - `"sep":"<text>"` - after each label. `": "` by default.
 - `"leader":"<text>"` - fills from a short label to the separator: `"leader":"."` draws `Name.....: `.
 - `"cols":<n>` - deal the fields into that many columns side by side, down each column first. The columns stack when they do not fit.
 - `"gap":<n>` - spaces between those columns. Three by default.
+- `"stripe":true` - lays every second field on a background of its own, to help the eye along a row: the theme's `surface` colour, or dark grey when the theme has none. `"stripe":"<codes>"` uses that colour instead, in [ANSI()] codes: `"stripe":"/#203040"`.
 
 ### Examples
 ```sharp
@@ -329,6 +504,7 @@ Items with the items under them, joined by guide lines. The top-level items sit 
 
 Options (the first argument, which may be empty):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
 - `"guide":"<style>"` - `line` (the default), `rounded`, `heavy`, `double`, `ascii` or `none`. A client without Unicode is sent every guide but `none` as `|-` and `` `- ``, as the examples show.
 - `branch`, `last`, `pipe` and `blank` - replace one piece of the guide: before an item with more after it, before the last item, before the lines of a level that carries on, and before the lines of one that has ended. Each is padded to the width of `branch`.
@@ -430,6 +606,7 @@ Options (the last argument):
 - `"gradient":"<colors>"` - shade the bar through these colours, [ANSI()] codes split by `|`: `"gradient":"r|y|g"` or `"gradient":"#ff4040|#40ff80"`. See [GRADIENT()] for how they blend.
 - `"shade":"cells"` or `"shade":"value"` - with `cells` (the default) each cell takes the colour at its place along the whole bar, so a fuller bar reaches further along the gradient. With `value` the whole filled part takes one colour, the one at the value's place: red when nearly empty, green when full.
 - `"space":"oklch"`, `"space":"oklab"` or `"space":"hsl"`, `"mirror":true` and `"repeat":<n>` - how the colours blend and run; see [GRADIENT()].
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 
 ### Examples
 The examples show what a client without Unicode is sent. A Unicode client sees solid blocks and light shades where these show `#` and `-`.
@@ -461,6 +638,7 @@ Each item of *<list>* on its own line after a bullet or a number. An item too lo
 
 Options (the last argument):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
 - `"style":"<style>"` - `bullet` (a round bullet, sent as `*` to a client without Unicode; the default), `dash`, `star`, `number`, `alpha`, `roman` or `none`.
 - `"start":<n>` - the first number, letter or numeral. 1 by default.
@@ -501,6 +679,7 @@ Short items, such as names, in as many columns as fit the width, each column as 
 
 Options (the last argument):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
 - `"gap":<n>` - spaces between the columns. Two by default.
 - `"across":true` - fill each row before the next.
@@ -533,6 +712,7 @@ When the table is too wide, the columns that wrap give way first, widest first, 
 
 Options (the first argument, which may be empty). The lists are split like the cells, and a list may stop short or leave a column's place empty:
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
+- `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
 - `"priority":"<list>"` - how important each column is: 1 is the most important. Every column is 1 by default, and among equals the rightmost is left out first.
 - `"min":"<list>"` and `"max":"<list>"` - each column's least and greatest width. A cell wider than its column's greatest width wraps.
@@ -540,6 +720,7 @@ Options (the first argument, which may be empty). The lists are split like the c
 - `"gap":<n>` - spaces between the columns. Two by default.
 - `"sep":"<text>"` - drawn between the columns instead of spaces.
 - `"rule":"<text>"` - the line under the headings. `-` by default; `"rule":""` for none.
+- `"stripe":true` - lays every second row on a background of its own, to help the eye along a row: the theme's `surface` colour, or dark grey when the theme has none. `"stripe":"<codes>"` uses that colour instead, in [ANSI()] codes: `"stripe":"/#203040"`. Rows shown as labelled values are not striped.
 - `"delim":"<text>"` - what splits the headings, cells and lists. `|` by default.
 
 ### Examples
@@ -634,7 +815,7 @@ Mannaz Byron
 
 `badge(<text>[, <kind>])`
 
-*<text>* in brackets, coloured for its kind: `ok` (green), `warn` (yellow), `error` (red), `info` (cyan, the default) or `muted` (grey). For a status beside a name or in a table cell.
+*<text>* in brackets, coloured for its kind: `ok` (green), `warn` (yellow), `error` (red), `info` (cyan, the default) or `muted` (grey). For a status beside a name or in a table cell. When the game sets `layout_theme`, the kinds take that theme's success, warning, error, info and muted colours instead.
 
 ### Example
 ```sharp

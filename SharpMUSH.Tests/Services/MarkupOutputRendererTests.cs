@@ -611,4 +611,44 @@ public partial class MarkupOutputRendererTests
 		await Assert.That(rendered).DoesNotContain("│");
 		await Assert.That(rendered).Contains("Hi");
 	}
+
+	// ── A player's theme ────────────────────────────────────────────────────────
+
+	/// <summary>A box as a layout function leaves it: under the game's look, which a reader's theme sits over.</summary>
+	private static MarkupText HouseBox(LayoutTheme? own = null)
+	{
+		var box = new TextBlock(MarkupText.Plain("hi")).Bordered();
+		var block = own is null ? (Block)box : box.Themed(own);
+		return BlockLayout.Build(block.ThemedUnder(new LayoutTheme { Border = BorderStyle.Mush }), 10);
+	}
+
+	[Test]
+	public async Task APlayersTheme_RedrawsTheLayoutsTheyRead()
+	{
+		var themed = StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "fantasy" }));
+		var plain = StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour));
+
+		await Assert.That(themed).StartsWith("\u2756\u2550");
+		await Assert.That(plain).StartsWith("+=");
+	}
+
+	[Test]
+	public async Task APlayersTheme_KeepsToASCIIForAClientWithoutUtf8()
+		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(SupportsUtf8: false), AllColour with { Theme = "fantasy" })))
+			.StartsWith("+==");
+
+	[Test]
+	public async Task ALayoutsOwnTheme_WinsOverThePlayers()
+		=> await Assert.That(StripAnsi(Render(HouseBox(new LayoutTheme { Border = BorderStyle.Rounded }), new ProtocolCapabilities(), AllColour with { Theme = "fantasy" })))
+			.StartsWith("\u256d");
+
+	[Test]
+	public async Task AThemeThatNoLongerReads_LeavesTheLayoutAlone()
+		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "nowhere" })))
+			.StartsWith("+=");
+
+	[Test]
+	public async Task AThemeThatCannotBeText_LeavesTheLayoutAlone()
+		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "{\"look\":{\"bullet\":\"\\ud800\"}}" })))
+			.StartsWith("+=");
 }

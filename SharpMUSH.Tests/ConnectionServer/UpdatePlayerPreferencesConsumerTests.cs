@@ -208,4 +208,37 @@ public class UpdatePlayerPreferencesConsumerTests
 		await Assert.That(connectionService.UpdateCapabilities(99, current => current)).IsFalse()
 			.Because("an unknown handle is not a change either");
 	}
+
+	/// <summary>A theme joins the preferences the flags set, and a later flag change keeps it.</summary>
+	[Test]
+	public async Task ThemeMessage_SetsTheThemeAndAFlagChangeKeepsIt()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var connectionService = new ConnectionServerService(
+			NullLogger<ConnectionServerService>.Instance, bus);
+		await connectionService.RegisterAsync(
+			43,
+			"127.0.0.1",
+			"localhost",
+			"telnet",
+			_ => ValueTask.CompletedTask,
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8,
+			() => { });
+		var consumer = new UpdatePlayerPreferencesConsumer(
+			connectionService, NullLogger<UpdatePlayerPreferencesConsumer>.Instance);
+
+		await consumer.HandleAsync(new UpdateThemeMessage(43, null));
+		await Assert.That(connectionService.Get(43)!.Preferences).IsNull();
+
+		await consumer.HandleAsync(new UpdatePlayerPreferencesMessage(43, true, true, false));
+		await consumer.HandleAsync(new UpdateThemeMessage(43, "nord"));
+		await consumer.HandleAsync(new UpdatePlayerPreferencesMessage(43, true, true, true));
+
+		await Assert.That(connectionService.Get(43)!.Preferences!.Theme).IsEqualTo("nord");
+		await Assert.That(connectionService.Get(43)!.Preferences!.Xterm256Enabled).IsTrue();
+
+		await consumer.HandleAsync(new UpdateThemeMessage(43, null));
+		await Assert.That(connectionService.Get(43)!.Preferences!.Theme).IsNull();
+	}
 }
