@@ -1,3 +1,4 @@
+using Markdig.Syntax;
 using SharpMUSH.Documentation;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -180,11 +181,12 @@ public class HelpArticleTests
 
 	/// <summary>
 	/// A topic shows one title. Stacked headings name one topic several ways: the first H1 of a stack is
-	/// the title and the rest are its aliases, which the reader never sees as headings. A subheading
-	/// stacked on another the same way would show both, one of them heading nothing.
+	/// the title and the rest are its aliases, which the reader never sees as headings. A heading with
+	/// nothing under it but one other heading (<c>## Trigger examples</c>, then <c>### Examples</c>)
+	/// shows two headings for one thing. A section opening straight into several subsections is fine.
 	/// </summary>
 	[Test]
-	public async Task EveryTopicShowsOneTitleAndNoEmptyHeadings()
+	public async Task EveryTopicShowsOneTitleAndNoRedundantHeadings()
 	{
 		var offending = new List<string>();
 		foreach (var file in TestPaths.Helpfiles.EnumerateFiles("*.md", SearchOption.AllDirectories))
@@ -192,15 +194,27 @@ public class HelpArticleTests
 			var corpus = file.Directory!.Name is "ahelp" or "news" ? file.Directory.Name : "help";
 			foreach (var parsed in HelpArticleParser.Parse(File.ReadAllText(file.FullName), corpus))
 			{
-				var blocks = Markdig.Markdown.Parse(parsed.Article.Markdown).ToList();
-				if (blocks.OfType<Markdig.Syntax.HeadingBlock>().Count(heading => heading.Level == 1) != 1)
+				var markdown = parsed.Article.Markdown;
+				var blocks = Markdig.Markdown.Parse(markdown).ToList();
+				if (blocks.OfType<HeadingBlock>().Count(heading => heading.Level == 1) != 1)
 				{
 					offending.Add($"{file.Name}: {parsed.Article.Lookup} shows more than one title");
 				}
-				offending.AddRange(blocks.Zip(blocks.Skip(1))
-					.Where(pair => pair.First is Markdig.Syntax.HeadingBlock { Level: > 1 } && pair.Second is Markdig.Syntax.HeadingBlock)
-					.Select(pair => $"{file.Name}: {parsed.Article.Lookup} stacks "
-						+ HelpArticleParser.HeadingText(parsed.Article.Markdown, (Markdig.Syntax.HeadingBlock)pair.First)));
+				for (var i = 0; i + 1 < blocks.Count; i++)
+				{
+					if (blocks[i] is not HeadingBlock { Level: > 1 } heading || blocks[i + 1] is not HeadingBlock next)
+					{
+						continue;
+					}
+					var children = blocks.Skip(i + 1).OfType<HeadingBlock>()
+						.TakeWhile(below => below.Level > heading.Level)
+						.Count(below => below.Level == heading.Level + 1);
+					if (next.Level <= heading.Level || children == 1)
+					{
+						offending.Add($"{file.Name}: {parsed.Article.Lookup} stacks {HelpArticleParser.HeadingText(markdown, heading)}"
+							+ $" on {HelpArticleParser.HeadingText(markdown, next)}");
+					}
+				}
 			}
 		}
 
