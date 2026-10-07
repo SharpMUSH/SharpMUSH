@@ -36,7 +36,7 @@
 .sc-pane-editor {
     flex: 1;
     min-width: 0;
-    background: #0c0f14;
+    background: var(--editor-bg);
 }
 
 .sc-editor-toolbar {
@@ -403,7 +403,7 @@
     flex-shrink: 0;
     /* The MudBlazor palette variable only exists once MudThemeProvider has rendered; the
        fallback is the amber this page already uses for the data-kind attribute badge. */
-    color: var(--mud-palette-warning, #d9a23a);
+    color: var(--warn);
     font-size: 0.5rem;
     line-height: 1;
 }
@@ -525,7 +525,7 @@
     max-height: 40%;
     min-height: 140px;
     border-top: 1px solid var(--border-soft);
-    background: #0a0d11;
+    background: var(--code-bg);
     font-family: var(--font-mono);
     font-size: 0.75rem;
 }
@@ -641,7 +641,7 @@
     color: var(--text-dim);
 }
 .sc-console-result {
-    color: #a3e8a0;
+    color: var(--success);
 }
 .sc-console-error {
     color: var(--mud-palette-error);

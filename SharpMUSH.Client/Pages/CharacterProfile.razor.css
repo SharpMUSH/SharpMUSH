@@ -12,7 +12,7 @@
 	width: 104px;
 	height: 104px;
 	border-radius: 18px;
-	border: 1px solid rgba(255, 255, 255, 0.14);
+	border: 1px solid var(--border);
 	box-sizing: border-box;
 	object-fit: cover;
 }

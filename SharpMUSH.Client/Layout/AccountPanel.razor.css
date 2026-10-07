@@ -77,8 +77,8 @@
 }
 
 .account-panel-item--danger:hover {
-    background: rgba(229, 72, 77, 0.12);
-    color: #e5484d;
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    color: var(--danger);
 }
 
 .account-panel-item-icon {

@@ -5,7 +5,7 @@
 .mush-editor-fill .monaco-editor .overflow-guard,
 .mush-editor-fill .monaco-editor-background,
 .mush-editor-fill .inputarea.ime-input {
-    background-color: #1a1a2e;
+    background-color: var(--editor-bg);
 }
 
 /* Classes doubled on purpose: Monaco's own rules have the single-class specificity and are

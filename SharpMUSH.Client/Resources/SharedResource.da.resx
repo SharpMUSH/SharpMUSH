@@ -5790,4 +5790,7 @@
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Viser de næste {0} scener.</value>
   </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Tema for {0}</value>
+  </data>
 </root>

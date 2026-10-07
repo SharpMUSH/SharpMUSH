@@ -6680,4 +6680,94 @@
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Showing the next {0} scenes.</value>
   </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Theme for {0}</value>
+  </data>
+  <data name="AdmThemesGenerate" xml:space="preserve">
+    <value>Generate colours</value>
+  </data>
+  <data name="AdmThemesGenerateHint" xml:space="preserve">
+    <value>Make this theme's colours from one colour, a preset palette, or palette JSON, with the generator the game's layout themes use. Every text colour comes out readable on every surface. Style choices and the stylesheet are kept.</value>
+  </data>
+  <data name="AdmThemesSeed" xml:space="preserve">
+    <value>Seed colour</value>
+  </data>
+  <data name="AdmThemesHarmony" xml:space="preserve">
+    <value>Harmony</value>
+  </data>
+  <data name="AdmThemesHarmonyMonochrome" xml:space="preserve">
+    <value>Monochrome: one hue</value>
+  </data>
+  <data name="AdmThemesHarmonyAnalogous" xml:space="preserve">
+    <value>Analogous: its neighbours</value>
+  </data>
+  <data name="AdmThemesHarmonyComplementary" xml:space="preserve">
+    <value>Complementary: its opposite</value>
+  </data>
+  <data name="AdmThemesHarmonySplit" xml:space="preserve">
+    <value>Split: either side of its opposite</value>
+  </data>
+  <data name="AdmThemesHarmonyTriadic" xml:space="preserve">
+    <value>Triadic: three round the wheel</value>
+  </data>
+  <data name="AdmThemesHarmonyTetradic" xml:space="preserve">
+    <value>Tetradic: four round the wheel</value>
+  </data>
+  <data name="AdmThemesContrastLevel" xml:space="preserve">
+    <value>Contrast above the minimum: {0}</value>
+  </data>
+  <data name="AdmThemesGenerateSeed" xml:space="preserve">
+    <value>Generate</value>
+  </data>
+  <data name="AdmThemesPreset" xml:space="preserve">
+    <value>Preset palette</value>
+  </data>
+  <data name="AdmThemesUsePalette" xml:space="preserve">
+    <value>Use palette</value>
+  </data>
+  <data name="AdmThemesPaletteJson" xml:space="preserve">
+    <value>Palette JSON</value>
+  </data>
+  <data name="AdmThemesUseJson" xml:space="preserve">
+    <value>Use JSON</value>
+  </data>
+  <data name="AdmThemesPaletteError" xml:space="preserve">
+    <value>Could not read the palette: {0}.</value>
+  </data>
+  <data name="AdmThemesGuideTitle" xml:space="preserve">
+    <value>How to generate a theme</value>
+  </data>
+  <data name="AdmThemesGuideSeed" xml:space="preserve">
+    <value>From one colour: pick a seed and a harmony and press Generate. This runs MarkupString's ThemePalette.Generate, the same generator the game's layout themes use. The harmony picks the other hues: monochrome keeps the seed's, analogous takes its neighbours, complementary its opposite, split the two either side of the opposite, triadic and tetradic three or four evenly round the wheel. Contrast raises every colour from the minimum (4.5:1 for text) toward 7:1.</value>
+  </data>
+  <data name="AdmThemesGuidePreset" xml:space="preserve">
+    <value>From a palette: the presets are ThemePalette.Presets. The eight genre palettes (fantasy, horror, science-fiction...) are generated, so they are made again for this theme's light or dark mode. The base16 schemes (nord, dracula, solarized-dark...) are fixed colours and bring their own mode with them.</value>
+  </data>
+  <data name="AdmThemesGuideJson" xml:space="preserve">
+    <value>From JSON: paste what layout_theme and a layout function's theme option take. That is a preset's name; an object with seed, harmony, contrast and mode; an object with base16 (sixteen colours); or any of those with colors setting roles (background, surface, foreground, primary, warning, error...).</value>
+  </data>
+  <data name="AdmThemesGuideMapping" xml:space="preserve">
+    <value>How a palette becomes a theme: its background is the page and its surface the cards, its foreground the text, with the dim and faint text mixed toward the page. Its primary is the accent, its warning the warning colour and its error the missing-link colour. Each text colour is then moved toward white or black until it reads at 4.5:1 on every surface, so a generated theme passes the contrast report.</value>
+  </data>
+  <data name="AdmThemesGuideCode" xml:space="preserve">
+    <value>In code, from a plugin or a tool:</value>
+  </data>
+  <data name="AdmThemesGuideDocs" xml:space="preserve">
+    <value>The full guide, with every variable and where each rule belongs, is docs/guides/portal-themes.md in the SharpMUSH repository.</value>
+  </data>
+  <data name="AdmThemesSheetOverrides" xml:space="preserve">
+    <value>The stylesheet sets {0}. Those replace the colour pickers below.</value>
+  </data>
+  <data name="AdmThemesStylesheet" xml:space="preserve">
+    <value>Stylesheet</value>
+  </data>
+  <data name="AdmThemesStylesheetHint" xml:space="preserve">
+    <value>CSS laid over this theme, for anything the colours and style choices do not reach. It starts as a guide that changes nothing: every variable with this theme's value, commented out, and an empty rule for each part of the portal. Saving refuses @import, url()s to other sites, HTML and script.</value>
+  </data>
+  <data name="AdmThemesStylesheetSize" xml:space="preserve">
+    <value>{0} of {1} characters</value>
+  </data>
+  <data name="AdmThemesStylesheetReset" xml:space="preserve">
+    <value>Remove stylesheet</value>
+  </data>
 </root>

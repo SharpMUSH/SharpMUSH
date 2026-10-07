@@ -46,6 +46,12 @@
                             <span class="account-panel-item-icon">&#9881;</span>
                             <span class="account-panel-item-label">@Loc["AuthAccountManagement"]</span>
                         </a>
+                        @* The look of each character (theme and accent) is per character, so it sits beside
+                           the character switch rather than only behind Account management's sidebar. *@
+                        <a href="/settings/theme" class="account-panel-item account-panel-theme" @onclick="ClosePanelAsync">
+                            <span class="account-panel-item-icon">&#9680;</span>
+                            <span class="account-panel-item-label">@Loc["NavTheme"]</span>
+                        </a>
                         <div class="account-panel-divider"></div>
                         <button type="button" class="account-panel-item account-panel-item--danger" @onclick="HandleLogoutAsync">
                             <span class="account-panel-item-icon">&#9211;</span>

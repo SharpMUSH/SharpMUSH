@@ -113,13 +113,13 @@
 
 .acct-btn-danger {
     background: transparent;
-    color: #f56b6b;
-    border-color: rgba(245, 107, 107, 0.4);
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 40%, transparent);
 }
 
 .acct-btn-danger:hover:not(:disabled) {
-    background: rgba(245, 107, 107, 0.08);
-    border-color: #f56b6b;
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+    border-color: var(--danger);
 }
 
 /* ── Flags ── */

@@ -242,10 +242,10 @@
 
     private static string ByteDeltaBackground(int delta)
     {
-        if (delta > 500)  return "rgba(0,200,100,0.18)";
-        if (delta > 0)    return "rgba(0,200,100,0.10)";
-        if (delta < -500) return "rgba(220,80,80,0.20)";
-        return "rgba(220,80,80,0.10)";
+        if (delta > 500)  return "color-mix(in srgb, var(--success) 18%, transparent)";
+        if (delta > 0)    return "color-mix(in srgb, var(--success) 10%, transparent)";
+        if (delta < -500) return "color-mix(in srgb, var(--danger) 20%, transparent)";
+        return "color-mix(in srgb, var(--danger) 10%, transparent)";
     }
 
     private static string ByteDeltaForeground(int delta) =>

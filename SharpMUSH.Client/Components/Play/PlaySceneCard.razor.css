@@ -37,7 +37,7 @@
 .scene-card-head-scrim {
 	position: absolute;
 	inset: 0;
-	background: linear-gradient(to right, rgba(10, 11, 13, 0.8) 0%, rgba(10, 11, 13, 0.58) 45%, rgba(10, 11, 13, 0.42) 100%);
+	background: linear-gradient(to right, rgba(var(--scrim-ink), 0.8) 0%, rgba(var(--scrim-ink), 0.58) 45%, rgba(var(--scrim-ink), 0.42) 100%);
 	pointer-events: none;
 }
 

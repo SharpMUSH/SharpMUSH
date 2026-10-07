@@ -97,10 +97,10 @@
     font-family: var(--font-mono); font-size: 0.5625rem; letter-spacing: 0.04em; text-transform: uppercase;
     padding: 0.125rem 0.4375rem; border-radius: 99px; flex-shrink: 0;
 }
-.aa-kind--page { background: rgba(0, 200, 100, 0.12); color: #6cde9a; }
-.aa-kind--widget { background: rgba(90, 169, 255, 0.12); color: #5aa9ff; }
-.aa-kind--form { background: rgba(179, 156, 255, 0.12); color: #b39cff; }
-.aa-kind--other { background: rgba(255, 255, 255, 0.06); color: var(--text-dim); }
+.aa-kind--page { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); }
+.aa-kind--widget { background: color-mix(in srgb, var(--info) 12%, transparent); color: var(--info); }
+.aa-kind--form { background: color-mix(in srgb, var(--special) 12%, transparent); color: var(--special); }
+.aa-kind--other { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text-dim); }
 .aa-role {
     font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.04em; text-transform: uppercase;
     padding: 0.125rem 0.4375rem; border-radius: 99px; color: var(--text-dim);
@@ -135,7 +135,7 @@
     border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer;
 }
 .aa-icon-btn:hover { color: var(--text); border-color: rgba(var(--glow), 0.4); }
-.aa-icon-btn--danger:hover { color: #e57373; border-color: rgba(229, 115, 115, 0.5); }
+.aa-icon-btn--danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
 
 .aa-meta-grid {
     display: grid;
@@ -162,6 +162,6 @@
 .aa-chips { display: flex; gap: 0.375rem; flex-wrap: wrap; }
 .aa-zone {
     font-family: var(--font-mono); font-size: 0.6875rem; padding: 0.1875rem 0.5625rem; border-radius: 99px;
-    color: #5aa9ff; background: rgba(90, 169, 255, 0.12); border: 1px solid rgba(90, 169, 255, 0.3);
+    color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
 }
 .aa-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }

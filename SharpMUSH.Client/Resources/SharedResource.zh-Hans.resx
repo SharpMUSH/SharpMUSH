@@ -5790,4 +5790,7 @@
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>显示接下来的 {0} 个场景。</value>
   </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>{0} 的主题</value>
+  </data>
 </root>
