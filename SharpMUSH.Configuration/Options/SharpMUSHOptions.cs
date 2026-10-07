@@ -107,6 +107,7 @@ public record SharpMUSHOptions
 			AnsiNames: true,
 			ChatStripQuote: true,
 			LayoutBorder: "mush",
+			LayoutTheme: "",
 			ImageHosts: "any",
 			ImageHostList: "",
 			CommaExitList: true,

@@ -855,6 +855,15 @@
   <data name="MonikerSet" xml:space="preserve">
     <value>Moniker set.</value>
   </data>
+  <data name="ThemeSet" xml:space="preserve">
+    <value>Theme set.</value>
+  </data>
+  <data name="ThemeCleared" xml:space="preserve">
+    <value>Theme cleared.</value>
+  </data>
+  <data name="ThemeUnreadableFormat" xml:space="preserve">
+    <value>Your @theme does not read ({0}), so layouts use the game's theme. @theme me=&lt;theme&gt; sets another; @theme me= clears it.</value>
+  </data>
   <data name="DigWhat" xml:space="preserve">
     <value>Dig what?</value>
   </data>

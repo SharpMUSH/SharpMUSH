@@ -1,3 +1,4 @@
+using MarkupString;
 using SharpMUSH.SocketServer.ProtocolHandlers;
 using MarkupString.Ansi;
 using MarkupString.Layout;
@@ -35,7 +36,7 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 			return new RenderedOutput(Encoding.UTF8.GetBytes(envelope), ApplyOutputTransform: false);
 		}
 
-		var ms = Relayout(MarkupTextSerializer.Deserialize(markup), connection.Capabilities);
+		var ms = Relayout(MarkupTextSerializer.Deserialize(markup), connection.Capabilities, connection.Preferences?.Theme);
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);
 		var text = connection.Capabilities.Format switch
 		{
@@ -65,17 +66,43 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// <summary>
 	/// <paramref name="text"/> with each intact layout block (<c>box()</c>, <c>flex()</c>, ...) laid out
 	/// for this client: an automatic-width block at the width it reported, box drawing as ASCII for a
-	/// client without UTF-8, and the content alone in reading order for a screen reader. The browser
+	/// client without UTF-8, the content alone in reading order for a screen reader, and under the
+	/// player's <c>@theme</c>, which sits over the game's look and under a layout's own theme. The browser
 	/// lays blocks out itself, so this is for every other connection.
 	/// </summary>
-	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities)
+	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, string? theme)
 	{
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
-		var context = !capabilities.SupportsUtf8 || capabilities.ScreenReader
-			? new LayoutContext { AsciiOnly = !capabilities.SupportsUtf8, Linear = capabilities.ScreenReader }
+		var look = ReaderTheme(theme);
+		var context = !capabilities.SupportsUtf8 || capabilities.ScreenReader || look is not null
+			? new LayoutContext { AsciiOnly = !capabilities.SupportsUtf8, Linear = capabilities.ScreenReader, Theme = look ?? LayoutTheme.Default }
 			: LayoutContext.Default;
 		return BlockLayout.Relayout(text, capabilities.Width, context);
+	}
+
+	/// <summary>Each theme a player has set, as the layout theme it makes, or null for one that no longer reads.</summary>
+	private static readonly ConcurrentDictionary<string, LayoutTheme?> ReaderThemes = new(StringComparer.Ordinal);
+
+	/// <summary>The layout theme <paramref name="theme"/> makes, or null for none.</summary>
+	private static LayoutTheme? ReaderTheme(string? theme)
+	{
+		if (string.IsNullOrWhiteSpace(theme)) return null;
+		// A handful of themes are in use at once; past that, start again rather than grow without bound.
+		if (ReaderThemes.Count > 256) ReaderThemes.Clear();
+		return ReaderThemes.GetOrAdd(theme, static spec =>
+		{
+			// The engine sends only themes that read, but a theme is the player's own text: one that
+			// fails here, however it fails, leaves their output in the game's theme rather than stopping it.
+			try
+			{
+				return ThemePalette.TryParse(spec, out var palette, out _) ? palette!.ToLayoutTheme() : null;
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+		});
 	}
 
 	/// <summary>

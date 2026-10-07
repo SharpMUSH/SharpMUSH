@@ -156,12 +156,22 @@ public record CosmeticOptions(
 	string LayoutBorder,
 
 	[property: SharpConfig(
+		Name = "layout_theme",
+		Category = "Cosmetic",
+		Description = "Colour theme for layouts that name none: a theme name, or a theme as JSON",
+		Group = "Layout",
+		Order = 2,
+		Tooltip = "Empty for no colour. A name from themes(), such as terminal or nord, or JSON such as "
+			+ "{\"seed\":\"#7aa2f7\",\"harmony\":\"triadic\"}. See help LAYOUT THEMES.")]
+	string LayoutTheme,
+
+	[property: SharpConfig(
 		Name = "image_hosts",
 		Category = "Cosmetic",
 		Description = "Which pictures image() and figure() may show: any, allow, block or off",
 		ValidationPattern = @"^(any|allow|block|off)$",
 		Group = "Layout",
-		Order = 2,
+		Order = 3,
 		Tooltip = "any shows pictures from every host; allow only those on image_host_list; block all but "
 			+ "those; off none. The game's own pictures (a relative address) are shown unless this is off. "
 			+ "A refused picture shows its text art or description.")]
@@ -172,7 +182,7 @@ public record CosmeticOptions(
 		Category = "Cosmetic",
 		Description = "Hosts for image_hosts allow or block, space separated",
 		Group = "Layout",
-		Order = 3,
+		Order = 4,
 		Tooltip = "For example: i.imgur.com *.example.com. A *. entry covers every subdomain.")]
 	string ImageHostList
 );

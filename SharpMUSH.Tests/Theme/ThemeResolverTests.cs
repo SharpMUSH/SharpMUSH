@@ -1,5 +1,6 @@
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models.Portal;
+using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor;
 
 namespace SharpMUSH.Tests.Theme;
 

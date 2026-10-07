@@ -957,6 +957,12 @@ chat_strip_quote yes
 # box-drawing characters gets the ascii pieces instead.
 layout_border mush
 
+# The colour theme layouts take when they name none: a name from themes(),
+# such as terminal or nord, or a theme written as JSON. Unset, layouts are
+# drawn without colour. See 'help layout themes'.
+# OPTIONAL
+# layout_theme terminal
+
 # Which pictures image() and figure() may show. any: every host. allow:
 # only the hosts in image_host_list. block: every host but those. off: no
 # pictures at all. The game's own pictures (a relative address) are shown

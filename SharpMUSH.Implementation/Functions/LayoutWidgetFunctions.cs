@@ -29,7 +29,8 @@ public partial class Functions
 		.Choice("show", Names<GaugeShow>(), (laid, show) => laid with { Block = laid.Block with { Show = show } })
 		.Int("bar", 1, MaxLayoutWidth, (laid, bar) => laid with { Block = laid.Block with { BarWidth = bar } })
 		.Gradient(color, laid => laid.Block.Gradient, (laid, gradient) => laid with { Block = laid.Block with { Gradient = gradient } })
-		.Choice("shade", Names<GaugeShade>(), (laid, shade) => laid with { Block = laid.Block with { Shade = shade } });
+		.Choice("shade", Names<GaugeShade>(), (laid, shade) => laid with { Block = laid.Block with { Shade = shade } })
+		.Theme((laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Gauge>> GaugeSchema { get; } = GaugeOptions(_ => null);
 
@@ -55,6 +56,12 @@ public partial class Functions
 
 		/// <summary>The border the options chose for the boxes and rules in the cells.</summary>
 		public BorderStyle? Border { get; init; }
+
+		/// <summary>The colours the options chose.</summary>
+		public LayoutTheme? Theme { get; init; }
+
+		/// <summary>The ansi() codes of the <c>stripe</c> option's colour, empty for the theme's.</summary>
+		public MString? Stripe { get; init; }
 	}
 
 	private static OptionSchema<TableSettings> DataTableSchema { get; } = OptionSchema<TableSettings>.Empty
@@ -67,7 +74,9 @@ public partial class Functions
 		.Text("priority", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("priority", list)) })
 		.Text("min", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("min", list)) })
 		.Text("max", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("max", list)) })
-		.Text("nowrap", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("nowrap", list)) });
+		.Text("nowrap", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("nowrap", list)) })
+		.Theme((settings, theme) => settings with { Theme = theme })
+		.Stripe((settings, codes) => settings with { Table = settings.Table with { Striped = codes is not null }, Stripe = codes });
 
 	/// <summary>A gradient's colours and the way it runs.</summary>
 	private sealed record Shading(ColorGradient Gradient, GradientFlow Flow);
@@ -104,7 +113,7 @@ public partial class Functions
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
 		return ValueTask.FromResult(BulletsSchema.Apply(Arg(args, 2), new Laid<Bullets>(new Bullets([.. items.Select(item => Body(item))]), MarkupText.Empty, DefaultBorder())) switch
 		{
-			Laid<Bullets> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border),
+			Laid<Bullets> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
@@ -120,7 +129,7 @@ public partial class Functions
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
 		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items]), MarkupText.Empty, DefaultBorder())) switch
 		{
-			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border),
+			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
@@ -181,7 +190,7 @@ public partial class Functions
 		}
 
 		var rows = cells.Select(row => row.Select(cell => Body(cell)).ToImmutableArray()).ToImmutableArray();
-		return Finish(parser, settings.Table with { Columns = [.. columns], Rows = rows }, settings.Width, settings.Border);
+		return Finish(parser, settings.Table with { Columns = [.. columns], Rows = rows }, settings.Width, settings.Border, settings.Theme, StripeOf(settings.Stripe));
 	}
 
 	/// <summary>
@@ -234,19 +243,21 @@ public partial class Functions
 	public ValueTask<CallState> Badge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var codes = Arg(args, 1).ToPlainText().Trim().ToLowerInvariant() switch
+		var kind = Arg(args, 1).ToPlainText().Trim().ToLowerInvariant() switch
 		{
-			"" or "info" => "hc",
-			"ok" => "hg",
-			"warn" => "hy",
-			"error" => "hr",
-			"muted" => "hx",
-			_ => null,
+			"" or "info" => (Codes: "hc", Role: ThemeRole.Info),
+			"ok" => ("hg", ThemeRole.Success),
+			"warn" => ("hy", ThemeRole.Warning),
+			"error" => ("hr", ThemeRole.Error),
+			"muted" => ("hx", ThemeRole.Muted),
+			_ => ((string Codes, ThemeRole Role)?)null,
 		};
-		if (codes is null) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
+		if (kind is not var (codes, role)) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
 
+		// layout_theme's colour for the kind when it has one; the classic codes otherwise.
+		IMarkup colour = HousePalette()?[role] is { } themed ? AnsiTheme.Paint(themed, role == ThemeRole.Muted ? ThemePaint.Text : ThemePaint.Bold) : AnsiCodeParser.Parse(codes);
 		var text = MarkupText.Concat([MarkupText.Plain("["), Arg(args, 0), MarkupText.Plain("]")]);
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(AnsiCodeParser.Parse(codes), text)));
+		return ValueTask.FromResult(new CallState(MarkupText.Wrap(colour, text)));
 	}
 
 	/// <summary>
