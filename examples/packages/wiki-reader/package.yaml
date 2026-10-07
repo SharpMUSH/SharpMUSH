@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -14,14 +14,6 @@ depends:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
-  - package: common-functions
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/common-functions/
-      branch: main
-      # common-functions ships here, not in SharpMUSH.Packages, so this points
-      # at the server repo where the other examples point at the package repo.
 
 objects:
   - ref: wiki_global
@@ -103,7 +95,7 @@ objects:
 
       FUN`GET`ROWS:
         value: |-
-          max(5,sub(height(%#,24),6))
+          [@@(no arguments — listing rows that fit the reader's screen, under the box's title, headings, footer and edges)][max(5,sub(height(%#,24),8))]
         flags: [funsyntax]
       # Half a screen: the audit prints two of these sections, and a wiki with a hundred untagged
       # pages should tell a staffer that rather than scroll the count off the top of their terminal.
@@ -158,44 +150,44 @@ objects:
       # The category bar under an article, as MediaWiki puts it under the page. Empty for a page in none.
       FUN`DISPLAY`CATBAR:
         value: |-
-          [@@(%0 a page reference)][if(words(setr(c,wiki(%0,categories))),[line()]%r[ansi(h,Categories:)]%b[iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b)]%r)]
+          [@@(%0 a page reference)][if(words(setr(c,wiki(%0,categories))),[rule()]%r[ansi(h,Categories:)]%b[iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b)]%r)]
         flags: [funsyntax]
       FUN`DISPLAY`REF:
         value: |-
           [@@(%0 a page reference — clickable where the client can take a command)][cmdlink(%0,+wiki %0,Read %0)]
         flags: [funsyntax]
-      FUN`DISPLAY`ROW:
+      FUN`DISPLAY`TABLE:
         value: |-
-          [@@(%0 a page reference — the separating space is not part of the column: a slug longer than the column would otherwise run straight into the title)][ljust(u(%!/FUN`DISPLAY`REF,%0),34)]%b[wiki(%0,title)]
+          [@@(%0 page references — a table of each page and its title, joined with %r and split on a newline so a title holding a | stays one cell)][datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12)),Page%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],Title%r[iter(%0,wiki(%i0,title),%b,%r)])]
         flags: [funsyntax]
-      FUN`DISPLAY`RECENTROW:
+      FUN`DISPLAY`RECENTTABLE:
         value: |-
-          [@@(%0 a page reference — same as ROW with the last edit's age)][ljust(u(%!/FUN`DISPLAY`REF,%0),34)]%b[ljust(wiki(%0,title),28,%b,1)]%b[trim(timestring(sub(secs(),wiki(%0,updated))))] ago
+          [@@(%0 page references — same as TABLE with the last edit's age)][datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r1%r2)),Page%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],Title%r[iter(%0,wiki(%i0,title),%b,%r)],Edited%r[iter(%0,[trim(timestring(sub(secs(),wiki(%i0,updated))))] ago,%b,%r)])]
         flags: [funsyntax]
 
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(%0 title · %1 refs · %2 page · %3 row attribute · %4 paging stem — reads %q<pages>)][header(%0)]%r[iter(u(%!/FUN`GET`SLICE,%1,%2),u(%!/%3,%i0),%b,%r)]%r[footer([u(%!/FUN`DISPLAY`COUNT,words(%1),entry,entries)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%4=[add(%2,1)])])]
+          [@@(%0 title · %1 refs · %2 page · %3 table attribute · %4 paging stem — reads %q<pages>)][box([u(%!/%3,u(%!/FUN`GET`SLICE,%1,%2))]%r[rule()]%r[u(%!/FUN`DISPLAY`COUNT,words(%1),entry,entries)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%4=[add(%2,1)])],%0)]
         flags: [funsyntax]
       FUN`DISPLAY`ARTICLE:
         value: |-
-          [@@(%0 a page reference — the whole article between chrome. Literal brackets and parens below are percent-escaped, which is the only spelling that works; this comment cannot show you one, because @@ parses its own argument too)][header([wiki(%0,title)]%b%([wiki(%0,namespace)]%))]%r[rendermarkdowncustom(wiki(%0,markdown),%!,width(%#,78))]%r[u(%!/FUN`DISPLAY`CATBAR,%0)][footer(rev [wiki(%0,revision)]%b%[[wiki(%0,locale)]%]%b-%b[trim(timestring(sub(secs(),wiki(%0,updated))))] ago)]
+          [@@(%0 a page reference — the whole article in a box titled with it. Literal brackets and parens below are percent-escaped, which is the only spelling that works; this comment cannot show you one, because @@ parses its own argument too)][box([rendermarkdowncustom(wiki(%0,markdown),%!,max(10,sub(width(%#,78),4)))]%r[u(%!/FUN`DISPLAY`CATBAR,%0)][rule()]%rrev [wiki(%0,revision)]%b%[[wiki(%0,locale)]%]%b-%b[trim(timestring(sub(secs(),wiki(%0,updated))))] ago,[wiki(%0,title)]%b%([wiki(%0,namespace)]%))]
         flags: [funsyntax]
       FUN`DISPLAY`FIELDS:
         value: |-
-          [@@(%0 a page reference — its metadata as a field list)][header([wiki(%0,title)])]%r[iter(title namespace revision locale,[ljust(ucstr(%i0),12)][if(strlen(setr(v,wiki(%0,%i0))),%q<v>,-)],%b,%r)]%r[ljust(CATEGORIES,12)][if(words(setr(c,wiki(%0,categories))),iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b),-)]%r[ljust(AUTHOR,12)][if(isdbref(setr(a,wiki(%0,author))),[name(%q<a>)]%b%(%q<a>%),%q<a>)]%r[ljust(UPDATED,12)][trim(timestring(sub(secs(),wiki(%0,updated))))] ago%r[footer(%0)]
+          [@@(%0 a page reference — its metadata as a field list)][box([fields(,Title,firstof(wiki(%0,title),-),Namespace,firstof(wiki(%0,namespace),-),Revision,firstof(wiki(%0,revision),-),Locale,firstof(wiki(%0,locale),-),Categories,if(words(setr(c,wiki(%0,categories))),iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b),-),Author,if(isdbref(setr(a,wiki(%0,author))),[name(%q<a>)]%b%(%q<a>%),firstof(%q<a>,-)),Updated,[trim(timestring(sub(secs(),wiki(%0,updated))))] ago)]%r[rule()]%r%0,wiki(%0,title))]
         flags: [funsyntax]
       FUN`DISPLAY`AUDITSECTION:
         value: |-
-          [@@(%0 heading · %1 refs — one capped section of the audit, empty when there is nothing to report)][if(words(%1),[line(%0)]%r[iter(extract(%1,1,u(%!/FUN`GET`AUDITROWS)),u(%!/FUN`DISPLAY`ROW,%i0),%b,%r)]%r[if(gt(words(%1),u(%!/FUN`GET`AUDITROWS)),... and [sub(words(%1),u(%!/FUN`GET`AUDITROWS))] more%r)])]
+          [@@(%0 heading · %1 refs — one capped section of the audit, empty when there is nothing to report)][if(words(%1),[rule(%0)]%r[u(%!/FUN`DISPLAY`TABLE,extract(%1,1,u(%!/FUN`GET`AUDITROWS)))]%r[if(gt(words(%1),u(%!/FUN`GET`AUDITROWS)),... and [sub(words(%1),u(%!/FUN`GET`AUDITROWS))] more%r)])]
         flags: [funsyntax]
       FUN`DISPLAY`AUDIT:
         value: |-
-          [@@(%0 published · %1 uncategorised — the section only appears when it has something in it, so a clean wiki reads as two counts)][header(Wiki audit)]%r[ljust(Published pages,24)][words(%0)]%r[ljust(Without a category,24)][words(%1)]%r[u(%!/FUN`DISPLAY`AUDITSECTION,Uncategorised,%1)][footer(drafts are invisible to softcode - use @wiki/list)]
+          [@@(%0 published · %1 uncategorised — the section only appears when it has something in it, so a clean wiki reads as two counts)][box([fields(,Published pages,words(%0),Without a category,words(%1))]%r[u(%!/FUN`DISPLAY`AUDITSECTION,Uncategorised,%1)][rule()]%rdrafts are invisible to softcode - use @wiki/list,Wiki audit)]
         flags: [funsyntax]
       FUN`DISPLAY`INDEX:
         value: |-
-          [header(Wiki)]%r[iter(u(%!/FUN`GET`NAMESPACES),[ljust(%i0,12)][rjust(words(wikilist(%i0)),4)] page[if(eq(words(wikilist(%i0)),1),,s)],%b,%r)]%r[line()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category <name>%b·%b+wiki/recent %[<n>%]%r[footer()]
+          [box([datacolumns(json(object,nowrap,"1|2"),Namespace|[iter(u(%!/FUN`GET`NAMESPACES),%i0,%b,|)],>Pages|[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,|)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category <name>%b·%b+wiki/recent %[<n>%],Wiki)]
         flags: [funsyntax]
 
       INC`DO`LISTING:
@@ -230,23 +222,23 @@ objects:
 
       CMD`LIST:
         value: |-
-          $^\+wiki/list(?\:\s+(?<ns>[^\s=]+))?(?\:=(?<page>\d+))?$:think [setq(namespace,r(ns,args),page,strfirstof(r(page,args),1))]; @include %!/INC`IS`NAMESPACE; think [setq(refs,wikilist(%q<namespace>),title,Pages[if(%q<namespace>,: %q<namespace>)],hint,trim(+wiki/list %q<namespace>))]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`ROW,%q<hint>
+          $^\+wiki/list(?\:\s+(?<ns>[^\s=]+))?(?\:=(?<page>\d+))?$:think [setq(namespace,r(ns,args),page,strfirstof(r(page,args),1))]; @include %!/INC`IS`NAMESPACE; think [setq(refs,wikilist(%q<namespace>),title,Pages[if(%q<namespace>,: %q<namespace>)],hint,trim(+wiki/list %q<namespace>))]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`TABLE,%q<hint>
         flags: [regexp, cmdsyntax]
 
       CMD`SEARCH:
         value: |-
-          $(?s)^\+wiki/search\s+(?<q>\S.*?)(?\:=(?<page>\d+))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; think [setq(refs,wikisearch(%q<query>),title,Search: %q<query>,hint,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`ROW,%q<hint>
+          $(?s)^\+wiki/search\s+(?<q>\S.*?)(?\:=(?<page>\d+))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; think [setq(refs,wikisearch(%q<query>),title,Search: %q<query>,hint,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`TABLE,%q<hint>
         flags: [regexp, cmdsyntax]
 
       # Categories are not in a page's name: a category is a list of pages, read with wikicategory().
       CMD`CATEGORY:
         value: |-
-          $^\+wiki/category\s+(?<name>[^=]*\S)(?\:=(?<page>\d+))?$:think [setq(category,trim(r(name,args)),page,strfirstof(r(page,args),1))]; think [setq(refs,wikicategory(%q<category>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,edit(lcstr(%q<category>),%b,_))],hint,+wiki/category %q<category>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`ROW,%q<hint>
+          $^\+wiki/category\s+(?<name>[^=]*\S)(?\:=(?<page>\d+))?$:think [setq(category,trim(r(name,args)),page,strfirstof(r(page,args),1))]; think [setq(refs,wikicategory(%q<category>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,edit(lcstr(%q<category>),%b,_))],hint,+wiki/category %q<category>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`TABLE,%q<hint>
         flags: [regexp, cmdsyntax]
 
       CMD`RECENT:
         value: |-
-          $^\+wiki/recent(?\:\s+(?<count>\d+))?(?\:=(?<page>\d+))?$:think [setq(count,strfirstof(r(count,args),10),page,strfirstof(r(page,args),1))]; think [setq(refs,wikirecent(%q<count>),title,Recently edited,hint,+wiki/recent %q<count>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`RECENTROW,%q<hint>
+          $^\+wiki/recent(?\:\s+(?<count>\d+))?(?\:=(?<page>\d+))?$:think [setq(count,strfirstof(r(count,args),10),page,strfirstof(r(page,args),1))]; think [setq(refs,wikirecent(%q<count>),title,Recently edited,hint,+wiki/recent %q<count>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`RECENTTABLE,%q<hint>
         flags: [regexp, cmdsyntax]
 
       CMD`INFO:

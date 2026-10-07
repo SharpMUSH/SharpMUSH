@@ -621,13 +621,13 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
 		await Assert.That(table).Contains($"Gala_{Tag}").Because("the scheduled scene's title should appear");
 
-		// Every line fits the player's width: the columns and the spaces align() puts between them add up to it.
+		// Every line fits the player's width.
 		var width = int.Parse(await Eval($"width({sam})"));
 		var tooWide = table.Split('\n').Where(l => l.Length > width).ToList();
 		await Assert.That(tooWide).IsEmpty().Because($"no line of the schedule may be wider than {width}");
 		var row = table.Split('\n').Single(l => l.Contains($"Gala_{Tag}"));
 		await Assert.That(row).Contains(await Eval("timefmt($H:$M,2524608000)"))
-			.Because("the Time column is the scene's time of day; the day is the rule above it");
+			.Because("the Time column is the scene's time of day");
 		await Assert.That(row).Contains("scheduled").Because("the Status column is wide enough for its longest word, so it does not wrap");
 
 		// +scenes and +events are the names other games use for the same list.
@@ -743,10 +743,11 @@ public class SceneRoleplayIntegrationTests
 	}
 
 	/// <summary>
-	/// +scene/upcoming reads like a calendar: each day under its own rule, the scenes of one day under the
-	/// same rule, and only the next 30 days unless a number of days (or all) is given. Every table fills
-	/// width(%#) without a blank row, and its heading row is underlined. The owner verbs that name a scene
-	/// (+scene/pitch &lt;id&gt;=, +scene/title &lt;id&gt;=, +scene/private &lt;id&gt;) work without focusing it.
+	/// +scene/upcoming reads like a calendar: one table in time order, each day named on its first scene,
+	/// and only the next 30 days unless a number of days (or all) is given. Every screen is a box no
+	/// wider than width(%#), without a blank row, and its table has a heading row. The owner verbs that
+	/// name a scene (+scene/pitch &lt;id&gt;=, +scene/title &lt;id&gt;=, +scene/private &lt;id&gt;) work without
+	/// focusing it.
 	/// </summary>
 	[Test]
 	public async Task SceneTables_FillTheWidth_AndTheScheduleIsGroupedByDay()
@@ -783,22 +784,19 @@ public class SceneRoleplayIntegrationTests
 
 		int Row(string title) => table.FindIndex(l => l.Contains(title));
 		var day = await Eval($"u({loggerDbref}/FUN`SCHED_DAY,{morning})");
-		await Assert.That(day).IsEqualTo(await Eval($"timefmt($A,{At(3, 9)})") + ", " + await Eval($"timefmt($B,{At(3, 9)})") + " " + DateTime.Today.AddDays(3).Day
-			+ (DateTime.Today.AddDays(3).Year == DateTime.Today.Year ? "" : ", " + DateTime.Today.AddDays(3).Year));
-		var rule = table.FindIndex(l => l.StartsWith('-') && l.Contains($" {day} "));
-		await Assert.That(rule).IsGreaterThan(-1).Because("each day is drawn as a rule naming it");
-		await Assert.That(Row($"Morning_{Tag}")).IsGreaterThan(rule);
+		await Assert.That(day).IsEqualTo(await Eval($"timefmt($a $b,{At(3, 9)})") + " " + DateTime.Today.AddDays(3).Day
+			+ (DateTime.Today.AddDays(3).Year == DateTime.Today.Year ? "" : " " + DateTime.Today.AddDays(3).Year));
+		var heading = table.FindIndex(l => l.Contains("Day") && l.Contains("Time") && l.Contains("Title") && l.Contains("RSVP"));
+		await Assert.That(heading).IsGreaterThan(-1).Because("the table has a heading row");
+		await Assert.That(Row($"Morning_{Tag}")).IsGreaterThan(heading);
+		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(day).Because("the first scene of a day names the day");
 		await Assert.That(Row($"Evening_{Tag}")).IsGreaterThan(Row($"Morning_{Tag}")).Because("scenes run in time order within the day");
-		await Assert.That(table.Skip(rule + 1).Take(Row($"Evening_{Tag}") - rule).Any(l => l.StartsWith('-')))
-			.IsFalse().Because("two scenes on the same day share one rule");
-		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(" 09:00 ").Because("a row carries the time of day; its rule carries the date");
+		await Assert.That(table[Row($"Evening_{Tag}")]).DoesNotContain(day).Because("two scenes on the same day name it once");
+		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(" 09:00 ").Because("a row carries the time of day");
 		await Assert.That(Row($"Later_{Tag}")).IsGreaterThan(Row($"Evening_{Tag}"));
 		await Assert.That(Row($"Far_{Tag}")).IsEqualTo(-1).Because("by default the schedule looks 30 days ahead");
-		await Assert.That(table[^1]).Contains("in the next 30 days").Because("the footer says how far it looked");
-		await Assert.That(table[^1]).Contains("later: +scenes <days>").Because("and how to see what it left out");
-
-		var heading = await Eval($"u({loggerDbref}/FUN`HEAD,u({loggerDbref}/FUN`SCHED_COLS,78))");
-		await Assert.That(heading).IsEqualTo(">6(u) <50(u) <5(u) <9(u) >4(u)").Because("every column of a heading row is underlined");
+		var footer = table.Single(l => l.Contains("in the next 30 days"));
+		await Assert.That(footer).Contains("later: +scenes <days>").Because("the footer says how far it looked, and how to see what it left out");
 
 		var wider = Lines(await RunAndCollectAs(xanHandle, "+scenes 90"));
 		await Assert.That(wider.Any(l => l.Contains($"Far_{Tag}"))).IsTrue().Because("+scenes <days> looks further ahead");
@@ -821,15 +819,16 @@ public class SceneRoleplayIntegrationTests
 		TestDiagnostics.WriteLine("=== +scene <id> ===\n" + string.Join("\n", card));
 		await Assert.That(card.Where(l => l.Length > width)).IsEmpty();
 		await Assert.That(card.Where(string.IsNullOrWhiteSpace)).IsEmpty();
-		await Assert.That(card.Any(l => l.StartsWith("Status") && l.Contains("Name") && l.EndsWith("Poses") && l.Length == width)).IsTrue()
-			.Because("the Players heading spans the width, Poses at its right edge");
-		await Assert.That(card.Single(l => l.StartsWith('-') && l.Contains(" Pitch ")).Length).IsEqualTo(width);
+		await Assert.That(card.Any(l => l.Contains("Status") && l.Contains("Name") && l.Contains("Poses"))).IsTrue()
+			.Because("the Players table has a heading row");
+		await Assert.That(card.Single(l => l.Contains("< Pitch >")).Length).IsEqualTo(width)
+			.Because("the Pitch divider meets both sides of the card");
 
 		// +scene/list (and +scene/mine) fit too, with a status as long as "scheduled".
 		var mine = Lines(await RunAndCollectAs(xanHandle, "+scene/mine"));
 		TestDiagnostics.WriteLine("=== +scene/mine ===\n" + string.Join("\n", mine));
 		await Assert.That(mine.Where(l => l.Length > width)).IsEmpty();
-		await Assert.That(mine.Single(l => l.Contains($"Far_{Tag}"))).EndsWith("scheduled");
+		await Assert.That(mine.Single(l => l.Contains($"Far_{Tag}"))).Contains(" scheduled ").Because("a status is never broken across lines");
 	}
 
 	/// <summary>+scene/deactivate keeps membership but clears focus; +scene/activate restores it.

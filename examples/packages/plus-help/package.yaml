@@ -1,20 +1,12 @@
 format: 1
 package: plus-help
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [help, docs, navigation, ui]
 requires_server: ">=0.1"
-
-depends:
-  - package: common-functions
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/common-functions/
-      branch: main
 
 # `+help` is the game's own help: what THIS game installed and what THIS game's staff wrote. `help`
 # is the engine's corpus, which a game cannot write to. The two never merge, and a +help miss points
@@ -204,7 +196,7 @@ objects:
       # ── Paging ──────────────────────────────────────────────────────────────
       FUN`GET`ROWS:
         value: |-
-          [@@(no arguments — listing rows that fit the reader's screen)][max(5,sub(height(%#,24),6))]
+          [@@(no arguments — listing rows that fit the reader's screen, under the box's title, headings, footer and edges)][max(5,sub(height(%#,24),8))]
         flags: [funsyntax]
       FUN`GET`NPAGES:
         value: |-
@@ -222,13 +214,19 @@ objects:
         value: |-
           [@@(%0 a record — its qualified name, clickable)][cmdlink([u(%!/FUN`GET`RNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
         flags: [funsyntax]
-      FUN`DISPLAY`ROW:
+      # The width a markdown body is rendered at inside a box: two borders and a space of padding on
+      # each side. rendermarkdown() refuses a width under 10.
+      FUN`GET`BODYWIDTH:
         value: |-
-          [@@(%0 a record — one listing row; the separating space is not part of the column, so a qualified name wider than it cannot run into the body)][ljust(u(%!/FUN`DISPLAY`REF,%0),36)]%b[left(squish(edit(u(%!/FUN`GET`RBODY,%0),%r,%b)),sub(width(%#,78),38))]
+          [@@(no arguments — the reader's width less the box's edges)][max(10,sub(width(%#,78),4))]
         flags: [funsyntax]
-      FUN`DISPLAY`SRCROW:
+      FUN`DISPLAY`SUMMARY:
         value: |-
-          [@@(%0 a source — one index row: what it is called, and what it covers)][ljust(cmdlink(%0,+help/list %0),18)]%b[left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),20))]
+          [@@(%0 a record · %1 how many characters fit — its body on one line, cut at a word so the row stays one line on the reader's screen)][setq(t,squish(edit(u(%!/FUN`GET`RBODY,%0),%r,%b)))][if(lte(strlen(%q<t>),%1),%q<t>,[ldelete(setr(c,left(%q<t>,sub(%1,3))),words(%q<c>))]...)]
+        flags: [funsyntax]
+      FUN`DISPLAY`SRCTABLE:
+        value: |-
+          [@@(%0 sources — the index table: what each is called, and what it covers. Cells are joined with %r and split on a newline, so a description holding a | stays one cell)][datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20)),Source%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],Covers%r[iter(%0,u(%!/FUN`GET`SRCDESC,%i0),%b,%r)])]
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-
@@ -240,11 +238,11 @@ objects:
       # reader choosing where to look is not helped by knowing one source has four topics.
       FUN`DISPLAY`INDEX:
         value: |-
-          [@@(%0 every record — the whole front page)][header(Help,width(%#,78))]%r[if(words(setr(i,u(%!/FUN`GET`FOUND,%0,index))),[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%q<i>),%!,width(%#,78))]%r)][line(Available help,width(%#,78))]%r[iter(u(%!/FUN`GET`LIVESOURCES,%0),u(%!/FUN`DISPLAY`SRCROW,%i0),%b,%r)]%r[line(,width(%#,78))]%r[u(%!/FUN`DISPLAY`SYNTAX)]%r[footer(,width(%#,78))]
+          [@@(%0 every record — the whole front page)][box([if(words(setr(i,u(%!/FUN`GET`FOUND,%0,index))),[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%q<i>),%!,u(%!/FUN`GET`BODYWIDTH))]%r)][rule(Available help)]%r[u(%!/FUN`DISPLAY`SRCTABLE,u(%!/FUN`GET`LIVESOURCES,%0))]%r[rule()]%r[u(%!/FUN`DISPLAY`SYNTAX)],Help)]
         flags: [funsyntax]
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(%0 title · %1 records · %2 page · %3 paging stem — reads %q<pages>)][header(%0,width(%#,78))]%r[iter(u(%!/FUN`GET`SLICE,%1,%2),u(%!/FUN`DISPLAY`ROW,%i0),%b,%r)]%r[footer([words(%1)] [if(eq(words(%1),1),topic,topics)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%3=[add(%2,1)])],width(%#,78))]
+          [@@(%0 title · %1 records · %2 page · %3 paging stem — reads %q<pages>. The summaries are cut to what is left of the reader's width beside the widest topic name, less the box's edges and the gap)][setq(sl,u(%!/FUN`GET`SLICE,%1,%2))][setq(cw,max(20,sub(width(%#,78),add(6,lmath(max,iter(%q<sl>,strlen(u(%!/FUN`GET`RNAME,%i0))))))))][box([datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20)),Topic%r[iter(%q<sl>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],Summary%r[iter(%q<sl>,u(%!/FUN`DISPLAY`SUMMARY,%i0,%q<cw>),%b,%r)])]%r[rule()]%r[words(%1)] [if(eq(words(%1),1),topic,topics)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%3=[add(%2,1)])],%0)]
         flags: [funsyntax]
       # One subtopic, named as it is known under its parent, running the full +help for it.
       FUN`DISPLAY`CHILD:
@@ -266,15 +264,15 @@ objects:
       # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
       FUN`DISPLAY`TOPIC:
         value: |-
-          [@@(%0 records · %1 a record — the whole topic between chrome)][header(u(%!/FUN`GET`RNAME,%1),width(%#,78))]%r[rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%1),%!,width(%#,78))]%r[u(%!/FUN`DISPLAY`NAV,%0,%1)][footer(+help/list [u(%!/FUN`GET`RSOURCE,%1)],width(%#,78))]
+          [@@(%0 records · %1 a record — the whole topic in a box titled with its name)][box([rendermarkdowncustom(u(%!/FUN`GET`RTEXT,%1),%!,u(%!/FUN`GET`BODYWIDTH))]%r[u(%!/FUN`DISPLAY`NAV,%0,%1)][rule()]%r+help/list [u(%!/FUN`GET`RSOURCE,%1)],u(%!/FUN`GET`RNAME,%1))]
         flags: [funsyntax]
-      FUN`DISPLAY`SRCLINE:
+      FUN`DISPLAY`SRCOBJ:
         value: |-
-          [@@(%0 a source · %1 its topic count — one registry row; a source whose object is gone is said to be missing rather than shown a #-1)][ljust(%0,20)][if(isdbref(setr(o,first(u(%!/FUN`GET`OBJECTS,%0)))),[ljust(num(%q<o>),10)][ljust(name(%q<o>),28)],[ljust(-,10)][ljust(object is missing,28)])][rjust(%1,4)]
+          [@@(%0 a source — the object carrying its topics, or nothing when that object is gone)][setq(o,first(u(%!/FUN`GET`OBJECTS,%0)))][if(isdbref(%q<o>),%q<o>)]
         flags: [funsyntax]
       FUN`DISPLAY`SOURCES:
         value: |-
-          [@@(%0 every record — the registry and what each entry contributes)][header(Help sources,width(%#,78))]%r[iter(u(%!/FUN`GET`SOURCES),u(%!/FUN`DISPLAY`SRCLINE,%i0,words(u(%!/FUN`GET`OF,%0,%i0))),%b,%r)]%r[footer(+help/source <name>=<object>,width(%#,78))]
+          [@@(%0 every record — the registry and what each entry contributes; a source whose object is gone is said to be missing rather than shown a #-1)][setq(srcs,u(%!/FUN`GET`SOURCES))][box([datacolumns(json(object,delim,json(string,%r),nowrap,json(string,1%r2%r4),priority,json(string,1%r2%r1%r1)),Source%r[iter(%q<srcs>,%i0,%b,%r)],Object%r[iter(%q<srcs>,firstof(num(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),-),%b,%r)],Name%r[iter(%q<srcs>,firstof(name(u(%!/FUN`DISPLAY`SRCOBJ,%i0)),object is missing),%b,%r)],>Topics%r[iter(%q<srcs>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)])]%r[rule()]%r+help/source <name>=<object>,Help sources)]
         flags: [funsyntax]
 
       # ── Markdown rendering ──────────────────────────────────────────────────
