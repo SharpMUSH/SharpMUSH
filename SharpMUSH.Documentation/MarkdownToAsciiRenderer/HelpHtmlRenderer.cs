@@ -138,15 +138,22 @@ public static class HelpHtmlRenderer
 	/// that a browser would otherwise collapse to one. That only works if the paragraph's HTML carries no
 	/// newline the terminal would not print, so each line break becomes what the terminal makes of it: a
 	/// soft break is a space, a soft break right after a <c>&lt;br&gt;</c> is nothing, and a hard break
-	/// is a <c>&lt;br&gt;</c> with no newline after it. A line that starts after a break keeps the
-	/// indentation the terminal prints (<see cref="Indentation"/>). A paragraph whose lines are columns of
-	/// spaces is marked <see cref="AlignedClass"/>, since the columns only line up in a monospaced font.
+	/// is a <c>&lt;br&gt;</c> with no newline after it. The first line, and each line that starts after a
+	/// break, keeps the indentation the terminal prints (<see cref="Lead"/>, <see cref="Indentation"/>).
+	/// A paragraph whose lines are columns of spaces is marked <see cref="AlignedClass"/>, since the
+	/// columns only line up in a monospaced font.
 	/// </summary>
 	private static void KeepTerminalSpacing(ParagraphBlock paragraph, string markdown)
 	{
 		if (paragraph.Inline is null)
 		{
 			return;
+		}
+
+		var lead = Lead(paragraph);
+		if (lead > 0 && paragraph.Inline.FirstChild is { } first)
+		{
+			first.InsertBefore(new HtmlInline(IndentSpan(lead)));
 		}
 
 		foreach (var lineBreak in paragraph.Inline.Descendants<LineBreakInline>().ToList())
@@ -185,8 +192,8 @@ public static class HelpHtmlRenderer
 	/// <summary>
 	/// The indentation of the line a break starts, as HTML. Markdig drops the spaces that open each line
 	/// of a paragraph, but the terminal prints them, and helpfiles use them to set a syntax line or an
-	/// example under the sentence that introduces it. The indentation counts from the paragraph's own
-	/// column, so a paragraph inside a list item or written indented keeps only what its lines add. It is
+	/// example under the sentence that introduces it. A paragraph inside a list item or a container counts
+	/// from its own column, so it keeps only what its lines add (<see cref="Lead"/>). It is
 	/// a <see cref="IndentClass"/> span the portal shows as written, since a list item is not laid out
 	/// with <c>white-space: pre-wrap</c> and would collapse the spaces.
 	/// </summary>
@@ -217,9 +224,18 @@ public static class HelpHtmlRenderer
 			}
 		}
 
-		var indent = column - paragraph.Column;
-		return indent > 0 ? $"<span class=\"{IndentClass}\">{new string(' ', indent)}</span>" : string.Empty;
+		var indent = column - paragraph.Column + Lead(paragraph);
+		return indent > 0 ? IndentSpan(indent) : string.Empty;
 	}
+
+	/// <summary>
+	/// How far a paragraph's first line is indented as the terminal prints it. A paragraph at the top of
+	/// the entry keeps the column it is written at, as the help index's indented groups are; inside a
+	/// list item or a container the indentation is the container's layout, so it counts from there.
+	/// </summary>
+	private static int Lead(ParagraphBlock paragraph) => paragraph.Parent is MarkdownDocument ? paragraph.Column : 0;
+
+	private static string IndentSpan(int width) => $"<span class=\"{IndentClass}\">{new string(' ', width)}</span>";
 
 	private static bool IsBreakTag(string tag) =>
 		tag.StartsWith("<br", StringComparison.OrdinalIgnoreCase) && tag.Length > 3 && tag[3] is '>' or '/' or ' ';

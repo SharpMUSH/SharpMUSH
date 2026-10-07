@@ -43,7 +43,6 @@ Sounds are only forwarded if the speaker also passes `<object>`'s @lock/filter, 
 
 ## Audible exit example
 
-### Example
 An audible exit leads from the room where Wizard is standing to another room where the puppet "Wiztoy" is standing.
 ```sharp
 > @prefix exit=From inside,

@@ -54,7 +54,6 @@ Switches:
 
 ## Speech format examples
 
-### Example
 ```sharp
 > &sayformat *Mike=%n sez, '%0'
 > &sayformat *Walker=From %n: %0

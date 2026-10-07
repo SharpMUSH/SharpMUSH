@@ -58,7 +58,6 @@ When using `@dolist/inline`, an @break in an `<action list>` will stop the calli
 
 ## Iteration examples
 
-### Examples
 ```sharp
 > @dolist a b c=say %i0 is number [inum(0)]
 You say, "a is number 1"
