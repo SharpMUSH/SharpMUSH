@@ -117,6 +117,9 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// <summary>The id <c>+scene/schedule</c> gives the scene it makes.</summary>
 	public const string ScheduledId = "9";
 
+	/// <summary>How the page asks for the scene its schedule made: the new ids on the list, filtered.</summary>
+	public const string NewlyScheduledPrefix = "squish(iter(setdiff(scenelist(mine),";
+
 	/// <summary>The scheduled scene's fields as the +scene verbs set them, read back by <c>scene(9,…)</c>.</summary>
 	private readonly Dictionary<string, string> _scheduled = new(StringComparer.Ordinal);
 
@@ -242,8 +245,8 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			"scenefocus(me)" => Focus,
 			"scene(scenefocus(me),public)" => FocusIsPublic ? "1" : "0",
 			"scenelist(mine)" => MemberScenes,
-			{ } diff when diff.StartsWith("setdiff(scenelist(mine),", StringComparison.Ordinal) => string.Join(' ',
-				MemberScenes.Split(' ').Except(diff["setdiff(scenelist(mine),".Length..^1].Split(' '))),
+			{ } diff when diff.StartsWith(NewlyScheduledPrefix, StringComparison.Ordinal) => string.Join(' ',
+				MemberScenes.Split(' ').Except(diff[NewlyScheduledPrefix.Length..diff.IndexOf(')', NewlyScheduledPrefix.Length)].Split(' '))),
 			{ } field when field.StartsWith($"scene({ScheduledId},", StringComparison.Ordinal) =>
 				_scheduled.GetValueOrDefault(field[$"scene({ScheduledId},".Length..^1], ""),
 			_ => null,
@@ -768,7 +771,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var sent = _api.RequestsSent();
 		var schedule = sent.Single(r => r.Command.StartsWith("+scene/schedule ", StringComparison.Ordinal));
 		await Assert.That(schedule.Command).IsEqualTo($"+scene/schedule Lanterns at Midnight={at}");
-		await Assert.That(schedule.Result).IsEqualTo("setdiff(scenelist(mine),1 3)");
+		await Assert.That(schedule.Result).StartsWith($"{SceneSurfaceApiHandler.NewlyScheduledPrefix}1 3),");
 		await Assert.That(schedule.Character).IsEqualTo("#1:1");
 		cut.WaitForAssertion(() =>
 		{
@@ -842,11 +845,13 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		FillScheduleForm(cut, "Meant To Be Quiet", DateTime.Today.AddDays(2).AddHours(20), watchable: false);
+		FillScheduleForm(cut, "Meant To Be Quiet", DateTime.Today.AddDays(2).AddHours(20), pitch: "Sent after.", watchable: false);
 		cut.Find(".scene-schedule-submit").Click();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-scheduled-note"), TimeSpan.FromSeconds(5));
 		await Assert.That(_api.CommandsRun()).Contains($"+scene/private {SceneSurfaceApiHandler.ScheduledId}");
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/pitch", StringComparison.Ordinal))).IsFalse()
+			.Because("privacy goes first, and the steps stop at the first refusal");
 		await Assert.That(cut.FindAll(".scene-schedule")).IsEmpty();
 	}
 

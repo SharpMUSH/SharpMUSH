@@ -396,7 +396,7 @@
         var scheduled = MushComposeEncoder.Encode(title.Replace('=', ' ').Trim());
         var known = before.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(IsSceneId);
         return await Commands.RunAsync($"+scene/schedule {scheduled}={at}",
-                $"setdiff({MemberScenes},{string.Join(' ', known)})", character) switch
+                NewlyScheduled(known), character) switch
             {
                 PortalCommandResponse { Result: { } added } when IsSceneId(added.Trim()) =>
                     await SceneScheduledAsync(added.Trim(), title, character),
@@ -406,19 +406,28 @@
     }
 
     /// <summary>
+    /// The ids on the character's list that were not there before and are a scheduled scene it owns: a scene
+    /// the character joined from another tab meanwhile also joins the list, but is neither.
+    /// </summary>
+    private static string NewlyScheduled(IEnumerable<string> before) =>
+        $"squish(iter(setdiff({MemberScenes},{string.Join(' ', before)}),if(and(strmatch(scene(##,status),scheduled),strmatch(scene(##,owner),%#)),##)))";
+
+    /// <summary>
     /// Sends what <c>+scene/schedule</c> does not take: the title when it held an =, the pitch, and privacy.
     /// Each is asked back from the scene in the same queue entry, since a verb refuses in its output.
     /// </summary>
     private async Task<string?> SceneScheduledAsync(string id, string title, string character)
     {
+        // Privacy goes first: the steps stop at the first that fails, and a scene asked to be private must
+        // not stay watchable because a pitch was refused.
         var changes = new List<(string Command, string Result, string Expected)>();
+        if (!_schedPublic)
+            changes.Add(($"+scene/private {id}", $"scene({id},public)", "0"));
         if (title.Contains('='))
             changes.Add(($"+scene/title {id}={MushComposeEncoder.Encode(title)}", $"scene({id},title)", title));
         var pitch = _schedPitch.Trim();
         if (pitch.Length > 0)
             changes.Add(($"+scene/pitch {id}={MushComposeEncoder.Encode(pitch)}", $"scene({id},summary)", pitch));
-        if (!_schedPublic)
-            changes.Add(($"+scene/private {id}", $"scene({id},public)", "0"));
 
         string? note = null;
         foreach (var (command, result, expected) in changes)
