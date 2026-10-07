@@ -318,6 +318,21 @@ public class PlusHelpIntegrationTests
 	}
 
 	/// <summary>
+	/// A listing's summary is the topic's first paragraph rendered, not its markdown source:
+	/// no code-span backticks or bold asterisks, and a topic opening with a heading is summarised
+	/// by the paragraph under it.
+	/// </summary>
+	[Test]
+	public async Task List_SummariesAreRenderedMarkdown()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var listed = Joined(await RunAs(await ReaderAsync(), "+help/list plus-help"));
+
+		await Assert.That(listed).Contains("+help is this game's own help");
+		await Assert.That(listed).DoesNotContain("`").And.DoesNotContain("**");
+	}
+
+	/// <summary>
 	/// Every shipped topic must EVALUATE — a body runs through <c>u()</c>, so an unescaped
 	/// <c>[</c>, <c>(</c> or <c>)</c> ends the expression, markdown code span or not. Asserted
 	/// because <c>FUN`GET`RTEXT</c> falls back to the stored text on failure: the topic still

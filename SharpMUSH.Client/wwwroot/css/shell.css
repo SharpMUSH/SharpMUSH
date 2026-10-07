@@ -759,6 +759,8 @@ pre.ms-preformatted {
 .ms-rule[data-align="left"]::before, .ms-divider[data-align="left"]::before { flex: 0 0 1ch; }
 .ms-rule[data-align="right"]::after, .ms-divider[data-align="right"]::after { flex: 0 0 1ch; }
 .ms-divider { margin: 0 -1ch; }
+/* An untitled rule is one line: the gap is for the title between its two halves. */
+.ms-rule:empty, .ms-divider:empty { gap: 0; }
 .ms-border-double.ms-rule::before, .ms-border-double.ms-rule::after { border-top: 3px double currentColor; }
 .ms-border-none.ms-rule::before, .ms-border-none.ms-rule::after { border-top: none; }
 .ms-flex { display: flex; flex-wrap: wrap; }
@@ -805,6 +807,8 @@ pre.ms-preformatted {
 .ms-table-wrap { max-width: 100%; overflow-x: auto; }
 .ms-table { border-collapse: collapse; }
 .ms-table th, .ms-table td { padding: 0 1ch; vertical-align: top; text-align: left; }
+/* The terminal breaks long words anywhere; a cell wraps between words, or a name, a time or a number splits mid-word on a phone. */
+.ms-table :is(th, td), .ms-table :is(th, td) .ms-text { word-break: normal; overflow-wrap: normal; }
 .ms-table th { border-bottom: 1px solid currentColor; }
 @media (max-width: 48em) { .ms-table .ms-p3 { display: none; } }
 @media (max-width: 32em) { .ms-table .ms-p2 { display: none; } }

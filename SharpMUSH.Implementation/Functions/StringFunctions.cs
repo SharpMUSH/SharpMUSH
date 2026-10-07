@@ -753,42 +753,22 @@ public partial class Functions
 	[SharpFunction(Name = "edit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string", "find", "replace"])]
 	public ValueTask<CallState> Edit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// fun_edit (src/funstr.c) edits the markup string, so the text it leaves alone keeps its colour.
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var str = args["0"].Message!.ToPlainText();
+		var str = args["0"].Message!;
 
-		for (int i = 1; i < args.Count - 1; i += 2)
+		for (var i = 1; i < args.Count - 1; i += 2)
 		{
 			var search = args[i.ToString()].Message!.ToPlainText();
-			var replace = args[(i + 1).ToString()].Message!.ToPlainText();
+			var replace = args[(i + 1).ToString()].Message!;
 
-			if (search == "^")
+			str = search switch
 			{
-				// Prepend
-				str = replace + str;
-			}
-			else if (search == "$")
-			{
-				// Append
-				str = str + replace;
-			}
-			else if (string.IsNullOrEmpty(search))
-			{
-				// Insert between every character
-				var result = new StringBuilder();
-				result.Append(replace);
-				foreach (var c in str)
-				{
-					result.Append(c);
-					result.Append(replace);
-				}
-
-				str = result.ToString();
-			}
-			else
-			{
-				// Replace all occurrences
-				str = str.Replace(search, replace);
-			}
+				"^" => MarkupText.Concat(replace, str),
+				"$" => MarkupText.Concat(str, replace),
+				"" => MarkupText.Concat([replace, .. SplitIntoGraphemes(str).SelectMany(g => new[] { g, replace })]),
+				_ => str.ReplaceAll(search, replace)
+			};
 		}
 
 		return ValueTask.FromResult(new CallState(str));

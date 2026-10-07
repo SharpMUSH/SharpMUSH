@@ -290,6 +290,18 @@ public class StringFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
+	/// <summary>Penn's edit() keeps the colour on the text it does not replace.</summary>
+	[Test]
+	[Arguments("edit(ansi(r,red) blue,blue,green)", "ansi(r,red) green")]
+	[Arguments("edit(ansi(r,red),^,>)", ">[ansi(r,red)]")]
+	[Arguments("edit(ansi(r,ab),,-)", "-[ansi(r,a)]-[ansi(r,b)]-")]
+	public async Task Edit_KeepsMarkup(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var markedUp = (await Parser.FunctionParse(MarkupText.Plain(expected)))?.Message!;
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(markedUp.Render(MarkupFormat.Ansi));
+	}
+
 	[Test]
 	[Arguments("tr(hello,el,ip)", "hippo")]
 	[Arguments("tr(abcd,bd,xy)", "axcy")]

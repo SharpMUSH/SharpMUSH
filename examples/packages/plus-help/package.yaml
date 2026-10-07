@@ -222,7 +222,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SUMMARY:
         value: |-
-          [@@(%0 a record · %1 how many characters fit — its body on one line, cut at a word so the row stays one line on the reader's screen)][setq(t,squish(edit(u(%!/FUN`GET`RBODY,%0),%r,%b)))][if(lte(strlen(%q<t>),%1),%q<t>,[ldelete(setr(c,left(%q<t>,sub(%1,3))),words(%q<c>))]...)]
+          [@@(%0 a record · %1 how many characters fit — its first paragraph that is not a heading, rendered and on one line, cut at a word so the row stays one line on the reader's screen)][setq(t,squish(edit(rendermarkdowncustom(before(regedit(regeditall(%r[u(%!/FUN`GET`RTEXT,%0)],%r#+ .*,),^%r+,),%r%r),%!,1000),%r,%b)))][if(lte(strlen(%q<t>),%1),%q<t>,[setq(c,ldelete(setr(c,left(%q<t>,sub(%1,3))),words(%q<c>)))][if(member(.|\,|;|:,right(%q<c>,1),|),left(%q<c>,dec(strlen(%q<c>))),%q<c>)]...)]
         flags: [funsyntax]
       FUN`DISPLAY`SRCTABLE:
         value: |-
