@@ -56,8 +56,8 @@ You can control where to look with:<br>
     m - If `<name>` is "me", return `<looker>`'s dbref<br>
     n - Match `<name>` against the names of objects in `<looker>`'s location<br>
     p - If `<name>` begins with a *, match the rest against player names<br>
-    z - English-style matching (my 2nd book) of `<name>` (see [MATCHING])
-    * - All of the above (try a complete match). Default when no match parameters are given.
+    z - English-style matching (my 2nd book) of `<name>` (see [MATCHING])<br>
+    * - All of the above (try a complete match). Default when no match parameters are given.<br>
     y - Match `<name>` against player names whether it begins with a * or not<br>
     x - Only match objects with the exact name `<name>`, no partial matches<br>
     s - Only match objects which `<looker>` controls. You must control `<looker>` or have the See_All power.

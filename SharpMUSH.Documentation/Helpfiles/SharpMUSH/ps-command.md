@@ -18,7 +18,7 @@
 -->
 # @ps
 
-See [@ps/history] for recent outcomes and [@profile] for temporary invocation timing.
+See [@ps/history] for recent outcomes and [@profile] for temporary invocation timing.<br>
 `@ps[/<switch>] [<player>]`<br>
 `@ps[/debug] <pid>`
 

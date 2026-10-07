@@ -40,7 +40,7 @@ For details of how the algorithm works, see [soundex algorithm].
 
 Here's how the soundex algorithm works:
 1. The first letter of the soundex code is the first letter of the word (exception: words starting with PH get a soundex starting with F)
-2. Each remaining letter is converted to a number:
+2. Each remaining letter is converted to a number:<br>
       vowels, h, w, y ---------> 0<br>
       b, p, f, v --------------> 1<br>
       c, g, j, k, q, s, x, z --> 2<br>

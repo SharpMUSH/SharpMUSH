@@ -166,6 +166,19 @@ public class HelpArticleTests
 	}
 
 	[Test]
+	[Arguments("Commands:<br>\n    @set me=x<br>\n    &attr me=y",
+		"<p>Commands:<br><span class=\"help-indent\">    </span>@set me=x<br><span class=\"help-indent\">    </span>&amp;attr me=y</p>\n")]
+	[Arguments("  Example:<br>\n    > think [MATCHING]",
+		"<p>Example:<br><span class=\"help-indent\">  </span>&gt; think <a href=\"/help/MATCHING\">MATCHING</a></p>\n")]
+	[Arguments("Hard break  \n  indented.", "<p>Hard break<br /><span class=\"help-indent\">  </span>indented.</p>\n")]
+	[Arguments("1. Either:<br>\n     a. this", "<ol>\n<li>Either:<br><span class=\"help-indent\">  </span>a. this</li>\n</ol>\n")]
+	[Arguments("Prose that\n    wraps.", "<p>Prose that wraps.</p>\n")]
+	public async Task WebKeepsTheIndentationOfALineAfterABreak(string markdown, string expected)
+	{
+		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(expected);
+	}
+
+	[Test]
 	public async Task TerminalTableCellsThatWrapStayInTheirColumn()
 	{
 		const string markdown = "| Failure to... | Lock |\n| --- | --- |\n| run an `$-command` on an object that is quite a long way from here | Command |";

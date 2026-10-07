@@ -101,7 +101,7 @@ This is the index to the MUSH online help files.
    5. If V is a Wizard, O does not control V
    6. If V is Royalty and O is not, O does not control V
    7. If O is MISTRUST, O does not control V
-   8. If O and V are owned by the same player, and either:
+   8. If O and V are owned by the same player, and either:<br>
        a. V is not set TRUST, or<br>
        b. O is set TRUST<br>
       then O controls V

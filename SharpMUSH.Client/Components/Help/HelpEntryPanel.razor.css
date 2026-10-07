@@ -39,6 +39,12 @@
     white-space: pre-wrap;
 }
 
+/* The indentation of a line that starts after a break, kept as written even in a list item, which
+   is not pre-wrap. */
+.help-entry ::deep span.help-indent {
+    white-space: pre;
+}
+
 .help-entry ::deep p.help-aligned {
     font-family: var(--font-mono);
     font-size: 0.8125rem;

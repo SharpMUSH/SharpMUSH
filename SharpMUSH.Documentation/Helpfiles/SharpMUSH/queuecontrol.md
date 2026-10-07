@@ -40,11 +40,11 @@
 -->
 # @queue
 
-`@queue/list [pid]`
-`@queue/pause pid=reason`
-`@queue/resume pid`
-`@queue/list/owner player`
-`@queue/pause/object object=reason`
+`@queue/list [pid]`<br>
+`@queue/pause pid=reason`<br>
+`@queue/resume pid`<br>
+`@queue/list/owner player`<br>
+`@queue/pause/object object=reason`<br>
 `@queue/resume/owner player`
 
 Inspect, pause or resume pending work without changing its PID or captured
