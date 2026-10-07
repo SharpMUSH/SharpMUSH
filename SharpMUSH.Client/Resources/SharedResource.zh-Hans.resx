@@ -5823,4 +5823,13 @@
   <data name="NavThemeForCharacter" xml:space="preserve">
     <value>{0} 的主题</value>
   </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>跳到主要内容</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>跳到文本框</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>页面文本（Markdown）</value>
+  </data>
 </root>

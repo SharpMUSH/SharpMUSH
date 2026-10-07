@@ -5823,4 +5823,13 @@
   <data name="NavThemeForCharacter" xml:space="preserve">
     <value>Tema pentru {0}</value>
   </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Salt la conținutul principal</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Salt la caseta de text</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Textul paginii (Markdown)</value>
+  </data>
 </root>

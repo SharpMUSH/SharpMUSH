@@ -90,7 +90,7 @@ else
         }
 
         @* column-reverse keeps the story at its newest pose as poses arrive, as Play's does. *@
-        <div class="scene-live-scroll">
+        <div class="scene-live-scroll" data-input-region>
             <div class="scene-live-story">
                 <SceneStory SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" LiveUnavailableChanged="OnLiveUnavailable"
                             OnEditPose="EditPoseAsync" OnPoseAdded="OnPoseAdded" />
@@ -100,7 +100,7 @@ else
         @if (scene.IsLive)
         {
             <div class="scene-live-compose @(_mode == Ooc ? "scene-live-compose--ooc" : null)">
-                <div class="scene-live-card">
+                <div class="scene-live-card" data-input-region>
                     <div class="scene-live-bar">
                         <TypeChips Items="_modes" Selected="@_mode" SelectedChanged="OnModeChanged" AriaLabel="@Loc["RolComposeMode"]" />
                         @if (_field is not null)
@@ -114,10 +114,11 @@ else
                        it goes out. Ctrl/⌘+Enter sends, which inserts nothing in a textarea. *@
                     <FormattedInput @ref="_field" Draft="_draft" Class="scene-live-field" InputClass="scene-live-input" Rows="3"
                                     Placeholder="@Placeholder" AriaLabel="@($"{Loc["RolComposeMode"]}: {Label(_mode)}")"
+                                    Primary="end" Autofocus="true"
                                     OnKeyDown="OnKeyDownAsync" OnRawRequested="() => _draft.SetRaw(true)" />
                     <div class="scene-live-foot">
                         <span class="scene-live-hint">@Loc["RolComposeSendHint"]</span>
-                        <button type="button" class="scene-live-send" disabled="@(!CanSend)" @onclick="SendPoseAsync">
+                        <button type="button" class="scene-live-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">
                             <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:16px;" /><span>@Loc["Send"]</span>
                         </button>
                     </div>
@@ -337,6 +338,13 @@ else
     private void OnPoseAdded()
     {
         if (_scene is { } scene) _scene = scene with { PoseCount = scene.PoseCount + 1 };
+    }
+
+    /// <summary>Send, clicked: the button goes disabled with the field emptied, so focus goes back to the field.</summary>
+    private async Task SendFromButtonAsync()
+    {
+        await SendPoseAsync();
+        if (_field is not null) await _field.FocusAsync();
     }
 
     private async Task SendPoseAsync()

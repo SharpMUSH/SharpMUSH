@@ -1531,3 +1531,36 @@ pre.ms-preformatted {
     background: var(--border);
     outline: none;
 }
+
+/* ── Skip links (WCAG 2.4.1, bypass blocks) ──
+   The first stops in the tab order: past the rail and the section menu to the page, or straight to the
+   page's main text box when it has one (input-focus.js). Off screen until focused. */
+.skip-links {
+	position: fixed;
+	top: 0.5rem;
+	left: 0.5rem;
+	z-index: 2000;
+	display: flex;
+	gap: 0.5rem;
+}
+.skip-link {
+	position: absolute;
+	left: -10000px;
+	padding: 0.5rem 0.875rem;
+	border-radius: var(--radius);
+	background: var(--accent);
+	color: var(--accent-on);
+	font-weight: 600;
+	text-decoration: none;
+}
+.skip-link:focus-visible,
+.skip-link:focus {
+	position: static;
+}
+:root:not(:has([data-primary-input])) .skip-link--input {
+	display: none;
+}
+/* The skip link's target is focused only to move the reading point; it is not a control. */
+.phosphor-main:focus {
+	outline: none;
+}

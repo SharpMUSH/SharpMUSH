@@ -5823,4 +5823,13 @@
   <data name="NavThemeForCharacter" xml:space="preserve">
     <value>{0} témája</value>
   </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Ugrás a fő tartalomhoz</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Ugrás a szövegmezőhöz</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Oldal szövege (Markdown)</value>
+  </data>
 </root>

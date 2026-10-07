@@ -114,7 +114,8 @@ else
                             }
                         </Controls>
                         <ChildContent>
-                            <div class="play-views">
+                            @* A plain click in the story or the output focuses the field below it (input-focus.js). *@
+                            <div class="play-views" data-input-region>
                                 @if (SceneHere is { } scene)
                                 {
                                     <div class="play-view play-story @(View == PlayView.Story ? null : "play-view--off")" inert="@(View != PlayView.Story)">

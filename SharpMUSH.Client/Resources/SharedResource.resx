@@ -6800,4 +6800,13 @@
   <data name="AdmThemesStylesheetReset" xml:space="preserve">
     <value>Remove stylesheet</value>
   </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Skip to main content</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Skip to the text box</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Page text (Markdown)</value>
+  </data>
 </root>
