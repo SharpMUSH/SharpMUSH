@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
@@ -28,12 +26,12 @@ public class OptionsService(
 {
 	public SharpMUSHOptions Create(string name)
 	{
-		var stored = database.GetExpandedServerData<JsonObject>(nameof(SharpMUSHOptions))
+		var data = database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
-		if (stored is not null)
+		if (data is not null)
 		{
-			return Clamped(name, Completed(stored));
+			return Clamped(name, data);
 		}
 
 		// Validated BEFORE it is stored. This branch only runs when nothing is stored, so a rejected
@@ -45,59 +43,6 @@ public class OptionsService(
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return defaultSettings;
-	}
-
-	/// <summary>
-	/// The stored document with every option it does not hold taken from <see cref="Default()"/>. A document
-	/// written before an option existed lacks it, and deserialising it as it is leaves a string option null
-	/// (and a whole category, if the category is new), which the validators then dereference.
-	/// </summary>
-	private SharpMUSHOptions Completed(JsonObject stored)
-	{
-		var filled = new List<string>();
-		var defaults = JsonSerializer.SerializeToNode(Default())!.AsObject();
-		foreach (var (category, defaultOptions) in defaults)
-		{
-			if (!stored.TryGetPropertyValue(category, out var storedOptions))
-			{
-				stored[category] = defaultOptions?.DeepClone();
-				filled.Add(category);
-			}
-			else if (storedOptions is JsonObject storedCategory && defaultOptions is JsonObject defaultCategory)
-			{
-				Fill(storedCategory, defaultCategory, category, filled);
-			}
-		}
-
-		var options = stored.Deserialize<SharpMUSHOptions>()!;
-		if (filled.Count == 0)
-		{
-			return options;
-		}
-
-		database.SetExpandedServerData(nameof(SharpMUSHOptions), options)
-			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
-		logger?.LogInformation("Stored configuration completed with the defaults of options it did not hold: {Options}",
-			string.Join(", ", filled));
-
-		return options;
-	}
-
-	/// <summary>
-	/// One category's absent options. An option that is there is kept whole: a dictionary option the game
-	/// removed an entry from is a value, not a gap the defaults should fill.
-	/// </summary>
-	private static void Fill(JsonObject stored, JsonObject defaults, string category, List<string> filled)
-	{
-		foreach (var (option, value) in defaults)
-		{
-			// Only an absent option: a stored null is a value the game chose for an option that allows one.
-			if (!stored.ContainsKey(option))
-			{
-				stored[option] = value?.DeepClone();
-				filled.Add($"{category}.{option}");
-			}
-		}
 	}
 
 	/// <summary>

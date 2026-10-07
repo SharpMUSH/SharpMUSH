@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
@@ -28,14 +26,10 @@ public class OptionsValidationTests
 	}
 
 	private static IExpandedDataStore StoreWith(SharpMUSHOptions stored)
-		=> StoreWith(JsonSerializer.SerializeToNode(stored)!.AsObject());
-
-	/// <summary>The stored document as the store hands it back: JSON, which may predate options added since.</summary>
-	private static IExpandedDataStore StoreWith(JsonObject stored)
 	{
 		var store = Substitute.For<IExpandedDataStore>();
-		store.GetExpandedServerData<JsonObject>(nameof(SharpMUSHOptions), Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<JsonObject?>(stored));
+		store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMUSHOptions?>(stored));
 		return store;
 	}
 
@@ -46,8 +40,8 @@ public class OptionsValidationTests
 	private static IExpandedDataStore StoreWithNoSavedOptions()
 	{
 		var store = Substitute.For<IExpandedDataStore>();
-		store.GetExpandedServerData<JsonObject>(nameof(SharpMUSHOptions), Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<JsonObject?>((JsonObject?)null));
+		store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMUSHOptions?>((SharpMUSHOptions?)null));
 		return store;
 	}
 
@@ -131,76 +125,7 @@ public class OptionsValidationTests
 		var stored = SomeStoredConfiguration();
 		var service = new OptionsService(StoreWith(stored), [new StubValidator(ValidateOptionsResult.Success)]);
 
-		await Assert.That(JsonSerializer.Serialize(service.Create(Options.DefaultName)))
-			.IsEqualTo(JsonSerializer.Serialize(stored));
-	}
-
-	/// <summary>
-	/// A document stored before an option existed does not hold it. Read as it was, a new string option came
-	/// back null and the validator threw on it, so every start failed after #1628 added layout_border.
-	/// </summary>
-	[Test]
-	public async Task AnOptionTheStoredDocumentLacksTakesItsDefaultAndIsStored()
-	{
-		var stored = JsonSerializer.SerializeToNode(SomeStoredConfiguration())!.AsObject();
-		stored["Cosmetic"]!.AsObject().Remove(nameof(CosmeticOptions.LayoutBorder));
-		var store = StoreWith(stored);
-		var service = new OptionsService(store, [new SharpMUSH.Configuration.ValidateSharpOptions()]);
-
-		var options = service.Create(Options.DefaultName);
-
-		await Assert.That(options.Cosmetic.LayoutBorder).IsEqualTo(SharpMUSHOptions.Default().Cosmetic.LayoutBorder);
-		await store.Received(1).SetExpandedServerData(nameof(SharpMUSHOptions),
-			Arg.Is<object>(saved => HoldsALayoutBorder(saved)),
-			Arg.Any<CancellationToken>());
-	}
-
-	private static bool HoldsALayoutBorder(object saved)
-		=> saved is SharpMUSHOptions { Cosmetic.LayoutBorder: not null };
-
-	[Test]
-	public async Task ACategoryTheStoredDocumentLacksTakesItsDefaults()
-	{
-		var stored = JsonSerializer.SerializeToNode(SomeStoredConfiguration())!.AsObject();
-		stored.Remove(nameof(SharpMUSHOptions.Cosmetic));
-		var service = new OptionsService(StoreWith(stored), [new SharpMUSH.Configuration.ValidateSharpOptions()]);
-
-		var options = service.Create(Options.DefaultName);
-
-		await Assert.That(JsonSerializer.Serialize(options.Cosmetic))
-			.IsEqualTo(JsonSerializer.Serialize(SharpMUSHOptions.Default().Cosmetic));
-	}
-
-	/// <summary>
-	/// An entry the game removed from a dictionary option is its choice, not a gap: the defaults fill whole
-	/// options only, so a removed alias stays removed.
-	/// </summary>
-	[Test]
-	public async Task AnEntryRemovedFromADictionaryOptionStaysRemoved()
-	{
-		var stored = JsonSerializer.SerializeToNode(SomeStoredConfiguration())!.AsObject();
-		stored["Alias"]!["FunctionAliases"]!.AsObject().Remove("flip");
-		var store = StoreWith(stored);
-		var service = new OptionsService(store, [new StubValidator(ValidateOptionsResult.Success)]);
-
-		var options = service.Create(Options.DefaultName);
-
-		await Assert.That(options.Alias.FunctionAliases.ContainsKey("flip")).IsFalse();
-		await Assert.That(options.Alias.FunctionAliases.ContainsKey("iter")).IsTrue();
-		await store.DidNotReceive().SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(),
-			Arg.Any<CancellationToken>());
-	}
-
-	[Test]
-	public async Task ACompleteStoredDocumentIsNotStoredAgain()
-	{
-		var store = StoreWith(SomeStoredConfiguration());
-		var service = new OptionsService(store, [new StubValidator(ValidateOptionsResult.Success)]);
-
-		service.Create(Options.DefaultName);
-
-		await store.DidNotReceive().SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(),
-			Arg.Any<CancellationToken>());
+		await Assert.That(service.Create(Options.DefaultName)).IsEqualTo(stored);
 	}
 
 	/// <summary>
