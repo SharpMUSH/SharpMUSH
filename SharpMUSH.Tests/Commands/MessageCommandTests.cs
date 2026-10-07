@@ -138,22 +138,6 @@ public class MessageCommandTests
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires room setup")]
-	public async ValueTask MessageRemitSwitch()
-	{
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires multiple objects")]
-	public async ValueTask MessageOemitSwitch()
-	{
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
 	public async ValueTask MessageNospoofSwitch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

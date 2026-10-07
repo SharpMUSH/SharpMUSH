@@ -108,6 +108,24 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 
 	public const string Switched = "This session now acts as someone else; the command was not run.";
 
+	/// <summary>Whether <c>+scene/schedule</c> makes a scene; off, it says <see cref="Refusal"/> and makes none.</summary>
+	public bool ScheduleAppears { get; set; } = true;
+
+	/// <summary>The ids of the acting character's scenes, as <c>scenelist(mine)</c> answers.</summary>
+	public string MemberScenes { get; set; } = "1 3";
+
+	/// <summary>Another tab schedules a scene for the same character in the same moment, with this id.</summary>
+	public string? ConcurrentScheduleId { get; set; }
+
+	/// <summary>The id <c>+scene/schedule</c> gives the scene it makes.</summary>
+	public const string ScheduledId = "9";
+
+	/// <summary>How the page asks for the scene its schedule made: the new ids on the list, filtered.</summary>
+	public const string NewlyScheduledPrefix = "squish(iter(setdiff(scenelist(mine),";
+
+	/// <summary>The scheduled scene's fields as the +scene verbs set them, read back by <c>scene(9,…)</c>.</summary>
+	private readonly Dictionary<string, string> _scheduled = new(StringComparer.Ordinal);
+
 	/// <summary>Every command request the page sent, in order, whether or not it ran.</summary>
 	private readonly List<PortalCommandRequest> _requests = [];
 
@@ -191,6 +209,39 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			}
 			if (SwitchAfterCreateTo is { } next) BoundCharacter = next;
 		}
+		else if (command.Command.StartsWith("+scene/schedule ", StringComparison.Ordinal))
+		{
+			if (ScheduleAppears)
+			{
+				var title = command.Command["+scene/schedule ".Length..command.Command.IndexOf('=')];
+				_scheduled["title"] = title;
+				_scheduled["public"] = "1";
+				MemberScenes = $"{ScheduledId} {MemberScenes}";
+				if (ConcurrentScheduleId is { } other) MemberScenes = $"{other} {MemberScenes}";
+				output = [$"Scheduled scene {ScheduledId} \"{title}\"."];
+			}
+			else
+			{
+				output = [Refusal];
+			}
+		}
+		else if (command.Command.StartsWith($"+scene/title {ScheduledId}=", StringComparison.Ordinal))
+		{
+			_scheduled["title"] = command.Command[$"+scene/title {ScheduledId}=".Length..];
+		}
+		else if (command.Command.StartsWith($"+scene/pitch {ScheduledId}=", StringComparison.Ordinal))
+		{
+			_scheduled["summary"] = command.Command[$"+scene/pitch {ScheduledId}=".Length..];
+		}
+		else if (command.Command == $"+scene/cancel {ScheduledId}")
+		{
+			_scheduled["status"] = "cancelled";
+		}
+		else if (command.Command == $"+scene/private {ScheduledId}")
+		{
+			if (PrivacyRefused) output = [PrivacyRefusal];
+			else _scheduled["public"] = "0";
+		}
 		else if (command.Command == "+scene/private")
 		{
 			if (PrivacyRefused) output = [PrivacyRefusal];
@@ -201,6 +252,11 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 		{
 			"scenefocus(me)" => Focus,
 			"scene(scenefocus(me),public)" => FocusIsPublic ? "1" : "0",
+			"scenelist(mine)" => MemberScenes,
+			{ } diff when diff.StartsWith(NewlyScheduledPrefix, StringComparison.Ordinal) => string.Join(' ',
+				MemberScenes.Split(' ').Except(diff[NewlyScheduledPrefix.Length..diff.IndexOf(')', NewlyScheduledPrefix.Length)].Split(' '))),
+			{ } field when field.StartsWith($"scene({ScheduledId},", StringComparison.Ordinal) =>
+				_scheduled.GetValueOrDefault(field[$"scene({ScheduledId},".Length..^1], ""),
 			_ => null,
 		};
 		var answer = new PortalCommandResponse(output, result, Truncated: false);
@@ -362,7 +418,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		await Assert.That(cut.Find(".scene-live-compose button.scene-live-send").HasAttribute("disabled")).IsTrue();
 
-		cut.Find(".scene-live-compose textarea").Input("a raven settles on the well");
+		await cut.Find(".scene-live-compose textarea").InputAsync("a raven settles on the well");
 
 		await Assert.That(cut.Find(".scene-live-compose button.scene-live-send").HasAttribute("disabled")).IsFalse();
 	}
@@ -376,13 +432,13 @@ public class SceneSurfaceTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
 
 		var box = cut.Find(".scene-live-compose textarea");
-		box.Input("half a thought");
-		box.KeyDown(new KeyboardEventArgs { Key = "Enter" });
-		box.KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+		await box.InputAsync("half a thought");
+		await box.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+		await box.KeyDownAsync(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
 
 		await _terminal.DidNotReceive().SendAsync(Arg.Any<string>());
 
-		cut.Find(".scene-live-compose textarea").KeyDown(new KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+		await cut.Find(".scene-live-compose textarea").KeyDownAsync(new KeyboardEventArgs { Key = "Enter", CtrlKey = true });
 
 		await _terminal.Received().SendAsync("+scene/emit S1=half a thought");
 	}
@@ -400,11 +456,11 @@ public class SceneSurfaceTests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll(".scene-live-compose .kit-chip").Select(c => c.TextContent)).IsEquivalentTo(["RolModeIc", "NavPlayTypeOoc"])
 			.Because("poses are free-written: the only choice is in or out of character");
-		cut.FindAll(".scene-live-compose .kit-chip").Single(c => c.TextContent == "NavPlayTypeOoc").Click();
+		await cut.FindAll(".scene-live-compose .kit-chip").Single(c => c.TextContent == "NavPlayTypeOoc").ClickAsync();
 		await Assert.That(cut.Find(".scene-live-compose").ClassList).Contains("scene-live-compose--ooc");
 
-		cut.Find(".scene-live-compose textarea").Input("brb, tea");
-		cut.Find(".scene-live-compose button.scene-live-send").Click();
+		await cut.Find(".scene-live-compose textarea").InputAsync("brb, tea");
+		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
 
 		await _terminal.Received().SendAsync("+scene/ooc S1=brb\\, tea");
 	}
@@ -422,8 +478,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
 		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
 
-		cut.Find(".scene-live-compose textarea").Input("line one\nline two");
-		cut.Find(".scene-live-compose button.scene-live-send").Click();
+		await cut.Find(".scene-live-compose textarea").InputAsync("line one\nline two");
+		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
 
 		await _terminal.Received().SendAsync("+scene/emit S1=line one%rline two");
 	}
@@ -525,7 +581,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		// Click the "combat" tag chip → only the combat pose remains.
 		var combatChip = cut.FindAll(".kit-chips button")
 			.First(c => c.TextContent.Trim() == "combat");
-		combatChip.Click();
+		await combatChip.ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -564,8 +620,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 		// JoinScene was invoked for the scene group on init.
 		await Assert.That(_hub.Joined).Contains("S1");
 
-		cut.Find(".scene-live-compose textarea").Input("waves hello");
-		cut.Find(".scene-live-compose button.scene-live-send").Click();
+		await cut.Find(".scene-live-compose textarea").InputAsync("waves hello");
+		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
 
 		await _terminal.Received().SendAsync("+scene/emit S1=waves hello");
 
@@ -675,14 +731,157 @@ public class SceneSurfaceTests : TrackingBunitContext
 			new AccountAuthService.CharacterSummary(number, 1, name, "PLAYER", IsActing: true)));
 	}
 
-	private void SubmitStartForm(IRenderedComponent<SharpMUSH.Client.Pages.Scenes> cut, string title, bool watchable = true)
+	private async Task SubmitStartForm(IRenderedComponent<SharpMUSH.Client.Pages.Scenes> cut, string title, bool watchable = true)
 	{
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-start button").Click();
+		await cut.Find(".scene-start button").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-start-title input"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-start-title input").Input(title);
-		if (!watchable) cut.Find(".scene-start-public input").Change(false);
-		cut.Find(".scene-start-submit").Click();
+		await cut.Find(".scene-start-title input").InputAsync(title);
+		if (!watchable) await cut.Find(".scene-start-public input").ChangeAsync(false);
+		await cut.Find(".scene-start-submit").ClickAsync();
+	}
+
+	/// <summary>Opens the schedule form and fills it in, picking the date and time through the pickers' bindings.</summary>
+	private static async Task FillScheduleForm(IRenderedComponent<SharpMUSH.Client.Pages.Scenes> cut, string title, DateTime when,
+		string pitch = "", bool watchable = true)
+	{
+		cut.WaitForAssertion(() => cut.Find(".scene-schedule-open"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-schedule-open").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".scene-schedule-title input"), TimeSpan.FromSeconds(5));
+		await cut.Find(".scene-schedule-title input").InputAsync(title);
+		var date = cut.FindComponent<MudDatePicker>();
+		await cut.InvokeAsync(() => date.Instance.DateChanged.InvokeAsync(when.Date));
+		var time = cut.FindComponent<MudTimePicker>();
+		await cut.InvokeAsync(() => time.Instance.TimeChanged.InvokeAsync(when.TimeOfDay));
+		if (pitch.Length > 0) await cut.Find(".scene-schedule-pitch textarea").ChangeAsync(pitch);
+		if (!watchable) await cut.Find(".scene-schedule-public input").ChangeAsync(false);
+	}
+
+	/// <summary>
+	/// The schedule button runs <c>+scene/schedule</c> as the acting character, with the time as epoch seconds
+	/// read in the browser's zone, finds the new scene as the one id that joined the character's list, and
+	/// sets the pitch on that id. The page then shows the schedule.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ScheduleASceneForLater_GoesOutAsTheVerb_AndLandsOnTheSchedule()
+	{
+		await ActAsAsync();
+		var reports = 0;
+		Services.GetRequiredService<SceneService>().Changed += () => reports++;
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+		var when = DateTime.Today.AddDays(3).AddHours(20);
+		var at = new DateTimeOffset(DateTime.SpecifyKind(when, DateTimeKind.Local)).ToUnixTimeSeconds();
+
+		await FillScheduleForm(cut, "Lanterns at Midnight", when, pitch: "Bring your own intrigue.");
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		WaitForCommand($"+scene/pitch {SceneSurfaceApiHandler.ScheduledId}=Bring your own intrigue.");
+		var sent = _api.RequestsSent();
+		var schedule = sent.Single(r => r.Command.StartsWith("+scene/schedule ", StringComparison.Ordinal));
+		await Assert.That(schedule.Command).IsEqualTo($"+scene/schedule Lanterns at Midnight={at}");
+		await Assert.That(schedule.Result).StartsWith($"{SceneSurfaceApiHandler.NewlyScheduledPrefix}1 3),");
+		await Assert.That(schedule.Character).IsEqualTo("#1:1");
+		cut.WaitForAssertion(() =>
+		{
+			if (!Services.GetRequiredService<NavigationManager>().Uri.EndsWith("/scenes?scheduled=1", StringComparison.Ordinal))
+				throw new InvalidOperationException("not on the schedule yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-schedule")).IsEmpty();
+		await Assert.That(reports).IsEqualTo(1);
+		await Assert.That(_api.CommandsRun()).DoesNotContain($"+scene/private {SceneSurfaceApiHandler.ScheduledId}");
+	}
+
+	/// <summary>
+	/// <c>+scene/schedule</c> splits at the first =, so a title holding one goes out without it and is then
+	/// set whole by <c>+scene/title</c>, which names the scene first. Privacy goes the same way, by id.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_AScheduledTitleWithAnEquals_IsSetWhole_AndPrivacyByTheNewId()
+	{
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		await FillScheduleForm(cut, "Truce = Trouble", DateTime.Today.AddDays(2).AddHours(19), watchable: false);
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		WaitForCommand($"+scene/private {SceneSurfaceApiHandler.ScheduledId}");
+		var commands = _api.CommandsRun();
+		var schedule = commands.Single(c => c.StartsWith("+scene/schedule ", StringComparison.Ordinal));
+		await Assert.That(schedule.Count(c => c == '=')).IsEqualTo(1);
+		await Assert.That(commands).Contains($"+scene/title {SceneSurfaceApiHandler.ScheduledId}=Truce = Trouble");
+		await Assert.That(cut.FindAll(".scene-scheduled-note")).IsEmpty();
+	}
+
+	/// <summary>A schedule the engine refused leaves the form open with the engine's words, and runs nothing after it.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ARefusedSchedule_SaysWhy_AndSendsNothingMore()
+	{
+		_api.ScheduleAppears = false;
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		await FillScheduleForm(cut, "Not Approved Yet", DateTime.Today.AddDays(1).AddHours(20), pitch: "Never sent.");
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-schedule-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-schedule-error").TextContent).Contains(SceneSurfaceApiHandler.Refusal);
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/pitch", StringComparison.Ordinal))).IsFalse();
+	}
+
+	/// <summary>A time that has already gone is caught in the form; nothing goes to the game.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ATimeThatHasPassed_IsRefusedInTheForm()
+	{
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		await FillScheduleForm(cut, "Too Late", DateTime.Now.AddMinutes(-5));
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-schedule-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(_api.CommandsRun()).IsEmpty();
+	}
+
+	/// <summary>
+	/// A scene asked to be private is never left watchable: when +scene/private is refused the new scene is
+	/// cancelled, and the form stays open with the engine's reason, so sending it again makes no duplicate.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_ScheduledButPrivacyRefused_CancelsTheScene_AndKeepsTheFormOpen()
+	{
+		_api.PrivacyRefused = true;
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		await FillScheduleForm(cut, "Meant To Be Quiet", DateTime.Today.AddDays(2).AddHours(20), pitch: "Never sent.", watchable: false);
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-schedule-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-schedule-error").TextContent).Contains(SceneSurfaceApiHandler.PrivacyRefusal);
+		await Assert.That(_api.CommandsRun()).Contains($"+scene/cancel {SceneSurfaceApiHandler.ScheduledId}");
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/pitch", StringComparison.Ordinal))).IsFalse()
+			.Because("privacy goes first, and nothing more is sent to a scene that was cancelled");
+	}
+
+	/// <summary>
+	/// Two scenes scheduled for the character in the same moment can't be told apart, but one is this form's:
+	/// the form closes rather than inviting a duplicate, and the page says the details were not set.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_AConcurrentSchedule_ClosesTheForm_AndSetsNothingOnAGuess()
+	{
+		_api.ConcurrentScheduleId = "10";
+		await ActAsAsync();
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		await FillScheduleForm(cut, "Twin Plans", DateTime.Today.AddDays(2).AddHours(20), pitch: "Which one?", watchable: false);
+		await cut.Find(".scene-schedule-submit").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-scheduled-note"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-schedule")).IsEmpty();
+		await Assert.That(_api.CommandsRun().Count(c => c.StartsWith("+scene/schedule", StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(_api.CommandsRun().Any(c => c.StartsWith("+scene/pitch", StringComparison.Ordinal)
+			|| c.StartsWith("+scene/private", StringComparison.Ordinal))).IsFalse();
 	}
 
 	private void WaitForCommand(string command) =>
@@ -714,7 +913,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "The Lantern Room");
+		await SubmitStartForm(cut, "The Lantern Room");
 
 		WaitForCommand("+scene/create The Lantern Room");
 		await _terminal.DidNotReceive().SendAsync(Arg.Any<string>());
@@ -758,7 +957,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "The Lantern Room");
+		await SubmitStartForm(cut, "The Lantern Room");
 
 		WaitForCommand("+scene/create The Lantern Room");
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
@@ -773,7 +972,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "A quiet corner", watchable: false);
+		await SubmitStartForm(cut, "A quiet corner", watchable: false);
 
 		WaitForCommand("+scene/private");
 		var commands = _api.CommandsRun();
@@ -793,7 +992,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		Services.GetRequiredService<SceneService>().Changed += () => reports++;
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "A quiet corner");
+		await SubmitStartForm(cut, "A quiet corner");
 
 		cut.WaitForAssertion(() =>
 		{
@@ -815,7 +1014,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync(314, "Wren Halloway");
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "As Wren");
+		await SubmitStartForm(cut, "As Wren");
 
 		WaitForCommand("+scene/create As Wren");
 		await Assert.That(cut.FindAll(".scene-start-error")).IsEmpty();
@@ -835,7 +1034,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		Services.GetRequiredService<SceneService>().Changed += () => reports++;
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "Refused Quietly");
+		await SubmitStartForm(cut, "Refused Quietly");
 
 		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains(SceneSurfaceApiHandler.Refusal);
@@ -857,7 +1056,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "Never Created", watchable: false);
+		await SubmitStartForm(cut, "Never Created", watchable: false);
 
 		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(_api.CommandsRun()).Contains("+scene/create Never Created");
@@ -877,7 +1076,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "Meant To Be Quiet", watchable: false);
+		await SubmitStartForm(cut, "Meant To Be Quiet", watchable: false);
 
 		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains(SceneSurfaceApiHandler.PrivacyRefusal);
@@ -893,7 +1092,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "Truly Quiet", watchable: false);
+		await SubmitStartForm(cut, "Truly Quiet", watchable: false);
 
 		WaitForCommand("+scene/private");
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
@@ -912,7 +1111,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync(314, "Wren Halloway");
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "Pinned", watchable: false);
+		await SubmitStartForm(cut, "Pinned", watchable: false);
 
 		WaitForCommand("+scene/private");
 		var sent = _api.RequestsSent();
@@ -934,7 +1133,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "Switched Away", watchable: false);
+		await SubmitStartForm(cut, "Switched Away", watchable: false);
 
 		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains(SceneSurfaceApiHandler.Switched);
@@ -950,7 +1149,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await ActAsAsync();
 		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
 
-		SubmitStartForm(cut, "Unreachable");
+		await SubmitStartForm(cut, "Unreachable");
 
 		cut.WaitForAssertion(() => cut.Find(".scene-start-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-start-error").TextContent).Contains(SceneSurfaceApiHandler.StoreDown);

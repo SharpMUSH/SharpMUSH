@@ -66,7 +66,7 @@ public class CommandPaletteTests : BunitContext
 	public async Task Typing_Filters_AndOffersTheTwoSearches()
 	{
 		var cut = RenderOpen();
-		cut.Find("input").Input("wi");
+		await cut.Find("input").InputAsync("wi");
 		var labels = Labels(cut);
 		await Assert.That(labels[0]).IsEqualTo("Wiki");
 		await Assert.That(labels).Contains("Search the wiki for “wi”");
@@ -79,10 +79,10 @@ public class CommandPaletteTests : BunitContext
 	{
 		bool? open = null;
 		var cut = RenderOpen(o => open = o);
-		cut.Find("input").Input("tomas");
-		cut.Find("[role='dialog']").KeyDown("ArrowDown");
+		await cut.Find("input").InputAsync("tomas");
+		await cut.Find("[role='dialog']").KeyDownAsync("ArrowDown");
 		await Assert.That(cut.FindAll("[role='option']")[1].GetAttribute("aria-selected")).IsEqualTo("true");
-		cut.Find("[role='dialog']").KeyDown("Enter");
+		await cut.Find("[role='dialog']").KeyDownAsync("Enter");
 		await Assert.That(Nav.Uri).EndsWith("/characters?q=tomas");
 		await Assert.That(open).IsFalse();
 	}
@@ -93,7 +93,7 @@ public class CommandPaletteTests : BunitContext
 		// preventDefault is decided when the dialog renders, so a flag set by ArrowDown would swallow
 		// the next letter typed into the field.
 		var cut = RenderOpen();
-		cut.Find("[role='dialog']").KeyDown("ArrowDown");
+		await cut.Find("[role='dialog']").KeyDownAsync("ArrowDown");
 		await Assert.That(cut.Find("[role='dialog']").OuterHtml.ToLowerInvariant()).DoesNotContain("preventdefault");
 	}
 
@@ -103,7 +103,7 @@ public class CommandPaletteTests : BunitContext
 		var cut = RenderOpen();
 		await Assert.That(cut.FindComponents<MudBlazor.MudFocusTrap>().Count).IsEqualTo(1);
 		JSInterop.VerifyInvoke("sharpmushLayout.rememberFocus");
-		cut.Find("[role='dialog']").KeyDown("Escape");
+		await cut.Find("[role='dialog']").KeyDownAsync("Escape");
 		JSInterop.VerifyInvoke("sharpmushLayout.restoreFocus");
 	}
 
@@ -112,7 +112,7 @@ public class CommandPaletteTests : BunitContext
 	{
 		bool? open = null;
 		var cut = RenderOpen(o => open = o);
-		cut.Find("[role='dialog']").KeyDown("Escape");
+		await cut.Find("[role='dialog']").KeyDownAsync("Escape");
 		await Assert.That(open).IsFalse();
 	}
 }

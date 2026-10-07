@@ -15,6 +15,8 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using System.Buffers;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Common;
@@ -196,37 +198,22 @@ public partial class Commands
 
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
-			var output = new System.Text.StringBuilder();
-			output.AppendLine($"Sitelock Rules ({sitelockRules.Rules.Count} total):");
-			output.AppendLine("Pattern                      Options");
-			output.AppendLine("---------------------------- ------------------------------");
+			Block rules = sitelockRules.Rules.Count == 0
+				? new TextBlock(MarkupText.Plain("No rules: every connection is allowed."))
+				: ServerLayout.Listing(
+					[
+						new TableColumn(MarkupText.Plain("Pattern")) { Wrap = false },
+						new TableColumn(MarkupText.Plain("Options")) { Min = 10 },
+					],
+					sitelockRules.Rules.Select(rule => new[] { rule.Key, string.Join(", ", rule.Value) }));
+			Block names = new TextBlock(MarkupText.Plain(bannedNames.BannedNames.Length == 0
+				? "No banned names."
+				: string.Join(", ", bannedNames.BannedNames)));
 
-			if (sitelockRules.Rules.Count == 0)
-			{
-				output.AppendLine("  (No rules defined - all connections allowed by default)");
-			}
-			else
-			{
-				foreach (var rule in sitelockRules.Rules)
-				{
-					var pattern = rule.Key;
-					var options = string.Join(", ", rule.Value);
-					output.AppendLine($"{pattern,-28} {options}");
-				}
-			}
-
-			output.AppendLine();
-			output.AppendLine($"Banned Player Names ({bannedNames.BannedNames.Length} total):");
-			if (bannedNames.BannedNames.Length == 0)
-			{
-				output.AppendLine("  (No banned names defined)");
-			}
-			else
-			{
-				output.AppendLine("  " + string.Join(", ", bannedNames.BannedNames));
-			}
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Sitelock rules ({sitelockRules.Rules.Count})"),
+				rules,
+				new Rule(MarkupText.Plain($"Banned player names ({bannedNames.BannedNames.Length})")) { TitleAlignment = Alignment.Left },
+				names), 78), executor);
 			return CallState.Empty;
 		}
 

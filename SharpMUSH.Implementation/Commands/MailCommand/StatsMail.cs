@@ -1,3 +1,7 @@
+using SharpMUSH.Library.Markup;
+using MarkupString.Layout;
+using MarkupString;
+using System.Globalization;
 using SharpMUSH.Library.Authorization;
 using Mediator;
 using SharpMUSH.Library;
@@ -97,50 +101,29 @@ public static class StatsMail
 	private static async Task<MString> FStats(
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
-	{
-		await notifyService.Notify(executor, $"Mail statistics for {targetName}:", executor);
-
-		var allSentMail = await allSentMailIe.ToArrayAsync();
-		var sentSize = allSentMail.Sum(x => x.Content.Length);
-		var sentUnread = allSentMail.Count(x => !x.Read);
-		var sentCleared = allSentMail.Count(x => x.Cleared);
-
-		await notifyService.Notify(executor,
-			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared, totalling {sentSize} characters.", executor);
-
-		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
-		var receivedSize = allReceivedMail.Sum(x => x.Content.Length);
-		var receivedUnread = allReceivedMail.Count(x => !x.Read);
-		var receivedCleared = allReceivedMail.Count(x => x.Cleared);
-
-		await notifyService.Notify(executor,
-			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared, totalling {receivedSize} characters.", executor);
-		if (allReceivedMail.Length > 0)
-			await notifyService.Notify(executor, $"Last is dated {allReceivedMail.Max(x => x.DateSent)}", executor);
-
-		return MarkupText.Empty;
-	}
+		=> await StatsSection(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: true);
 
 	private static async Task<MString> DStats(
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
+		=> await StatsSection(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: false);
+
+	/// <summary><c>@mail/dstats</c> and <c>/fstats</c>: what was sent and received, and with <paramref name="withSize"/> how much text it holds.</summary>
+	private static async Task<MString> StatsSection(INotifyService notifyService, AnySharpObject executor, string targetName,
+		SharpMail[] sent, SharpMail[] received, bool withSize)
 	{
-		var allSentMail = await allSentMailIe.ToArrayAsync();
-		var sentUnread = allSentMail.Count(x => !x.Read);
-		var sentCleared = allSentMail.Count(x => x.Cleared);
-		await notifyService.Notify(executor, $"Mail statistics for {targetName}:", executor);
+		string Summary(SharpMail[] mail) =>
+			$"{mail.Length}, {mail.Count(x => !x.Read)} unread, {mail.Count(x => x.Cleared)} cleared"
+			+ (withSize ? $", {mail.Sum(x => x.Content.Length)} characters" : "");
+
+		(string, MString)[] fields =
+		[
+			("Sent", MarkupText.Plain(Summary(sent))),
+			("Received", MarkupText.Plain(Summary(received))),
+			.. received.Length == 0 ? [] : new[] { ("Last received", MarkupText.Plain(received.Max(x => x.DateSent).ToString("ddd MMM dd HH:mm yyyy", CultureInfo.InvariantCulture))) },
+		];
 		await notifyService.Notify(executor,
-			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared.", executor);
-
-		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
-		var receivedUnread = allReceivedMail.Count(x => !x.Read);
-		var receivedCleared = allReceivedMail.Count(x => x.Cleared);
-
-		await notifyService.Notify(executor,
-			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared.", executor);
-		if (allReceivedMail.Length > 0)
-			await notifyService.Notify(executor, $"Last is dated {allReceivedMail.Max(x => x.DateSent)}", executor);
-
+			ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Mail statistics for {targetName}"), ServerLayout.KeyValues(fields)), 78), executor);
 		return MarkupText.Empty;
 	}
 

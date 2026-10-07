@@ -101,7 +101,7 @@ public class MailPageTests : TrackingBunitContext
 				throw new InvalidOperationException("mailbox rows not rendered yet");
 		});
 
-		cut.Find(".mail-row").Click();
+		await cut.Find(".mail-row").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -134,9 +134,9 @@ public class MailPageD1Tests : TrackingBunitContext
 		return cut;
 	}
 
-	private static void Select(IRenderedComponent<SharpMUSH.Client.Pages.Mail> cut, int row)
+	private static async Task Select(IRenderedComponent<SharpMUSH.Client.Pages.Mail> cut, int row)
 	{
-		cut.FindAll(".mail-row")[row].Click();
+		await cut.FindAll(".mail-row")[row].ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Find(".mail-reading-body").TextContent.Contains(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Body))
@@ -164,7 +164,7 @@ public class MailPageD1Tests : TrackingBunitContext
 	public async Task SwitchingCharacter_ListsTheNewCharactersMessages()
 	{
 		var cut = RenderAt("/mail");
-		Select(cut, 0);
+		await Select(cut, 0);
 
 		_mail.SwitchCharacter();
 
@@ -190,7 +190,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(avatar.GetAttribute("aria-hidden")).IsEqualTo("true");
 		await Assert.That(row.FirstElementChild).IsSameReferenceAs(avatar);
 
-		Select(cut, 0);
+		await Select(cut, 0);
 		await Assert.That(cut.Find(".mail-reading-avatar").GetAttribute("style")).IsEqualTo(avatar.GetAttribute("style"));
 	}
 
@@ -207,7 +207,7 @@ public class MailPageD1Tests : TrackingBunitContext
 	public async Task Reply_OpensComposeAddressedToTheSender()
 	{
 		var cut = RenderAt("/mail");
-		Select(cut, 0);
+		await Select(cut, 0);
 		await Assert.That(cut.Find(".mail-reading-actions a.mail-reply").GetAttribute("href"))
 			.IsEqualTo("/mail/compose?to=Tomas%20Reyes&subject=Re%3A%20The%20ledger");
 	}
@@ -216,10 +216,10 @@ public class MailPageD1Tests : TrackingBunitContext
 	public async Task Forward_OpensComposeWithTheSubject_AndHandsTheBodyOverOutOfTheAddress()
 	{
 		var cut = RenderAt("/mail");
-		Select(cut, 0);
+		await Select(cut, 0);
 		var nav = Services.GetRequiredService<BunitNavigationManager>();
 
-		cut.Find(".mail-reading-actions button.mail-forward").Click();
+		await cut.Find(".mail-reading-actions button.mail-forward").ClickAsync();
 
 		var uri = new Uri(nav.Uri);
 		await Assert.That(uri.AbsolutePath).IsEqualTo("/mail/compose");
@@ -314,7 +314,7 @@ public class MailPageD1Tests : TrackingBunitContext
 	public async Task SwitchingCharacter_PutsThePreviousMessageAwayAtOnce()
 	{
 		var cut = RenderAt("/mail");
-		Select(cut, 0);
+		await Select(cut, 0);
 		_mail.HoldLists = new TaskCompletionSource();
 
 		_mail.SwitchCharacter();
@@ -336,7 +336,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		var cut = Render<SharpMUSH.Client.Pages.MailDetail>(p => p.Add(x => x.Id, 1));
 		cut.WaitForAssertion(() => cut.Find("button.md-delete"), TimeSpan.FromSeconds(5));
 
-		cut.Find("button.md-delete").Click();
+		await cut.Find("button.md-delete").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (!nav.Uri.EndsWith("/mail?folder=SENT", StringComparison.Ordinal)) throw new InvalidOperationException($"still at {nav.Uri}");

@@ -113,12 +113,12 @@ public class MsspConfigPageTests : TrackingBunitContext
 	{
 		var cut = RenderLoaded();
 
-		cut.FindAll("[data-mssp='STATUS'] .cfg-pill").Single(pill => pill.TextContent.Trim() == "Open Beta").Click();
-		cut.Find("[data-mssp='CONTACT'] input").Change("staff@example.com");
+		await cut.FindAll("[data-mssp='STATUS'] .cfg-pill").Single(pill => pill.TextContent.Trim() == "Open Beta").ClickAsync();
+		await cut.Find("[data-mssp='CONTACT'] input").ChangeAsync("staff@example.com");
 
 		await Assert.That(cut.Find(".cfg-count").TextContent).IsEqualTo("2 changes");
 
-		cut.FindAll(".cfg-unsaved .kit-capsule").Last().Click();
+		await cut.FindAll(".cfg-unsaved .kit-capsule").Last().ClickAsync();
 		cut.WaitForState(() => _api.Saved is not null);
 
 		await Assert.That(JsonSerializer.Serialize(_api.Saved)).IsEqualTo(JsonSerializer.Serialize(new Dictionary<string, string[]>
@@ -135,8 +135,8 @@ public class MsspConfigPageTests : TrackingBunitContext
 	{
 		var cut = RenderLoaded();
 
-		cut.Find("[data-mssp='CONTACT'] input").Change("two\tfields");
-		cut.FindAll(".cfg-unsaved .kit-capsule").Last().Click();
+		await cut.Find("[data-mssp='CONTACT'] input").ChangeAsync("two\tfields");
+		await cut.FindAll(".cfg-unsaved .kit-capsule").Last().ClickAsync();
 
 		await Assert.That(cut.Find("[data-mssp='CONTACT'] .cfg-row-error").TextContent).Contains("control characters");
 		await Assert.That(_api.Saved).IsNull();

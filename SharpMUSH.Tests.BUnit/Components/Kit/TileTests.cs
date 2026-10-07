@@ -53,7 +53,7 @@ public class TileTests : BunitContext
 		var cut = Render<PortraitTile>(p => p.Add(x => x.Name, "Wren").Add(x => x.OnClick, () => hit = true));
 		var b = cut.Find("button.kit-portrait");
 		await Assert.That(b.GetAttribute("type")).IsEqualTo("button");
-		b.Click();
+		await b.ClickAsync();
 		await Assert.That(hit).IsTrue();
 	}
 

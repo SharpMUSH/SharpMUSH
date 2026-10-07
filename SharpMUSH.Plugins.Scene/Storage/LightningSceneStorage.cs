@@ -345,11 +345,14 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			switch ((filter ?? "").Trim().ToLowerInvariant())
 			{
 				case "scheduled":
+				case "upcoming":
 					// The schedule is every scene waiting to run: one with a time, and a paused one with or
 					// without. A running or finished scene is not waiting, whatever time it was once given. A
 					// paused scene with no time has no place in a window, so only the unwindowed list shows it,
 					// after the timed ones.
 					var windowed = fromUtcMillis is not null || toUtcMillis is not null;
+					var upcoming = string.Equals((filter ?? "").Trim(), "upcoming", StringComparison.OrdinalIgnoreCase);
+					var now = UtcMillis();
 					matches = ScenesByIndex(tx, IdxScheduled)
 						.Concat(ScenesByIndex(tx, StatusIndexKey(PausedStatus)))
 						.DistinctBy(s => s.Id)
@@ -358,6 +361,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 						.Where(s => s.ScheduledFor is { } due
 							? (fromUtcMillis is null || due >= fromUtcMillis) && (toUtcMillis is null || due <= toUtcMillis)
 							: !windowed)
+						.Where(s => !upcoming || !IsOverdue(s, now))
 						.OrderBy(s => s.ScheduledFor is null)
 						.ThenBy(s => s.ScheduledFor)
 						.ThenByDescending(s => s.LastActivityAt);
@@ -382,6 +386,17 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 			return matches.Take(Math.Max(0, count)).Select(s => ProjectScene(tx, s)).ToList();
 		}));
+
+	/// <summary>How long after its time a scene that never started stays on the <c>upcoming</c> list: a host may start late.</summary>
+	public static readonly TimeSpan LateStartGrace = TimeSpan.FromHours(1);
+
+	/// <summary>
+	/// A scene whose time passed more than <see cref="LateStartGrace"/> ago without it starting. A paused scene
+	/// is never overdue: it ran, and waits on its host to resume it whatever time it was given.
+	/// </summary>
+	private static bool IsOverdue(SceneRecord scene, long now) =>
+		!string.Equals(scene.Status, PausedStatus, StringComparison.Ordinal)
+		&& scene.ScheduledFor is { } due && due < now - (long)LateStartGrace.TotalMilliseconds;
 
 	/// <summary>
 	/// A cancelled scene never ran and never will: the lists leave it out, and only its own page (the archive)

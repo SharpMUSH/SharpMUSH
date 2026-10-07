@@ -44,11 +44,11 @@ public class RoomBannerTests : BunitContext
 		var cut = RenderBanner(Docks);
 		var toggle = cut.Find("button.room-banner-desc");
 		await Assert.That(toggle.GetAttribute("aria-pressed")).IsEqualTo("false");
-		toggle.Click();
+		await toggle.ClickAsync();
 		await Assert.That(cut.Find(".kit-banner").ClassList).Contains("kit-banner--open");
 		await Assert.That(cut.Find(".room-banner-desc-text").TextContent).Contains("Lamps are being lit.");
 		await Assert.That(cut.Find("button.room-banner-desc").GetAttribute("aria-pressed")).IsEqualTo("true");
-		cut.Find("button.room-banner-desc").Click();
+		await cut.Find("button.room-banner-desc").ClickAsync();
 		await Assert.That(cut.Find(".kit-banner").ClassList).DoesNotContain("kit-banner--open");
 	}
 
@@ -73,7 +73,7 @@ public class RoomBannerTests : BunitContext
 		var cut = RenderBanner(Docks, minimised: true, onMinimised: m => minimised = m);
 		await Assert.That(cut.Find(".kit-banner-strip-title").TextContent).IsEqualTo("Lower Docks");
 		await Assert.That(cut.Find(".kit-banner-strip-fact").TextContent).IsEqualTo("Harbour Ward · 5 here");
-		cut.Find("button.kit-banner-restore").Click();
+		await cut.Find("button.kit-banner-restore").ClickAsync();
 		await Assert.That(minimised).IsEqualTo(false);
 	}
 

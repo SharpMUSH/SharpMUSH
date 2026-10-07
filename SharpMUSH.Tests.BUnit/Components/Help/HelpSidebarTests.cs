@@ -155,8 +155,8 @@ public class HelpSidebarTests : TrackingBunitContext
 	{
 		Install(isStaff: false);
 		var cut = RenderAt("/help");
-		cut.Find(".kit-side-search input").Input("NEWBIE");
-		cut.Find(".kit-side-search").Submit();
+		await cut.Find(".kit-side-search input").InputAsync("NEWBIE");
+		await cut.Find(".kit-side-search").SubmitAsync();
 		cut.WaitForAssertion(() => { if (!Nav.Uri.EndsWith("/help/newbie", StringComparison.Ordinal)) throw new InvalidOperationException($"still at {Nav.Uri}"); }, TimeSpan.FromSeconds(5));
 		await Assert.That(Nav.Uri).EndsWith("/help/newbie");
 	}
@@ -166,8 +166,8 @@ public class HelpSidebarTests : TrackingBunitContext
 	{
 		Install(isStaff: false);
 		var cut = RenderAt("/help/newbie");
-		cut.Find(".kit-side-search input").Input("mail-*");
-		cut.Find(".kit-side-search").Submit();
+		await cut.Find(".kit-side-search input").InputAsync("mail-*");
+		await cut.Find(".kit-side-search").SubmitAsync();
 		cut.WaitForAssertion(() => { if (!Nav.Uri.EndsWith("/help?q=mail-%2A", StringComparison.Ordinal)) throw new InvalidOperationException($"still at {Nav.Uri}"); }, TimeSpan.FromSeconds(5));
 		await Assert.That(Nav.Uri).EndsWith("/help?q=mail-%2A");
 	}

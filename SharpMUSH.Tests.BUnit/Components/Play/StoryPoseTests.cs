@@ -96,12 +96,12 @@ public class StoryPoseTests : BunitContext
 			.Add(x => x.OnEdit, e => saved = e));
 		var edit = cut.Find("button.story-edit-btn");
 		await Assert.That(edit.GetAttribute("aria-label")).IsEqualTo("Edit");
-		edit.Click();
+		await edit.ClickAsync();
 		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("leans on a stack of crates");
 		await Assert.That(cut.FindAll(".story-body").Count).IsEqualTo(0).Because("the text is being edited in its place");
 
-		cut.Find("textarea.story-editor-input").Input("leans on the crates, waiting.");
-		cut.Find("button.story-editor-save").Click();
+		await cut.Find("textarea.story-editor-input").InputAsync("leans on the crates, waiting.");
+		await cut.Find("button.story-editor-save").ClickAsync();
 		await Assert.That(saved).IsEqualTo(("P1", @"leans on the crates\, waiting."))
 			.Because("the box is the pose as shown, and goes back as decompose() writes it");
 		await Assert.That(cut.FindAll(".story-editor").Count).IsEqualTo(0);
@@ -114,11 +114,11 @@ public class StoryPoseTests : BunitContext
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(tags: ["ooc"], markup: "brb, making tea")).Add(x => x.CanEdit, true)
 			.Add(x => x.OnEdit, e => saved = e));
 		await Assert.That(cut.FindAll(".story-row--ooc").Count).IsEqualTo(1);
-		cut.Find("button.story-edit-btn").Click();
+		await cut.Find("button.story-edit-btn").ClickAsync();
 		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("brb, making tea")
 			.Because("the box holds the pose as it shows");
-		cut.Find("textarea.story-editor-input").Input("back, tea made");
-		cut.Find("button.story-editor-save").Click();
+		await cut.Find("textarea.story-editor-input").InputAsync("back, tea made");
+		await cut.Find("button.story-editor-save").ClickAsync();
 		await Assert.That(saved).IsEqualTo(("P1", @"back\, tea made"));
 	}
 
@@ -134,11 +134,11 @@ public class StoryPoseTests : BunitContext
 	{
 		var calls = 0;
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.CanEdit, true).Add(x => x.OnEdit, _ => calls++));
-		cut.Find("button.story-edit-btn").Click();
-		cut.Find("textarea.story-editor-input").Input("something else");
-		cut.Find("button.story-editor-cancel").Click();
-		cut.Find("button.story-edit-btn").Click();
-		cut.Find("button.story-editor-save").Click();
+		await cut.Find("button.story-edit-btn").ClickAsync();
+		await cut.Find("textarea.story-editor-input").InputAsync("something else");
+		await cut.Find("button.story-editor-cancel").ClickAsync();
+		await cut.Find("button.story-edit-btn").ClickAsync();
+		await cut.Find("button.story-editor-save").ClickAsync();
 		await Assert.That(calls).IsEqualTo(0);
 	}
 
@@ -164,10 +164,10 @@ public class StoryPoseTests : BunitContext
 	{
 		string? opened = null;
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.OnCharacter, name => opened = name));
-		cut.Find("button.story-name").Click();
+		await cut.Find("button.story-name").ClickAsync();
 		await Assert.That(opened).IsEqualTo("Tomas Reyes");
 		opened = null;
-		cut.Find("button.story-portrait-btn").Click();
+		await cut.Find("button.story-portrait-btn").ClickAsync();
 		await Assert.That(opened).IsEqualTo("Tomas Reyes");
 	}
 
@@ -202,13 +202,13 @@ public class StoryPoseTests : BunitContext
 		var pose = Pose() with { Content = styled.ToPlainText(), Markup = MarkupTextSerializer.Serialize(styled) };
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, pose).Add(x => x.CanEdit, true).Add(x => x.OnEdit, e => saved = e));
 
-		cut.Find("button.story-edit-btn").Click();
+		await cut.Find("button.story-edit-btn").ClickAsync();
 		await Assert.That(cut.Find("textarea.story-editor-input").GetAttribute("value")).IsEqualTo("Tomas leans on a stack of crates");
 		await Assert.That(cut.Find(".story-editor .fi-overlay").InnerHtml).Contains("Tomas</span>")
 			.Because("the layer over the field shows the name in its colour");
 
-		cut.Find("textarea.story-editor-input").Input("Tomas leans on the crates.");
-		cut.Find("button.story-editor-save").Click();
+		await cut.Find("textarea.story-editor-input").InputAsync("Tomas leans on the crates.");
+		await cut.Find("button.story-editor-save").ClickAsync();
 		await Assert.That(saved).IsEqualTo(("P1", "[ansi(r,Tomas)]%bleans on the crates."));
 	}
 
@@ -221,15 +221,15 @@ public class StoryPoseTests : BunitContext
 	{
 		(string PoseId, string Text)? saved = null;
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.CanEdit, true).Add(x => x.OnEdit, e => saved = e));
-		cut.Find("button.story-edit-btn").Click();
+		await cut.Find("button.story-edit-btn").ClickAsync();
 		await Assert.That(cut.FindAll(".fi-notice").Count).IsEqualTo(0);
 
-		cut.Find("textarea.story-editor-input").Input("[ansi(r,Tomas)] waves.");
+		await cut.Find("textarea.story-editor-input").InputAsync("[ansi(r,Tomas)] waves.");
 		await Assert.That(cut.Find(".fi-notice").TextContent).Contains("[ansi(");
-		cut.Find(".fi-notice-action").Click();
+		await cut.Find(".fi-notice-action").ClickAsync();
 
 		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0).Because("a softcode box has no styled layer");
-		cut.Find("button.story-editor-save").Click();
+		await cut.Find("button.story-editor-save").ClickAsync();
 		await Assert.That(saved).IsEqualTo(("P1", "[ansi(r,Tomas)] waves."));
 	}
 }

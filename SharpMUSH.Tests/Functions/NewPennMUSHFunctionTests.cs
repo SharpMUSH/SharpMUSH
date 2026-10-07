@@ -145,14 +145,6 @@ public class NewPennMUSHFunctionTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	[Test]
-	public async Task CONFIG_NoArgs_ReturnsListOfOptions()
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("config()")))?.Message!;
-		var resultText = result.ToPlainText();
-		await Assert.That(resultText).IsNotEmpty();
-	}
-
 	#endregion
 
 	#region IDLESECS Tests

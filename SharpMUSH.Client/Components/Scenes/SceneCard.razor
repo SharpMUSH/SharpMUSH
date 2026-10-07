@@ -1,7 +1,8 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* One scene in a list (/scenes, /scenes/active), after the scene cards in board 30's feed: the title,
-   a LIVE tag while it runs (PAUSED while it waits to resume), "room · N poses · when", Read, and — for a running scene — the live view
+   a LIVE tag while it runs (PAUSED while it waits to resume), the pitch's first line, "room · N poses · when"
+   (a scene still waiting to start has neither room nor poses, so it says only when it is due), Read, and — for a running scene — the live view
    as the card's one accent action: Join for a viewer with a character, Watch Live for anyone else. *@
 <article class="scene-card @(Scene.IsLive ? "scene-card--live" : null)">
     <div class="scene-card-main">
@@ -20,12 +21,19 @@
                 <Pill Tag="true" Class="scene-card-private">@Loc["NavScenePrivate"]</Pill>
             }
         </div>
+        @if (Pitch is { } pitch)
+        {
+            <p class="scene-card-pitch">@pitch</p>
+        }
         <div class="scene-card-meta">
-            <span>@Scene.RoomName</span>
-            <span aria-hidden="true">·</span>
-            <span>@Loc.Plural("RolPoseCount", "count", Scene.PoseCount)</span>
-            <span aria-hidden="true">·</span>
-            <span>@When</span>
+            @foreach (var (part, index) in Meta().Select((part, index) => (part, index)))
+            {
+                @if (index > 0)
+                {
+                    <span aria-hidden="true">·</span>
+                }
+                <span>@part</span>
+            }
         </div>
     </div>
     <div class="scene-card-actions">
@@ -42,6 +50,21 @@
 
     /// <summary>The viewer acts as a character, so the live view is somewhere to pose, not only to watch.</summary>
     [Parameter] public bool CanJoin { get; set; }
+
+    /// <summary>The pitch the owner set with +scene/pitch, or null when there is none.</summary>
+    private string? Pitch =>
+        Scene.Meta.TryGetValue("summary", out var pitch) && !string.IsNullOrWhiteSpace(pitch) ? pitch.Trim() : null;
+
+    /// <summary>A scene that has not begun: it has a time to come and nothing recorded yet.</summary>
+    private bool Upcoming => !Scene.IsLive && Scene.PoseCount == 0 && Scene.ScheduledForUtc is { } due && due > DateTimeOffset.UtcNow;
+
+    /// <summary>The meta line's parts, leaving out what the scene does not have.</summary>
+    private IEnumerable<string> Meta()
+    {
+        if (!string.IsNullOrWhiteSpace(Scene.RoomName)) yield return Scene.RoomName;
+        if (!Upcoming) yield return Loc.Plural("RolPoseCount", "count", Scene.PoseCount);
+        yield return When;
+    }
 
     /// <summary>When a scene not yet running is due; otherwise how long since anything happened in it.</summary>
     private string When =>

@@ -76,7 +76,7 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(row.QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Salt Market at Dusk");
 		await Assert.That(row.QuerySelector(".kit-row-count")!.TextContent).IsEqualTo("5");
 		await Assert.That(row.GetAttribute("aria-current")).IsEqualTo("page").Because("the scene is what main shows");
-		row.Click();
+		await row.ClickAsync();
 		await Assert.That(opened).IsTrue();
 	}
 
@@ -108,7 +108,7 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(rows[0].QuerySelector(".kit-row-unread")!.TextContent).IsEqualTo("3");
 		await Assert.That(rows[1].ClassList).DoesNotContain("kit-row--unread");
 		await Assert.That(rows[1].GetAttribute("aria-current")).IsEqualTo("page");
-		rows[0].Click();
+		await rows[0].ClickAsync();
 		await Assert.That(opened).IsEqualTo("Public");
 	}
 
@@ -131,7 +131,7 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(rows[1].QuerySelector("img.kit-row-avatar")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/tomas.jpg")
 			.Because("the picture comes from the directory row with that objid");
 		await Assert.That(rows[1].QuerySelector(".kit-row-avatar--second")!.TextContent).IsEqualTo("DK");
-		rows[1].Click();
+		await rows[1].ClickAsync();
 		await Assert.That(opened).IsEqualTo("#312:1|#315:1");
 	}
 

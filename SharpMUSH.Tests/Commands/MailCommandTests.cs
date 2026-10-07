@@ -46,7 +46,7 @@ public class MailCommandTests
 		var afterBare = NotificationsTo(player.DbRef).Skip(beforeBare).ToArray();
 
 		await Assert.That(afterBare).DoesNotContain(m => m.StartsWith("#-1 EXCEPTION: "));
-		await Assert.That(afterBare).Contains(m => m.Contains("MAIL (folder  0)"));
+		await Assert.That(afterBare).Contains(m => m.Contains("Mail, folder 0 (INBOX)"));
 		await Assert.That(afterBare).Contains(m => m.Contains("Bare List Subject"));
 	}
 

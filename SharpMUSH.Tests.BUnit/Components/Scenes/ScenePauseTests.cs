@@ -65,12 +65,12 @@ public class ScenePauseTests : TrackingBunitContext
 	{
 		var cut = await RenderAsActingAsync(313, "active");
 
-		cut.Find(".scene-detail-pause").Click();
+		await cut.Find(".scene-detail-pause").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-pause-submit"), TimeSpan.FromSeconds(5));
 
 		Answer("paused");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", status: "paused");
-		cut.Find(".scene-pause-submit").Click();
+		await cut.Find(".scene-pause-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-paused"), TimeSpan.FromSeconds(5));
 		var sent = Commands().Single();
@@ -92,7 +92,7 @@ public class ScenePauseTests : TrackingBunitContext
 
 		Answer("active");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", status: "active");
-		cut.Find(".scene-detail-resume").Click();
+		await cut.Find(".scene-detail-resume").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-live"), TimeSpan.FromSeconds(5));
 		await Assert.That(Commands().Single().Command).IsEqualTo("+scene/start S1");
@@ -102,11 +102,11 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task ARefusal_IsShown_AndTheSceneStaysAsItWas()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-pause").Click();
+		await cut.Find(".scene-detail-pause").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-pause-submit"), TimeSpan.FromSeconds(5));
 
 		Answer("active", "You do not own that scene.");
-		cut.Find(".scene-pause-submit").Click();
+		await cut.Find(".scene-pause-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-action-error").TextContent).Contains("You do not own that scene.");
@@ -140,15 +140,15 @@ public class ScenePauseTests : TrackingBunitContext
 		var cut = await RenderAsActingAsync(313, "active");
 		await Assert.That(cut.FindAll(".scene-detail-pitch").Count).IsEqualTo(0);
 
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-edit-title input").GetAttribute("value")).IsEqualTo("Salt Market at Dusk")
 			.Because("the form opens on the scene as it is");
-		cut.Find(".scene-edit-pitch textarea").Change("Masks and music; a feud.");
+		await cut.Find(".scene-edit-pitch textarea").ChangeAsync("Masks and music; a feud.");
 
 		Answer("Masks and music; a feud.", "Pitch set for scene S1.");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", summary: "Masks and music; a feud.");
-		cut.Find(".scene-edit-submit").Click();
+		await cut.Find(".scene-edit-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-pitch"), TimeSpan.FromSeconds(5));
 		var sent = Commands().Single();
@@ -164,13 +164,13 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task TheOwner_MakesTheScenePrivate()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-edit-public input").Change(false);
+		await cut.Find(".scene-edit-public input").ChangeAsync(false);
 
 		Answer("0", "Scene S1 is now private.");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", isPublic: false);
-		cut.Find(".scene-edit-submit").Click();
+		await cut.Find(".scene-edit-submit").ClickAsync();
 
 		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
 		await Assert.That(Commands().Single().Command).IsEqualTo("+scene/private S1");
@@ -180,12 +180,12 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task AnEditTheGameRefuses_IsShown_AndTheFormStaysOpen()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-edit-title input").Change("Ash and Salt");
+		await cut.Find(".scene-edit-title input").ChangeAsync("Ash and Salt");
 
 		Answer("Salt Market at Dusk", "That scene is not yours to change. Its owner or a wizard can do it.");
-		cut.Find(".scene-edit-submit").Click();
+		await cut.Find(".scene-edit-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-action-error").TextContent).Contains("not yours to change");
@@ -197,7 +197,7 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task GoingToAnotherScene_ClosesTheForm()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
 
 		_api.Extra["/api/scenes/S2"] = SceneJson.Scene("S2", "Ash and Salt");
@@ -253,7 +253,8 @@ public class ScenePauseTests : TrackingBunitContext
 		var first = new DateTimeOffset(2030, 3, 4, 18, 30, 0, TimeSpan.Zero);
 		var second = first.AddDays(1);
 		_api.Extra[SceneJson.Scheduled] = SceneJson.List(
-			SceneJson.Scene("S4", "Night of Lamps", status: "scheduled", room: "", scheduledFor: first.ToUnixTimeMilliseconds()),
+			SceneJson.Scene("S4", "Night of Lamps", status: "scheduled", room: "", scheduledFor: first.ToUnixTimeMilliseconds(),
+				summary: "Every lamp on the quay is lit at once."),
 			SceneJson.Scene("S5", "The Harbour Ball", status: "paused", scheduledFor: second.ToUnixTimeMilliseconds()),
 			SceneJson.Scene("S1", "Salt Market at Dusk", status: "paused"));
 		Services.AddSingleton(CharactersApiFake.Anonymous(this));
@@ -270,10 +271,44 @@ public class ScenePauseTests : TrackingBunitContext
 		var rows = cut.FindAll(".schedule-row");
 		await Assert.That(rows[0].QuerySelector(".schedule-time")!.TextContent).IsEqualTo(first.ToLocalTime().ToString("t", CultureInfo.CurrentCulture));
 		await Assert.That(rows[0].QuerySelector(".schedule-title")!.GetAttribute("href")).IsEqualTo("/scenes/S4");
-		await Assert.That(rows[0].QuerySelector(".schedule-meta")!.TextContent).Contains("No room yet");
+		await Assert.That(rows[0].QuerySelector(".schedule-pitch")!.TextContent).IsEqualTo("Every lamp on the quay is lit at once.");
+		await Assert.That(rows[0].TextContent).DoesNotContain("No room yet").Because("a scheduled scene has no room until it starts");
+		await Assert.That(rows[1].QuerySelector(".schedule-pitch")).IsNull().Because("a scene with no pitch shows none");
 		await Assert.That(rows[0].QuerySelector(".schedule-meta")!.TextContent).Contains("Hosted by Ilsa Varn");
 		await Assert.That(rows[1].QuerySelector(".schedule-paused")!.TextContent.Trim()).IsEqualTo("PAUSED");
 		await Assert.That(rows[2].QuerySelector(".schedule-title")!.TextContent).IsEqualTo("Salt Market at Dusk");
-		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(0).Because("the schedule is an agenda, not the archive's cards");
+		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(0).Because("the schedule has cards of its own, by day, not the archive's");
+	}
+
+	/// <summary>
+	/// Today and tomorrow are named as such; a scene whose time came without it starting is marked late; and
+	/// a full page of scenes says the list stops there.
+	/// </summary>
+	[Test]
+	public async Task TheSchedule_NamesTodayAndTomorrow_MarksALateScene_AndSaysWhenItIsFull()
+	{
+		var now = DateTimeOffset.Now;
+		var endOfToday = new DateTimeOffset(now.Date.AddDays(1).AddSeconds(-1), now.Offset);
+		var tomorrowNoon = new DateTimeOffset(now.Date.AddDays(1).AddHours(12), now.Offset);
+		var later = Enumerable.Range(0, 47).Select(i => SceneJson.Scene($"L{i}", $"Later {i}", status: "scheduled", room: "",
+			scheduledFor: now.AddDays(3 + i).ToUnixTimeMilliseconds()));
+		_api.Extra[SceneJson.Scheduled] = SceneJson.List([
+			SceneJson.Scene("S7", "Running Behind", status: "scheduled", room: "", scheduledFor: now.AddMinutes(-5).ToUnixTimeMilliseconds()),
+			SceneJson.Scene("S8", "Last Bell", status: "scheduled", room: "", scheduledFor: endOfToday.ToUnixTimeMilliseconds()),
+			SceneJson.Scene("S9", "Morning Market", status: "scheduled", room: "", scheduledFor: tomorrowNoon.ToUnixTimeMilliseconds()),
+			.. later]);
+		Services.AddSingleton(CharactersApiFake.Anonymous(this));
+		Nav.NavigateTo("/scenes?scheduled=1");
+		var cut = Render<SharpMUSH.Client.Pages.Scenes>();
+
+		cut.WaitForAssertion(() => cut.Find(".schedule-row"), TimeSpan.FromSeconds(5));
+		var days = cut.FindAll(".schedule-day-head").Select(h => h.TextContent.Trim()).ToList();
+		await Assert.That(days).Contains($"Today · {endOfToday.ToString("D", CultureInfo.CurrentCulture)}");
+		await Assert.That(days).Contains($"Tomorrow · {tomorrowNoon.ToString("D", CultureInfo.CurrentCulture)}");
+
+		var rows = cut.FindAll(".schedule-row");
+		await Assert.That(rows[0].QuerySelector(".schedule-late")).IsNotNull().Because("its time came and it has not started");
+		await Assert.That(rows[2].QuerySelector(".schedule-late")).IsNull();
+		await Assert.That(cut.Find(".scenes-list-capped").TextContent).Contains("50");
 	}
 }

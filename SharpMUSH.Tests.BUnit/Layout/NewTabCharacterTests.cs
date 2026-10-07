@@ -198,13 +198,13 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = RenderNavMenu();
 
-		cut.Find("button.phosphor-profile-card").Click();
+		await cut.Find("button.phosphor-profile-card").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.FindAll(".account-panel-switch-btn").Count == 0)
 				throw new InvalidOperationException("panel not open yet");
 		});
-		cut.Find(".account-panel-switch-btn").Click();
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.FindAll(".account-panel-character").Count == 0)
@@ -213,7 +213,7 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 
 		var betaRow = cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta"));
 		var newTabButton = betaRow.QuerySelector(".account-panel-newtab")!;
-		newTabButton.Click();
+		await newTabButton.ClickAsync();
 
 		await Assert.That(openHandler.Invocations.Count).IsEqualTo(1);
 	}

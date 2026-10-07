@@ -55,7 +55,7 @@ public class MailRefusalTests : TrackingBunitContext
 		Services.GetRequiredService<NavigationManager>().NavigateTo("/mail/compose?to=Bbo");
 
 		var cut = Render<SharpMUSH.Client.Pages.MailCompose>();
-		cut.FindAll("button").First(b => b.TextContent.Contains("Send")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Send")).ClickAsync();
 
 		var snackbar = Services.GetRequiredService<ISnackbar>();
 		cut.WaitForAssertion(() =>

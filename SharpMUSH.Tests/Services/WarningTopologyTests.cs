@@ -77,44 +77,4 @@ public class WarningTopologyTests
 		await Assert.That(exitOneway).Contains("exit-oneway");
 		await Assert.That(exitMultiple).Contains("exit-multiple");
 	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires full database and exit setup")]
-	public async Task CheckExitWarnings_UnlinkedExit_DetectsWarning()
-	{
-		// This test would require:
-		// - Creating an exit with NOTHING destination (DBRef -1 or 0)
-		// - Setting up WarningService with mocked dependencies
-		// - Verifying warning notification is sent
-		await Task.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires full database and exit setup")]
-	public async Task CheckExitWarnings_OnewayExit_DetectsWarning()
-	{
-		// This test would require:
-		// - Creating two rooms
-		// - Creating an exit from room A to room B
-		// - NOT creating a return exit from room B to room A
-		// - Mocking GetExitsQuery to return empty list for destination room
-		// - Verifying one-way warning notification is sent
-		await Task.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires full database and exit setup")]
-	public async Task CheckExitWarnings_MultipleReturnExits_DetectsWarning()
-	{
-		// This test would require:
-		// - Creating two rooms
-		// - Creating an exit from room A to room B
-		// - Creating MULTIPLE return exits from room B to room A
-		// - Mocking GetExitsQuery to return multiple exits
-		// - Verifying multiple-return warning notification is sent
-		await Task.CompletedTask;
-	}
 }

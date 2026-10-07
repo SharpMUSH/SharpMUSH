@@ -70,7 +70,7 @@ public class WikiViewOutageTests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("CreateThisPage");
 
 		_handler.Up = true;
-		cut.Find(".wiki-load-failed button").Click();
+		await cut.Find(".wiki-load-failed button").ClickAsync();
 		cut.WaitForState(() => cut.Markup.Contains("Welcome back", StringComparison.Ordinal), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".wiki-load-failed").Count).IsEqualTo(0);
 	}

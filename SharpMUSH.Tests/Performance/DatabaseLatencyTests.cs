@@ -9,8 +9,10 @@ namespace SharpMUSH.Tests.Performance;
 /// <summary>
 /// Observational latency diagnostics for the database layer.
 /// Reports mean and P50/P95/P99 latency percentiles per operation to the console.
-/// Always runs (not Explicit) to provide warm-path diagnostics; contains no assertions.
+/// They contain no assertions and print through <see cref="TestDiagnostics"/>, which is muted unless
+/// SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING is set, so they run only when asked for by name.
 /// </summary>
+[Explicit]
 public class DatabaseLatencyTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

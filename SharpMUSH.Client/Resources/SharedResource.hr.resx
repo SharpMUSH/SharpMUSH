@@ -5560,9 +5560,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>Scena nije pauzirana.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Još bez sobe</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Domaćin: {0}</value>
   </data>
@@ -5715,5 +5712,47 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Redak {0}: ::: item raspoređuje se samo izravno unutar flexa.</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Zakaži scenu</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Scena nema sobu dok ne počne: odvija se gdje je domaćin kad je pokrene.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Odaberite vrijeme koje još nije prošlo.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Scena nije zakazana.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Scena je u rasporedu, ali nije sve spremljeno: {0} Uredite je na njezinoj stranici.</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Domaćin</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Ova scena počinje {0}. Njezin zapis počinje tada.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Ova scena još nije počela. Njezin zapis počinje kad počne.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Scena je u rasporedu, ali je u istom trenutku zakazana još jedna za vas, pa njezin opis i privatnost nisu postavljeni. Provjerite obje scene na njihovim stranicama.</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Detalji i glumci</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Kasni</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Danas</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Sutra</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Prikazano je sljedećih {0} scena.</value>
   </data>
 </root>

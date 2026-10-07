@@ -9,6 +9,8 @@
     <OutputType>Exe</OutputType>
     <RollForward>LatestMajor</RollForward>
     <NoWarn>TUnit0038</NoWarn>
+    <!-- BannedSymbols.txt: bUnit's fire-and-forget event dispatchers (see EventDispatch.cs). -->
+    <WarningsAsErrors>$(WarningsAsErrors);RS0030</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +19,11 @@
     <PackageReference Include="TUnit" Version="$(TUnitVersion)" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="MudBlazor" Version="9.9.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="BannedSymbols.txt" />
   </ItemGroup>
 
   <ItemGroup>

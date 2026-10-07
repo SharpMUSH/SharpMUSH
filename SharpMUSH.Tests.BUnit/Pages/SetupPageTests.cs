@@ -381,10 +381,10 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Change("headwiz");
-		cut.Find("#setup-password").Change("password-one");
-		cut.Find("#setup-confirm").Change("password-one");
-		cut.Find("button.setup-submit").Click();
+		await cut.Find("#setup-username").ChangeAsync("headwiz");
+		await cut.Find("#setup-password").ChangeAsync("password-one");
+		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -400,14 +400,14 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(accountAuth.Role).IsEqualTo("God");
 		await Assert.That(cut.Find("a.setup-import").GetAttribute("href")).IsEqualTo("/admin/import?setup=1");
 
-		cut.Find("button.setup-fresh").Click();
+		await cut.Find("button.setup-fresh").ClickAsync();
 
 		// The handler the game has is kept by default; the one it lacks is created.
 		await Assert.That(cut.Find("#setup-handler-http input[value='keep']").HasAttribute("checked")).IsTrue();
 		await Assert.That(cut.Find("#setup-handler-http .setup-handler-now").TextContent).Contains("http-handler, profile-handler");
 		await Assert.That(cut.FindAll("#setup-handler-event input[value='keep']")).IsEmpty();
 		await Assert.That(cut.Find("#setup-handler-event input[value='create']").HasAttribute("checked")).IsTrue();
-		cut.Find("button.setup-save-handlers").Click();
+		await cut.Find("button.setup-save-handlers").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -425,9 +425,9 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find("#setup-pkg-room-contents").HasAttribute("checked")).IsTrue()
 			.Because("a new game has it, and the handler it builds on is there now");
 
-		cut.Find("#setup-pkg-scene").Change(false);
-		cut.Find("#setup-pkg-wiki-reader").Change(true);
-		cut.Find("button.setup-save").Click();
+		await cut.Find("#setup-pkg-scene").ChangeAsync(false);
+		await cut.Find("#setup-pkg-wiki-reader").ChangeAsync(true);
+		await cut.Find("button.setup-save").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -449,7 +449,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 		var enterPortalButton = cut.Find("button.setup-signin");
 		await Assert.That(enterPortalButton.TextContent).Contains("AuthEnterPortal");
-		enterPortalButton.Click();
+		await enterPortalButton.ClickAsync();
 		await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri);
 	}
 
@@ -466,7 +466,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
 		cut.WaitForAssertion(() => cut.Find("button.setup-save"));
-		cut.Find("button.setup-save").Click();
+		await cut.Find("button.setup-save").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".setup-error"));
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupFinishFailed");
@@ -485,8 +485,8 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		cut.WaitForAssertion(() => cut.Find("#setup-starter-wiki"));
 		await Assert.That(cut.Find("#setup-starter-wiki").HasAttribute("checked")).IsTrue();
 
-		cut.Find("#setup-starter-wiki").Change(false);
-		cut.Find("button.setup-save").Click();
+		await cut.Find("#setup-starter-wiki").ChangeAsync(false);
+		await cut.Find("button.setup-save").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -506,14 +506,14 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
 		cut.WaitForAssertion(() => cut.Find("#setup-starter-wiki"));
-		cut.Find("#setup-starter-wiki").Change(false);
-		cut.Find("button.setup-save").Click();
+		await cut.Find("#setup-starter-wiki").ChangeAsync(false);
+		await cut.Find("button.setup-save").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".setup-error"));
 		await Assert.That(cut.Find("#setup-starter-wiki").HasAttribute("checked")).IsFalse();
 
 		handler.PackagesFail = false;
-		cut.Find("button.setup-save").Click();
+		await cut.Find("button.setup-save").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("AuthSetupComplete"))
@@ -538,7 +538,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find("#setup-starter-wiki").HasAttribute("disabled")).IsTrue();
 		await Assert.That(cut.Markup).Contains("AdmSetupStarterWikiApplied");
 
-		cut.Find("button.setup-save").Click();
+		await cut.Find("button.setup-save").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -561,13 +561,13 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
 		cut.WaitForAssertion(() => cut.Find("button.setup-save"));
-		cut.Find("button.setup-save").Click();
+		await cut.Find("button.setup-save").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".setup-error"));
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupStarterWikiFailed");
 		await Assert.That(handler.FinishCalls).IsEqualTo(0);
 
-		cut.Find("button.setup-save").Click();
+		await cut.Find("button.setup-save").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("AuthSetupComplete"))
@@ -589,14 +589,14 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
 		cut.WaitForAssertion(() => cut.Find("#setup-handler-http"));
 
-		cut.Find("#setup-handler-http input[value='use']").Change(true);
-		cut.Find("#setup-handler-event input[value='none']").Change(true);
-		cut.Find("button.setup-save-handlers").Click();
+		await cut.Find("#setup-handler-http input[value='use']").ChangeAsync(true);
+		await cut.Find("#setup-handler-event input[value='none']").ChangeAsync(true);
+		await cut.Find("button.setup-save-handlers").ClickAsync();
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupHandlerDbrefRequired");
 		await Assert.That(handler.HandlerChanges).IsEmpty();
 
-		cut.Find("#setup-handler-http-dbref").Change("#46");
-		cut.Find("button.setup-save-handlers").Click();
+		await cut.Find("#setup-handler-http-dbref").ChangeAsync("#46");
+		await cut.Find("button.setup-save-handlers").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -624,9 +624,9 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
 		cut.WaitForAssertion(() => cut.Find("#setup-handler-http"));
-		cut.Find("#setup-handler-event input[value='none']").Change(true);
+		await cut.Find("#setup-handler-event input[value='none']").ChangeAsync(true);
 
-		cut.Find("button.setup-save-handlers").Click();
+		await cut.Find("button.setup-save-handlers").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find("#setup-handler-http .setup-handler-clashes"));
 
 		await Assert.That(handler.ClashChecks).IsEquivalentTo(["http dbref=8"])
@@ -635,8 +635,8 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(handler.HandlerChanges).IsEmpty().Because("nothing changes before the choice is made");
 		await Assert.That(cut.Markup).DoesNotContain("AdmSetupPackagesTitle");
 
-		cut.Find("#setup-handler-http-accept").Change(true);
-		cut.Find("button.setup-save-handlers").Click();
+		await cut.Find("#setup-handler-http-accept").ChangeAsync(true);
+		await cut.Find("button.setup-save-handlers").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -699,10 +699,10 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true, completeSessionToken: ""));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Change("headwiz");
-		cut.Find("#setup-password").Change("password-one");
-		cut.Find("#setup-confirm").Change("password-one");
-		cut.Find("button.setup-submit").Click();
+		await cut.Find("#setup-username").ChangeAsync("headwiz");
+		await cut.Find("#setup-password").ChangeAsync("password-one");
+		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -750,10 +750,10 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Change("headwiz");
-		cut.Find("#setup-password").Change("password-one");
-		cut.Find("#setup-confirm").Change("password-two");
-		cut.Find("button.setup-submit").Click();
+		await cut.Find("#setup-username").ChangeAsync("headwiz");
+		await cut.Find("#setup-password").ChangeAsync("password-one");
+		await cut.Find("#setup-confirm").ChangeAsync("password-two");
+		await cut.Find("button.setup-submit").ClickAsync();
 
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthPasswordsDoNotMatch");
 	}
@@ -767,10 +767,10 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				completeBody: "Setup has already been completed."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Change("headwiz");
-		cut.Find("#setup-password").Change("password-one");
-		cut.Find("#setup-confirm").Change("password-one");
-		cut.Find("button.setup-submit").Click();
+		await cut.Find("#setup-username").ChangeAsync("headwiz");
+		await cut.Find("#setup-password").ChangeAsync("password-one");
+		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -790,10 +790,10 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				completeBody: "Username is already taken."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		cut.Find("#setup-username").Change("headwiz");
-		cut.Find("#setup-password").Change("password-one");
-		cut.Find("#setup-confirm").Change("password-one");
-		cut.Find("button.setup-submit").Click();
+		await cut.Find("#setup-username").ChangeAsync("headwiz");
+		await cut.Find("#setup-password").ChangeAsync("password-one");
+		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{

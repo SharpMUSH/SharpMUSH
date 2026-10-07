@@ -92,8 +92,8 @@ public class WikiEditLocaleTests : BunitContext
 	{
 		var cut = RenderEditor("en");
 
-		AddCategoryButton(cut).Input("Places of Note");
-		AddCategoryButton(cut).KeyDown(new KeyboardEventArgs { Key = "Enter" });
+		await AddCategoryButton(cut).InputAsync("Places of Note");
+		await AddCategoryButton(cut).KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
 		// Kept as typed: the server keys it and titles the new category's page with this spelling.
 		await Assert.That(cut.Instance.Article!.Categories).IsEquivalentTo(["lore", "Places of Note"]);
@@ -106,7 +106,7 @@ public class WikiEditLocaleTests : BunitContext
 	{
 		var cut = RenderEditor("en");
 
-		cut.Find(".wiki-edit-tags .wiki-edit-tag button").Click();
+		await cut.Find(".wiki-edit-tags .wiki-edit-tag button").ClickAsync();
 
 		await Assert.That(cut.Instance.Article!.Categories).IsEmpty();
 	}

@@ -5816,9 +5816,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>The scene was not paused.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>No room yet</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Hosted by {0}</value>
   </data>
@@ -6232,5 +6229,47 @@
   </data>
   <data name="LayAppNavUrlHelper" xml:space="preserve">
     <value>A route returning this app's own sidebar links, e.g. http/jobs/nav</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Schedule a scene</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>The scene has no room until it starts: it runs wherever its host is when they start it.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Pick a time that has not passed yet.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>The scene was not scheduled.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>The scene is on the schedule, but not everything was saved: {0} Edit it from its page.</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Host</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>This scene starts {0}. Its log begins when it does.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>This scene has not started yet. Its log begins when it does.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>The scene is on the schedule, but another was scheduled for you at the same moment, so its pitch and privacy were not set. Check both scenes on their pages.</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Details and cast</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Late</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Tomorrow</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Showing the next {0} scenes.</value>
   </data>
 </root>

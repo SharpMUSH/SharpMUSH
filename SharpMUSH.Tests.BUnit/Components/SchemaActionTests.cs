@@ -122,7 +122,7 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 	{
 		var cut = RenderForm(JobForm(), JobData());
 
-		Button(cut, "Close", 0).Click();
+		await Button(cut, "Close", 0).ClickAsync();
 		WaitForPosts(cut, 1);
 
 		var (path, body) = _handler.Posts.Single();
@@ -142,7 +142,7 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 		var cut = RenderForm(JobForm(), JobData());
 		await Assert.That(cut.Find(".schema-empty").TextContent).IsEqualTo("No comments yet.");
 
-		Button(cut, "Comment").Click();
+		await Button(cut, "Comment").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("second")) throw new InvalidOperationException("data not replaced yet");
@@ -159,7 +159,7 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 		_handler.Answers.Enqueue("""{"ok":true,"fields":{"filter":"open"}}""");
 		var cut = RenderForm(JobForm(new SchemaActionSuccess(null, null, MergeFields: false, ResetFields: true)), JobData());
 
-		Button(cut, "Comment").Click();
+		await Button(cut, "Comment").ClickAsync();
 		WaitForPosts(cut, 1);
 		cut.WaitForAssertion(() =>
 		{
@@ -167,7 +167,7 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 		}, TimeSpan.FromSeconds(5));
 
 		// What the next action sends is what the form now holds.
-		Button(cut, "Comment").Click();
+		await Button(cut, "Comment").ClickAsync();
 		WaitForPosts(cut, 2);
 
 		var second = _handler.Posts.Last().Body;
@@ -181,14 +181,14 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 		_handler.Answers.Enqueue("""{"ok":true}""");
 		var cut = RenderForm(JobForm(new SchemaActionSuccess(null, null, MergeFields: false, ResetFields: true)), JobData());
 
-		Button(cut, "Comment").Click();
+		await Button(cut, "Comment").ClickAsync();
 		WaitForPosts(cut, 1);
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.Markup.Contains("draft text")) throw new InvalidOperationException("comment not cleared yet");
 		}, TimeSpan.FromSeconds(5));
 
-		Button(cut, "Comment").Click();
+		await Button(cut, "Comment").ClickAsync();
 		WaitForPosts(cut, 2);
 		await Assert.That(_handler.Posts.Last().Body.TryGetProperty("comment", out _)).IsFalse();
 	}
@@ -199,9 +199,9 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 		_handler.Answers.Enqueue("""{"ok":true,"fields":{"filter":"open"}}""");
 		var cut = RenderForm(JobForm(new SchemaActionSuccess(null, null, MergeFields: true)), JobData());
 
-		Button(cut, "Comment").Click();
+		await Button(cut, "Comment").ClickAsync();
 		WaitForPosts(cut, 1);
-		Button(cut, "Comment").Click();
+		await Button(cut, "Comment").ClickAsync();
 		WaitForPosts(cut, 2);
 
 		var second = _handler.Posts.Last().Body;
@@ -215,7 +215,7 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 		var cut = RenderForm(JobForm(), JobData());
 
 		var filter = cut.FindAll("input").First(i => i.GetAttribute("type") is null or "text");
-		filter.Change("mine");
+		await filter.ChangeAsync("mine");
 		WaitForPosts(cut, 1);
 
 		var (path, body) = _handler.Posts.Single();
@@ -235,7 +235,7 @@ public class SchemaActionTests : TrackingBunitContext, IAsyncDisposable
 		var data = Data(("entries", """[{"author":"Ada","time":0,"body":"oops","actions":[{"label":"Delete","action":"delete","values":{"entry":3}}]}]"""));
 
 		var cut = Render<MudHarness>(p => p.AddChildContent<SchemaViewRenderer>(c => c.Add(x => x.Document, view).Add(x => x.Data, data)));
-		cut.Find(".schema-timeline-action").Click();
+		await cut.Find(".schema-timeline-action").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("No comments yet.")) throw new InvalidOperationException("data not replaced yet");

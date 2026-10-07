@@ -114,7 +114,7 @@ public class AdminProfilesResetGateTests : TrackingBunitContext
 		Auth.SetPolicies("players.moderate", "packages.admin");
 		var cut = RenderLoaded();
 
-		cut.FindAll("button").First(b => b.TextContent.Contains("ResetToDefaults")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("ResetToDefaults")).ClickAsync();
 
 		cut.WaitForAssertion(() => snackbar.Received().Add(
 			Arg.Is<string>(m => m.Contains("AdmProfilesResetFailedError") && m.Contains(ProfileHandlerResetApi.Refusal)),
@@ -139,7 +139,7 @@ public class AdminProfilesResetGateTests : TrackingBunitContext
 		Auth.SetPolicies("players.moderate", "packages.admin");
 		var cut = RenderLoaded();
 
-		cut.FindAll("button").First(b => b.TextContent.Contains("ResetToDefaults")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("ResetToDefaults")).ClickAsync();
 
 		cut.WaitForAssertion(() => snackbar.Received().Add(
 			Arg.Is<string>(m => m.Contains("AdmProfilesResetFailedError") && m.Contains("FN`FIELD") && m.Contains("GET`PROFILE")),

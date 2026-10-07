@@ -8,7 +8,6 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -19,12 +18,51 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Common;
+using System.Collections.Immutable;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
 	private static readonly Regex ConnectionPatternRegex = ConnectionPattern();
+
+	/// <summary>PennMUSH's <c>DOING_LEN</c>: how much of an <c>@doing</c> a listing shows.</summary>
+	private const int DoingCells = 40;
+
+	/// <summary>Wide enough that no column of a listing is ever left out; each line ends at its last character.</summary>
+	private const int ListingCells = 200;
+
+	/// <summary>
+	/// PennMUSH's <c>dump_users</c> columns (<c>src/bsd.c</c>), one cell apart, so the listing reads
+	/// as PennMUSH's, with the hidden-row <c>D</c> at the end of the idle cell. A WHO crawler reads one
+	/// line per player, so no cell wraps: <c>@doing</c> is cut at PennMUSH's 40 characters, a long name
+	/// widens its column, and the listing is laid out the same for every client (not fluid), in plain
+	/// ASCII with no box drawing. The portal draws it as a table.
+	/// </summary>
+	private static readonly ImmutableArray<TableColumn> MortalWhoColumns =
+	[
+		new(MarkupText.Plain("Player Name")) { Min = 16, Wrap = false },
+		new(MarkupText.Plain("On For")) { Min = 10, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Idle ")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Doing")) { Max = DoingCells, Wrap = false },
+	];
+
+	/// <summary>
+	/// The wizard <c>dump_users</c> columns. Unlike PennMUSH, the host lines up under its heading however many
+	/// connection flags the descriptor carries.
+	/// </summary>
+	private static readonly ImmutableArray<TableColumn> WizardWhoColumns =
+	[
+		new(MarkupText.Plain("Player Name")) { Min = 16, Wrap = false },
+		new(MarkupText.Plain("Loc #")) { Min = 6, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("On For")) { Min = 9, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Idle")) { Min = 5, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Cmds")) { Min = 5, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Des")) { Min = 5, Wrap = false },
+		new(MarkupText.Plain("Host")) { Wrap = false },
+	];
 
 	[SharpCommand(Name = "WHO", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -37,13 +75,7 @@ public partial class Commands
 
 		var everyone = ConnectionService.GetAll();
 
-		// PennMUSH dump_users formats (src/bsd.c): header widths and per-row layout are replicated verbatim.
-		string header = isWizard
-			? string.Format("{0,-16} {1,6} {2,9} {3,5} {4,5} {5,-4} {6}",
-				"Player Name", "Loc #", "On For", "Idle", "Cmds", "Des", "Host")
-			: string.Format("{0,-16} {1,10} {2,6}  {3}", "Player Name", "On For", "Idle", "Doing");
-
-		var lines = new List<string>();
+		var rows = new List<ImmutableArray<Block>>();
 		await foreach (var player in everyone
 			.Where(player => player.Ref.HasValue && (isWizard || player.PresenceClass != PresenceClasses.Portal)))
 		{
@@ -57,7 +89,6 @@ public partial class Commands
 			}
 
 			var name = known.Object().Name;
-			var namePadded = name.PadToColumns(16);
 			var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
 			var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
 			var isDark = await known.HasFlag("DARK");
@@ -66,7 +97,7 @@ public partial class Commands
 			// latter doesn't touch the object's flags, so it can't be seen via HasFlag("DARK").
 			var isHiddenRow = isDark || player.IsHidden;
 
-			string line;
+			string[] cells;
 			if (isWizard)
 			{
 				var location = known.IsContent
@@ -77,14 +108,15 @@ public partial class Commands
 					? (player.HostName.Length > 20 ? player.HostName[..20] : player.HostName) + " (Dark)"
 					: (player.HostName.Length > 27 ? player.HostName[..27] : player.HostName);
 				// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
-				line = $"{namePadded} {location,6} {onFor,9} {idle,5}  {player.CommandCount,4} {player.Handle,3}{ConnType(player)} {host}";
+				cells = [name, location, onFor, idle, player.CommandCount.ToString(CultureInfo.InvariantCulture),
+					$"{player.Handle,3}{ConnType(player)}", host];
 			}
 			else
 			{
 				// @doing is read without permission checks (get_doing, bsd.c:6251), so the connect
 				// screen, which has no executor, shows the same column a logged-in viewer sees.
 				var doingText = await GetDoingText(parser, executor ?? known, known);
-				line = $"{namePadded} {onFor,10}   {idle,4}{(isHiddenRow ? 'D' : ' ')} {doingText}";
+				cells = [name, onFor, idle + (isHiddenRow ? "D" : " "), doingText];
 			}
 
 			// CanSee(viewer, target) is `viewer.IsPriv() || viewer.IsSee_All() || !target.IsDark()`,
@@ -98,11 +130,11 @@ public partial class Commands
 
 			if (visible)
 			{
-				lines.Add(line);
+				rows.Add([.. cells.Select(cell => (Block)MarkupText.Plain(cell))]);
 			}
 		}
 
-		var count = lines.Count;
+		var count = rows.Count;
 		var footer = count switch
 		{
 			0 => "There are no players connected.",
@@ -110,7 +142,8 @@ public partial class Commands
 			_ => $"There are {count} players connected."
 		};
 
-		var message = $"{header}\n{string.Join('\n', lines)}\n{footer}";
+		var listing = ServerLayout.Build(new Table(isWizard ? WizardWhoColumns : MortalWhoColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, fluid: false);
+		var message = MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]);
 
 		await NotifyService.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 

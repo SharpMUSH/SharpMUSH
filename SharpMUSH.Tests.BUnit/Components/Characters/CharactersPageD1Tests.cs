@@ -49,7 +49,7 @@ public class CharactersPageD1Tests : TrackingBunitContext
 	public async Task CategoryChips_Filter()
 	{
 		var cut = RenderAt("/characters");
-		cut.FindAll(".kit-chips button").Single(b => b.TextContent == "Guard").Click();
+		await cut.FindAll(".kit-chips button").Single(b => b.TextContent == "Guard").ClickAsync();
 		await Assert.That(Names(cut)).IsEquivalentTo(new[] { "Dace Kellan", "Wren Halloway" });
 	}
 
