@@ -341,7 +341,7 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 ## Infrastructure Notes
 
 - **Logging**: Serilog, configured through `appsettings.json`
-- **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091)
+- **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091; plain HTTP, `/metrics` only, never redirected to HTTPS — `MetricsListener`, `ConnectionServerOptions.MetricsPort`)
 - **Caching**: `ZiggyCreatures.FusionCache`; compiled boolean-expression cache keyed as `"compiled-expressions"`
 - **Rate limiting**: `"public-api"` — fixed window per client IP (30 req/min, `RateLimiting:PublicApi:*`) on the credential/claim endpoints that opt in with `[EnableRateLimiting]`; `"mcp"` — per client IP on `/mcp`; `"softcode-http"` — one global `http_per_second` budget on `/http/*`. Portal assets, the boot reads (`api/setup/status`, `api/server-info`) and `api/help` are not limited
 - **CORS**: Configured via `Cors:AllowedOrigins` in `appsettings.json`; development allows all origins with credentials (required for SignalR)

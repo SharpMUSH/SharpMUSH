@@ -139,7 +139,7 @@ spec:
         app: sharpmush
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
+        prometheus.io/port: "9092"
         prometheus.io/path: "/metrics"
     spec:
       terminationGracePeriodSeconds: 60
@@ -249,7 +249,7 @@ spec:
         app: connectionserver
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "4202"
+        prometheus.io/port: "9091"
         prometheus.io/path: "/metrics"
     spec:
       terminationGracePeriodSeconds: 60
@@ -344,7 +344,7 @@ spec:
     matchLabels:
       app: sharpmush
   endpoints:
-    - port: http
+    - port: metrics
       path: /metrics
       interval: 30s
 ---
@@ -357,7 +357,7 @@ spec:
     matchLabels:
       app: connectionserver
   endpoints:
-    - port: http
+    - port: metrics
       path: /metrics
       interval: 30s
 ---
@@ -405,7 +405,7 @@ spec:
               service:
                 name: sharpmush
                 port:
-                  number: 8080
+                  number: 9092
           - path: /*
             pathType: ImplementationSpecific
             backend:

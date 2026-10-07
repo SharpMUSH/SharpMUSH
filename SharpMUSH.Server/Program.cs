@@ -43,6 +43,7 @@ public class Program
 
 		var builder = WebApplication.CreateBuilder(args);
 		DatabaseProviderSetting.EnsureSupported(builder.Configuration["SHARPMUSH_DATABASE_PROVIDER"]);
+		MetricsListener.Listen(builder.WebHost, builder.Configuration);
 
 		// Resolve the NATS URL.  Ownership of the testcontainer (when NATS_URL is not set)
 		// belongs to ConnectionServer; Server only needs the URL to connect.
@@ -91,6 +92,20 @@ public class Program
 		// default, so no header is trusted until an operator explicitly configures the proxy hop.
 		app.UseForwardedHeaders();
 
+		// The metrics port serves the scrape and nothing else, so the portal, the API and /http are never
+		// reachable over its plain HTTP.
+		var metricsPort = MetricsListener.Port(app.Configuration);
+		app.Use((context, next) =>
+		{
+			if (MetricsListener.Serves(context, metricsPort) && context.Request.Path != MetricsListener.Path)
+			{
+				context.Response.StatusCode = StatusCodes.Status404NotFound;
+				return Task.CompletedTask;
+			}
+
+			return next(context);
+		});
+
 		// Early, so it can compress what everything below serves. Responses that already carry a
 		// Content-Encoding — the precompressed portal assets — are skipped, never encoded twice.
 		app.UseResponseCompression();
@@ -107,7 +122,8 @@ public class Program
 			app.UseDeveloperExceptionPage();
 		}
 
-		app.UseHttpsRedirection();
+		// Not on the metrics port: a scraper does not follow a redirect to the HTTPS port's certificate.
+		app.UseWhen(context => !MetricsListener.Serves(context, metricsPort), branch => branch.UseHttpsRedirection());
 
 		// ── URL canonicalisation: must run before static files so redirects fire first
 		app.UseMiddleware<CanonicalUrlMiddleware>();

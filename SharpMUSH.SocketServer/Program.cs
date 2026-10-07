@@ -27,6 +27,18 @@ public class Program
 
 		try
 		{
+			var metricsPort = app.Services.GetRequiredService<ConnectionServerOptions>().MetricsPort;
+			app.Use((context, next) =>
+			{
+				if (metricsPort > 0 && context.Connection.LocalPort == metricsPort && context.Request.Path != "/metrics")
+				{
+					context.Response.StatusCode = StatusCodes.Status404NotFound;
+					return Task.CompletedTask;
+				}
+
+				return next(context);
+			});
+
 			var webSocketOptions = new WebSocketOptions
 			{
 				KeepAliveInterval = TimeSpan.FromSeconds(30)
@@ -228,6 +240,12 @@ public class Program
 			{
 				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
 			});
+
+			// /metrics only; see ConnectionServerOptions.MetricsPort.
+			if (connectionServerOptions.MetricsPort > 0)
+			{
+				options.ListenAnyIP(connectionServerOptions.MetricsPort);
+			}
 		});
 
 		builder.Services.AddControllers();
