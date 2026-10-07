@@ -3,6 +3,8 @@ using Mediator;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
+using MarkupString.Layout;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -111,7 +113,7 @@ public static class ViewWiki
 		// English is how a translation gap goes unnoticed in game exactly as it does on the web.
 		var localeMarker = localized is { IsFallback: true } ? $" [{localized.Locale}]" : string.Empty;
 
-		var line = MarkupText.Plain("-").Repeat(RenderWidth);
+		var line = ServerLayout.Build(new Rule(), RenderWidth);
 		var restricted = (await access.RequirementsAsync()).HasPageRules(page.Id);
 		var markers = $"{(published ? "" : " (draft)")}{(restricted ? " (restricted)" : "")}";
 		// A category's name is its category page's title, in the reader's language where it is translated.

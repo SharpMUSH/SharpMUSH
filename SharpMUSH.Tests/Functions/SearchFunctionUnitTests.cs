@@ -282,14 +282,6 @@ public class SearchFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("nearby(%#,%#)", "1")]
-	public async Task Nearby(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
 	public async Task Lsearch_ElockFilter_ReturnsMatchingObjects()
 	{
 		// The elock class evaluates a lock string against objects

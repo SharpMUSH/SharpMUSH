@@ -1,7 +1,5 @@
 using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Integration;
 
@@ -19,10 +17,7 @@ public class AntlrParserErrorAnalysis
 	private const string ScriptFileName = "MyrddinBBS_v406.txt";
 	private const string AnalysisOutputFileName = "AntlrParserErrorAnalysis_Output.txt";
 
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private static IMUSHCodeParser Parser => SyntaxOnlyParser.Instance;
 
 	/// <summary>
 	/// Reads the Myrddin BBS install script from the test data file.

@@ -12,6 +12,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using MarkupString;
+using SharpMUSH.Library.Markup;
+using Block = MarkupString.Layout.Block;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -38,6 +40,12 @@ public partial class RecursiveMarkdownRenderer
 	/// has to work to the same budget as everything around it.
 	/// </summary>
 	protected int MaxWidth => _maxWidth;
+
+	/// <summary>
+	/// <paramref name="block"/> laid out at the render width (<see cref="ServerLayout.Build"/>); a flex item
+	/// that takes the result in draws it again at the item's width.
+	/// </summary>
+	protected MString Laid(Block block) => ServerLayout.Build(block, _maxWidth);
 
 	private const int START_BORDER_WIDTH = 2; // "| "
 	private const int END_BORDER_WIDTH = 2; // " |"

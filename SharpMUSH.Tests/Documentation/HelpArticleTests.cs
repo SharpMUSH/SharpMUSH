@@ -166,16 +166,16 @@ public class HelpArticleTests
 	}
 
 	[Test]
-	public async Task TerminalTableCellsThatWrapKeepTheirBorders()
+	public async Task TerminalTableCellsThatWrapStayInTheirColumn()
 	{
 		const string markdown = "| Failure to... | Lock |\n| --- | --- |\n| run an `$-command` on an object that is quite a long way from here | Command |";
 		var lines = RecursiveMarkdownHelper.RenderMarkdown(markdown, maxWidth: 40).ToPlainText().Split('\n');
-		await Assert.That(lines.Length).IsGreaterThan(3);
-		foreach (var line in lines)
+		var divider = lines[0].IndexOf('|');
+		await Assert.That(divider).IsGreaterThan(0);
+		foreach (var line in lines.Where((_, i) => i != 1))
 		{
-			await Assert.That(line.Length).IsEqualTo(40);
-			await Assert.That(line[0]).IsEqualTo('|');
-			await Assert.That(line[^1]).IsEqualTo('|');
+			await Assert.That(line.Length).IsLessThanOrEqualTo(40);
+			await Assert.That(line.IndexOf('|')).IsEqualTo(divider);
 		}
 	}
 

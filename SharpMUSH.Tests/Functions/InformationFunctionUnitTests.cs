@@ -131,14 +131,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("version()", "")]
-	public async Task Version(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
 	[Arguments("numversion()", "20250102000000")]
 	public async Task Numversion(string str, string expected)
 	{

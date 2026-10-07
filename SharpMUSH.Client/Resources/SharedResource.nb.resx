@@ -5556,9 +5556,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>Scenen ble ikke satt på pause.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Ikke noe rom ennå</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Vert: {0}</value>
   </data>
@@ -5750,5 +5747,47 @@
   </data>
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>Spillets standard følger enhetens lyse eller mørke innstilling.</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Planlegg en scene</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>Scenen har ikke noe rom før den starter: den foregår der verten er når scenen starter.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Velg et tidspunkt som ikke har passert ennå.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>Scenen ble ikke planlagt.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>Scenen står på planen, men ikke alt ble lagret: {0} Rediger den fra siden dens.</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Vert</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Denne scenen starter {0}. Loggen begynner da.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Denne scenen har ikke startet ennå. Loggen begynner når den gjør det.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>Scenen står på planen, men en annen ble planlagt for deg i samme øyeblikk, så beskrivelsen og personvernet ble ikke satt. Sjekk begge scenene på sidene deres.</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Detaljer og rollebesetning</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Forsinket</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>I dag</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>I morgen</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Viser de neste {0} scenene.</value>
   </data>
 </root>

@@ -138,29 +138,4 @@ public class GuestLoginTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest3"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest4"));
 	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires guest configuration testing infrastructure")]
-	[DependsOn(nameof(ConnectGuest_MultipleGuests_SelectsAppropriateOne))]
-	public async ValueTask ConnectGuest_GuestsDisabled_FailsWithError()
-	{
-		// This test would require modifying the configuration to disable guests
-		// Skipping for now as it requires configuration testing infrastructure
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires advanced connection management")]
-	[DependsOn(nameof(ConnectGuest_GuestsDisabled_FailsWithError))]
-	public async ValueTask ConnectGuest_MaxGuestsReached_FailsWithError()
-	{
-		// This test would require:
-		// 1. Setting max_guests configuration
-		// 2. Creating exactly that many guest connections
-		// 3. Attempting to connect one more
-		// Skipping for now as it requires more complex setup
-		await ValueTask.CompletedTask;
-	}
 }

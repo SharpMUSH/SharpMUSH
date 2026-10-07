@@ -5556,9 +5556,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>场景未能暂停。</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>尚无房间</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>主持：{0}</value>
   </data>
@@ -5750,5 +5747,47 @@
   </data>
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>游戏默认主题会跟随设备的浅色或深色设置。</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>安排场景</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>场景开始前没有房间：主持人开始场景时身在何处，场景就在何处进行。</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>请选择一个尚未过去的时间。</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>场景未能安排。</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>场景已加入日程，但部分内容未保存：{0} 请在其页面中编辑。</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>主持人</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>此场景将于 {0} 开始。届时开始记录。</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>此场景尚未开始。场景开始后即开始记录。</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>场景已加入日程，但同一时刻还为你安排了另一个场景，因此未设置其简介和隐私。请在两个场景的页面中分别检查。</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>详情与角色</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>已延迟</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>今天</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>明天</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>显示接下来的 {0} 个场景。</value>
   </data>
 </root>

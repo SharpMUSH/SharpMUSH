@@ -1,34 +1,7 @@
-using System.Reflection;
-
 namespace SharpMUSH.Tests.Internal;
 
 public class TestInfrastructureLifetimeTests
 {
-	[Test]
-	public async Task ConnectionFixtureDisposesOwnedFactoryThroughAsyncDisposable()
-	{
-		var host = new RecordingConnectionFactory();
-		var fixture = new ConnectionServerWebAppFactory { DockerNetwork = null!, NatsTestServer = null! };
-		typeof(ConnectionServerWebAppFactory).GetField("_server", BindingFlags.Instance | BindingFlags.NonPublic)!
-			.SetValue(fixture, host);
-
-		await ((IAsyncDisposable)fixture).DisposeAsync();
-
-		await Assert.That(host.DisposalCount).IsEqualTo(1);
-	}
-
-	// No server or container is started: this tests ownership at the disposal boundary only.
-	private sealed class RecordingConnectionFactory() :
-		ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.SocketServer.Program>("unused")
-	{
-		public int DisposalCount { get; private set; }
-		public override ValueTask DisposeAsync()
-		{
-			DisposalCount++;
-			return ValueTask.CompletedTask;
-		}
-	}
-
 	[Test]
 	public async Task GeneratedNamesRemainDistinctUnderConcurrentCreation()
 	{

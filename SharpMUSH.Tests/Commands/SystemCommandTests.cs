@@ -21,7 +21,7 @@ public class SystemCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	// PennMUSH reference: cmd_flag with SWITCH_LIST calls do_list_flags("FLAG", ..., FLAG_LIST_NAMECHAR, T("Flags"))
-	// SharpMUSH outputs a table beginning with "Object Flags:".
+	// SharpMUSH outputs a panel titled "Object flags".
 	[Test]
 	public async ValueTask FlagCommand()
 	{
@@ -34,11 +34,11 @@ public class SystemCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextContains(msg, "Object flags")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_power with SWITCH_LIST calls do_list_flags("POWER", ..., FLAG_LIST_NAMECHAR, T("Powers"))
-	// SharpMUSH outputs a table beginning with "Object Powers:".
+	// SharpMUSH outputs a panel titled "Object powers".
 	[Test]
 	public async ValueTask PowerCommand()
 	{
@@ -51,7 +51,7 @@ public class SystemCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Powers:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextContains(msg, "Object powers")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_hook with SWITCH_LIST calls do_hook_list(executor, arg_left, 1).

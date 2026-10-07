@@ -19,58 +19,7 @@ public class TimePrecisionFunctionTests
 	private async Task<string> Eval(string code)
 		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
 
-	// ---- The helper, which every function funnels through --------------------------------------
-
-	[Test]
-	[Arguments(null, TimePrecision.Seconds)]
-	[Arguments("", TimePrecision.Seconds)]
-	[Arguments("s", TimePrecision.Seconds)]
-	[Arguments("S", TimePrecision.Seconds)]
-	[Arguments("seconds", TimePrecision.Seconds)]
-	[Arguments("f", TimePrecision.Fractional)]
-	[Arguments("FRACTIONAL", TimePrecision.Fractional)]
-	[Arguments("ms", TimePrecision.Milliseconds)]
-	[Arguments("Milliseconds", TimePrecision.Milliseconds)]
-	public async Task PrecisionTokensParse(string? token, TimePrecision expected)
-	{
-		await Assert.That(TimePrecisions.TryParse(token, out var precision)).IsTrue();
-		await Assert.That(precision).IsEqualTo(expected);
-	}
-
-	/// <summary>
-	/// Only the six documented spellings: "secs" and "millis" read like precision tokens but are not
-	/// ones, and an undocumented alias makes the guide wrong rather than the parser generous.
-	/// </summary>
-	[Test]
-	[Arguments("us")]
-	[Arguments("ns")]
-	[Arguments("m")]
-	[Arguments("nonsense")]
-	[Arguments("secs")]
-	[Arguments("sec")]
-	[Arguments("millis")]
-	[Arguments("milli")]
-	public async Task UnknownPrecisionTokensAreRejectedRatherThanDefaulted(string token)
-		=> await Assert.That(TimePrecisions.TryParse(token, out _)).IsFalse();
-
 	// ---- hostile input --------------------------------------------------------------------------
-
-	/// <summary>
-	/// The sign of a duration in (-1, 0) lives entirely in the millisecond remainder, because the
-	/// whole-second part truncates to zero. Read off the whole part it is lost, and a negative
-	/// duration passes the guard and renders positive.
-	/// </summary>
-	[Test]
-	[Arguments("-0.5", 0L, -500)]
-	[Arguments("-0.9996", -1L, 0)]
-	[Arguments("-1.5", -1L, -500)]
-	[Arguments("0.9996", 1L, 0)]
-	public async Task ASubSecondNegativeKeepsItsSign(string input, long expectedSeconds, int expectedMs)
-	{
-		await Assert.That(TimePrecisions.TryParseSecondsParts(input, out var seconds, out var ms)).IsTrue();
-		await Assert.That(seconds).IsEqualTo(expectedSeconds);
-		await Assert.That(ms).IsEqualTo(expectedMs);
-	}
 
 	[Test]
 	[Arguments("timestring(-0.5)")]
@@ -111,70 +60,6 @@ public class TimePrecisionFunctionTests
 	public async Task AnEtimefmtWidthTooLargeForInt32DoesNotThrow()
 		=> await Assert.That(await Eval("etimefmt($99999999999s,61)")).IsEqualTo("1");
 
-	[Test]
-	[Arguments(1500L, TimePrecision.Seconds, "1")]
-	[Arguments(1500L, TimePrecision.Fractional, "1.5")]
-	[Arguments(1500L, TimePrecision.Milliseconds, "1500")]
-	[Arguments(1000L, TimePrecision.Fractional, "1")]
-	[Arguments(1778518155494L, TimePrecision.Seconds, "1778518155")]
-	[Arguments(1778518155494L, TimePrecision.Fractional, "1778518155.494")]
-	[Arguments(1778518155494L, TimePrecision.Milliseconds, "1778518155494")]
-	public async Task FormatRendersTheStoredMillisecondValue(long ms, TimePrecision precision, string expected)
-		=> await Assert.That(TimePrecisions.Format(ms, precision)).IsEqualTo(expected);
-
-	[Test]
-	[Arguments("1", 1000L)]
-	[Arguments("1.5", 1500L)]
-	[Arguments("-1.5", -1500L)]
-	[Arguments("1778518155.494", 1778518155494L)]
-	[Arguments("0.001", 1L)]
-	public async Task SecondsInputMayCarryAFraction(string input, long expectedMs)
-	{
-		await Assert.That(TimePrecisions.TryParseSeconds(input, out var ms)).IsTrue();
-		await Assert.That(ms).IsEqualTo(expectedMs);
-	}
-
-	[Test]
-	[Arguments("")]
-	[Arguments("abc")]
-	[Arguments("1e3")]
-	[Arguments("1,5")]
-	public async Task NonNumericSecondsAreRejected(string input)
-		=> await Assert.That(TimePrecisions.TryParseSeconds(input, out _)).IsFalse();
-
-	/// <summary>
-	/// A current-culture parse reads "1.5" as 15 under a comma decimal separator, which would make a
-	/// game's arithmetic depend on its host's locale.
-	/// </summary>
-	[Test]
-	public async Task SecondsInputIsCultureIndependent()
-	{
-		var original = CultureInfo.CurrentCulture;
-		try
-		{
-			CultureInfo.CurrentCulture = new CultureInfo("de-DE");
-			await Assert.That(TimePrecisions.TryParseSeconds("1.5", out var ms)).IsTrue();
-			await Assert.That(ms).IsEqualTo(1500L);
-			await Assert.That(TimePrecisions.Format(1500L, TimePrecision.Fractional)).IsEqualTo("1.5");
-		}
-		finally
-		{
-			CultureInfo.CurrentCulture = original;
-		}
-	}
-
-	/// <summary>
-	/// Floor, not truncation, because <see cref="DateTimeOffset.ToUnixTimeSeconds"/> floors pre-epoch
-	/// instants — a second convention would make csecs() and convsecs() disagree about one moment.
-	/// </summary>
-	[Test]
-	[Arguments(1500L, 1L)]
-	[Arguments(-1500L, -2L)]
-	[Arguments(-1000L, -1L)]
-	[Arguments(0L, 0L)]
-	public async Task WholeSecondsFloor(long ms, long expected)
-		=> await Assert.That(TimePrecisions.ToWholeSeconds(ms)).IsEqualTo(expected);
-
 	// ---- secs() -------------------------------------------------------------------------------
 
 	[Test]
@@ -208,18 +93,6 @@ public class TimePrecisionFunctionTests
 		var after = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		await Assert.That(seconds * 1000m).IsGreaterThanOrEqualTo(before).And.IsLessThanOrEqualTo(after);
 	}
-
-	/// <summary>
-	/// Fractional seconds drop trailing zeros like every other non-integer this server prints, so a
-	/// whole second has no decimal point at all.
-	/// </summary>
-	[Test]
-	[Arguments(1790565951000L, "1790565951")]
-	[Arguments(1790565951500L, "1790565951.5")]
-	[Arguments(1790565951050L, "1790565951.05")]
-	[Arguments(1790565951001L, "1790565951.001")]
-	public async Task FractionalTrimsTrailingZeros(long milliseconds, string expected)
-		=> await Assert.That(TimePrecisions.Format(milliseconds, TimePrecision.Fractional)).IsEqualTo(expected);
 
 	[Test]
 	public async Task SecsRejectsAnUnknownPrecision()
@@ -314,23 +187,6 @@ public class TimePrecisionFunctionTests
 	[Test]
 	public async Task EtimeRejectsNegativeSeconds()
 		=> await Assert.That(await Eval("etime(-1)")).IsEqualTo("#-1 SECONDS MUST NOT BE NEGATIVE");
-
-	/// <summary>
-	/// The two parts are read back as one signed magnitude, so -1.5 splits as -1 and -500, not the
-	/// -2 and 500 that flooring would give. Both parts carry the sign — see
-	/// <see cref="ASubSecondNegativeKeepsItsSign"/> for why the remainder has to.
-	/// </summary>
-	[Test]
-	[Arguments("1.5", 1L, 500)]
-	[Arguments("-1.5", -1L, -500)]
-	[Arguments("-2", -2L, 0)]
-	[Arguments("0.999", 0L, 999)]
-	public async Task SecondsPartsTruncateTowardsZero(string input, long expectedSeconds, int expectedMs)
-	{
-		await Assert.That(TimePrecisions.TryParseSecondsParts(input, out var seconds, out var ms)).IsTrue();
-		await Assert.That(seconds).IsEqualTo(expectedSeconds);
-		await Assert.That(ms).IsEqualTo(expectedMs);
-	}
 
 	/// <summary>
 	/// A millisecond long only reaches ~292 million years, so the duration renderers split into a
@@ -434,5 +290,153 @@ public class TimePrecisionFunctionTests
 		var result = await Eval(code);
 		await Assert.That(long.TryParse(result, out _)).IsFalse();
 		await Assert.That(result.Split(' ').Length).IsEqualTo(5);
+	}
+}
+
+/// <summary>
+/// The helper every time function funnels through (<see cref="TimePrecisions"/>), tested directly:
+/// it reads no world, so these need no host.
+/// </summary>
+public class TimePrecisionHelperTests
+{
+	[Test]
+	[Arguments(null, TimePrecision.Seconds)]
+	[Arguments("", TimePrecision.Seconds)]
+	[Arguments("s", TimePrecision.Seconds)]
+	[Arguments("S", TimePrecision.Seconds)]
+	[Arguments("seconds", TimePrecision.Seconds)]
+	[Arguments("f", TimePrecision.Fractional)]
+	[Arguments("FRACTIONAL", TimePrecision.Fractional)]
+	[Arguments("ms", TimePrecision.Milliseconds)]
+	[Arguments("Milliseconds", TimePrecision.Milliseconds)]
+	public async Task PrecisionTokensParse(string? token, TimePrecision expected)
+	{
+		await Assert.That(TimePrecisions.TryParse(token, out var precision)).IsTrue();
+		await Assert.That(precision).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// Only the six documented spellings: "secs" and "millis" read like precision tokens but are not
+	/// ones, and an undocumented alias makes the guide wrong rather than the parser generous.
+	/// </summary>
+	[Test]
+	[Arguments("us")]
+	[Arguments("ns")]
+	[Arguments("m")]
+	[Arguments("nonsense")]
+	[Arguments("secs")]
+	[Arguments("sec")]
+	[Arguments("millis")]
+	[Arguments("milli")]
+	public async Task UnknownPrecisionTokensAreRejectedRatherThanDefaulted(string token)
+		=> await Assert.That(TimePrecisions.TryParse(token, out _)).IsFalse();
+
+	/// <summary>
+	/// The sign of a duration in (-1, 0) lives entirely in the millisecond remainder, because the
+	/// whole-second part truncates to zero. Read off the whole part it is lost, and a negative
+	/// duration passes the guard and renders positive.
+	/// </summary>
+	[Test]
+	[Arguments("-0.5", 0L, -500)]
+	[Arguments("-0.9996", -1L, 0)]
+	[Arguments("0.9996", 1L, 0)]
+	public async Task ASubSecondNegativeKeepsItsSign(string input, long expectedSeconds, int expectedMs)
+	{
+		await Assert.That(TimePrecisions.TryParseSecondsParts(input, out var seconds, out var ms)).IsTrue();
+		await Assert.That(seconds).IsEqualTo(expectedSeconds);
+		await Assert.That(ms).IsEqualTo(expectedMs);
+	}
+
+	[Test]
+	[Arguments(1500L, TimePrecision.Seconds, "1")]
+	[Arguments(1500L, TimePrecision.Fractional, "1.5")]
+	[Arguments(1500L, TimePrecision.Milliseconds, "1500")]
+	[Arguments(1000L, TimePrecision.Fractional, "1")]
+	[Arguments(1778518155494L, TimePrecision.Seconds, "1778518155")]
+	[Arguments(1778518155494L, TimePrecision.Fractional, "1778518155.494")]
+	[Arguments(1778518155494L, TimePrecision.Milliseconds, "1778518155494")]
+	public async Task FormatRendersTheStoredMillisecondValue(long ms, TimePrecision precision, string expected)
+		=> await Assert.That(TimePrecisions.Format(ms, precision)).IsEqualTo(expected);
+
+	[Test]
+	[Arguments("1", 1000L)]
+	[Arguments("1.5", 1500L)]
+	[Arguments("-1.5", -1500L)]
+	[Arguments("1778518155.494", 1778518155494L)]
+	[Arguments("0.001", 1L)]
+	public async Task SecondsInputMayCarryAFraction(string input, long expectedMs)
+	{
+		await Assert.That(TimePrecisions.TryParseSeconds(input, out var ms)).IsTrue();
+		await Assert.That(ms).IsEqualTo(expectedMs);
+	}
+
+	[Test]
+	[Arguments("")]
+	[Arguments("abc")]
+	[Arguments("1e3")]
+	[Arguments("1,5")]
+	public async Task NonNumericSecondsAreRejected(string input)
+		=> await Assert.That(TimePrecisions.TryParseSeconds(input, out _)).IsFalse();
+
+	/// <summary>
+	/// A current-culture parse reads "1.5" as 15 under a comma decimal separator, which would make a
+	/// game's arithmetic depend on its host's locale.
+	/// </summary>
+	[Test]
+	public async Task SecondsInputIsCultureIndependent()
+	{
+		var original = CultureInfo.CurrentCulture;
+		try
+		{
+			CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+			await Assert.That(TimePrecisions.TryParseSeconds("1.5", out var ms)).IsTrue();
+			await Assert.That(ms).IsEqualTo(1500L);
+			await Assert.That(TimePrecisions.Format(1500L, TimePrecision.Fractional)).IsEqualTo("1.5");
+		}
+		finally
+		{
+			CultureInfo.CurrentCulture = original;
+		}
+	}
+
+	/// <summary>
+	/// Floor, not truncation, because <see cref="DateTimeOffset.ToUnixTimeSeconds"/> floors pre-epoch
+	/// instants — a second convention would make csecs() and convsecs() disagree about one moment.
+	/// </summary>
+	[Test]
+	[Arguments(1500L, 1L)]
+	[Arguments(-1500L, -2L)]
+	[Arguments(-1000L, -1L)]
+	[Arguments(0L, 0L)]
+	public async Task WholeSecondsFloor(long ms, long expected)
+		=> await Assert.That(TimePrecisions.ToWholeSeconds(ms)).IsEqualTo(expected);
+
+	/// <summary>
+	/// Fractional seconds drop trailing zeros like every other non-integer this server prints, so a
+	/// whole second has no decimal point at all.
+	/// </summary>
+	[Test]
+	[Arguments(1790565951000L, "1790565951")]
+	[Arguments(1790565951500L, "1790565951.5")]
+	[Arguments(1790565951050L, "1790565951.05")]
+	[Arguments(1790565951001L, "1790565951.001")]
+	public async Task FractionalTrimsTrailingZeros(long milliseconds, string expected)
+		=> await Assert.That(TimePrecisions.Format(milliseconds, TimePrecision.Fractional)).IsEqualTo(expected);
+
+	/// <summary>
+	/// The two parts are read back as one signed magnitude, so -1.5 splits as -1 and -500, not the
+	/// -2 and 500 that flooring would give. Both parts carry the sign — see
+	/// <see cref="ASubSecondNegativeKeepsItsSign"/> for why the remainder has to.
+	/// </summary>
+	[Test]
+	[Arguments("1.5", 1L, 500)]
+	[Arguments("-1.5", -1L, -500)]
+	[Arguments("-2", -2L, 0)]
+	[Arguments("0.999", 0L, 999)]
+	public async Task SecondsPartsTruncateTowardsZero(string input, long expectedSeconds, int expectedMs)
+	{
+		await Assert.That(TimePrecisions.TryParseSecondsParts(input, out var seconds, out var ms)).IsTrue();
+		await Assert.That(seconds).IsEqualTo(expectedSeconds);
+		await Assert.That(ms).IsEqualTo(expectedMs);
 	}
 }

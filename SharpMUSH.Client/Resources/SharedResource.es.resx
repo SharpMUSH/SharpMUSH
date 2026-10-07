@@ -5556,9 +5556,6 @@
   <data name="RolSceneNotPaused" xml:space="preserve">
     <value>La escena no se pausó.</value>
   </data>
-  <data name="RolScheduleNoRoom" xml:space="preserve">
-    <value>Aún sin sala</value>
-  </data>
   <data name="RolScheduleHostedBy" xml:space="preserve">
     <value>Organiza {0}</value>
   </data>
@@ -5750,5 +5747,47 @@
   </data>
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>El tema predeterminado del juego sigue el modo claro u oscuro de tu dispositivo.</value>
+  </data>
+  <data name="RolScheduleScene" xml:space="preserve">
+    <value>Programar una escena</value>
+  </data>
+  <data name="RolScheduleSceneHint" xml:space="preserve">
+    <value>La escena no tiene sala hasta que empieza: se juega donde esté su anfitrión al iniciarla.</value>
+  </data>
+  <data name="RolScheduleTimePast" xml:space="preserve">
+    <value>Elige una hora que aún no haya pasado.</value>
+  </data>
+  <data name="RolSceneNotScheduled" xml:space="preserve">
+    <value>La escena no se programó.</value>
+  </data>
+  <data name="RolSceneScheduledPartly" xml:space="preserve">
+    <value>La escena está en la agenda, pero no se guardó todo: {0} Edítala desde su página.</value>
+  </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Anfitrión</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Esta escena empieza el {0}. Su registro comienza entonces.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Esta escena aún no ha empezado. Su registro comienza cuando empiece.</value>
+  </data>
+  <data name="RolSceneScheduledUnidentified" xml:space="preserve">
+    <value>La escena está en la agenda, pero en el mismo momento se programó otra para ti, así que no se aplicaron su presentación ni su privacidad. Revisa ambas escenas en sus páginas.</value>
+  </data>
+  <data name="RolSceneAboutToggle" xml:space="preserve">
+    <value>Detalles y reparto</value>
+  </data>
+  <data name="RolScheduleLate" xml:space="preserve">
+    <value>Con retraso</value>
+  </data>
+  <data name="RolScheduleToday" xml:space="preserve">
+    <value>Hoy</value>
+  </data>
+  <data name="RolScheduleTomorrow" xml:space="preserve">
+    <value>Mañana</value>
+  </data>
+  <data name="RolScheduleCapped" xml:space="preserve">
+    <value>Se muestran las próximas {0} escenas.</value>
   </data>
 </root>

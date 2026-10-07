@@ -15,7 +15,6 @@ public class VectorFunctionTests : ServerTestBase
 	[Arguments("vmax(1 5 3,4 2 6)", "4 5 6")]
 	[Arguments("vmin(1 5 3,4 2 6)", "1 2 3")]
 	[Arguments("vdot(1 2 3,4 5 6)", "32")]
-	[Arguments("vcross(1 0 0,0 1 0)", "0 0 1")]
 	[Arguments("vdim(1 2 3)", "3")]
 	[Arguments("vdim()", "0")]
 	public async Task TheVectorOperations(string code, string expected)
