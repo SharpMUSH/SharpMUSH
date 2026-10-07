@@ -221,7 +221,7 @@ public class AccountStatusTests
 		db.GetAccountByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
 		db.GetAccountForCharacterAsync(Arg.Is<DBRef>(d => d.Number == 1), Arg.Any<CancellationToken>()).Returns(account);
 
-		await Assert.That((await svc.SetAccountStatusAsync(account.Id!, AccountStatus.Active)).Value).IsTypeOf<Success>();
+		(await svc.SetAccountStatusAsync(account.Id!, AccountStatus.Active)).Expect<Success>();
 		await db.Received(1).UpdateAccountStatusAsync(account.Id!, AccountStatus.Active, Arg.Any<CancellationToken>());
 	}
 
@@ -234,7 +234,7 @@ public class AccountStatusTests
 		db.GetAccountForCharacterAsync(Arg.Is<DBRef>(d => d.Number == 1), Arg.Any<CancellationToken>())
 			.Returns(new SharpAccount { Id = "node_accounts/2", Username = "Other", PasswordHash = "hash" });
 
-		await Assert.That((await svc.SetAccountStatusAsync(account.Id!, AccountStatus.Closed)).Value).IsTypeOf<Success>();
+		(await svc.SetAccountStatusAsync(account.Id!, AccountStatus.Closed)).Expect<Success>();
 	}
 
 	[Test]
