@@ -618,7 +618,6 @@ public class MyrddinBBSIntegrationTests
 		var collecting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current!.Execution.CancellationToken);
-		timeout.CancelAfter(TimeSpan.FromSeconds(10));
 		Task<IReadOnlyList<string>>? collection = null;
 		try
 		{
@@ -636,6 +635,12 @@ public class MyrddinBBSIntegrationTests
 				await Assert.That(timers).HasSingleItem();
 				await WaitForBbsQueueAsync();
 			}
+			// The gate must be the next entry the queue runs, and the queue runs one entry at a time. The
+			// install's moves raise ROOM`CONTENTS events, each building rows for every connected occupant of
+			// the installer's room; in the shared test world that is seconds apiece, and several back to back
+			// outlasted the ten seconds below before the gate ever started. The timeout is for the gate.
+			await scheduler.DrainImmediateQueueForTests(TimeSpan.FromSeconds(60));
+			timeout.CancelAfter(TimeSpan.FromSeconds(10));
 			var admission = await scheduler.AdmitWork(async () =>
 			{
 				entered.TrySetResult();
