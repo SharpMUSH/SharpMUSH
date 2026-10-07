@@ -1,4 +1,4 @@
-# Help
+# help
 This is the index to the MUSH online help files.
 
   For an explanation of the help system, type:    help [newbie]<br>

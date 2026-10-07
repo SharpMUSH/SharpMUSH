@@ -31,9 +31,9 @@ public class TextFunctionUnitTests
 	/// names come from the shipped help corpus; <c>strip*</c> names exactly two of them.
 	/// </summary>
 	[Test]
-	[Arguments("textentries(help,strip*)", "STRIPACCENTS() STRIPANSI()")]
-	[Arguments("textentries(help,strip*,|)", "STRIPACCENTS()|STRIPANSI()")]
-	[Arguments("textentries(help,strallof*)", "STRFIRSTOF()")]
+	[Arguments("textentries(help,strip*)", "stripaccents() stripansi()")]
+	[Arguments("textentries(help,strip*,|)", "stripaccents()|stripansi()")]
+	[Arguments("textentries(help,strallof*)", "strfirstof()")]
 	[Arguments("textentries(help,zzznosuchtopic*)", "")]
 	public async Task TextentriesFiltersByPattern(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
