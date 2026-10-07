@@ -22,8 +22,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class ConfigurationController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	IExpandedDataStore database,
-	ConfigurationReloadService configReloadService,
+	IConfigOptionWriter config,
 	MushCnfImportService mushCnf,
 	IAuditLog audit,
 	ILogger<ConfigurationController> logger)
@@ -73,24 +72,32 @@ public class ConfigurationController(
 				return BadRequest(new { errors = "No updates provided" });
 			}
 
-			var current = options.CurrentValue;
 			var corrections = new List<ConfigBoundCorrection>();
-			var updated = ApplyUpdates(current, updates, corrections, out var errors);
+			var errors = new Dictionary<string, string>();
+			string? refused = null;
+			var updated = await config.UpdateAsync(current =>
+			{
+				var changed = ApplyUpdates(current, updates, corrections, out errors);
+				if (errors.Count > 0)
+				{
+					return current;
+				}
+
+				var validationResult = new ValidateSharpOptions().Validate(null, changed);
+				refused = validationResult.Failed ? validationResult.FailureMessage : null;
+				return refused is null ? changed : current;
+			});
 
 			if (errors.Count > 0)
 			{
 				return BadRequest(new { errors = errors });
 			}
 
-			var validator = new ValidateSharpOptions();
-			var validationResult = validator.Validate(null, updated);
-			if (validationResult.Failed)
+			if (refused is not null)
 			{
-				return BadRequest(new { errors = new Dictionary<string, string> { ["_global"] = validationResult.FailureMessage } });
+				return BadRequest(new { errors = new Dictionary<string, string> { ["_global"] = refused } });
 			}
 
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updated);
-			configReloadService.SignalChange();
 			// Logged once stored: a correction in a refused update never took effect.
 			foreach (var correction in corrections)
 			{

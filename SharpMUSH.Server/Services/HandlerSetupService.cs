@@ -27,7 +27,7 @@ public class HandlerSetupService(
 	IPackageInstallService installer,
 	IBundledPackageBootstrap bundled,
 	IPackageManifestService manifests,
-	ConfigurationReloadService reload,
+	IConfigOptionWriter config,
 	ILogger<HandlerSetupService> logger)
 {
 	private static readonly string[] Kinds = [HandlerKinds.Http, HandlerKinds.Event];
@@ -243,14 +243,12 @@ public class HandlerSetupService(
 			removed.Add(id);
 		}
 
-		var settings = options.CurrentValue;
-		await mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions), settings with
+		await config.UpdateAsync(settings => settings with
 		{
 			Database = kind == HandlerKinds.Http
 				? settings.Database with { HttpHandler = target }
 				: settings.Database with { EventHandler = target }
-		}), cancellationToken);
-		reload.SignalChange();
+		});
 		logger.LogInformation("Setup wizard set the {Kind} handler to {Target}.", LogSanitizer.Sanitize(kind),
 			target is { } t ? $"#{t}" : "none");
 

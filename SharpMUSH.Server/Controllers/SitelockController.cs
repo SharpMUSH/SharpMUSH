@@ -17,28 +17,12 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class SitelockController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	IExpandedDataStore database,
-	ConfigurationReloadService configReloadService,
+	IConfigOptionWriter config,
 	IBanEnforcer banEnforcer,
 	IAuditLog audit,
 	ILogger<SitelockController> logger)
 	: ControllerBase
 {
-	/// <summary>
-	/// The freshest known <see cref="SharpMUSHOptions"/>: whatever is actually persisted in the
-	/// database, falling back to <see cref="options"/>'s in-memory snapshot only if nothing has
-	/// been persisted yet. Read-modify-write mutations (<see cref="AddSitelockRule"/>,
-	/// <see cref="DeleteSitelockRule"/>) must base their merge on this rather than on
-	/// <c>options.CurrentValue</c> alone: <c>IOptionsWrapper&lt;SharpMUSHOptions&gt;</c> re-reads
-	/// lazily off the reload change-token, and a rule persisted moments earlier by a *different*
-	/// mutation (e.g. via the in-game <c>@sitelock</c> command, or a prior request) could otherwise
-	/// be silently dropped by an overwrite based on a stale in-memory copy. Mirrors
-	/// <c>WizardCommands.CurrentPersistedOptionsAsync</c> (SharpMUSH.Implementation).
-	/// </summary>
-	private async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
-		=> await database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
-			?? options.CurrentValue;
-
 	[HttpGet]
 	public ActionResult<Dictionary<string, string[]>> GetSitelockRules()
 	{
@@ -69,19 +53,13 @@ public class SitelockController(
 				return BadRequest("At least one access rule is required");
 			}
 
-			var currentOptions = await CurrentPersistedOptionsAsync();
-			var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules)
+			await config.UpdateAsync(current => current with
 			{
-				[hostPattern] = accessRules
-			};
-
-			var updatedOptions = currentOptions with
-			{
-				SitelockRules = new SitelockRulesOptions(newRules)
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
+				SitelockRules = new SitelockRulesOptions(new Dictionary<string, string[]>(current.SitelockRules.Rules)
+				{
+					[hostPattern] = accessRules
+				})
+			});
 			await audit.RecordPortalAsync(User, AuditActions.SitelockAdd, AuditTargets.Of(AuditTargetKinds.Host, hostPattern),
 				string.Join(" ", accessRules));
 			await banEnforcer.EnforceHostRuleAsync(hostPattern);
@@ -101,21 +79,19 @@ public class SitelockController(
 	{
 		try
 		{
-			var currentOptions = await CurrentPersistedOptionsAsync();
-			var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules);
+			var removed = false;
+			await config.UpdateAsync(current =>
+			{
+				var rules = new Dictionary<string, string[]>(current.SitelockRules.Rules);
+				removed = rules.Remove(hostPattern);
+				return removed ? current with { SitelockRules = new SitelockRulesOptions(rules) } : current;
+			});
 
-			if (!newRules.Remove(hostPattern))
+			if (!removed)
 			{
 				return NotFound($"Sitelock rule for '{hostPattern}' not found");
 			}
 
-			var updatedOptions = currentOptions with
-			{
-				SitelockRules = new SitelockRulesOptions(newRules)
-			};
-
-			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-			configReloadService.SignalChange();
 			await audit.RecordPortalAsync(User, AuditActions.SitelockRemove, AuditTargets.Of(AuditTargetKinds.Host, hostPattern));
 
 			logger.LogInformation("Deleted sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));

@@ -23,8 +23,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class MsspController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	IExpandedDataStore database,
-	ConfigurationReloadService configReloadService,
+	IConfigOptionWriter config,
 	IMsspReportService report,
 	IAuditLog audit)
 	: ControllerBase
@@ -53,12 +52,7 @@ public class MsspController(
 			return BadRequest(new { error = string.Join(" ", problems) });
 		}
 
-		// The persisted copy rather than options.CurrentValue, as SitelockController does: another
-		// change saved a moment ago must not be overwritten with a stale snapshot.
-		var current = await database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
-			?? options.CurrentValue;
-		await database.SetExpandedServerData(nameof(SharpMUSHOptions), current with { Mssp = new MsspOptions(settings) });
-		configReloadService.SignalChange();
+		await config.UpdateAsync(current => current with { Mssp = new MsspOptions(settings) });
 		await audit.RecordPortalAsync(User, AuditActions.ConfigSet, AuditTargets.Of(AuditTargetKinds.Setting, "mssp"),
 			JsonSerializer.Serialize(settings));
 

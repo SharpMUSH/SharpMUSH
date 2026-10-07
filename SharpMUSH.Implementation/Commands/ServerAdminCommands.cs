@@ -633,21 +633,18 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var current = await CurrentPersistedOptionsAsync();
-		var restrictions = current.Restriction.CommandRestrictions
-			.Where(entry => !entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
-			.ToDictionary(entry => entry.Key, entry => entry.Value);
-		restrictions[name] = [restriction];
-
-		await ObjectDataService.SetExpandedServerDataAsync(current with
+		var updated = await ConfigWriter.UpdateAsync(current =>
 		{
-			Restriction = current.Restriction with { CommandRestrictions = restrictions }
+			var restrictions = current.Restriction.CommandRestrictions
+				.Where(entry => !entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+				.ToDictionary(entry => entry.Key, entry => entry.Value);
+			restrictions[name] = [restriction];
+			return current with { Restriction = current.Restriction with { CommandRestrictions = restrictions } };
 		});
-		ConfigReloadService.SignalChange();
 		// The reload reapplies the setting only when it changed. Applied here as well, because
 		// restrict_command replaces the command's restriction even when the line is one already set,
 		// and because the reload's own pass is not awaited.
-		await ApplyConfiguredRestrictionsAsync(restrictions);
+		await ApplyConfiguredRestrictionsAsync(updated.Restriction.CommandRestrictions);
 
 		return await ConfigSetAsync(executor, "restrict_command", text, save);
 	}

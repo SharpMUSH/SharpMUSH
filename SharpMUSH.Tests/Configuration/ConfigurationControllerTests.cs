@@ -9,6 +9,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Tests.Server;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -25,8 +26,9 @@ public class ConfigurationControllerTests
 		var store = Substitute.For<IExpandedDataStore>();
 		var reload = new ConfigurationReloadService();
 
-		return (new ConfigurationController(options, store, reload,
-			new MushCnfImportService(options, store, reload, NullLogger<MushCnfImportService>.Instance),
+		var config = StoreConfigOptionWriter.Create(store, options, reload);
+		return (new ConfigurationController(options, config,
+			new MushCnfImportService(config, store, NullLogger<MushCnfImportService>.Instance),
 			Substitute.For<IAuditLog>(), NullLogger<ConfigurationController>.Instance), store, reload);
 	}
 

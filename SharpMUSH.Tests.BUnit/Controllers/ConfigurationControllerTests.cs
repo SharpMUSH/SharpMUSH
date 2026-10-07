@@ -10,6 +10,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Controllers;
 
@@ -25,8 +26,9 @@ public class ConfigurationControllerTests
 		var database = Substitute.For<ISharpDatabase>();
 		var reloadService = new ConfigurationReloadService();
 		var logger = Substitute.For<ILogger<ConfigurationController>>();
-		return new ConfigurationController(wrapper, database, reloadService,
-			new MushCnfImportService(wrapper, database, reloadService, NullLogger<MushCnfImportService>.Instance), Substitute.For<IAuditLog>(), logger);
+		var config = StoreConfigOptionWriter.Create(database, wrapper, reloadService);
+		return new ConfigurationController(wrapper, config,
+			new MushCnfImportService(config, database, NullLogger<MushCnfImportService>.Instance), Substitute.For<IAuditLog>(), logger);
 	}
 
 	[TUnit.Core.Test]
@@ -227,10 +229,10 @@ public class ConfigurationControllerTests
 		var database = Substitute.For<ISharpDatabase>();
 		var wrapper = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		wrapper.CurrentValue.Returns(CreateDefaultOptions());
+		var config = StoreConfigOptionWriter.Create(database, wrapper, new ConfigurationReloadService());
 		var controller = new ConfigurationController(
-			wrapper, database, new ConfigurationReloadService(),
-			new MushCnfImportService(wrapper, database, new ConfigurationReloadService(),
-				NullLogger<MushCnfImportService>.Instance),
+			wrapper, config,
+			new MushCnfImportService(config, database, NullLogger<MushCnfImportService>.Instance),
 			Substitute.For<IAuditLog>(),
 			Substitute.For<ILogger<ConfigurationController>>());
 
