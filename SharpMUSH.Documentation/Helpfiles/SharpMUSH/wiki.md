@@ -10,6 +10,36 @@
   ],
   "sections": [
     {
+      "id": "viewing-and-discovery",
+      "heading": "Viewing and discovery",
+      "lookup": "wiki viewing and discovery"
+    },
+    {
+      "id": "reading-source",
+      "heading": "Reading source",
+      "lookup": "wiki reading source"
+    },
+    {
+      "id": "reading-drafts",
+      "heading": "Reading drafts",
+      "lookup": "wiki reading drafts"
+    },
+    {
+      "id": "locale-selection",
+      "heading": "Translations and locales",
+      "lookup": "wiki locale selection"
+    },
+    {
+      "id": "linking",
+      "heading": "Linking pages",
+      "lookup": "wiki links"
+    },
+    {
+      "id": "authoring-commands",
+      "heading": "Authoring commands",
+      "lookup": "wiki authoring commands"
+    },
+    {
       "id": "editing",
       "heading": "Editing wiki pages",
       "lookup": "wiki editing",
@@ -21,6 +51,16 @@
         "@WIKI/ROLLBACK",
         "@WIKI/TRANSLATE"
       ]
+    },
+    {
+      "id": "example",
+      "heading": "Example",
+      "lookup": "wiki example"
+    },
+    {
+      "id": "administration-commands",
+      "heading": "Administration commands",
+      "lookup": "wiki administration commands"
     },
     {
       "id": "administration",
@@ -54,41 +94,6 @@
         "WIKI-CATEGORIES",
         "@WIKI/CATEGORY"
       ]
-    },
-    {
-      "id": "viewing-and-discovery",
-      "heading": "Viewing and discovery",
-      "lookup": "wiki viewing and discovery"
-    },
-    {
-      "id": "authoring-commands",
-      "heading": "Authoring commands",
-      "lookup": "wiki authoring commands"
-    },
-    {
-      "id": "administration-commands",
-      "heading": "Administration commands",
-      "lookup": "wiki administration commands"
-    },
-    {
-      "id": "reading-source",
-      "heading": "Reading source",
-      "lookup": "wiki reading source"
-    },
-    {
-      "id": "reading-drafts",
-      "heading": "Reading drafts",
-      "lookup": "wiki reading drafts"
-    },
-    {
-      "id": "locale-selection",
-      "heading": "Locale selection",
-      "lookup": "wiki locale selection"
-    },
-    {
-      "id": "example",
-      "heading": "Example",
-      "lookup": "wiki example"
     }
   ],
   "redirects": {}
@@ -109,92 +114,53 @@ the main namespace. Valid namespaces: main, help, character, system, category.
 A page is identified by its namespace and title alone; categories are labels
 it carries (see [wiki categories]).
 
+The `/noeval` switch may be combined with any `@wiki` switch to suppress
+softcode evaluation of the arguments.
+
+Page content is Markdown; see [rendermarkdown supported markdown features], or
+the wiki's own "Help:Markdown Guide" page (`@wiki help:markdown_guide`). Live listing blocks
+(`::: category ...`) render on the web portal and appear in-game as a
+placeholder.
+
+The rest of this topic:
+
+- [wiki viewing and discovery] - reading, listing and searching pages
+- [wiki reading source] - a page's Markdown, exactly as stored
+- [wiki reading drafts] - unpublished pages and who may read them
+- [wiki locale selection] - translations, your locale, and the `/source`, `/md` and `/draft` modifiers
+- [wiki links] - linking one page to another
+- [wiki authoring commands] and [wiki editing] - creating, editing and translating pages
+- [wiki example] - a short session
+- [wiki administration commands] and [wiki administration] - deleting, protecting, publishing, history
+- [wiki permissions] - what a namespace, category or page requires
+- [wiki categories] - filing pages in categories
+
+::: seealso
+- [wiki editing]
+- [wiki administration]
+- [wiki categories]
+- [wiki permissions]
+- [WIKI()]
+:::
+
+## Viewing and discovery
+
+- `@wiki <page>` or `@wiki/view <page>` - display a page
+- `@wiki/list [<namespace>]` - list pages
+- `@wiki/category <name>` - list the pages and subcategories in a category
+- `@wiki/search <text>` - find pages by title or content, in any locale
+- `@wiki/search/source <text>` - match source text only
+- `@wiki/recent [<count>]` - recently edited pages (default 10)
+- `@wiki/history <page>` - revision history
+- `@wiki/md <page>` - show the page's markdown source instead of the rendered body
+- `@wiki/view/draft <page>` - also render the page if it is a draft (see [wiki reading drafts])
+
 Listings (`@wiki/list`, `@wiki/search`, `@wiki/recent`) print every page's
 identifier fully qualified as `<namespace>:<slug>`; `home` in the main
 namespace lists as `main:home`. One column, one grammar, and the identifier
 printed is always one you can paste straight back into `@wiki`. Typing a
 target is unchanged: the short form still works, so `@wiki home` and
 `@wiki main:home` reach the same page.
-
-## Viewing and discovery
-* `@wiki <page>` or `@wiki/view <page>` - display a page
-* `@wiki/list [<namespace>]` - list pages
-* `@wiki/category <name>` - list the pages and subcategories in a category
-* `@wiki/category <page>=<names>` - set a page's categories (comma-separated)
-* `@wiki/search <text>` - find pages by title or content, in any locale
-* `@wiki/recent [<count>]` - recently edited pages (default 10)
-* `@wiki/history <page>` - revision history
-* `@wiki/md <page>` - show the page's markdown source instead of the rendered
-body
-* `@wiki/view/draft <page>` - also render the page if it is a draft (`wiki.drafts`, or its author)
-
-## Authoring commands
-* `@wiki/create <title>=<markdown>` - create a page
-* `@wiki/edit <page>=<markdown>` - replace a page's content
-* `@wiki/append <page>=<markdown>` - add a paragraph to a page
-* `@wiki/rollback <page>=<revision #>` - restore an earlier revision
-* `@wiki/translate <page>/<lang>=<markdown>` - write one locale's translation
-
-## Administration commands
-* `@wiki/delete <page>` - delete a page (`wiki.delete`)
-* `@wiki/protect <page>`, `@wiki/unprotect <page>` - require `wiki.admin` to edit and delete the page, or stop requiring it (`wiki.admin`)
-* `@wiki/publish <page>`, `@wiki/unpublish <page>` - publish or mark as draft (`wiki.admin`)
-* `@wiki/require <target>=<action> <permission>...` - what a namespace, category or page requires (`wiki.admin`)
-* `@wiki/access <target>[=<player>]` - show what a target requires, or what a player may do with a page
-
-The `/noeval` switch may be combined with any of the above to suppress
-softcode evaluation of the arguments.
-
-## Reading source
-`@wiki/md <page>` prints the markdown a page is stored with, exactly as stored -
-nothing is rendered, reflowed or wrapped, and the page's own `[`, `%` and `$`
-reach you as text. That is the copy you edit: read it with `/md`, change it, and
-put it back with `@wiki/edit <page>=<markdown>`. `@wiki/view/source/md <page>`
-gives a translator the source locale's markdown to work from before writing
-`@wiki/translate`. The softcode equivalent is `wiki(<page>, markdown)`.
-
-## Reading drafts
-An unpublished page is a draft, and `@wiki` does not render a draft's body or
-its revision history to anybody by default. You are told the page is a draft
-rather than told it does not exist; the header still names it and marks it
-`(draft)`.
-
-* `@wiki/view/draft <page>` - render the draft's body as well
-* `@wiki/history/draft <page>` - list the draft's revisions as well
-
-`/draft` is an opt-in, not a permission: only the draft's author and holders of
-`wiki.drafts` can read a draft, and for everybody else the answer is exactly the same with the switch as without
-it, so `/draft` can never be used to find out whether a draft exists. The same
-rule covers an unpublished *translation*: you get the published version in
-whatever language the page does have, not a withheld French draft.
-
-## Locale selection
-@wiki reads pages in your locale, the one you set with `@locale`. When a page
-has no translation in your locale you get the fallback version, and its locale
-appears in brackets next to the revision number on the header line.
-
-* `@wiki/view/source <page>` - read the page in the locale it was written in,
-ignoring yours. Useful when translating.
-* `@wiki/history <page>` shows your locale's revision stream, which is numbered
-separately from the source's; `@wiki/history/source <page>` shows the source
-locale's.
-* `@wiki/translate <page>/<lang>=<markdown>` - write the `<lang>` translation.
-See [wiki editing].
-
-Like `/noeval`, `/source` and `/md`, `/draft` is a modifier rather than an
-action, so it combines with `/view` and `/history` instead of replacing them
-(`/draft` has no effect on `/search`, which already includes drafts for anyone
-who can see them; `/md` has none on `/history` or the listings).
-
-The modifiers are orthogonal and stack: `/source` chooses the locale, `/md`
-chooses raw over rendered, `/draft` decides whether an unpublished body is shown
-at all. `/md` grants nothing - a draft still needs `/draft` and still needs
-`wiki.drafts`, so asking for a draft's source is still asking for a draft.
-
-Your `LOCALE` decides what you *read*. It never decides what you *write*:
-`@wiki/translate` takes the language in the command and refuses to run without
-it. Getting a read wrong shows you the wrong translation, which you can see and
-undo; getting a write wrong files your English under French, which you cannot.
 
 `@wiki/search` matches every locale a page has been translated into, not just
 the one it was written in, so you find a page by whatever wording you remember.
@@ -203,39 +169,108 @@ that matched was not the page's own source locale, that locale appears in
 brackets after the line, and if several locales matched, yours is the one
 shown. `@wiki/search/source <text>` matches source text only.
 
-Drafts stay out of the way: unpublished pages and unpublished translations are
-shown only to their author and to holders of `wiki.drafts`; for everybody else
-`@wiki/list`, `@wiki/search` and `@wiki/recent` omit them, and `wiki()`,
-`wikilist()`, `wikisearch()` and `wikirecent()` never return them to anybody.
-`@wiki/list`'s totals count only what you are allowed to see, so the count does
-not give a draft away either. Being able to *edit* a page is not enough: that is
-`wiki.edit`, and seeing other people's drafts is `wiki.drafts`.
+Not every page is listed for everybody. Drafts are left out for anyone who may
+not read them (see [wiki reading drafts]). A page you may not read because its
+namespace, a category it is in, or the page itself requires a permission you
+lack (see [wiki permissions]) is left out of every listing and answers as a
+page that does not exist.
 
-The same goes for a page you may not read because its namespace, a category it
-is in, or the page itself requires a permission you lack (see
-[wiki permissions]): it is left out of every listing and answers as a page that
-does not exist.
+::: seealso
+- [WIKILIST()]
+- [WIKISEARCH()]
+- [WIKIRECENT()]
+:::
 
-Even a `wiki.drafts` holder reads a draft's body or history only by adding `/DRAFT`; see
-[wiki]. A page that is itself unpublished stays withheld however its
-individual translations are flagged, so publishing one language does not
-publish the article.
+## Reading source
+
+`@wiki/md <page>` prints the markdown a page is stored with, exactly as stored -
+nothing is rendered, reflowed or wrapped, and the page's own `[`, `%` and `$`
+reach you as text. That is the copy you edit: read it with `/md`, change it, and
+put it back with `@wiki/edit <page>=<markdown>`. `@wiki/view/source/md <page>`
+gives a translator the source locale's markdown to work from before writing
+`@wiki/translate`. The softcode equivalent is `wiki(<page>, markdown)`.
+
+`/md` grants nothing: a draft still needs `/draft` and still needs
+`wiki.drafts`, so asking for a draft's source is still asking for a draft.
+
+## Reading drafts
+
+- `@wiki/view/draft <page>` - render the draft's body as well
+- `@wiki/history/draft <page>` - list the draft's revisions as well
+
+An unpublished page is a draft, and `@wiki` does not render a draft's body or
+its revision history to anybody by default. You are told the page is a draft
+rather than told it does not exist; the header still names it and marks it
+`(draft)`.
+
+`/draft` is an opt-in, not a permission: only the draft's author and holders of
+`wiki.drafts` can read a draft, and for everybody else the answer is exactly the same with the switch as without
+it, so `/draft` can never be used to find out whether a draft exists. Even a
+`wiki.drafts` holder reads a draft's body or history only by adding `/draft`.
+Being able to *edit* a page is not enough: that is `wiki.edit`, and seeing
+other people's drafts is `wiki.drafts`.
+
+The same rule covers an unpublished *translation*: you get the published
+version in whatever language the page does have, not a withheld French draft.
+A page that is itself unpublished stays withheld however its individual
+translations are flagged, so publishing one language does not publish the
+article.
+
+### Drafts in listings
+
+Unpublished pages and unpublished translations are shown only to their author
+and to holders of `wiki.drafts`; for everybody else `@wiki/list`,
+`@wiki/search` and `@wiki/recent` omit them, and `wiki()`, `wikilist()`,
+`wikisearch()` and `wikirecent()` never return them to anybody. `@wiki/list`'s
+totals count only what you are allowed to see, so the count does not give a
+draft away either. `/draft` has no effect on `/search`, which already includes
+drafts for anyone who can see them.
 
 That keeps a draft's title, text and existence out of discovery. It is still not
 a secret store: asking for a page by name tells you whether one is there. Put
 nothing in a draft that the people who can guess its name should not know exists.
 
-Page content is Markdown; see `help markdown` or the wiki's own
-"Help:Markdown Guide" page (`@wiki help:markdown_guide`) for the supported
-syntax. Live listing blocks (`::: category ...`) render on the web portal and
-appear in-game as a placeholder.
+On the web portal, drafts are hidden from anonymous visitors and from the
+sitemap. To publish or unpublish a page, see [wiki administration].
 
-Linking to other pages:
+## Translations and locales
+
+- `@wiki/view/source <page>` - read the page in the locale it was written in, ignoring yours; useful when translating
+- `@wiki/history <page>` - your locale's revision stream, numbered separately from the source's
+- `@wiki/history/source <page>` - the source locale's revision stream
+- `@wiki/translate <page>/<lang>=<markdown>` - write the `<lang>` translation (see [wiki editing])
+
+@wiki reads pages in your locale, the one you set with `@locale` (see
+[@locale]). When a page has no translation in your locale you get the fallback
+version, and its locale appears in brackets next to the revision number on the
+header line.
+
+Your `LOCALE` decides what you *read*. It never decides what you *write*:
+`@wiki/translate` takes the language in the command and refuses to run without
+it. Getting a read wrong shows you the wrong translation, which you can see and
+undo; getting a write wrong files your English under French, which you cannot.
+
+### Modifiers
+
+`/noeval`, `/source`, `/md` and `/draft` are modifiers rather than actions, so
+they combine with `/view` and `/history` instead of replacing them. They are
+orthogonal and stack:
+
+- `/source` chooses the locale
+- `/md` chooses raw over rendered (it has no effect on `/history` or the listings)
+- `/draft` decides whether an unpublished body is shown at all (it has no effect on `/search`)
+
+## Linking pages
+
+- `[[Page Name]]`
+- `[[Display text|Page Name]]`
+
 Inside a page's Markdown, `[[Page Name]]` links to another wiki page. The
 target takes the same forms `@wiki` does, so `[[Home]]` and
-`[[Help:Markdown Guide]]` reach the pages you would reach by typing them. `[[Display text|Page Name]]` links with
-wording of your own; without it the page's title is shown. Only the display
-text appears - the brackets and the target never do.
+`[[Help:Markdown Guide]]` reach the pages you would reach by typing them.
+`[[Display text|Page Name]]` links with wording of your own; without it the
+page's title is shown. Only the display text appears - the brackets and the
+target never do.
 
 On the web portal that is an ordinary link. In-game, `@wiki` renders it as a
 clickable command link that runs `@wiki <namespace>:<slug>` for the
@@ -249,13 +284,25 @@ attached to it - softcode that renders a page is free to present its links
 however it likes, and `@wiki` is the only surface that already knows how to
 follow one.
 
+`[[Category:Lore]]` is an ordinary link to a category's page; it does not file
+the page in that category (see [wiki categories]).
+
 ::: seealso
-- [wiki editing]
-- [wiki administration]
-- [wiki categories]
-- [wiki permissions]
 - [WIKI()]
+- [RENDERMARKDOWN()]
+- [RENDERMARKDOWNCUSTOM()]
 :::
+
+## Authoring commands
+
+- `@wiki/create <title>=<markdown>` - create a page
+- `@wiki/edit <page>=<markdown>` - replace a page's content
+- `@wiki/append <page>=<markdown>` - add a paragraph to a page
+- `@wiki/rollback <page>=<revision #>` - restore an earlier revision
+- `@wiki/translate <page>/<lang>=<markdown>` - write one locale's translation
+- `@wiki/category <page>=<names>` - set a page's categories (comma-separated; see [wiki categories])
+
+Each is described in [wiki editing].
 
 ## Editing wiki pages
 
@@ -264,6 +311,13 @@ follow one.
 - `@wiki/append <page>=<markdown>`
 - `@wiki/rollback <page>=<revision #>`
 - `@wiki/translate <page>/<lang>=<markdown>`
+
+Creating a page needs `wiki.create`, and editing one `wiki.edit`, along with
+whatever the page's namespace, categories and the page itself require (see
+[wiki permissions]); translations count as edits. Each page records its author
+and last editor by dbref.
+
+### Creating and editing
 
 @wiki/create makes a new wiki page. The title may carry a namespace prefix
 (`@wiki/create Help:House Rules=# House Rules`); the page's URL slug is
@@ -274,11 +328,18 @@ Markdown as a new paragraph at the end, handy for building up a page from a
 telnet client one block at a time. Every edit records a revision; see
 [wiki administration].
 
+To change a page's existing text, read its source with `@wiki/md` first (see
+[wiki reading source]).
+
+### Rolling back
+
 @wiki/rollback restores the page body from an earlier revision (find the
-number with [wiki administration]). The restore is a normal edit: it creates a NEW
+number with `@wiki/history`; see [wiki administration]). The restore is a normal edit: it creates a NEW
 revision rather than rewriting history, so a rollback can itself be rolled
 back. The web portal offers the same action via the Restore button in each
 page's history dialog.
+
+### Translating
 
 @wiki/translate writes one locale's translation of a page: the same rows the
 web portal's language selector edits. The language is part of the target,
@@ -299,10 +360,11 @@ sending the command, you are told so and *nothing is written*; re-read the
 page and re-apply your text. The command never retries by itself, because a
 retry would put your older text on top of theirs.
 
-Creating a page needs `wiki.create`, and editing one `wiki.edit`, along with
-whatever the page's namespace, categories and the page itself require (see
-[wiki permissions]); translations count as edits. Each page records its author
-and last editor by dbref.
+::: seealso
+- [wiki]
+- [wiki administration]
+- [wiki locale selection]
+:::
 
 ## Example
 
@@ -318,9 +380,19 @@ WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<t
 ```
 
 ::: seealso
-- [wiki]
-- [wiki administration]
+- [wiki editing]
 :::
+
+## Administration commands
+
+- `@wiki/delete <page>` - delete a page (`wiki.delete`)
+- `@wiki/protect <page>`, `@wiki/unprotect <page>` - require `wiki.admin` to edit and delete the page, or stop requiring it (`wiki.admin`)
+- `@wiki/publish <page>`, `@wiki/unpublish <page>` - publish or mark as draft (`wiki.admin`)
+- `@wiki/require <target>=<action> <permission>...` - what a namespace, category or page requires (`wiki.admin`)
+- `@wiki/access <target>[=<player>]` - show what a target requires, or what a player may do with a page
+
+The first three are described in [wiki administration], the last two in
+[wiki permissions].
 
 ## Wiki administration
 
@@ -336,7 +408,9 @@ its entire revision history. Protecting a page is a page requirement of
 shows in `@wiki/access` and is cleared by `@wiki/unprotect`. Unpublished pages
 are drafts: hidden from anonymous web visitors and from the sitemap, and
 in-game their body and revision history are shown only to their author or a
-`wiki.drafts` holder who asks for them with `/draft`. See [wiki].
+`wiki.drafts` holder who asks for them with `/draft`. See [wiki reading drafts].
+
+### Revision history
 
 @wiki/history lists every revision with its editor, date, and edit summary, for
 the revision stream of your own locale. Each locale is numbered independently
@@ -364,6 +438,19 @@ category or a single page can require more, as MediaWiki's namespace and page
 protections do. A target is `namespace <name>`, `category <name>`, or a page
 title as `@wiki` takes it.
 
+The wiki's own permissions:
+
+| Permission | Lets you |
+|---|---|
+| `wiki.read` | read pages |
+| `wiki.create` | create pages |
+| `wiki.edit` | edit and translate pages |
+| `wiki.delete` | delete pages |
+| `wiki.drafts` | read other people's drafts (see [wiki reading drafts]) |
+| `wiki.admin` | protect, publish and set requirements; skips namespace, category and page requirements |
+
+### How requirements combine
+
 A page requires everything its namespace, each of its categories and the page
 itself require, for the action and for reading it; deleting also requires what
 editing does. Requirements only add: no level lifts what another requires. A
@@ -371,24 +458,26 @@ player needs every permission listed, and a permission comes from their roles,
 like any other (see [roles]). `wiki.admin` skips namespace, category and page
 requirements, though not the four global permissions.
 
-`@wiki/require` replaces what the actions it names require and leaves the rest
-alone; an action with no permissions after it requires nothing again. The
-permissions must be built-in or defined with `@role/define`. It needs
-`wiki.admin`.
-
 Filing a page in a category is an edit under its current categories and under
 the new ones, so a category that requires `lore.edit` to edit can only gain
 pages from someone holding it. Creating a page needs what its namespace
 requires to create it and what the categories it starts in require.
+
+New games start with the system namespace requiring `wiki.admin` to create,
+edit and delete its pages.
+
+### Setting and checking requirements
+
+`@wiki/require` replaces what the actions it names require and leaves the rest
+alone; an action with no permissions after it requires nothing again. The
+permissions must be built-in or defined with `@permission/define` (see
+[@permission define]). It needs `wiki.admin`.
 
 `@wiki/access <target>` lists what a target requires; for a page, also what it
 inherits. `@wiki/access <page>=<player>` says, action by action, whether that
 player may act on the page and which requirement stops them. Asking about
 anyone but yourself needs `wiki.admin`. A page you may not read answers as one
 that does not exist.
-
-New games start with the system namespace requiring `wiki.admin` to create,
-edit and delete its pages.
 
 ```sharp
 > @wiki/require category lore=edit lore.edit, read
@@ -407,6 +496,7 @@ From softcode, `wikiaccess(<page>, <action>[, <player>])` returns 1 or 0.
 - [wiki administration]
 - [WIKIACCESS()]
 - [roles]
+- [@permission]
 :::
 
 ## Wiki categories
@@ -423,6 +513,8 @@ comma-separated list, and `@wiki/category <page>=` takes it out of all of them.
 It is an edit: the page's requirements apply, and so do the new categories'
 (see [wiki permissions]). It does not change the text, so it adds no revision.
 
+### Category pages
+
 Each category has a page of its own, `Category:Lore`, in the category
 namespace. Filing a page in a category that has no page yet makes one, titled
 with the name exactly as you typed it, so `Places of Note` keeps its capitals
@@ -437,6 +529,8 @@ is translated. The name shown is the title of the category's page, so giving
 `Category:Lore` a French translation in the portal shows French readers its
 French title wherever the category appears. A category with no page is shown
 by its key, with a capital first letter.
+
+### Listing a category
 
 `@wiki/category <name>` lists a category's subcategories and pages. Category
 names are matched as titles are: case and spaces versus underscores do not
@@ -459,4 +553,5 @@ dash and `1 page(s), 0 subcategory(ies):`, then one line per member:
 ::: seealso
 - [wiki]
 - [wiki editing]
+- [WIKICATEGORY()]
 :::

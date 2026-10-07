@@ -42,71 +42,87 @@
 -->
 # Object snapshots
 
-Object snapshots recover mistakes on a room, exit or code object without restoring the
-world. The active player needs snapshots.capture to capture and snapshots.restore
-to preview/restore. Either scope permits listing. The player must control the object. All operations recheck the linked account
-and current capabilities. Another owned object cannot borrow the player's delegation.
-Snapshots are visible to their creating account while the current character can still
-read their attributes and locks. Ownership changes and role revocation apply immediately.
+An object snapshot saves a room, exit or code object's attributes, and optionally its locks, flags and name, so a mistake on that one object can be undone without restoring the whole world. Players cannot be snapshotted.
+
+| Permission | Allows |
+| --- | --- |
+| `snapshots.capture` | capturing, and listing |
+| `snapshots.restore` | previewing and restoring, and listing |
+
+Capture does not imply restore. You must also control the object, and the permission must be held by the account linked to the player you are playing: an object you own cannot borrow it. Every operation checks the account and its permissions again, so a change of ownership or a revoked role applies at once.
+
+A snapshot is visible to the account that took it, for as long as the character using it can still read the attributes and locks it holds.
 
 ## Commands
-```sharp
 
-    @snapshot/capture object=description
-    @snapshot/list object
-    @snapshot/preview object=snapshot-id
-    @snapshot/restore object=snapshot-id,preview-token
-    @snapshot/resolve object=pending-recovery-id
-```
+- `@snapshot/capture <object>=<description>` - take a snapshot
+- `@snapshot/list <object>` - list the object's snapshots, and any pending recovery
+- `@snapshot/preview <object>=<snapshot-id>` - show what a restore would change, with a preview token
+- `@snapshot/restore <object>=<snapshot-id>,<preview-token>` - restore what the preview showed
+- `@snapshot/resolve <object>=<pending-recovery-id>` - keep the object as it is after an interrupted restore
+
+The portal's Object snapshots page does the same.
+
+Output: the message `@snapshot` shows, such as `Captured snapshot <id>`, the list, or the preview and its token.
 
 ## Preview and restore selection
 
-Add /locks, /flags or /name to preview and restore to include those fields. Use identical
-switches for preview and restore. The basic operation restores the captured attributes
-and their flags. Attributes created afterward, locks not present in the snapshot, and
-structural relationships are retained. The portal's Object snapshots page also lets you
-select individual attribute names before previewing. A changed target or selection
-invalidates the preview; inspect a fresh preview before trying again.
+By default a preview and restore cover the captured attributes and their attribute flags. Add switches to include more:
+
+- `/locks` - the object's locks
+- `/flags` - the object's flags
+- `/name` - the object's name
+
+Give the restore exactly the switches you gave the preview. On the portal you can also pick individual attributes before previewing.
+
+A restore leaves alone attributes created after the snapshot, locks the snapshot does not hold, and where the object sits in the world. If the object or the selection changes after the preview, its token is no longer accepted: preview again and check the new result.
 
 ## Captured data
 
-Capture records markup, attribute flags, ancestor access metadata and creator identities, locks and their flags,
-object flags, name, full object identity, type, creator, time, description, schema and
-retention policy. Credentials and account relationships are excluded by rejecting player
-objects. Object owner, location, home, parent, zone, powers, quota and currency are never
-restored. Attribute creator identities validate historical read access; ordinary attribute
-writes determine ownership when restoring. Privileged or locked locks require their normal
-administrative workflow. Normal attribute and object flag restrictions still apply.
+A snapshot records:
+
+- each attribute's value with its markup, its flags, and who created it;
+- the object's locks and their flags;
+- the object's flags, name, type, full identity and creator;
+- when it was taken, its description, and its format version.
+
+A restore never touches the owner, location, home, parent, zone, powers, quota or money. Restored attributes are written as ordinary attribute writes, so the restoring character's normal rights decide their owner, and normal attribute and flag restrictions apply. A privileged or locked lock still needs its usual administrative command.
 
 ## Retention limits
 
-Histories retain 1-20 snapshots per object (10 by default), with an additional pending
-recovery image protected from pruning. Each image is limited to 1024 readable attributes
-and 2 MiB. Histories use the existing database expanded-object store; they survive restarts
-and travel in provider world backups. No external file directory needs copying.
+| Limit | Value |
+| --- | --- |
+| Snapshots kept per object | 1-20 (10 by default) |
+| Attributes per snapshot | 1024 readable attributes |
+| Size of one snapshot | 2 MiB |
+
+A pending recovery snapshot is kept on top of these and is never pruned. Snapshots live in the world database: they survive restarts and travel in world backups, with no separate files to copy.
 
 ## Recovery
 
-Restore is a sequence of cache-invalidating Mediator mutations, not a cross-command
-transaction. Before the first change, a durable before-image and pending recovery marker
-are stored. If a mutation, cancellation or process failure interrupts restoration, the
-marker identifies the recovery image. Preview and restore that image before another
-restore. Recovery uses exactly the fields selected by the interrupted operation and explicitly
-removes attributes or locks that operation created. Default recovery selections include only
-the interrupted operation's attributes and locks, preserving unrelated later edits. The portal fixes the fields and switches to the recorded recovery selection; game commands require the original switches. Correct any newly applied SAFE/privileged restrictions through their normal
-commands first. Storage failure while clearing the marker is also reported as requiring
-recovery. If the original account can no longer recover (for example after ownership or
-account changes), a current controller with snapshots.restore can explicitly acknowledge
-the current object using /resolve and the exact pending recovery ID, or the portal's
-Acknowledge current state action. This clears the marker without undoing partial changes,
-retains the image, and records the resolving account, character and time.
+A restore changes the object one write at a time; it is not one all-or-nothing step. Before the first change it saves the object as it was (a recovery snapshot) and marks the object as having a pending recovery.
 
-Writes through this service are serialized within the single engine; other
-commands can still change an object, so avoid concurrent editing during restore.
+### After an interrupted restore
+
+If a restore is cancelled or fails part way, `@snapshot/list` shows the pending recovery. Preview and restore that recovery snapshot before any other restore. It covers exactly the fields the interrupted restore selected, and removes attributes or locks that restore created; by default it selects only the interrupted restore's attributes and locks, so unrelated later edits are kept. The portal fixes the fields and switches to match; in the game, give the original switches yourself.
+
+If a SAFE flag or another restriction was applied in between, clear it with its usual command first. A failure to clear the pending marker after a successful restore is reported as needing recovery too.
+
+### Keeping the current state
+
+When the original account can no longer recover the object, for example after the object or the account changed hands, anyone who controls the object and holds `snapshots.restore` can accept it as it is with `@snapshot/resolve` and the exact pending recovery ID, or the portal's Acknowledge current state button. That clears the marker without undoing the partial changes, keeps the recovery snapshot, and records who resolved it and when.
+
+### Concurrent edits
+
+The server runs one snapshot write at a time, but other commands can still change the object during a restore. Avoid editing it while a restore runs.
 
 ## Validation
 
-A malformed image, unsupported schema, changed object type, recycled object number,
-missing attribute creator/flag, missing stable lock reference, invalid preview or missing
-permission fails before restoration. Whole-world backups and package rollback continue
-to serve their existing purposes.
+A restore is refused before any change when the snapshot is malformed or in an unsupported format, the object's type changed, its dbref was recycled, an attribute's creator or flag or a lock's reference no longer exists, the preview is invalid, or a permission is missing.
+
+Snapshots do not replace [@backup] for the whole world, or package rollback for packages.
+
+::: seealso
+- [administrative capabilities]
+- [@backup]
+:::

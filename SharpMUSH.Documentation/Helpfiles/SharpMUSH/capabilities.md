@@ -30,48 +30,69 @@
 -->
 # Administrative capabilities
 
-Roles are the shared source for delegated administrative operations, in the game and in the
-portal. They use the account role assignments and per-account overrides, and persist in world
-backups. Adding capabilities does not change Penn-compatible flags, powers, ownership checks or
-locks. See help roles for the player-facing description and help @role for the commands.
+Administrative capabilities are the permission scopes that guard snapshots, recurring jobs, the queue, profiling and reality layers. They are granted through roles, in the game and on the portal alike, using the account's role assignments and per-account overrides, and they are kept in world backups. They change nothing about PennMUSH flags, powers, ownership checks or locks.
+
+For roles from a player's side see [roles]; for the commands see [@role] and [@permission].
 
 ## Grant and deny resolution
 
-Resolution follows Discord's permission computation, one scope at a time. The owner (the account
-linked to player #1) holds everything. A held role that allows administrator grants everything
-and bypasses overrides. A per-account override (Allow or Deny) decides next. Otherwise any held
-role that allows the scope grants it regardless of priority; failing that, a role that denies it
-refuses it; failing that, the everyone role decides, and a scope nobody allows is denied.
-Priority is never consulted. Within one role or override set, a child scope left on Inherit takes
-the setting of its umbrella scope, so an explicit child setting wins over the umbrella.
+Each scope is decided on its own, the way Discord computes permissions. The first rule that applies wins:
+
+1. The owner, the account linked to player #1, holds everything.
+2. A held role that allows `administrator` grants everything, and overrides do not apply.
+3. A per-account override, Allow or Deny, decides.
+4. Any held role that allows the scope grants it, whatever its priority.
+5. Any held role that denies the scope refuses it.
+6. The `everyone` role decides; a scope nobody allows is refused.
+
+Priority is never consulted here; it only orders who may manage whom (see [administrative capabilities delegated role management]).
+
+Within one role or override set, a narrower scope left on Inherit takes the setting of the scope above it, so an explicit setting on the narrower scope wins over its parent.
 
 ## Capability scopes
 
-The stable action scopes are snapshots.capture, snapshots.restore, jobs.manage.own,
-jobs.manage, queue.inspect.own, queue.inspect, queue.control.own, queue.control,
-diagnostics.profile and reality.admin. The administrative job/queue scopes imply their
-corresponding own scopes. Own scopes still require a separate resource-owner check.
-Snapshot restore never follows from capture. Feature implementations enforce these gates
-where the operation executes, including after waiting in a queue.
+| Scope | Guards |
+| --- | --- |
+| `snapshots.capture` | capturing and listing [object snapshots] |
+| `snapshots.restore` | previewing, restoring and listing object snapshots |
+| `jobs.manage.own` | your own account's [recurring jobs] |
+| `jobs.manage` | every account's recurring jobs |
+| `queue.inspect.own` | inspecting your own queued work |
+| `queue.inspect` | inspecting anyone's queued work |
+| `queue.control.own` | controlling your own queued work |
+| `queue.control` | controlling anyone's queued work |
+| `diagnostics.profile` | [@profile] |
+| `reality.admin` | [@reality] |
+
+Each scope without `.own` implies its `.own` form. An `.own` scope still needs you to own the thing it acts on. Restoring never follows from capturing.
+
+The check happens where the work is done, including after it has waited in the queue.
 
 ## Actor identity and revocation
 
-Portal HTTP actions resolve the account as a whole: every linked character's tier counts.
-Game entry points call GetGameActorAsync with the actual executor full objid to resolve
-the linked account; unlinked or disabled accounts have no capability actor.
-Game actions supply the active player's full objid and that same player as executor, and only
-that character's flags choose its tier roles. Another linked character's flags do not elevate
-it. Owned objects, foreign characters and privileged callbacks cannot borrow the account's
-authority. The executing service reloads account status, character links, roles and overrides on
-every authorization; queue records store identities, never cached grants. Transfer, unlink,
-disable and revocation therefore apply when queued work executes.
+On the portal, an action is taken by the account as a whole: every character linked to it counts.
+
+In the game, an action is taken by the player you are playing, on behalf of the account it is linked to. A player on no account, or on a disabled one, has no capabilities. Only that player's own flags decide which tier roles (`wizard`, `royalty`) it brings; another character on the same account does not raise it.
+
+Objects you own, other people's characters and privileged callbacks cannot borrow your account's authority.
+
+Every check reloads the account's status, its characters, its roles and its overrides. Queued work stores who it runs as, never a copy of their grants, so a transfer, unlink, disabled account or revoked role applies when the work runs, not when it was queued.
 
 ## Delegated role management
 
-Every role change, from @role, @permission or the portal, goes through the role management service and needs
-roles.admin. Following Discord's role hierarchy, a manager creates, edits, deletes, assigns and
-removes only roles below their own highest role, changes only accounts whose highest role is below
-theirs, never changes their own account, and allows only scopes they hold. System roles keep their
-slug and priority, are never deleted and are never assigned by hand. The owner is exempt, which
-keeps recovery possible whatever the roles say. The effective-permission API and @role/player
-report which layer decided each scope and the deciding roles.
+Every role change, from `@role`, `@permission` or the portal, needs `roles.admin`, and follows Discord's role hierarchy. A manager:
+
+- creates, edits, deletes, assigns and removes only roles below their own highest role;
+- changes only accounts whose highest role is below theirs, and never their own;
+- allows only scopes they hold themselves.
+
+System roles keep their name and priority, are never deleted, and are never assigned by hand. The owner is exempt from all of this, so the game can always be recovered.
+
+`@role/player` and the portal's effective-permission view report which rule decided each scope, and which roles.
+
+::: seealso
+- [roles]
+- [@role]
+- [@permission]
+- [security]
+:::
