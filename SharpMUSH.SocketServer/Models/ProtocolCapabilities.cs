@@ -50,6 +50,11 @@ public static class OutputFormatNegotiation
 /// to render <i>below</i> what the client and the flags between them claim, so it is what turns
 /// colour off for a player who does not want it.
 /// </param>
+/// <param name="Width">
+/// The width the client last reported through NAWS, or zero when it never has. A layout drawn by
+/// <c>box()</c>, <c>flex()</c> and the like at an automatic width is laid out again at this width
+/// before it is sent.
+/// </param>
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
@@ -60,5 +65,6 @@ public record ProtocolCapabilities(
 	OutputFormat Format = OutputFormat.Ansi,
 	bool ScreenReader = false,
 	string? ColorStylePin = null,
-	string? MxpSupported = null
+	string? MxpSupported = null,
+	int Width = 0
 );

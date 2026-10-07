@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
+using MarkupString.Layout;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.RenderingWorker.Services;
 using SharpMUSH.SocketServer.Services;
@@ -563,5 +564,51 @@ public partial class MarkupOutputRendererTests
 		var rendered = Render(text, new ProtocolCapabilities(SupportsAnsi: supportsAnsi), AllColour);
 
 		await Assert.That(rendered).IsEqualTo("See newbie2 for more.");
+	}
+
+	// ── Layouts: laid out again for the client ──────────────────────────────────
+
+	private static string Box(bool fluid) => MarkupTextSerializer.Serialize(BlockLayout.Build(
+		new Frame(new TextBlock(MarkupText.Plain("Hi"))) { Border = BorderStyle.Single, Title = MarkupText.Plain("T") }, 12, fluid));
+
+	private static string RenderFor(string markup, ProtocolCapabilities capabilities) =>
+		StripAnsi(Encoding.UTF8.GetString(new MarkupOutputRenderer().Render(markup, Connection() with { Capabilities = capabilities }).Data))
+			.Replace("\r\n", "\n");
+
+	/// <summary>A box drawn at the width of the connection that ran the command is sent to each reader at theirs.</summary>
+	[Test]
+	public async Task AFluidLayout_IsLaidOutAtTheClientsWidth()
+	{
+		var rendered = RenderFor(Box(fluid: true), new ProtocolCapabilities(Width: 20));
+
+		await Assert.That(rendered.TrimEnd('\n')).IsEqualTo(
+			"┌───────┤ T ├──────┐\n│ Hi               │\n└──────────────────┘");
+	}
+
+	[Test]
+	public async Task AFixedLayout_KeepsItsWidth()
+	{
+		var rendered = RenderFor(Box(fluid: false), new ProtocolCapabilities(Width: 20));
+
+		await Assert.That(rendered.Split('\n')[0].Length).IsEqualTo(12);
+	}
+
+	[Test]
+	public async Task AClientWithoutUtf8_GetsAsciiBorders()
+	{
+		var rendered = RenderFor(Box(fluid: false), new ProtocolCapabilities(SupportsUtf8: false));
+
+		await Assert.That(rendered).DoesNotContain("─");
+		await Assert.That(rendered).Contains("Hi");
+	}
+
+	[Test]
+	public async Task AScreenReader_GetsTheContentWithoutBorders()
+	{
+		var rendered = RenderFor(Box(fluid: false), new ProtocolCapabilities(ScreenReader: true));
+
+		await Assert.That(rendered).DoesNotContain("─");
+		await Assert.That(rendered).DoesNotContain("│");
+		await Assert.That(rendered).Contains("Hi");
 	}
 }

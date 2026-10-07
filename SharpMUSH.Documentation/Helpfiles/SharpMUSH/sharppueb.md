@@ -157,6 +157,7 @@ Available functions:
 - sound() and music()
 - stopsound()
 - image()
+- figure() (a picture with text art and text flowing round it; see [LAYOUT FUNCTIONS])
 - pane()
 - preformat()
 - clearscreen()

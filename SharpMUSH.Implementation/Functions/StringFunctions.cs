@@ -1961,16 +1961,20 @@ public partial class Functions
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var colors = ColorConfiguration?.CurrentValue;
+		return ValueTask.FromResult(new CallState(MarkupText.Wrap(AnsiCodes(args["0"].Message!.ToPlainText()), args["1"].Message ?? MarkupText.Empty)));
+	}
 
-		// The codes are read by MarkupString's AnsiCodeParser, the one parser of them; the game supplies only
-		// its colour names (colors.json).
-		var markup = AnsiCodeParser.Parse(args["0"].Message!.ToPlainText(),
+	/// <summary>
+	/// ansi() codes as a layer. The codes are read by MarkupString's AnsiCodeParser, the one parser of
+	/// them; the game supplies only its colour names (colors.json).
+	/// </summary>
+	private AnsiMarkup AnsiCodes(string codes)
+	{
+		var colors = ColorConfiguration?.CurrentValue;
+		return AnsiCodeParser.Parse(codes,
 			name => colors is not null && colors.ColorsByName.TryGetValue(name, out var color)
 				? ColorTranslator.FromHtml(color.rgb).ToAnsiColor()
 				: null);
-
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(markup, args["1"].Message ?? MarkupText.Empty)));
 	}
 
 	[SharpFunction(Name = "null", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]

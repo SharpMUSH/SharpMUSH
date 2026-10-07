@@ -295,6 +295,12 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.OutOfRange);
 		}
 
+		// A host image_hosts refuses is written as a client with no pictures shows it: the words.
+		if (!ImageAllowed(address))
+		{
+			return new CallState(description is { Length: > 0 } ? description : address);
+		}
+
 		return new CallState(MarkupText.Image(address, description, width, height));
 	}
 

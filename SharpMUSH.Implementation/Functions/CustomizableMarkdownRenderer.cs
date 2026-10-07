@@ -1,5 +1,6 @@
 using Markdig.Extensions.CustomContainers;
 using Markdig.Extensions.Tables;
+using Table = Markdig.Extensions.Tables.Table;
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
