@@ -175,21 +175,10 @@ public static partial class ThemeStylesheet
 			problems.Add("A stylesheet holds CSS only: '<' is not allowed, even in a string. In a data: URL, write it as %3C.");
 		}
 
-		foreach (var rule in (string[])["@import", "@charset", "@namespace"])
-		{
-			if (text.Contains(rule, StringComparison.Ordinal))
-			{
-				problems.Add($"{rule} is not allowed: a theme's stylesheet is one sheet, read as written.");
-			}
-		}
-
-		foreach (var (pattern, what) in Forbidden)
-		{
-			if (pattern.IsMatch(text))
-			{
-				problems.Add($"{what} is not allowed.");
-			}
-		}
+		problems.AddRange(((string[])["@import", "@charset", "@namespace"])
+			.Where(rule => text.Contains(rule, StringComparison.Ordinal))
+			.Select(rule => $"{rule} is not allowed: a theme's stylesheet is one sheet, read as written."));
+		problems.AddRange(Forbidden.Where(f => f.Pattern.IsMatch(text)).Select(f => $"{f.What} is not allowed."));
 
 		var urls = UrlPattern().Matches(text);
 		if (urls.Count != Regex.Matches(text, @"\burl\(").Count)
@@ -197,14 +186,10 @@ public static partial class ThemeStylesheet
 			problems.Add("A url( is not closed.");
 		}
 
-		foreach (Match url in urls)
-		{
-			var target = url.Groups["target"].Value.Trim();
-			if (!AllowedUrl(target))
-			{
-				problems.Add($"url({target}) loads from elsewhere. Use a path on this site (starting with /) or a data:image URL.");
-			}
-		}
+		problems.AddRange(urls
+			.Select(url => url.Groups["target"].Value.Trim())
+			.Where(target => !AllowedUrl(target))
+			.Select(target => $"url({target}) loads from elsewhere. Use a path on this site (starting with /) or a data:image URL."));
 
 		if (!Balanced(text))
 		{
