@@ -6,7 +6,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using ZiggyCreatures.Caching.Fusion;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Immutable;
 
 namespace SharpMUSH.Tests.Parser;
@@ -28,11 +27,6 @@ namespace SharpMUSH.Tests.Parser;
 /// </summary>
 public class LockFlagPowerOperandTests
 {
-	/// <summary>
-	/// <c>FLAG^</c> and <c>POWER^</c> read only the unlocker, so the parser's services are never reached.
-	/// </summary>
-	private static readonly IBooleanExpressionParser BooleanParser = new BooleanExpressionParser(
-		Substitute.For<ILockEvaluationServices>(), Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
 
 	private static AnySharpObject ThingWith(SharpPower[] powers, SharpObjectFlag[] flags)
 	{
@@ -111,7 +105,11 @@ public class LockFlagPowerOperandTests
 	public async Task OperandMatchesAsPennMUSHDoes(string lockText, bool expected)
 	{
 		var subject = ThingWith(Powers, Flags);
+		// FLAG^ and POWER^ read only the unlocker, so the parser's services are never reached.
+		using var cache = new FusionCache(new FusionCacheOptions());
+		var parser = new BooleanExpressionParser(
+			Substitute.For<ILockEvaluationServices>(), Substitute.For<IMediator>(), cache);
 
-		await Assert.That(await BooleanParser.Compile(lockText)(subject, subject)).IsEqualTo(expected);
+		await Assert.That(await parser.Compile(lockText)(subject, subject)).IsEqualTo(expected);
 	}
 }
