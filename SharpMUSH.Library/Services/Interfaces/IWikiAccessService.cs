@@ -4,16 +4,25 @@ using SharpMUSH.Library.Models.Wiki;
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// Who is reading the wiki: the permissions they hold, resolved by the role system, and the dbref their
-/// own drafts are stored under (null for an anonymous reader).
+/// Who is reading the wiki: the permissions they hold, resolved by the role system, the dbref their
+/// own drafts are stored under (null for an anonymous reader), and the slugs of the biographies their
+/// account owns: one per character linked to the account, whichever of them is acting.
 /// </summary>
-public sealed record WikiReader(IReadOnlySet<string> Scopes, string? Dbref)
+public sealed record WikiReader(IReadOnlySet<string> Scopes, string? Dbref, IReadOnlySet<string> Biographies)
 {
 	/// <summary>A reader holding <paramref name="scopes"/>, compared without case.</summary>
-	public static WikiReader From(IEnumerable<string> scopes, string? dbref)
-		=> new(scopes.ToHashSet(StringComparer.OrdinalIgnoreCase), dbref);
+	public static WikiReader From(IEnumerable<string> scopes, string? dbref, IEnumerable<string>? biographies = null)
+		=> new(scopes.ToHashSet(StringComparer.OrdinalIgnoreCase), dbref,
+			(biographies ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase));
 
 	public bool Has(string scope) => Scopes.Contains(scope);
+
+	/// <summary>
+	/// True when the page at <paramref name="ns"/>/<paramref name="slug"/> is the biography of one of this
+	/// reader's account's characters. Its owner reads, writes and edits it by owning it, not by any permission.
+	/// </summary>
+	public bool OwnsBiography(string ns, string? slug)
+		=> slug is { Length: > 0 } && WikiRoutes.IsCharacterProfile(ns) && Biographies.Contains(WikiHelpers.Slugify(slug));
 
 	/// <summary>A <c>wiki.admin</c> holder skips namespace, category and page requirements.</summary>
 	public bool Bypasses => Has(Authorization.PortalPermission.WikiAdmin);
@@ -24,11 +33,13 @@ public sealed record WikiReader(IReadOnlySet<string> Scopes, string? Dbref)
 /// permission that refused it; <paramref name="RequiredBy"/> is the namespace, category or page that
 /// required it, null when the global scope for the action was missing.
 /// </summary>
-public sealed record WikiDecision(WikiAction Action, bool Allowed, bool Bypassed, string? MissingScope, WikiRuleTarget? RequiredBy)
+public sealed record WikiDecision(WikiAction Action, bool Allowed, bool Bypassed, string? MissingScope, WikiRuleTarget? RequiredBy,
+	bool Owner = false)
 {
-	/// <summary>One line: "allowed", "allowed (wiki.admin skips requirements)", "needs wiki.edit", "category lore requires lore.edit" or "the page requires wiki.admin".</summary>
+	/// <summary>One line: "allowed", "allowed (your own character's biography)", "allowed (wiki.admin skips requirements)", "needs wiki.edit", "category lore requires lore.edit" or "the page requires wiki.admin".</summary>
 	public string Describe() => (Allowed, Bypassed, RequiredBy) switch
 	{
+		(true, _, _) when Owner => "allowed (your own character's biography)",
 		(true, true, _) => "allowed (wiki.admin skips requirements)",
 		(true, false, _) => "allowed",
 		(false, _, null) => $"needs {MissingScope}",
@@ -53,8 +64,14 @@ public interface IWikiAccessService
 	/// <summary>A reader who is not logged in: what the <c>everyone</c> role grants.</summary>
 	ValueTask<WikiReader> AnonymousAsync(CancellationToken ct = default);
 
-	/// <summary>A game object as a reader: what it is granted, and its dbref as <c>@wiki</c> stores authors.</summary>
+	/// <summary>
+	/// A game object as a reader: what it is granted, its dbref as <c>@wiki</c> stores authors, and the
+	/// biographies of the characters on its account.
+	/// </summary>
 	ValueTask<WikiReader> ForObjectAsync(AnySharpObject obj, CancellationToken ct = default);
+
+	/// <summary>The slugs of the biographies of the characters linked to account <paramref name="accountId"/>.</summary>
+	ValueTask<IReadOnlyList<string>> BiographiesAsync(string accountId, CancellationToken ct = default);
 
 	/// <summary>Every requirement set, cached until one changes.</summary>
 	Task<WikiRequirements> RequirementsAsync();
@@ -68,8 +85,11 @@ public interface IWikiAccessService
 	/// <summary>The draft rule: a published page, or the reader wrote it, or the reader holds <c>wiki.drafts</c>.</summary>
 	bool MaySeeDraft(WikiReader reader, WikiPage page);
 
-	/// <summary>Whether <paramref name="reader"/> may create a page in <paramref name="ns"/> filed in <paramref name="categories"/>.</summary>
-	Task<WikiDecision> DecideCreateAsync(WikiReader reader, string ns, IEnumerable<string> categories);
+	/// <summary>
+	/// Whether <paramref name="reader"/> may create a page in <paramref name="ns"/> filed in <paramref name="categories"/>;
+	/// <paramref name="slug"/>, when known, lets an owner write their own character's biography.
+	/// </summary>
+	Task<WikiDecision> DecideCreateAsync(WikiReader reader, string ns, IEnumerable<string> categories, string? slug = null);
 
 	/// <summary>
 	/// Whether <paramref name="reader"/> may file <paramref name="page"/> in <paramref name="categories"/>: an edit

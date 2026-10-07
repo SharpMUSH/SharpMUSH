@@ -23,8 +23,8 @@ namespace SharpMUSH.Server.Controllers;
 /// JSON attribute on the character — backend-agnostic, no extra DB schema. Every write also mirrors the
 /// icon, the banner and the icon's caption into the standard <c>IMAGE</c>, <c>IMAGE`BANNER</c> and
 /// <c>IMAGE`ALT</c> attributes (spec §2), so softcode and OOB payloads read the same picture. Edits
-/// require the requester to control the character (owner) or be staff (Wizard/Royalty), enforced by
-/// <see cref="IPermissionService"/>.
+/// require the requester's account to own the character, whichever of its characters is acting, or the
+/// acting character to control it (staff), enforced by <see cref="IPermissionService"/>.
 ///
 /// Routes:
 ///   GET    /api/profile/{name}/gallery          — list gallery entries (anonymous)
@@ -41,6 +41,7 @@ public class GalleryController(
 	IAttributeService attributeService,
 	IPermissionService permissionService,
 	IVisibleWorldProjection projection,
+	IAccountService accounts,
 	ILogger<GalleryController> logger) : ControllerBase
 {
 	private const string GalleryAttribute = GalleryWriter.GalleryAttribute;
@@ -206,6 +207,12 @@ public class GalleryController(
 	{
 		var character = await ResolveCharacterAsync(name, ct);
 		if (character is null) return (null, false);
+
+		// A character on the caller's own account is theirs to edit, whichever character they are playing.
+		if (AccountSessionAuthenticationHandler.TryGetAccount(User, out var accountId, out _)
+				&& await accounts.GetAccountForCharacterAsync(character.Object().DBRef, ct) is { Id: { Length: > 0 } owner }
+				&& string.Equals(owner, accountId, StringComparison.Ordinal))
+			return (character, true);
 
 		var viewer = await ResolveViewerAsync(ct);
 		if (viewer is null) return (character, false);

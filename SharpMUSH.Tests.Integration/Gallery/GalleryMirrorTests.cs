@@ -140,6 +140,11 @@ public class GalleryMirrorTests(ServerWebAppFactory factory)
 			{
 				await http.DeleteAsync($"{url}/{Uri.EscapeDataString(entry.AssetId)}");
 			}
+			// The uploads took the banner and the avatar from whatever held them: give those places back.
+			if (before.Count > 0)
+			{
+				await http.PutAsJsonAsync(url, before);
+			}
 		}
 	}
 

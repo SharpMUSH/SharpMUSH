@@ -192,15 +192,16 @@ else
             ? own
             : [];
         var canEdit = ProfileEditRights.CanEdit(user, mine, Name);
+        var owned = ProfileEditRights.Owns(user, mine, Name);
 
         if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
         {
-            _context = NewContext(canEdit);
+            _context = NewContext(canEdit, owned);
             return;
         }
 
         _written = null;
-        _context = NewContext(canEdit);
+        _context = NewContext(canEdit, owned);
 
         _loadedFor = Name;
         var generation = ++_generation;
@@ -252,8 +253,8 @@ else
             scenes => _liveScene = scenes is IReadOnlyList<SceneSummary> list ? list.FirstOrDefault(s => s.IsLive) : null)
         : Task.CompletedTask;
 
-    private ProfilePageContext NewContext(bool canEdit) =>
-        new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged);
+    private ProfilePageContext NewContext(bool canEdit, bool owned) =>
+        new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged, owned);
 
     /// <summary>
     /// A gallery widget changed the gallery: the banner and the avatar follow it, and so does every
@@ -275,10 +276,13 @@ else
 
     private async Task WriteAsync(Task<ApiResult<List<GalleryEntry>>> write, string failedKey)
     {
+        // A write that answers after the page moved to another character is that character's, not this one's.
+        var generation = _generation;
         _busy = true;
         ApiResult<List<GalleryEntry>> result;
         try { result = await write; }
         finally { _busy = false; }
+        if (generation != _generation) return;
 
         switch (result)
         {

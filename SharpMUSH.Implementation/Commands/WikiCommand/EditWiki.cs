@@ -39,7 +39,7 @@ public static class EditWiki
 		}
 
 		var decision = await WikiCommandHelper.Access(parser).DecideCreateAsync(
-			await WikiCommandHelper.ReaderAsync(parser, executor), WikiHelpers.NamespaceName(ns), []);
+			await WikiCommandHelper.ReaderAsync(parser, executor), WikiHelpers.NamespaceName(ns), [], WikiHelpers.Slugify(title));
 		if (!decision.Allowed)
 		{
 			await notifyService.Notify(executor, $"WIKI: You can't create pages in {WikiHelpers.NamespaceName(ns)}: {decision.Describe()}.", executor);
