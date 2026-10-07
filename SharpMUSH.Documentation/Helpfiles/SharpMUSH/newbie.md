@@ -22,7 +22,7 @@
   }
 }
 -->
-# newbie
+# Newbie
 
 If you are new to MUSHing, the help files may seem confusing. Most of them are written in a specific style, however, and once you understand it the files are extremely helpful.
 

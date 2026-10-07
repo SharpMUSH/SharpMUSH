@@ -16,7 +16,7 @@
   }
 }
 -->
-# action lists
+# Action Lists
 
 An "action list" is simply a list of MUSH commands which are run together, one after the other. Each command in the list is separated by a semicolon. Action lists appear in many places: in user-defined commands, triggered in `@a`-attributes by the MUSH, and even as arguments to other commands, like `@switch` and `@dolist`.
 

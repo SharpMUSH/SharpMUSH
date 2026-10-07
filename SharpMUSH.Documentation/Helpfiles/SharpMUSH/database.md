@@ -20,7 +20,7 @@
   }
 }
 -->
-# database
+# Database
 
 You will find the term "dbref" or "dbref number" used frequently in these help files and in MUSHcode. It is an abbreviation of "database reference number".
 

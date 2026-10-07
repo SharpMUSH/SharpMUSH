@@ -18,7 +18,7 @@
   }
 }
 -->
-# functions
+# Functions
 
 Functions are specialized commands used to manipulate strings and other input. Functions take the general form: `[FUNCTION(<input>)]`
 

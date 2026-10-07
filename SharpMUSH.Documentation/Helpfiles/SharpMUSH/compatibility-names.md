@@ -33,7 +33,7 @@
   ]
 }
 -->
-# COMPATIBILITY NAMES
+# Compatibility Names
 
 Functions and commands that exist in SharpMUSH and not in PennMUSH, or that take their arguments in a
 different order.

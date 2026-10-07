@@ -16,7 +16,7 @@
   }
 }
 -->
-# registers
+# Registers
 
 A register is essentially a little reserved piece of computer memory that can hold some variable information that you want to pass on to another command. There are thirty registers on the MUSH available via the %0-%9 substitutions and v(0)-v(9) and r(0,args) to r(29,args). There are also many setq registers available via %q- substitution (%q0 - %q9, %qA - %qZ and arbitrary names), or the `r()` function.
 

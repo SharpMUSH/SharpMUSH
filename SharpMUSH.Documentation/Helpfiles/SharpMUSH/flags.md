@@ -16,7 +16,7 @@
   }
 }
 -->
-# flags
+# Flags
 
 Flags give objects certain abilities or qualities. For example, a wizard player has wiz powers because s/he has the WIZARD flag set.
 

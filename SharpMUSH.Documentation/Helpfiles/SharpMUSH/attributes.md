@@ -31,7 +31,7 @@
   }
 }
 -->
-# attributes
+# Attributes
 
 Attributes with (*) after them are special, cannot be set by players, and may only be visible to wizards or admin. For those attributes, there is no @-command, so you can just type 'help `<attribute name>`' for help. For all other attributes, type 'help @`<attribute name>`' for help.
 

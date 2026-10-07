@@ -22,7 +22,7 @@
   }
 }
 -->
-# help search
+# Help Search
 
 `help <textname>`<br>
 `help <namepattern>`<br>

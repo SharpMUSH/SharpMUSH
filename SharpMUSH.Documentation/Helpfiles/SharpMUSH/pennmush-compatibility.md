@@ -7,7 +7,7 @@
   "sections": []
 }
 -->
-# PENNMUSH COMPATIBILITY
+# PennMUSH Compatibility
 
 SharpMUSH targets PennMUSH 1.8.8 softcode compatibility. Where it differs, the difference is one of
 three things, and this profile keeps them apart:

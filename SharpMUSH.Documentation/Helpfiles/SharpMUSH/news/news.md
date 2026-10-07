@@ -1,4 +1,4 @@
-# news
+# News
 
 News and updates for SharpMUSH.
 

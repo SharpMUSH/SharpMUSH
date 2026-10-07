@@ -7,7 +7,7 @@
   "sections": []
 }
 -->
-# COMPATIBILITY DEFECTS
+# Compatibility Defects
 
 Differences that are **bugs**, tracked and expected to change. Listed so they are not mistaken for
 choices.

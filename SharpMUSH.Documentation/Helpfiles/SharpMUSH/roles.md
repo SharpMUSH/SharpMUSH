@@ -37,13 +37,13 @@
   }
 }
 -->
-# roles
+# Roles
 
 A role is a named set of permissions. Roles decide what an object may do: in the game (being a wizard, the PennMUSH powers, controlling other objects) and in the web portal (wiki, media, packages, configuration, and so on). They work like the roles on a Discord server.
 
 Both objects and accounts hold roles. An object holds the roles assigned to it; a character linked to an account also holds the account's. Nothing is inherited from an object's owner.
 
-Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and `@permission` for the list of permissions. A game can add permissions of its own, such as `bbs.moderate`, with `@permission/define` (see [@permission define]), and a package can bring its own (see [roles packages]).
+Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and [@permission] for the list of permissions. A game can add permissions of its own, such as `bbs.moderate`, with `@permission/define` (see [@permission define]), and a package can bring its own (see [roles packages]).
 
 ## How roles combine
 

@@ -38,7 +38,7 @@
   ]
 }
 -->
-# COMPATIBILITY IDENTITY
+# Compatibility Identity
 
 SharpMUSH and PennMUSH differ in object identity and numeric representation.
 Object timestamps and objids use milliseconds here, automatic dbref allocation

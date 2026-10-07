@@ -46,7 +46,7 @@
   }
 }
 -->
-# attribute trees
+# Attribute Trees
 
 Attributes can be arranged in a hierarchical tree; these are called "attribute trees", and are conceptually similar to the way that files and directories/folders are organized on computer filesystems. Attribute trees can be used to reduce spam when examining and to provide organized control over permissions for related attributes.
 

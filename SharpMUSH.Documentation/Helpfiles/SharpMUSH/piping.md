@@ -10,7 +10,7 @@
   "sections": []
 }
 -->
-# piping
+# Piping
 
 In an action list, `;|` separates two commands like `;` does, and pipes the first into the second: what the first command shows you is passed to the second instead, which reads it as `%|`. Spaces may come between the `;` and the `|`.
 

@@ -1,5 +1,5 @@
-# FLAG LIST
-# FLAGS LIST
+# Flag List
+# Flags List
 
 | Flag | Title | Flag | Title | Flag | Title |
 |------|-------|------|-------|------|-------|
