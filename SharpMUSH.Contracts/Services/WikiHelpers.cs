@@ -76,6 +76,27 @@ public static class WikiHelpers
 				.ToList();
 
 	/// <summary>
+	/// The categories every page in <paramref name="ns"/> is in, whatever its own list says: a biography in
+	/// the <c>Character</c> namespace is in the <c>character</c> category. The store adds them on every write, so
+	/// they cannot be taken off; an editor shows them as fixed.
+	/// </summary>
+	public static IReadOnlyList<string> NamespaceCategories(WikiNamespace? ns) =>
+		ns is WikiNamespace.Character ? [CharacterCategory] : [];
+
+	/// <inheritdoc cref="NamespaceCategories(WikiNamespace?)"/>
+	public static IReadOnlyList<string> NamespaceCategories(string? ns) => NamespaceCategories(ParseNamespace(ns));
+
+	/// <summary>The category every character biography is in.</summary>
+	public const string CharacterCategory = "character";
+
+	/// <summary>
+	/// <see cref="NormalizeCategories(IEnumerable{string}?)"/> with the categories <paramref name="ns"/> puts every
+	/// page in (<see cref="NamespaceCategories(WikiNamespace?)"/>).
+	/// </summary>
+	public static IReadOnlyList<string> NormalizeCategories(IEnumerable<string>? categories, WikiNamespace? ns) =>
+		NormalizeCategories((categories ?? []).Concat(NamespaceCategories(ns)));
+
+	/// <summary>
 	/// The display name of a category key: underscores become spaces and the first letter is
 	/// upper-cased, the way MediaWiki shows a title.
 	/// </summary>

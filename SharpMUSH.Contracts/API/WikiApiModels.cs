@@ -104,11 +104,12 @@ public record WikiPageSummaryDto(
 public record WikiPageCountsDto(int Total, int Published, int Drafts, int Restricted);
 
 /// <summary>
-/// One row of <c>GET /api/wiki/categories</c>: a category any page the caller may see is filed in, or that has a
-/// page of its own. <see cref="Name"/> is its page's title in the reader's locale, else its key as a title;
-/// <see cref="Pages"/> counts the pages filed in it that the caller may see.
+/// One row of <c>GET /api/wiki/categories</c>: a category any page the caller may see is filed in, that has a
+/// page of its own, or that is pinned. <see cref="Name"/> is its page's title in the reader's locale, else its key
+/// as a title; <see cref="Pages"/> counts the pages filed in it that the caller may see; <see cref="Pinned"/> says
+/// whether it has a card on the wiki home.
 /// </summary>
-public record WikiCategorySummaryDto(string Key, string Name, int Pages, bool HasPage);
+public record WikiCategorySummaryDto(string Key, string Name, int Pages, bool HasPage, bool Pinned = false);
 
 /// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
 public record WikiTranslationSummaryDto(
@@ -168,6 +169,9 @@ public record ExistsRequest(string[] Refs);
 /// leaves it in none) and whether it is published.
 /// </summary>
 public record SetMetadataRequest(IReadOnlyList<string>? Categories, bool Published);
+
+/// <summary>Request body for <c>PUT /api/wiki/categories/{category}/pin</c>: whether the category has a card on the wiki home.</summary>
+public record SetCategoryPinnedRequest(bool Pinned);
 
 /// <summary>Request body for batch protection changes. Refs use <c>ns/slug</c> form.</summary>
 public record BatchProtectRequest(string[] Refs, bool IsProtected);

@@ -92,7 +92,9 @@
       "lookup": "wiki categories",
       "aliases": [
         "WIKI-CATEGORIES",
-        "@WIKI/CATEGORY"
+        "@WIKI/CATEGORY",
+        "@WIKI/PIN",
+        "@WIKI/UNPIN"
       ]
     }
   ],
@@ -390,9 +392,10 @@ WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<t
 - `@wiki/publish <page>`, `@wiki/unpublish <page>` - publish or mark as draft (`wiki.admin`)
 - `@wiki/require <target>=<action> <permission>...` - what a namespace, category or page requires (`wiki.admin`)
 - `@wiki/access <target>[=<player>]` - show what a target requires, or what a player may do with a page
+- `@wiki/pin <category>`, `@wiki/unpin <category>` - show a category on the wiki home, or stop showing it (`wiki.admin`)
 
-The first three are described in [wiki administration], the last two in
-[wiki permissions].
+The first three are described in [wiki administration], the next two in
+[wiki permissions], and pins in [wiki categories].
 
 ## Wiki administration
 
@@ -503,6 +506,8 @@ From softcode, `wikiaccess(<page>, <action>[, <player>])` returns 1 or 0.
 
 - `@wiki/category <name>`
 - `@wiki/category <page>=<name>[, <name>...]`
+- `@wiki/pin [<category>]`
+- `@wiki/unpin <category>`
 
 Categories work the way they do in MediaWiki, except that they are held by
 the page rather than written in its text. A page can be in any number of
@@ -512,6 +517,10 @@ categories; the portal lists them at the page's foot.
 comma-separated list, and `@wiki/category <page>=` takes it out of all of them.
 It is an edit: the page's requirements apply, and so do the new categories'
 (see [wiki permissions]). It does not change the text, so it adds no revision.
+
+Every page in the character namespace is in the Character category, whatever
+its list says. The category comes from the namespace: it is added when the
+page is written and put back if a list leaves it out, so it cannot be removed.
 
 ### Category pages
 
@@ -548,6 +557,26 @@ dash and `1 page(s), 0 subcategory(ies):`, then one line per member:
 
 ```sharp
   main:combat_primer             Combat Primer (rev 2, 2026-10-05)
+```
+
+### Pinning categories
+
+The portal's wiki home shows a card for each pinned category, with its newest
+pages. Other categories are still listed in the wiki sidebar, and a search on
+the wiki home looks through all of them. A new game pins Character.
+
+`@wiki/pin <category>` pins a category and `@wiki/unpin <category>` unpins
+it; both need `wiki.admin`. A category need not have a page or any member to
+be pinned, and a leading `category:` is accepted. `@wiki/pin` alone lists the
+pinned categories. Each form returns the pinned category keys, separated by
+spaces. Staff can also pin a category from its page or from the Categories
+card on the portal's wiki admin page.
+
+```sharp
+> @wiki/pin Rules
+WIKI: Category 'Rules' is now pinned to the wiki home.
+> @wiki/pin
+WIKI: Pinned to the wiki home: Character, Rules.
 ```
 
 ::: seealso

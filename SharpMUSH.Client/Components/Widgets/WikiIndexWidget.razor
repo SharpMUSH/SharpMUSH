@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Client.Components.Wiki
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
 @inject WikiService Wiki
@@ -11,7 +12,8 @@
 
 @* D1 §6.1 wiki home (board 21): a glass hero (the home page's image, a search field, New page for
    creators) and category cards — a cover, the name and count, the top three pages with draft and
-   locked tags, and "All N pages". Search reads ?q= from the address and filters as you type. *@
+   locked tags, and "All N pages". Only the categories staff pinned get a card; a search looks through
+   every category. Search reads ?q= from the address and filters as you type. *@
 <div class="wiki-index-container">
     <div class="wiki-index">
         <GlassBanner Title="@Loc["NavWikiHeroTitle"]" Kicker="@string.Format(Loc["NavWikiHeroKicker"], Loc["AppTitle"])" ImageUrl="@_heroImage"
@@ -47,7 +49,15 @@
         else if (FilteredGroups.Count == 0)
         {
             <div class="wiki-empty">
-                @(string.IsNullOrWhiteSpace(_search) ? Loc["NavWikiNoPages"] : string.Format(Loc["NavWikiNoMatches"], _search))
+                @(!Searching ? (_pages.Count == 0 ? Loc["NavWikiNoPages"] : Loc["NavWikiNoPinned"]) : string.Format(Loc["NavWikiNoMatches"], _search))
+                @if (!Searching && _pages.Count > 0)
+                {
+                    <AuthorizeView Policy="wiki.admin">
+                        <Authorized>
+                            <div class="wiki-empty-hint">@Loc["WikiNoPinnedHint"]</div>
+                        </Authorized>
+                    </AuthorizeView>
+                }
             </div>
         }
         else
@@ -70,6 +80,15 @@
                             <div class="wiki-cat-head">
                                 <h2 class="wiki-cat-name">@label</h2>
                                 <span class="wiki-cat-count">@g.Pages.Count</span>
+                                @if (!g.IsUncategorized)
+                                {
+                                    <AuthorizeView Policy="wiki.admin">
+                                        <Authorized>
+                                            <WikiCategoryPinButton Category="@g.Key" Name="@label" Pinned="@_pinned.Contains(g.Key)" Compact="true"
+                                                                   PinnedChanged="@(pinned => SetPinned(g.Key, pinned))" />
+                                        </Authorized>
+                                    </AuthorizeView>
+                                }
                             </div>
                             <div class="wiki-cat-pages">
                                 @foreach (var page in g.Pages.Take(TopPages))
@@ -113,6 +132,11 @@
     private string? _heroImage;
     private IReadOnlyList<WikiPageSummary> _pages = [];
 
+    /// <summary>The keys of the categories pinned to the wiki home: the only ones with a card unless searching.</summary>
+    private HashSet<string> _pinned = new(StringComparer.Ordinal);
+
+    private bool Searching => !string.IsNullOrWhiteSpace(_search);
+
     private static string NewPageHref => "/wiki/main/new-page/edit";
 
     /// <summary>Each category's name in the reader's language; a category with no page shows its key.</summary>
@@ -124,8 +148,10 @@
         ReadQuery();
 
         var names = Wiki.GetCategoryNamesAsync().AsTask();
+        var pinned = Wiki.GetPinnedCategoriesAsync().AsTask();
         var (items, _) = await Wiki.GetAllPagesAsync(skip: 0, take: 500);
         _names = await names;
+        if (await pinned is List<string> keys) _pinned = keys.ToHashSet(StringComparer.Ordinal);
         _pages = items;
         _loading = false;
 
@@ -167,15 +193,18 @@
     {
         get
         {
-            var q = _pages.AsEnumerable();
-            if (!string.IsNullOrWhiteSpace(_search))
-            {
-                q = q.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
-                                 || p.Categories.Any(c => WikiHelpers.CategoryLabel(c, _names).Contains(_search, StringComparison.OrdinalIgnoreCase)));
-            }
+            if (!Searching)
+                return WikiCategories.Group(_pages).Where(g => _pinned.Contains(g.Key)).ToList();
 
-            return WikiCategories.Group(q);
+            return WikiCategories.Group(_pages.Where(p => p.Title.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || p.Categories.Any(c => WikiHelpers.CategoryLabel(c, _names).Contains(_search, StringComparison.OrdinalIgnoreCase))));
         }
+    }
+
+    private void SetPinned(string key, bool pinned)
+    {
+        if (pinned) _pinned.Add(key);
+        else _pinned.Remove(key);
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

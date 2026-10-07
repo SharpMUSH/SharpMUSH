@@ -4661,6 +4661,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>Nog geen wikipagina's.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>Hier zijn nog geen categorieën vastgepind.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>Geen pagina's komen overeen met “{0}”.</value>
   </data>

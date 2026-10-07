@@ -25,7 +25,12 @@ file sealed class WikiListHandler : HttpMessageHandler
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
-		var body = request.RequestUri!.AbsolutePath == "/api/wiki/pages" ? Pages : null;
+		var body = request.RequestUri!.AbsolutePath switch
+		{
+			"/api/wiki/pages" => Pages,
+			"/api/wiki/pinned-categories" => """["guides","house_rules"]""",
+			_ => null,
+		};
 		return Task.FromResult(body is null
 			? new HttpResponseMessage(HttpStatusCode.NotFound)
 			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
@@ -34,7 +39,7 @@ file sealed class WikiListHandler : HttpMessageHandler
 
 /// <summary>
 /// Confirms the Wiki Index widget renders the category grid from the REST page list: a card for every
-/// category a page names, the "Uncategorized" card for a page in none, and the page titles.
+/// pinned category a page names, and the page titles. A page in no pinned category has no card.
 /// </summary>
 public class WikiIndexWidgetTests : TrackingBunitContext
 {
@@ -70,13 +75,11 @@ public class WikiIndexWidgetTests : TrackingBunitContext
 
 		var markup = cut.Markup;
 		await Assert.That(markup).Contains("Getting Started");
-		await Assert.That(markup).Contains("World Lore");
-		await Assert.That(markup).Contains("Guides");
-		await Assert.That(markup).Contains("NavWikiUncategorized");
+		await Assert.That(markup).DoesNotContain("World Lore");
+		await Assert.That(markup).DoesNotContain("NavWikiUncategorized");
 
 		var names = cut.FindAll(".wiki-cat-name").Select(n => n.TextContent.Trim()).ToList();
-		await Assert.That(names).IsEquivalentTo(["Guides", "House rules", "NavWikiUncategorized"])
-			.Because("a page in two categories is listed under each, and pages in none come last");
-		await Assert.That(names[^1]).IsEqualTo("NavWikiUncategorized");
+		await Assert.That(names).IsEquivalentTo(["Guides", "House rules"])
+			.Because("a page in two pinned categories is listed under each");
 	}
 }

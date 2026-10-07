@@ -4661,6 +4661,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>Ingen wiki-sider endnu.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>Ingen kategorier er fastgjort her endnu.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>Ingen sider matcher “{0}”.</value>
   </data>

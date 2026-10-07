@@ -78,6 +78,12 @@ public interface IWikiStore
 	/// <summary>Sets the page's categories and published flag without a revision.</summary>
 	Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published);
 
+	/// <summary>The keys of the categories pinned to the wiki home, ordinally sorted.</summary>
+	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
+
+	/// <summary>Pins or unpins one category key; true when that changed what is stored.</summary>
+	Task<bool> SetCategoryPinnedAsync(string category, bool pinned);
+
 	/// <summary>One locale's revisions, by revision number descending.</summary>
 	Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take);
 

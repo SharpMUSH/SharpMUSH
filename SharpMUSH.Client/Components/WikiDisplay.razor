@@ -43,6 +43,7 @@ else if (Article is null && IsCategoryPage)
             <PlainPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@WikiHelpers.CategoryLabel(Slug, _categoryNames)">
                 <Actions>
                     <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
+                    @CategoryPinButton
                     <AuthorizeView Policy="wiki.create">
                         <Authorized>
                             <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => ActivateEditMode())">@Loc["WikiCategoryDescribe"]</CapsuleButton>
@@ -356,12 +357,27 @@ else
 
     private RenderFragment HeaderActions => __builder =>
     {
+        @if (IsCategoryPage)
+        {
+            @CategoryPinButton
+        }
         <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="@HistoryHref">@Loc["ResHistory"]</CapsuleButton>
         @* The server decides, with the page's namespace, category and page requirements in hand. *@
         @if (Article?.Access?.Edit == true)
         {
             <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => ActivateEditMode())">@Loc["WikiEdit"]</CapsuleButton>
         }
+    };
+
+    /// <summary>On a category's page, a wiki.admin holder pins the category to the wiki home or takes it off.</summary>
+    private RenderFragment CategoryPinButton => __builder =>
+    {
+        <AuthorizeView Policy="wiki.admin">
+            <Authorized>
+                <WikiCategoryPinButton Category="@WikiHelpers.CategoryKey(Slug)"
+                                       Name="@WikiHelpers.CategoryLabel(Slug, _categoryNames)" />
+            </Authorized>
+        </AuthorizeView>
     };
 
     private static List<Mentioned> FindMentioned(string html) =>

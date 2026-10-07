@@ -4661,6 +4661,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>Még nincsenek wiki oldalak.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>Még nincs ide kitűzött kategória.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>Egy oldal sem felel meg ennek: „{0}”.</value>
   </data>

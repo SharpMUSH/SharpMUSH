@@ -12,12 +12,13 @@ namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 /// </summary>
 public class WikiHomeD1Tests : TrackingBunitContext
 {
+	private readonly WikiApiFake _fake;
 	private readonly BunitAuthorizationContext _auth;
 	private readonly BunitNavigationManager _nav;
 
 	public WikiHomeD1Tests()
 	{
-		(_, _auth) = WikiApiFake.Install(this);
+		(_fake, _auth) = WikiApiFake.Install(this);
 		_nav = Services.GetRequiredService<BunitNavigationManager>();
 	}
 
@@ -48,7 +49,7 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	{
 		var cut = RenderHome();
 		var cards = cut.FindAll(".wiki-cat-card");
-		await Assert.That(cards.Count).IsEqualTo(3);
+		await Assert.That(cards.Count).IsEqualTo(2).Because("guides and lore are pinned; the uncategorized page has no card");
 
 		var guides = cards[0];
 		await Assert.That(guides.QuerySelector(".wiki-cat-name")!.TextContent).IsEqualTo("Guides");
@@ -63,12 +64,61 @@ public class WikiHomeD1Tests : TrackingBunitContext
 
 		var lore = cards[1];
 		await Assert.That(lore.QuerySelector("a.wiki-cat-page .wiki-cat-tag--locked")).IsNotNull();
+	}
 
-		var uncategorized = cards[2];
+	[Test]
+	public async Task OnlyPinnedCategoriesGetACard()
+	{
+		_fake.Pinned.Remove("guides");
+		var cut = RenderHome();
+		var names = cut.FindAll(".wiki-cat-card .wiki-cat-name").Select(n => n.TextContent).ToList();
+		await Assert.That(names).IsEquivalentTo(["Lore"]);
+	}
+
+	[Test]
+	public async Task ASearchLooksThroughUnpinnedCategoriesAndUncategorizedPages()
+	{
+		_fake.Pinned.Clear();
+		var cut = RenderHome("/wiki?q=notes");
+		var cards = cut.FindAll(".wiki-cat-card");
+		await Assert.That(cards.Count).IsEqualTo(1);
+		var uncategorized = cards[0];
 		await Assert.That(uncategorized.QuerySelector(".wiki-cat-name")!.TextContent).IsEqualTo("Uncategorized");
 		await Assert.That(uncategorized.QuerySelector(".wiki-cat-cover-fallback")).IsNotNull();
 		await Assert.That(uncategorized.QuerySelector("a.wiki-cat-all")).IsNull()
 			.Because("pages in no category have no category page to list them all");
+	}
+
+	[Test]
+	public async Task NothingPinned_SaysSo_AndTellsStaffHowToPin()
+	{
+		_fake.Pinned.Clear();
+		var reader = RenderHome();
+		await Assert.That(reader.Find(".wiki-empty").TextContent).Contains("No categories are pinned here yet.");
+		await Assert.That(reader.FindAll(".wiki-empty-hint").Count).IsEqualTo(0);
+
+		_auth.SetPolicies("wiki.admin");
+		var admin = RenderHome();
+		await Assert.That(admin.Find(".wiki-empty-hint").TextContent).Contains("@wiki/pin");
+	}
+
+	[Test]
+	public async Task AWikiAdminUnpinsACategoryFromItsCard()
+	{
+		var reader = RenderHome();
+		await Assert.That(reader.FindAll(".wiki-cat-card [aria-pressed]").Count).IsEqualTo(0)
+			.Because("only wiki.admin holders see the pin");
+
+		_auth.SetPolicies("wiki.admin");
+		var cut = RenderHome();
+		var lore = cut.FindAll(".wiki-cat-card").Single(c => c.QuerySelector(".wiki-cat-name")!.TextContent == "Lore");
+		await lore.QuerySelector("button[aria-pressed='true']")!.ClickAsync(new());
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".wiki-cat-card").Count != 1) throw new InvalidOperationException("lore still shown");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(_fake.Pinned).IsEquivalentTo(["guides"]);
 	}
 
 	[Test]

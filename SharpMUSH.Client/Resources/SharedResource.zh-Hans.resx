@@ -4661,6 +4661,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>还没有 Wiki 页面。</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>这里还没有置顶的分类。</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>没有与“{0}”匹配的页面。</value>
   </data>

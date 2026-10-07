@@ -27,7 +27,8 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/counts          — page counts by state (published, draft), and restricted pages
 ///   GET  /api/wiki/category/{cat}  — pages in a category (subcategories are its category-namespace rows)
 ///   GET  /api/wiki/category-names  — each category's name in the reader's locale
-///   GET  /api/wiki/categories      — every category, with its name and how many pages it holds
+///   GET  /api/wiki/categories      — every category, with its name, how many pages it holds and whether it is pinned
+///   GET  /api/wiki/pinned-categories — the keys of the categories pinned to the wiki home
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
 /// </summary>
 [ApiController]
@@ -132,8 +133,8 @@ public class WikiBrowseController(
 
 	/// <summary>
 	/// GET /api/wiki/categories?lang=fr
-	/// Every category a page the caller may see is filed in, and every category with a page of its own,
-	/// ordered by name.
+	/// Every category a page the caller may see is filed in, every category with a page of its own, and every
+	/// pinned category, ordered by name.
 	/// </summary>
 	[HttpGet("categories")]
 	public async Task<IActionResult> GetCategories([FromQuery] string? lang = null)
@@ -146,15 +147,23 @@ public class WikiBrowseController(
 		var pages = new Dictionary<string, string>(StringComparer.Ordinal);
 		foreach (var page in await FilterVisibleAsync(await Wiki.GetByNamespaceAsync(WikiNamespace.Category, 0, int.MaxValue, visibility)))
 			pages.TryAdd(WikiHelpers.CategoryKey(page.Slug), page.Title);
-		return Ok(counts.Keys.Union(names.Keys).Union(pages.Keys)
+		var pinned = (await Wiki.GetPinnedCategoriesAsync()).ToHashSet(StringComparer.Ordinal);
+		return Ok(counts.Keys.Union(names.Keys).Union(pages.Keys).Union(pinned)
 			.Select(key => new WikiCategorySummaryDto(key,
 				names.TryGetValue(key, out var name) && name.Length > 0 ? name
 				: pages.TryGetValue(key, out var title) && title.Length > 0 ? title
 				: WikiHelpers.CategoryLabel(key),
-				counts.GetValueOrDefault(key), names.ContainsKey(key) || pages.ContainsKey(key)))
+				counts.GetValueOrDefault(key), names.ContainsKey(key) || pages.ContainsKey(key), pinned.Contains(key)))
 			.OrderBy(category => category.Name, StringComparer.OrdinalIgnoreCase)
 			.ToList());
 	}
+
+	/// <summary>
+	/// GET /api/wiki/pinned-categories
+	/// The keys of the categories pinned to the wiki home. Only these get a card there.
+	/// </summary>
+	[HttpGet("pinned-categories")]
+	public async Task<IActionResult> GetPinnedCategories() => Ok(await Wiki.GetPinnedCategoriesAsync());
 
 	/// <summary>
 	/// POST /api/wiki/exists

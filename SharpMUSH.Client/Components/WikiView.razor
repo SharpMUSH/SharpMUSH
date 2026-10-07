@@ -39,6 +39,7 @@ else
                   SelectedLocale="@_selectedLocale"
                   AvailableLocales="@_availableLocales"
                   CategoryNames="@_categoryNames"
+                  Namespace="@Namespace"
                   OnLocaleChanged="@HandleLocaleChanged"
                   OnSaved="@HandleSave"
                   OnCancel="@HandleCancel" />
@@ -144,7 +145,11 @@ else
                 Categories = [.. _article.Categories],
                 Published = _article.Published,
             }
-            : new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null);
+            : new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null)
+            {
+                // A new page shows the categories its namespace will put it in, as the saved page will have them.
+                Categories = [.. WikiHelpers.NamespaceCategories(Namespace)],
+            };
 
     /// <summary>
     /// Switching locale in the editor is a navigation, not local state: <c>?lang=</c> stays the single

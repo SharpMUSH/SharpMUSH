@@ -4661,6 +4661,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>Još nema wiki stranica.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>Ovdje još nema prikvačenih kategorija.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>Nijedna stranica ne odgovara „{0}“.</value>
   </data>

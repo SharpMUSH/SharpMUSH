@@ -367,6 +367,18 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 	}
 
+	/// <summary>The keys of the categories pinned to the wiki home; only these get a card there.</summary>
+	public async ValueTask<ApiResult<List<string>>> GetPinnedCategoriesAsync() =>
+		await httpClientFactory.CreateClient("api")
+			.GetApiAsync<List<string>>("api/wiki/pinned-categories", "The server returned no pinned wiki categories.");
+
+	/// <summary>Pins <paramref name="category"/> to the wiki home or takes it off (wiki.admin); returns the pinned keys.</summary>
+	public async ValueTask<ApiResult<List<string>>> SetCategoryPinnedAsync(string category, bool pinned) =>
+		Logged(await Http.PutApiAsync<SetCategoryPinnedRequest, List<string>>(
+				$"api/wiki/categories/{Uri.EscapeDataString(category)}/pin",
+				new SetCategoryPinnedRequest(pinned), EmptyResponse),
+			"SetCategoryPinnedAsync", category);
+
 	/// <summary>Every category the reader can see, with its name and page count, ordered by name.</summary>
 	public async ValueTask<ApiResult<List<WikiCategorySummaryDto>>> GetCategoriesAsync(string? lang = null) =>
 		await httpClientFactory.CreateClient("api")
