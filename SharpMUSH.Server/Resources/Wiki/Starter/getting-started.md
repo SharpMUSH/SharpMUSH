@@ -1,3 +1,5 @@
+![An adventurer and cat study a blueprint map of a fantasy world](/assets/presets/wiki/getting-started.webp)
+
 # Getting Started
 
 ## New to MUSHes?

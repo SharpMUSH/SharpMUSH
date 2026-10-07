@@ -17,9 +17,9 @@ public partial class LightningDatabase
 	/// Idempotent world setup, run under <see cref="MigrateLock"/>:
 	/// 1. upsert the shared flag/power/attribute-flag/attribute-entry definitions and the system roles and
 	///    categories (always, cheap, and keyed by name, so a plugin installed later still lands its flags);
-	/// 2. apply the initial migration once, gated on <see cref="InitialMigrationId"/>: objects #0-#9, the
-	///    ancestor player formats, the <c>system</c> wiki namespace's requirement and the <c>character</c>
-	///    category's pin to the wiki home;
+	/// 2. apply the initial migration once, gated on <see cref="InitialMigrationId"/>: objects #0-#9, their
+	///    showcase image metadata, the ancestor player formats, the <c>system</c> wiki namespace's requirement
+	///    and the <c>character</c> category's pin to the wiki home;
 	/// 3. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 4. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 5. ensure the singleton server-state row exists.
@@ -206,10 +206,10 @@ public partial class LightningDatabase
 			PutCategory(tx, kind, new RoleCategory(name, "", now));
 	}
 
-	/// <summary>Seeds objects #0-#9 (names/types/edges/flags from <see cref="InitialObjectSeed"/>), sets
-	/// <c>next_dbref</c> to 10, makes the <c>system</c> wiki namespace <c>wiki.admin</c>-only and pins the
-	/// <c>character</c> category to the wiki home. Runs once,
-	/// gated by <see cref="InitialMigrationId"/>.</summary>
+	/// <summary>Seeds objects #0-#9 (names/types/edges/flags from <see cref="InitialObjectSeed"/>), their
+	/// portal image metadata, sets <c>next_dbref</c> to 10 and makes the <c>system</c> wiki namespace
+	/// <c>wiki.admin</c>-only, then pins the <c>character</c> category to the wiki home. Runs once, gated
+	/// by <see cref="InitialMigrationId"/>.</summary>
 	private static void ApplyInitialSeed(ITx tx)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -249,6 +249,14 @@ public partial class LightningDatabase
 			}
 		}
 
+		foreach (var image in InitialObjectImageSeed.Objects)
+		{
+			WriteInitialAttribute(tx, image.Dbref, "IMAGE", image.Image);
+			WriteInitialAttribute(tx, image.Dbref, "IMAGE`BANNER", image.Banner);
+			WriteInitialAttribute(tx, image.Dbref, "IMAGE`ALT", image.Alt);
+			WriteInitialAttribute(tx, image.Dbref, "IMAGE`FOCAL", image.Focal);
+		}
+
 		tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(10));
 
 		var admin = new[] { PortalPermission.WikiAdmin };
@@ -263,6 +271,13 @@ public partial class LightningDatabase
 
 		tx.Put(Tables.WikiPin, WikiPinKey(WikiHelpers.CharacterCategory), WikiPinValue);
 	}
+
+	private static void WriteInitialAttribute(ITx tx, long dbref, string longName, string value)
+		=> WriteAttributePath(tx, dbref, new PreparedAttributeWrite(
+			longName.Split('`'),
+			Keys.Str(MarkupTextSerializer.Serialize(MString.Plain(value))),
+			1,
+			[]));
 
 	/// <summary>Raises <c>next_dbref</c> to (highest key in <c>obj</c>) + 1 when that is larger than what is stored — the floor a wiped-and-reimported world needs, never a ceiling this lowers.</summary>
 	private static void RecomputeNextDbref(ITx tx) => RecomputeCounter(tx, "next_dbref", Tables.Obj);

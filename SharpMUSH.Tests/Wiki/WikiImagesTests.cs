@@ -86,6 +86,16 @@ public class WikiImagesTests
 	public async Task LeadImageUrl_ImageOpeningThePage_IsTheLead(string html)
 		=> await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/one.jpg");
 
+	[Test]
+	public async Task LeadImage_ImageOpeningThePage_IncludesDecodedAltText()
+	{
+		var lead = WikiImages.LeadImage("<p><img src=\"/one.jpg\" alt=\"A quay &amp; harbour\"></p>");
+
+		await Assert.That(lead).IsNotNull();
+		await Assert.That(lead!.Url).IsEqualTo("/one.jpg");
+		await Assert.That(lead.Alt).IsEqualTo("A quay & harbour");
+	}
+
 	/// <summary>The Application Schema Guide's mock-up sits halfway down; it illustrates the text it follows.</summary>
 	[Test]
 	[Arguments("<p>Intro.</p><p><img src=\"/one.jpg\"></p>")]

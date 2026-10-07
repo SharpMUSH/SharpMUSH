@@ -47,6 +47,26 @@ public class StarterWikiPagesTests
 	}
 
 	[Test]
+	public async Task GettingStarted_OpensWithBlueprintArtwork()
+	{
+		var page = StarterWikiPages.All.Single(p => p is { Title: "Getting Started", Namespace: WikiNamespace.Main });
+		var html = new WikiMarkdigPipeline().RenderToHtml(page.Markdown);
+
+		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/assets/presets/wiki/getting-started.webp");
+		await Assert.That(html).Contains("alt=\"An adventurer and cat study a blueprint map of a fantasy world\"");
+	}
+
+	[Test]
+	public async Task Theme_OpensWithAtelierArtwork()
+	{
+		var page = StarterWikiPages.All.Single(p => p is { Title: "Theme", Namespace: WikiNamespace.Main });
+		var html = new WikiMarkdigPipeline().RenderToHtml(page.Markdown);
+
+		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/assets/presets/wiki/theme.webp");
+		await Assert.That(html).Contains("alt=\"Costumes and painted scenery fill a theatrical atelier\"");
+	}
+
+	[Test]
 	public async Task Setting_ListsItsSubcategories()
 	{
 		var setting = StarterWikiPages.All.Single(p => p is { Title: "Setting", Namespace: WikiNamespace.Main });

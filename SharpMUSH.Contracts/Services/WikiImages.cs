@@ -14,8 +14,14 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public static partial class WikiImages
 {
+	/// <summary>A lead image's entity-decoded URL and authored alternative text.</summary>
+	public sealed record ImageReference(string Url, string? Alt);
+
 	[GeneratedRegex(@"<img\b[^>]*\bsrc\s*=\s*""([^""]*)""[^>]*>", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
 	private static partial Regex ImgTag();
+
+	[GeneratedRegex(@"\s+alt\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+	private static partial Regex AltAttribute();
 
 	[GeneratedRegex(@"<p>\s*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
 	private static partial Regex OpeningParagraphBefore();
@@ -37,15 +43,26 @@ public static partial class WikiImages
 	}
 
 	/// <summary>
-	/// The URL of the page's lead image — its first <c>&lt;img&gt;</c> when nothing but whitespace and the
-	/// opening of its paragraph comes before it, inside a <c>::: center</c> block or not — entity-decoded, or null when the page opens with text.
+	/// The page's lead image — its first <c>&lt;img&gt;</c> when nothing but whitespace and the opening of
+	/// its paragraph comes before it, inside a <c>::: center</c> block or not — with its URL and authored
+	/// alternative text entity-decoded, or null when the page opens with text.
 	/// </summary>
-	public static string? LeadImageUrl(string? html)
+	public static ImageReference? LeadImage(string? html)
 	{
 		if (string.IsNullOrWhiteSpace(html)) return null;
 		var match = ImgTag().Match(html);
-		return match.Success && NothingBefore().IsMatch(html[..match.Index]) ? FirstImageUrl(html) : null;
+		if (!match.Success || !NothingBefore().IsMatch(html[..match.Index])) return null;
+
+		var url = WebUtility.HtmlDecode(match.Groups[1].Value);
+		if (string.IsNullOrWhiteSpace(url)) return null;
+
+		var altMatch = AltAttribute().Match(match.Value);
+		var alt = altMatch.Success ? WebUtility.HtmlDecode(altMatch.Groups[1].Value) : null;
+		return new ImageReference(url, alt);
 	}
+
+	/// <summary>The entity-decoded URL of the page's lead image, or null when the page opens with text.</summary>
+	public static string? LeadImageUrl(string? html) => LeadImage(html)?.Url;
 
 	/// <summary>
 	/// Removes the first <c>&lt;img&gt;</c> whose decoded <c>src</c> is <paramref name="url"/> from

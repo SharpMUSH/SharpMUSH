@@ -1,9 +1,11 @@
 using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Database.Seed;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -67,6 +69,48 @@ public class MigrationTests
 		{
 			await db.DisposeAsync();
 			await FixtureDirectoryCleanup.DeleteAsync(path);
+		}
+	}
+
+	[Test]
+	public async Task InitialMigrationSeedsShowcaseObjectImagesOnce()
+	{
+		var path = Path.Combine(Path.GetTempPath(), "showcase-image-seed-" + Guid.NewGuid().ToString("N"));
+		var db = Create(path);
+
+		try
+		{
+			await db.Migrate();
+
+			foreach (var seed in InitialObjectImageSeed.Objects)
+			{
+				await AssertAttribute(seed.Dbref, "IMAGE", seed.Image);
+				await AssertAttribute(seed.Dbref, "IMAGE`BANNER", seed.Banner);
+				await AssertAttribute(seed.Dbref, "IMAGE`ALT", seed.Alt);
+				await AssertAttribute(seed.Dbref, "IMAGE`FOCAL", seed.Focal);
+			}
+
+			var god = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+			await db.SetAttributeAsync(new DBRef(0), ["IMAGE"], MString.Plain("/custom/room-zero.webp"), god);
+			await db.Migrate();
+
+			await AssertAttribute(0, "IMAGE", "/custom/room-zero.webp");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			await FixtureDirectoryCleanup.DeleteAsync(path);
+		}
+
+		async Task AssertAttribute(long dbref, string longName, string expected)
+		{
+			var attribute = await db.GetAttributeAsync(new DBRef((int)dbref), longName.Split('`')).LastAsync();
+			await Assert.That(attribute.Value.ToPlainText()).IsEqualTo(expected);
+			var expectedFlags = longName == "IMAGE"
+				? new[] { "no_command", "visual", "prefixmatch", "public", "branch" }
+				: ["no_command", "visual", "prefixmatch", "public"];
+			await Assert.That(attribute.Flags.Select(flag => flag.Name).ToArray())
+				.IsEquivalentTo(expectedFlags);
 		}
 	}
 

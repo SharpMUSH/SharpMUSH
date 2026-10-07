@@ -69,7 +69,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 	}
 
 	private const string BodyHtml =
-		"<p><img class=\"wiki-img\" src=\"/api/wiki-assets/h/ward.jpg\" alt=\"Harbour Ward\" loading=\"lazy\" /></p>" +
+		"<p><img class=\"wiki-img\" src=\"/api/wiki-assets/h/ward.jpg\" alt=\"A ward of slate roofs beside the harbour\" loading=\"lazy\" /></p>" +
 		"<p>Harbour Ward runs along the waterfront.</p>" +
 		"<h2 id=\"geography\">Geography</h2><p>Reclaimed land.</p>" +
 		"<h2 id=\"notable-residents\">Notable residents</h2>" +
@@ -79,7 +79,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 
 	/// <summary>The same body without the image it opens with: nothing for a banner to take.</summary>
 	private static readonly string BodyHtmlWithoutLeadImage =
-		BodyHtml.Replace("<p><img class=\"wiki-img\" src=\"/api/wiki-assets/h/ward.jpg\" alt=\"Harbour Ward\" loading=\"lazy\" /></p>", string.Empty);
+		BodyHtml.Replace("<p><img class=\"wiki-img\" src=\"/api/wiki-assets/h/ward.jpg\" alt=\"A ward of slate roofs beside the harbour\" loading=\"lazy\" /></p>", string.Empty);
 
 	private static WikiArticle Ward(string? image, string? html = null) =>
 		new("Harbour Ward", "![Harbour Ward](/api/wiki-assets/h/ward.jpg)\n\nIntro\n\n## Geography\n\ntext\n\n## Notable residents\n\ntext", image, html ?? BodyHtml)
@@ -115,6 +115,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-banner h1.kit-banner-title").TextContent).IsEqualTo("Harbour Ward");
 		await Assert.That(cut.Find(".kit-banner-kicker").TextContent).IsEqualTo("Theme");
 		await Assert.That(cut.Find(".kit-banner img.kit-banner-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/h/ward.jpg");
+		await Assert.That(cut.Find(".kit-banner img.kit-banner-img").GetAttribute("alt")).IsEqualTo("A ward of slate roofs beside the harbour");
 		var secondary = cut.Find(".kit-banner-secondary");
 		await Assert.That(secondary.TextContent).Contains("Last edited by");
 		await Assert.That(secondary.QuerySelector("a.mention")!.TextContent).IsEqualTo("Ilsa Varn");
