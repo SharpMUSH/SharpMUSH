@@ -21,6 +21,10 @@ namespace SharpMUSH.Library.Markup;
 /// no tree to walk; this one does, and the nested form evaluates to the same text. The escapes and the
 /// space rule are PennMUSH's; the code letters are MarkupString's <see cref="AnsiCodeWriter"/>.
 /// </para>
+/// <para>
+/// A layout is written as the call that builds it, <c>[box(...)]</c>, read from the tree it carries rather
+/// than from the box art (<c>SoftcodeDecomposer.Layout.cs</c>).
+/// </para>
 /// </remarks>
 public static partial class SoftcodeDecomposer
 {
@@ -32,7 +36,7 @@ public static partial class SoftcodeDecomposer
 		var open = new List<(IMarkup Markup, string Close)>();
 		var position = 0;
 
-		void Write(IReadOnlyList<IMarkup> markups, string segment)
+		void Write(IEnumerable<IMarkup> markups, string softcode)
 		{
 			// The first markup is the innermost.
 			var layers = markups.Reverse().Select(m => (Markup: m, Call: Call(m))).Where(l => l.Call is not null).ToList();
@@ -45,17 +49,27 @@ public static partial class SoftcodeDecomposer
 				builder.Append(call!.Value.Open);
 				open.Add((markup, call.Value.Close));
 			}
-			builder.Append(Escape(segment));
+			builder.Append(softcode);
 		}
 
-		foreach (var run in text.Runs)
+		var runs = text.Runs;
+		for (var r = 0; r < runs.Length; r++)
 		{
-			if (run.Start > position) Write([], text.Text[position..run.Start]);
-			Write(run.Markups, text.Text.Substring(run.Start, run.Length));
+			var run = runs[r];
+			if (run.Start > position) Write([], Escape(text.Text[position..run.Start]));
+			if (LayoutAt(text, r) is var (layout, last, outside))
+			{
+				// A layout is the call that builds it, once for all the runs it covers; the colours inside it are its own.
+				Write(outside, LayoutCall(layout, text.Substring(run.Start, runs[last].End - run.Start)));
+				position = runs[last].End;
+				r = last;
+				continue;
+			}
+			Write(run.Markups, Escape(text.Text.Substring(run.Start, run.Length)));
 			position = run.End;
 		}
 
-		Write([], position < text.Length ? text.Text[position..] : string.Empty);
+		Write([], Escape(position < text.Length ? text.Text[position..] : string.Empty));
 		return builder.ToString();
 	}
 
