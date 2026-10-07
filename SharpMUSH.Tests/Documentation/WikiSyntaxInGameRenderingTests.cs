@@ -106,6 +106,16 @@ public class WikiSyntaxInGameRenderingTests
 		await Assert.That(inline.ToPlainText()).IsEqualTo("See [image: A map] here.");
 	}
 
+	/// <summary>A lone image inside <c>::: center</c> is centred for a terminal too, like the text around it.</summary>
+	[Test]
+	public async Task ImageAllowed_AloneInACentredBlockIsCentred()
+	{
+		var lines = RecursiveMarkdownHelper.RenderMarkdown("::: center\n![logo](/l.svg)\n:::",
+			new RecursiveMarkdownRenderer(20) { ImageAllowed = _ => true }).ToPlainText().Split('\n');
+
+		await Assert.That(lines[0].TrimEnd()).IsEqualTo("   [image: logo]");
+	}
+
 	/// <summary>A percentage has no pixel count, so the picture is left its own size.</summary>
 	[Test]
 	public async Task ImageAllowed_PercentWidthIsNotAPixelWidth()
