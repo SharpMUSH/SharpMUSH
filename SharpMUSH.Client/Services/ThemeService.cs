@@ -95,15 +95,20 @@ public sealed class ThemeService : IThemeService, IDisposable
 
 	/// <summary>
 	/// Resolves the theme for the acting character. Waits for the game's themes: until they arrive the cached
-	/// theme stands, rather than flashing Phosphor at a character whose theme is one the game made.
+	/// theme stands, rather than flashing Phosphor at a character whose theme is one the game made. A signed-in
+	/// tab waits for its acting character the same way, since a reload restores the session before the roster.
+	/// Only published themes apply, so staff, who are also sent drafts, see what the settings page reports.
 	/// </summary>
 	private void Apply()
 	{
 		if (!_loaded) return;
 
 		var character = _account.ActiveCharacter;
+		if (character is null && _account.IsLoggedIn) return;
+
+		var published = _themes.Where(t => t.Published).ToList();
 		var resolved = ThemeResolver.Resolve(
-			ThemeResolver.Pick(_themes, _defaultThemeId, character?.ThemeId), character?.Accent);
+			ThemeResolver.Pick(published, _defaultThemeId, character?.ThemeId), character?.Accent);
 		if (resolved.Css == _resolved.Css && resolved.ThemeId == _resolved.ThemeId) return;
 
 		_resolved = resolved;

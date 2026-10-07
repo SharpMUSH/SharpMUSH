@@ -17,6 +17,8 @@ namespace SharpMUSH.Tests.Client.Services;
 /// </summary>
 public class ThemeServiceTests : TrackingTestContext
 {
+	private static readonly PortalTheme Draft = BuiltInThemes.Daylight with { Id = "draft", Name = "Draft", BuiltIn = false, Published = false };
+
 	private static readonly PortalTheme House = BuiltInThemes.Phosphor with
 	{
 		Id = "house",
@@ -39,7 +41,7 @@ public class ThemeServiceTests : TrackingTestContext
 
 	private ThemeService Build(string defaultThemeId = "house", bool themesHeld = false)
 	{
-		var http = Track(new HttpClient(new ThemesHandler(new PortalThemesResponse([.. BuiltInThemes.All, House], defaultThemeId), themesHeld))
+		var http = Track(new HttpClient(new ThemesHandler(new PortalThemesResponse([.. BuiltInThemes.All, House, Draft], defaultThemeId), themesHeld))
 		{
 			BaseAddress = new Uri("http://localhost"),
 		});
@@ -146,6 +148,38 @@ public class ThemeServiceTests : TrackingTestContext
 		await Assert.That(service.Current).IsSameReferenceAs(preview);
 
 		service.Preview(null);
+		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
+	}
+
+	[Test]
+	public async Task ASignedInTabKeepsTheCachedThemeUntilItsCharacterIsKnown()
+	{
+		_account.ActiveCharacter = Character("daylight");
+		await Build().ReloadAsync();
+		var cached = _storage[ThemeService.CacheKey];
+
+		_account.ActiveCharacter = null;
+		_account.IsLoggedIn = true;
+		var reloaded = Build();
+		await reloaded.InitializeAsync();
+		await reloaded.ReloadAsync();
+
+		await Assert.That(reloaded.Current.ThemeId).IsEqualTo("daylight");
+		await Assert.That(_storage[ThemeService.CacheKey]).IsEqualTo(cached);
+
+		_account.ActiveCharacter = Character();
+		_account.Fire();
+		await Assert.That(reloaded.Current.ThemeId).IsEqualTo("house");
+	}
+
+	[Test]
+	public async Task AnUnpublishedThemeIsNotPaintedEvenWhenTheListCarriesIt()
+	{
+		_account.ActiveCharacter = Character("draft");
+		var service = Build();
+
+		await service.ReloadAsync();
+
 		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
 	}
 }
