@@ -129,8 +129,8 @@ public class HelpApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	[Arguments("@mail", "MAIL")]
-	[Arguments("mail-sending", "MAIL-SENDING")]
+	[Arguments("@mail", "Mail")]
+	[Arguments("mail-sending", "Sending Mail")]
 	[Arguments("getting started", "Getting Started")]
 	[Arguments("NEWBIE", "newbie")]
 	public async Task Entry_ResolvesTopicsWhoseNamesFightWithUrls(string requested, string expectedTopic)

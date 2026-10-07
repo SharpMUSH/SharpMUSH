@@ -18,7 +18,7 @@
   ]
 }
 -->
-# command output
+# Command Output
 
 Every command has an output: the answer a function doing the same thing would give. `@dig` outputs the new room, as `dig()` returns it; `think` outputs what it thinks. The output is never the text the command shows you. `@find` shows a line per object and a count, and outputs the list of objects.
 

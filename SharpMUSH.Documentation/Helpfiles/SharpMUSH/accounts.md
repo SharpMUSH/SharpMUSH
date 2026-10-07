@@ -18,7 +18,7 @@
   ]
 }
 -->
-# accounts
+# Accounts
 
 An account is one login for the web portal and the account menu at the connect screen. Characters are linked to it: one account can hold many characters, and each character belongs to at most one account. The account's roles come from its characters, and its characters share the account's roles (see [roles]).
 

@@ -16,7 +16,7 @@
   }
 }
 -->
-# warnings list
+# Warnings List
 
 The building warning system supports the following types of warnings:
 

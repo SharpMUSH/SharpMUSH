@@ -58,7 +58,7 @@ recycled object numbers cannot inherit code. A calling object's new owner
 selects the new scope immediately. Definitions are never cached in the shared
 built-in function table.
 
-# local function startup
+# Local Function Startup
 
 The registry is in memory. Re-register local functions from the backing object's
 `STARTUP` attribute after each engine restart, using the same `@function/local`

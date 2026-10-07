@@ -18,7 +18,7 @@
   }
 }
 -->
-# who
+# WHO
 
 `WHO [<pattern>]`<br>
 `DOING [<pattern>]`

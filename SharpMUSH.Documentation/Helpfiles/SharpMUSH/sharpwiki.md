@@ -1,4 +1,4 @@
-# WIKI()
+# wiki()
 
 - `wiki(<page>)`
 - `wiki(<page>, <field>)`
@@ -57,7 +57,7 @@ en
 - [WIKIACCESS()]
 :::
 
-# WIKICATEGORY()
+# wikicategory()
 
 - `wikicategory(<category>)`
 
@@ -86,7 +86,7 @@ help
 - [wiki]
 :::
 
-# WIKILIST()
+# wikilist()
 
 - `wikilist()`
 - `wikilist(<namespace>)`
@@ -111,7 +111,7 @@ help:markdown_guide
 - [WIKISEARCH()]
 :::
 
-# WIKISEARCH()
+# wikisearch()
 
 - `wikisearch(<text>)`
 
@@ -133,7 +133,7 @@ combat_primer house_rules
 - [WIKILIST()]
 :::
 
-# WIKIRECENT()
+# wikirecent()
 
 - `wikirecent()`
 - `wikirecent(<count>)`
@@ -146,7 +146,7 @@ newest first. *<count>* defaults to 10 and is clamped to 1-50.
 - [WIKILIST()]
 :::
 
-# WIKIACCESS()
+# wikiaccess()
 
 - `wikiaccess(<page>, <action>)`
 - `wikiaccess(<page>, <action>, <player>)`

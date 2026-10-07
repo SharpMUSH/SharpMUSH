@@ -45,7 +45,7 @@
   ]
 }
 -->
-# @REALITY
+# @reality
 
 Reality layers let objects share a room while presenting different presences. The feature
 starts disabled. Existing locks, DARK behavior and permissions still apply when it is enabled.

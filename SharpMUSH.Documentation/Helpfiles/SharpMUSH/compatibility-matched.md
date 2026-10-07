@@ -18,7 +18,7 @@
   ]
 }
 -->
-# COMPATIBILITY MATCHED
+# Compatibility Matched
 
 These once differed and now match PennMUSH; noted here only because earlier SharpMUSH releases
 behaved differently.

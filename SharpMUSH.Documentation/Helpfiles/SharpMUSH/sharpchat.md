@@ -1,7 +1,7 @@
-# CHAT
-# CHAT SYSTEM
+# Chat
+# Chat System
 # comsys
-# CHANNELS
+# Channels
 
 SharpMUSH has a built-in chat system which allows you to speak to other players who are on the same channel without needing to be in the same room as them. It supports a large number of channels which can be customized and restricted in various ways.
 
@@ -58,10 +58,10 @@ Normally, when an object attempts to speak on the channel system with @chat, usi
 - [@CEMIT]
 :::
 
-# @CEMIT
-# @NSCEMIT
-# CEMIT()
-# NSCEMIT()
+# @cemit
+# @nscemit
+# cemit()
+# nscemit()
 
 - `@cemit[/noisy|/silent][/noeval] <channel>=<message>`
 - `@nscemit[/noisy|/silent][/noeval] <channel>=<message>`
@@ -99,7 +99,7 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - [channel functions]
 :::
 
-# @CHANNEL OTHER
+# @channel other
 # @channel/recall
 # @channel/title
 # @channel/buffer
@@ -119,7 +119,7 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - [@CHANNEL ADMIN]
 :::
 
-# @CHANNEL ADMIN
+# @channel admin
 # @channel/add
 # @channel/delete
 # @channel/mogrifier
@@ -169,7 +169,7 @@ Channel locks are managed by the separate `@clock` command, not by a `@channel` 
 - [@CHANNEL CLOCK]
 :::
 
-# @CHANNEL LIST
+# @channel list
 
 The output of `@channel/list` is one header line and one row per channel:
 ```text
@@ -197,8 +197,8 @@ which reads `(None)` when nothing matched.
 - [@CHANNEL CLOCK]
 :::
 
-# @CHANNEL PRIVS
-# CHANNEL-PRIVS
+# @channel privs
+# Channel-privs
 
 `@channel/privs <channel>=<privlist>`
 
@@ -238,7 +238,7 @@ These are privileges, not locks. A privilege says which *kind* of thing the chan
 - [cflags()]
 :::
 
-# @CHANNEL CLOCK
+# @channel clock
 # @channel/clock
 # @clock
 
@@ -276,11 +276,12 @@ You may set a channel's locks if you own it, if you pass its mod lock, or if you
 - [@CHANNEL PRIVS]
 :::
 
-# MUXCOMSYS
-# ADDCOM
-# DELCOM
-# COMLIST
-# COMTITLE
+# MUX Comsys
+# Muxcomsys
+# addcom
+# delcom
+# comlist
+# comtitle
 
 `addcom <alias>=<channel>`<br>
 `delcom <alias>`<br>

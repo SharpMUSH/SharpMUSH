@@ -30,7 +30,7 @@
   ]
 }
 -->
-# RENDERMARKDOWN()
+# rendermarkdown()
 
 `rendermarkdown([<markdown>[, <width>]])`
 

@@ -94,7 +94,7 @@
   "redirects": {}
 }
 -->
-# wiki
+# Wiki
 
 - `@wiki <page>`
 - `@wiki/<switch> <page>[=<value>]`

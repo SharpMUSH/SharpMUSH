@@ -19,7 +19,7 @@
   }
 }
 -->
-# zone masters
+# Zone Masters
 
 SHARED PLAYERS
 

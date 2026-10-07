@@ -26,11 +26,11 @@ public class CompatibilityProfileStructureTests
 {
 	private const string Profile = "pennmush-compatibility.md";
 	private const string Choice = "**A choice.**";
-	private const string Unresolved = "COMPATIBILITY UNRESOLVED";
+	private const string Unresolved = "Compatibility Unresolved";
 
 	/// <summary>Sections whose entries are, by definition, not decisions.</summary>
 	private static readonly HashSet<string> UndecidedSections =
-		[Unresolved, "COMPATIBILITY DEFECTS", "COMPATIBILITY MATCHED"];
+		[Unresolved, "Compatibility Defects", "Compatibility Matched"];
 
 	/// <summary>
 	/// Entries in a decided section that are not themselves a difference, and why. Anything else there

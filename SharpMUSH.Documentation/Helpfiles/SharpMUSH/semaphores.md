@@ -40,7 +40,7 @@
   }
 }
 -->
-# semaphores
+# Semaphores
 
 The most complicated thing about semaphores is their name. Before you try to use semaphores, you should first be familiar with the "`@wait`" command. If you are, then you know that normally, you type:
 

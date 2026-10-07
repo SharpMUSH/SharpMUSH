@@ -1,4 +1,4 @@
-# FORMDECODE()
+# formdecode()
 `formdecode(<string>[, <paramname>[, <osep>]])`
 
 formdecode() is intended for use with the HTTP Handler. See [http] for more.
@@ -32,7 +32,7 @@ You say, "name,hobby,like,like"
 - [FORMQ()]
 :::
 
-# FORMQ()
+# formq()
 `formq(<string>[, <prefix>])`
 
 formq() decodes form-encoded data (an HTTP query string or a form-urlencoded body) and sets one **Q-register per parameter**, so HTTP handler softcode can read named parameters directly instead of calling [FORMDECODE()] per field. This is a SharpMUSH extension; there is no PennMUSH equivalent.

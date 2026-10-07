@@ -26,7 +26,7 @@
   }
 }
 -->
-# listening
+# Listening
 
 There are two basic ways to trigger action on the MUSH. The basic way is to type in commands such as 'look' or '`@emit`'. These commands are not seen or heard by other players, although the results of the commands may be.
 
