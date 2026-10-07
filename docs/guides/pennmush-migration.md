@@ -1,6 +1,6 @@
 # Migrating a PennMUSH world
 
-SharpMUSH can import a PennMUSH flatfile and, optionally, the world's `mush.cnf`. This is the only supported direct world import. RhostMUSH and TinyMUX have no direct supported importer; move those worlds through a compatible PennMUSH export only after validating that intermediate conversion independently.
+SharpMUSH can import a PennMUSH flatfile and, optionally, the world's `mush.cnf`, mail database (`maildb`), and chat database (`chatdb`). The flatfile is the only supported direct world/object source. RhostMUSH and TinyMUX have no direct supported importer; move those worlds through a compatible PennMUSH export only after validating that intermediate conversion independently.
 
 Import is one-way. Keep the original PennMUSH installation and its immutable pre-cutover backup until the SharpMUSH world has passed its observation period. Never treat a successful upload as proof that the game is ready for players.
 
@@ -10,20 +10,20 @@ Make a current inventory before changing either server:
 
 - PennMUSH version, flatfile format, database size, highest dbref, and object count;
 - custom flags, powers, attributes, locks, command/function restrictions, and `mush.cnf` includes;
-- channels, mail, aliases, player passwords, guests, and login policy;
+- channels, mail, mail aliases, player passwords, guests, and login policy, including the separate PennMUSH `maildb` and `chatdb` files;
 - globals, master-room objects, HTTP and event handlers, startup attributes, and scheduled jobs;
 - packages and representative softcode entry points;
 - DNS, telnet/WebSocket endpoints, bots, monitoring, mail delivery, and other external integrations;
 - uploaded wiki assets and any files used by plugins or operational scripts.
 
-Create and checksum a PennMUSH flatfile while the source is quiescent. Copy the flatfile, the complete configuration tree, help/text files, and any other external state to storage the SharpMUSH host cannot overwrite. The importer accepts one uploaded `mush.cnf`; it does not follow that file's includes, so inventory included files and reconcile their effective settings yourself.
+Create and checksum a PennMUSH flatfile, `maildb`, and `chatdb` while the source is quiescent. Copy them, the complete configuration tree, help/text files, and any other external state to storage the SharpMUSH host cannot overwrite. The importer accepts one uploaded `mush.cnf`; it does not follow that file's includes, so inventory included files and reconcile their effective settings yourself. The mail and chat inputs are optional to the importer, but omitting them intentionally imports no mail aliases/channels from those stores.
 
 Check the destination with `@storage`. The import needs room for the live world, a staging world, and the world it replaces. A production-sized first rehearsal belongs on a disposable, non-public SharpMUSH installation with the same image and storage settings planned for production.
 
 ## 2. Rehearse the import
 
 1. Start a clean SharpMUSH stack and protect `/setup` from untrusted visitors. Claim the administrator account linked to `#1`.
-2. From setup, open **Import PennMUSH**. Upload the optional `mush.cnf` with the database so configuration-derived object references and restrictions are in place before objects are converted.
+2. From setup, open **Import PennMUSH**. Upload the flatfile and the matching optional `mush.cnf`, `maildb`, and `chatdb` together. Configuration-derived object references and restrictions are applied before objects are converted; mail aliases, messages, channels, memberships, and history come from the ancillary databases.
 3. Read every skipped-configuration warning. Reproduce settings SharpMUSH supports and record intentional exceptions.
 4. Upload the flatfile and let conversion finish. SharpMUSH writes into a separate `<world>.staging-*` LMDB environment; a failed conversion does not partially replace the live world.
 5. Review the import diagnostics before promotion. Promotion moves the former live world to `<world>.previous` and atomically installs the staging world.
@@ -43,7 +43,7 @@ Record pass/fail, the command or screen used, and any accepted difference for ev
 | Objects and dbrefs | Object counts and highest dbref are plausible; known rooms, exits, things, and players retain the dbrefs embedded in softcode. |
 | Attributes and locks | Sample inherited, private, wizard, visual, and large attributes; evaluate representative lock types and failure messages. |
 | Flags and powers | Custom and built-in definitions exist, permissions are correct, and representative objects retained assignments. |
-| Channels and mail | Membership, aliases, history expectations, mail folders, send/read/delete, and privacy are checked with distinct accounts. |
+| Channels and mail | Confirm the intended `maildb` and `chatdb` were supplied. Membership, aliases, history expectations, mail folders, send/read/delete, and privacy are checked with distinct accounts. |
 | Configuration | Effective `mush.cnf` settings, command/function restrictions, names, limits, login policy, and object references are reconciled against the inventory. |
 | Handlers and packages | HTTP/event handlers, globals, master-room code, startup behavior, and each selected package have one intentional owner. |
 | Softcode | Run a risk-ranked suite of player commands, building commands, queues, iterators, regexes, locks, persistence, and error paths. |
@@ -58,7 +58,7 @@ Investigate differences rather than normalizing the transcript until it looks gr
 Define the go/no-go checklist and rollback authority before the maintenance window.
 
 1. Announce the freeze and stop logins or place PennMUSH in maintenance mode.
-2. Drain queued work, create the final source flatfile, archive source configuration and external state, and record checksums and counts.
+2. Drain queued work, create the final source flatfile plus matching `maildb` and `chatdb`, archive source configuration and external state, and record checksums and counts for every input.
 3. Repeat the rehearsed import on the intended SharpMUSH host. Do not reuse a changed rehearsal database.
 4. Run the abbreviated acceptance suite: administrator and player login, known dbrefs, core softcode, mail/channel samples, telnet, portal/WebSocket, integrations, backup, storage, health, logs, and metrics.
 5. Change DNS/proxy/client endpoints only after the named approver signs off. Keep PennMUSH stopped but immediately recoverable.

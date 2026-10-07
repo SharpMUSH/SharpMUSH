@@ -53,8 +53,68 @@ public partial class AdministratorGuideTests
 		}
 	}
 
+	[Test]
+	public async Task MigrationGuideDefinesSupportedInputsAndRollbackBoundary()
+	{
+		var text = Read("docs/guides/pennmush-migration.md");
+		foreach (var required in new[]
+		{
+			"PennMUSH flatfile", "mush.cnf", "maildb", "chatdb", "RhostMUSH", "TinyMUX",
+			"no direct supported importer", "one-way", "rehearsal", "validation", "## 4. Cut over",
+			"<world>.previous", "point-in-time world copy"
+		})
+		{
+			await Assert.That(text).Contains(required);
+		}
+	}
+
+	[Test]
+	public async Task OperatorGuideDistinguishesStateAndRecoveryKinds()
+	{
+		var text = Read("docs/guides/operator-handbook.md");
+		foreach (var required in new[]
+		{
+			"Lightning/LMDB world", "Wiki assets", "NATS JetStream", "Plugin assemblies",
+			"Restore drill", "Deployment rollback", "Data restore", "@storage", "readiness",
+			"Prometheus", "Restic"
+		})
+		{
+			await Assert.That(text).Contains(required);
+		}
+	}
+
+	[Test]
+	public async Task ArchitectureNamesRuntimeAndObservationBoundaries()
+	{
+		var text = Read("docs/design/deployment-architecture.md");
+		foreach (var required in new[]
+		{
+			"SharpMUSH.Server", "SharpMUSH.SocketServer", "SharpMUSH.RenderingWorker", "NATS",
+			"Lightning/LMDB", "Wiki assets", "Restic", "Off-host storage", "Prometheus",
+			"health/readiness"
+		})
+		{
+			await Assert.That(text).Contains(required);
+		}
+	}
+
+	[Test]
+	public async Task MaintainedRepositoryGuidesDoNotClaimDotNet10()
+	{
+		foreach (var relativePath in new[]
+		{
+			"docs/guides/pennmush-migration.md", "docs/guides/operator-handbook.md",
+			"docs/design/deployment-architecture.md", "docs/guides/writing-a-plugin.md"
+		})
+		{
+			await Assert.That(Read(relativePath)).DoesNotContain("net10.0");
+		}
+	}
+
 	private static string Resolve(string relativePath)
 		=> Path.Combine(RepositoryDocuments, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+	private static string Read(string relativePath) => File.ReadAllText(Resolve(relativePath));
 
 	[GeneratedRegex("""(?<!!)\[[^\]]+\]\(([^)\s]+)(?:\s+['"][^)]*['"])?\)""")]
 	private static partial Regex MarkdownLink();
