@@ -4661,6 +4661,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>Страниц в вики пока нет.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>Здесь пока нет закреплённых категорий.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>Нет страниц по запросу «{0}».</value>
   </data>

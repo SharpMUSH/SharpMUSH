@@ -75,7 +75,7 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		=> SourceLocaleToStamp(sourceLocale) switch
 		{
 			string stampedLocale => await store.CreatePageAsync(NewPage(title, Render(markdown), authorDbref, ns, stampedLocale,
-				WikiHelpers.NormalizeCategories(categories))),
+				WikiHelpers.NormalizeCategories(categories, ns))),
 			Error<string> error => error,
 		};
 
@@ -173,8 +173,21 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		return result;
 	}
 
-	public Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published)
-		=> store.SetPageMetadataAsync(id, WikiHelpers.NormalizeCategories(categories), published);
+	public async Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published)
+		=> await store.GetPageByIdAsync(id) switch
+		{
+			// A page never changes namespace, so the categories its namespace adds are read from the stored page.
+			WikiPage page => await store.SetPageMetadataAsync(id,
+				WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(page.Namespace)), published),
+			NotFound notFound => notFound,
+		};
+
+	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync() => store.GetPinnedCategoriesAsync();
+
+	public async Task<Result<bool>> SetCategoryPinnedAsync(string category, bool pinned)
+		=> WikiHelpers.CategoryKey(category) is { Length: > 0 } key
+			? await store.SetCategoryPinnedAsync(key, pinned)
+			: new Error<string>("A category needs a name.");
 
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 		=> store.GetRevisionsAsync(pageId, string.Empty, skip, take);

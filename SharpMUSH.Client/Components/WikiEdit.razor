@@ -114,9 +114,20 @@
             @foreach (var category in Article.Categories)
             {
                 var c = category;
-                <span class="wiki-edit-tag">@WikiCategories.Display(c, CategoryNames)
-                    <button type="button" disabled="@IsTranslation" @onclick="@(() => RemoveCategory(c))">×</button>
-                </span>
+                @if (IsNamespaceCategory(c))
+                {
+                    @* Every page in this namespace is in it; the server puts it back, so it has no remove button. *@
+                    <span class="wiki-edit-tag wiki-edit-tag--fixed" title="@string.Format(Loc["WkCategoryFromNamespace"], NamespaceLabel)">
+                        @WikiCategories.Display(c, CategoryNames)
+                        <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" aria-label="@string.Format(Loc["WkCategoryFromNamespace"], NamespaceLabel)" />
+                    </span>
+                }
+                else
+                {
+                    <span class="wiki-edit-tag">@WikiCategories.Display(c, CategoryNames)
+                        <button type="button" disabled="@IsTranslation" @onclick="@(() => RemoveCategory(c))">×</button>
+                    </span>
+                }
             }
             <input class="wiki-edit-taginput" value="@_categoryEntry"
                    disabled="@IsTranslation"
@@ -181,6 +192,9 @@
     /// with no page, or none given, shows its key.
     /// </summary>
     [Parameter] public IReadOnlyDictionary<string, string>? CategoryNames { get; set; }
+
+    /// <summary>The page's namespace; the categories it puts every page in are shown fixed.</summary>
+    [Parameter] public string? Namespace { get; set; }
 
     /// <summary>Invoked after a successful save with the updated article.</summary>
     [Parameter] public EventCallback<WikiArticle> OnSaved { get; set; }
@@ -303,6 +317,11 @@
     }
 
     private void RemoveCategory(string category) => Article?.Categories.Remove(category);
+
+    private bool IsNamespaceCategory(string category) =>
+        WikiHelpers.NamespaceCategories(Namespace).Contains(WikiCategories.Key(category));
+
+    private string NamespaceLabel => WikiHelpers.CategoryLabel(Namespace ?? string.Empty);
 
     private void OnCategoryKeyDown(KeyboardEventArgs args)
     {

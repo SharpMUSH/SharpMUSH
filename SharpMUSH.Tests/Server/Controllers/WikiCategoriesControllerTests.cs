@@ -34,9 +34,10 @@ public class WikiCategoriesControllerTests
 		await Assert.That(categories).IsEquivalentTo(new[]
 		{
 			new WikiCategorySummaryDto("beasts", "Beasts", 2, HasPage: false),
+			new WikiCategorySummaryDto("character", "Character", 0, HasPage: false, Pinned: true),
 			new WikiCategorySummaryDto("lore", "Lore", 1, HasPage: false),
 			new WikiCategorySummaryDto("lore_of_the_deep", "Lore of the Deep", 0, HasPage: true),
-		}).Because("a draft the caller may not see is not counted, so its category is not listed");
+		}).Because("a draft the caller may not see is not counted, so its category is not listed; a pinned one is listed though empty");
 	}
 
 	[Test]
@@ -78,7 +79,11 @@ public class WikiCategoriesControllerTests
 
 		var categories = await CategoriesAsync(WikiControllerTestHarness.Build(storage, authenticated: true, "#42", PortalPermission.WikiDrafts).Wiki);
 
-		await Assert.That(categories).IsEquivalentTo(new[] { new WikiCategorySummaryDto("magic_items", "Magic Items", 1, HasPage: true) })
+		await Assert.That(categories).IsEquivalentTo(new[]
+			{
+				new WikiCategorySummaryDto("character", "Character", 0, HasPage: false, Pinned: true),
+				new WikiCategorySummaryDto("magic_items", "Magic Items", 1, HasPage: true),
+			})
 			.Because("a caller who sees drafts sees the draft category page, so the category is not offered as new");
 	}
 
@@ -105,5 +110,28 @@ public class WikiCategoriesControllerTests
 
 		await Assert.That((await storage.GetBySlugAsync("sea_lore", WikiNamespace.Category)).Expect<WikiPage>().Title)
 			.IsEqualTo("Sea Lore");
+	}
+
+	[Test]
+	public async Task Pinning_a_category_puts_it_on_the_wiki_home_and_unpinning_takes_it_off()
+	{
+		var (wiki, storage) = WikiControllerTestHarness.BuildWithClaims(PortalPermission.WikiAdmin);
+		await storage.CreateAsync("Harbour", "x", "#1", categories: ["Lore"]);
+
+		var pinned = (OkObjectResult)await wiki.Admin.SetCategoryPinned("Lore", new SetCategoryPinnedRequest(true));
+		await Assert.That((IEnumerable<string>)pinned.Value!).IsEquivalentTo(["character", "lore"]);
+		await Assert.That((await CategoriesAsync(wiki)).Single(c => c.Key == "lore").Pinned).IsTrue();
+
+		await wiki.Admin.SetCategoryPinned("character", new SetCategoryPinnedRequest(false));
+		var home = (OkObjectResult)await wiki.Browse.GetPinnedCategories();
+		await Assert.That((IEnumerable<string>)home.Value!).IsEquivalentTo(["lore"]);
+	}
+
+	[Test]
+	public async Task Pinning_a_blank_name_is_a_bad_request()
+	{
+		var (wiki, _) = WikiControllerTestHarness.BuildWithClaims(PortalPermission.WikiAdmin);
+
+		await Assert.That(await wiki.Admin.SetCategoryPinned(" ", new SetCategoryPinnedRequest(true))).IsTypeOf<BadRequestObjectResult>();
 	}
 }

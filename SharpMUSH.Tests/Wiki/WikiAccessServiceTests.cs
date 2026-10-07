@@ -196,6 +196,25 @@ public class WikiAccessServiceTests
 			.IsEqualTo("namespace system requires wiki.admin");
 	}
 
+	/// <summary>
+	/// A biography is filed in Character whatever the request names, so Character's requirements apply to
+	/// creating one and to changing its categories even when the request leaves Character out.
+	/// </summary>
+	[Test]
+	public async Task TheNamespaceCategory_CountsTowardCreateAndCategoryRequirements()
+	{
+		var (wiki, access, _) = await BuildAsync();
+		var bio = (await wiki.CreateAsync("Ilsa Varn", "body", "#1", WikiNamespace.Character)).Expect<WikiPage>();
+		await access.SetRequirementsAsync(Admin, "#1", WikiRuleTarget.ForCategory(WikiHelpers.CharacterCategory),
+			new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Create] = [LoreEdit], [WikiAction.Edit] = [LoreEdit] });
+
+		await Assert.That((await access.DecideCreateAsync(Player, "character", [])).Describe())
+			.IsEqualTo("category character requires lore.edit");
+		await Assert.That((await access.DecideCreateAsync(Player, "main", [])).Allowed).IsTrue();
+		await Assert.That((await access.DecideCreateAsync(With(Player, LoreEdit), "character", [])).Allowed).IsTrue();
+		await Assert.That((await access.DecideCategoriesAsync(Player, bio, [])).Allowed).IsFalse();
+	}
+
 	[Test]
 	public async Task OnlyWikiAdminSetsRequirementsAndOnlyToKnownPermissions()
 	{

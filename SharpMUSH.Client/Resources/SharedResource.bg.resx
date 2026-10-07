@@ -4661,6 +4661,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>Все още няма уики страници.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>Тук все още няма закачени категории.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>Няма страници, съответстващи на „{0}“.</value>
   </data>

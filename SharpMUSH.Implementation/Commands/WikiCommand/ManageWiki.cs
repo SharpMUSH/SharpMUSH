@@ -13,7 +13,7 @@ namespace SharpMUSH.Implementation.Commands.WikiCommand;
 
 /// <summary>
 /// Administrative @wiki subcommands: delete (a page action, see <see cref="IWikiAccessService"/>), and
-/// protect/unprotect and publish/unpublish, which need wiki.admin. Categories are an edit, set by
+/// protect/unprotect, publish/unpublish and pin/unpin, which need wiki.admin. Categories are an edit, set by
 /// <c>@wiki/category page=list</c> (<see cref="EditWiki"/>).
 /// </summary>
 public static class ManageWiki
@@ -105,5 +105,61 @@ public static class ManageWiki
 			default:
 				return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
+	}
+
+	/// <summary>
+	/// <c>@wiki/pin</c> lists the categories pinned to the wiki home; <c>@wiki/pin &lt;category&gt;</c> and
+	/// <c>@wiki/unpin &lt;category&gt;</c> change them, and need wiki.admin. Returns the pinned keys.
+	/// </summary>
+	public static async ValueTask<MString> Pin(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		IWikiService wikiService,
+		IWikiLocalizationService localization,
+		INotifyService notifyService,
+		MString? categoryArg,
+		bool pin)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var names = await localization.GetCategoryNamesAsync(await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor),
+			await WikiCommandHelper.VisibilityAsync(parser, executor));
+		var name = categoryArg?.ToPlainText().Trim() ?? string.Empty;
+
+		if (name.Length > 0)
+		{
+			if (!(await WikiCommandHelper.ReaderAsync(parser, executor)).Has(PortalPermission.WikiAdmin))
+			{
+				await notifyService.Notify(executor, "WIKI: Permission denied. That needs the wiki.admin permission.", executor);
+				return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			if (name.StartsWith("category:", StringComparison.OrdinalIgnoreCase)) name = name["category:".Length..];
+			var label = WikiHelpers.CategoryLabel(name, names);
+			switch (await wikiService.SetCategoryPinnedAsync(name, pin))
+			{
+				case bool changed:
+					await notifyService.Notify(executor, (changed, pin) switch
+					{
+						(true, true) => $"WIKI: Category '{label}' is now pinned to the wiki home.",
+						(true, false) => $"WIKI: Category '{label}' is no longer pinned to the wiki home.",
+						(false, true) => $"WIKI: Category '{label}' was already pinned.",
+						(false, false) => $"WIKI: Category '{label}' was not pinned.",
+					}, executor);
+					break;
+				case Error<string>:
+					await notifyService.Notify(executor, "WIKI: Which category?", executor);
+					return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+			}
+		}
+
+		var pinned = await wikiService.GetPinnedCategoriesAsync();
+		if (name.Length == 0)
+		{
+			await notifyService.Notify(executor, pinned.Count == 0
+				? "WIKI: No category is pinned to the wiki home."
+				: $"WIKI: Pinned to the wiki home: {string.Join(", ", pinned.Select(key => WikiHelpers.CategoryLabel(key, names)))}.", executor);
+		}
+
+		return MarkupText.Plain(string.Join(' ', pinned));
 	}
 }

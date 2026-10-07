@@ -209,6 +209,48 @@ public class WikiCommandTests
 	}
 
 	[Test]
+	public async ValueTask WikiPin_NonWizard_IsDenied()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiPinMortal");
+		var category = TestIsolationHelpers.GenerateUniqueName("pinmortal").ToLowerInvariant();
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/pin {category}"));
+
+		await ExpectNotify(player.DbRef, "needs the wiki.admin permission");
+		await Assert.That(await WikiService.GetPinnedCategoriesAsync()).DoesNotContain(category);
+	}
+
+	[Test]
+	public async ValueTask WikiPin_AsGod_PinsAndUnpinsACategory()
+	{
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		var category = TestIsolationHelpers.GenerateUniqueName("pinned").ToLowerInvariant();
+		var label = WikiHelpers.CategoryLabel(category);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/pin Category:{category}"));
+		await ExpectNotify(god, $"'{label}' is now pinned to the wiki home");
+		await Assert.That(await WikiService.GetPinnedCategoriesAsync()).Contains(category);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/unpin {category}"));
+		await ExpectNotify(god, $"'{label}' is no longer pinned to the wiki home");
+		await Assert.That(await WikiService.GetPinnedCategoriesAsync()).DoesNotContain(category);
+	}
+
+	[Test]
+	public async ValueTask WikiCategory_OnABiography_KeepsCharacter()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiBioFiler");
+		var title = TestIsolationHelpers.GenerateUniqueName("Bio");
+		var page = (await WikiService.CreateAsync(title, "Bio.", player.DbRef.ToString(), WikiNamespace.Character, "en")).Expect<WikiPage>();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/category Character:{title}="));
+
+		await Assert.That((await WikiService.GetByIdAsync(page.Id)).Expect<WikiPage>().Categories).IsEquivalentTo(["character"]);
+	}
+
+	[Test]
 	public async ValueTask WikiRollback_RestoresEarlierRevision()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

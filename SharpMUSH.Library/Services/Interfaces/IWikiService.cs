@@ -92,7 +92,8 @@ public interface IWikiService
 	/// <summary>
 	/// Creates a new wiki page. The (namespace, slug) identity must be unique. Renders the Markdown to
 	/// HTML and extracts plain text at creation time. <paramref name="categories"/> are the page's
-	/// categories, keyed by <c>WikiHelpers.NormalizeCategories</c>; they are not read from the text.
+	/// categories, keyed by <c>WikiHelpers.NormalizeCategories</c>, plus those <paramref name="ns"/> puts every page
+	/// in (<c>WikiHelpers.NamespaceCategories</c>); they are not read from the text.
 	/// <paramref name="sourceLocale"/> records the locale the body is authored in, canonicalised through
 	/// <c>WikiHelpers.NormalizeLocale</c>. It is materialised once here and immutable thereafter — nothing
 	/// re-derives it on read. Null or blank stores <see cref="string.Empty"/>, meaning "not yet stamped";
@@ -139,9 +140,23 @@ public interface IWikiService
 		string editorDbref);
 
 	/// <summary>
+	/// The categories pinned to the wiki home, as keys in key order. Only these get a card there; every
+	/// category still has its page and its place in the sidebar. A new world pins <c>character</c>.
+	/// </summary>
+	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
+
+	/// <summary>
+	/// Pins <paramref name="category"/> to the wiki home or takes it off. The category need not have a page
+	/// or any member yet. Returns whether anything changed, or <c>Error</c> for a blank name. Who may do this
+	/// is the caller's rule (wiki.admin).
+	/// </summary>
+	Task<Result<bool>> SetCategoryPinnedAsync(string category, bool pinned);
+
+	/// <summary>
 	/// Sets a page's categories and published flag. Does NOT create a revision — metadata changes are not
 	/// content edits. Categories are keyed (<c>WikiHelpers.NormalizeCategories</c>): blanks dropped,
-	/// duplicates merged.
+	/// duplicates merged, and the categories the page's namespace puts it in added
+	/// (<c>WikiHelpers.NamespaceCategories</c>), so they cannot be removed.
 	/// Returns the updated page, or <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
 	Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published);

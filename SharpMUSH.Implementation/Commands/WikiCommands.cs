@@ -20,7 +20,8 @@ public partial class Commands
 		Switches =
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
-			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH", "REQUIRE", "ACCESS",
+			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH", "PIN", "UNPIN", "REQUIRE",
+			"ACCESS",
 			"NOEVAL", "SOURCE", "DRAFT", "MD"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
@@ -109,6 +110,10 @@ public partial class Commands
 				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Publish),
 			"UNPUBLISH" when hasArg0 && !hasArg1
 				=> await ManageWiki.Handle(parser, Mediator, wikiService, NotifyService, arg0!, ManageWiki.Operation.Unpublish),
+			"PIN" when !hasArg1
+				=> await ManageWiki.Pin(parser, Mediator, wikiService, localization, NotifyService, arg0, pin: true),
+			"UNPIN" when hasArg0 && !hasArg1
+				=> await ManageWiki.Pin(parser, Mediator, wikiService, localization, NotifyService, arg0, pin: false),
 			"REQUIRE" when hasArg0 && hasArg1
 				=> await AccessWiki.Require(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
 			"ACCESS" when hasArg0

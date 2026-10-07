@@ -21,6 +21,9 @@ public sealed class InMemoryWikiStore : IWikiStore
 	private readonly ConcurrentDictionary<(string PageId, string Locale), WikiTranslation> _translations = new();
 	private readonly ConcurrentDictionary<WikiRuleTarget, WikiRequirementSet> _requirements = new();
 
+	/// <summary>Pinned category keys; <c>character</c> to start with, as a new Lightning world has.</summary>
+	private readonly ConcurrentDictionary<string, byte> _pinned = new(StringComparer.Ordinal) { [WikiHelpers.CharacterCategory] = 0 };
+
 	private int _idCounter;
 
 	/// <summary>A <see cref="WikiStoreService"/> over a fresh in-memory store.</summary>
@@ -147,6 +150,12 @@ public sealed class InMemoryWikiStore : IWikiStore
 		else _requirements[set.Target] = set;
 		return Task.FromResult<Found<None>>(new None());
 	}
+
+	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
+		=> Task.FromResult<IReadOnlyList<string>>(_pinned.Keys.Order(StringComparer.Ordinal).ToList());
+
+	public Task<bool> SetCategoryPinnedAsync(string category, bool pinned)
+		=> Task.FromResult(pinned ? _pinned.TryAdd(category, 0) : _pinned.TryRemove(category, out _));
 
 	public Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)
 	{

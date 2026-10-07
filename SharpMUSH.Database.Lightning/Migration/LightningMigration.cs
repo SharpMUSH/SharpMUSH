@@ -5,6 +5,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -17,7 +18,8 @@ public partial class LightningDatabase
 	/// 1. upsert the shared flag/power/attribute-flag/attribute-entry definitions and the system roles and
 	///    categories (always, cheap, and keyed by name, so a plugin installed later still lands its flags);
 	/// 2. apply the initial migration once, gated on <see cref="InitialMigrationId"/>: objects #0-#9, the
-	///    ancestor player formats and the <c>system</c> wiki namespace's requirement;
+	///    ancestor player formats, the <c>system</c> wiki namespace's requirement and the <c>character</c>
+	///    category's pin to the wiki home;
 	/// 3. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 4. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 5. ensure the singleton server-state row exists.
@@ -205,7 +207,8 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>Seeds objects #0-#9 (names/types/edges/flags from <see cref="InitialObjectSeed"/>), sets
-	/// <c>next_dbref</c> to 10 and makes the <c>system</c> wiki namespace <c>wiki.admin</c>-only. Runs once,
+	/// <c>next_dbref</c> to 10, makes the <c>system</c> wiki namespace <c>wiki.admin</c>-only and pins the
+	/// <c>character</c> category to the wiki home. Runs once,
 	/// gated by <see cref="InitialMigrationId"/>.</summary>
 	private static void ApplyInitialSeed(ITx tx)
 	{
@@ -257,6 +260,8 @@ public partial class LightningDatabase
 			UpdatedBy = "#1",
 			UpdatedAt = now,
 		}));
+
+		tx.Put(Tables.WikiPin, WikiPinKey(WikiHelpers.CharacterCategory), WikiPinValue);
 	}
 
 	/// <summary>Raises <c>next_dbref</c> to (highest key in <c>obj</c>) + 1 when that is larger than what is stored — the floor a wiped-and-reimported world needs, never a ceiling this lowers.</summary>

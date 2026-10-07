@@ -242,14 +242,18 @@
             <div class="adminwiki-catlist">
                 @foreach (var category in _categories)
                 {
-                    <a class="@($"adminwiki-catcard{(category.HasPage ? null : " adminwiki-catcard--nopage")}")"
-                       href="@WikiCategories.Route(category.Key)"
-                       title="@(category.HasPage ? null : Loc["WikiCategoryNoPage"].Value)">
-                        <MudIcon Icon="@(category.HasPage ? Icons.Material.Filled.Label : Icons.Material.Outlined.Label)" Size="Size.Small"
-                                 Class="adminwiki-catcard-icon" />
-                        <span class="adminwiki-catcard-name">@category.Name</span>
-                        <span class="adminwiki-catcard-count">@category.Pages</span>
-                    </a>
+                    var c = category;
+                    <div class="@($"adminwiki-catcard{(c.HasPage ? null : " adminwiki-catcard--nopage")}")">
+                        <a class="adminwiki-catcard-link" href="@WikiCategories.Route(c.Key)"
+                           title="@(c.HasPage ? null : Loc["WikiCategoryNoPage"].Value)">
+                            <MudIcon Icon="@(c.HasPage ? Icons.Material.Filled.Label : Icons.Material.Outlined.Label)" Size="Size.Small"
+                                     Class="adminwiki-catcard-icon" />
+                            <span class="adminwiki-catcard-name">@c.Name</span>
+                            <span class="adminwiki-catcard-count">@c.Pages</span>
+                        </a>
+                        <WikiCategoryPinButton Category="@c.Key" Name="@c.Name" Pinned="@c.Pinned" Compact="true"
+                                               PinnedChanged="@(pinned => SetPinned(c.Key, pinned))" />
+                    </div>
                 }
             </div>
         }
@@ -441,6 +445,13 @@
         await LoadStatsAsync();
         await categories;
         await requirements;
+    }
+
+    /// <summary>Keeps the card's row in step with a pin the server accepted.</summary>
+    private void SetPinned(string key, bool pinned)
+    {
+        if (_categories?.FindIndex(c => c.Key == key) is { } index and >= 0)
+            _categories[index] = _categories[index] with { Pinned = pinned };
     }
 
     private async Task LoadCategoriesAsync()

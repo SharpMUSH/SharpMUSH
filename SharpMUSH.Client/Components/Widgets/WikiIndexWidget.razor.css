@@ -104,7 +104,7 @@
 
 .wiki-cat-head {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: 8px;
 }
 
@@ -207,6 +207,12 @@
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
+}
+
+.wiki-empty-hint {
+	margin-top: 6px;
+	font-size: 13px;
+	color: var(--text-faint);
 }
 
 /* the widget sizes itself against its own box: 2 columns when narrower than 48rem, 1 under 30rem */

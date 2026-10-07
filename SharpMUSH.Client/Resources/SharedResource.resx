@@ -4079,6 +4079,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>No wiki pages yet.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>No categories are pinned here yet.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>No pages match “{0}”.</value>
   </data>
@@ -5471,6 +5474,9 @@
   <data name="WkAddCategory" xml:space="preserve">
     <value>Add a category</value>
   </data>
+  <data name="WkCategoryFromNamespace" xml:space="preserve">
+    <value>Every page in the {0} namespace is in this category.</value>
+  </data>
   <data name="NavWikiSubcategories" xml:space="preserve">
     <value>{count, plural, one {# subcategory} other {# subcategories}}</value>
   </data>
@@ -5649,7 +5655,7 @@
     <value>rev {0}</value>
   </data>
   <data name="WikiCategoriesSub" xml:space="preserve">
-    <value>Every category, with how many pages it holds. A dashed one is in use but has no category page yet. A new category keeps its name exactly as typed.</value>
+    <value>Every category, with how many pages it holds. A dashed one is in use but has no category page yet. A new category keeps its name exactly as typed. The pin puts a category on the wiki home.</value>
   </data>
   <data name="WikiNewCategoryName" xml:space="preserve">
     <value>New category</value>
@@ -5671,6 +5677,24 @@
   </data>
   <data name="WikiCategoryNoPage" xml:space="preserve">
     <value>In use, but it has no category page yet</value>
+  </data>
+  <data name="WikiPinCategory" xml:space="preserve">
+    <value>Pin to wiki home</value>
+  </data>
+  <data name="WikiUnpinCategory" xml:space="preserve">
+    <value>Unpin from wiki home</value>
+  </data>
+  <data name="WikiCategoryPinned" xml:space="preserve">
+    <value>{0} is pinned to the wiki home.</value>
+  </data>
+  <data name="WikiCategoryUnpinned" xml:space="preserve">
+    <value>{0} is no longer pinned to the wiki home.</value>
+  </data>
+  <data name="WikiCategoryPinFailed" xml:space="preserve">
+    <value>The pin couldn't be changed: {0}</value>
+  </data>
+  <data name="WikiNoPinnedHint" xml:space="preserve">
+    <value>Pin a category from its page, from the Categories card in Admin, or with @wiki/pin.</value>
   </data>
   <data name="WikiNoCategories" xml:space="preserve">
     <value>No categories yet.</value>

@@ -21,6 +21,7 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   PUT  /api/wiki/{slug}/protection  — require wiki.admin to edit and delete the page, or not (wiki.admin)
 ///   PUT  /api/wiki/{slug}/metadata    — set categories/published (authenticated)
+///   PUT  /api/wiki/categories/{category}/pin — pin a category to the wiki home, or unpin it (wiki.admin)
 ///   POST /api/wiki/batch/protect      — batch protection change (Wizard+)
 ///   POST /api/wiki/batch/delete       — batch deletion (Wizard+)
 ///   POST /api/wiki/invalidate-cache   — evict pre-render cache entries after an edit
@@ -60,6 +61,19 @@ public class WikiAdminController(
 			protect
 				? WikiRequirementSet.Protection
 				: new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Edit] = [], [WikiAction.Delete] = [] });
+
+	/// <summary>
+	/// PUT /api/wiki/categories/{category}/pin
+	/// Pins a category to the wiki home or takes it off, and returns the pinned keys.
+	/// </summary>
+	[HttpPut("categories/{category}/pin")]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
+	public async Task<IActionResult> SetCategoryPinned(string category, [FromBody] SetCategoryPinnedRequest request)
+		=> await Wiki.SetCategoryPinnedAsync(category, request.Pinned) switch
+		{
+			bool => Ok(await Wiki.GetPinnedCategoriesAsync()),
+			Error<string> error => BadRequest(error.Value),
+		};
 
 	/// <summary>
 	/// PUT /api/wiki/{slug}/metadata

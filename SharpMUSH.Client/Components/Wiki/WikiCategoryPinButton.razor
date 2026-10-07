@@ -1,0 +1,86 @@
+@using SharpMUSH.Client.Models.Wiki
+@inject WikiService Wiki
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Pins a category to the wiki home or takes it off. Shown to wiki.admin holders only (the host wraps it in
+   AuthorizeView); the server refuses anyone else. Compact is an icon for a row of categories; otherwise a
+   capsule for a page header. Given no Pinned, it asks the server. *@
+@if (_pinned is { } pinned)
+{
+    var label = pinned ? Loc["WikiUnpinCategory"].Value : Loc["WikiPinCategory"].Value;
+    var icon = pinned ? Icons.Material.Filled.PushPin : Icons.Material.Outlined.PushPin;
+    @if (Compact)
+    {
+        <MudTooltip Text="@label">
+            <MudIconButton Icon="@icon" Size="Size.Small" Color="@(pinned ? Color.Primary : Color.Default)"
+                           aria-label="@label" aria-pressed="@(pinned ? "true" : "false")" Disabled="@_busy" OnClick="@ToggleAsync" />
+        </MudTooltip>
+    }
+    else
+    {
+        <CapsuleButton Icon="@icon" Pressed="@pinned" Disabled="@_busy" OnClick="@ToggleAsync">@label</CapsuleButton>
+    }
+}
+
+@code {
+    /// <summary>The category, by key or name.</summary>
+    [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
+
+    /// <summary>The category's name as the reader sees it, for the confirmation; its key as a title when null.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>Whether it is pinned, when the host already knows; null loads it.</summary>
+    [Parameter] public bool? Pinned { get; set; }
+
+    /// <summary>An icon button rather than a labelled capsule.</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    /// <summary>Raised with the new state after a change the server accepted.</summary>
+    [Parameter] public EventCallback<bool> PinnedChanged { get; set; }
+
+    private bool? _pinned;
+    private bool _busy;
+    private string? _loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Pinned is { } given)
+        {
+            _pinned = given;
+            return;
+        }
+
+        var key = WikiCategories.Key(Category);
+        if (key == _loadedFor) return;
+        _loadedFor = key;
+        _pinned = await Wiki.GetPinnedCategoriesAsync() is List<string> pinned ? pinned.Contains(key) : null;
+        // A failed read leaves no button; the next render for this category asks again.
+        if (_pinned is null) _loadedFor = null;
+    }
+
+    private async Task ToggleAsync()
+    {
+        if (_pinned is not { } pinned || _busy) return;
+        _busy = true;
+        try
+        {
+            var label = Name ?? WikiCategories.Label(Category, string.Empty);
+            switch (await Wiki.SetCategoryPinnedAsync(Category, !pinned))
+            {
+                case List<string> now:
+                    _pinned = now.Contains(WikiCategories.Key(Category));
+                    Snackbar.Add(string.Format(Loc[_pinned.Value ? "WikiCategoryPinned" : "WikiCategoryUnpinned"], label), Severity.Success);
+                    await PinnedChanged.InvokeAsync(_pinned.Value);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(string.Format(Loc["WikiCategoryPinFailed"], failure.Message), Severity.Error);
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

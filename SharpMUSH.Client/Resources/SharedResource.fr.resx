@@ -3955,6 +3955,9 @@
   <data name="NavWikiNoPages" xml:space="preserve">
     <value>Aucune page wiki pour le moment.</value>
   </data>
+  <data name="NavWikiNoPinned" xml:space="preserve">
+    <value>Aucune catégorie n'est encore épinglée ici.</value>
+  </data>
   <data name="NavWikiNoMatches" xml:space="preserve">
     <value>Aucune page ne correspond à « {0} ».</value>
   </data>
