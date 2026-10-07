@@ -29,13 +29,14 @@ public partial class RecursiveMarkdownRenderer
 		if (options.Direction == FlexDirection.Column) return Laid(Column(items));
 
 		var available = _maxWidth - options.Gap * (items.Count - 1);
-		var widths = available > 0 ? ColumnWidths(items, available) : null;
+		// Fixed bases that overrun the row stack, each still at its basis, as they did before the engine drew rows.
+		if ((available > 0 ? ColumnWidths(items, available) : null) is not { } widths) return Laid(Column(items));
 
 		// Each item is rendered at the width the engine will give it (the same shares, worked out here), so
 		// what it holds that the engine does not lay out itself, a code block, fits as it is.
-		var sized = items.Select((item, i) => (Block)new Sized(ItemBody(widths is null ? RenderFlexItem(item) : RenderFlexItem(item, widths[i])))
+		var sized = items.Select((item, i) => (Block)new Sized(ItemBody(RenderFlexItem(item, widths[i])))
 		{
-			Basis = item.Options.Basis is not null && widths is not null ? BlockSize.Cells(widths[i]) : BlockSize.Auto,
+			Basis = item.Options.Basis is not null ? BlockSize.Cells(widths[i]) : BlockSize.Auto,
 			Grow = item.Options.Basis is null ? item.Options.Grow : 0,
 			Min = options.Wrap ? Math.Min(item.Options.Min, _maxWidth) : 1
 		}).ToImmutableArray();
@@ -60,8 +61,8 @@ public partial class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// A column direction's items one under the other with a blank line between them, each at its basis
-	/// when it has one, as the portal keeps a basis as a width in a column.
+	/// Items one under the other with a blank line between them, each at its basis when it has one, as the
+	/// portal keeps a basis as a width in a column: a column direction, or a row whose fixed bases overrun it.
 	/// </summary>
 	private Stack Column(IReadOnlyList<FlexItemBlock> items)
 	{

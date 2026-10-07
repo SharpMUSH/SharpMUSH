@@ -125,6 +125,15 @@ public class MarkdownFlexTests
 		await Assert.That(lines).IsEquivalentTo(["alpha beta", "gamma", "", "Bottom"]);
 	}
 
+	/// <summary>Fixed bases wider than the row together stack, and each item keeps its basis as its width.</summary>
+	[Test]
+	public async Task Terminal_OverrunningBases_StackAtTheirBasis()
+	{
+		var lines = Lines(":::: flex\n::: item {basis=10}\nalpha beta gamma\n:::\n::: item {basis=10}\ndelta epsilon\n:::\n::::", 15);
+
+		await Assert.That(lines).IsEquivalentTo(["alpha beta", "gamma", "", "delta", "epsilon"]);
+	}
+
 	/// <summary>The gap comes out of the row before the percentages, so two halves share one line.</summary>
 	[Test]
 	public async Task Terminal_TwoHalves_FitBesideTheirGap()
