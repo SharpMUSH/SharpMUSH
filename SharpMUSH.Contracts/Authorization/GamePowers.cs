@@ -68,6 +68,7 @@ public static class GamePowers
 		new("See_All", [], null, "Can examine and see everything, without changing it."),
 		new("See_Queue", [], null, "Can see every object's queue with @ps."),
 		new("See_OOB", [], null, "Can see out-of-band traffic from other connections."),
+		new("Send_Image", [], null, "Can show pictures with image(), figure() and Markdown, from the hosts image_hosts allows."),
 		new("Send_OOB", ["Pueblo_Send"], null, "Can send out-of-band messages such as Pueblo and GMCP."),
 		new("SQL_OK", ["Use_SQL"], null, "Can run SQL queries."),
 		new("Tport_Anything", ["tel_anything"], null, "Can @teleport any object."),

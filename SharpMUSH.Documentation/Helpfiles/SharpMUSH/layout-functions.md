@@ -814,7 +814,7 @@ Floated, *<beside>* flows down the other side of the art in a telnet client and 
 
 ## Who sees the picture
 
-The picture is shown only when the caller is a Wizard or has the Send_OOB @power, as for image(), and the `image_hosts` option allows its host. Otherwise the portal shows the art too, or the description when there is none.
+The picture is shown only when the caller may use image() (a Wizard, or the Send_Image or Send_OOB @power; the approved role holds Send_Image) and the `image_hosts` option allows its host. Otherwise the portal shows the art too, or the description when there is none.
 
 ## Example
 ```sharp

@@ -86,7 +86,7 @@
       "scenario": "20-admin-commands",
       "case": "admin.lists",
       "step": 0,
-      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these four are the only difference accepted.",
+      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB, Send_Image and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
       "tracking": "#1406",
       "profile": "SharpMUSH-only flags and powers",
       "command": "@list flags",
@@ -98,11 +98,11 @@
       "scenario": "20-admin-commands",
       "case": "admin.lists",
       "step": 1,
-      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these four are the only difference accepted.",
+      "reason": "SharpMUSH defines the SCENE_ROOM and TRUECOLOR flags and the See_OOB, Send_Image and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
       "tracking": "#1406",
       "profile": "SharpMUSH-only flags and powers",
       "command": "@list powers",
-      "sharp": "Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, Immortal, Link_Anywhere, Login, Long_Fingers, MANY_ATTRIBS, No_Pay, No_Quota, Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, Poll, Queue, Quotas, SQL_OK, Search, See_All, See_OOB, See_Queue, Send_OOB, Tport_Anything, Tport_Anywhere, Unkillable",
+      "sharp": "Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, Immortal, Link_Anywhere, Login, Long_Fingers, MANY_ATTRIBS, No_Pay, No_Quota, Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, Poll, Queue, Quotas, SQL_OK, Search, See_All, See_OOB, See_Queue, Send_Image, Send_OOB, Tport_Anything, Tport_Anywhere, Unkillable",
       "penn": "Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, Immortal, Link_Anywhere, Login, Long_Fingers, MANY_ATTRIBS, No_Pay, No_Quota, Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, Poll, Queue, Quotas, SQL_OK, Search, See_All, See_Queue, Send_OOB, Tport_Anything, Tport_Anywhere"
     },
     {

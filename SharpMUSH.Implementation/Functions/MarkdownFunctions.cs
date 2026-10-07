@@ -102,9 +102,9 @@ public partial class Functions
 
 	/// <summary>
 	/// Which of a markdown image's addresses render as a picture: the ones <c>image()</c> would show for
-	/// <paramref name="executor"/>. Without Send_OOB the markdown's images stay their placeholders, so
+	/// <paramref name="executor"/>. Without Send_Image the markdown's images stay their placeholders, so
 	/// <c>rendermarkdown()</c> is no way around what <c>image()</c> asks.
 	/// </summary>
 	private async ValueTask<Func<string, bool>?> MarkdownImagePolicy(AnySharpObject executor)
-		=> await CanSendOob(executor) ? ImageAllowed : null;
+		=> await CanSendImage(executor) ? ImageAllowed : null;
 }

@@ -173,8 +173,9 @@ public partial class Functions
 	/// <summary>
 	/// <c>figure(&lt;address&gt;[, &lt;description&gt;[, &lt;art&gt;[, &lt;float&gt;[, &lt;beside&gt;[, &lt;width&gt;]]]]])</c>
 	/// — a picture with the text art a terminal shows instead of it, and, floated <c>left</c> or
-	/// <c>right</c>, text that flows round it. The picture is shown only when the caller may send
-	/// pictures (as <c>image()</c>) and <c>image_hosts</c> allows its host; otherwise the art is.
+	/// <c>right</c>, text that flows round it. The picture is shown only when the caller may show
+	/// pictures (as <c>image()</c>: Send_Image or Send_OOB) and <c>image_hosts</c> allows its host;
+	/// otherwise the art is.
 	/// </summary>
 	[SharpFunction(Name = "figure", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular, ParameterNames = ["address", "description", "art", "float", "beside", "width"])]
 	public async ValueTask<CallState> Figure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -194,7 +195,7 @@ public partial class Functions
 		if (LayoutWidth(parser, Arg(args, 5)) is not (int width, bool fluid)) return new CallState(ErrorMessages.Returns.ArgRange);
 
 		var shown = address.Length > 0
-			&& await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator))
+			&& await CanSendImage(await parser.CurrentState.KnownExecutorObject(Mediator))
 			&& ImageAllowed(address);
 		var description = Arg(args, 1).ToPlainText();
 		var image = new ImageMarkup(shown ? address : string.Empty, description.Length == 0 ? null : description);
