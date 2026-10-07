@@ -10,7 +10,7 @@ internal static class SceneJson
 {
 	public const string Recent = "/api/scenes?filter=recent&count=50";
 	public const string Active = "/api/scenes?filter=active&count=50";
-	public const string Scheduled = "/api/scenes?filter=scheduled&count=50";
+	public const string Scheduled = "/api/scenes?filter=upcoming&count=50";
 	public const string Finished = "/api/scenes?filter=finished&count=50";
 
 	public static string Participant(int dbref) => $"/api/scenes?participant=%23{dbref}&count=50";

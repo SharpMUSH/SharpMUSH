@@ -1,52 +1,74 @@
 @using System.Globalization
 @inject IStringLocalizer<SharedResource> Loc
 
-@* The schedule as an agenda: the scenes waiting to run grouped under their day, each with its start
-   time, its title into the scene's page, where it is and who hosts it. The list arrives in time order
-   (the server's scheduled filter), with the paused scenes that have no time last; those close the
-   agenda under a heading of their own rather than a date. Days and times are the reader's own. *@
+@* The schedule as an agenda: the scenes waiting to run grouped under their day, each a card of its own with
+   its start time, its title into the scene's page, who hosts it and what it is about (the pitch). Where it
+   happens is left out: a scheduled scene has no room until it starts. The list arrives in time order (the
+   server's scheduled filter), with the paused scenes that have no time last; those close the agenda under a
+   heading of their own rather than a date. Days and times are the reader's own; today and tomorrow say so,
+   and a day's heading stays in view while its scenes scroll under it. A scene whose time came without it
+   starting is marked late (the server drops it from the list an hour on). *@
 <div class="schedule-agenda">
     @foreach (var day in Days())
     {
         <section class="schedule-day">
             <h2 class="schedule-day-head">@day.Heading</h2>
-            <KitCard>
-                <ol class="schedule-rows">
-                    @foreach (var scene in day.Scenes)
-                    {
-                        <li @key="scene.Id" class="schedule-row">
-                            <span class="schedule-time">@(scene.ScheduledForUtc is { } due ? due.ToLocalTime().ToString("t", CultureInfo.CurrentCulture) : "—")</span>
-                            <div class="schedule-main">
-                                <div class="schedule-top">
-                                    <a class="schedule-title" href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}")">@Loc.Title(scene)</a>
-                                    @if (scene.IsPaused)
-                                    {
-                                        <Pill Tag="true" Class="schedule-paused">@Loc["RolPausedBadge"]</Pill>
-                                    }
-                                    @if (!scene.IsPublic)
-                                    {
-                                        <Pill Tag="true" Class="schedule-private">@Loc["NavScenePrivate"]</Pill>
-                                    }
-                                </div>
-                                <div class="schedule-meta">
-                                    <span>@(string.IsNullOrWhiteSpace(scene.RoomName) ? Loc["RolScheduleNoRoom"] : scene.RoomName)</span>
-                                    @if (!string.IsNullOrWhiteSpace(scene.OwnerName))
-                                    {
-                                        <span aria-hidden="true">·</span>
-                                        <span>@string.Format(Loc["RolScheduleHostedBy"], scene.OwnerName)</span>
-                                    }
-                                </div>
+            <ol class="schedule-rows">
+                @foreach (var scene in day.Scenes)
+                {
+                    <li @key="scene.Id" class="schedule-row">
+                        <span class="schedule-time">@(scene.ScheduledForUtc is { } due ? due.ToLocalTime().ToString("t", CultureInfo.CurrentCulture) : "—")</span>
+                        <div class="schedule-main">
+                            <div class="schedule-top">
+                                <a class="schedule-title" href="@($"/scenes/{Uri.EscapeDataString(scene.Id)}")">@Loc.Title(scene)</a>
+                                @if (IsLate(scene))
+                                {
+                                    <Pill Tag="true" Warn="true" Class="schedule-late">@Loc["RolScheduleLate"]</Pill>
+                                }
+                                @if (scene.IsPaused)
+                                {
+                                    <Pill Tag="true" Class="schedule-paused">@Loc["RolPausedBadge"]</Pill>
+                                }
+                                @if (!scene.IsPublic)
+                                {
+                                    <Pill Tag="true" Class="schedule-private">@Loc["NavScenePrivate"]</Pill>
+                                }
                             </div>
-                        </li>
-                    }
-                </ol>
-            </KitCard>
+                            @if (Pitch(scene) is { } pitch)
+                            {
+                                <p class="schedule-pitch">@pitch</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(scene.OwnerName))
+                            {
+                                <div class="schedule-meta">@string.Format(Loc["RolScheduleHostedBy"], scene.OwnerName)</div>
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
         </section>
     }
 </div>
 
 @code {
     [Parameter, EditorRequired] public required IReadOnlyList<SceneSummary> Scenes { get; set; }
+
+    /// <summary>The pitch the host set with +scene/pitch, or null when there is none.</summary>
+    private static string? Pitch(SceneSummary scene) =>
+        scene.Meta.TryGetValue("summary", out var pitch) && !string.IsNullOrWhiteSpace(pitch) ? pitch.Trim() : null;
+
+    /// <summary>A scene that has not started though its time has come.</summary>
+    private static bool IsLate(SceneSummary scene) =>
+        !scene.IsPaused && scene.ScheduledForUtc is { } due && due < DateTimeOffset.UtcNow;
+
+    /// <summary>The day's date, after "Today" or "Tomorrow" when it is one of those.</summary>
+    private string Heading(DateTimeOffset local, DateOnly date, DateOnly today)
+    {
+        var full = local.ToString("D", CultureInfo.CurrentCulture);
+        return date == today ? $"{Loc["RolScheduleToday"]} · {full}"
+            : date == today.AddDays(1) ? $"{Loc["RolScheduleTomorrow"]} · {full}"
+            : full;
+    }
 
     private sealed record Day(string Heading, List<SceneSummary> Scenes);
 
@@ -55,6 +77,7 @@
     {
         var days = new List<Day>();
         var untimed = new List<SceneSummary>();
+        var today = DateOnly.FromDateTime(DateTimeOffset.Now.DateTime);
         DateOnly? current = null;
         foreach (var scene in Scenes)
         {
@@ -68,7 +91,7 @@
             var date = DateOnly.FromDateTime(local.DateTime);
             if (date != current)
             {
-                days.Add(new Day(local.ToString("D", CultureInfo.CurrentCulture), []));
+                days.Add(new Day(Heading(local, date, today), []));
                 current = date;
             }
             days[^1].Scenes.Add(scene);

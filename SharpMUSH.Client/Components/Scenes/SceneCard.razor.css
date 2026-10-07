@@ -41,6 +41,15 @@
 	text-overflow: ellipsis;
 }
 
+.scene-card-pitch {
+	margin: 4px 0 0;
+	font-size: 13px;
+	color: var(--text-dim);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .scene-card-meta {
 	display: flex;
 	flex-wrap: wrap;

@@ -358,4 +358,34 @@ public class SceneServiceIntegrationTests
 		await Assert.That(windowed).DoesNotContain(paused).Because("a scene with no time is in no window");
 		await Assert.That((await Eval("scenelist(active)")).Split(' ')).DoesNotContain(paused);
 	}
+
+	/// <summary>
+	/// <c>upcoming</c> is the schedule a reader can still go to: a scene that never started and is more than
+	/// an hour past its time is off it, one a little late is still on it, and a paused scene stays whatever
+	/// time it was given.
+	/// </summary>
+	[Test]
+	public async Task ListUpcoming_LeavesOutScenesLongPastDue()
+	{
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+		var missed = await NewSceneAsync("UpcomingMissed");
+		await Eval($"sceneset({missed},status,scheduled)");
+		await Eval($"sceneset({missed},scheduledfor,{now - 2 * 3_600_000})");
+
+		var late = await NewSceneAsync("UpcomingLate");
+		await Eval($"sceneset({late},status,scheduled)");
+		await Eval($"sceneset({late},scheduledfor,{now - 10 * 60_000})");
+
+		var pausedLongAgo = await NewSceneAsync("UpcomingPaused");
+		await Eval($"sceneset({pausedLongAgo},status,paused)");
+		await Eval($"sceneset({pausedLongAgo},scheduledfor,{now - 48 * 3_600_000})");
+
+		var upcoming = (await Eval("scenelist(upcoming)")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(upcoming).DoesNotContain(missed).Because("it never started and its time is long gone");
+		await Assert.That(upcoming).Contains(late).Because("a host may start a little late");
+		await Assert.That(upcoming).Contains(pausedLongAgo).Because("a paused scene waits to be resumed");
+		await Assert.That((await Eval("scenelist(scheduled)")).Split(' ')).Contains(missed)
+			.Because("the whole schedule still lists it");
+	}
 }

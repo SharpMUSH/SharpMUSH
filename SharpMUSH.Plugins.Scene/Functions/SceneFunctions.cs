@@ -134,8 +134,9 @@ public static class SceneFunctions
 	/// <summary>
 	/// scenelist([&lt;filter&gt;][, &lt;from&gt;][, &lt;to&gt;])
 	/// Returns a space-separated list of scene ids. Filter: active | recent |
-	/// scheduled | mine (default recent). The optional UTC-millis from/to bounds
-	/// window the scheduled filter.
+	/// scheduled | upcoming | mine (default recent). upcoming is scheduled without the scenes
+	/// that never started and are more than an hour past their time. The optional UTC-millis
+	/// from/to bounds window the scheduled and upcoming filters.
 	/// </summary>
 	[SharpFunction(Name = "scenelist", MinArgs = 0, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
