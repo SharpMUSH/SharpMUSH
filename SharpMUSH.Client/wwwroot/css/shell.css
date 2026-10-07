@@ -808,8 +808,8 @@ pre.ms-preformatted {
 .ms-table th { border-bottom: 1px solid currentColor; }
 @media (max-width: 48em) { .ms-table .ms-p3 { display: none; } }
 @media (max-width: 32em) { .ms-table .ms-p2 { display: none; } }
-/* Portal-only: LayoutCss.Fixed leaves its title gap in a rule with no title, which splits the line in two. */
-.ms-rule:empty { gap: 0; }
+/* Portal-only: LayoutCss.Fixed leaves its title gap in a rule or divider with no title, which splits the line in two. */
+.ms-rule:empty, .ms-divider:empty { gap: 0; }
 /* Portal-only: a cell breaks a word only when the word cannot fit, so a table sizes its columns to whole words. */
 .ms-table .ms-text { overflow-wrap: break-word; }
 

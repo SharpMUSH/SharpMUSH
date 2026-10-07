@@ -1934,10 +1934,10 @@ public partial class Commands : ICommandRestrictionApplier
 		Delete: async (mediator, name) => await mediator.Send(new DeleteObjectFlagCommand(name)),
 		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetObjectFlagDisabledCommand(name, disabled)),
 		AddTakesAlias: false,
-		ListTitle: "Object Flags:",
+		ListTitle: "Object flags",
 		ListColumns:
 		[
-			new(MarkupText.Plain("Name")) { Min = 20, Wrap = false },
+			new(MarkupText.Plain("Name")) { Wrap = false },
 			new(MarkupText.Plain("Symbol")) { Wrap = false, Priority = 2 },
 			new(MarkupText.Plain("Type Restrictions")) { Min = 10 },
 		],
@@ -2003,12 +2003,12 @@ public partial class Commands : ICommandRestrictionApplier
 		Delete: async (mediator, name) => await mediator.Send(new DeletePowerCommand(name)),
 		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetPowerDisabledCommand(name, disabled)),
 		AddTakesAlias: true,
-		ListTitle: "Object Powers:",
+		ListTitle: "Object powers",
 		ListColumns:
 		[
-			new(MarkupText.Plain("Name")) { Min = 20, Wrap = false },
+			new(MarkupText.Plain("Name")) { Wrap = false },
 			new(MarkupText.Plain("Symbol")) { Wrap = false, Priority = 3 },
-			new(MarkupText.Plain("Aliases")) { Min = 18, Priority = 2 },
+			new(MarkupText.Plain("Aliases")) { Min = 10, Priority = 2 },
 			new(MarkupText.Plain("Type Restrictions")) { Min = 10 },
 		],
 		ListRow: power => [power.Name, power.Symbol, string.Join(",", power.Aliases ?? []), string.Join(",", power.TypeRestrictions)],
@@ -2095,9 +2095,9 @@ public partial class Commands : ICommandRestrictionApplier
 				.Where(entry => (!entry.Disabled || executor.IsGod()) && (matcher is null || SoftcodeRegex.IsMatch(matcher, entry.Name)))
 				.Select(entry => registry.ListRow(entry).Select(cell => (Block)MarkupText.Plain(cell)).ToImmutableArray())
 				.ToArrayAsync();
-			// The columns keep their old widths as minimums, one cell apart; a narrow client loses the least needed first.
-			var table = new Table(registry.ListColumns, [.. rows]) { Gap = 1 };
-			await NotifyService.Notify(executor, MarkupText.Concat([MarkupText.Plain(registry.ListTitle + "\n"), ServerLayout.Build(table, 78)]), executor);
+			// A narrow client loses the least needed column first.
+			var table = ServerLayout.Listing(registry.ListColumns, rows);
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(registry.ListTitle), table), 78), executor);
 			return CallState.Empty;
 		}
 

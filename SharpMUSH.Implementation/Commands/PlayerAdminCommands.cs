@@ -198,31 +198,22 @@ public partial class Commands
 
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
-			var rules = sitelockRules.Rules.Count == 0
-				? MarkupText.Plain("  (No rules defined - all connections allowed by default)")
-				: ServerLayout.Build(new Table(
+			Block rules = sitelockRules.Rules.Count == 0
+				? new TextBlock(MarkupText.Plain("No rules: every connection is allowed."))
+				: ServerLayout.Listing(
 					[
-						new TableColumn(MarkupText.Plain("Pattern")) { Min = 28, Wrap = false },
+						new TableColumn(MarkupText.Plain("Pattern")) { Wrap = false },
 						new TableColumn(MarkupText.Plain("Options")) { Min = 10 },
 					],
-					[.. sitelockRules.Rules.Select(rule => ImmutableArray.Create<Block>(MarkupText.Plain(rule.Key), MarkupText.Plain(string.Join(", ", rule.Value))))])
-				{ Gap = 1 }, 78);
+					sitelockRules.Rules.Select(rule => new[] { rule.Key, string.Join(", ", rule.Value) }));
+			Block names = new TextBlock(MarkupText.Plain(bannedNames.BannedNames.Length == 0
+				? "No banned names."
+				: string.Join(", ", bannedNames.BannedNames)));
 
-			var output = new System.Text.StringBuilder();
-			output.AppendLine();
-			output.AppendLine($"Banned Player Names ({bannedNames.BannedNames.Length} total):");
-			if (bannedNames.BannedNames.Length == 0)
-			{
-				output.AppendLine("  (No banned names defined)");
-			}
-			else
-			{
-				output.AppendLine("  " + string.Join(", ", bannedNames.BannedNames));
-			}
-
-			await NotifyService.Notify(executor,
-				MarkupText.Concat([MarkupText.Plain($"Sitelock Rules ({sitelockRules.Rules.Count} total):\n"), rules, MarkupText.NewLine, MarkupText.Plain(output.ToString().TrimEnd())]),
-				executor);
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Sitelock rules ({sitelockRules.Rules.Count})"),
+				rules,
+				new Rule(MarkupText.Plain($"Banned player names ({bannedNames.BannedNames.Length})")) { TitleAlignment = Alignment.Left },
+				names), 78), executor);
 			return CallState.Empty;
 		}
 

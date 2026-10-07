@@ -1,3 +1,5 @@
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
@@ -42,8 +44,8 @@ public partial class Commands
 			var operation = switches.FirstOrDefault() ?? (left.Length == 0 ? "LIST" : "INFO");
 			output = operation switch
 			{
-				"LIST" => MarkupText.Plain(await PermissionListAsync(parser)),
-				"INFO" => MarkupText.Plain(await PermissionInfoAsync(parser, left)),
+				"LIST" => await PermissionListAsync(parser),
+				"INFO" => await PermissionInfoAsync(parser, left),
 				"CATEGORIES" => await CategoriesAsync(parser, CategoryKind.Permission),
 				_ when operation.StartsWith("CATEGORY/") => MarkupText.Plain(await CategoryChangeAsync(parser, executor, CategoryKind.Permission, operation, left, right, hasRight)),
 				_ => MarkupText.Plain(await PermissionChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight))
@@ -55,45 +57,52 @@ public partial class Commands
 	}
 
 	/// <summary><c>@permission</c>: every permission, with the narrower ones each umbrella covers, then the game's own by category.</summary>
-	private static async ValueTask<string> PermissionListAsync(IMUSHCodeParser parser)
+	private static async ValueTask<MString> PermissionListAsync(IMUSHCodeParser parser)
 	{
-		var output = new StringBuilder("Permissions (an umbrella also covers the scopes listed after it):");
-		foreach (var scope in PortalPermission.AllScopes)
-		{
-			var implied = PortalPermission.ImpliedScopes(scope);
-			output.Append($"\n  {scope}{(implied.Count > 0 ? "  -> " + string.Join(", ", implied) : "")}");
-		}
+		var builtIn = ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("Permission")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Also covers")) { Min = 10 },
+			],
+			PortalPermission.AllScopes.Select(scope => new[] { scope, string.Join(", ", PortalPermission.ImpliedScopes(scope)) }));
 
 		var custom = await RoleRegistry(parser).GetCustomPermissionsAsync(ExecutionBudget.CurrentToken);
-		output.Append(custom.Count == 0 ? "\nCustom permissions: none. Add one with @permission/define." : "\nCustom permissions, by category:");
-		foreach (var category in custom.GroupBy(p => p.Category, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
-		{
-			output.Append($"\n {category.Key}");
-			foreach (var permission in category)
-				output.Append($"\n  {permission.Scope}{(permission.Description.Length > 0 ? "  " + permission.Description : "")}");
-		}
-		return output.ToString();
+		Block defined = custom.Count == 0
+			? new TextBlock(MarkupText.Plain("None. Add one with @permission/define."))
+			: ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Category")) { Wrap = false, Priority = 2 },
+					new TableColumn(MarkupText.Plain("Permission")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Description")) { Min = 10 },
+				],
+				custom.OrderBy(p => p.Category, StringComparer.OrdinalIgnoreCase)
+					.Select(permission => new[] { permission.Category, permission.Scope, permission.Description }));
+
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Permissions"),
+			builtIn, new Rule(MarkupText.Plain("Custom permissions")), defined), 78);
 	}
 
 	/// <summary><c>@permission &lt;permission&gt;</c>: what it is, and which roles allow or deny it.</summary>
-	private static async ValueTask<string> PermissionInfoAsync(IMUSHCodeParser parser, string name)
+	private static async ValueTask<MString> PermissionInfoAsync(IMUSHCodeParser parser, string name)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		var registry = RoleRegistry(parser);
 		var scope = name.ToLowerInvariant();
 		var custom = (await registry.GetCustomPermissionsAsync(ct)).FirstOrDefault(p => p.Scope == scope);
 		if (custom is null && !PortalPermission.IsKnown(scope))
-			return $"No permission named '{scope}'. See @permission.";
+			return MarkupText.Plain($"No permission named '{scope}'. See @permission.");
 
-		var output = new StringBuilder(custom is null
-			? $"Permission: {scope}  Built in"
-			: $"Permission: {scope}  Category: {custom.Category}{(custom.Description.Length > 0 ? "  " + custom.Description : "")}");
 		var implied = PortalPermission.ImpliedScopes(scope);
-		if (implied.Count > 0) output.Append($"\nCovers: {string.Join(", ", implied)}");
 		var roles = await registry.GetRolesAsync(ct);
-		output.Append($"\nAllowed by: {Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Allow).Select(r => r.Slug))}");
-		output.Append($"\nDenied by: {Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Deny).Select(r => r.Slug))}");
-		return output.ToString();
+		(string, MString)[] fields =
+		[
+			("Category", MarkupText.Plain(custom is null ? "Built in" : custom.Category)),
+			.. custom is not { Description.Length: > 0 } ? [] : new[] { ("Description", MarkupText.Plain(custom.Description)) },
+			.. implied.Count == 0 ? [] : new[] { ("Covers", MarkupText.Plain(string.Join(", ", implied))) },
+			("Allowed by", MarkupText.Plain(Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Allow).Select(r => r.Slug)))),
+			("Denied by", MarkupText.Plain(Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Deny).Select(r => r.Slug)))),
+		];
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Permission: {scope}"), ServerLayout.KeyValues(fields)), 78);
 	}
 
 	private async ValueTask<string> PermissionChangeAsync(IMUSHCodeParser parser, AnySharpObject executor, string operation,

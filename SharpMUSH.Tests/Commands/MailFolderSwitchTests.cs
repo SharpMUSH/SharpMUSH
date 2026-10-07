@@ -1,4 +1,5 @@
-﻿using Mediator;
+using System.Text.RegularExpressions;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -74,7 +75,7 @@ public class MailFolderSwitchTests
 
 		await Assert.That(result.Message!.ToPlainText())
 			.DoesNotContain("INVALID SWITCH", StringComparison.OrdinalIgnoreCase);
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 0 [INBOX].", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("Current folder: 0 (INBOX)", StringComparison.Ordinal));
 	}
 
 	/// <summary>
@@ -103,8 +104,8 @@ public class MailFolderSwitchTests
 		await Run("@mail");
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 1 [SAVED].", StringComparison.Ordinal));
-		await Assert.That(told).Contains(m => m.Contains("MAIL (folder  1)", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("Current folder: 1 (SAVED)", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("Mail, folder 1 (SAVED)", StringComparison.Ordinal));
 		await Assert.That(told).Contains(m => m.Contains("Kept In Saved", StringComparison.Ordinal));
 		await Assert.That(told).DoesNotContain(m => m.Contains("Stays In Inbox", StringComparison.Ordinal));
 	}
@@ -163,7 +164,7 @@ public class MailFolderSwitchTests
 		await Run("@mail");
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 1 [ARCHIVE].", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("Current folder: 1 (ARCHIVE)", StringComparison.Ordinal));
 		await Assert.That(told).Contains(m => m.Contains("Renamed Subject", StringComparison.Ordinal));
 	}
 
@@ -190,18 +191,18 @@ public class MailFolderSwitchTests
 		await Run("@mail");
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(told).Contains(m => m.Contains("MAIL: 1 messages in folder 1 [unnamed] (1 unread, 0 cleared).", StringComparison.Ordinal));
-		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is 1 [unnamed].", StringComparison.Ordinal));
+		await Assert.That(FolderRows(told)).Contains("1 unnamed 1 1 0");
+		await Assert.That(told).Contains(m => m.Contains("Current folder: 1 (unnamed)", StringComparison.Ordinal));
 		await Assert.That(told).Contains(m => m.Contains("Returned Subject", StringComparison.Ordinal));
 	}
 
 	/// <summary>
 	/// The folder report (<c>do_mail_change_folder</c> with no folder, <c>extmail.c:313-321</c>) tallies
-	/// every folder that holds mail, highest number first, each with its own unread and cleared counts,
-	/// and skips the empty ones.
+	/// every folder that holds mail, each with its own unread and cleared counts, skips the empty ones,
+	/// and names the current folder.
 	/// </summary>
 	[Test]
-	public async Task FolderReportTalliesEachFolderHighestNumberFirst()
+	public async Task FolderReportTalliesEachFolder()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailTally");
@@ -224,15 +225,23 @@ public class MailFolderSwitchTests
 
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await Run("@mail/folder");
-		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before)
-			.Where(m => m.StartsWith("MAIL:", StringComparison.Ordinal)).ToList();
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(told).IsEquivalentTo(new[]
+		// Folder, name, messages, unread, cleared.
+		await Assert.That(FolderRows(told)).IsEquivalentTo(new[]
 		{
-			"MAIL: 2 messages in folder 2 [BETA] (1 unread, 0 cleared).",
-			"MAIL: 1 messages in folder 1 [ALPHA] (1 unread, 0 cleared).",
-			"MAIL: 1 messages in folder 0 [INBOX] (0 unread, 1 cleared).",
-			"MAIL: Current folder is 0 [INBOX]."
+			"0 INBOX 1 0 1",
+			"1 ALPHA 1 1 0",
+			"2 BETA 2 1 0",
 		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(told).Contains(m => m.Contains("Current folder: 0 (INBOX)", StringComparison.Ordinal));
 	}
+
+	/// <summary>The rows of the folder report's table, each cell one space apart.</summary>
+	private static string[] FolderRows(IEnumerable<string> told) =>
+	[
+		.. told.SelectMany(message => message.Split('\n'))
+			.Select(line => Regex.Replace(line.Trim(' ', '|', '│'), @"\s+", " "))
+			.Where(row => Regex.IsMatch(row, @"^\d+ \S+ \d+ \d+ \d+$"))
+	];
 }

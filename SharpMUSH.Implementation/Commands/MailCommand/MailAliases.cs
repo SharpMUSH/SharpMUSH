@@ -1,3 +1,7 @@
+using SharpMUSH.Library.Markup;
+using MarkupString.Layout;
+using MarkupString;
+using System.Collections.Immutable;
 using SharpMUSH.Library.Authorization;
 using Mediator;
 using SharpMUSH.Library;
@@ -209,33 +213,27 @@ public static class MailAliases
 			? found.Object().Name
 			: "*NOTHING*";
 
-	/// <summary>A printf <c>%-N.Ns</c>: cut to <paramref name="width"/>, then padded to it.</summary>
-	private static string Column(string text, int width)
-		=> (text.Length > width ? text[..width] : text).PadRight(width);
-
-	/// <summary>do_malias_list.</summary>
+	/// <summary>do_malias_list: the aliases the executor may see, with who may use and see each.</summary>
 	private static async ValueTask ListAsync(Services services, AnySharpObject executor)
 	{
-		var notified = false;
+		var rows = new List<string[]>();
 		await foreach (var alias in AllAsync(services))
 		{
-			if (!await IsListedForAsync(alias, executor))
+			if (await IsListedForAsync(alias, executor))
 			{
-				continue;
+				rows.Add([$"{Token}{alias.Name}", alias.Description, PrivilegeColumn(alias.UsePrivileges), PrivilegeColumn(alias.SeePrivileges),
+					await OwnerNameAsync(services, alias.Owner)]);
 			}
-
-			if (!notified)
-			{
-				await Tell(services, executor,
-					$"{Column("Name", 13)} {Column("Alias Description", 35)} Use See {Column("Owner", 15)}");
-				notified = true;
-			}
-
-			await Tell(services, executor,
-				$"{Token}{Column(alias.Name, 12)} {Column(alias.Description, 35)} {ShortPrivileges(alias)} {Column(await OwnerNameAsync(services, alias.Owner), 15)}");
 		}
 
-		await Tell(services, executor, "*****  End of Mail Aliases *****");
+		await TellPanelAsync(services, executor, rows,
+			[
+				new TableColumn(MarkupText.Plain("Name")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Description")) { Min = 10 },
+				new TableColumn(MarkupText.Plain("Use")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("See")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Owner")) { Wrap = false, Priority = 3 },
+			]);
 	}
 
 	/// <summary>do_malias_all: every alias, numbered, for admin; anyone else gets the ordinary list.</summary>
@@ -247,16 +245,31 @@ public static class MailAliases
 			return;
 		}
 
-		await Tell(services, executor, "Num   Name       Description                              Owner       Count");
-
+		var rows = new List<string[]>();
 		var index = 0;
 		await foreach (var alias in AllAsync(services))
 		{
-			await Tell(services, executor,
-				$"#{index++,-4} {Token}{Column(alias.Name, 10)} {Column(alias.Description, 40)} {Column(await OwnerNameAsync(services, alias.Owner), 11)} ({alias.Members.Length,3})");
+			rows.Add([$"#{index++}", $"{Token}{alias.Name}", alias.Description, await OwnerNameAsync(services, alias.Owner),
+				alias.Members.Length.ToString(CultureInfo.InvariantCulture)]);
 		}
 
-		await Tell(services, executor, "***** End of Mail Aliases *****");
+		await TellPanelAsync(services, executor, rows,
+			[
+				new TableColumn(MarkupText.Plain("Num")) { Wrap = false, Priority = 3 },
+				new TableColumn(MarkupText.Plain("Name")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Description")) { Min = 10 },
+				new TableColumn(MarkupText.Plain("Owner")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Members")) { Alignment = Alignment.Right, Wrap = false, Priority = 2 },
+			]);
+	}
+
+	/// <summary>The alias listing in a panel, or a line saying there is nothing to list.</summary>
+	private static ValueTask TellPanelAsync(Services services, AnySharpObject executor, List<string[]> rows, ImmutableArray<TableColumn> columns)
+	{
+		Block body = rows.Count == 0
+			? new TextBlock(MarkupText.Plain("No mail aliases."))
+			: ServerLayout.Listing(columns, rows);
+		return services.Notify.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Mail aliases"), body), 78), executor);
 	}
 
 	/// <summary>do_malias_members.</summary>
@@ -803,20 +816,15 @@ public static class MailAliases
 	private static ValueTask<string> UnparseAsync(Services services, AnySharpObject viewer, SharpPlayer target)
 		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target), services.Connections);
 
-	/// <summary>get_shortprivs: the Use and See columns of the list, <c>E</c> for everyone.</summary>
-	private static string ShortPrivileges(SharpMailAlias alias)
+	/// <summary>get_shortprivs: one of the Use and See columns of the list, <c>E</c> for everyone.</summary>
+	private static string PrivilegeColumn(MailAliasPrivileges privileges)
 	{
-		static string Column(MailAliasPrivileges privileges)
-		{
-			if (privileges == MailAliasPrivileges.Everyone) return "E-";
+		if (privileges == MailAliasPrivileges.Everyone) return "E-";
 
-			var first = privileges.HasFlag(MailAliasPrivileges.Members) ? 'M' : '-';
-			var second = privileges.HasFlag(MailAliasPrivileges.Admin) ? 'A' : '-';
-			if (first == '-' && second == '-') second = 'O';
-			return $"{first}{second}";
-		}
-
-		return $"{Column(alias.UsePrivileges)}  {Column(alias.SeePrivileges)} ";
+		var first = privileges.HasFlag(MailAliasPrivileges.Members) ? 'M' : '-';
+		var second = privileges.HasFlag(MailAliasPrivileges.Admin) ? 'A' : '-';
+		if (first == '-' && second == '-') second = 'O';
+		return $"{first}{second}";
 	}
 
 	/// <summary>

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
@@ -128,11 +129,10 @@ public class MailAliasCommandTests
 		await Assert.That((await EvaluateAsync(outsider, "malias()")).Split(' ')).DoesNotContain(alias);
 
 		var listing = await RunAsync(owner, "@malias/list");
-		// "%c%-12.12s %-35.35s %s %-15.15s": the owner's name is cut to fifteen characters.
-		await Assert.That(listing).Contains(m => m.StartsWith(alias) && m.Contains(" M-  -O ")
-			&& m.Contains(owner.Name[..Math.Min(15, owner.Name.Length)]));
-		await Assert.That(listing).Contains(m => m.StartsWith("Name          Alias Description"));
-		await Assert.That(listing).Contains("*****  End of Mail Aliases *****");
+		// One table: the alias's row carries who may use it (members), who may see it (the owner) and the owner.
+		var rows = listing.SelectMany(m => m.Split('\n')).ToArray();
+		await Assert.That(rows).Contains(row => row.Contains(alias) && Regex.IsMatch(row, @"\sM-\s+-O\s") && row.Contains(owner.Name));
+		await Assert.That(rows).Contains(row => Regex.IsMatch(row, @"Name\s+Description\s+Use\s+See\s+Owner"));
 	}
 
 	/// <summary>
