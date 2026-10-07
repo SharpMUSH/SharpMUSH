@@ -930,7 +930,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message!)));
+		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message!, HouseTheme())));
 
 	[SharpFunction(Name = "formdecode", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]

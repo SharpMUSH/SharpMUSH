@@ -166,7 +166,7 @@ Available functions:
 
 None of them leaves anything in the plain text, so `strlen()` and listen patterns see what they saw before, except where a function stands words in for what a client cannot show, such as a picture's description.
 
-All but preformat() need a Wizard or the Send_OOB @power, as [CMDLINK()] does: they make a client fetch a file, play it, or clear what the player is looking at. Laying text out does not, so preformat() is open to anyone.
+All but preformat() need a Wizard or the Send_OOB @power, as [CMDLINK()] does: they make a client fetch a file, play it, or clear what the player is looking at. Laying text out does not, so preformat() is open to anyone. image() and figure() also accept the Send_Image @power, which allows pictures and nothing else; the approved role holds it, so an approved character can show a picture in a pose or a description.
 
 ::: seealso
 - [HTML FUNCTIONS]
@@ -222,6 +222,8 @@ A picture. *<width>* and *<height>* are in pixels.
 *<description>* is what a client with no pictures shows instead (the address itself when none is given), so it is worth writing. MXP gets `<IMAGE>`, Pueblo and the portal `<img>`, and a terminal the words.
 
 Put it inside [CMDLINK()] for a picture that runs a command when clicked.
+
+It needs a Wizard, the Send_OOB @power or the Send_Image @power (which the approved role holds); anyone else gets `#-1 PERMISSION DENIED`. A host the `image_hosts` option refuses is shown as the words.
 
 ### Example
 ```sharp

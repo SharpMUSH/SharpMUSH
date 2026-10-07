@@ -107,6 +107,9 @@ public static class BuiltInRoles
 		PortalPermission.ProtectAdmin,
 	];
 
+	/// <summary>An approved character may show pictures in what it writes: a pose, a description, a page.</summary>
+	private static readonly string[] ApprovedScopes = [PortalPermission.GamePower("Send_Image")];
+
 	private static readonly string[] HelperScopes = [PortalPermission.PlayersView, PortalPermission.QueueInspect];
 
 	private static readonly string[] ModeratorScopes =
@@ -193,7 +196,7 @@ public static class BuiltInRoles
 			roles.Add(Template(SlugFor(role), role.ToString(), (int)role, ColorFor(role), true, scopes));
 		}
 
-		roles.Add(Template(ApprovedSlug, "Approved", ApprovedPriority, "#8bc34a", true, []));
+		roles.Add(Template(ApprovedSlug, "Approved", ApprovedPriority, "#8bc34a", true, ApprovedScopes));
 
 		return roles;
 	}
