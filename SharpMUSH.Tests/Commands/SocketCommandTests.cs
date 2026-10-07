@@ -218,8 +218,8 @@ public class SocketCommandTests
 	}
 
 	/// <summary>
-	/// The terminal-feature pins: each is stored, shown, and "auto" hands the feature back to what the
-	/// terminal reported. An unknown value is refused rather than stored.
+	/// The terminal-feature settings: each is stored and shown; "auto" hands a link back to what the terminal
+	/// reported, and pictures stay off until set. An unknown value is refused rather than stored.
 	/// </summary>
 	[Test]
 	public async Task SocksetPinsTerminalFeatures()
@@ -235,8 +235,20 @@ public class SocketCommandTests
 		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Hyperlinks")).IsNotNull().And.Contains("on");
 
 		await Assert.That(await RunAsync(handle, "SOCKSET GRAPHICS=auto")).Contains("Graphics set to 'auto'");
-		await Assert.That(metadata.ContainsKey("GRAPHICS")).IsFalse();
-		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Graphics")).IsNotNull().And.Contains("auto (off)");
+		await Assert.That(metadata.GetValueOrDefault("GRAPHICS")).IsEqualTo("auto");
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Graphics")).IsNotNull().And.Contains("auto (blocks)");
+
+		await Assert.That(await RunAsync(handle, "SOCKSET GRAPHICS=off")).Contains("Graphics set to 'off'");
+		await Assert.That(metadata.ContainsKey("GRAPHICS")).IsFalse().Because("pictures are off until turned on");
+
+		await Assert.That(await RunAsync(handle, "SOCKSET ANIMATION=on")).Contains("Animation set to 'on'");
+		await Assert.That(metadata.GetValueOrDefault("ANIMATION")).IsEqualTo("1");
+		await Assert.That(await RunAsync(handle, "SOCKSET TERMINAL=Windows-Terminal")).Contains("Terminal set to 'windows-terminal'");
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Terminal ")).IsNotNull().And.Contains("Windows Terminal");
+		await Assert.That(await RunAsync(handle, "SOCKSET TERMINAL=auto")).Contains("Terminal set to 'auto'");
+		await Assert.That(metadata.ContainsKey("TERMINAL")).IsFalse();
+		await Assert.That((await RunAsync(handle, "SOCKSET TERMINAL=teletype")).Any(line => line.StartsWith("Unknown terminal 'teletype'.")))
+			.IsTrue();
 
 		await Assert.That(await RunAsync(handle, "SOCKSET GRAPHICS=hologram"))
 			.Contains("Unknown graphics setting. Valid settings: 'auto', 'detect', 'kitty', 'iterm2', 'sixel', 'blocks', 'off'.");

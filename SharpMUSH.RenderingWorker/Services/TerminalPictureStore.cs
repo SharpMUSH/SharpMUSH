@@ -41,6 +41,12 @@ public sealed class TerminalPictureStore : IDisposable
 	/// <summary>How long a failed fetch is remembered before the address is tried again.</summary>
 	private static readonly TimeSpan FailureMemory = TimeSpan.FromMinutes(10);
 
+	/// <summary>The most frames a moving picture keeps; one with more is shown still.</summary>
+	public const int MaxFrames = 120;
+
+	/// <summary>The most bytes of pixels a moving picture's frames hold together; past it they are shrunk.</summary>
+	public const long MaxMovingBytes = 16L * 1024 * 1024;
+
 	/// <summary>How many failed addresses are remembered at most.</summary>
 	public const int MaxFailures = 1024;
 
@@ -181,7 +187,8 @@ public sealed class TerminalPictureStore : IDisposable
 
 	/// <summary>
 	/// <paramref name="bytes"/> decoded to RGBA and shrunk to <see cref="MaxStoredSide"/>, keyed by a hash of
-	/// the file. PNG, JPEG, GIF (its first frame), BMP, TGA and PSD read; anything else throws.
+	/// the file. PNG, JPEG, GIF, BMP, TGA and PSD read; anything else throws. A GIF of more than one frame is a
+	/// moving picture (<see cref="DecodeMoving"/>).
 	/// </summary>
 	public static TerminalPicture Decode(byte[] bytes)
 	{
@@ -191,10 +198,45 @@ public sealed class TerminalPictureStore : IDisposable
 		if (info.Width is <= 0 or > MaxDecodedSide || info.Height is <= 0 or > MaxDecodedSide)
 			throw new InvalidDataException($"A {info.Width}x{info.Height} picture is over {MaxDecodedSide} pixels a side.");
 
+		var key = Convert.ToHexString(SHA256.HashData(bytes), 0, 16);
+		if (IsGif(bytes) && DecodeMoving(bytes, key) is { } moving) return moving;
+
 		var image = ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha);
 		var (width, height, rgba) = Shrink(image.Width, image.Height, image.Data, MaxStoredSide);
-		var key = Convert.ToHexString(SHA256.HashData(bytes), 0, 16);
 		return new TerminalPicture(key, width, height, rgba);
+	}
+
+	private static bool IsGif(byte[] bytes) => bytes.AsSpan().StartsWith("GIF8"u8);
+
+	/// <summary>
+	/// A GIF's frames, each shrunk so that all of them together hold no more than <see cref="MaxMovingBytes"/>,
+	/// or null for a GIF of one frame or more than <see cref="MaxFrames"/>, which is shown still.
+	/// </summary>
+	private static TerminalPicture? DecodeMoving(byte[] bytes, string key)
+	{
+		using var stream = new MemoryStream(bytes, writable: false);
+		var decoded = new List<(int Width, int Height, byte[] Rgba, int DelayInMs)>();
+		foreach (var frame in ImageResult.AnimatedGifFramesFromStream(stream, ColorComponents.RedGreenBlueAlpha))
+		{
+			if (decoded.Count == MaxFrames) return null;
+			// The decoder may hand back the same buffer for every frame, so each is copied.
+			decoded.Add((frame.Width, frame.Height, frame.Data.ToArray(), frame.DelayInMs));
+		}
+
+		if (decoded.Count < 2) return null;
+
+		var (fullWidth, fullHeight) = (decoded[0].Width, decoded[0].Height);
+		var side = (int)Math.Min(MaxStoredSide, Math.Sqrt((double)MaxMovingBytes / (4L * decoded.Count)));
+		var frames = new List<TerminalPictureFrame>(decoded.Count);
+		var (width, height) = (fullWidth, fullHeight);
+		foreach (var frame in decoded)
+		{
+			(width, height, var rgba) = Shrink(frame.Width, frame.Height, frame.Rgba, Math.Max(1, side));
+			// A frame naming no delay is shown for 100ms by the writer, as browsers do.
+			frames.Add(new TerminalPictureFrame(rgba, TimeSpan.FromMilliseconds(Math.Max(0, frame.DelayInMs))));
+		}
+
+		return new TerminalPicture(key, width, height, frames);
 	}
 
 	/// <summary>

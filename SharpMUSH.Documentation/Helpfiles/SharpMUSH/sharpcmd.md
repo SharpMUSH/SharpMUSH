@@ -2358,6 +2358,8 @@ Options:
 - colorstyle: See [COLORSTYLE]
 - hyperlinks, commandlinks: See [HYPERLINKS]
 - graphics: See [GRAPHICS]
+- animation: See [ANIMATION]
+- terminal: See [TERMINAL]
 - outputprefix: Same as OUTPUTPREFIX
 - outputsuffix: Same as OUTPUTSUFFIX
 - pueblo: Sets Pueblo-related options. If value has md5=...", then it will set the pueblo checksum. If empty, Pueblo mode is turned off.
@@ -2379,6 +2381,7 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 - [COLORSTYLE]
 - [HYPERLINKS]
 - [GRAPHICS]
+- [TERMINAL]
 - [@prompt]
 :::
 # colorstyle
@@ -2416,7 +2419,7 @@ Some terminals can make links clickable. With hyperlinks on, a web link is sent 
 
 Neither is sent unless SharpMUSH knows your client reads it, because a client that does not may print the codes as text. 'auto' (the default) decides from your client:
 
-- hyperlinks: on for terminals known to draw them (kitty, Ghostty, WezTerm, foot, Alacritty, Contour, Mudlet).
+- hyperlinks: on when your terminal is one known to draw them (see [TERMINAL]), or your client is Mudlet.
 - commandlinks: on when your client reports MSLP in its MTTS capabilities.
 
 Use 'on' or 'off' to override that, and 'auto' to go back to it. SOCKSET shows the setting in effect, as "auto (on)" or "auto (off)" when nothing is set. terminfo() includes 'hyperlinks' and 'commandlinks' while they are on.
@@ -2437,32 +2440,79 @@ Hyperlinks set to 'on'
 `SOCKSET graphics=<value>`<br>
 `@SOCKSET [me|<descriptor>]=graphics,<value>`
 
-Pictures in the game (such as those placed with figure()) are shown as their text art unless your terminal can draw them. The graphics setting says how your terminal draws a picture:
+Pictures in the game (such as those placed with figure()) are shown as their text art until you turn pictures on. They are off by default because only you can see whether your terminal shows them: a terminal reached through tmux, screen or an ssh hop, or one with images turned off in its settings, may not, even when SharpMUSH knows it can. The graphics setting says how your terminal draws a picture:
 
-- kitty: the Kitty graphics protocol (kitty, Ghostty, WezTerm). The picture is sent once per connection and drawn in its cells as text, so it scrolls and wraps like text.
-- iterm2: iTerm2 inline images (iTerm2, WezTerm).
-- sixel: sixel graphics (foot, mlterm, Contour, xterm started with sixel support).
+- auto: the best way your terminal has. SharpMUSH picks from what your terminal can do (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. A terminal it does not know gets blocks. Also accepted as 'on'.
+- detect: like auto, and also asks your terminal what it can draw and what it is. The answer arrives with the next line you send, so send any command afterwards. Use this when your terminal does not say which it is.
+- kitty: the Kitty graphics protocol (kitty, Ghostty, Rio). The picture is sent once per connection and drawn in its cells as text, so it scrolls and wraps like text.
+- iterm2: iTerm2 inline images (iTerm2, WezTerm, Konsole, mintty, Visual Studio Code, Rio, mlterm).
+- sixel: sixel graphics (foot, WezTerm, iTerm2, Konsole, Windows Terminal, mintty, Contour, mlterm, xterm started with sixel support).
 - blocks: coloured half-block characters, two pixels to a cell. Any UTF-8 terminal with colour shows these.
-- off: always the text art.
-- auto: decide from your terminal (the default). Kitty and Ghostty get kitty, WezTerm gets iterm2, and foot, mlterm and Contour get sixel; any other terminal gets the text art.
-- detect: like auto, and also asks your terminal what it can draw. The answer arrives with the next line you send, so send any command afterwards. Use this when your terminal is not one SharpMUSH knows by name.
+- off: the text art (the default).
 
-Kitty pictures and half blocks are only sent to a connection receiving UTF-8. A connection identified as a screen reader always receives the picture's description instead. SOCKSET shows the method in use, as "auto (<method>)" when nothing is set, and terminfo() includes it.
+Kitty pictures and half blocks are only sent to a connection receiving UTF-8. A connection identified as a screen reader always receives the picture's description instead. SOCKSET shows the method in use, as "auto (<method>)" for auto, and terminfo() includes it.
 
-A picture appears in the space its text art takes, so whatever is laid out around it stays where it is. The first time a picture is shown it may appear as its text art while the game fetches it.
+A picture appears in the space its text art takes, so whatever is laid out around it stays where it is. The first time a picture is shown it may appear as its text art while the game fetches it. A moving picture shows its first frame unless animation is on; see [ANIMATION].
 
 Example:
 ```
-> SOCKSET graphics=blocks
-Graphics set to 'blocks'
+> SOCKSET graphics=auto
+Graphics set to 'auto'
 ```
 
 
 ::: seealso
 - [@SOCKSET]
+- [ANIMATION]
+- [TERMINAL]
 - [HYPERLINKS]
 - [TERMINFO()]
 - [FIGURE()]
+:::
+# animation
+`SOCKSET animation=<on|off>`<br>
+`@SOCKSET [me|<descriptor>]=animation,<on|off>`
+
+With animation on, a moving picture (an animated GIF) plays, as long as pictures are on (see [GRAPHICS]) and drawn in a way that can move: kitty sends every frame, and iterm2 sends the picture as an animated GIF. With it off (the default), or drawn as sixel or blocks, a moving picture shows its first frame.
+
+A terminal known not to play moving pictures (Ghostty, Konsole, mintty and Visual Studio Code among them) is sent the first frame even with animation on. terminfo() includes 'animation' while moving pictures play.
+
+Example:
+```
+> SOCKSET animation=on
+Animation set to 'on'
+```
+
+
+::: seealso
+- [GRAPHICS]
+- [TERMINAL]
+- [@SOCKSET]
+:::
+# terminal
+`SOCKSET terminal=<name|auto>`<br>
+`@SOCKSET [me|<descriptor>]=terminal,<name|auto>`
+
+SharpMUSH works out which terminal you use from the terminal type your client reports, or from its answer when you use 'SOCKSET graphics=detect'. That decides which links are sent (see [HYPERLINKS]) and, once pictures are on, how they are drawn (see [GRAPHICS]). Most clients report a generic type such as xterm-256color, which names no terminal.
+
+Naming your terminal here tells SharpMUSH what it is, for one that does not say (Windows Terminal never does). 'auto' goes back to what your client reported. SOCKSET shows the terminal in use, as "auto (<terminal>)" when you have not named one.
+
+The terminals SharpMUSH knows:
+
+- kitty, ghostty, wezterm, iterm2, konsole, foot, xterm, windows-terminal, mintty, vscode (Visual Studio Code's terminal), contour, rio, mlterm, alacritty, vte (GNOME Terminal, Tilix, Terminator and other VTE terminals), tmux
+
+Example:
+```
+> SOCKSET terminal=windows-terminal
+Terminal set to 'windows-terminal'
+```
+
+
+::: seealso
+- [GRAPHICS]
+- [ANIMATION]
+- [HYPERLINKS]
+- [@SOCKSET]
 :::
 # @speechmod
 `@speechmod <object>[=<modifier>]`
