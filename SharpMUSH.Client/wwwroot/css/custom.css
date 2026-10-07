@@ -3,6 +3,9 @@
 @import url("../_content/MudBlazor/MudBlazor.min.css") layer(vendor);
 
 @import url("tokens.css") layer(tokens);
+/* MarkupString's own rules for its ms-* classes, generated at build from the packages (tools/ClientData);
+   shell.css comes after, so its portal-only rules build on them. */
+@import url("../data/markup.css") layer(shell);
 @import url("shell.css") layer(shell);
 @import url("mush-syntax.css") layer(shell);
 @import url("globals.css") layer(shell);
