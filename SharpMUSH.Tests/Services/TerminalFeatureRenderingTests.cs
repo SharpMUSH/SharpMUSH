@@ -88,6 +88,34 @@ public class TerminalFeatureRenderingTests
 	}
 
 	[Test]
+	public async Task TurningAnimationOnOrOff_SendsThePictureAgain()
+	{
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance,
+			new PictureHandler(HttpStatusCode.OK, MovingGif));
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+		var markup = FigureMarkup("https://pictures.example/cat.gif");
+		RenderContext With(bool animation) => Context(new ProtocolCapabilities(SupportsTruecolor: true,
+			Pins: new TerminalPins(Graphics: TerminalGraphics.Kitty, Animation: animation)));
+
+		var still = await RenderAsync(renderer, markup, With(false));
+		var moving = await RenderAsync(renderer, markup, With(true));
+		var stillAgain = await RenderAsync(renderer, markup, With(false));
+
+		await Assert.That(still).Contains(KittyStart).And.DoesNotContain("a=f");
+		await Assert.That(moving).Contains("a=f").Because("the terminal holds the still picture, not its frames");
+		await Assert.That(stillAgain).Contains(KittyStart).And.DoesNotContain("a=f")
+			.Because("the still picture replaces the moving one, which would otherwise keep playing");
+	}
+
+	[Test]
+	public async Task AMovingPicture_CountsEveryFrameAgainstTheCache()
+	{
+		var picture = TerminalPictureStore.Decode(MovingGif);
+
+		await Assert.That(TerminalPictureStore.SizeOf(picture)).IsEqualTo(2L * 4 * 2 * 4);
+	}
+
+	[Test]
 	public async Task APictureThatCannotBeFetched_IsItsTextArt()
 	{
 		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance,

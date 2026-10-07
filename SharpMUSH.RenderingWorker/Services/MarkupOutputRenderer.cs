@@ -92,7 +92,8 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 			return null;
 
 		return new RenderPictureSource(pictureStore,
-			connectionPictures.For($"{connection.Handle}:{connection.SessionId}"));
+			connectionPictures.For($"{connection.Handle}:{connection.SessionId}",
+				connection.Capabilities.Features.HasFlag(TerminalFeatures.MovingPictures)));
 	}
 
 	private static RenderedOutput Render(string markup, RenderContext connection, bool prompt, RenderPictureSource? pictures)

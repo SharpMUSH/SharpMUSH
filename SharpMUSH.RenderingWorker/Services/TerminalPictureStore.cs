@@ -159,7 +159,7 @@ public sealed class TerminalPictureStore : IDisposable
 			var bytes = await ReadBoundedAsync(stream);
 			var picture = Decode(bytes);
 			entry.Picture = picture;
-			Interlocked.Add(ref _bytes, picture.Rgba.Length);
+			Interlocked.Add(ref _bytes, SizeOf(picture));
 			Trim();
 		}
 		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException
@@ -206,6 +206,10 @@ public sealed class TerminalPictureStore : IDisposable
 		return new TerminalPicture(key, width, height, rgba);
 	}
 
+	/// <summary>The bytes of pixels <paramref name="picture"/> holds: every frame of a moving one.</summary>
+	public static long SizeOf(TerminalPicture picture) =>
+		picture.Frames.Count > 0 ? picture.Frames.Sum(frame => (long)frame.Rgba.Length) : picture.Rgba.Length;
+
 	private static bool IsGif(byte[] bytes) => bytes.AsSpan().StartsWith("GIF8"u8);
 
 	/// <summary>
@@ -219,8 +223,10 @@ public sealed class TerminalPictureStore : IDisposable
 		foreach (var frame in ImageResult.AnimatedGifFramesFromStream(stream, ColorComponents.RedGreenBlueAlpha))
 		{
 			if (decoded.Count == MaxFrames) return null;
-			// The decoder may hand back the same buffer for every frame, so each is copied.
-			decoded.Add((frame.Width, frame.Height, frame.Data.ToArray(), frame.DelayInMs));
+			// Each frame is shrunk to the still limit as it arrives (which also copies it, since the decoder may hand
+			// back the same buffer every time), so a GIF of many large frames never holds them at full size.
+			var (frameWidth, frameHeight, rgba) = Shrink(frame.Width, frame.Height, frame.Data, MaxStoredSide);
+			decoded.Add((frameWidth, frameHeight, ReferenceEquals(rgba, frame.Data) ? rgba.ToArray() : rgba, frame.DelayInMs));
 		}
 
 		if (decoded.Count < 2) return null;
@@ -300,7 +306,7 @@ public sealed class TerminalPictureStore : IDisposable
 		{
 			if (Interlocked.Read(ref _bytes) <= MaxCacheBytes) break;
 			if (_entries.TryRemove(address, out var removed) && removed.Picture is { } dropped)
-				Interlocked.Add(ref _bytes, -dropped.Rgba.Length);
+				Interlocked.Add(ref _bytes, -SizeOf(dropped));
 		}
 	}
 
