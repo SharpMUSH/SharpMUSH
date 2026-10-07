@@ -110,4 +110,26 @@ public class ThemeCommandTests
 	[Arguments("{\"look\":{\"bullet\":\"\\ud800\"}}")]
 	public async Task ATheme_ThatCannotBeText_IsRefusedNotThrown(string spec)
 		=> await Assert.That(LayoutThemes.Read(spec) is Error<string>).IsTrue();
+
+	/// <summary>Every <c>&gt; @theme</c> example in the help, with the line under it as what the player is told.</summary>
+	public static IEnumerable<Func<(string Command, string Told)>> HelpExamples()
+	{
+		var lines = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"))
+			.SkipWhile(line => line != "# @theme").Skip(1).TakeWhile(line => !line.StartsWith("# ", StringComparison.Ordinal)).ToArray();
+		for (var i = 0; i < lines.Length - 1; i++)
+		{
+			if (!lines[i].StartsWith("> @theme", StringComparison.Ordinal)) continue;
+			var (command, told) = (lines[i][2..], lines[i + 1]);
+			yield return () => (command, told);
+		}
+	}
+
+	[Test]
+	[MethodDataSource(nameof(HelpExamples))]
+	public async Task TheHelpExamplesSayWhatTheyDo(string command, string told)
+	{
+		var (heard, _) = await AsPlayer(command);
+
+		await Assert.That(heard).Contains(told);
+	}
 }

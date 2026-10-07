@@ -43,6 +43,8 @@ The layout functions take their options as one JSON object: `{"border":"double",
 - straight into the argument, inside a second pair of braces, because the outer pair only keeps its commas together: `box(Hello,,30,{{"border":"double","pad":2}})`
 - built with [JSON()]: `box(Hello,,30,json(object,border,"double",pad,2))`
 
+Written straight into an argument, a JSON list needs `\[` in place of its opening bracket, since `[` starts a function call: `{{"title":\["( "," )"]}}`. The same goes for a `[` inside a string. `]` can stay as it is.
+
 ### Values
 
 | Option | Takes |
@@ -298,6 +300,83 @@ That is how a client without Unicode sees it. With Unicode the edges are double 
 
 Each colour carries the standard colour a client with only the sixteen is sent instead, picked by its hue, so a pale blue is sent as blue rather than the grey nearest it. A client without colour is sent the layout as it is; nothing in a layout depends on colour alone. A client without Unicode gets ASCII borders in the same colours.
 
+## Making a theme
+
+[THEME()] shows what a theme comes to, and [SWATCH()] shows whether each colour stands out enough. Each of these starts from something small and lets the generator do the rest.
+
+From one colour, here a blue with triadic harmony. The seed becomes the primary colour and the others are spaced round it:
+
+```sharp
+> think json_query(theme({{"seed":"#7aa2f7","harmony":"triadic"}}),get,colors,secondary,rgb)
+"#ffa099"
+```
+
+The same theme for a light background. Each colour is darkened until it stands out from white:
+
+```sharp
+> think json_query(theme({{"seed":"#7aa2f7","harmony":"triadic","mode":"light"}}),get,colors,primary,rgb)
+"#4568b8"
+```
+
+With `"contrast":1`, every colour stands out at least 7 to 1. The quiet `muted` colour moves furthest: without it, it is `#6b615d` at 3.1 to 1.
+
+```sharp
+> think swatch({{"seed":"#d08770","harmony":"split","contrast":1}},64)
+Role        Sample  Colour   16-colour         Contrast
+-------------------------------------------------------
+background  -       #190f0b  0 black           -
+surface     Sample  #2b1c18  8 bright black    -
+foreground  Sample  #e8dbd7  7 white           13.9:1
+primary     Sample  #d98f78  9 bright red      7.3:1
+secondary   Sample  #6cd2c9  14 bright cyan    10.5:1
+tertiary    Sample  #7fb7ec  12 bright blue    8.9:1
+muted       Sample  #a69c97  7 white           7.0:1
+success     Sample  #9abd53  10 bright green   8.8:1
+warning     Sample  #ee9748  11 bright yellow  8.2:1
+error       Sample  #f98b6e  9 bright red      8.0:1
+info        Sample  #86acff  12 bright blue    8.4:1
+```
+
+From a base16 scheme, copied from an editor or terminal theme. Its sixteen colours go in order, base00 to base0F; base0D, the scheme's blue, becomes the primary colour:
+
+```sharp
+> think json_query(theme({{"base16":\["#1d1f21","#282a2e","#373b41","#969896","#b4b7b4","#c5c8c6","#e0e0e0","#ffffff","#cc6666","#de935f","#f0c674","#b5bd68","#8abeb7","#81a2be","#b294bb","#a3685a"]}}),get,colors,primary,rgb)
+"#81a2be"
+```
+
+From a built-in theme with one colour changed:
+
+```sharp
+> think json_query(theme({{"preset":"nord","colors":{"primary":"#bf616a"}}}),get,colors,primary,rgb)
+"#bf616a"
+```
+
+From a genre with its look changed. This keeps fantasy's colours and gauge but draws ASCII lines, a dash for each bullet and round brackets about the title:
+
+```sharp
+> think box(bullets(Sword|Shield,|),Kit,20,{{"theme":{"preset":"fantasy","look":{"bullet":"-","border":"ascii","title":\["( "," )"]}}}})
++------( Kit )-----+
+| - Sword          |
+| - Shield         |
++------------------+
+```
+
+A gauge drawn in pieces of your own, in the reader's own sixteen colours:
+
+```sharp
+> think gauge(7,10,HP,{{"width":30,"theme":{"preset":"terminal","look":{"gauge":\["<","=",".",">"]}}}})
+HP <===============......> 70%
+```
+
+A theme made once can be kept in an attribute and used by name. [SET()] stores what [THEME()] wrote, and [JSON()] puts it into the options:
+
+```sharp
+> think [set(me,MYTHEME:[theme({{"seed":"#d08770","harmony":"split"}})])][box(Hello,,20,json(object,theme,v(MYTHEME)))]
++==================+
+| Hello            |
++==================+
+```
+
 ## Using themes
 
 Written straight into options, a theme object goes inside them as it is: `box(Hi,,30,{{"theme":{"seed":"#d08770"}}})`. Each player can also pick a theme of their own for every layout they read with [@THEME]. [THEME()] writes any theme out in full, to keep in an attribute, and [SWATCH()] shows one's colours and how well each stands out.
@@ -335,9 +414,11 @@ terminal fantasy historical horror modern mystery romance science-fiction spirit
 Writes *<theme>* out in full as JSON: its name, whether it is for a dark or light background, and each colour with the standard colour a sixteen-colour client is sent. *<theme>* is anything the `"theme"` option takes; see [LAYOUT THEMES]. A theme made from a seed colour can be made once and kept:
 
 ```
-&THEME me=[theme({{"seed":"#d08770","harmony":"split"}})]
-think box(Hello,,30,json(object,theme,v(THEME)))
+think set(me,MYTHEME:[theme({{"seed":"#d08770","harmony":"split"}})])
+think box(Hello,,30,json(object,theme,v(MYTHEME)))
 ```
+
+`&MYTHEME me=...` would keep the `[theme(...)]` call as written instead of the theme it makes.
 
 The result is read back as it is, so it can be edited and passed on.
 
@@ -405,14 +486,49 @@ A player's theme sits over the game's `layout_theme` and under a theme a layout 
 `@theme` refuses a theme it cannot read and says why, leaving the old one in place. A `THEME` attribute set some other way that does not read, or that names a theme since removed, is ignored: layouts use the game's theme, and the player is told at login why theirs was not used.
 
 ## Examples
+
+A built-in theme, then the same one for a light background:
+
 ```sharp
 > @theme me=fantasy
 Theme set.
 > @theme/light me=fantasy
 Theme set.
+```
+
+A theme made from one colour, with every colour made to stand out a little more than it must:
+
+```sharp
+> @theme me={{"seed":"#d08770","harmony":"split","contrast":0.5}}
+Theme set.
+```
+
+A scheme copied from an editor theme, as sixteen base16 colours:
+
+```sharp
+> @theme me={{"base16":["#1d1f21","#282a2e","#373b41","#969896","#b4b7b4","#c5c8c6","#e0e0e0","#ffffff","#cc6666","#de935f","#f0c674","#b5bd68","#8abeb7","#81a2be","#b294bb","#a3685a"]}}
+Theme set.
+```
+
+Nord with red borders, and fantasy with plain bullets and round brackets about each title. `@theme` does not evaluate the theme, so a list needs no `\[`:
+
+```sharp
+> @theme me={{"preset":"nord","colors":{"primary":"#bf616a"}}}
+Theme set.
+> @theme me={{"preset":"fantasy","look":{"bullet":"-","title":["( "," )"]}}}
+Theme set.
+```
+
+A theme it cannot read is refused, and the old one stays. Clearing it goes back to the game's theme:
+
+```sharp
+> @theme me=nosuch
+#-1 UNKNOWN THEME
 > @theme me=
 Theme cleared.
 ```
+
+Try a theme on one layout with its `"theme"` option, and check its colours with [SWATCH()], before making it yours. A wizard sets the game's own with `@config/set layout_theme=<name>`.
 
 ::: seealso
 - [LAYOUT THEMES]
