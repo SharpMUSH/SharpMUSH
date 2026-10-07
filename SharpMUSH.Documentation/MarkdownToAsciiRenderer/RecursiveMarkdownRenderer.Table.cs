@@ -1,20 +1,22 @@
 using Markdig.Extensions.Tables;
 using MarkupString;
 using SharpMUSH.Library.Markup;
+using System.Collections.Immutable;
 using System.Text;
+using MarkupString.Layout;
+using Block = MarkupString.Layout.Block;
+using Table = Markdig.Extensions.Tables.Table;
+using LayoutTable = MarkupString.Layout.Table;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public partial class RecursiveMarkdownRenderer
 {
 	/// <summary>
-	/// A table is laid out by its own spacing, which is what <see cref="MarkupText.Preformatted"/> says:
-	/// a Pueblo client reads the stream as HTML, where runs of spaces collapse and a proportional font
-	/// ignores every column width, and the portal gets a <c>&lt;pre&gt;</c>. A terminal is unaffected.
+	/// A table with headings as a layout <see cref="LayoutTable"/>; one whose headings are all empty
+	/// as plain columns, the way a topic list is written.
 	/// </summary>
-	protected virtual MString RenderTable(Table table) => MarkupText.Preformatted(RenderTableRows(table));
-
-	private MString RenderTableRows(Table table)
+	protected virtual MString RenderTable(Table table)
 	{
 		var borderStyle = _dimStyle;
 
@@ -69,75 +71,45 @@ public partial class RecursiveMarkdownRenderer
 				))
 				.ToList();
 
-			return MarkupText.Join(MarkupText.Plain("\n"), borderlessRows);
+			// Laid out by its own spacing, which is what Preformatted says: a Pueblo client reads the
+			// stream as HTML, where runs of spaces collapse, and the portal gets a <pre>.
+			return MarkupText.Preformatted(MarkupText.Join(MarkupText.Plain("\n"), borderlessRows));
 		}
 
-		// Fit the table to the width left once the borders are accounted for.
-		// Format: "| cell1 | cell2 | cell3 |"
-		var columnWidths = ComputeColumnWidths(cellsByRow, columnCount, TableContentWidth(columnCount));
-
-		var columnSpecs = new StringBuilder();
-		for (var col = 0; col < columnCount; col++)
-		{
-			if (col > 0) columnSpecs.Append(' ');
-
-			var alignment = "<";
-			if (table.ColumnDefinitions.Count > col && table.ColumnDefinitions[col].Alignment.HasValue)
+		// A table with headings is a layout table: columns sized to their widest cell, wrapping and then
+		// leaving out columns on a narrow client, a card per row when not even one fits, and a real
+		// <table> in the portal.
+		// A heading is drawn on one line, so a column narrows no further than its heading's longest word.
+		var columns = Enumerable.Range(0, columnCount)
+			.Select(col => headerRows.Count > 0 && col < headerRows[0].Cells.Count ? headerRows[0].Cells[col] : MarkupText.Empty)
+			.Select((heading, col) => new TableColumn(heading)
 			{
-				alignment = table.ColumnDefinitions[col].Alignment!.Value switch
-				{
-					TableColumnAlign.Left => "<",
-					TableColumnAlign.Center => "-",
-					TableColumnAlign.Right => ">",
-					_ => "<"
-				};
-			}
+				Alignment = table.ColumnDefinitions.Count > col
+					? table.ColumnDefinitions[col].Alignment switch
+					{
+						TableColumnAlign.Center => Alignment.Center,
+						TableColumnAlign.Right => Alignment.Right,
+						_ => Alignment.Left
+					}
+					: Alignment.Left,
+				Min = Math.Max(MinimumColumnWidth, heading.ToPlainText().Split(' ').Max(word => word.Length))
+			})
+			.ToImmutableArray();
+		var body = allRows
+			.Where(r => !r.IsHeader)
+			.Select(r => r.Cells.Select(cell => (Block)cell).ToImmutableArray())
+			.ToImmutableArray();
 
-			columnSpecs.Append(alignment);
-			columnSpecs.Append(columnWidths[col]);
-		}
-
-		var renderedRows = new List<MString>();
-		for (var rowIndex = 0; rowIndex < allRows.Count; rowIndex++)
+		return Laid(new LayoutTable(columns, body)
 		{
-			var (isHeader, cells) = allRows[rowIndex];
-
-			var alignedRow = TextAligner.Align(
-				columnSpecs.ToString(),
-				cells,
-				MarkupText.Plain(" "),
-				MarkupText.Wrap(borderStyle, " | "),
-				// A cell too wide for its column wraps onto more lines; each of them carries the borders.
-				MarkupText.Concat([MarkupText.Wrap(borderStyle, " |"), MarkupText.Plain("\n"), MarkupText.Wrap(borderStyle, "| ")])
-			);
-
-			var rowWithBorders = MarkupText.Concat([
-				MarkupText.Wrap(borderStyle, "| "),
-				alignedRow,
-				MarkupText.Wrap(borderStyle, " |")
-			]);
-
-			renderedRows.Add(rowWithBorders);
-
-			if (isHeader)
-			{
-				var separator = new StringBuilder();
-				separator.Append("|");
-				for (var col = 0; col < columnCount; col++)
-				{
-					separator.Append('-', columnWidths[col] + 2);
-					separator.Append('|');
-				}
-				renderedRows.Add(MarkupText.Wrap(borderStyle, separator.ToString()));
-			}
-		}
-
-		return MarkupText.Join(MarkupText.Plain("\n"), renderedRows);
+			Separator = MarkupText.Wrap(borderStyle, " | "),
+			HeaderRule = MarkupText.Wrap(borderStyle, "-")
+		});
 	}
 
 	/// <summary>
-	/// The width available to a bordered table's cells, once the outer borders and the
-	/// <c>" | "</c> between each pair of columns are taken out.
+	/// The width available to a table's cells once the <c>" | "</c> between each pair of columns and
+	/// the borders a <c>RENDERMARKUP`TABLE</c> template draws on either side are taken out.
 	/// </summary>
 	protected int TableContentWidth(int columnCount) =>
 		_maxWidth - (START_BORDER_WIDTH + END_BORDER_WIDTH + (columnCount - 1) * COLUMN_SEPARATOR_WIDTH);

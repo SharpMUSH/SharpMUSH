@@ -80,7 +80,7 @@ public class MarkdownFlexTests
 	{
 		var lines = Lines(TwoColumns, 40);
 
-		await Assert.That(lines).IsEquivalentTo(["Left", "", "Right"]);
+		await Assert.That(lines).IsEquivalentTo(["Left", "Right"]);
 	}
 
 	[Test]

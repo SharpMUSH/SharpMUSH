@@ -3,6 +3,7 @@ using MarkupString;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
@@ -47,7 +48,7 @@ public static class ReadMail
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchMail);
 		}
 
-		var line = MarkupText.Plain("-").Repeat(78);
+		var line = ServerLayout.DashedRule(78);
 		var outputs = new List<MString>();
 		foreach (var (actualMail, folder, number) in messages)
 		{

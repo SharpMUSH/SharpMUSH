@@ -1,17 +1,24 @@
 using SharpMUSH.Library.Services;
 using MarkupString;
-using System.Text.RegularExpressions;
+using MarkupString.Layout;
+using Block = MarkupString.Layout.Block;
+using System.Collections.Immutable;
+using FlexAlign = SharpMUSH.Library.Services.FlexAlign;
+using FlexJustify = SharpMUSH.Library.Services.FlexJustify;
+using LayoutFlex = MarkupString.Layout.Flex;
+using LayoutFlexAlign = MarkupString.Layout.FlexAlign;
+using LayoutFlexJustify = MarkupString.Layout.FlexJustify;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public partial class RecursiveMarkdownRenderer
 {
 	/// <summary>
-	/// A <c>flex</c> layout as columns, the way <c>align()</c> sets them: each item gets a width (a fixed
-	/// <c>basis</c> first, then what is left shared by <c>grow</c>), renders at that width, and the columns are
-	/// joined line by line with the gap between them. A column direction, or a row whose items would fall below
-	/// their <c>min</c> width while wrapping is on, stacks the items instead, as the portal does on a phone; a
-	/// stacked item keeps its basis as its width.
+	/// A <c>flex</c> layout as a layout <see cref="LayoutFlex"/>: each item gets a width (a fixed <c>basis</c>
+	/// first, then what is left shared by <c>grow</c>) and is rendered at that width; a column direction, or a
+	/// row whose items would fall below their <c>min</c> width while wrapping is on, stacks the items instead,
+	/// as the portal does on a phone. The terminal lines items up by the row's <c>align</c>; an item's own
+	/// <c>align</c> is the portal's alone.
 	/// </summary>
 	protected virtual MString RenderFlex(FlexBlock flex)
 	{
@@ -19,45 +26,56 @@ public partial class RecursiveMarkdownRenderer
 		if (items.Count == 0) return MarkupText.Empty;
 
 		var options = flex.Options;
+		if (options.Direction == FlexDirection.Column) return Laid(Column(items));
+
 		var available = _maxWidth - options.Gap * (items.Count - 1);
 		var widths = available > 0 ? ColumnWidths(items, available) : null;
-		var fits = widths is not null && items.Select((item, i) => widths[i] >= Math.Min(item.Options.Min, _maxWidth)).All(ok => ok);
 
-		if (options.Direction == FlexDirection.Column || widths is null || (options.Wrap && !fits))
+		// Each item is rendered at the width the engine will give it (the same shares, worked out here), so
+		// what it holds that the engine does not lay out itself, a code block, fits as it is.
+		var sized = items.Select((item, i) => (Block)new Sized(ItemBody(widths is null ? RenderFlexItem(item) : RenderFlexItem(item, widths[i])))
 		{
-			var stacked = items.Select(StackedItem).Where(IsNonWhitespace).ToList();
-			return MarkupText.Join(MarkupText.Plain("\n\n"), stacked);
-		}
+			Basis = item.Options.Basis is not null && widths is not null ? BlockSize.Cells(widths[i]) : BlockSize.Auto,
+			Grow = item.Options.Basis is null ? item.Options.Grow : 0,
+			Min = options.Wrap ? Math.Min(item.Options.Min, _maxWidth) : 1
+		}).ToImmutableArray();
 
-		var columns = items.Select((item, i) => FlexColumn(item, widths[i])).ToList();
-		var height = columns.Max(column => column.Count);
-		var aligned = columns.Select((column, i) =>
-			AlignColumn(column, widths[i], height, items[i].Options.Align ?? options.Align)).ToList();
-
-		var spare = available - widths.Sum();
-		var (lead, between) = options.Justify switch
+		return Laid(new LayoutFlex(sized)
 		{
-			FlexJustify.End => (spare, 0),
-			FlexJustify.Center => (spare / 2, 0),
-			FlexJustify.Between when items.Count > 1 => (0, spare / (items.Count - 1)),
-			_ => (0, 0)
-		};
-		var gap = MarkupText.Plain(new string(' ', options.Gap + between));
-		var indent = MarkupText.Plain(new string(' ', lead));
-
-		var lines = Enumerable.Range(0, height).Select(row =>
-		{
-			var parts = new List<MString> { indent };
-			for (var i = 0; i < aligned.Count; i++)
+			Gap = options.Gap,
+			Align = options.Align switch
 			{
-				if (i > 0) parts.Add(gap);
-				parts.Add(aligned[i][row]);
+				FlexAlign.Center => LayoutFlexAlign.Center,
+				FlexAlign.End => LayoutFlexAlign.End,
+				_ => LayoutFlexAlign.Start
+			},
+			Justify = options.Justify switch
+			{
+				FlexJustify.End => LayoutFlexJustify.End,
+				FlexJustify.Center => LayoutFlexJustify.Center,
+				FlexJustify.Between => LayoutFlexJustify.Between,
+				_ => LayoutFlexJustify.Start
 			}
-
-			return MarkupText.Concat(parts).Trim(TrimType.TrimEnd, " ");
 		});
+	}
 
-		return MarkupText.Join(MarkupText.NewLine, lines.ToArray());
+	/// <summary>
+	/// A column direction's items one under the other with a blank line between them, each at its basis
+	/// when it has one, as the portal keeps a basis as a width in a column.
+	/// </summary>
+	private Stack Column(IReadOnlyList<FlexItemBlock> items)
+	{
+		var stacked = new List<Block>();
+		foreach (var item in items)
+		{
+			var body = ItemBody(RenderFlexItem(item));
+			if (body is TextBlock { Content.Length: 0 }) continue;
+			if (stacked.Count > 0) stacked.Add(new TextBlock(MarkupText.Empty));
+			stacked.Add(item.Options.Basis is { } basis
+				? new LayoutFlex([new Sized(body) { Basis = basis.IsPercent ? BlockSize.Percent(basis.Value) : BlockSize.Cells(basis.Value), Grow = 0 }])
+				: body);
+		}
+		return new Stack([.. stacked]);
 	}
 
 	/// <summary>
@@ -94,63 +112,18 @@ public partial class RecursiveMarkdownRenderer
 		return MarkupText.Join(MarkupText.Plain("\n"), parts);
 	}
 
-	/// <summary>An item stacked under the others: at its basis when it has one, else at the full width.</summary>
-	private MString StackedItem(FlexItemBlock item) => item.Options.Basis is { } basis
-		? MarkupText.Join(MarkupText.NewLine, FlexColumn(item, basis.Columns(_maxWidth))
-			.Select(line => line.Trim(TrimType.TrimEnd, " ")).ToArray())
-		: RenderFlexItem(item);
-
-	/// <summary>An item rendered at <paramref name="width"/> and broken into lines no wider than it.</summary>
-	private List<MString> FlexColumn(FlexItemBlock item, int width)
+	/// <summary>An item's blocks, rendered to <paramref name="width"/>.</summary>
+	private MString RenderFlexItem(FlexItemBlock item, int width)
 	{
 		var outer = _maxWidth;
 		_maxWidth = width;
 		try
 		{
-			var rendered = RenderFlexItem(item);
-			return rendered.Length == 0
-				? []
-				: rendered.Split("\n").SelectMany(line => WrapInColumn(line, width)).ToList();
+			return RenderFlexItem(item);
 		}
 		finally
 		{
 			_maxWidth = outer;
 		}
-	}
-
-	/// <summary>
-	/// A line broken to <paramref name="width"/>. A list item's continuation lines hang under its text, not its
-	/// marker, as they would in a browser.
-	/// </summary>
-	private static IEnumerable<MString> WrapInColumn(MString line, int width)
-	{
-		if (line.Length == 0) return [line];
-
-		var marker = ListMarkerPrefix().Match(line.ToPlainText());
-		var hang = marker.Success ? marker.Length : 0;
-		if (hang == 0 || hang >= width - 4) return line.WrapLines(width);
-
-		var pieces = line.Substring(hang, line.Length - hang).WrapLines(width - hang).ToList();
-		var indent = MarkupText.Plain(new string(' ', hang));
-		return pieces.Select((piece, i) => MarkupText.Concat(i == 0 ? line.Substring(0, hang) : indent, piece));
-	}
-
-	[GeneratedRegex(@"^\s*(?:\*|\d+\.) ", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-	private static partial Regex ListMarkerPrefix();
-
-	/// <summary>A column's lines each filled to <paramref name="width"/>, with blank lines placing it in <paramref name="height"/>.</summary>
-	private static List<MString> AlignColumn(List<MString> lines, int width, int height, FlexAlign align)
-	{
-		var blank = MarkupText.Plain(new string(' ', width));
-		var filled = lines.Select(line => line.Pad(MarkupText.Space, width, PadType.Right, TruncationType.Truncate)).ToList();
-		var spare = height - filled.Count;
-		var above = align switch
-		{
-			FlexAlign.End => spare,
-			FlexAlign.Center => spare / 2,
-			_ => 0
-		};
-
-		return [.. Enumerable.Repeat(blank, above), .. filled, .. Enumerable.Repeat(blank, spare - above)];
 	}
 }

@@ -34,19 +34,19 @@ public partial class Commands
 		var right = (args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "").Trim();
 		var hasRight = args.ContainsKey("1");
 
-		string output;
+		MString output;
 		if (switches.Length > 1 || switches.FirstOrDefault() is "CREATE" or "DESCRIBE" or "RENAME" or "DELETE")
-			output = "Choose one @permission operation. A category is changed with @permission/category/<create|describe|rename|delete>.";
+			output = MarkupText.Plain("Choose one @permission operation. A category is changed with @permission/category/<create|describe|rename|delete>.");
 		else
 		{
 			var operation = switches.FirstOrDefault() ?? (left.Length == 0 ? "LIST" : "INFO");
 			output = operation switch
 			{
-				"LIST" => await PermissionListAsync(parser),
-				"INFO" => await PermissionInfoAsync(parser, left),
+				"LIST" => MarkupText.Plain(await PermissionListAsync(parser)),
+				"INFO" => MarkupText.Plain(await PermissionInfoAsync(parser, left)),
 				"CATEGORIES" => await CategoriesAsync(parser, CategoryKind.Permission),
-				_ when operation.StartsWith("CATEGORY/") => await CategoryChangeAsync(parser, executor, CategoryKind.Permission, operation, left, right, hasRight),
-				_ => await PermissionChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight)
+				_ when operation.StartsWith("CATEGORY/") => MarkupText.Plain(await CategoryChangeAsync(parser, executor, CategoryKind.Permission, operation, left, right, hasRight)),
+				_ => MarkupText.Plain(await PermissionChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight))
 			};
 		}
 

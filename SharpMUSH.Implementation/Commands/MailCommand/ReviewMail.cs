@@ -1,6 +1,7 @@
 ﻿using Mediator;
 using MarkupString;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
@@ -14,7 +15,7 @@ public static class ReviewMail
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService, IMediator mediator, INotifyService notifyService, MString? arg0, MString? msgListArg, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var line = MarkupText.Plain("-").Repeat(78);
+		var line = ServerLayout.DashedRule(78);
 		var name = arg0?.ToPlainText() ?? string.Empty;
 
 		// Review is of the mail the executor SENT (PennMUSH do_mail_review selects on the sender), so a

@@ -2,6 +2,7 @@
 using Mediator;
 using MarkupString;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,7 +17,7 @@ public static class ListMail
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString? arg0, MString? arg1, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
-		var line = MarkupText.Plain("-").Repeat(78);
+		var line = ServerLayout.DashedRule(78);
 
 		var folders = executor is SharpPlayer player
 			? await MailFolders.LoadAsync(objectDataService, player)
@@ -37,7 +38,7 @@ public static class ListMail
 		{
 			// do_mail_list (extmail.c:762) heads the list with the folder's number.
 			var number = folders.NumberOf(folder.Key) is int n ? $"{n,2}" : folder.Key;
-			var center = MarkupText.Plain($"  MAIL (folder {number})  ").Pad(MarkupText.Plain("-"), 78, PadType.Center, TruncationType.Truncate);
+			var center = ServerLayout.DashedRule(78, MarkupText.Plain($"  MAIL (folder {number})  "));
 
 			var folderTasks = await folder.ToAsyncEnumerable().Select((x, y, _) => DisplayMailLine(x, y)).ToArrayAsync();
 

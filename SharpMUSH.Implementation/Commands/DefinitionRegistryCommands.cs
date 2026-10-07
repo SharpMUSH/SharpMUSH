@@ -16,6 +16,8 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using DotNext.Collections.Generic;
 using System.Diagnostics;
@@ -1903,8 +1905,9 @@ public partial class Commands : ICommandRestrictionApplier
 		Func<IMediator, string, ValueTask<bool>> Delete,
 		Func<IMediator, string, bool, ValueTask<bool>> SetDisabled,
 		bool AddTakesAlias,
-		string[] ListHeader,
-		Func<RegistryEntry, string> ListRow,
+		string ListTitle,
+		ImmutableArray<TableColumn> ListColumns,
+		Func<RegistryEntry, string[]> ListRow,
 		Func<RegistryEntry, string[]> Describe,
 		RegistryMessages Messages);
 
@@ -1931,13 +1934,14 @@ public partial class Commands : ICommandRestrictionApplier
 		Delete: async (mediator, name) => await mediator.Send(new DeleteObjectFlagCommand(name)),
 		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetObjectFlagDisabledCommand(name, disabled)),
 		AddTakesAlias: false,
-		ListHeader:
+		ListTitle: "Object Flags:",
+		ListColumns:
 		[
-			"Object Flags:",
-			"Name                 Symbol Type Restrictions",
-			"-------------------- ------ -------------------"
+			new(MarkupText.Plain("Name")) { Min = 20, Wrap = false },
+			new(MarkupText.Plain("Symbol")) { Wrap = false, Priority = 2 },
+			new(MarkupText.Plain("Type Restrictions")) { Min = 10 },
 		],
-		ListRow: flag => $"{flag.Name,-20} {flag.Symbol,-6} {string.Join(",", flag.TypeRestrictions)}",
+		ListRow: flag => [flag.Name, flag.Symbol, string.Join(",", flag.TypeRestrictions)],
 		Describe: flag =>
 		[
 			$"Flag: {flag.Name}",
@@ -1999,13 +2003,15 @@ public partial class Commands : ICommandRestrictionApplier
 		Delete: async (mediator, name) => await mediator.Send(new DeletePowerCommand(name)),
 		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetPowerDisabledCommand(name, disabled)),
 		AddTakesAlias: true,
-		ListHeader:
+		ListTitle: "Object Powers:",
+		ListColumns:
 		[
-			"Object Powers:",
-			"Name                 Symbol Aliases            Type Restrictions",
-			"-------------------- ------ ------------------ -------------------"
+			new(MarkupText.Plain("Name")) { Min = 20, Wrap = false },
+			new(MarkupText.Plain("Symbol")) { Wrap = false, Priority = 3 },
+			new(MarkupText.Plain("Aliases")) { Min = 18, Priority = 2 },
+			new(MarkupText.Plain("Type Restrictions")) { Min = 10 },
 		],
-		ListRow: power => $"{power.Name,-20} {power.Symbol,-6} {string.Join(",", power.Aliases ?? []),-18} {string.Join(",", power.TypeRestrictions)}",
+		ListRow: power => [power.Name, power.Symbol, string.Join(",", power.Aliases ?? []), string.Join(",", power.TypeRestrictions)],
 		Describe: power =>
 		[
 			$"Power: {power.Name}",
@@ -2087,9 +2093,11 @@ public partial class Commands : ICommandRestrictionApplier
 			var matcher = pattern.Length == 0 ? null : SoftcodeRegex.Wildcard(pattern);
 			var rows = await registry.All(Mediator)
 				.Where(entry => (!entry.Disabled || executor.IsGod()) && (matcher is null || SoftcodeRegex.IsMatch(matcher, entry.Name)))
-				.Select(registry.ListRow)
+				.Select(entry => registry.ListRow(entry).Select(cell => (Block)MarkupText.Plain(cell)).ToImmutableArray())
 				.ToArrayAsync();
-			await NotifyService.Notify(executor, string.Join(Environment.NewLine, [.. registry.ListHeader, .. rows]), executor);
+			// The columns keep their old widths as minimums, one cell apart; a narrow client loses the least needed first.
+			var table = new Table(registry.ListColumns, [.. rows]) { Gap = 1 };
+			await NotifyService.Notify(executor, MarkupText.Concat([MarkupText.Plain(registry.ListTitle + "\n"), ServerLayout.Build(table, 78)]), executor);
 			return CallState.Empty;
 		}
 

@@ -1,4 +1,8 @@
+using System.Collections.Immutable;
+using System.Globalization;
 using System.Text;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
@@ -38,22 +42,22 @@ public partial class Commands
 		var right = (args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "").Trim();
 		var hasRight = args.ContainsKey("1");
 
-		string output;
+		MString output;
 		if (switches.Length > 1)
-			output = "Choose one @role operation.";
+			output = MarkupText.Plain("Choose one @role operation.");
 		else if (switches.FirstOrDefault() == "DESCRIBE")
-			output = $"Usage: @role/category/describe {CategoryUsage("CATEGORY/DESCRIBE")}. See help @role.";
+			output = MarkupText.Plain($"Usage: @role/category/describe {CategoryUsage("CATEGORY/DESCRIBE")}. See help @role.");
 		else
 		{
 			var operation = switches.FirstOrDefault() ?? (left.Length == 0 ? "LIST" : "INFO");
 			output = operation switch
 			{
 				"LIST" => await RoleListAsync(parser),
-				"INFO" => await RoleInfoAsync(parser, left),
+				"INFO" => MarkupText.Plain(await RoleInfoAsync(parser, left)),
 				"CATEGORIES" => await CategoriesAsync(parser, CategoryKind.Role),
-				"PLAYER" => await RoleExplainAsync(parser, executor, left.Length == 0 ? "me" : left),
-				_ when operation.StartsWith("CATEGORY/") => await CategoryChangeAsync(parser, executor, CategoryKind.Role, operation, left, right, hasRight),
-				_ => await RoleChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight)
+				"PLAYER" => MarkupText.Plain(await RoleExplainAsync(parser, executor, left.Length == 0 ? "me" : left)),
+				_ when operation.StartsWith("CATEGORY/") => MarkupText.Plain(await CategoryChangeAsync(parser, executor, CategoryKind.Role, operation, left, right, hasRight)),
+				_ => MarkupText.Plain(await RoleChangeAsync(parser, executor, operation, allSwitches.Contains("ACCOUNT"), left, right, hasRight))
 			};
 		}
 
@@ -67,16 +71,23 @@ public partial class Commands
 			? [$"CATEGORY/{onCategory}"]
 			: switches;
 
-	private static async ValueTask<string> RoleListAsync(IMUSHCodeParser parser)
+	private static async ValueTask<MString> RoleListAsync(IMUSHCodeParser parser)
 	{
 		var roles = await RoleRegistry(parser).GetRolesAsync(ExecutionBudget.CurrentToken);
-		var slugWidth = Math.Max(4, roles.Max(r => r.Slug.Length));
-		var categoryWidth = Math.Max(8, roles.Max(r => r.Category.Length));
-		var output = new StringBuilder("Roles, highest first:");
-		foreach (var role in roles)
-			output.Append($"\n{role.Priority,4}  {role.Slug.PadRight(slugWidth)}  {role.Category.PadRight(categoryWidth)}  {role.Name}{(role.IsSystem ? "  (system)" : "")}");
-		return output.ToString();
+		var table = Listing(
+			[
+				new TableColumn(MarkupText.Plain("Priority")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+				new TableColumn(MarkupText.Plain("Role")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Category")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Name")) { Min = 10 },
+			],
+			roles.Select(role => new[] { role.Priority.ToString(CultureInfo.InvariantCulture), role.Slug, role.Category, role.IsSystem ? $"{role.Name} (system)" : role.Name }));
+		return MarkupText.Concat([MarkupText.Plain("Roles, highest first:\n"), ServerLayout.Build(table, 78)]);
 	}
+
+	/// <summary>A listing's rows under <paramref name="columns"/>, each cell plain text.</summary>
+	private static Table Listing(ImmutableArray<TableColumn> columns, IEnumerable<string[]> rows) =>
+		new(columns, [.. rows.Select(row => row.Select(cell => (Block)MarkupText.Plain(cell)).ToImmutableArray())]);
 
 	private static async ValueTask<string> RoleInfoAsync(IMUSHCodeParser parser, string slug)
 	{
@@ -99,38 +110,35 @@ public partial class Commands
 	}
 
 	/// <summary><c>@role/categories</c> and <c>@permission/categories</c>: one category list, what each category holds and its description.</summary>
-	private static async ValueTask<string> CategoriesAsync(IMUSHCodeParser parser, CategoryKind kind)
+	private static async ValueTask<MString> CategoriesAsync(IMUSHCodeParser parser, CategoryKind kind)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		var registry = RoleRegistry(parser);
 		var members = kind == CategoryKind.Role
 			? (await registry.GetRolesAsync(ct)).Select(r => r.Category).ToArray()
 			: (await registry.GetCustomPermissionsAsync(ct)).Select(p => p.Category).ToArray();
-		var output = new StringBuilder();
-		AppendCategories(output, kind == CategoryKind.Role ? "Role categories:" : "Permission categories:",
-			await registry.GetCategoriesAsync(kind, ct),
-			category => Counted(members.Count(m => string.Equals(m, category, StringComparison.OrdinalIgnoreCase)), kind == CategoryKind.Role ? "role" : "permission"),
-			$"{CategoryCommand(kind)}/category/create <name>=<description>");
-		return output.ToString();
+		var heading = kind == CategoryKind.Role ? "Role categories:" : "Permission categories:";
+		var categories = await registry.GetCategoriesAsync(kind, ct);
+		if (categories.Count == 0)
+			return MarkupText.Plain($"{heading}\n  none. Create one with {CategoryCommand(kind)}/category/create <name>=<description>.");
+
+		var table = Listing(
+			[
+				new TableColumn(MarkupText.Plain("Category")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Holds")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Description")) { Min = 10 },
+			],
+			categories.Select(category => new[]
+			{
+				category.Name,
+				Counted(members.Count(m => string.Equals(m, category.Name, StringComparison.OrdinalIgnoreCase)), kind == CategoryKind.Role ? "role" : "permission"),
+				category.Description
+			}));
+		return MarkupText.Concat([MarkupText.Plain(heading + "\n"), ServerLayout.Build(table, 78)]);
 	}
 
 	/// <summary>The command that manages the category list <paramref name="kind"/>.</summary>
 	private static string CategoryCommand(CategoryKind kind) => kind == CategoryKind.Role ? "@role" : "@permission";
-
-	private static void AppendCategories(StringBuilder output, string heading, IReadOnlyList<RoleCategory> categories,
-		Func<string, string> held, string create)
-	{
-		output.Append(heading);
-		if (categories.Count == 0)
-		{
-			output.Append($"\n  none. Create one with {create}.");
-			return;
-		}
-
-		var width = categories.Max(c => c.Name.Length);
-		foreach (var category in categories)
-			output.Append($"\n  {category.Name.PadRight(width)}  {held(category.Name),-14}  {category.Description}");
-	}
 
 	private static string Counted(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 

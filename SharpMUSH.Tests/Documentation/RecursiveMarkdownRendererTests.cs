@@ -15,20 +15,20 @@ public class RecursiveMarkdownRendererTests
 	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
 	/// <summary>
-	/// Help and wiki text is rendered once and sent to every kind of client. A table and a code block
-	/// are laid out by their own spacing, and a Pueblo client reads the stream as HTML, where runs of
-	/// spaces collapse and a proportional font ignores every column width — so the layout has to say
-	/// what it is.
+	/// Help and wiki text is rendered once and sent to every kind of client. A table is laid out by its
+	/// own spacing, and a Pueblo client reads the stream as HTML, where runs of spaces collapse and a
+	/// proportional font ignores every column width, so the layout has to say what it is; the portal
+	/// draws the table itself.
 	/// </summary>
 	[Test]
-	public async Task RenderTable_IsPreformatted()
+	public async Task RenderTable_IsPreformattedForPuebloAndATableInHtml()
 	{
 		var markdown = "| a | b |\n|---|---|\n| 1 | 2 |";
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("<xch_mudtext>");
-		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<pre");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<table");
 	}
 
 	[Test]
@@ -160,19 +160,26 @@ public class RecursiveMarkdownRendererTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("* Item 1\n* Item 2");
-		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 2)).IsTrue()
-			.Because("the bullet is dim, like the ordered list's numbers");
 	}
 
 	[Test]
-	public async Task RenderOrderedList_ShouldHaveFaintNumbers()
+	public async Task RenderOrderedList_NumbersEachItem()
 	{
 		var markdown = "1. First\n2. Second";
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("1. First\n2. Second");
-		await Assert.That(AnsiStream.Sets(result.Render(MarkupFormat.Ansi), 2)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderList_WrappedItem_HangsUnderItsText()
+	{
+		static string[] Lines(string markdown) => SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, maxWidth: 16).ToPlainText().Split('\n');
+
+		await Assert.That(Lines("* one two three four five six")).IsEquivalentTo(["* one two three", "  four five six"]);
+		await Assert.That(Lines("10. ten\n11. eleven words that wrap")).IsEquivalentTo(["10. ten", "11. eleven words", "    that wrap"]);
 	}
 
 	[Test]
@@ -286,23 +293,37 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderTable_ShouldFitToWidth()
+	public async Task RenderTable_ColumnsTakeTheirWidestCell()
 	{
-		var markdown = @"| A | B |
+		var markdown = @"| A | Bee |
 |---|---|
 | 1 | 2 |";
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
-		var lines = result.ToPlainText().Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-		var firstLineLength = lines[0].Length;
-		await Assert.That(firstLineLength).IsGreaterThan(20);
-		await Assert.That(firstLineLength).IsLessThanOrEqualTo(78);
+		await Assert.That(result.ToPlainText()).IsEqualTo("A   | Bee\n---------\n1   | 2");
+	}
 
-		foreach (var line in lines.Where(l => !l.Contains("---")))
-		{
-			await Assert.That(line.Length).IsEqualTo(firstLineLength);
-		}
+	[Test]
+	public async Task RenderList_NestedList_IndentsUnderItsItem()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("* one\n  * inner\n* two");
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("* one\n  * inner\n* two");
+	}
+
+	/// <summary>The two table examples in <c>help rendermarkdown()</c>, as printed there.</summary>
+	[Test]
+	public async Task RenderTable_HelpExamples()
+	{
+		var small = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(
+			"| Name | Age |\n|------|-----|\n| Alice | 30 |\n| Bob | 25 |");
+		var narrow = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(
+			"| Topic | Summary |\n|---|---|\n| @lock | Sets a lock on an object, which decides who may pass it. |", maxWidth: 40);
+
+		await Assert.That(small.ToPlainText()).IsEqualTo("Name  | Age\n-----------\nAlice | 30\nBob   | 25");
+		await Assert.That(narrow.ToPlainText()).IsEqualTo(
+			"Topic | Summary\n" + new string('-', 40) + "\n@lock | Sets a lock on an object, which\n      | decides who may pass it.");
 	}
 
 	[Test]

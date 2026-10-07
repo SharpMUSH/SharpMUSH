@@ -15,6 +15,8 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
+using MarkupString.Layout;
+using SharpMUSH.Library.Markup;
 using System.Buffers;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Common;
@@ -196,25 +198,17 @@ public partial class Commands
 
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
+			var rules = sitelockRules.Rules.Count == 0
+				? MarkupText.Plain("  (No rules defined - all connections allowed by default)")
+				: ServerLayout.Build(new Table(
+					[
+						new TableColumn(MarkupText.Plain("Pattern")) { Min = 28, Wrap = false },
+						new TableColumn(MarkupText.Plain("Options")) { Min = 10 },
+					],
+					[.. sitelockRules.Rules.Select(rule => ImmutableArray.Create<Block>(MarkupText.Plain(rule.Key), MarkupText.Plain(string.Join(", ", rule.Value))))])
+				{ Gap = 1 }, 78);
+
 			var output = new System.Text.StringBuilder();
-			output.AppendLine($"Sitelock Rules ({sitelockRules.Rules.Count} total):");
-			output.AppendLine("Pattern                      Options");
-			output.AppendLine("---------------------------- ------------------------------");
-
-			if (sitelockRules.Rules.Count == 0)
-			{
-				output.AppendLine("  (No rules defined - all connections allowed by default)");
-			}
-			else
-			{
-				foreach (var rule in sitelockRules.Rules)
-				{
-					var pattern = rule.Key;
-					var options = string.Join(", ", rule.Value);
-					output.AppendLine($"{pattern,-28} {options}");
-				}
-			}
-
 			output.AppendLine();
 			output.AppendLine($"Banned Player Names ({bannedNames.BannedNames.Length} total):");
 			if (bannedNames.BannedNames.Length == 0)
@@ -226,7 +220,9 @@ public partial class Commands
 				output.AppendLine("  " + string.Join(", ", bannedNames.BannedNames));
 			}
 
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor,
+				MarkupText.Concat([MarkupText.Plain($"Sitelock Rules ({sitelockRules.Rules.Count} total):\n"), rules, MarkupText.NewLine, MarkupText.Plain(output.ToString().TrimEnd())]),
+				executor);
 			return CallState.Empty;
 		}
 
