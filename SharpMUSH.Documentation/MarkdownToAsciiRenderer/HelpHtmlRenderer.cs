@@ -41,6 +41,9 @@ public static class HelpHtmlRenderer
 	/// <summary>The class a paragraph laid out in columns of spaces gets, so the portal sets it monospaced.</summary>
 	public const string AlignedClass = "help-aligned";
 
+	/// <summary>The class of the spaces that indent a line inside a paragraph, which the portal keeps as written.</summary>
+	public const string IndentClass = "help-indent";
+
 	/// <summary>A gap of three or more spaces inside a line: text lined up in columns.</summary>
 	private static readonly Regex WideGap = new(@"\S {3,}\S", RegexOptions.Compiled);
 
@@ -83,7 +86,7 @@ public static class HelpHtmlRenderer
 
 		foreach (var paragraph in document.Descendants<ParagraphBlock>().ToList())
 		{
-			KeepTerminalSpacing(paragraph);
+			KeepTerminalSpacing(paragraph, markdown);
 		}
 
 		foreach (var link in document.Descendants<LinkInline>())
@@ -135,25 +138,41 @@ public static class HelpHtmlRenderer
 	/// that a browser would otherwise collapse to one. That only works if the paragraph's HTML carries no
 	/// newline the terminal would not print, so each line break becomes what the terminal makes of it: a
 	/// soft break is a space, a soft break right after a <c>&lt;br&gt;</c> is nothing, and a hard break
-	/// is a <c>&lt;br&gt;</c> with no newline after it. A paragraph whose lines are columns of spaces is
-	/// marked <see cref="AlignedClass"/>, since the columns only line up in a monospaced font.
+	/// is a <c>&lt;br&gt;</c> with no newline after it. The first line, and each line that starts after a
+	/// break, keeps the indentation the terminal prints (<see cref="Lead"/>, <see cref="Indentation"/>).
+	/// A paragraph whose lines are columns of spaces is marked <see cref="AlignedClass"/>, since the
+	/// columns only line up in a monospaced font.
 	/// </summary>
-	private static void KeepTerminalSpacing(ParagraphBlock paragraph)
+	private static void KeepTerminalSpacing(ParagraphBlock paragraph, string markdown)
 	{
 		if (paragraph.Inline is null)
 		{
 			return;
 		}
 
+		var lead = Lead(paragraph);
+		if (lead > 0 && paragraph.Inline.FirstChild is { } first)
+		{
+			first.InsertBefore(new HtmlInline(IndentSpan(lead)));
+		}
+
 		foreach (var lineBreak in paragraph.Inline.Descendants<LineBreakInline>().ToList())
 		{
 			if (lineBreak.IsHard)
 			{
-				lineBreak.ReplaceBy(new HtmlInline("<br />"));
+				lineBreak.ReplaceBy(new HtmlInline("<br />" + Indentation(paragraph, lineBreak, markdown)));
 			}
 			else if (lineBreak.PreviousSibling is HtmlInline { Tag: var tag } && IsBreakTag(tag))
 			{
-				lineBreak.Remove();
+				var indentation = Indentation(paragraph, lineBreak, markdown);
+				if (indentation.Length > 0)
+				{
+					lineBreak.ReplaceBy(new HtmlInline(indentation));
+				}
+				else
+				{
+					lineBreak.Remove();
+				}
 			}
 			else
 			{
@@ -169,6 +188,54 @@ public static class HelpHtmlRenderer
 			paragraph.GetAttributes().AddClass(AlignedClass);
 		}
 	}
+
+	/// <summary>
+	/// The indentation of the line a break starts, as HTML. Markdig drops the spaces that open each line
+	/// of a paragraph, but the terminal prints them, and helpfiles use them to set a syntax line or an
+	/// example under the sentence that introduces it. A paragraph inside a list item or a container counts
+	/// from its own column, so it keeps only what its lines add (<see cref="Lead"/>). It is
+	/// a <see cref="IndentClass"/> span the portal shows as written, since a list item is not laid out
+	/// with <c>white-space: pre-wrap</c> and would collapse the spaces.
+	/// </summary>
+	private static string Indentation(ParagraphBlock paragraph, LineBreakInline lineBreak, string markdown)
+	{
+		var newline = lineBreak.Span.Start < 0 || lineBreak.Span.Start >= markdown.Length
+			? -1
+			: markdown.IndexOf('\n', lineBreak.Span.Start);
+		if (newline < 0)
+		{
+			return string.Empty;
+		}
+
+		var column = 0;
+		for (var i = newline + 1; i < markdown.Length; i++)
+		{
+			if (markdown[i] == ' ')
+			{
+				column++;
+			}
+			else if (markdown[i] == '\t')
+			{
+				column += 4 - column % 4;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		var indent = column - paragraph.Column + Lead(paragraph);
+		return indent > 0 ? IndentSpan(indent) : string.Empty;
+	}
+
+	/// <summary>
+	/// How far a paragraph's first line is indented as the terminal prints it. A paragraph at the top of
+	/// the entry keeps the column it is written at, as the help index's indented groups are; inside a
+	/// list item or a container the indentation is the container's layout, so it counts from there.
+	/// </summary>
+	private static int Lead(ParagraphBlock paragraph) => paragraph.Parent is MarkdownDocument ? paragraph.Column : 0;
+
+	private static string IndentSpan(int width) => $"<span class=\"{IndentClass}\">{new string(' ', width)}</span>";
 
 	private static bool IsBreakTag(string tag) =>
 		tag.StartsWith("<br", StringComparison.OrdinalIgnoreCase) && tag.Length > 3 && tag[3] is '>' or '/' or ' ';

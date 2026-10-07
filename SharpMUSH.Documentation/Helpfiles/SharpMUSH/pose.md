@@ -41,7 +41,6 @@ If you have a SPEECHMOD attribute set, it will be evaluated with `<action>` as %
 
 ## Pose examples
 
-### Examples
 ```sharp
 > pose waves.
 Bob waves.

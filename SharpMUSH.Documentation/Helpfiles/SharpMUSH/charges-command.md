@@ -37,7 +37,6 @@ When the CHARGES attribute is present and AUSE is triggered, the value of the CH
 
 ## Limited use example
 
-### Example
 ```sharp
 > @create Revolver
 > @use Revolver=You pull the trigger.

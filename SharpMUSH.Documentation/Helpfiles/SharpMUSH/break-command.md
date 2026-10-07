@@ -42,7 +42,6 @@ If `<action list>` is given, it is executed instead of the rest of the commands 
 
 ## Conditional break examples
 
-### Examples
 ```sharp
 > @va obj=$testme *: @pemit %#=You try a test ; @break lt(%0,10)=@pemit %#=But you're too low! ; @pemit %#=And you succeed!
 > testme 0

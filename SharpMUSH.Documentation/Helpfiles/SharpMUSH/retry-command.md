@@ -39,7 +39,7 @@ Each `@retry` invocation has an independent hard cap of 1,000 retry iterations. 
 
 ## Retry examples
 
-### Example: 'while'
+Looping like 'while':
 ```sharp
 > &sing me=$sing *:say %0 bottles of beer! ; @retry gt(%0,0)=dec(%0) ; say Go get some more!
 > sing 3

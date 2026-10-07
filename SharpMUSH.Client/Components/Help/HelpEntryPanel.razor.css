@@ -29,6 +29,21 @@
     background: var(--surface-alt, rgba(127, 127, 127, 0.08));
 }
 
+/* A blank line in a helpfile is a blank line in the terminal. The portal's reset takes every margin
+   off, so without these each block would run straight into the next. */
+.help-entry ::deep :is(p, ul, ol, pre, table, blockquote) {
+    margin: 0 0 1em;
+    margin-block-end: 1lh;
+}
+
+.help-entry ::deep :is(h2, h3) {
+    margin: 0 0 0.5em;
+}
+
+.help-entry ::deep :is(p, ul, ol, pre, table, blockquote):last-child {
+    margin-block-end: 0;
+}
+
 /* Helpfiles are written for a terminal, which prints every space: authors line text up with runs of
    them. The server turns each line break into what the terminal prints (HelpHtmlRenderer), so keeping
    the spaces here adds no line the terminal would not show. A paragraph laid out in columns is marked
@@ -37,6 +52,12 @@
 .help-entry ::deep td,
 .help-entry ::deep th {
     white-space: pre-wrap;
+}
+
+/* The indentation of a line that starts after a break, kept as written even in a list item, which
+   is not pre-wrap. */
+.help-entry ::deep span.help-indent {
+    white-space: pre;
 }
 
 .help-entry ::deep p.help-aligned {

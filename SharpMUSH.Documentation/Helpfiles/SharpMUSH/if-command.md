@@ -41,7 +41,6 @@ For RhostMUSH compatability, @skip runs the action list `<false>` when `<boolean
 
 ## Conditional examples
 
-### Examples
 ```sharp
 > @if 1=say Yes, say No
 You say, "Yes"

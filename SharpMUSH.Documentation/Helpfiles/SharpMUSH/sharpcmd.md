@@ -823,8 +823,8 @@ Show just the object names (with no ansi) in a table:
 # @input/prompt
 # @input/cancel
 
-`@input/start <object>/<attribute>=<prompt>[,<timeout-seconds>]`
-`@input/prompt <prompt>`
+`@input/start <object>/<attribute>=<prompt>[,<timeout-seconds>]`<br>
+`@input/prompt <prompt>`<br>
 `@input/cancel`
 
   Starts a guided input session on the current Telnet or WebSocket connection. The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. The initiating executor must control the callback object and have both read and execute access to its directly stored attribute. Omitting `/start` also starts a session.

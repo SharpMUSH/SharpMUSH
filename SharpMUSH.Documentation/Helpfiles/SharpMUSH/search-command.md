@@ -93,7 +93,6 @@ If multiple `<class>` and `<restrictions>` are given, objects must meet all crit
 
 ## Object search examples
 
-### Examples
 ```sharp
 @search all type=player,flags=W <-- list all Wizard players
 @search type=room <-- list all rooms owned by me.

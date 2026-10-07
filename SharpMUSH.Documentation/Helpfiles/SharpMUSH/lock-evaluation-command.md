@@ -41,7 +41,6 @@ The person trying to pass the lock is %# and *<object>* is %! when the evaluatio
 
 ## Evaluation lock example
 
-### Example
 ```sharp
 @lock Thursday Cafe = whichday/Thu
 &whichday Thursday Cafe = first(time())

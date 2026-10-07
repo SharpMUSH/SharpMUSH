@@ -378,8 +378,7 @@ Controls who can take from this container.
 # @lock/filter
 # @lock/infilter
 
-## Filter Lock
-## Infilter Lock
+## Filter and Infilter Locks
 These are lock versions of @filter and @infilter, respectively. Anyone who fails to pass the lock will have their speech filtered. The sound being made is passed to evaluation locks as %0.
 
 
