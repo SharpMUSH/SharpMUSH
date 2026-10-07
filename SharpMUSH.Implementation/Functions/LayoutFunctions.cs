@@ -285,7 +285,7 @@ public partial class Functions
 		LayoutWidth(parser, widthArg) is (int width, bool fluid)
 			? new CallState(Build(border is null && theme is null && stripe is null
 				? block
-				: block.Themed((theme ?? LayoutTheme.Default) with { Border = border, StripeColor = stripe ?? theme?.StripeColor }), width, fluid, block is Table { Striped: true } or Fields { Striped: true }))
+				: block.Themed((theme ?? LayoutTheme.Default) with { Border = border ?? theme?.Border, StripeColor = stripe ?? theme?.StripeColor }), width, fluid, block is Table { Striped: true } or Fields { Striped: true }))
 			: new CallState(ErrorMessages.Returns.ArgRange);
 
 	/// <summary>The <c>stripe</c> option's colour, from its ansi() codes, or null for the theme's.</summary>
@@ -328,7 +328,9 @@ public partial class Functions
 			ThemePalette read => read,
 			_ => null,
 		};
-		var look = (palette?.ToLayoutTheme() ?? LayoutTheme.Default) with { Border = DefaultBorder() };
+		// A theme with a look of its own brings its border; layout_border is the border of one without.
+		var colours = palette?.ToLayoutTheme() ?? LayoutTheme.Default;
+		var look = colours with { Border = colours.Border ?? DefaultBorder() };
 		var made = (cosmetic.LayoutBorder, cosmetic.LayoutTheme, palette, look);
 		_house = made;
 		return made;

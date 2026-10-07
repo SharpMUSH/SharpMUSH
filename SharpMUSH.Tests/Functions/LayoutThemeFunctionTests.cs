@@ -66,7 +66,7 @@ public class LayoutThemeFunctionTests
 	[Test]
 	public async Task Themes_ListsThePresets()
 		=> await Assert.That((await Eval("themes()")).ToPlainText())
-			.IsEqualTo("terminal catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night");
+			.IsEqualTo("terminal adult fantasy historical horror modern mystery romance science-fiction spiritual catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night");
 
 	[Test]
 	public async Task Theme_WritesTheWholePaletteOut()
@@ -130,4 +130,18 @@ public class LayoutThemeFunctionTests
 	[Test]
 	public async Task Swatch_ShowsTheSurfaceAsABackground()
 		=> await Assert.That((await Eval("swatch(nord,78)")).Render(MarkupFormat.Ansi)).Contains("48;2;59;66;82mSample");
+
+	[Test]
+	public async Task AGenreTheme_BringsItsOwnShapes()
+	{
+		var text = (await Eval("box(bullets(Sword),Kit,20,{{\"theme\":\"fantasy\"}})")).ToPlainText();
+		var changed = (await Eval("box(Hi,,12,{{\"theme\":{\"preset\":\"fantasy\",\"look\":{\"border\":\"single\"}}}})")).ToPlainText();
+		var chosen = (await Eval("box(Hi,,12,{{\"theme\":\"fantasy\",\"border\":\"ascii\"}})")).ToPlainText();
+
+		await Assert.That(text).StartsWith("\u2554");
+		await Assert.That(text).Contains("\u2561 \u2756 Kit \u2756 \u255e");
+		await Assert.That(text).Contains("\u2767 Sword");
+		await Assert.That(changed).StartsWith("\u250c");
+		await Assert.That(chosen).StartsWith("+-");
+	}
 }
