@@ -29,9 +29,10 @@
 	letter-spacing: var(--title-tracking);
 	text-transform: var(--title-transform);
 	line-height: 1.2;
-	color: var(--text);
+	color: var(--title-color);
+	text-shadow: var(--title-shadow);
 	/* The theme's ornament: a rule under the title, and a glyph either side of it. */
-	background: var(--title-underline) left bottom / min(14rem, 100%) 2px no-repeat;
+	background: var(--title-underline) left bottom / min(14rem, 100%) var(--title-underline-height) no-repeat;
 	padding-bottom: var(--title-underline-pad);
 }
 

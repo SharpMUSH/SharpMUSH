@@ -190,6 +190,10 @@
 	--title-transform: none;
 	--title-tracking: normal;
 	--title-style: normal;
+	--title-underline-height: 2px;
+	--title-color: var(--text);     /* titles' colour and effect (glow, gilt, letterpress...) */
+	--title-shadow: none;
+	--image-filter: none;           /* the tone pictures take: banners, covers */
 	--card-bg: var(--surface);      /* KitCard: frame layers and grain over the surface */
 	--card-border-style: solid;
 	--card-border-width: 1px;

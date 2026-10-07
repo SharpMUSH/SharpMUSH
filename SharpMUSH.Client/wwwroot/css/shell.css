@@ -243,6 +243,10 @@
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	background: var(--surface-3);
+	/* The page's texture, pinned to the window so it runs on from the page behind without a seam. */
+	background-image: var(--texture);
+	background-size: var(--texture-size);
+	background-attachment: fixed;
 	border-right: 1px solid var(--border-soft);
 	transition: width var(--motion-slide);
 }

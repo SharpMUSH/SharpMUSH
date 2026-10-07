@@ -133,7 +133,7 @@ public class ThemeResolverTests
 	[Test]
 	public async Task ThereIsAThemeForEveryMsspGenre()
 	{
-		var genres = new[] { "adult", "fantasy", "historical", "horror", "modern", "mystery", "romance", "science-fiction", "spiritual" };
+		var genres = new[] { "passion", "fantasy", "historical", "horror", "modern", "mystery", "romance", "science-fiction", "spiritual" };
 
 		foreach (var genre in genres)
 		{
@@ -164,6 +164,44 @@ public class ThemeResolverTests
 		await Assert.That(theme.Token("ornament-before")).IsEqualTo("none");
 		await Assert.That(theme.Token("card-bg")).IsEqualTo("var(--surface)");
 		await Assert.That(theme.Token("title-underline-pad")).IsEqualTo("0px");
+		await Assert.That(theme.Token("title-color")).IsEqualTo("var(--text)");
+		await Assert.That(theme.Token("title-shadow")).IsEqualTo("none");
+		await Assert.That(theme.Token("image-filter")).IsEqualTo("none");
+	}
+
+	[Test]
+	public async Task EachGenreHasATextureAndFrameOfItsOwn()
+	{
+		var genres = BuiltInThemes.All.Skip(2).Select(t => ThemeResolver.Complete(t.Tokens).Style).ToList();
+
+		await Assert.That(genres.Select(s => s[ThemeStyles.Texture]).Distinct().Count()).IsEqualTo(genres.Count);
+		await Assert.That(genres.Select(s => s[ThemeStyles.Frame]).Distinct().Count()).IsEqualTo(genres.Count);
+		await Assert.That(genres.Select(s => s[ThemeStyles.FontDisplay]).Distinct().Count()).IsEqualTo(genres.Count);
+	}
+
+	[Test]
+	public async Task DrawnFramesAreEscapedDataUris()
+	{
+		foreach (var theme in BuiltInThemes.All)
+		{
+			var css = ThemeResolver.Resolve(theme).Css;
+			await Assert.That(css).DoesNotContain("<").Because(theme.Id);
+			await Assert.That(css).DoesNotContain(">").Because(theme.Id);
+		}
+
+		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Fantasy).Token("card-bg")).Contains("data:image/svg+xml,%3Csvg").And.Contains("%23");
+	}
+
+	[Test]
+	public async Task PicturesAreTintedTowardTheAccentInUse()
+	{
+		var horror = ThemeResolver.Resolve(BuiltInThemes.Horror);
+		var cyan = ThemeResolver.Resolve(BuiltInThemes.Horror, "#00c8ff");
+
+		// #e0453a is hue 4, #00c8ff hue 193; sepia sits near 38.
+		await Assert.That(horror.Token("image-filter")).Contains("hue-rotate(-34deg)");
+		await Assert.That(cyan.Token("image-filter")).Contains("hue-rotate(155deg)");
+		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Mystery).Token("image-filter")).StartsWith("grayscale(1)");
 	}
 
 	[Test]

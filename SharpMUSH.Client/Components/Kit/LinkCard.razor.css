@@ -37,6 +37,8 @@
 	font-style: var(--title-style);
 	letter-spacing: var(--title-tracking);
 	text-transform: var(--title-transform);
+	color: var(--title-color);
+	text-shadow: var(--title-shadow);
 }
 
 .kit-link-card-desc {

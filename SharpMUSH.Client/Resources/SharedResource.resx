@@ -6414,7 +6414,7 @@
     <value>Style</value>
   </data>
   <data name="AdmThemesStyleHint" xml:space="preserve">
-    <value>Typefaces, corners, the page's texture, the ornament around page titles, how cards are framed, and how titles are lettered.</value>
+    <value>Typefaces, corners, the page's texture, the ornament around page titles, how cards are framed, how titles are lettered and lit, and the tone pictures take.</value>
   </data>
   <data name="AdmThemesMakeDefaultDark" xml:space="preserve">
     <value>Make default for dark</value>
@@ -6541,6 +6541,102 @@
   </data>
   <data name="AdmThemeStyleTitlesItalic" xml:space="preserve">
     <value>Italic</value>
+  </data>
+  <data name="AdmThemeStyleEffect" xml:space="preserve">
+    <value>Title effect</value>
+  </data>
+  <data name="AdmThemeStyleImagery" xml:space="preserve">
+    <value>Picture tone</value>
+  </data>
+  <data name="AdmThemeStyleTextureVelvet" xml:space="preserve">
+    <value>Crushed velvet</value>
+  </data>
+  <data name="AdmThemeStyleTextureParchment" xml:space="preserve">
+    <value>Scorched parchment</value>
+  </data>
+  <data name="AdmThemeStyleTextureFoxing" xml:space="preserve">
+    <value>Foxed old page</value>
+  </data>
+  <data name="AdmThemeStyleTextureBlood" xml:space="preserve">
+    <value>Blood</value>
+  </data>
+  <data name="AdmThemeStyleTextureBlinds" xml:space="preserve">
+    <value>Light through blinds</value>
+  </data>
+  <data name="AdmThemeStyleTexturePetals" xml:space="preserve">
+    <value>Petals</value>
+  </data>
+  <data name="AdmThemeStyleTextureMandala" xml:space="preserve">
+    <value>Mandala</value>
+  </data>
+  <data name="AdmThemeStyleTextureSwiss" xml:space="preserve">
+    <value>Layout grid</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentDeco" xml:space="preserve">
+    <value>Art deco</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentDouble" xml:space="preserve">
+    <value>Double rule underneath</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentBlock" xml:space="preserve">
+    <value>Square</value>
+  </data>
+  <data name="AdmThemeStyleFrameFiligree" xml:space="preserve">
+    <value>Flourished corners</value>
+  </data>
+  <data name="AdmThemeStyleFrameEngraved" xml:space="preserve">
+    <value>Engraved</value>
+  </data>
+  <data name="AdmThemeStyleFrameDrip" xml:space="preserve">
+    <value>Dripping</value>
+  </data>
+  <data name="AdmThemeStyleFrameTape" xml:space="preserve">
+    <value>Taped corners</value>
+  </data>
+  <data name="AdmThemeStyleFrameBar" xml:space="preserve">
+    <value>Side bar</value>
+  </data>
+  <data name="AdmThemeStyleFrameDeco" xml:space="preserve">
+    <value>Art deco corners</value>
+  </data>
+  <data name="AdmThemeStyleFrameHalo" xml:space="preserve">
+    <value>Halo</value>
+  </data>
+  <data name="AdmThemeStyleFrameScallop" xml:space="preserve">
+    <value>Lace edge</value>
+  </data>
+  <data name="AdmThemeStyleEffectNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleEffectGlow" xml:space="preserve">
+    <value>Glow</value>
+  </data>
+  <data name="AdmThemeStyleEffectGilt" xml:space="preserve">
+    <value>Gilded</value>
+  </data>
+  <data name="AdmThemeStyleEffectEmboss" xml:space="preserve">
+    <value>Letterpress</value>
+  </data>
+  <data name="AdmThemeStyleEffectEmber" xml:space="preserve">
+    <value>Embers</value>
+  </data>
+  <data name="AdmThemeStyleEffectBleed" xml:space="preserve">
+    <value>Inked</value>
+  </data>
+  <data name="AdmThemeStyleImageryNatural" xml:space="preserve">
+    <value>Natural</value>
+  </data>
+  <data name="AdmThemeStyleImageryTint" xml:space="preserve">
+    <value>Tinted to the accent</value>
+  </data>
+  <data name="AdmThemeStyleImagerySepia" xml:space="preserve">
+    <value>Sepia</value>
+  </data>
+  <data name="AdmThemeStyleImageryMono" xml:space="preserve">
+    <value>Black and white</value>
+  </data>
+  <data name="AdmThemeStyleImageryNoir" xml:space="preserve">
+    <value>Noir</value>
   </data>
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>The game default follows your device's light or dark setting.</value>

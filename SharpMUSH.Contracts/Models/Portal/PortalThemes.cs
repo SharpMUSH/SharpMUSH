@@ -157,60 +157,60 @@ public static class BuiltInThemes
 		}, BuiltIn: true);
 
 	// One theme per MSSP genre (MsspCatalog's GENRE choices, less "None"), with the ids the telnet layout themes
-	// use, so a game's portal theme and layout_theme can share one name. Colours are listed in ThemeTokens.Editable
-	// order: bg, surface, surface-2, surface-3, rail-bg, text, text-dim, text-faint, border, border-soft, accent,
+	// use, so a game's portal theme and layout_theme can share one name; Adult's is "passion". Colours are listed in
+	// ThemeTokens.Editable order: bg, surface, surface-2, surface-3, rail-bg, text, text-dim, text-faint, border, border-soft, accent,
 	// warn, link-missing.
 
-	/// <summary>Adult: wine and gold, a high-contrast serif in italic, damask behind double-ruled cards.</summary>
-	public static readonly PortalTheme Adult = Genre("adult", "Adult", dark: true,
-		["#140a0e", "#1d1015", "#26151c", "#170c11", "#0d0609", "#f3e6ea", "#c4a9b2", "#a88d97", "#3d2430", "#2a1820", "#e0b860", "#ffb07a", "#ff8fa3"],
-		display: "playfair", body: "ui", corners: "soft", texture: "damask", ornament: "diamond", frame: "double", titles: "italic");
+	/// <summary>Passion (MSSP's Adult): wine and gold, crushed velvet, gilded italic titles and art deco corners.</summary>
+	public static readonly PortalTheme Passion = Genre("passion", "Passion", dark: true,
+		["#160a10", "#1f0f17", "#29141e", "#190b12", "#0e060a", "#f5e6ec", "#c9abb6", "#ab8d99", "#43263a", "#2d1824", "#e2b865", "#ffb07a", "#ff8fa3"],
+		display: "playfair", body: "ui", corners: "soft", texture: "velvet", ornament: "deco", frame: "deco", titles: "italic", effect: "gilt", imagery: "tint");
 
-	/// <summary>Fantasy: parchment, inscribed capitals, fleurons and corner-marked cards.</summary>
+	/// <summary>Fantasy: scorched parchment, inscribed capitals in rubric red, fleurons and flourished corners.</summary>
 	public static readonly PortalTheme Fantasy = Genre("fantasy", "Fantasy", dark: false,
-		["#efe4cc", "#f8f0dc", "#efe3c6", "#e6d8b8", "#ddcba4", "#2b1d0e", "#5a4630", "#6b5640", "#cdb98f", "#e2d3b0", "#7a3b10", "#8a4b00", "#a32a1d"],
-		display: "cinzel", body: "serif", corners: "soft", texture: "paper", ornament: "fleuron", frame: "corners", titles: "normal");
+		["#ecdfc2", "#f7eed6", "#eee0c0", "#e4d3ae", "#d9c59a", "#2b1d0e", "#5a4630", "#6b5640", "#c9b083", "#dfcda5", "#8c1c13", "#8a4b00", "#a32a1d"],
+		display: "cinzel", body: "serif", corners: "soft", texture: "parchment", ornament: "fleuron", frame: "filigree", titles: "normal", effect: "gilt", imagery: "sepia");
 
-	/// <summary>Historical: sepia linen, an old-style printed face, square corners and inset rules.</summary>
+	/// <summary>Historical: a foxed old page, an old-style face pressed into it, double rules and engraved frames.</summary>
 	public static readonly PortalTheme Historical = Genre("historical", "Historical", dark: false,
-		["#ebe5d8", "#f6f2e8", "#ece6d8", "#e4dccb", "#d9cfba", "#2a2620", "#57503f", "#6a6250", "#cfc5ae", "#e2dac8", "#6b3e26", "#7f4f00", "#a33a2a"],
-		display: "fell", body: "serif", corners: "sharp", texture: "linen", ornament: "rule", frame: "inset", titles: "normal");
+		["#e9e2d1", "#f5f0e3", "#ebe4d3", "#e2d9c4", "#d6cbb2", "#2a2620", "#57503f", "#6a6250", "#c6b99b", "#ddd3bd", "#6b3e26", "#7f4f00", "#a33a2a"],
+		display: "fell", body: "serif", corners: "sharp", texture: "foxing", ornament: "double", frame: "engraved", titles: "normal", effect: "emboss", imagery: "sepia");
 
-	/// <summary>Horror: near-black and blood red, blackletter titles between daggers, a creeping mist and glow.</summary>
+	/// <summary>Horror: near-black pooled with blood, blackletter between daggers, glowing like embers, cards that drip.</summary>
 	public static readonly PortalTheme Horror = Genre("horror", "Horror", dark: true,
-		["#0b0909", "#141010", "#1b1515", "#0e0b0b", "#070505", "#e8dede", "#a89a9a", "#8e8080", "#2e2222", "#201818", "#e0453a", "#d9a441", "#ff8a7a"],
-		display: "grenze", body: "ui", corners: "sharp", texture: "mist", ornament: "cross", frame: "glow", titles: "normal");
+		["#0c0707", "#150d0d", "#1d1212", "#100909", "#080404", "#ecdede", "#ad9a9a", "#928080", "#3a2222", "#261616", "#e0453a", "#d9a441", "#ff8a7a"],
+		display: "grenze", body: "ui", corners: "sharp", texture: "blood", ornament: "cross", frame: "drip", titles: "normal", effect: "ember", imagery: "tint");
 
-	/// <summary>Modern: clean white and cobalt, a geometric sans in capitals on a drafting grid.</summary>
+	/// <summary>Modern: Swiss style, white and cobalt, a geometric sans in capitals on a layout grid, black and white pictures.</summary>
 	public static readonly PortalTheme Modern = Genre("modern", "Modern", dark: false,
-		["#f2f3f5", "#ffffff", "#f0f1f4", "#e8eaee", "#e4e7ec", "#111318", "#474c55", "#5c616b", "#d5d9e0", "#e6e9ee", "#2952e3", "#8f5300", "#c0362c"],
-		display: "space", body: "ui", corners: "sharp", texture: "grid", ornament: "rule", frame: "plain", titles: "caps");
+		["#f3f4f6", "#ffffff", "#f0f1f4", "#e8eaee", "#e4e7ec", "#0d0f14", "#474c55", "#5c616b", "#d5d9e0", "#e6e9ee", "#2448d8", "#8f5300", "#c0362c"],
+		display: "space", body: "ui", corners: "sharp", texture: "swiss", ornament: "block", frame: "bar", titles: "caps", effect: "none", imagery: "mono");
 
-	/// <summary>Mystery: midnight and brass, typewritten titles on a grainy page.</summary>
+	/// <summary>Mystery: noir, light through blinds, typewritten case notes taped up, pictures in hard black and white.</summary>
 	public static readonly PortalTheme Mystery = Genre("mystery", "Mystery", dark: true,
-		["#12141a", "#1a1d24", "#20242c", "#15171d", "#0c0d11", "#e6e1d6", "#a9a395", "#8f8a7e", "#2c3039", "#22252c", "#d4a95a", "#e8b45e", "#ff8a8a"],
-		display: "typewriter", body: "ui", corners: "sharp", texture: "grain", ornament: "rule", frame: "inset", titles: "normal");
+		["#0f1012", "#17181b", "#1d1f23", "#131416", "#0a0a0c", "#e8e4dc", "#a8a49b", "#8e8a82", "#2c2d31", "#222327", "#d9a441", "#e8b45e", "#ff8a8a"],
+		display: "typewriter", body: "ui", corners: "sharp", texture: "blinds", ornament: "rule", frame: "tape", titles: "normal", effect: "bleed", imagery: "noir");
 
-	/// <summary>Romance: blush and rose, an italic garamond with hearts, lace and a soft glow.</summary>
+	/// <summary>Romance: blush and rose, scattered petals, an italic garamond between hearts, lace-edged cards.</summary>
 	public static readonly PortalTheme Romance = Genre("romance", "Romance", dark: false,
-		["#f8eef0", "#fffafb", "#f7eaee", "#f1e2e7", "#ecd6dd", "#2d1a20", "#6b4b55", "#7d5c66", "#e5ccd4", "#f0dfe4", "#b0306a", "#8f4b00", "#b3261e"],
-		display: "cormorant", body: "serif", corners: "round", texture: "lace", ornament: "heart", frame: "glow", titles: "italic");
+		["#f9edf0", "#fffafb", "#f8e9ee", "#f2e0e6", "#edd4dc", "#2d1a20", "#6b4b55", "#7d5c66", "#e6c9d3", "#f0dde3", "#b0306a", "#8f4b00", "#b3261e"],
+		display: "cormorant", body: "serif", corners: "round", texture: "petals", ornament: "heart", frame: "scallop", titles: "italic", effect: "gilt", imagery: "tint");
 
-	/// <summary>Science fiction: deep space and cyan, wide capitals in brackets, scanlines and targeting corners.</summary>
+	/// <summary>Science fiction: deep space and cyan, wide glowing capitals in brackets, scanlines and targeting corners.</summary>
 	public static readonly PortalTheme ScienceFiction = Genre("science-fiction", "Science Fiction", dark: true,
 		["#070b14", "#0d1422", "#121b2d", "#0a101b", "#04070d", "#dbe8ff", "#93a7c6", "#7a8eae", "#1d2a42", "#152035", "#36d6ff", "#ffc857", "#ff8aa0"],
-		display: "orbitron", body: "ui", corners: "sharp", texture: "scanlines", ornament: "brackets", frame: "corners", titles: "caps");
+		display: "orbitron", body: "ui", corners: "sharp", texture: "scanlines", ornament: "brackets", frame: "corners", titles: "caps", effect: "glow", imagery: "tint");
 
-	/// <summary>Spiritual: ivory and amethyst, a calm roman with flowers, rounded cards in a soft mist.</summary>
+	/// <summary>Spiritual: ivory and amethyst, a mandala of light from above, a calm roman between flowers, haloed cards.</summary>
 	public static readonly PortalTheme Spiritual = Genre("spiritual", "Spiritual", dark: false,
-		["#f4f1f8", "#fdfbff", "#f3eef9", "#ebe5f3", "#e3dbef", "#241f2e", "#574e66", "#6a6178", "#ddd4ea", "#ebe5f3", "#6b4fa8", "#8a5300", "#b3361e"],
-		display: "marcellus", body: "ui", corners: "round", texture: "mist", ornament: "lotus", frame: "plain", titles: "normal");
+		["#f5f1f9", "#fdfbff", "#f3eef9", "#ebe5f3", "#e3dbef", "#241f2e", "#574e66", "#6a6178", "#ddd4ea", "#ebe5f3", "#6b4fa8", "#8a5300", "#b3361e"],
+		display: "marcellus", body: "ui", corners: "round", texture: "mandala", ornament: "lotus", frame: "halo", titles: "normal", effect: "glow", imagery: "tint");
 
 	public static readonly IReadOnlyList<PortalTheme> All =
-		[Phosphor, Daylight, Adult, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual];
+		[Phosphor, Daylight, Passion, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual];
 
-	private static PortalTheme Genre(string id, string name, bool dark, string[] colors,
-		string display, string body, string corners, string texture, string ornament, string frame, string titles)
+	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
+		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery)
 	{
 		var tokens = ThemeTokens.Editable.Zip(colors).ToDictionary(p => p.First, p => p.Second);
 		tokens[ThemeStyles.FontDisplay] = display;
@@ -220,6 +220,8 @@ public static class BuiltInThemes
 		tokens[ThemeStyles.Ornament] = ornament;
 		tokens[ThemeStyles.Frame] = frame;
 		tokens[ThemeStyles.Titles] = titles;
+		tokens[ThemeStyles.Effect] = effect;
+		tokens[ThemeStyles.Imagery] = imagery;
 		return new PortalTheme(id, name, dark, Published: true, tokens, BuiltIn: true);
 	}
 
