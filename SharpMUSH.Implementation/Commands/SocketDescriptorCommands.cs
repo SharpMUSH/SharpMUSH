@@ -12,6 +12,8 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
+using TerminalFeatures = MarkupString.Ansi.TerminalFeatures;
+using TerminalProfile = MarkupString.Ansi.TerminalProfile;
 using SharpMUSH.Messaging.Messages;
 using System.Globalization;
 using System.Text;
@@ -347,10 +349,7 @@ public partial class Commands
 		// Absent means "auto": the flags and the negotiated terminal decide again.
 		await MessageBus.Publish(new UpdateColorStyleMessage(connection.Handle,
 			connection.Metadata.GetValueOrDefault(SocketOptions.ColorStyleKey)));
-		await MessageBus.Publish(new UpdateTerminalFeaturesMessage(connection.Handle,
-			TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.HyperlinksKey),
-			TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.CommandLinksKey),
-			connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey)));
+		await MessageBus.Publish(new UpdateTerminalFeaturesMessage(connection.Handle, TerminalPins.Of(connection.Metadata)));
 
 		if (probe)
 		{
@@ -708,11 +707,21 @@ public static class SocketOptions
 		// reports and answers give, read through the calculation the renderer uses.
 		var features = TerminalFeatureReader.For(connection.Metadata);
 		Row("Hyperlinks", PinnedOrAuto(TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.HyperlinksKey),
-			features.HasFlag(TerminalOutputFeatures.Hyperlinks)));
+			features.HasFlag(TerminalFeatures.Hyperlinks)));
 		Row("Command Links", PinnedOrAuto(TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.CommandLinksKey),
-			features.HasFlag(TerminalOutputFeatures.CommandLinks)));
-		Row("Graphics", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey)
-			?? $"auto ({TerminalFeatureReader.GraphicsName(features)})");
+			features.HasFlag(TerminalFeatures.CommandLinks)));
+		// Pictures are off until the player turns them on; "auto" says which method the terminal gets.
+		Row("Graphics", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey) switch
+		{
+			null => TerminalGraphics.Off,
+			TerminalGraphics.Auto => $"auto ({TerminalFeatureReader.GraphicsName(features)})",
+			var method => method
+		});
+		Row("Animation", OnOff(features.HasFlag(TerminalFeatures.MovingPictures)));
+		var terminal = TerminalFeatureReader.TerminalOf(connection.Metadata);
+		Row("Terminal", connection.Metadata.ContainsKey(TerminalFeatureReader.TerminalKey)
+			? terminal?.Name ?? "unknown"
+			: $"auto ({terminal?.Name ?? "unknown"})");
 
 		builder.Append($"{"Prompt Newlines",-15}:  {YesNo(connection.Metadata.GetValueOrDefault(PromptNewlinesKey) == "1")}");
 
@@ -802,6 +811,12 @@ public static class SocketOptions
 
 			case "GRAPHICS":
 				return SetGraphics(value);
+
+			case "ANIMATION":
+				return SetAnimation(value);
+
+			case "TERMINAL":
+				return SetTerminal(value);
 
 			default:
 				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetInvalidOptionFormat), name);
@@ -899,13 +914,13 @@ public static class SocketOptions
 			return SocksetResult.Of(setKey, setting);
 		}
 
-		// A method pins how pictures are drawn; auto leaves it to the terminal; detect does too, and also asks
-		// the terminal, whose answer comes back with the player's next line.
+		// Pictures are off until set. A method pins how they are drawn; auto leaves it to the terminal; detect
+		// does too, and also asks the terminal, whose answer comes back with the player's next line.
 		SocksetResult SetGraphics(string newValue)
 		{
 			var setting = newValue.Trim().ToLowerInvariant() switch
 			{
-				"auto" => "auto",
+				"auto" or "on" or "yes" => TerminalGraphics.Auto,
 				"detect" => "detect",
 				"kitty" => TerminalGraphics.Kitty,
 				"iterm2" or "iterm" => TerminalGraphics.Iterm2,
@@ -919,16 +934,60 @@ public static class SocketOptions
 			{
 				case null:
 					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetUnknownGraphics));
-				case "auto":
+				case TerminalGraphics.Off:
 					connection.Metadata.TryRemove(TerminalFeatureReader.GraphicsKey, out _);
 					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting);
 				case "detect":
-					connection.Metadata.TryRemove(TerminalFeatureReader.GraphicsKey, out _);
+					connection.Metadata[TerminalFeatureReader.GraphicsKey] = TerminalGraphics.Auto;
 					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsDetecting)) with { Probe = true };
 				default:
 					connection.Metadata[TerminalFeatureReader.GraphicsKey] = setting;
 					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting);
 			}
+		}
+
+		// Moving pictures play only when this is on, and only through Kitty graphics or iTerm2's inline images.
+		SocksetResult SetAnimation(string newValue)
+		{
+			bool? on = newValue.Trim().ToLowerInvariant() switch
+			{
+				"on" or "yes" or "1" => true,
+				"off" or "no" or "0" => false,
+				_ => null
+			};
+
+			switch (on)
+			{
+				case null:
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetUnknownAnimationSetting));
+				case true:
+					connection.Metadata[TerminalFeatureReader.AnimationKey] = "1";
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetAnimationSetFormat), "on");
+				default:
+					connection.Metadata.TryRemove(TerminalFeatureReader.AnimationKey, out _);
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetAnimationSetFormat), "off");
+			}
+		}
+
+		// Names the terminal, for one that does not say what it is (Windows Terminal) or says it wrongly; auto
+		// goes back to what it reported.
+		SocksetResult SetTerminal(string newValue)
+		{
+			var id = newValue.Trim();
+			if (id.Equals("auto", StringComparison.OrdinalIgnoreCase))
+			{
+				connection.Metadata.TryRemove(TerminalFeatureReader.TerminalKey, out _);
+				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetTerminalSetFormat), "auto");
+			}
+
+			if (TerminalProfile.Find(id) is not { } profile)
+			{
+				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetUnknownTerminalFormat), id,
+					string.Join(", ", TerminalProfile.Known.Select(known => $"'{known.Id}'")));
+			}
+
+			connection.Metadata[TerminalFeatureReader.TerminalKey] = profile.Id;
+			return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetTerminalSetFormat), profile.Id);
 		}
 	}
 

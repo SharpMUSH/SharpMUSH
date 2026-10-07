@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using MarkupString.Ansi;
 using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.SocketServer.Models;
@@ -58,13 +59,9 @@ public static class OutputFormatNegotiation
 /// <c>box()</c>, <c>flex()</c> and the like at an automatic width is laid out again at this width
 /// before it is sent.
 /// </param>
-/// <param name="DetectedFeatures">
-/// What the terminal can do beyond colour, from the terminal types it reported and what it answered
-/// when asked (<see cref="TerminalFeatureReader.Detect"/>). The pins below override it.
-/// </param>
-/// <param name="HyperlinksPin">A <c>SOCKSET hyperlinks</c> pin, or null for auto.</param>
-/// <param name="CommandLinksPin">A <c>SOCKSET commandlinks</c> pin, or null for auto.</param>
-/// <param name="GraphicsPin">A <c>SOCKSET graphics</c> pin (<see cref="TerminalGraphics"/>), or null for auto.</param>
+/// <param name="TerminalTypes">The terminal types the client reported, which name its terminal.</param>
+/// <param name="Probe">What the terminal answered when asked, or null when it never was.</param>
+/// <param name="Pins">What the player set with <c>SOCKSET</c>; null for nothing.</param>
 /// <param name="CellWidth">The terminal's character cell width in pixels, or zero when it never said.</param>
 /// <param name="CellHeight">The terminal's character cell height in pixels, or zero when it never said.</param>
 public record ProtocolCapabilities(
@@ -79,20 +76,30 @@ public record ProtocolCapabilities(
 	string? ColorStylePin = null,
 	string? MxpSupported = null,
 	int Width = 0,
-	TerminalOutputFeatures DetectedFeatures = TerminalOutputFeatures.None,
-	bool? HyperlinksPin = null,
-	bool? CommandLinksPin = null,
-	string? GraphicsPin = null,
+	IReadOnlyList<string>? TerminalTypes = null,
+	TerminalProbeResult? Probe = null,
+	TerminalPins? Pins = null,
 	int CellWidth = 0,
 	int CellHeight = 0
 )
 {
+	/// <summary>The terminal, through <see cref="TerminalFeatureReader.Identify"/>, or null when it is not one this server knows.</summary>
+	[JsonIgnore]
+	public TerminalProfile? Terminal => TerminalFeatureReader.Identify(TerminalTypes ?? [], Probe, Pins?.Terminal);
+
 	/// <summary>
-	/// What this connection is sent beyond colour: <see cref="DetectedFeatures"/> under the pins, through
+	/// What this connection is sent beyond colour: what the terminal can do under the pins, through
 	/// <see cref="TerminalFeatureReader.Resolve"/>, the calculation <c>terminfo()</c> also reports.
 	/// </summary>
 	[JsonIgnore]
-	public TerminalOutputFeatures Features => TerminalFeatureReader.Resolve(DetectedFeatures, HyperlinksPin,
-		CommandLinksPin, GraphicsPin, Charset.Replace("-", "").Equals("UTF8", StringComparison.OrdinalIgnoreCase),
-		ScreenReader);
+	public TerminalFeatures Features
+	{
+		get
+		{
+			var terminal = Terminal;
+			return TerminalFeatureReader.Resolve(TerminalFeatureReader.Detect(terminal, TerminalTypes ?? [], Probe), terminal,
+				Pins ?? TerminalPins.None, Charset.Replace("-", "").Equals("UTF8", StringComparison.OrdinalIgnoreCase),
+				ScreenReader);
+		}
+	}
 }

@@ -116,11 +116,10 @@ public record UpdateColorStyleMessage(long Handle, string? Style) : IHandleMessa
 public record UpdateThemeMessage(long Handle, string? Theme) : IHandleMessage;
 
 /// <summary>
-/// Carries the <c>SOCKSET hyperlinks</c>, <c>commandlinks</c> and <c>graphics</c> pins to the socket owner.
-/// Each is null for "auto", which leaves the feature to what the terminal reported or answered.
-/// <paramref name="Graphics"/> is one of the <see cref="SharpMUSH.Library.Utilities.TerminalGraphics"/> values.
+/// Carries the <c>SOCKSET hyperlinks</c>, <c>commandlinks</c>, <c>graphics</c>, <c>animation</c> and
+/// <c>terminal</c> settings to the socket owner.
 /// </summary>
-public record UpdateTerminalFeaturesMessage(long Handle, bool? Hyperlinks, bool? CommandLinks, string? Graphics)
+public record UpdateTerminalFeaturesMessage(long Handle, SharpMUSH.Library.Utilities.TerminalPins Pins)
 	: IHandleMessage;
 
 /// <summary>

@@ -192,9 +192,6 @@ public class TelnetServer : ConnectionHandler
 		}
 
 		IReadOnlyList<string> publishedTerminalTypes = [];
-		// What the terminal last answered when asked, kept so a later terminal-type report and a later
-		// answer each work out the terminal's features from both.
-		TerminalProbeResult? probeResult = null;
 		var terminalTypeProtocol = new TerminalTypeProtocol().OnTerminalTypes(
 			async terminalTypes =>
 			{
@@ -213,7 +210,7 @@ public class TelnetServer : ConnectionHandler
 				// say it, that they could display them.
 				await PublishAfterRegistrationAsync(async () =>
 				{
-					TryApplyTerminalCapabilities(nextPort, snapshot, probeResult);
+					TryApplyTerminalCapabilities(nextPort, snapshot);
 					await _publishEndpoint.Publish(
 						new TerminalTypeNegotiatedMessage(nextPort, snapshot), ct);
 				});
@@ -271,12 +268,11 @@ public class TelnetServer : ConnectionHandler
 			{
 				var answered = new TerminalProbeResult(report.KittyGraphics, report.Sixel == true, report.Version,
 					report.CellWidth ?? 0, report.CellHeight ?? 0);
-				probeResult = answered;
 				await PublishAfterRegistrationAsync(async () =>
 				{
 					_connectionService.UpdateCapabilities(nextPort, current => current with
 					{
-						DetectedFeatures = TerminalFeatureReader.Detect(publishedTerminalTypes, answered),
+						Probe = answered,
 						CellWidth = answered.CellWidth,
 						CellHeight = answered.CellHeight
 					});
@@ -521,7 +517,7 @@ public class TelnetServer : ConnectionHandler
 	/// negotiation read loop on a retry loop would not be.
 	/// </para>
 	/// </summary>
-	private void TryApplyTerminalCapabilities(long handle, IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe)
+	private void TryApplyTerminalCapabilities(long handle, IReadOnlyList<string> terminalTypes)
 	{
 		var connection = _connectionService.Get(handle);
 		if (connection is null)
@@ -540,7 +536,7 @@ public class TelnetServer : ConnectionHandler
 			SupportsTruecolor = reported.Truecolor && !reported.ScreenReader,
 			SupportsUtf8 = reported.Utf8,
 			ScreenReader = reported.ScreenReader,
-			DetectedFeatures = TerminalFeatureReader.Detect(terminalTypes, probe)
+			TerminalTypes = terminalTypes
 		});
 
 		if (updated)

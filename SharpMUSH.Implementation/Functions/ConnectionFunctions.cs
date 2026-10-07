@@ -12,6 +12,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Time;
 using SharpMUSH.Library.Utilities;
+using TerminalFeatures = MarkupString.Ansi.TerminalFeatures;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Markup;
@@ -1239,9 +1240,10 @@ public partial class Functions
 		// Not PennMUSH tokens: what the connection is sent beyond colour, read the way the renderer reads
 		// it, so softcode can tell whether a link is clickable or a picture is drawn. Nothing when neither.
 		var features = TerminalFeatureReader.For(metadata);
-		if (features.HasFlag(TerminalOutputFeatures.Hyperlinks)) terminfo.Add("hyperlinks");
-		if (features.HasFlag(TerminalOutputFeatures.CommandLinks)) terminfo.Add("commandlinks");
+		if (features.HasFlag(TerminalFeatures.Hyperlinks)) terminfo.Add("hyperlinks");
+		if (features.HasFlag(TerminalFeatures.CommandLinks)) terminfo.Add("commandlinks");
 		if (TerminalFeatureReader.GraphicsName(features) is var graphics && graphics != TerminalGraphics.Off) terminfo.Add(graphics);
+		if (features.HasFlag(TerminalFeatures.MovingPictures)) terminfo.Add("animation");
 
 		// "One of the color styles shown in [colorstyle] will also be included" — always one, so a
 		// client that pinned nothing still reports what it is being rendered at. An explicit
