@@ -16,7 +16,7 @@
   }
 }
 -->
-# gs moving
+# Getting Started: Moving
 
 To see the room you're in, type `look` (see [look]). You'll probably see something similar to this (though some MUSHes customize the appearance of rooms):
 

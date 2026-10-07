@@ -1,5 +1,5 @@
-# FUNCTION LIST
-# FUNCTION TYPES
+# Function List
+# Function Types
   Several major variants of functions are available. The help topics are listed below, together with a quick summary of the function type and some examples of that type of function.
 
   [Attribute functions]: attribute-related manipulations (GET, UFUN) <br>
@@ -26,7 +26,7 @@
   The command "@list/functions" lists all functions on the game.<br>
   The command "@function" lists only the game's custom global functions defined via the @function command.
 
-# Attribute functions
+# Attribute Functions
   These functions can access or alter information stored in attributes on objects.
 
 |                |                |                |                |
@@ -46,7 +46,7 @@
 - [attributes]
 - [NON-STANDARD ATTRIBUTES]
 :::
-# Bitwise functions
+# Bitwise Functions
   These functions treat integers as a sequence of binary bits (either 0 or 1) and manipulate them.
 
   For example, 2 is represented as '0010' and 4 as '0100'. If these two numbers are bitwise-or'ed together with BOR(), the result is 6, or (in binary) '0110'. These functions are useful for storing small lists of toggle (Yes/No) options efficiently.
@@ -56,7 +56,7 @@
 | [BAND()]     | [BASECONV()] | [BNAND()]    | [BNOT()]     |
 | [BOR()]      | [BXOR()]     | [SHL()]      | [SHR()]      |
 
-# Boolean functions
+# Boolean Functions
   Boolean functions all return 0 or 1 as an answer.
 
   Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
@@ -72,7 +72,7 @@
 - [boolean values]
 - [@config]
 :::
-# Communication functions
+# Communication Functions
   Communication functions are side-effect functions that send a message to an object or objects. [PAGERECALL()] and [PAGECONVERSATIONS()] are the exception: they read your own page log and send nothing (SharpMUSH extensions).
 
 |                       |                       |                       |                       |
@@ -88,7 +88,7 @@
 - [Mail Functions]
 :::
 
-# Connection functions
+# Connection Functions
   Connection functions return information about the connections open on a game, or about specific connections.
 
 |                |                |                |                |
@@ -102,7 +102,7 @@
 | [TERMINFO()]   | [WIDTH()]      | [XMWHO()]      | [XMWHOID()]    |
 | [XWHO()]       | [XWHOID()]     | [ZMWHO()]      | [ZWHO()]       |
 
-# Dbref functions
+# Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
 
 |               |               |               |               |
@@ -120,7 +120,7 @@
 - [database]
 - [Information functions]
 :::
-# Information functions
+# Information Functions
   Information functions return values related to objects or the game.
 
 |                |                |                |                |
@@ -145,7 +145,7 @@
 - [Dbref functions]
 :::
 
-# List functions
+# List Functions
   List functions take at least one list of elements and return transformed lists or one or more members of those lists. Most of these functions can take an arbitrary `<delimiter>` argument to specify what delimits list elements; if none is provided, a space is used by default.
 
 |                 |                 |                 |                 |
@@ -168,7 +168,7 @@
 - [LISTS]
 :::
 
-# Math functions
+# Math Functions
   Math functions take one or more floating point numbers and return a numeric value.
 
 |              |              |              |              |
@@ -198,7 +198,7 @@
 ::: seealso
 - [Vector functions]
 :::
-# Vector functions
+# Vector Functions
   These functions operate on n-dimensional vectors. A vector is a delimiter-separated list of numbers (space-separated, by default):
 
 |            |            |            |            |
@@ -213,7 +213,7 @@
 - [Math functions]
 :::
 
-# Regular expression functions
+# Regular Expression Functions
   These functions take a regular expression (regexp, or re) and match it against assorted things.
 
 |                  |                  |                  |                  |
@@ -230,7 +230,7 @@
 - [regexp]
 :::
 
-# SQL functions
+# SQL Functions
   These functions perform queries or other operations on an SQL database to which the MUSH is connected, if SQL support is available and enabled.
 
 |               |               |               |               |
@@ -238,7 +238,7 @@
 | [MAPSQL()]    | [SQL()]       | [SQLESCAPE()] |               |
 
 
-# String functions
+# String Functions
   String functions take at least one string and return a transformed string, parts of a string, or a value related to the string(s).
 
 |                          |                          |                          |                          |
@@ -270,7 +270,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 - [STRINGS]
 - [LAYOUT FUNCTIONS]
 :::
-# Time functions
+# Time Functions
   These functions return times or format times.
 
 |                 |                 |                 |                 |
@@ -284,7 +284,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 ::: seealso
 - [timezones]
 :::
-# Utility functions
+# Utility Functions
   These functions don't quite fit into any other category.
 
 |                    |                    |                    |                    |
@@ -306,7 +306,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         |
 | [UPTIME()]         | [VALID()]          | [WIPE()]           |                    |
 
-# Wiki functions
+# Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
 
 |                  |                  |                  |                  |
@@ -319,7 +319,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 :::
 
 # @@()
-# NULL()
+# null()
 `@@(<expression>)`<br>
 `null(<expression>[, ... , <expression>])`
 
@@ -331,7 +331,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 - [@@]
 :::
 
-# ABS()
+# abs()
 `abs(<number>)`
 
   Returns the absolute value of a number.
@@ -351,7 +351,7 @@ You say, "2"
 - [SIGN()]
 :::
 
-# ACCNAME()
+# accname()
 `accname(<object>)`
 
   accname() returns the name of `<object>`, applying the object's<br>
@@ -364,7 +364,7 @@ You say, "2"
 - [INAME()]
 - [accents]
 :::
-# ACOS()
+# acos()
 `acos(<cosine>[, <angle type>])`
 
   Returns the angle that has the given `<cosine>` (arc-cosine), with the angle expressed in the given `<angle type>`, or radians by default.
@@ -380,7 +380,7 @@ You say, "2"
 - [SIN()]
 - [TAN()]
 :::
-# ADD()
+# add()
 `add(<number1>, <number2>[, ... , <numberN>])`
 
   Returns the sum of the given numbers.
@@ -390,7 +390,7 @@ You say, "2"
 - [Math functions]
 - [LMATH()]
 :::
-# AFTER()
+# after()
 `after(<string1>, <string2>)`
 
   Returns the portion of `<string1>` that occurs after `<string2>`. If `<string2>` isn't in `<string1>`, the function returns nothing. This is case-sensitive.
@@ -409,7 +409,7 @@ You say, "r baz"
 - [BEFORE()]
 - [REST()]
 :::
-# ALLOF()
+# allof()
 `allof(<expr>[, ... , <exprN>], <osep>)`
 
   Evaluates every `<expr>` argument (including side-effects) and returns the results of those which are true, in a list separated by `<osep>`. The output separator argument is required, and can be a string of any length (including an empty string; use %b for a space).
@@ -442,7 +442,7 @@ You say, "r baz"
 - [STRFIRSTOF()]
 - [FILTER()]
 :::
-# ALPHAMAX()
+# alphamax()
 `alphamax(<word>[, ... , <wordN>])`
 
   Takes any number of `<word>` arguments, and returns the one which is lexicographically biggest. That is, the `<word>` would be last in alphabetical order.
@@ -453,7 +453,7 @@ You say, "r baz"
 - [ALPHAMIN()]
 - [MAX()]
 :::
-# ALPHAMIN()
+# alphamin()
 `alphamin(<word>[, ... , <wordN>])`
 
   Takes any number of `<word>` arguments, and returns the one which is lexicographically smallest. That is, the word that would be first in alphabetical order.
@@ -465,8 +465,8 @@ You say, "r baz"
 - [ALPHAMAX()]
 - [MIN()]
 :::
-# AND()
-# CAND()
+# and()
+# cand()
 `and(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>
 `cand(<boolean1>, <boolean2>[, ... , <booleanN>])`
 
@@ -483,8 +483,8 @@ You say, "r baz"
 - [NOT()]
 - [LMATH()]
 :::
-# ANDFLAGS()
-# ANDLFLAGS()
+# andflags()
+# andlflags()
 `andflags(<object>, <string of flag letters>)`<br>
 `andlflags(<object>, <list of flag names>)`
 
@@ -502,7 +502,7 @@ You say, "r baz"
 - [FLAGS()]
 - [LFLAGS()]
 :::
-# ANDLPOWERS()
+# andlpowers()
 `andlpowers(<object>, <list of powers>)`
 
   This function returns 1 if `<object>` has all the powers in a specified list, and 0 if it does not. The list is a space-separated list of power names. A '!' preceding a flag name means "not power".
@@ -518,7 +518,7 @@ You say, "r baz"
 - [@power]
 - [@power]
 :::
-# APOSS()
+# aposs()
 # %a
 `aposs(<object>)`
 
@@ -530,11 +530,11 @@ You say, "r baz"
 - [POSS()]
 - [SUBJ()]
 :::
-# ART()
+# art()
 `art(<string>)`
 
   This function returns the proper article, "a" or "an", based on whether or not `<string>` begins with a vowel.
-# ASIN()
+# asin()
 `asin(<sine>[, <angle type>])`
 
   Returns the angle with the given `<sine>` (arc-sine), with the angle expressed in the given `<angle type>`, or radians by default.
@@ -550,8 +550,8 @@ You say, "r baz"
 - [SIN()]
 - [TAN()]
 :::
-# ATAN()
-# ATAN2()
+# atan()
+# atan2()
 `atan(<tangent>[, <angle type>])`<br>
 `atan2(<number1>, <number2>[, <angle type>])`
 
@@ -570,8 +570,8 @@ You say, "r baz"
 - [SIN()]
 - [TAN()]
 :::
-# ATRLOCK()
-# ATTRLOCK()
+# atrlock()
+# attrlock()
 `atrlock(<object>/<attrib>[, [on|off]])`
 
   When given a single `<object>`/`<attribute>` pair as an argument, returns 1 if the attribute is locked, 0 if unlocked, and #-1 if the attribute doesn't exist or can't be read by the function's caller.
@@ -591,7 +591,7 @@ You say, "r baz"
 - [@atrchown]
 - [HASFLAG()]
 :::
-# ATTRIB_SET()
+# attrib_set()
 `attrib_set(<object>/<attrib>[, <value>])`
 
   Sets or clears an attribute. With a `<value>`, it sets the attribute, without one, it clears the attribute. This is an easier-to-read replacement for the old set(`<object>`, `<attrib>`:`<value>`) notation, and a less destructive replacement for wipe() that won't destroy entire attribute trees in one shot.
@@ -604,7 +604,7 @@ You say, "r baz"
 - [@set]
 - [ATTRIB_SET#()]
 :::
-# ATTRIB_SET#()
+# attrib_set#()
 `attrib_set#(<object>/<attrib>[, <value>])`
 
   Sets or clears an attribute exactly as [ATTRIB_SET()] does, and returns `<object>`'s name followed by the `<object>`/`<attribute>` pair it was given, rather than the empty string. Use it when the calling code wants to report what it just set. On failure it returns the same error attrib_set() would.
@@ -620,7 +620,7 @@ You say, "r baz"
 - [ATTRIB_SET()]
 - [SET()]
 :::
-# BAND()
+# band()
 `band(<integer>[, ... , <integerN>])`
 
   Does a bitwise AND of all its arguments, returning the result (a number with only the bits set in every argument set in it).
@@ -630,7 +630,7 @@ You say, "r baz"
 - [Bitwise functions]
 - [LMATH()]
 :::
-# BASECONV()
+# baseconv()
 `baseconv(<number>, <from base>, <to base>)`
 
   Converts `<number>`, which is in base `<from base>` into base `<to base>`. The bases can be between 2 (binary) and 64, inclusive.
@@ -644,12 +644,12 @@ You say, "r baz"
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
   In base 63 and base 64, - is always treated as a digit. Using base64 as a 'from' will also treat + as 62 and / as 63.
-# BEEP()
+# beep()
 `beep([<number>])`
 
   Returns `<number>` "alert" bell characters. `<number>` must be in the range 1 to 5, or, if unspecified, defaults to 1. This function may only be used by royalty and wizards.
 
-# BEFORE()
+# before()
 `before(<string1>, <string2>)`
 
   Returns the portion of `<string1>` that occurs before `<string2>`. If `<string2>` isn't in `<string1>`, `<string1>` is returned. This is case-sensitive.
@@ -669,7 +669,7 @@ You say, "foo b"
 - [AFTER()]
 - [FIRST()]
 :::
-# BENCHMARK()
+# benchmark()
 `benchmark(<expression>, <number>[, <sendto>])`
 
   Evaluates `<expression>` `<number>` times, and returns the average, minimum, and maximum time it took to evaluate `<expression>` in microseconds. If a `<sendto>` argument is given, benchmark() instead pemits the times to the object `<sendto>`, and returns the result of the last evaluation of `<expression>`.
@@ -681,7 +681,7 @@ Average: 520.47   Min: 340   Max: 1382
 think benchmark(iter(lnum(1,100), %i0), 200)
 Average: 110.27   Min: 106   Max: 281
 ```
-# BRACKETS()
+# brackets()
 `brackets(<string>)`
 
   Returns a count of the number of left and right square brackets, parentheses, and curly braces in the string, in that order, as a space-separated list of numbers. This is useful for finding missing or extra brackets in MUSH code. `<string>` is evaluated.
@@ -692,7 +692,7 @@ Average: 110.27   Min: 106   Max: 281
 think brackets(v(desc))
 1 1 2 2 1 0
 ```
-# BNAND()
+# bnand()
 `bnand(<integer1>, <integer2>)`
 
   Returns `<integer1>` with every bit that was set in `<integer2>` cleared.
@@ -701,7 +701,7 @@ think brackets(v(desc))
 ::: seealso
 - [Bitwise functions]
 :::
-# BNOT()
+# bnot()
 `bnot(<integer>)`
 
   Returns the bitwise complement of `<integer>`. Every bit set in it is cleared, and every clear bit is set.
@@ -710,7 +710,7 @@ think brackets(v(desc))
 ::: seealso
 - [Bitwise functions]
 :::
-# BOR()
+# bor()
 `bor(<integer>[, ... , <integerN>])`
 
   Does a bitwise OR of all its arguments, returning the result. (A number with a bit set if that bit appears in any of its arguments).
@@ -720,7 +720,7 @@ think brackets(v(desc))
 - [Bitwise functions]
 - [LMATH()]
 :::
-# BOUND()
+# bound()
 `bound(<number>, <lower bound>[, <higher bound>])`
 
   bound() returns `<number>` if it is between `<lower bound>` and `<higher bound>`. If it's lower than `<lower bound>`, `<lower bound>` is returned. If it's higher than `<higher bound>`, `<higher bound>` is returned.
@@ -734,7 +734,7 @@ think brackets(v(desc))
 - [ROUND()]
 - [TRUNC()]
 :::
-# BXOR()
+# bxor()
 `bxor(<integer>[, ... , <integerN>])`
 
   Does a bitwise XOR of all its arguments, returning the result. (A number with a bit set if it's set in only one of its arguments).
@@ -744,7 +744,7 @@ think brackets(v(desc))
 - [Bitwise functions]
 - [LMATH()]
 :::
-# CAPSTR()
+# capstr()
 `capstr(<string>)`
 
   Returns `<string>` with the first character capitalized.
@@ -760,8 +760,8 @@ Foo bar baz
 - [LCSTR()]
 - [UCSTR()]
 :::
-# CAT()
-# STRCAT()
+# cat()
+# strcat()
 `cat(<string>[, ... , <stringN>])`<br>
 `strcat(<string1>[, ... , <stringN>])`
 
@@ -774,7 +774,7 @@ You say, "foo bar baz blech"
 say strcat(foo bar, baz blech)
 You say, "foo barbaz blech"
 ```
-# CENTER()
+# center()
 `center(<string>, <width>[, <fill>[, <rightfill>]])`
 
   This function will center `<string>` within a field `<width>` characters wide, using the `<fill>` string for padding on the left side of the string, and `<rightfill>` for padding on the right side. `<rightfill>` defaults to the mirror-image of `<fill>` if not specified. `<fill>` defaults to a space if neither `<fill>` nor `<rightfill>` are specified.
@@ -802,7 +802,7 @@ You say, "--X--"
 - [LJUST()]
 - [RJUST()]
 :::
-# CHAIN()
+# chain()
 `chain(<attribute list>, <base>[, <arg0>[, ... , <argN>]])`
 
   chain() threads a value through a sequence of user-defined attributes -- the functional "pipeline", or thread-first "arrow" (as in Clojure's `->`), pattern. `<attribute list>` is a space-separated list of `[<object>/]<attribute>` names.
@@ -835,7 +835,7 @@ You say, "*HELLO*!"
 - [u()]
 - [@include attribute pipelines]
 :::
-# CHECKPASS()
+# checkpass()
 `checkpass(<player>, <string>)`
 
   Returns 1 if `<string>` matches `<player>`'s password, and 0 otherwise. If `<player>` has no password, this function will always return 1.
@@ -847,8 +847,8 @@ You say, "*HELLO*!"
 - [@password]
 - [@newpassword]
 :::
-# CHR()
-# ORD()
+# chr()
+# ord()
 `chr(<number>)`<br>
 `ord(<character>)`
 
@@ -863,7 +863,7 @@ You say, "65"
 say chr(65)
 You say, "A"
 ```
-# CLONE()
+# clone()
 `clone(<object>[, <new name>[, <dbref>[, preserve]]])`
 
   This function clones `<object>`, as per @clone, and returns the dbref number of the clone, or #-1 if the object could not be cloned.
@@ -880,7 +880,7 @@ You say, "A"
 - [DIG()]
 - [OPEN()]
 :::
-# CMDS()
+# cmds()
 `cmds(<player|descriptor>)`
 
   Returns the number of commands issued by a player during this connection as indicated by WHO.
@@ -891,7 +891,7 @@ You say, "A"
 ::: seealso
 - [Connection functions]
 :::
-# SENT()
+# sent()
 `sent(<player|descriptor>)`
 
   Returns the number of characters sent by a player during this connection as indicated by SESSION.
@@ -902,7 +902,7 @@ You say, "A"
 ::: seealso
 - [Connection functions]
 :::
-# RECV()
+# recv()
 `recv(<player|descriptor>)`
 
   Returns the number of characters received by a player during this connection as indicated by SESSION.
@@ -913,7 +913,7 @@ You say, "A"
 ::: seealso
 - [Connection functions]
 :::
-# COMP()
+# comp()
 `comp(<value1>, <value2>[, <type>])`
 
   comp() compares two values. It returns 0 if they are the same, -1 if `<value1>` is less than/precedes alphabetically `<value2>`, and 1 otherwise.
@@ -933,7 +933,7 @@ You say, "A"
 - [STRMATCH()]
 - [EQ()]
 :::
-# CON()
+# con()
 `con(<object>)`
 
   Returns the dbref of the first object in the `<object>`'s inventory.
@@ -945,10 +945,10 @@ You say, "A"
 - [LCON()]
 - [NEXT()]
 :::
-# COND()
-# CONDALL()
-# NCOND()
-# NCONDALL()
+# cond()
+# condall()
+# ncond()
+# ncondall()
 `cond(<cond>, <expr>[, ... , <condN>, <exprN>][, <default>])`<br>
 `condall(<cond>, <expr>[, ... , <condN>, <exprN>][, <default>])`<br>
 `ncond(<cond>, <expr>[, ... , <condN>, <exprN>][, <default>])`<br>
@@ -977,7 +977,7 @@ You say, "This is true"
 - [FIRSTOF()]
 - [ALLOF()]
 :::
-# CONFIG()
+# config()
 `config([<option>])`
 
   With no arguments, config() returns a list of config option names. If `<option>` is given, config() returns the value of the given option Boolean configuration options will return values of "Yes" or "No".
@@ -988,7 +988,7 @@ think config(money_singular)
 Penny
 ```
 
-# CONN()
+# conn()
 `conn(<player|descriptor>)`
 
   This function returns the number of seconds a player has been connected. `<player>` should be the full name of a player or a dbref. You can also use a `<descriptor>` to get connection information for a specific connection when a player is connected more than once. Wizards can also specify the descriptor of a connection which is still at the login screen.
@@ -999,7 +999,7 @@ Penny
 ::: seealso
 - [Connection functions]
 :::
-# CONTROLS()
+# controls()
 `controls(<object>, <victim>[/<attribute>])`
 
   With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If one of the objects does not exist, it will return #-1 ARGN NOT FOUND (where N is the argument which is the invalid object). If `<attribute>` is not a valid attribute name, it will return #-1 BAD ATTR NAME. You must control `<object>` or `<victim>`, or have the See_All power, to use this function.
@@ -1009,8 +1009,8 @@ Penny
 - [VISIBLE()]
 - [CONTROL]
 :::
-# CONVSECS()
-# CONVUTCSECS()
+# convsecs()
+# convutcsecs()
 `convsecs(<seconds>[, <timezone>])`<br>
 `convutcsecs(<seconds>)`
 
@@ -1041,8 +1041,8 @@ You say, "709395750"
 - [time()]
 - [timefmt()]
 :::
-# CONVTIME()
-# CONVUTCTIME()
+# convtime()
+# convutctime()
 `convtime(<time string>[, <timezone>[, <precision>]])`<br>
 `convutctime(<time string>[, <precision>])`
 
@@ -1069,7 +1069,7 @@ You say, "Wed Jun 24 10:22:54 1992"
 - [time()]
 - [timezones]
 :::
-# COS()
+# cos()
 `cos(<angle>[, <angle type>])`
 
   Returns the cosine of `<angle>`. Angle must be in the given angle type, or radians by default.
@@ -1094,7 +1094,7 @@ You say, "0"
 - [SIN()]
 - [TAN()]
 :::
-# PCREATE()
+# pcreate()
 `pcreate(<name>, <password>[, <dbref>])`
 
   Creates a player with a given `<name>` and `<password>`. This function can only be used by wizards.
@@ -1108,7 +1108,7 @@ You say, "0"
 - [DIG()]
 - [OPEN()]
 :::
-# CREATE()
+# create()
 `create(<object>[, <cost>[, <dbref>]])`
 
    This function creates an object with name `<object>` for `<cost>` pennies, and returns the dbref number of the created object. It returns #-1 on error.
@@ -1122,8 +1122,8 @@ You say, "0"
 - [DIG()]
 - [OPEN()]
 :::
-# CTIME()
-# CSECS()
+# ctime()
+# csecs()
 `ctime(<object>[, <utc>])`<br>
 `csecs(<object>[, <precision>])`
 
@@ -1138,7 +1138,7 @@ You say, "0"
 - [SECS()]
 - [OBJID()]
 :::
-# ANGLES
+# Angles
 
   In any function which accepts an angle type, the argument can be one of 'd' for degrees, 'r' for radians, or 'g' for gradians. Gradians are not used often, but it's included for completeness.
 
@@ -1154,7 +1154,7 @@ You say, "0"
 - [SIN()]
 - [TAN()]
 :::
-# CTU()
+# ctu()
 `ctu(<angle>, <from>, <to>)`
 
   Converts between the different ways to measure angles. `<from>` controls what the angle is treated as, and `<to>` what form it is turned into. See HELP ANGLES for more information.
@@ -1174,7 +1174,7 @@ You say, "90 degrees is 1.570796 radians"
 - [SIN()]
 - [TAN()]
 :::
-# DEC()
+# dec()
 `dec(<integer>)`<br>
 `dec(<string-ending-in-integer>)`
 
@@ -1206,7 +1206,7 @@ You say, "90 degrees is 1.570796 radians"
 - [INC()]
 - [SUB()]
 :::
-# DECOMPOSEWEB()
+# decomposeweb()
 `decomposeweb(<string>)`
 
   Returns `<string>` as HTML, ready to place in a web page. Characters such as `<` and `&` in the text are encoded, and colour, links, tags and other markup are written as the HTML the web portal uses for them.
@@ -1225,7 +1225,7 @@ a&lt;b&gt; <span style="color: #ff5555">red</span>
 - [ansi()]
 - [RENDER()]
 :::
-# DECOMPOSE()
+# decompose()
 `decompose(<string>)`
 
   decompose() works like escape() with the additional caveat that it inserts parse-able characters to recreate `<string>` exactly after one parsing. It takes care of multiple spaces, '%r's, and '%t's.
@@ -1242,7 +1242,7 @@ This is \[a%b[ansi(y,test)]\] %b%b
 - [ESCAPE()]
 - [SECURE()]
 :::
-# DEFAULT()
+# default()
 `default([<obj>/]<attr>[, ... ,[<objN>]/<attrN>], <default>)`
 
   This function returns the value of the first possible `<obj>`/`<attr>`, as if retrieved via the get() function, if the attribute exists and is readable by you. Otherwise, it evaluates `<default>`, and returns that. Note that `<default>` is only evaluated if none of the given attributes exist or can be read. Note further than an empty attribute counts as an existing attribute.
@@ -1270,8 +1270,8 @@ You say "apple orange banana"
 - [UDEFAULT()]
 - [STRFIRSTOF()]
 :::
-# STRDELETE()
-# DELETE()
+# strdelete()
+# delete()
 `strdelete(<string>, <first>, <len>)`
 
   Return a modified `<string>`, with `<len>` characters starting after the character at position `<first>` deleted. In other words, it copies `<first>` characters, skips `<len>` characters, and then copies the remainder of the string. If `<len>` is negative, deletes characters leftwards from `<first>`. Characters are numbered starting at 0.
@@ -1301,7 +1301,7 @@ You say, "abcfgh"
 - [MID()]
 - [LDELETE()]
 :::
-# DIE()
+# die()
 `die(<number of times to roll die>, <number of sides on die>[, <show>])`
 
   This function simulates rolling dice. It "rolls" a die with a given number of sides, a certain number of times, and adds the results. For example, DIE(2, 6) would roll "2d6" - two six-sided dice, generating a result in the range 2-12. The maximum number of dice this function will roll in a single call is 700. If `<show>` is true, the result will be a space-seperated list of the individual rolls rather than their sum.
@@ -1317,7 +1317,7 @@ think die(3, 6, 1)
 ::: seealso
 - [RAND()]
 :::
-# DIG()
+# dig()
 `dig(<name>[, <exit to>[, <exit from>[, <room dbref>, <to dbref>, <from dbref>]]])`
 
   This function digs a room called `<name>`, and optionally opens and links `<exit to>` and `<exit from>`, like the normal @dig command. It returns the dbref number of the new room.
@@ -1332,11 +1332,11 @@ think die(3, 6, 1)
 - [CREATE()]
 - [PCREATE()]
 :::
-# DIGEST()
+# digest()
 # MD5
 # SHA1
-# CHECKSUM
-# HASH
+# Checksum
+# Hash
 `digest(list)`<br>
 `digest(<algorithm>, <string>)`
 
@@ -1367,7 +1367,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [ENCRYPT()]
 - [HMAC()]
 :::
-# DIST2D()
+# dist2d()
 `dist2d(<x1>, <y1>, <x2>, <y2>)`
 
   Returns the distance between two points in the Cartesian plane that have coordinates (`<x1>`, `<y1>`) and (`<x2>`, `<y2>`).
@@ -1377,7 +1377,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [DIST3D()]
 - [LMATH()]
 :::
-# DIST3D()
+# dist3d()
 `dist3d(<x1>, <y1>, <z1>, <x2>, <y2>, <z2>)`
 
   Returns the distance between two points in space, with coordinates (`<x1>`, `<y1>`, `<z1>`) and (`<x2>`, `<y2>`, `<z2>`).
@@ -1387,9 +1387,9 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [DIST2D()]
 - [LMATH()]
 :::
-# DIV()
-# FLOORDIV()
-# FDIV()
+# div()
+# floordiv()
+# fdiv()
 `div(<number1>, <number2>[, ... , <numberN>])`<br>
 `fdiv(<number1>, <number2>[, ... , <numberN>])`<br>
 `floordiv(<number1>, <number2>[, ... , <numberN>])`
@@ -1416,7 +1416,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [MOD()]
 - [LMATH()]
 :::
-# DOING()
+# doing()
 `doing(<player|descriptor>)`
 
   When given the name of a player or descriptor, doing() returns the player's @doing. If no matching player or descriptor is found, or the descriptor is not yet connected to a player, an empty string is returned.
@@ -1427,9 +1427,9 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [@doing]
 - [POLL()]
 :::
-# E()
-# EVERY()
-# SOME()
+# e()
+# every()
+# some()
 `every([<object>/]<attribute>, <list>[, <delimiter>[, <register>]])`<br>
 `some([<object>/]<attribute>, <list>[, <delimiter>[, <register>]])`
 
@@ -1458,7 +1458,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [setq()]
 - [CHAIN()]
 :::
-# EXP()
+# exp()
 `e([<number>])`
 
   With no argument, returns the value of "e" (2.71828182845904523536, rounded to the game's float_precision setting).
@@ -1471,7 +1471,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
 - [POWER()]
 - [LOG()]
 :::
-# EDEFAULT()
+# edefault()
 `edefault([<obj>/]<attr>, <default case>)`
 
   This function returns the evaluated value of `<obj>`/`<attr>`, as if retrieved via the get_eval() function, if the attribute exists and is readable by you. Otherwise, it evaluates `<default case>`, and returns that. `<default case>` is only evaluated if the attribute does not exist or cannot be read.
@@ -1496,7 +1496,7 @@ You say "You have lost 6 marbles."
 - [UDEFAULT()]
 - [HASATTR()]
 :::
-# EDIT()
+# edit()
 `edit(<string>, <search>, <replace>[, ... , <searchN>, <replaceN>])`
 
   For each given `<search>` and `<replace>` pair, edit() replaces all occurrences of `<search>` in `<string>` with the corresponding `<replace>`.
@@ -1519,7 +1519,7 @@ You say "I think this is an exam."
 - [@edit]
 - [REGEDIT()]
 :::
-# ELEMENTS()
+# elements()
 `elements(<list of words>, <list of numbers>[, <delim>[, <osep>]])`
 
   This function returns the words in `<list of words>` that are in the positions specified by `<list of numbers>`. The `<list of words>` are assumed to be space-separated, unless a `<delim>` is given. If `<osep>` is given, the matching words are separated by `<osep>`, otherwise by `<delim>`.
@@ -1544,7 +1544,7 @@ You say "Ack Moo"
 - [INDEX()]
 - [GRAB()]
 :::
-# ELOCK()
+# elock()
 `elock(<object>[/<locktype>], <victim>)`
 
   elock() returns 1 if the `<victim>` would pass the @lock/`<locktype>` on `<object>`, and 0 if it would fail. Any locktype can be given, including user-defined "user:" @locks. If no `<locktype>` is given, it defaults to the Basic lock.
@@ -1570,8 +1570,8 @@ think elock(Dancing Slippers/drop, Princess)
 - [LOCKFILTER()]
 - [@lset]
 :::
-# EMIT()
-# NSEMIT()
+# emit()
+# nsemit()
 `emit(<message>)`<br>
 `nsemit(<message>)`
 
@@ -1587,9 +1587,9 @@ think elock(Dancing Slippers/drop, Princess)
 - [OEMIT()]
 - [ZEMIT()]
 :::
-# ENCODE64()
-# DECODE64()
-# base64
+# encode64()
+# decode64()
+# Base64
 `encode64(<string>)`<br>
 `decode64(<string>)`
 
@@ -1602,8 +1602,8 @@ think elock(Dancing Slippers/drop, Princess)
 - [ENCRYPT()]
 - [DIGEST()]
 :::
-# ENCRYPT()
-# DECRYPT()
+# encrypt()
+# decrypt()
 `encrypt(<string>, <password>[, <encode>])`<br>
 `decrypt(<string>, <password>[, <encoded>])`
 
@@ -1618,7 +1618,7 @@ think elock(Dancing Slippers/drop, Princess)
 - [ENCODE64()]
 - [DIGEST()]
 :::
-# ENTRANCES()
+# entrances()
 `entrances([<object>[, <type>[, <begin>[, <end>]]]])`
 
   With no arguments, the entrances() function returns a list of all exits, things, players, and rooms linked to your location, like @entrances. You can specify an object other than your current location with `<object>`. You can limit the type of objects found by specifying one or more of the following for `<type>`:<br>
@@ -1635,7 +1635,7 @@ think elock(Dancing Slippers/drop, Princess)
 - [lsearch()]
 - [@entrances]
 :::
-# EQ()
+# eq()
 `eq(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more `<number>`s, and returns 1 if they are all equal, and 0 otherwise.
@@ -1645,7 +1645,7 @@ think elock(Dancing Slippers/drop, Princess)
 - [NEQ()]
 - [LMATH()]
 :::
-# ESCAPE()
+# escape()
 `escape(<string>)`
 
   The escape() function "escapes out" potentially "dangerous" characters, preventing function evaluation in the next pass of the parser. It returns `<string>` after adding the escape character ('\') at the beginning of the string, and before the following characters:
@@ -1659,8 +1659,8 @@ think elock(Dancing Slippers/drop, Princess)
 - [DECOMPOSE()]
 - [SECURE()]
 :::
-# EVAL()
-# GET_EVAL()
+# eval()
+# get_eval()
 `eval(<object>, <attribute>)`<br>
 `get_eval(<object>/<attribute>)`
 
@@ -1682,7 +1682,7 @@ test
 - [GET()]
 - [EDEFAULT()]
 :::
-# EXIT()
+# exit()
 `exit(<object>)`
 
   Returns the dbref of the first exit in room `<object>`.
@@ -1694,7 +1694,7 @@ test
 - [LEXITS()]
 - [NEXT()]
 :::
-# EXTRACT()
+# extract()
 `extract(<list>[, <first>[, <length>[, <delimiter>]]])`
 
   This function returns `<length>` elements of `<list>`, counting from the `<first>`th element. If `<length>` is not specified, the default is 1, so extract(`<list>`,3) acts like elements(`<list>`,3). If `<first>` is not specified, the default is the 1, so extract(`<list>`) acts like first(`<list>`).
@@ -1721,8 +1721,8 @@ a test
 - [ELEMENTS()]
 - [GRAB()]
 :::
-# FILTER()
-# FILTERBOOL()
+# filter()
+# filterbool()
 `filter([<obj>/]<attr>, <list>[, <delimiter>[, <osep>[, ..., <argN>]]])`<br>
 `filterbool([<obj>]/<attr>, <list>[, <delimiter>[, <osep>[, ..., <argN>]]])`
 
@@ -1750,7 +1750,7 @@ You say, "1 3 5"
 - [E()]
 - [boolean values]
 :::
-# FILTERQ()
+# filterq()
 `filterq(<register>, [<object>/]<attribute>, <list>[, <delimiter>[, <osep>[, <arg1>[, ... , <argN>]]]])`
 
   filterq() is filter() with reject-capture: it returns the elements of `<list>` for which `<attribute>` evaluates to exactly 1, osep-joined, and ALSO sets the q-register `<register>` to the elements that were filtered OUT (osep-joined; an empty string when nothing was rejected).
@@ -1772,7 +1772,7 @@ Kept: 12 7 / Dropped: apples pears
 - [E()]
 - [setq()]
 :::
-# FINDABLE()
+# findable()
 `findable(<object>, <victim>)`
 
   This function returns 1 if `<object>` can locate `<victim>`, or 0 if it cannot. If one of the objects does not exist, it will return #-1 ARGN NOT FOUND (where N is the argument which is the invalid object).
@@ -1784,7 +1784,7 @@ Kept: 12 7 / Dropped: apples pears
 - [locate()]
 - [LOC()]
 :::
-# FIRST()
+# first()
 `first(<list>[, <delimiter>])`
 
   Returns the first element of a list.
@@ -1797,7 +1797,7 @@ Kept: 12 7 / Dropped: apples pears
 - [FIRSTOF()]
 - [STRFIRSTOF()]
 :::
-# FIRSTOF()
+# firstof()
 `firstof([<expr>, ... , <exprN>][, <default>])`
 
   Returns the first evaluated `<expr>` that is true. If no `<expr>` arguments are true, `<default>` is returned.
@@ -1828,7 +1828,7 @@ You say, "2"
 - [STRFIRSTOF()]
 - [FILTER()]
 :::
-# FLAGS()
+# flags()
 `flags()`<br>
 `flags([<object>[/<attribute>]])`
 
@@ -1854,7 +1854,7 @@ Tnp
 - [LFLAGS()]
 - [LIST()]
 :::
-# LFLAGS()
+# lflags()
 `lflags()`<br>
 `lflags(<object>[/<attribute>])`
 
@@ -1878,8 +1878,8 @@ NO_COMMAND PUPPET
 - [FLAGS()]
 - [LIST()]
 :::
-# FLIP()
-# REVERSE()
+# flip()
+# reverse()
 `flip(<string>)`
 
   flip() reverses a string. reverse() is an alias for flip().
@@ -1894,7 +1894,7 @@ You say, "zab rab oof"
 ::: seealso
 - [REVWORDS()]
 :::
-# FMOD()
+# fmod()
 `fmod(<number>, <divisor>)`
 
   Similar to remainder() but may take floating point arguments. The return value is `<number>` - n * `<divisor>`, where n is the quotient of `<number>` / `<divisor>`, rounded towards zero. The result has the same sign as `<number>` and a magnitude less than the magnitude of `<divisor>`.
@@ -1911,7 +1911,7 @@ think fmod(6.1,2.5)
 - [MOD()]
 - [LMATH()]
 :::
-# FOLLOWERS()
+# followers()
 `followers(<object>)`
 
   Returns the list of things and players following object. You must control `<object>`.
@@ -1922,7 +1922,7 @@ think fmod(6.1,2.5)
 - [follow]
 - [unfollow]
 :::
-# FOLLOWING()
+# following()
 `following(<object>)`
 
   Returns the list of things and players that the object is following. You must control `<object>`.
@@ -1933,7 +1933,7 @@ think fmod(6.1,2.5)
 - [follow]
 - [unfollow]
 :::
-# FRACTION()
+# fraction()
 `fraction(<number>[, <whole>])`
 
   This function returns a fraction representing the floating-point `<number>`, reduced to its
@@ -1962,7 +1962,7 @@ think fraction(.75)
 
     > think fraction(2.75, 1)<br>
     2 3/4
-# FULLNAME()
+# fullname()
 `fullname(<object>)`
 
   fullname() returns the full name of object `<object>`. It is identical to name() except that for exits, fullname() returns the complete exit name, including all aliases.
@@ -1981,7 +1981,7 @@ You say, "South;sout;sou;so;s"
 - [ALIAS()]
 - [ALIAS()]
 :::
-# FUNCTIONS()
+# functions()
 `functions([<type>])`
 
   Returns a space-separated list of the names of functions. If `<type>` is "local", only @functions are listed. If "builtin", only builtin functions. If "all" or omitted, both are returned.
@@ -1991,8 +1991,8 @@ You say, "South;sout;sou;so;s"
 - [LIST()]
 - [CONFIG()]
 :::
-# GET()
-# XGET()
+# get()
+# xget()
 `get(<object>/<attribute>)`<br>
 `xget(<object>, <attribute>)`
 
@@ -2013,7 +2013,7 @@ This is [a test].
 - [DEFAULT()]
 - [UDEFAULT()]
 :::
-# GETPIDS()
+# getpids()
 `getpids(<object>[/<attribute>])`
 
   Returns a space-separated list of semaphore queue process ids waiting on the given `<object>` and semaphore `<attribute>`. If `<attribute>` is not given, pids for all semaphores on the object are returned.
@@ -2026,9 +2026,9 @@ This is [a test].
 - [PIDINFO()]
 - [semaphores]
 :::
-# GRAB()
-# REGRAB()
-# REGRABI()
+# grab()
+# regrab()
+# regrabi()
 `grab(<list>, <pattern>[, <delimiter>])`<br>
 `regrab(<list>, <regexp>[, <delimiter>[, <osep>]])`<br>
 `regrabi(<list>, <regexp>[, <delimiter>])`
@@ -2047,9 +2047,9 @@ This is [a test].
 - [ELEMENTS()]
 - [regmatch()]
 :::
-# GRABALL()
-# REGRABALL()
-# REGRABALLI()
+# graball()
+# regraball()
+# regraballi()
 `graball(<list>, <pattern>[, <delim>[, <osep>]])`<br>
 `regraball(<list>, <regexp>[, <delim>[, <osep>]])`<br>
 `regraballi(<list>, <regexp>[, <delim>[, <osep>]])`
@@ -2073,13 +2073,13 @@ You say "This is"
 - [GRAB()]
 - [regmatch()]
 :::
-# GREP()
-# REGREP()
-# WILDGREP()
-# GREPI()
-# REGREPI()
-# WILDGREPI()
-# PGREP()
+# grep()
+# regrep()
+# wildgrep()
+# grepi()
+# regrepi()
+# wildgrepi()
+# pgrep()
 `grep(<object>, <attrs>, <substring>)`<br>
 `wildgrep(<object>, <attrs>, <pattern>)`<br>
 `regrep(<object>, <attrs>, <regexp>)`<br>
@@ -2103,7 +2103,7 @@ You say "This is"
 - [LATTR()]
 - [WILDCARDS]
 :::
-# GT()
+# gt()
 `gt(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more numbers, and returns 1 if and only if each number is greater than the number after it, and 0 otherwise.
@@ -2117,7 +2117,7 @@ You say "This is"
 - [NEQ()]
 - [LMATH()]
 :::
-# GTE()
+# gte()
 `gte(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more numbers, and returns 1 if and only if each number is greater than or equal to the number after it, and 0 otherwise.
@@ -2131,10 +2131,10 @@ You say "This is"
 - [NEQ()]
 - [LMATH()]
 :::
-# HASATTR()
-# HASATTRP()
-# HASATTRVAL()
-# HASATTRPVAL()
+# hasattr()
+# hasattrp()
+# hasattrval()
+# hasattrpval()
 `hasattr(<object>[/<attribute>][, <attribute>])`<br>
 `hasattrp(<object>[/<attribute>][, <attribute>])`<br>
 `hasattrval(<object>[/<attribute>][, <attribute>])`<br>
@@ -2158,7 +2158,7 @@ You say "This is"
 - [VISIBLE()]
 - [LATTR()]
 :::
-# HASFLAG()
+# hasflag()
 `hasflag(<object>[/<attrib>], <flag>)`
 
   With no `<attrib>`, hasflag() returns 1 if `<object>` has the `<flag>` flag set. If `<attrib>` is specified, the attribute is checked for the `<flag>` attribute flag instead. If the flag is not present, 0 is returned.
@@ -2184,7 +2184,7 @@ think hasflag(me, wizard)
 - [HASPOWER()]
 - [HASTYPE()]
 :::
-# HASPOWER()
+# haspower()
 `haspower(<object>, <power>)`
 
   Returns 1 if `<object>` has the named power, and 0 if it does not.
@@ -2197,7 +2197,7 @@ think hasflag(me, wizard)
 - [@power]
 - [HASFLAG()]
 :::
-# HASROLE()
+# hasrole()
 `hasrole(<object>, <role>)`
 
   Returns 1 if `<object>` holds the role named `<role>`, and 0 if not. `<role>` is the role's short name as @role/list shows it. An object holds `everyone`, the roles assigned to it, and, for a character linked to an account, the account's roles. A player that is not a guest also holds `player`, and #1 holds `god`.
@@ -2214,7 +2214,7 @@ think hasrole(*Ariel, moderator)
 - [PERMISSION()]
 - [@role]
 :::
-# HASTYPE()
+# hastype()
 `hastype(<object>, <type list>)`
 
   Returns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM, EXIT and GARBAGE.
@@ -2233,7 +2233,7 @@ think hastype(test object, PLAYER THING)
 - [TYPES OF OBJECTS]
 - [TYPE()]
 :::
-# HIDDEN()
+# hidden()
 `hidden(<player|descriptor>)`
 
   If you can see hidden players, this function returns 1 if `<player>` (or the player connected to `<descriptor>`) is hidden, and 0 otherwise. If you cannot see hidden players, hidden() returns #-1.
@@ -2242,7 +2242,7 @@ think hastype(test object, PLAYER THING)
 ::: seealso
 - [@hide]
 :::
-# HOME()
+# home()
 `home(<object>)`
 
   Returns the object's 'home', where it is @link'd to. This is the home for a player or thing, the drop-to of a room, or source of an exit.
@@ -2251,8 +2251,8 @@ think hastype(test object, PLAYER THING)
 ::: seealso
 - [@link]
 :::
-# HOST()
-# HOSTNAME()
+# host()
+# hostname()
 `host(<player|descriptor>)`
 
   Returns the hostname a player is connected from, as shown on the wizard WHO. This may be more reliable that get(`<player>`/lastsite) if the player has multple connections from different locations, and the function is called with a descriptor argument.
@@ -2268,8 +2268,8 @@ think hastype(test object, PLAYER THING)
 - [LPORTS()]
 - [LPORTS()]
 :::
-# IDLE()
-# IDLESECS()
+# idle()
+# idlesecs()
 `idle(<player|descriptor>[, <precision>])`
 
   This function returns the number of seconds a player has been idle, much as WHO does. `<player name>` must be the full name of a player, or a player's dbref. You can also specify a `<descriptor>`, useful if a player is connected multiple times, or for connections which are still at the login screen. Players who are not connected have an idle time of "-1", as do dark wizards, when idle() is used on them by a non-priv'ed player.
@@ -2281,8 +2281,8 @@ think hastype(test object, PLAYER THING)
 - [Connection functions]
 - [CONN()]
 :::
-# IF()
-# IFELSE()
+# if()
+# ifelse()
 `if(<condition>, <true expression>[, <false expression>])`<br>
 `ifelse(<condition>, <true expression>, <false expression>)`
 
@@ -2296,7 +2296,7 @@ think hastype(test object, PLAYER THING)
 - [@break]
 - [COND()]
 :::
-# INAME()
+# iname()
 `iname(<object>)`
 
   iname() returns the name of `<object>`, as it would appear if you were inside it. It is identical to name() except that if the object has a NAMEFORMAT or NAMEACCENT attribute, it is used.
@@ -2311,7 +2311,7 @@ think hastype(test object, PLAYER THING)
 - [FULLNAME()]
 - [ACCNAME()]
 :::
-# INC()
+# inc()
 `inc(<integer>)`<br>
 `inc(<string-ending-in-integer>)`
 
@@ -2339,7 +2339,7 @@ think inc(3)
 - [ADD()]
 - [SUB()]
 :::
-# INDEX()
+# index()
 `index(<list>, <character>, <first>, <length>)`
 
   This function is similar to extract(), except that it requires four arguments, while extract() uses defaults for its arguments if they aren't given. The function returns `<length>` items starting from the `<first>` position. Trailing spaces are trimmed.
@@ -2361,8 +2361,8 @@ You say, "Mug of Beer"
 - [ELEMENTS()]
 - [GRAB()]
 :::
-# INSERT()
-# LINSERT()
+# insert()
+# linsert()
 `linsert(<list>, <position>, <new item>[, <delim>])`
 
   If `<position>` is a positive integer, this inserts `<new item>` BEFORE the item at `<position>` from the left in `<list>`. That means that `<new item>` then becomes the `<position>`th element of `<list>`.
@@ -2389,7 +2389,7 @@ You say, "meep GOOP bleep gleep"
 - [LDELETE()]
 - [STRINSERT()]
 :::
-# ISDAYLIGHT()
+# isdaylight()
 `isdaylight([<secs>[, <timezone>]])`
 
   Returns 1 if it's daylight savings in the specified timezone at the given time. Defaults to the host server's time zone and current time if not specified.
@@ -2399,12 +2399,12 @@ You say, "meep GOOP bleep gleep"
 - [timezones]
 - [SECS()]
 :::
-# ISAPPROVED()
+# isapproved()
 `isapproved(<object>)`
 
-  Returns 1 if `<object>` is royalty or above, or carries the APPROVED flag, and 0 otherwise. A guest is never approved, whatever else is set on it.
+  Returns 1 if `<object>` is royalty or above, or holds the `approved` role (on itself or through its account), and 0 otherwise. A guest is never approved, whatever else is set on it.
 
-  APPROVED is the engine's general "this character has cleared whatever bar this game sets for full participation" flag. The engine ships the flag and this predicate and deliberately ships no policy for what earns it; a game decides that and sets the flag however it likes (royalty and above can set and unset it).
+  `approved` is the engine's general "this character has cleared whatever bar this game sets for full participation" role. The engine ships the role and this predicate and deliberately ships no policy for what earns it; a game decides that and assigns the role however it likes, with `@role/assign <player>=approved`.
 
   Softcode and the server answer this question with the same code, so a game's `+`-verbs cannot drift from the engine's own checks. Games that want a different rule should wrap this in one function attribute and call that everywhere, rather than re-implementing the test.
 
@@ -2417,12 +2417,12 @@ think isapproved(me)
 
 
 ::: seealso
-- [HASFLAG()]
-- [@flag]
-- [FLAG LIST]
+- [HASROLE()]
+- [@role assigning]
+- [roles]
 :::
-# ISDBREF()
-# ISOBJID()
+# isdbref()
+# isobjid()
 `isdbref(<string>)`<br>
 `isobjid(<string>)`
 
@@ -2462,7 +2462,7 @@ The next object to be created will be #33.
 - [NUM()]
 - [OBJID()]
 :::
-# ISINT()
+# isint()
 `isint(<string>)`
 
   Returns 1 if its argument is an integer, and 0 otherwise. Integers can begin with a '+' or '-' sign, but the rest of the string must be digits.
@@ -2471,7 +2471,7 @@ The next object to be created will be #33.
 ::: seealso
 - [ISNUM()]
 :::
-# ISNUM()
+# isnum()
 `isnum(<string>)`
 
   This function returns 1 if `<string>` is a number, and 0 if it is not. Numbers can begin with a '-' sign (for negatives), but the rest of the characters in the string must be digits, and an optional decimal point.
@@ -2480,7 +2480,7 @@ The next object to be created will be #33.
 ::: seealso
 - [ISINT()]
 :::
-# ISREGEXP()
+# isregexp()
 `isregexp(<string>)`
 
   This function returns 1 if `<string>` is a valid regular expression, and 0 if it is not.
@@ -2489,12 +2489,12 @@ The next object to be created will be #33.
 ::: seealso
 - [regexp]
 :::
-# ISWORD()
+# isword()
 `isword(<string>)`
 
   This function returns 1 if every character in `<string>` is a letter, or 0, if any character isn't a letter. Case does not matter.
 
-# ITEMS()
+# items()
 `items(<list>, <delim>)`
 
   items() counts the number of items in a list using an arbitrary `<delim>`. Null items are counted, so:
@@ -2511,8 +2511,8 @@ The next object to be created will be #33.
 ::: seealso
 - [WORDS()]
 :::
-# ITEMIZE()
-# ELIST()
+# itemize()
+# elist()
 `itemize(<list>[, <delim>[, <conjunction>[, <punctuation>]]])`<br>
 `elist(<list>[, <conjunction>[, <delim>[, <osep>[, <punctuation>]]]])`
 
@@ -2532,7 +2532,7 @@ You say, "eggs, bacon, and spam"
 say itemize(eggs bacon spam, ,&,;)
 You say, "eggs; bacon; & spam"
 ```
-# IBREAK()
+# ibreak()
 `ibreak([<level>])`
 
   The ibreak() function stops an iter() from running at the end of the current loop. When used in nested iter()s, you can give a `<level>` to specify how many iter()s to break from. iter() will stop evaluating at the end of the current loop, and NOT immediately after ibreak() is called.
@@ -2556,7 +2556,7 @@ You say, "Test 1! Test 2! Test 3!"
 - [ilev()]
 - [ilev()]
 :::
-# IPADDR()
+# ipaddr()
 `ipaddr(<player|descriptor>)`
 
   Returns the IP address of the connected player or descriptor. This may be more reliable than get(`<player>`/lastip) if the player has multple connections from different locations, and the function is called with a descriptor argument.
@@ -2570,7 +2570,7 @@ You say, "Test 1! Test 2! Test 3!"
 - [LPORTS()]
 - [LPORTS()]
 :::
-# JITER()
+# jiter()
 `jiter(<attribute list>, <input>[, <osep>])`
 
   jiter() (juxtapositioned iteration) evaluates each attribute in the space-separated `<attribute list>` with the SAME `<input>` passed as %0, and returns the results side by side, joined by `<osep>` (default: one space).
@@ -2595,7 +2595,7 @@ You say, "One|PLAYER"
 - [fold()]
 - [u()]
 :::
-# LAST()
+# last()
 `last(<list>[, <delimiter>])`
 
   Returns the last element of a list. Elements in `<list>` are separated by `<delimiter>`, if given, or by a space if not.
@@ -2607,10 +2607,10 @@ You say, "One|PLAYER"
 - [BEFORE()]
 - [AFTER()]
 :::
-# LATTR()
-# LATTRP()
-# REGLATTR()
-# REGLATTRP()
+# lattr()
+# lattrp()
+# reglattr()
+# reglattrp()
 `lattr(<object>[/<attribute pattern>][, <output separator>])`<br>
 `lattrp(<object>[/<attribute pattern>][, <output separator>])`<br>
 `reglattr(<object>[/<regexp>][, <output separator>])`<br>
@@ -2635,12 +2635,12 @@ You say, "One|PLAYER"
 - [GREP()]
 - [WILDCARDS]
 :::
-# NATTR()
-# NATTRP()
-# ATTRCNT()
-# ATTRPCNT()
-# REGNATTR()
-# REGNATTRP()
+# nattr()
+# nattrp()
+# attrcnt()
+# attrpcnt()
+# regnattr()
+# regnattrp()
 `nattr(<object>[/<attribute pattern>])`<br>
 `nattrp(<object>[/<attribute pattern>])`<br>
 `regnattr(<object>[/<regexp>])`<br>
@@ -2661,7 +2661,7 @@ You say, "One|PLAYER"
 - [XATTR()]
 - [WILDCARDS]
 :::
-# LCON()
+# lcon()
 `lcon(<object>[, <type>])`
 
   Returns a list of the dbrefs of objects which are located in `<object>`.
@@ -2686,8 +2686,8 @@ You say, "One|PLAYER"
 - [NEXT()]
 - [LVCON()]
 :::
-# LCSTR()
-# LCSTR2()
+# lcstr()
+# lcstr2()
 `lcstr(<string>)`<br>
 `lcstr2(<string>)`
 
@@ -2706,7 +2706,7 @@ You say, "foo bar baz"
 - [CAPSTR()]
 - [UCSTR()]
 :::
-# LDELETE()
+# ldelete()
 `ldelete(<list>, <position(s)>[, <delimiter>[, <osep>]])`
 
   This function deletes the element(s) of `<list>` at the given `<position(s)>`. Elements of `<list>` are separated by `<delimiter>`, which defaults to a space. Null items are counted, as in 'items()'. Elements of `<position(s)>` must be numeric, and are always separated by a space, not by `<delimiter>`. Elements of the returned list are separated by `<osep>`, which defaults to the `<delimiter>`.
@@ -2731,7 +2731,7 @@ You say, "foo ~ bar ~ boing"
 - [REMOVE()]
 - [INSERT()]
 :::
-# LEFT()
+# left()
 `left(<string>, <length>)`
 
   Returns the first `<length>` characters from `<string>`.
@@ -2742,8 +2742,8 @@ You say, "foo ~ bar ~ boing"
 - [MID()]
 - [LJUST()]
 :::
-# NSLEMIT()
-# LEMIT()
+# nslemit()
+# lemit()
 `lemit(<message>)`<br>
 `nslemit(<message>)`
 
@@ -2756,7 +2756,7 @@ You say, "foo ~ bar ~ boing"
 - [@lemit]
 - [REMIT()]
 :::
-# LETQ()
+# letq()
 `letq([<reg1>, <value1>[, ... , <regN>, <valueN>], ]<expr>)`
 
   letq() saves the current values of the given q-`<reg>`isters, sets them to new `<value>`s, evaluates `<expr>` and then restores the saved registers. It does not restore registers that are not listed. None of the values can see the updated contents of the registers -- they are only visible to `<expr>`.
@@ -2781,7 +2781,7 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
 - [ulocal()]
 - [R()]
 :::
-# LEXITS()
+# lexits()
 `lexits(<room>)`
 
   Returns a list of the dbrefs of exits in a room.
@@ -2795,7 +2795,7 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
 - [NEXT()]
 - [LVEXITS()]
 :::
-# LJUST()
+# ljust()
 `ljust(<string>, <length>[, <fill>[, <truncate?>]])`
 
   This function returns `<string>`, padded with the string `<fill>` until it's `<length>` characters long. `<fill>` can be more than one character in length, and defaults to a single space.
@@ -2826,7 +2826,7 @@ You say, "foo   "
 - [RJUST()]
 - [LEFT()]
 :::
-# LINK()
+# link()
 `link(<object>, <destination>[, <preserve>])`
 
   This function links `<object>` to `<destination>`. While normally used on exits, it has all of the other capabilities of @link as well. It returns #-1 or 0 on failure, 1 on success. If the optional third argument is true, acts like @link/preserve.
@@ -2836,7 +2836,7 @@ You say, "foo   "
 - [@link]
 - [OPEN()]
 :::
-# LIST()
+# list()
 `list(<option>[, <type>])`
 
   This is the function-equivilent of the @list command, and lists some useful information about the MUSH. `<option>` can be one of:
@@ -2866,7 +2866,7 @@ You say, "foo   "
 :::
 
 `llocks()`
-# LIT()
+# lit()
 `lit(<string>)`
 
   This function returns `<string>` literally - without even squishing spaces, and without evaluating *anything*. This can be useful for writing ASCII maps with spaces or whatever.
@@ -2886,7 +2886,7 @@ You say, "foo   "
 ::: seealso
 - [DECOMPOSE()]
 :::
-# LMATH()
+# lmath()
 `lmath(<op>, <list>[, <delim>])`
 
   This function performs generic math operations on `<list>`, returning the result. Each element of the list is treated as one argument to an operation, so that lmath(`<op>`, 1 2 3) is equivalent to `<op>`(1, 2, 3). Using @function, one can easily write ladd, lsub, etc as per TinyMUSH.
@@ -2906,7 +2906,7 @@ think lmath(add, 1|2|3, |)
     > &FUN_FACTORIAL me=lmath(mul,lnum(1,%0))<br>
     > think u(fun_factorial,5)<br>
     120
-# LN()
+# ln()
 `ln(<number>)`
 
   Returns the natural log of `<number>`. This is equivilent to log(`<number>`, e).
@@ -2915,7 +2915,7 @@ think lmath(add, 1|2|3, |)
 ::: seealso
 - [LOG()]
 :::
-# LNUM()
+# lnum()
 `lnum(<number>)`<br>
 `lnum(<start number>, <end number>[, <output separator>[, <step>]])`
 
@@ -2929,7 +2929,7 @@ think lmath(add, 1|2|3, |)
   lnum(1,10,%b,2) -> 1 3 5 7 9<br>
   lnum(0,10,%b,2) -> 0 2 4 6 8 10
 
-# LOC()
+# loc()
 `loc(<object>)`
 
   For things and players, loc() returns the dbref of the object which contains `<object>`. For rooms, it returns the drop-to, if one is set, or #-1 otherwise. For exits, it returns the destination (the source is an exits home()). This will be #-1 for unlinked exits, #-2 for variable exits, and #-3 for exits @linked to "home".
@@ -2950,7 +2950,7 @@ think lmath(add, 1|2|3, |)
 - [UNFINDABLE]
 - [@whereis]
 :::
-# LOCALIZE()
+# localize()
 `localize(<code>)`
 
   localize() saves the q-registers, evaluates its argument, and restores the registers afterwards. It has the same effect as ulocal(), but doesn't require setting the code into an attribute.
@@ -2977,7 +2977,7 @@ You say, "Outside-Inside-Inside"
 - [ulocal()]
 - [UDEFAULT()]
 :::
-# LOCK()
+# lock()
 `lock(<object>[/<locktype>][, <new value>])`
 
   lock() returns the text string equivalent of the @lock on `<object>`. `<locktype>` can be any valid switch for @lock ("Enter", "user:foo", etc) and defaults to "Basic". You must be able to examine the lock.
@@ -2996,8 +2996,8 @@ You say, "Outside-Inside-Inside"
 - [LOCKOWNER()]
 - [LOCKFILTER()]
 :::
-# LLOCKS()
-# LOCKS()
+# llocks()
+# locks()
 `llocks([<object>])`<br>
 `locks(<object>)`
 
@@ -3022,7 +3022,7 @@ Basic USER:ITSME Use
 - [LLOCKFLAGS()]
 - [LOCKOWNER()]
 :::
-# LOCKFILTER()
+# lockfilter()
 `lockfilter(<key>, <dbrefs>[, <delim>])`
 
   lockfilter() goes through `<dbrefs>` and tests them all against the lock `<key>`, returning a list of all dbrefs that pass the `<key>`.
@@ -3060,7 +3060,7 @@ Walker WalkerBot Wilco
 - [FILTER()]
 - [TESTLOCK()]
 :::
-# LOCKFLAGS()
+# lockflags()
 `lockflags(<object>[/<locktype>])`<br>
 `lockflags()`
 
@@ -3076,7 +3076,7 @@ Walker WalkerBot Wilco
 - [LLOCKS()]
 - [LOCKOWNER()]
 :::
-# LLOCKFLAGS()
+# llockflags()
 `llockflags(<object>[/<locktype>])`<br>
 `llockflags()`
 
@@ -3092,7 +3092,7 @@ Walker WalkerBot Wilco
 - [LLOCKS()]
 - [LOCKOWNER()]
 :::
-# LOCKOWNER()
+# lockowner()
 `lockowner(<object>[/<locktype>])`
 
   This function returns the dbref of the executor who set the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock. Legacy locks with an unknown creator return `#-1`; absent or inaccessible locks return `#-1 NO SUCH LOCK`.
@@ -3105,7 +3105,7 @@ Walker WalkerBot Wilco
 - [LOCK()]
 - [LLOCKS()]
 :::
-# LISTSET()
+# listset()
 `listset(<list>,<position>,<replacement>[,<input delimiter>[,<output delimiter>]])`
 
   Replaces the item at the one-based position in a list. Delimiters default to a space; the output delimiter defaults to the input delimiter. For example, `listset(a b c,2,x)` returns `a x c`.
@@ -3116,7 +3116,7 @@ Walker WalkerBot Wilco
 - [LREPLACE()]
 - [LSET()]
 :::
-# LSET()
+# lset()
 `lset(<object>/<locktype>,[!]<flag>)`
 
   This function sets or clears flags on locks and returns an empty string. It requires side effects to be enabled.
@@ -3130,7 +3130,7 @@ Walker WalkerBot Wilco
 - [LOCK()]
 - [LOCKOWNER()]
 :::
-# LOG()
+# log()
 `log(<number>[, <base>])`
 
   Returns the logarithm (base 10, or the given base) of `<number>`. `<base>` can be a floating-point number, or 'e' for the natural logarithm.
@@ -3139,7 +3139,7 @@ Walker WalkerBot Wilco
 ::: seealso
 - [LN()]
 :::
-# LPARENT()
+# lparent()
 `lparent(<object>)`
 
   This function returns a list consisting of `<object>`'s dbref (as per num()), the dbref of its parent, grandparent, greatgrandparent, etc. The list will not, however, show parents of objects which the player is not privileged to examine. Ancestor objects are not included.
@@ -3151,7 +3151,7 @@ Walker WalkerBot Wilco
 - [parent]
 - [ANCESTORS]
 :::
-# LPLAYERS()
+# lplayers()
 `lplayers(<object>)`
 
   This function returns the dbrefs of all players, connected or not, in `<object>`. DARK wizards aren't listed to mortals or those without the see_all power. You must be in `<object>` or control it to use this function.
@@ -3162,8 +3162,8 @@ Walker WalkerBot Wilco
 - [LCON()]
 - [LTHINGS()]
 :::
-# LTHINGS()
-# LOBJECTS()
+# lthings()
+# lobjects()
 `lthings(<object>)`
 
   This function returns the dbrefs of all things, dark or not, in `<object>`. You must be in `<object>` or control it to use this function.
@@ -3173,7 +3173,7 @@ Walker WalkerBot Wilco
 - [LVTHINGS()]
 - [LCON()]
 :::
-# LPOS()
+# lpos()
 `lpos(<string>, <character>)`
 
   This function returns a list of the positions where `<character>` appears in `<string>`, with the first character of the string being 0. Note that this differs from the pos() function, but is consistent with other string functions like mid() and strdelete().
@@ -3193,8 +3193,8 @@ You say, "1 4 8"
 - [element()]
 - [WORDPOS()]
 :::
-# LSTATS()
-# STATS()
+# lstats()
+# stats()
 `lstats([<player>])`
 
   This function returns the breakdown of objects in the database, in a format similar to "@stats". If `<player>` is "all" (the default), a breakdown is done for the entire database. Otherwise, the breakdown is returned for that particular player.
@@ -3213,7 +3213,7 @@ You say, "1 4 8"
 ::: seealso
 - [lsearch()]
 :::
-# LT()
+# lt()
 `lt(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more numbers, and returns 1 if and only if each number is less than the number after it, and 0 otherwise.
@@ -3236,7 +3236,7 @@ th lt(1,3,2)
 - [LNUM()]
 - [LMATH()]
 :::
-# LTE()
+# lte()
 `lte(<number1>, <number2>[, ... , <numberN>])`
 
   Takes two or more numbers, and returns 1 if and only if each number is less than or equal to the number after it, and 0 otherwise.
@@ -3249,7 +3249,7 @@ th lt(1,3,2)
 - [LNUM()]
 - [LMATH()]
 :::
-# LVCON()
+# lvcon()
 `lvcon(<object>)`
 
   This function returns the dbrefs of all objects that are inside `<object>` and visible (non-dark). You must be in `<object>` or control it to use this function.
@@ -3261,7 +3261,7 @@ th lt(1,3,2)
 - [LVTHINGS()]
 - [LVEXITS()]
 :::
-# LVEXITS()
+# lvexits()
 `lvexits(<room>)`
 
   This function returns the dbrefs of all visible (non-dark) exits from `<room>`. You must be in the room or control it to use this function.
@@ -3273,7 +3273,7 @@ th lt(1,3,2)
 - [LVPLAYERS()]
 - [LVTHINGS()]
 :::
-# LVPLAYERS()
+# lvplayers()
 `lvplayers(<object>)`
 
   This function returns the dbrefs of all connected and non-dark players in an object. You must be in the object or control it to use this function.
@@ -3285,8 +3285,8 @@ th lt(1,3,2)
 - [LVTHINGS()]
 - [LVEXITS()]
 :::
-# LVTHINGS()
-# LVOBJECTS()
+# lvthings()
+# lvobjects()
 `lvthings(<object>)`
 
   This function returns the dbrefs of all non-dark things inside an object. You must be in the object or control it to use this function.
@@ -3298,8 +3298,8 @@ th lt(1,3,2)
 - [LVCON()]
 - [LVEXITS()]
 :::
-# LWHO()
-# LWHOID()
+# lwho()
+# lwhoid()
 `lwho([<viewer>[, <status>]])`<br>
 `lwhoid([<viewer>[, <status>]])`
 
@@ -3318,7 +3318,7 @@ th lt(1,3,2)
 - [XWHO()]
 - [LPORTS()]
 :::
-# MAP()
+# map()
 `map([<object>/]<attribute>, <list>[, <delim>[, <osep>]])`
 
   This function works much like ITER(). The given `<attribute>` is evaluated once for each element of `<list>`, and the results of the evaluations are returned. For each evaluation, the current list element is passed to the attribute as %0, and its position in the list as %1. Elements of `<list>` are separated by `<delim>`, or a space if none is given, and the results are returned separated by `<osep>`, if given, or the delimiter otherwise.
@@ -3343,7 +3343,7 @@ th lt(1,3,2)
 - [iter()]
 - [@dolist]
 :::
-# MAX()
+# max()
 `max(<number1>[, ... , <numberN>])`
 
   This function returns the largest number in its list of arguments. It can take any number of arguments.
@@ -3355,8 +3355,8 @@ th lt(1,3,2)
 - [BOUND()]
 - [ALPHAMAX()]
 :::
-# AVG()
-# MEAN()
+# avg()
+# mean()
 `mean(<number1>[, ... , <numberN>])`
 
   Returns the mean (arithmetic average) of its arguments.
@@ -3369,7 +3369,7 @@ th lt(1,3,2)
 - [STDDEV()]
 - [LMATH()]
 :::
-# MEDIAN()
+# median()
 `median(<number>[, ... , <numberN>])`
 
   Returns the median (the middlemost numerically) of its arguments.
@@ -3380,7 +3380,7 @@ th lt(1,3,2)
 - [STDDEV()]
 - [LMATH()]
 :::
-# MEMBER()
+# member()
 `member(<list>, <word>[, <delimiter>])`
 
   member() returns the position where `<word>` first occurs in `<list>`. If `<word>` is not present in `<list>`, it returns 0. Elements of `<list>` are `<delimiter>`-separated, or space-separated if no `<delimiter>` is given.
@@ -3394,7 +3394,7 @@ th lt(1,3,2)
 - [COMP()]
 - [STRMATCH()]
 :::
-# MERGE()
+# merge()
 `merge(<string1>, <string2>, <characters>)`
 
   This function merges `<string1>` and `<string2>`, depending on `<characters>`. If a character in `<string1>` is the same as one in `<characters>`, it is replaced by the character in the corresponding position in `<string2>`. The two strings must be of the same length.
@@ -3418,7 +3418,7 @@ You say, "ABcdEF"
 - [SPLICE()]
 - [TR()]
 :::
-# MESSAGE()
+# message()
 `message(<recipients>, <message>, [<object>/]<attribute>[, <arg0>[, ... , <arg9>][, <switches>]])`
 
   message() is the function form of @message/silent, and sends a message, formatted through an attribute, to a list of objects. See [@message] for more information.
@@ -3445,7 +3445,7 @@ Formatted> Foo Bar Baz
 - [REMIT()]
 - [speak()]
 :::
-# MID()
+# mid()
 `mid(<string>, <first>, <length>)`
 
   mid() returns `<length>` characters from `<string>`, starting from the `<first>` character. If `<length>` is positive, it counts forwards from the `<first>` character; for negative `<length>`s, it counts backwards. Note that the first character in `<string>` is numbered 0, not 1.
@@ -3464,7 +3464,7 @@ You say, "es"
 - [RIGHT()]
 - [STRDELETE()]
 :::
-# MIN()
+# min()
 `min(<number1>[, ... , <numberN>])`
 
   This function returns the smallest number in its list of arguments. It can take any number of arguments.
@@ -3476,10 +3476,10 @@ You say, "es"
 - [BOUND()]
 - [ALPHAMIN()]
 :::
-# MOD()
-# MODULO()
-# MODULUS()
-# REMAINDER()
+# mod()
+# modulo()
+# modulus()
+# remainder()
 `modulo(<number>, <number>[, ..., <numberN>])`<br>
 `remainder(<number>, <number>[, ..., <numberN>])`
 
@@ -3503,7 +3503,7 @@ You say, "es"
 - [DIV()]
 - [LMATH()]
 :::
-# MONEY()
+# money()
 `money(<integer>)`<br>
 `money(<object>)`
 
@@ -3519,8 +3519,8 @@ You say, "es"
 ::: seealso
 - [score]
 :::
-# MTIME()
-# MSECS()
+# mtime()
+# msecs()
 `mtime(<object>[, <utc?>])`<br>
 `msecs(<object>[, <precision>])`
 
@@ -3538,8 +3538,8 @@ You say, "es"
 - [CONVTIME()]
 - [CONVSECS()]
 :::
-# MUDNAME()
-# MUDURL()
+# mudname()
+# mudurl()
 `mudname()`<br>
 `mudurl()`
 
@@ -3557,7 +3557,7 @@ You say, "http://www.testmush.com"
 ::: seealso
 - [CONFIG()]
 :::
-# MUL()
+# mul()
 `mul(<number1>, <number2>[, ... , <numberN>])`
 
   Returns the product of some numbers.
@@ -3568,8 +3568,8 @@ You say, "http://www.testmush.com"
 - [DIV()]
 - [DIV()]
 :::
-# MWHO()
-# MWHOID()
+# mwho()
+# mwhoid()
 `mwho()`<br>
 `mwhoid()`
 
@@ -3582,8 +3582,8 @@ You say, "http://www.testmush.com"
 - [LWHO()]
 - [NMWHO()]
 :::
-# ALIAS()
-# FULLALIAS()
+# alias()
+# fullalias()
 `alias(<object>[, <new alias>])`<br>
 `fullalias(<object>)`
 
@@ -3605,7 +3605,7 @@ You say, "$;No;Nol;Noli;Nolt"
 ::: seealso
 - [FULLNAME()]
 :::
-# NAME()
+# name()
 `name(<object>[, <new name>])`
 
   name() returns the name of object `<object>`. For exits, name() returns only the displayed name of the exit.
@@ -3620,8 +3620,8 @@ You say, "$;No;Nol;Noli;Nolt"
 - [ALIAS()]
 - [MONIKER()]
 :::
-# MONIKER()
-# CNAME()
+# moniker()
+# cname()
 `moniker(<object>)`
 
   Returns `<object>`'s accented name, with the color template from its @moniker applied. moniker() always returns the colored name, even if monikers are disabled via @config.
@@ -3635,7 +3635,7 @@ You say, "$;No;Nol;Noli;Nolt"
 - [INAME()]
 - [ACCNAME()]
 :::
-# NAMELIST()
+# namelist()
 `namelist(<player-list>[, [<object>/]<attribute>])`
 
   namelist() takes a list of players of the form used by the page command and returns a corresponding list of dbrefs. Invalid and ambiguous names return the dbrefs #-1 and #-2, respectively.
@@ -3658,8 +3658,8 @@ You say, "#1 #7 #56 #-1"
 - [NUM()]
 - [PMATCH()]
 :::
-# NAMEGRAB()
-# NAMEGRABALL()
+# namegrab()
+# namegraball()
 `namegrab(<dbref list>, <name>[, <delimiter>])`<br>
 `namegraball(<dbref list>, <name>[, <delimiter>])`
 
@@ -3680,9 +3680,9 @@ You say, "#1 #7 #56 #-1"
 - [NAMELIST()]
 - [locate()]
 :::
-# NAND()
-# NCAND()
-# CNAND()
+# nand()
+# ncand()
+# cnand()
 `nand(<boolean1>[, ... , <booleanN>])`<br>
 `ncand(<boolean1>[, ... , <booleanN>])`<br>
 `cnand(<boolean1>[, ... , <booleanN>])`
@@ -3699,7 +3699,7 @@ You say, "#1 #7 #56 #-1"
 - [OR()]
 - [NOR()]
 :::
-# NEARBY()
+# nearby()
 `nearby(<object 1>, <object 2>)`
 
   Returns 1 if `<object 1>` is "nearby" `<object 2>`, and 0 otherwise. "Nearby" means the objects are in the same location, or that one is located inside the other. You must control at least one of the objects; if you don't, or if one of the objects can't be found, nearby() returns #-1.
@@ -3709,7 +3709,7 @@ You say, "#1 #7 #56 #-1"
 - [locate()]
 - [FINDABLE()]
 :::
-# NEQ()
+# neq()
 `neq(<number1>, <number2>[, ... , <numberN>])`
 
   Returns 0 if all the given `<number>`s are the same, and 1 otherwise. Basically the same as [not(eq(`<number1>`, `<number2>`[, ... , `<numberN>`]))] but more efficient.
@@ -3720,7 +3720,7 @@ You say, "#1 #7 #56 #-1"
 - [NOT()]
 - [LMATH()]
 :::
-# NEXT()
+# next()
 `next(<object>)`
 
   If `<object>` is an exit, then next() will return the next exit in `<object>`'s source room. If `<object>` is a thing or a player, then next() will return the next object in the contents list of `<object>`'s location. Otherwise, it returns a #-1. #-1 is also used to denote that there are no more exits or objects after `<object>`.
@@ -3734,7 +3734,7 @@ You say, "#1 #7 #56 #-1"
 - [CON()]
 - [EXIT()]
 :::
-# NEXTDBREF()
+# nextdbref()
 `nextdbref()`
 
   This function returns the next dbref on the free list; when the next object is @created (or @dug, or @opened, or @pcreated, etc.), it will have this dbref.
@@ -3744,8 +3744,8 @@ You say, "#1 #7 #56 #-1"
 - [@stats]
 - [LSTATS()]
 :::
-# NOR()
-# NCOR()
+# nor()
+# ncor()
 `nor(<boolean1>[, ... , <booleanN>])`<br>
 `ncor(<boolean1>[, ... , <booleanN>])`
 
@@ -3762,7 +3762,7 @@ You say, "#1 #7 #56 #-1"
 - [NAND()]
 - [LMATH()]
 :::
-# NOT()
+# not()
 `not(<boolean>)`
 
   not() returns 1 if `<boolean>` is false, and 0 if it's true.
@@ -3778,7 +3778,7 @@ You say, "#1 #7 #56 #-1"
 - [NOR()]
 - [XOR()]
 :::
-# NUM()
+# num()
 `num(<object>)`
 
   Returns the dbref number of `<object>`. `<object>` must reference a valid object, as per [MATCHING].
@@ -3789,8 +3789,8 @@ You say, "#1 #7 #56 #-1"
 - [RNUM()]
 - [PMATCH()]
 :::
-# NVCON()
-# NCON()
+# nvcon()
+# ncon()
 `ncon(<object>)`<br>
 `nvcon(<object>)`
 
@@ -3804,8 +3804,8 @@ You say, "#1 #7 #56 #-1"
 - [LCON()]
 - [LVCON()]
 :::
-# NVEXITS()
-# NEXITS()
+# nvexits()
+# nexits()
 `nexits(<room>)`<br>
 `nvexits(<room>)`
 
@@ -3819,8 +3819,8 @@ You say, "#1 #7 #56 #-1"
 - [LEXITS()]
 - [LVEXITS()]
 :::
-# NVPLAYERS()
-# NPLAYERS()
+# nvplayers()
+# nplayers()
 `nplayers(<object>)`<br>
 `nvplayers(<object>)`
 
@@ -3834,10 +3834,10 @@ You say, "#1 #7 #56 #-1"
 - [LPLAYERS()]
 - [LVPLAYERS()]
 :::
-# NVTHINGS()
-# NTHINGS()
-# NOBJECTS()
-# NVOBJECTS()
+# nvthings()
+# nthings()
+# nobjects()
+# nvobjects()
 `nthings(<object>)`<br>
 `nvthings(<object>)`
 
@@ -3851,8 +3851,8 @@ You say, "#1 #7 #56 #-1"
 - [LTHINGS()]
 - [LVTHINGS()]
 :::
-# NMWHO()
-# NWHO()
+# nmwho()
+# nwho()
 `nwho([<viewer>])`<br>
 `nmwho()`
 
@@ -3869,7 +3869,7 @@ You say, "#1 #7 #56 #-1"
 - [XWHO()]
 - [XWHO()]
 :::
-# OBJ()
+# obj()
 # %o
 `obj(<object>)`
 
@@ -3881,7 +3881,7 @@ You say, "#1 #7 #56 #-1"
 - [POSS()]
 - [APOSS()]
 :::
-# OBJEVAL()
+# objeval()
 `objeval(<object>, <expression>)`
 
   Allows you to evaluate `<expression>` from the viewpoint of `<object>`. If side-effect functions are enabled, you must control `<object>`; if not, you must either control `<object>` or have the see_all power. If `<object>` does not exist or you don't meet one of the criterion, the expression evaluates with your privileges.
@@ -3890,7 +3890,7 @@ You say, "#1 #7 #56 #-1"
 ::: seealso
 - [S()]
 :::
-# OBJID()
+# objid()
 `objid(<object>)`
 
   This function returns the object id of `<object>`, a value which uniquely identifies it for the life of the MUSH. The object id is the object's dbref, a colon character, and the object's creation time, in milliseconds since the epoch, equivalent to [num(`<object>`)]:[csecs(`<object>`,ms)] (PennMUSH stores seconds, so its objids end in [csecs(`<object>`)] instead; see help COMPATIBILITY IDENTITY)
@@ -3906,7 +3906,7 @@ You say, "#1 #7 #56 #-1"
 - [CTIME()]
 - [%#]
 :::
-# OBJMEM()
+# objmem()
 `objmem(<object>)`
 
   This function returns the amount of memory, in bytes, being used by the object. It can only be used by players with Search powers.
@@ -3917,8 +3917,8 @@ You say, "#1 #7 #56 #-1"
 ::: seealso
 - [PLAYERMEM()]
 :::
-# OEMIT()
-# NSOEMIT()
+# oemit()
+# nsoemit()
 `oemit([<room>/]<object> [... <object>], <message>)`<br>
 `nsoemit([<room>/]<object> [... <object>], <message>)`
 
@@ -3926,7 +3926,7 @@ You say, "#1 #7 #56 #-1"
 
   nsoemit() works like @nsoemit.
 
-# OPEN()
+# open()
 `open(<exit name>[, <destination>[, <source>[, <dbref>]]])`
 
   This function attempts to open an exit named `<exit name>`. The exit will be opened in the room `<source>`, if given, or the caller's current location if no `<source>` is specified.
@@ -3946,8 +3946,8 @@ You say, "#1 #7 #56 #-1"
 - [CREATE()]
 - [PCREATE()]
 :::
-# OR()
-# COR()
+# or()
+# cor()
 `or(<boolean1>, <boolean2>[, ... , <booleanN>])`<br>
 `cor(<boolean1>, <boolean2>[, ... , <booleanN>])`
 
@@ -3964,8 +3964,8 @@ You say, "#1 #7 #56 #-1"
 - [ALLOF()]
 - [LMATH()]
 :::
-# ORFLAGS()
-# ORLFLAGS()
+# orflags()
+# orlflags()
 `orflags(<object>, <string of flag characters>)`<br>
 `orlflags(<object>, <list of flag names>)`
 
@@ -3984,7 +3984,7 @@ You say, "#1 #7 #56 #-1"
 - [LFLAGS()]
 - [ORLPOWERS()]
 :::
-# ORLPOWERS()
+# orlpowers()
 `orlpowers(<object>, <list of powers>)`
 
   This function returns 1 if `<object>` has at least one of the powers in a specified list, and 0 if it does not. The list is a space-separated list of power names. A '!' preceding a flag name means "not power".
@@ -4001,7 +4001,7 @@ You say, "#1 #7 #56 #-1"
 - [@power]
 - [ORFLAGS()]
 :::
-# OWNER()
+# owner()
 `owner(<object>[/<attribute>])`<br>
 `owner(<object>[/<attribute>], <new owner>[, preserve])`
 
@@ -4017,7 +4017,7 @@ You say, "#1 #7 #56 #-1"
 - [@atrchown]
 :::
 
-# PARENT()
+# parent()
 `parent(<object>[, <new parent>])`
 
   This function returns the dbref number of an object's parent. You must be able to examine the object to do this. If you specify a second argument, parent() attempts to change the parent first. You must control `<object>`, and be allowed to @parent to `<new parent>`.
@@ -4029,10 +4029,10 @@ You say, "#1 #7 #56 #-1"
 - [pfun()]
 - [LPARENT()]
 :::
-# PEMIT()
-# NSPEMIT()
-# PROMPT()
-# NSPROMPT()
+# pemit()
+# nspemit()
+# prompt()
+# nsprompt()
 `pemit(<object list|port numbers>, <message>)`<br>
 `nspemit(<object list|port numbers>, <message>)`<br>
 `prompt(<object list>, <message>)`<br>
@@ -4050,7 +4050,7 @@ You say, "#1 #7 #56 #-1"
 - [@nspemit]
 - [PROMPT_NEWLINES]
 :::
-# PERMISSION()
+# permission()
 `permission(<object>, <permission>)`
 
   Returns 1 if `<object>` holds `<permission>`, and 0 if not. The answer is the same one the game and the web portal use when that object tries the action, so softcode can check ahead of time instead of keeping its own list of staff. `<permission>` may be built in or one the game defined with `@permission/define`, such as `scene.close`. Any other name returns `#-1 NO SUCH PERMISSION`; @permission lists them all.
@@ -4067,11 +4067,11 @@ think permission(me, wiki.delete)
 - [roles]
 - [@role]
 :::
-# PI()
+# pi()
 `pi()`
 
   Returns the value of "pi" (3.14159265358979323846264338327, rounded to the game's float_precision setting).
-# PIDINFO()
+# pidinfo()
 `pidinfo(<pid>[, <list of fields>[, <output separator>]])`
 
   This function returns information about a process id if the player has permission to see the process. The `<list of fields>` is a space-separated list that may contain the following elements:
@@ -4091,7 +4091,7 @@ think permission(me, wiki.delete)
 - [LPIDS()]
 - [GETPIDS()]
 :::
-# PLAYERMEM()
+# playermem()
 `playermem(<player>)`
 
   This function returns the amount of memory, in bytes, being used by everything owned by the player. It can only be used by players with Search powers.
@@ -4100,7 +4100,7 @@ think permission(me, wiki.delete)
 ::: seealso
 - [OBJMEM()]
 :::
-# PLAYER()
+# player()
 `player(<port>)`
 
   Returns the dbref of the player connected to a given port. Mortals can only use this function on their own ports, while See_All players can use it on any port.
@@ -4110,7 +4110,7 @@ think permission(me, wiki.delete)
 - [LPORTS()]
 - [LPORTS()]
 :::
-# PMATCH()
+# pmatch()
 `pmatch(<name>)`
 
   pmatch() attempts to find a player called `<name>`, which should be the full or partial name of a player (possibly prefixed with a "*") or a dbref. First, it checks to see if `<name>` is the dbref, full name, or alias of a player; if so, their dbref is returned. Otherwise, it checks for partial matches against the names of online players. If there are no matches, #-1 is returned. If there are multiple matches, pmatch() returns #-2. Otherwise, the matching player's dbref is returned.
@@ -4123,10 +4123,10 @@ think permission(me, wiki.delete)
 - [NAMELIST()]
 - [locate()]
 :::
-# MOTD()
-# WIZMOTD()
-# DOWNMOTD()
-# FULLMOTD()
+# motd()
+# wizmotd()
+# downmotd()
+# fullmotd()
 `motd()`<br>
 `wizmotd()`<br>
 `downmotd()`<br>
@@ -4144,7 +4144,7 @@ think permission(me, wiki.delete)
 - [POLL()]
 - [@poll]
 :::
-# POLL()
+# poll()
 `poll()`
 
   This function returns the current @poll.
@@ -4155,7 +4155,7 @@ think permission(me, wiki.delete)
 - [DOING()]
 - [@doing]
 :::
-# LPIDS()
+# lpids()
 `lpids([<object>[, <queue types>]])`
 
   This function returns a list of queue process ids (pids). Only commands queued by objects with the same owner as `<object>` are listed. If you have the see_queue @power, you can specify "all" for `<object>` to get pids for everyone's queue entries. `<object>` defaults to the caller, or "all" for priviledged callers.
@@ -4172,8 +4172,8 @@ think permission(me, wiki.delete)
 - [GETPIDS()]
 - [PIDINFO()]
 :::
-# LPORTS()
-# PORTS()
+# lports()
+# ports()
 `lports([<viewer>[, <status>]])`<br>
 `ports(<player name>)`
 
@@ -4191,7 +4191,7 @@ think permission(me, wiki.delete)
 - [PLAYER()]
 - [Connection functions]
 :::
-# POS()
+# pos()
 `pos(<needle>, <haystack>)`
 
   This function returns the position that `<needle>` begins in `<haystack>`. Unlike most other string functions, the first character of `<haystack>` is numbered 1, not 0. If `<needle>` is not present in `<haystack>`, pos() returns #-1.
@@ -4203,7 +4203,7 @@ think permission(me, wiki.delete)
 - [LPOS()]
 - [WORDPOS()]
 :::
-# POSS()
+# poss()
 # %p
 `poss(<object>)`
 
@@ -4215,7 +4215,7 @@ think permission(me, wiki.delete)
 - [OBJ()]
 - [APOSS()]
 :::
-# POWER()
+# power()
 `power(<number>, <exponent>)`
 
   Returns `<number>` to the power of `<exponent>`.
@@ -4226,7 +4226,7 @@ think permission(me, wiki.delete)
 ::: seealso
 - [ROOT()]
 :::
-# POWERS()
+# powers()
 `powers()`<br>
 `powers(<object>)`<br>
 `powers(<object>, <power>)`
@@ -4242,7 +4242,7 @@ think permission(me, wiki.delete)
 - [@power]
 - [@power]
 :::
-# QUOTA()
+# quota()
 `quota(<player>)`
 
   Returns the player's quota, the maximum number of objects they can create if quotas are in effect. Returns 99999 for players with the No_Quota @power, so it's safe to use in numerical comparisons.
@@ -4258,9 +4258,9 @@ think permission(me, wiki.delete)
 - [@power]
 - [@power]
 :::
-# R()
+# r()
 # %q
-# R-FUNCTION
+# r-function
 `r(<register>[, <type>])`
 
   The r() function can be used to access registers. It can retrieve the value of q-registers set with setq() and related functions, as well as the 30 stack values (the first ten of which are also available via %0-%9), and also iter() and switch() context (also available through itext() and stext(), respectively). The registers() function can be used to obtain a list of available registers.
@@ -4288,7 +4288,7 @@ think permission(me, wiki.delete)
 - [ilev()]
 - [STEXT()]
 :::
-# RAND()
+# rand()
 `rand()`<br>
 `rand(<num>)`<br>
 `rand(<min>, <max>)`
@@ -4308,8 +4308,8 @@ think permission(me, wiki.delete)
 ::: seealso
 - [RANDWORD()]
 :::
-# RANDWORD()
-# PICKRAND()
+# randword()
+# pickrand()
 `randword(<list>[, <delimiter>])`
 
   Returns a randomly selected element from `<list>`. Elements of the list are separated by `<delimiter>`, which defaults to a space.
@@ -4321,7 +4321,7 @@ think permission(me, wiki.delete)
 - [RAND()]
 - [RANDEXTRACT()]
 :::
-# RANDEXTRACT()
+# randextract()
 `randextract(<list>[, <count>[, <delim>[, <type>[, <osep>]]]])`
 
   Returns up to `<count>` random elements from the `<delim>`-separated `<list>`. The following `<type>`s are available:<br>
@@ -4348,10 +4348,10 @@ You say, "this test is this is is"
 - [RAND()]
 - [RANDWORD()]
 :::
-# REGEDIT()
-# REGEDITALL()
-# REGEDITI()
-# REGEDITALLI()
+# regedit()
+# regeditall()
+# regediti()
+# regeditalli()
 `regedit(<string>, <regexp>, <replace>[, ... , <regexpN>, <replaceN>])`<br>
 `regediti(<string>, <regexp>, <replace>[, ... , <regexpN>, <replaceN>])`<br>
 `regeditall(<string>, <regexp>, <replace>[, ... , <regexpN>, <replaceN>])`<br>
@@ -4378,7 +4378,7 @@ You say "this Trash is the Brash string"
 - [regmatch()]
 - [GRAB()]
 :::
-# REGREPLACE()
+# regreplace()
 `regreplace(<string>, <regexp>, <replacement>[, <flags>])`
 
   Replaces every part of `<string>` that matches `<regexp>` with `<replacement>`, and returns the result. `<replacement>` may refer to captured groups with `$1`, `$2` and so on, or by name with `${name}`.
@@ -4395,8 +4395,8 @@ You say "this Trash is the Brash string"
 - [regmatch()]
 - [regexp syntax]
 :::
-# REMIT()
-# NSREMIT()
+# remit()
+# nsremit()
 `remit(<object list>, <message>)`<br>
 `nsremit(<object list>, <message>)`
 
@@ -4410,7 +4410,7 @@ You say "this Trash is the Brash string"
 - [PEMIT()]
 - [NSLEMIT()]
 :::
-# REMOVE()
+# remove()
 `remove(<list>, <words>[, <delimiter>])`
 
   This function removes the first occurrence of every word in the list `<words>` from `<list>`, and returns the resulting `<list>`. It is case sensitive.
@@ -4423,7 +4423,7 @@ You say "this Trash is the Brash string"
 - [LDELETE()]
 - [SETDIFF()]
 :::
-# RENDER()
+# render()
 `render(<string>, <formats>)`
 
   This function renders the given `<string>` into a given format. Most useful when coding bots, or inserting text into an SQL database to display on a website. `<formats>` is a space-separated list of one or more of the following:
@@ -4449,7 +4449,7 @@ You say, "&lt;Test 1&gt; &amp; \<u\>Test 2</u>"
 - [TAGWRAP()]
 - [json()]
 :::
-# REPEAT()
+# repeat()
 `repeat(<string>, <number>)`
 
   This function simply repeats `<string>`, `<number>` times. No spaces are inserted between each repetition.
@@ -4464,8 +4464,8 @@ You say, "TestTestTestTestTest"
 ::: seealso
 - [SPACE()]
 :::
-# LREPLACE()
-# REPLACE()
+# lreplace()
+# replace()
 `lreplace(<list>, <position(s)>, <new item>[, <delimiter>[, <osep>]])`
 
   This replaces the item(s) at the given `<position(s)>` in `<list>` with `<new item>`. `<delimiter>` defaults to a space, and `<osep>` defaults to `<delimiter>`. Null items are counted when determining position.
@@ -4497,7 +4497,7 @@ You say, "Turn south at the junction"
 - [SPLICE()]
 - [STRREPLACE()]
 :::
-# REST()
+# rest()
 `rest(<list>[, <delimiter>])`
 
   Returns a list minus its first element.
@@ -4508,7 +4508,7 @@ You say, "Turn south at the junction"
 - [FIRST()]
 - [LAST()]
 :::
-# REVWORDS()
+# revwords()
 `revwords(<list>[, <delimiter>[, <output separator>]])`
 
   This function reverses the order of words in a list. List elements are separated by `<delimiter>`, which defaults to a space. Elements in the reversed list are separated by `<ouput separator>`, which defaults to the delimiter.
@@ -4523,7 +4523,7 @@ You say, "eep baz bar foo"
 ::: seealso
 - [FLIP()]
 :::
-# RIGHT()
+# right()
 `right(<string>, <length>)`
 
   Returns the `<length>` rightmost characters from `<string>`.
@@ -4533,7 +4533,7 @@ You say, "eep baz bar foo"
 - [LEFT()]
 - [MID()]
 :::
-# RJUST()
+# rjust()
 `rjust(<string>, <length>[, <fill>[, <truncate?>]])`
 
   This function returns `<string>`, padded on the left with the string `<fill>` until it's `<length>` characters long. `<fill>` can be more than one character in length, and defaults to a single space.
@@ -4564,7 +4564,7 @@ You say, "-   foo-"
 - [LJUST()]
 - [RIGHT()]
 :::
-# RLOC()
+# rloc()
 `rloc(<object>, <levels>)`
 
   This function may be used to the get the location of `<object>`'s location (and on through the levels of locations), substituting for repeated nested loc() calls. `<levels>` indicates the number of loc()-equivalent calls to make; i.e., loc(loc(`<object>`)) is equivalent to rloc(`<object>`,2). rloc(`<object>`,0) is equivalent to num(`<object>`), and rloc(`<object>`,1) is equivalent to loc(`<object>`).
@@ -4579,7 +4579,7 @@ You say, "-   foo-"
 - [RNUM()]
 - [locate()]
 :::
-# RNUM()
+# rnum()
 `rnum(<container>, <object>)`
 
   This function looks for an object called `<object>` located inside `<container>`. If a single matching object is found, its dbref is returned. If several matching objects are found, #-2 is returned, and if nothing matches, or you lack permission, #-1 is returned.
@@ -4595,7 +4595,7 @@ You say, "-   foo-"
 - [RLOC()]
 - [ROOM()]
 :::
-# ROLES()
+# roles()
 `roles(<object>)`
 
   Returns the short names of the roles `<object>` holds, its own and its account's, highest priority first, with `everyone` last.
@@ -4612,7 +4612,7 @@ moderator player everyone
 - [PERMISSION()]
 - [@role]
 :::
-# ROOM()
+# room()
 `room(<object>)`
 
   Returns the "absolute" location of an object. This is always a room; it is the container of all other containers of the object. The "absolute" location of an object is the place @lemit messages are sent to and NO_TEL status determined. You must control the object, be See_All, or be near the object in order for this function to work. The exception to this are players; if `<object>` is a player, the ROOM() function may be used to find the player's absolute location if the player is not set UNFINDABLE.
@@ -4624,7 +4624,7 @@ moderator player everyone
 - [RNUM()]
 - [WHERE()]
 :::
-# ROOT()
+# root()
 `root(<number>, \<n\>)`
 
   Returns the n-th root of `<number>`. The 2nd root is the square root, the 3rd the cube root, and so on.
@@ -4642,9 +4642,9 @@ think power(3, 3)
 - [SQRT()]
 - [POWER()]
 :::
-# ROUND()
-# CEIL()
-# FLOOR()
+# round()
+# ceil()
+# floor()
 `round(<number>, <places>[, <pad>])`<br>
 `floor(<number>)`<br>
 `ceil(<number>)`
@@ -4670,8 +4670,8 @@ think floor(3.14159)
 - [BOUND()]
 - [TRUNC()]
 :::
-# S()
-# S-FUNCTION
+# s()
+# s-function
 `s(<string>)`
 
   This function performs a second round of evaluation on `<string>`, and returns the result. It should be considered extremely dangerous to use on user input, or any other string which you don't have complete control over. There are very few genuine uses for this function; things can normally be achieved another, safer way.
@@ -4688,7 +4688,7 @@ You say, "When we eval [ucstr(test)], we get TEST"
 - [OBJEVAL()]
 - [DECOMPOSE()]
 :::
-# SCAN()
+# scan()
 `scan(<looker>, <command>[, <switches>])`<br>
 `scan(<command>)`
 
@@ -4716,7 +4716,7 @@ You say, "When we eval [ucstr(test)], we get TEST"
 - [evaluation order]
 - [$-commands]
 :::
-# SCRAMBLE()
+# scramble()
 `scramble(<string>)`
 
   This function scrambles a string, returning a random permutation of its characters. Note that this function does not pay any attention to spaces or other special characters; it will scramble these characters just like normal characters.
@@ -4731,7 +4731,7 @@ You say, "cfaedb"
 ::: seealso
 - [SHUFFLE()]
 :::
-# SECS()
+# secs()
 `secs([<precision>])`
 
   This function returns the number of elapsed seconds since midnight, January 1, 1970 UTC. UTC is the base time zone, formerly GMT. This is a good way of synchronizing things that must run at a certain time.
@@ -4741,7 +4741,7 @@ You say, "cfaedb"
 - [CONVSECS()]
 - [time()]
 :::
-# SECURE()
+# secure()
 `secure(<string>)`
 
   This function returns `<string>` with all "dangerous" characters replaced by spaces. Dangerous characters are<br>
@@ -4753,7 +4753,7 @@ You say, "cfaedb"
 - [DECOMPOSE()]
 - [ESCAPE()]
 :::
-# SET()
+# set()
 `set(<object>[/<attribute>], <flag>)`<br>
 `set(<object>, <attribute>:<value>)`
 
@@ -4767,7 +4767,7 @@ You say, "cfaedb"
 - [@set]
 - [WIPE()]
 :::
-# SETDIFF()
+# setdiff()
 `setdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
   This function returns the difference of two sets -- i.e., the elements in `<list1>` that aren't in `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [SORTING]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
@@ -4784,7 +4784,7 @@ You say, "baz foo"
 - [SETSYMDIFF()]
 - [SETUNION()]
 :::
-# SETSYMDIFF()
+# setsymdiff()
 `setsymdiff(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
   This function returns the symmetric difference of two sets -- i.e., the elements that only appear in one or the other of the lists, but not in both. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [SORTING]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
@@ -4801,7 +4801,7 @@ You say, "baz foo moof"
 - [SETINTER()]
 - [SETUNION()]
 :::
-# SETINTER()
+# setinter()
 `setinter(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
   This function returns the intersection of two sets -- i.e., the elements that are in both `<list1>` and `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [SORTING]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
@@ -4818,8 +4818,8 @@ You say, "bar gleep"
 - [SETSYMDIFF()]
 - [SETUNION()]
 :::
-# LISTQ()
-# UNSETQ()
+# listq()
+# unsetq()
 `listq([<pattern>])`<br>
 `unsetq([<pattern1> [<pattern2> [...]]])`
 
@@ -4852,7 +4852,7 @@ LOC
 - [REGISTERS()]
 - [WILDCARDS]
 :::
-# REGISTERS()
+# registers()
 `registers([<pattern>[, <types>[, <osep>]]])`
 
   The registers() function returns a list of the names of all existing registers of the specified `<types>`. `<types>` is a space-separated list containing zero or more of:
@@ -4878,7 +4878,7 @@ LOC
 - [STEXT()]
 - [ilev()]
 :::
-# SETUNION()
+# setunion()
 `setunion(<list1>, <list2>[, <delimiter>[, <sort type>[, <osep>]]])`
 
   This function returns the union of two sets -- i.e., all the elements of both `<list1>` and `<list2>`, minus any duplicate elements. The list returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [SORTING]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
@@ -4901,7 +4901,7 @@ You say, "bar baz foo gleep moof"
 - [SETINTER()]
 - [SETSYMDIFF()]
 :::
-# SHA0()
+# sha0()
 `sha0(<string>)`
 
   Returns the SHA-0 cryptographic hash of the string. See RFC 3174 for more information. Deprecated; use digest() and higher strength algorithms instead. On servers with newer versions of OpenSSL that no longer provide the algorithm, returns #-1 NOT SUPPORTED.
@@ -4910,7 +4910,7 @@ You say, "bar baz foo gleep moof"
 ::: seealso
 - [digest().]
 :::
-# SHL()
+# shl()
 `shl(<number>, <count>)`
 
   Performs a leftwards bit-shift on `<number>`, shifting it `<count>` times. This is equivalent to mul(`<number>`, power(2, `<count>`), but much faster.
@@ -4919,7 +4919,7 @@ You say, "bar baz foo gleep moof"
 ::: seealso
 - [SHR()]
 :::
-# SHR()
+# shr()
 `shr(<number>, <count>)`
 
   Performs a rightwards bit-shift on `<number>`, shifting it `<count>` times. This is equivalent to div(`<number>`, power(2, `<count>`), but much faster.
@@ -4928,7 +4928,7 @@ You say, "bar baz foo gleep moof"
 ::: seealso
 - [SHL()]
 :::
-# SHUFFLE()
+# shuffle()
 `shuffle(<list>[, <delimiter>[, <osep>]])`
 
   This function shuffles the order of the items of a list, returning a random permutation of its elements.
@@ -4946,7 +4946,7 @@ You say, "baz foo gleep bar"
 - [SCRAMBLE()]
 - [RANDWORD()]
 :::
-# SIGN()
+# sign()
 `sign(<number>)`
 
   Essentially returns the sign of a number -- 0 if the number is 0, 1 if the number is positive, and -1 if the number is negative. This is equivalent to bound(`<number>`, -1, 1).
@@ -4968,7 +4968,7 @@ You say, "-1"
 - [ABS()]
 - [BOUND()]
 :::
-# SIN()
+# sin()
 `sin(<angle>[, <angle type>])`
 
   Returns the sine of `<angle>`, which should be expressed in the given angle type, or radians by default.
@@ -4984,7 +4984,7 @@ You say, "-1"
 - [CTU()]
 - [TAN()]
 :::
-# SORT()
+# sort()
 `sort(<list>[, <sort type>[, <delimiter>[, <osep>]]])`
 
   This sorts a list of words. If no second argument is given, it will try to detect the type of sort it should do. If all the words are numbers, it will sort them in order of smallest to largest. If all the words are dbrefs, it will sort them in order of smallest to largest. Otherwise, it will perform a lexicographic sort.
@@ -4998,7 +4998,7 @@ You say, "-1"
 - [SORTBY()]
 - [SORTKEY()]
 :::
-# SORTBY()
+# sortby()
 `sortby([<obj>/]<attrib>, <list>[, <delimiter>[, <output separator>]])`
 
   This sorts an arbitrary list according to the ufun `<obj>`/`<attrib>`. This ufun should compare two arbitrary elements, %0 and %1, and return zero (equal), a negative integer (element 1 is less than element 2) or a positive integer (element 1 is greater than element 2), similar to the comp() function.
@@ -5022,7 +5022,7 @@ You say, "-1"
 - [SORT()]
 - [SORTKEY()]
 :::
-# SORTKEY()
+# sortkey()
 `sortkey([<obj>/]<attrib>, <list>[, <sort type>[, <delimiter>[, <osep>]]])`
 
   This function creates a list of keys by passing every element of `<list>` into the ufun given in `<attrib>`. The list is then sorted according to the sorting method in `<sort type>`, or is automatically guessed (as per [SORTING]).
@@ -5045,7 +5045,7 @@ You say, "-1"
 - [SORTING]
 - [SORTBY()]
 :::
-# SORTING
+# Sorting
   In functions where you can specify a sorting method, you can provide one of these sort types:
 
   Type    Sorts:<br>
@@ -5080,8 +5080,8 @@ You say, "-1"
 - [SETINTER()]
 - [SETDIFF()]
 :::
-# SOUNDLIKE()
-# SOUNDSLIKE()
+# soundlike()
+# soundslike()
 `soundslike(<word>, <word>[, <hash type>])`<br>
 `soundlike(<word>, <word>[, <hash type>])`
 
@@ -5099,7 +5099,7 @@ think soundslike(robin,roebuck, phone)
 ::: seealso
 - [soundex()]
 :::
-# SPACE()
+# space()
 `space(<number>)`
 
   Prints `<number>` spaces. Useful for times when you want to be able to use lots of spaces to separate things. Same as [repeat(%b, `<number>`)].
@@ -5114,7 +5114,7 @@ Amberyl says, "a     b"
 ::: seealso
 - [REPEAT()]
 :::
-# SPELLNUM()
+# spellnum()
 `spellnum(<number>)`
 
   Given a number, return its written-out representation in words.
@@ -5129,7 +5129,7 @@ twelve thousand three hundred forty-five
 ::: seealso
 - [ORDINAL()]
 :::
-# ORDINAL()
+# ordinal()
 `ordinal(<integer>)`
 
   Given an integer, return its written-out ordinal representation in words.
@@ -5144,7 +5144,7 @@ first
 ::: seealso
 - [SPELLNUM()]
 :::
-# SPLICE()
+# splice()
 `splice(<list1>, <list2>, <word>[, <delimiter>])`
 
   This function splices `<list1>` and `<list2>` together. `<list1>` and `<list2>` are space-separated lists of words.
@@ -5162,7 +5162,7 @@ You say, "foo moof baz"
 ::: seealso
 - [MERGE()]
 :::
-# MAPSQL()
+# mapsql()
 `mapsql([<object>/]<attribute>, <query>[, <osep>[, <dofieldnames>[, <param1>[, <param2>[, ...]]]]])`
 
   Performs an SQL query if the MUSH is configured to connect to an SQL database server. This function requires a WIZARD flag or the Sql_Ok power.
@@ -5191,7 +5191,7 @@ You say, "foo moof baz"
 - [@sql]
 - [@mapsql]
 :::
-# SQL()
+# sql()
 `sql(<query>[, <row separator>[, <field separator>[, <register>[, <param1>[, <param2>[, ...]]]]]])`
 
   Performs an SQL query if the MUSH is configured to connect to an SQL database server. This function requires a WIZARD flag or the Sql_Ok power.
@@ -5252,7 +5252,7 @@ You say, "foo moof baz"
     > foo bar<br>
     5 rows updated.
 
-# SQLESCAPE()
+# sqlescape()
 `sqlescape(<string>)`
 
   This function performs SQL-server-implemented escaping of `<string>`. It's important to escape arbitrary data before passing it to the sql() and mapsql() functions, or @sql command, to prevent SQL injection attacks.
@@ -5279,7 +5279,7 @@ You don\'t say
 - [@sql]
 - [@mapsql]
 :::
-# SQRT()
+# sqrt()
 `sqrt(<number>)`
 
   Returns the square root of `<number>`. `<number>` cannot be negative.
@@ -5288,7 +5288,7 @@ You don\'t say
 ::: seealso
 - [ROOT()]
 :::
-# SQUISH()
+# squish()
 `squish(<string>[, <character>])`
 
   This function removes the leading and trailing `<character>`s from `<string>`, and condenses all inter-word `<character>`s to a single`<character>`. If no character is given, a space is used.
@@ -5306,8 +5306,8 @@ You don\'t say
 ::: seealso
 - [TRIM()]
 :::
-# STARTTIME()
-# RESTARTTIME()
+# starttime()
+# restarttime()
 `starttime()`<br>
 `restarttime()`
 
@@ -5329,7 +5329,7 @@ Tue Sep 22 13:54:04 2015
 - [CONVTIME()]
 - [RESTARTS()]
 :::
-# RESTARTS()
+# restarts()
 `restarts()`
 
   Returns the number of times the server has been rebooted with @shutdown/reboot since the last full startup.
@@ -5339,7 +5339,7 @@ Tue Sep 22 13:54:04 2015
 - [STARTTIME()]
 - [STARTTIME()]
 :::
-# SSL()
+# ssl()
 `ssl(<player|descriptor>)`
 
   This function returns 1 if the player is using an SSL connection, and 0 otherwise. If SSL connections are disabled, it always returns 0. You must be See_All to use this function on another player.
@@ -5348,7 +5348,7 @@ Tue Sep 22 13:54:04 2015
 ::: seealso
 - [TERMINFO()]
 :::
-# STEP()
+# step()
 `step([<obj>/]<attr>, <list>, <step>[, <delim>[, <osep>]])`
 
   This function is similar to map(), except you can pass up to 30 elements of the list at a time, in %0-%9 and v(10)-v(29). `<step>` must be between 1 and 30, with a step of 1 equivalent to map(). If the elements of the list can't be split up evenly, the last evaluation will run with some of the registers unset; the %+ substitution or the registers() function can be used to see which/how many are set.
@@ -5375,7 +5375,7 @@ d - e -
 - [anonymous attributes]
 - [REGISTERS()]
 :::
-# STDDEV()
+# stddev()
 `stddev(<number1>[, ... , <numberN>])`
 
   Returns the sample standard deviation of its arguments.
@@ -5386,8 +5386,8 @@ d - e -
 - [MEDIAN()]
 - [LMATH()]
 :::
-# STRFIRSTOF()
-# STRALLOF()
+# strfirstof()
+# strallof()
 `strfirstof(<expr>[, ... , <exprN>], <default>)`<br>
 `strallof(<expr>[, ... , <exprN>], <osep>)`
 
@@ -5416,7 +5416,7 @@ You say, "foo"
 - [CAT()]
 - [DEFAULT()]
 :::
-# STRINSERT()
+# strinsert()
 `strinsert(<string>, <position>, <insert>)`
 
   This function returns `<string>`, with `<insert>` added before the `<position>` character in `<string>`. Note that the first character in `<string>` is numbered 0, not 1.
@@ -5437,7 +5437,7 @@ My name
 - [INSERT()]
 - [STRREPLACE()]
 :::
-# STRIPACCENTS()
+# stripaccents()
 `stripaccents(<string>[, <smart>])`
 
   Returns the string with accented characters converted to non-accented. As with the accent() function, this assumes the ISO 8859-1 character set.
@@ -5452,7 +5452,7 @@ My name
 - [STRIPANSI()]
 - [RENDER()]
 :::
-# STRIPANSI()
+# stripansi()
 `stripansi(<string>)`
 
   Returns the string with all ansi and HTML codes removed.
@@ -5465,7 +5465,7 @@ My name
 - [RENDER()]
 :::
 
-# STRDISTANCE()
+# strdistance()
 
 `strdistance(<source>, <target>)`
 
@@ -5491,7 +5491,7 @@ strdistance(,e[chr(769)][chr(128512)])
 - [GRAPHEMES()]
 :::
 
-# PRINTF()
+# printf()
 `printf(<format>[, <value>...])`
 
   Builds compact reports from a format and its values. Directives have the form `%[flags][width][.precision]type`, where type is `s` (text), `d` (signed 64-bit integer), or `f` (decimal). Each directive consumes one value. `%%` emits a literal percent and consumes none. Missing or extra values return `#-1 PRINTF ARGUMENT COUNT MISMATCH`; unsupported, incomplete, or repeated flags return `#-1 INVALID PRINTF FORMAT`.
@@ -5518,7 +5518,7 @@ printf(lit(%4s|%-4s),ansi(r,chr(30028)),ansi(b,chr(128512)))
 - [WRAP()]
 :::
 
-# DISPLAYWIDTH()
+# displaywidth()
 `displaywidth(<string>)`
 
   Returns the terminal columns occupied by the text, ignoring its markup. A wide CJK character occupies two columns. Combining marks add no columns; joined emoji are measured as whole clusters by MarkupString. Empty text returns 0. Control characters such as tabs and newlines occupy no columns. This is the same as `strlen(<string>,0)`; plain [STRLEN()] also counts each control character as one.
@@ -5533,7 +5533,7 @@ printf(lit(%4s|%-4s),ansi(r,chr(30028)),ansi(b,chr(128512)))
 - [GRAPHEMES()]
 :::
 
-# GRAPHEMECOUNT()
+# graphemecount()
 `graphemecount(<string>)`
 
   Returns the number of extended grapheme clusters in the text, ignoring markup. Combining accents, emoji modifiers, joined emoji, and paired flag indicators remain with their cluster. Empty text returns 0. Segmentation follows the released MarkupString library and the runtime Unicode rules, so the original composed or decomposed spelling is retained.
@@ -5545,7 +5545,7 @@ printf(lit(%4s|%-4s),ansi(r,chr(30028)),ansi(b,chr(128512)))
 - [GRAPHEMES()]
 :::
 
-# GRAPHEMES()
+# graphemes()
 `graphemes(<string>[, <output-separator>])`
 
   Inserts the output separator between whole grapheme clusters, retaining ANSI, HTML, and custom markup. The default separator is one space. Any separator text is accepted, including multiple characters and markup; an explicitly empty separator returns the original text with its markup. Empty input returns empty output. No separator is inserted before the first or after the last cluster, and existing spaces in the input remain clusters. There is no escaping or quoting of clusters containing the separator; choose a separator suitable for your data.
@@ -5560,7 +5560,7 @@ printf(lit(%4s|%-4s),ansi(r,chr(30028)),ansi(b,chr(128512)))
 - [FLIP()]
 :::
 
-# STRLEN()
+# strlen()
 `strlen(<string>[, <count controls>])`
 
   Returns terminal display columns, ignoring markup. Wide CJK characters count as two columns and combining marks add no columns. Use [GRAPHEMECOUNT()] to count whole grapheme clusters.
@@ -5582,7 +5582,7 @@ You say, "2"
 - [WORDS()]
 - [STRFIRSTOF()]
 :::
-# STRMATCH()
+# strmatch()
 `strmatch(<string>, <pattern>[, <register list>])`
 
   This function matches `<pattern>` against the entire `<string>`. It returns 1 if it matches and 0 if it doesn't. It is not case-sensitive, and `<pattern>` may contain wildcards.
@@ -5615,7 +5615,7 @@ You say, "1"
 - [R()]
 - [WILDCARDS]
 :::
-# STRREPLACE()
+# strreplace()
 `strreplace(<string>, <start>, <length>, <text>)`
 
   Returns `<string>` with the `<length>` characters starting at `<start>` replaced by `<text>`. As with most other string functions, the first character is at position 0.
@@ -5640,7 +5640,7 @@ You say, "abcdefgh"
 - [LDELETE()]
 - [LREPLACE()]
 :::
-# SUB()
+# sub()
 `sub(<number1>, <number>[, ... , <number>])`
 
   sub() subtracts `<number>` from `<number1>`. If more than one `<number>` argument is given, each is subtracted from the result of the previous subtraction in turn. The result of the final subtraction is returned.
@@ -5652,7 +5652,7 @@ You say, "abcdefgh"
 - [LMATH()]
 - [VSUB()]
 :::
-# SUBJ()
+# subj()
 # %s
 `subj(<object>)`
 
@@ -5664,10 +5664,10 @@ You say, "abcdefgh"
 - [OBJ()]
 - [POSS()]
 :::
-# RESWITCH()
-# RESWITCHI()
-# RESWITCHALL()
-# RESWITCHALLI()
+# reswitch()
+# reswitchi()
+# reswitchall()
+# reswitchalli()
 `reswitch(<str>, <re1>, <list1>[, ... , <reN>, <listN>][, <default>])`<br>
 `reswitchall(<str>, <re1>, <list1>[, ... , <reN>, <listN>][, <default>])`<br>
 `reswitchi(<str>, <re1>, <list1>[, ... , <reN>, <listN>][, <default>])`<br>
@@ -5688,7 +5688,7 @@ You say, "abcdefgh"
 - [REGEDIT()]
 - [regexp]
 :::
-# SWITCH WILDCARDS
+# Switch Wildcards
   @switch, @select, switch(), and switchall() normally do wildcard matching between their first argument and the `<expr>`ession arguments, with the normal * and ? special characters. However, if one of the `<expr>`essions starts with "`<" or ">`", a less-than or greater-than check is done instead of wildcard matching for that pair.
 
   switch(X, >Y, A, B) returns A if X is greater than Y, and B if it's not.<br>
@@ -5707,8 +5707,8 @@ You say, "abcdefgh"
 ::: seealso
 - [WILDCARDS]
 :::
-# STEXT()
-# SLEV()
+# stext()
+# slev()
 # %$
 # %$0
 `slev()`<br>
@@ -5732,7 +5732,7 @@ You say, "foo bar!"
 - [RESWITCH()]
 - [@switch]
 :::
-# T()
+# t()
 `t(<expression>)`
 
   Returns 1 if `<expression>` is a true boolean value, and 0 otherwise. The definitions of true and false vary depending on the value of the 'tiny_booleans' @config option. See [boolean values] for details.
@@ -5746,7 +5746,7 @@ You say, "foo bar!"
 - [OR()]
 - [AND()]
 :::
-# TABLE()
+# table()
 `table(<list>[, <field width>[, <line length>[, <delimiter>[, <osep>]]]])`
 
   This function returns the elements of `<list>` in a tabular format. All other parameters are optional. `<field width>` specifies how wide each table entry is allowed to be, and defaults to 10. If `<field width>` begins with a "`<", it is left-aligned. ">`" makes it right-aligned, and "-" makes it centered. Elements longer than `<field width>` are truncated to fit.
@@ -5767,7 +5767,7 @@ a          b          areallylon d
 ::: seealso
 - [align()]
 :::
-# TAN()
+# tan()
 `tan(<angle>[, <angle type>])`
 
   Returns the tangent of `<angle>`, which should be expressed in the given angle type, or radians by default. See HELP ANGLES for more information.
@@ -5781,7 +5781,7 @@ a          b          areallylon d
 - [CTU()]
 - [SIN()]
 :::
-# TEL()
+# tel()
 `tel(<object>, <destination>[, <silent>[, <inside>]])`
 
   This function will teleport `<object>` to `<destination>`, exactly as @teleport `<object>`=`<destination>`. `<silent>` is an optional boolean that, if true, makes the function act like @teleport/silent. `<inside>` is an optional boolean that, if true, makes the function act like @teleport/inside.
@@ -5790,7 +5790,7 @@ a          b          areallylon d
 ::: seealso
 - [@teleport]
 :::
-# TERMINFO()
+# terminfo()
 `terminfo(<player|descriptor>)`
 
   Returns a list with at least one element - the type of client used by the player, or "unknown" if the client being used doesn't support being asked to identify itself using RFC 1091.
@@ -5820,7 +5820,7 @@ a          b          areallylon d
 - [@SOCKSET]
 - [OOB()]
 :::
-# JSON FUNCTIONS
+# JSON Functions
   JSON functions are used to create and modify JSON objects.
 
 `isjson()    json()     json_array()     json_group_by()     json_map()     json_query()     json_mod()`
@@ -5833,8 +5833,8 @@ a          b          areallylon d
 ::: seealso
 - [JSON PATHS]
 :::
-# WEBSOCKET_HTML()
-# WEBSOCKET_JSON()
+# websocket_html()
+# websocket_json()
 `websocket_html(<html>[, <player>])`<br>
 `websocket_json(<json>[, <player>])`
 
@@ -5849,7 +5849,7 @@ a          b          areallylon d
 - [OOB()]
 - [json()]
 :::
-# OOB()
+# oob()
 # GMCP
 `oob(<players>, <package>[, <message>])`
 
@@ -5869,7 +5869,7 @@ a          b          areallylon d
 ::: seealso
 - [json()]
 :::
-# ISJSON()
+# isjson()
 `isjson(<text>)`
 
   This function returns 1 if its argument is valid JSON, 0 if not.
@@ -5890,7 +5890,7 @@ think isjson("quoted")
 ::: seealso
 - [json()]
 :::
-# JSON_GROUP_BY()
+# json_group_by()
 `json_group_by([<object>/]<attribute>, <list>[, <delimiter>])`
 
   json_group_by() buckets the elements of `<list>` by a computed key: `<attribute>` (or a #lambda) is evaluated once per element (the element passed as %0, as in filter() and map()), and its result becomes that element's group key. The result is a JSON object mapping each key, in first-seen order, to a JSON array of the elements that produced it.
@@ -5913,7 +5913,7 @@ think isjson("quoted")
 - [MAP()]
 - [CHAIN()]
 :::
-# JSON PATHS
+# JSON Paths
 
   json_mod() and the extract argument for json_query() take a path string that describes what part of a JSON object or array to act on. All paths start with a $ to indicate the base JSON value, and 0 or more specifiers in the following formats:
 
@@ -5925,7 +5925,7 @@ think isjson("quoted")
 - [json_mod()]
 - [json_query()]
 :::
-# TESTLOCK()
+# testlock()
 `testlock(<key>, <victim>)`
 
   testlock() returns 1 if the `<victim>` would pass the lock defined in `<key>` as run by the caller, and 0 if it would fail.
@@ -5952,10 +5952,10 @@ think testlock(\\+FOO:BAR,*Walker)
 - [LOCKFILTER()]
 - [locktypes]
 :::
-# TEXTFILE()
-# TEXTENTRIES()
-# TEXTSEARCH()
-# DYNHELP()
+# textfile()
+# textentries()
+# textsearch()
+# dynhelp()
 `textfile(<type>, <entry>)`<br>
 `textentries(<type>, <pattern>[, <osep>])`<br>
 `textsearch(<type>, <pattern>[, <osep>])`
@@ -5991,7 +5991,7 @@ You say, "CWHO() LWHO() MWHO() NWHO() XWHO() ZWHO()"
 ::: seealso
 - [WILDCARDS]
 :::
-# ETIME()
+# etime()
 `etime(<seconds>[, <width>[, <precision>]])`
 
   This function formats a number of seconds using the same rules as the 'On for' and 'Idle' columens in WHO's output. The optional `<width>` argument controls the maximum size of the returned string.
@@ -6016,7 +6016,7 @@ think etime(61, 5)
 - [TIMESTRING()]
 - [STRINGSECS()]
 :::
-# TIMESTRING()
+# timestring()
 `timestring(<seconds>[, <pad flag>[, <precision>]])`
 
   The timestring function takes a number of seconds as input and returns the amount of time formatted into days, hours, minutes, and seconds. If `<pad flag>` is 1, all time periods will be used even if the number of seconds is less than a day, hour, or minute. If `<pad flag>` is 2, all numbers will be 2 digits long.
@@ -6038,7 +6038,7 @@ You say, "00d 00h 05m 01s"
 - [ETIME()]
 - [etimefmt()]
 :::
-# STRINGSECS()
+# stringsecs()
 `stringsecs(<timestring>[, <precision>])`
 
   The stringsecs() function takes a string of the form produced by timestring() or etime() and converts it back into seconds.
@@ -6059,7 +6059,7 @@ You say, "301"
 - [CONVTIME()]
 - [ETIME()]
 :::
-# TR()
+# tr()
 `tr(<string>, <find>, <replace>)`
 
   This function translates every character in `<string>` that exists in `<find>` to the character at an identical position in `<replace>`. Ranges of characters separated by -'s are accepted. `<find>` and `<replace>` must be the same length after expansion of ranges. If a character exists more than once in `<find>`, only the last instance will be counted. The example below is the common ROT-13 algorithm for lower case strings, demonstrated with every letter explicitly listed, and with the equivalent but briefer character ranges. Literal -'s can be in `<find>` and `<replace>` if they are the first or last characters in the arguments.
@@ -6077,9 +6077,9 @@ You say, "hello"
 - [MERGE()]
 - [SPLICE()]
 :::
-# TRIM()
-# TRIMPENN()
-# TRIMTINY()
+# trim()
+# trimpenn()
+# trimtiny()
 `trim(<string>[, <characters to trim>[, <trim style>]])`<br>
 `trimpenn(<string>[, <characters to trim>[, <trim style>]])`<br>
 `trimtiny(<string>[, <trim style>[, <characters to trim>]])`
@@ -6109,8 +6109,8 @@ You say "Trim Test"
 - [SQUISH()]
 - [EDIT()]
 :::
-# TRUNC()
-# VAL()
+# trunc()
+# val()
 `trunc(<string>)`
 
   This function truncates floating point numbers to integers. It can also be used to return the leading numeric prefix of a string. If `<string>` does not start with a number, 0 is returned.
@@ -6133,7 +6133,7 @@ You say, "101"
 - [ROUND()]
 - [LEFT()]
 :::
-# TYPE()
+# type()
 `type(<object>)`
 
   This function returns the type of an object - one of PLAYER, THING, EXIT, ROOM or GARBAGE - or #-1 if the object can't be found.
@@ -6154,8 +6154,8 @@ ROOM
 - [HASTYPE()]
 - [TYPES OF OBJECTS]
 :::
-# UCSTR()
-# UCSTR2()
+# ucstr()
+# ucstr2()
 `ucstr(<string>)`<br>
 `ucstr2(<string>)`
 
@@ -6177,8 +6177,8 @@ say ucstr2(gr[chr(252)]n)
 - [LCSTR()]
 - [CAPSTR()]
 :::
-# UDEFAULT()
-# ULDEFAULT()
+# udefault()
+# uldefault()
 `udefault([<object>/]<attribute>, <default case>[, <arg0>[, ... , <arg29>]])`<br>
 `uldefault([<object>/]<attribute>, <default case>[, <arg0>[, ... <arg29>]])`
 
@@ -6208,7 +6208,7 @@ You say "-- BOOM --"
 - [ulocal()]
 - [LOCALIZE()]
 :::
-# UNIQUE()
+# unique()
 `unique(<list>[, <sort type>[, <delim>[, <osep>]]])`
 
   unique() returns a copy of `<list>` with consecutive duplicate items removed. It does not sort the list. The optional `<sort type>` describes what type of data is in the list; see [SORTING] for details. If no type is given, the elements are compared as strings. Elements of `<list>` are separated by `<delim>`, which defaults to a space. Each element of the output is separated by `<osep>`, which defaults to `<delim>`.
@@ -6228,8 +6228,8 @@ think unique(1|2|3|3, n, |, _)
 - [SETUNION()]
 - [SORT()]
 :::
-# V()
-# V-FUNCTION
+# v()
+# v-function
 `v(<variable>)`<br>
 `v(<integer>)`<br>
 `v(<attribute>)`
@@ -6253,7 +6253,7 @@ think unique(1|2|3|3, n, |, _)
 - [R()]
 - [attributes]
 :::
-# VADD()
+# vadd()
 `vadd(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the sum of two vectors. A vector is a list of numbers separated by spaces or `<delimiter>`.
@@ -6267,7 +6267,7 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [Vector functions]
 :::
-# VCROSS()
+# vcross()
 `vcross(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the 3-dimensional vector that is the cross product of its 3-dimensional argument vectors. The cross product is defined as:
@@ -6283,7 +6283,7 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [Vector functions]
 :::
-# VDIM()
+# vdim()
 `vdim(<vector>[, <delimiter>])`
 
   Returns the dimensionality of a vector.
@@ -6295,7 +6295,7 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [Vector functions]
 :::
-# VDOT()
+# vdot()
 `vdot(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the dot product of two vectors. A dot product is the sum of the products of the corresponding elements of the two vectors, e.g. vdot(a b c,d e f) = ad + be + cf. The vectors must be of the same length.
@@ -6307,7 +6307,7 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [Vector functions]
 :::
-# VMIN()
+# vmin()
 `vmin(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns a new vector made out of the minimums of each corresponding pair of numbers from the two vectors. The vectors must be of the same length.
@@ -6319,7 +6319,7 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [Vector functions]
 :::
-# VMAX()
+# vmax()
 `vmax(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns a new vector made out of the maximums of each corresponding pair of numbers from the two vectors. The vectors must be of the same length.
@@ -6331,8 +6331,8 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [Vector functions]
 :::
-# VERSION()
-# NUMVERSION()
+# version()
+# numversion()
 `version()`<br>
 `numversion()`
 
@@ -6355,7 +6355,7 @@ You say "1008001004"
 ::: seealso
 - [@version]
 :::
-# VISIBLE()
+# visible()
 `visible(<object>, <victim>[/<attribute>])`
 
   If no attribute name is provided, this function returns 1 if `<object>` can examine `<victim>`, or 0, if it cannot. If an attribute name is given, the function returns 1 if `<object>` can see the attribute `<attribute>` on `<victim>`, or 0, if it cannot.
@@ -6367,7 +6367,7 @@ You say "1008001004"
 - [CONTROLS()]
 - [VISUAL]
 :::
-# VMAG()
+# vmag()
 `vmag(<vector>[, <delimiter>])`
 
   Returns the magnitude of a vector, using a Euclidean distance metric. That is, for vector a b c d, returns sqrt(a^2+b^2+c^2+d^2).
@@ -6379,7 +6379,7 @@ You say "1008001004"
 ::: seealso
 - [Vector functions]
 :::
-# VMUL()
+# vmul()
 `vmul(<vector1|number1>, <vector2|number2>[, <delimiter>[, <osep>]])`
 
   Returns the result of either multiplying a vector by a number, or the element-wise product of two vectors. The element-wise product of a b c by w x z is aw bx cz
@@ -6393,7 +6393,7 @@ You say "1008001004"
 ::: seealso
 - [Vector functions]
 :::
-# VSUB()
+# vsub()
 `vsub(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the difference between two vectors.
@@ -6405,7 +6405,7 @@ You say "1008001004"
 ::: seealso
 - [Vector functions]
 :::
-# VUNIT()
+# vunit()
 `vunit(<vector>[, <delimiter>])`
 
   Returns the unit vector (a vector of magnitude 1), which points in the same direction as the given vector.
@@ -6419,8 +6419,8 @@ You say "1008001004"
 ::: seealso
 - [Vector functions]
 :::
-# WIDTH()
-# HEIGHT()
+# width()
+# height()
 # SCREENWIDTH
 # SCREENHEIGHT
 `width(<player|descriptor>[, <default>])`<br>
@@ -6433,7 +6433,7 @@ You say "1008001004"
   When used on something that's not a visible player, the functions return the default values.
 
   The intent of these functions is allow softcode that does formatting to be able to produce a display that can make full use of any given screen size.
-# WHERE()
+# where()
 `where(<object>)`
 
   This function returns the "true" location of an object. This is the standard location (i.e. where the object is) for things and players, the source room for exits, and #-1 for rooms.
@@ -6450,7 +6450,7 @@ You say "1008001004"
 - [HOME()]
 - [@whereis]
 :::
-# WIPE()
+# wipe()
 `wipe(<object>[/<attribute pattern>])`
 
   This function is equivalent to @wipe, and attempts to wipe all the attributes on `<object>` whose names match `<attribute pattern>`, or "*" if no pattern is given. It returns nothing. Like @wipe, this function will destroy entire attribute trees; to safely remove a single attribute, use attrib_set() instead.
@@ -6461,7 +6461,7 @@ You say "1008001004"
 - [ATTRIB_SET()]
 - [SET()]
 :::
-# WORDPOS()
+# wordpos()
 `wordpos(<list>, <number>[, <delimiter>])`
 
   Returns the number of the word within `<list>` where the `<number>`th character falls. Characters and words are numbered starting with 1, and `<delimiter>`s between words are treated as belonging to the word that follows them. If the list is less than `<number>` characters long, #-1 is returned. `<delimiter>` defaults to a space.
@@ -6477,7 +6477,7 @@ You say, "2"
 - [MEMBER()]
 - [POS()]
 :::
-# WORDS()
+# words()
 `words(<list>[, <delimiter>])`
 
   words() returns the number of elements in `<list>`. Elements of `<list>` are separated by `<delimiter>`, which defaults to a space.
@@ -6498,7 +6498,7 @@ think words(1 2%b%b3, %b)
 - [STRLEN()]
 - [ITEMS()]
 :::
-# WRAP()
+# wrap()
 `wrap(<string>, <width>[, <first line width>[, <line separator>]])`
 
   This function takes `<string>` and splits it into lines containing no more than `<width>` characters each. If `<first line width>` is given, the first line may have a different width. If `<line separator>` is given, it is inserted between each line; by default the separator is a newline (%r).
@@ -6509,10 +6509,10 @@ think words(1 2%b%b3, %b)
 @desc here=wrap([space(4)]Indented paragraph, 72)
 @desc here=iter(wrap(Hanging indent, 72, 76, %r), switch(#@, >1, space(4))%i0, %r, %r)
 ```
-# XATTR()
-# XATTRP()
-# REGXATTR()
-# REGXATTRP()
+# xattr()
+# xattrp()
+# regxattr()
+# regxattrp()
 `xattr(<object>[/<attribute pattern>], <start>, <count>[, <osep>])`<br>
 `xattrp(<object>[/<attribute pattern>], <start>, <count>[, <osep>])`<br>
 `regxattr(<object>[/<regexp>], <start>, <count>[, <osep>])`<br>
@@ -6534,7 +6534,7 @@ think words(1 2%b%b3, %b)
 - [WILDCARDS]
 - [regexp]
 :::
-# XOR()
+# xor()
 `xor(<boolean1>, <boolean2>[, ... , <booleanN>])`
 
   Takes two or more booleans and returns a 1 if one, and only one, of the inputs is equivalent to true(1).
@@ -6548,8 +6548,8 @@ think words(1 2%b%b3, %b)
 - [NOR()]
 - [LMATH()]
 :::
-# XVCON()
-# XCON()
+# xvcon()
+# xcon()
 `xcon(<object>, <start>, <count>)`<br>
 `xvcon(<object>, <start>, <count>)`
 
@@ -6565,8 +6565,8 @@ think words(1 2%b%b3, %b)
 - [LCON()]
 - [LVCON()]
 :::
-# XVEXITS()
-# XEXITS()
+# xvexits()
+# xexits()
 `xexits(<room>, <start>, <count>)`<br>
 `xvexits(<room>, <start>, <count>)`
 
@@ -6582,8 +6582,8 @@ think words(1 2%b%b3, %b)
 - [LEXITS()]
 - [LVEXITS()]
 :::
-# XVPLAYERS()
-# XPLAYERS()
+# xvplayers()
+# xplayers()
 `xplayers(<object>, <start>, <count>)`<br>
 `xvplayers(<object>, <start>, <count>)`
 
@@ -6601,10 +6601,10 @@ think words(1 2%b%b3, %b)
 - [XVTHINGS()]
 - [XVEXITS()]
 :::
-# XVTHINGS()
-# XTHINGS()
-# XOBJECTS()
-# XVOBJECTS()
+# xvthings()
+# xthings()
+# xobjects()
+# xvobjects()
 `xthings(<object>, <start>, <count>)`<br>
 `xvthings(<object>, <start>, <count>)`
 
@@ -6622,10 +6622,10 @@ think words(1 2%b%b3, %b)
 - [XVPLAYERS()]
 - [XVEXITS()]
 :::
-# XWHO()
-# XWHOID()
-# XMWHO()
-# XMWHOID()
+# xwho()
+# xwhoid()
+# xmwho()
+# xmwhoid()
 `xwho([<looker>, ]<start>, <count>)`<br>
 `xmwho(<start>, <count>)`<br>
 `xwhoid([<looker>, ]<start>, <count>)`<br>
@@ -6646,7 +6646,7 @@ think words(1 2%b%b3, %b)
 - [NMWHO()]
 - [ZWHO()]
 :::
-# ZFIND()
+# zfind()
 `zfind(<zone>[, <osep>])`
 
   Returns the dbrefs of every object @chzone'd to `<zone>` that you may examine, separated by `<osep>` (a space by default).
@@ -6662,8 +6662,8 @@ think words(1 2%b%b3, %b)
 - [@chzone]
 - [lsearch()]
 :::
-# ZWHO()
-# ZMWHO()
+# zwho()
+# zmwho()
 `zwho(<object>[, <viewer>])`<br>
 `zmwho(<object>)`
 
@@ -6679,8 +6679,8 @@ think words(1 2%b%b3, %b)
 - [ZFUN()]
 - [ZEMIT()]
 :::
-# ZEMIT()
-# NSZEMIT()
+# zemit()
+# nszemit()
 `zemit(<zone>, <message>)`<br>
 `nszemit(<zone>, <message>)`
 
@@ -6696,7 +6696,7 @@ think words(1 2%b%b3, %b)
 - [ZWHO()]
 - [zones]
 :::
-# ZFUN()
+# zfun()
 `zfun(<attribute>[, <arg0>[, <arg1>[, ... , <arg29>]]])`
 
   This function evaluates an attribute on the caller's Zone object. It is essentially identical to
@@ -6712,7 +6712,7 @@ think words(1 2%b%b3, %b)
 - [ZWHO()]
 - [zones]
 :::
-# ZONE()
+# zone()
 `zone(<object>[, <new zone>])`
 
   Returns `<object>`'s zone, or #-1 if it has no zone. You must be able to examine the object; if you can't, zone() returns #-1.
@@ -6726,7 +6726,7 @@ think words(1 2%b%b3, %b)
 - [ZWHO()]
 - [zemit() ZONES]
 :::
-# UPTIME()
+# uptime()
 `UPTIME([<type>[, <precision>]])`
 
   This function returns the time, as a number of seconds, that something happend (or will happen). Exactly what is returned depends on the given `<type>`, which should be one of:
@@ -6755,7 +6755,7 @@ think words(1 2%b%b3, %b)
 - [@dump]
 - [@shutdown]
 :::
-# SUGGEST()
+# suggest()
 `SUGGEST(<category>, <word>[, <seperator>[, <limit>]])`
 
   Returns a list of suggested alternatives to `<word>` from vocabulary words known in the given `<category>`. `<seperator>` defaults to space. `<limit>` controls how many suggestions are returned, and defaults to 20.
@@ -6774,7 +6774,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 ::: seealso
 - [@SUGGEST]
 :::
-# CONNRECORD()
+# connrecord()
 `CONNRECORD(<id>[, <osep>])`
 
   This Wizard-only function returns information about a connection if enhanced logging is enabled.
@@ -6791,7 +6791,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 ::: seealso
 - [connlog()]
 :::
-# ADDRLOG()
+# addrlog()
 `ADDRLOG([<count>, ]ip|hostname, <pattern>[, <osep>])`
 
   Searches the log of unique sites that have connected to the mush and returns a list of 'IPADDRESS HOSTNAME' pairs that match the given field with the given wildcard pattern, separated by `<osep>`, which defaults to |. If 'count' is given, returns the total number of matches instead.
@@ -6805,7 +6805,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 - [connlog()]
 - [CONNRECORD()]
 :::
-# URLENCODE()
+# urlencode()
 `URLENCODE(<string>)`
 
   This function converts its argument to a URL-encoded string where everything but a-z, A-Z, 0-9, -, ., _, and ~ are converted into %NN where NN is a hex code for their character value.
@@ -6815,7 +6815,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 - [URLDECODE()]
 - [@HTTP]
 :::
-# URLDECODE()
+# urldecode()
 `URLDECODE(<string>)`
 
   This function takes a URL-encoded string and returns it in its decoded form. Unprintable characters are converted to question marks.
@@ -6825,7 +6825,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 - [URLENCODE()]
 - [@HTTP]
 :::
-# HMAC()
+# hmac()
 `HMAC(<digest>, <key>, <text>[, <encoding>])`
 
   Computes the HMAC (message authentication code) hash for `<text>` using the passphrase `<key>` and the given hash function `<digest>`, which can be any supported by digest(). `<encoding>` can be base16 (The default) or base64.

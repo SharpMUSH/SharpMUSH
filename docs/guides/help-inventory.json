@@ -7617,14 +7617,6 @@
       "file": "sharpflag.md",
       "corpus": "help",
       "names": [
-        "APPROVED"
-      ],
-      "canonical": "APPROVED"
-    },
-    {
-      "file": "sharpflag.md",
-      "corpus": "help",
-      "names": [
         "AUDIBLE"
       ],
       "canonical": "AUDIBLE"

@@ -50,7 +50,7 @@
   ]
 }
 -->
-# RENDERMARKDOWNCUSTOM()
+# rendermarkdowncustom()
 
 `rendermarkdowncustom(<markdown>, <object>[, <width>])`
 

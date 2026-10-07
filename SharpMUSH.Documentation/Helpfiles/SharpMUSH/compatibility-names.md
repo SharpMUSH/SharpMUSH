@@ -33,7 +33,7 @@
   ]
 }
 -->
-# COMPATIBILITY NAMES
+# Compatibility Names
 
 Functions and commands that exist in SharpMUSH and not in PennMUSH, or that take their arguments in a
 different order.
@@ -129,11 +129,11 @@ arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0
 
 **A choice.**
 
-**PennMUSH** has no `APPROVED`, `SCENE_ROOM` or `TRUECOLOR` flag and no `See_OOB` or `Unkillable`
+**PennMUSH** has no `SCENE_ROOM` or `TRUECOLOR` flag and no `See_OOB` or `Unkillable`
 power.<br>
-**SharpMUSH** defines all five, so `@list flags`, `@list powers`, `list(flags)` and `list(powers)` name
+**SharpMUSH** defines all four, so `@list flags`, `@list powers`, `list(flags)` and `list(powers)` name
 them among PennMUSH's own, in the same sorted, comma-separated line.<br>
-**Why.** `APPROVED` is what `isapproved()` reads, `SCENE_ROOM` belongs to the scene plugin and
+**Why.** `SCENE_ROOM` belongs to the scene plugin and
 `TRUECOLOR` marks a client that takes 24-bit colour; `See_OOB` and `Unkillable` are reserved for
 SharpMUSH subsystems. An imported PennMUSH database has none of them set.<br>
 **Workaround.** None needed for imported code: nothing PennMUSH wrote can set or test a name it never

@@ -17,7 +17,7 @@
 }
 -->
 
-# regexp classes
+# Regular Expression Classes
 
 SharpMUSH uses .NET character classes and Unicode categories. POSIX bracket classes such as `[[:digit:]]`, `[[:alpha:]]`, and `[[:^word:]]` are not supported. Convert them when porting PennMUSH patterns; .NET can accept some of this text as a different pattern without reporting an error.
 

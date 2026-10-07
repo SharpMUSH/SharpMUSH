@@ -1,5 +1,5 @@
-# MAIL
-# @MAIL
+# Mail
+# @mail
 
 - `@mail[/<switches>] [<msg-list>[=<target>]]`
 - `@mail[/<switches>] <player-list>=[<subject>/]<message>`
@@ -36,10 +36,11 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 - [@MAILQUOTA]
 :::
 
-# MAIL-READING
-# @MAIL/READ
-# @MAIL/LIST
-# @MAIL/CSTATS
+# Reading Mail
+# Mail-reading
+# @mail/read
+# @mail/list
+# @mail/cstats
 
 - `@mail <msg #>`
 - `@mail/read <msg-list>`
@@ -60,9 +61,10 @@ A *<player-list>* is a space-separated list of recipients, which may be:
 `@mail/cstats`
 * Shows how many messages you have, in the same format as the automatic mail check when you connect.
 
-# MAIL-SENDING
-# @MAIL/SEND
-# @MAIL/FWD
+# Sending Mail
+# Mail-sending
+# @mail/send
+# @mail/fwd
 
 - `@mail[/switch] <player-list>=[<subject>]/<msg>`
 * This sends the message *<msg>* to all players in *<player-list>*.
@@ -80,14 +82,15 @@ If you have an @mailsignature attribute set on yourself, its contents will be ev
 - `@mail/fwd <msg-list>=<player-list>`
 * This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded".
 
-# MAIL-OTHER
-# @MAIL/CLEAR
-# @MAIL/UNCLEAR
-# @MAIL/PURGE
-# @MAIL/TAG
-# @MAIL/UNTAG
-# @MAIL/UNREAD
-# @MAIL/STATUS
+# Other Mail Commands
+# Mail-other
+# @mail/clear
+# @mail/unclear
+# @mail/purge
+# @mail/tag
+# @mail/untag
+# @mail/unread
+# @mail/status
 
 - `@mail/clear [<msg-list> | all]`
 - `@mail/unclear [<msg-list> | all]`
@@ -122,10 +125,11 @@ To clear all mail from Paul and Chani:
 * *<status>* can be one of: tagged, untagged, cleared, uncleared, read, unread, urgent or unurgent.
 * Read marks a new message as read without reading it, urgent/unurgent toggle the urgent flag, and the others are equivalent to @mail/tag, @mail/untag, @mail/clear, @mail/unclear and @mail/unread respectively.
 
-# MAIL-FOLDERS
-# @MAIL/FOLDER
-# @MAIL/UNFOLDER
-# @MAIL/FILE
+# Mail Folders
+# Mail-folders
+# @mail/folder
+# @mail/unfolder
+# @mail/file
 
 The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail can only be in 1 folder at a time. Folder 0 is the "inbox" where new mail is received. Most @mail commands operate on only the current folder.
 
@@ -150,9 +154,10 @@ The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail 
 - [@MAILFILTER]
 :::
 
-# MAIL-REVIEWING
-# @MAIL/REVIEW
-# @MAIL/RETRACT
+# Reviewing Mail
+# Mail-reviewing
+# @mail/review
+# @mail/retract
 
 - `@mail/review [<player>]`
 * Reviews the messages you have sent to *<player>*, or all messages you've sent if no *<player>* is specified.
@@ -163,7 +168,7 @@ The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail 
 - `@mail/retract <player>=<msglist>`
 * Retracts (deletes) unread messages you have sent to *<player>*.
 
-# @MAILQUOTA
+# @mailquota
 
 - `@mailquota <player>[=<limit>]`
 
@@ -176,7 +181,7 @@ This attribute allows wizards to change the maximum number of messages a player 
 > @wall Please @mail any and all problems to Complaints_Department.
 ```
 
-# @MAILFILTER
+# @mailfilter
 # MAILFILTER
 
 The @mailfilter attribute specifies automatic filing of incoming @mail messages into folders. When an @mail message is received, the contents of @mailfilter are evaluated, with the following arguments passed:
@@ -198,7 +203,7 @@ Filter urgent messages into folder 1
 - [MAIL-FOLDERS]
 :::
 
-# @MAILSIGNATURE
+# @mailsignature
 # MAILSIGNATURE
 
 - `@mailsignature <object>[=<signature>]`
@@ -216,7 +221,8 @@ When set, this attribute is evaluated and appended to any @mail messages sent by
 - [MAIL-SENDING]
 :::
 
-# MAIL-ADMIN
+# Mail Administration
+# Mail-admin
 
 The @mail command can also take the following switches:
 
@@ -254,7 +260,7 @@ Available functions:
 * [mailtime]
 * [malias]
 
-# FOLDERSTATS()
+# folderstats()
 
 - `folderstats()`
 - `folderstats(<folder #>)`
@@ -268,7 +274,7 @@ folderstats() returns the number of read, unread, and cleared messages in a spec
 - [mailstats]
 :::
 
-# MAIL()
+# mail()
 
 - `mail()`
 - `mail(<player name>)`
@@ -291,7 +297,7 @@ When given numeric arguments, mail() returns the text of the corresponding messa
 - [mailfrom]
 :::
 
-# MAILLIST()
+# maillist()
 
 - `maillist([<player>, ]<message-list>)`
 
@@ -313,10 +319,10 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 - [mailfrom]
 :::
 
-# MAILFROM()
-# MAILTIME()
-# MAILSTATUS()
-# MAILSUBJECT()
+# mailfrom()
+# mailtime()
+# mailstatus()
+# mailsubject()
 
 - `mailfrom([<player>, ][<folder #>:]<mail message #>)`
 - `mailtime([<player>, ][<folder #>:]<mail message #>)`
@@ -334,9 +340,9 @@ maillist() returns a list of all *<player>*'s @mail messages which match the giv
 - [maillist]
 :::
 
-# MAILSTATS()
-# MAILDSTATS()
-# MAILFSTATS()
+# mailstats()
+# maildstats()
+# mailfstats()
 
 - `mailstats([<player>])`
 - `maildstats([<player>])`
@@ -358,13 +364,13 @@ The mail*stats() functions return data like @mail/*stats does. You either must u
 - [folderstats]
 :::
 
-# MAILSEND()
+# mailsend()
 
 - `mailsend(<player>,[<subject>/]<message>)`
 
 This function sends a message to a player, just like @mail/send. It returns nothing if successful, or an error message.
 
-# MALIAS()
+# malias()
 
 - `malias([<delimiter>])`
 - `malias(<malias name>)`

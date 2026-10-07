@@ -1,5 +1,5 @@
-# @LOCK-SIMPLE
-# @LOCK-OBJID
+# @lock-simple
+# @lock-objid
 
 **SIMPLE LOCKS**
 
@@ -17,10 +17,10 @@ This locks the object "My Toy" to you and you alone. It is recommended that you 
 
 For backwards compatibility, `OBJID^<object>` is an alias for `=<object>`.
 
-# @LOCK-OWNER
-# @LOCK-CARRY
+# @lock-owner
+# @lock-carry
 
-## OWNER LOCK
+## Owner Lock
 
 An "owner" lock allows you to lock something to anything owned by the same player:
 ```sharp
@@ -28,7 +28,7 @@ An "owner" lock allows you to lock something to anything owned by the same playe
 ```
 This locks "Box" to anything owned by the owner of "My Toy" (since players own themselves, that includes the owner as well).
 
-## CARRY LOCK
+## Carry Lock
 You can lock an object to something that has to be carried:
 ```sharp
 @lock Door = +Secret Door Key
@@ -43,9 +43,9 @@ This locks the exit "Disneyworld Entrance" to either the object "Child" -or- to 
 
 This is the same as `@lock Entrance=+Child|=Child`.
 
-# @LOCK-ATTRIBUTE
+# @lock-attribute
 
-## ATTRIBUTE LOCKS
+## Attribute Locks
 You can lock an object to an attribute on the person trying to pass the lock (as long as the object can "see" that attribute):
 
 `@lock <object>=<attribute>:<value>`
@@ -62,9 +62,9 @@ This would lock the exit "Men's Room" to anyone with a SEX attribute starting wi
 ```
 This would lock the exit "A-F" to anyone with a ICNAME attribute starting with a letter "less than" the letter "g". This assumes that ICNAME is visual or the object with the lock can see it.
 
-# @LOCK-NAME
+# @lock-name
 
-## NAME LOCKS
+## Name Locks
 You can test for objects matching a given name by using the below format:
 
 `@lock <object>=name^<pattern>`
@@ -76,15 +76,15 @@ For example, to lock "Bob's Tools" to only people with a name beginning with Bob
 @lock/use Bob's Tools=name^bob*
 ```
 
-# @LOCK-BIT
-# @LOCK-FLAG
-# @LOCK-TYPE
-# @LOCK-POWER
-# @LOCK-ROLE
-# @LOCK-PERM
-# @LOCK-CHANNEL
+# @lock-bit
+# @lock-flag
+# @lock-type
+# @lock-power
+# @lock-role
+# @lock-perm
+# @lock-channel
 
-## BIT LOCKS
+## Bit Locks
 You can test for set flags, powers, roles, permissions, or object types in a lock directly, without using an evaluation lock, with these formats:
 
 `@lock <object>=flag^<flag>`<br>
@@ -113,10 +113,10 @@ You can also test for channel membership with:
 
 `@lock <object>=channel^<channel>`
 
-# @LOCK-DBREFLIST
-# @LOCK-LIST
+# @lock-dbreflist
+# @lock-list
 
-## LIST LOCK
+## List Lock
 You can test to see if the enactor is a member of a space-separated list of dbrefs or objids on an attribute on the object, with:
 
 `@lock <object>=dbreflist^<attributename>`
@@ -128,9 +128,9 @@ For example:
 @lock/use commands = !dbreflist^deny & dbreflist^allow 
 ```
 
-# @LOCK-INDIRECT
+# @lock-indirect
 
-## INDIRECT LOCKS
+## Indirect Locks
 An "indirect" lock allows you to lock something to the same thing as another object (very useful in setting channel locks; see [@CHANNEL CLOCK]):
 ```sharp
 @lock Second Puppet=@First Puppet
@@ -141,9 +141,9 @@ This locks the object "Second Puppet" to whatever the object "First Puppet" is l
 ```
 Second Puppet's basic lock now checks First Puppet's use lock.
 
-# @LOCK-HOST
+# @lock-host
 
-## HOST LOCKS
+## Host Locks
 
 You can check to make sure an object is owned by a player connected from a specific host or IP address using the following:
 
@@ -165,10 +165,10 @@ This locks *<object>* to players (and the objects of players) currently connecte
 - [LASTSITE]
 :::
 
-# @LOCK/BASIC
-# @LOCK/ENTER
-# @LOCK/LEAVE
-# @LOCK/TELEPORT
+# @lock/basic
+# @lock/enter
+# @lock/leave
+# @lock/teleport
 
 ## Basic Lock
 For exits, this lock controls who can pass through the exit.<br>
@@ -218,9 +218,9 @@ For rooms, the Teleport lock controls who can "@teleport" into the room, if it h
 - [lock keys]
 :::
 
-# @LOCK/FOLLOW
-# @LOCK/FORWARD
-# @LOCK/DROPTO
+# @lock/follow
+# @lock/forward
+# @lock/dropto
 
 ## Follow Lock
 For players and things, controls who may "follow" the object. Has no meaning for rooms or exits.
@@ -253,9 +253,9 @@ For rooms, only objects which pass this lock will be sent to the rooms Drop-To. 
 - [lock keys]
 :::
 
-# @LOCK/USE
-# @LOCK/COMMAND
-# @LOCK/LISTEN
+# @lock/use
+# @lock/command
+# @lock/listen
 
 ## Use Lock
 For players, things and rooms, this lock controls who may "use" the object. You must also pass an object's Use lock to trigger $-commands or ^-listens on it (as well as the Command/Listen lock; see below). When an object is used as a Channel Mogrifier, only players who pass the object's Use lock will have their speech on the channel mogrified. Has no meaning for exits.
@@ -287,11 +287,11 @@ For players, things and rooms, you must pass this lock (as well as the Use lock)
 - [listening listen patterns]
 :::
 
-# @LOCK/PAGE
-# @LOCK/SPEECH
-# @LOCK/MAIL
-# @LOCK/MAILFORWARD
-# @LOCK/INTERACT
+# @lock/page
+# @lock/speech
+# @lock/mail
+# @lock/mailforward
+# @lock/interact
 
 ## Page Lock
 For players, things and rooms, you must pass this lock to page or @pemit to the object, or @remit inside it. Meaningless for exits.
@@ -332,13 +332,13 @@ Controls who can forward @mail to this object via @mailforward.
 ## Interact Lock
 Controls whose indirect speech you'll hear (from say, pose, channels, @emit, etc). Does not block sound directed specifically at you, such as page, whisper, @pemit, etc; use @lock/page for those. **Note**: if sound is blocked by the interact lock, the speaker will not be informed.
 
-# @LOCK/DROP
-# @LOCK/DROPIN
-# @LOCK/GIVE
-# @LOCK/FROM
-# @LOCK/PAY
-# @LOCK/RECEIVE
-# @LOCK/TAKE
+# @lock/drop
+# @lock/dropin
+# @lock/give
+# @lock/from
+# @lock/pay
+# @lock/receive
+# @lock/take
 
 ## Drop Lock
 For players and things, controls who can drop the object. Has no meaning for exits. On rooms, has the same meaning as @lock/dropin.
@@ -375,11 +375,10 @@ Controls who can take from this container.
 - [@LOCK/BASIC]
 :::
 
-# @LOCK/FILTER
-# @LOCK/INFILTER
+# @lock/filter
+# @lock/infilter
 
-## Filter Lock
-## Infilter Lock
+## Filter and Infilter Locks
 These are lock versions of @filter and @infilter, respectively. Anyone who fails to pass the lock will have their speech filtered. The sound being made is passed to evaluation locks as %0.
 
 
@@ -388,9 +387,9 @@ These are lock versions of @filter and @infilter, respectively. Anyone who fails
 - [@infilter]
 :::
 
-# @LOCK/CONTROL
-# @LOCK/DESTROY
-# @LOCK/EXAMINE
+# @lock/control
+# @lock/destroy
+# @lock/examine
 
 ## Control Lock
 Allows objects which would not normally control something to do so. Does not work for players.
@@ -418,12 +417,12 @@ Limits who can examine a VISUAL object.
 - [VISUAL]
 :::
 
-# @LOCK/ZONE
-# @LOCK/CHZONE
-# @LOCK/CHOWN
-# @LOCK/PARENT
-# @LOCK/LINK
-# @LOCK/OPEN
+# @lock/zone
+# @lock/chzone
+# @lock/chown
+# @lock/parent
+# @lock/link
+# @lock/open
 
 ## Zone Lock
 Objects which pass a SHARED player's @lock/zone control all the objects the shared player owns. If the zone_control_zmp_only @config option is off, anything passing the @lock/zone of other objects will control everything @chzoned to the object.
@@ -484,8 +483,8 @@ Controls who can @open an exit from this OPEN_OK room.
 - [OPEN_ANYWHERE POWER]
 :::
 
-# @LOCK/USER
-# @LOCK/USER:<NAME>
+# @lock/user
+# @lock/user:<name>
 
 ## User-defined Locks
 User-defined locks have no hardcoded meaning. They allow you to set locks for any purpose, which you can test using the elock() function. *<name>* can be anything which is a valid attribute name. For example, in a combat system you might use a "wield" @lock on weapons, similar to:

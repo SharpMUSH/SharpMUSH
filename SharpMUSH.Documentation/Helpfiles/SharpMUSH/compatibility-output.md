@@ -23,7 +23,7 @@
   ]
 }
 -->
-# COMPATIBILITY OUTPUT
+# Compatibility Output
 
 `render(<string>, <formats>)` converts a string's markup for something outside the game: a bot, a
 web page, an SQL column. The formats are `ansi`, `html`, `noaccents` and `markup`, as in PennMUSH,

@@ -37,13 +37,13 @@
   }
 }
 -->
-# roles
+# Roles
 
 A role is a named set of permissions. Roles decide what an object may do: in the game (being a wizard, the PennMUSH powers, controlling other objects) and in the web portal (wiki, media, packages, configuration, and so on). They work like the roles on a Discord server.
 
 Both objects and accounts hold roles. An object holds the roles assigned to it; a character linked to an account also holds the account's. Nothing is inherited from an object's owner.
 
-Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and `@permission` for the list of permissions. A game can add permissions of its own, such as `bbs.moderate`, with `@permission/define` (see [@permission define]), and a package can bring its own (see [roles packages]).
+Each role sets every permission to one of three states: Allow, Deny, or neither (it leaves the permission to other roles). Each role also has a priority, which places it in the role hierarchy. See [@role] for the commands, and [@permission] for the list of permissions. A game can add permissions of its own, such as `bbs.moderate`, with `@permission/define` (see [@permission define]), and a package can bring its own (see [roles packages]).
 
 ## How roles combine
 
@@ -73,9 +73,12 @@ To take a permission away from one object, use an override (`@permission/deny`).
 | 20 | royalty | `players.view`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.admin` |
 | 15 | builder | `diagnostics.profile`, `game.builder` |
 | 12 | helper | `players.view`, `queue.inspect` |
+| 11 | approved | nothing; [isapproved()] reads it |
 | 10 | player | `wiki.create`, `wiki.edit`, `media.upload`, `softcode.use`, `snapshots.capture`, `snapshots.restore`, `jobs.manage.own`, `queue.inspect.own`, `queue.control.own` |
 | 0 | guest | `game.guest` |
 | 0 | everyone | `wiki.read` |
+
+`approved` marks a character that has met the game's own bar for full participation. Nothing in the engine assigns it; a game assigns it when its own bar is met (a finished chargen, a staff review), with `@role/assign <player>=approved`.
 
 `helper` and `moderator` are ordinary roles: assign them with `@role/assign`, and edit or delete them as you like. They are created only in a new game.
 

@@ -38,7 +38,7 @@
   ]
 }
 -->
-# COMPATIBILITY ARGUMENTS
+# Compatibility Arguments
 
 Functions that accept a different number of arguments here. Every one of these is **additive**: the
 call you would write for PennMUSH keeps its PennMUSH meaning, and the extra argument is optional.

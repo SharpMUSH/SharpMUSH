@@ -30,7 +30,6 @@ Wizards and objects with the pick_dbref power can also specify the dbrefs of gar
 
 ## Room and exit examples
 
-### Examples
 ```sharp
 > @dig Kitchen
 ```

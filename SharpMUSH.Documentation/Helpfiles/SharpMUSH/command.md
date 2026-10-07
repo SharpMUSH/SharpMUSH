@@ -74,7 +74,6 @@ Commands added with `@command/add`, like other standard commands, are always cas
 
 ## Added command example
 
-### Examples
 ```sharp
 > @create Dining Machine
 > &eat dining=$eat *:@remit %L=%n takes a bite of %0.

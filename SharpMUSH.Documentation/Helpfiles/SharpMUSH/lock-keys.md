@@ -19,7 +19,7 @@
   }
 }
 -->
-# lock keys
+# Lock Keys
 
 There are many key types, and it is also possible to form more complex locks by using boolean symbols and grouping. See [lock keys combining lock keys] for examples.
 

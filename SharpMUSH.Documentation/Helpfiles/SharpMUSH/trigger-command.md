@@ -77,7 +77,6 @@ Walker slaps himself around with a trout
 
 ## Trigger examples
 
-### Examples
 ```sharp
 > &GREET me=POSE waves hi.
 > @trigger me/GREET

@@ -22,17 +22,17 @@
   }
 }
 -->
-# restrict
+# Restrict
 
 Commands, functions and attributes can have their permission levels controlled in the mush config files, or by wizards from the game via `@command`, `@function` and `@attribute`.
 
 In the config file, the syntax is:<br>
-`restrict_command <command-name> <restriction> [" <error message>]`
+`restrict_command <command-name> <restriction> [" <error message>]`<br>
     restrict_function `<function-name>` `<restriction>`<br>
     restrict_attribute `<attribute-name>` `<restriction>`
 
 From the game:<br>
-`@command/restrict <command-name>=<restriction> [" <error message>]`
+`@command/restrict <command-name>=<restriction> [" <error message>]`<br>
     `@function`/restrict `<function-name>`=`<restriction>`<br>
     `@attribute`/access `<attribute-name>`=`<restriction>`
 

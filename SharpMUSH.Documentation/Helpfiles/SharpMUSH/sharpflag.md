@@ -1,5 +1,5 @@
-# FLAG LIST
-# FLAGS LIST
+# Flag List
+# Flags List
 
 | Flag | Title | Flag | Title | Flag | Title |
 |------|-------|------|-------|------|-------|
@@ -17,7 +17,7 @@
 | n | No_command | o | On-vacation | p | Puppet |
 | r | Royalty | s | Suspect | t | Transparent |
 | u | Uninspected | v | Verbose | w | No_warn |
-| x | Cloudy/Terse | + | Approved |  |  |
+| x | Cloudy/Terse |  |  |  |  |
 
 Additional Flags:
 * Chan_usefirstmatch
@@ -64,23 +64,6 @@ ANSI highlight can also be enabled on a per-connection basis with `@sockset`.
 - [TRUECOLOR]
 - [@config]
 - [@SOCKSET]
-:::
-
-# APPROVED
-
-**Flag: APPROVED (players)**
-
-Marks a character as approved: it has cleared whatever bar this game sets for full participation. Royalty and above can set and unset it.
-
-SharpMUSH ships the flag and the `isapproved()` predicate ("royalty or above, or APPROVED") and deliberately ships no policy for what earns it. Each game decides that for itself (a finished chargen, a staff review, a waiting period) and sets the flag when its own bar is met. Nothing in the engine sets APPROVED on its own.
-
-Systems built on top of it use `isapproved()` rather than testing the flag directly, so staff are implicitly approved and a game that wants a different rule can change it in one place. The bundled `scene` package works this way: any character may browse the schedule and read scene information, but only an approved character may join, own, administer or otherwise be associated with a scene.
-
-
-::: seealso
-- [ISAPPROVED()]
-- [ROYALTY]
-- [@flag]
 :::
 
 # AUDIBLE

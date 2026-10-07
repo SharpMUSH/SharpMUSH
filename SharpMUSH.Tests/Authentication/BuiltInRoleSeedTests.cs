@@ -61,6 +61,17 @@ public class BuiltInRoleSeedTests
 	}
 
 	[Test]
+	public async Task ApprovedIsASystemRoleJustAbovePlayerThatAllowsNothing()
+	{
+		var approved = BuiltInRoles.All.Single(r => r.Slug == BuiltInRoles.ApprovedSlug);
+		await Assert.That(approved.IsSystem).IsTrue();
+		await Assert.That(approved.Category).IsEqualTo(Categories.System);
+		await Assert.That(approved.Permissions).IsEmpty();
+		await Assert.That(approved.Priority).IsBetween((int)PortalRole.Player + 1, BuiltInRoles.Starters.Min(r => r.Priority) - 1);
+		await Assert.That(BuiltInRoles.IsImplicit(approved.Slug)).IsFalse();
+	}
+
+	[Test]
 	public async Task SeedingTwiceChangesNothing()
 	{
 		var seeded = BuiltInRoles.SeedChanges([], 1);

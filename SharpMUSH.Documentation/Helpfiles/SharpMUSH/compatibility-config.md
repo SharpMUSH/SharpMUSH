@@ -28,7 +28,7 @@
   ]
 }
 -->
-# COMPATIBILITY CONFIG
+# Compatibility Config
 
 These configuration options change how existing code evaluates. All of them are read at evaluation
 time, so changing one takes effect on the next call rather than at the next restart. Set them with

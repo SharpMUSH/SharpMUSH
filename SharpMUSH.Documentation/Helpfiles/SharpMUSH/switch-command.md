@@ -70,7 +70,6 @@ When using `@switch/inline`, an @break in an `<action>` will stop the calling ac
 
 ## Pattern matching examples
 
-### Examples
 ```sharp
 > &SWITCH_EX thing=$foo *: @switch %0=*a*, :acks, *b*, :bars, :glurps
 > foo abc
@@ -100,7 +99,6 @@ thing says, "Before: 'foob'. After: 'rbaz'
 
 ## Queue ordering examples
 
-### Examples
 ```sharp
 > &SWITCH_EX me=$foo *:think before ; @switch %0=1,think one ; think after
 > foo 1

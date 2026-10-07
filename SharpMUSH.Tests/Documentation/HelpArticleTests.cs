@@ -1,3 +1,4 @@
+using Markdig.Syntax;
 using SharpMUSH.Documentation;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -163,6 +164,61 @@ public class HelpArticleTests
 	public async Task WebLineBreaksAreWhatTheTerminalPrints(string markdown, string expected)
 	{
 		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("Commands:<br>\n    @set me=x<br>\n    &attr me=y",
+		"<p>Commands:<br><span class=\"help-indent\">    </span>@set me=x<br><span class=\"help-indent\">    </span>&amp;attr me=y</p>\n")]
+	[Arguments("  Example:<br>\n    > think [MATCHING]",
+		"<p><span class=\"help-indent\">  </span>Example:<br><span class=\"help-indent\">    </span>&gt; think <a href=\"/help/MATCHING\">MATCHING</a></p>\n")]
+	[Arguments("Hard break  \n  indented.", "<p>Hard break<br /><span class=\"help-indent\">  </span>indented.</p>\n")]
+	[Arguments("1. Either:<br>\n     a. this", "<ol>\n<li>Either:<br><span class=\"help-indent\">  </span>a. this</li>\n</ol>\n")]
+	[Arguments("Prose that\n    wraps.", "<p>Prose that wraps.</p>\n")]
+	public async Task WebKeepsTheIndentationOfALineAfterABreak(string markdown, string expected)
+	{
+		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// A topic shows one title. Stacked headings name one topic several ways: the first H1 of a stack is
+	/// the title and the rest are its aliases, which the reader never sees as headings. A heading with
+	/// nothing under it but one other heading (<c>## Trigger examples</c>, then <c>### Examples</c>)
+	/// shows two headings for one thing. A section opening straight into several subsections is fine.
+	/// </summary>
+	[Test]
+	public async Task EveryTopicShowsOneTitleAndNoRedundantHeadings()
+	{
+		var offending = new List<string>();
+		foreach (var file in TestPaths.Helpfiles.EnumerateFiles("*.md", SearchOption.AllDirectories))
+		{
+			var corpus = file.Directory!.Name is "ahelp" or "news" ? file.Directory.Name : "help";
+			foreach (var parsed in HelpArticleParser.Parse(File.ReadAllText(file.FullName), corpus))
+			{
+				var markdown = parsed.Article.Markdown;
+				var blocks = Markdig.Markdown.Parse(markdown).ToList();
+				if (blocks.OfType<HeadingBlock>().Count(heading => heading.Level == 1) != 1)
+				{
+					offending.Add($"{file.Name}: {parsed.Article.Lookup} shows more than one title");
+				}
+				for (var i = 0; i + 1 < blocks.Count; i++)
+				{
+					if (blocks[i] is not HeadingBlock { Level: > 1 } heading || blocks[i + 1] is not HeadingBlock next)
+					{
+						continue;
+					}
+					var children = blocks.Skip(i + 1).OfType<HeadingBlock>()
+						.TakeWhile(below => below.Level > heading.Level)
+						.Count(below => below.Level == heading.Level + 1);
+					if (next.Level <= heading.Level || children == 1)
+					{
+						offending.Add($"{file.Name}: {parsed.Article.Lookup} stacks {HelpArticleParser.HeadingText(markdown, heading)}"
+							+ $" on {HelpArticleParser.HeadingText(markdown, next)}");
+					}
+				}
+			}
+		}
+
+		await Assert.That(offending).IsEmpty();
 	}
 
 	[Test]

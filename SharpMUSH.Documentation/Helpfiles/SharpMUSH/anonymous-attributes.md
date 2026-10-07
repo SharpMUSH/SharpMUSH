@@ -41,7 +41,7 @@
   }
 }
 -->
-# anonymous attributes
+# Anonymous Attributes
 
 In many cases where a function expects a object/attribute pair that refers to an attribute to evaluate, you can use the form
 

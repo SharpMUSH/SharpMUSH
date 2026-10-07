@@ -56,16 +56,16 @@ public class DispatchCoverageGapTests : ServerTestBase
 	}
 
 	/// <summary>
-	/// <c>help isapproved()</c>: 1 for a non-guest that is royalty or above or carries <c>APPROVED</c>.
+	/// <c>help isapproved()</c>: 1 for a non-guest that is royalty or above or holds the <c>approved</c> role.
 	/// </summary>
 	[Test]
-	public async Task IsApprovedFollowsTheApprovedFlag()
+	public async Task IsApprovedFollowsTheApprovedRole()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "Approval");
 
 		await Assert.That(await Eval($"isapproved({player})")).IsEqualTo("0");
 
-		await Cmd($"@set {player}=APPROVED");
+		await Cmd($"@role/assign {player}=approved");
 
 		await Assert.That(await Eval($"isapproved({player})")).IsEqualTo("1");
 	}

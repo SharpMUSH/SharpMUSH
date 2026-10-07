@@ -13,7 +13,7 @@
   ]
 }
 -->
-# COMPATIBILITY ECONOMY
+# Compatibility Economy
 
 SharpMUSH has no built-in currency balances or penny charges. Games that need an economy can store balances in attributes; code ported from PennMUSH must account for this difference.
 

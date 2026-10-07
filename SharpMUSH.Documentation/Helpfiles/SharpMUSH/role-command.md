@@ -79,13 +79,14 @@ Anyone may list roles and look at one.
 
 `@role/allow`, `@role/deny` and `@role/clear` set each listed permission on the role to Allow, Deny or neither. `@role/rename`, `@role/category`, `@role/color` and `@role/priority` change those fields; `@role/color <role>=none` removes the colour. `@role/delete` removes a role and takes it away from everything that held it.
 
-The system roles (`everyone`, `guest`, `player`, `builder`, `royalty`, `wizard` and `god`) cannot be created, deleted or moved, but what they allow can be edited like any other role.
+The system roles (`everyone`, `guest`, `player`, `approved`, `builder`, `royalty`, `wizard` and `god`) cannot be created, deleted or moved, but what they allow can be edited like any other role.
 
-Examples:
+### Examples
+
 ```sharp
-@role/create storyteller=Staff/Storyteller
-@role/priority storyteller=14
-@role/allow storyteller=wiki.delete media.admin
+> @role/create storyteller=Staff/Storyteller
+> @role/priority storyteller=14
+> @role/allow storyteller=wiki.delete media.admin
 ```
 
 ## Assigning roles
@@ -96,13 +97,17 @@ An object holds the roles assigned to it. A character linked to an account also 
 
 `@set <object>=WIZARD` and `@set <object>=ROYALTY` assign the `wizard` and `royalty` roles, and `@power <object>=Builder` and `=Guest` the `builder` and `guest` roles, under the same rules.
 
+`approved` is assigned only with `@role`; [isapproved()] reads it.
+
 Three roles are never assigned: every object holds `everyone`, every player that is not a guest holds `player`, and player #1 holds `god`.
 
-Examples:
+### Examples
+
 ```sharp
-@role/assign Ariel=moderator
-@role/assign/account Ariel=helper
-@role/unassign Ariel=moderator
+> @role/assign Ariel=moderator
+> @role/assign/account Ariel=helper
+> @role/assign Ariel=approved
+> @role/unassign Ariel=moderator
 ```
 
 ## Role categories
@@ -113,11 +118,12 @@ Each role category has a description of up to 200 characters. A new game has `Sy
 
 `@role/category/describe` changes the description, and `@role/category/rename` the name, taking every role in it along. `@role/category/delete` removes an empty category; move its roles elsewhere first. All of these need the `roles.admin` permission.
 
-Examples:
+### Examples
+
 ```sharp
-@role/category/create Scenes=People who run and close scenes
-@role/create closer=Scenes/Scene closer
-@role/category/rename Scenes=Scene staff
+> @role/category/create Scenes=People who run and close scenes
+> @role/create closer=Scenes/Scene closer
+> @role/category/rename Scenes=Scene staff
 ```
 
 ## Who may change what

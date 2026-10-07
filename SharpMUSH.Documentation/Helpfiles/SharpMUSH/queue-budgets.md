@@ -28,7 +28,7 @@
   ]
 }
 -->
-# queue budgets
+# Queue Budgets
 
 Every admitted command occupies one slot until it finishes. Immediate commands,
 @wait delays, semaphore waiters, and asynchronous attribute callbacks share the

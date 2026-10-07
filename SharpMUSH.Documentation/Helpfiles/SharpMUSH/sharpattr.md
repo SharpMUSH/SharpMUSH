@@ -2,7 +2,7 @@
 See docs/guides/help-migration.json for the old-to-new lookup map. -->
 
 # IMAGE
-# IMAGE ATTRIBUTES
+# Image Attributes
 # IMAGE\`BANNER
 # IMAGE\`ALT
 # IMAGE\`FOCAL

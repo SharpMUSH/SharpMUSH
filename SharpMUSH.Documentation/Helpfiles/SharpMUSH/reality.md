@@ -45,87 +45,89 @@
   ]
 }
 -->
-# @REALITY
+# @reality
 
-Reality layers let objects share a room while presenting different presences. The feature
-starts disabled. Existing locks, DARK behavior and permissions still apply when it is enabled.
+Reality layers let objects share a room while being present to some viewers and not to others: a ghost can walk among the living unseen. The feature starts disabled. When it is on, locks, DARK and permissions still apply as usual.
+
+- [@reality receiving and transmitting layers] - how one object perceives another
+- [@reality administration] - the `@reality` command
+- [@reality layer descriptions] - a different description per layer
+- [@reality ghost example] - a worked setup
+- [@reality perception rules] - what the layers filter
+- [@reality portal visibility] - the web portal
+- [@reality persistence] - where the settings are kept
 
 ## Receiving and transmitting layers
 
-Each object has a receiving set (RX) and a transmitting set (TX). A viewer or listener can
-perceive another object when its RX and that object's TX share a configured layer. The two
-directions are independent: a ghost may hear a living player who cannot hear the ghost.
-An existing object always passes its own layer check, even with empty sets.
+Each object has a receiving set (RX) and a transmitting set (TX). A viewer or listener perceives another object when its RX and that object's TX share a layer. The two directions are independent: a ghost may hear a living player who cannot hear the ghost. An object always perceives itself, even with empty sets.
 
-Objects without settings use the normal layer for both RX and TX. Settings belong to the
-full object identity, including its creation time; a recycled database number does not
-inherit a previous object's settings. Removing a layer removes its participation in
-perception. It never substitutes another layer for objects that used it.
+The world starts with one layer, `normal`, and an object with no settings receives and transmits `normal`.
+
+Settings belong to the object's full identity, including its creation time, so a recycled dbref does not inherit them. Removing a layer takes it out of every object's sets; nothing else takes its place.
 
 ## Administration
 
-Administration requires the current reality.admin role capability on the linked active
-player. Changing or inspecting an object's settings also requires ordinary control.
-These administration commands accept explicit object references so an administrator can
-repair an object that the administrator cannot currently perceive.
-```sharp
+- `@reality` or `@reality/list` - whether reality is on, and the configured layers
+- `@reality/enable` and `@reality/disable` - turn the feature on or off; disabling keeps the configuration
+- `@reality/add <layer>` and `@reality/remove <layer>` - define or delete a layer
+- `@reality/rx <object>=<layers>` - set what the object receives
+- `@reality/tx <object>=<layers>` - set what the object transmits
+- `@reality/describe <object>=<layer>/<attribute>` - describe the object with `<attribute>` to viewers on `<layer>`
+- `@reality/describe <object>=<layer>` - remove that layer's description
+- `@reality/inspect <object>` - show the object's RX, TX and descriptions
 
-    @reality/list
-    @reality/add ghost
-    @reality/rx #number:creation=normal ghost
-    @reality/tx #number:creation=ghost
-    @reality/describe #number:creation=ghost/GHOSTDESC
-    @reality/inspect #number:creation
-    @reality/enable
-```
+`<layers>` is a space-separated list; an empty value sets an empty set. `<object>` must be a dbref, so you can repair an object you cannot currently perceive.
 
-Use /rx or /tx with an empty value to set an empty set. /describe with only the layer name
-clears that layer's description mapping. /remove removes a named layer; /disable returns
-to ordinary behavior without deleting configuration. At most 32 layers are configured.
-Layer names contain 1-32 ASCII letters, digits, underscores or hyphens and are case-insensitive.
+Every switch needs the `reality.admin` permission on the account linked to the player you are playing. Changing or inspecting an object also needs control of it.
+
+| Limit | Value |
+| --- | --- |
+| Layers per world | 32 |
+| Layer name | 1-32 ASCII letters, digits, `_` or `-`; case does not matter |
+
+Output: the message `@reality` shows.
 
 ## Layer descriptions
 
-Descriptions name attributes; a missing or unreadable attribute uses the ordinary description.
-The first shared configured layer with a mapping supplies the description. Reading and
-evaluating that attribute uses the viewer's
-normal permissions and preserves markup; configuring a mapping does not grant access to
-its contents. If it cannot be read or evaluated, it does not expose the protected text.
-Without a mapping, the usual description behavior remains in effect.
+A layer description names an attribute to show in place of the object's description. The first layer the viewer shares with the object that has a description supplies it. Without one, the usual description is shown.
+
+The attribute is read and evaluated with the viewer's own permissions, markup kept. Setting a description grants no access to its contents: if the viewer cannot read or evaluate the attribute, the ordinary description is shown and the protected text is not.
 
 ## Ghost example
 
-A setup for a ghost that hears ordinary speech but is heard only by other ghosts:
-```sharp
+A ghost that hears ordinary speech, but is heard only by other ghosts:
 
-    @reality/add ghost
-    @reality/rx #ghost:creation=normal ghost
-    @reality/tx #ghost:creation=ghost
+```sharp
+> @reality/add ghost
+> @reality/rx #42=normal ghost
+> @reality/tx #42=ghost
+> @reality/enable
 ```
 
-Here #ghost:creation stands for the ghost object's actual full database reference.
-Give a seer RX normal ghost and keep its TX normal to let it perceive both populations.
-Apply the desired sets to rooms and exits too: ordinary movement requires the moving
-object to perceive its destination.
+Here `#42` stands for the ghost. A seer that perceives both living and ghosts receives `normal ghost` and keeps transmitting `normal`.
+
+Give rooms and exits the sets they need too: moving into a place requires the mover to perceive it.
 
 ## Perception rules
 
-Layer checks apply to looking, object matching (including explicit references), contents
-and exits, movement, sender-bearing notifications and listeners, including debug traces and
-puppet relays. Wizard flags and ownership
-do not bypass this check. Internal database maintenance remains unfiltered; the scoped
-administration commands are the explicit repair path.
+Layer checks apply to:
+
+- looking, and matching objects by name or by dbref;
+- contents and exit lists;
+- movement;
+- messages with a sender, and listeners, including debug output and puppet relays.
+
+Wizard flags and ownership do not bypass them. Internal database maintenance is not filtered; the `@reality` switches that take a dbref are the way to repair an object.
 
 ## Portal visibility
 
-The portal and object API use the same engine policy. Room events are delivered separately
-to authenticated current characters using their present location and RX sets. In enabled
-mode, events without a full actor identity are not broadcast. An old room subscription or
-an unlinked character cannot expose hidden events. System messages without a game-world
-sender remain system messages.
+The web portal and the object API follow the same rules. Room events go only to signed-in characters whose current location and RX set let them perceive the sender. While reality is enabled, an event with no full sender identity is not broadcast. An old room subscription or an unlinked character cannot reveal hidden events. System messages with no sender in the world are still delivered.
 
 ## Persistence
 
-Configuration and object settings persist in the world database and travel with its backups.
-Changes take effect after their durable writes complete. Restart loads the saved configuration
-before applying enabled behavior.
+The configuration and each object's settings are kept in the world database and travel with its backups. A change takes effect once it is saved. After a restart the saved configuration is loaded before reality is applied.
+
+::: seealso
+- [administrative capabilities]
+- [look]
+:::

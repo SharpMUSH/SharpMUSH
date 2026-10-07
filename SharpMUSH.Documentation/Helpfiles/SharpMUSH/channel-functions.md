@@ -91,7 +91,7 @@
   ]
 }
 -->
-# Channel functions
+# Channel Functions
 
 Functions inspect membership, privileges, history, and channel metadata. For channel emission, see [@CEMIT].
 
@@ -113,7 +113,7 @@ Functions inspect membership, privileges, history, and channel metadata. For cha
 
 ## cflags()
 
-`cflags(<channel>[,<object>])`
+`cflags(<channel>[,<object>])`<br>
 `clflags(<channel>[,<object>])`
 
 - **cflags()** and **clflags()**: With one argument, *\<channel\>*'s privileges; with two, *\<object\>*'s own flags on that channel. `cflags()` abbreviates each to its single letter and `clflags()` spells it out; that is the only difference between them. See [@CHANNEL PRIVS] for the privilege letters; a member's own flags are `Q`uiet, `H`ide, `G`ag and `C`ombine. Reading another object's flags requires that you be able to examine it, and answers `#-1 NOT ON CHANNEL` when it is not a member.
@@ -132,9 +132,9 @@ Functions inspect membership, privileges, history, and channel metadata. For cha
 
 ## cbuffer()
 
-`cbuffer(<channel>)`
-`cdesc(<channel>)`
-`cmsgs(<channel>)`
+`cbuffer(<channel>)`<br>
+`cdesc(<channel>)`<br>
+`cmsgs(<channel>)`<br>
 `cusers(<channel>)`
 
 - **cbuffer()**, **cdesc()**, **cmsgs()**, **cusers()**: the recall buffer's size, the @channel/describe text, the number of messages held in the buffer, and the number of members, respectively. These are the same figures [@channel joining] prints.

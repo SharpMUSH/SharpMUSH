@@ -39,7 +39,6 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 
 ## Location targeting examples
 
-### Examples
 Show a message in the locations of players Bob and Fred, to everyone except those two players:
 ```sharp
 > @oemit *Bob *Fred=Bob throws a paper aeroplane at Fred.

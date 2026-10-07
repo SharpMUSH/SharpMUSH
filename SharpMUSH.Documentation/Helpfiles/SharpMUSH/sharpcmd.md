@@ -1,4 +1,4 @@
-# COMMANDS
+# Commands
 Help is available for the following MUSH commands:
 
 |            |            |            |            |            |
@@ -25,7 +25,7 @@ At the login screen, [connect] reaches a character. On a game with web-portal ac
 
 Commands that act on your connection rather than your character are listed in [socket commands].
 
-# @-ATTRIBUTES
+# @-attributes
 These '@' commands set standard message/action sets on objects. Each comes in 3 versions: `@<whatever>`, `@o<whatever>`, and `@a<whatever>`. Only the `@<whatever>` version is listed below, but help is available for each:
 
 |              |              |              |              |              |
@@ -54,7 +54,7 @@ These '@' command set other standard attributes on objects that don't follow the
 - [NON-STANDARD ATTRIBUTES]
 :::
 
-# @-BUILDING
+# @-building
 These '@' commands are building-related (they create or modify objects):
 
 |              |              |              |              |              |
@@ -66,7 +66,7 @@ These '@' commands are building-related (they create or modify objects):
 | [@recycle]   | [@set]       | [@ulock]     | [@undestroy] | [@unlink]    |
 | [@unlock]    | [@uunlock]   | [@wipe]      |              |              |
 
-# @-GENERAL
+# @-general
 These '@' commands are general utility and programming commands:
 
 |              |              |              |              |              |
@@ -84,7 +84,7 @@ These '@' commands are general utility and programming commands:
 | [@sweep]     | [@switch]    | [@teleport]  | [@trigger]   | [@verb]      |
 | [@version]   | [@wait]      | [@whereis]   | [@wiki]      | [@zemit]     |
 
-# @-WIZARD
+# @-wizard
 These '@' commands are only usable by wizards or privileged players:
 
 |                |                |                |                |                |
@@ -823,8 +823,8 @@ Show just the object names (with no ansi) in a table:
 # @input/prompt
 # @input/cancel
 
-`@input/start <object>/<attribute>=<prompt>[,<timeout-seconds>]`
-`@input/prompt <prompt>`
+`@input/start <object>/<attribute>=<prompt>[,<timeout-seconds>]`<br>
+`@input/prompt <prompt>`<br>
 `@input/cancel`
 
   Starts a guided input session on the current Telnet or WebSocket connection. The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. The initiating executor must control the callback object and have both read and execute access to its directly stored attribute. Omitting `/start` also starts a session.
@@ -1318,7 +1318,7 @@ Q-registers (set via setq() and similar functions) are inherited from the @confo
 - [@nameformat]
 - [@descformat]
 :::
-# @HTTP
+# @http
 `@http <obj>/<attr>=<URL>`<br>
 `@http/delete <obj>/<att>=<URL>[,<data>]`<br>
 `@http/post <obj>/<att>=<URL>[,<data>]`<br>
@@ -1381,7 +1381,7 @@ You may wish to use the @search command instead, which can filter the results mo
 - [@entrances]
 :::
 # @forwardlist
-# forwardlist
+# FORWARDLIST
 `@forwardlist <object>[=<list of dbrefs>]`
 
 If `<object>` is set AUDIBLE, any sound it hears which passes its @filter and @lock/filter will be forwarded (prefixed with its @prefix) to each of the dbrefs given in its @forwardlist attribute, in much the same way as puppets forward sound to their owners.
@@ -1398,7 +1398,7 @@ In order to forward to an object, you must either control it, have the pemit_all
 - [LOCKING]
 :::
 # @debugforwardlist
-# debugforwardlist
+# DEBUGFORWARDLIST
 `@debugforwardlist <object>[=<list of dbrefs>]`
 
 When `<object>` has an @debugforwardlist attribute set, any debug output it produces (either because it has the DEBUG flag set, or because an attribute with the DEBUG attribute flag is evaluated) is forwarded to all the dbrefs listed in the debugforwardlist.
@@ -1411,7 +1411,7 @@ The @debugforwardlist must be a space-seperated list of dbrefs. In order to forw
 - [@forwardlist]
 - [LOCKING]
 :::
-# flag permissions
+# Flag Permissions
 The following permissions can be used when specifying whether `<actor>` may set or clear a flag on an `<object>` they control:
 
 - trusted `<actor>` must pass a TRUST check (see help TRUST)
@@ -1742,8 +1742,8 @@ Note that, unlike most attributes, @destination cannot be abbreviated and must b
 - [LINK_OK]
 - [Link_Anywhere Power]
 :::
-# LOCKING
-# LOCKS
+# Locking
+# Locks
 # @lock
 `@lock[/<switch>] <object>=<key>`
 
@@ -1900,8 +1900,8 @@ Name set.
 :::
 
 Config options: player_name_spaces, player_name_len, only_ascii_in_names
-# @ONAME
-# @ANAME
+# @oname
+# @aname
 `@oname <object>[=<message>]`<br>
 `@aname <object>[=<action list>]`
 
@@ -2334,7 +2334,7 @@ You can use this command to set yourself or any of your objects to be male, fema
 `@shutdown/reboot` restarts the game without disconnecting the users. This is necessary to load changes to the MUSH's configuration files (mush.cnf, restrict.cnf, etc), though not changes to names.cnf, which take effect without a reboot.
 
 If the `/paranoid` switch is added, the shutdown dump will be a paranoid dump (see @dump).
-# @SLAVE
+# @slave
 `@slave/restart [info|ssl]`
 
 @slave is a wizard-only command used to control the various subprocesses used by the mush to do various things. The only switch it currently takes is `/restart`, which will shut down and relaunch the slave daemon process in question.
@@ -2343,7 +2343,7 @@ Two different daemons are used:
 
 info: Resolves IP addresses into host names whenever a new connection is established.<br>
 ssl : Handles encrypted SSL connections across @shutdown/reboots.
-# @SOCKSET
+# @sockset
 # SOCKSET
 `SOCKSET [<option>=<value>]`<br>
 `@sockset [<descriptor>][=<option>, <value>[, ..., <optionN>, <valueN>]]`
@@ -2377,7 +2377,7 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 - [COLORSTYLE]
 - [@prompt]
 :::
-# COLORSTYLE
+# colorstyle
 `SOCKSET colorstyle=<value>`<br>
 `@SOCKSET [me|<descriptor>]=colorstyle,<value>`
 
@@ -2403,7 +2403,7 @@ In the event that your client receives a color that it is unable to display, Sha
 - [XTERM256]
 - [@SOCKSET]
 :::
-# @SPEECHMOD
+# @speechmod
 `@speechmod <object>[=<modifier>]`
 
 When set, this attribute modifies everything `<object>` says, poses, semiposes and @emits. The original text spoken/posed/emitted is passed as %0, with %1 passed as " (for say), : (for pose), ; (for semipose) or | (for @emit).
@@ -3125,8 +3125,8 @@ Output: the dbref of the room you arrive in.
 - [EXITS]
 - [movement]
 :::
-# movement
-# move-attributes
+# Movement
+# Move-attributes
 
 Every move (through an exit, by @teleport, by entering or leaving an object, or by going home)
 triggers the same attributes in the same order:
@@ -3474,7 +3474,7 @@ Output: the output of the command run. See [command output].
 - [$-commands]
 - [evaluation order]
 :::
-# socket commands
+# Socket Commands
 These commands can only be entered through a client, on the connection they are typed into. They act on that connection rather than on a game object, so they work whether or not you have connected to a character, and would be meaningless if run by an object or from a queued action.
 
 - IDLE
@@ -3531,7 +3531,7 @@ A variable with several values repeats its name on one line per value, the defau
 ::: seealso
 - [INFO]
 :::
-# @SUGGEST
+# @suggest
 `@suggest[/list]`<br>
 `@suggest/add <category>=<word>`<br>
 `@suggest/delete <category>=<word>`

@@ -56,7 +56,6 @@ In order to use this command, at least one of the following criterion must apply
 
 ## Local verb example
 
-### Examples
 ```sharp
 > &VERB_EXAMPLE Test Object=$test:@verb me=%#,TEST,You just tested.,OTEST,just tested the example.,ATEST,%n
 > test

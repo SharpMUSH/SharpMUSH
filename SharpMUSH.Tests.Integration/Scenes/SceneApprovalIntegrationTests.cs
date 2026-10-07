@@ -15,7 +15,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// The approval boundary, end to end: the engine's <c>APPROVED</c> flag and <c>isapproved()</c> predicate,
+/// The approval boundary, end to end: the engine's <c>approved</c> role and <c>isapproved()</c> predicate,
 /// the bundled <c>scene</c> package's <c>+scene</c> verbs that consume them, and the wizard lockdown on the
 /// primitive <c>@scene</c> surface underneath.
 ///
@@ -147,15 +147,15 @@ public class SceneApprovalIntegrationTests
 		var (unapproved, unapprovedHandle) = await CreatePlayerAsync($"Unapp_{Tag}");
 		var (guest, guestHandle) = await CreatePlayerAsync($"Guesty_{Tag}");
 
-		await God1($"@set {approved}=APPROVED");
+		await God1($"@role/assign {approved}=approved");
 		await GrantGuestPowerAsync(guest);
-		// Deliberately ALSO flag the guest APPROVED: the guest term must win regardless.
-		await God1($"@set {guest}=APPROVED");
+		// Deliberately ALSO give the guest the approved role: the guest term must win regardless.
+		await God1($"@role/assign {guest}=approved");
 		await Assert.That(await Eval($"haspower({guest}, Guest)")).IsEqualTo("1")
 			.Because("the rest of this beat is meaningless if the Guest power did not take");
 
 		await Assert.That(await Eval($"isapproved({approved})")).IsEqualTo("1")
-			.Because("the APPROVED flag makes an ordinary character approved");
+			.Because("the approved role makes an ordinary character approved");
 		await Assert.That(await Eval($"isapproved({unapproved})")).IsEqualTo("0")
 			.Because("a character with neither staff bit nor the flag is not approved");
 		await Assert.That(await Eval("isapproved(#1)")).IsEqualTo("1")
@@ -182,7 +182,7 @@ public class SceneApprovalIntegrationTests
 		await God1($"@tel {loggerDbref}={digOut}");
 		await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref);
 
-		// ---- 3. An APPROVED character may own a scene -------------------------------------------
+		// ---- 3. An approved character may own a scene -------------------------------------------
 		var createOut = await RunAs(approvedHandle, $"+scene/create Approval Test {Tag}");
 		Log($"[CREATE approved] {createOut}");
 		var sceneId = await Eval($"get({approved}/MY.SID)");
@@ -252,7 +252,7 @@ public class SceneApprovalIntegrationTests
 		await Assert.That(int.Parse(posesWhileApproved)).IsGreaterThan(int.Parse(posesBefore))
 			.Because("an approved, focused character's pose is captured");
 
-		await God1($"@set {approved}=!APPROVED");
+		await God1($"@role/unassign {approved}=approved");
 		await Assert.That(await Eval($"isapproved({approved})")).IsEqualTo("0");
 		await RunAs(approvedHandle, "pose tests that capture stops the moment approval is revoked.");
 		var posesAfterRevoke = await Eval($"scene({sceneId}, posecount)");
@@ -359,20 +359,20 @@ public class SceneApprovalIntegrationTests
 	}
 
 	[Test]
-	public async Task ApprovedFlag_CannotBeSetOrUnsetByAnUnprivilegedPlayer()
+	public async Task ApprovedRole_CannotBeAssignedOrUnassignedByAnUnprivilegedPlayer()
 	{
 		await God1("@set #1=WIZARD");
 		var (setter, setterHandle) = await CreatePlayerAsync($"Setter_{Tag}");
 		var (target, targetHandle) = await CreatePlayerAsync($"Target_{Tag}");
 
-		await RunAs(setterHandle, $"@set {target}=APPROVED");
+		await RunAs(setterHandle, $"@role/assign {target}=approved");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("0")
-			.Because("APPROVED is royalty-settable; an ordinary player cannot approve anyone");
+			.Because("assigning a role needs roles.admin; an ordinary player cannot approve anyone");
 
-		await God1($"@set {target}=APPROVED");
+		await God1($"@role/assign {target}=approved");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("1");
 
-		await RunAs(setterHandle, $"@set {target}=!APPROVED");
+		await RunAs(setterHandle, $"@role/unassign {target}=approved");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("1")
 			.Because("nor can an ordinary player revoke someone else's approval");
 

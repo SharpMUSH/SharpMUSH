@@ -16,7 +16,7 @@
   }
 }
 -->
-# debug
+# DEBUG
 
 **Flag: DEBUG (all types)**
 

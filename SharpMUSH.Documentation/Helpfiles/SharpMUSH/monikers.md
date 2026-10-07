@@ -16,7 +16,7 @@
   }
 }
 -->
-# monikers
+# Monikers
 
 Monikers are ansi templates which allow objects to have colored names. They can be set via the `@moniker` command, and can always be viewed via the `moniker()` function and %k substitution. Monikers may also be used automatically by MUSH commands, depending on how the "monikers" `@config` option is set.
 
