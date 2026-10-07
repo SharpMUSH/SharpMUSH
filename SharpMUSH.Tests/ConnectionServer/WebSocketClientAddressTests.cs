@@ -51,6 +51,17 @@ public class WebSocketClientAddressTests
 		await Assert.That(context.Request.IsHttps).IsTrue();
 	}
 
+	/// <summary>Kestrel's dual-stack listener sees the IPv4 proxy as ::ffff:a.b.c.d; it is still the listed proxy.</summary>
+	[Test]
+	[Arguments("ForwardedHeaders:KnownProxies:0", Proxy)]
+	[Arguments("ForwardedHeaders:KnownNetworks:0", "172.29.0.0/16")]
+	public async Task DualStackProxyPeerIsStillTheListedProxy(string key, string value)
+	{
+		var context = await RunAsync("::ffff:" + Proxy, Player, (key, value));
+
+		await Assert.That(WebSocketServer.ClientAddress(context.Connection.RemoteIpAddress)).IsEqualTo(Player);
+	}
+
 	[Test]
 	public async Task ProxyNetworkHandsOnThePlayersAddress()
 	{
