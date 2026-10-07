@@ -284,6 +284,8 @@ Sets the theme every layout is drawn in for that player: boxes, tables, gauges a
 
 A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it; the web portal has themes of its own. You must control *<player>*. The theme is kept in the player's `THEME` attribute.
 
+`@theme` refuses a theme it cannot read and says why, leaving the old one in place. A `THEME` attribute set some other way that does not read, or that names a theme since removed, is ignored: layouts use the game's theme, and the player is told at login why theirs was not used.
+
 Output: none.
 
 ### Examples

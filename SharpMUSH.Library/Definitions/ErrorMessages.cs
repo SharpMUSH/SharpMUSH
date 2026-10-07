@@ -944,6 +944,7 @@ public static partial class ErrorMessages
 		public const string MonikerSet = "Moniker set.";
 		public const string ThemeSet = "Theme set.";
 		public const string ThemeCleared = "Theme cleared.";
+		public const string ThemeUnreadableFormat = "Your @theme does not read ({0}), so layouts use the game's theme. @theme me=<theme> sets another; @theme me= clears it.";
 		public const string DigWhat = "Dig what?";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RoomCreatedWithNumberFormat = "{0} created with room number {1}.";

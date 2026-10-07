@@ -646,4 +646,9 @@ public partial class MarkupOutputRendererTests
 	public async Task AThemeThatNoLongerReads_LeavesTheLayoutAlone()
 		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "nowhere" })))
 			.StartsWith("+=");
+
+	[Test]
+	public async Task AThemeThatCannotBeText_LeavesTheLayoutAlone()
+		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "{\"look\":{\"bullet\":\"\\ud800\"}}" })))
+			.StartsWith("+=");
 }

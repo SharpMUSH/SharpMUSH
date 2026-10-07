@@ -8,6 +8,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -627,8 +628,16 @@ public partial class Commands
 		// run after the look.
 		await SyncPlayerOutputPreferences(handle, player.Object);
 		// After the flags, which set the preferences the theme joins; null clears a theme the socket kept.
-		await MessageBus.Publish(new UpdateThemeMessage(handle, await ThemeOf(new AnySharpObject(player))));
+		// A THEME that no longer reads (set by hand, or naming a preset since renamed) is not sent; the
+		// player is told why after the login messages, and layouts use the game's theme meanwhile.
+		var theme = await ThemeOf(new AnySharpObject(player));
+		var unreadable = theme is not null && LayoutThemes.Read(theme) is Error<string> error ? error.Value : null;
+		await MessageBus.Publish(new UpdateThemeMessage(handle, unreadable is null ? theme : null));
 		await ShowPostLoginMessages(handle, new AnySharpObject(player), isGuest);
+		if (unreadable is not null)
+		{
+			await NotifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.ThemeUnreadableFormat), null, unreadable);
+		}
 
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)

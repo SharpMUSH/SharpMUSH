@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -80,4 +81,33 @@ public class ThemeCommandTests
 		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef)).Contains("Theme cleared.");
 		await Assert.That((await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({player.DbRef}/THEME)")))!.Message!.ToPlainText()).IsEmpty();
 	}
+
+	[Test]
+	public async Task Login_WithAThemeThatDoesNotRead_SaysSo()
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ThemeRoom"), god));
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "Themer", home);
+		// Set by hand, so @theme never saw it.
+		await WebAppFactoryArg.CommandParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&THEME me={\"look\":{\"bullet\":5}}"));
+
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
+		try
+		{
+			await WebAppFactoryArg.CommandParser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {player.Name} {TestIsolationHelpers.TestPassword}"));
+
+			await Assert.That(WebAppFactoryArg.Notifications.ForHandle(handle))
+				.Contains("Your @theme does not read (#-1 INVALID THEME: bullet is text), so layouts use the game's theme. @theme me=<theme> sets another; @theme me= clears it.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(handle);
+		}
+	}
+
+	[Test]
+	[Arguments("\ud800")]
+	[Arguments("{\"look\":{\"bullet\":\"\\ud800\"}}")]
+	public async Task ATheme_ThatCannotBeText_IsRefusedNotThrown(string spec)
+		=> await Assert.That(LayoutThemes.Read(spec) is Error<string>).IsTrue();
 }

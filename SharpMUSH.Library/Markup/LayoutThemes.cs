@@ -17,7 +17,16 @@ public static class LayoutThemes
 	{
 		spec = spec.Trim();
 		if (spec.Length == 0) return new Error<string>(Unknown);
-		if (ThemePalette.TryParse(spec, out var palette, out var error)) return palette!;
+		string? error;
+		try
+		{
+			if (ThemePalette.TryParse(spec, out var palette, out error)) return palette!;
+		}
+		catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+		{
+			// MarkupString 2.9.0 throws on half of a surrogate pair rather than refusing it.
+			return new Error<string>("#-1 INVALID THEME: not JSON or a theme name");
+		}
 		var unknown = spec[0] is not ('{' or '[') && (error ?? string.Empty).Contains("theme name", StringComparison.Ordinal)
 			|| (error ?? string.Empty).StartsWith("no theme named", StringComparison.Ordinal);
 		return new Error<string>(unknown ? Unknown : $"#-1 INVALID THEME: {error}");

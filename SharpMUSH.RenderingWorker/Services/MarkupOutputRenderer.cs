@@ -91,7 +91,18 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		// A handful of themes are in use at once; past that, start again rather than grow without bound.
 		if (ReaderThemes.Count > 256) ReaderThemes.Clear();
 		return ReaderThemes.GetOrAdd(theme, static spec =>
-			ThemePalette.TryParse(spec, out var palette, out _) ? palette!.ToLayoutTheme() : null);
+		{
+			// The engine sends only themes that read, but a theme is the player's own text: one that
+			// fails here, however it fails, leaves their output in the game's theme rather than stopping it.
+			try
+			{
+				return ThemePalette.TryParse(spec, out var palette, out _) ? palette!.ToLayoutTheme() : null;
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+		});
 	}
 
 	/// <summary>
