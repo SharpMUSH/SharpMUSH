@@ -26,6 +26,7 @@ public sealed class FakeAccountAuthState : IAccountAuthState
 
 	public event Action? AuthStateChanged;
 	public event Action? ActiveCharacterChanged;
+	public event Action? AppearanceChanged;
 
 	/// <summary>What <see cref="GetDebugOttAsync"/> answers.</summary>
 	public AccountAuthService.DebugOttResponse? NextDebugOtt { get; set; }
@@ -52,4 +53,7 @@ public sealed class FakeAccountAuthState : IAccountAuthState
 		AuthStateChanged?.Invoke();
 		ActiveCharacterChanged?.Invoke();
 	}
+
+	/// <summary>Raises <see cref="AppearanceChanged"/>, as the real state does when a character's theme or accent is saved.</summary>
+	public void FireAppearance() => AppearanceChanged?.Invoke();
 }

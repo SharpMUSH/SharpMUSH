@@ -1,120 +1,82 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using MudBlazor.Extensions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
-using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
-/// Component tests for <see cref="ThemeProvider"/>.
+/// Component tests for <see cref="ThemeProvider"/>: it writes the current theme's tokens as a stylesheet and hands
+/// MudBlazor the matching palette, and follows the service when the theme changes.
 /// Extends BunitContext directly because this project does not reference SharpMUSH.Tests.
 /// </summary>
-public abstract class ThemeProviderTestBase : BunitContext
+public class ThemeProviderTests : BunitContext
 {
-	protected ThemeProviderTestBase()
+	private sealed class Holder
+	{
+		public ResolvedTheme Theme { get; set; } = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
+	}
+
+	private readonly Holder _current = new();
+	private Action? _changed;
+	private readonly IThemeService _service = Substitute.For<IThemeService>();
+
+	public ThemeProviderTests()
 	{
 		Services.AddMudServices();
 		Services.AddLocalization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
-	}
-
-	protected static IThemeService MakeService(ThemePreset? preset = null)
-	{
-		preset ??= new ThemePreset(
-			Name: "Default Dark",
-			PrimaryColor: "#4caf50",
-			SecondaryColor: "#81c784",
-			TertiaryColor: "#a5d6a7",
-			BackgroundColor: "#1a1a1a",
-			SurfaceColor: "#242424",
-			AppBarColor: "#1a1a1a",
-			DrawerBackgroundColor: "#1e1e1e",
-			IsDarkMode: true);
-
-		var svc = Substitute.For<IThemeService>();
-		svc.GetCurrentThemeAsync().Returns(Task.FromResult(preset));
-		svc.GetAvailablePresetsAsync()
-			.Returns(Task.FromResult<IReadOnlyList<ThemePreset>>([preset]));
-		return svc;
-	}
-}
-
-public class ThemeProviderRenderTests : ThemeProviderTestBase
-{
-	[TUnit.Core.Test]
-	public async Task ThemeProvider_RendersChildContent()
-	{
-		var svc = MakeService();
-		Services.AddSingleton(svc);
-
-		var cut = Render<ThemeProvider>(p => p
-			.AddChildContent("<span id='child'>hello</span>"));
-
-		var span = cut.Find("#child");
-		await Assert.That(span.TextContent).IsEqualTo("hello");
+		_service.Current.Returns(_ => _current.Theme);
+		_service.OnThemeChanged += Arg.Do<Action>(h => _changed = h);
+		Services.AddSingleton(_service);
 	}
 
 	[TUnit.Core.Test]
-	public async Task ThemeProvider_RendersMudThemeProvider()
+	public async Task RendersChildContent()
 	{
-		var svc = MakeService();
-		Services.AddSingleton(svc);
+		var cut = Render<ThemeProvider>(p => p.AddChildContent("<span id='child'>hello</span>"));
 
-		var cut = Render<ThemeProvider>(p => p
-			.AddChildContent("<span></span>"));
-
-		var mudTheme = cut.FindComponent<MudThemeProvider>();
-		await Assert.That(mudTheme.Instance is not null).IsTrue();
+		await Assert.That(cut.Find("#child").TextContent).IsEqualTo("hello");
 	}
 
 	[TUnit.Core.Test]
-	public async Task ThemeProvider_CallsGetCurrentThemeAsync_OnInit()
+	public async Task WritesTheThemesTokensAsAStylesheet()
 	{
-		var svc = MakeService();
-		Services.AddSingleton(svc);
+		var cut = Render<ThemeProvider>(p => p.AddChildContent("<span></span>"));
 
-		_ = Render<ThemeProvider>(p => p
-			.AddChildContent("<span></span>"));
-
-		await svc.Received().GetCurrentThemeAsync();
-	}
-}
-
-public class ThemeProviderEventTests : ThemeProviderTestBase
-{
-	[TUnit.Core.Test]
-	public async Task ThemeProvider_SubscribesToOnThemeChanged_OnInit()
-	{
-		Action? capturedHandler = null;
-		var svc = Substitute.For<IThemeService>();
-		svc.GetCurrentThemeAsync().Returns(Task.FromResult(
-			new ThemePreset("Default Dark", "#4caf50", "#81c784", "#a5d6a7",
-				"#1a1a1a", "#242424", "#1a1a1a", "#1e1e1e", true)));
-
-		svc.OnThemeChanged += Arg.Do<Action>(h => capturedHandler = h);
-		Services.AddSingleton(svc);
-
-		_ = Render<ThemeProvider>(p => p
-			.AddChildContent("<span></span>"));
-
-		await Assert.That(capturedHandler is not null).IsTrue();
+		var css = cut.Find("style#sharp-theme").TextContent;
+		await Assert.That(css).StartsWith(":root{color-scheme:dark;");
+		await Assert.That(css).Contains("--accent:#00f5b7;");
+		await Assert.That(cut.FindComponent<MudThemeProvider>().Instance.GetState(x => x.IsDarkMode)).IsTrue();
 	}
 
 	[TUnit.Core.Test]
-	public async Task ThemeProvider_Dispose_UnsubscribesFromOnThemeChanged()
+	public async Task FollowsTheServiceToALightThemeWithACharactersAccent()
 	{
-		var svc = MakeService();
-		Services.AddSingleton(svc);
+		var cut = Render<ThemeProvider>(p => p.AddChildContent("<span></span>"));
 
-		var cut = Render<ThemeProvider>(p => p
-			.AddChildContent("<span></span>"));
+		_current.Theme = ThemeResolver.Resolve(BuiltInThemes.Daylight, "#5aa9ff");
+		_changed!.Invoke();
+
+		cut.WaitForState(() => cut.Find("style#sharp-theme").TextContent.Contains("color-scheme:light"));
+		var mud = cut.FindComponent<MudThemeProvider>().Instance;
+		await Assert.That(mud.GetState(x => x.IsDarkMode)).IsFalse();
+		await Assert.That(mud.Theme!.PaletteLight.Primary).IsEqualTo(new MudBlazor.Utilities.MudColor(_current.Theme.Accent));
+	}
+
+	[TUnit.Core.Test]
+	public async Task StopsFollowingTheServiceWhenDisposed()
+	{
+		var cut = Render<ThemeProvider>(p => p.AddChildContent("<span></span>"));
 
 		cut.Instance.Dispose();
 
-		svc.Received().OnThemeChanged -= Arg.Any<Action>();
+		_service.Received().OnThemeChanged -= Arg.Any<Action>();
+		await Task.CompletedTask;
 	}
 }

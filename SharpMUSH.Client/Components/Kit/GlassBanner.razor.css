@@ -13,6 +13,7 @@
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
+	filter: var(--image-filter);
 }
 
 .kit-banner-blur {
@@ -80,7 +81,7 @@
 	top: 56px;
 	bottom: 64px;
 	overflow: auto;
-	color: var(--text);
+	color: var(--text-over-image);
 	font-size: 14px;
 	line-height: 1.5;
 	text-shadow: var(--on-image-shadow);
@@ -106,7 +107,7 @@
 .kit-banner-text {
 	flex: 1 1 auto;
 	min-width: 0;
-	color: var(--text);
+	color: var(--text-over-image);
 	text-shadow: var(--on-image-shadow);
 }
 
@@ -134,10 +135,30 @@
 
 .kit-banner-title {
 	margin: 0;
-	font-family: inherit;
-	font-weight: 700;
+	font-family: var(--font-display);
+	font-weight: var(--font-title-weight);
+	font-style: var(--title-style);
+	letter-spacing: var(--title-tracking);
+	text-transform: var(--title-transform);
 	font-size: 17px;
 	line-height: 1.25;
+}
+
+.kit-banner-text--hero .kit-banner-title::before,
+.kit-banner-text--hero .kit-banner-title::after {
+	content: var(--ornament-before);
+	color: var(--accent);
+	font-family: var(--font-ui);
+	font-size: 0.6em;
+	font-style: normal;
+	vertical-align: 0.2em;
+	margin-right: 0.45em;
+}
+
+.kit-banner-text--hero .kit-banner-title::after {
+	content: var(--ornament-after);
+	margin-right: 0;
+	margin-left: 0.45em;
 }
 
 .kit-banner-text--hero .kit-banner-title {
@@ -185,6 +206,7 @@
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
+	filter: var(--image-filter);
 }
 
 .kit-banner-strip-blur {
@@ -211,7 +233,7 @@
 	align-items: center;
 	gap: 10px;
 	padding: 0 6px 0 14px;
-	color: var(--text);
+	color: var(--text-over-image);
 	text-shadow: var(--on-image-shadow);
 }
 

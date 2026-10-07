@@ -1,21 +1,32 @@
-using SharpMUSH.Library.Models;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.Models.Portal;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// Manages MudBlazor theme presets and the currently-active theme for the portal UI.
+/// The portal's look: the themes the game offers, and the one in use, resolved for the acting character's
+/// own theme and accent.
 /// </summary>
 public interface IThemeService
 {
-	/// <summary>Raised when the active theme changes so components can re-render.</summary>
+	/// <summary>Raised when <see cref="Current"/> changes, so the theme can be applied again.</summary>
 	event Action? OnThemeChanged;
 
-	/// <summary>Returns the currently-active preset.</summary>
-	Task<ThemePreset> GetCurrentThemeAsync();
+	/// <summary>The theme the portal is painted with: a preview while one is shown, else the acting character's.</summary>
+	ResolvedTheme Current { get; }
 
-	/// <summary>Returns all built-in presets.</summary>
-	Task<IReadOnlyList<ThemePreset>> GetAvailablePresetsAsync();
+	/// <summary>The themes this viewer may use (staff with the editing scope also get the unpublished ones).</summary>
+	IReadOnlyList<PortalTheme> Themes { get; }
 
-	/// <summary>Switches the active preset by name.  Throws if the name is unknown.</summary>
-	Task ApplyPresetAsync(string presetName);
+	/// <summary>The game's default themes for a browser that prefers dark and one that prefers light.</summary>
+	PortalThemeDefaults Defaults { get; }
+
+	/// <summary>Whether this browser prefers a light colour scheme; the game default follows it.</summary>
+	bool PrefersLight { get; }
+
+	/// <summary>Paints the portal with <paramref name="theme"/> until called again with null, without storing it.</summary>
+	void Preview(ResolvedTheme? theme);
+
+	/// <summary>Reads the themes from the server again, after they were edited.</summary>
+	Task ReloadAsync();
 }

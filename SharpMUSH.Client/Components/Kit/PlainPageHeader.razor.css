@@ -24,9 +24,33 @@
 	margin: 4px 0 0;
 	font-family: var(--font-display);
 	font-size: 26px;
-	font-weight: 700;
+	font-weight: var(--font-title-weight);
+	font-style: var(--title-style);
+	letter-spacing: var(--title-tracking);
+	text-transform: var(--title-transform);
 	line-height: 1.2;
-	color: var(--text);
+	color: var(--title-color);
+	text-shadow: var(--title-shadow);
+	/* The theme's ornament: a rule under the title, and a glyph either side of it. */
+	background: var(--title-underline) left bottom / min(14rem, 100%) var(--title-underline-height) no-repeat;
+	padding-bottom: var(--title-underline-pad);
+}
+
+.kit-page-title::before,
+.kit-page-title::after {
+	content: var(--ornament-before);
+	color: var(--accent);
+	font-family: var(--font-ui);
+	font-size: 0.6em;
+	font-style: normal;
+	vertical-align: 0.2em;
+	margin-right: 0.45em;
+}
+
+.kit-page-title::after {
+	content: var(--ornament-after);
+	margin-right: 0;
+	margin-left: 0.45em;
 }
 
 .kit-page-desc {

@@ -98,6 +98,7 @@ public static class BuildNavCatalog
 
 		new("/admin/applications", Icons.Material.Filled.Apps, "AdmApplicationsTitle", "AdmCardApplications", Group.Portal, ["applications.admin"]),
 		new("/admin/layout", Icons.Material.Filled.Dashboard, "AdmLayoutTitle", "AdmCardLayout", Group.Portal, ["layout.admin"]),
+		new("/admin/themes", Icons.Material.Filled.Palette, "AdmThemesTitle", "AdmCardThemes", Group.Portal, ["layout.admin"]),
 		new("/admin/packages", Icons.Material.Filled.Inventory2, "PkgPackages", "AdmCardPackages", Group.Portal, ["packages.admin"]),
 		new("/admin/profiles", Icons.Material.Filled.Badge, "ProfileHandler", "AdmCardProfiles", Group.Portal, ["players.moderate"]),
 

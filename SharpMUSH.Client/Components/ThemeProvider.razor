@@ -1,6 +1,9 @@
 @inject IThemeService ThemeService
 @implements IDisposable
 
+@* The theme's tokens as a :root rule. It sits after tokens.css (and after the copy index.html applies
+   from localStorage before the runtime starts), and is unlayered, so it overrides both. *@
+<style id="sharp-theme">@_css</style>
 <MudThemeProvider Theme="_theme" IsDarkMode="_isDarkMode" />
 @ChildContent
 
@@ -8,32 +11,29 @@
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    private MudTheme _theme = SharpMUSH.Client.Services.ThemeService.GetDefaultPreset().ToMudTheme();
-    private bool _isDarkMode = SharpMUSH.Client.Services.ThemeService.GetDefaultPreset().IsDarkMode;
+    private MudTheme _theme = new();
+    private bool _isDarkMode = true;
+    private string _css = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         ThemeService.OnThemeChanged += HandleThemeChanged;
-
-        // Restore persisted preset (reads localStorage)
-        if (ThemeService is SharpMUSH.Client.Services.ThemeService concrete)
-            await concrete.InitializeAsync();
-
-        await RefreshThemeAsync();
+        Refresh();
     }
 
     private void HandleThemeChanged()
-        => InvokeAsync(async () =>
+        => InvokeAsync(() =>
         {
-            await RefreshThemeAsync();
+            Refresh();
             StateHasChanged();
         });
 
-    private async Task RefreshThemeAsync()
+    private void Refresh()
     {
-        var preset = await ThemeService.GetCurrentThemeAsync();
-        _theme = preset.ToMudTheme();
-        _isDarkMode = preset.IsDarkMode;
+        var current = ThemeService.Current;
+        _theme = current.ToMudTheme();
+        _isDarkMode = current.Dark;
+        _css = current.Css;
     }
 
     public void Dispose()
