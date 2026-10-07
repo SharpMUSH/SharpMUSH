@@ -1,6 +1,6 @@
 format: 1
 package: plus-help
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -334,23 +334,27 @@ objects:
         @function helplink=%!,FUN`HELPLINK,2,2
 
       # ── Shared command steps ────────────────────────────────────────────────
-      INC`DISPLAY`ERROR:
+      INC`DISPLAY`WARN:
         value: |-
-          @@ %0 the message — every refusal in this package reports through here; @pemit %#=[ansi(hr,Help>)] %0
+          @@ %0 the message — a mistake in what was typed, reported as a warning; @pemit %#=[notice(HELP,%0,warn)]
+        flags: [cmdsyntax]
+      INC`DISPLAY`DENIED:
+        value: |-
+          @@ %0 the message - a refusal for want of permission, reported as an error; @pemit %#=[notice(HELP,%0,error)]
         flags: [cmdsyntax]
       INC`DISPLAY`INFO:
         value: |-
-          @@ %0 the message — for an empty result, which is not a failure; @pemit %#=[ansi(hc,Help>)] %0
+          @@ %0 the message — for an empty result, which is not a failure; @pemit %#=[notice(HELP,%0)]
         flags: [cmdsyntax]
       # The miss points at the engine's corpus rather than silently rendering it: +help stays able to
       # answer "does this GAME document this?", which a fallthrough would cost.
       INC`DISPLAY`MISS:
         value: |-
-          @@ %0 the query that matched nothing; @pemit %#=[ansi(hr,Help>)] No local topic '%0'.%b%bTry:%b%b[cmdlink(help %0,help %0)]
+          @@ %0 the query that matched nothing; @pemit %#=[notice(HELP,No local topic '%0'.%b%bTry:%b%b[cmdlink(help %0,help %0)],warn)]
         flags: [cmdsyntax]
       INC`IS`STAFF:
         value: |-
-          @@ no arguments — writing help is a staff verb, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`ERROR=Staff only.
+          @@ no arguments — writing help is a staff verb, checked against the caller's flags; @assert orflags(%#,Wr)=@include %!/INC`DISPLAY`DENIED=Staff only.
         flags: [cmdsyntax]
       # Two checks, in the order the name is transformed. First what +help reserves — "/" separates
       # source from topic, "*" and "?" are its wildcards — then whether the derived PATH can be
@@ -364,17 +368,17 @@ objects:
       # %q<topic> is the caller's staged, trimmed, upper-cased name; this leaves %q<attr> set.
       INC`IS`TOPICNAME:
         value: |-
-          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert strlen(%q<topic>)=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[^*?/\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think [setq(attr,HELP`[edit(trim(squish(%q<topic>)),%b,`)])]; @assert valid(attrname,%q<attr>)=@include %!/INC`DISPLAY`ERROR=A topic name has to be storable as an attribute name.; think [setq(obj,u(%!/SRC`GAME))]
+          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert strlen(%q<topic>)=@include %!/INC`DISPLAY`WARN=Which topic?; @assert regmatch(%q<topic>,^\[^*?/\]+$)=@include %!/INC`DISPLAY`WARN=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think [setq(attr,HELP`[edit(trim(squish(%q<topic>)),%b,`)])]; @assert valid(attrname,%q<attr>)=@include %!/INC`DISPLAY`WARN=A topic name has to be storable as an attribute name.; think [setq(obj,u(%!/SRC`GAME))]
         flags: [cmdsyntax]
       INC`DO`LISTING:
         value: |-
-          @@ %0 title · %1 records · %2 page · %3 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`ERROR=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3)]
+          @@ %0 title · %1 records · %2 page · %3 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3)]
         flags: [cmdsyntax]
       # One topic renders; none reports the miss; several list the qualified candidates, in the
       # engine's own words for an ambiguous topic.
       INC`DO`SHOW:
         value: |-
-          @@ %0 the query as typed; think [setq(q,lcstr(trim(%0)))]; @assert %q<q>=@include %!/INC`DISPLAY`ERROR=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))]; think [setq(m,u(%!/FUN`GET`FOUND,%q<recs>,%q<q>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS=%q<q>; @break gt(words(%q<m>),1)={@pemit %#=[ansi(hc,Help>)] Here are the entries which match '%q<q>':;@pemit %#=[iter(%q<m>,u(%!/FUN`DISPLAY`REF,%i0),%b,%b)]}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
+          @@ %0 the query as typed; think [setq(q,lcstr(trim(%0)))]; @assert %q<q>=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))]; think [setq(m,u(%!/FUN`GET`FOUND,%q<recs>,%q<q>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS=%q<q>; @break gt(words(%q<m>),1)={@pemit %#=[notice(HELP,Here are the entries which match '%q<q>':)];@pemit %#=[iter(%q<m>,u(%!/FUN`DISPLAY`REF,%i0),%b,%b)]}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────
@@ -389,7 +393,7 @@ objects:
         flags: [regexp, cmdsyntax]
       CMD`LIST:
         value: |-
-          $^\+help/list(?\:\s+(?<src>[^\s=]+))?(?\:=(?<page>\d+))?$:think [setq(src,lcstr(r(src,args)),page,strfirstof(r(page,args),1))]; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(%q<src>),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`ERROR=No such help source: %q<src>. Try +help/sources.; @include %!/INC`DO`LISTING=Topics[if(%q<src>,: %q<src>)],[if(%q<src>,u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>)],%q<page>,[trim(+help/list %q<src>)]
+          $^\+help/list(?\:\s+(?<src>[^\s=]+))?(?\:=(?<page>\d+))?$:think [setq(src,lcstr(r(src,args)),page,strfirstof(r(page,args),1))]; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(%q<src>),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`WARN=No such help source: %q<src>. Try +help/sources.; @include %!/INC`DO`LISTING=Topics[if(%q<src>,: %q<src>)],[if(%q<src>,u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>)],%q<page>,[trim(+help/list %q<src>)]
         flags: [regexp, cmdsyntax]
       CMD`SEARCH:
         value: |-
@@ -401,7 +405,7 @@ objects:
         flags: [regexp, cmdsyntax]
       CMD`USAGE:
         value: |-
-          $^\+help/(?<sw>search|write|delete|source|unsource)\s*$:@include %!/INC`DISPLAY`ERROR=Usage: +help/[r(sw,args)] [switch(r(sw,args),search,<text>,write,<topic>=<text>,delete,<topic>,source,<name>=<object>,<name>)]
+          $^\+help/(?<sw>search|write|delete|source|unsource)\s*$:@include %!/INC`DISPLAY`WARN=Usage: +help/[r(sw,args)] [switch(r(sw,args),search,<text>,write,<topic>=<text>,delete,<topic>,source,<name>=<object>,<name>)]
         flags: [regexp, cmdsyntax]
       # attrib_set() rather than "&": the attribute NAME is computed here, and @set obj/attr= sets
       # attribute FLAGS on this engine rather than a value, so it is not an option at all. The body
@@ -413,21 +417,21 @@ objects:
       # +help/write. That is the trade for a computed attribute name; nothing else here needs it.
       CMD`WRITE:
         value: |-
-          $(?s)^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(setr(body,r(body,args)))=@include %!/INC`DISPLAY`ERROR=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[ansi(hc,Help>)] Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+          $(?s)^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(setr(body,r(body,args)))=@include %!/INC`DISPLAY`WARN=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[notice(HELP,Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
         flags: [regexp, cmdsyntax]
       CMD`DELETE:
         value: |-
-          $(?s)^\+help/delete\s+(?<topic>.+)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(get(%q<obj>/%q<attr>))=@include %!/INC`DISPLAY`ERROR=No game topic by that name.; think [attrib_set(%q<obj>/%q<attr>)]; @pemit %#=[ansi(hc,Help>)] Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].
+          $(?s)^\+help/delete\s+(?<topic>.+)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(get(%q<obj>/%q<attr>))=@include %!/INC`DISPLAY`WARN=No game topic by that name.; think [attrib_set(%q<obj>/%q<attr>)]; @pemit %#=[notice(HELP,Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
         flags: [regexp, cmdsyntax]
       # The escape hatch for a system no package installed. A package that ships a manifest should
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
       CMD`SOURCE:
         value: |-
-          $(?s)^\+help/source\s+(?<name>[^=]+)=(?<obj>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`ERROR=A source name is letters, digits, and _ . or -.; @assert isdbref(setr(o,locate(%#,trim(r(obj,args)),*)))=@include %!/INC`DISPLAY`ERROR=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[ansi(hc,Help>)] [lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.
+          $(?s)^\+help/source\s+(?<name>[^=]+)=(?<obj>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`WARN=A source name is letters, digits, and _ . or -.; @assert isdbref(setr(o,locate(%#,trim(r(obj,args)),*)))=@include %!/INC`DISPLAY`WARN=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[notice(HELP,[lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.,ok)]
         flags: [regexp, cmdsyntax]
       CMD`UNSOURCE:
         value: |-
-          $(?s)^\+help/unsource\s+(?<name>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`ERROR=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[ansi(hc,Help>)] Dropped help source [lcstr(%q<name>)].
+          $(?s)^\+help/unsource\s+(?<name>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`WARN=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[notice(HELP,Dropped help source [lcstr(%q<name>)].,ok)]
         flags: [regexp, cmdsyntax]
 
   # ---- this package's own topics ---------------------------------------------

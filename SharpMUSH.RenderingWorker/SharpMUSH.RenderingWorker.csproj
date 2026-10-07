@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SharpMUSH.SocketServer/SharpMUSH.SocketServer.csproj" />
+    <ProjectReference Include="../SharpMUSH.Contracts/SharpMUSH.Contracts.csproj" />
     <PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />

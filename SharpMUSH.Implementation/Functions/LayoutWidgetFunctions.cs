@@ -14,7 +14,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 /// <summary>
 /// The smaller layout pieces: <c>gauge()</c>, <c>bullets()</c>, <c>grid()</c>, <c>datatable()</c>,
-/// <c>datacolumns()</c>, <c>badge()</c> and <c>gradient()</c>. Like <c>box()</c>, each returns the text a
+/// <c>datacolumns()</c>, <c>badge()</c>, <c>notice()</c> and <c>gradient()</c>. Like <c>box()</c>, each returns the text a
 /// terminal shows with the layout riding on it.
 /// </summary>
 public partial class Functions
@@ -245,22 +245,49 @@ public partial class Functions
 	public ValueTask<CallState> Badge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var kind = Arg(args, 1).ToPlainText().Trim().ToLowerInvariant() switch
-		{
-			"" or "info" => (Codes: "hc", Role: ThemeRole.Info),
-			"ok" => ("hg", ThemeRole.Success),
-			"warn" => ("hy", ThemeRole.Warning),
-			"error" => ("hr", ThemeRole.Error),
-			"muted" => ("hx", ThemeRole.Muted),
-			_ => ((string Codes, ThemeRole Role)?)null,
-		};
-		if (kind is not var (codes, role)) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
-
-		// layout_theme's colour for the kind when it has one; the classic codes otherwise.
-		IMarkup colour = HousePalette()?[role] is { } themed ? AnsiTheme.Paint(themed, role == ThemeRole.Muted ? ThemePaint.Text : ThemePaint.Bold) : AnsiCodeParser.Parse(codes);
-		var text = MarkupText.Concat([MarkupText.Plain("["), Arg(args, 0), MarkupText.Plain("]")]);
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(colour, text)));
+		if (BadgeKindOf(Arg(args, 1)) is not { } kind) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
+		return ValueTask.FromResult(new CallState(Bracketed(Arg(args, 0), BadgeColour(kind))));
 	}
+
+	/// <summary>
+	/// <c>notice(&lt;source&gt;, &lt;text&gt;[, &lt;kind&gt;])</c> — a message from a system, led by the system's
+	/// badge in its kind's colour and, for every kind but <c>info</c> and <c>muted</c>, the kind as a word
+	/// (<c>Done:</c>, <c>Warning:</c>, <c>Error:</c>), so a reader without colour still knows it. A screen
+	/// reader is sent the lead without its brackets (<see cref="NoticeMarkup"/>).
+	/// </summary>
+	[SharpFunction(Name = "notice", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["source", "text", "kind"])]
+	public ValueTask<CallState> Notice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (BadgeKindOf(Arg(args, 2)) is not { } kind) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
+
+		var lead = NoticeMarkup.Build(Arg(args, 0), kind.Word, BadgeColour(kind));
+		var text = Arg(args, 1);
+		return ValueTask.FromResult(new CallState(lead.Length == 0 ? text : MarkupText.Concat([lead, MarkupText.Space, text])));
+	}
+
+	/// <summary>A badge's kind: the classic colour codes, the theme colour that replaces them, and the word that says it.</summary>
+	private readonly record struct BadgeKind(string Codes, ThemeRole Role, string? Word);
+
+	/// <summary>The kind <paramref name="kind"/> names, <c>info</c> when empty; null for one that is not a kind.</summary>
+	private static BadgeKind? BadgeKindOf(MString kind) => kind.ToPlainText().Trim().ToLowerInvariant() switch
+	{
+		"" or "info" => new BadgeKind("hc", ThemeRole.Info, null),
+		"ok" => new BadgeKind("hg", ThemeRole.Success, "Done"),
+		"warn" => new BadgeKind("hy", ThemeRole.Warning, "Warning"),
+		"error" => new BadgeKind("hr", ThemeRole.Error, "Error"),
+		"muted" => new BadgeKind("hx", ThemeRole.Muted, null),
+		_ => null,
+	};
+
+	/// <summary>layout_theme's colour for the kind when it has one; the classic codes otherwise.</summary>
+	private IMarkup BadgeColour(BadgeKind kind) =>
+		HousePalette()?[kind.Role] is { } themed
+			? AnsiTheme.Paint(themed, kind.Role == ThemeRole.Muted ? ThemePaint.Text : ThemePaint.Bold)
+			: AnsiCodeParser.Parse(kind.Codes);
+
+	private static MString Bracketed(MString text, IMarkup colour) =>
+		MarkupText.Wrap(colour, MarkupText.Concat([MarkupText.Plain("["), text, MarkupText.Plain("]")]));
 
 	/// <summary>
 	/// <c>gradient(&lt;text&gt;, &lt;colors&gt;[, &lt;options&gt;])</c> — the text in colours blended one into the

@@ -607,7 +607,7 @@ public class SceneRoleplayIntegrationTests
 		// Schedule with raw epoch-seconds (convtime rejects it → SCHED_WHEN falls back to the number * 1000).
 		var schedMsgs = await RunAndCollectAs(samHandle, $"+scene/schedule Gala_{Tag}=2524608000");
 		var schedLine = schedMsgs.First(m => m.Contains("Scheduled scene"));
-		var schedId = schedLine.Replace("Scheduled scene ", "").Split(' ')[0];
+		var schedId = schedLine.Split("Scheduled scene ")[1].Split(' ')[0];
 		await Assert.That(schedId).IsNotEmpty().Because("the schedule confirmation should carry the new scene id");
 
 		await Assert.That(await Eval($"scene({schedId}, scheduledfor)")).IsEqualTo("2524608000000")
@@ -768,7 +768,7 @@ public class SceneRoleplayIntegrationTests
 		async Task<string> Schedule(string title, long when)
 		{
 			var said = await RunAndCollectHeardBy(xanHandle, xan, $"+scene/schedule {title}=" + when);
-			return said.First(m => m.Contains("Scheduled scene")).Replace("Scheduled scene ", "").Split(' ')[0];
+			return said.First(m => m.Contains("Scheduled scene")).Split("Scheduled scene ")[1].Split(' ')[0];
 		}
 
 		await Schedule($"Evening_{Tag}", At(3, 18));

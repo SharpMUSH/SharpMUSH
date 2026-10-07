@@ -20,6 +20,7 @@ This topic covers the functions, how layouts nest, their width, what each kind o
 | [DATATABLE()] and [DATACOLUMNS()] | a table that gives way on a narrow screen, given by rows or by columns |
 | [GRADIENT()] | text shaded through colours |
 | [BADGE()] | a coloured status tag |
+| [NOTICE()] | a message led by the badge of the system it comes from |
 | [THEMES()], [THEME()] and [SWATCH()] | colour themes for layouts; see [LAYOUT THEMES] |
 
 ## Text and nesting
@@ -134,6 +135,7 @@ In the portal the picture shows in place of the cat, with the fields beside it.
 - [DATACOLUMNS()]
 - [GRADIENT()]
 - [BADGE()]
+- [NOTICE()]
 - [LAYOUT BORDERS]
 - [LAYOUT THEMES]
 - [ALIGN()]
@@ -267,7 +269,7 @@ The colours, which `"colors"` sets by name:
 - `secondary` - titles and field labels
 - `tertiary` - list bullets
 - `muted` - tree guides, separators, the line under table headings, a gauge's empty part
-- `success`, `warning`, `error`, `info` - [BADGE()] uses these
+- `success`, `warning`, `error`, `info` - [BADGE()] and [NOTICE()] use these
 - `surface` - the background behind every second row of a striped table or field list (`"stripe":true`)
 - `background`, `foreground` - what the others are measured against; neither is painted
 
@@ -1076,5 +1078,42 @@ Mannaz [Online] Raya [Away]
 
 ::: seealso
 - [ANSI()]
+- [NOTICE()]
+- [LAYOUT FUNCTIONS]
+:::
+
+# notice()
+
+`notice(<source>, <text>[, <kind>])`
+
+A message from a system, such as `+job` or `+scene`: *<source>* as a badge, then *<text>*. *<kind>* is one of [BADGE()]'s kinds, and colours the badge. Every kind but `info` (the default) and `muted` also puts a word before the text, so a reader without colour, or a screen reader, still knows what kind of message it is:
+
+- `info` - nothing; the message is news
+- `ok` - `Done:`; the thing asked for happened
+- `warn` - `Warning:`; something typed was wrong (no such job, a missing title) or needs a second look
+- `error` - `Error:`; a real error: the player may not do this, or something broke
+- `muted` - nothing, in grey
+
+A client that says it is a screen reader is sent the badge without its brackets and the word in lower case, `JOBS error: Only a Job Admin can do that.`, and an info notice as `JOBS: Job 12 is due Friday.` The portal keeps the brackets from its screen reader the same way.
+
+The word takes the badge's colour. When the game sets `layout_theme`, the kinds take that theme's colours, as [BADGE()]'s do. An empty *<source>* leaves the badge out.
+
+A package says its own name once and uses it for every message, so its players learn which system is talking. Keep the name short and in capitals.
+
+### Examples
+```sharp
+> think notice(JOBS,Job 12 is due Friday.)
+[JOBS] Job 12 is due Friday.
+> think notice(JOBS,Job 12 is closed.,ok)
+[JOBS] Done: Job 12 is closed.
+> think notice(WIKI,There is no page called Lore/Dragons.,warn)
+[WIKI] Warning: There is no page called Lore/Dragons.
+> think notice(JOBS,Only a Job Admin can do that.,error)
+[JOBS] Error: Only a Job Admin can do that.
+```
+
+::: seealso
+- [BADGE()]
+- [LAYOUT THEMES]
 - [LAYOUT FUNCTIONS]
 :::

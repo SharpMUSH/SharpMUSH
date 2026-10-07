@@ -3,6 +3,7 @@ using SharpMUSH.SocketServer.ProtocolHandlers;
 using MarkupString.Ansi;
 using MarkupString.Layout;
 using MarkupString.Mxp;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Text;
@@ -107,8 +108,9 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);
 		var ansi = AnsiOptionsFor(connection.Capabilities, depth, pictures);
-		var ms = Relayout(MarkupTextSerializer.Deserialize(markup), connection.Capabilities, connection.Preferences?.Theme,
-			ansi.Pictures is null ? null : PictureCellsFor(ansi));
+		// A notice()'s lead without its brackets for a screen reader, and without its tags for everyone.
+		var ms = Relayout(NoticeMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), connection.Capabilities.ScreenReader),
+			connection.Capabilities, connection.Preferences?.Theme, ansi.Pictures is null ? null : PictureCellsFor(ansi));
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo, WireFor(depth)),

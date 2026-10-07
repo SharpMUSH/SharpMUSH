@@ -1,6 +1,7 @@
 using MarkupString.Layout;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -278,6 +279,24 @@ public class LayoutFunctionTests
 	}
 
 	/// <summary>
+	/// A notice's badge and kind word share the kind's colour and the text keeps its own; an empty source
+	/// leaves the badge out.
+	/// </summary>
+	[Test]
+	public async Task ANoticeColoursItsBadgeAndWordForItsKind()
+	{
+		var error = (await Eval("notice(JOBS,There is [ansi(u,no)] job 12.,error)")).Render(MarkupFormat.Ansi);
+		var lead = NoticeMarkup.ForTelnet(await Eval("notice(JOBS,x,error)"), false).Render(MarkupFormat.Ansi);
+		await Assert.That(lead).IsEqualTo((await Eval("ansi(hr,\\[JOBS\\] Error:) x")).Render(MarkupFormat.Ansi));
+		await Assert.That(error).Contains("There is ").And.Contains((await Eval("ansi(u,no)")).Render(MarkupFormat.Ansi));
+
+		await Assert.That((await Eval("notice(,Saved.,ok)")).ToPlainText()).IsEqualTo("Done: Saved.");
+		await Assert.That((await Eval("notice(JOBS,Quiet.,muted)")).ToPlainText()).IsEqualTo("[JOBS] Quiet.");
+		await Assert.That((await Eval("notice(JOBS,Priority is low\\, normal or high \\(or green\\, red\\).,error)")).ToPlainText())
+			.IsEqualTo("[JOBS] Error: Priority is low, normal or high (or green, red).");
+	}
+
+	/// <summary>
 	/// The options are one JSON object, written inside a second pair of braces or built with
 	/// <c>json()</c>; a string keeps its colour and an escaped quote is a quote.
 	/// </summary>
@@ -373,6 +392,7 @@ public class LayoutFunctionTests
 	[Arguments("datatable({{\"priority\":\"1|2|3\"}},A|B,1|2)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("datatable({{\"min\":\"x\"}},A|B,1|2)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
+	[Arguments("notice(JOBS,x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("gradient(x,h|r)", "#-1 UNKNOWN COLOR")]
 	[Arguments("gradient(x,r|g,{{\"rgb\":\"\"}})", "#-1 UNKNOWN LAYOUT OPTION RGB")]
 	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]
