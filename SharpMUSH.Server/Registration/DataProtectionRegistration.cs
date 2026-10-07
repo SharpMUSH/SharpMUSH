@@ -33,10 +33,11 @@ internal static class DataProtectionRegistration
 
 		// What PersistKeysToFileSystem does, but read from the host's LightningWorldPath when options are
 		// first resolved, so a test host given a world of its own gets a key ring of its own beside it.
-		// The repository creates the directory on first write.
+		// The directory is made here rather than on the first key write, so a volume the server cannot
+		// write to fails at startup and the backup service always finds the path it snapshots.
 		services.AddOptions<KeyManagementOptions>()
 			.Configure<LightningWorldPath, ILoggerFactory>((options, world, loggerFactory) =>
-				options.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(KeyRingPath(world.Value)), loggerFactory));
+				options.XmlRepository = new FileSystemXmlRepository(Directory.CreateDirectory(KeyRingPath(world.Value)), loggerFactory));
 
 		return services;
 	}

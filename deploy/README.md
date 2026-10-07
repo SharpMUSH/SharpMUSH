@@ -307,8 +307,9 @@ To enable it, fill in the restic settings in `.env` and uncomment:
 COMPOSE_PROFILES=backup
 ```
 
-Once enabled, the `backup` service snapshots `/data/backup` and `/data/wiki-assets` to your
-bucket every night at 03:30, keeping 7 daily and 4 weekly snapshots. The volume is mounted
+Once enabled, the `backup` service snapshots `/data/backup`, `/data/wiki-assets` and
+`/data/lightning.dataprotection-keys` to your bucket every night at 03:30, keeping 7 daily and 4
+weekly snapshots. The volume is mounted
 **read-only**, so a backup run can never corrupt live data.
 
 **What it snapshots is a copy, not the live world.** restic reads `data.mdb` front to back
@@ -361,7 +362,7 @@ docker compose run --rm -v restore:/restore backup \
 
 **To restore for real**: stop the stack, then put the snapshot's
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
-`lightning`, and `wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
+`lightning`, and `wiki-assets` and `lightning.dataprotection-keys` go back as they are. The game reads whatever is in the volume on boot.
 
 ```bash
 docker compose stop sharpmush-server connectionserver
@@ -379,7 +380,9 @@ docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-
 docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server -c '
   rm -rf /app/data/lightning &&
   cp -a /restore/data/backup/<timestamp> /app/data/lightning &&
-  cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/'
+  cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/ &&
+  rm -rf /app/data/lightning.dataprotection-keys &&
+  cp -a /restore/data/lightning.dataprotection-keys /app/data/lightning.dataprotection-keys'
 
 docker compose start connectionserver sharpmush-server
 docker volume rm restore    # once the game is up and you are satisfied
