@@ -62,14 +62,14 @@ The sections below cover:
 
 ## Commands and ownership
 
-- `@job/create <objid>/<attribute>=<schedule>|<timezone>[|<description>]` - create a job
+- `@job/create <object>/<attribute>=<schedule>|<timezone>[|<description>]` - create a job
 - `@job/list` - list your account's jobs
 - `@job/list/all` - list every account's jobs
 - `@job/disable <job-id>` and `@job/enable <job-id>` - stop or resume firing
 - `@job/schedule <job-id>=<schedule>|<timezone>` - change when it fires
 - `@job/delete <job-id>` - remove it
 
-`<objid>` is the object's full identity, `#<number>:<creation>`, as [OBJID()] returns it; a bare dbref or a name is refused.
+`<object>` is matched like any other object: a name, `me`, `here`, a dbref or an objid. The job stores the object's full identity, `#<number>:<creation>`, as [OBJID()] returns it, so if the object is destroyed and its dbref reused, the job does not fire on the new object.
 
 Add `/all` to `/disable`, `/enable`, `/schedule` or `/delete` to select another account's job. The portal's Recurring jobs page has the same controls.
 

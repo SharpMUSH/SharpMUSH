@@ -39,8 +39,11 @@ public class AdminAccountsController(
 	/// True for a server-owned account whose status cannot be changed. Reported rather than derived
 	/// client-side so the reservation rule lives only where it is enforced.
 	/// </param>
+	/// <param name="IsGodsAccount">
+	/// True for the account holding God (#1), which may be restored but never disabled, closed or deleted.
+	/// </param>
 	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
-		bool MustChangePassword, bool IsReserved, IReadOnlyList<AdminCharacterSummary> Characters);
+		bool MustChangePassword, bool IsReserved, bool IsGodsAccount, IReadOnlyList<AdminCharacterSummary> Characters);
 	public record ResetPasswordRequest(string NewPassword);
 
 	private static string FullId(string key) => $"node_accounts/{key}";
@@ -122,6 +125,7 @@ public class AdminAccountsController(
 		var rows = await accounts.ToAsyncEnumerable()
 			.Select(async (account, ct) => new AdminAccountRow(KeyOf(account), account.Username, account.Email,
 				account.Status.ToString(), account.MustChangePassword, SystemAccount.IsReserved(account.Username),
+				await accountService.IsGodsAccountAsync(account.Id!, ct),
 				(await accountService.GetCharactersAsync(account.Id!, ct))
 				.Select(c => new AdminCharacterSummary(c.Object.Key, c.Object.Name)).ToList()))
 			.ToListAsync();
@@ -149,8 +153,10 @@ public class AdminAccountsController(
 	{
 		var (adminId, failure) = await RequireWizardAsync();
 		if (failure is not null) return failure;
+		if (await accountService.GetByIdAsync(FullId(key)) is null)
+			return NotFound($"No account with key '{key}'.");
 		var result = await accountService.DisableAccountAsync(FullId(key));
-		if (result is Error<string> error) return NotFound(error.Value);
+		if (result is Error<string> error) return Conflict(error.Value);
 		await audit.RecordPortalAsync(adminId!, AuditActions.AccountStatus, await AccountTargetAsync(key),
 			nameof(AccountStatus.Disabled));
 		logger.LogInformation("Admin {AdminId} disabled account {Key}", LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key));
@@ -182,7 +188,7 @@ public class AdminAccountsController(
 			return BadRequest($"Unknown account status '{request.Status}'.");
 
 		// Resolving the account here separates the two error causes: absent is 404, present but
-		// refused (the reserved system account) is 409. Mapping both to NotFound claimed an account
+		// refused (the reserved system account, or God's) is 409. Mapping both to NotFound claimed an account
 		// does not exist when it does.
 		var accountId = FullId(key);
 		if (await accountService.GetByIdAsync(accountId) is null)
@@ -205,7 +211,8 @@ public class AdminAccountsController(
 		if (reason is { Length: > AdminBansController.MaxReasonLength })
 			return BadRequest($"Keep the reason to {AdminBansController.MaxReasonLength} characters.");
 		var character = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbrefNumber)));
-		await accountService.UnlinkCharacterAsync(FullId(key), new DBRef(dbrefNumber));
+		if (await accountService.UnlinkCharacterAsync(FullId(key), new DBRef(dbrefNumber)) is Error<string> refused)
+			return Conflict(refused.Value);
 		await audit.RecordPortalAsync(adminId!, AuditActions.CharacterUnlink,
 			character is AnySharpObject unlinked
 				? AuditTargets.Of(unlinked)

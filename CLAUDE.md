@@ -80,6 +80,7 @@ Key environment variables:
 - `SHARPMUSH_DATABASE_PROVIDER` — accepts only `lightning` (the default when unset); any other value fails startup
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
+- `SHARPMUSH_DATAPROTECTION_PATH` — directory for ASP.NET Core's Data Protection key ring (default: `<world path>.dataprotection-keys`, beside the world so it lands on the same volume)
 - `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`)
 - `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
 - `SHARPMUSH_BACKUP_PACKAGE_KEEP` — how many automatic copies taken before a portal package apply/rollback/uninstall stay, in `<backup path>/pre-package`, counted apart from the others (default: 2; `0` turns them off)
@@ -149,7 +150,7 @@ The **shared vocabulary** is how a game says a thing once and lets each format w
 
 `MString.ToString()` is always plain text (equivalent to `ToPlainText()`) — it is never format-specific. To produce output for a client, render explicitly: `text.Render(MarkupFormat.Ansi)`, `.Render(MarkupFormat.Html)`, etc. There is no `ToAnsi()`/`ToHtml()`.
 
-Server output that lines things up (`WHO`, the admin listings, help and the Markdown renderer's tables, lists, rules and flex rows) builds a MarkupString layout `Block` tree (`Table`, `Rule`, `Bullets`, `Flex`) and lays it out with `ServerLayout.Build` (`SharpMUSH.Library/Markup`), never padded strings or a repeated `-`. The rendering worker then lays it out again for each client's width, as ASCII without UTF-8 and in reading order for a screen reader, and the portal draws it as HTML. A listing or a detail view is a titled `ServerLayout.Panel` (rounded lines, `+-+` without UTF-8) around a `ServerLayout.Listing` table or `ServerLayout.KeyValues` labelled values. Mail is a `ServerLayout.Section` instead (a titled double rule above, one below, no sides), so a copied line is only its text. `WHO` and `DOING` stay plain ASCII, one line per player, for WHO crawlers. `ServerLayout.DashedRule` is PennMUSH's `-----` separator, for output that keeps PennMUSH's look.
+Server output that lines things up (`WHO`, the admin listings, help and the Markdown renderer's tables, lists, rules and flex rows) builds a MarkupString layout `Block` tree (`Table`, `Rule`, `Bullets`, `Flex`) and lays it out with `ServerLayout.Build` (`SharpMUSH.Library/Markup`), never padded strings or a repeated `-`. The rendering worker then lays it out again for each client's width, as ASCII without UTF-8 and in reading order for a screen reader, and the portal draws it as HTML. A listing or a detail view is a titled `ServerLayout.Panel` (rounded lines, `+-+` without UTF-8; a reader's `@theme` with a border of its own replaces them, since `ServerLayout.Build` lays everything out under `ServerLayout.House` as a fallback) around a `ServerLayout.Listing` table or `ServerLayout.KeyValues` labelled values. Mail is a `ServerLayout.Section` instead (a titled double rule above, one below, no sides), so a copied line is only its text. `WHO` and `DOING` stay plain ASCII, one line per player, for WHO crawlers. `ServerLayout.DashedRule` is PennMUSH's `-----` separator, for output that keeps PennMUSH's look.
 
 MUSH-specific policy (space-list semantics, `compressSpaces`, glob-to-regex, column alignment, PennMUSH error strings) is not in the markup packages — it lives in `SharpMUSH.Library/Markup/` (`MushText`, `TextAligner`, `ColumnSpec`), built on top of the generic `MarkupText` API.
 
@@ -173,7 +174,7 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
 
 - `IWidgetRegistry` / `ILayoutService` — widget system; widgets registered at startup in `Program.cs`
 - `ApplicationCatalog` — the Dynamic Applications snapshot; loads alongside the first render, so a reader that needs the whole list awaits `Loaded`
-- `IThemeService` — built-in MudTheme accent presets, the choice persisted in localStorage (the CSS variables in `wwwroot/css/tokens.css` are static; see `docs/design/ui-patterns.md` §13)
+- `IThemeService` — the acting character's portal theme and accent (staff themes at `/admin/themes`, built-in genre themes, an optional staff stylesheet), resolved to CSS custom properties over `wwwroot/css/tokens.css`; component CSS writes no colours of its own. See `docs/guides/portal-themes.md`
 - `WikiService` / `SceneService` — HTTP clients for the server's wiki and scene APIs (scene writes go through game commands)
 - `GameCommandService` — runs a game command as the acting character (`POST api/commands`) and returns its output
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management

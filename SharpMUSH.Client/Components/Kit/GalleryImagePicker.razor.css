@@ -1,0 +1,100 @@
+/* Inside MudOverlay's fixed layer, which supplies the backdrop and the scroll lock. */
+.kit-picker {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 100vw;
+	max-height: 100dvh;
+	padding: 16px;
+	box-sizing: border-box;
+	outline: none;
+}
+
+.kit-picker-frame {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: min(100%, 40rem);
+	max-height: calc(100dvh - 32px);
+	padding: 16px;
+	box-sizing: border-box;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	background: var(--surface);
+	overflow: auto;
+}
+
+.kit-picker-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.kit-picker-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.kit-picker-spacer {
+	flex: 1 1 auto;
+}
+
+/* MudFileUpload's wrapper would otherwise take the frame's width and margin */
+.kit-picker-frame ::deep .kit-picker-upload {
+	margin: 0;
+	width: auto;
+	align-self: flex-start;
+}
+
+.kit-picker-label {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.kit-picker-empty {
+	padding: 24px 16px;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-card);
+	color: var(--text-dim);
+	text-align: center;
+}
+
+.kit-picker-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+	gap: 8px;
+}
+
+.kit-picker-item {
+	aspect-ratio: 1;
+	padding: 0;
+	border: 2px solid transparent;
+	border-radius: 10px;
+	background: var(--surface-2);
+	overflow: hidden;
+	cursor: pointer;
+}
+
+.kit-picker-item img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.kit-picker-item:hover,
+.kit-picker-item:focus-visible {
+	border-color: var(--border);
+}
+
+.kit-picker-item--current,
+.kit-picker-item--current:hover {
+	border-color: var(--accent);
+}
+
+.kit-picker-item:disabled {
+	cursor: default;
+	opacity: 0.6;
+}

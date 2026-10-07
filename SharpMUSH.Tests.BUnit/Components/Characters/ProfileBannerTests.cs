@@ -1,10 +1,12 @@
 using Bunit;
 using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using AccountCharacter = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
 namespace SharpMUSH.Tests.BUnit.Components.Characters;
 
@@ -17,10 +19,11 @@ namespace SharpMUSH.Tests.BUnit.Components.Characters;
 public class ProfileBannerTests : TrackingBunitContext
 {
 	private readonly CharactersApiFake _fake;
+	private readonly BunitAuthorizationContext _auth;
 
 	public ProfileBannerTests()
 	{
-		(_fake, _, _) = CharactersApiFake.Install(this);
+		(_fake, _, _auth) = CharactersApiFake.Install(this);
 		Services.AddSingleton(CharactersApiFake.Anonymous(this));
 		var layouts = Substitute.For<ILayoutService>();
 		layouts.GetLayoutAsync(Arg.Any<string>()).Returns(new LayoutConfiguration(new Dictionary<WidgetZone, List<WidgetPlacement>>(), new LayoutSettings(false, false)));
@@ -180,5 +183,169 @@ public class ProfileBannerTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find("button.char-profile-full"), TimeSpan.FromSeconds(5));
 		await cut.Find("button.char-profile-full").ClickAsync();
 		await Assert.That(cut.Find("[role='dialog'] img.kit-viewer-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/d/docks.jpg");
+	}
+
+	private static IRenderedComponent<InputFile> UploadInput(IRenderedComponent<CharacterProfile> cut, string upload)
+	{
+		var id = cut.Find($"{upload} input[type=file]").Id;
+		return cut.FindComponents<InputFile>().First(i => i.Find("input").Id == id);
+	}
+
+	private async Task SignInAsTomasAsync()
+	{
+		_auth.SetAuthorized("player");
+		Services.AddSingleton(await CharactersApiFake.SignedInAsync(this, new AccountCharacter(312, 1, "Tomas Reyes", "PLAYER", IsActing: true)));
+	}
+
+	[Test]
+	public async Task AVisitor_IsNotOfferedTheImageControls()
+	{
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-pill--dbref"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".char-profile-change-banner").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".char-profile-change-avatar").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TheOwner_ChangesTheBanner_AndItIsNotTheAvatar()
+	{
+		await SignInAsTomasAsync();
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{"image":"/api/wiki-assets/a/a.jpg"}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"a","fileName":"a.jpg","url":"/api/wiki-assets/a/a.jpg","caption":null,"order":0,"isIcon":true,"isBanner":false}]
+			""";
+		_fake.Extra["POST /api/profile/Tomas%20Reyes/gallery?use=banner"] = """
+			[{"assetId":"a","fileName":"a.jpg","url":"/api/wiki-assets/a/a.jpg","caption":null,"order":0,"isIcon":true,"isBanner":false},
+			 {"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":null,"order":1,"isIcon":false,"isBanner":true}]
+			""";
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-change-banner"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".char-profile-remove-banner").Count).IsEqualTo(0).Because("there is no banner to remove yet");
+
+		await cut.Find(".char-profile-change-banner").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("[role='dialog'] .kit-picker-upload"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-picker-title").TextContent).IsEqualTo("Change banner");
+		UploadInput(cut, ".kit-picker-upload")
+			.UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "docks.jpg", contentType: "image/jpeg"));
+
+		cut.WaitForAssertion(() => cut.Find("img.kit-banner-img"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(0).Because("the picker closes once a file is chosen");
+		await Assert.That(cut.Find("img.kit-banner-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/d/docks.jpg");
+		await Assert.That(cut.Find(".kit-banner-lead img.char-profile-portrait").GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/a.jpg");
+		await Assert.That(cut.FindAll(".char-profile-remove-banner").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task TheOwner_ChangesTheAvatar_AndTheBannerStays()
+	{
+		await SignInAsTomasAsync();
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{"banner":"/api/wiki-assets/d/docks.jpg"}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":null,"order":0,"isIcon":false,"isBanner":true}]
+			""";
+		_fake.Extra["POST /api/profile/Tomas%20Reyes/gallery?use=avatar"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":null,"order":0,"isIcon":false,"isBanner":true},
+			 {"assetId":"t","fileName":"tomas.jpg","url":"/api/wiki-assets/t/tomas.jpg","caption":null,"order":1,"isIcon":true,"isBanner":false}]
+			""";
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-change-avatar"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-banner-lead .char-profile-initials").TextContent).IsEqualTo("TR")
+			.Because("a gallery of only the banner has no avatar");
+
+		await cut.Find(".char-profile-change-avatar").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("[role='dialog'] .kit-picker-upload"), TimeSpan.FromSeconds(5));
+		UploadInput(cut, ".kit-picker-upload")
+			.UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "tomas.jpg", contentType: "image/jpeg"));
+
+		cut.WaitForAssertion(() => cut.Find(".kit-banner-lead img.char-profile-portrait"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-banner-lead img.char-profile-portrait").GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/tomas.jpg");
+		await Assert.That(cut.Find("img.kit-banner-img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/d/docks.jpg");
+	}
+
+	[Test]
+	public async Task TheOwner_PicksTheAvatarFromTheGallery()
+	{
+		await SignInAsTomasAsync();
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":"Docks","order":0,"isIcon":false,"isBanner":true},
+			 {"assetId":"t","fileName":"tomas.jpg","url":"/api/wiki-assets/t/tomas.jpg","caption":"Tomas","order":1,"isIcon":false,"isBanner":false}]
+			""";
+		string? sent = null;
+		_fake.OnRequest = async request =>
+		{
+			if (request.Method == HttpMethod.Put) sent = await request.Content!.ReadAsStringAsync();
+		};
+		_fake.Extra["PUT /api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":"Docks","order":0,"isIcon":false,"isBanner":true},
+			 {"assetId":"t","fileName":"tomas.jpg","url":"/api/wiki-assets/t/tomas.jpg","caption":"Tomas","order":1,"isIcon":true,"isBanner":false}]
+			""";
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-change-avatar"), TimeSpan.FromSeconds(5));
+		await cut.Find(".char-profile-change-avatar").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("[role='dialog'] .kit-picker-item"), TimeSpan.FromSeconds(5));
+
+		var items = cut.FindAll(".kit-picker-item");
+		await Assert.That(items.Count).IsEqualTo(2);
+		await Assert.That(items.All(i => i.GetAttribute("aria-pressed") == "false")).IsTrue()
+			.Because("nothing is the avatar yet; the banner is not marked as one");
+		await cut.Find(".kit-picker-item[aria-label='Tomas']").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".kit-banner-lead img.char-profile-portrait"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-banner-lead img.char-profile-portrait").GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/tomas.jpg");
+		await Assert.That(sent).Contains("\"assetId\":\"t\"");
+		await Assert.That(System.Text.Json.JsonDocument.Parse(sent!).RootElement.EnumerateArray()
+			.Single(e => e.GetProperty("isIcon").GetBoolean()).GetProperty("assetId").GetString()).IsEqualTo("t");
+		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ThePicker_MarksTheCurrentBanner()
+	{
+		await SignInAsTomasAsync();
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":"Docks","order":0,"isIcon":false,"isBanner":true},
+			 {"assetId":"t","fileName":"tomas.jpg","url":"/api/wiki-assets/t/tomas.jpg","caption":"Tomas","order":1,"isIcon":true,"isBanner":false}]
+			""";
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-change-banner"), TimeSpan.FromSeconds(5));
+		await cut.Find(".char-profile-change-banner").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("[role='dialog'] .kit-picker-item"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-picker-item--current").GetAttribute("aria-label")).IsEqualTo("Docks");
+
+		await cut.Find(".kit-picker-close").ClickAsync();
+		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TheOwner_RemovesTheBanner()
+	{
+		await SignInAsTomasAsync();
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{"banner":"/api/wiki-assets/d/docks.jpg"}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":null,"order":0,"isIcon":false,"isBanner":true}]
+			""";
+		string? sent = null;
+		_fake.OnRequest = async request =>
+		{
+			if (request.Method == HttpMethod.Put) sent = await request.Content!.ReadAsStringAsync();
+		};
+		_fake.Extra["PUT /api/profile/Tomas%20Reyes/gallery"] = """
+			[{"assetId":"d","fileName":"docks.jpg","url":"/api/wiki-assets/d/docks.jpg","caption":null,"order":0,"isIcon":false,"isBanner":false}]
+			""";
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-remove-banner"), TimeSpan.FromSeconds(5));
+		await cut.Find(".char-profile-remove-banner").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".kit-banner--hue"), TimeSpan.FromSeconds(5));
+		await Assert.That(sent).Contains("\"isBanner\":false");
+		await Assert.That(cut.FindAll(".char-profile-remove-banner").Count).IsEqualTo(0);
 	}
 }

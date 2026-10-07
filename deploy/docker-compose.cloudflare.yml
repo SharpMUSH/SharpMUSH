@@ -253,7 +253,7 @@ services:
       # front to back while commits keep landing under it, and LMDB does not promise such a copy
       # opens; /data/backup holds copies taken with LMDB's own copy routine, each one a complete
       # environment. SHARPMUSH_BACKUP_INTERVAL on sharpmush-server keeps them fresh.
-      - RESTIC_BACKUP_SOURCES=/data/backup /data/wiki-assets
+      - RESTIC_BACKUP_SOURCES=/data/backup /data/wiki-assets /data/lightning.dataprotection-keys
       # A copy still being written is named .incoming-*; it is moved into place only when complete, so
       # excluding it keeps a half-written world out of the snapshot even mid-copy.
       - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush --exclude /data/backup/.incoming-*

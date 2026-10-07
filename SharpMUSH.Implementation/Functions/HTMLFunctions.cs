@@ -112,6 +112,13 @@ public partial class Functions
 		=> await executor.IsWizard() || await executor.HasPower("Send_OOB");
 
 	/// <summary>
+	/// Whether <paramref name="executor"/> may show a picture (<c>image()</c>, <c>figure()</c>, a Markdown
+	/// image): <see cref="CanSendOob"/>, or the Send_Image power on its own, which the approved role holds.
+	/// </summary>
+	private static async ValueTask<bool> CanSendImage(AnySharpObject executor)
+		=> await CanSendOob(executor) || await executor.HasPower("Send_Image");
+
+	/// <summary>
 	/// <c>wshtml(&lt;html&gt;)</c> — an HTML fragment as markup (<see cref="HtmlFragment"/>): text nodes
 	/// become the text, each element a layer over what it encloses. It sends nothing; the value is for
 	/// whatever emits it, and every client reads it the way it reads <c>tagwrap()</c> output. Each element
@@ -276,7 +283,7 @@ public partial class Functions
 	[SharpFunction(Name = "image", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["address", "description", "width", "height"])]
 	public async ValueTask<CallState> Image(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
+		if (!await CanSendImage(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}

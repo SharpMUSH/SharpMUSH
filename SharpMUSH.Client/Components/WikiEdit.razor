@@ -51,7 +51,7 @@
         </div>
 
         <div class="wiki-edit-titlerow">
-            <input class="wiki-edit-title" value="@Article.Title"
+            <input @ref="_title" class="wiki-edit-title" value="@Article.Title" aria-label="@Loc["WkPageTitlePlaceholder"]"
                    @oninput="@(e => Article.Title = e.Value?.ToString() ?? string.Empty)"
                    placeholder="@Loc["WkPageTitlePlaceholder"]" />
         </div>
@@ -85,7 +85,9 @@
         }
 
         <div class="wiki-edit-split">
-            <textarea id="@_taId" class="wiki-edit-textarea" spellcheck="false"
+            @* The page's main text box (input-focus.js): typing on the page lands here, caret at the top. *@
+            <textarea @ref="_source" id="@_taId" class="wiki-edit-textarea" spellcheck="false" data-primary-input="start"
+                      aria-label="@Loc["WkSourceLabel"]"
                       value="@Article.Content"
                       @oninput="@(e => Article.Content = e.Value?.ToString() ?? string.Empty)"></textarea>
             <div class="wiki-edit-preview WikiContent">
@@ -148,7 +150,7 @@
                 </span>
                 @Loc["WkMinorEdit"]
             </button>
-            <span class="wiki-edit-delta" style="@(ByteDelta >= 0 ? "color:var(--accent);" : "color:#e57373;")">
+            <span class="wiki-edit-delta" style="@(ByteDelta >= 0 ? "color:var(--accent);" : "color:var(--danger);")">
                 @Loc.Plural("WkBytesDelta", "count", Math.Abs(ByteDelta), "signed", SignedByteDelta)
             </span>
             <div class="wiki-edit-savediv"></div>
@@ -239,6 +241,25 @@
         WikiHelpers.SameLanguage(locale, SourceLocale)
             ? string.Format(Loc["WkSourceLocaleLabel"], PortalLocales.DisplayName(locale))
             : PortalLocales.DisplayName(locale);
+
+    private ElementReference _title;
+    private ElementReference _source;
+    private bool _arrived;
+
+    /// <summary>Opening the editor focuses the title of a page that has none yet, else the source.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_arrived || Article is null) return;
+        _arrived = true;
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("sharpmushInputFocus.arrive", string.IsNullOrWhiteSpace(Article.Title) ? _title : _source);
+        }
+        catch (JSException)
+        {
+            // No focus script: the fields are still there to click.
+        }
+    }
 
     private readonly string _taId = $"wiki-edit-ta-{Guid.NewGuid():N}";
     private bool _saving;

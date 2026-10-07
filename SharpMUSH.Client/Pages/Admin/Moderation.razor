@@ -81,13 +81,16 @@
                             <CapsuleButton Icon="@Icons.Material.Filled.LockOpen" Class="adm-mod-lift"
                                            Disabled="_busy" OnClick="() => LiftAsync(ban)">@Loc["AdmModerationLift"]</CapsuleButton>
                         }
-                        else
+                        else if (!picked.GodsAccount)
                         {
                             <CapsuleButton Icon="@Icons.Material.Filled.Block" Class="adm-mod-ban"
                                            Disabled="@(_busy || picked.AccountKey is null || !HasReason)" OnClick="BanAsync">@Loc["AdmModerationBan"]</CapsuleButton>
                         }
-                        <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Class="adm-mod-unlink"
-                                       Disabled="@(_busy || picked.AccountKey is null)" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>
+                        @if (picked.DbrefNumber != 1)
+                        {
+                            <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Class="adm-mod-unlink"
+                                           Disabled="@(_busy || picked.AccountKey is null)" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>
+                        }
                     </div>
                     <p class="adm-mod-note">@Loc["AdmModerationWarnNote"]</p>
                 </div>

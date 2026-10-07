@@ -20,6 +20,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 /// Routes:
 ///   GET /api/scenes?filter=active|recent|scheduled[&amp;count=] — list scene DTOs
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
+///   ...&amp;offset=N&amp;state=live|upcoming|finished&amp;search=text — narrow and page any list
 ///   GET /api/scenes/partners?participant=#N[&amp;count=] — who shares the most of those scenes with them
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
 ///   GET /api/scenes/{id}/poses[?count=]   — ordered pose DTOs; the whole log is streamed in pages
@@ -125,21 +126,59 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	/// <summary>
 	/// GET /api/scenes?filter=active|recent|scheduled&amp;count=50
 	/// Lists scenes by filter (recent-first; scheduled sorted by ScheduledFor ascending),
-	/// restricted to scenes the caller may see. <c>count</c> caps the number returned.
+	/// restricted to scenes the caller may see. <c>count</c> caps the number returned. <c>state</c> keeps the
+	/// scenes in one state (<see cref="MatchesState"/>), <c>search</c> those whose title, pitch or room holds
+	/// the text, and <c>offset</c> skips that many of the scenes left, for a list read a page at a time.
 	/// </summary>
 	[HttpGet]
 	public async Task<IActionResult> ListScenes([FromQuery] string filter = "recent", [FromQuery] int count = 50,
-		[FromQuery] string? participant = null)
+		[FromQuery] string? participant = null, [FromQuery] int offset = 0, [FromQuery] string? state = null,
+		[FromQuery] string? search = null)
 	{
+		if (!IsKnownState(state))
+		{
+			return BadRequest(new { error = "state must be live, upcoming or finished." });
+		}
+
+		Func<Contracts.Scene, bool> match = scene => MatchesState(scene, state) && MatchesSearch(scene, search);
 		if (participant is not null)
 		{
 			return DBRef.TryParse(participant, out var member) && member is { } who
-				? Ok((await VisibleScenesOfAsync(who, count)).Select(ToDto))
+				? Ok((await VisibleScenesAsync("mine", who.ToString(), count, offset, match)).Select(ToDto))
 				: BadRequest(new { error = "participant must be a dbref such as #42." });
 		}
 
 		// Every returned scene is gated through CanSeeAsync so non-public scenes never leak to non-members.
-		return Ok((await VisibleScenesAsync(filter, CallerDbref, count)).Select(ToDto));
+		return Ok((await VisibleScenesAsync(filter, CallerDbref, count, offset, match)).Select(ToDto));
+	}
+
+	private static bool IsKnownState(string? state) =>
+		string.IsNullOrWhiteSpace(state) || state.Trim().ToLowerInvariant() is "live" or "upcoming" or "finished";
+
+	/// <summary>
+	/// <c>live</c> is a running scene, <c>upcoming</c> one waiting to run (not started yet, or paused), and
+	/// <c>finished</c> one that ended. No state keeps every scene.
+	/// </summary>
+	private static bool MatchesState(Contracts.Scene scene, string? state) =>
+		(state?.Trim().ToLowerInvariant()) switch
+		{
+			"live" => scene.Status == "active",
+			"upcoming" => scene.Status is "new" or "paused",
+			"finished" => scene.Status == "finished",
+			_ => true,
+		};
+
+	/// <summary>The scene's title, pitch or room name holds <paramref name="search"/>, ignoring case.</summary>
+	private static bool MatchesSearch(Contracts.Scene scene, string? search)
+	{
+		if (string.IsNullOrWhiteSpace(search)) return true;
+
+		var text = search.Trim();
+		return Holds(scene.RoomName)
+			|| (scene.Meta.TryGetValue("title", out var title) && Holds(title))
+			|| (scene.Meta.TryGetValue("summary", out var pitch) && Holds(pitch));
+
+		bool Holds(string? value) => value?.Contains(text, StringComparison.OrdinalIgnoreCase) == true;
 	}
 
 	/// <summary>
@@ -182,36 +221,44 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 
 	/// <summary>The scenes <paramref name="member"/> belongs to, newest first, that the caller may see.</summary>
 	private Task<List<Contracts.Scene>> VisibleScenesOfAsync(DBRef member, int count) =>
-		VisibleScenesAsync("mine", member.ToString(), count);
+		VisibleScenesAsync("mine", member.ToString(), count, 0, null);
 
 	/// <summary>The most scenes one list request returns, whatever <c>count</c> asks for.</summary>
 	public const int MaxListCount = 200;
 
 	/// <summary>
-	/// The first <paramref name="count"/> scenes of <paramref name="filter"/> that the caller may see. The
-	/// service's own <c>count</c> cuts the list before visibility is known, so when the first window holds
-	/// fewer visible scenes than wanted, and the service had more to give, the whole list is read once more —
-	/// newer scenes the caller cannot open never push the older ones it can out of the answer. Two reads at
-	/// most: the store reads every index entry on each call whatever the count, so widening step by step
-	/// repeated that read once per doubling.
+	/// The <paramref name="count"/> scenes of <paramref name="filter"/> that the caller may see and that
+	/// <paramref name="match"/> keeps, after the first <paramref name="offset"/> of them. The service's own
+	/// <c>count</c> cuts the list before visibility is known, so when the first window holds fewer such scenes
+	/// than wanted, and the service had more to give, the whole list is read once more — newer scenes the
+	/// caller cannot open never push the older ones it can out of the answer. Two reads at most: the store
+	/// reads every index entry on each call whatever the count, so widening step by step repeated that read
+	/// once per doubling.
 	/// </summary>
-	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count)
+	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count, int offset,
+		Func<Contracts.Scene, bool>? match)
 	{
 		var wanted = Math.Clamp(count, 0, MaxListCount);
+		var skip = Math.Clamp(offset, 0, int.MaxValue - MaxListCount);
+		var needed = skip + wanted;
 		var seen = new Dictionary<string, bool>(StringComparer.Ordinal);
-		var ask = Math.Max(1, wanted);
+		var ask = Math.Max(1, needed);
 		var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
 		var visible = await TakeVisibleAsync(scenes);
-		if (visible.Count >= wanted || scenes.Count < ask) return visible;
+		if (visible.Count < needed && scenes.Count >= ask)
+		{
+			visible = await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+		}
 
-		return await TakeVisibleAsync(await sceneService.ListScenesAsync(filter, viewer, count: int.MaxValue));
+		return visible.Skip(skip).ToList();
 
 		async Task<List<Contracts.Scene>> TakeVisibleAsync(IReadOnlyList<Contracts.Scene> listed)
 		{
-			var taken = new List<Contracts.Scene>(Math.Min(listed.Count, wanted));
+			var taken = new List<Contracts.Scene>(Math.Min(listed.Count, needed));
 			foreach (var scene in listed)
 			{
-				if (taken.Count >= wanted) break;
+				if (taken.Count >= needed) break;
+				if (match is not null && !match(scene)) continue;
 				if (!seen.TryGetValue(scene.Id, out var canSee))
 				{
 					seen[scene.Id] = canSee = await CanSeeAsync(scene);

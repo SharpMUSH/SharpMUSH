@@ -106,7 +106,7 @@ public record SharpMUSHOptions
 			AnnounceConnects: true,
 			AnsiNames: true,
 			ChatStripQuote: true,
-			LayoutBorder: "mush",
+			LayoutBorder: "double",
 			LayoutTheme: "",
 			ImageHosts: "any",
 			ImageHostList: "",

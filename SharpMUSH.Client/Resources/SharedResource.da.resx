@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Fjern banner</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Skift banner</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Skift avatar</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Upload et nyt billede</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Eller vælg fra galleriet</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Der er ingen billeder i galleriet endnu.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Banneret kunne ikke ændres: {0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>live nu</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scener med {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Tilbage til {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Søg i scener</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Scenestatus</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Kommende</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Afsluttede</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Vis flere</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Se alle</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Spiller ofte med</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Viser de næste {0} scener.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Tema for {0}</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Gå til hovedindhold</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Gå til tekstfeltet</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Sidetekst (Markdown)</value>
   </data>
 </root>

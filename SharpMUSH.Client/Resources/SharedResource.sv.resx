@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Ta bort banderoll</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Byt banderoll</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Byt avatar</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Ladda upp en ny bild</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Eller välj från galleriet</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Inga bilder i galleriet ännu.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Banderollen kunde inte ändras: {0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>pågår nu</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scener med {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Tillbaka till {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Sök scener</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Scenstatus</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Alla</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Kommande</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Avslutade</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Visa fler</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Visa alla</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Spelar ofta med</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Visar de kommande {0} scenerna.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Tema för {0}</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Hoppa till huvudinnehåll</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Hoppa till textrutan</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Sidtext (Markdown)</value>
   </data>
 </root>

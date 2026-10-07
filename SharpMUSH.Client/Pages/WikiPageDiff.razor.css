@@ -72,7 +72,7 @@
     flex-wrap: wrap;
 }
 .wikidiff-stat-add { color: var(--accent); }
-.wikidiff-stat-del { color: #e57373; }
+.wikidiff-stat-del { color: var(--danger); }
 .wikidiff-stat-sum { color: var(--text-faint); }
 
 .wikidiff-body {
@@ -93,8 +93,8 @@
     border-left-color: var(--accent);
 }
 .wikidiff-line--del {
-    background: rgba(229, 115, 115, 0.08);
-    border-left-color: #e57373;
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+    border-left-color: var(--danger);
 }
 .wikidiff-line--ctx { background: transparent; }
 .wikidiff-gutter {
@@ -107,7 +107,7 @@
     color: var(--text-faint);
 }
 .wikidiff-gutter--add { color: var(--accent); }
-.wikidiff-gutter--del { color: #e57373; }
+.wikidiff-gutter--del { color: var(--danger); }
 .wikidiff-line--ctx .wikidiff-text { color: var(--text-dim); }
 .wikidiff-line--del .wikidiff-text { color: var(--text-dim); }
 .wikidiff-text {
@@ -148,7 +148,7 @@
     border-bottom: none;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
-.wikidiff-split-head--old { background: rgba(229, 115, 115, 0.08); }
+.wikidiff-split-head--old { background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .wikidiff-split-head--new { background: rgba(var(--glow), 0.07); }
 .wikidiff-pane {
     background: var(--surface-3);

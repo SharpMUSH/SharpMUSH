@@ -46,17 +46,25 @@
                         <MudTd data-label="@Loc["Characters"]">
                             @foreach (var character in context.Characters)
                             {
-                                <MudChip T="string" Size="Size.Small"
-                                         OnClose="@(() => UnlinkAsync(context, character))">
-                                    @character.Name (#@character.DbrefNumber)
-                                </MudChip>
+                                @* God (#1) never leaves its account, so its chip has no unlink. *@
+                                @if (character.DbrefNumber == 1)
+                                {
+                                    <MudChip T="string" Size="Size.Small">@character.Name (#@character.DbrefNumber)</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small"
+                                             OnClose="@(() => UnlinkAsync(context, character))">
+                                        @character.Name (#@character.DbrefNumber)
+                                    </MudChip>
+                                }
                             }
                         </MudTd>
                         <MudTd>
                             <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
                             @if (!context.IsReserved)
                             {
-                                @foreach (var target in StatusTargets(context.Status))
+                                @foreach (var target in StatusTargets(context))
                                 {
                                     <MudButton Size="Size.Small" data-testid="account-status-action"
                                                Color="@(target == "Active" ? Color.Success : Color.Error)"
@@ -128,8 +136,10 @@
         _ => Color.Error
     };
 
-    private static string[] StatusTargets(string status) => status switch
+    /// <summary>The statuses an account can be moved to. God's account can only ever be restored.</summary>
+    private static string[] StatusTargets(AdminAccountsService.AdminAccountRow row) => row.Status switch
     {
+        "Active" when row.IsGodsAccount => [],
         "Active" => ["Disabled", "Closed", "Deleted"],
         _ => ["Active"]
     };

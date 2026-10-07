@@ -390,6 +390,40 @@ public class MarkupTagFunctionTests
 		await Assert.That(said.ToPlainText()).Contains("[image: A map]");
 	}
 
+	/// <summary>
+	/// Send_Image is pictures and nothing else: <c>image()</c>, <c>figure()</c> and a Markdown image show
+	/// one, and the rest of what Send_OOB gates stays shut. The approved role holds it, which is how an
+	/// approved character's <c>box(figure())</c> pose keeps its picture.
+	/// </summary>
+	[Test]
+	public async Task TheSendImagePower_ShowsPicturesAndNothingElse()
+	{
+		var mortal = await MortalAsync("SendImageMortal");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {mortal.DbRef}=Send_Image"));
+
+		var image = await ThinkAs(mortal, "image(map.png,A map)");
+		var figure = await ThinkAs(mortal, "figure(https://example.com/cat.png,A cat)");
+		var markdown = await ThinkAs(mortal, "rendermarkdown(!%[A map%]%(/assets/map.png%))");
+		var sound = await ThinkAs(mortal, "sound(door.wav)");
+
+		await Assert.That(image.Render(MarkupFormat.Html)).Contains("src=\"map.png\"");
+		await Assert.That(figure.Render(MarkupFormat.Html)).Contains("src=\"https://example.com/cat.png\"");
+		await Assert.That(markdown.Render(MarkupFormat.Html)).Contains("src=\"/assets/map.png\"");
+		await Assert.That(sound.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+			.Because("Send_Image allows pictures, not the rest of Send_OOB");
+	}
+
+	/// <summary>Without Send_Image or Send_OOB a figure is its art or description, never a picture.</summary>
+	[Test]
+	public async Task AMortalsFigureIsItsDescription()
+	{
+		var mortal = await MortalAsync("FigureMortal");
+
+		var figure = await ThinkAs(mortal, "figure(https://example.com/cat.png,A cat)");
+
+		await Assert.That(figure.Render(MarkupFormat.Html)).DoesNotContain("example.com/cat.png");
+	}
+
 	/// <summary><c>+wiki</c> draws its article in a <c>box()</c>; the picture has to come out the other side.</summary>
 	[Test]
 	public async Task RenderMarkdown_PictureSurvivesABox()

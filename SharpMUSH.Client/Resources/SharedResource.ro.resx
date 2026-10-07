@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Elimină bannerul</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Schimbă bannerul</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Schimbă avatarul</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Încarcă o imagine nouă</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Sau alege din galerie</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Nu există încă imagini în galerie.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Bannerul nu a putut fi schimbat: {0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>în desfășurare</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scene cu {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Înapoi la {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Caută scene</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Starea scenei</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Toate</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>În direct</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Viitoare</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Încheiate</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Arată mai multe</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Vezi tot</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Joacă des cu</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Se afișează următoarele {0} scene.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Tema pentru {0}</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Salt la conținutul principal</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Salt la caseta de text</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Textul paginii (Markdown)</value>
   </data>
 </root>

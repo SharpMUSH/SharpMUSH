@@ -148,6 +148,24 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			.Because("the server refuses this reader's save of the page");
 	}
 
+	/// <summary>
+	/// An account writes its own character's biography by owning the character, with no wiki permission;
+	/// a visitor who neither owns it nor holds wiki.create is not offered the button.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task AMissingBiography_IsOfferedToItsOwner_WithoutWikiCreate(bool owned)
+	{
+		Auth.SetAuthorized("Pell Marsh");
+		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
+			.Add(x => x.Context, new ProfilePageContext("Pell Marsh", false, Owned: owned)));
+		cut.WaitForAssertion(() => cut.Find(".wiki-article--no-bio"), TimeSpan.FromSeconds(5));
+
+		var offered = cut.FindAll(".wiki-article--no-bio button").Any(b => b.TextContent.Contains("Write a biography"));
+		await Assert.That(offered).IsEqualTo(owned);
+	}
+
 	private IRenderedComponent<CascadingWrapper> RenderProfile(string character = "Tomas Reyes")
 	{
 		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()

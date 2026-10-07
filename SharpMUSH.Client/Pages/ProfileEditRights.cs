@@ -19,7 +19,14 @@ public static class ProfileEditRights
 			return false;
 		}
 
-		return PortalRoleHelper.Meets(user, PortalRole.Royalty)
-			|| ownCharacters.Any(c => string.Equals(c.Name, characterName, StringComparison.OrdinalIgnoreCase));
+		return PortalRoleHelper.Meets(user, PortalRole.Royalty) || Owns(user, ownCharacters, characterName);
 	}
+
+	/// <summary>
+	/// Whether the signed-in account owns the character, whichever of its characters is acting. The server
+	/// lets an account write and edit its own characters' biographies on that alone, with no wiki permission.
+	/// </summary>
+	public static bool Owns(ClaimsPrincipal? user, IEnumerable<AccountAuthService.CharacterSummary> ownCharacters, string characterName)
+		=> user?.Identity?.IsAuthenticated == true
+			&& ownCharacters.Any(c => string.Equals(c.Name, characterName, StringComparison.OrdinalIgnoreCase));
 }

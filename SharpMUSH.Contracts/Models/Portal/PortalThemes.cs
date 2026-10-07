@@ -250,6 +250,7 @@ public static class BuiltInThemes
 /// <param name="AccentAdjusted">The chosen accent was too faint against this theme and was moved until it read.</param>
 /// <param name="Tokens">Every custom property this theme sets, by name without the <c>--</c>.</param>
 /// <param name="Style">The theme's <see cref="ThemeStyles"/> choices, by setting.</param>
+/// <param name="Stylesheet">The theme's own stylesheet (<see cref="ThemeStylesheet"/>), or null.</param>
 public sealed record ResolvedTheme(
 	string ThemeId,
 	string Name,
@@ -258,9 +259,18 @@ public sealed record ResolvedTheme(
 	string? RequestedAccent,
 	bool AccentAdjusted,
 	IReadOnlyDictionary<string, string> Tokens,
-	IReadOnlyDictionary<string, string> Style)
+	IReadOnlyDictionary<string, string> Style,
+	string? Stylesheet = null)
 {
-	/// <summary>A <c>:root</c> rule that sets every token. Unlayered, so it wins over <c>tokens.css</c>'s defaults.</summary>
+	/// <summary>The tokens a character's own accent sets, laid again after a theme's stylesheet so it keeps them.</summary>
+	public static readonly IReadOnlyList<string> AccentTokens =
+		[ThemeTokens.Accent, "accent-dim", "accent-on", "glow", "ms-border", "ms-title", "ms-heading", "ms-bullet"];
+
+	/// <summary>
+	/// A <c>:root</c> rule that sets every token, then the theme's stylesheet. Unlayered, so it wins over
+	/// <c>tokens.css</c>'s defaults. A character's own accent is set once more after the stylesheet, so a theme
+	/// that sets <c>--accent</c> itself still shows each character's.
+	/// </summary>
 	public string Css
 	{
 		get
@@ -271,7 +281,25 @@ public sealed record ResolvedTheme(
 				css.Append("--").Append(name).Append(':').Append(value).Append(';');
 			}
 
-			return css.Append('}').ToString();
+			css.Append('}');
+			if (string.IsNullOrWhiteSpace(Stylesheet))
+			{
+				return css.ToString();
+			}
+
+			css.Append('\n').Append(Stylesheet).Append('\n');
+			if (RequestedAccent is not null)
+			{
+				css.Append(":root{");
+				foreach (var name in AccentTokens.Where(Tokens.ContainsKey))
+				{
+					css.Append("--").Append(name).Append(':').Append(Tokens[name]).Append(';');
+				}
+
+				css.Append('}');
+			}
+
+			return css.ToString();
 		}
 	}
 
@@ -293,7 +321,7 @@ public static class ThemeResolver
 
 	public static ResolvedTheme Resolve(PortalTheme theme, string? accent = null)
 	{
-		var (tokens, style) = Complete(theme.Tokens);
+		var (tokens, style) = Complete(ThemeStylesheet.WithColorOverrides(theme.Tokens, theme.Stylesheet));
 		var bg = ThemeColor.Parse(tokens[ThemeTokens.Background]);
 		var surface = ThemeColor.Parse(tokens[ThemeTokens.Surface]);
 		// A chosen accent is drawn on the page, cards, the current sidebar row and the sidebar itself.
@@ -313,7 +341,8 @@ public static class ThemeResolver
 		}
 
 		return new ResolvedTheme(theme.Id, theme.Name, theme.Dark, accentColor.Hex, requested?.Hex,
-			requested is { } asked && asked != accentColor, tokens, style);
+			requested is { } asked && asked != accentColor, tokens, style,
+			string.IsNullOrWhiteSpace(theme.Stylesheet) ? null : theme.Stylesheet);
 	}
 
 	/// <summary>
@@ -412,6 +441,31 @@ public static class ThemeResolver
 		return (colors, style);
 	}
 
+	/// <summary>The status and kind colours every theme derives, with Phosphor's values (<c>tokens.css</c>).</summary>
+	public static readonly IReadOnlyList<(string Name, string Hex)> StatusColors =
+	[
+		("danger", "#e57373"),
+		("success", "#6cde9a"),
+		("info", "#5aa9ff"),
+		("special", "#b39cff"),
+	];
+
+	/// <summary>The syntax colours every theme derives, with Phosphor's values (<c>tokens.css</c>).</summary>
+	public static readonly IReadOnlyList<(string Name, string Hex)> SyntaxColors =
+	[
+		("syntax-command", "#c792ea"),
+		("syntax-function", "#82aaff"),
+		("syntax-substitution", "#f78c6c"),
+		("syntax-dbref", "#89ddff"),
+		("syntax-reference", "#c3e88d"),
+		("syntax-at-command", "#ffcb6b"),
+		("syntax-danger", "#ff5350"),
+		("syntax-string", "#ce9178"),
+		("syntax-link", "#4ec9b0"),
+		("syntax-heading", "#9cdcfe"),
+		("syntax-emphasis", "#dcdcaa"),
+	];
+
 	private static void Derive(Dictionary<string, string> tokens, bool dark, ThemeColor accent)
 	{
 		ThemeColor Get(string name) => ThemeColor.Parse(tokens[name]);
@@ -446,6 +500,23 @@ public static class ThemeResolver
 			tokens["ooc-band-border"] = "#9486d0";
 			tokens["ooc-icon-bg"] = "#d8cff7";
 			tokens["ooc-icon-fg"] = "#3f3370";
+		}
+
+		// Status and kind colours (deletes and denials, allows and results, notices, roles and forms), and the code
+		// and syntax colours of help, the softcode console and highlighted softcode: each readable on the surfaces
+		// it is drawn on, starting from Phosphor's and moved toward white or black as the theme needs.
+		ThemeColor[] grounds = [bg, surface, surface3];
+		foreach (var (name, hex) in StatusColors)
+		{
+			tokens[name] = ReadableAgainst(ThemeColor.Parse(hex), dark, ThemeTokens.TextContrast, grounds).Hex;
+		}
+
+		var codeBg = dark ? bg.Mix(ThemeColor.Black, 0.35) : surface3;
+		tokens["code-bg"] = codeBg.Hex;
+		tokens["code-text"] = ReadableAgainst(Get(ThemeTokens.Text), dark, ThemeTokens.TextContrast, codeBg).Hex;
+		foreach (var (name, hex) in SyntaxColors)
+		{
+			tokens[name] = ReadableAgainst(ThemeColor.Parse(hex), dark, ThemeTokens.TextContrast, codeBg, surface).Hex;
 		}
 
 		// MarkupString's layout HTML reads these (border = primary, title and label = secondary, guide = muted,

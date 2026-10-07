@@ -22,13 +22,16 @@
        from — just the fact and, for anyone who may write one, the offer. *@
     <div class="wiki-article wiki-article--no-bio">
         <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiCharacterNoBio", Slug]</MudText>
-        <AuthorizeView Policy="wiki.create">
-            <Authorized>
-                <MudButton EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Ripple="true"
-                           Class="mt-2" Style="text-transform:none;"
-                           OnClick="@ActivateEditMode">@Loc["WikiCharacterWriteBio"]</MudButton>
-            </Authorized>
-        </AuthorizeView>
+        @if (OwnsBiography)
+        {
+            @WriteBioButton
+        }
+        else
+        {
+            <AuthorizeView Policy="wiki.create">
+                <Authorized>@WriteBioButton</Authorized>
+            </AuthorizeView>
+        }
     </div>
 }
 else if (Article is null && IsCategoryPage)
@@ -380,6 +383,17 @@ else
     /// framing (and the "this page does not exist" wording) would misread as something broken.
     /// </summary>
     private bool IsCharacterBiography => WikiRoutes.IsCharacterProfile(Namespace);
+
+    /// <summary>The profile this biography sits on, when it does: it says whether the viewer's account owns the character.</summary>
+    [CascadingParameter] private SharpMUSH.Client.Models.Widgets.ProfilePageContext? Profile { get; set; }
+
+    /// <summary>An account writes its own character's biography without wiki.create (the server decides by ownership).</summary>
+    private bool OwnsBiography => IsCharacterBiography && Profile is { Owned: true } profile
+        && string.Equals(WikiHelpers.Slugify(profile.CharacterName), WikiHelpers.Slugify(Slug), StringComparison.Ordinal);
+
+    private RenderFragment WriteBioButton => @<MudButton EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Ripple="true"
+                                                       Class="mt-2" Style="text-transform:none;"
+                                                       OnClick="@ActivateEditMode">@Loc["WikiCharacterWriteBio"]</MudButton>;
 
     private string HistoryHref => $"{PagePath}/history";
 

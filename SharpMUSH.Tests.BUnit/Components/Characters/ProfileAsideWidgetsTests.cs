@@ -104,6 +104,7 @@ public class ProfileAsideWidgetsTests : TrackingBunitContext
 		await Assert.That(rows[0].QuerySelector(".kit-row-sub")!.TextContent).Contains("live now");
 		await Assert.That(rows[1].GetAttribute("href")).IsEqualTo("/scenes/41");
 		await Assert.That(rows[1].QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Ferry Steps");
+		await Assert.That(cut.Find("a.recent-scenes-view-all").GetAttribute("href")).IsEqualTo("/character/Tomas%20Reyes/scenes");
 	}
 
 	[Test]
@@ -122,6 +123,7 @@ public class ProfileAsideWidgetsTests : TrackingBunitContext
 		var cut = InProfile<RecentScenesWidget>();
 		cut.WaitForAssertion(() => cut.Find(".recent-scenes-empty"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".recent-scenes-empty").TextContent).IsEqualTo("No scenes yet.");
+		await Assert.That(cut.FindAll("a.recent-scenes-view-all").Count).IsEqualTo(0).Because("there is nothing more to see");
 	}
 
 	[Test]

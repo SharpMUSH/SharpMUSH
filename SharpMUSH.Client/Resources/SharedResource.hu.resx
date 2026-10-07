@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Borító eltávolítása</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Borító cseréje</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Avatar cseréje</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Új kép feltöltése</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Vagy válassz a galériából</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>A galériában még nincs kép.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>A borító nem módosítható: {0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>most zajlik</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>{0} jelenetei</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Vissza: {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Jelenetek keresése</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Jelenet állapota</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Élő</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Közelgő</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Befejezett</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Több mutatása</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Összes</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Gyakran játszik vele</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>A következő {0} jelenet látható.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>{0} témája</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Ugrás a fő tartalomhoz</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Ugrás a szövegmezőhöz</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Oldal szövege (Markdown)</value>
   </data>
 </root>

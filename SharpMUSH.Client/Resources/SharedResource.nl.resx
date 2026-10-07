@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Banner verwijderen</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Banner wijzigen</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Avatar wijzigen</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Nieuwe afbeelding uploaden</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Of kies uit de galerij</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Nog geen afbeeldingen in de galerij.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>De banner kon niet worden gewijzigd: {0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>nu bezig</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scènes met {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Terug naar {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Scènes zoeken</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Scènestatus</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Gepland</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Afgelopen</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Meer tonen</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Alles bekijken</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Speelt vaak met</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>De volgende {0} scènes worden getoond.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Thema voor {0}</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Naar hoofdinhoud</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Naar het tekstvak</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Paginatekst (Markdown)</value>
   </data>
 </root>

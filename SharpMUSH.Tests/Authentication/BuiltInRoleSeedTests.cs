@@ -61,14 +61,28 @@ public class BuiltInRoleSeedTests
 	}
 
 	[Test]
-	public async Task ApprovedIsASystemRoleJustAbovePlayerThatAllowsNothing()
+	public async Task ApprovedIsASystemRoleJustAbovePlayerThatAllowsPictures()
 	{
 		var approved = BuiltInRoles.All.Single(r => r.Slug == BuiltInRoles.ApprovedSlug);
 		await Assert.That(approved.IsSystem).IsTrue();
 		await Assert.That(approved.Category).IsEqualTo(Categories.System);
-		await Assert.That(approved.Permissions).IsEmpty();
+		await Assert.That(approved.Permissions.Keys).IsEquivalentTo([PortalPermission.GamePower("Send_Image")])
+			.Because("an approved character may show pictures in a pose, and nothing else comes with approval");
 		await Assert.That(approved.Priority).IsBetween((int)PortalRole.Player + 1, BuiltInRoles.Starters.Min(r => r.Priority) - 1);
 		await Assert.That(BuiltInRoles.IsImplicit(approved.Slug)).IsFalse();
+	}
+
+	/// <summary>A world seeded before Send_Image existed gains it on its approved role.</summary>
+	[Test]
+	public async Task AnApprovedRoleSeededWithoutSendImageGainsIt()
+	{
+		var approved = new SharpRole
+		{
+			Slug = BuiltInRoles.ApprovedSlug, Name = "Approved", Category = Categories.System, Priority = BuiltInRoles.ApprovedPriority,
+			IsSystem = true, CreatedAt = 5
+		};
+		var changed = BuiltInRoles.SeedChanges([approved], 9).Single(r => r.Slug == BuiltInRoles.ApprovedSlug);
+		await Assert.That(changed.Permissions[PortalPermission.GamePower("Send_Image")]).IsEqualTo(PermissionState.Allow);
 	}
 
 	[Test]

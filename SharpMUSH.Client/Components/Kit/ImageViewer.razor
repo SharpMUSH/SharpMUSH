@@ -80,7 +80,7 @@
 
     /// <summary>The scrim: MudOverlay's own dark background is too light to read a portrait against,
     /// and scoped CSS cannot reach a child component's root, so the overlay takes it as a style.</summary>
-    private const string ScrimStyle = "background: rgba(8, 9, 10, 0.9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);";
+    private const string ScrimStyle = "background: rgba(var(--scrim-ink), 0.9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);";
 
     protected override void OnParametersSet()
     {

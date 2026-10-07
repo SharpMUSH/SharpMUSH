@@ -194,7 +194,10 @@ public class AccountService(
 	private async ValueTask<CharacterClaim> MoveCharacterAsync(SharpAccount holder, string accountId, SharpPlayer character,
 		CancellationToken ct)
 	{
-		await UnlinkCharacterAsync(holder.Id!, character.Object.DBRef, ct);
+		// God never leaves its account, so its holder's password cannot carry it elsewhere.
+		if (await UnlinkCharacterAsync(holder.Id!, character.Object.DBRef, ct) is not Success)
+			return new LinkedElsewhere(character, holder);
+
 		return await AttachCharacterAsync(accountId, character, ct) switch
 		{
 			SharpPlayer linked => linked,
@@ -218,15 +221,22 @@ public class AccountService(
 	/// The security-relevant direction: unlinking the last character drops the account back to Guest,
 	/// and leaving Player scopes cached would keep granting them after the entitlement is gone.
 	/// </remarks>
-	public async ValueTask UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
+	public async ValueTask<Result<Success>> UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
 	{
+		if (characterRef.Number == 1)
+			return new Error<string>("God cannot be unlinked from its account.");
+
 		await database.UnlinkCharacterFromAccountAsync(accountId, characterRef, ct);
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
+		return new Success();
 	}
 
 	public ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default)
 		=> database.GetAccountForCharacterAsync(characterRef, ct);
+
+	public async ValueTask<bool> IsGodsAccountAsync(string accountId, CancellationToken ct = default)
+		=> await database.GetAccountForCharacterAsync(new DBRef(1), ct) is { } holder && holder.Id == accountId;
 
 	public ValueTask<SharpAccount?> GetByIdAsync(string accountId, CancellationToken ct = default)
 		=> database.GetAccountByIdAsync(accountId, ct);
@@ -246,6 +256,9 @@ public class AccountService(
 		if (SystemAccount.IsReserved(account.Username))
 			return new Error<string>("The system account's status cannot be changed.");
 
+		if (status is not AccountStatus.Active && await IsGodsAccountAsync(accountId, ct))
+			return new Error<string>("God's account cannot be disabled, closed or deleted.");
+
 		await database.UpdateAccountStatusAsync(accountId, status, ct);
 		await StatusChangedAsync(accountId, status, ct);
 		return new Success();
@@ -259,6 +272,9 @@ public class AccountService(
 
 		if (SystemAccount.IsReserved(account.Username))
 			return new Error<string>("The system account cannot be banned.");
+
+		if (await IsGodsAccountAsync(ban.AccountId, ct))
+			return new Error<string>("God's account cannot be banned.");
 
 		if (!await database.BanAccountAsync(ban, ct))
 			return new Error<string>("Account not found.");

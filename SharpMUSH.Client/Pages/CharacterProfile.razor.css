@@ -5,6 +5,17 @@
 	min-width: 0;
 }
 
+/* the portrait, with Change avatar on its bottom-right corner for whoever may edit the profile */
+.char-profile-avatar {
+	position: relative;
+}
+
+.char-profile-avatar ::deep .char-profile-change-avatar {
+	position: absolute;
+	right: -8px;
+	bottom: -8px;
+}
+
 /* the 104px portrait at the banner's bottom-left, radius 18 */
 .char-profile-portrait,
 .char-profile-initials {
@@ -12,7 +23,7 @@
 	width: 104px;
 	height: 104px;
 	border-radius: 18px;
-	border: 1px solid rgba(255, 255, 255, 0.14);
+	border: 1px solid var(--border);
 	box-sizing: border-box;
 	object-fit: cover;
 }

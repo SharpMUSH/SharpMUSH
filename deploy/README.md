@@ -78,6 +78,11 @@ else to run, tune or connect to. Three settings on `sharpmush-server` matter:
 memory — the file is sparse and only grows as the world does. Raise it before a world reaches it;
 the server refuses writes with `MDB_MAP_FULL` rather than corrupting anything.
 
+ASP.NET Core's Data Protection key ring (what antiforgery, cookie auth and the like sign with) is
+kept beside the world, at `/app/data/lightning.dataprotection-keys`, so it outlives a recreated
+container. `SHARPMUSH_DATAPROTECTION_PATH` moves it; every replica of the server must read the same one.
+If you move it, put the new path in the backup service's `RESTIC_BACKUP_SOURCES` as well.
+
 Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
 that is safe to read, have the server make one: see [Backups](#backups-restic).
 
@@ -303,8 +308,9 @@ To enable it, fill in the restic settings in `.env` and uncomment:
 COMPOSE_PROFILES=backup
 ```
 
-Once enabled, the `backup` service snapshots `/data/backup` and `/data/wiki-assets` to your
-bucket every night at 03:30, keeping 7 daily and 4 weekly snapshots. The volume is mounted
+Once enabled, the `backup` service snapshots `/data/backup`, `/data/wiki-assets` and
+`/data/lightning.dataprotection-keys` to your bucket every night at 03:30, keeping 7 daily and 4
+weekly snapshots. The volume is mounted
 **read-only**, so a backup run can never corrupt live data.
 
 **What it snapshots is a copy, not the live world.** restic reads `data.mdb` front to back
@@ -357,7 +363,8 @@ docker compose run --rm -v restore:/restore backup \
 
 **To restore for real**: stop the stack, then put the snapshot's
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
-`lightning`, and `wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
+`lightning`, and `wiki-assets` and `lightning.dataprotection-keys` go back as they are. The game
+reads whatever is in the volume on boot.
 
 ```bash
 docker compose stop sharpmush-server connectionserver
@@ -375,7 +382,11 @@ docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-
 docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server -c '
   rm -rf /app/data/lightning &&
   cp -a /restore/data/backup/<timestamp> /app/data/lightning &&
-  cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/'
+  cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/ &&
+  if [ -d /restore/data/lightning.dataprotection-keys ]; then
+    rm -rf /app/data/lightning.dataprotection-keys &&
+    cp -a /restore/data/lightning.dataprotection-keys /app/data/lightning.dataprotection-keys
+  fi'
 
 docker compose start connectionserver sharpmush-server
 docker volume rm restore    # once the game is up and you are satisfied
@@ -465,8 +476,8 @@ docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'du -sh /a
 docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.previous'
 ```
 
-The other things on the volume are the wiki's uploaded assets (`/app/data/wiki-assets`) and the
-backup directory. NATS keeps its JetStream state in its own `nats-data` volume. That state is
+The other things on the volume are the wiki's uploaded assets (`/app/data/wiki-assets`), the
+Data Protection key ring (`/app/data/lightning.dataprotection-keys`) and the backup directory. NATS keeps its JetStream state in its own `nats-data` volume. That state is
 transient, but it is on the same disk:
 
 ```bash

@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Ukloni naslovnu</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Promijeni naslovnu</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Promijeni avatar</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Učitaj novu sliku</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Ili odaberi iz galerije</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>U galeriji još nema slika.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Naslovna se nije mogla promijeniti: {0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>uživo</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scene s likom {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Natrag na profil: {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Pretraži scene</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Stanje scene</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Sve</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>Uživo</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Nadolazeće</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Završene</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Prikaži više</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Često igra s</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Prikazano je sljedećih {0} scena.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Tema za {0}</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Preskoči na glavni sadržaj</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Preskoči na tekstni okvir</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Tekst stranice (Markdown)</value>
   </data>
 </root>

@@ -86,7 +86,7 @@
 }
 
 .app-alert-error {
-    border-left-color: #e5484d;
+    border-left-color: var(--danger);
 }
 
 @container page (max-width: 48rem) {

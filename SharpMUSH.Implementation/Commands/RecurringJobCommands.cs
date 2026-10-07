@@ -7,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services.RecurringJobs;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -42,7 +43,10 @@ public partial class Commands
 				var target = lhs.Split('/', 2);
 				var schedule = rhs.Split('|', 3);
 				if (target.Length != 2 || schedule.Length < 2) throw new RecurringJobException("invalid", "Use target/attribute=schedule|timezone|description.");
-				var job = await service.CreateAsync(actor, new(target[0].Trim(), target[1].Trim(), schedule[0].Trim(), schedule[1].Trim(), schedule.Length == 3 ? schedule[2].Trim() : ""), ct);
+				// The job stores the full objid, so a recycled dbref can't take it over.
+				if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target[0].Trim(), LocateFlags.All) is not AnySharpObject found)
+					return new CallState(ErrorMessages.Returns.NoMatch);
+				var job = await service.CreateAsync(actor, new(found.Object().DBRef.ToString(), target[1].Trim(), schedule[0].Trim(), schedule[1].Trim(), schedule.Length == 3 ? schedule[2].Trim() : ""), ct);
 				output = "Created recurring job " + job.Id;
 			}
 			else

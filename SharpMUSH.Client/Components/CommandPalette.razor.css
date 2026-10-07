@@ -6,7 +6,7 @@
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
 	background: var(--surface);
-	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+	box-shadow: var(--shadow-pop);
 	overflow: hidden;
 }
 

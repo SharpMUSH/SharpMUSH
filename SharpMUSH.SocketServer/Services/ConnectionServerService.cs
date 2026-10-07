@@ -193,11 +193,16 @@ public class ConnectionServerService(
 	public IEnumerable<ConnectionData> GetAll() =>
 		_sessionState.Values;
 
+	/// <summary>
+	/// Replaces the preferences on <paramref name="handle"/> but keeps its theme, which only
+	/// <see cref="UpdateTheme"/> sets: the flags and the theme arrive on separate subjects, and a retry
+	/// here must not put back a theme read before <see cref="UpdateTheme"/> changed it.
+	/// </summary>
 	public bool UpdatePreferences(long handle, PlayerOutputPreferences preferences)
 	{
 		if (_sessionState.TryGetValue(handle, out var connection))
 		{
-			var updated = connection with { Preferences = preferences };
+			var updated = connection with { Preferences = preferences with { Theme = connection.Preferences?.Theme } };
 			for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
 			{
 				if (_sessionState.TryUpdate(handle, updated, connection))
@@ -210,7 +215,7 @@ public class ConnectionServerService(
 					return false;
 				}
 
-				updated = connection with { Preferences = preferences };
+				updated = connection with { Preferences = preferences with { Theme = connection.Preferences?.Theme } };
 			}
 		}
 		return false;

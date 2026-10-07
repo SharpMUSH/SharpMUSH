@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>移除横幅</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>更换横幅</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>更换头像</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>上传新图片</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>或从图库中选择</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>图库中还没有图片。</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>无法更改横幅：{0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>进行中</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>{0} 参与的场景</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>返回 {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>搜索场景</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>场景状态</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>即将开始</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>已结束</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>显示更多</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>查看全部</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>常一起游戏</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>显示接下来的 {0} 个场景。</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>{0} 的主题</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>跳到主要内容</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>跳到文本框</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>页面文本（Markdown）</value>
   </data>
 </root>

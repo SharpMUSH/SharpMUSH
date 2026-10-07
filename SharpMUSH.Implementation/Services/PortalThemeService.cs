@@ -28,7 +28,10 @@ public sealed class StoredPortalTheme
 	public bool Published { get; set; }
 	public Dictionary<string, string> Tokens { get; set; } = [];
 
-	public PortalTheme ToTheme() => new(Id, Name, Dark, Published, Tokens);
+	/// <summary>The theme's own stylesheet (<see cref="ThemeStylesheet"/>), or null.</summary>
+	public string? Stylesheet { get; set; }
+
+	public PortalTheme ToTheme() => new(Id, Name, Dark, Published, Tokens, Stylesheet: string.IsNullOrWhiteSpace(Stylesheet) ? null : Stylesheet);
 }
 
 /// <summary>A character's portal look (expanded object data on the player).</summary>
@@ -236,7 +239,9 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 			return $"There is already a theme named '{name}'.";
 		}
 
-		return ThemeResolver.Validate(request.Tokens) is [var first, ..] ? first : null;
+		return ThemeResolver.Validate(request.Tokens) is [var first, ..] ? first
+			: ThemeStylesheet.Validate(request.Stylesheet) is [var sheet, ..] ? sheet
+			: null;
 	}
 
 	private static StoredPortalTheme Store(StoredPortalTheme theme, PortalThemeRequest request)
@@ -246,6 +251,7 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 		theme.Published = request.Published;
 		var (colors, style) = ThemeResolver.Complete(request.Tokens);
 		theme.Tokens = colors.Concat(style).ToDictionary();
+		theme.Stylesheet = string.IsNullOrWhiteSpace(request.Stylesheet) ? null : request.Stylesheet;
 		return theme;
 	}
 

@@ -5,21 +5,21 @@ using MarkupString.Html;
 namespace SharpMUSH.Tests.BUnit.Resources;
 
 /// <summary>
-/// The HTML emitters write bare <c>ms-*</c> classes for every attribute with a fixed rendering, and
-/// <see cref="AnsiCss.Fixed"/> is the package's own stylesheet for them. The portal does not include
-/// that string — it carries its own copy in shell.css — so a class added to the package, or a value
-/// changed in one, would silently diverge from what the terminal renders. This pins the two
-/// together: every rule the package defines must appear in shell.css with the same declarations.
-/// The portal may add rules of its own (the combined underline+strike, the link classes); it may
-/// not restate one of these with a different value.
+/// The HTML emitters write bare <c>ms-*</c> classes, and the packages carry their own stylesheet for them
+/// (<see cref="AnsiCss.Fixed"/>, <see cref="LayoutCss.Fixed"/>). The portal serves that stylesheet as
+/// <c>data/markup.css</c>, generated at build from the packages it runs (tools/ClientData), so a package
+/// update brings its rules with it. These pin how it is wired: imported ahead of shell.css, in the same
+/// layer, so the portal's own rules build on it; and no copy of a package rule left in shell.css, where
+/// it would go stale with the next update.
 /// </summary>
 public class MarkupCssCoverageTests
 {
 	private static readonly string ShellCss = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
+	private static readonly string CustomCss = File.ReadAllText(Path.Join(ClientSource.CssRoot, "custom.css"));
 
 	/// <summary>
-	/// Every (selector, declaration) pair in <see cref="AnsiCss.Fixed"/>. A nested block — the
-	/// <c>@keyframes</c> body — survives as a single declaration, because the split only cuts on
+	/// Every (selector, declaration) pair in the packages' stylesheets. A nested block (the
+	/// <c>@keyframes</c> body) survives as a single declaration, because the split only cuts on
 	/// semicolons outside braces.
 	/// </summary>
 	public static IEnumerable<Func<(string Selector, string Declaration)>> FixedDeclarations() =>
@@ -29,15 +29,26 @@ public class MarkupCssCoverageTests
 
 	[Test]
 	[MethodDataSource(nameof(FixedDeclarations))]
-	public async Task EveryFixedDeclaration_IsInShellCss((string Selector, string Declaration) rule)
+	public async Task NoPackageDeclaration_IsCopiedIntoShellCss((string Selector, string Declaration) rule)
 	{
 		var shellDeclarations = CssRules(ShellCss)
 			.Where(r => string.Equals(r.Selector, rule.Selector, StringComparison.Ordinal))
 			.SelectMany(r => Declarations(r.Body))
 			.ToArray();
 
-		await Assert.That(shellDeclarations).Contains(rule.Declaration)
-			.Because($"AnsiCss.Fixed declares `{rule.Selector} {{ {rule.Declaration}; }}` and shell.css must match it");
+		await Assert.That(shellDeclarations).DoesNotContain(rule.Declaration)
+			.Because($"`{rule.Selector} {{ {rule.Declaration}; }}` comes from data/markup.css; a copy in shell.css goes stale when the package changes it");
+	}
+
+	[Test]
+	public async Task MarkupCss_IsImportedAheadOfShellCss_InTheSameLayer()
+	{
+		const string markup = "@import url(\"../data/markup.css\") layer(shell);";
+		const string shell = "@import url(\"shell.css\") layer(shell);";
+
+		await Assert.That(CustomCss).Contains(markup);
+		await Assert.That(CustomCss.IndexOf(markup, StringComparison.Ordinal))
+			.IsLessThan(CustomCss.IndexOf(shell, StringComparison.Ordinal));
 	}
 
 	/// <summary>

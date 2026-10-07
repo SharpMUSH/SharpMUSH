@@ -93,7 +93,7 @@ public class WikiRevisionsController(
 	/// a rollback can itself be rolled back.
 	/// </summary>
 	[HttpPost("{slug}/rollback")]
-	[Authorize(Policy = PortalPermission.WikiEdit)]
+	[Authorize]
 	public async Task<IActionResult> RollbackPage(string slug, [FromBody] RollbackRequest request, [FromQuery] string? ns = null)
 	{
 		var editorDbref = CallerDbref;

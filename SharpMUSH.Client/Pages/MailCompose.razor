@@ -7,22 +7,24 @@
 @inject MailService Mail
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <PageTitle>@Loc["ComposeMail"] — @Loc["AppTitle"]</PageTitle>
 
 @* D1 §6.5 compose: the plain header, the message in a card, and the bottom bar (§4.11) with
    Urgent, Cancel and Send. ?to= and ?subject= fill it in (a reply); ?draft= takes a body staged
-   in the mail service (a forward's quoted text). *@
+   in the mail service (a forward's quoted text). The message is the page's main text box (input-focus.js):
+   typing on the page lands in it. Arriving focuses To when it is empty, else the message. *@
 <div class="mail-compose-page">
     <PlainPageHeader Kicker="@Loc["Mail"]" Title="@Loc["ComposeMail"]" />
 
     <KitCard Class="mc-card">
         <div class="mc-fields">
-            <MudTextField @bind-Value="_to" Label="@Loc["To"]" Variant="Variant.Outlined"
+            <MudTextField @bind-Value="_to" Label="@Loc["To"]" Variant="Variant.Outlined" InputId="mc-to"
                           Margin="Margin.Dense" Class="mc-field" Required="true" />
             <MudTextField @bind-Value="_subject" Label="@Loc["Subject"]" Variant="Variant.Outlined"
                           Margin="Margin.Dense" Class="mc-field" />
-            <MudTextField @bind-Value="_body" Label="@Loc["Message"]" Variant="Variant.Outlined"
+            <MudTextField @bind-Value="_body" Label="@Loc["Message"]" Variant="Variant.Outlined" InputId="mc-body"
                           Lines="10" Margin="Margin.Dense" Class="mc-field" />
         </div>
     </KitCard>
@@ -62,6 +64,20 @@
         _to = string.IsNullOrWhiteSpace(ToQuery) ? string.Empty : ToQuery!;
         _subject = string.IsNullOrWhiteSpace(SubjectQuery) ? string.Empty : SubjectQuery!;
         _body = DraftQuery is { Length: > 0 } draft && Mail.TakeDraft(draft) is string staged ? staged : string.Empty;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushInputFocus.mark", "mc-body", "start");
+            await JS.InvokeVoidAsync("sharpmushInputFocus.arrive", string.IsNullOrWhiteSpace(_to) ? "mc-to" : "mc-body");
+        }
+        catch (JSException)
+        {
+            // No focus script: the fields are still there to click.
+        }
     }
 
     private async Task SendAsync()

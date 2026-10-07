@@ -290,7 +290,7 @@
 	flex-direction: column;
 	background: var(--surface);
 	border-top: 1px solid var(--border);
-	box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
+	box-shadow: var(--shadow-pop);
 	z-index: 10;
 }
 .phosphor-terminal-header {
@@ -312,7 +312,7 @@
 	z-index: 1350;
 	width: max-content;
 	max-width: calc(100vw - 32px);
-	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+	box-shadow: var(--shadow-pop);
 }
 
 .game-update-banner .mud-alert-message {
@@ -531,7 +531,7 @@
 	font-weight: 600;
 	font-family: var(--font-ui);
 	letter-spacing: 0.02em;
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	border: 1px solid var(--border);
 }
 .phosphor-avatar-dot {
 	position: absolute;
@@ -547,7 +547,7 @@
 	box-shadow: 0 0 6px rgba(var(--glow), 0.7);
 }
 .phosphor-avatar-dot--offline {
-	background: #555;
+	background: var(--text-faint);
 }
 .phosphor-profile-name {
 	font-family: var(--font-ui);
@@ -626,7 +626,7 @@
 
 /* Sent (echoed) commands — dim cyan, prefixed with an accent caret in markup */
 .terminal-sent {
-    color: #7fb0c4;
+    color: var(--syntax-dbref);
     opacity: 0.85;
 }
 
@@ -722,29 +722,15 @@
     background: var(--surface-2);
 }
 
-/* ── MarkupString (MString) non-color attributes ──
-   Colors arrive as inline `style` from the MarkupString.Html ANSI emitter; these classes
-   carry the remaining text attributes. MarkupString.Html's `HtmlCss.Fixed` is the single
-   source for them: every rule below is a verbatim copy of one of its rules, pinned by
-   MarkupCssCoverageTests. Portal-only additions (the combined underline+strike rule, the
-   --ms-fg/--ms-bg theming, and the cmd-link theming/hover/focus rules) sit alongside, never
-   on top. */
-.ms-bold { font-weight: bold; }
-.ms-faint { opacity: 0.6; }
-.ms-italic { font-style: italic; }
-.ms-underline { text-decoration: underline; }
-.ms-strike { text-decoration: line-through; }
+/* ── MarkupString (MString) ──
+   Colors arrive as inline `style` from the MarkupString.Html emitter; the ms-* classes carry the
+   rest. The packages' own rules for them (AnsiCss.Fixed, LayoutCss.Fixed) are data/markup.css,
+   generated at build by tools/ClientData and imported ahead of this file (custom.css). What
+   follows here is portal-only and builds on them. */
 .ms-underline.ms-strike { text-decoration: underline line-through; }
-.ms-overline { text-decoration: overline; }
-.ms-blink { animation: ms-blink 1s step-start infinite; }
-/* Reverse video for a run that has neither colour set — the emitter only writes ms-invert
-   when it has no colours to swap inline. HtmlCss.Fixed falls back through --ms-fg/--ms-bg,
-   so pointing those at the terminal pane's own colours themes the swap without editing the
-   package's rule. */
-:root { --ms-fg: var(--text, #fff); --ms-bg: var(--surface, #000); }
-.ms-invert { color: var(--ms-bg, #000); background-color: var(--ms-fg, #fff); }
-
-@keyframes ms-blink { 50% { opacity: 0; } }
+/* Reverse video for a run that has neither colour set: the package's .ms-invert falls back
+   through --ms-fg/--ms-bg, so pointing those at the terminal pane's own colours themes the swap. */
+:root { --ms-fg: var(--text); --ms-bg: var(--surface); }
 
 /* align() and the other laid-out text arrive as <pre class="ms-preformatted">. In game output that text
    is part of a line, not a block: a block <pre> takes the browser's own margins and monospace size, so
@@ -756,101 +742,22 @@ pre.ms-preformatted {
     white-space: pre-wrap;
 }
 
-/* box(), rule(), flex(), item(), figure(), fields(), tree(), gauge(), bullets(), grid() and datatable() arrive as <div class="ms-layout">. These rules mirror
-   MarkupString.Html's LayoutCss.Fixed verbatim (pinned by MarkupCssCoverageTests). */
-.ms-layout { display: block; max-width: 100%; white-space: normal; }
-.ms-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.ms-box { margin: 0; padding: 0 1ch; min-width: 0; border: 1px solid var(--ms-border, var(--ms-border-default, currentColor)); }
-.ms-box.ms-border-none { border: none; padding: 0; }
-.ms-box.ms-border-double { border: 3px double var(--ms-border, var(--ms-border-default, currentColor)); }
-.ms-box.ms-border-heavy { border-width: 2px; }
-.ms-box.ms-border-rounded { border-radius: 0.5em; }
-.ms-box-title { padding: 0 1ch; margin-inline: auto; }
-.ms-box-title, .ms-rule-title { color: var(--ms-title, var(--ms-title-default, inherit)); }
-.ms-box-title[data-align="left"] { margin-inline: 0 auto; }
-.ms-box-title[data-align="right"] { margin-inline: auto 0; }
-.ms-rule, .ms-divider { display: flex; align-items: center; gap: 1ch; }
-.ms-rule::before, .ms-rule::after, .ms-divider::before, .ms-divider::after { content: ""; flex: 1 1 0; border-top: 1px solid var(--ms-border, var(--ms-border-default, currentColor)); }
-.ms-rule[data-align="left"]::before, .ms-divider[data-align="left"]::before { flex: 0 0 1ch; }
-.ms-rule[data-align="right"]::after, .ms-divider[data-align="right"]::after { flex: 0 0 1ch; }
-.ms-divider { margin: 0 -1ch; }
-.ms-border-double.ms-rule::before, .ms-border-double.ms-rule::after { border-top: 3px double var(--ms-border, var(--ms-border-default, currentColor)); }
-.ms-border-none.ms-rule::before, .ms-border-none.ms-rule::after { border-top: none; }
-.ms-flex { display: flex; flex-wrap: wrap; }
-.ms-flex.ms-vertical { flex-direction: column; }
-.ms-item { min-width: 0; box-sizing: border-box; }
-.ms-flex.ms-divided > .ms-item + .ms-item { border-left: 1px solid var(--ms-separator, var(--ms-separator-default, currentColor)); padding-left: 1ch; }
-.ms-figure { display: flow-root; }
-.ms-figure-image { max-width: 100%; height: auto; }
-.ms-figure-art { margin: 0; font: inherit; white-space: pre; }
-.ms-float-left > .ms-figure-image, .ms-float-left > .ms-figure-art { float: left; max-width: 50%; margin: 0 2ch 0.5em 0; }
-.ms-float-right > .ms-figure-image, .ms-float-right > .ms-figure-art { float: right; max-width: 50%; margin: 0 0 0.5em 2ch; }
-.ms-fields { display: grid; grid-template-columns: minmax(min-content, max-content) minmax(0, 1fr); column-gap: 1ch; margin: 0; }
-.ms-field { display: contents; }
-.ms-field > dt { grid-column: 1; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ms-label, var(--ms-label-default, inherit)); }
-.ms-field > dd { grid-column: 2; margin: 0; min-width: 0; }
-.ms-fields.ms-label-right > .ms-field > dt { text-align: right; }
-.ms-fields.ms-leader > .ms-field > dt { display: flex; gap: 0.5ch; }
-.ms-fields.ms-leader > .ms-field > dt::after { content: ""; flex: 1 0 2ch; border-bottom: 1px dotted currentColor; margin-bottom: 0.3em; }
-.ms-fields.ms-striped { column-gap: 0; }
-.ms-fields.ms-striped > .ms-field > dt { padding-right: 1ch; }
-.ms-fields.ms-striped > .ms-field:nth-child(even) > * { background: var(--ms-stripe, var(--ms-stripe-default, rgba(127, 127, 127, 0.12))); }
-.ms-tree, .ms-tree ul { list-style: none; margin: 0; padding: 0; }
-.ms-tree ul { margin-left: 1ch; }
-.ms-tree ul > li { position: relative; padding-left: 3ch; border-left: 1px solid var(--ms-guide, var(--ms-guide-default, currentColor)); }
-.ms-tree ul > li:last-child { border-left-color: transparent; }
-.ms-tree ul > li::before { content: ""; position: absolute; left: -1px; top: 0; width: 2ch; height: 0.7em; border-left: 1px solid var(--ms-guide, var(--ms-guide-default, currentColor)); border-bottom: 1px solid var(--ms-guide, var(--ms-guide-default, currentColor)); }
-.ms-tree.ms-guide-rounded ul > li:last-child::before { border-bottom-left-radius: 0.4em; }
-.ms-tree.ms-guide-heavy ul > li, .ms-tree.ms-guide-heavy ul > li::before { border-width: 2px; }
-.ms-tree.ms-guide-double ul > li, .ms-tree.ms-guide-double ul > li::before { border-left-style: double; border-left-width: 3px; }
-.ms-tree.ms-guide-none ul > li, .ms-tree.ms-guide-none ul > li::before { border-color: transparent; }
-.ms-gauge { display: flex; align-items: center; gap: 1ch; }
-.ms-gauge > meter { flex: 1 1 8ch; min-width: 4ch; accent-color: var(--ms-gauge, var(--ms-gauge-default, auto)); }
-.ms-gauge-bar { flex: 1 1 8ch; min-width: 4ch; height: 1em; display: flex; border: 1px solid var(--ms-border, var(--ms-border-default, currentColor)); box-sizing: border-box; }
-.ms-gauge-fill { height: 100%; }
-.ms-bullets { margin: 0; padding-left: 3ch; }
-.ms-bullets > li::marker, .ms-bullets .ms-marker { color: var(--ms-bullet, var(--ms-bullet-default, inherit)); }
-.ms-bullet-dash { list-style-type: "- "; }
-.ms-bullet-star { list-style-type: "* "; }
-.ms-bullet-none, .ms-bullet-custom { list-style: none; }
-.ms-bullet-custom > li > .ms-marker { display: inline-block; margin-left: -2ch; min-width: 2ch; }
-.ms-grid { list-style: none; margin: 0; padding: 0; display: grid; }
-.ms-grid.ms-down { display: block; }
-.ms-grid > li { break-inside: avoid; white-space: pre-wrap; overflow-wrap: anywhere; }
-/* A block with no HTML of its own is drawn as its lines; gradient() over a layout clips the gradient to its text and borders. */
-.ms-pre { margin: 0; font: inherit; white-space: pre; overflow-x: auto; }
-.ms-shaded { -webkit-background-clip: text; background-clip: text; color: transparent; }
-.ms-shaded :is(.ms-box, .ms-gauge-bar), .ms-shaded :is(.ms-rule, .ms-divider)::before, .ms-shaded :is(.ms-rule, .ms-divider)::after { border-image: var(--ms-shade) 1; }
-.ms-table-wrap { max-width: 100%; overflow-x: auto; }
-.ms-table { border-collapse: collapse; }
-.ms-table.ms-fill { width: 100%; }
-.ms-table th, .ms-table td { padding: 0 1ch; vertical-align: top; text-align: left; }
-.ms-table th { border-bottom: 1px solid var(--ms-header-rule, var(--ms-header-rule-default, currentColor)); color: var(--ms-heading, var(--ms-heading-default, inherit)); }
-.ms-table.ms-striped > tbody > tr:nth-child(even) { background: var(--ms-stripe, var(--ms-stripe-default, rgba(127, 127, 127, 0.12))); }
-.ms-table .ms-nowrap, .ms-table .ms-nowrap .ms-text { white-space: pre; overflow-wrap: normal; }
-@media (max-width: 48em) { .ms-table .ms-p3 { display: none; } .ms-table.ms-fill > colgroup { display: none; } }
-@media (max-width: 32em) { .ms-table .ms-p2 { display: none; } }
 /* Portal-only: LayoutCss.Fixed leaves its title gap in a rule or divider with no title, which splits the line in two. */
 .ms-rule:empty, .ms-divider:empty { gap: 0; }
 /* Portal-only: a cell breaks a word only when the word cannot fit, so a table sizes its columns to whole words. */
 .ms-table .ms-text { overflow-wrap: break-word; }
 
 /* Command links (xch_cmd) — clickable, run a MUSH command. Distinct from URL links.
-   The base rule mirrors HtmlCss.Fixed's .ms-cmd-link verbatim (pinned by
-   MarkupCssCoverageTests); the portal-only color theming sits in its own rule below. */
+   The package's .ms-cmd-link sets the cursor and dotted underline; the portal colours it. */
 .ms-cmd-link {
-    cursor: pointer;
-    text-decoration: underline dotted;
-}
-.ms-cmd-link {
-    color: var(--primary, #6cf);
+    color: var(--accent);
 }
 .ms-cmd-link:hover {
     text-decoration-style: solid;
 }
 /* Command links carry role="button" tabindex="0"; show a focus ring for keyboard users. */
 .ms-cmd-link:focus-visible {
-    outline: 2px solid var(--primary, #6cf);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
     text-decoration-style: solid;
 }
@@ -859,7 +766,7 @@ pre.ms-preformatted {
 .mush-editor-fill {
     width: 100%;
     height: 100%;
-    background-color: #1a1a2e;
+    background-color: var(--editor-bg);
 }
 
 .mush-editor-fill .monaco-editor-container {
@@ -875,23 +782,23 @@ pre.ms-preformatted {
     background-color: transparent;
 }
 .mush-dark-grid thead tr th {
-    background-color: #1a1a1a;
-    border-bottom: 1px solid #333;
-    color: rgba(255,255,255,0.6);
+    background-color: var(--surface-3);
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 .mush-dark-grid tbody tr td {
-    border-bottom: 1px solid #282828;
-    color: rgba(255,255,255,0.87);
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text);
 }
 .mush-dark-grid tbody tr:hover td {
-    background-color: rgba(255,255,255,0.04);
+    background-color: color-mix(in srgb, var(--text) 4%, transparent);
 }
 .mush-dark-grid .mud-table-pagination {
-    background-color: #1a1a1a;
-    border-top: 1px solid #333;
+    background-color: var(--surface-3);
+    border-top: 1px solid var(--border);
 }
 
 /* ── HelpDrawer markdown rendering ── */
@@ -899,32 +806,32 @@ pre.ms-preformatted {
     font-family: Consolas, 'Courier New', monospace;
     font-size: 0.8125rem;
     line-height: 1.6;
-    color: #d4d4d4;
+    color: var(--text);
 }
 .mush-help-md p { margin: 0 0 0.5rem; }
 .mush-help-md pre {
-    background: #0d0d0d;
-    border: 1px solid #333;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
     border-radius: 4px;
     padding: 0.5rem 0.75rem;
     overflow-x: auto;
     white-space: pre;
 }
 .mush-help-md code {
-    background: rgba(255,255,255,0.07);
+    background: color-mix(in srgb, var(--text) 7%, transparent);
     border-radius: 3px;
     padding: 0.0625rem 0.25rem;
     font-family: inherit;
     font-size: 0.92em;
-    color: #ce9178;
+    color: var(--syntax-string);
 }
 .mush-help-md pre code {
     background: none;
     padding: 0;
-    color: #d4d4d4;
+    color: var(--code-text);
 }
 .mush-help-md a[href^="help:"] {
-    color: #4ec9b0;
+    color: var(--syntax-link);
     text-decoration: none;
     cursor: pointer;
 }
@@ -932,7 +839,7 @@ pre.ms-preformatted {
     text-decoration: underline;
 }
 .mush-help-md h1, .mush-help-md h2, .mush-help-md h3 {
-    color: #9cdcfe;
+    color: var(--syntax-heading);
     margin: 0.75rem 0 0.375rem;
 }
 .mush-help-md ul, .mush-help-md ol {
@@ -940,12 +847,12 @@ pre.ms-preformatted {
     margin: 0 0 0.5rem;
 }
 .mush-help-md blockquote {
-    border-left: 3px solid #555;
+    border-left: 3px solid var(--border);
     padding-left: 0.625rem;
-    color: #888;
+    color: var(--text-faint);
     margin: 0 0 0.5rem;
 }
-.mush-help-md strong { color: #dcdcaa; }
+.mush-help-md strong { color: var(--syntax-emphasis); }
 
 /* ── Wiki rendered content ── */
 /* Applied to the MudCard wrapping rendered wiki HTML (WikiDisplay.razor).      */
@@ -1009,14 +916,14 @@ pre.ms-preformatted {
 .WikiContent .mud-card-content h4,
 .WikiContent .mud-card-content h5,
 .WikiContent .mud-card-content h6 {
-    color: var(--mud-palette-text-primary, rgba(255,255,255,0.87));
+    color: var(--text);
     margin: 1.2em 0 0.4em;
     line-height: 1.25;
 }
 
 .WikiContent .mud-card-content h1,
 .WikiContent .mud-card-content h2 {
-    border-bottom: 1px solid var(--mud-palette-lines-default, #333);
+    border-bottom: 1px solid var(--border);
     padding-bottom: 0.2em;
 }
 
@@ -1037,7 +944,7 @@ pre.ms-preformatted {
 
 /* Inline code and code blocks */
 .WikiContent .mud-card-content code {
-    background: rgba(255, 255, 255, 0.07);
+    background: color-mix(in srgb, var(--text) 7%, transparent);
     border-radius: 3px;
     padding: 0.0625rem 0.3125rem;
     font-family: Consolas, 'Courier New', monospace;
@@ -1045,8 +952,8 @@ pre.ms-preformatted {
 }
 
 .WikiContent .mud-card-content pre {
-    background: #0d0d0d;
-    border: 1px solid var(--mud-palette-lines-default, #333);
+    background: var(--code-bg);
+    border: 1px solid var(--border);
     border-radius: 4px;
     padding: 0.625rem 0.875rem;
     overflow-x: auto;
@@ -1060,10 +967,10 @@ pre.ms-preformatted {
 
 /* Blockquotes */
 .WikiContent .mud-card-content blockquote {
-    border-left: 3px solid var(--mud-palette-secondary, #80cbc4);
+    border-left: 3px solid var(--accent-dim);
     margin: 0 0 1em;
     padding: 0.2em 0 0.2em 1em;
-    color: var(--mud-palette-text-secondary, rgba(255,255,255,0.6));
+    color: var(--text-dim);
 }
 
 /* Tables (Markdig pipe tables) */
@@ -1075,23 +982,23 @@ pre.ms-preformatted {
 
 .WikiContent .mud-card-content th,
 .WikiContent .mud-card-content td {
-    border: 1px solid var(--mud-palette-lines-default, #333);
+    border: 1px solid var(--border);
     padding: 0.375rem 0.75rem;
     text-align: left;
 }
 
 .WikiContent .mud-card-content th {
-    background: rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--text) 5%, transparent);
 }
 
 .WikiContent .mud-card-content tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 
 /* Horizontal rules */
 .WikiContent .mud-card-content hr {
     border: none;
-    border-top: 1px solid var(--mud-palette-lines-default, #333);
+    border-top: 1px solid var(--border);
     margin: 1.5em 0;
 }
 
@@ -1171,22 +1078,22 @@ pre.ms-preformatted {
 /* ── Wiki directive blocks (dynamic listings: category / tag / pagelist / recent) ── */
 
 .wiki-directive-block {
-    border-left: 3px solid var(--mud-palette-secondary, #80cbc4);
-    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--accent-dim);
+    background: color-mix(in srgb, var(--text) 3%, transparent);
     border-radius: 0 4px 4px 0;
     padding: 0.6em 1.1em;
     margin: 0 0 1em;
 }
 
 .wiki-directive-block .wiki-directive-header {
-    color: var(--mud-palette-text-primary, rgba(255, 255, 255, 0.87));
+    color: var(--text);
     font-weight: 600;
     margin-bottom: 0.35em;
 }
 
 .wiki-directive-block .wiki-directive-empty,
 .wiki-directive-block .wiki-directive-loading {
-    color: var(--mud-palette-text-secondary, rgba(255, 255, 255, 0.6));
+    color: var(--text-dim);
     margin: 0;
 }
 
@@ -1202,7 +1109,7 @@ pre.ms-preformatted {
 }
 
 .wiki-directive-list .wiki-directive-date {
-    color: var(--mud-palette-text-secondary, rgba(255, 255, 255, 0.6));
+    color: var(--text-dim);
     font-size: 0.85em;
 }
 
@@ -1359,7 +1266,7 @@ pre.ms-preformatted {
 		   off-screen; visibility switches after the slide closing and at once opening. */
 		visibility: hidden;
 		transition: transform 0.22s ease, visibility 0s linear 0.22s;
-		box-shadow: 2px 0 24px rgba(0, 0, 0, 0.5);
+		box-shadow: var(--shadow-pop);
 	}
 	.phosphor-shell--nav-open .phosphor-sidebar {
 		transform: translateX(0);
@@ -1375,7 +1282,7 @@ pre.ms-preformatted {
 		position: fixed;
 		inset: 0;
 		z-index: 1000;
-		background: rgba(0, 0, 0, 0.55);
+		background: var(--overlay);
 		opacity: 0;
 		pointer-events: none;
 		transition: opacity 0.22s ease;
@@ -1396,7 +1303,7 @@ pre.ms-preformatted {
 		transform: translateX(-100%);
 		visibility: hidden;
 		transition: transform 0.22s ease, visibility 0s linear 0.22s;
-		box-shadow: 2px 0 24px rgba(0, 0, 0, 0.5);
+		box-shadow: var(--shadow-pop);
 	}
 	.phosphor-pagebar:has(.kit-pagebar--collapsed) { width: min(280px, 86vw); }
 	.phosphor-shell--pagebar-open .phosphor-pagebar {
@@ -1530,4 +1437,37 @@ pre.ms-preformatted {
 .wiki-catlink:focus-visible {
     background: var(--border);
     outline: none;
+}
+
+/* ── Skip links (WCAG 2.4.1, bypass blocks) ──
+   The first stops in the tab order: past the rail and the section menu to the page, or straight to the
+   page's main text box when it has one (input-focus.js). Off screen until focused. */
+.skip-links {
+	position: fixed;
+	top: 0.5rem;
+	left: 0.5rem;
+	z-index: 2000;
+	display: flex;
+	gap: 0.5rem;
+}
+.skip-link {
+	position: absolute;
+	left: -10000px;
+	padding: 0.5rem 0.875rem;
+	border-radius: var(--radius);
+	background: var(--accent);
+	color: var(--accent-on);
+	font-weight: 600;
+	text-decoration: none;
+}
+.skip-link:focus-visible,
+.skip-link:focus {
+	position: static;
+}
+:root:not(:has([data-primary-input])) .skip-link--input {
+	display: none;
+}
+/* The skip link's target is focused only to move the reading point; it is not a control. */
+.phosphor-main:focus {
+	outline: none;
 }

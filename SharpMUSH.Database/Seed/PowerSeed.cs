@@ -53,6 +53,8 @@ public static class PowerSeed
 		// PennMUSH renamed Pueblo_Send to Send_OOB "to reflect its new use for other,
 		// non-Pueblo-related, out of band messages. Pueblo_Send remains as an alias."
 		// (game/txt/hlp/pennv186.hlp:86; the rename is applied at load in src/flags.c:850-855.)
+		// SharpMUSH's own: pictures without the rest of Send_OOB. The approved role holds it.
+		("Send_Image", [], ["wizard","log"], ["wizard"]),
 		("Send_OOB", ["Pueblo_Send"], ["wizard","log"], ["wizard"]),
 		("SQL_OK", ["Use_SQL"], ["wizard","log"], ["wizard"]),
 		("Tport_Anything", ["tel_anything"], ["wizard","log"], ["wizard"]),

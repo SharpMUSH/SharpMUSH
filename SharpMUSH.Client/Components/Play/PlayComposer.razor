@@ -16,9 +16,11 @@
    as a post or command of its own. The field is a FormattedInput: Say, OOC and Emit are written as styled text
    (the format menu colours a selection) and sent as decompose() writes them, so what is shown is what is posed,
    brackets and percent signs included; the menu's softcode switch (kept per browser) sends what is typed as
-   softcode instead, as Command always does, and there the menu wraps the selection in [ansi()]. *@
+   softcode instead, as Command always does, and there the menu wraps the selection in [ansi()]. The field is
+   the page's main text box (FormattedInput.Primary): it is focused when the Story opens, typing anywhere on the
+   page lands in it, and a click on the bar around it focuses it; Send hands focus back to it. *@
 <BottomBar Class="@($"composer {(_expanded ? "composer--expanded" : null)}")">
-    <div class="composer-scope">
+    <div class="composer-scope" data-input-region>
         <div class="composer-grid">
             <div class="composer-chips">
                 <TypeChips Items="_types" Selected="@_type" SelectedChanged="OnTypeChanged" AriaLabel="@Loc["NavPlayMessageType"]" />
@@ -40,8 +42,9 @@
             <FormattedInput @ref="_field" Draft="_draft" Class="composer-field"
                             InputClass="@($"composer-input {(_type == Command ? "composer-input--command" : null)}")"
                             AriaLabel="@($"{Loc["NavPlayMessageType"]}: {Label(_type)}")" Placeholder="@Placeholder"
+                            Primary="end" Autofocus="true" EnterKeyHint="send"
                             OnKeyDown="OnKeyDownAsync" OnRawRequested="@(_type == Command ? default : EventCallback.Factory.Create(this, () => SetRawAsync(true)))" />
-            <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendAsync">@Loc["Send"]</button>
+            <button type="button" class="composer-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
         </div>
     </div>
 </BottomBar>
@@ -298,6 +301,13 @@
         {
             _walking = false;
         }
+    }
+
+    /// <summary>Send, clicked: the button goes disabled with the field emptied, so focus goes back to the field.</summary>
+    private Task SendFromButtonAsync()
+    {
+        _focusInput = true;
+        return SendAsync();
     }
 
     private async Task SendAsync()

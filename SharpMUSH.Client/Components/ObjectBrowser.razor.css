@@ -23,7 +23,7 @@
 .ob-hint code { background: var(--surface-2); border-radius: 3px; padding: 0 0.1875rem; }
 
 .ob-error { margin: 0 0.5rem 0.375rem; padding: 0.375rem 0.625rem; border-radius: var(--radius); font-size: 0.71875rem;
-    color: #e0b050; background: rgba(217, 162, 58, 0.12); border: 1px solid rgba(217, 162, 58, 0.3); }
+    color: var(--warn); background: var(--warn-tint); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
 .ob-empty { padding: 0.875rem; text-align: center; font-family: var(--font-mono); font-size: 0.71875rem; color: var(--text-faint); }
 
 .ob-group-label { font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.14em; text-transform: uppercase;

@@ -281,6 +281,85 @@
 	flex: 1;
 }
 
+/* Generate: a seed, a harmony and a contrast level, a preset, or palette JSON. */
+.adm-theme-generate {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	gap: 12px;
+	align-items: center;
+}
+
+.adm-theme-generate--json {
+	grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.adm-theme-guide {
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius-row);
+	padding: 8px 12px;
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}
+
+.adm-theme-guide summary {
+	cursor: pointer;
+	color: var(--text);
+	font-weight: 600;
+}
+
+.adm-theme-guide p {
+	margin: 8px 0 0;
+}
+
+.adm-theme-code-sample,
+.adm-theme-sheet {
+	box-sizing: border-box;
+	width: 100%;
+	margin: 8px 0 0;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--code-bg);
+	color: var(--code-text);
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	line-height: 1.5;
+	tab-size: 4;
+}
+
+.adm-theme-code-sample {
+	overflow-x: auto;
+	white-space: pre;
+}
+
+.adm-theme-sheet {
+	resize: vertical;
+	min-height: 16rem;
+}
+
+.adm-theme-sheet:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.adm-theme-sheet-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.adm-theme-sheet-problems {
+	margin: 0;
+	padding-left: 1.25rem;
+	color: var(--danger);
+	font-size: 0.8125rem;
+}
+
+.adm-theme ::deep .adm-theme-code textarea {
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+}
+
 @container page (max-width: 48rem) {
 	.adm-theme-layout {
 		grid-template-columns: minmax(0, 1fr);

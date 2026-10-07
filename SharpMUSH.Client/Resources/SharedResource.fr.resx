@@ -4084,6 +4084,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Retirer la bannière</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Changer la bannière</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Changer l'avatar</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Téléverser une nouvelle image</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Ou choisir dans la galerie</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Aucune image dans la galerie pour l’instant.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Impossible de changer la bannière : {0}</value>
   </data>
@@ -4095,6 +4110,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>en cours</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Scènes avec {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Retour à {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Rechercher des scènes</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>État de la scène</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Toutes</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>En direct</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>À venir</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Terminées</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Afficher plus</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Tout voir</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Joue souvent avec</value>
@@ -5083,5 +5128,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Affichage des {0} prochaines scènes.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Thème de {0}</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Aller au contenu principal</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Aller à la zone de texte</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Texte de la page (Markdown)</value>
   </data>
 </root>

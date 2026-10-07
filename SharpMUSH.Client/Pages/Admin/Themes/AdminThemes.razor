@@ -6,6 +6,9 @@
 @inject IThemeService Themes
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@using ThemePalette = MarkupString.ThemePalette
+@using ThemeHarmony = MarkupString.ThemeHarmony
+@using SharpMUSH.Library.DiscriminatedUnions
 
 @* The theme editor: the game's themes as named sets of the design tokens and style choices, which ones a
    character that chose none sees (one for browsers that prefer dark, one for light), and which ones players may
@@ -103,6 +106,77 @@
                                        Label="@Loc["AdmThemesPublished"]" id="theme-published" />
                         </div>
 
+                        @if (!locked)
+                        {
+                            <section class="adm-theme-group" id="theme-generate">
+                                <h3 class="adm-theme-group-title">@Loc["AdmThemesGenerate"]</h3>
+                                <p class="adm-theme-hint">@Loc["AdmThemesGenerateHint"]</p>
+                                <div class="adm-theme-generate">
+                                    <label class="adm-theme-token">
+                                        <input type="color" class="adm-theme-color" value="@_seed" aria-label="@Loc["AdmThemesSeed"]"
+                                               @onchange="e => SetSeed(e.Value?.ToString())" />
+                                        <span class="adm-theme-token-text">
+                                            <span class="adm-theme-token-name">@Loc["AdmThemesSeed"]</span>
+                                            <input type="text" class="adm-theme-hex" value="@_seed" spellcheck="false" maxlength="7" id="theme-seed"
+                                                   aria-label="@($"{Loc["AdmThemesSeed"]} (hex)")" @onchange="e => SetSeed(e.Value?.ToString())" />
+                                        </span>
+                                    </label>
+                                    <MudSelect T="ThemeHarmony" @bind-Value="_harmony" Label="@Loc["AdmThemesHarmony"]" Variant="Variant.Outlined"
+                                               Margin="Margin.Dense" Dense="true" id="theme-harmony">
+                                        @foreach (var harmony in Enum.GetValues<ThemeHarmony>())
+                                        {
+                                            <MudSelectItem T="ThemeHarmony" Value="@harmony">@Loc[$"AdmThemesHarmony{harmony}"]</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                    <MudSlider T="double" @bind-Value="_contrast" Min="0" Max="1" Step="0.1" Color="Color.Primary" Class="adm-theme-contrast-slider">
+                                        @Loc["AdmThemesContrastLevel", _contrast.ToString("0.0")]
+                                    </MudSlider>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="GenerateFromSeed" id="theme-generate-seed">
+                                        @Loc["AdmThemesGenerateSeed"]
+                                    </MudButton>
+                                </div>
+                                <div class="adm-theme-generate">
+                                    <MudSelect T="string" @bind-Value="_preset" Label="@Loc["AdmThemesPreset"]" Variant="Variant.Outlined"
+                                               Margin="Margin.Dense" Dense="true" id="theme-preset">
+                                        @foreach (var preset in ThemePalette.Presets)
+                                        {
+                                            <MudSelectItem T="string" Value="@preset.Name">@preset.Name</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@string.IsNullOrEmpty(_preset)"
+                                               OnClick="() => UsePalette(_preset)" id="theme-generate-preset">@Loc["AdmThemesUsePalette"]</MudButton>
+                                </div>
+                                <div class="adm-theme-generate adm-theme-generate--json">
+                                    <MudTextField T="string" @bind-Value="_paletteJson" Label="@Loc["AdmThemesPaletteJson"]" Lines="3"
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-theme-code" id="theme-palette-json"
+                                                  Placeholder='{"seed":"#6b4fa8","harmony":"triadic","contrast":0.3}' />
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_paletteJson)"
+                                               OnClick="() => UsePalette(_paletteJson)" id="theme-generate-json">@Loc["AdmThemesUseJson"]</MudButton>
+                                </div>
+                                @if (_paletteError is not null)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Dense="true" id="theme-palette-error">@_paletteError</MudAlert>
+                                }
+                                <details class="adm-theme-guide" id="theme-guide">
+                                    <summary>@Loc["AdmThemesGuideTitle"]</summary>
+                                    <p>@Loc["AdmThemesGuideSeed"]</p>
+                                    <p>@Loc["AdmThemesGuidePreset"]</p>
+                                    <p>@Loc["AdmThemesGuideJson"]</p>
+                                    <p>@Loc["AdmThemesGuideMapping"]</p>
+                                    <p>@Loc["AdmThemesGuideCode"]</p>
+                                    <pre class="adm-theme-code-sample">@GuideCode</pre>
+                                    <p>@Loc["AdmThemesGuideDocs"]</p>
+                                </details>
+                            </section>
+                        }
+
+                        @if (ThemeStylesheet.ColorOverrides(_draft.Stylesheet) is { Count: > 0 } overridden)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" id="theme-sheet-overrides">
+                                @Loc["AdmThemesSheetOverrides", string.Join(", ", overridden.Keys.Select(k => Loc[TokenKey(k)].Value))]
+                            </MudAlert>
+                        }
+
                         @foreach (var (groupKey, tokens) in Groups)
                         {
                             <section class="adm-theme-group">
@@ -155,11 +229,12 @@
                             <h3 class="adm-theme-group-title">@Loc["AdmThemesContrast"]</h3>
                             <p class="adm-theme-hint">@Loc["AdmThemesContrastHint"]</p>
                             <ul class="adm-theme-contrast" id="theme-contrast">
-                                @foreach (var (fg, bg, ratio) in ThemeResolver.Contrasts(_draft.Tokens))
+                                @{ var effective = ThemeStylesheet.WithColorOverrides(_draft.Tokens, _draft.Stylesheet); }
+                                @foreach (var (fg, bg, ratio) in ThemeResolver.Contrasts(effective))
                                 {
                                     var ok = ratio >= ThemeTokens.TextContrast;
                                     <li class="@(ok ? null : "adm-theme-contrast--low")" data-pair="@($"{fg}/{bg}")">
-                                        <span class="adm-theme-contrast-sample" style="@($"color:{_draft.Tokens[fg]};background:{_draft.Tokens[bg]};border-color:{_draft.Tokens[ThemeTokens.Border]}")">Aa</span>
+                                        <span class="adm-theme-contrast-sample" style="@($"color:{effective[fg]};background:{effective[bg]};border-color:{effective[ThemeTokens.Border]}")">Aa</span>
                                         <span class="adm-theme-contrast-pair">@Loc["AdmThemesOn", Loc[TokenKey(fg)], Loc[TokenKey(bg)]]</span>
                                         <span class="adm-theme-contrast-ratio">@ratio.ToString("0.0")</span>
                                         <MudIcon Icon="@(ok ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)" Size="Size.Small"
@@ -167,6 +242,31 @@
                                     </li>
                                 }
                             </ul>
+                        </section>
+
+                        <section class="adm-theme-group" id="theme-stylesheet">
+                            <h3 class="adm-theme-group-title">@Loc["AdmThemesStylesheet"]</h3>
+                            <p class="adm-theme-hint">@Loc["AdmThemesStylesheetHint"]</p>
+                            <textarea class="adm-theme-sheet" id="theme-sheet" spellcheck="false" rows="24" disabled="@locked"
+                                      aria-label="@Loc["AdmThemesStylesheet"]" value="@SheetText"
+                                      @onchange="e => SetStylesheet(e.Value?.ToString())"></textarea>
+                            <div class="adm-theme-sheet-bar">
+                                <span class="adm-theme-hint">@Loc["AdmThemesStylesheetSize", SheetText.Length, ThemeStylesheet.MaxLength]</span>
+                                <span class="adm-theme-spacer"></span>
+                                @if (!locked && _draft.Stylesheet is not null)
+                                {
+                                    <MudButton Variant="Variant.Text" OnClick="ResetStylesheet" id="theme-sheet-reset">@Loc["AdmThemesStylesheetReset"]</MudButton>
+                                }
+                            </div>
+                            @if (SheetProblems is { Count: > 0 } problems)
+                            {
+                                <ul class="adm-theme-sheet-problems" id="theme-sheet-problems">
+                                    @foreach (var problem in problems)
+                                    {
+                                        <li>@problem</li>
+                                    }
+                                </ul>
+                            }
                         </section>
 
                         <div class="adm-theme-actions">
@@ -185,7 +285,7 @@
                                     <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="Duplicate" id="theme-duplicate">@Loc["AdmThemesDuplicate"]</MudButton>
                                 }
                                 <MudButton Variant="Variant.Text" Disabled="@(_busy || !_dirty)" OnClick="Revert" id="theme-revert">@Loc["AdmThemesRevert"]</MudButton>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || !_dirty)" OnClick="SaveAsync" id="theme-save">
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || !_dirty || SheetProblems.Count > 0)" OnClick="SaveAsync" id="theme-save">
                                     @Loc["Save"]
                                 </MudButton>
                             }
@@ -214,6 +314,9 @@
         public bool BuiltIn { get; set; }
         public Dictionary<string, string> Tokens { get; set; } = [];
 
+        /// <summary>The theme's own stylesheet, or null while it has none (the editor then shows the starter).</summary>
+        public string? Stylesheet { get; set; }
+
         public static ThemeDraft From(PortalTheme theme) => new()
         {
             Id = theme.Id,
@@ -222,11 +325,12 @@
             Published = theme.Published,
             BuiltIn = theme.BuiltIn,
             Tokens = ThemeResolver.Complete(theme.Tokens) is var (colors, style) ? colors.Concat(style).ToDictionary() : [],
+            Stylesheet = theme.Stylesheet,
         };
 
-        public PortalTheme ToTheme() => new(Id ?? "draft", Name, Dark, Published, Tokens);
+        public PortalTheme ToTheme() => new(Id ?? "draft", Name, Dark, Published, Tokens, Stylesheet: Stylesheet);
 
-        public PortalThemeRequest ToRequest() => new(Name.Trim(), Dark, Published, new Dictionary<string, string>(Tokens));
+        public PortalThemeRequest ToRequest() => new(Name.Trim(), Dark, Published, new Dictionary<string, string>(Tokens), Stylesheet);
     }
 
     private static readonly (string Group, string[] Tokens)[] Groups =
@@ -244,7 +348,34 @@
     private bool _trying;
     private string? _error;
 
+    private string _seed = "#6b4fa8";
+    private ThemeHarmony _harmony = ThemeHarmony.Analogous;
+    private double _contrast;
+    private string? _preset;
+    private string? _paletteJson;
+    private string? _paletteError;
+
     private ResolvedTheme Draft => ThemeResolver.Resolve(_draft!.ToTheme());
+
+    /// <summary>What the stylesheet box shows: the theme's own, or the starter while it has none.</summary>
+    private string SheetText => _draft?.Stylesheet ?? (_draft is null ? string.Empty : ThemeStylesheet.Starter(Draft));
+
+    private IReadOnlyList<string> SheetProblems => ThemeStylesheet.Validate(_draft?.Stylesheet);
+
+    private const string GuideCode = """
+        using MarkupString;
+        using SharpMUSH.Library.Models.Portal;
+
+        // One colour, a harmony, light or dark, and how far above 4.5:1 to go (0 to 1).
+        var palette = ThemePalette.Generate(new RgbColor(0x6b, 0x4f, 0xa8), ThemeHarmony.Triadic, ThemeMode.Light, contrast: 0.3);
+
+        // Or a preset: ThemePalette.Preset("nord"), ThemePalette.Genres, ThemePalette.Presets.
+        // Or palette JSON: ThemePalette.TryParse(json, out var parsed, out var error).
+
+        var (colors, dark) = ThemeGenerator.FromPalette(palette);
+        // colors: the 13 colour tokens. Send them, with style choices if you like, as the
+        // Tokens of a PortalThemeRequest to POST api/themes (needs layout.admin).
+        """;
 
     /// <summary>"surface-2" is "AdmThemeTokenSurface2".</summary>
     private static string TokenKey(string token) => "AdmThemeToken" + Pascal(token);
@@ -339,6 +470,63 @@
         if (SharpMUSH.Library.Models.Portal.ThemeColor.TryParse(value, out var color))
         {
             _draft!.Tokens[token] = color.Hex;
+        }
+
+        Edited();
+    }
+
+    private void SetStylesheet(string? css)
+    {
+        // The starter, untouched, changes nothing: keep the theme without a stylesheet rather than store it.
+        _draft!.Stylesheet = string.IsNullOrWhiteSpace(css) || css == ThemeStylesheet.Starter(Draft) ? null : css;
+        Edited();
+    }
+
+    private void ResetStylesheet()
+    {
+        _draft!.Stylesheet = null;
+        Edited();
+    }
+
+    private void SetSeed(string? value)
+    {
+        if (SharpMUSH.Library.Models.Portal.ThemeColor.TryParse(value, out var color))
+        {
+            _seed = color.Hex;
+        }
+    }
+
+    private void GenerateFromSeed()
+    {
+        ApplyColors(ThemeGenerator.Generate(_seed, _harmony, _draft!.Dark, _contrast), _draft.Dark);
+    }
+
+    /// <summary>A preset's name or palette JSON, made again for this theme's mode when it was generated.</summary>
+    private void UsePalette(string? text)
+    {
+        switch (ThemeGenerator.FromText(text ?? string.Empty, _draft!.Dark))
+        {
+            case ValueTuple<Dictionary<string, string>, bool> palette:
+                ApplyColors(palette.Item1, palette.Item2);
+                break;
+            case Error<string> error:
+                _paletteError = Loc["AdmThemesPaletteError", error.Value];
+                break;
+        }
+    }
+
+    private void ApplyColors(Dictionary<string, string> colors, bool dark)
+    {
+        _paletteError = null;
+        foreach (var (token, value) in colors)
+        {
+            _draft!.Tokens[token] = value;
+        }
+
+        // A fixed scheme (base16) is dark or light already; the theme takes its mode unless that would move a default.
+        if (dark != _draft!.Dark && !IsDefault(_draft.Id))
+        {
+            _draft.Dark = dark;
         }
 
         Edited();

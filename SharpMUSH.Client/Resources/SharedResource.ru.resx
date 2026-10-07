@@ -4790,6 +4790,21 @@
   <data name="NavGalleryRemoveBanner" xml:space="preserve">
     <value>Убрать обложку</value>
   </data>
+  <data name="NavCharChangeBanner" xml:space="preserve">
+    <value>Сменить обложку</value>
+  </data>
+  <data name="NavCharChangeAvatar" xml:space="preserve">
+    <value>Сменить аватар</value>
+  </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Загрузить новое изображение</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Или выбрать из галереи</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>В галерее пока нет изображений.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Не удалось сменить обложку: {0}</value>
   </data>
@@ -4801,6 +4816,36 @@
   </data>
   <data name="NavLiveNowShort" xml:space="preserve">
     <value>идёт сейчас</value>
+  </data>
+  <data name="NavCharScenesTitle" xml:space="preserve">
+    <value>Сцены с участием: {0}</value>
+  </data>
+  <data name="NavCharScenesBack" xml:space="preserve">
+    <value>Назад к профилю: {0}</value>
+  </data>
+  <data name="NavCharScenesSearch" xml:space="preserve">
+    <value>Поиск сцен</value>
+  </data>
+  <data name="NavCharScenesStates" xml:space="preserve">
+    <value>Состояние сцены</value>
+  </data>
+  <data name="NavCharScenesAll" xml:space="preserve">
+    <value>Все</value>
+  </data>
+  <data name="NavCharScenesLive" xml:space="preserve">
+    <value>В эфире</value>
+  </data>
+  <data name="NavCharScenesUpcoming" xml:space="preserve">
+    <value>Предстоящие</value>
+  </data>
+  <data name="NavCharScenesFinished" xml:space="preserve">
+    <value>Завершённые</value>
+  </data>
+  <data name="NavCharScenesMore" xml:space="preserve">
+    <value>Показать ещё</value>
+  </data>
+  <data name="NavCharScenesViewAll" xml:space="preserve">
+    <value>Смотреть все</value>
   </data>
   <data name="NavOftenPlaysWith" xml:space="preserve">
     <value>Часто играет с</value>
@@ -5789,5 +5834,17 @@
   </data>
   <data name="RolScheduleCapped" xml:space="preserve">
     <value>Показаны следующие {0} сцен.</value>
+  </data>
+  <data name="NavThemeForCharacter" xml:space="preserve">
+    <value>Тема для {0}</value>
+  </data>
+  <data name="NavSkipToContent" xml:space="preserve">
+    <value>Перейти к основному содержимому</value>
+  </data>
+  <data name="NavSkipToTextBox" xml:space="preserve">
+    <value>Перейти к текстовому полю</value>
+  </data>
+  <data name="WkSourceLabel" xml:space="preserve">
+    <value>Текст страницы (Markdown)</value>
   </data>
 </root>

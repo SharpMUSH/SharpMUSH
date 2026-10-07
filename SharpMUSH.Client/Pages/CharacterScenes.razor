@@ -1,0 +1,188 @@
+@page "/character/{Name}/scenes"
+@layout CharactersLayout
+@using SharpMUSH.Client.Components.Scenes
+@using SharpMUSH.Client.Services
+@inject CharacterDirectoryService Directory
+@inject SceneService Scenes
+@inject AccountAuthService AccountAuth
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+<PageTitle>@string.Format(Loc["NavCharScenesTitle"], Name) — @Loc["AppTitle"]</PageTitle>
+
+@* Every scene the character belongs to that the viewer may see, newest first, as the scene archive's
+   cards: the profile's Recent scenes card links here with View all. A state and a search narrow the
+   list on the server (api/scenes?participant=), which hands it over a page at a time. *@
+<FeatureGate Feature="@GameFeatures.Scenes">
+<div class="char-scenes-page">
+    <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@string.Format(Loc["NavCharScenesTitle"], Name)">
+        <DescriptionContent>
+            <a class="char-scenes-back" href="@ProfileHref">@string.Format(Loc["NavCharScenesBack"], Name)</a>
+        </DescriptionContent>
+        <Actions>
+            <input class="char-scenes-search" type="search" placeholder="@Loc["NavCharScenesSearch"]" aria-label="@Loc["NavCharScenesSearch"]"
+                   value="@_search" @onchange="@(e => SearchAsync(e.Value?.ToString()))" />
+        </Actions>
+    </PlainPageHeader>
+
+    <TypeChips Items="@StateChips" Selected="@_state" SelectedChanged="SelectStateAsync" AriaLabel="@Loc["NavCharScenesStates"]" />
+
+    @if (_missing)
+    {
+        <EmptyBox Class="char-scenes-missing">@string.Format(Loc["NavCharNotFound"], Name)</EmptyBox>
+    }
+    else if (_loading && _scenes.Count == 0)
+    {
+        <div class="char-scenes-list" aria-busy="true">
+            @for (var i = 0; i < 4; i++)
+            {
+                <SkeletonCard Height="72" />
+            }
+        </div>
+    }
+    else if (_failed && _scenes.Count == 0)
+    {
+        <EmptyBox Class="char-scenes-failed">@Loc["WidUnavailable"]</EmptyBox>
+    }
+    else if (_scenes.Count == 0)
+    {
+        <EmptyBox Class="char-scenes-none">@Loc["ResNoScenesFound"]</EmptyBox>
+    }
+    else
+    {
+        <div class="char-scenes-list">
+            @foreach (var scene in _scenes)
+            {
+                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null)" />
+            }
+        </div>
+        @if (_failed)
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="char-scenes-more-failed">@Loc["WidUnavailable"]</MudAlert>
+        }
+        @if (_more)
+        {
+            <CapsuleButton Class="char-scenes-more" Disabled="_loading" OnClick="LoadMoreAsync">@Loc["NavCharScenesMore"]</CapsuleButton>
+        }
+    }
+</div>
+</FeatureGate>
+
+@code {
+    [Parameter] public required string Name { get; set; }
+
+    /// <summary>Scenes asked for at a time.</summary>
+    public const int PageSize = 25;
+
+    private const string AllStates = "";
+
+    private string? _dbref;
+    private string? _loadedFor;
+    private string _state = AllStates;
+    private string _search = string.Empty;
+    private List<SceneSummary> _scenes = [];
+    private bool _loading = true;
+    private bool _failed;
+    private bool _missing;
+    private bool _more;
+
+    /// <summary>The list holds only the private scenes the acting character may see; a switch, or a scene this tab started, reads it again.</summary>
+    private readonly ViewerScopedReload _reload = new();
+
+    private IReadOnlyList<(string Key, string Label)> StateChips =>
+    [
+        (AllStates, Loc["NavCharScenesAll"]),
+        ("live", Loc["NavCharScenesLive"]),
+        ("upcoming", Loc["NavCharScenesUpcoming"]),
+        ("finished", Loc["NavCharScenesFinished"]),
+    ];
+
+    private string ProfileHref => $"/character/{Uri.EscapeDataString(Name)}";
+
+    protected override void OnInitialized() =>
+        _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () => { await ReloadAsync(); StateHasChanged(); }), Scenes);
+
+    public void Dispose() => _reload.Dispose();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase)) return;
+        _loadedFor = Name;
+        (_dbref, _missing, _state, _search) = (null, false, AllStates, string.Empty);
+        await ReloadAsync();
+    }
+
+    private async Task SelectStateAsync(string state)
+    {
+        if (state == _state) return;
+        _state = state;
+        await ReloadAsync();
+    }
+
+    private async Task SearchAsync(string? search)
+    {
+        var text = search?.Trim() ?? string.Empty;
+        if (text == _search) return;
+        _search = text;
+        await ReloadAsync();
+    }
+
+    /// <summary>The first page again, for a new character, state, search or viewer.</summary>
+    private async Task ReloadAsync()
+    {
+        var ticket = _reload.Begin();
+        (_scenes, _more, _failed, _loading) = ([], false, false, true);
+
+        if (_dbref is null)
+        {
+            var name = Name;
+            switch (await Directory.ResolveObjidAsync(name))
+            {
+                case string objid:
+                    if (!_reload.IsCurrent(ticket)) return;
+                    _dbref = objid.Split(':')[0];
+                    break;
+                case SharpMUSH.Library.DiscriminatedUnions.NotFound:
+                    if (!_reload.IsCurrent(ticket)) return;
+                    (_missing, _loading) = (true, false);
+                    return;
+                case ApiFailure:
+                    if (!_reload.IsCurrent(ticket)) return;
+                    (_failed, _loading) = (true, false);
+                    return;
+            }
+        }
+
+        await ReadPageAsync(ticket);
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        _loading = true;
+        await ReadPageAsync(_reload.Begin());
+    }
+
+    /// <summary>
+    /// The next page after the scenes already shown. One more than a page is asked for, so whether there
+    /// is a further page is known without asking for it.
+    /// </summary>
+    private async Task ReadPageAsync(int ticket)
+    {
+        if (_dbref is not { } dbref) return;
+
+        var read = await Scenes.GetParticipantScenesAsync(dbref, PageSize + 1, _scenes.Count, _state, _search);
+        if (!_reload.IsCurrent(ticket)) return;
+        switch (read)
+        {
+            case IReadOnlyList<SceneSummary> page:
+                _scenes = [.. _scenes, .. page.Take(PageSize).Where(s => _scenes.All(shown => shown.Id != s.Id))];
+                (_more, _failed) = (page.Count > PageSize, false);
+                break;
+            case ApiFailure:
+                _failed = true;
+                break;
+        }
+
+        _loading = false;
+    }
+}

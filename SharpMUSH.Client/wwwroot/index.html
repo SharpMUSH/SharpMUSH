@@ -13,6 +13,7 @@
          fetches all of them alongside custom.css instead. -->
     <link rel="preload" as="style" href="_content/MudBlazor/MudBlazor.min.css" />
     <link rel="preload" as="style" href="css/tokens.css" />
+    <link rel="preload" as="style" href="data/markup.css" />
     <link rel="preload" as="style" href="css/shell.css" />
     <link rel="preload" as="style" href="css/mush-syntax.css" />
     <link rel="preload" as="style" href="css/globals.css" />
@@ -73,6 +74,8 @@
     <!-- A terminal's resume point in sessionStorage, so a reload resumes the game session -->
     <script src="js/terminal-resume#[.{fingerprint}].js"></script>
     <script src="js/layout#[.{fingerprint}].js"></script>
+    <!-- The page's main text field: focus on arrival, type-to-focus, click-to-focus (input-focus.js) -->
+    <script src="js/input-focus#[.{fingerprint}].js"></script>
     <!-- Passkey (WebAuthn) prompts for sign-in and the account page -->
     <script src="js/passkeys#[.{fingerprint}].js"></script>
     <!-- The wiki post-render pass (mermaid run + anchor scroll). Mermaid itself is fetched by this

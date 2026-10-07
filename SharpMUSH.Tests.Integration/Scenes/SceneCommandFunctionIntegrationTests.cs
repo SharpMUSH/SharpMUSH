@@ -29,6 +29,9 @@ public class SceneCommandFunctionIntegrationTests
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
+	private async Task<MString> EvalMarkup(string expression) =>
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!;
+
 	private async Task Cmd(string command) =>
 		await CommandParser.CommandParse(1, Connection, MarkupText.Plain(command));
 
@@ -134,6 +137,31 @@ public class SceneCommandFunctionIntegrationTests
 		await Assert.That(await Eval($"scenepose({sceneId},{plainId},content)")).IsEqualTo("A red ember.");
 		await Assert.That(await Eval($"scenepose({sceneId},{plainId},markup)")).IsNotEqualTo(plainMarkup)
 			.Because("an edit through the function must keep its colour too");
+	}
+
+	/// <summary>
+	/// <c>scenepose(..., content)</c> is the pose as it was written, not its plain text, so a recall prints
+	/// the colour, the box and the picture the room saw. It used to answer the plain column, and
+	/// <c>+scene/recall</c> showed a <c>box(figure())</c> pose as box art around the picture's description.
+	/// </summary>
+	[Test]
+	public async Task ScenePoseContent_KeepsColourBoxesAndPictures()
+	{
+		var sceneId = await CreateSceneAsync("Written");
+		await Cmd($"@scene/set {sceneId}/public=1");
+
+		var colourId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,A [ansi(hr,red)] ember.)");
+		var colour = await EvalMarkup($"scenepose({sceneId},{colourId},content)");
+		await Assert.That(colour.ToPlainText()).IsEqualTo("A red ember.");
+		await Assert.That(colour.Render(MarkupFormat.Ansi)).IsNotEqualTo("A red ember.")
+			.Because("the content a recall prints must keep the pose's colour");
+
+		var pictureId = await Eval($"sceneaddpose({sceneId},{God},,{God},emit,,[box(figure(https://example.com/cat.png,A cat))])");
+		var picture = MarkupTextSerializer.Serialize(await EvalMarkup($"scenepose({sceneId},{pictureId},content)"));
+		await Assert.That(picture).Contains("\"t\":\"frame\"")
+			.Because("the box must come back as a box, not as the text art drawn from it");
+		await Assert.That(picture).Contains("https://example.com/cat.png")
+			.Because("the picture must come back with its address");
 	}
 
 	/// <summary>
