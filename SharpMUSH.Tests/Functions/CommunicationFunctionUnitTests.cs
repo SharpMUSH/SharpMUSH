@@ -65,16 +65,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Zone system not yet implemented")]
-	[Arguments("zemit(#0,test message)", "")]
-	public async Task Zemit(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
 	[Arguments("nsoemit(#1,test)", "")]
 	public async Task Nsoemit(string str, string expected)
 	{

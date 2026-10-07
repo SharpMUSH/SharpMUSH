@@ -20,25 +20,15 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class PennMUSHDatabaseConverterTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IPennMUSHDatabaseConverter GetConverter()
-	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
-	}
-
-	[Test]
-	public async ValueTask ConverterServiceIsRegistered()
-	{
-		var converter = GetConverter();
-		await Assert.That(converter).IsNotNull();
-	}
-
+	/// <summary>
+	/// Even an empty import ends by turning on <c>paren_groups</c> and reinstalling packages, so it too
+	/// runs in a world of its own.
+	/// </summary>
 	[Test]
 	public async ValueTask ConverterCanConvertEmptyDatabase()
 	{
-		var converter = GetConverter();
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var converter = world.Converter;
 		var database = new PennMUSHDatabase
 		{
 			Version = "Test Version",

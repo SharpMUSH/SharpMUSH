@@ -1,7 +1,7 @@
 using Mediator;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Implementation;
+using SharpMUSH.Tests.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -43,10 +43,6 @@ namespace SharpMUSH.Tests.Parser;
 /// </summary>
 public class LockShortCircuitTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	/// <summary>
 	/// A lock leaf that answers <c>true</c>. Written as an eval lock so the recording seam below sees it.
@@ -160,8 +156,9 @@ public class LockShortCircuitTests
 
 	private static string Route(bool leavesSuspend) => leavesSuspend ? "suspending leaves" : "completed leaves";
 
-	private async ValueTask<AnySharpObject> God()
-		=> (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
+	/// <summary>The gated object and unlocker; every leaf is answered by name, so only its identity matters.</summary>
+	private static ValueTask<AnySharpObject> God()
+		=> ValueTask.FromResult(new TestObjectFactory().CreatePlayer(1, "God"));
 
 	/// <summary>
 	/// A parser per case, over its own cache: these tests compile the same lock text under both

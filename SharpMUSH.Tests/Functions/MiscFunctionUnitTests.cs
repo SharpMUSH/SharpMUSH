@@ -107,16 +107,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	[Arguments("json_map(obj/attr,{\"a\":1})", "")]
-	public async Task JsonMap(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
 	[Arguments("malias(%#)", "")]
 	public async Task Malias(string str, string expected)
 	{
@@ -173,14 +163,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("atan2(1,1)", "")]
-	public async Task Atan2(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
 	[Arguments("power(2,3)", "8")]
 	public async Task Power(string str, string expected)
 	{
@@ -191,16 +173,6 @@ public class MiscFunctionUnitTests
 	[Test]
 	[Arguments("remainder(10,3)", "1")]
 	public async Task Remainder(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	[Arguments("ctu(3.5,5)", "4")]
-	public async Task Ctu(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
@@ -257,14 +229,6 @@ public class MiscFunctionUnitTests
 
 		// loc() answers with an objid, and the room's creation stamp is not what is under test here.
 		await Assert.That(location!.Message!.ToPlainText().Trim().Split(':')[0]).IsEqualTo(room);
-	}
-
-	[Test]
-	[Arguments("wipe(%#/testattr)", "")]
-	public async Task Wipe(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]

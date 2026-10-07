@@ -1,5 +1,9 @@
 using SharpMUSH.Library.Authorization;
-using Microsoft.Extensions.DependencyInjection;
+using Mediator;
+using NSubstitute;
+using SharpMUSH.Implementation;
+using SharpMUSH.Library.Services.Interfaces;
+using ZiggyCreatures.Caching.Fusion;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -24,10 +28,11 @@ namespace SharpMUSH.Tests.Parser;
 /// </summary>
 public class LockFlagPowerOperandTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IBooleanExpressionParser BooleanParser => WebAppFactoryArg.Services.GetRequiredService<IBooleanExpressionParser>();
+	/// <summary>
+	/// <c>FLAG^</c> and <c>POWER^</c> read only the unlocker, so the parser's services are never reached.
+	/// </summary>
+	private static readonly IBooleanExpressionParser BooleanParser = new BooleanExpressionParser(
+		Substitute.For<ILockEvaluationServices>(), Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
 
 	private static AnySharpObject ThingWith(SharpPower[] powers, SharpObjectFlag[] flags)
 	{
