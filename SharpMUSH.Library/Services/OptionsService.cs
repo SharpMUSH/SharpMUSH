@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
@@ -26,12 +28,12 @@ public class OptionsService(
 {
 	public SharpMUSHOptions Create(string name)
 	{
-		var data = database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
+		var stored = database.GetExpandedServerData<JsonObject>(nameof(SharpMUSHOptions))
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
-		if (data is not null)
+		if (stored is not null)
 		{
-			return Clamped(name, data);
+			return Clamped(name, Completed(stored));
 		}
 
 		// Validated BEFORE it is stored. This branch only runs when nothing is stored, so a rejected
@@ -43,6 +45,48 @@ public class OptionsService(
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
 		return defaultSettings;
+	}
+
+	/// <summary>
+	/// The stored document with every option it does not hold taken from <see cref="Default()"/>. A document
+	/// written before an option existed lacks it, and deserialising it as it is leaves a string option null
+	/// (and a whole category, if the category is new), which the validators then dereference.
+	/// </summary>
+	private SharpMUSHOptions Completed(JsonObject stored)
+	{
+		var filled = new List<string>();
+		var defaults = JsonSerializer.SerializeToNode(Default())!.AsObject();
+		Fill(stored, defaults, string.Empty, filled);
+
+		var options = stored.Deserialize<SharpMUSHOptions>()!;
+		if (filled.Count == 0)
+		{
+			return options;
+		}
+
+		database.SetExpandedServerData(nameof(SharpMUSHOptions), options)
+			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+		logger?.LogInformation("Stored configuration completed with the defaults of options it did not hold: {Options}",
+			string.Join(", ", filled));
+
+		return options;
+	}
+
+	private static void Fill(JsonObject stored, JsonObject defaults, string path, List<string> filled)
+	{
+		foreach (var (key, value) in defaults)
+		{
+			// Only an absent option: a stored null is a value the game chose for an option that allows one.
+			if (!stored.TryGetPropertyValue(key, out var storedValue))
+			{
+				stored[key] = value?.DeepClone();
+				filled.Add(path + key);
+			}
+			else if (storedValue is JsonObject storedObject && value is JsonObject defaultObject)
+			{
+				Fill(storedObject, defaultObject, $"{path}{key}.", filled);
+			}
+		}
 	}
 
 	/// <summary>
