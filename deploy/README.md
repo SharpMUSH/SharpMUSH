@@ -81,6 +81,7 @@ the server refuses writes with `MDB_MAP_FULL` rather than corrupting anything.
 ASP.NET Core's Data Protection key ring (what antiforgery, cookie auth and the like sign with) is
 kept beside the world, at `/app/data/lightning.dataprotection-keys`, so it outlives a recreated
 container. `SHARPMUSH_DATAPROTECTION_PATH` moves it; every replica of the server must read the same one.
+If you move it, put the new path in the backup service's `RESTIC_BACKUP_SOURCES` as well.
 
 Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
 that is safe to read, have the server make one: see [Backups](#backups-restic).
@@ -362,7 +363,8 @@ docker compose run --rm -v restore:/restore backup \
 
 **To restore for real**: stop the stack, then put the snapshot's
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
-`lightning`, and `wiki-assets` and `lightning.dataprotection-keys` go back as they are. The game reads whatever is in the volume on boot.
+`lightning`, and `wiki-assets` and `lightning.dataprotection-keys` go back as they are. The game
+reads whatever is in the volume on boot.
 
 ```bash
 docker compose stop sharpmush-server connectionserver
@@ -381,8 +383,10 @@ docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-
   rm -rf /app/data/lightning &&
   cp -a /restore/data/backup/<timestamp> /app/data/lightning &&
   cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/ &&
-  rm -rf /app/data/lightning.dataprotection-keys &&
-  cp -a /restore/data/lightning.dataprotection-keys /app/data/lightning.dataprotection-keys'
+  if [ -d /restore/data/lightning.dataprotection-keys ]; then
+    rm -rf /app/data/lightning.dataprotection-keys &&
+    cp -a /restore/data/lightning.dataprotection-keys /app/data/lightning.dataprotection-keys
+  fi'
 
 docker compose start connectionserver sharpmush-server
 docker volume rm restore    # once the game is up and you are satisfied
