@@ -778,7 +778,7 @@ pre.ms-preformatted {
 .ms-border-none.ms-rule::before, .ms-border-none.ms-rule::after { border-top: none; }
 .ms-flex { display: flex; flex-wrap: wrap; }
 .ms-flex.ms-vertical { flex-direction: column; }
-.ms-item { min-width: 0; }
+.ms-item { min-width: 0; box-sizing: border-box; }
 .ms-flex.ms-divided > .ms-item + .ms-item { border-left: 1px solid var(--ms-separator, var(--ms-separator-default, currentColor)); padding-left: 1ch; }
 .ms-figure { display: flow-root; }
 .ms-figure-image { max-width: 100%; height: auto; }
