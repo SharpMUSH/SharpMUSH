@@ -98,11 +98,11 @@ public partial class Commands
 		[
 			("Category", MarkupText.Plain(custom is null ? "Built in" : custom.Category)),
 			.. custom is not { Description.Length: > 0 } ? [] : new[] { ("Description", MarkupText.Plain(custom.Description)) },
-			.. implied.Count == 0 ? [] : new[] { ("Covers", MarkupText.Plain(string.Join(", ", implied))) },
+			.. implied.Count == 0 ? [] : new[] { ("Covers", MarkupText.Plain(Joined(implied))) },
 			("Allowed by", MarkupText.Plain(Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Allow).Select(r => r.Slug)))),
 			("Denied by", MarkupText.Plain(Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Deny).Select(r => r.Slug)))),
 		];
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Permission: {scope}"), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Permission: {scope}"), ServerLayout.KeyValues(fields)), 78);
 	}
 
 	private async ValueTask<string> PermissionChangeAsync(IMUSHCodeParser parser, AnySharpObject executor, string operation,

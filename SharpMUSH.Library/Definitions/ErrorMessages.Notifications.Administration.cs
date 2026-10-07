@@ -84,6 +84,7 @@ public static partial class ErrorMessages
 		public const string ConfigOptionEnabled = "Enabled.";
 		public const string ConfigOptionDisabled = "Disabled.";
 		public const string ConfigCategoriesHeader = "Configuration categories";
+		public const string ConfigAllCategories = "All categories";
 		public const string ConfigUseCategoryHelp = "Use '@config <category>' to see options in a category.";
 		public const string ConfigUseOptionHelp = "Use '@config <option>' to see the value of an option.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

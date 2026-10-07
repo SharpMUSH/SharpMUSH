@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 internal static class MailLayout
 {
 	/// <summary>
-	/// <paramref name="mail"/> in a panel titled <paramref name="title"/>: who sent it, when, its status and
+	/// <paramref name="mail"/> in a section titled <paramref name="title"/>: who sent it, when, its status and
 	/// subject over a divider, then the message itself.
 	/// </summary>
 	public static async ValueTask<MString> Message(SharpMail mail, string title)
@@ -25,7 +25,7 @@ internal static class MailLayout
 			mail.Tagged ? "Tagged" : null,
 		}.OfType<string>());
 
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title),
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(title),
 			ServerLayout.KeyValues(
 			[
 				("From", MarkupText.Plain(from)),

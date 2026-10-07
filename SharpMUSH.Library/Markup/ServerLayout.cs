@@ -33,6 +33,23 @@ public static class ServerLayout
 	public static Block Panel(MarkupText title, params ReadOnlySpan<Block> parts) =>
 		new Frame(parts.Length == 1 ? parts[0] : new Stack([.. parts])) { Border = PanelBorder, Title = title };
 
+	/// <summary>
+	/// The lines round a section that is read as text and copied from (mail): double lines to a client that
+	/// reads UTF-8, <c>=</c> to one that does not.
+	/// </summary>
+	public static BorderStyle SectionBorder => BorderStyle.Double;
+
+	/// <summary>
+	/// <paramref name="parts"/> between two <see cref="SectionBorder"/> rules, the first carrying
+	/// <paramref name="title"/> at its left. Unlike a <see cref="Panel"/> there are no sides, so a line
+	/// copied out of it is only its text. A <see cref="Rule"/> among the parts is a single-line divider.
+	/// </summary>
+	public static Block Section(MarkupText title, params ReadOnlySpan<Block> parts) =>
+		new Stack([
+			new Rule(title) { Border = SectionBorder, TitleAlignment = Alignment.Left },
+			.. parts,
+			new Rule { Border = SectionBorder }]);
+
 	/// <summary>A table with the house heading rule and two cells between columns.</summary>
 	public static Table Listing(ImmutableArray<TableColumn> columns, IEnumerable<ImmutableArray<Block>> rows) =>
 		new(columns, [.. rows]) { HeaderRule = HeadingRule };
@@ -43,7 +60,18 @@ public static class ServerLayout
 
 	/// <summary>Labelled values, <c>Label: value</c>, the values lined up in one column.</summary>
 	public static Fields KeyValues(IEnumerable<(string Label, MarkupText Value)> items) =>
-		new([.. items.Select(item => new Field(MarkupText.Plain(item.Label), Body(item.Value)))]);
+		KeyValues(items.Select(item => (MarkupText.Plain(item.Label), item.Value)));
+
+	/// <summary>Labelled values whose labels carry markup of their own, a command link for one.</summary>
+	public static Fields KeyValues(IEnumerable<(MarkupText Label, MarkupText Value)> items) =>
+		new([.. items.Select(item => new Field(item.Label, Body(item.Value)))]);
+
+	/// <summary>
+	/// <paramref name="text"/> as a link that runs <paramref name="command"/> in a client that can click
+	/// (Pueblo, MXP, the portal); any other client sees the text alone.
+	/// </summary>
+	public static MarkupText CommandLink(string text, string command) =>
+		MarkupText.Wrap(AnsiMarkup.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: command), text);
 
 	/// <summary>Text as one block: the layouts in it kept as layouts, the text between them as text.</summary>
 	public static Block Body(MarkupText text)

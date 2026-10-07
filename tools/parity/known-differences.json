@@ -190,9 +190,9 @@
       "scenario": "50-mail",
       "case": "mail.folder-numbers",
       "step": 12,
-      "reason": "SharpMUSH draws the folder report as a titled panel (a table of folders, then the current folder under a divider); PennMUSH prints one MAIL: line per folder.",
+      "reason": "SharpMUSH draws the folder report as a titled section (a table of folders, then the current folder under a divider); PennMUSH prints one MAIL: line per folder.",
       "tracking": "#1641",
-      "profile": "Mail listings are drawn as panels",
+      "profile": "Mail listings are drawn as titled sections",
       "command": "@mail/folder"
     }
   ]

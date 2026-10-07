@@ -1069,7 +1069,7 @@ public partial class Commands
 		{
 			var counts = getAllOptions().CountBy(opt => opt.Category).ToDictionary(StringComparer.OrdinalIgnoreCase);
 			var categories = ServerLayout.KeyValues(allCategories.Select(cat =>
-				(cat, MarkupText.Plain(counts.GetValueOrDefault(cat) == 1 ? "1 option" : $"{counts.GetValueOrDefault(cat)} options")))) with
+				(ServerLayout.CommandLink(cat, $"@config {cat}"), MarkupText.Plain(counts.GetValueOrDefault(cat) == 1 ? "1 option" : $"{counts.GetValueOrDefault(cat)} options")))) with
 			{ Columns = 2 };
 			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
 				MarkupText.Plain(ErrorMessages.Notifications.ConfigCategoriesHeader),
@@ -1098,9 +1098,15 @@ public partial class Commands
 			}
 
 			var options = ServerLayout.KeyValues(categoryOptions.Select(opt =>
-				(useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name, MarkupText.Plain(ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr)))));
+			{
+				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+				return (ServerLayout.CommandLink(name, $"@config {name}"), MarkupText.Plain(ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr)));
+			}));
 			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
-				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat, matchingCategory)), options), 78), executor);
+				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat, matchingCategory)),
+				options,
+				new Rule(),
+				new TextBlock(ServerLayout.CommandLink(ErrorMessages.Notifications.ConfigAllCategories, "@config"))), 78), executor);
 			return CallState.Empty;
 		}
 

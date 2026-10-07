@@ -247,7 +247,7 @@ public static class FolderMail
 					new TableColumn(MarkupText.Plain("Cleared")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
 				],
 				rows);
-		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Mail folders"),
+		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain("Mail folders"),
 			folders,
 			new Rule(),
 			new TextBlock(MarkupText.Plain($"Current folder: {current} ({currentFolder.DisplayName})"))), 78), executor);

@@ -101,15 +101,15 @@ public static class StatsMail
 	private static async Task<MString> FStats(
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
-		=> await StatsPanel(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: true);
+		=> await StatsSection(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: true);
 
 	private static async Task<MString> DStats(
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
-		=> await StatsPanel(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: false);
+		=> await StatsSection(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: false);
 
 	/// <summary><c>@mail/dstats</c> and <c>/fstats</c>: what was sent and received, and with <paramref name="withSize"/> how much text it holds.</summary>
-	private static async Task<MString> StatsPanel(INotifyService notifyService, AnySharpObject executor, string targetName,
+	private static async Task<MString> StatsSection(INotifyService notifyService, AnySharpObject executor, string targetName,
 		SharpMail[] sent, SharpMail[] received, bool withSize)
 	{
 		string Summary(SharpMail[] mail) =>
@@ -123,7 +123,7 @@ public static class StatsMail
 			.. received.Length == 0 ? [] : new[] { ("Last received", MarkupText.Plain(received.Max(x => x.DateSent).ToString("ddd MMM dd HH:mm yyyy", CultureInfo.InvariantCulture))) },
 		];
 		await notifyService.Notify(executor,
-			ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Mail statistics for {targetName}"), ServerLayout.KeyValues(fields)), 78), executor);
+			ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Mail statistics for {targetName}"), ServerLayout.KeyValues(fields)), 78), executor);
 		return MarkupText.Empty;
 	}
 

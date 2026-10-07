@@ -241,7 +241,7 @@ public class MailFolderSwitchTests
 	private static string[] FolderRows(IEnumerable<string> told) =>
 	[
 		.. told.SelectMany(message => message.Split('\n'))
-			.Select(line => Regex.Replace(line.Trim(' ', '|', '│'), @"\s+", " "))
+			.Select(line => Regex.Replace(line.Trim(), @"\s+", " "))
 			.Where(row => Regex.IsMatch(row, @"^\d+ \S+ \d+ \d+ \d+$"))
 	];
 }

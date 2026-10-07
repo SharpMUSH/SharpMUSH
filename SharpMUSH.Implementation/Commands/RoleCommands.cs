@@ -108,7 +108,7 @@ public partial class Commands
 			("Allows", MarkupText.Plain(ScopeList(role.Permissions, PermissionState.Allow))),
 			("Denies", MarkupText.Plain(ScopeList(role.Permissions, PermissionState.Deny))),
 		];
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(role.Name), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(role.Name), ServerLayout.KeyValues(fields)), 78);
 	}
 
 	/// <summary><c>@role/categories</c> and <c>@permission/categories</c>: one category list, what each category holds and its description.</summary>
@@ -177,7 +177,7 @@ public partial class Commands
 			("Holds", MarkupText.Plain(Joined(scopes.Where(grants.Has)))),
 			("Lacks", MarkupText.Plain(Joined(scopes.Where(scope => !grants.Has(scope))))),
 		];
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(target.Object().Name), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(target.Object().Name), ServerLayout.KeyValues(fields)), 78);
 	}
 
 	private static string SourceNote(ObjectGrants grants, string slug)

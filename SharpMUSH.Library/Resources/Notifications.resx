@@ -1744,6 +1744,9 @@
   <data name="ConfigCategoriesHeader" xml:space="preserve">
     <value>Configuration categories</value>
   </data>
+  <data name="ConfigAllCategories" xml:space="preserve">
+    <value>All categories</value>
+  </data>
   <data name="ConfigUseCategoryHelp" xml:space="preserve">
     <value>Use '@config &lt;category&gt;' to see options in a category.</value>
   </data>

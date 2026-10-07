@@ -51,7 +51,7 @@ public static class ListMail
 			var rows = await folder.ToAsyncEnumerable().Select((mail, index, _) => Row(mail, index)).ToArrayAsync();
 			var unread = folder.Count(mail => !mail.Read);
 
-			await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title),
+			await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(title),
 				ServerLayout.Listing(Columns, rows),
 				new Rule(),
 				new TextBlock(MarkupText.Plain($"{Counted(rows.Length, "message")}, {unread} unread.\nFlags: N new, U urgent, F forwarded, C cleared, + tagged."))), 78));

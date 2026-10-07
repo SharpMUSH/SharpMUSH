@@ -226,7 +226,7 @@ public static class MailAliases
 			}
 		}
 
-		await TellPanelAsync(services, executor, rows,
+		await TellSectionAsync(services, executor, rows,
 			[
 				new TableColumn(MarkupText.Plain("Name")) { Wrap = false },
 				new TableColumn(MarkupText.Plain("Description")) { Min = 10 },
@@ -253,7 +253,7 @@ public static class MailAliases
 				alias.Members.Length.ToString(CultureInfo.InvariantCulture)]);
 		}
 
-		await TellPanelAsync(services, executor, rows,
+		await TellSectionAsync(services, executor, rows,
 			[
 				new TableColumn(MarkupText.Plain("Num")) { Wrap = false, Priority = 3 },
 				new TableColumn(MarkupText.Plain("Name")) { Wrap = false },
@@ -263,13 +263,13 @@ public static class MailAliases
 			]);
 	}
 
-	/// <summary>The alias listing in a panel, or a line saying there is nothing to list.</summary>
-	private static ValueTask TellPanelAsync(Services services, AnySharpObject executor, List<string[]> rows, ImmutableArray<TableColumn> columns)
+	/// <summary>The alias listing in a section, or a line saying there is nothing to list.</summary>
+	private static ValueTask TellSectionAsync(Services services, AnySharpObject executor, List<string[]> rows, ImmutableArray<TableColumn> columns)
 	{
 		Block body = rows.Count == 0
 			? new TextBlock(MarkupText.Plain("No mail aliases."))
 			: ServerLayout.Listing(columns, rows);
-		return services.Notify.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Mail aliases"), body), 78), executor);
+		return services.Notify.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain("Mail aliases"), body), 78), executor);
 	}
 
 	/// <summary>do_malias_members.</summary>
