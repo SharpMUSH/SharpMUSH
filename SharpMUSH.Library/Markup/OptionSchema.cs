@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using MarkupString;
+using MarkupString.Ansi;
 using MarkupString.Layout;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -46,6 +47,10 @@ public sealed class OptionSchema<T> where T : class
 
 	private OptionSchema<T> Typed(string key, ValueKind accepts, Func<T, MString, Result<T>> apply, bool first = false) =>
 		new(_options.Add(new Option(key, first, accepts, apply)));
+
+	/// <summary>An option that takes a string, or a JSON object or array written as it is, which <paramref name="apply"/> reads as JSON text.</summary>
+	public OptionSchema<T> Json(string key, Func<T, MString, Result<T>> apply) =>
+		Typed(key, ValueKind.String | ValueKind.Json, apply);
 
 	/// <summary>An option that takes any text, empty included.</summary>
 	public OptionSchema<T> Text(string key, Func<T, MString, T> set) =>
@@ -142,6 +147,9 @@ public enum ValueKind
 
 	/// <summary><c>true</c> or <c>false</c>.</summary>
 	Boolean = 4,
+
+	/// <summary>A JSON object or array, kept as the plain text it was written as.</summary>
+	Json = 8,
 }
 
 /// <summary>
@@ -203,6 +211,7 @@ public static class OptionObject
 		var source = text.Text;
 		if (position == source.Length) return null;
 		if (source[position] == '"') return ReadString(text, ref position) is { } value ? (ValueKind.String, value) : null;
+		if (source[position] is '{' or '[') return ReadNested(source, ref position) is { } nested ? (ValueKind.Json, MarkupText.Plain(nested)) : null;
 
 		foreach (var literal in (ReadOnlySpan<string>)["true", "false"])
 		{
@@ -219,6 +228,31 @@ public static class OptionObject
 		return position > digits && double.TryParse(number, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)
 			? (ValueKind.Number, MarkupText.Plain(number))
 			: null;
+	}
+
+	/// <summary>
+	/// The object or array at <paramref name="position"/> as written, up to the bracket that closes it,
+	/// strings skipped whole; whether it is valid JSON is for the option reading it to say.
+	/// </summary>
+	private static string? ReadNested(string source, ref int position)
+	{
+		var start = position;
+		var depth = 0;
+		var inString = false;
+		for (; position < source.Length; position++)
+		{
+			var c = source[position];
+			if (inString)
+			{
+				if (c == '\\') position++;
+				else if (c == '"') inString = false;
+				continue;
+			}
+			if (c == '"') inString = true;
+			else if (c is '{' or '[') depth++;
+			else if (c is '}' or ']' && --depth == 0) return source[start..++position];
+		}
+		return null;
 	}
 
 	/// <summary>The string at <paramref name="position"/>, its unescaped runs cut from the text with their markup.</summary>
@@ -309,6 +343,17 @@ public static class LayoutOptionGroups
 		["down"] = GradientFlow.Down,
 		["diagonal"] = GradientFlow.Diagonal,
 	};
+
+	/// <summary>
+	/// <c>theme:</c> a theme by name, or one written out as a JSON object (<see cref="LayoutThemes.Read"/>),
+	/// for the layout and everything inside it.
+	/// </summary>
+	public static OptionSchema<T> Theme<T>(this OptionSchema<T> schema, Func<T, LayoutTheme, T> set) where T : class =>
+		schema.Json("theme", (settings, value) => LayoutThemes.Read(value.ToPlainText()) switch
+		{
+			ThemePalette palette => set(settings, palette.ToLayoutTheme()),
+			Error<string> error => error,
+		});
 
 	/// <summary><c>width:</c>, kept as written: the function reads it once it knows the connection.</summary>
 	public static OptionSchema<T> Width<T>(this OptionSchema<T> schema, Func<T, MString, T> set) where T : class =>

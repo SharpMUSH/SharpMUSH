@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using MarkupString;
+using MarkupString.Ansi;
 using MarkupString.Layout;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -29,20 +30,29 @@ public partial class Functions
 	{
 		/// <summary>The border the call's options chose, for the block and every box and rule inside it that names none.</summary>
 		public BorderStyle? Border { get; init; }
+
+		/// <summary>The colours the call's <c>theme</c> option chose, for the block and everything inside it.</summary>
+		public LayoutTheme? Theme { get; init; }
 	}
 
-	/// <summary>The border options on a layout that holds others: they set the border of the boxes and rules inside it.</summary>
+	/// <summary>
+	/// The border options on a layout that holds others: they set the border of the boxes and rules
+	/// inside it. Its <c>theme</c> colours them all.
+	/// </summary>
 	private static OptionSchema<Laid<T>> InnerBorder<T>(OptionSchema<Laid<T>> schema) where T : Block =>
-		schema.Border(laid => laid.Border ?? laid.House, (laid, border) => laid with { Border = border });
+		schema.Border(laid => laid.Border ?? laid.House, (laid, border) => laid with { Border = border })
+			.Theme((laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Frame>> BoxSchema { get; } = OptionSchema<Laid<Frame>>.Empty
 		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border }, Border = border })
 		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
-		.Int("pad", 0, 10, (laid, pad) => laid with { Block = laid.Block with { Padding = pad } });
+		.Int("pad", 0, 10, (laid, pad) => laid with { Block = laid.Block with { Padding = pad } })
+		.Theme((laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Rule>> RuleSchema { get; } = OptionSchema<Laid<Rule>>.Empty
 		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border } })
-		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } });
+		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
+		.Theme((laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Flex>> FlexSchema { get; } = InnerBorder(OptionSchema<Laid<Flex>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
@@ -217,7 +227,7 @@ public partial class Functions
 		var tree = new Tree([.. Rest(args, 1).SelectMany(TreeItemsOf)]);
 		return ValueTask.FromResult(TreeSchema.Apply(Arg(args, 0), new Laid<Tree>(tree, MarkupText.Empty, DefaultBorder())) switch
 		{
-			Laid<Tree> laid => Finish(parser, laid.Block with { Guide = laid.Block.Guide is { } guide ? Even(guide) : null }, laid.Width, laid.Border),
+			Laid<Tree> laid => Finish(parser, laid.Block with { Guide = laid.Block.Guide is { } guide ? Even(guide) : null }, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
 		});
 	}
@@ -258,29 +268,53 @@ public partial class Functions
 	/// </summary>
 	private CallState Laidout<T>(IMUSHCodeParser parser, OptionSchema<Laid<T>> schema, MString options, T block, MString? width = null) where T : Block =>
 		schema.Apply(options, new Laid<T>(block, width ?? MarkupText.Empty, DefaultBorder()),
-			laid => Finish(parser, laid.Block, laid.Width, laid.Border),
+			laid => Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
 			error => new CallState(error.Value));
 
 	/// <summary>
 	/// <paramref name="block"/> laid out at the width <paramref name="widthArg"/> names, under
-	/// <paramref name="border"/> when its options chose one: the boxes and rules inside it that name no
-	/// border of their own take that one instead of <c>layout_border</c>.
+	/// <paramref name="border"/> and <paramref name="theme"/> when its options chose them: the boxes and
+	/// rules inside it that name no border of their own take that one instead of <c>layout_border</c>,
+	/// and its parts take the theme's colours instead of <c>layout_theme</c>'s.
 	/// </summary>
-	private CallState Finish(IMUSHCodeParser parser, Block block, MString widthArg, BorderStyle? border = null) =>
+	private CallState Finish(IMUSHCodeParser parser, Block block, MString widthArg, BorderStyle? border = null, LayoutTheme? theme = null) =>
 		LayoutWidth(parser, widthArg) is (int width, bool fluid)
-			? new CallState(Build(border is null ? block : block.Themed(new LayoutTheme { Border = border }), width, fluid))
+			? new CallState(Build(border is null && theme is null ? block : block.Themed((theme ?? LayoutTheme.Default) with { Border = border }), width, fluid))
 			: new CallState(ErrorMessages.Returns.ArgRange);
 
 	/// <summary>
-	/// <paramref name="block"/> laid out under the game's look (<c>layout_border</c>), which a block that
-	/// takes it in as a child sheds again so the outer one's look carries through (<see cref="Adopt"/>).
+	/// <paramref name="block"/> laid out under the game's look (<c>layout_border</c>, <c>layout_theme</c>),
+	/// which a block that takes it in as a child sheds again so the outer one's look carries through
+	/// (<see cref="Adopt"/>). The game's look sits under any a reader brings (<see cref="Themed.Fallback"/>).
 	/// </summary>
-	private MString Build(Block block, int width, bool fluid) => BlockLayout.Build(block.Themed(HouseTheme()), width, fluid);
+	private MString Build(Block block, int width, bool fluid) => BlockLayout.Build(block.ThemedUnder(HouseTheme()), width, fluid);
 
-	private LayoutTheme HouseTheme() => new() { Border = DefaultBorder() };
+	/// <summary>The <c>layout_border</c> and <c>layout_theme</c> the house look was last made from, and the look.</summary>
+	private (string? Border, string? Theme, ThemePalette? Palette, LayoutTheme Look)? _house;
+
+	/// <summary>The game's look: <c>layout_border</c>'s border and <c>layout_theme</c>'s colours.</summary>
+	private LayoutTheme HouseTheme() => House().Look;
+
+	/// <summary><c>layout_theme</c>'s palette, or null when it is unset or names no theme.</summary>
+	private ThemePalette? HousePalette() => House().Palette;
+
+	private (string? Border, string? Theme, ThemePalette? Palette, LayoutTheme Look) House()
+	{
+		var cosmetic = Configuration.CurrentValue.Cosmetic;
+		if (_house is { } house && house.Border == cosmetic.LayoutBorder && house.Theme == cosmetic.LayoutTheme) return house;
+		var palette = string.IsNullOrWhiteSpace(cosmetic.LayoutTheme) ? null : LayoutThemes.Read(cosmetic.LayoutTheme) switch
+		{
+			ThemePalette read => read,
+			_ => null,
+		};
+		var look = (palette?.ToLayoutTheme() ?? LayoutTheme.Default) with { Border = DefaultBorder() };
+		var made = (cosmetic.LayoutBorder, cosmetic.LayoutTheme, palette, look);
+		_house = made;
+		return made;
+	}
 
 	/// <summary>A child block without the game's look a function laid it out under.</summary>
-	private Block Adopt(Block block) => block is Themed themed && themed.Theme == HouseTheme() ? themed.Content : block;
+	private Block Adopt(Block block) => block is Themed { Fallback: true } themed && themed.Theme == HouseTheme() ? themed.Content : block;
 
 	/// <summary>The arguments from <paramref name="first"/> on, in order.</summary>
 	private static IEnumerable<MString> Rest(IReadOnlyDictionary<string, CallState> args, int first) =>
