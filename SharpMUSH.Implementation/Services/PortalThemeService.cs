@@ -12,8 +12,11 @@ public sealed class PortalThemesData
 {
 	public List<StoredPortalTheme> Themes { get; set; } = [];
 
-	/// <summary>Null until staff pick one: <see cref="BuiltInThemes.Phosphor"/>.</summary>
+	/// <summary>The default for browsers that prefer dark. Null until staff pick one: <see cref="BuiltInThemes.Phosphor"/>.</summary>
 	public string? DefaultThemeId { get; set; }
+
+	/// <summary>The default for browsers that prefer light. Null until staff pick one: <see cref="BuiltInThemes.Daylight"/>.</summary>
+	public string? DefaultLightThemeId { get; set; }
 }
 
 public sealed class StoredPortalTheme
@@ -89,7 +92,13 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 				return false;
 			}
 
-			if (!request.Published && DefaultId(stored) == id)
+			if (request.Dark != theme.Dark && IsDefault(stored, id))
+			{
+				result = new Error<string>("A default theme keeps its light or dark mode. Make another theme the default first.");
+				return false;
+			}
+
+			if (!request.Published && IsDefault(stored, id))
 			{
 				result = new Error<string>("The default theme must stay published. Make another theme the default first.");
 				return false;
@@ -118,7 +127,7 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 				return false;
 			}
 
-			if (DefaultId(stored) == id)
+			if (IsDefault(stored, id))
 			{
 				result = new Error<string>("The default theme cannot be deleted. Make another theme the default first.");
 				return false;
@@ -148,7 +157,15 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 				return false;
 			}
 
-			stored.DefaultThemeId = id;
+			if (theme.Dark)
+			{
+				stored.DefaultThemeId = id;
+			}
+			else
+			{
+				stored.DefaultLightThemeId = id;
+			}
+
 			result = Response(stored, includeUnpublished: true);
 			return true;
 		});
@@ -191,7 +208,8 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 
 	private static bool BuiltIn(string id) => BuiltInThemes.All.Any(t => t.Id == id);
 
-	private static string DefaultId(PortalThemesData stored) => stored.DefaultThemeId ?? BuiltInThemes.PhosphorId;
+	private static bool IsDefault(PortalThemesData stored, string id)
+		=> (stored.DefaultThemeId ?? BuiltInThemes.PhosphorId) == id || (stored.DefaultLightThemeId ?? BuiltInThemes.DaylightId) == id;
 
 	private static IEnumerable<PortalTheme> All(PortalThemesData stored)
 		=> BuiltInThemes.All.Concat(stored.Themes.Select(t => t.ToTheme()));
@@ -199,8 +217,9 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 	private static PortalThemesResponse Response(PortalThemesData stored, bool includeUnpublished)
 	{
 		var themes = All(stored).Where(t => includeUnpublished || t.Published).ToList();
-		var defaultId = themes.Any(t => t.Id == DefaultId(stored) && t.Published) ? DefaultId(stored) : BuiltInThemes.PhosphorId;
-		return new PortalThemesResponse(themes, defaultId);
+		string Usable(string? id, string fallback) => themes.Any(t => t.Id == id && t.Published) ? id! : fallback;
+		return new PortalThemesResponse(themes,
+			Usable(stored.DefaultThemeId, BuiltInThemes.PhosphorId), Usable(stored.DefaultLightThemeId, BuiltInThemes.DaylightId));
 	}
 
 	private static string? Invalid(PortalThemeRequest request, PortalThemesData stored, string? exceptId)
@@ -224,7 +243,8 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 		theme.Name = request.Name.Trim();
 		theme.Dark = request.Dark;
 		theme.Published = request.Published;
-		theme.Tokens = ThemeTokens.Editable.ToDictionary(k => k, k => ThemeColor.Parse(request.Tokens[k]).Hex);
+		var (colors, style) = ThemeResolver.Complete(request.Tokens);
+		theme.Tokens = colors.Concat(style).ToDictionary();
 		return theme;
 	}
 

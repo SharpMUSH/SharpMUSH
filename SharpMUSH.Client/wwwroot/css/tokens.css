@@ -57,6 +57,87 @@
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* ── Theme display faces (fonts/OFL-Themes.txt; Special Elite: fonts/LICENSE-SpecialElite.txt) ──
+   Title faces a theme can name (ThemeStyles.DisplayFaces). Latin subsets only, as Google serves them; other
+   scripts fall through to the stack's serif or sans. A face is only fetched when a theme in use sets it. */
+@font-face {
+    font-family: "Cinzel";
+    src: url("/fonts/cinzel-latin.woff2") format("woff2");
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Cormorant Garamond";
+    src: url("/fonts/cormorant-garamond-latin.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Cormorant Garamond";
+    src: url("/fonts/cormorant-garamond-italic-latin.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Grenze Gotisch";
+    src: url("/fonts/grenze-gotisch-latin.woff2") format("woff2");
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "IM Fell English";
+    src: url("/fonts/im-fell-english-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Marcellus";
+    src: url("/fonts/marcellus-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Orbitron";
+    src: url("/fonts/orbitron-latin.woff2") format("woff2");
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Playfair Display";
+    src: url("/fonts/playfair-display-latin.woff2") format("woff2");
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Playfair Display";
+    src: url("/fonts/playfair-display-italic-latin.woff2") format("woff2");
+    font-weight: 400 900;
+    font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("/fonts/space-grotesk-latin.woff2") format("woff2");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Special Elite";
+    src: url("/fonts/special-elite-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
 	/* ── Phosphor Refined design tokens ── */
 	--bg: #0e0f11;
@@ -98,6 +179,21 @@
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
+	/* ── theme style (ThemeStyles.Css); these are Phosphor's, a theme's stylesheet replaces them ── */
+	--font-title-weight: 700;
+	--texture: none;                /* page background texture, layered over the background gradient */
+	--texture-size: auto;
+	--ornament-before: none;        /* page and banner titles: a glyph either side, and a rule under */
+	--ornament-after: none;
+	--title-underline: none;
+	--title-underline-pad: 0px;
+	--title-transform: none;
+	--title-tracking: normal;
+	--title-style: normal;
+	--card-bg: var(--surface);      /* KitCard: frame layers and grain over the surface */
+	--card-border-style: solid;
+	--card-border-width: 1px;
+	--card-shadow: none;
 	--shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 4px 16px rgba(0,0,0,0.4);
 	--mud-palette-background-gradient: radial-gradient(120% 100% at 80% -10%, #16181c 0%, #0e0f11 55%);
 	--mud-palette-navbar-gradient: linear-gradient(90deg, #101113 0%, #0d0e10 100%);

@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>Világos</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>A játék alapértelmezett témája követi az eszközöd világos vagy sötét beállítását.</value>
+  </data>
 </root>

@@ -29,12 +29,40 @@ public class PortalThemeServiceTests
 	}
 
 	[Test]
-	public async Task AFreshGameOffersTheBuiltInThemesWithPhosphorAsDefault()
+	public async Task AFreshGameOffersTheBuiltInThemesWithPhosphorAndDaylightAsDefaults()
 	{
 		var themes = await new PortalThemeService(new InMemoryData()).GetThemesAsync(includeUnpublished: false);
 
-		await Assert.That(themes.Themes.Select(t => t.Id)).IsEquivalentTo(["phosphor", "daylight"]);
+		await Assert.That(themes.Themes.Select(t => t.Id)).IsEquivalentTo(BuiltInThemes.All.Select(t => t.Id));
 		await Assert.That(themes.DefaultThemeId).IsEqualTo("phosphor");
+		await Assert.That(themes.DefaultLightThemeId).IsEqualTo("daylight");
+	}
+
+	[Test]
+	public async Task ALightThemeBecomesTheDefaultForLightBrowsersOnly()
+	{
+		var service = new PortalThemeService(new InMemoryData());
+		var light = (await service.CreateAsync(Request("Dawn") with { Dark = false })).Expect<PortalTheme>();
+
+		var state = (await service.SetDefaultAsync(light.Id)).Expect<PortalThemesResponse>();
+
+		await Assert.That(state.DefaultLightThemeId).IsEqualTo(light.Id);
+		await Assert.That(state.DefaultThemeId).IsEqualTo("phosphor");
+		await Assert.That((await service.UpdateAsync(light.Id, Request("Dawn"))).Value is Error<string> { Value: var why } && why.Contains("light or dark"))
+			.IsTrue().Because("a default keeps its mode");
+	}
+
+	[Test]
+	public async Task AThemesStyleIsStoredWithItAndAnUnknownChoiceRefused()
+	{
+		var service = new PortalThemeService(new InMemoryData());
+
+		var created = (await service.CreateAsync(Request("Ink", edit: t => t[ThemeStyles.FontDisplay] = "cinzel"))).Expect<PortalTheme>();
+		await Assert.That(created.Tokens[ThemeStyles.FontDisplay]).IsEqualTo("cinzel");
+		await Assert.That(created.Tokens[ThemeStyles.Texture]).IsEqualTo("none");
+
+		var refused = await service.CreateAsync(Request("Bad", edit: t => t[ThemeStyles.Ornament] = "skull"));
+		await Assert.That(refused.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
@@ -107,10 +135,10 @@ public class PortalThemeServiceTests
 		await Assert.That((await service.UpdateAsync(theme.Id, Request("House", published: false))).Value).IsTypeOf<Error<string>>();
 		await Assert.That((await service.DeleteAsync(theme.Id)).Value).IsTypeOf<Error<string>>();
 
-		(await service.SetDefaultAsync("daylight")).Expect<PortalThemesResponse>();
+		(await service.SetDefaultAsync("horror")).Expect<PortalThemesResponse>();
 		var left = (await service.DeleteAsync(theme.Id)).Expect<PortalThemesResponse>();
 		await Assert.That(left.Themes.Any(t => t.Id == theme.Id)).IsFalse();
-		await Assert.That(left.DefaultThemeId).IsEqualTo("daylight");
+		await Assert.That(left.DefaultThemeId).IsEqualTo("horror");
 	}
 
 	[Test]

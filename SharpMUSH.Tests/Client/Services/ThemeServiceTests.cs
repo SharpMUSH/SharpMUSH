@@ -38,10 +38,17 @@ public class ThemeServiceTests : TrackingTestContext
 
 	private readonly FakeAccountAuthState _account = new();
 	private readonly Dictionary<string, string?> _storage = [];
+	private readonly Browser _browser = new();
+
+	/// <summary>The browser's colour scheme, as the media query reports it.</summary>
+	private sealed class Browser
+	{
+		public bool PrefersLight { get; set; }
+	}
 
 	private ThemeService Build(string defaultThemeId = "house", bool themesHeld = false)
 	{
-		var http = Track(new HttpClient(new ThemesHandler(new PortalThemesResponse([.. BuiltInThemes.All, House, Draft], defaultThemeId), themesHeld))
+		var http = Track(new HttpClient(new ThemesHandler(new PortalThemesResponse([.. BuiltInThemes.All, House, Draft], defaultThemeId, "romance"), themesHeld))
 		{
 			BaseAddress = new Uri("http://localhost"),
 		});
@@ -49,13 +56,22 @@ public class ThemeServiceTests : TrackingTestContext
 		factory.CreateClient("api").Returns(http);
 
 		var js = Substitute.For<IJSRuntime>();
+		js.InvokeAsync<bool>("sharpmushLayout.watchLightScheme", Arg.Any<object?[]?>()).Returns(_ => new ValueTask<bool>(_browser.PrefersLight));
 		js.InvokeAsync<string?>(Arg.Any<string>(), Arg.Any<object?[]?>())
 			.Returns(call => new ValueTask<string?>(_storage.GetValueOrDefault((string)call.ArgAt<object?[]>(1)![0]!)));
 		js.InvokeAsync<Microsoft.JSInterop.Infrastructure.IJSVoidResult>(Arg.Any<string>(), Arg.Any<object?[]?>())
 			.Returns(call =>
 			{
 				var args = call.ArgAt<object?[]>(1)!;
-				_storage[(string)args[0]!] = (string?)args[1];
+				if (call.ArgAt<string>(0).EndsWith(".removeItem", StringComparison.Ordinal))
+				{
+					_storage.Remove((string)args[0]!);
+				}
+				else
+				{
+					_storage[(string)args[0]!] = (string?)args[1];
+				}
+
 				return new ValueTask<Microsoft.JSInterop.Infrastructure.IJSVoidResult>(default(Microsoft.JSInterop.Infrastructure.IJSVoidResult)!);
 			});
 
@@ -83,7 +99,7 @@ public class ThemeServiceTests : TrackingTestContext
 
 		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
 		await Assert.That(service.Current.Accent).IsEqualTo("#ff5c7a");
-		await Assert.That(service.DefaultThemeId).IsEqualTo("house");
+		await Assert.That(service.Defaults).IsEqualTo(new PortalThemeDefaults("house", "romance"));
 	}
 
 	[Test]
@@ -181,5 +197,47 @@ public class ThemeServiceTests : TrackingTestContext
 		await service.ReloadAsync();
 
 		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
+	}
+
+	[Test]
+	public async Task TheGameDefaultFollowsTheBrowsersLightOrDarkSetting()
+	{
+		_account.ActiveCharacter = Character();
+		_browser.PrefersLight = true;
+		var service = Build();
+		await service.InitializeAsync();
+		await service.ReloadAsync();
+
+		await Assert.That(service.Current.ThemeId).IsEqualTo("romance");
+		await Assert.That(_storage.ContainsKey(ThemeService.LightCacheKey)).IsTrue().Because("the boot script needs both while following");
+
+		service.OnLightSchemeChanged(false);
+		await Assert.That(service.Current.ThemeId).IsEqualTo("house");
+	}
+
+	[Test]
+	public async Task AChosenThemeIgnoresTheBrowsersSetting()
+	{
+		_account.ActiveCharacter = Character("mystery");
+		_browser.PrefersLight = true;
+		_storage[ThemeService.LightCacheKey] = "stale";
+		var service = Build();
+		await service.ReloadAsync();
+
+		await Assert.That(service.Current.ThemeId).IsEqualTo("mystery");
+		await Assert.That(_storage.ContainsKey(ThemeService.LightCacheKey)).IsFalse();
+	}
+
+	[Test]
+	public async Task ALightBrowserRestoresTheCachedLightTheme()
+	{
+		_account.ActiveCharacter = Character();
+		await Build().ReloadAsync();
+
+		_browser.PrefersLight = true;
+		var next = Build(themesHeld: true);
+		await next.InitializeAsync();
+
+		await Assert.That(next.Current.ThemeId).IsEqualTo("romance");
 	}
 }

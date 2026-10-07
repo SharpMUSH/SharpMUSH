@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>Jasny</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>Domyślny motyw gry podąża za jasnym lub ciemnym ustawieniem twojego urządzenia.</value>
+  </data>
 </root>

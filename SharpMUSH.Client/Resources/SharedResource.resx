@@ -6273,7 +6273,7 @@
     <value>The portal's colour themes, and which one players get</value>
   </data>
   <data name="AdmThemesDescription" xml:space="preserve">
-    <value>The portal's colour themes. Players pick among the published ones for each of their characters; a character that picked none gets the default.</value>
+    <value>The portal's themes: colours, typefaces, texture and ornament. Players pick among the published ones for each of their characters; a character that picked none gets the default for its browser's light or dark setting.</value>
   </data>
   <data name="AdmThemesNew" xml:space="preserve">
     <value>New theme</value>
@@ -6398,9 +6398,6 @@
   <data name="AdmThemesRevert" xml:space="preserve">
     <value>Revert</value>
   </data>
-  <data name="AdmThemesMakeDefault" xml:space="preserve">
-    <value>Make default</value>
-  </data>
   <data name="AdmThemesCopyOf" xml:space="preserve">
     <value>{0} copy</value>
   </data>
@@ -6412,5 +6409,140 @@
   </data>
   <data name="AdmThemesDeleteBody" xml:space="preserve">
     <value>Characters that picked it go back to the default theme.</value>
+  </data>
+  <data name="AdmThemesGroupStyle" xml:space="preserve">
+    <value>Style</value>
+  </data>
+  <data name="AdmThemesStyleHint" xml:space="preserve">
+    <value>Typefaces, corners, the page's texture, the ornament around page titles, how cards are framed, and how titles are lettered.</value>
+  </data>
+  <data name="AdmThemesMakeDefaultDark" xml:space="preserve">
+    <value>Make default for dark</value>
+  </data>
+  <data name="AdmThemesMakeDefaultLight" xml:space="preserve">
+    <value>Make default for light</value>
+  </data>
+  <data name="AdmThemeStyleFontDisplay" xml:space="preserve">
+    <value>Title face</value>
+  </data>
+  <data name="AdmThemeStyleFontBody" xml:space="preserve">
+    <value>Text face</value>
+  </data>
+  <data name="AdmThemeStyleCorners" xml:space="preserve">
+    <value>Corners</value>
+  </data>
+  <data name="AdmThemeStyleTexture" xml:space="preserve">
+    <value>Texture</value>
+  </data>
+  <data name="AdmThemeStyleOrnament" xml:space="preserve">
+    <value>Title ornament</value>
+  </data>
+  <data name="AdmThemeStyleFrame" xml:space="preserve">
+    <value>Card frame</value>
+  </data>
+  <data name="AdmThemeStyleTitles" xml:space="preserve">
+    <value>Title lettering</value>
+  </data>
+  <data name="AdmThemeStyleFontDisplayUi" xml:space="preserve">
+    <value>Portal face (Hanken Grotesk)</value>
+  </data>
+  <data name="AdmThemeStyleFontBodyUi" xml:space="preserve">
+    <value>Portal face (Hanken Grotesk)</value>
+  </data>
+  <data name="AdmThemeStyleFontBodySerif" xml:space="preserve">
+    <value>Book serif (Georgia)</value>
+  </data>
+  <data name="AdmThemeStyleCornersSoft" xml:space="preserve">
+    <value>Soft</value>
+  </data>
+  <data name="AdmThemeStyleCornersSharp" xml:space="preserve">
+    <value>Sharp</value>
+  </data>
+  <data name="AdmThemeStyleCornersRound" xml:space="preserve">
+    <value>Round</value>
+  </data>
+  <data name="AdmThemeStyleTextureNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleTextureGrain" xml:space="preserve">
+    <value>Grain</value>
+  </data>
+  <data name="AdmThemeStyleTexturePaper" xml:space="preserve">
+    <value>Paper</value>
+  </data>
+  <data name="AdmThemeStyleTextureLinen" xml:space="preserve">
+    <value>Linen</value>
+  </data>
+  <data name="AdmThemeStyleTextureGrid" xml:space="preserve">
+    <value>Grid</value>
+  </data>
+  <data name="AdmThemeStyleTextureScanlines" xml:space="preserve">
+    <value>Scanlines</value>
+  </data>
+  <data name="AdmThemeStyleTextureStars" xml:space="preserve">
+    <value>Stars</value>
+  </data>
+  <data name="AdmThemeStyleTextureMist" xml:space="preserve">
+    <value>Mist</value>
+  </data>
+  <data name="AdmThemeStyleTextureDamask" xml:space="preserve">
+    <value>Damask</value>
+  </data>
+  <data name="AdmThemeStyleTextureLace" xml:space="preserve">
+    <value>Lace</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentRule" xml:space="preserve">
+    <value>Rule underneath</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentDiamond" xml:space="preserve">
+    <value>Diamonds</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentFleuron" xml:space="preserve">
+    <value>Fleuron</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentStar" xml:space="preserve">
+    <value>Stars</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentBrackets" xml:space="preserve">
+    <value>Brackets</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCross" xml:space="preserve">
+    <value>Daggers</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentHeart" xml:space="preserve">
+    <value>Heart</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentLotus" xml:space="preserve">
+    <value>Flowers</value>
+  </data>
+  <data name="AdmThemeStyleFramePlain" xml:space="preserve">
+    <value>Plain</value>
+  </data>
+  <data name="AdmThemeStyleFrameDouble" xml:space="preserve">
+    <value>Double rule</value>
+  </data>
+  <data name="AdmThemeStyleFrameCorners" xml:space="preserve">
+    <value>Corner marks</value>
+  </data>
+  <data name="AdmThemeStyleFrameGlow" xml:space="preserve">
+    <value>Glow</value>
+  </data>
+  <data name="AdmThemeStyleFrameInset" xml:space="preserve">
+    <value>Inset rule</value>
+  </data>
+  <data name="AdmThemeStyleTitlesNormal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="AdmThemeStyleTitlesCaps" xml:space="preserve">
+    <value>Capitals</value>
+  </data>
+  <data name="AdmThemeStyleTitlesItalic" xml:space="preserve">
+    <value>Italic</value>
+  </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>The game default follows your device's light or dark setting.</value>
   </data>
 </root>

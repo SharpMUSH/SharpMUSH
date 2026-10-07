@@ -18,8 +18,11 @@ public interface IThemeService
 	/// <summary>The themes this viewer may use (staff with the editing scope also get the unpublished ones).</summary>
 	IReadOnlyList<PortalTheme> Themes { get; }
 
-	/// <summary>The theme a character that chose none sees.</summary>
-	string DefaultThemeId { get; }
+	/// <summary>The game's default themes for a browser that prefers dark and one that prefers light.</summary>
+	PortalThemeDefaults Defaults { get; }
+
+	/// <summary>Whether this browser prefers a light colour scheme; the game default follows it.</summary>
+	bool PrefersLight { get; }
 
 	/// <summary>Paints the portal with <paramref name="theme"/> until called again with null, without storing it.</summary>
 	void Preview(ResolvedTheme? theme);

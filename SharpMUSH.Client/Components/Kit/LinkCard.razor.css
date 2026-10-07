@@ -4,9 +4,10 @@
 	gap: 12px;
 	min-width: 0;
 	padding: 16px;
-	background: var(--surface);
-	border: 1px solid var(--border);
+	background: var(--card-bg);
+	border: var(--card-border-width) var(--card-border-style) var(--border);
 	border-radius: var(--radius-card);
+	box-shadow: var(--card-shadow);
 	color: var(--text);
 	text-decoration: none;
 	transition: border-color var(--motion-pop);
@@ -30,8 +31,12 @@
 }
 
 .kit-link-card-title {
+	font-family: var(--font-display);
 	font-size: 15px;
-	font-weight: 700;
+	font-weight: var(--font-title-weight);
+	font-style: var(--title-style);
+	letter-spacing: var(--title-tracking);
+	text-transform: var(--title-transform);
 }
 
 .kit-link-card-desc {

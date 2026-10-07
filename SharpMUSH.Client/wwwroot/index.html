@@ -23,11 +23,14 @@
     <link href="css/custom.css" rel="stylesheet" />
     <link href="SharpMUSH.Client.styles.css" rel="stylesheet" />
     <!-- The theme this browser last used (ThemeService.CacheKey), applied before the runtime starts so the
-         loading screen and the first render are already in it. ThemeProvider's own copy follows in the body
-         and overrides this one once the game's themes and the character's accent are read. -->
+         loading screen and the first render are already in it. While the theme follows the browser's light or
+         dark preference, the light one is kept apart (ThemeService.LightCacheKey) and used when the browser
+         prefers light. ThemeProvider's own copy follows in the body and overrides this one once the game's
+         themes and the character's accent are read. -->
     <script>
         try {
-            const theme = JSON.parse(localStorage.getItem('sharp-theme') || 'null');
+            const light = window.matchMedia('(prefers-color-scheme: light)').matches && localStorage.getItem('sharp-theme-light');
+            const theme = JSON.parse(light || localStorage.getItem('sharp-theme') || 'null');
             if (theme && typeof theme.Css === 'string') {
                 const style = document.createElement('style');
                 style.id = 'sharp-theme-boot';

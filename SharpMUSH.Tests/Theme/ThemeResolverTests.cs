@@ -119,13 +119,84 @@ public class ThemeResolverTests
 	}
 
 	[Test]
-	public async Task PickFallsBackFromAMissingThemeToTheDefaultThenPhosphor()
+	public async Task PickFallsBackFromAMissingThemeToTheDefaultForTheBrowsersPreferenceThenPhosphor()
 	{
 		IReadOnlyList<PortalTheme> themes = BuiltInThemes.All;
+		var defaults = new PortalThemeDefaults("horror", "romance");
 
-		await Assert.That(ThemeResolver.Pick(themes, "daylight", "gone").Id).IsEqualTo("daylight");
-		await Assert.That(ThemeResolver.Pick(themes, "gone", null).Id).IsEqualTo("phosphor");
-		await Assert.That(ThemeResolver.Pick(themes, "phosphor", "daylight").Id).IsEqualTo("daylight");
+		await Assert.That(ThemeResolver.Pick(themes, defaults, prefersLight: false, "gone").Id).IsEqualTo("horror");
+		await Assert.That(ThemeResolver.Pick(themes, defaults, prefersLight: true, null).Id).IsEqualTo("romance");
+		await Assert.That(ThemeResolver.Pick(themes, defaults, prefersLight: true, "mystery").Id).IsEqualTo("mystery");
+		await Assert.That(ThemeResolver.Pick(themes, new PortalThemeDefaults("gone", "gone"), prefersLight: true, null).Id).IsEqualTo("phosphor");
+	}
+
+	[Test]
+	public async Task ThereIsAThemeForEveryMsspGenre()
+	{
+		var genres = new[] { "adult", "fantasy", "historical", "horror", "modern", "mystery", "romance", "science-fiction", "spiritual" };
+
+		foreach (var genre in genres)
+		{
+			var theme = BuiltInThemes.All.SingleOrDefault(t => t.Id == genre);
+			await Assert.That(theme).IsNotNull().Because(genre);
+			await Assert.That(ThemeStyles.Keys.All(k => theme!.Tokens.ContainsKey(k))).IsTrue().Because($"{genre} sets every style");
+		}
+	}
+
+	[Test]
+	public async Task NoTwoBuiltInThemesLookAlike()
+	{
+		var looks = BuiltInThemes.All.Select(t => string.Join(",", ThemeStyles.Keys.Select(k => ThemeResolver.Complete(t.Tokens).Style[k]))).ToList();
+		var genreLooks = looks.Skip(2).ToList();
+
+		await Assert.That(genreLooks.Distinct().Count()).IsEqualTo(genreLooks.Count);
+	}
+
+	[Test]
+	public async Task PhosphorsStyleIsWhatTokensCssShips()
+	{
+		var theme = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
+
+		await Assert.That(theme.Token("font-display")).IsEqualTo("'Hanken Grotesk', system-ui, sans-serif");
+		await Assert.That(theme.Token("radius")).IsEqualTo("9px");
+		await Assert.That(theme.Token("radius-card")).IsEqualTo("16px");
+		await Assert.That(theme.Token("texture")).IsEqualTo("none");
+		await Assert.That(theme.Token("ornament-before")).IsEqualTo("none");
+		await Assert.That(theme.Token("card-bg")).IsEqualTo("var(--surface)");
+		await Assert.That(theme.Token("title-underline-pad")).IsEqualTo("0px");
+	}
+
+	[Test]
+	public async Task AGenreThemeCarriesItsEmbellishments()
+	{
+		var scifi = ThemeResolver.Resolve(BuiltInThemes.ScienceFiction);
+		var fantasy = ThemeResolver.Resolve(BuiltInThemes.Fantasy);
+
+		await Assert.That(scifi.Token("font-display")).StartsWith("'Orbitron'");
+		await Assert.That(scifi.Token("title-transform")).IsEqualTo("uppercase");
+		await Assert.That(scifi.Token("ornament-before")).IsEqualTo("\"\\5B\"");
+		await Assert.That(scifi.Token("texture")).Contains("repeating-linear-gradient");
+		await Assert.That(scifi.Token("card-bg")).Contains("no-repeat").And.EndsWith("var(--surface)");
+		await Assert.That(fantasy.Token("texture")).Contains("feTurbulence");
+		await Assert.That(fantasy.Token("font-ui")).StartsWith("Georgia");
+	}
+
+	[Test]
+	public async Task AStyleSettingIsOneOfItsChoicesAndMayBeLeftOut()
+	{
+		var tokens = BuiltInThemes.Phosphor.Tokens.ToDictionary();
+		await Assert.That(ThemeResolver.Validate(tokens)).IsEmpty();
+
+		tokens[ThemeStyles.Texture] = "url(evil)";
+		await Assert.That(string.Join("\n", ThemeResolver.Validate(tokens))).Contains("Style 'texture' is one of none, grain");
+	}
+
+	[Test]
+	public async Task AStyleValueThatIsNotAChoiceNeverReachesTheStylesheet()
+	{
+		var theme = BuiltInThemes.Phosphor with { Tokens = new Dictionary<string, string>(BuiltInThemes.Phosphor.Tokens) { [ThemeStyles.Texture] = "url(evil)" } };
+
+		await Assert.That(ThemeResolver.Resolve(theme).Css).DoesNotContain("evil");
 	}
 
 	[Test]

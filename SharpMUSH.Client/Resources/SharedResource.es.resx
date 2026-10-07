@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>Claro</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>El tema predeterminado del juego sigue el modo claro u oscuro de tu dispositivo.</value>
+  </data>
 </root>

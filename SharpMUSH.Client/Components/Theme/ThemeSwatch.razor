@@ -1,9 +1,10 @@
-@* A small picture of a theme: its page, a card on it with a line of text in each text colour, and an
-   accent button. Painted from the resolved tokens directly, so it shows a theme that is not the one in use. *@
+@* A small picture of a theme: its page with its texture, a card in its frame with "Aa" in its title face, a line
+   in its dim text colour, and an accent button. Painted from the resolved tokens directly, so it shows a theme
+   that is not the one in use. *@
 <span class="theme-swatch @Class" style="@Style" aria-hidden="true">
     <span class="theme-swatch-card">
-        <span class="theme-swatch-line theme-swatch-line--text"></span>
-        <span class="theme-swatch-line theme-swatch-line--dim"></span>
+        <span class="theme-swatch-face">Aa</span>
+        <span class="theme-swatch-line"></span>
         <span class="theme-swatch-button"></span>
     </span>
 </span>
@@ -15,5 +16,9 @@
     private string Style =>
         $"--sw-bg:{Theme.Token(ThemeTokens.Background)};--sw-surface:{Theme.Token(ThemeTokens.Surface)};" +
         $"--sw-border:{Theme.Token(ThemeTokens.Border)};--sw-text:{Theme.Token(ThemeTokens.Text)};" +
-        $"--sw-dim:{Theme.Token(ThemeTokens.TextDim)};--sw-accent:{Theme.Accent}";
+        $"--sw-dim:{Theme.Token(ThemeTokens.TextDim)};--sw-accent:{Theme.Accent};" +
+        $"--sw-face:{Theme.Token("font-display")};--sw-weight:{Theme.Token("font-title-weight")};" +
+        $"--sw-face-style:{Theme.Token("title-style")};--sw-radius:{Theme.Token("radius")};" +
+        $"--sw-texture:{Theme.Token("texture")};--sw-texture-size:{Theme.Token("texture-size")};" +
+        $"--sw-frame:{Theme.Token("card-border-style")};--sw-frame-width:{Theme.Token("card-border-width")}";
 }

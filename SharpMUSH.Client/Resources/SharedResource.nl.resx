@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>Licht</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>De standaard van het spel volgt de lichte of donkere instelling van je apparaat.</value>
+  </data>
 </root>

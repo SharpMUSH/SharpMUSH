@@ -7,10 +7,10 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-@* The theme editor: the game's themes as named sets of the design tokens, which one a character that chose
-   none sees, and which ones players may choose. Built-in themes are read-only; "Duplicate" starts an
-   editable copy. "Try on the portal" paints the whole portal with the unsaved draft until it is turned
-   off or the page is left. *@
+@* The theme editor: the game's themes as named sets of the design tokens and style choices, which ones a
+   character that chose none sees (one for browsers that prefer dark, one for light), and which ones players may
+   choose. Built-in themes are read-only; "Duplicate" starts an editable copy. "Try on the portal" paints the whole
+   portal with the unsaved draft until it is turned off or the page is left. *@
 
 <PageTitle>@Loc["AdmThemesTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
@@ -47,7 +47,7 @@
                         <span class="adm-theme-item-text">
                             <span class="adm-theme-item-name">@theme.Name</span>
                             <span class="adm-theme-item-tags">
-                                @if (theme.Id == _state.DefaultThemeId)
+                                @if (IsDefault(theme.Id))
                                 {
                                     <span class="adm-theme-tag adm-theme-tag--default">@Loc["AdmThemesDefault"]</span>
                                 }
@@ -90,11 +90,11 @@
                             <MudTextField T="string" @bind-Value="_draft.Name" @bind-Value:after="Edited" Label="@Loc["AdmThemesName"]"
                                           MaxLength="40" Disabled="locked" Variant="Variant.Outlined" Margin="Margin.Dense" id="theme-name" />
                             <div class="adm-theme-mode" role="radiogroup" aria-label="@Loc["AdmThemesMode"]">
-                                <button type="button" role="radio" class="adm-theme-mode-choice @(_draft.Dark ? "is-on" : null)" disabled="@locked"
+                                <button type="button" role="radio" class="adm-theme-mode-choice @(_draft.Dark ? "is-on" : null)" disabled="@(locked || IsDefault(_draft.Id))"
                                         aria-checked="@(_draft.Dark ? "true" : "false")" @onclick="() => SetDark(true)">
                                     <MudIcon Icon="@Icons.Material.Outlined.DarkMode" Size="Size.Small" />@Loc["AdmThemesDark"]
                                 </button>
-                                <button type="button" role="radio" class="adm-theme-mode-choice @(!_draft.Dark ? "is-on" : null)" disabled="@locked"
+                                <button type="button" role="radio" class="adm-theme-mode-choice @(!_draft.Dark ? "is-on" : null)" disabled="@(locked || IsDefault(_draft.Id))"
                                         aria-checked="@(!_draft.Dark ? "true" : "false")" @onclick="() => SetDark(false)">
                                     <MudIcon Icon="@Icons.Material.Outlined.LightMode" Size="Size.Small" />@Loc["AdmThemesLight"]
                                 </button>
@@ -126,6 +126,32 @@
                         }
 
                         <section class="adm-theme-group">
+                            <h3 class="adm-theme-group-title">@Loc["AdmThemesGroupStyle"]</h3>
+                            <p class="adm-theme-hint">@Loc["AdmThemesStyleHint"]</p>
+                            <div class="adm-theme-styles">
+                                @foreach (var key in ThemeStyles.Keys)
+                                {
+                                    <MudSelect T="string" Value="@_draft.Tokens[key]" ValueChanged="v => SetStyle(key, v)" Label="@Loc[StyleKey(key)]"
+                                               Disabled="locked" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" id="@($"theme-style-{key}")">
+                                        @foreach (var choice in ThemeStyles.Choices[key])
+                                        {
+                                            <MudSelectItem T="string" Value="@choice">
+                                                @if (key == ThemeStyles.FontDisplay)
+                                                {
+                                                    <span class="adm-theme-face" style="@($"--face:{ThemeStyles.DisplayFaces[choice].Stack}")">@FaceName(choice)</span>
+                                                }
+                                                else
+                                                {
+                                                    @Loc[StyleKey(key, choice)]
+                                                }
+                                            </MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                }
+                            </div>
+                        </section>
+
+                        <section class="adm-theme-group">
                             <h3 class="adm-theme-group-title">@Loc["AdmThemesContrast"]</h3>
                             <p class="adm-theme-hint">@Loc["AdmThemesContrastHint"]</p>
                             <ul class="adm-theme-contrast" id="theme-contrast">
@@ -154,7 +180,7 @@
                             {
                                 @if (_draft.Id is not null)
                                 {
-                                    <MudButton Variant="Variant.Text" Color="Color.Error" Disabled="@(_busy || _draft.Id == _state.DefaultThemeId)"
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" Disabled="@(_busy || IsDefault(_draft.Id))"
                                                OnClick="DeleteAsync" id="theme-delete">@Loc["AdmThemesDelete"]</MudButton>
                                     <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="Duplicate" id="theme-duplicate">@Loc["AdmThemesDuplicate"]</MudButton>
                                 }
@@ -163,10 +189,12 @@
                                     @Loc["Save"]
                                 </MudButton>
                             }
-                            @if (_draft.Id is not null && _draft.Id != _state.DefaultThemeId)
+                            @if (_draft.Id is not null && !IsDefault(_draft.Id))
                             {
                                 <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@(_busy || _dirty || !_draft.Published)"
-                                           OnClick="MakeDefaultAsync" id="theme-default">@Loc["AdmThemesMakeDefault"]</MudButton>
+                                           OnClick="MakeDefaultAsync" id="theme-default">
+                                    @Loc[_draft.Dark ? "AdmThemesMakeDefaultDark" : "AdmThemesMakeDefaultLight"]
+                                </MudButton>
                             }
                         </div>
                     </div>
@@ -193,7 +221,7 @@
             Dark = theme.Dark,
             Published = theme.Published,
             BuiltIn = theme.BuiltIn,
-            Tokens = ThemeTokens.Editable.ToDictionary(t => t, t => theme.Tokens.TryGetValue(t, out var v) ? v : BuiltInThemes.Phosphor.Tokens[t]),
+            Tokens = ThemeResolver.Complete(theme.Tokens) is var (colors, style) ? colors.Concat(style).ToDictionary() : [],
         };
 
         public PortalTheme ToTheme() => new(Id ?? "draft", Name, Dark, Published, Tokens);
@@ -219,8 +247,31 @@
     private ResolvedTheme Draft => ThemeResolver.Resolve(_draft!.ToTheme());
 
     /// <summary>"surface-2" is "AdmThemeTokenSurface2".</summary>
-    private static string TokenKey(string token) =>
-        "AdmThemeToken" + string.Concat(token.Split('-').Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+    private static string TokenKey(string token) => "AdmThemeToken" + Pascal(token);
+
+    /// <summary>"font-body" is "AdmThemeStyleFontBody"; with "serif", "AdmThemeStyleFontBodySerif".</summary>
+    private static string StyleKey(string key, string? choice = null) => "AdmThemeStyle" + Pascal(key) + (choice is null ? "" : Pascal(choice));
+
+    private static string Pascal(string name) => string.Concat(name.Split('-').Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+
+    /// <summary>A title face by its own name; the portal's own face is the one choice described rather than named.</summary>
+    private string FaceName(string face) => face switch
+    {
+        "ui" => Loc["AdmThemeStyleFontDisplayUi"],
+        "cinzel" => "Cinzel",
+        "cormorant" => "Cormorant Garamond",
+        "fell" => "IM Fell English",
+        "playfair" => "Playfair Display",
+        "grenze" => "Grenze Gotisch",
+        "space" => "Space Grotesk",
+        "typewriter" => "Special Elite",
+        "orbitron" => "Orbitron",
+        "marcellus" => "Marcellus",
+        _ => face,
+    };
+
+    private bool IsDefault(string? id) => id is not null && _state is not null
+        && (id == _state.DefaultThemeId || id == _state.DefaultLightThemeId);
 
     protected override async Task OnInitializedAsync()
     {
@@ -228,7 +279,7 @@
         {
             case PortalThemesResponse state:
                 _state = state;
-                Select(state.Themes.FirstOrDefault(t => t.Id == state.DefaultThemeId) ?? state.Themes[0]);
+                Select(state.Themes.FirstOrDefault(t => t.Id == state.Defaults.For(Themes.PrefersLight)) ?? state.Themes[0]);
                 break;
             case ApiFailure failure:
                 _error = failure.Message;
@@ -270,6 +321,16 @@
     private void SetDark(bool dark)
     {
         _draft!.Dark = dark;
+        Edited();
+    }
+
+    private void SetStyle(string key, string? value)
+    {
+        if (ThemeStyles.IsValid(key, value))
+        {
+            _draft!.Tokens[key] = value!;
+        }
+
         Edited();
     }
 
@@ -353,7 +414,7 @@
         {
             case PortalThemesResponse state:
                 _state = state;
-                Select(state.Themes.First(t => t.Id == state.DefaultThemeId));
+                Select(state.Themes.First(t => t.Id == state.Defaults.For(Themes.PrefersLight)));
                 await Themes.ReloadAsync();
                 break;
             case ApiFailure failure:

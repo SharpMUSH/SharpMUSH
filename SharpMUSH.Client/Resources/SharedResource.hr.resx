@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>Svijetla</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>Zadana tema igre prati svijetlu ili tamnu postavku vašeg uređaja.</value>
+  </data>
 </root>

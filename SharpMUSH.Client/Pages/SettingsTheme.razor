@@ -49,6 +49,10 @@
                                 @ThemeChoice(character, theme.Id, theme.Name, busy)
                             }
                         </div>
+                        @if (character.ThemeId is null && Themes.Defaults.DarkThemeId != Themes.Defaults.LightThemeId)
+                        {
+                            <span class="settings-theme-note">@Loc["NavThemeFollowsDevice"]</span>
+                        }
                     </div>
 
                     <div class="settings-theme-field">
@@ -91,8 +95,16 @@
 
     private IEnumerable<PortalTheme> Published => Themes.Themes.Where(t => t.Published);
 
-    private string DefaultName =>
-        Themes.Themes.FirstOrDefault(t => t.Id == Themes.DefaultThemeId)?.Name ?? BuiltInThemes.Phosphor.Name;
+    // "Phosphor / Daylight": the game default follows the browser's light or dark setting.
+    private string DefaultName
+    {
+        get
+        {
+            string Name(string id) => Themes.Themes.FirstOrDefault(t => t.Id == id)?.Name ?? id;
+            var (dark, light) = (Themes.Defaults.DarkThemeId, Themes.Defaults.LightThemeId);
+            return dark == light ? Name(dark) : $"{Name(dark)} / {Name(light)}";
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -103,7 +115,7 @@
     protected override async Task OnInitializedAsync() => await AccountAuth.GetCharactersAsync();
 
     private ResolvedTheme Resolve(AccountAuthService.CharacterSummary character) =>
-        ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.DefaultThemeId, character.ThemeId), character.Accent);
+        ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, character.ThemeId), character.Accent);
 
     private static bool IsCustom(AccountAuthService.CharacterSummary character) =>
         character.Accent is { } accent && !BuiltInThemes.AccentSwatches.Any(s => string.Equals(s.Hex, accent, StringComparison.OrdinalIgnoreCase));
@@ -111,7 +123,7 @@
     private RenderFragment ThemeChoice(AccountAuthService.CharacterSummary character, string? themeId, string label, bool busy) => __builder =>
     {
         var on = character.ThemeId == themeId;
-        var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.DefaultThemeId, themeId), character.Accent);
+        var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, themeId), character.Accent);
         <button type="button" role="radio" class="settings-theme-choice @(on ? "is-on" : null)" aria-checked="@(on ? "true" : "false")"
                 data-theme="@(themeId ?? "default")" disabled="@busy" @onclick="() => SaveAsync(character, themeId, character.Accent)">
             <ThemeSwatch Theme="theme" Class="settings-theme-choice-swatch" />

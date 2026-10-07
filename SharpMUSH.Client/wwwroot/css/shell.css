@@ -8,7 +8,8 @@
 	display: flex;
 	overflow: hidden;
 	background: var(--bg);
-	background-image: var(--mud-palette-background-gradient);
+	background-image: var(--texture), var(--mud-palette-background-gradient);
+	background-size: var(--texture-size), auto;
 }
 
 /* Content column: topbar + scrollable main + footer/terminal */

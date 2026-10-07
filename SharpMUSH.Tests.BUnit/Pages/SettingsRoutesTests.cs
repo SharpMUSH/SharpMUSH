@@ -62,7 +62,7 @@ public class SettingsRoutesTests : BunitContext
 			NullLogger<AccountAuthService>.Instance, []));
 		var themes = Substitute.For<IThemeService>();
 		themes.Themes.Returns(BuiltInThemes.All);
-		themes.DefaultThemeId.Returns(BuiltInThemes.PhosphorId);
+		themes.Defaults.Returns(new SharpMUSH.Library.API.PortalThemeDefaults(BuiltInThemes.PhosphorId, BuiltInThemes.DaylightId));
 		Services.AddSingleton(themes);
 
 		var cut = Render<SettingsTheme>();

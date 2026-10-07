@@ -3,44 +3,49 @@
 	flex: none;
 	width: 72px;
 	height: 48px;
-	padding: 7px;
+	padding: 6px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
-	background: var(--sw-bg);
+	background-color: var(--sw-bg);
+	background-image: var(--sw-texture);
+	background-size: var(--sw-texture-size);
 }
 
 .theme-swatch-card {
-	display: flex;
+	display: grid;
 	flex: 1;
-	flex-direction: column;
-	justify-content: center;
-	gap: 4px;
-	padding: 0 6px;
-	border: 1px solid var(--sw-border);
-	border-radius: 6px;
+	grid-template-columns: auto 1fr;
+	grid-template-rows: 1fr auto;
+	align-items: center;
+	gap: 2px 5px;
+	padding: 2px 5px 4px;
+	border: min(var(--sw-frame-width), 2px) var(--sw-frame) var(--sw-border);
+	border-radius: min(var(--sw-radius), 8px);
 	background: var(--sw-surface);
+}
+
+.theme-swatch-face {
+	grid-row: 1 / span 2;
+	font-family: var(--sw-face);
+	font-weight: var(--sw-weight);
+	font-style: var(--sw-face-style);
+	font-size: 15px;
+	line-height: 1;
+	color: var(--sw-text);
 }
 
 .theme-swatch-line {
 	display: block;
+	align-self: end;
 	height: 3px;
 	border-radius: 2px;
-}
-
-.theme-swatch-line--text {
-	width: 80%;
-	background: var(--sw-text);
-}
-
-.theme-swatch-line--dim {
-	width: 55%;
 	background: var(--sw-dim);
 }
 
 .theme-swatch-button {
 	display: block;
-	width: 40%;
-	height: 6px;
+	width: 70%;
+	height: 5px;
 	border-radius: 3px;
 	background: var(--sw-accent);
 }

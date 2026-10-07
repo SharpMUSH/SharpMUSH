@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>Светлая</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>Тема игры по умолчанию следует светлой или тёмной настройке вашего устройства.</value>
+  </data>
 </root>

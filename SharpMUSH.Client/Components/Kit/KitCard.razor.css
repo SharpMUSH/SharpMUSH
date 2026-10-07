@@ -1,7 +1,8 @@
 .kit-card {
-	background: var(--surface);
-	border: 1px solid var(--border);
+	background: var(--card-bg);
+	border: var(--card-border-width) var(--card-border-style) var(--border);
 	border-radius: var(--radius-card);
+	box-shadow: var(--card-shadow);
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
@@ -22,8 +23,12 @@
 }
 
 .kit-card-title {
+	font-family: var(--font-display);
 	font-size: 15px;
-	font-weight: 700;
+	font-weight: var(--font-title-weight);
+	font-style: var(--title-style);
+	letter-spacing: var(--title-tracking);
+	text-transform: var(--title-transform);
 	color: var(--text);
 }
 

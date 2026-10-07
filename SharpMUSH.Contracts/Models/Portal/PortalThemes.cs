@@ -156,7 +156,72 @@ public static class BuiltInThemes
 			[ThemeTokens.LinkMissing] = "#c0362c",
 		}, BuiltIn: true);
 
-	public static readonly IReadOnlyList<PortalTheme> All = [Phosphor, Daylight];
+	// One theme per MSSP genre (MsspCatalog's GENRE choices, less "None"), with the ids the telnet layout themes
+	// use, so a game's portal theme and layout_theme can share one name. Colours are listed in ThemeTokens.Editable
+	// order: bg, surface, surface-2, surface-3, rail-bg, text, text-dim, text-faint, border, border-soft, accent,
+	// warn, link-missing.
+
+	/// <summary>Adult: wine and gold, a high-contrast serif in italic, damask behind double-ruled cards.</summary>
+	public static readonly PortalTheme Adult = Genre("adult", "Adult", dark: true,
+		["#140a0e", "#1d1015", "#26151c", "#170c11", "#0d0609", "#f3e6ea", "#c4a9b2", "#a88d97", "#3d2430", "#2a1820", "#e0b860", "#ffb07a", "#ff8fa3"],
+		display: "playfair", body: "ui", corners: "soft", texture: "damask", ornament: "diamond", frame: "double", titles: "italic");
+
+	/// <summary>Fantasy: parchment, inscribed capitals, fleurons and corner-marked cards.</summary>
+	public static readonly PortalTheme Fantasy = Genre("fantasy", "Fantasy", dark: false,
+		["#efe4cc", "#f8f0dc", "#efe3c6", "#e6d8b8", "#ddcba4", "#2b1d0e", "#5a4630", "#6b5640", "#cdb98f", "#e2d3b0", "#7a3b10", "#8a4b00", "#a32a1d"],
+		display: "cinzel", body: "serif", corners: "soft", texture: "paper", ornament: "fleuron", frame: "corners", titles: "normal");
+
+	/// <summary>Historical: sepia linen, an old-style printed face, square corners and inset rules.</summary>
+	public static readonly PortalTheme Historical = Genre("historical", "Historical", dark: false,
+		["#ebe5d8", "#f6f2e8", "#ece6d8", "#e4dccb", "#d9cfba", "#2a2620", "#57503f", "#6a6250", "#cfc5ae", "#e2dac8", "#6b3e26", "#7f4f00", "#a33a2a"],
+		display: "fell", body: "serif", corners: "sharp", texture: "linen", ornament: "rule", frame: "inset", titles: "normal");
+
+	/// <summary>Horror: near-black and blood red, blackletter titles between daggers, a creeping mist and glow.</summary>
+	public static readonly PortalTheme Horror = Genre("horror", "Horror", dark: true,
+		["#0b0909", "#141010", "#1b1515", "#0e0b0b", "#070505", "#e8dede", "#a89a9a", "#8e8080", "#2e2222", "#201818", "#e0453a", "#d9a441", "#ff8a7a"],
+		display: "grenze", body: "ui", corners: "sharp", texture: "mist", ornament: "cross", frame: "glow", titles: "normal");
+
+	/// <summary>Modern: clean white and cobalt, a geometric sans in capitals on a drafting grid.</summary>
+	public static readonly PortalTheme Modern = Genre("modern", "Modern", dark: false,
+		["#f2f3f5", "#ffffff", "#f0f1f4", "#e8eaee", "#e4e7ec", "#111318", "#474c55", "#5c616b", "#d5d9e0", "#e6e9ee", "#2952e3", "#8f5300", "#c0362c"],
+		display: "space", body: "ui", corners: "sharp", texture: "grid", ornament: "rule", frame: "plain", titles: "caps");
+
+	/// <summary>Mystery: midnight and brass, typewritten titles on a grainy page.</summary>
+	public static readonly PortalTheme Mystery = Genre("mystery", "Mystery", dark: true,
+		["#12141a", "#1a1d24", "#20242c", "#15171d", "#0c0d11", "#e6e1d6", "#a9a395", "#8f8a7e", "#2c3039", "#22252c", "#d4a95a", "#e8b45e", "#ff8a8a"],
+		display: "typewriter", body: "ui", corners: "sharp", texture: "grain", ornament: "rule", frame: "inset", titles: "normal");
+
+	/// <summary>Romance: blush and rose, an italic garamond with hearts, lace and a soft glow.</summary>
+	public static readonly PortalTheme Romance = Genre("romance", "Romance", dark: false,
+		["#f8eef0", "#fffafb", "#f7eaee", "#f1e2e7", "#ecd6dd", "#2d1a20", "#6b4b55", "#7d5c66", "#e5ccd4", "#f0dfe4", "#b0306a", "#8f4b00", "#b3261e"],
+		display: "cormorant", body: "serif", corners: "round", texture: "lace", ornament: "heart", frame: "glow", titles: "italic");
+
+	/// <summary>Science fiction: deep space and cyan, wide capitals in brackets, scanlines and targeting corners.</summary>
+	public static readonly PortalTheme ScienceFiction = Genre("science-fiction", "Science Fiction", dark: true,
+		["#070b14", "#0d1422", "#121b2d", "#0a101b", "#04070d", "#dbe8ff", "#93a7c6", "#7a8eae", "#1d2a42", "#152035", "#36d6ff", "#ffc857", "#ff8aa0"],
+		display: "orbitron", body: "ui", corners: "sharp", texture: "scanlines", ornament: "brackets", frame: "corners", titles: "caps");
+
+	/// <summary>Spiritual: ivory and amethyst, a calm roman with flowers, rounded cards in a soft mist.</summary>
+	public static readonly PortalTheme Spiritual = Genre("spiritual", "Spiritual", dark: false,
+		["#f4f1f8", "#fdfbff", "#f3eef9", "#ebe5f3", "#e3dbef", "#241f2e", "#574e66", "#6a6178", "#ddd4ea", "#ebe5f3", "#6b4fa8", "#8a5300", "#b3361e"],
+		display: "marcellus", body: "ui", corners: "round", texture: "mist", ornament: "lotus", frame: "plain", titles: "normal");
+
+	public static readonly IReadOnlyList<PortalTheme> All =
+		[Phosphor, Daylight, Adult, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual];
+
+	private static PortalTheme Genre(string id, string name, bool dark, string[] colors,
+		string display, string body, string corners, string texture, string ornament, string frame, string titles)
+	{
+		var tokens = ThemeTokens.Editable.Zip(colors).ToDictionary(p => p.First, p => p.Second);
+		tokens[ThemeStyles.FontDisplay] = display;
+		tokens[ThemeStyles.FontBody] = body;
+		tokens[ThemeStyles.Corners] = corners;
+		tokens[ThemeStyles.Texture] = texture;
+		tokens[ThemeStyles.Ornament] = ornament;
+		tokens[ThemeStyles.Frame] = frame;
+		tokens[ThemeStyles.Titles] = titles;
+		return new PortalTheme(id, name, dark, Published: true, tokens, BuiltIn: true);
+	}
 
 	/// <summary>Quick picks for a character's accent. Each is adjusted for the theme it lands on, like any other.</summary>
 	public static readonly IReadOnlyList<(string Name, string Hex)> AccentSwatches =
@@ -180,6 +245,7 @@ public static class BuiltInThemes
 /// <param name="RequestedAccent">The character's own accent as chosen, or null when the theme's is in use.</param>
 /// <param name="AccentAdjusted">The chosen accent was too faint against this theme and was moved until it read.</param>
 /// <param name="Tokens">Every custom property this theme sets, by name without the <c>--</c>.</param>
+/// <param name="Style">The theme's <see cref="ThemeStyles"/> choices, by setting.</param>
 public sealed record ResolvedTheme(
 	string ThemeId,
 	string Name,
@@ -187,7 +253,8 @@ public sealed record ResolvedTheme(
 	string Accent,
 	string? RequestedAccent,
 	bool AccentAdjusted,
-	IReadOnlyDictionary<string, string> Tokens)
+	IReadOnlyDictionary<string, string> Tokens,
+	IReadOnlyDictionary<string, string> Style)
 {
 	/// <summary>A <c>:root</c> rule that sets every token. Unlayered, so it wins over <c>tokens.css</c>'s defaults.</summary>
 	public string Css
@@ -211,16 +278,18 @@ public sealed record ResolvedTheme(
 public static class ThemeResolver
 {
 	/// <summary>
-	/// The theme the character sees: its chosen theme if that is still offered, else the default, else Phosphor.
+	/// The theme the character sees: its chosen theme if that is still offered, else the game's default for the
+	/// browser's light or dark preference, else Phosphor.
 	/// </summary>
-	public static PortalTheme Pick(IReadOnlyList<PortalTheme> themes, string? defaultThemeId, string? chosenThemeId)
+	public static PortalTheme Pick(IReadOnlyList<PortalTheme> themes, PortalThemeDefaults defaults, bool prefersLight, string? chosenThemeId)
 		=> themes.FirstOrDefault(t => t.Id == chosenThemeId)
-			?? themes.FirstOrDefault(t => t.Id == defaultThemeId)
+			?? themes.FirstOrDefault(t => t.Id == defaults.For(prefersLight))
+			?? themes.FirstOrDefault(t => t.Id == defaults.DarkThemeId)
 			?? BuiltInThemes.Phosphor;
 
 	public static ResolvedTheme Resolve(PortalTheme theme, string? accent = null)
 	{
-		var tokens = Complete(theme.Tokens);
+		var (tokens, style) = Complete(theme.Tokens);
 		var bg = ThemeColor.Parse(tokens[ThemeTokens.Background]);
 		var surface = ThemeColor.Parse(tokens[ThemeTokens.Surface]);
 
@@ -231,9 +300,14 @@ public static class ThemeResolver
 		tokens[ThemeTokens.Accent] = accentColor.Hex;
 
 		Derive(tokens, theme.Dark, accentColor);
+		foreach (var (name, value) in ThemeStyles.Css(style, ThemeColor.Parse(tokens[ThemeTokens.Text]), accentColor,
+			ThemeColor.Parse(tokens[ThemeTokens.Border]), theme.Dark))
+		{
+			tokens[name] = value;
+		}
 
 		return new ResolvedTheme(theme.Id, theme.Name, theme.Dark, accentColor.Hex, requested?.Hex,
-			requested is { } asked && asked != accentColor, tokens);
+			requested is { } asked && asked != accentColor, tokens, style);
 	}
 
 	/// <summary>
@@ -263,7 +337,10 @@ public static class ThemeResolver
 		return ThemeColor.Contrast(dark, accent) >= ThemeColor.Contrast(ThemeColor.White, accent) ? dark : ThemeColor.White;
 	}
 
-	/// <summary>Problems with a theme's tokens: a missing or malformed colour. Empty when it can be saved.</summary>
+	/// <summary>
+	/// Problems with a theme's tokens: a missing or malformed colour, or a style setting that is not one of its
+	/// choices. A style setting may be left out. Empty when the theme can be saved.
+	/// </summary>
 	public static IReadOnlyList<string> Validate(IReadOnlyDictionary<string, string>? tokens)
 	{
 		var problems = new List<string>();
@@ -281,7 +358,20 @@ public static class ThemeResolver
 
 		if (tokens is not null)
 		{
-			problems.AddRange(tokens.Keys.Where(k => !ThemeTokens.Editable.Contains(k)).Select(k => $"Token '{k}' is not a theme token."));
+			foreach (var (name, value) in tokens)
+			{
+				if (ThemeStyles.Choices.TryGetValue(name, out var choices))
+				{
+					if (!choices.Contains(value))
+					{
+						problems.Add($"Style '{name}' is one of {string.Join(", ", choices)}, not '{value}'.");
+					}
+				}
+				else if (!ThemeTokens.Editable.Contains(name))
+				{
+					problems.Add($"Token '{name}' is not a theme token.");
+				}
+			}
 		}
 
 		return problems;
@@ -290,24 +380,30 @@ public static class ThemeResolver
 	/// <summary>Each of <see cref="ThemeTokens.ContrastPairs"/> with its ratio.</summary>
 	public static IReadOnlyList<(string Foreground, string Background, double Ratio)> Contrasts(IReadOnlyDictionary<string, string> tokens)
 		=> ThemeTokens.ContrastPairs
-			.Where(p => tokens.ContainsKey(p.Foreground) && tokens.ContainsKey(p.Background)
-				&& ThemeColor.TryParse(tokens[p.Foreground], out _) && ThemeColor.TryParse(tokens[p.Background], out _))
 			.Select(p => (p.Foreground, p.Background,
-				ThemeColor.Contrast(ThemeColor.Parse(tokens[p.Foreground]), ThemeColor.Parse(tokens[p.Background]))))
+				Fg: tokens.TryGetValue(p.Foreground, out var fg) && ThemeColor.TryParse(fg, out var f) ? f : (ThemeColor?)null,
+				Bg: tokens.TryGetValue(p.Background, out var bg) && ThemeColor.TryParse(bg, out var b) ? b : (ThemeColor?)null))
+			.Where(p => p.Fg is not null && p.Bg is not null)
+			.Select(p => (p.Foreground, p.Background, ThemeColor.Contrast(p.Fg!.Value, p.Bg!.Value)))
 			.ToList();
 
-	/// <summary>The theme's tokens, normalised to lower-case <c>#rrggbb</c>, with Phosphor's for any it lacks.</summary>
-	private static Dictionary<string, string> Complete(IReadOnlyDictionary<string, string> tokens)
+	/// <summary>
+	/// The theme's colours, normalised to lower-case <c>#rrggbb</c> with Phosphor's for any it lacks, and its style
+	/// choices with the defaults for any it lacks.
+	/// </summary>
+	public static (Dictionary<string, string> Colors, Dictionary<string, string> Style) Complete(IReadOnlyDictionary<string, string> tokens)
 	{
-		var complete = new Dictionary<string, string>(StringComparer.Ordinal);
+		var colors = new Dictionary<string, string>(StringComparer.Ordinal);
 		foreach (var name in ThemeTokens.Editable)
 		{
-			complete[name] = tokens.TryGetValue(name, out var value) && ThemeColor.TryParse(value, out var color)
+			colors[name] = tokens.TryGetValue(name, out var value) && ThemeColor.TryParse(value, out var color)
 				? color.Hex
 				: BuiltInThemes.Phosphor.Tokens[name];
 		}
 
-		return complete;
+		var style = ThemeStyles.Keys.ToDictionary(k => k,
+			k => tokens.TryGetValue(k, out var value) && ThemeStyles.IsValid(k, value) ? value : ThemeStyles.Defaults[k], StringComparer.Ordinal);
+		return (colors, style);
 	}
 
 	private static void Derive(Dictionary<string, string> tokens, bool dark, ThemeColor accent)

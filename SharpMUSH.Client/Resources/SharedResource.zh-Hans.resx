@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>浅色</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>游戏默认主题会跟随设备的浅色或深色设置。</value>
+  </data>
 </root>

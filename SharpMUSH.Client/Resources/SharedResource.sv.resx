@@ -5748,4 +5748,7 @@
   <data name="NavThemeLight" xml:space="preserve">
     <value>Ljust</value>
   </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>Spelets standard följer enhetens ljusa eller mörka inställning.</value>
+  </data>
 </root>
