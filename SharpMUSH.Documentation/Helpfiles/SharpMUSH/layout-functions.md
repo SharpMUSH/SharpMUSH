@@ -190,7 +190,7 @@ That is how a client without Unicode sees it. With Unicode the corners and edges
 
 **Sixteen-colour clients.** Each colour carries the standard colour a client with only the sixteen is sent instead, picked by its hue, so a pale blue is sent as blue rather than the grey nearest it. A client without colour is sent the layout as it is; nothing in a layout depends on colour alone. A client without Unicode gets ASCII borders in the same colours.
 
-Written straight into options, a theme object goes inside them as it is: `box(Hi,,30,{{"theme":{"seed":"#d08770"}}})`. [THEME()] writes any theme out in full, to keep in an attribute, and [SWATCH()] shows one's colours and how well each stands out.
+Written straight into options, a theme object goes inside them as it is: `box(Hi,,30,{{"theme":{"seed":"#d08770"}}})`. Each player can also pick a theme of their own for every layout they read with [@THEME]. [THEME()] writes any theme out in full, to keep in an attribute, and [SWATCH()] shows one's colours and how well each stands out.
 
 ::: seealso
 - [THEMES()]
@@ -271,6 +271,35 @@ info        Sample  #88c0d0  6 cyan          6.2:1
 - [THEMES()]
 - [THEME()]
 - [LAYOUT THEMES]
+:::
+
+# @THEME
+
+`@theme[/light|/dark] <player>=<theme>`<br>
+`@theme <player>=`
+
+Sets the theme every layout is drawn in for that player: boxes, tables, gauges and the rest, from any function in [LAYOUT FUNCTIONS]. *<theme>* is anything the `"theme"` option takes (see [LAYOUT THEMES]): a name from [THEMES()], or a theme written out as JSON inside a second pair of braces, as for a layout function's options: `@theme me={{"seed":"#7aa2f7","harmony":"triadic"}}`. With nothing after the `=`, the theme is cleared.
+
+`/light` makes the theme for a client with a light background, and `/dark` for a dark one. A theme made from one colour, which includes the genre themes, is made again for that background; a well-known scheme such as `nord` stays as it is.
+
+A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it; the web portal has themes of its own. You must control *<player>*. The theme is kept in the player's `THEME` attribute.
+
+Output: none.
+
+### Examples
+```sharp
+> @theme me=fantasy
+Theme set.
+> @theme/light me=fantasy
+Theme set.
+> @theme me=
+Theme cleared.
+```
+
+::: seealso
+- [LAYOUT THEMES]
+- [THEMES()]
+- [SWATCH()]
 :::
 
 # BOX()

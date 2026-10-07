@@ -216,6 +216,31 @@ public class ConnectionServerService(
 		return false;
 	}
 
+	/// <summary>Sets the player's theme on <paramref name="handle"/>, keeping the rest of its preferences.</summary>
+	public bool UpdateTheme(long handle, string? theme)
+	{
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+		{
+			if (!_sessionState.TryGetValue(handle, out var connection))
+			{
+				return false;
+			}
+
+			// Login sends the flags first, so a theme normally finds preferences in place; none and no theme is nothing to set.
+			if (connection.Preferences is null && theme is null)
+			{
+				return true;
+			}
+
+			var preferences = (connection.Preferences ?? new PlayerOutputPreferences()) with { Theme = theme };
+			if (_sessionState.TryUpdate(handle, connection with { Preferences = preferences }, connection))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public bool ClearPreferences(long handle)
 	{
 		if (!_sessionState.TryGetValue(handle, out var connection))
@@ -334,6 +359,8 @@ public interface IConnectionServerService
 	IEnumerable<ConnectionServerService.ConnectionData> GetAll();
 
 	bool UpdatePreferences(long handle, SharpMUSH.SocketServer.Models.PlayerOutputPreferences preferences);
+
+	bool UpdateTheme(long handle, string? theme);
 
 	bool ClearPreferences(long handle);
 

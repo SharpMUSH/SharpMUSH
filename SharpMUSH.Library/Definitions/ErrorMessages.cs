@@ -942,6 +942,8 @@ public static partial class ErrorMessages
 		public const string ClonedRoom = "Cloned: Room {0}.";
 		public const string MonikerCleared = "Moniker cleared.";
 		public const string MonikerSet = "Moniker set.";
+		public const string ThemeSet = "Theme set.";
+		public const string ThemeCleared = "Theme cleared.";
 		public const string DigWhat = "Dig what?";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RoomCreatedWithNumberFormat = "{0} created with room number {1}.";

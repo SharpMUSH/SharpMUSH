@@ -107,3 +107,10 @@ public record ClearPlayerOutputPreferencesMessage(long Handle) : IHandleMessage;
 /// values, or null for "auto", which hands the decision back to the flags and the terminal.
 /// </summary>
 public record UpdateColorStyleMessage(long Handle, string? Style) : IHandleMessage;
+
+/// <summary>
+/// Carries a player's <c>@theme</c> to the socket owner, whose renderer lays layouts out again under it.
+/// <paramref name="Theme"/> is a theme as the <c>"theme"</c> layout option takes it, or null for none,
+/// which leaves the game's own look.
+/// </summary>
+public record UpdateThemeMessage(long Handle, string? Theme) : IHandleMessage;

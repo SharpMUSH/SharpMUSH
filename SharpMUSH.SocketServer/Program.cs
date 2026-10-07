@@ -185,6 +185,7 @@ public class Program
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdatePlayerPreferencesMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, ClearPlayerOutputPreferencesMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateColorStyleMessage>();
+				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateThemeMessage>();
 				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
 				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
 				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();

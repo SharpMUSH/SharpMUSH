@@ -626,6 +626,8 @@ public partial class Commands
 		// their own, each with its own time limit, so none of them can run the login out of time; they
 		// run after the look.
 		await SyncPlayerOutputPreferences(handle, player.Object);
+		// After the flags, which set the preferences the theme joins; null clears a theme the socket kept.
+		await MessageBus.Publish(new UpdateThemeMessage(handle, await ThemeOf(new AnySharpObject(player))));
 		await ShowPostLoginMessages(handle, new AnySharpObject(player), isGuest);
 
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible

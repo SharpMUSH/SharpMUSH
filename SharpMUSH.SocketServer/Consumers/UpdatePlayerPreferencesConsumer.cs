@@ -13,7 +13,8 @@ public class UpdatePlayerPreferencesConsumer(
 	ILogger<UpdatePlayerPreferencesConsumer> logger)
 	: IMessageConsumer<UpdatePlayerPreferencesMessage>,
 		IMessageConsumer<ClearPlayerOutputPreferencesMessage>,
-		IMessageConsumer<UpdateColorStyleMessage>
+		IMessageConsumer<UpdateColorStyleMessage>,
+		IMessageConsumer<UpdateThemeMessage>
 {
 	public Task HandleAsync(UpdatePlayerPreferencesMessage message, CancellationToken cancellationToken = default)
 	{
@@ -33,7 +34,8 @@ public class UpdatePlayerPreferencesConsumer(
 				ColorEnabled: message.ColorEnabled,
 				Xterm256Enabled: message.Xterm256Enabled,
 				TruecolorEnabled: message.TruecolorEnabled,
-				Locale: existingPreferences?.Locale ?? "en"
+				Locale: existingPreferences?.Locale ?? "en",
+				Theme: existingPreferences?.Theme
 			);
 
 			var success = connectionService.UpdatePreferences(message.Handle, updatedPreferences);
@@ -71,6 +73,16 @@ public class UpdatePlayerPreferencesConsumer(
 		else
 		{
 			logger.LogWarning("Could not set colour style for unknown connection handle: {Handle}", message.Handle);
+		}
+
+		return Task.CompletedTask;
+	}
+
+	public Task HandleAsync(UpdateThemeMessage message, CancellationToken cancellationToken = default)
+	{
+		if (!connectionService.UpdateTheme(message.Handle, message.Theme))
+		{
+			logger.LogWarning("Could not set the theme for unknown connection handle: {Handle}", message.Handle);
 		}
 
 		return Task.CompletedTask;
