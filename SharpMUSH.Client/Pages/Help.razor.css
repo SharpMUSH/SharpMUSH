@@ -93,6 +93,10 @@
 	margin-block-end: 1lh;
 }
 
+.help-entry ::deep :is(h2, h3) {
+	margin: 0 0 0.5em;
+}
+
 .help-entry ::deep :is(p, ul, ol, pre, table, blockquote):last-child {
 	margin-block-end: 0;
 }
