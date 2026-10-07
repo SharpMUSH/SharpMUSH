@@ -47,7 +47,8 @@ public sealed class WikiAccessService(
 
 	public async Task<WikiDecision> DecideCreateAsync(WikiReader reader, string ns, IEnumerable<string> categories, string? slug = null)
 		=> OwnerDecision(reader, ns, slug, WikiAction.Create)
-			?? Decide(reader, await RequirementsAsync(), ns.ToLowerInvariant(), WikiHelpers.NormalizeCategories(categories), null,
+			?? Decide(reader, await RequirementsAsync(), ns.ToLowerInvariant(),
+				WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(ns)), null,
 				WikiAction.Create);
 
 	public async Task<WikiDecision> DecideCategoriesAsync(WikiReader reader, WikiPage page, IEnumerable<string> categories)
@@ -56,7 +57,8 @@ public sealed class WikiAccessService(
 		var requirements = await RequirementsAsync();
 		var before = Decide(reader, requirements, page.Namespace, page.Categories, page.Id, WikiAction.Edit);
 		return before.Allowed
-			? Decide(reader, requirements, page.Namespace, WikiHelpers.NormalizeCategories(categories), page.Id, WikiAction.Edit)
+			? Decide(reader, requirements, page.Namespace,
+				WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(page.Namespace)), page.Id, WikiAction.Edit)
 			: before;
 	}
 
