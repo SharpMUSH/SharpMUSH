@@ -404,6 +404,43 @@ public class TerminalTypeNegotiatedConsumer(
 }
 
 /// <summary>
+/// Records what a terminal answered when asked what it can draw (<c>SOCKSET graphics=detect</c>), which
+/// <c>terminfo()</c> and <c>SOCKSET</c> report.
+/// </summary>
+public class TerminalReportConsumer(
+	ILogger<TerminalReportConsumer> logger,
+	IConnectionService connectionService)
+	: IMessageConsumer<TerminalReportMessage>
+{
+	public async Task HandleAsync(TerminalReportMessage message, CancellationToken cancellationToken = default)
+	{
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping terminal report for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		var report = message.Report;
+		if (report.KittyGraphics is { } kitty)
+		{
+			connectionService.Update(message.Handle, TerminalFeatureReader.ProbeKittyKey, kitty ? "1" : "0");
+		}
+
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeSixelKey, report.Sixel ? "1" : "0");
+		if (!string.IsNullOrEmpty(report.Version))
+		{
+			connectionService.Update(message.Handle, TerminalFeatureReader.ProbeVersionKey, report.Version);
+		}
+
+		if (report is { CellWidth: > 0, CellHeight: > 0 })
+		{
+			connectionService.Update(message.Handle, TerminalFeatureReader.ProbeCellSizeKey,
+				$"{report.CellWidth}x{report.CellHeight}");
+		}
+	}
+}
+
+/// <summary>
 /// Consumes connection closed messages from NATS JetStream
 /// </summary>
 public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, IConnectionService connectionService)

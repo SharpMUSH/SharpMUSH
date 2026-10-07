@@ -12,22 +12,90 @@ using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.RenderingWorker.Services;
 
-public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
+public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, ConnectionPictures? connectionPictures)
+	: IMarkupOutputRenderer
 {
 	/// <summary>Connection type value used by the WebSocket gateway when registering connections.</summary>
 	public const string WebSocketConnectionType = "websocket";
 
+	/// <summary>
+	/// How long a render waits for a picture it does not hold yet before sending the text art in its place.
+	/// The connection's later output waits behind it, so this is short; the picture is drawn next time.
+	/// </summary>
+	public static readonly TimeSpan PictureWait = TimeSpan.FromMilliseconds(1500);
+
+	/// <summary>A renderer that draws no pictures: each is its text art.</summary>
+	public MarkupOutputRenderer() : this(null, null)
+	{
+	}
+
 	public ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection,
-		bool prompt = false, CancellationToken ct = default)
+		bool prompt = false, CancellationToken ct = default) =>
+		RenderAsync(markup, ContextOf(connection), prompt, ct);
+
+	/// <summary>
+	/// <paramref name="markup"/> for <paramref name="connection"/>, waiting up to <see cref="PictureWait"/> for
+	/// any picture it would draw that is still being fetched.
+	/// </summary>
+	public async ValueTask<RenderedOutput> RenderAsync(string markup, RenderContext connection, bool prompt = false,
+		CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
-		return ValueTask.FromResult(Render(markup, connection, prompt));
+		var pictures = PicturesFor(connection);
+		var rendered = Render(markup, connection, prompt, pictures);
+
+		if (pictures is { Pending.Count: > 0 })
+		{
+			try
+			{
+				await Task.WhenAll(pictures.Pending).WaitAsync(PictureWait, ct);
+			}
+			catch (TimeoutException)
+			{
+				// Sent as it is; the picture is drawn the next time it is shown.
+			}
+
+			if (pictures.Pending.Any(fetch => fetch.IsCompleted))
+			{
+				pictures = PicturesFor(connection)!;
+				rendered = Render(markup, connection, prompt, pictures);
+			}
+		}
+
+		pictures?.Commit();
+		return rendered;
 	}
 
 	public RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection, bool prompt = false) =>
-		Render(markup, new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences), prompt);
+		Render(markup, ContextOf(connection), prompt);
 
+	/// <summary><paramref name="markup"/> for <paramref name="connection"/>, with only the pictures already held.</summary>
 	public RenderedOutput Render(string markup, RenderContext connection, bool prompt = false)
+	{
+		var pictures = PicturesFor(connection);
+		var rendered = Render(markup, connection, prompt, pictures);
+		pictures?.Commit();
+		return rendered;
+	}
+
+	private static RenderContext ContextOf(ConnectionServerService.ConnectionData connection) =>
+		new(connection.ConnectionType, connection.Capabilities, connection.Preferences, connection.Handle, connection.SessionId);
+
+	/// <summary>
+	/// Where this render finds pictures: for a terminal that draws them, the shared store and what this
+	/// connection's terminal already holds; otherwise none, and every picture is its text art.
+	/// </summary>
+	private RenderPictureSource? PicturesFor(RenderContext connection)
+	{
+		if (pictureStore is null || connectionPictures is null || connection.Capabilities.Format != OutputFormat.Ansi
+			|| (connection.Capabilities.Features & TerminalOutputFeatures.Pictures) == 0)
+			return null;
+
+		return new RenderPictureSource(pictureStore,
+			connectionPictures.For($"{connection.Handle}:{connection.SessionId}"));
+	}
+
+	private static RenderedOutput Render(string markup, RenderContext connection, bool prompt, RenderPictureSource? pictures)
 	{
 		if (connection.ConnectionType == WebSocketConnectionType)
 		{
@@ -36,8 +104,10 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 			return new RenderedOutput(Encoding.UTF8.GetBytes(envelope), ApplyOutputTransform: false);
 		}
 
-		var ms = Relayout(MarkupTextSerializer.Deserialize(markup), connection.Capabilities, connection.Preferences?.Theme);
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);
+		var ansi = AnsiOptionsFor(connection.Capabilities, depth, pictures);
+		var ms = Relayout(MarkupTextSerializer.Deserialize(markup), connection.Capabilities, connection.Preferences?.Theme,
+			ansi.Pictures is null ? null : PictureCellsFor(ansi));
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo, WireFor(depth)),
@@ -45,7 +115,7 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 			// The ANSI render for everything else, which maps a command link or a tagwrap() span to its
 			// ANSI equivalent, or to plain text when it has none. A client that negotiated neither
 			// Pueblo nor MXP must never see a literal tag.
-			_ => ms.Render(MarkupFormat.Ansi, WireFor(depth))
+			_ => ms.Render(MarkupFormat.Ansi, AnsiWireFor(ansi))
 		};
 
 		text = NormalizeLineEnding(text);
@@ -70,16 +140,81 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// player's <c>@theme</c>, which sits over the game's look and under a layout's own theme. The browser
 	/// lays blocks out itself, so this is for every other connection.
 	/// </summary>
-	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, string? theme)
+	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, string? theme,
+		Func<ImageMarkup, int, PictureCells?>? pictures)
 	{
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
 		var look = ReaderTheme(theme);
-		var context = !capabilities.SupportsUtf8 || capabilities.ScreenReader || look is not null
-			? new LayoutContext { AsciiOnly = !capabilities.SupportsUtf8, Linear = capabilities.ScreenReader, Theme = look ?? LayoutTheme.Default }
+		var context = !capabilities.SupportsUtf8 || capabilities.ScreenReader || look is not null || pictures is not null
+			? new LayoutContext
+			{
+				AsciiOnly = !capabilities.SupportsUtf8,
+				Linear = capabilities.ScreenReader,
+				Theme = look ?? LayoutTheme.Default,
+				Pictures = pictures
+			}
 			: LayoutContext.Default;
 		return BlockLayout.Relayout(text, capabilities.Width, context);
 	}
+
+	/// <summary>The most cells a picture is drawn over, each way, however wide the space it is given.</summary>
+	public const int MaxPictureColumns = 60;
+
+	public const int MaxPictureRows = 30;
+
+	/// <summary>
+	/// The cells a figure's picture takes for a client that draws it: none for a picture not held (the
+	/// figure keeps its text art), otherwise as wide as it was asked for, but no wider than the picture is
+	/// at one pixel a pixel or than <see cref="MaxPictureColumns"/>, and short enough to keep within
+	/// <see cref="MaxPictureRows"/> at its own shape.
+	/// </summary>
+	private static Func<ImageMarkup, int, PictureCells?> PictureCellsFor(AnsiOutputOptions options) => (image, columns) =>
+	{
+		if (columns <= 0 || options.Pictures is not { } source || !source.TryGetPicture(image, out var picture)) return null;
+
+		var natural = Math.Max(1, (picture.Width + options.CellWidth - 1) / options.CellWidth);
+		var cells = PictureCells.Fit(picture.Width, picture.Height, Math.Min(Math.Min(columns, natural), MaxPictureColumns),
+			options.CellWidth, options.CellHeight);
+		if (cells.Rows <= MaxPictureRows) return cells;
+
+		var narrower = Math.Max(1, cells.Columns * MaxPictureRows / cells.Rows);
+		return PictureCells.Fit(picture.Width, picture.Height, narrower, options.CellWidth, options.CellHeight);
+	};
+
+	/// <summary>
+	/// What an ANSI client is sent: colour at <paramref name="depth"/>, the terminal features it has, and the
+	/// pictures <paramref name="pictures"/> holds when it draws them.
+	/// </summary>
+	private static AnsiOutputOptions AnsiOptionsFor(ProtocolCapabilities capabilities, AnsiColorDepth depth,
+		RenderPictureSource? pictures) =>
+		new(depth, FeaturesOf(capabilities.Format == OutputFormat.Ansi ? capabilities.Features : TerminalOutputFeatures.None))
+		{
+			Pictures = pictures,
+			CellWidth = capabilities.CellWidth > 0 ? capabilities.CellWidth : 10,
+			CellHeight = capabilities.CellHeight > 0 ? capabilities.CellHeight : 20
+		};
+
+	/// <summary>The markup package's flags for <paramref name="features"/>, which are the same bits.</summary>
+	private static TerminalFeatures FeaturesOf(TerminalOutputFeatures features) =>
+		(features.HasFlag(TerminalOutputFeatures.Hyperlinks) ? TerminalFeatures.Hyperlinks : 0)
+		| (features.HasFlag(TerminalOutputFeatures.CommandLinks) ? TerminalFeatures.CommandLinks : 0)
+		| (features.HasFlag(TerminalOutputFeatures.KittyGraphics) ? TerminalFeatures.KittyGraphics : 0)
+		| (features.HasFlag(TerminalOutputFeatures.InlineImages) ? TerminalFeatures.InlineImages : 0)
+		| (features.HasFlag(TerminalOutputFeatures.Sixel) ? TerminalFeatures.Sixel : 0)
+		| (features.HasFlag(TerminalOutputFeatures.BlockArt) ? TerminalFeatures.BlockArt : 0);
+
+	/// <summary>
+	/// The registry for an ANSI client: shared across connections sent the same colour and features, and made
+	/// for the one render when it draws pictures, since the picture source belongs to that render.
+	/// </summary>
+	private static MarkupRegistry AnsiWireFor(AnsiOutputOptions options) =>
+		options.Pictures is not null
+			? MarkupRegistry.Default.WithAnsiOutput(options)
+			: AnsiWires.GetOrAdd((options.ColorDepth, options.Features),
+				static key => MarkupRegistry.Default.WithAnsiOutput(new AnsiOutputOptions(key.Depth, key.Features)));
+
+	private static readonly ConcurrentDictionary<(AnsiColorDepth Depth, TerminalFeatures Features), MarkupRegistry> AnsiWires = new();
 
 	/// <summary>Each theme a player has set, as the layout theme it makes, or null for one that no longer reads.</summary>
 	private static readonly ConcurrentDictionary<string, LayoutTheme?> ReaderThemes = new(StringComparer.Ordinal);
@@ -139,8 +274,8 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		};
 
 	/// <summary>
-	/// The registry that renders ANSI and Pueblo at <paramref name="depth"/>. Telnet clients do not read OSC 8,
-	/// so a link is its text. Built on first use because <see cref="MarkupRegistry.Default"/> is installed at
+	/// The registry that renders Pueblo at <paramref name="depth"/>. Pueblo has its own links, so a link's
+	/// colour part is written without OSC 8. Built on first use because <see cref="MarkupRegistry.Default"/> is installed at
 	/// startup, after this type loads, and shared, since a registry is immutable.
 	/// </summary>
 	private static MarkupRegistry WireFor(AnsiColorDepth depth) =>

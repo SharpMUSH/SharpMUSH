@@ -2797,6 +2797,24 @@
   <data name="SocksetColorStyleSetFormat" xml:space="preserve">
     <value>Colorstyle set to '{0}'</value>
   </data>
+  <data name="SocksetHyperlinksSetFormat" xml:space="preserve">
+    <value>Hyperlinks set to '{0}'</value>
+  </data>
+  <data name="SocksetCommandLinksSetFormat" xml:space="preserve">
+    <value>Command links set to '{0}'</value>
+  </data>
+  <data name="SocksetUnknownLinkSetting" xml:space="preserve">
+    <value>Unknown setting. Valid settings: 'on', 'off', 'auto'.</value>
+  </data>
+  <data name="SocksetGraphicsSetFormat" xml:space="preserve">
+    <value>Graphics set to '{0}'</value>
+  </data>
+  <data name="SocksetUnknownGraphics" xml:space="preserve">
+    <value>Unknown graphics setting. Valid settings: 'auto', 'detect', 'kitty', 'iterm2', 'sixel', 'blocks', 'off'.</value>
+  </data>
+  <data name="SocksetGraphicsDetecting" xml:space="preserve">
+    <value>Asking your terminal what it can draw. Its answer arrives with the next line you send.</value>
+  </data>
   <data name="SocksetInvalidOptionFormat" xml:space="preserve">
     <value>@sockset option '{0}' is not a valid option.</value>
   </data>

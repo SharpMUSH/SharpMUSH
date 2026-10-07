@@ -171,6 +171,7 @@ public class Program
 		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
 		builder.Services.AddTelnetServer();
 		builder.Services.AddSingleton<MsspReportHolder>();
+		builder.Services.AddSingleton<TerminalProbes>();
 		builder.Services.AddHostedService<MsspReportRequestService>();
 
 		builder.Services.AddHostedService<SharpMUSH.SocketServer.Services.HealthMonitoringService>();
@@ -198,6 +199,8 @@ public class Program
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, ClearPlayerOutputPreferencesMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateColorStyleMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateThemeMessage>();
+				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateTerminalFeaturesMessage>();
+				x.AddConsumer<ProbeTerminalConsumer, ProbeTerminalMessage>();
 				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
 				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
 				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();

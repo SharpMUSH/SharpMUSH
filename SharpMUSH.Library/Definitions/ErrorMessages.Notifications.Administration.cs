@@ -54,6 +54,17 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetColorStyleSetFormat = "Colorstyle set to '{0}'";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetHyperlinksSetFormat = "Hyperlinks set to '{0}'";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetCommandLinksSetFormat = "Command links set to '{0}'";
+		public const string SocksetUnknownLinkSetting = "Unknown setting. Valid settings: 'on', 'off', 'auto'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetGraphicsSetFormat = "Graphics set to '{0}'";
+		public const string SocksetUnknownGraphics =
+			"Unknown graphics setting. Valid settings: 'auto', 'detect', 'kitty', 'iterm2', 'sixel', 'blocks', 'off'.";
+		public const string SocksetGraphicsDetecting =
+			"Asking your terminal what it can draw. Its answer arrives with the next line you send.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetInvalidOptionFormat = "@sockset option '{0}' is not a valid option.";
 		public const string SocksetInvalidDescriptor = "Invalid descriptor.";
 

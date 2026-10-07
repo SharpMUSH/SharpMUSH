@@ -111,6 +111,35 @@ public class ConnectionTerminfoTests
 	}
 
 	/// <summary>
+	/// Not PennMUSH tokens: what a connection is sent beyond colour, read the way the renderer reads it.
+	/// A kitty terminal is sent hyperlinks and Kitty pictures; a pin turns one off.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsTerminalFeatures()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "KittyTermClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet", terminalType: "XTERM-KITTY", telnetNegotiated: true);
+		connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "XTERM-KITTY");
+		try
+		{
+			var tokens = (await TerminfoAsync(playerRef)).Split(' ');
+			await Assert.That(tokens).Contains("hyperlinks");
+			await Assert.That(tokens).Contains(TerminalGraphics.Kitty);
+
+			connectionService.Update(handle, TerminalFeatureReader.HyperlinksKey, "0");
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).DoesNotContain("hyperlinks");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>
 	/// A colour flag can raise the depth above what the terminal negotiated — that is what setting
 	/// XTERM256 on a character is for — so the reported style has to account for it. Reading the style
 	/// out of terminal metadata alone told a "dumb"-terminal player with XTERM256 that they were on

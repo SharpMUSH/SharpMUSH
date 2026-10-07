@@ -113,6 +113,24 @@
   <data name="SocksetColorStyleSetFormat" xml:space="preserve">
     <value>Style de couleur défini sur « {0} »</value>
   </data>
+  <data name="SocksetHyperlinksSetFormat" xml:space="preserve">
+    <value>Hyperliens définis sur « {0} »</value>
+  </data>
+  <data name="SocksetCommandLinksSetFormat" xml:space="preserve">
+    <value>Liens de commande définis sur « {0} »</value>
+  </data>
+  <data name="SocksetUnknownLinkSetting" xml:space="preserve">
+    <value>Réglage inconnu. Réglages valides : 'on', 'off', 'auto'.</value>
+  </data>
+  <data name="SocksetGraphicsSetFormat" xml:space="preserve">
+    <value>Graphismes définis sur « {0} »</value>
+  </data>
+  <data name="SocksetUnknownGraphics" xml:space="preserve">
+    <value>Réglage graphique inconnu. Réglages valides : 'auto', 'detect', 'kitty', 'iterm2', 'sixel', 'blocks', 'off'.</value>
+  </data>
+  <data name="SocksetGraphicsDetecting" xml:space="preserve">
+    <value>Votre terminal est interrogé sur ce qu'il sait afficher. Sa réponse arrive avec la prochaine ligne que vous envoyez.</value>
+  </data>
   <data name="SocksetInvalidOptionFormat" xml:space="preserve">
     <value>L'option @sockset « {0} » n'est pas valide.</value>
   </data>

@@ -384,6 +384,7 @@ internal static class EngineRegistration
 				x.AddConsumer<Consumers.PuebloNegotiatedConsumer, PuebloNegotiatedMessage>();
 				x.AddConsumer<Consumers.MxpNegotiatedConsumer, MxpNegotiatedMessage>();
 				x.AddConsumer<Consumers.TerminalTypeNegotiatedConsumer, TerminalTypeNegotiatedMessage>();
+				x.AddConsumer<Consumers.TerminalReportConsumer, TerminalReportMessage>();
 				x.AddConsumer<Consumers.TelnetNegotiatedConsumer, TelnetNegotiatedMessage>();
 				x.AddConsumer<Consumers.MSSPReportRequestConsumer, MSSPReportRequestMessage>();
 			});

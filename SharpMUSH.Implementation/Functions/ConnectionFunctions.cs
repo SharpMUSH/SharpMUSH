@@ -1236,6 +1236,13 @@ public partial class Functions
 			terminfo.Add("stripaccents");
 		}
 
+		// Not PennMUSH tokens: what the connection is sent beyond colour, read the way the renderer reads
+		// it, so softcode can tell whether a link is clickable or a picture is drawn. Nothing when neither.
+		var features = TerminalFeatureReader.For(metadata);
+		if (features.HasFlag(TerminalOutputFeatures.Hyperlinks)) terminfo.Add("hyperlinks");
+		if (features.HasFlag(TerminalOutputFeatures.CommandLinks)) terminfo.Add("commandlinks");
+		if (TerminalFeatureReader.GraphicsName(features) is var graphics && graphics != TerminalGraphics.Off) terminfo.Add(graphics);
+
 		// "One of the color styles shown in [colorstyle] will also be included" — always one, so a
 		// client that pinned nothing still reports what it is being rendered at. An explicit
 		// "SOCKSET colorstyle" wins; otherwise it is read back out of the client's own MTTS claims.
