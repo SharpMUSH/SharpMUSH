@@ -717,6 +717,7 @@ Options (the first argument, which may be empty). The lists are split like the c
 - `"priority":"<list>"` - how important each column is: 1 is the most important. Every column is 1 by default, and among equals the rightmost is left out first.
 - `"min":"<list>"` and `"max":"<list>"` - each column's least and greatest width. A cell wider than its column's greatest width wraps.
 - `"nowrap":"<list>"` - the numbers of the columns that never wrap.
+- `"grow":"<list>"` - each column's share of the width left over once every column fits. A table with a column that grows fills its width; one without is as wide as its cells. No column grows past its greatest width.
 - `"gap":<n>` - spaces between the columns. Two by default.
 - `"sep":"<text>"` - drawn between the columns instead of spaces.
 - `"rule":"<text>"` - the line under the headings. `-` by default; `"rule":""` for none.

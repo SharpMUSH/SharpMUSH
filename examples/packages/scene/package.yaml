@@ -1,6 +1,6 @@
 format: 1.2
 package: scene
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -416,19 +416,20 @@ objects:
       # (FUN`TABLE`OPTS), so a title or persona holding a | stays one cell; no width is given, so each
       # reader gets it at their own and the portal draws a table.
       FUN`CAST`TABLE: |-
-        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3,|12,1|1|2),[ansi(h,Status)]%r[iter(%1,capstr(scenemember(%0,%i0,role)),,%r)],[ansi(h,Name)]%r[iter(%1,u(%!/FUN`CAST`NAME,%0,%i0),,%r)],>[ansi(h,Poses)]%r[iter(%1,words(sceneposes(%0,%i0)),,%r)])]
+        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3,|12,1|1|2,|1),[ansi(h,Status)]%r[iter(%1,capstr(scenemember(%0,%i0,role)),,%r)],[ansi(h,Name)]%r[iter(%1,u(%!/FUN`CAST`NAME,%0,%i0),,%r)],>[ansi(h,Poses)]%r[iter(%1,words(sceneposes(%0,%i0)),,%r)])]
       FUN`CAST`NAME: |-
-        [switch(setr(sa,scenemember(%0,%1,showas)),,[name(%1)],[name(%1)] as %q<sa>)]
+        [switch(setr(sa,scenemember(%0,%1,showas)),,[name(%1)],[name(%1)] as [edit(%q<sa>,%r,%b)])]
       # Every screen is a box() with no sides, corners or tees: a titled line across the top, the
       # dividers and bottom line across the whole width, and nothing beside the text, so a pitch or a
       # pose copied from a terminal carries no |. The portal draws its usual card.
       FUN`FRAME: |-
         json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
       # The options every table here shares: %0 the nowrap columns, %1 the least widths, %2 the priorities,
-      # each written split by |. The delimiter is a newline, and these lists split on it like the cells do.
+      # %3 the shares of spare width (the column that takes it, so the table spans the screen), each
+      # written split by |. The delimiter is a newline, and these lists split on it like the cells do.
       # No heading rule: it would span only the table, not the screen, so headings are bold instead.
       FUN`TABLE`OPTS: |-
-        json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,edit(%0,|,%r)),min,json(string,edit(%1,|,%r)),priority,json(string,edit(%2,|,%r)))
+        json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,edit(%0,|,%r)),min,json(string,edit(%1,|,%r)),priority,json(string,edit(%2,|,%r)),grow,json(string,edit(%3,|,%r)))
 
 
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default
@@ -493,7 +494,7 @@ objects:
         [rjust(u(%!/FUN`POT_MS,%0,%1),15,0)]~%1
       # %0 the scene, %1 its members oldest pose first.
       FUN`POT_TABLE: |-
-        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4,|12,1|1|2|1),>[ansi(h,#)]%r[iter(%1,inum(0),,%r)],[ansi(h,Name)]%r[iter(%1,[name(%i0)][switch(scenemember(%0,%i0,showas),,,%b%([scenemember(%0,%i0,showas)]%))],,%r)],>[ansi(h,Last pose)]%r[iter(%1,trim(u(%!/FUN`POT_IDLE,%0,%i0)),,%r)],[ansi(h,Turn)]%r[iter(%1,switch(inum(0),1,<- up,),,%r)])]
+        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4,|12,1|1|2|1,|1),>[ansi(h,#)]%r[iter(%1,inum(0),,%r)],[ansi(h,Name)]%r[iter(%1,[name(%i0)][switch(scenemember(%0,%i0,showas),,,%b%([edit(scenemember(%0,%i0,showas),%r,%b)]%))],,%r)],>[ansi(h,Last pose)]%r[iter(%1,trim(u(%!/FUN`POT_IDLE,%0,%i0)),,%r)],[ansi(h,Turn)]%r[iter(%1,switch(inum(0),1,<- up,),,%r)])]
       # Control flow is guard-then-display: the @assert early-exits (no switch() for output) and leaves
       # %q<SceneID> set for the shared display tail, which is @included with that id. The guard is inline
       # for the same reason the approval guard is — an @assert behind an @include does not stop the caller,
@@ -517,7 +518,7 @@ objects:
       FUN`LIST_LINK: |-
         [cmdlink(edit(u(%!/FUN`LIST_TITLE,%0),%r,%b),+scene %0,+scene %0)]
       FUN`LIST_TABLE: |-
-        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2),>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Where)]%r[iter(%0,u(%!/FUN`SCENE_FIELD,%i0,roomname,-),,%r)],>[ansi(h,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],[ansi(h,Status)]%r[iter(%0,scene(%i0,status),,%r)])]
+        [datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Where)]%r[iter(%0,u(%!/FUN`SCENE_FIELD,%i0,roomname,-),,%r)],>[ansi(h,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],[ansi(h,Status)]%r[iter(%0,scene(%i0,status),,%r)])]
       FUN`LIST_RENDER: |-
         [setq(lst,scenelist(%0))][box([if(words(%q<lst>),u(%!/FUN`LIST_TABLE,%q<lst>),No scenes.)],Scenes: %0,,u(%!/FUN`FRAME))]%r[words(%q<lst>)] [if(eq(words(%q<lst>),1),scene,scenes)]
       # +scene and +scene/list.
@@ -550,7 +551,7 @@ objects:
       # The schedule reads like a calendar: scenes in time order, the day named on the first scene of
       # each day, the scenes with no time last. One table, so the columns line up from day to day.
       FUN`SCHED_TABLE: |-
-        [setq(pday,)][datacolumns(u(%!/FUN`TABLE`OPTS,1|2|3|5|6,|||12,1|1|1|1|2|2),[ansi(h,Day)]%r[iter(%0,if(strmatch(setr(day,u(%!/FUN`SCHED_DAY,%i0)),%q<pday>),,[setq(pday,%q<day>)]%q<day>),,%r)],[ansi(h,Time)]%r[iter(%0,switch(setr(sw,scene(%i0,scheduledfor)),,-,timefmt($H:$M,div(%q<sw>,1000))),,%r)],>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Status)]%r[iter(%0,u(%!/FUN`SCHED_STATUS,%i0),,%r)],>[ansi(h,RSVP)]%r[iter(%0,words(scenemembers(%i0)),,%r)])]
+        [setq(pday,)][datacolumns(u(%!/FUN`TABLE`OPTS,1|2|3|5|6,|||12,1|1|1|1|2|2,|||1),[ansi(h,Day)]%r[iter(%0,if(strmatch(setr(day,u(%!/FUN`SCHED_DAY,%i0)),%q<pday>),,[setq(pday,%q<day>)]%q<day>),,%r)],[ansi(h,Time)]%r[iter(%0,switch(setr(sw,scene(%i0,scheduledfor)),,-,timefmt($H:$M,div(%q<sw>,1000))),,%r)],>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Status)]%r[iter(%0,u(%!/FUN`SCHED_STATUS,%i0),,%r)],>[ansi(h,RSVP)]%r[iter(%0,words(scenemembers(%i0)),,%r)])]
       # A scheduled scene whose time has passed without it starting reads "late", as on the portal.
       FUN`SCHED_STATUS: |-
         [setq(sf,scene(%0,scheduledfor))][if(cand(strmatch(setr(st,scene(%0,status)),scheduled),strlen(%q<sf>),lt(%q<sf>,mul(secs(),1000))),late,%q<st>)]

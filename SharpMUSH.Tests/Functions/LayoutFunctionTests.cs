@@ -327,6 +327,19 @@ public class LayoutFunctionTests
 		await Assert.That(text).Contains(cell);
 	}
 
+	/// <summary>
+	/// A column that grows takes the width left over, so the table spans its width; without one the
+	/// table is as wide as its cells.
+	/// </summary>
+	[Test]
+	[Arguments("datatable({{\"width\":30,\"grow\":\"|1\"}},A|B,1|2)", 30)]
+	[Arguments("datatable({{\"width\":30}},A|B,1|2)", 4)]
+	public async Task AGrowingColumnFillsTheTable(string code, int width)
+	{
+		var lines = (await Eval(code)).ToPlainText().Split('\n');
+		await Assert.That(lines.Max(line => line.TrimEnd().Length)).IsEqualTo(width);
+	}
+
 	[Test]
 	[Arguments("box(x,,20,{{\"colour\":\"red\"}})", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("box(x,,20,border:double)", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
@@ -368,6 +381,7 @@ public class LayoutFunctionTests
 	[Arguments("gradient(x,r|g,{{\"gradient\":\"b\"}})", "#-1 UNKNOWN LAYOUT OPTION GRADIENT")]
 	[Arguments("gauge(1,2,,{{\"gradient\":\"r\",\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("datacolumns({{\"nowrap\":\"3\"}},A|1,B|2)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("datatable({{\"grow\":\"101\"}},A|B,1|2)", ErrorMessages.Returns.ArgRange)]
 	public async Task ABadArgumentIsRefused(string code, string error)
 		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(error);
 }
