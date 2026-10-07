@@ -4,7 +4,7 @@
 
 Give an experienced MUSH administrator enough current, repository-owned evidence to rehearse a PennMUSH import, operate and recover a SharpMUSH deployment, and understand the service boundaries without relying on marketing claims or an external diagram service.
 
-The work spans two repositories. `SharpMUSH` owns facts coupled to the runtime, deployment files, and tests. `SharpMUSH.Guide` publishes administrator-facing copies alongside its generated command, function, and configuration reference. The Guide sync imports these selected source documents from SharpMUSH so operational truth is edited once rather than drifting between repositories. Publishing material on `sharpmush.com` remains a separate site concern; the Guide copies must nevertheless stand alone and be suitable as that site's source material.
+The work spans the three documentation surfaces according to their existing responsibilities. `SharpMUSH` owns facts coupled to the runtime, deployment files, and tests. `SharpMUSH.Docs` owns the adopter-facing presentation published at `sharpmush.com`. `SharpMUSH.Guide` remains the generated command, function, configuration, and softcode reference; this slice changes it only if a reference link is genuinely needed.
 
 ## Scope
 
@@ -15,7 +15,7 @@ This slice delivers:
 - a first-party architecture diagram stored as text in the repository;
 - links to existing portal screenshots only where they represent the shipped interface;
 - automated documentation checks for internal links and framework-version claims;
-- a guarded SharpMUSH.Guide sync for the three maintained administrator documents.
+- native Starlight pages, navigation, screenshots, and build verification in SharpMUSH.Docs.
 
 It does not:
 
@@ -97,11 +97,13 @@ Arrows name protocols or data ownership. The prose states the failure boundary f
 
 Existing screenshots under `docs/design/d1/boards/` may be linked from the operator or architecture documents only when the corresponding UI is shipped and the caption identifies the represented route. Design-only or stale boards remain design references and are not presented as current product proof.
 
-### SharpMUSH.Guide publication
+### SharpMUSH.Docs publication
 
-`SharpMUSH.Guide` receives the three documents under `Guides/` through its scheduled synchronization workflow. The workflow sparse-checks out the exact SharpMUSH source paths, stages them separately from generated help entries, and fails before changing the Guide when any expected source is absent. The Guide README identifies which folders are generated and where corrections belong.
+`SharpMUSH.Docs` receives native MDX pages under `src/content/docs/guides/` for migration and operations, plus an expanded `technical/architecture.mdx`. These pages use Starlight's `Steps`, `Aside`, `LinkCard`, and image support to present the same contracts in an adopter-facing form. They link to exact SharpMUSH repository sections for commands and low-level recovery detail rather than copying long command blocks that would drift.
 
-The sync preserves hand-written Guide material and never treats the administrator documents as command/function help entries. Its local fixture test proves that an absent source refuses the update and that a successful update copies all three files without removing unrelated guides.
+The site navigation adds **Migrate from PennMUSH** and **Operate SharpMUSH** directly after **Run with Docker**. Get Started, the home-page PennMUSH card, Compatibility, Comparison, Web Portal, and Docker pages link into those decision paths. The development and plugin pages derive their visible SDK requirement from the repository's current `global.json` value in prose maintained for the same release; this slice updates the present stale .NET 10 claims to .NET 11 and adds a build-time test that rejects regressions in maintained pages.
+
+Screenshots live in `src/assets/guide/` with task-specific names and alt text. Only shipped screens are used. The portal guide receives annotated or tightly cropped views of first-run setup, configuration, packages, and import when those current states can be captured or verified; unavailable privileged states use no mock image. The architecture page embeds a first-party diagram stored with the site and retains Mermaid source in SharpMUSH.
 
 ## Verification
 
@@ -118,7 +120,7 @@ Add focused tests that:
 
 Tests assert durable contractual concepts, not exact paragraphs or formatting. Existing documentation tests and `dotnet format whitespace` remain green.
 
-`SharpMUSH.Guide` also tests the repository-to-repository copy using local fixtures; its tests require no network access and do not mutate generated command, function, or configuration output.
+`SharpMUSH.Docs` adds an offline content-contract script that checks the new routes, navigation entries, current SDK claims, task-specific image alt text, and internal links before `astro build`. The normal production build remains the final proof that MDX and Starlight components compile. SharpMUSH.Guide's generated-reference sync remains unchanged.
 
 ## Writing rules
 
@@ -137,5 +139,6 @@ Tests assert durable contractual concepts, not exact paragraphs or formatting. E
 3. Add the operator handbook until its contract passes.
 4. Add the architecture reference and diagram until its contract passes.
 5. Repair stale `.NET 10` guidance covered by the version test.
-6. Extend and test SharpMUSH.Guide's guarded sync for these documents.
-7. Run focused documentation tests, formatting verification, both repositories' local workflow tests, and link validation.
+6. Add the SharpMUSH.Docs migration and operator pages, navigation, cross-links, current SDK requirements, and verified screenshots.
+7. Replace the external-only architecture page with the first-party architecture reference.
+8. Run focused SharpMUSH tests, formatting verification, SharpMUSH.Docs content contracts and production build, and link validation.

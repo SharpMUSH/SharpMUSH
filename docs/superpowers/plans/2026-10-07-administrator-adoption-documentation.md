@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Publish tested migration, operations, and deployment-architecture guidance from SharpMUSH into SharpMUSH.Guide without duplicating an editable source of truth.
+**Goal:** Give a prospective MUSH administrator a tested migration, operations, and architecture path on sharpmush.com, backed by exact runtime guidance in SharpMUSH.
 
-**Architecture:** SharpMUSH owns the three repository-coupled Markdown sources and C# contract tests. SharpMUSH.Guide's existing guarded sync copies those selected documents into `Guides/` independently of the generated help-reference pipeline, with an offline shell fixture proving preservation and failure behavior.
+**Architecture:** SharpMUSH owns repository-coupled migration facts, deployment commands, Mermaid source, and TUnit contracts. SharpMUSH.Docs owns the concise Starlight presentation at sharpmush.com, including navigation, cross-links, current SDK claims, and verified screenshots. SharpMUSH.Guide remains the generated softcode reference and is unchanged.
 
-**Tech Stack:** Markdown, Mermaid, TUnit/.NET 11, Bash, GitHub Actions
+**Tech Stack:** Markdown, MDX, Mermaid, Astro 5, Starlight, Node.js, TUnit/.NET 11
 
 **Spec:** `docs/superpowers/specs/2026-10-07-administrator-adoption-documentation-design.md`
 
@@ -17,40 +17,40 @@
 - PennMUSH flatfile plus optional `mush.cnf` is the only supported direct import source.
 - State explicitly that RhostMUSH and TinyMUX have no direct supported importer.
 - Operational commands must already exist and name their assumed directory or Compose file.
-- SharpMUSH is the editable source of truth; SharpMUSH.Guide receives generated copies.
-- Use concise present-tense prose with no historical or changelog narration.
+- SharpMUSH.Docs summaries link to SharpMUSH for low-level procedure instead of copying long command blocks.
+- Use only screenshots verified against shipped routes; never present a design board as live proof.
 
 ## Review Focus
 
-- A missing upstream administrator guide must fail the Guide sync before any published guide changes.
-- An unrelated hand-written Guide file must survive every sync.
-- Relative links must resolve both in SharpMUSH and after publication under SharpMUSH.Guide's `Guides/` directory.
-- A reader must not confuse a world copy, an off-host Restic snapshot, NATS state, or plugin files.
-- Migration rollback must preserve the source PennMUSH world and identify SharpMUSH's `.previous` world separately.
+- Migration rollback preserves the original PennMUSH world and distinguishes it from SharpMUSH's `.previous` world.
+- Readers can distinguish LMDB world copies, Restic snapshots, NATS state, wiki assets, and plugin files.
+- Every new sharpmush.com route is present in navigation and linked from the relevant existing journey page.
+- Maintained install/plugin pages cannot silently return to a stale SDK major version.
+- Every internal site link and image reference resolves during the offline content check and production build.
 
 ---
 
-### Task 1: Documentation contracts in SharpMUSH
+### Task 1: SharpMUSH documentation contracts
 
 **Files:**
 - Create: `SharpMUSH.Tests/Documentation/AdministratorGuideTests.cs`
 - Modify: `SharpMUSH.Tests/SharpMUSH.Tests.csproj`
 
 **Interfaces:**
-- Consumes: repository root derived from `AppContext.BaseDirectory`
-- Produces: contract tests for the three source documents and maintained version claims
+- Consumes: Markdown copied into the test output as `Documentation/Repository/...`
+- Produces: durable content and relative-link contracts for repository-owned operational truth
 
-- [ ] **Step 1: Add the new Markdown files to the test output**
+- [ ] **Step 1: Link the maintained documents into test output**
 
-Add linked content entries for `docs/guides/pennmush-migration.md`, `docs/guides/operator-handbook.md`, `docs/design/deployment-architecture.md`, `docs/guides/writing-a-plugin.md`, `deploy/README.md`, and `deploy/connection-updates.md` under `Documentation/Repository/` in `SharpMUSH.Tests.csproj`.
+Add `Content` items for the two new guides, the architecture source, `docs/guides/writing-a-plugin.md`, `deploy/README.md`, and `deploy/connection-updates.md`.
 
-- [ ] **Step 2: Write failing contract tests**
+- [ ] **Step 2: Write failing tests**
 
-Create `AdministratorGuideTests.cs` with one test per document. Use a small `Read(string relative)` helper over copied test content. Assert concepts independently, for example:
+Create tests that require:
 
 ```csharp
 [Test]
-public async Task MigrationGuideDefinesTheSupportedAndUnsupportedSources()
+public async Task MigrationGuideNamesSupportedAndUnsupportedSources()
 {
 	var text = Read("docs/guides/pennmush-migration.md");
 	await Assert.That(text).Contains("PennMUSH flatfile");
@@ -61,26 +61,22 @@ public async Task MigrationGuideDefinesTheSupportedAndUnsupportedSources()
 }
 ```
 
-Additional tests require `one-way`, `rehearsal`, `validation`, `cutover`, `rollback`, and every acceptance domain from the spec; require the operator topics and the backup/state distinctions; require every architecture component; reject `.NET 10` only in the maintained guide set; and resolve every relative Markdown link in the three new files. Ignore fragment-only, `http:`, `https:`, and `mailto:` destinations. Strip anchors and URL-decode paths before checking them.
+Separate tests require one-way import, rehearsal, validation, cutover, rollback, every migration acceptance domain, every operator topic, state/backup distinctions, and every architecture component. A shared Markdown-link test ignores fragment-only and absolute URLs, strips anchors, URL-decodes paths, and fails when a relative repository target is absent. Restrict the stale-version assertion to maintained adoption/plugin documents, not historical specs or benchmark records.
 
-- [ ] **Step 3: Run the test and verify RED**
+- [ ] **Step 3: Verify RED**
 
-Run:
+Run `dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/AdministratorGuideTests/*"`.
 
-```bash
-dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/AdministratorGuideTests/*"
-```
+Expected: FAIL because the new files do not exist.
 
-Expected: FAIL because the three source documents do not exist.
-
-- [ ] **Step 4: Commit the failing contract**
+- [ ] **Step 4: Commit the contract**
 
 ```bash
 git add SharpMUSH.Tests/Documentation/AdministratorGuideTests.cs SharpMUSH.Tests/SharpMUSH.Tests.csproj
-git commit -m "test: define administrator guide contracts"
+git commit -m "test: define administrator documentation contracts"
 ```
 
-### Task 2: PennMUSH migration runbook
+### Task 2: Repository PennMUSH migration runbook
 
 **Files:**
 - Create: `docs/guides/pennmush-migration.md`
@@ -89,37 +85,35 @@ git commit -m "test: define administrator guide contracts"
 - Reference: `SharpMUSH.Client/Pages/Setup.razor`
 
 **Interfaces:**
-- Consumes: current portal import flow, Lightning staging/promotion behavior, parity evidence
-- Produces: repository source published as `SharpMUSH.Guide/Guides/PennMUSH Migration.md`
+- Consumes: actual portal import order, Lightning staging/promotion, storage preflight, parity evidence
+- Produces: technical source linked by the public migration page
 
-- [ ] **Step 1: Write the support boundary and preparation sections**
+- [ ] **Step 1: Write eligibility and preparation**
 
-State the supported source shape, unsupported direct sources, one-way boundary, source preservation, inventory, source dump/config capture, external-integration inventory, capacity preflight, and disposable target requirement.
+Cover the supported PennMUSH flatfile plus optional `mush.cnf`, unsupported direct RhostMUSH/TinyMUX imports, one-way boundary, immutable source backup, inventory, external integrations, capacity, and disposable rehearsal target.
 
-- [ ] **Step 2: Write rehearsal and import steps**
+- [ ] **Step 2: Write rehearsal and diagnostics**
 
-Document `/setup` ordering and the later admin import route, `mush.cnf` before database import, handler/package choices, staged-world promotion, diagnostics, and the rule that rehearsal never becomes authoritative by accident.
+Document setup/import ordering, configuration before database import, handler/package choices, staged promotion, diagnostics, and the rule that a rehearsal never becomes authoritative implicitly.
 
-- [ ] **Step 3: Write the acceptance matrix**
+- [ ] **Step 3: Write the validation matrix**
 
-Use a checklist/table covering identities/passwords, objects/dbrefs, attributes/locks, flags/powers, channels, mail, configuration, handlers, packages, representative softcode, telnet/WebSocket login, portal login, and external integrations. Link developer parity evidence without making it an operator prerequisite.
+Cover identities/passwords, object counts/dbrefs, attributes/locks, flags/powers, channels, mail, configuration, handlers, packages, representative softcode, telnet/WebSocket login, portal login, and external integrations.
 
 - [ ] **Step 4: Write cutover and rollback**
 
-Define go/no-go evidence, final source freeze, final import, DNS/client endpoint change, observation window, source-world retention, `.previous` semantics, rollback triggers, and the difference between switching back to PennMUSH and restoring a SharpMUSH world copy.
+Define final source freeze, go/no-go evidence, endpoint change, observation window, `.previous`, rollback triggers, returning to PennMUSH, and restoring a SharpMUSH world copy.
 
-- [ ] **Step 5: Run the migration contracts**
+- [ ] **Step 5: Run focused tests and commit**
 
-Run the focused filter from Task 1. Expected: migration tests PASS; operator and architecture tests still FAIL.
-
-- [ ] **Step 6: Commit**
+Expected: migration contracts PASS while later contracts remain red.
 
 ```bash
 git add docs/guides/pennmush-migration.md
 git commit -m "docs: add safe PennMUSH migration runbook"
 ```
 
-### Task 3: Operator handbook
+### Task 3: Repository operator handbook
 
 **Files:**
 - Create: `docs/guides/operator-handbook.md`
@@ -127,182 +121,209 @@ git commit -m "docs: add safe PennMUSH migration runbook"
 - Reference: `deploy/connection-updates.md`
 
 **Interfaces:**
-- Consumes: supported Compose paths and existing detailed deployment procedures
-- Produces: operational sequence published as `SharpMUSH.Guide/Guides/Operator Handbook.md`
+- Consumes: exact maintained Compose and recovery procedures
+- Produces: task map linked by the public operator page
 
-- [ ] **Step 1: Write deployment selection and secure first claim**
+- [ ] **Step 1: Write deployment and first-claim operations**
 
-Link the direct-Caddy and Cloudflare choices, enumerate public/private ports, require controlled access to `/setup`, identify secrets, and give post-claim checks.
+Cover Caddy versus Cloudflare, public/private ports, protected `/setup`, secrets, post-claim checks, readiness, health, logs, metrics, `@storage`, and connection survival boundaries.
 
-- [ ] **Step 2: Write observation and routine-operation sections**
+- [ ] **Step 2: Write backup and restore rehearsal**
 
-Cover `/ready`, `/api/health`, logs by service, Prometheus ports, `@storage`, `@backup/list`, process ownership, and connection survival boundaries. Use exact commands already present in `deploy/README.md` or link to that section rather than inventing variants.
+Distinguish LMDB copies, wiki assets, Restic, NATS JetStream, and plugins. Require an isolated restore, non-public boot, world/wiki validation, and a dated result record.
 
-- [ ] **Step 3: Write backup and restore rehearsal**
+- [ ] **Step 3: Write upgrades, rollback, and incidents**
 
-Distinguish LMDB point-in-time copies, wiki assets, Restic snapshots, NATS JetStream state, and plugin files. Require a scheduled rehearsal that restores into an isolated volume, boots it without public ingress, validates world and wiki data, and records date/result/operator.
+Leave image policy unchanged. Cover preflight, backup, storage headroom, controlled recreation, verification, deployment rollback versus data restore, storage/NATS/renderer/socket/authentication/security incidents, and secret-safe diagnostics.
 
-- [ ] **Step 4: Write upgrades, rollback, and incidents**
+- [ ] **Step 4: Run focused tests and commit**
 
-Preserve current image policy. Add preflight, backup, storage headroom, controlled pull/recreate, readiness/functional checks, deployment rollback versus data restore, and incident trees for storage pressure, NATS failure, renderer failure, socket-server replacement, failed authentication, and suspected compromise. Diagnostic collection must redact `.env`, tokens, cookies, passwords, and world data.
-
-- [ ] **Step 5: Run focused contracts**
-
-Expected: migration and operator tests PASS; architecture tests still FAIL.
-
-- [ ] **Step 6: Commit**
+Expected: migration and operator contracts PASS.
 
 ```bash
 git add docs/guides/operator-handbook.md
 git commit -m "docs: add SharpMUSH operator handbook"
 ```
 
-### Task 4: First-party deployment architecture
+### Task 4: Repository-owned deployment architecture
 
 **Files:**
 - Create: `docs/design/deployment-architecture.md`
-- Reference: `docs/design/d1/boards/29-config-section-saved.png`
 - Reference: `deploy/connection-updates.md`
 
 **Interfaces:**
-- Consumes: deployed service topology and shipped configuration UI proof
-- Produces: Mermaid source published as `SharpMUSH.Guide/Guides/Deployment Architecture.md`
+- Consumes: current Compose topology
+- Produces: first-party Mermaid source and failure-boundary reference
 
-- [ ] **Step 1: Add the Mermaid topology**
+- [ ] **Step 1: Add the diagram**
 
-Show browser REST/SignalR/WebSocket, MU* telnet, ingress choice, `SharpMUSH.Server`, `SharpMUSH.SocketServer`, `SharpMUSH.RenderingWorker`, NATS, Lightning/LMDB, wiki assets, point-in-time copies, read-only Restic access, off-host storage, readiness, and Prometheus. Label protocols and ownership on edges.
+Show browser REST/SignalR/WebSocket, MU* telnet, Caddy/Cloudflare ingress, `SharpMUSH.Server`, `SharpMUSH.SocketServer`, `SharpMUSH.RenderingWorker`, NATS, Lightning/LMDB, wiki assets, point-in-time copies, read-only Restic access, off-host storage, readiness, and Prometheus. Label protocols and ownership.
 
 - [ ] **Step 2: Explain failure and persistence boundaries**
 
-Give one concise subsection per service: owned state, restart effect, health signal, and what a backup does or does not include. Link `deploy/connection-updates.md` for socket continuity.
+For each service, state owned state, restart effect, health signal, and backup coverage. Link connection-survival detail.
 
-- [ ] **Step 3: Add one accurate portal visual**
-
-Embed `docs/design/d1/boards/29-config-section-saved.png` only after checking it against the shipped route. Caption it as `/admin/config` and state that it illustrates the saved configuration state rather than the whole admin surface. If it is stale, omit it and record why in the commit message instead of presenting a mockup as proof.
-
-- [ ] **Step 4: Run focused contracts and link checks**
+- [ ] **Step 3: Run focused tests and commit**
 
 Expected: all `AdministratorGuideTests` PASS.
-
-- [ ] **Step 5: Commit**
 
 ```bash
 git add docs/design/deployment-architecture.md
 git commit -m "docs: add first-party deployment architecture"
 ```
 
-### Task 5: Guarded administrator-guide sync in SharpMUSH.Guide
+### Task 5: SharpMUSH.Docs content contracts
 
 **Files:**
-- Create: `/home/grave/RiderProjects/SharpMUSH.Guide/.github/scripts/update_administrator_guides.sh`
-- Create: `/home/grave/RiderProjects/SharpMUSH.Guide/.github/scripts/test_administrator_guides.sh`
-- Modify: `/home/grave/RiderProjects/SharpMUSH.Guide/.github/workflows/sync-documentation.yml`
-- Modify: `/home/grave/RiderProjects/SharpMUSH.Guide/README.md`
-- Generated: `/home/grave/RiderProjects/SharpMUSH.Guide/Guides/PennMUSH Migration.md`
-- Generated: `/home/grave/RiderProjects/SharpMUSH.Guide/Guides/Operator Handbook.md`
-- Generated: `/home/grave/RiderProjects/SharpMUSH.Guide/Guides/Deployment Architecture.md`
+- Create: `SharpMUSH.Docs/scripts/check-content.js`
+- Create: `SharpMUSH.Docs/scripts/check-content.test.js`
+- Modify: `SharpMUSH.Docs/package.json`
 
 **Interfaces:**
-- Consumes: SharpMUSH checkout containing the three exact source paths
-- Produces: stable Guide filenames and a non-destructive guarded sync
+- Consumes: site pages, `astro.config.mjs`, and asset references
+- Produces: `npm run check-content`, invoked before production build
 
-- [ ] **Step 1: Write the failing offline shell test**
+- [ ] **Step 1: Write failing Node tests**
 
-Build a temporary fake SharpMUSH tree and fake Guide output. Assert that:
+Use `node:test` with a temporary content tree. Test missing navigation routes, missing internal links, missing image assets, generic repeated alt text, `.NET 10` in maintained install/plugin pages, and a valid fixture. Name the production change each test catches.
 
-```bash
-update_administrator_guides.sh "$source" "$target"
-test -f "$target/PennMUSH Migration.md"
-test -f "$target/Operator Handbook.md"
-test -f "$target/Deployment Architecture.md"
-test -f "$target/Code Style.md"
-```
+- [ ] **Step 2: Verify RED**
 
-Then remove one source, require a nonzero exit, and compare checksums to prove the target was unchanged.
+Run `node --test scripts/check-content.test.js`.
 
-- [ ] **Step 2: Run the shell test and verify RED**
+Expected: FAIL because `check-content.js` does not exist.
 
-Run `.github/scripts/test_administrator_guides.sh` from SharpMUSH.Guide. Expected: FAIL because the updater does not exist.
+- [ ] **Step 3: Implement the checker**
 
-- [ ] **Step 3: Implement the atomic copy script**
+Export pure helpers plus a CLI. Resolve `/route` links against `src/content/docs/<route>.mdx`, relative images against the page path, and the new navigation slugs from `astro.config.mjs`. Check only maintained guide/reference/technical pages for stale SDK prose. Ignore absolute URLs and fragments.
 
-The script takes `<sharpmush-root> <guide-directory>`, validates all three sources before mutation, copies them through a temporary directory, then installs the three stable filenames. It touches no other file in `Guides/`.
+- [ ] **Step 4: Wire scripts and verify GREEN**
 
-- [ ] **Step 4: Run the shell test and verify GREEN**
+Add `"test": "node --test scripts/*.test.js"`, `"check-content": "node scripts/check-content.js"`, and run `check-content` before `astro build` without duplicating the existing conversion step.
 
-Run `.github/scripts/test_administrator_guides.sh`. Expected: PASS with no network.
-
-- [ ] **Step 5: Extend the scheduled workflow**
-
-Expand sparse checkout to include `docs/guides/pennmush-migration.md`, `docs/guides/operator-handbook.md`, and `docs/design/deployment-architecture.md`. Call the updater after help processing and include the administrator-guide result in the workflow summary. Preserve the main-branch push guard.
-
-- [ ] **Step 6: Update repository guidance and generate the current copies**
-
-Explain in `README.md` that command/function/configuration pages and the three administrator guides are generated from SharpMUSH, while other `Guides/` files remain hand-written here. Run the updater against the current SharpMUSH worktree.
-
-- [ ] **Step 7: Run all Guide tests**
-
-Run:
+- [ ] **Step 5: Commit**
 
 ```bash
-.github/scripts/test_administrator_guides.sh
-.github/scripts/test_workflow.sh
+git add scripts package.json package-lock.json
+git commit -m "test: validate documentation content contracts"
 ```
 
-Expected: PASS; `git diff --check` produces no output.
-
-- [ ] **Step 8: Commit in SharpMUSH.Guide**
-
-```bash
-git add .github README.md Guides
-git commit -m "docs: publish administrator adoption guides"
-```
-
-### Task 6: Cross-repository verification
+### Task 6: Public migration and operator journeys
 
 **Files:**
-- Modify only if verification exposes a defect in files already in scope.
+- Create: `SharpMUSH.Docs/src/content/docs/guides/pennmush-migration.mdx`
+- Create: `SharpMUSH.Docs/src/content/docs/guides/operator-handbook.mdx`
+- Modify: `SharpMUSH.Docs/astro.config.mjs`
+- Modify: `SharpMUSH.Docs/src/content/docs/guides/get-started.mdx`
+- Modify: `SharpMUSH.Docs/src/content/docs/guides/docker-quickstart.mdx`
+- Modify: `SharpMUSH.Docs/src/content/docs/guides/web-portal.mdx`
+- Modify: `SharpMUSH.Docs/src/content/docs/reference/compatibility.mdx`
+- Modify: `SharpMUSH.Docs/src/content/docs/reference/comparison.mdx`
+- Modify: `SharpMUSH.Docs/src/content/docs/index.mdx`
 
 **Interfaces:**
-- Consumes: completed changes in both repositories
-- Produces: evidence that the sources, generated copies, links, format, and tests agree
+- Consumes: the two SharpMUSH technical guides
+- Produces: decision-ready sharpmush.com routes and cross-links
 
-- [ ] **Step 1: Compare published copies byte-for-byte**
+- [ ] **Step 1: Add both pages and navigation**
 
-Use `cmp` for each SharpMUSH source and SharpMUSH.Guide destination. Expected: all return 0.
+Use Starlight `Steps`, `Aside`, and `LinkCard`. Migration presents eligibility, rehearsal, validation, cutover, and rollback with a prominent one-way warning and links to repository detail. Operations presents first claim, daily checks, backup/restore rehearsal, upgrade verification, incident entry points, and links to exact deploy sections.
 
-- [ ] **Step 2: Run SharpMUSH formatting twice**
+- [ ] **Step 2: Repair the adopter journey**
 
-```bash
-dotnet format whitespace --folder SharpMUSH.Tests --exclude "**/bin/**" --exclude "**/obj/**"
-dotnet format whitespace --folder SharpMUSH.Tests --exclude "**/bin/**" --exclude "**/obj/**"
-```
+Add links from Get Started, Docker, Web Portal import routes, Compatibility, Comparison, and the home PennMUSH card. Keep the demo secondary to installation and migration evidence.
 
-Expected: second pass changes nothing.
+- [ ] **Step 3: Run content checks and commit**
 
-- [ ] **Step 3: Run focused and dependent SharpMUSH verification**
+Expected: `npm test` and `npm run check-content` PASS.
 
 ```bash
-dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/AdministratorGuideTests/*"
-dotnet build SharpMUSH.Tests/SharpMUSH.Tests.csproj
+git add astro.config.mjs src/content/docs
+git commit -m "docs: add migration and operator journeys"
 ```
 
-Expected: PASS.
+### Task 7: Current SDK and visual proof
 
-- [ ] **Step 4: Run Guide verification again from a clean fixture**
+**Files:**
+- Modify: `SharpMUSH.Docs/src/content/docs/guides/local-install.mdx`
+- Modify: `SharpMUSH.Docs/src/content/docs/guides/plugins.mdx`
+- Modify: `SharpMUSH.Docs/src/content/docs/guides/web-portal.mdx`
+- Add: verified images under `SharpMUSH.Docs/src/assets/guide/`
+
+**Interfaces:**
+- Consumes: `SharpMUSH/global.json` and verified current portal screens
+- Produces: accurate SDK requirements, descriptive alt text, and product-state evidence
+
+- [ ] **Step 1: Update SDK requirements**
+
+Change the development prerequisite to the SDK version pinned in `global.json`, explain prerelease/roll-forward behavior briefly, change plugin examples from `net10.0` to `net11.0`, and correct the three repeated `Git Clone` alt texts to their actual tasks.
+
+- [ ] **Step 2: Capture or reuse only shipped portal states**
+
+Verify first-run setup, saved configuration, package review, and database import routes. Add only states that can be reached without inventing data or exposing secrets. Use task-specific filenames, captions, and alt text; omit unavailable privileged states.
+
+- [ ] **Step 3: Add images to the portal guide**
+
+Place each image beside the administrator job it proves. Keep prose useful without the image.
+
+- [ ] **Step 4: Run content checks and commit**
 
 ```bash
-.github/scripts/test_administrator_guides.sh
-.github/scripts/test_workflow.sh
+git add src/assets/guide src/content/docs/guides
+git commit -m "docs: update SDK guidance and portal visuals"
 ```
 
-Expected: PASS.
+### Task 8: First-party site architecture
 
-- [ ] **Step 5: Inspect both diffs**
+**Files:**
+- Modify: `SharpMUSH.Docs/src/content/docs/technical/architecture.mdx`
+- Add: `SharpMUSH.Docs/src/assets/guide/deployment-architecture.svg`
 
-Run `git diff --check`, `git status --short`, and `git diff --stat` in both repositories. Confirm no research artifacts, temporary fixture directories, or unrelated user changes are staged.
+**Interfaces:**
+- Consumes: SharpMUSH Mermaid topology and boundary prose
+- Produces: reliable architecture route with no external single point of failure
 
-- [ ] **Step 6: Commit any verification-only repairs separately**
+- [ ] **Step 1: Replace the external-only page**
 
-Use a narrow `fix(docs): ...` commit only when verification required an in-scope correction. Otherwise make no empty commit.
+Embed a first-party rendered diagram and concise service/persistence/failure tables. Link the Mermaid source and detailed connection-update reference in SharpMUSH. DeepWiki may remain supplementary, not the only diagram.
+
+- [ ] **Step 2: Run checks and production build**
+
+Run `npm test`, `npm run check-content`, and `npm run build` with the SharpMUSH submodule at the matching commit. Expected: PASS with no broken MDX imports or routes.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/assets/guide/deployment-architecture.svg src/content/docs/technical/architecture.mdx
+git commit -m "docs: publish first-party deployment architecture"
+```
+
+### Task 9: Cross-repository verification
+
+**Files:**
+- Modify only when verification exposes an in-scope defect.
+
+**Interfaces:**
+- Consumes: completed SharpMUSH and SharpMUSH.Docs changes
+- Produces: passing builds and an evidence-backed handoff
+
+- [ ] **Step 1: Format SharpMUSH twice**
+
+Run `dotnet format whitespace --folder SharpMUSH.Tests --exclude "**/bin/**" --exclude "**/obj/**"` twice. The second pass changes nothing.
+
+- [ ] **Step 2: Run SharpMUSH verification**
+
+Run the focused `AdministratorGuideTests`, then `dotnet build SharpMUSH.Tests/SharpMUSH.Tests.csproj`.
+
+- [ ] **Step 3: Run SharpMUSH.Docs verification**
+
+Run `npm test`, `npm run check-content`, and `npm run build` from a clean dependency install. Confirm all new routes appear in `dist/`.
+
+- [ ] **Step 4: Inspect both diffs**
+
+Run `git diff --check`, `git status --short`, and `git diff --stat` in both repositories. Exclude research reports, temporary clones, build output, and unrelated user work.
+
+- [ ] **Step 5: Commit verification repairs separately**
+
+Use a narrow `fix(docs): ...` commit only if verification finds an in-scope defect. Make no empty commit.
 
