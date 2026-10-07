@@ -31,7 +31,7 @@ public class BottomBarTests : BunitContext
 		await Assert.That(radios[0].GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(radios[0].ClassList).Contains("kit-chip--on");
 		await Assert.That(radios[1].GetAttribute("aria-checked")).IsEqualTo("false");
-		radios[2].Click();
+		await radios[2].ClickAsync();
 		await Assert.That(picked).IsEqualTo("ooc");
 	}
 
@@ -45,9 +45,9 @@ public class BottomBarTests : BunitContext
 		var radios = cut.FindAll("[role=radio]");
 		await Assert.That(radios.Select(r => r.GetAttribute("tabindex")).ToList())
 			.IsEquivalentTo(new[] { "0", "-1", "-1", "-1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		radios[0].KeyDown("ArrowRight");
+		await radios[0].KeyDownAsync("ArrowRight");
 		await Assert.That(picked).IsEqualTo("say");
-		cut.FindAll("[role=radio]")[0].KeyDown("ArrowLeft");
+		await cut.FindAll("[role=radio]")[0].KeyDownAsync("ArrowLeft");
 		await Assert.That(picked).IsEqualTo("cmd");
 	}
 

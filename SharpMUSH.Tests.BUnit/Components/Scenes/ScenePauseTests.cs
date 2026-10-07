@@ -65,12 +65,12 @@ public class ScenePauseTests : TrackingBunitContext
 	{
 		var cut = await RenderAsActingAsync(313, "active");
 
-		cut.Find(".scene-detail-pause").Click();
+		await cut.Find(".scene-detail-pause").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-pause-submit"), TimeSpan.FromSeconds(5));
 
 		Answer("paused");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", status: "paused");
-		cut.Find(".scene-pause-submit").Click();
+		await cut.Find(".scene-pause-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-paused"), TimeSpan.FromSeconds(5));
 		var sent = Commands().Single();
@@ -92,7 +92,7 @@ public class ScenePauseTests : TrackingBunitContext
 
 		Answer("active");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", status: "active");
-		cut.Find(".scene-detail-resume").Click();
+		await cut.Find(".scene-detail-resume").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-live"), TimeSpan.FromSeconds(5));
 		await Assert.That(Commands().Single().Command).IsEqualTo("+scene/start S1");
@@ -102,11 +102,11 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task ARefusal_IsShown_AndTheSceneStaysAsItWas()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-pause").Click();
+		await cut.Find(".scene-detail-pause").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-pause-submit"), TimeSpan.FromSeconds(5));
 
 		Answer("active", "You do not own that scene.");
-		cut.Find(".scene-pause-submit").Click();
+		await cut.Find(".scene-pause-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-action-error").TextContent).Contains("You do not own that scene.");
@@ -140,15 +140,15 @@ public class ScenePauseTests : TrackingBunitContext
 		var cut = await RenderAsActingAsync(313, "active");
 		await Assert.That(cut.FindAll(".scene-detail-pitch").Count).IsEqualTo(0);
 
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-edit-title input").GetAttribute("value")).IsEqualTo("Salt Market at Dusk")
 			.Because("the form opens on the scene as it is");
-		cut.Find(".scene-edit-pitch textarea").Change("Masks and music; a feud.");
+		await cut.Find(".scene-edit-pitch textarea").ChangeAsync("Masks and music; a feud.");
 
 		Answer("Masks and music; a feud.", "Pitch set for scene S1.");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", summary: "Masks and music; a feud.");
-		cut.Find(".scene-edit-submit").Click();
+		await cut.Find(".scene-edit-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-pitch"), TimeSpan.FromSeconds(5));
 		var sent = Commands().Single();
@@ -164,13 +164,13 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task TheOwner_MakesTheScenePrivate()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-edit-public input").Change(false);
+		await cut.Find(".scene-edit-public input").ChangeAsync(false);
 
 		Answer("0", "Scene S1 is now private.");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", isPublic: false);
-		cut.Find(".scene-edit-submit").Click();
+		await cut.Find(".scene-edit-submit").ClickAsync();
 
 		cut.WaitForState(() => cut.FindAll(".scene-edit").Count == 0, TimeSpan.FromSeconds(5));
 		await Assert.That(Commands().Single().Command).IsEqualTo("+scene/private S1");
@@ -180,12 +180,12 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task AnEditTheGameRefuses_IsShown_AndTheFormStaysOpen()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
-		cut.Find(".scene-edit-title input").Change("Ash and Salt");
+		await cut.Find(".scene-edit-title input").ChangeAsync("Ash and Salt");
 
 		Answer("Salt Market at Dusk", "That scene is not yours to change. Its owner or a wizard can do it.");
-		cut.Find(".scene-edit-submit").Click();
+		await cut.Find(".scene-edit-submit").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".scene-action-error"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-action-error").TextContent).Contains("not yours to change");
@@ -197,7 +197,7 @@ public class ScenePauseTests : TrackingBunitContext
 	public async Task GoingToAnotherScene_ClosesTheForm()
 	{
 		var cut = await RenderAsActingAsync(313, "active");
-		cut.Find(".scene-detail-edit").Click();
+		await cut.Find(".scene-detail-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".scene-edit-submit"), TimeSpan.FromSeconds(5));
 
 		_api.Extra["/api/scenes/S2"] = SceneJson.Scene("S2", "Ash and Salt");

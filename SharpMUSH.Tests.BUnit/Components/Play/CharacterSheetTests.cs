@@ -122,9 +122,9 @@ public class CharacterSheetTests : TrackingBunitContext
 		var actions = cut.FindAll(".sheet-actions > *");
 		await Assert.That(actions.Select(a => a.TextContent.Trim()).ToList())
 			.IsEquivalentTo(new[] { "Look", "Page", "Mail", "Profile" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		actions[0].Click();
+		await actions[0].ClickAsync();
 		await Assert.That(ran).IsEqualTo("look #312");
-		cut.FindAll(".sheet-actions > *")[1].Click();
+		await cut.FindAll(".sheet-actions > *")[1].ClickAsync();
 		await Assert.That(paged).IsEqualTo("Tomas Reyes");
 		await Assert.That(cut.FindAll(".sheet-actions > *")[2].GetAttribute("href")).IsEqualTo("/mail/compose?to=Tomas%20Reyes");
 		await Assert.That(cut.FindAll(".sheet-actions > *")[3].GetAttribute("href")).IsEqualTo("/character/Tomas%20Reyes");
@@ -152,7 +152,7 @@ public class CharacterSheetTests : TrackingBunitContext
 	{
 		var cut = RenderSheet(occupant: null);
 		cut.WaitForAssertion(() => cut.Find(".sheet-gallery img"), TimeSpan.FromSeconds(5));
-		cut.Find("button.sheet-full").Click();
+		await cut.Find("button.sheet-full").ClickAsync();
 		await Assert.That(cut.Find(".kit-viewer img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/tomas.jpg");
 	}
 
@@ -168,10 +168,10 @@ public class CharacterSheetTests : TrackingBunitContext
 	{
 		var cut = RenderSheet(occupant: Tomas);
 		cut.WaitForAssertion(() => cut.Find(".sheet-gallery img"), TimeSpan.FromSeconds(5));
-		cut.Find("button.sheet-full").Click();
+		await cut.Find("button.sheet-full").ClickAsync();
 		await Assert.That(cut.Find(".kit-viewer img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/room.jpg");
-		cut.Find(".kit-viewer").KeyDown("Escape");
-		cut.FindAll(".sheet-gallery button")[1].Click();
+		await cut.Find(".kit-viewer").KeyDownAsync("Escape");
+		await cut.FindAll(".sheet-gallery button")[1].ClickAsync();
 		await Assert.That(cut.Find(".kit-viewer img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/b/b.jpg");
 	}
 
@@ -180,9 +180,9 @@ public class CharacterSheetTests : TrackingBunitContext
 	{
 		var closed = 0;
 		var cut = RenderSheet(occupant: Tomas, onClose: () => closed++);
-		cut.Find("[role='dialog']").KeyDown("Escape");
+		await cut.Find("[role='dialog']").KeyDownAsync("Escape");
 		await Assert.That(closed).IsEqualTo(1);
-		cut.Find("button.sheet-close").Click();
+		await cut.Find("button.sheet-close").ClickAsync();
 		await Assert.That(closed).IsEqualTo(2);
 		JSInterop.VerifyInvoke("sharpmushLayout.restoreFocus", calledTimes: 2);
 	}

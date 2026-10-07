@@ -52,7 +52,7 @@ public class GlassBannerTests : BunitContext
 		var restore = cut.Find(".kit-banner-strip button");
 		await Assert.That(restore.GetAttribute("aria-label")).IsEqualTo("Show banner");
 		await Assert.That(restore.GetAttribute("aria-expanded")).IsEqualTo("false");
-		restore.Click();
+		await restore.ClickAsync();
 		await Assert.That(restored).IsTrue();
 	}
 
@@ -64,7 +64,7 @@ public class GlassBannerTests : BunitContext
 		var btn = cut.Find("button.kit-banner-minimise");
 		await Assert.That(btn.GetAttribute("aria-label")).IsEqualTo("Minimise banner");
 		await Assert.That(btn.GetAttribute("aria-expanded")).IsEqualTo("true");
-		btn.Click();
+		await btn.ClickAsync();
 		await Assert.That(minimised).IsTrue();
 	}
 
@@ -75,7 +75,7 @@ public class GlassBannerTests : BunitContext
 		var minimised = true;
 		var cut = Render<GlassBanner>(p => p.Add(x => x.Title, "x").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.Minimised, minimised)
 			.Add(x => x.MinimisedChanged, v => minimised = v));
-		cut.Find(".kit-banner-strip button").Click();
+		await cut.Find(".kit-banner-strip button").ClickAsync();
 		cut.Render(p => p.Add(x => x.Title, "x").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.Minimised, minimised));
 		await Assert.That(cut.Find("button.kit-banner-minimise")).IsNotNull();
 		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase))).IsTrue()
@@ -161,7 +161,7 @@ public class GlassBannerTests : BunitContext
 		var b = cut.Find("button.kit-capsule");
 		await Assert.That(b.ClassList).DoesNotContain("kit-capsule--icon");
 		await Assert.That(b.HasAttribute("aria-pressed")).IsFalse();
-		b.Click();
+		await b.ClickAsync();
 		await Assert.That(hit).IsTrue();
 	}
 

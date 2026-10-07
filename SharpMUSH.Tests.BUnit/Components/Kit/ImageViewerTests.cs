@@ -51,10 +51,10 @@ public class ImageViewerTests : BunitContext
 		var index = 0;
 		var cut = Render<ImageViewer>(p => p.Add(x => x.Items, Three).Add(x => x.Open, true).Add(x => x.Index, 0)
 			.Add(x => x.IndexChanged, i => index = i));
-		cut.Find("button.kit-viewer-prev").Click();
+		await cut.Find("button.kit-viewer-prev").ClickAsync();
 		await Assert.That(index).IsEqualTo(2);
 		await Assert.That(cut.Find("img.kit-viewer-img").GetAttribute("src")).IsEqualTo("/c.jpg");
-		cut.Find("[role='dialog']").KeyDown("ArrowRight");
+		await cut.Find("[role='dialog']").KeyDownAsync("ArrowRight");
 		await Assert.That(cut.Find("img.kit-viewer-img").GetAttribute("src")).IsEqualTo("/a.jpg");
 	}
 
@@ -64,7 +64,7 @@ public class ImageViewerTests : BunitContext
 		// preventDefault is decided when the dialog renders, so a flag set by one key would swallow the
 		// next Tab (focus stuck) or Enter (a capsule's click lost).
 		var cut = Render<ImageViewer>(p => p.Add(x => x.Items, Three).Add(x => x.Open, true));
-		cut.Find("[role='dialog']").KeyDown("ArrowRight");
+		await cut.Find("[role='dialog']").KeyDownAsync("ArrowRight");
 		await Assert.That(cut.Find("[role='dialog']").OuterHtml.ToLowerInvariant()).DoesNotContain("preventdefault");
 	}
 
@@ -75,7 +75,7 @@ public class ImageViewerTests : BunitContext
 		await Assert.That(cut.FindComponents<MudBlazor.MudFocusTrap>().Count).IsEqualTo(1);
 		JSInterop.VerifyInvoke("sharpmushLayout.rememberFocus");
 
-		cut.Find("button.kit-viewer-close").Click();
+		await cut.Find("button.kit-viewer-close").ClickAsync();
 		JSInterop.VerifyInvoke("sharpmushLayout.restoreFocus");
 	}
 
@@ -84,11 +84,11 @@ public class ImageViewerTests : BunitContext
 	{
 		var open = true;
 		var cut = Render<ImageViewer>(p => p.Add(x => x.Items, Three).Add(x => x.Open, true).Add(x => x.OpenChanged, o => open = o));
-		cut.Find("[role='dialog']").KeyDown("Escape");
+		await cut.Find("[role='dialog']").KeyDownAsync("Escape");
 		await Assert.That(open).IsFalse();
 
 		open = true;
-		cut.Find("button.kit-viewer-close").Click();
+		await cut.Find("button.kit-viewer-close").ClickAsync();
 		await Assert.That(open).IsFalse();
 	}
 

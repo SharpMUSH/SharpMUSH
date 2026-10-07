@@ -25,10 +25,10 @@ public class LanguagePickerTests : TrackingBunitContext
 	public async Task Escape_ClosesTheOpenMenu()
 	{
 		var cut = Render<MudHarness>(p => p.AddChildContent<LanguagePicker>());
-		cut.Find(".mud-menu button").Click();
+		await cut.Find(".mud-menu button").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".mud-popover-open"), TimeSpan.FromSeconds(5));
 
-		cut.Find(".mud-menu button").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+		await cut.Find(".mud-menu button").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
 
 		cut.WaitForAssertion(() =>
 		{

@@ -91,8 +91,8 @@ public class CharactersSidebarTests : TrackingBunitContext
 		// Every load has landed (the browse counts are the last to render) before typing, so no later
 		// render can land between the keystroke and the submit.
 		cut.WaitForAssertion(() => cut.Find(".char-side-browse .kit-row-count"), TimeSpan.FromSeconds(5));
-		cut.Find(".kit-side-search input").Input("wren");
-		cut.Find(".kit-side-search").Submit();
+		await cut.Find(".kit-side-search input").InputAsync("wren");
+		await cut.Find(".kit-side-search").SubmitAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (!Nav.Uri.EndsWith("/characters?q=wren", StringComparison.Ordinal))

@@ -127,7 +127,7 @@ public class GameUpdateBannerTests : BunitContext
 		info.Now = "build-2";
 		connection.Step(HubConnectionState.Reconnecting, HubConnectionState.Connected);
 
-		banner.WaitForElement(".game-update-reload").Click();
+		await banner.WaitForElement(".game-update-reload").ClickAsync();
 
 		await Assert.That(Navigation.History.Count).IsEqualTo(1);
 		await Assert.That(Navigation.History.Single().Options.ForceLoad).IsTrue();

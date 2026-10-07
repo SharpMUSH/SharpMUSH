@@ -185,7 +185,7 @@ public class SchemaDisplayTests : BunitContext
 		await Assert.That(buttons[1].HasAttribute("disabled")).IsTrue()
 			.Because("an action the document does not declare cannot be dispatched");
 
-		buttons[0].Click();
+		await buttons[0].ClickAsync();
 
 		await Assert.That(requested).IsNotNull();
 		await Assert.That(requested!.Action).IsEqualTo("comment");
@@ -208,14 +208,15 @@ public class SchemaDisplayTests : BunitContext
 		await Assert.That(rendered.ClassName).Contains("filled");
 		await Assert.That(rendered.ClassName).Contains("error");
 
-		rendered.Click();
+		// The click waits on the confirmation this test answers below.
+		await cut.StartClickAsync(rendered);
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("Close this job?")) throw new InvalidOperationException("dialog not shown yet");
 		}, TimeSpan.FromSeconds(5));
 		await Assert.That(requested).IsNull().Because("nothing is sent before the viewer confirms");
 
-		cut.FindAll("button").First(b => b.TextContent.Contains("WidConfirm")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("WidConfirm")).ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (requested is null) throw new InvalidOperationException("not dispatched yet");
@@ -235,12 +236,12 @@ public class SchemaDisplayTests : BunitContext
 			.Add(x => x.Actions, Actions)
 			.Add(x => x.OnAction, (SchemaActionRequest r) => requested = r)));
 
-		cut.Find("button.schema-button").Click();
+		await cut.StartClickAsync(cut.Find("button.schema-button"));
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Markup.Contains("Close this job?")) throw new InvalidOperationException("dialog not shown yet");
 		}, TimeSpan.FromSeconds(5));
-		cut.FindAll("button").First(b => b.TextContent.Contains("Cancel")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Cancel")).ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.Markup.Contains("Close this job?")) throw new InvalidOperationException("dialog still open");

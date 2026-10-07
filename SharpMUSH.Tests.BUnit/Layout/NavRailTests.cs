@@ -190,7 +190,7 @@ public class NavRailTests : TrackingBunitContext
 	{
 		var searched = false;
 		var cut = RenderAt("/", terminalOpen: true, onSearch: () => searched = true);
-		cut.Find("button.phosphor-rail-search").Click();
+		await cut.Find("button.phosphor-rail-search").ClickAsync();
 		await Assert.That(searched).IsTrue();
 		await Assert.That(cut.Find("button.phosphor-rail-terminal").GetAttribute("aria-pressed")).IsEqualTo("true");
 	}

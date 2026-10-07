@@ -232,9 +232,9 @@ public class AccountPanelTests : TrackingBunitContext
 			.Add(c => c.OnSectionMenu, () => calls.Add("section"))
 			.Add(c => c.OnSearch, () => calls.Add("search"))
 			.Add(c => c.OnToggleTerminal, () => calls.Add("terminal")));
-		cut.Find(".phosphor-drawer-tools button.phosphor-pagebar-btn").Click();
-		cut.Find(".phosphor-drawer-tools button[aria-haspopup='dialog']").Click();
-		cut.Find(".phosphor-drawer-tools button[aria-pressed]").Click();
+		await cut.Find(".phosphor-drawer-tools button.phosphor-pagebar-btn").ClickAsync();
+		await cut.Find(".phosphor-drawer-tools button[aria-haspopup='dialog']").ClickAsync();
+		await cut.Find(".phosphor-drawer-tools button[aria-pressed]").ClickAsync();
 		await Assert.That(calls).IsEquivalentTo(new[] { "section", "search", "terminal" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.FindAll(".phosphor-drawer-tools .phosphor-lang").Count).IsEqualTo(1);
 	}
@@ -276,7 +276,7 @@ public class AccountPanelTests : TrackingBunitContext
 	{
 		var cut = RenderNavMenu(isCollapsed: false);
 
-		cut.Find("button.phosphor-profile-card").Click();
+		await cut.Find("button.phosphor-profile-card").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -296,7 +296,7 @@ public class AccountPanelTests : TrackingBunitContext
 		// remains a working affordance, just narrower.
 		await Assert.That(cut.FindAll(".phosphor-profile-name").Count).IsEqualTo(0);
 
-		cut.Find("button.phosphor-profile-card").Click();
+		await cut.Find("button.phosphor-profile-card").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -314,7 +314,7 @@ public class AccountPanelTests : TrackingBunitContext
 		var cut = RenderPanel(initialOpen: true);
 		await Assert.That(cut.FindAll(".account-panel").Count).IsEqualTo(1);
 
-		cut.Find(".account-panel").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+		await cut.Find(".account-panel").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" });
 
 		cut.WaitForAssertion(() =>
 		{
@@ -330,7 +330,7 @@ public class AccountPanelTests : TrackingBunitContext
 		var cut = RenderPanel(initialOpen: true);
 		await Assert.That(cut.FindAll(".account-panel-scrim").Count).IsEqualTo(1);
 
-		cut.Find(".account-panel-scrim").Click();
+		await cut.Find(".account-panel-scrim").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -348,7 +348,7 @@ public class AccountPanelTests : TrackingBunitContext
 
 		await Assert.That(cut.Find(".account-panel-track").ClassList).DoesNotContain("account-panel-track--submenu");
 
-		cut.Find(".account-panel-switch-btn").Click();
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
 
 		await Assert.That(cut.Find(".account-panel-track").ClassList).Contains("account-panel-track--submenu");
 		var rows = cut.FindAll(".account-panel-character");
@@ -364,7 +364,7 @@ public class AccountPanelTests : TrackingBunitContext
 		var beta = new CharacterSummary(2, 2L, "Beta", "");
 		var cut = RenderPanel(characters: [alpha, beta], activeCharacter: beta, initialOpen: true);
 
-		cut.Find(".account-panel-switch-btn").Click();
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
 
 		var rows = cut.FindAll(".account-panel-character");
 		var alphaRow = rows.Single(r => r.TextContent.Contains("Alpha"));
@@ -388,8 +388,8 @@ public class AccountPanelTests : TrackingBunitContext
 			initialOpen: true,
 			onSwitchCharacter: EventCallback.Factory.Create<CharacterSummary>(this, c => chosen = c));
 
-		cut.Find(".account-panel-switch-btn").Click();
-		cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta")).Click();
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
+		await cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta")).ClickAsync();
 
 		await Assert.That(chosen).IsEqualTo(beta);
 		// Selecting closes the panel — the same UX every character-switching surface in the app uses.
@@ -411,7 +411,7 @@ public class AccountPanelTests : TrackingBunitContext
 			initialOpen: true,
 			onSwitchCharacter: EventCallback.Factory.Create<CharacterSummary>(this, c => chosen = c));
 
-		cut.Find(".account-panel-switch-btn").Click();
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
 		var betaRow = cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta"));
 
 		// Reachable: a keyboard user tabbing through the popover must be able to land on the row.
@@ -421,7 +421,7 @@ public class AccountPanelTests : TrackingBunitContext
 		// Activatable: Enter (and Space) must do what a click does, since the row can't be a real
 		// <button> — it already hosts the sibling "open in a new tab" button, and nesting interactive
 		// controls is invalid HTML.
-		betaRow.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+		await betaRow.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
 		await Assert.That(chosen).IsEqualTo(beta);
 		cut.WaitForAssertion(() =>
@@ -444,12 +444,12 @@ public class AccountPanelTests : TrackingBunitContext
 			onSwitchCharacter: EventCallback.Factory.Create<CharacterSummary>(this, c => switched = c),
 			onOpenInNewTab: EventCallback.Factory.Create<CharacterSummary>(this, c => opened = c));
 
-		cut.Find(".account-panel-switch-btn").Click();
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
 		var betaRow = cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta"));
 		var newTabButton = betaRow.QuerySelector(".account-panel-newtab")!;
 		await Assert.That(newTabButton.TagName).IsEqualTo("BUTTON");
 
-		newTabButton.Click();
+		await newTabButton.ClickAsync();
 
 		await Assert.That(opened).IsEqualTo(beta);
 		// @onclick:stopPropagation on the inner button must keep the row's own click (which would
@@ -467,7 +467,7 @@ public class AccountPanelTests : TrackingBunitContext
 		await Assert.That(link.TagName).IsEqualTo("A");
 		await Assert.That(link.GetAttribute("href")).IsEqualTo("/account");
 
-		link.Click();
+		await link.ClickAsync();
 
 		// Clicking closes the panel — proof the same element's @onclick handler actually ran
 		// alongside the href, not just that the href attribute happens to be correct.
@@ -484,7 +484,7 @@ public class AccountPanelTests : TrackingBunitContext
 		var invoked = false;
 		var cut = RenderPanel(initialOpen: true, onLogout: EventCallback.Factory.Create(this, () => invoked = true));
 
-		cut.FindAll(".account-panel-item").Single(el => el.TextContent.Contains("AuthLogout")).Click();
+		await cut.FindAll(".account-panel-item").Single(el => el.TextContent.Contains("AuthLogout")).ClickAsync();
 
 		await Assert.That(invoked).IsTrue();
 		cut.WaitForAssertion(() =>

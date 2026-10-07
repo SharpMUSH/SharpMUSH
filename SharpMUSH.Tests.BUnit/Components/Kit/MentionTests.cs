@@ -41,7 +41,7 @@ public class MentionTests : BunitContext
 	{
 		var hit = false;
 		var cut = Render<Mention>(p => p.Add(x => x.Name, "Ilsa").Add(x => x.Href, null).Add(x => x.OnClick, () => hit = true));
-		cut.Find("button.mention").Click();
+		await cut.Find("button.mention").ClickAsync();
 		await Assert.That(hit).IsTrue();
 	}
 

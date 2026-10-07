@@ -149,7 +149,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		var before = toggle.GetAttribute("aria-checked");
 		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(0);
 
-		toggle.Click();
+		await toggle.ClickAsync();
 
 		row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit");
 		await Assert.That(row.QuerySelector("button[role=switch]")!.GetAttribute("aria-checked")).IsNotEqualTo(before);
@@ -163,9 +163,9 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	{
 		_served.Save = (HttpStatusCode.BadRequest, """{ "errors": { "Chat.NoisyCEmit": "sharp-refusal-reason" } }""");
 		var cut = RenderChat();
-		cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.Click();
+		await cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
 
-		cut.Find(".cfg-unsaved button.kit-capsule--primary").Click();
+		await cut.Find(".cfg-unsaved button.kit-capsule--primary").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".cfg-row-error"), TimeSpan.FromSeconds(5));
 		var row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit");
@@ -179,8 +179,8 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	public async Task UnsavedBar_ResetChangesClearsIt()
 	{
 		var cut = RenderChat();
-		cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.Click();
-		cut.Find(".cfg-unsaved .cfg-reset").Click();
+		await cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
+		await cut.Find(".cfg-unsaved .cfg-reset").ClickAsync();
 		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".cfg-row-changed").Count).IsEqualTo(0);
 	}
@@ -223,7 +223,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	{
 		// The router re-renders the page on a hash-only navigation; the edits must survive it.
 		var cut = RenderChat();
-		cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.Click();
+		await cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
 		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(1);
 
 		cut.Render(p => p.Add(x => x.Category, "chat"));
@@ -238,7 +238,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	{
 		// A hash-only navigation raises no LocationChanged in Blazor, so the click itself must do it.
 		var cut = RenderChat();
-		cut.FindAll(".cfg-toc")[2].Click();
+		await cut.FindAll(".cfg-toc")[2].ClickAsync();
 		await Assert.That(cut.Find(".cfg-toc--current").GetAttribute("href")).IsEqualTo("/admin/config/chat#group-economy");
 	}
 

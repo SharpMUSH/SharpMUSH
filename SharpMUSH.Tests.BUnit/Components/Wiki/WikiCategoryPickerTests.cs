@@ -42,8 +42,8 @@ public class WikiCategoryPickerTests : TrackingBunitContext
 	{
 		var (host, categories) = RenderPicker([]);
 
-		host.Find(".wcp-entry input").Input("Magic Items");
-		host.Find(".wcp-option--new").Click();
+		await host.Find(".wcp-entry input").InputAsync("Magic Items");
+		await host.Find(".wcp-option--new").ClickAsync();
 
 		await Assert.That(categories).IsEquivalentTo(new[] { "Magic Items" });
 		await Assert.That(host.Find(".wcp-chip").TextContent).Contains("Magic Items");
@@ -55,9 +55,9 @@ public class WikiCategoryPickerTests : TrackingBunitContext
 		var (host, categories) = RenderPicker(["places"]);
 
 		var input = host.Find(".wcp-entry input");
-		input.Input("PLACES");
+		await input.InputAsync("PLACES");
 		await Assert.That(host.FindAll(".wcp-option--new")).IsEmpty();
-		host.Find(".wcp-entry input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+		await host.Find(".wcp-entry input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
 		await Assert.That(categories).IsEquivalentTo(new[] { "places" });
 	}

@@ -86,7 +86,7 @@ public class SectionShellTests : BunitContext
 		var toggle = cut.Find(".slot button.kit-pagebar-toggle");
 		await Assert.That(toggle.GetAttribute("aria-expanded")).IsEqualTo("true");
 
-		toggle.Click();
+		await toggle.ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".slot .kit-pagebar--collapsed .side--collapsed"));
 		await Assert.That(cut.Find(".slot button.kit-pagebar-toggle").GetAttribute("aria-expanded")).IsEqualTo("false");
 		var saved = JSInterop.VerifyInvoke("localStorage.setItem");

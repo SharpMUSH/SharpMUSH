@@ -50,7 +50,7 @@ public class ExitsCardTests : BunitContext
 		var tile = Tile(cut, "Harbour Row");
 		await Assert.That(tile.QuerySelector("img")!.GetAttribute("src")).IsEqualTo("/r/row.jpg");
 		await Assert.That(tile.QuerySelector("kbd.exit-key")!.TextContent).IsEqualTo("n");
-		tile.QuerySelector("button.exit-go")!.Click();
+		await tile.QuerySelector("button.exit-go")!.ClickAsync();
 		await Assert.That(ran).IsEqualTo("goto #1210");
 	}
 
@@ -71,7 +71,7 @@ public class ExitsCardTests : BunitContext
 		await Assert.That(tile.QuerySelector(".exit-pill")!.TextContent.Trim()).IsEqualTo("Locked");
 		await Assert.That(tile.QuerySelector(".exit-sub")!.TextContent).IsEqualTo("Closed after dusk");
 		await Assert.That(tile.ClassList).Contains("exit--locked");
-		tile.QuerySelector("button.exit-go")!.Click();
+		await tile.QuerySelector("button.exit-go")!.ClickAsync();
 		await Assert.That(ran).IsEqualTo("goto #1211").Because("the game answers a failed lock with its @fail");
 	}
 
@@ -89,15 +89,15 @@ public class ExitsCardTests : BunitContext
 		var cut = RenderExits([Ferry], ran.Add);
 		var tile = Tile(cut, "Ferry Steps");
 		await Assert.That(tile.QuerySelector(".exit-pill")!.TextContent.Trim()).IsEqualTo("Leaves scene");
-		tile.QuerySelector("button.exit-go")!.Click();
+		await tile.QuerySelector("button.exit-go")!.ClickAsync();
 		await Assert.That(ran).IsEmpty();
 		await Assert.That(cut.Find("[role='alertdialog'] .exit-confirm-text").TextContent).IsEqualTo("This leaves the scene.");
-		cut.Find("button.exit-confirm-stay").Click();
+		await cut.Find("button.exit-confirm-stay").ClickAsync();
 		await Assert.That(cut.FindAll("[role='alertdialog']").Count).IsEqualTo(0);
 		await Assert.That(ran).IsEmpty();
 
-		Tile(cut, "Ferry Steps").QuerySelector("button.exit-go")!.Click();
-		cut.Find("button.exit-confirm-go").Click();
+		await Tile(cut, "Ferry Steps").QuerySelector("button.exit-go")!.ClickAsync();
+		await cut.Find("button.exit-confirm-go").ClickAsync();
 		await Assert.That(ran).IsEquivalentTo(new[] { "goto #1212" });
 	}
 
@@ -118,8 +118,8 @@ public class ExitsCardTests : BunitContext
 	{
 		var ran = new List<string>();
 		var cut = RenderExits([Ferry], ran.Add);
-		Tile(cut, "Ferry Steps").QuerySelector("button.exit-go")!.Click();
-		cut.Find("[role='alertdialog']").KeyDown("Escape");
+		await Tile(cut, "Ferry Steps").QuerySelector("button.exit-go")!.ClickAsync();
+		await cut.Find("[role='alertdialog']").KeyDownAsync("Escape");
 		await Assert.That(cut.FindAll("[role='alertdialog']").Count).IsEqualTo(0);
 		await Assert.That(ran).IsEmpty();
 	}
@@ -141,7 +141,7 @@ public class ExitsCardTests : BunitContext
 		var v1 = new RoomExit(null, "North", "north", null, [], null, null, null, null);
 		var nameless = new RoomExit(null, "", null, null, [], null, null, null, null);
 		var cut = RenderExits([v1, nameless], c => ran = c);
-		Tile(cut, "North").QuerySelector("button.exit-go")!.Click();
+		await Tile(cut, "North").QuerySelector("button.exit-go")!.ClickAsync();
 		await Assert.That(ran).IsEqualTo("north");
 		await Assert.That(Tile(cut, "Untitled").QuerySelector("button.exit-go")!.HasAttribute("disabled")).IsTrue();
 	}
@@ -154,9 +154,9 @@ public class ExitsCardTests : BunitContext
 		var preview = Tile(cut, "Harbour Row").QuerySelector(".exit-preview")!;
 		await Assert.That(preview.QuerySelector(".exit-preview-desc")!.TextContent).IsEqualTo("A lamplit street of chandlers.");
 		await Assert.That(preview.QuerySelector(".exit-preview-there")!.TextContent).IsEqualTo("2 there");
-		preview.QuerySelector("button.exit-preview-look")!.Click();
+		await preview.QuerySelector("button.exit-preview-look")!.ClickAsync();
 		await Assert.That(ran).IsEqualTo("look #1210");
-		Tile(cut, "Harbour Row").QuerySelector(".exit-preview button.exit-preview-go")!.Click();
+		await Tile(cut, "Harbour Row").QuerySelector(".exit-preview button.exit-preview-go")!.ClickAsync();
 		await Assert.That(ran).IsEqualTo("goto #1210");
 	}
 

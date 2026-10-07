@@ -53,9 +53,9 @@ public class WidgetConfigDialogTests : BunitContext
 	}
 
 	/// <summary>Clicks Apply and returns the dialog markup, which carries any validation error.</summary>
-	private static string SaveAndRead(IRenderedComponent<MudDialogProvider> provider)
+	private static async Task<string> SaveAndRead(IRenderedComponent<MudDialogProvider> provider)
 	{
-		provider.FindAll("button").First(b => b.TextContent.Contains("LayApply")).Click();
+		await provider.FindAll("button").First(b => b.TextContent.Contains("LayApply")).ClickAsync();
 		return provider.Markup;
 	}
 
@@ -70,7 +70,7 @@ public class WidgetConfigDialogTests : BunitContext
 		// worked and change nothing.
 		var provider = await RenderDialogAsync("WikiBody", json);
 
-		await Assert.That(SaveAndRead(provider)).Contains("LayCfgNotAnObject");
+		await Assert.That(await SaveAndRead(provider)).Contains("LayCfgNotAnObject");
 	}
 
 	[TUnit.Core.Test]
@@ -78,7 +78,7 @@ public class WidgetConfigDialogTests : BunitContext
 	{
 		var provider = await RenderDialogAsync("WikiBody", "{\"slug\":\"house-rules\"}");
 
-		await Assert.That(SaveAndRead(provider)).DoesNotContain("LayCfgNotAnObject");
+		await Assert.That(await SaveAndRead(provider)).DoesNotContain("LayCfgNotAnObject");
 	}
 
 	[TUnit.Core.Test]
@@ -86,7 +86,7 @@ public class WidgetConfigDialogTests : BunitContext
 	{
 		var provider = await RenderDialogAsync("WikiBody", "{not json");
 
-		await Assert.That(SaveAndRead(provider)).Contains("LayInvalidJson");
+		await Assert.That(await SaveAndRead(provider)).Contains("LayInvalidJson");
 	}
 
 	[TUnit.Core.Test]
@@ -127,7 +127,7 @@ public class WidgetConfigDialogTests : BunitContext
 	{
 		var cut = await RenderDialogAsync("WikiBody");
 
-		cut.FindAll("button").First(b => b.TextContent.Contains("LayCfgInsertTemplate")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("LayCfgInsertTemplate")).ClickAsync();
 
 		// Read the rendered editor rather than the MudTextField instance — reaching into a component's
 		// bound parameter is what MUD0012 warns about, and the DOM is what an admin actually sees.

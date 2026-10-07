@@ -290,11 +290,12 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		});
 		cut.WaitForAssertion(() => cut.Find("button[aria-label='AuthUnlinkCharacter']"), TimeSpan.FromSeconds(5));
 
-		cut.Find("button[aria-label='AuthUnlinkCharacter']").Click();
+		// The click waits on the confirmation this test answers below.
+		await cut.StartClickAsync(cut.Find("button[aria-label='AuthUnlinkCharacter']"));
 		cut.WaitForAssertion(() => cut.Find(".mud-dialog"), TimeSpan.FromSeconds(5));
 		await Assert.That(handler.Unlinks).IsEqualTo(0).Because("nothing is unlinked before the player confirms");
 
-		cut.FindAll(".mud-dialog button").Single(b => b.TextContent.Trim() == "Cancel").Click();
+		await cut.FindAll(".mud-dialog button").Single(b => b.TextContent.Trim() == "Cancel").ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.FindAll(".mud-dialog").Count > 0) throw new InvalidOperationException("dialog still open");

@@ -109,7 +109,7 @@ public class LayoutEditorTests : TrackingBunitContext
 		var preview = cut.Find(".kit-page-actions [aria-pressed]");
 		await Assert.That(preview.TextContent).Contains("LayPreview");
 		await Assert.That(preview.GetAttribute("aria-pressed")).IsEqualTo("true").Because("the preview starts open");
-		preview.Click();
+		await preview.ClickAsync();
 		await Assert.That(cut.Find(".kit-page-actions [aria-pressed]").GetAttribute("aria-pressed")).IsEqualTo("false");
 		await Assert.That(cut.Find("a.layedit-back[href='/admin/layout']").TextContent).Contains("LayAllLayouts");
 	}
@@ -155,24 +155,24 @@ public class LayoutEditorTests : TrackingBunitContext
 		var cut = await RenderEditorAsync();
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-12").Count).IsEqualTo(1);
 
-		cut.Find(".le-resize").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
+		await cut.Find(".le-resize").KeyDownAsync(new KeyboardEventArgs { Key = "ArrowLeft" });
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-11").Count).IsEqualTo(1);
 		await Assert.That(cut.Find(".le-resize").GetAttribute("aria-valuenow")).IsEqualTo("11");
 
 		// Shift takes bigger bites: 11 - 3 - 3 - 3 = 2.
 		for (var i = 0; i < 3; i++)
 		{
-			cut.Find(".le-resize").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft", ShiftKey = true });
+			await cut.Find(".le-resize").KeyDownAsync(new KeyboardEventArgs { Key = "ArrowLeft", ShiftKey = true });
 		}
 
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-2").Count).IsEqualTo(1);
 
 		// Clamped at the low end rather than wrapping or going to zero.
-		cut.Find(".le-resize").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft", ShiftKey = true });
-		cut.Find(".le-resize").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
+		await cut.Find(".le-resize").KeyDownAsync(new KeyboardEventArgs { Key = "ArrowLeft", ShiftKey = true });
+		await cut.Find(".le-resize").KeyDownAsync(new KeyboardEventArgs { Key = "ArrowLeft" });
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-1").Count).IsEqualTo(1);
 
-		cut.Find(".le-resize").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+		await cut.Find(".le-resize").KeyDownAsync(new KeyboardEventArgs { Key = "ArrowRight" });
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-2").Count).IsEqualTo(1);
 	}
 
@@ -187,19 +187,19 @@ public class LayoutEditorTests : TrackingBunitContext
 		JSInterop.Setup<double>("sharpmushLayout.gridColumnWidth", _ => true).SetResult(40d);
 		var cut = await RenderEditorAsync();
 
-		cut.Find(".le-resize").PointerDown(new PointerEventArgs { ClientX = 800, PointerId = 7 });
-		cut.Find(".le-resize").PointerMove(new PointerEventArgs { ClientX = 640, PointerId = 7 });
+		await cut.Find(".le-resize").PointerDownAsync(new PointerEventArgs { ClientX = 800, PointerId = 7 });
+		await cut.Find(".le-resize").PointerMoveAsync(new PointerEventArgs { ClientX = 640, PointerId = 7 });
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-8").Count).IsEqualTo(1);
 
 		// Rounds to the nearest column rather than truncating: 30px past the boundary is most of one.
-		cut.Find(".le-resize").PointerMove(new PointerEventArgs { ClientX = 670, PointerId = 7 });
+		await cut.Find(".le-resize").PointerMoveAsync(new PointerEventArgs { ClientX = 670, PointerId = 7 });
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-9").Count).IsEqualTo(1);
 
 		// Clamped, not run off the end: 12 columns of travel past full width is still full width.
-		cut.Find(".le-resize").PointerMove(new PointerEventArgs { ClientX = 1400, PointerId = 7 });
+		await cut.Find(".le-resize").PointerMoveAsync(new PointerEventArgs { ClientX = 1400, PointerId = 7 });
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-12").Count).IsEqualTo(1);
 
-		cut.Find(".le-resize").PointerUp(new PointerEventArgs { PointerId = 7 });
+		await cut.Find(".le-resize").PointerUpAsync(new PointerEventArgs { PointerId = 7 });
 		await Assert.That(cut.Find(".le-resize").GetAttribute("aria-valuenow")).IsEqualTo("12");
 	}
 
@@ -213,8 +213,8 @@ public class LayoutEditorTests : TrackingBunitContext
 		JSInterop.Setup<double>("sharpmushLayout.gridColumnWidth", _ => true).SetResult(0d);
 		var cut = await RenderEditorAsync();
 
-		cut.Find(".le-resize").PointerDown(new PointerEventArgs { ClientX = 800, PointerId = 7 });
-		cut.Find(".le-resize").PointerMove(new PointerEventArgs { ClientX = 200, PointerId = 7 });
+		await cut.Find(".le-resize").PointerDownAsync(new PointerEventArgs { ClientX = 800, PointerId = 7 });
+		await cut.Find(".le-resize").PointerMoveAsync(new PointerEventArgs { ClientX = 200, PointerId = 7 });
 
 		await Assert.That(cut.FindAll(".mud-drop-item.le-span-12").Count).IsEqualTo(1);
 	}
@@ -232,10 +232,10 @@ public class LayoutEditorTests : TrackingBunitContext
 
 		await Assert.That(PlacedNames(cut)).IsEqualTo("LayWidgetWikiIndex,LayWidgetSpacer");
 
-		cut.FindAll(".le-item-btn--down")[0].Click();
+		await cut.FindAll(".le-item-btn--down")[0].ClickAsync();
 		await Assert.That(PlacedNames(cut)).IsEqualTo("LayWidgetSpacer,LayWidgetWikiIndex");
 
-		cut.FindAll(".le-item-btn--up")[1].Click();
+		await cut.FindAll(".le-item-btn--up")[1].ClickAsync();
 		await Assert.That(PlacedNames(cut)).IsEqualTo("LayWidgetWikiIndex,LayWidgetSpacer");
 	}
 

@@ -229,7 +229,7 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 
 		var chips = cut.FindAll(".kit-chips button");
 		await Assert.That(chips.Select(c => c.TextContent)).IsEquivalentTo(new[] { "All", "combat", "dialogue" });
-		chips.Single(c => c.TextContent == "combat").Click();
+		await chips.Single(c => c.TextContent == "combat").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{

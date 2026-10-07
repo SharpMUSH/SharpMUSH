@@ -81,11 +81,11 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
 
-		cut.Find("button.wiki-req-edit").Click();
+		await cut.Find("button.wiki-req-edit").ClickAsync();
 		// The pickers are read, create, edit and delete, in that order.
 		var pickers = cut.FindComponents<MudAutocomplete<WikiRequirementsEditor.PermissionOption>>();
 		await cut.InvokeAsync(() => pickers[2].Instance.ValueChanged.InvokeAsync(new("media.admin", "Image Library · Manage", "")));
-		cut.FindAll("button").Single(b => b.TextContent.Contains("Save")).Click();
+		await cut.FindAll("button").Single(b => b.TextContent.Contains("Save")).ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (Server.Puts.Count != 1) throw new InvalidOperationException("no save yet");
@@ -108,7 +108,7 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
 
-		cut.Find("button.wiki-req-edit").Click();
+		await cut.Find("button.wiki-req-edit").ClickAsync();
 		var read = cut.FindComponents<MudAutocomplete<WikiRequirementsEditor.PermissionOption>>()[0].Instance;
 		cut.WaitForAssertion(() =>
 		{
@@ -131,9 +131,9 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Set, set).Add(x => x.Editable, true));
 
-		cut.Find("button.wiki-req-edit").Click();
-		cut.Find(".wiki-req-chip button[aria-label$='lore.read']").Click();
-		cut.FindAll("button").Single(b => b.TextContent.Contains("Save")).Click();
+		await cut.Find("button.wiki-req-edit").ClickAsync();
+		await cut.Find(".wiki-req-chip button[aria-label$='lore.read']").ClickAsync();
+		await cut.FindAll("button").Single(b => b.TextContent.Contains("Save")).ClickAsync();
 		cut.WaitForAssertion(() =>
 		{
 			if (Server.Puts.Count != 1) throw new InvalidOperationException("no save yet");
@@ -150,7 +150,7 @@ public class WikiRequirementsEditorTests : TrackingBunitContext
 		var cut = Render<WikiRequirementsEditor>(p => p
 			.Add(x => x.Scope, "category").Add(x => x.Key, "lore").Add(x => x.Editable, true));
 
-		cut.Find("button.wiki-req-edit").Click();
+		await cut.Find("button.wiki-req-edit").ClickAsync();
 		await Assert.That(cut.Find(".wiki-req-actions a.wiki-req-define").GetAttribute("href")).IsEqualTo("/admin/roles?tab=permissions");
 	}
 

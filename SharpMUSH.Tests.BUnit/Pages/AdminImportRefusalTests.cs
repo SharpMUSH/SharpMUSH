@@ -95,19 +95,19 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			TotalObjects = 10, ProcessedObjects = 5, CurrentPhase = "Objects", PercentageComplete = 50
 		}));
 
-	private static void Click(IRenderedComponent<ImportDatabase> cut, string label) =>
-		cut.FindAll("button").First(b => b.TextContent.Contains(label)).Click();
+	private static Task Click(IRenderedComponent<ImportDatabase> cut, string label) =>
+		cut.FindAll("button").First(b => b.TextContent.Contains(label)).ClickAsync();
 
-	private IRenderedComponent<ImportDatabase> StartConversion()
+	private async Task<IRenderedComponent<ImportDatabase>> StartConversion()
 	{
 		var cut = Render<ImportDatabase>();
 		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("+V-1\n~0\n***END OF DUMP***\n", "outdb"));
-		Click(cut, "StartConversion");
+		await Click(cut, "StartConversion");
 		return cut;
 	}
 
 	/// <summary>Picks the database, then the source game's mush.cnf, and starts.</summary>
-	private IRenderedComponent<ImportDatabase> StartConversionWithConfig()
+	private async Task<IRenderedComponent<ImportDatabase>> StartConversionWithConfig()
 	{
 		var cut = Render<ImportDatabase>();
 		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("+V-1\n~0\n***END OF DUMP***\n", "outdb"));
@@ -115,7 +115,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		cut.FindComponents<InputFile>().Last(input => input.Find("input").GetAttribute("accept") == ".cnf,.conf,.txt")
 			.UploadFiles(InputFileContent.CreateFromText("mud_name Elsewhere\n", "mush.cnf"));
 		cut.WaitForAssertion(() => cut.Find(".dbimport-config-name"), TimeSpan.FromSeconds(5));
-		Click(cut, "StartConversion");
+		await Click(cut, "StartConversion");
 		return cut;
 	}
 
@@ -134,7 +134,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			return path == "api/databaseconversion/upload" ? Started() : Halfway();
 		}, bodies);
 
-		var cut = StartConversionWithConfig();
+		var cut = await StartConversionWithConfig();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -159,7 +159,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			? Refusal(HttpStatusCode.BadRequest, refused)
 			: Halfway());
 
-		var cut = StartConversionWithConfig();
+		var cut = await StartConversionWithConfig();
 
 		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mud-alert").TextContent).Contains($"DatabaseImportFailed({refused})");
@@ -188,7 +188,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		var cut = Render<ImportConfig>();
 		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("mud_nmae Test\n", "mush.cnf"));
 		cut.WaitForAssertion(() => cut.Find("button.kit-capsule--primary"), TimeSpan.FromSeconds(5));
-		cut.Find("button.kit-capsule--primary").Click();
+		await cut.Find("button.kit-capsule--primary").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mud-alert").TextContent).Contains($"ConfigImportFailed({refused})");
@@ -202,7 +202,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		Services.AddSingleton(snackbar);
 
 		var cut = Render<ConfigSidebar>();
-		cut.FindAll("button").First(b => b.TextContent.Contains("Export")).Click();
+		await cut.FindAll("button").First(b => b.TextContent.Contains("Export")).ClickAsync();
 
 		cut.WaitForAssertion(() => snackbar.Received().Add(
 			Arg.Is<string>(m => m.Contains("ExportFailed") && m.Contains(Reason)),
@@ -215,7 +215,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 	{
 		AddServices((_, _) => Refusal(HttpStatusCode.BadRequest, "No file uploaded"));
 
-		var cut = StartConversion();
+		var cut = await StartConversion();
 
 		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mud-alert").TextContent).Contains("DatabaseImportFailed(No file uploaded)");
@@ -229,7 +229,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			? Refusal(HttpStatusCode.NotFound, "Session not found")
 			: Started());
 
-		var cut = StartConversion();
+		var cut = await StartConversion();
 
 		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mud-alert").TextContent).Contains("DatabaseImportFailed(Session not found)");
@@ -247,8 +247,9 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			_ => Started()
 		});
 
-		var cut = StartConversion();
-		cut.WaitForAssertion(() => Click(cut, "CancelConversion"), TimeSpan.FromSeconds(5));
+		var cut = await StartConversion();
+		cut.WaitForAssertion(() => cut.FindAll("button").First(b => b.TextContent.Contains("CancelConversion")), TimeSpan.FromSeconds(5));
+		await Click(cut, "CancelConversion");
 
 		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mud-alert").TextContent)

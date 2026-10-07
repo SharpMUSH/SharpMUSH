@@ -63,7 +63,7 @@ public class SchemaFormRendererTests : BunitContext
 		var cut = Render<SchemaFormRenderer>(parameters => parameters.Add(p => p.Document, RequiredNameForm()));
 
 		var submit = cut.FindAll("button").First(b => b.TextContent.Contains("WidSubmit"));
-		submit.Click();
+		await submit.ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{

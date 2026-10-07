@@ -51,7 +51,7 @@ public class ProfileAsideWidgetsTests : TrackingBunitContext
 	{
 		var visitor = InProfile<CharacterGalleryWidget>();
 		visitor.WaitForAssertion(() => visitor.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
-		visitor.Find("button.gallery-view-all").Click();
+		await visitor.Find("button.gallery-view-all").ClickAsync();
 		await Assert.That(visitor.Find(".kit-viewer-count").TextContent).Contains("4");
 		await Assert.That(visitor.FindAll(".kit-viewer-actions button").Count).IsEqualTo(0);
 	}
@@ -69,10 +69,10 @@ public class ProfileAsideWidgetsTests : TrackingBunitContext
 		var cut = InProfile<CharacterGalleryWidget>(canEdit: true);
 		cut.WaitForAssertion(() => cut.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".gallery-upload button.gallery-add").Count).IsEqualTo(1).Because("a kit capsule, not MudBlazor's default upload button");
-		cut.Find("button.gallery-view-all").Click();
-		cut.Find("button.kit-viewer-next").Click();
-		cut.Find("button.kit-viewer-next").Click();
-		cut.Find(".kit-viewer-actions button.gallery-make-banner").Click();
+		await cut.Find("button.gallery-view-all").ClickAsync();
+		await cut.Find("button.kit-viewer-next").ClickAsync();
+		await cut.Find("button.kit-viewer-next").ClickAsync();
+		await cut.Find(".kit-viewer-actions button.gallery-make-banner").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
