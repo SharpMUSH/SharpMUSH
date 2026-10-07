@@ -420,8 +420,8 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// <c>isapproved(&lt;object&gt;)</c> — 1 when the object is royalty or above, or carries the
-	/// <c>APPROVED</c> flag; 0 otherwise (and always 0 for a guest). The softcode face of
+	/// <c>isapproved(&lt;object&gt;)</c> — 1 when the object is royalty or above, or holds the
+	/// <c>approved</c> role; 0 otherwise (and always 0 for a guest). The softcode face of
 	/// <see cref="HelperFunctions.IsApproved"/>, so a game's <c>+</c>-verbs and the engine answer the
 	/// approval question with the same code rather than two copies of the same rule.
 	/// </summary>

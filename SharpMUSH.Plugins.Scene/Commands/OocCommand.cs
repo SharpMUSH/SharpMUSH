@@ -29,10 +29,10 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 /// is exactly the line the room heard, less the <c>&lt;OOC&gt;</c> marker (the tag carries it): the speech
 /// name, not the scene persona, since out of character is the player speaking. Anywhere else nothing is
 /// recorded. The speaker must also be approved when they speak, re-checked on every line as the scene
-/// package's capture hooks do, because focus and membership survive a revoked APPROVED flag. The rule is
+/// package's capture hooks do, because focus and membership survive a revoked approved role. The rule is
 /// the package's own <c>FUN`IS`APPROVED</c>, evaluated on its Scene Logger as the logger, so a game that
-/// redefines it is obeyed here too; without the package it is the package's default, a player with the
-/// APPROVED flag.</para>
+/// redefines it is obeyed here too; without the package it is the package's default, a player that
+/// <c>isapproved()</c>.</para>
 ///
 /// <para>This is the "game's OOC command" the portal's OOC band assumes (design handoff §7.2): the band
 /// keys off the <c>ooc</c> tag.</para>

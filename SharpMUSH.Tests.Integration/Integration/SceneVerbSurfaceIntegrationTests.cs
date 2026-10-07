@@ -65,7 +65,7 @@ public class SceneVerbSurfaceIntegrationTests
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
-		await God1($"@set {dbref}=APPROVED");
+		await God1($"@role/assign {dbref}=approved");
 		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed.Value);
 		_actors[handle] = parsed.Value;
 		return (dbref, handle);

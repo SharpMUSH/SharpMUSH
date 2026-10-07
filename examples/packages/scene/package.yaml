@@ -80,10 +80,10 @@ objects:
       # The ONE place +scene asks "may this thing be ASSOCIATED with a scene?". Two halves:
       #   • it must be a CHARACTER — a scene associates players, not things or rooms; and
       #   • it must be APPROVED — isapproved() is the engine predicate, "royalty or above,
-      #     or carrying the APPROVED flag", and it is false for a guest whatever else is set.
-      # The engine ships that rule and no policy for what earns the flag; a game decides that
-      # and sets APPROVED itself. A game that wants a DIFFERENT bar edits this one attribute —
-      # nothing else in the package tests the flag, and the engine and the verbs cannot drift
+      #     or holding the approved role", and it is false for a guest whatever else is set.
+      # The engine ships that rule and no policy for what earns the role; a game decides that
+      # and assigns it itself. A game that wants a DIFFERENT bar edits this one attribute —
+      # nothing else in the package tests the role, and the engine and the verbs cannot drift
       # because both sides run the same isapproved() code.
       #
       # Association is the line, not visibility: viewing a schedule or a scene's information is
