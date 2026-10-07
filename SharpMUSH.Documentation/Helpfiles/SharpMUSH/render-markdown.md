@@ -57,7 +57,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 Fenced code blocks support ANSI syntax highlighting when a language tag is specified.
 
 Use `` ```sharp `` for SharpMUSH/MUSH softcode, which gets the full semantic token pipeline<br>
-(functions, substitutions, object references, registers, etc.) is used:
+(functions, substitutions, object references, registers, etc.):
 
 ```sharp
 name(%#)              -- function call + substitution
