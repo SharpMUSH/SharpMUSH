@@ -13,6 +13,7 @@ using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Utilities;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -630,6 +631,22 @@ public partial class MarkupOutputRendererTests
 
 		await Assert.That(themed).StartsWith("\u2756\u2550");
 		await Assert.That(plain).StartsWith("+=");
+	}
+
+	/// <summary>A server listing, laid out the way <c>@config</c> and the other listings are.</summary>
+	private static MarkupText ServerPanel() =>
+		ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("List"), new TextBlock(MarkupText.Plain("hi"))), 20);
+
+	[Test]
+	public async Task APlayersTheme_DrawsServerListingsInItsLook()
+	{
+		var themed = StripAnsi(Render(ServerPanel(), new ProtocolCapabilities(), AllColour with { Theme = "fantasy" }));
+		var plain = StripAnsi(Render(ServerPanel(), new ProtocolCapabilities(), AllColour));
+		var coloured = StripAnsi(Render(ServerPanel(), new ProtocolCapabilities(), AllColour with { Theme = "{\"seed\":\"#7aa2f7\"}" }));
+
+		await Assert.That(themed).StartsWith("\u2756\u2550");
+		await Assert.That(plain).StartsWith("\u256d");
+		await Assert.That(coloured).StartsWith("\u256d");
 	}
 
 	[Test]

@@ -141,7 +141,7 @@ In the portal the picture shows in place of the cat, with the fields beside it.
 
 # Layout Borders
 
-box() and rule() draw with a border style. The game's default is the `layout_border` option; `"border":"<style>"` picks another.
+box() and rule() draw with a border style. The game's default is the `layout_border` option, `double` unless the game changes it; `"border":"<style>"` picks another. A client without Unicode is sent `double` as the `mush` style shown below.
 
 ## Styles
 
@@ -368,10 +368,10 @@ A gauge drawn in pieces of your own, in the reader's own sixteen colours:
 HP <===============......> 70%
 ```
 
-A theme made once can be kept in an attribute and used by name. [SET()] stores what [THEME()] wrote, and [JSON()] puts it into the options:
+A theme made once can be used again without making it each time. [THEME()] writes it out, and [JSON()] puts it into the options. To keep it, store it in an attribute as [THEME()] shows:
 
 ```sharp
-> think [set(me,MYTHEME:[theme({{"seed":"#d08770","harmony":"split"}})])][box(Hello,,20,json(object,theme,v(MYTHEME)))]
+> think [setq(0,theme({{"seed":"#d08770","harmony":"split"}}))][box(Hello,,20,json(object,theme,%q0))]
 +==================+
 | Hello            |
 +==================+
@@ -418,7 +418,7 @@ think set(me,MYTHEME:[theme({{"seed":"#d08770","harmony":"split"}})])
 think box(Hello,,30,json(object,theme,v(MYTHEME)))
 ```
 
-`&MYTHEME me=...` would keep the `[theme(...)]` call as written instead of the theme it makes.
+`&MYTHEME me=...` would keep the `[theme(...)]` call as written instead of the theme it makes. [SET()] tells you the attribute was set, as `@set` does.
 
 The result is read back as it is, so it can be edited and passed on.
 
