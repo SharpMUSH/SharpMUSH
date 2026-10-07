@@ -159,6 +159,10 @@ services:
       - ForwardedHeaders__KnownProxies__0=172.28.0.10
     volumes:
       - app-data:/app/data
+    # /metrics (plain HTTP, nothing else on it), on the host's loopback only, for a scraper on the host
+    # or an ssh tunnel to it.
+    ports:
+      - "127.0.0.1:9092:9092"
     depends_on:
       nats:
         condition: service_healthy

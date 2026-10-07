@@ -139,7 +139,7 @@ reached at one stable HTTPS address and the proxy passes the browser's `Host` th
 | 4203 | Telnet over TLS — *configured but not yet implemented* | not yet |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
 | 4202 | Connection server HTTP / `/ws` WebSocket | no — internal, reached via Caddy's `/ws` route |
-| 9092 | Server `/metrics` for Prometheus (plain HTTP, answers nothing else; `Metrics:Port`, 0 turns it off) | no — scrape it from the compose network |
+| 9092 | Server `/metrics` for Prometheus (plain HTTP, answers nothing else; `Metrics:Port`, 0 turns it off) | no — published on the host's loopback only (`127.0.0.1:9092`), for a scraper on the host or an ssh tunnel. Needs Docker Engine 28.3.3 or later: older engines let hosts on the same network segment reach loopback-published ports (before 28.0.0), or did so after a firewalld reload (before 28.3.3) |
 | 9091 | Connection server `/metrics` (same; `ConnectionServer:MetricsPort`) | no — scrape it from the compose network |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
 

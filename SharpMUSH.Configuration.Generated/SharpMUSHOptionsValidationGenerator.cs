@@ -109,7 +109,7 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 		return
 			$$"""
 			      var {{prop.Name}}Value = {{category.Name}}Value.{{prop.Name}};
-			      if (!{{regexFieldName}}.IsMatch({{prop.Name}}Value.ToString() ?? ""))
+			      if (!{{regexFieldName}}.IsMatch($"{{{prop.Name}}Value}"))
 			      {
 			        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' is invalid.");
 			      }
