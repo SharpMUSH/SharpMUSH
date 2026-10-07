@@ -211,6 +211,22 @@ public static partial class ThemeStylesheet
 			problems.Add("Braces do not balance: every { needs its }.");
 		}
 
+		// A colour token the contrast report cannot read (another selector, or a colour that is not #rrggbb) would
+		// paint the page with one colour while the report, the derived shades and MudBlazor's palette use another.
+		var declared = Unescape(bare);
+		var readable = Readable(declared);
+		var unreadable = TokenDeclarationPattern().Matches(declared)
+			.Select(m => m.Groups["name"].Value)
+			.Where(ThemeTokens.Editable.Contains)
+			.GroupBy(name => name)
+			.Where(g => g.Count() > readable.GetValueOrDefault(g.Key))
+			.Select(g => $"--{g.Key}")
+			.ToList();
+		if (unreadable.Count > 0)
+		{
+			problems.Add($"Set {string.Join(", ", unreadable)} only in a plain :root rule, as a #rrggbb colour, so the contrast report can check it.");
+		}
+
 		return problems;
 	}
 
@@ -226,6 +242,17 @@ public static partial class ThemeStylesheet
 			return found;
 		}
 
+		foreach (var (name, value) in RootColors(Unescape(bare)))
+		{
+			found[name] = value;
+		}
+
+		return found;
+	}
+
+	/// <summary>Each colour token set to a <c>#rrggbb</c> or <c>#rgb</c> colour in a <c>:root</c> rule, in order.</summary>
+	private static IEnumerable<(string Name, string Hex)> RootColors(string bare)
+	{
 		foreach (Match root in RootRulePattern().Matches(bare))
 		{
 			foreach (Match declaration in ColorDeclarationPattern().Matches(root.Groups["body"].Value))
@@ -233,13 +260,15 @@ public static partial class ThemeStylesheet
 				var name = declaration.Groups["name"].Value;
 				if (ThemeTokens.Editable.Contains(name) && ThemeColor.TryParse(declaration.Groups["value"].Value, out var color))
 				{
-					found[name] = color.Hex;
+					yield return (name, color.Hex);
 				}
 			}
 		}
-
-		return found;
 	}
+
+	/// <summary>How many times each colour token is set where <see cref="ColorOverrides"/> reads it.</summary>
+	private static Dictionary<string, int> Readable(string bare)
+		=> RootColors(bare).GroupBy(c => c.Name).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
 
 	/// <summary><paramref name="tokens"/> with the colour tokens <paramref name="css"/> sets laid over them.</summary>
 	public static IReadOnlyDictionary<string, string> WithColorOverrides(IReadOnlyDictionary<string, string> tokens, string? css)
@@ -460,9 +489,12 @@ public static partial class ThemeStylesheet
 	[GeneratedRegex(@"\burl\(\s*(?<target>""[^""]*""|'[^']*'|[^)]*)\s*\)")]
 	private static partial Regex UrlPattern();
 
-	[GeneratedRegex(@":root\s*\{(?<body>[^{}]*)\}")]
+	[GeneratedRegex(@"(?<![\w-]):root\s*\{(?<body>[^{}]*)\}", RegexOptions.IgnoreCase)]
 	private static partial Regex RootRulePattern();
 
 	[GeneratedRegex(@"--(?<name>[a-z0-9-]+)\s*:\s*(?<value>#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3})\s*(?:!important\s*)?(?:;|$)")]
 	private static partial Regex ColorDeclarationPattern();
+
+	[GeneratedRegex(@"--(?<name>[a-z0-9-]+)\s*:")]
+	private static partial Regex TokenDeclarationPattern();
 }

@@ -25,6 +25,8 @@ public class ThemeStylesheetTests
 	[Arguments(".x::before { content: \"\\2726\"; }")]
 	[Arguments("@media (max-width: 760px) { .x { display: none; } }")]
 	[Arguments("/* a comment with url(http://example.com) in it */ .x { color: red; }")]
+	[Arguments(":ROOT { --text: #fff; --text-dim: #CCCCCC !important }")]
+	[Arguments(":root { --te\\78t: #ffffff; }")]
 	[Arguments("")]
 	public async Task OrdinaryCssIsAccepted(string css)
 		=> await Assert.That(ThemeStylesheet.Validate(css)).IsEmpty();
@@ -49,6 +51,12 @@ public class ThemeStylesheetTests
 	[Arguments(".x { color: red; } }", "Braces")]
 	[Arguments(".x { color: red; } /* not closed", "comment")]
 	[Arguments(".x { background: url(/a.png; }", "not closed")]
+	[Arguments(":root { --text: rgb(255 255 255); }", "--text")]
+	[Arguments(":root { --text: white; }", "--text")]
+	[Arguments("html { --bg: #000000; }", "--bg")]
+	[Arguments(":root, .x { --bg: #000000; }", "--bg")]
+	[Arguments(":root:lang(zh) { --accent: #ff0000; }", "--accent")]
+	[Arguments(":root { --text: #ffffff; } body { --text: #000000; }", "--text")]
 	public async Task AnythingThatLoadsFromElsewhereOrEscapesItsStyleIsRefused(string css, string because)
 	{
 		var problems = ThemeStylesheet.Validate(css);
@@ -74,6 +82,13 @@ public class ThemeStylesheetTests
 		var overrides = ThemeStylesheet.ColorOverrides(css);
 
 		await Assert.That(overrides).IsEquivalentTo(new Dictionary<string, string> { ["text"] = "#ffffff", ["bg"] = "#000000" });
+	}
+
+	[Test]
+	public async Task AnUpperCaseRootAndAnEscapedNameAreReadAsTheBrowserReadsThem()
+	{
+		await Assert.That(ThemeStylesheet.ColorOverrides(":ROOT { --text: #fff; }")).ContainsKey("text");
+		await Assert.That(ThemeStylesheet.ColorOverrides(":root { --te\\78t: #ffffff; }")).ContainsKey("text");
 	}
 
 	[Test]

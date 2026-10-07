@@ -162,6 +162,8 @@ escapes (a disguised `\75 rl(` is `url(`):
   handed to one;
 - `image-set()` and `src()` (use `url()`), `expression()`, `javascript:` and `vbscript:` URLs, `behavior`,
   `-moz-binding`;
+- one of the thirteen colour tokens set anywhere but a plain `:root` rule, or to anything but a `#rrggbb` or `#rgb`
+  colour: the contrast report could not read it, so the page would wear one colour while the report checked another;
 - braces that do not balance, a comment that is not closed, and more than 64 KiB.
 
 ## Writing portal CSS
