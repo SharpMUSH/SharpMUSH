@@ -211,7 +211,8 @@ public class AdminAccountsController(
 		if (reason is { Length: > AdminBansController.MaxReasonLength })
 			return BadRequest($"Keep the reason to {AdminBansController.MaxReasonLength} characters.");
 		var character = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbrefNumber)));
-		await accountService.UnlinkCharacterAsync(FullId(key), new DBRef(dbrefNumber));
+		if (await accountService.UnlinkCharacterAsync(FullId(key), new DBRef(dbrefNumber)) is Error<string> refused)
+			return Conflict(refused.Value);
 		await audit.RecordPortalAsync(adminId!, AuditActions.CharacterUnlink,
 			character is AnySharpObject unlinked
 				? AuditTargets.Of(unlinked)

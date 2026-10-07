@@ -180,6 +180,19 @@ public class CharacterClaimTests : ServerTestBase
 			.Contains($"{character.Object.Name} is no longer linked to account '{account.Username}'.");
 	}
 
+	[Test]
+	public async Task AccountUnlink_OfGod_IsRefused()
+	{
+		var gods = await Accounts.GetAccountForCharacterAsync(new DBRef(1));
+		await Assert.That(gods).IsNotNull().Because("bootstrap links the pre-generated admin account to God");
+
+		await Cmd($"@account/unlink {gods!.Username}=#1");
+
+		await Assert.That((await Accounts.GetAccountForCharacterAsync(new DBRef(1)))?.Id).IsEqualTo(gods.Id);
+		await Assert.That(Notifications.For(WebAppFactoryArg.ExecutorDBRef))
+			.Contains("God cannot be unlinked from its account.");
+	}
+
 	/// <summary>A connected character on <paramref name="account"/>, for running <c>@account/claim</c> as.</summary>
 	private async Task<TestIsolationHelpers.TestPlayer> PlayingOnAsync(SharpAccount account)
 	{

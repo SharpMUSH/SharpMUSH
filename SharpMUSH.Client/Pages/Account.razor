@@ -154,9 +154,13 @@
                                                 <MudIconButton Icon="@Icons.Material.Outlined.Palette" Size="Size.Small"
                                                                Href="@($"/settings/theme#theme-{context.DbrefNumber}")"
                                                                aria-label="@Loc["NavThemeForCharacter", context.Name]" />
-                                                <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
-                                                               Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
-                                                               OnClick="() => UnlinkCharacterAsync(context.DbrefNumber, context.Name)" />
+                                                @* God (#1) never leaves its account. *@
+                                                @if (context.DbrefNumber != 1)
+                                                {
+                                                    <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
+                                                                   Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
+                                                                   OnClick="() => UnlinkCharacterAsync(context.DbrefNumber, context.Name)" />
+                                                }
                                             </MudTd>
                                         </RowTemplate>
                                     </MudTable>

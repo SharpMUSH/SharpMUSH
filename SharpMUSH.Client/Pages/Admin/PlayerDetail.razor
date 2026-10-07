@@ -22,7 +22,7 @@
                         <CapsuleButton Icon="@Icons.Material.Filled.PowerSettingsNew" Disabled="_busy"
                                        Class="adm-char-boot" OnClick="BootAsync">@Loc["AdmCharacterBoot"]</CapsuleButton>
                     }
-                    @if (detail.Character.AccountKey is not null)
+                    @if (detail.Character.AccountKey is not null && detail.Character.DbrefNumber != 1)
                     {
                         <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Disabled="_busy"
                                        Class="adm-char-unlink" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>

@@ -70,7 +70,11 @@ public interface IAccountService
 	/// </summary>
 	ValueTask<CharacterLink> AttachCharacterAsync(string accountId, SharpPlayer character, CancellationToken ct = default);
 
-	ValueTask UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default);
+	/// <summary>
+	/// Takes the character off the account; the character itself is kept. God (#1) is refused: it never
+	/// leaves its account, which is why that account can never be disabled, closed, deleted or banned.
+	/// </summary>
+	ValueTask<Result<Success>> UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default);
 
 	ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default);
 

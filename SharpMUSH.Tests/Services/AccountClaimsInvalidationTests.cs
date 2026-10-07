@@ -1,5 +1,6 @@
 using NSubstitute;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -56,6 +57,19 @@ public class AccountClaimsInvalidationTests
 		await database.Received(1).UnlinkCharacterFromAccountAsync("node_accounts/1", new DBRef(7, 777L),
 			Arg.Any<CancellationToken>());
 		await invalidator.Received(1).InvalidateAsync("node_accounts/1", Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task UnlinkCharacterAsync_God_IsRefusedWithoutWriting()
+	{
+		var (service, database, invalidator) = Build();
+
+		var refused = (await service.UnlinkCharacterAsync("node_accounts/1", new DBRef(1, 1L))).Expect<Error<string>>();
+
+		await Assert.That(refused.Value).IsEqualTo("God cannot be unlinked from its account.");
+		await database.DidNotReceive().UnlinkCharacterFromAccountAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
+			Arg.Any<CancellationToken>());
+		await invalidator.DidNotReceive().InvalidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
 	/// <summary>

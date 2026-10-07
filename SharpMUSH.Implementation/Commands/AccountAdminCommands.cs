@@ -273,7 +273,12 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await AccountService.UnlinkCharacterAsync(account.Id!, player.Object.DBRef);
+		if (await AccountService.UnlinkCharacterAsync(account.Id!, player.Object.DBRef) is Error<string> refused)
+		{
+			await NotifyService.Notify(executor, refused.Value);
+			return CallState.Empty;
+		}
+
 		await Audit.RecordAsync(executor, AuditActions.CharacterUnlink, AuditTargets.Of(player), account.Username);
 		await NotifyService.Notify(executor, $"{player.Object.Name} is no longer linked to account '{account.Username}'.");
 		return new CallState(player.Object.DBRef);

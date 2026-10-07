@@ -194,7 +194,10 @@ public class AccountService(
 	private async ValueTask<CharacterClaim> MoveCharacterAsync(SharpAccount holder, string accountId, SharpPlayer character,
 		CancellationToken ct)
 	{
-		await UnlinkCharacterAsync(holder.Id!, character.Object.DBRef, ct);
+		// God never leaves its account, so its holder's password cannot carry it elsewhere.
+		if (await UnlinkCharacterAsync(holder.Id!, character.Object.DBRef, ct) is not Success)
+			return new LinkedElsewhere(character, holder);
+
 		return await AttachCharacterAsync(accountId, character, ct) switch
 		{
 			SharpPlayer linked => linked,
@@ -218,11 +221,15 @@ public class AccountService(
 	/// The security-relevant direction: unlinking the last character drops the account back to Guest,
 	/// and leaving Player scopes cached would keep granting them after the entitlement is gone.
 	/// </remarks>
-	public async ValueTask UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
+	public async ValueTask<Result<Success>> UnlinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
 	{
+		if (characterRef.Number == 1)
+			return new Error<string>("God cannot be unlinked from its account.");
+
 		await database.UnlinkCharacterFromAccountAsync(accountId, characterRef, ct);
 		if (claimsInvalidator is not null)
 			await claimsInvalidator.InvalidateAsync(accountId, ct);
+		return new Success();
 	}
 
 	public ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken ct = default)

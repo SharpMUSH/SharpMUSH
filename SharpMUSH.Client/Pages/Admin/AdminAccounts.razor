@@ -46,10 +46,18 @@
                         <MudTd data-label="@Loc["Characters"]">
                             @foreach (var character in context.Characters)
                             {
-                                <MudChip T="string" Size="Size.Small"
-                                         OnClose="@(() => UnlinkAsync(context, character))">
-                                    @character.Name (#@character.DbrefNumber)
-                                </MudChip>
+                                @* God (#1) never leaves its account, so its chip has no unlink. *@
+                                @if (character.DbrefNumber == 1)
+                                {
+                                    <MudChip T="string" Size="Size.Small">@character.Name (#@character.DbrefNumber)</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small"
+                                             OnClose="@(() => UnlinkAsync(context, character))">
+                                        @character.Name (#@character.DbrefNumber)
+                                    </MudChip>
+                                }
                             }
                         </MudTd>
                         <MudTd>
