@@ -62,6 +62,11 @@ services:
     environment:
       - Rendering__SocketPath=/run/sharpmush/render.sock
       - NATS_URL=nats://nats:4222
+      # The web terminal's /ws reaches this service through Caddy, so its peer address is Caddy's.
+      # Trusting Caddy's X-Forwarded-For (the same list as sharpmush-server's, below) gives each web
+      # connection the player's own address, which is what WHO, sitelock and sitebans see. Nothing
+      # else is trusted: a client that reaches :4202 directly cannot name its own address.
+      - ForwardedHeaders__KnownProxies__0=172.28.0.10
     depends_on:
       renderer:
         condition: service_healthy

@@ -73,6 +73,11 @@ services:
     environment:
       - Rendering__SocketPath=/run/sharpmush/render.sock
       - NATS_URL=nats://nats:4222
+      # The web terminal's /ws reaches this service through cloudflared, so its peer address is cloudflared's.
+      # Trusting cloudflared's X-Forwarded-For (the same list as sharpmush-server's, below) gives each web
+      # connection the player's own address, which is what WHO, sitelock and sitebans see. Nothing
+      # else is trusted: a client that reaches :4202 directly cannot name its own address.
+      - ForwardedHeaders__KnownProxies__0=172.29.0.10
     depends_on:
       renderer:
         condition: service_healthy
