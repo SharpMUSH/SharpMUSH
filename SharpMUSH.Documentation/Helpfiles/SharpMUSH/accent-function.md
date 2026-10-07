@@ -40,22 +40,22 @@ For each character in `<string>`, the corresponding character of `<template>` is
 
 ## Accent examples
 
-Some examples of accent() and their expected outputs:
+Some examples of accent() and what they print. Each result is shown in words, since the accented letters are not ASCII:
 
 ```sharp
 > think accent(Aule, ---:)
-`Aul(e-with-diaeresis)`
-Aulë
 ```
+
+Prints "Aule" with a diaeresis (two dots) over the final e.
 
 ```sharp
 > think accent(The Nina was a ship, The Ni~a was a ship)
-The Ni(n-with-~)a was a ship
-The Niña was a ship
 ```
+
+Prints "The Nina was a ship" with a tilde over the n of "Nina".
 
 ```sharp
 > think accent(Khazad ai-menu!, Khaz^d ai-m^nu!)
-Khaz(a-with-^)d ai-m(e-with-^)nu!
-Khazâd ai-mênu
 ```
+
+Prints "Khazad ai-menu!" with a circumflex over the second a of "Khazad" and over the e of "menu".

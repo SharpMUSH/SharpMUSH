@@ -47,7 +47,7 @@ parity run.
 **A choice.**
 
 **PennMUSH** routes a filter's answer through `do_mail_file` (`extmail.c:616-630`), whose
-`parse_folder` (`extmail.c:2839-2855`) accepts a digit `0`–`MAX_FOLDERS` or the name of a folder the
+`parse_folder` (`extmail.c:2839-2855`) accepts a digit `0` to `MAX_FOLDERS` or the name of a folder the
 player has already used, and answers `MAIL: Invalid folder specification` otherwise.<br>
 **SharpMUSH** accepts any alphanumeric name (`extmail.c:333`'s own rule for one) and makes it one of
 the player's folders as the message is filed, exactly as `@mail/file` does. The new folder takes the
@@ -56,7 +56,7 @@ by number as they do any other; when all fifteen are taken, the name is refused 
 **Why.** A filter is written before the folder it files into exists; requiring the player to create it
 first means the first message that matches is the one that goes astray.<br>
 **Workaround.** Filters written for PennMUSH keep working. A filter that returns a name PennMUSH would
-have rejected files here instead of erroring, so check the spelling — a typo makes a folder.<br>
+have rejected files here instead of erroring, so check the spelling: a typo makes a folder.<br>
 **Example.** The parity case `choice.mail-folder` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## An empty `MAILFORWARDLIST` is no list

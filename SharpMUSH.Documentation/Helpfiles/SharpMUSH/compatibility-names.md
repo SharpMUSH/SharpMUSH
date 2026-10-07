@@ -38,7 +38,7 @@
 Functions and commands that exist in SharpMUSH and not in PennMUSH, or that take their arguments in a
 different order.
 
-The additions below cost imported code nothing — a name PennMUSH never had cannot be called by
+The additions below cost imported code nothing: a name PennMUSH never had cannot be called by
 PennMUSH softcode. **The argument-order difference is not in that class.** `ctitle()` and `cstatus()`
 take their two arguments the other way round here, so every existing call to either has to be
 swapped by hand; nothing detects it for you, and a call left alone will resolve the channel name as
@@ -50,7 +50,7 @@ requires migrating code you already have.
 **A choice.**
 
 **PennMUSH** is `ctitle(<channel>, <object>)` and `cstatus(<channel>, <object>)`.<br>
-**SharpMUSH** is `ctitle(<object>, <channel>)` and `cstatus(<object>, <channel>)` — object first,
+**SharpMUSH** is `ctitle(<object>, <channel>)` and `cstatus(<object>, <channel>)`, object first,
 consistently across the pair.<br>
 **Why.** No reason was recorded when the order was chosen. It stays because reversing it now would
 break code written for SharpMUSH.<br>
@@ -92,21 +92,21 @@ hi
 
 ## SharpMUSH-only functions
 
-  `motd() wizmotd() downmotd() fullmotd()` — the Messages of the Day `@motd` set. Only `motd()` is
+  `motd() wizmotd() downmotd() fullmotd()`: the Messages of the Day `@motd` set. Only `motd()` is
   readable by a mortal.<br>
-  `cinfo(<channel>[, <field>])` — one field of a channel: `name`, `owner`, `members` or `buffer`.<br>
-  `cnand()` — the cancelling form of `nand()`, for code written against servers that spell it so.<br>
-  `zfind(<zone>[, <osep>])` — the objects `@chzone`'d to a zone that you may examine.<br>
-  `decomposeweb()` — `decompose()` for a web client: angle brackets encoded, colour rebuilt as an
+  `cinfo(<channel>[, <field>])`: one field of a channel: `name`, `owner`, `members` or `buffer`.<br>
+  `cnand()`: the cancelling form of `nand()`, for code written against servers that spell it so.<br>
+  `zfind(<zone>[, <osep>])`: the objects `@chzone`'d to a zone that you may examine.<br>
+  `decomposeweb()`: `decompose()` for a web client: angle brackets encoded, colour rebuilt as an
   `ansi()` call.<br>
-  `regreplace()` — regex replace with `$1`-style backreferences and an `i` flag, where PennMUSH has
+  `regreplace()`: regex replace with `$1`-style backreferences and an `i` flag, where PennMUSH has
   `regedit()` with alternating pairs and `%1`-style references.<br>
-  `regmatchalli()` — a second name for `reglmatchalli()`. Despite the name it searches a list and
+  `regmatchalli()`: a second name for `reglmatchalli()`. Despite the name it searches a list and
   returns positions; it is not a case-insensitive `regmatch()`.<br>
-  `rendermarkdown()` — CommonMark to markup.<br>
-  `pagerecall()`, `pageconversations()` — read your own page log (the `page_log` option); PennMUSH
+  `rendermarkdown()`: CommonMark to markup.<br>
+  `pagerecall()`, `pageconversations()`: read your own page log (the `page_log` option); PennMUSH
   keeps no page log.<br>
-  `formq()`, the wiki functions and the scene functions — SharpMUSH subsystems with no PennMUSH
+  `formq()`, the wiki functions and the scene functions: SharpMUSH subsystems with no PennMUSH
   counterpart.
 
 Two are registered and do nothing yet: `websocket_html()` and `websocket_json()` validate their
@@ -114,16 +114,16 @@ arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0
 
 ## SharpMUSH-only commands
 
-  `@account` — administers web-portal accounts.<br>
-  `@locale` — the language the server addresses you in.<br>
-  `@map` — `@dolist` passing the element as `%0` rather than substituting it.<br>
-  `page/recall`, `page/conversations`, `page/timestamps` — switches that read your own page log;
+  `@account`: administers web-portal accounts.<br>
+  `@locale`: the language the server addresses you in.<br>
+  `@map`: `@dolist` passing the element as `%0` rather than substituting it.<br>
+  `page/recall`, `page/conversations`, `page/timestamps`: switches that read your own page log;
   PennMUSH keeps no page log, so the parity harness has no case for them.<br>
-  `register`, `login`, `make`, `play` — the account layer at the login screen.<br>
-  `version` — `@version` before you have connected. PennMUSH has no bare `version`; it is accepted
+  `register`, `login`, `make`, `play`: the account layer at the login screen.<br>
+  `version`: `@version` before you have connected. PennMUSH has no bare `version`; it is accepted
   here because crawlers and players from MUX-family servers type it, and it publishes nothing `INFO`
   does not.<br>
-  `~<command>` — run one command under strict parsing.
+  `~<command>`: run one command under strict parsing.
 
 ## SharpMUSH-only flags and powers
 

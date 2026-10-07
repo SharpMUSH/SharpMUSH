@@ -90,7 +90,7 @@ Your conversations outlast the names in them, so a name that finds no player, or
 
 A bare `#<dbref>` is only ever the object that holds that dbref now: if it was recycled to someone new, the old holder's pages are reached by their objid or their old name, never by the dbref. Only your own conversations are searched. With no `<player-list>`, it shows your latest pages across all your conversations. `<lines>` is 10 unless given, and at most 500; 0 shows as many as that.
 
-Each page reads as it did when it was delivered: your own pages as you saw them sending them (`You paged …`, `Long distance to …`), everyone else's as you received them, with the pager's page alias if the page carried one. Recall only shows: it does not run PAGEFORMAT or OUTPAGEFORMAT, and it triggers nothing. `/timestamps` puts the time each page was sent in front of it, as @channel/recall does.
+Each page reads as it did when it was delivered: your own pages as you saw them sending them (`You paged ...`, `Long distance to ...`), everyone else's as you received them, with the pager's page alias if the page carried one. Recall only shows: it does not run PAGEFORMAT or OUTPAGEFORMAT, and it triggers nothing. `/timestamps` puts the time each page was sent in front of it, as @channel/recall does.
 
 `page/conversations` lists your logged conversations, the most recent first: who each is with, how many pages it holds, and when the last one was sent.
 

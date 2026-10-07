@@ -47,7 +47,7 @@ Available functions:
 - wshtml()
 - html(), tag() and endtag() (see their entries)
 
-Things a client may have that are not tags — a sound, a picture, a pane, a screen to clear — are written once and rendered by each client in its own way. See [MEDIA FUNCTIONS].
+Things a client may have that are not tags (a sound, a picture, a pane, a screen to clear) are written once and rendered by each client in its own way. See [MEDIA FUNCTIONS].
 
 ### Examples
 ```sharp
@@ -137,7 +137,7 @@ Outputs *<string>* as a link that runs *<command>* when clicked. *<hint>*, which
 
 Each client gets the link in its own dialect: `<a xch_cmd>` for Pueblo, `<send href>` for MXP, a clickable link in the web portal. Every other client gets *<string>* alone. This is why a command link is a function of its own: one written with tagwrap() works in only one of those clients.
 
-cmdlink() is SharpMUSH's own. It needs a Wizard or the Send_OOB @power, as PennMUSH requires for XCH_CMD; anyone else gets `#-1 PERMISSION DENIED`. A *<command>* containing a control character — a line break, a tab, an escape — is `#-1 INVALID ARGUMENT`: a line break would have the client send the rest as a second command, and the others are not part of any command a player could type.
+cmdlink() is SharpMUSH's own. It needs a Wizard or the Send_OOB @power, as PennMUSH requires for XCH_CMD; anyone else gets `#-1 PERMISSION DENIED`. A *<command>* containing a control character (a line break, a tab, an escape) is `#-1 INVALID ARGUMENT`: a line break would have the client send the rest as a second command, and the others are not part of any command a player could type.
 
 ### Example
 ```sharp
@@ -163,7 +163,7 @@ Available functions:
 - prefetch()
 - expirelinks()
 
-None of them leaves anything in the plain text, so `strlen()` and listen patterns see what they saw before — except where a function stands words in for what a client cannot show, such as a picture's description.
+None of them leaves anything in the plain text, so `strlen()` and listen patterns see what they saw before, except where a function stands words in for what a client cannot show, such as a picture's description.
 
 All but preformat() need a Wizard or the Send_OOB @power, as [CMDLINK()] does: they make a client fetch a file, play it, or clear what the player is looking at. Laying text out does not, so preformat() is open to anyone.
 
@@ -218,7 +218,7 @@ Silences what is playing. *<channel>* is `effects` or `music`; with none, both s
 
 A picture. *<width>* and *<height>* are in pixels.
 
-*<description>* is what a client with no pictures shows instead — the address itself when none is given — so it is worth writing. MXP gets `<IMAGE>`, Pueblo and the portal `<img>`, and a terminal the words.
+*<description>* is what a client with no pictures shows instead (the address itself when none is given), so it is worth writing. MXP gets `<IMAGE>`, Pueblo and the portal `<img>`, and a terminal the words.
 
 Put it inside [CMDLINK()] for a picture that runs a command when clicked.
 
@@ -232,7 +232,7 @@ Put it inside [CMDLINK()] for a picture that runs a command when clicked.
 
 `pane(<text>, <name>[, <title>])`
 
-Sends *<text>* to a pane of its own — a window or region the client keeps apart from the main output — opening it if the client has none by that name. *<title>* is what the pane is labelled.
+Sends *<text>* to a pane of its own (a window or region the client keeps apart from the main output), opening it if the client has none by that name. *<title>* is what the pane is labelled.
 
 A client with no panes shows the text where it is, which is why the text is inside the function rather than sent after it.
 
@@ -247,7 +247,7 @@ A client with no panes shows the text where it is, which is why the text is insi
 
 Says *<text>* is laid out by its own spacing: a table, a map, a listing.
 
-A client reading the stream as HTML — a Pueblo client, the portal — collapses runs of spaces and uses a variable width font, so anything drawn with spaces needs this around it or its columns will not line up. Pueblo gets `<xch_mudtext>`, the portal `<pre>`, and a terminal the text unchanged, since a terminal lays it out that way already.
+A client reading the stream as HTML (a Pueblo client, the portal) collapses runs of spaces and uses a variable width font, so anything drawn with spaces needs this around it or its columns will not line up. Pueblo gets `<xch_mudtext>`, the portal `<pre>`, and a terminal the text unchanged, since a terminal lays it out that way already.
 
 [align()], [align()] and [TABLE()] already say it for themselves, as do tables and code blocks in help and wiki text. This is for columns you draw yourself.
 
@@ -328,7 +328,7 @@ See [@prompt] for information about sending telnet GOAHEAD prompts. Support for 
 
   The fragment is read the way a browser reads it: an unclosed tag closes at the end, a stray closing tag is dropped, a bare `<` is text. An element that encloses nothing is dropped, since a tag has to cover something; `<br>` is a line break.
 
-  The gate is [TAGWRAP()]'s. With the Send_OOB power (Pueblo_Send is its older name), any tag and any attribute. Without it, only the tags PennMUSH's `tagwrap()` allows — one forbidden tag refuses the whole fragment — and only attributes a browser cannot be made to run, one forbidden attribute dropping them all from that tag.
+  The gate is [TAGWRAP()]'s. With the Send_OOB power (Pueblo_Send is its older name), any tag and any attribute. Without it, only the tags PennMUSH's `tagwrap()` allows (one forbidden tag refuses the whole fragment) and only attributes a browser cannot be made to run, one forbidden attribute dropping them all from that tag.
 
   PennMUSH's `wshtml(<html>, <default>)` takes a second, plain-text string for clients without HTML, and its `wsjson()` embeds a JSON object the same way. Here `<default>` is accepted, so softcode written for PennMUSH still runs, but it is not used: the markup's own text is what a client without HTML sees. There is no `wsjson()`: JSON is data for a program rather than text with a plain reading, so it goes by [OOB()], which sends it where a connection can receive it.
 

@@ -106,13 +106,13 @@ think hello
 
 This is specifically about matching a built-in command name. It does not contradict the `$`-command
 rule in [compatibility matched]: once built-in dispatch has not matched, `$`-commands *are* matched
-against the fully evaluated line — a separate, later stage.
+against the fully evaluated line (a separate, later stage).
 
 ## Malformed expressions are an error, not silent text
 
 **A choice.**
 
-**PennMUSH** evaluates almost anything — an unclosed `[`, `(`, or `{`, or a trailing `\` still
+**PennMUSH** evaluates almost anything: an unclosed `[`, `(`, or `{`, or a trailing `\` still
 produces output.<br>
 **SharpMUSH** answers `#-1 PARSER FAILURE` for an unbalanced expression.<br>
 **Why.** Silent recovery turns a typo into output that looks deliberate.<br>
@@ -163,8 +163,8 @@ every call that had already started and counts the result, answering 86 here; Sh
 
 **A choice.**
 
-**PennMUSH** counts every recursive call of its expression parser against `call_limit` — each
-bracket, function argument and attribute body (`src/parse.c:2128`) — and ships it at 100.<br>
+**PennMUSH** counts every recursive call of its expression parser against `call_limit` (each
+bracket, function argument and attribute body, `src/parse.c:2128`) and ships it at 100.<br>
 **SharpMUSH** counts function calls and attribute evaluations, about a third as many for the same
 code, and starts a new game at 1000.<br>
 **Why.** At 100 the call limit would trip before `function_recursion_limit` (50) on ordinary
@@ -246,7 +246,7 @@ of it. `%t` is kept in every position on both servers:
 **A choice.**
 
 **PennMUSH** lets the last argument of functions such as `pemit()`, `emit()` and `capstr()` swallow
-extra unescaped commas — `capstr(a,b,c)` capitalises the string `a,b,c` — though it now warns that
+extra unescaped commas (`capstr(a,b,c)` capitalises the string `a,b,c`), though it now warns that
 this is deprecated.<br>
 **SharpMUSH** treats every comma as an argument separator, so `capstr(a,b,c)` is a
 too-many-arguments error.<br>

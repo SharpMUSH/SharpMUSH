@@ -73,7 +73,7 @@ Listen patterns are checked after the object's normal `@listen` attribute.
 
 ::: seealso
 - [@listen]
-- [@ahear] — `@ahear`, `@amhear`, and `@aahear` provide the three listener reaction attributes.
+- [@ahear]: `@ahear`, `@amhear`, and `@aahear` provide the three listener reaction attributes.
 - [MONITOR]
 - `[LISTEN_PARENT]`
 - [$-commands]

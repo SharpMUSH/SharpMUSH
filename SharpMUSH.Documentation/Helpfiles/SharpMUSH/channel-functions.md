@@ -116,7 +116,7 @@ Functions inspect membership, privileges, history, and channel metadata. For cha
 `cflags(<channel>[,<object>])`
 `clflags(<channel>[,<object>])`
 
-- **cflags()** and **clflags()**: With one argument, *\<channel\>*'s privileges; with two, *\<object\>*'s own flags on that channel. `cflags()` abbreviates each to its single letter and `clflags()` spells it out — that is the only difference between them. See [@CHANNEL PRIVS] for the privilege letters; a member's own flags are `Q`uiet, `H`ide, `G`ag and `C`ombine. Reading another object's flags requires that you be able to examine it, and answers `#-1 NOT ON CHANNEL` when it is not a member.
+- **cflags()** and **clflags()**: With one argument, *\<channel\>*'s privileges; with two, *\<object\>*'s own flags on that channel. `cflags()` abbreviates each to its single letter and `clflags()` spells it out; that is the only difference between them. See [@CHANNEL PRIVS] for the privilege letters; a member's own flags are `Q`uiet, `H`ide, `G`ag and `C`ombine. Reading another object's flags requires that you be able to examine it, and answers `#-1 NOT ON CHANNEL` when it is not a member.
 
 ## cstatus()
 
@@ -161,7 +161,7 @@ Functions inspect membership, privileges, history, and channel metadata. For cha
 
 `crecall(<channel>[,<lines>[,<start>[,<osep>[,<timestamps?>]]]])`
 
-- **crecall()**: The last *\<lines\>* lines of *\<channel\>*'s recall buffer, oldest first, joined by *\<osep\>* (a space by default). *\<lines\>* defaults to 10, and 0 means the whole buffer; *\<start\>* begins the replay at that line of the buffer. A true fifth argument prefixes each line with the time it was said. As with [@CHANNEL OTHER], being able to join the channel is enough — membership is not required.
+- **crecall()**: The last *\<lines\>* lines of *\<channel\>*'s recall buffer, oldest first, joined by *\<osep\>* (a space by default). *\<lines\>* defaults to 10, and 0 means the whole buffer; *\<start\>* begins the replay at that line of the buffer. A true fifth argument prefixes each line with the time it was said. As with [@CHANNEL OTHER], being able to join the channel is enough; membership is not required.
 
 ## cbufferadd()
 

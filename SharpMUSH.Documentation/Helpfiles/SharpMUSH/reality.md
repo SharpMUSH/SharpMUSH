@@ -82,7 +82,7 @@ repair an object that the administrator cannot currently perceive.
 Use /rx or /tx with an empty value to set an empty set. /describe with only the layer name
 clears that layer's description mapping. /remove removes a named layer; /disable returns
 to ordinary behavior without deleting configuration. At most 32 layers are configured.
-Layer names contain 1–32 ASCII letters, digits, underscores or hyphens and are case-insensitive.
+Layer names contain 1-32 ASCII letters, digits, underscores or hyphens and are case-insensitive.
 
 ## Layer descriptions
 

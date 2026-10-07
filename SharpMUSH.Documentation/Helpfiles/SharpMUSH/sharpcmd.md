@@ -781,9 +781,9 @@ With no arguments, @config lists the categories of configuration options for the
 
 Output: when exactly one option matches, its value, as `config()` returns it; otherwise nothing.
 
-The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Booleans take yes/no, true/false or 1/0; numbers may be written with a leading `#`; an object option takes -1 for none. A value that does not fit the option, or that the configuration's own checks reject, is refused and nothing changes. Options naming files (the File and Message categories), the SQL credentials, and list-valued options (banned names, sitelock rules, restrictions — see [@sitelock]) cannot be set this way.
+The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Booleans take yes/no, true/false or 1/0; numbers may be written with a leading `#`; an object option takes -1 for none. A value that does not fit the option, or that the configuration's own checks reject, is refused and nothing changes. Options naming files (the File and Message categories), the SQL credentials, and list-valued options (banned names, sitelock rules, restrictions; see [@sitelock]) cannot be set this way.
 
-SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So unlike PennMUSH, every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all — the listening addresses and ports belong to the connection server's own configuration — so setting them has no effect.
+SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So unlike PennMUSH, every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all (the listening addresses and ports belong to the connection server's own configuration), so setting them has no effect.
 
 Only God can see the SQL credentials (sql_username, sql_password, sql_database).
 
@@ -835,7 +835,7 @@ Show just the object names (with no ansi) in a table:
 
   From the callback, use `@input/prompt` to send another prompt to this connection, or `@input/start` to replace the session. A new session invalidates queued responses to the former session. Replies waiting behind session startup, including blank replies, belong to the first session opened after they were queued. Replacing that session discards its remaining queued replies, including queued cancel messages. If that session ends before they execute, they are discarded rather than run as commands. `@input/cancel` ends capture and restores ordinary commands. Cancellation prevents callbacks already running on this connection from reopening or managing capture; a later independent start is still allowed. A player can always leave by sending exactly `@input/cancel` (case-insensitive) as a complete input message. This escape is checked before queue admission, even when the queue is full. Extra spaces or appended commands make it ordinary literal session data.
 
-  Timeout defaults to 60 seconds and may be 1–3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends; the callback receives empty `%0` and `timeout` in `%1`. Sending the cancel escape after expiry does not suppress an already pending timeout callback. Starting another session is refused while the expired generation still owes its timeout callback; the timeout callback itself may start the next session. The callback is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without invoking a callback. A halted executor, unhandled callback failure, or an exhausted execution budget also ends capture.
+  Timeout defaults to 60 seconds and may be 1-3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends; the callback receives empty `%0` and `timeout` in `%1`. Sending the cancel escape after expiry does not suppress an already pending timeout callback. Starting another session is refused while the expired generation still owes its timeout callback; the timeout callback itself may start the next session. The callback is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without invoking a callback. A halted executor, unhandled callback failure, or an exhausted execution budget also ends capture.
 
   Every delivery rechecks the connection incarnation, full character and callback identities, ownership, control, and attribute access. These checks share the callback execution budget. Prompts are bound to the original connection and are discarded if that connection is replaced before delivery. Changed ownership, deleted/recycled objects, or revoked permission end the session safely. Two connections playing the same character have independent sessions and cannot consume one another's input. There may be at most 1024 sessions globally, 64 per initiating owner, and one per connection. An input message may contain at most 65,536 UTF-16 code units; longer input is rejected while capture remains active.
 
@@ -2019,9 +2019,9 @@ Wizard-only. Turns one or more live objects into a softcode package manifest (`p
 
 `@package <objects>=<package-id>` exports the selection and pemits the resulting manifest back to you. Dbrefs that point at another selected object are converted to symbolic `{{ref}}` tokens automatically. `<version>` defaults to `1.0.0` and `<description>` defaults to an auto-generated note.
 
-This single-step export only succeeds when the selection is **self-contained** — every dbref in the objects' attributes points at another selected object. If any attribute references an object outside the selection, that dbref must be classified as a well-known object or a configure parameter, which is done in the web authoring panel; `@package` will tell you which dbrefs are unresolved and point you there.
+This single-step export only succeeds when the selection is **self-contained**: every dbref in the objects' attributes points at another selected object. If any attribute references an object outside the selection, that dbref must be classified as a well-known object or a configure parameter, which is done in the web authoring panel; `@package` will tell you which dbrefs are unresolved and point you there.
 
-`@package` obeys the same visibility rules as `@decompile`: an object must pass your examine permission, and only the attributes you can see — VEILED attributes excluded — are scanned or written into the manifest.
+`@package` obeys the same visibility rules as `@decompile`: an object must pass your examine permission, and only the attributes you can see (VEILED attributes excluded) are scanned or written into the manifest.
 
 
 ::: seealso
@@ -2249,7 +2249,7 @@ The attribute name is evaluated before the attribute is set, so `&hdr_%q1 me=...
 
 Runs `<command>` with strict argument parsing. SharpMUSH normally splits a command's arguments with error recovery: a syntax error in the argument text is patched up and the split returns its best effort. Under `~`, the recovery is switched off and that error answers `#-1 PARSER FAILURE` instead.
 
-This is narrower than it sounds, and it is **not** what makes a malformed expression an error — that happens anyway. `think [add(1,2)` answers `#-1 PARSER FAILURE` with or without `~`, because an argument whose split reported errors is re-parsed strictly before it is evaluated. What `~` changes is the split itself, so a command whose argument structure only survived by error recovery fails instead of running on a best-effort reading of what you typed.
+This is narrower than it sounds, and it is **not** what makes a malformed expression an error; that happens anyway. `think [add(1,2)` answers `#-1 PARSER FAILURE` with or without `~`, because an argument whose split reported errors is re-parsed strictly before it is evaluated. What `~` changes is the split itself, so a command whose argument structure only survived by error recovery fails instead of running on a best-effort reading of what you typed.
 
 Nesting is limited by the `max_depth` configuration option, as it is for [@@] and the other command modifiers.
 
@@ -2540,7 +2540,7 @@ Note that @startups are NEVER inherited from parent objects.
 
 In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. A destroyed object is removed rather than kept as garbage, so there is no garbage count.
 
-`@stats/tables` lists SharpMUSH's lookup tables — built-in functions, @functions, commands, flags, powers, attribute definitions, config options and connections — with the number of entries in each.<br>
+`@stats/tables` lists SharpMUSH's lookup tables (built-in functions, @functions, commands, flags, powers, attribute definitions, config options and connections) with the number of entries in each.<br>
 `@stats/flags` reports, for the FLAG and POWER flagspaces, how many definitions each has and how objects' sets of flags are distributed.
 
 `@stats/chunks`, `/regions`, `/paging` and `/freespace` report PennMUSH's attribute-chunk allocator. SharpMUSH keeps attributes in its database provider and has no chunk allocator, so these switches say so and return `#-1 NOT SUPPORTED`. For how much disk the database itself uses, see `@storage`.
@@ -2656,7 +2656,7 @@ Administers the web-portal accounts that characters are linked to. Wizard-only, 
 
 `/claim` is for anyone playing a character that is on an account: it links `<character>` to that same account. The password is `<character>`'s own, or, for a character on another account of yours, that account's password, which moves the character over. See [accounts claiming].
 
-With no switch, shows one account's details. `/list` lists every account, or those whose username contains `<pattern>`. `/newpassword` sets a password and requires the holder to change it at their next login. `/disable` and `/enable` suspend and restore access, and `/close` and `/delete` retire the account — the record is kept either way, so the characters linked to it are never orphaned.
+With no switch, shows one account's details. `/list` lists every account, or those whose username contains `<pattern>`. `/newpassword` sets a password and requires the holder to change it at their next login. `/disable` and `/enable` suspend and restore access, and `/close` and `/delete` retire the account; the record is kept either way, so the characters linked to it are never orphaned.
 
 `/link` adds a character to the account without its password: one made with [@pcreate], imported, or whose holder lost its password. A character already on another account is refused until `/unlink` takes it off that one. Only God links God, and only a wizard links a wizard. `/unlink` takes a character off the account; the character itself is kept. Players link their own characters with [claim]. See [accounts staff].
 
@@ -3128,8 +3128,8 @@ Output: the dbref of the room you arrive in.
 # movement
 # move-attributes
 
-Every move — through an exit, by @teleport, by entering or leaving an object, or by going home
-— triggers the same attributes in the same order:
+Every move (through an exit, by @teleport, by entering or leaving an object, or by going home)
+triggers the same attributes in the same order:
 
 1. `@oxmove` on the moving object, shown in the room it is leaving. `%0` is the destination, `%1` the room being left.
 2. `@leave` / `@oleave` / `@aleave` on the room or object being left. `%0` is the destination. Without an `@oleave`, onlookers see "`<Name>` has left."
@@ -3140,8 +3140,8 @@ Every move — through an exit, by @teleport, by entering or leaving an object, 
 7. `@enter` / `@oenter` / `@aenter` on the room or object being entered. `%0` is the room left. Without an `@oenter`, onlookers see "`<Name>` has arrived."
 8. `@move` / `@omove` / `@amove` on the moving object itself. `%0` is the destination, `%1` the room left.
 
-An object that cannot hear — one that is not a connected player, not a PUPPET, has no `@listen`,
-and is not AUDIBLE with a `@forwardlist` — triggers only the action attributes (`@aleave`,
+An object that cannot hear (one that is not a connected player, not a PUPPET, has no `@listen`,
+and is not AUDIBLE with a `@forwardlist`) triggers only the action attributes (`@aleave`,
 `@azleave`, `@azenter`, `@aenter`), never the messages. A DARK wizard triggers no `@o`-messages
 at all.
 
@@ -3295,7 +3295,7 @@ This is a SharpMUSH command; PennMUSH's `register` mails a password for a new ch
 # login
 `login <name-or-email> <password>`
 
-Authenticates to an existing account from the login screen and puts your connection into account mode, where [make], [play] and [claim] work. It does not connect you to a character — use [play] for that.
+Authenticates to an existing account from the login screen and puts your connection into account mode, where [make], [play] and [claim] work. It does not connect you to a character; use [play] for that.
 
 This is a SharpMUSH command; PennMUSH has no account layer.
 
@@ -3352,7 +3352,7 @@ This is a SharpMUSH command; PennMUSH has no account layer.
 # version
 `version`
 
-Reports the game's name, its address if one is published, and the server version — the same lines [@version] prints. It works from the login screen, before you have connected.
+Reports the game's name, its address if one is published, and the server version (the same lines [@version] prints). It works from the login screen, before you have connected.
 
 A deliberate divergence: PennMUSH has no bare `version` at the login screen, only `@version` in-game. Crawlers and players arriving from MUX-family servers type it unprefixed, and it publishes nothing that `INFO` does not.
 

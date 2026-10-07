@@ -7,22 +7,22 @@
   "sections": [
     {
       "id": "boolean-compatibility-tiny-booleans",
-      "heading": "Boolean compatibility \u2014 `tiny_booleans`",
+      "heading": "Boolean compatibility: `tiny_booleans`",
       "lookup": "compatibility config boolean compatibility tiny booleans"
     },
     {
       "id": "numeric-compatibility-tiny-math-null-eq-zero",
-      "heading": "Numeric compatibility \u2014 `tiny_math`, `null_eq_zero`",
+      "heading": "Numeric compatibility: `tiny_math`, `null_eq_zero`",
       "lookup": "compatibility config numeric compatibility tiny math null eq zero"
     },
     {
       "id": "trim-argument-order-tiny-trim-fun",
-      "heading": "Trim argument order \u2014 `tiny_trim_fun`",
+      "heading": "Trim argument order: `tiny_trim_fun`",
       "lookup": "compatibility config trim argument order tiny trim fun"
     },
     {
       "id": "parenthesis-groups-paren-groups",
-      "heading": "Parenthesis groups \u2014 `paren_groups`",
+      "heading": "Parenthesis groups: `paren_groups`",
       "lookup": "compatibility config parenthesis groups paren groups"
     }
   ]
@@ -34,7 +34,7 @@ These configuration options change how existing code evaluates. All of them are 
 time, so changing one takes effect on the next call rather than at the next restart. Set them with
 `@config/set` or on the web portal's configuration page.
 
-## Boolean compatibility — `tiny_booleans`
+## Boolean compatibility: `tiny_booleans`
 
 Boolean conditions use the same rules in functions, command guards, list filters, and indirect calls.
 With `tiny_booleans` off, numeric zero (including `-0`, `0.0` and hexadecimal zero), an empty string,
@@ -57,7 +57,7 @@ returns every result with a true condition; `ncond()` and `ncondall()` select fa
 condition is a single value, not a list of separate booleans. A selected empty result does not cause
 the default to run.
 
-## Numeric compatibility — `tiny_math`, `null_eq_zero`
+## Numeric compatibility: `tiny_math`, `null_eq_zero`
 
 Arithmetic and numeric comparisons read `tiny_math` and `null_eq_zero` at call time, including
 indirect `#apply` calls. With `tiny_math` off, the complete argument must be a number; an empty
@@ -75,7 +75,7 @@ settings.
 `null_eq_zero` is on; otherwise they report an integer suffix error. Overflow reports
 `#-1 OUT OF RANGE`. `tiny_math` does not change these string-counter rules.
 
-## Trim argument order — `tiny_trim_fun`
+## Trim argument order: `tiny_trim_fun`
 
 With `tiny_trim_fun` off, `trim(text,characters,side)` uses Penn argument order. With it on,
 `trim(text,side,characters)` uses Tiny argument order. The default characters are spaces and the
@@ -89,7 +89,7 @@ package needs a fixed argument order regardless of game configuration.
 hixx
 ```
 
-## Parenthesis groups — `paren_groups`
+## Parenthesis groups: `paren_groups`
 
 **A choice.** Off by default; importing a PennMUSH database turns it on.
 

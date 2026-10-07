@@ -104,7 +104,7 @@ Restrictions apply to this evaluation and its nested calls; they do not modify s
 wide function permissions or other concurrent evaluations. The existing invocation,
 output, recursion, and elapsed execution limits remain in force, and nested restricted
 calls share the active execution budget. Inputs and expression text together, and each
-combined result, must fit the shared ceiling of 5 × 1024 × 1024 UTF-16 code units.
+combined result, must fit the shared ceiling of 5 * 1024 * 1024 UTF-16 code units.
 Arguments, expression fragments, wrapper source and inputs, and serialized `fn()` source
 retained across active nested calls also share that ceiling. Each expansion is checked
 before it is retained, and `fn()` reserves space before serializing its next call. This
