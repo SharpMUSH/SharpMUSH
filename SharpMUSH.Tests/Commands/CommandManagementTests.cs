@@ -1020,23 +1020,23 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"@config/set restrict_command={value}")).Contains("Couldn't set that option.");
 	}
 
-	/// <summary>Takes the entry a test stored back out, and puts the configured layer back to match.</summary>
+	/// <summary>
+	/// Takes the entry a test stored back out, and puts the configured layer back to match. Through the writer's lock,
+	/// so a change another test stores meanwhile (PackageSettingInstallTests runs alongside) is kept.
+	/// </summary>
 	private async Task ForgetConfiguredRestrictionAsync(string name)
 	{
-		var data = WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
-		if (await data.GetExpandedServerDataAsync<SharpMUSHOptions>() is not { } stored)
-		{
-			return;
-		}
-
-		var remaining = stored.Restriction.CommandRestrictions
-			.Where(entry => entry.Key != name)
-			.ToDictionary(entry => entry.Key, entry => entry.Value);
-		await data.SetExpandedServerDataAsync(stored with
-		{
-			Restriction = stored.Restriction with { CommandRestrictions = remaining }
-		});
-		WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>().SignalChange();
+		var stored = await WebAppFactoryArg.Services.GetRequiredService<IConfigOptionWriter>().UpdateAsync(current =>
+			current with
+			{
+				Restriction = current.Restriction with
+				{
+					CommandRestrictions = current.Restriction.CommandRestrictions
+						.Where(entry => entry.Key != name)
+						.ToDictionary(entry => entry.Key, entry => entry.Value)
+				}
+			});
+		var remaining = stored.Restriction.CommandRestrictions;
 		await Restrictions.ApplyConfiguredRestrictionsAsync(remaining);
 	}
 
