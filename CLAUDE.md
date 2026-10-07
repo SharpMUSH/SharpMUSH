@@ -80,6 +80,7 @@ Key environment variables:
 - `SHARPMUSH_DATABASE_PROVIDER` — accepts only `lightning` (the default when unset); any other value fails startup
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
+- `SHARPMUSH_DATAPROTECTION_PATH` — directory for ASP.NET Core's Data Protection key ring (default: `<world path>.dataprotection-keys`, beside the world so it lands on the same volume)
 - `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`)
 - `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
 - `SHARPMUSH_BACKUP_PACKAGE_KEEP` — how many automatic copies taken before a portal package apply/rollback/uninstall stay, in `<backup path>/pre-package`, counted apart from the others (default: 2; `0` turns them off)

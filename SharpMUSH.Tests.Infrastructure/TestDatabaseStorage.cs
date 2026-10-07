@@ -28,7 +28,7 @@ public sealed class TestDatabaseStorage : IAsyncInitializer, IAsyncDisposable
 
 		try
 		{
-			foreach (var path in new[] { ownedPath, ownedPath + ".backups" }.Where(Directory.Exists))
+			foreach (var path in new[] { ownedPath, ownedPath + ".backups", ownedPath + ".dataprotection-keys" }.Where(Directory.Exists))
 				Directory.Delete(path, recursive: true);
 		}
 		finally
