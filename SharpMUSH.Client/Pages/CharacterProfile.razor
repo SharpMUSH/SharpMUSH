@@ -21,8 +21,8 @@
 @* D1 §6.3 character profile (boards 25–26). The banner's picture is the profile's banner field
    (IMAGE`BANNER), else the gallery's banner, else a gradient on the name's hue; the portrait is the
    image field (IMAGE), else the gallery's icon, else initials. Whoever may edit the profile changes
-   either from here (Change banner, Remove banner, and Change avatar on the portrait); each is an
-   upload into the gallery, which the gallery widget then shows. Below it the "profile" layout scope:
+   either from here (Change banner, Remove banner, and Change avatar on the portrait); a change
+   uploads a new image into the gallery or picks one already there, and the gallery widget follows. Below it the "profile" layout scope:
    MainContent (the character-header application as Details, WikiBody as Biography) beside the
    RightSidebar zone (Gallery, Recent scenes, Often plays with). *@
 @if (_missing)
@@ -55,11 +55,7 @@ else
                     }
                     @if (CanEditImages)
                     {
-                        <MudFileUpload T="IBrowserFile" FilesChanged="@(f => UploadAsync(f, GalleryUse.Avatar))" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" Class="char-profile-avatar-upload">
-                            <CustomContent>
-                                <CapsuleButton Class="char-profile-change-avatar" Icon="@Icons.Material.Outlined.PhotoCamera" AriaLabel="@Loc["NavCharChangeAvatar"]" Disabled="_busy" OnClick="@context.OpenFilePickerAsync" />
-                            </CustomContent>
-                        </MudFileUpload>
+                        <CapsuleButton Class="char-profile-change-avatar" Icon="@Icons.Material.Outlined.PhotoCamera" AriaLabel="@Loc["NavCharChangeAvatar"]" Disabled="_busy" OnClick="@(() => OpenPicker(GalleryUse.Avatar))" />
                     }
                 </div>
             </Lead>
@@ -90,11 +86,7 @@ else
             <Actions>
                 @if (CanEditImages)
                 {
-                    <MudFileUpload T="IBrowserFile" FilesChanged="@(f => UploadAsync(f, GalleryUse.Banner))" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" Class="char-profile-banner-upload">
-                        <CustomContent>
-                            <CapsuleButton Class="char-profile-change-banner" Icon="@Icons.Material.Outlined.Panorama" Disabled="_busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavCharChangeBanner"]</CapsuleButton>
-                        </CustomContent>
-                    </MudFileUpload>
+                    <CapsuleButton Class="char-profile-change-banner" Icon="@Icons.Material.Outlined.Panorama" Disabled="_busy" OnClick="@(() => OpenPicker(GalleryUse.Banner))">@Loc["NavCharChangeBanner"]</CapsuleButton>
                     @if (_gallery.Any(g => g.IsBanner))
                     {
                         <CapsuleButton Class="char-profile-remove-banner" Icon="@Icons.Material.Outlined.HideImage" AriaLabel="@Loc["NavGalleryRemoveBanner"]" Disabled="_busy" OnClick="RemoveBannerAsync" />
@@ -126,6 +118,13 @@ else
     </div>
 
     <ImageViewer Items="@_viewerItems" @bind-Open="_viewerOpen" Label="@DisplayName" />
+    @if (CanEditImages)
+    {
+        <GalleryImagePicker @bind-Open="_pickerOpen" Items="_gallery" Busy="_busy"
+                            Title="@(_pickFor == GalleryUse.Avatar ? Loc["NavCharChangeAvatar"] : Loc["NavCharChangeBanner"])"
+                            SelectedAssetId="@(_pickFor == GalleryUse.Avatar ? _gallery.FirstOrDefault(g => g.IsIcon)?.AssetId : _gallery.FirstOrDefault(g => g.IsBanner)?.AssetId)"
+                            OnUpload="@(f => UploadAsync(f, _pickFor))" OnPick="PickAsync" />
+    }
 }
 
 @code {
@@ -153,6 +152,12 @@ else
     /// <summary>Bumped on every load: an answer for an older load is dropped (A→B→C must show C).</summary>
     private int _generation;
     private bool _viewerOpen;
+
+    private bool _pickerOpen;
+
+    /// <summary>What the image picker chooses: the banner or the avatar. Kept after it closes, since
+    /// it closes before the chosen write starts.</summary>
+    private GalleryUse _pickFor = GalleryUse.Banner;
     private IReadOnlyList<ImageViewer.Item> _viewerItems = [];
 
     private string DisplayName => _profile?.Name is { Length: > 0 } name ? name : Name;
@@ -207,7 +212,7 @@ else
         var generation = ++_generation;
         // The previous character's live-scene read, still in flight, is not this one's.
         _liveSceneReload.Begin();
-        (_profile, _gallery, _liveScene, _online, _missing, _unreadable, _viewerItems, _viewerOpen) = (null, [], null, false, false, false, [], false);
+        (_profile, _gallery, _liveScene, _online, _missing, _unreadable, _viewerItems, _viewerOpen, _pickerOpen) = (null, [], null, false, false, false, [], false, false);
 
         var profile = Profiles.GetAsync(Name);
         var gallery = Gallery.ListAsync(Name);
@@ -270,6 +275,13 @@ else
 
     private Task UploadAsync(IBrowserFile? file, GalleryUse use) =>
         file is null ? Task.CompletedTask : WriteAsync(Gallery.UploadAsync(Name, file, use), "GalleryUploadFailed");
+
+    private void OpenPicker(GalleryUse use) => (_pickFor, _pickerOpen) = (use, true);
+
+    /// <summary>An image already in the gallery becomes the banner or the avatar.</summary>
+    private Task PickAsync(GalleryEntry item) => _pickFor == GalleryUse.Avatar
+        ? WriteAsync(Gallery.ReplaceAsync(Name, GalleryService.WithIcon(_gallery, item.AssetId)), "GallerySetIconFailed")
+        : WriteAsync(Gallery.ReplaceAsync(Name, GalleryService.WithBanner(_gallery, item.AssetId)), "GallerySetBannerFailed");
 
     private Task RemoveBannerAsync() =>
         WriteAsync(Gallery.ReplaceAsync(Name, GalleryService.WithBanner(_gallery, null)), "GallerySetBannerFailed");

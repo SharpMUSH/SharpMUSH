@@ -4090,6 +4090,15 @@
   <data name="NavCharChangeAvatar" xml:space="preserve">
     <value>Changer l'avatar</value>
   </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Téléverser une nouvelle image</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>Ou choisir dans la galerie</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Aucune image dans la galerie pour l’instant.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>Impossible de changer la bannière : {0}</value>
   </data>

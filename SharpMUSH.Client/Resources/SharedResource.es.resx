@@ -4796,6 +4796,15 @@
   <data name="NavCharChangeAvatar" xml:space="preserve">
     <value>Cambiar avatar</value>
   </data>
+  <data name="NavPickerUpload" xml:space="preserve">
+    <value>Subir una imagen nueva</value>
+  </data>
+  <data name="NavPickerFromGallery" xml:space="preserve">
+    <value>O elegir de la galería</value>
+  </data>
+  <data name="NavPickerGalleryEmpty" xml:space="preserve">
+    <value>Aún no hay imágenes en la galería.</value>
+  </data>
   <data name="GallerySetBannerFailed" xml:space="preserve">
     <value>No se pudo cambiar la portada: {0}</value>
   </data>

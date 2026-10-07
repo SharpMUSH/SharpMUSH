@@ -10,19 +10,10 @@
 	position: relative;
 }
 
-.char-profile-avatar ::deep .char-profile-avatar-upload {
+.char-profile-avatar ::deep .char-profile-change-avatar {
 	position: absolute;
 	right: -8px;
 	bottom: -8px;
-	margin: 0;
-	width: auto;
-}
-
-/* the banner's Change banner and Remove banner sit in its top-right row; MudFileUpload's wrapper
-   would otherwise take the row's width */
-.char-profile ::deep .char-profile-banner-upload {
-	margin: 0;
-	width: auto;
 }
 
 /* the 104px portrait at the banner's bottom-left, radius 18 */
