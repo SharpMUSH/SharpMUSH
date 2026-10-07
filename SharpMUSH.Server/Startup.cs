@@ -83,6 +83,7 @@ public class Startup(string colorFile, string natsUrl)
 		services.AddSharpMushLogging(configuration);
 		services.AddSharpMushMessaging(natsUrl);
 		services.AddSharpMushCachingAndScheduling();
+		services.AddSharpMushDataProtection();
 		services.AddSharpMushAuthentication(configuration, environment);
 		services.AddSharpMushWebApi(configuration);
 		services.AddSharpMushHostedServices();

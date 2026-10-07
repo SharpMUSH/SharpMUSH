@@ -78,6 +78,10 @@ else to run, tune or connect to. Three settings on `sharpmush-server` matter:
 memory — the file is sparse and only grows as the world does. Raise it before a world reaches it;
 the server refuses writes with `MDB_MAP_FULL` rather than corrupting anything.
 
+ASP.NET Core's Data Protection key ring (what antiforgery, cookie auth and the like sign with) is
+kept beside the world, at `/app/data/lightning.dataprotection-keys`, so it outlives a recreated
+container. `SHARPMUSH_DATAPROTECTION_PATH` moves it; every replica of the server must read the same one.
+
 Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
 that is safe to read, have the server make one: see [Backups](#backups-restic).
 
@@ -465,8 +469,8 @@ docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'du -sh /a
 docker compose run --rm --no-deps --entrypoint sh sharpmush-server -c 'rm -rf /app/data/lightning.previous'
 ```
 
-The other things on the volume are the wiki's uploaded assets (`/app/data/wiki-assets`) and the
-backup directory. NATS keeps its JetStream state in its own `nats-data` volume. That state is
+The other things on the volume are the wiki's uploaded assets (`/app/data/wiki-assets`), the
+Data Protection key ring (`/app/data/lightning.dataprotection-keys`) and the backup directory. NATS keeps its JetStream state in its own `nats-data` volume. That state is
 transient, but it is on the same disk:
 
 ```bash
