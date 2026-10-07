@@ -54,9 +54,13 @@ public class StorageCommandTests : ServerTestBase
 	[Test]
 	public async Task TheReportCountsReaderSlotsADeadProcessLeftBehind()
 	{
+		// The session's store also checks on a timer, which can free the slot before this test does; the
+		// count the report reads goes up whichever check freed it.
 		var store = ((LightningDatabase)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>()).Store;
+		var clearedBefore = store.StaleReadersCleared;
 		await DeadReader.LeaveAsync(store.Path);
-		await Assert.That(store.CheckStaleReaders()).IsEqualTo(1);
+		store.CheckStaleReaders();
+		await Assert.That(store.StaleReadersCleared).IsEqualTo(clearedBefore + 1);
 
 		var heard = await HeardAfterAsync("@storage");
 

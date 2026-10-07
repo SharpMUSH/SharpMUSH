@@ -8,11 +8,12 @@ public class LightningStoreTests
 {
 	private readonly List<string> _paths = [];
 
-	private LightningStore Open()
+	private LightningStore Open(TimeSpan? readerCheckInterval = null)
 	{
 		var path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 		_paths.Add(path);
-		return new LightningStore(new LightningStoreOptions { Path = path, MapSize = 256L << 20 });
+		var options = new LightningStoreOptions { Path = path, MapSize = 256L << 20 };
+		return new LightningStore(readerCheckInterval is { } interval ? options with { ReaderCheckInterval = interval } : options);
 	}
 
 	[After(Test)]
@@ -267,6 +268,24 @@ public class LightningStoreTests
 		await Assert.That(store.CheckStaleReaders()).IsEqualTo(1);
 		await Assert.That(store.CheckStaleReaders()).IsEqualTo(0);
 		await Assert.That(store.StaleReadersCleared).IsEqualTo(1);
+	}
+
+	/// <summary>The periodic check frees the slot without anyone asking, so a caller's own check that comes
+	/// after it finds nothing; <see cref="LightningStore.StaleReadersCleared"/> counts the slot either way.</summary>
+	[Test]
+	public async Task ThePeriodicCheckFreesTheSlotOnItsOwn()
+	{
+		using var store = Open(readerCheckInterval: TimeSpan.FromMilliseconds(50));
+		await DeadReader.LeaveAsync(store.Path);
+
+		var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+		while (store.StaleReadersCleared == 0 && DateTime.UtcNow < deadline)
+		{
+			await Task.Delay(10);
+		}
+
+		await Assert.That(store.StaleReadersCleared).IsEqualTo(1);
+		await Assert.That(store.CheckStaleReaders()).IsEqualTo(0);
 	}
 
 	[Test]
