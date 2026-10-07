@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>场景已加入日程，但部分内容未保存：{0} 请在其页面中编辑。</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>主持人</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>此场景将于 {0} 开始。届时开始记录。</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>此场景尚未开始。场景开始后即开始记录。</value>
+  </data>
 </root>

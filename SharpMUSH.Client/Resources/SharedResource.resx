@@ -6245,4 +6245,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>The scene is on the schedule, but not everything was saved: {0} Edit it from its page.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Host</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>This scene starts {0}. Its log begins when it does.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>This scene has not started yet. Its log begins when it does.</value>
+  </data>
 </root>

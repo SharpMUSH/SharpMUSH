@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>Scena este în program, dar nu s-a salvat totul: {0} Edit-o din pagina ei.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Gazdă</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Această scenă începe pe {0}. Jurnalul ei începe atunci.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Această scenă nu a început încă. Jurnalul ei începe odată cu ea.</value>
+  </data>
 </root>

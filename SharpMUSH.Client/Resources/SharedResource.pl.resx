@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>Scena jest w harmonogramie, ale nie wszystko zostało zapisane: {0} Edytuj ją na jej stronie.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Gospodarz</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Ta scena zaczyna się {0}. Jej zapis rozpocznie się wtedy.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Ta scena jeszcze się nie zaczęła. Jej zapis rozpocznie się wraz z nią.</value>
+  </data>
 </root>

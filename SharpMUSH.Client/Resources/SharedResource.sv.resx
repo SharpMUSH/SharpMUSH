@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>Scenen finns i schemat, men allt sparades inte: {0} Redigera den från dess sida.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Värd</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Den här scenen börjar {0}. Loggen börjar då.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Den här scenen har inte börjat än. Loggen börjar när den gör det.</value>
+  </data>
 </root>

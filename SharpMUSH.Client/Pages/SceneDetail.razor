@@ -51,9 +51,24 @@
                     {
                         <Pill Tag="true" Class="scene-detail-paused">@Loc["RolPausedBadge"]</Pill>
                     }
-                    <span>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
-                    <span aria-hidden="true">·</span>
-                    <span>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+                    @if (NotStarted(scene))
+                    {
+                        @* Nothing has happened yet: what matters is when it will. *@
+                        if (!scene.IsPaused)
+                        {
+                            <Pill Tag="true" Class="scene-detail-upcoming">@Loc["NavScenesScheduled"]</Pill>
+                        }
+                        if (scene.ScheduledForUtc is { } due)
+                        {
+                            <span class="scene-detail-due">@due.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+                        }
+                    }
+                    else
+                    {
+                        <span>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
+                        <span aria-hidden="true">·</span>
+                        <span>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+                    }
                 </span>
             </DescriptionContent>
             <Actions>
@@ -156,20 +171,26 @@
                 {
                     <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
                 }
+                else if (visible.Count == 0 && NotStarted(scene))
+                {
+                    <EmptyBox Class="scene-detail-not-started">@(scene.ScheduledForUtc is { } due
+                        ? string.Format(Loc["RolSceneStartsAt"], due.ToLocalTime().ToString("MMM d, yyyy HH:mm"))
+                        : Loc["RolSceneNotStartedYet"])</EmptyBox>
+                }
                 else if (visible.Count == 0)
                 {
                     <EmptyBox>@Loc["RolNoPoses"]</EmptyBox>
                 }
                 else
                 {
+                    @* The log reads as the live view does (StoryPose): a portrait, the name and time, the pose in
+                       the portal's font, the other participants' names as mentions. *@
                     <KitCard>
                         <div class="scene-detail-log">
-                            <div class="scene-log">
-                                @foreach (var pose in visible)
-                                {
-                                    <ScenePoseLine @key="pose.Id" Pose="pose" />
-                                }
-                            </div>
+                            @foreach (var pose in visible)
+                            {
+                                <StoryPose @key="pose.Id" Pose="pose" Mentions="_mentions" />
+                            }
                         </div>
                     </KitCard>
                 }
@@ -177,23 +198,39 @@
 
             <aside class="scene-detail-aside">
                 <KitCard Aside="true" Title="@Loc["NavSceneDetails"]">
+                    @* A scene that has not started has no start, length or activity to tell: when it is due and
+                       who hosts it are what a reader comes for. *@
                     <dl class="scene-detail-facts">
-                        <dt>@Loc["NavSceneStarted"]</dt>
-                        <dd>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
+                        @if (!NotStarted(scene))
+                        {
+                            <dt>@Loc["NavSceneStarted"]</dt>
+                            <dd>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
+                        }
                         @if (!scene.IsLive && scene.ScheduledForUtc is { } due)
                         {
                             <dt>@Loc["NavScenesScheduled"]</dt>
                             <dd class="scene-detail-scheduled">@due.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
                         }
-                        <dt>@Loc["NavSceneLastActivity"]</dt>
-                        <dd>@Loc.Format(scene.LastActivityAtUtc)</dd>
-                        @if (!string.IsNullOrWhiteSpace(scene.StarterName))
+                        @if (NotStarted(scene))
                         {
-                            <dt>@Loc["NavSceneStartedBy"]</dt>
-                            <dd><Mention Name="@scene.StarterName" /></dd>
+                            @if (!string.IsNullOrWhiteSpace(scene.OwnerName))
+                            {
+                                <dt>@Loc["NavSceneHost"]</dt>
+                                <dd><Mention Name="@scene.OwnerName" /></dd>
+                            }
                         }
-                        <dt>@Loc["NavSceneLength"]</dt>
-                        <dd>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</dd>
+                        else
+                        {
+                            <dt>@Loc["NavSceneLastActivity"]</dt>
+                            <dd>@Loc.Format(scene.LastActivityAtUtc)</dd>
+                            @if (!string.IsNullOrWhiteSpace(scene.StarterName))
+                            {
+                                <dt>@Loc["NavSceneStartedBy"]</dt>
+                                <dd><Mention Name="@scene.StarterName" /></dd>
+                            }
+                            <dt>@Loc["NavSceneLength"]</dt>
+                            <dd>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</dd>
+                        }
                     </dl>
                     @if (CalendarStart(scene) is { } start)
                     {
@@ -241,6 +278,9 @@
 
     /// <summary>The characters who posed, in the order they first did.</summary>
     private List<string> _cast = [];
+
+    /// <summary>The cast as mentions in the log: a name in another's pose links to them, the viewer's in the accent.</summary>
+    private IReadOnlyList<StoryMentions.Target> _mentions = [];
     private string? _activeTag;
     private bool _loading = true;
 
@@ -288,6 +328,7 @@
         _poses = [];
         _allTags = [];
         _cast = [];
+        _mentions = [];
         _activeTag = null;
         _scene = null;
         // A form open on the scene this page showed before holds that scene's values; saving them here would
@@ -360,6 +401,9 @@
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var viewer = AccountAuth.ActiveCharacter?.Name;
+        _mentions = [.. _cast.Select(name => new StoryMentions.Target(name, null,
+            viewer is not null && string.Equals(name, viewer, StringComparison.OrdinalIgnoreCase)))];
     }
 
     /// <summary>The pause form is open.</summary>
@@ -521,6 +565,9 @@
     /// <summary>A value read back is the one sent, give or take line endings and the edges' whitespace.</summary>
     private static bool Same(string value, string expected) =>
         string.Equals(value.Replace("\r\n", "\n").Trim(), expected.Replace("\r\n", "\n").Trim(), StringComparison.Ordinal);
+
+    /// <summary>The scene has not run yet: it is not live, has not finished, and nothing was posed in it.</summary>
+    private static bool NotStarted(SceneSummary scene) => !scene.IsLive && !scene.IsFinished && scene.PoseCount == 0;
 
     /// <summary>When the scene starts, for a scene that is waiting on a time: not one that runs now or has ended.</summary>
     private static DateTimeOffset? CalendarStart(SceneSummary scene) =>

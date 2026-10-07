@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>A jelenet az ütemtervben van, de nem minden lett mentve: {0} Szerkeszd az oldalán.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Házigazda</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Ez a jelenet {0}-kor kezdődik. A naplója akkor indul.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Ez a jelenet még nem kezdődött el. A naplója az indulásakor kezdődik.</value>
+  </data>
 </root>

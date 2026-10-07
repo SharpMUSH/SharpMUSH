@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>La escena está en la agenda, pero no se guardó todo: {0} Edítala desde su página.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Anfitrión</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Esta escena empieza el {0}. Su registro comienza entonces.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Esta escena aún no ha empezado. Su registro comienza cuando empiece.</value>
+  </data>
 </root>

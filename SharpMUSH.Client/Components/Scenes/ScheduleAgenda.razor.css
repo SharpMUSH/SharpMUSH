@@ -43,7 +43,7 @@
 
 .schedule-row:hover,
 .schedule-row:focus-within {
-	border-color: var(--accent);
+	border-color: rgba(var(--glow), 0.4);
 }
 
 .schedule-time {

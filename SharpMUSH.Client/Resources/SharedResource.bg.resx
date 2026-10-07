@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>Сцената е в графика, но не всичко беше запазено: {0} Редактирайте я от нейната страница.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Домакин</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Тази сцена започва {0}. Дневникът ѝ започва тогава.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Тази сцена още не е започнала. Дневникът ѝ започва, когато тя започне.</value>
+  </data>
 </root>

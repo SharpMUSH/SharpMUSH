@@ -5021,4 +5021,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>La scène est au programme, mais tout n'a pas été enregistré : {0} Modifiez-la depuis sa page.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Hôte</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Cette scène commence le {0}. Son journal commence à ce moment-là.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Cette scène n'a pas encore commencé. Son journal commencera avec elle.</value>
+  </data>
 </root>

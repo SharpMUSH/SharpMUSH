@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>Сцена в расписании, но сохранено не всё: {0} Отредактируйте её на её странице.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Ведущий</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Эта сцена начнётся {0}. Её журнал начнётся тогда же.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Эта сцена ещё не началась. Её журнал начнётся вместе с ней.</value>
+  </data>
 </root>

@@ -5728,4 +5728,13 @@
   <data name="RolSceneScheduledPartly" xml:space="preserve">
     <value>De scène staat op de planning, maar niet alles is opgeslagen: {0} Bewerk hem op zijn pagina.</value>
   </data>
+  <data name="NavSceneHost" xml:space="preserve">
+    <value>Host</value>
+  </data>
+  <data name="RolSceneStartsAt" xml:space="preserve">
+    <value>Deze scène begint op {0}. Het logboek begint dan.</value>
+  </data>
+  <data name="RolSceneNotStartedYet" xml:space="preserve">
+    <value>Deze scène is nog niet begonnen. Het logboek begint zodra hij start.</value>
+  </data>
 </root>
