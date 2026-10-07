@@ -107,8 +107,8 @@ public class SoftcodeEditorTabsTests : BunitContext
 		var cut = Render<Components.MudHarness>(p => p
 			.AddChildContent<SharpMUSH.Client.Pages.SoftcodeEditor>());
 
-		cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).Click();
-		cut.WaitForElement(".sc-attr-item", TimeSpan.FromSeconds(5)).Click();
+		await cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).ClickAsync();
+		await cut.WaitForElement(".sc-attr-item", TimeSpan.FromSeconds(5)).ClickAsync();
 		cut.WaitForElement(".sc-tab", TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.FindAll(".sc-tab")).Count().IsEqualTo(1);
@@ -143,7 +143,7 @@ public class SoftcodeEditorTabsTests : BunitContext
 	{
 		var cut = await RenderWithOneOpenTabAsync();
 
-		cut.Find(".sc-tab-close").Click();
+		await cut.Find(".sc-tab-close").ClickAsync();
 
 		// CloseTabAsync reads the Monaco buffer before it removes the tab, so the removal lands
 		// after the click returns. Opening one is the other way round -- the tab is added before
@@ -162,7 +162,7 @@ public class SoftcodeEditorTabsTests : BunitContext
 		// The close control sits inside the tab, whose own click switches to it. If the click
 		// reaches both, closing the last tab leaves the editor trying to activate a tab that
 		// is no longer there.
-		cut.Find(".sc-tab-close").Click();
+		await cut.Find(".sc-tab-close").ClickAsync();
 
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.Markup).Contains("TermNoAttributeSelected"),
@@ -194,7 +194,7 @@ public class SoftcodeEditorTabsTests : BunitContext
 		var cut = Render<Components.MudHarness>(p => p
 			.AddChildContent<SharpMUSH.Client.Pages.SoftcodeEditor>());
 
-		cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).Click();
+		await cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).ClickAsync();
 		cut.WaitForElement(".sc-attr-item", TimeSpan.FromSeconds(5));
 		return cut;
 	}
@@ -212,7 +212,7 @@ public class SoftcodeEditorTabsTests : BunitContext
 		await Assert.That(toggle.GetAttribute("aria-expanded")).IsEqualTo("false");
 		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("TermExpandBranch(FN)");
 
-		toggle.Click();
+		await toggle.ClickAsync();
 
 		// A nested row shows only its own segment; its depth carries the rest of the name.
 		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["DESCRIBE", "FN", "GREET"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -229,7 +229,7 @@ public class SoftcodeEditorTabsTests : BunitContext
 	{
 		var cut = await RenderWithObjectSelectedAsync();
 
-		cut.Find(".sc-search-input").Input("greet");
+		await cut.Find(".sc-search-input").InputAsync("greet");
 
 		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["FN", "GREET"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
@@ -238,8 +238,8 @@ public class SoftcodeEditorTabsTests : BunitContext
 	public async Task ANestedAttributeOpensWithItsBranchesLinkedAboveIt()
 	{
 		var cut = await RenderWithObjectSelectedAsync();
-		cut.Find(".sc-tree-toggle").Click();
-		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")).Click();
+		await cut.Find(".sc-tree-toggle").ClickAsync();
+		await cut.Find(".sc-attr-item[title='FN`GREET']").ClickAsync();
 		cut.WaitForElement(".sc-tab", TimeSpan.FromSeconds(5));
 
 		// The full reference still reads as softcode names it; only the branch part recedes.
@@ -256,7 +256,7 @@ public class SoftcodeEditorTabsTests : BunitContext
 			.IsEquivalentTo(["TermObjects", "Attributes · #8"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
 		// The branch in the breadcrumb is an attribute of its own, and opens as one.
-		cut.Find(".sc-crumb-link").Click();
+		await cut.Find(".sc-crumb-link").ClickAsync();
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.FindAll(".sc-tab")).Count().IsEqualTo(2),
 			TimeSpan.FromSeconds(5));
@@ -267,18 +267,18 @@ public class SoftcodeEditorTabsTests : BunitContext
 	public async Task ClosingATabUnfoldsTheBranchesAboveTheTabLeftActive()
 	{
 		var cut = await RenderWithObjectSelectedAsync();
-		cut.Find(".sc-tree-toggle").Click();
-		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")).Click();
+		await cut.Find(".sc-tree-toggle").ClickAsync();
+		await cut.Find(".sc-attr-item[title='FN`GREET']").ClickAsync();
 		cut.WaitForElement(".sc-tab", TimeSpan.FromSeconds(5));
-		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("DESCRIBE")).Click();
+		await cut.Find(".sc-attr-item[title='DESCRIBE']").ClickAsync();
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.FindAll(".sc-tab")).Count().IsEqualTo(2),
 			TimeSpan.FromSeconds(5));
 
 		// Fold FN while DESCRIBE is active, then close DESCRIBE: FN`GREET becomes active and must show.
-		cut.Find(".sc-tree-toggle").Click();
+		await cut.Find(".sc-tree-toggle").ClickAsync();
 		await Assert.That(AttributeRowNames(cut)).IsEquivalentTo(["DESCRIBE", "FN"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		cut.FindAll(".sc-tab").Single(e => e.TextContent.Contains("DESCRIBE")).QuerySelector(".sc-tab-close")!.Click();
+		await cut.Find(".sc-tab-label[title='#8/DESCRIBE'] ~ .sc-tab-close").ClickAsync();
 
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.Find(".sc-tab--on .sc-tab-label").TextContent.Trim()).IsEqualTo("#8/FN`GREET"),

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -30,6 +31,7 @@ public class AccountController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IValidateService validateService,
 	PasskeyService passkeys,
+	IPortalThemeService themes,
 	ILogger<AccountController> logger) : ControllerBase
 {
 	/// <summary>
@@ -98,7 +100,7 @@ public class AccountController(
 				: null
 			: ActingCharacterResolver.Resolve(await SessionAsync(), characters);
 		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
-			actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime);
+			actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime, themes: themes);
 		return Ok(summaries);
 	}
 
@@ -219,6 +221,27 @@ public class AccountController(
 		await accountService.UnlinkCharacterAsync(accountId!, new DBRef(dbrefNumber));
 		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", LogSanitizer.Sanitize(accountId), dbrefNumber);
 		return NoContent();
+	}
+
+	/// <summary>
+	/// Sets one of the account's characters' portal theme and accent. Any of them, not only the acting one: the
+	/// Theme settings page lists them all so a player can tell their tabs apart before opening them.
+	/// </summary>
+	[HttpPut("characters/{dbrefNumber:int}/appearance")]
+	public async Task<IActionResult> SetAppearance(int dbrefNumber, [FromBody] CharacterAppearance appearance)
+	{
+		var (accountId, failure) = await GetAccountIdFromBearerAsync();
+		if (failure is not null) return failure;
+
+		var characters = await accountService.GetCharactersAsync(accountId!);
+		if (characters.FirstOrDefault(c => c.Object.Key == dbrefNumber) is not { } character)
+			return NotFound();
+
+		return await themes.SetAppearanceAsync(character.Object, appearance) switch
+		{
+			CharacterAppearance stored => Ok(stored),
+			Error<string> error => BadRequest(error.Value),
+		};
 	}
 
 	public record ChangePasswordRequest(string OldPassword, string NewPassword);

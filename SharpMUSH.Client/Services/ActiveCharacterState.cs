@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using static SharpMUSH.Client.Services.AccountAuthService;
 
 namespace SharpMUSH.Client.Services;
@@ -70,6 +71,26 @@ public sealed class ActiveCharacterState(ILogger logger)
 		}
 	}
 
+	/// <summary>
+	/// Raised when a character's theme or accent changes. Apart from <see cref="Changed"/>, which means a different
+	/// identity and makes pages reload what they show for it; a new accent changes nothing they show.
+	/// </summary>
+	public event Action? AppearanceChanged;
+
+	/// <summary>Records the theme and accent the server stored for one character of the roster.</summary>
+	public void SetAppearance(int dbrefNumber, CharacterAppearance appearance)
+	{
+		CharacterSummary Updated(CharacterSummary c) => c with { ThemeId = appearance.ThemeId, Accent = appearance.Accent };
+
+		Characters = Characters.Select(c => c.DbrefNumber == dbrefNumber ? Updated(c) : c).ToList();
+		if (ActiveCharacter?.DbrefNumber == dbrefNumber)
+		{
+			ActiveCharacter = Updated(ActiveCharacter);
+		}
+
+		Raise(AppearanceChanged, "AppearanceChanged");
+	}
+
 	/// <summary>Adds one character the server has just created; it is not acting until a switch says so.</summary>
 	public void Add(CharacterSummary character) => SetRoster([.. Characters, character]);
 
@@ -81,15 +102,17 @@ public sealed class ActiveCharacterState(ILogger logger)
 	/// A subscriber's render exception must never propagate back into the caller mid-switch, so it is
 	/// logged and swallowed.
 	/// </summary>
-	private void RaiseChanged()
+	private void RaiseChanged() => Raise(Changed, "ActiveCharacterChanged");
+
+	private void Raise(Action? handlers, string name)
 	{
 		try
 		{
-			Changed?.Invoke();
+			handlers?.Invoke();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "An ActiveCharacterChanged subscriber threw; swallowed");
+			logger.LogError(ex, "An {Event} subscriber threw; swallowed", name);
 		}
 	}
 }

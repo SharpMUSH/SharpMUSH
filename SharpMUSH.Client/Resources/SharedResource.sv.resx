@@ -2025,10 +2025,6 @@
     <value>Tema</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Temainställningar är på väg.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Visa/dölj navigeringen</value>
     <comment>MT</comment>
@@ -5712,6 +5708,45 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Rad {0}: ett ::: item läggs bara ut direkt inuti en flex.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Ge varje karaktär ett eget tema och en egen accentfärg, så att du ser skillnad på deras fönster direkt. Utseendet sparas med karaktären och följer med till alla enheter.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Koppla en karaktär till ditt konto för att ge den ett eget utseende.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Spelas nu</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Spelets standard ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Accentfärg</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Temats egen</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Egen färg</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Visas som {0} så att den går att läsa på det här temat.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Kunde inte spara: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Mörkt</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Ljust</value>
+  </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>Spelets standard följer enhetens ljusa eller mörka inställning.</value>
   </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planera en scen</value>

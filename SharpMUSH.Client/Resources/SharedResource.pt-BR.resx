@@ -2025,10 +2025,6 @@
     <value>Tema</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>As preferências de tema estão a caminho.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Alternar navegação</value>
     <comment>MT</comment>
@@ -5712,6 +5708,45 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Linha {0}: um ::: item só é organizado diretamente dentro de um flex.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Dê a cada personagem seu próprio tema e cor de destaque para distinguir as janelas de relance. A aparência fica salva no personagem e o acompanha em qualquer dispositivo.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Vincule um personagem à sua conta para dar a ele uma aparência própria.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Jogando agora</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Tema</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>Padrão do jogo ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Destaque</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>Do tema</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Cor própria</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Exibida como {0} para continuar legível neste tema.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Não foi possível salvar: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Escuro</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Claro</value>
+  </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>O tema padrão do jogo segue a configuração clara ou escura do seu dispositivo.</value>
   </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Agendar uma cena</value>

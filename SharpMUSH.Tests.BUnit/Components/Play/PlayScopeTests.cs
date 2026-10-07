@@ -70,7 +70,7 @@ public class PlayScopeTests : BunitContext
 		RoomOccupant? opened = null;
 		PushRoom();
 		var cut = InPlay<HereWidget>(new PlayPageContext(o => { opened = o; return Task.CompletedTask; }, _ => Task.CompletedTask));
-		cut.Find(".kit-portrait").Click();
+		await cut.Find(".kit-portrait").ClickAsync();
 		await Assert.That(opened?.Name).IsEqualTo("Tomas Reyes");
 	}
 
@@ -82,7 +82,7 @@ public class PlayScopeTests : BunitContext
 		await Assert.That(cut.FindAll(".exit").Count).IsEqualTo(0);
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".exit"), TimeSpan.FromSeconds(5));
-		cut.Find(".exit button.exit-go").Click();
+		await cut.Find(".exit button.exit-go").ClickAsync();
 		await Assert.That(sent).IsEqualTo("goto #1210");
 	}
 
@@ -102,7 +102,7 @@ public class PlayScopeTests : BunitContext
 	{
 		PushRoom();
 		var cut = Render<ExitsWidget>();
-		cut.Find(".exit button.exit-go").Click();
+		await cut.Find(".exit button.exit-go").ClickAsync();
 		await _play.Received(1).SendAsync("goto #1210");
 	}
 }

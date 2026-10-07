@@ -70,9 +70,9 @@ public class PlaySceneCardTests : BunitContext
 		var button = cut.Find("button.scene-card-sub");
 		await Assert.That(button.GetAttribute("aria-label")).IsEqualTo("Lower Docks: Show banner");
 		await Assert.That(button.GetAttribute("title")).IsEqualTo("Show banner");
-		button.Click();
+		await button.ClickAsync();
 		await Assert.That(pressed).IsEqualTo(1);
-		cut.Find(".scene-card-title").Click();
+		await cut.Find(".scene-card-title").ClickAsync();
 		await Assert.That(pressed).IsEqualTo(2).Because("the name is the bigger target on a phone");
 
 		var plain = RenderCard(subtitle: "Lower Docks");
@@ -105,7 +105,7 @@ public class PlaySceneCardTests : BunitContext
 		await Assert.That(radios[0].GetAttribute("tabindex")).IsEqualTo("0");
 		await Assert.That(radios[1].GetAttribute("aria-checked")).IsEqualTo("false");
 		await Assert.That(radios[1].GetAttribute("tabindex")).IsEqualTo("-1");
-		radios[1].Click();
+		await radios[1].ClickAsync();
 		await Assert.That(chosen).IsEqualTo(PlayView.Terminal);
 	}
 
@@ -117,13 +117,13 @@ public class PlaySceneCardTests : BunitContext
 		var toggle = cut.Find(".scene-card-viewtoggle");
 		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("Terminal");
 		await Assert.That(toggle.GetAttribute("title")).IsEqualTo("Terminal: Full output · channels and pages included");
-		toggle.Click();
+		await toggle.ClickAsync();
 		await Assert.That(chosen).IsEqualTo(PlayView.Terminal);
 
 		cut = RenderCard(view: PlayView.Terminal, onView: v => chosen = v);
 		toggle = cut.Find(".scene-card-viewtoggle");
 		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("Story");
-		toggle.Click();
+		await toggle.ClickAsync();
 		await Assert.That(chosen).IsEqualTo(PlayView.Story);
 	}
 
@@ -132,7 +132,7 @@ public class PlaySceneCardTests : BunitContext
 	{
 		PlayView? chosen = null;
 		var cut = RenderCard(onView: v => chosen = v);
-		cut.FindAll("[role='radio']")[0].KeyDown("ArrowRight");
+		await cut.FindAll("[role='radio']")[0].KeyDownAsync("ArrowRight");
 		await Assert.That(chosen).IsEqualTo(PlayView.Terminal);
 	}
 
@@ -152,7 +152,7 @@ public class PlaySceneCardTests : BunitContext
 		var button = cut.Find("button.scene-card-focus");
 		await Assert.That(button.GetAttribute("aria-pressed")).IsEqualTo("false");
 		await Assert.That(button.GetAttribute("aria-label")).IsEqualTo("Focus mode");
-		button.Click();
+		await button.ClickAsync();
 		await Assert.That(focus).IsTrue();
 		var on = RenderCard(focus: true);
 		await Assert.That(on.Find("button.scene-card-focus").GetAttribute("aria-pressed")).IsEqualTo("true");

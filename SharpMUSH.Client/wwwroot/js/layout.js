@@ -137,6 +137,11 @@ window.sharpmushLayout = {
 		this._unwatchScreen('_shortScreen');
 	},
 
+	// ThemeService: the game's default theme follows the browser's light or dark preference.
+	watchLightScheme: function (dotnetRef) {
+		return this._watchScreen('_lightScheme', '(prefers-color-scheme: light)', dotnetRef, 'OnLightSchemeChanged');
+	},
+
 	_watchScreen: function (slot, condition, dotnetRef, method) {
 		this._unwatchScreen(slot);
 		const query = window.matchMedia(condition);

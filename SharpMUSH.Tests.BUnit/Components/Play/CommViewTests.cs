@@ -108,8 +108,8 @@ public class CommViewTests : TrackingBunitContext
 		_feed.ChannelList = [new CommChannel("Public", 0)];
 		var cut = RenderView("Public");
 		await Assert.That(cut.Find(".comm-compose input").GetAttribute("placeholder")).IsEqualTo("Message #Public");
-		cut.Find(".comm-compose input").Input("hello; world");
-		cut.Find(".comm-compose button.comm-send").Click();
+		await cut.Find(".comm-compose input").InputAsync("hello; world");
+		await cut.Find(".comm-compose button.comm-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "@chat Public=hello%; world" });
 	}
 
@@ -125,8 +125,8 @@ public class CommViewTests : TrackingBunitContext
 		_feed.ConversationList = [new CommConversation(key, ["Tomas Reyes", "Dace Kellan"], ["#312:1", "#315:1"], 0, Now)];
 		var cut = RenderView(key);
 		await Assert.That(cut.Find(".comm-title").TextContent).IsEqualTo("Tomas Reyes, Dace Kellan");
-		cut.Find(".comm-compose input").Input("meet at nine");
-		cut.Find(".comm-compose input").KeyDown("Enter");
+		await cut.Find(".comm-compose input").InputAsync("meet at nine");
+		await cut.Find(".comm-compose input").KeyDownAsync("Enter");
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page #312:1 #315:1=meet at nine" });
 	}
 
@@ -173,8 +173,8 @@ public class CommViewTests : TrackingBunitContext
 		var key = "page Wren Halloway";
 		_feed.ConversationList = [new CommConversation(key, ["Wren Halloway"], [null], 0, Now)];
 		var cut = RenderView(key);
-		cut.Find(".comm-compose input").Input("hi");
-		cut.Find(".comm-compose button.comm-send").Click();
+		await cut.Find(".comm-compose input").InputAsync("hi");
+		await cut.Find(".comm-compose button.comm-send").ClickAsync();
 		await Assert.That(_sent).IsEquivalentTo(new[] { "page \"Wren Halloway\"=hi" });
 	}
 
@@ -261,7 +261,7 @@ public class CommViewTests : TrackingBunitContext
 		var cut = RenderView("Public");
 
 		await Assert.That(cut.Find(".comm").ClassList.Contains("comm--members-toggled")).IsFalse();
-		cut.Find("button.comm-members-toggle").Click();
+		await cut.Find("button.comm-members-toggle").ClickAsync();
 		await Assert.That(cut.Find(".comm").ClassList.Contains("comm--members-toggled")).IsTrue();
 	}
 
@@ -271,7 +271,7 @@ public class CommViewTests : TrackingBunitContext
 		_feed.ChannelList = [new CommChannel("Public", 0)];
 		var closed = false;
 		var cut = RenderView("Public", () => closed = true);
-		cut.Find("button.comm-close").Click();
+		await cut.Find("button.comm-close").ClickAsync();
 		await Assert.That(closed).IsTrue();
 	}
 }

@@ -85,15 +85,15 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 
 	private BunitNavigationManager Nav => (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
 
-	private IRenderedComponent<SharpMUSH.Client.Pages.Login> SubmitLoginFrom(string startingUri, object[] characters)
+	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.Login>> SubmitLoginFrom(string startingUri, object[] characters)
 	{
 		SeedServices(characters);
 		Nav.NavigateTo(startingUri);
 
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
-		cut.Find("#login-username").Change("newbie");
-		cut.Find("#login-password").Change("hunter2");
-		cut.Find("button.login-submit").Click();
+		await cut.Find("#login-username").ChangeAsync("newbie");
+		await cut.Find("#login-password").ChangeAsync("hunter2");
+		await cut.Find("button.login-submit").ClickAsync();
 		return cut;
 	}
 
@@ -110,7 +110,7 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 	[TUnit.Core.Test]
 	public async Task Login_WithNoCharacters_LandsOnCharacterCreation()
 	{
-		var cut = SubmitLoginFrom("/login", characters: []);
+		var cut = await SubmitLoginFrom("/login", characters: []);
 
 		WaitForNavigation(cut, "/characters/new");
 
@@ -124,7 +124,7 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 	[TUnit.Core.Test]
 	public async Task Login_WithNoCharacters_PrefersOnboardingOverReturnUrl()
 	{
-		var cut = SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("/wiki")}", characters: []);
+		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("/wiki")}", characters: []);
 
 		WaitForNavigation(cut, "/characters/new");
 
@@ -134,7 +134,7 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 	[TUnit.Core.Test]
 	public async Task Login_WithACharacter_StillHonoursTheReturnUrl()
 	{
-		var cut = SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("/wiki")}", OneCharacter);
+		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("/wiki")}", OneCharacter);
 
 		WaitForNavigation(cut, "/wiki");
 
@@ -149,9 +149,9 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
 		var inputs = cut.FindAll("input");
-		inputs[0].Change("newbie");
-		inputs[2].Change("hunter2");
-		cut.Find("button.register-submit").Click();
+		await inputs[0].ChangeAsync("newbie");
+		await inputs[2].ChangeAsync("hunter2");
+		await cut.Find("button.register-submit").ClickAsync();
 
 		WaitForNavigation(cut, "/characters/new");
 

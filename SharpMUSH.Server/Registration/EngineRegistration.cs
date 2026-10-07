@@ -207,6 +207,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IConnectionAnnounceService, ConnectionAnnounceService>();
 		services.AddSingleton<IChannelBroadcastService, Implementation.Services.ChannelBroadcastService>();
 		services.AddSingleton<IGameMessageService, Implementation.Services.GameMessageService>();
+		services.AddSingleton<IPortalThemeService, Implementation.Services.PortalThemeService>();
 		services.AddSingleton<IConfigOptionWriter, ConfigOptionWriter>();
 		services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();

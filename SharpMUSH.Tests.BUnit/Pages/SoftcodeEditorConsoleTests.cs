@@ -106,26 +106,20 @@ public class SoftcodeEditorConsoleTests : BunitContext
 			.SetResult("Hi, %0 from [name(me)].");
 	}
 
-	/// <summary>
-	/// Opens the console and waits for it: under a loaded parallel run the console has been seen to render after
-	/// <c>Click</c> returned, so reading its input at once failed.
-	/// </summary>
-	private static void OpenConsole(IRenderedComponent<Components.MudHarness> cut)
-	{
-		cut.Find(".sc-console-toggle").Click();
-		cut.WaitForElement(".sc-console-line", TimeSpan.FromSeconds(5));
-	}
+	/// <summary>Opens the console. The click is awaited, so the console has rendered by the time this returns.</summary>
+	private static Task OpenConsoleAsync(IRenderedComponent<Components.MudHarness> cut) =>
+		cut.Find(".sc-console-toggle").ClickAsync();
 
-	private IRenderedComponent<Components.MudHarness> RenderWithFunctionOpen()
+	private async Task<IRenderedComponent<Components.MudHarness>> RenderWithFunctionOpenAsync()
 	{
 		var cut = Render<Components.MudHarness>(p => p
 			.AddChildContent<SharpMUSH.Client.Pages.SoftcodeEditor>());
 
-		cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).Click();
-		cut.WaitForElement(".sc-tree-toggle", TimeSpan.FromSeconds(5)).Click();
-		// The attribute list loads after the toggle opens, so wait for it rather than reading it at once.
-		cut.WaitForAssertion(() => cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")), TimeSpan.FromSeconds(5));
-		cut.FindAll(".sc-attr-item").Single(e => e.TextContent.Contains("GREET")).Click();
+		await cut.WaitForElement(".ob-item", TimeSpan.FromSeconds(5)).ClickAsync();
+		await cut.WaitForElement(".sc-tree-toggle", TimeSpan.FromSeconds(5)).ClickAsync();
+		// Found by selector rather than picked out of FindAll: the element is looked up again when the click is
+		// dispatched, so a render that lands in between cannot leave the click on a button that is gone.
+		await cut.Find(".sc-attr-item[title='FN`GREET']").ClickAsync();
 		cut.WaitForElement(".sc-tab", TimeSpan.FromSeconds(5));
 		return cut;
 	}
@@ -133,13 +127,12 @@ public class SoftcodeEditorConsoleTests : BunitContext
 	[TUnit.Core.Test]
 	public async Task RunningTheBuffer_SendsItUnsaved_AsTheObject_WithTheArguments()
 	{
-		var cut = RenderWithFunctionOpen();
+		var cut = await RenderWithFunctionOpenAsync();
 
-		OpenConsole(cut);
-		cut.Find(".sc-console-addarg").Click();
-		// The same race as OpenConsole: under load the new argument's input renders after Click returns.
-		cut.WaitForElement(".sc-console-arg-input", TimeSpan.FromSeconds(5)).Input("Bob");
-		cut.Find(".sc-eval").Click();
+		await OpenConsoleAsync(cut);
+		await cut.Find(".sc-console-addarg").ClickAsync();
+		await cut.Find(".sc-console-arg-input").InputAsync("Bob");
+		await cut.Find(".sc-eval").ClickAsync();
 
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.FindAll(".sc-console-entry")).Count().IsEqualTo(1),
@@ -164,12 +157,12 @@ public class SoftcodeEditorConsoleTests : BunitContext
 	[TUnit.Core.Test]
 	public async Task ATypedExpression_RunsAsTheCharacter_AndIsKeptForUp()
 	{
-		var cut = RenderWithFunctionOpen();
-		OpenConsole(cut);
+		var cut = await RenderWithFunctionOpenAsync();
+		await OpenConsoleAsync(cut);
 
 		var line = cut.Find(".sc-console-line");
-		line.Input("add(1,2)");
-		line.KeyDown("Enter");
+		await line.InputAsync("add(1,2)");
+		await line.KeyDownAsync("Enter");
 
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.FindAll(".sc-console-entry")).Count().IsEqualTo(1),
@@ -181,7 +174,7 @@ public class SoftcodeEditorConsoleTests : BunitContext
 		await Assert.That(sent.Arguments).IsNull();
 		await Assert.That(cut.Find(".sc-console-line").GetAttribute("value")).IsEqualTo(string.Empty);
 
-		cut.Find(".sc-console-line").KeyDown("ArrowUp");
+		await cut.Find(".sc-console-line").KeyDownAsync("ArrowUp");
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.Find(".sc-console-line").GetAttribute("value")).IsEqualTo("add(1,2)"),
 			TimeSpan.FromSeconds(5));
@@ -190,15 +183,15 @@ public class SoftcodeEditorConsoleTests : BunitContext
 	[TUnit.Core.Test]
 	public async Task TheScrollbackBelongsToTheTabThatRan()
 	{
-		var cut = RenderWithFunctionOpen();
-		OpenConsole(cut);
-		cut.Find(".sc-eval").Click();
+		var cut = await RenderWithFunctionOpenAsync();
+		await OpenConsoleAsync(cut);
+		await cut.Find(".sc-eval").ClickAsync();
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.FindAll(".sc-console-entry")).Count().IsEqualTo(1),
 			TimeSpan.FromSeconds(5));
 
 		// With the tab closed the console has no tab's scrollback to show.
-		cut.Find(".sc-tab-close").Click();
+		await cut.Find(".sc-tab-close").ClickAsync();
 		await cut.WaitForAssertionAsync(
 			async () => await Assert.That(cut.FindAll(".sc-console-entry")).IsEmpty(),
 			TimeSpan.FromSeconds(5));

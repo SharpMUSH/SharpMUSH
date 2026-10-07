@@ -125,13 +125,13 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 		Server.Editable = true;
 		var cut = RenderProfile();
 
-		cut.Find(".wiki-body-card .wiki-body-edit").Click();
+		await cut.Find(".wiki-body-card .wiki-body-edit").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .wiki-edit-textarea"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".wiki-body-card .wiki-edit-textarea").GetAttribute("value")).IsEqualTo("Lean and quiet.");
 		await Assert.That(cut.FindAll(".wiki-body-card .wiki-body-edit").Count).IsEqualTo(0)
 			.Because("the editor is open; a second click would throw the draft away");
 
-		cut.Find(".wiki-body-card .wiki-edit-cancel").Click();
+		await cut.Find(".wiki-body-card .wiki-edit-cancel").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .wiki-body-edit"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".wiki-body-card .wiki-edit-textarea").Count).IsEqualTo(0);
 	}

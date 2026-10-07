@@ -75,17 +75,17 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		// The key handlers are async, and a loaded run can finish them after KeyDown returns: wait on each effect.
 		foreach (var command in new[] { "look", "say hi" })
 		{
-			cut.Find(".term-input").Input(command);
-			cut.Find(".term-input").KeyDown("Enter");
+			await cut.Find(".term-input").InputAsync(command);
+			await cut.Find(".term-input").KeyDownAsync("Enter");
 			cut.WaitForAssertion(() => terminal.Received(1).SendAsync(command), TimeSpan.FromSeconds(5));
 		}
 
-		cut.Find(".term-input").KeyDown("ArrowUp");
+		await cut.Find(".term-input").KeyDownAsync("ArrowUp");
 		cut.WaitForAssertion(() => InputIs(cut, "say hi"), TimeSpan.FromSeconds(5));
-		cut.Find(".term-input").KeyDown("ArrowUp");
+		await cut.Find(".term-input").KeyDownAsync("ArrowUp");
 		cut.WaitForAssertion(() => InputIs(cut, "look"), TimeSpan.FromSeconds(5));
-		cut.Find(".term-input").KeyDown("ArrowDown");
-		cut.Find(".term-input").KeyDown("ArrowDown");
+		await cut.Find(".term-input").KeyDownAsync("ArrowDown");
+		await cut.Find(".term-input").KeyDownAsync("ArrowDown");
 		cut.WaitForAssertion(() => InputIs(cut, ""), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("").Because("past the newest is the empty line");
 	}

@@ -28,7 +28,7 @@ public class SidebarRowTests : BunitContext
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.OnClick, () => clicked = true));
 		var b = cut.Find("button.kit-row");
 		await Assert.That(b.GetAttribute("type")).IsEqualTo("button");
-		b.Click();
+		await b.ClickAsync();
 		await Assert.That(clicked).IsTrue();
 	}
 

@@ -59,10 +59,10 @@ public class HereCardTests : BunitContext
 		RoomOccupant? opened = null;
 		string? ran = null;
 		var cut = RenderHere([Player("Tomas Reyes", "#312"), Player("Pell Marsh", "#320", profile: false)], o => opened = o, c => ran = c);
-		cut.FindAll(".kit-portrait")[0].Click();
+		await cut.FindAll(".kit-portrait")[0].ClickAsync();
 		await Assert.That(opened?.Name).IsEqualTo("Tomas Reyes");
 		await Assert.That(ran).IsNull();
-		cut.FindAll(".kit-portrait")[1].Click();
+		await cut.FindAll(".kit-portrait")[1].ClickAsync();
 		await Assert.That(ran).IsEqualTo("look #320");
 	}
 
@@ -73,7 +73,7 @@ public class HereCardTests : BunitContext
 		var cut = RenderHere([Bundle], onCommand: c => ran = c);
 		var thing = cut.Find("button.here-thing");
 		await Assert.That(thing.QuerySelector("img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/o/bundle.jpg");
-		thing.Click();
+		await thing.ClickAsync();
 		await Assert.That(ran).IsEqualTo("look #1142");
 	}
 
@@ -83,7 +83,7 @@ public class HereCardTests : BunitContext
 		string? ran = null;
 		var v1 = new RoomOccupant("#5", "Bob", "look #5", null, null, null, null, null, null, false, false, []);
 		var cut = RenderHere([v1], onCommand: c => ran = c);
-		cut.Find(".kit-portrait").Click();
+		await cut.Find(".kit-portrait").ClickAsync();
 		await Assert.That(ran).IsEqualTo("look #5");
 		await Assert.That(cut.Find(".kit-portrait-fallback").TextContent).IsEqualTo("B");
 	}

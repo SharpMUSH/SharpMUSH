@@ -188,7 +188,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find("button.kit-capsule--primary").TextContent).Contains("ImportConfiguration");
 		await Assert.That(cut.Find(".kit-card-title").TextContent).IsEqualTo("SelectedFile");
 
-		cut.Find(".mud-expand-panel-header").Click();
+		await cut.Find(".mud-expand-panel-header").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find("textarea.mud-input-slot"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("textarea.mud-input-slot").TextContent + cut.Find("textarea.mud-input-slot").GetAttribute("value"))
 			.Contains("mud_name Test");
@@ -212,7 +212,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".kit-chip--on").TextContent.Trim()).IsEqualTo("CommandRestrictions");
 		await Assert.That(cut.Find(".config-list-name").TextContent).IsEqualTo("@nuke");
 
-		chips[1].Click();
+		await chips[1].ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -459,7 +459,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(Disabled("SnapshotsLoad")).IsTrue();
 		await Assert.That(Disabled("SnapshotsCapture")).IsTrue();
 
-		cut.Find(".snapshots-lookup input").Input("#12:1700000000000");
+		await cut.Find(".snapshots-lookup input").InputAsync("#12:1700000000000");
 		await Assert.That(Disabled("SnapshotsLoad")).IsFalse();
 		await Assert.That(Disabled("SnapshotsCapture")).IsFalse();
 	}
@@ -505,7 +505,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		bool ApplyDisabled() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "PkgApply").HasAttribute("disabled");
 		await Assert.That(ApplyDisabled()).IsTrue();
 
-		cut.Find("input#pkg-settings-confirm, #pkg-settings-confirm input").Change(true);
+		await cut.Find("input#pkg-settings-confirm, #pkg-settings-confirm input").ChangeAsync(true);
 		cut.WaitForAssertion(() =>
 		{
 			if (ApplyDisabled()) throw new InvalidOperationException("apply still waits");
@@ -519,9 +519,9 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cut = RenderPage(typeof(SuggestionManagement));
 
 		cut.WaitForAssertion(() => cut.Find(".mud-expand-panel-header"), TimeSpan.FromSeconds(5));
-		cut.Find(".mud-expand-panel-header").Click();
+		await cut.Find(".mud-expand-panel-header").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".mud-chip-close-button"), TimeSpan.FromSeconds(5));
-		cut.Find(".mud-chip-close-button").Click();
+		await cut.Find(".mud-chip-close-button").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
@@ -544,14 +544,14 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		}, TimeSpan.FromSeconds(5));
 		foreach (var header in cut.FindAll(".mud-expand-panel-header"))
 		{
-			header.Click();
+			await header.ClickAsync();
 		}
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.FindAll("input.mud-input-slot").Count < 2) throw new InvalidOperationException("panels not open");
 		}, TimeSpan.FromSeconds(5));
 
-		cut.FindAll("input.mud-input-slot")[0].Change("typed-in-one");
+		await cut.FindAll("input.mud-input-slot")[0].ChangeAsync("typed-in-one");
 
 		await Assert.That(cut.FindAll("input.mud-input-slot")[1].GetAttribute("value") ?? string.Empty).IsEqualTo(string.Empty);
 	}
@@ -573,7 +573,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".aa-detail-name").TextContent).IsEqualTo("Alpha");
 		await Assert.That(cut.Find(".aa-card--on .aa-card-name").TextContent).IsEqualTo("Alpha");
 
-		cut.FindAll(".aa-card")[1].Click();
+		await cut.FindAll(".aa-card")[1].ClickAsync();
 
 		await Assert.That(cut.Find(".aa-detail-name").TextContent).IsEqualTo("Beta");
 		await Assert.That(cut.Find(".aa-card--on .aa-card-name").TextContent).IsEqualTo("Beta");
@@ -597,7 +597,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".ra-empty-detail").Count).IsEqualTo(1);
 
 		// Sorted by priority, highest first: Admin, then Builder.
-		cut.FindAll(".ra-card")[1].Click();
+		await cut.FindAll(".ra-card")[1].ClickAsync();
 
 		await Assert.That(cut.Find(".ra-card--on .ra-card-name").TextContent).IsEqualTo("Builder");
 		await Assert.That(cut.Find(".ra-detail-slug").TextContent).IsEqualTo("builder");
@@ -621,7 +621,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cut = RenderPage(typeof(AdminRoles));
 
 		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
-		cut.Find(".ra-card").Click();
+		await cut.Find(".ra-card").ClickAsync();
 		var section = cut.FindAll(".ra-section").Single(s => s.QuerySelector(".ra-section-label")?.TextContent == "Scenes");
 		var row = section.QuerySelectorAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-name")?.TextContent == "scene.close");
 		// A custom permission is named by its scope, so the scope is not repeated under it.
@@ -629,7 +629,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(row.QuerySelector(".ra-perm-desc")!.TextContent).IsEqualTo("Finish any scene");
 		await Assert.That(row.QuerySelector(".ra-tri--allow")!.ClassList.Contains("ra-tri--on")).IsTrue();
 
-		cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabPermissions")).Click();
+		await cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabPermissions")).ClickAsync();
 		await Assert.That(cut.Find(".roleadmin-assign .ra-section-label").TextContent).IsEqualTo("Scenes");
 		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-scope").TextContent).IsEqualTo("scene.close");
 		await Assert.That(cut.Find(".roleadmin-assign .ra-perm-desc").TextContent).IsEqualTo("Finish any scene");
@@ -653,7 +653,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cut = RenderPage(typeof(AdminRoles));
 
 		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
-		cut.Find(".ra-card").Click();
+		await cut.Find(".ra-card").ClickAsync();
 		var capture = cut.FindAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-scope")?.TextContent == "snapshots.capture");
 		await Assert.That(capture.QuerySelector(".ra-access--allow .ra-access-role")!.TextContent.Trim()).IsEqualTo("Helper");
 		var restore = cut.FindAll(".ra-perm-row").Single(r => r.QuerySelector(".ra-perm-scope")?.TextContent == "snapshots.restore");
@@ -674,7 +674,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cut = RenderPage(typeof(AdminRoles));
 
 		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
-		cut.Find(".ra-card").Click();
+		await cut.Find(".ra-card").ClickAsync();
 		await Assert.That(cut.Find(".ra-note--access").TextContent).Contains("RolAccessOwnerNote");
 		await Assert.That(cut.FindAll(".ra-access").Count).IsEqualTo(0);
 	}
@@ -700,7 +700,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			: child.QuerySelector(".ra-card-sub")!.TextContent).ToArray();
 		await Assert.That(order).IsEquivalentTo(new[] { "#System", "wizard", "#staff", "moderator", "helper" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
-		cut.FindAll(".ra-card").Single(card => card.TextContent.Contains("helper")).Click();
+		await cut.FindAll(".ra-card").Single(card => card.TextContent.Contains("helper")).ClickAsync();
 		await Assert.That(cut.Find("select.ra-input").GetAttribute("value")).IsEqualTo("Staff");
 	}
 
@@ -726,11 +726,11 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		var cut = RenderPage(typeof(AdminRoles));
 
 		cut.WaitForAssertion(() => cut.Find(".ra-card"), TimeSpan.FromSeconds(5));
-		cut.Find(".ra-card").Click();
+		await cut.Find(".ra-card").ClickAsync();
 		var options = cut.Find("select.ra-input").QuerySelectorAll("option").Select(o => o.GetAttribute("value")).ToArray();
 		await Assert.That(options).IsEquivalentTo(new[] { "", "Staff", "System" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
-		cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabCategories")).Click();
+		await cut.FindAll(".kit-chip").Single(chip => chip.TextContent.Contains("RolTabCategories")).ClickAsync();
 		var roleRows = cut.FindAll("[data-kind=role] .ra-category-row");
 		var permissionRows = cut.FindAll("[data-kind=permission] .ra-category-row");
 		await Assert.That(roleRows.Count).IsEqualTo(2);

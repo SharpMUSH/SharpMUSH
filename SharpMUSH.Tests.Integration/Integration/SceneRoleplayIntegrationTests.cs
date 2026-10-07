@@ -97,12 +97,6 @@ public class SceneRoleplayIntegrationTests
 		};
 	}
 
-	private IReadOnlyList<string> MessagesSince(int fromCount)
-	{
-		var all = NotifyService.ReceivedCalls().Select(ExtractMessageText).OfType<string>().ToList();
-		return all.Skip(fromCount).ToList();
-	}
-
 	/// <summary>A single captured notification: who heard it, the text, and the short "#N" sender dbref (or null).</summary>
 	private sealed record Notification(string Recipient, string Message, string? Sender);
 
@@ -152,12 +146,16 @@ public class SceneRoleplayIntegrationTests
 			.ToList();
 	}
 
-	/// <summary>Runs a command as a connection handle and returns every notification it produced.</summary>
+	/// <summary>
+	/// Runs a command as a connection handle and returns what the player at that handle heard while it ran.
+	/// The substitute is shared with every test running alongside, so everyone else's lines in that window
+	/// (a blank <c>@pemit</c> to the Event Handler, another test's tracker) are someone else's output.
+	/// </summary>
 	private async Task<IReadOnlyList<string>> RunAndCollectAs(long handle, string command)
 	{
-		var before = NotificationCount();
-		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
-		return MessagesSince(before);
+		var player = ConnectionService.Get(handle)?.Ref
+			?? throw new InvalidOperationException($"handle {handle} is not logged in");
+		return await RunAndCollectHeardBy(handle, player.ToString(), command);
 	}
 
 	/// <summary>

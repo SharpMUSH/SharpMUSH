@@ -2025,10 +2025,6 @@
     <value>Тема</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>Предпочитанията за тема предстоят.</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>Превключи навигацията</value>
     <comment>MT</comment>
@@ -5712,6 +5708,45 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>Ред {0}: ::: item се подрежда само непосредствено вътре във flex.</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>Дайте на всеки персонаж собствена тема и акцентен цвят, за да различавате прозорците им с един поглед. Изгледът се пази с персонажа и го следва на всяко устройство.</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>Свържете персонаж с акаунта си, за да му дадете собствен изглед.</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>Играе сега</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>Тема</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>По подразбиране за играта ({0})</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>Акцент</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>На темата</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>Собствен цвят</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>Показва се като {0}, за да остане четим на тази тема.</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>Не можа да се запази: {0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>Тъмна</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>Светла</value>
+  </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>Темата по подразбиране следва светлата или тъмната настройка на устройството ви.</value>
   </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Насрочи сцена</value>

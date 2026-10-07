@@ -39,6 +39,7 @@ public class AuthControllerDebugOttTests
 				new SharpMUSH.Server.Authentication.Passkeys.PasskeyCeremonyStore(TimeProvider.System),
 				TimeProvider.System,
 				Substitute.For<Microsoft.Extensions.Logging.ILogger<SharpMUSH.Server.Authentication.Passkeys.PasskeyService>>()),
+			Substitute.For<SharpMUSH.Library.Services.Interfaces.IPortalThemeService>(),
 			Substitute.For<Microsoft.Extensions.Logging.ILogger<AuthController>>());
 	}
 

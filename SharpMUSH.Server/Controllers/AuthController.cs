@@ -38,6 +38,7 @@ public class AuthController(
 	IHostEnvironment environment,
 	SitelockGuard sitelockGuard,
 	PasskeyService passkeys,
+	IPortalThemeService themes,
 	ILogger<AuthController> logger) : ControllerBase
 {
 	/// <summary>The remote IP the current request originated from, for session origin tracking.</summary>
@@ -328,7 +329,7 @@ public class AuthController(
 		// The roster carries the binding too — the token is opaque to the client, so this response is
 		// where the tab learns who it starts as.
 		var charSummaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
-			actingKey: primary?.Object.Key, actingCreationTime: primary?.Object.CreationTime);
+			actingKey: primary?.Object.Key, actingCreationTime: primary?.Object.CreationTime, themes: themes);
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp(),
 			primary?.Object.Key, primary?.Object.CreationTime);
 		logger.LogInformation("Account login success for {Username} ({Id})", LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));

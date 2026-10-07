@@ -61,13 +61,13 @@ public class GalleryRefusalTests : TrackingBunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	private IRenderedComponent<CharacterGalleryWidget> RenderLoaded()
+	private async Task<IRenderedComponent<CharacterGalleryWidget>> RenderLoaded()
 	{
 		var cut = Render<CharacterGalleryWidget>(p => p
 			.Add(w => w.CharacterName, "Gandalf")
 			.Add(w => w.CanEdit, true));
 		cut.WaitForAssertion(() => cut.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
-		cut.Find("button.gallery-view-all").Click();
+		await cut.Find("button.gallery-view-all").ClickAsync();
 		return cut;
 	}
 
@@ -101,9 +101,9 @@ public class GalleryRefusalTests : TrackingBunitContext
 	public async Task ARefusedDeleteSaysWhy_AndKeepsTheImage()
 	{
 		Arrange(isIcon: true, method => method == HttpMethod.Delete ? HttpStatusCode.Forbidden : HttpStatusCode.OK);
-		var cut = RenderLoaded();
+		var cut = await RenderLoaded();
 
-		cut.Find(".kit-viewer-actions button.gallery-delete").Click();
+		await cut.Find(".kit-viewer-actions button.gallery-delete").ClickAsync();
 
 		var shown = await SingleSnackbar(cut);
 		await Assert.That(shown.Message).IsEqualTo($"GalleryDeleteFailed({Refusal})");
@@ -114,9 +114,9 @@ public class GalleryRefusalTests : TrackingBunitContext
 	public async Task ARefusedIconChangeSaysWhy()
 	{
 		Arrange(isIcon: false, method => method == HttpMethod.Put ? HttpStatusCode.Forbidden : HttpStatusCode.OK);
-		var cut = RenderLoaded();
+		var cut = await RenderLoaded();
 
-		cut.Find(".kit-viewer-actions button.gallery-make-icon").Click();
+		await cut.Find(".kit-viewer-actions button.gallery-make-icon").ClickAsync();
 
 		var shown = await SingleSnackbar(cut);
 		await Assert.That(shown.Message).IsEqualTo($"GallerySetIconFailed({Refusal})");

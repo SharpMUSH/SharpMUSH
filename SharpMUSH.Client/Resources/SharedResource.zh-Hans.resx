@@ -2025,10 +2025,6 @@
     <value>主题</value>
     <comment>MT</comment>
   </data>
-  <data name="NavThemeComingSoon" xml:space="preserve">
-    <value>主题偏好设置即将推出。</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavToggleNavigation" xml:space="preserve">
     <value>切换导航栏</value>
     <comment>MT</comment>
@@ -5712,6 +5708,45 @@
   </data>
   <data name="WkFenceItemOutsideFlex" xml:space="preserve">
     <value>第 {0} 行：::: item 只有直接放在 flex 内才会排布。</value>
+  </data>
+  <data name="NavThemeIntro" xml:space="preserve">
+    <value>为每个角色设置自己的主题和强调色，一眼就能分清他们的窗口。外观随角色保存，在任何设备上都会跟随。</value>
+  </data>
+  <data name="NavThemeNoCharacters" xml:space="preserve">
+    <value>将角色关联到你的账户，即可为其设置专属外观。</value>
+  </data>
+  <data name="NavThemeActing" xml:space="preserve">
+    <value>正在游玩</value>
+  </data>
+  <data name="NavThemeTheme" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="NavThemeGameDefault" xml:space="preserve">
+    <value>游戏默认（{0}）</value>
+  </data>
+  <data name="NavThemeAccent" xml:space="preserve">
+    <value>强调色</value>
+  </data>
+  <data name="NavThemeAccentThemeOwn" xml:space="preserve">
+    <value>使用主题自带</value>
+  </data>
+  <data name="NavThemeAccentCustom" xml:space="preserve">
+    <value>自定义颜色</value>
+  </data>
+  <data name="NavThemeAccentAdjusted" xml:space="preserve">
+    <value>显示为 {0}，以便在此主题上保持清晰可读。</value>
+  </data>
+  <data name="NavThemeSaveFailed" xml:space="preserve">
+    <value>无法保存：{0}</value>
+  </data>
+  <data name="NavThemeDark" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="NavThemeLight" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="NavThemeFollowsDevice" xml:space="preserve">
+    <value>游戏默认主题会跟随设备的浅色或深色设置。</value>
   </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>安排场景</value>
