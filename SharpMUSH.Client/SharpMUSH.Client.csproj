@@ -92,7 +92,7 @@
 	</ItemGroup>
 
 	<!-- The softcode editor's data files (data/mush-defs.json, data/mush-functions.json,
-	     data/mush-commands.json) are built by tools/ClientData from the [SharpFunction]/[SharpCommand]
+	     data/mush-commands.json) and the MarkupString stylesheet (data/markup.css) are built by tools/ClientData from the [SharpFunction]/[SharpCommand]
 	     attributes and the shipped helpfiles, into wwwroot/data, which .gitignore leaves out. They are
 	     not checked in: a checked-in copy went stale with every help change and conflicted on every
 	     merge. -->
@@ -130,7 +130,7 @@
 
 	<Target Name="GenerateClientData" DependsOnTargets="ResolveClientDataInputs" Condition="'$(NoBuild)' != 'true'"
 		Inputs="@(_ClientDataInput)"
-		Outputs="$(ClientDataOutput)mush-defs.json;$(ClientDataOutput)mush-functions.json;$(ClientDataOutput)mush-commands.json">
+		Outputs="$(ClientDataOutput)mush-defs.json;$(ClientDataOutput)mush-functions.json;$(ClientDataOutput)mush-commands.json;$(ClientDataOutput)markup.css">
 		<Exec Command="&quot;$(ClientDataHost)&quot; &quot;$(ClientDataTool)&quot; &quot;$(ClientDataHelpfiles)&quot; &quot;$(ClientDataOutput.TrimEnd('\'))&quot;" />
 	</Target>
 
@@ -138,7 +138,7 @@
 		Condition="'$(NoBuild)' != 'true'">
 		<ItemGroup>
 			<!-- On a clean checkout the files did not exist when wwwroot/** was globbed into Content. -->
-			<_ClientDataFile Include="wwwroot\data\mush-defs.json;wwwroot\data\mush-functions.json;wwwroot\data\mush-commands.json" />
+			<_ClientDataFile Include="wwwroot\data\mush-defs.json;wwwroot\data\mush-functions.json;wwwroot\data\mush-commands.json;wwwroot\data\markup.css" />
 			<Content Remove="@(_ClientDataFile)" />
 			<Content Include="@(_ClientDataFile)" />
 			<FileWrites Include="@(_ClientDataFile)" />
