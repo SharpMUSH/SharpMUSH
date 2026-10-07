@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using System.Text.Json;
 using Microsoft.JSInterop;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -39,7 +40,10 @@ public class AccountAuthService(
 
 	/// <summary><paramref name="IsActing"/> is the server's answer to "who is this tab?" — the acting
 	/// character is bound to the session token, which is opaque here, so the roster carries it.</summary>
-	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false);
+	/// <param name="ThemeId">The character's chosen portal theme, or null for the game's default.</param>
+	/// <param name="Accent">The character's own accent colour, or null for the theme's.</param>
+	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false,
+		string? ThemeId = null, string? Accent = null);
 
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
@@ -79,6 +83,13 @@ public class AccountAuthService(
 	{
 		add => _roster.Changed += value;
 		remove => _roster.Changed -= value;
+	}
+
+	/// <inheritdoc cref="ActiveCharacterState.AppearanceChanged"/>
+	public event Action? AppearanceChanged
+	{
+		add => _roster.AppearanceChanged += value;
+		remove => _roster.AppearanceChanged -= value;
 	}
 
 	/// <inheritdoc cref="ActiveCharacterState.SetActive"/>
@@ -687,6 +698,21 @@ public class AccountAuthService(
 		// one exists, and stayed one in this tab (no build tools, no wiki editing) until it signed in again.
 		await ReloadAuthorityAsync();
 		return character;
+	}
+
+	/// <summary>Stores one of the account's characters' portal theme and accent, and updates the roster to match.</summary>
+	public async Task<ApiResult<CharacterAppearance>> SetAppearanceAsync(int dbrefNumber, CharacterAppearance appearance)
+	{
+		await InitAsync();
+		if (AccountSessionToken is null) return NotLoggedIn("Not logged in to account.");
+
+		var result = await _api.SetAppearanceAsync(dbrefNumber, appearance);
+		if (result is CharacterAppearance stored)
+		{
+			_roster.SetAppearance(dbrefNumber, stored);
+		}
+
+		return result;
 	}
 
 	/// <summary>Unlinks a character from this account; see <see cref="CharacterUnlinked"/> for the advisory.</summary>

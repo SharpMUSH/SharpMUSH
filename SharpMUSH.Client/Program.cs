@@ -65,6 +65,7 @@ builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<AdminGuestsService>();
 builder.Services.AddSingleton<GameMessagesService>();
+builder.Services.AddSingleton<PortalThemesAdminService>();
 builder.Services.AddSingleton<AdminCharactersService>();
 builder.Services.AddSingleton<AdminAuditService>();
 builder.Services.AddSingleton<AdminBansService>();
@@ -189,8 +190,9 @@ CultureInfo.DefaultThreadCurrentUICulture = culture;
 // see PortalStartupPage in SharpMUSH.Server.)
 _ = app.Services.GetRequiredService<AccountAuthService>().InitAsync();
 
-// The stored theme preset, read before the first render so ThemeProvider renders the right theme once
-// instead of rendering the default and then re-rendering the whole tree in the stored one.
+// The last theme applied in this browser, read before the first render so ThemeProvider renders it once
+// instead of rendering the default and then re-rendering the whole tree in the stored one. The game's
+// themes and the character's own accent follow in the background.
 await app.Services.GetRequiredService<ThemeService>().InitializeAsync();
 
 // index.html is served with a static lang="en", so without this the document keeps

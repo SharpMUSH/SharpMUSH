@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -177,6 +178,10 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 
 	public Task<ApiResult<Success>> UnlinkCharacterAsync(int dbrefNumber) =>
 		Client.DeleteApiAsync($"api/account/characters/{dbrefNumber}");
+
+	public Task<ApiResult<CharacterAppearance>> SetAppearanceAsync(int dbrefNumber, CharacterAppearance appearance) =>
+		Client.PutApiAsync<CharacterAppearance, CharacterAppearance>(
+			$"api/account/characters/{dbrefNumber}/appearance", appearance, "The server did not say what it stored.");
 
 	public Task<ApiResult<Success>> ChangePasswordAsync(string oldPassword, string newPassword) =>
 		Client.PutApiAsync("api/account/password", new ChangePasswordRequest(oldPassword, newPassword));

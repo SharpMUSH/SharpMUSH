@@ -7,7 +7,7 @@
 	backdrop-filter: var(--glass-filter);
 	-webkit-backdrop-filter: var(--glass-filter);
 	box-shadow: var(--glass-edge);
-	color: var(--text);
+	color: var(--text-over-image);
 	font: inherit;
 	font-size: 13px;
 	font-weight: 600;
