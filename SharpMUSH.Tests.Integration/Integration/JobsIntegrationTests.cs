@@ -281,6 +281,41 @@ public class JobsIntegrationTests
 			await Assert.That(await As(admin, "+bucket/rename Mod-Mail=Requests")).Contains("There is a Requests bucket already.");
 			await Assert.That(await As(admin, "+bucket/rename Mod-Mail=Moderators")).Contains("The bucket is called Moderators now.");
 			await Assert.That(await As(admin, "+bucket/delete Moderators")).Contains("Bucket Moderators is deleted");
+
+			await Assert.That(await As(admin, "+bucket/rename Requests=Help Desk")).Contains("The bucket is called Help Desk now.");
+			await Assert.That(await As(player, "+request Lost=Where am I?")).Contains("Filed job 4 in Help Desk")
+				.Because("renaming the default bucket keeps +request filing there");
+			await Assert.That(await As(admin, "+bucket/disable Help Desk")).Contains("Help Desk is where +request files.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task ABigBucketIsDeletedABatchAtATime()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var admin = await Player("JobsBgA", "job-admin");
+			var player = await Player("JobsBgP");
+			for (var i = 1; i <= 25; i++)
+			{
+				await As(player, $"+bug Exit {i}=Broken exit {i}.");
+			}
+
+			var before = Notifications.CountFor(admin.DbRef);
+			await Assert.That(await As(admin, "+bucket/delete Bugs=Requests"))
+				.Contains("Bucket Bugs takes no new jobs now. Its 25 jobs are moving to Requests; it is deleted, with its role and permission, once they have all moved.")
+				.Because("25 jobs is more than one queue entry moves");
+
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(await God("think [iter(lnum(1,25),job(##,bucket))]")).IsEqualTo(string.Join(" ", Enumerable.Repeat("Requests", 25)));
+			await Assert.That(await As(admin, "+bucket Bugs")).Contains("There is no bucket called Bugs.");
+			await Assert.That(string.Join("\n", Notifications.For(admin.DbRef).Skip(before)))
+				.Contains("Bucket Bugs is deleted, with its role and permission. 25 jobs moved to Requests.");
 		}
 		finally
 		{
@@ -355,7 +390,7 @@ public class JobsIntegrationTests
 			await Assert.That(mustMove.GetProperty("errors").GetProperty("moveto").GetString()).IsEqualTo("Big Ideas still has 1 job. Pick a bucket to move them to.");
 			var gone = await Http("POST", "/jobs/act", """{"op":"deletebucket","bucket":"ideas","moveto":"requests"}""", admin);
 			await Assert.That(gone.GetProperty("ok").GetBoolean()).IsTrue().Because(gone.ToString());
-			await Assert.That(gone.GetProperty("message").GetString()).IsEqualTo("Bucket Big Ideas is deleted. 1 job moved to Requests.");
+			await Assert.That(gone.GetProperty("message").GetString()).IsEqualTo("Bucket Big Ideas is deleted, with its role and permission. 1 job moved to Requests.");
 			await Assert.That(gone.GetProperty("redirect").GetString()).IsEqualTo("/apps/jobs/buckets");
 			await Assert.That(await God("think [job(1,bucket)]")).IsEqualTo("Requests");
 		}

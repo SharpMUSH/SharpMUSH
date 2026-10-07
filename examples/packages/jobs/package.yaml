@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -132,6 +132,9 @@ objects:
       # Where +request files when no bucket is named, and where +job/query opens a job.
       DATA`DEFAULT`BUCKET: |-
         Requests
+      # How many jobs a bucket being deleted moves per queue entry; the rest move in the next one.
+      DATA`MOVE`BATCH: |-
+        10
       # +bug, +typo, +pitch and +apply each file in one bucket.
       DATA`SHORTCUT`BUG: |-
         Bugs
@@ -293,6 +296,9 @@ objects:
       # %0 jobs, in words.
       FUN`NJOBS: |-
         %0 job[if(neq(%0,1),s)]
+      # What deleting bucket %0 says: %1 jobs moving to bucket %2, %3 1 when they are still moving.
+      FUN`DELETED: |-
+        [if(%3,Bucket %0 takes no new jobs now. Its [u({{jobs}}/FUN`NJOBS,%1)] are moving to [name(%2)]; it is deleted\, with its role and permission\, once they have all moved.,Bucket %0 is deleted\, with its role and permission.[if(%1,%b[u({{jobs}}/FUN`NJOBS,%1)] moved to [name(%2)].)])]
       # Bucket %0, person %1. The bucket's work and file locks decide.
       FUN`CAN`WORK: |-
         [t(elock(%0/work,%1))]
@@ -658,7 +664,7 @@ objects:
         [switch(1,not(u({{jobs}}/FUN`TAKES`JOBS,%0)),[name(%0)] is not taking new jobs already.,not(comp(lcstr(name(%0)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))),[name(%0)] is where +request files. Point DATA`DEFAULT`BUCKET elsewhere first.,)]
       # Why bucket %0 can't be deleted with its jobs moved to bucket %1 (typed as %2, empty to move none), or nothing.
       FUN`ERR`DELETE: |-
-        [setq(_ej,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%0)))][switch(1,not(comp(lcstr(name(%0)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))),[name(%0)] is where +request files. Point DATA`DEFAULT`BUCKET elsewhere first.,cand(strlen(%2),not(strlen(%1))),There is no bucket called %2.,cand(strlen(%1),not(comp(%1,%0))),Pick another bucket to move the jobs to.,cand(strlen(%1),not(u({{jobs}}/FUN`TAKES`JOBS,%1))),[name(%1)] is not taking new jobs.,cand(%q<_ej>,not(strlen(%1))),[name(%0)] still has [u({{jobs}}/FUN`NJOBS,%q<_ej>)]. Pick a bucket to move them to.,)]
+        [setq(_ej,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%0)))][switch(1,not(comp(lcstr(name(%0)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))),[name(%0)] is where +request files. Point DATA`DEFAULT`BUCKET elsewhere first.,strlen(get(%0/DELETING`TO)),[name(%0)] is being deleted already.,cand(strlen(%2),not(strlen(%1))),There is no bucket called %2.,cand(strlen(%1),not(comp(%1,%0))),Pick another bucket to move the jobs to.,cand(strlen(%1),not(u({{jobs}}/FUN`TAKES`JOBS,%1))),[name(%1)] is not taking new jobs.,cand(%q<_ej>,not(strlen(%1))),[name(%0)] still has [u({{jobs}}/FUN`NJOBS,%q<_ej>)]. Pick a bucket to move them to.,)]
       # +bucket/create <name>=<description>: the bucket, its permission softcode.jobs.<slug>, and the role job-admin-<slug> allowing it.
       INC`BUCKET`CREATE: |-
         @include {{jobs}}/INC`NEED`ADMIN; think [setq(bname,trim(%q<lhs>))][setq(desc,%q<rhs>)]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`NAME,%q<bname>,))))=@pemit %#=%q<err>; @assert u({{jobs}}/FUN`SETTING`OK,description,%q<desc>)=@pemit %#=[get({{jobs}}/DATA`SETTING`DESCRIPTION)]; @include {{jobs}}/INC`DO`BUCKET`CREATE; @pemit %#=Bucket %q<bname> is ready. The role job-admin-%q<slug> works it: @role/assign <player>=job-admin-%q<slug>
@@ -668,25 +674,36 @@ objects:
       INC`BUCKET`DISABLE: |-
         @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<arg>)))=@pemit %#=There is no bucket called %q<arg>.; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DISABLE,%q<bk>))))=@pemit %#=%q<err>; think [setq(off,1)]; @include {{jobs}}/INC`DO`BUCKET`STATE; @pemit %#=[name(%q<bk>)] takes no new jobs now. Its jobs stay there and are worked as before. +bucket/enable [name(%q<bk>)] takes them again.
       INC`BUCKET`ENABLE: |-
-        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<arg>)))=@pemit %#=There is no bucket called %q<arg>.; @assert not(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>))=@pemit %#=[name(%q<bk>)] takes new jobs already.; think [setq(off,0)]; @include {{jobs}}/INC`DO`BUCKET`STATE; @pemit %#=[name(%q<bk>)] takes new jobs again.
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<arg>)))=@pemit %#=There is no bucket called %q<arg>.; @assert not(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>))=@pemit %#=[name(%q<bk>)] takes new jobs already.; @assert not(strlen(get(%q<bk>/DELETING`TO)))=@pemit %#=[name(%q<bk>)] is being deleted.; think [setq(off,0)]; @include {{jobs}}/INC`DO`BUCKET`STATE; @pemit %#=[name(%q<bk>)] takes new jobs again.
       # +bucket/delete <bucket>[=<bucket>]: a bucket that still has jobs, open or closed, is deleted only
       # once they have somewhere to go; each moves there as +job/trans moves it.
       INC`BUCKET`DELETE: |-
-        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<lhs>)))=@pemit %#=There is no bucket called %q<lhs>.; think [setq(mv,if(strlen(%q<rhs>),u({{jobs}}/FUN`BUCKET,%q<rhs>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%q<bk>)))]; @assert cor(strlen(%q<rhs>),not(%q<_nj>))=@pemit %#=[name(%q<bk>)] still has [u({{jobs}}/FUN`NJOBS,%q<_nj>)]. +bucket/delete [name(%q<bk>)]=<bucket> moves them there first.; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<rhs>))))=@pemit %#=%q<err>; @include {{jobs}}/INC`DO`BUCKET`DELETE; @pemit %#=Bucket %q<bname> is deleted, with its role and permission.[if(%q<moved>,%b[u({{jobs}}/FUN`NJOBS,%q<moved>)] moved to [name(%q<mv>)].)]
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,%q<lhs>)))=@pemit %#=There is no bucket called %q<lhs>.; think [setq(mv,if(strlen(%q<rhs>),u({{jobs}}/FUN`BUCKET,%q<rhs>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%q<bk>)))]; @assert cor(strlen(%q<rhs>),not(%q<_nj>))=@pemit %#=[name(%q<bk>)] still has [u({{jobs}}/FUN`NJOBS,%q<_nj>)]. +bucket/delete [name(%q<bk>)]=<bucket> moves them there first.; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<rhs>))))=@pemit %#=%q<err>; @include/nobreak {{jobs}}/INC`DO`BUCKET`DELETE; @pemit %#=[u({{jobs}}/FUN`DELETED,%q<bname>,%q<moved>,%q<mv>,%q<pending>)]
       # The writes those share with the portal's bucket pages. Registers in, as INC`DO` takes them.
       # %q<bname>, %q<desc>: makes the bucket, its permission and role. Leaves %q<bk> and %q<slug>.
       INC`DO`BUCKET`CREATE: |-
         think [setq(slug,u({{jobs}}/FUN`SLUG,%q<bname>))][setq(bk,objid(create(%q<bname>)))]; @tel %q<bk>={{buckets}}; @parent %q<bk>={{buckets}}; @set %q<bk>=NO_COMMAND; &DESCRIPTION %q<bk>=%q<desc>; &SLUG %q<bk>=%q<slug>; @lock/user:file %q<bk>=#TRUE; @lock/user:work %q<bk>=perm^softcode.jobs.admin|perm^softcode.jobs.%q<slug>; @dolist/inline [get({{jobs}}/DATA`HOOKS)]=&ON`## %q<bk>=[get({{jobs}}/DATA`HOOKDOC`##)]; @permission/define softcode.jobs.%q<slug>=Jobs/Work jobs in the %q<bname> bucket.; @role/create job-admin-%q<slug>=Jobs/Job Admin - %q<bname>; @role/allow job-admin-%q<slug>=softcode.jobs.%q<slug>
-      # %q<bk> is called %q<bname> from now on; its slug, permission and role id stay.
+      # %q<bk> is called %q<bname> from now on; its slug, permission and role id stay. Renaming the
+      # default bucket points DATA`DEFAULT`BUCKET at the new name.
       INC`DO`BUCKET`RENAME: |-
-        @name %q<bk>=%q<bname>; @role/rename job-admin-[get(%q<bk>/SLUG)]=Job Admin - %q<bname>
+        think [setq(_rd,not(comp(lcstr(name(%q<bk>)),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))))]; @name %q<bk>=%q<bname>; @role/rename job-admin-[get(%q<bk>/SLUG)]=Job Admin - %q<bname>; think [if(%q<_rd>,set({{jobs}},DATA`DEFAULT`BUCKET:%q<bname>))]
       # %q<bk> stops taking new jobs (%q<off> 1) or takes them again (0).
       INC`DO`BUCKET`STATE: |-
         &DISABLED %q<bk>=[if(%q<off>,1)]
-      # Moves every job in %q<bk> to %q<mv>, then removes the bucket, its role and its permission. Leaves
-      # %q<bname> and %q<moved>, how many jobs moved.
+      # Moves the jobs in %q<bk> to %q<mv>, then removes the bucket, its role and its permission. Leaves
+      # %q<bname> and %q<moved>, how many jobs move. More than DATA`MOVE`BATCH jobs would not fit in one
+      # queue entry's time: the first batch moves here, the bucket stops taking jobs, and
+      # TRIG`BUCKET`DRAIN moves the rest a batch per queue entry and deletes the bucket after the last.
+      # %q<pending> is 1 then. Include it with /nobreak.
       INC`DO`BUCKET`DELETE: |-
-        think [setq(slug,get(%q<bk>/SLUG))][setq(bname,name(%q<bk>))][setq(_dj,u({{jobs}}/FUN`SELECT,%q<actor>,INBUCKET,%q<bk>))][setq(moved,words(%q<_dj>))][setq(nb,%q<mv>)]; @dolist/inline %q<_dj>={think [setq(jo,##)]; @include {{jobs}}/INC`DO`TRANSFER}; @role/delete job-admin-%q<slug>; @permission/undefine softcode.jobs.%q<slug>; @tel %q<bk>={{jobs}}; @nuke %q<bk>
+        think [setq(slug,get(%q<bk>/SLUG))][setq(bname,name(%q<bk>))][setq(_dj,u({{jobs}}/FUN`SELECT,%q<actor>,INBUCKET,%q<bk>))][setq(moved,words(%q<_dj>))][setq(nb,%q<mv>)][setq(_bs,get({{jobs}}/DATA`MOVE`BATCH))][setq(pending,gt(%q<moved>,%q<_bs>))]; @dolist/inline [extract(%q<_dj>,1,%q<_bs>)]={think [setq(jo,##)]; @include {{jobs}}/INC`DO`TRANSFER}; @break %q<pending>={&DISABLED %q<bk>=1; &DELETING`TO %q<bk>=%q<mv>; &DELETING`BY %q<bk>=%q<actor>; &DELETING`MOVED %q<bk>=%q<moved>; @trigger {{jobs}}/TRIG`BUCKET`DRAIN=%q<bk>}; @include {{jobs}}/INC`DO`BUCKET`GONE
+      # Removes %q<bk>, its role and its permission (%q<slug>).
+      INC`DO`BUCKET`GONE: |-
+        @role/delete job-admin-%q<slug>; @permission/undefine softcode.jobs.%q<slug>; @tel %q<bk>={{jobs}}; @nuke %q<bk>
+      # Bucket %0, being deleted: moves the next batch of its jobs, and deletes it once none are left.
+      # Whoever deleted it hears when it is gone.
+      TRIG`BUCKET`DRAIN: |-
+        @assert cand(isdbref(%0),strlen(get(%0/DELETING`TO))); think [setq(bk,%0)][setq(nb,get(%0/DELETING`TO))][setq(actor,get(%0/DELETING`BY))][setq(slug,get(%0/SLUG))][setq(bname,name(%0))][setq(_bs,get({{jobs}}/DATA`MOVE`BATCH))][setq(_dj,u({{jobs}}/FUN`SELECT,%q<actor>,INBUCKET,%0))]; @assert isdbref(%q<nb>)={&DELETING`TO %0=; @pemit %q<actor>=Stopped deleting bucket %q<bname>: the bucket its jobs were moving to is gone. It takes no new jobs; delete it again to move the rest.}; @dolist/inline [extract(%q<_dj>,1,%q<_bs>)]={think [setq(jo,##)]; @include {{jobs}}/INC`DO`TRANSFER}; @break gt(words(%q<_dj>),%q<_bs>)=@trigger {{jobs}}/TRIG`BUCKET`DRAIN=%0; think [setq(_dm,get(%0/DELETING`MOVED))][setq(_dn,name(%q<nb>))]; @include {{jobs}}/INC`DO`BUCKET`GONE; @pemit %q<actor>=Bucket %q<bname> is deleted, with its role and permission. [u({{jobs}}/FUN`NJOBS,%q<_dm>)] moved to %q<_dn>.
       # +bucket/lock <bucket>/file|work=<lock>: ordinary locks, so perm^, role^ and the rest all work.
       INC`BUCKET`LOCK: |-
         @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=+bucket/lock <bucket>/file|work=<lock>; @assert t(match(file work,setr(lk,lcstr(trim(after(%q<lhs>,/))))))=@pemit %#=A bucket has a file lock (who may file) and a work lock (who works it).; @lock/user:%q<lk> %q<bk>=%q<rhs>; @pemit %#=[name(%q<bk>)] %q<lk> lock: [lock(%q<bk>/%q<lk>)]
@@ -919,9 +936,9 @@ objects:
       WEB`ACT`DISABLEBUCKET: |-
         @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DISABLE,%q<bk>))))=think [setq(out,u({{jobs}}/WEB`ERR,%q<err>))]; think [setq(off,1)]; @include {{jobs}}/INC`DO`BUCKET`STATE; think [setq(out,u({{jobs}}/WEB`BDONE,[name(%q<bk>)] takes no new jobs now.))]
       WEB`ACT`ENABLEBUCKET: |-
-        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; @assert not(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>))=think [setq(out,u({{jobs}}/WEB`ERR,[name(%q<bk>)] takes new jobs already.))]; think [setq(off,0)]; @include {{jobs}}/INC`DO`BUCKET`STATE; think [setq(out,u({{jobs}}/WEB`BDONE,[name(%q<bk>)] takes new jobs again.))]
+        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; @assert not(u({{jobs}}/FUN`TAKES`JOBS,%q<bk>))=think [setq(out,u({{jobs}}/WEB`ERR,[name(%q<bk>)] takes new jobs already.))]; @assert not(strlen(get(%q<bk>/DELETING`TO)))=think [setq(out,u({{jobs}}/WEB`ERR,[name(%q<bk>)] is being deleted.))]; think [setq(off,0)]; @include {{jobs}}/INC`DO`BUCKET`STATE; think [setq(out,u({{jobs}}/WEB`BDONE,[name(%q<bk>)] takes new jobs again.))]
       WEB`ACT`DELETEBUCKET: |-
-        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; think [setq(_to,u({{jobs}}/WEB`GETS,moveto))][setq(mv,if(strlen(%q<_to>),u({{jobs}}/FUN`BUCKET`BYSLUG,%q<_to>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%q<viewer>,INBUCKET,%q<bk>)))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<_to>))))=think [setq(out,u({{jobs}}/WEB`ERRF,if(%q<_nj>,moveto,_global),%q<err>))]; @include {{jobs}}/INC`DO`BUCKET`DELETE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Bucket %q<bname> is deleted.[if(%q<moved>,%b[u({{jobs}}/FUN`NJOBS,%q<moved>)] moved to [name(%q<mv>)].)]),redirect,json(string,/apps/jobs/buckets)))]
+        @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; think [setq(_to,u({{jobs}}/WEB`GETS,moveto))][setq(mv,if(strlen(%q<_to>),u({{jobs}}/FUN`BUCKET`BYSLUG,%q<_to>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%q<viewer>,INBUCKET,%q<bk>)))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<_to>))))=think [setq(out,u({{jobs}}/WEB`ERRF,if(%q<_nj>,moveto,_global),%q<err>))]; @include/nobreak {{jobs}}/INC`DO`BUCKET`DELETE; think [setq(out,json(object,ok,json(boolean,true),message,json(string,u({{jobs}}/FUN`DELETED,%q<bname>,%q<moved>,%q<mv>,%q<pending>)),redirect,json(string,/apps/jobs/buckets)))]
       # Setting %0 as posted, in the words +bucket/set takes.
       WEB`SETTING: |-
         [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(t(match(true 1 yes on,lcstr(%q<_v>))),yes,no),if(strmatch(%q<_v>,null),,%q<_v>))]
@@ -956,7 +973,7 @@ objects:
       # The Manage section's elements for bucket %0: rename it, stop or start its new jobs, delete it.
       # The bucket +request files in can do neither of the last two.
       WEB`MANAGE: |-
-        [setq(_mn,name(%0))][setq(_ms,get(%0/SLUG))][setq(_mj,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%0)))][setq(_md,not(comp(lcstr(%q<_mn>),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))))][u({{jobs}}/WEB`FIELD,rename,Name,text,Up to 20 characters. Its permission and role keep their names.)]%r[u({{jobs}}/WEB`BBTN,Rename,json(object,op,json(string,renamebucket),bucket,json(string,%q<_ms>)))]%r[json(object,kind,json(string,divider))]%r[if(%q<_md>,u({{jobs}}/WEB`MD,%q<_mn> is where +request files\, so it always takes new jobs and cannot be deleted.),[u({{jobs}}/WEB`MD,if(u({{jobs}}/FUN`TAKES`JOBS,%0),**Taking new jobs.** Disable it and nobody can file in %q<_mn> or move a job into it. Its jobs stay and are worked as before.,**Disabled.** Nobody can file in %q<_mn> or move a job into it. Its jobs stay and are worked as before.))]%r[if(u({{jobs}}/FUN`TAKES`JOBS,%0),u({{jobs}}/WEB`BBTN,Disable,json(object,op,json(string,disablebucket),bucket,json(string,%q<_ms>)),warning,Stop %q<_mn> taking new jobs?),u({{jobs}}/WEB`BBTN,Take new jobs again,json(object,op,json(string,enablebucket),bucket,json(string,%q<_ms>)),success))]%r[json(object,kind,json(string,divider))]%r[u({{jobs}}/WEB`MD,if(%q<_mj>,Deleting %q<_mn> moves its [u({{jobs}}/FUN`NJOBS,%q<_mj>)]\, open and closed\, to the bucket you pick\, then removes the role job-admin-%q<_ms> and the permission softcode.jobs.%q<_ms>.,Deleting %q<_mn> removes it with the role job-admin-%q<_ms> and the permission softcode.jobs.%q<_ms>.))]%r[if(%q<_mj>,[u({{jobs}}/WEB`SELECT,moveto,Move its jobs to,iter(setdiff(u({{jobs}}/WEB`MOVABLE),%0),[get(%i0/SLUG)] [name(%i0)],%b,|))]%r)][u({{jobs}}/WEB`BBTN,Delete bucket,json(object,op,json(string,deletebucket),bucket,json(string,%q<_ms>)),error,Delete %q<_mn>? [if(%q<_mj>,Its jobs move to the bucket you picked\, and its,Its)] role and permission go with it.)])]
+        [setq(_mn,name(%0))][setq(_ms,get(%0/SLUG))][setq(_mj,words(u({{jobs}}/FUN`SELECT,%#,INBUCKET,%0)))][setq(_md,not(comp(lcstr(%q<_mn>),lcstr(get({{jobs}}/DATA`DEFAULT`BUCKET)))))][u({{jobs}}/WEB`FIELD,rename,Name,text,Up to 20 characters. Its permission and role keep their names.)]%r[u({{jobs}}/WEB`BBTN,Rename,json(object,op,json(string,renamebucket),bucket,json(string,%q<_ms>)))]%r[json(object,kind,json(string,divider))]%r[switch(1,%q<_md>,u({{jobs}}/WEB`MD,%q<_mn> is where +request files\, so it always takes new jobs and cannot be deleted.),strlen(get(%0/DELETING`TO)),u({{jobs}}/WEB`MD,%q<_mn> is being deleted. Its jobs are moving to [name(get(%0/DELETING`TO))]\, and it goes once they have all moved.),[u({{jobs}}/WEB`MD,if(u({{jobs}}/FUN`TAKES`JOBS,%0),**Taking new jobs.** Disable it and nobody can file in %q<_mn> or move a job into it. Its jobs stay and are worked as before.,**Disabled.** Nobody can file in %q<_mn> or move a job into it. Its jobs stay and are worked as before.))]%r[if(u({{jobs}}/FUN`TAKES`JOBS,%0),u({{jobs}}/WEB`BBTN,Disable,json(object,op,json(string,disablebucket),bucket,json(string,%q<_ms>)),warning,Stop %q<_mn> taking new jobs?),u({{jobs}}/WEB`BBTN,Take new jobs again,json(object,op,json(string,enablebucket),bucket,json(string,%q<_ms>)),success))]%r[json(object,kind,json(string,divider))]%r[u({{jobs}}/WEB`MD,if(%q<_mj>,Deleting %q<_mn> moves its [u({{jobs}}/FUN`NJOBS,%q<_mj>)]\, open and closed\, to the bucket you pick\, then removes the role job-admin-%q<_ms> and the permission softcode.jobs.%q<_ms>.,Deleting %q<_mn> removes it with the role job-admin-%q<_ms> and the permission softcode.jobs.%q<_ms>.))]%r[if(%q<_mj>,[u({{jobs}}/WEB`SELECT,moveto,Move its jobs to,iter(setdiff(u({{jobs}}/WEB`MOVABLE),%0),[get(%i0/SLUG)] [name(%i0)],%b,|))]%r)][u({{jobs}}/WEB`BBTN,Delete bucket,json(object,op,json(string,deletebucket),bucket,json(string,%q<_ms>)),error,Delete %q<_mn>? [if(%q<_mj>,Its jobs move to the bucket you picked\, and its,Its)] role and permission go with it.)])]
       # The buckets a deleted bucket's jobs can move to: every one taking new jobs. The select names them by slug.
       WEB`MOVABLE: |-
         [squish(iter(lcon({{buckets}}),if(u({{jobs}}/FUN`TAKES`JOBS,%i0),objid(%i0))))]
@@ -1543,12 +1560,12 @@ objects:
         - `+bucket/rename <bucket>=<new name>`: its permission and role keep their names.
         - `+bucket/disable <bucket>`: nothing new is filed in it or moved into it. Its jobs stay and are worked as before. `+bucket/enable <bucket>` takes new jobs again.
         - `+bucket/delete <bucket>`: an empty bucket. Its role and permission go with it.
-        - `+bucket/delete <bucket>=<other bucket>`: moves its jobs, open and closed, to the other bucket first.
+        - `+bucket/delete <bucket>=<other bucket>`: moves its jobs, open and closed, to the other bucket first. A bucket with more than 10 jobs stops taking new ones and moves them 10 at a time; it is deleted, and you are told, once the last has moved.
+        - `+bucket/lock <bucket>/file=<lock>` and `/work=<lock>`: who may file, and who works it. They are ordinary locks.
 
-        The bucket `+request` files in can be neither disabled nor deleted.
+        The bucket `+request` files in can be neither disabled nor deleted. Renaming it keeps `+request` filing there.
 
         The portal's **Bucket settings** page does the same: **New bucket** under the list, and **Manage** on each bucket's page.
-        - `+bucket/lock <bucket>/file=<lock>` and `/work=<lock>`: who may file, and who works it. They are ordinary locks.
       HELP`JOBS`ROLES: |-
         Who works which jobs comes from permissions, held through roles:
 
