@@ -2,7 +2,7 @@
 
 This handbook is the task map for the supported single-host Compose deployment. Exact commands and settings live in [`deploy/README.md`](../../deploy/README.md); connection-preservation boundaries live in [`deploy/connection-updates.md`](../../deploy/connection-updates.md). Run every command from `deploy/` and use the same Compose file that created the stack.
 
-## Deploy and claim the administrator
+## First claim and deployment
 
 Choose one ingress model:
 

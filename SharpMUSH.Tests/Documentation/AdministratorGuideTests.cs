@@ -56,12 +56,14 @@ public partial class AdministratorGuideTests
 	[Test]
 	public async Task MigrationGuideDefinesSupportedInputsAndRollbackBoundary()
 	{
-		var text = Read("docs/guides/pennmush-migration.md");
+		var text = Read("docs/guides/pennmush-migration.md").ToLowerInvariant();
 		foreach (var required in new[]
 		{
-			"PennMUSH flatfile", "mush.cnf", "maildb", "chatdb", "RhostMUSH", "TinyMUX",
-			"no direct supported importer", "one-way", "rehearsal", "validation", "## 4. Cut over",
-			"<world>.previous", "point-in-time world copy"
+			"pennmush flatfile", "mush.cnf", "maildb", "chatdb", "rhostmush", "tinymux",
+			"no direct supported importer", "one-way", "rehearsal", "validation", "## 4. cut over",
+			"<world>.previous", "point-in-time world copy", "identity and passwords", "objects and dbrefs",
+			"attributes and locks", "flags and powers", "channels and mail", "configuration",
+			"handlers and packages", "softcode", "connections", "portal", "integrations"
 		})
 		{
 			await Assert.That(text).Contains(required);
@@ -71,12 +73,12 @@ public partial class AdministratorGuideTests
 	[Test]
 	public async Task OperatorGuideDistinguishesStateAndRecoveryKinds()
 	{
-		var text = Read("docs/guides/operator-handbook.md");
+		var text = Read("docs/guides/operator-handbook.md").ToLowerInvariant();
 		foreach (var required in new[]
 		{
-			"Lightning/LMDB world", "Wiki assets", "NATS JetStream", "Plugin assemblies",
-			"Restore drill", "Deployment rollback", "Data restore", "@storage", "readiness",
-			"Prometheus", "Restic"
+			"lightning/lmdb world", "wiki assets", "nats jetstream", "plugin assemblies",
+			"restore drill", "deployment rollback", "data restore", "@storage", "readiness",
+			"prometheus", "restic", "first claim", "logs", "upgrade", "incident"
 		})
 		{
 			await Assert.That(text).Contains(required);
@@ -107,7 +109,8 @@ public partial class AdministratorGuideTests
 			"docs/design/deployment-architecture.md", "docs/guides/writing-a-plugin.md"
 		})
 		{
-			await Assert.That(Read(relativePath)).DoesNotContain("net10.0");
+			var stale = Regex.IsMatch(Read(relativePath), @"(?:\.NET\s+10\b|net10\.0)", RegexOptions.IgnoreCase);
+			await Assert.That(stale).IsFalse().Because($"{relativePath} must follow the SDK pinned in global.json");
 		}
 	}
 
