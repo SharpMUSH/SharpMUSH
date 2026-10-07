@@ -137,7 +137,8 @@ public class SoftcodeEditorConsoleTests : BunitContext
 
 		OpenConsole(cut);
 		cut.Find(".sc-console-addarg").Click();
-		cut.Find(".sc-console-arg-input").Input("Bob");
+		// The same race as OpenConsole: under load the new argument's input renders after Click returns.
+		cut.WaitForElement(".sc-console-arg-input", TimeSpan.FromSeconds(5)).Input("Bob");
 		cut.Find(".sc-eval").Click();
 
 		await cut.WaitForAssertionAsync(
