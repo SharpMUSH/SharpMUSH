@@ -121,8 +121,7 @@ public class WikiStartupSeedingTests
 	private static readonly (WikiNamespace Ns, string Slug)[] SeededPages =
 	[
 		(WikiNamespace.Main, "home"),
-		(WikiNamespace.Help, "markdown_guide"),
-		(WikiNamespace.Help, "application_schema_guide")
+		(WikiNamespace.Help, "markdown_guide")
 	];
 
 	[Test]
