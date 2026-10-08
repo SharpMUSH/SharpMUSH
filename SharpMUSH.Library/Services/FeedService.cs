@@ -56,11 +56,13 @@ public class FeedService(
 		var purged = 0;
 		foreach (var kind in await mediator.Send(new GetFeedKindsQuery(), cancellationToken))
 		{
-			foreach (var feed in await mediator.Send(new GetFeedsQuery(kind.Name), cancellationToken))
+			var aging = (await mediator.Send(new GetFeedsQuery(kind.Name), cancellationToken))
+				.Where(feed => feed.Messages > 0)
+				.Select(feed => (feed.Key, Age: feed.Settings.Over(kind.Effective).MaxAge ?? TimeSpan.Zero))
+				.Where(feed => feed.Age > TimeSpan.Zero);
+			foreach (var (key, age) in aging)
 			{
-				if (feed.Messages == 0 || feed.Settings.Over(kind.Effective).MaxAge is not { } age || age <= TimeSpan.Zero)
-					continue;
-				purged += await mediator.Send(new PurgeFeedCommand(kind.Name, feed.Key, now - age), cancellationToken);
+				purged += await mediator.Send(new PurgeFeedCommand(kind.Name, key, now - age), cancellationToken);
 			}
 		}
 
