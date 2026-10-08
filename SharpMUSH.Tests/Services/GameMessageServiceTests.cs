@@ -126,6 +126,25 @@ public class GameMessageServiceTests
 		await Assert.That(html).Contains("src=\"/assets/logo.png\" alt=\"The SharpMUSH logo\"");
 	}
 
+	/// <summary>A way in the game has turned off is not offered: <c>config()</c> answers <c>No</c>, not an empty string.</summary>
+	[Test]
+	public async Task TheMessagesObjectLeavesOutWaysInThatAreOff()
+	{
+		var (service, _) = await WithMessagesObjectAsync();
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Net = options.Net with { PlayerCreation = false, Guests = false }
+		});
+
+		var connect = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>().ToPlainText();
+		var register = (await service.RenderAsync(GameMessage.Register, 0)).Expect<MString>().ToPlainText();
+
+		await Assert.That(connect).Contains("Have an account?");
+		await Assert.That(connect).DoesNotContain("New here?");
+		await Assert.That(connect).DoesNotContain("Just looking?");
+		await Assert.That(register).DoesNotContain("connect guest");
+	}
+
 	[Test]
 	public async Task TheMessagesObjectEvaluatesItsAttributes()
 	{

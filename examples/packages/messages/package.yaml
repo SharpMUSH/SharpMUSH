@@ -51,7 +51,7 @@ objects:
                      =     =
 
       FUN`MENU: |-
-        [@@(The text beside the logo. A way in that the game has turned off is left out.)]Welcome to [ansi(h,mudname())]!%r[if(config(player_creation),%r[u(FUN`SECTION,New here?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,register),<name> \[email\] <password>,u(FUN`COMMAND,make),<character> <password>)])][if(config(guests),%r[u(FUN`SECTION,Just looking?)]%r[fields(u(FUN`LIST),cmdlink(u(FUN`COMMAND,connect),connect guest,Look around as a guest),guest)])]%r[u(FUN`SECTION,Have an account?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,login),<name-or-email> <password>,u(FUN`COMMAND,play),<character>,u(FUN`COMMAND,claim),<character> <password>)]%r[u(FUN`SECTION,Playing a character?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,connect),<character> <password>)]%r[u(FUN`SECTION,Any time)]%r[fields(u(FUN`LIST),cmdlink(u(FUN`COMMAND,WHO),WHO,See who is online),who is online,cmdlink(u(FUN`COMMAND,QUIT),QUIT,Disconnect),leave the game)]
+        [@@(The text beside the logo. A way in that the game has turned off is left out.)]Welcome to [ansi(h,mudname())]!%r[if(strmatch(config(player_creation),Yes),%r[u(FUN`SECTION,New here?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,register),<name> \[email\] <password>,u(FUN`COMMAND,make),<character> <password>)])][if(strmatch(config(guests),Yes),%r[u(FUN`SECTION,Just looking?)]%r[fields(u(FUN`LIST),cmdlink(u(FUN`COMMAND,connect),connect guest,Look around as a guest),guest)])]%r[u(FUN`SECTION,Have an account?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,login),<name-or-email> <password>,u(FUN`COMMAND,play),<character>,u(FUN`COMMAND,claim),<character> <password>)]%r[u(FUN`SECTION,Playing a character?)]%r[fields(u(FUN`LIST),u(FUN`COMMAND,connect),<character> <password>)]%r[u(FUN`SECTION,Any time)]%r[fields(u(FUN`LIST),cmdlink(u(FUN`COMMAND,WHO),WHO,See who is online),who is online,cmdlink(u(FUN`COMMAND,QUIT),QUIT,Disconnect),leave the game)]
       FUN`SECTION: |-
         [@@(%0 heading: a light rule with the heading at its left)][rule(ansi(h,%0),,json(object,border,json(string,single),title,json(string,left)))]
       FUN`LIST: |-
@@ -65,11 +65,11 @@ objects:
       WIZMOTD: |-
         %r[notice(STAFF,Nothing new for staff. Leave a note here with @wizmotd <message>.,muted)]
       GUEST: |-
-        %r[notice(GUEST,You are playing [name(%#)]\, a temporary guest character.)]%rType [cmdlink(help,help,Read the help)] for the commands.[if(config(player_creation),%bTo keep a character\, QUIT and register an account.)]
+        %r[notice(GUEST,You are playing [name(%#)]\, a temporary guest character.)]%rType [cmdlink(help,help,Read the help)] for the commands.[if(strmatch(config(player_creation),Yes),%bTo keep a character\, QUIT and register an account.)]
       NEWUSER: |-
         %r[u(FUN`SECTION,Your account is ready)]%r[fields(u(FUN`LIST),make <character> <password>,create your first character,claim <character> <password>,add a character you already have,play <character>,enter the game as one of them)]
       REGISTER: |-
-        %r[notice(,[mudname()] is not taking new accounts.,warn)][if(config(guests),%rYou can still look around: [cmdlink(connect guest,connect guest)].)]
+        %r[notice(,[mudname()] is not taking new accounts.,warn)][if(strmatch(config(guests),Yes),%rYou can still look around: [cmdlink(connect guest,connect guest)].)]
       DOWN: |-
         %r[notice(,[mudname()] is closed to logins for now. Please try again later.,warn)]
       QUIT: |-
