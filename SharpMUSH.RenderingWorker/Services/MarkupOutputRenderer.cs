@@ -90,13 +90,13 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// </summary>
 	private RenderPictureSource? PicturesFor(RenderContext connection)
 	{
-		if (pictureStore is null || connectionPictures is null) return null;
+		if (pictureStore is null) return null;
 
 		// The MXP client fetches the picture itself; nothing is transmitted, so nothing is remembered as held.
 		if (connection.Capabilities.Format == OutputFormat.Mxp && MxpDrawsImages(connection.Capabilities.MxpSupported))
 			return new RenderPictureSource(pictureStore, new ConnectionPictures.Sent());
 
-		if (connection.Capabilities.Format != OutputFormat.Ansi
+		if (connectionPictures is null || connection.Capabilities.Format != OutputFormat.Ansi
 			|| (connection.Capabilities.Features & TerminalFeatures.Pictures) == 0)
 			return null;
 
