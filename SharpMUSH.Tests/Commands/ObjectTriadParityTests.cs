@@ -63,6 +63,22 @@ public class ObjectTriadParityTests
 	}
 
 	/// <summary>
+	/// Creates a player who starts out in a fresh room, for a test that asserts every line that player
+	/// hears. A player gathered in by <see cref="Room"/> starts in the default home, which every
+	/// parallel test shares: a room message whose recipients were listed before the teleport still
+	/// reaches the player after it.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> PlayerInRoomOfItsOwn(string prefix)
+	{
+		var dig = await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix + "Room")}"));
+		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
+	}
+
+	/// <summary>
 	/// Strips the creation stamp off every reference in a slash-separated list. A triad's %0/%1
 	/// carry whatever <c>DBRef.ToString()</c> produced, which is a full objid when the reference
 	/// was resolved from a live object — the same reason
@@ -586,12 +602,8 @@ public class ObjectTriadParityTests
 	[Test]
 	public async ValueTask GiveToAPlayerInAnotherRoomFindsNobody()
 	{
-		var giver = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveFarGiver");
-		var elsewhere = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveFarTarget");
-		await Room("GiveFarGiverRoom", giver.DbRef);
-		await Room("GiveFarTargetRoom", elsewhere.DbRef);
+		var giver = await PlayerInRoomOfItsOwn("GiveFarGiver");
+		var elsewhere = await PlayerInRoomOfItsOwn("GiveFarTarget");
 
 		var seen = await MessagesWhile(giver.DbRef, async () =>
 			await GodParser.CommandParse(giver.Handle, ConnectionService,
@@ -608,9 +620,7 @@ public class ObjectTriadParityTests
 	[Test]
 	public async ValueTask GiveToANameNobodyAnswersToFindsNobody()
 	{
-		var giver = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveMissGiver");
-		await Room("GiveMissRoom", giver.DbRef);
+		var giver = await PlayerInRoomOfItsOwn("GiveMissGiver");
 		var absent = TestIsolationHelpers.GenerateUniqueName("GiveMissNobody");
 
 		var seen = await MessagesWhile(giver.DbRef, async () =>
@@ -654,10 +664,9 @@ public class ObjectTriadParityTests
 	[Test]
 	public async ValueTask GiveOfSomethingTheGiverDoesNotHaveSaysSoOnce()
 	{
-		var giver = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveNoGiftGiver");
+		var giver = await PlayerInRoomOfItsOwn("GiveNoGiftGiver");
 		var recipient = await Thing("GiveNoGiftBox");
-		await Room("GiveNoGiftRoom", giver.DbRef, recipient);
+		await God($"@teleport/silent {recipient}={await Location(giver.DbRef)}");
 		var absent = TestIsolationHelpers.GenerateUniqueName("GiveNoGiftAbsent");
 
 		var seen = await MessagesWhile(giver.DbRef, async () =>
