@@ -181,7 +181,7 @@ Arguments are comma-separated with **`content` last**; references are **dbrefs**
 | `MEMBER` | `@scene/member <sceneId>/<role>=<playerDbref>` |
 | `UNMEMBER` | `@scene/unmember <sceneId>=<playerDbref>` (drops all the player's roles) |
 | `FOCUS` | `@scene/focus <playerDbref>=<sceneId>` (set the player's current scene; empty = clear) |
-| `SHOWAS` | `@scene/showas <sceneId>/<playerDbref>=<name>` (member-edge persona) |
+| `SHOWAS` | `@scene/showas <sceneId>/<playerDbref>=<name>` (member-edge persona; an empty name clears it) |
 | `PLOT` | `@scene/plot[/create\|/link\|/unlink] <plot>[=<sceneId>]` |
 
 Each arm calls exactly one `ISceneService` method, then publishes a

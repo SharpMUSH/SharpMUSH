@@ -252,8 +252,8 @@ public class SearchFunctionUnitTests
 	{
 		// Use a short unique identifier to avoid cross-test interference.
 		// which all parallel @create calls compete for and causes transient transaction conflicts.
-		// Instead, set a $-command attribute directly on room #0 (the master room).
-		// scan() with the default "all" switch always checks room #0 via the globals scope,
+		// Instead, set a $-command attribute directly on room #0, where God stands.
+		// scan() with the default "all" switch checks the looker's room,
 		// so no object creation is needed.
 		var uid = Guid.NewGuid().ToString("N")[..12]; // 12 lowercase hex chars, unique per run
 		var commandWord = $"sc{uid}"; // e.g. "scabcd1234" — unique pattern for this test
@@ -264,7 +264,7 @@ public class SearchFunctionUnitTests
 		try
 		{
 			// scan() searches for $-commands that would match the given command.
-			// The attribute is on room #0, which scan() always includes via checkGlobals.
+			// The attribute is on room #0, God's location, which the "all" switch includes.
 			var result = (await Parser.FunctionParse(MarkupText.Plain($"scan({commandWord} test argument)")))?.Message!;
 			var resultText = result.ToPlainText();
 

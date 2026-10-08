@@ -115,8 +115,9 @@ public static class SceneCommandModule
 				=> await SceneMemberHandlers.RemoveMember(parser, sceneService, notifyService, executor, arg0!, arg1!),
 			"FOCUS" when hasArg0
 				=> await SceneMemberHandlers.Focus(parser, sceneService, notifyService, executor, arg0!, arg1),
-			"SHOWAS" when hasArg0 && hasArg1
-				=> await SceneMemberHandlers.ShowAs(parser, sceneService, notifyService, executor, arg0!, arg1!),
+			// An empty name clears the persona: the member poses under their own name again.
+			"SHOWAS" when hasArg0
+				=> await SceneMemberHandlers.ShowAs(parser, sceneService, notifyService, executor, arg0!, arg1 ?? MarkupText.Empty),
 			"PLOT" when hasArg0
 				=> await ScenePlotHandlers.Plot(parser, sceneService, notifyService, executor, plotSub, arg0!, arg1),
 			null when hasArg0
