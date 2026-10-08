@@ -6,9 +6,9 @@ namespace SharpMUSH.Tests.Wiki;
 
 /// <summary>
 /// Renders the seeded Help:Application Schema Guide through the real wiki pipeline to
-/// guarantee its visual aids actually render: the Mermaid architecture diagram becomes a
-/// <c>.mermaid</c> container for the client renderer, the SVG form mock becomes an image,
-/// and the two audience sections get auto-identifier anchors so the intro jump-links resolve.
+/// guarantee its visual aids actually render: the Mermaid diagrams become <c>.mermaid</c>
+/// containers for the client renderer, the SVG form mock becomes an image, and every in-page
+/// link lands on a heading's auto-identifier anchor.
 /// </summary>
 public class ApplicationSchemaGuideSeedTests
 {
@@ -27,24 +27,27 @@ public class ApplicationSchemaGuideSeedTests
 	}
 
 	[Test]
-	public async Task Guide_RendersWithoutError_AndContainsBothAudienceSections()
+	public async Task Guide_RendersWithoutError_AndContainsEveryAudienceSection()
 	{
 		var html = Render();
 
-		await Assert.That(html).Contains("For administrators");
-		await Assert.That(html).Contains("For softcode authors");
+		await Assert.That(html).Contains("Using applications");
+		await Assert.That(html).Contains("Adding an application");
+		await Assert.That(html).Contains("Building your own application");
 		await Assert.That(html).Contains("<table>"); // the field-type / registry tables
 	}
 
 	[Test]
-	public async Task Guide_ArchitectureDiagram_BecomesMermaidContainer()
+	public async Task Guide_Diagrams_BecomeMermaidContainers()
 	{
 		var html = Render();
 
-		// The ```mermaid fence must become a .mermaid block (rendered to SVG client-side),
+		// Each ```mermaid fence must become a .mermaid block (rendered to SVG client-side),
 		// not a literal code block.
-		await Assert.That(html).Contains("class=\"mermaid\"");
+		await Assert.That(html.Split("class=\"mermaid\"").Length - 1).IsEqualTo(4);
+		await Assert.That(html).Contains("sequenceDiagram");
 		await Assert.That(html).Contains("flowchart LR");
+		await Assert.That(html).Contains("flowchart TD");
 	}
 
 	[Test]
@@ -58,16 +61,24 @@ public class ApplicationSchemaGuideSeedTests
 	}
 
 	[Test]
-	public async Task Guide_AudienceSections_HaveAnchorIdsForJumpLinks()
+	public async Task Guide_JumpLinks_AllHaveTargets()
 	{
 		var html = Render();
 
-		// Markdig auto-identifiers give the ## headings ids that match the intro
-		// [For administrators](#for-administrators) / [...](#for-softcode-authors) links.
-		await Assert.That(html).Contains("id=\"for-administrators\"");
-		await Assert.That(html).Contains("id=\"for-softcode-authors\"");
-		await Assert.That(html).Contains("href=\"#for-administrators\"");
-		await Assert.That(html).Contains("href=\"#for-softcode-authors\"");
+		// Markdig auto-identifiers give the headings ids; every in-page link must name one of them.
+		var ids = System.Text.RegularExpressions.Regex.Matches(html, "id=\"([^\"]+)\"").Select(m => m.Groups[1].Value).ToHashSet();
+		var targets = System.Text.RegularExpressions.Regex.Matches(html, "href=\"#([^\"]+)\"").Select(m => m.Groups[1].Value).ToList();
+
+		await Assert.That(targets).Contains("using-applications");
+		await Assert.That(targets).Contains("adding-an-application");
+		await Assert.That(targets).Contains("building-your-own-application");
+		await Assert.That(targets.Where(t => !ids.Contains(t))).IsEmpty();
+	}
+
+	[Test]
+	public async Task Guide_IsPlainAscii()
+	{
+		await Assert.That(SeededWikiPages.ApplicationSchemaGuide.All(char.IsAscii)).IsTrue();
 	}
 
 	[Test]
