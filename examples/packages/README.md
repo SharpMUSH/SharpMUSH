@@ -28,7 +28,8 @@ which games can add as a remote in the admin panel.
 | [`bbs-lite/`](bbs-lite/) | Dependencies with source hints, typed configure params, cross-package refs, conflicts, locks, prerelease versions |
 | [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
-| [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, formats each listener's copy with ``FEED`RADIO`FORMAT``, and logs into scenes through a tap |
+| [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
+| [`radio-scene/`](radio-scene/) | A package that joins two others: a tap on the radio feed kind logs what a listener hears into their scene, and it adds `+radio/log` by attaching ``EXT`LOG`` to the radio (requires radio and scene) |
 
 ## The manifest: `package.yaml`
 

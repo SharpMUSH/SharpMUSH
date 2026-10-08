@@ -81,6 +81,8 @@ public static class BundledPackages
 		// Available, not installed: +radio lands an object in the master room, and is the worked example of
 		// a system built on @feed.
 		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: joins radio and scene, so +radio/log puts a frequency into a scene.
+		new("radio-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

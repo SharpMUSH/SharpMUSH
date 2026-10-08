@@ -15,7 +15,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// The bundled radio package, installed from the catalogue and driven with typed commands: the worked example
+/// The bundled radio package, and radio-scene on top of it, installed from the catalogue and driven with typed commands: the worked example
 /// of a system built on @feed. Each test installs the package, removes it again and undefines the radio feed
 /// kind, so frequency ids start at 1. Not in parallel: +radio is global.
 /// </summary>
@@ -58,7 +58,7 @@ public class RadioIntegrationTests
 		return player;
 	}
 
-	private async Task InstallAsync()
+	private async Task InstallAsync(string package = "radio")
 	{
 		var controller = new PackagesController(
 			WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>(),
@@ -70,8 +70,8 @@ public class RadioIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
 		var applied = await controller.Apply(
-			new ApplyRequest(BundledPackages.RemoteName, "radio", null, null, null), CancellationToken.None);
-		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("radio must install from the catalogue");
+			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
+		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
 		// AINSTALL is queued after the apply: it defines the feed kind and adds +radio.
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
@@ -190,11 +190,14 @@ public class RadioIntegrationTests
 	}
 
 	[Test]
-	public async Task WhatALoggingListenerHearsGoesIntoTheirSceneOnce()
+	public async Task WithRadioScene_WhatALoggingListenerHearsGoesIntoTheirSceneOnce()
 	{
 		try
 		{
 			await InstallAsync();
+			var early = await Player("RadEarly");
+			await Assert.That(await As(early, "+radio/log")).Contains("+radio has no /log switch");
+			await InstallAsync("radio-scene");
 			var admin = await Player("RadA", "radio-admin");
 			var logger = await Player("RadLog", "approved");
 			var ann = await Player("RadAnn");
@@ -207,6 +210,7 @@ public class RadioIntegrationTests
 			await As(logger, $"+scene/create {TestIsolationHelpers.GenerateUniqueName("RadScene")}");
 			var scene = await God($"think [scenefocus(#{logger.DbRef.Number})]");
 			await Assert.That(await As(logger, "+radio/log Ship")).Contains("goes into your scene until +radio/stoplog");
+			await Assert.That(await As(logger, "+radio/log")).Contains("Logged into your scene: Ship.");
 
 			var said = TestIsolationHelpers.GenerateUniqueName("RadLogged");
 			await As(ann, $"+radio Ship={said}");
@@ -228,6 +232,7 @@ public class RadioIntegrationTests
 		}
 		finally
 		{
+			await Installer.UninstallAsync("radio-scene", force: true, CancellationToken.None);
 			await UninstallAsync();
 		}
 	}

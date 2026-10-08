@@ -2,7 +2,7 @@ format: 1.2
 package: radio
 version: 1.0.0
 authors: [SharpMUSH]
-description: "Radio: +radio frequencies players tune in to, speak on, recall and log into their scene, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
+description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [radio, channels, comms, feed]
@@ -39,7 +39,7 @@ roles:
 
 objects:
   # The radio: the @feed kind's owner, so its attributes are the kind's tie-ins, and the command object.
-  # WIZARD because it defines the feed kind, adds the +radio command and its hook, and logs into scenes.
+  # WIZARD because it defines the feed kind and adds the +radio command and its hook.
   # +radio is an @hook/override/inline target of a command STARTUP adds with /noparse/rsnoparse, so what a
   # player types reaches the code as typed and nothing a player wrote is evaluated.
   #
@@ -49,7 +49,8 @@ objects:
   #   F`<id>`LOCK`TALK|MODERATE|ADMIN        its locks; an unset one falls back to DATA`LOCK`<name>
   #   F`<id>`LIST`MEMBER|MODERATOR|ADMIN     objids on its lists; a list always passes its lock
   #   F`<id>`RESTRICT`<key>                  when a restriction ends, in seconds, or 0 for never
-  #   P`<key>`TITLE|ALTEREGO|COLOR|LOG`<id>  a player's own settings on a frequency
+  #   P`<key>`TITLE|ALTEREGO|COLOR`<id>      a player's own settings on a frequency
+  #   EXT`<switch>                           another package's switch: the object whose INC`<switch> runs it
   - ref: radio
     type: thing
     name: Radio
@@ -69,9 +70,12 @@ objects:
         50
       DATA`RECALL`MAX: |-
         500
-      # The switches +radio takes; each is INC`<SWITCH>.
+      # The switches +radio takes; each is INC`<SWITCH>. A package that adds one (radio-scene adds /log)
+      # sets EXT`<SWITCH> here to its own object (a ref the package manager fills in, so it is read with u()).
+      # +radio includes that object's INC`<SWITCH> with the same registers, %q<ext> that object. The radio is
+      # still the executor, so the included code names the radio %! and its own object %q<ext>.
       DATA`SWITCHES: |-
-        join leave gag ungag title alterego color examine recall log stoplog restrict unrestrict create rename category desc delete lock unlock options memadd memrem modadd modrem admadd admrem
+        join leave gag ungag title alterego color examine recall restrict unrestrict create rename category desc delete lock unlock options memadd memrem modadd modrem admadd admrem
       # The highest frequency id given out; ids are never reused.
       COUNTER: |-
         0
@@ -80,7 +84,7 @@ objects:
       # %1 is the switches and %2 what follows, both as typed.
       CMD`RADIO:
         value: |-
-          $(?is)^\+radio(/\S*)?(?\: +(.*))?$: think [setq(sw,lcstr(after(%1,/)))][setq(arg,trim(%2))][setq(eq,strmatch(%q<arg>,*=*))][setq(lhs,trim(before(%q<arg>,=)))][setq(rhs,trim(after(%q<arg>,=)))][setq(me,u({{radio}}/FUN`KEY,%#))]; @assert cor(not(strlen(%q<sw>)),t(member(get({{radio}}/DATA`SWITCHES),%q<sw>)))=@pemit %#=[notice(RADIO,+radio has no /%q<sw> switch. +help radio lists them.,warn)]; @include {{radio}}/INC`[firstof(%q<sw>,if(%q<eq>,SEND,if(strlen(%q<arg>),USAGE,LIST)))]
+          $(?is)^\+radio(/\S*)?(?\: +(.*))?$: think [setq(sw,lcstr(after(%1,/)))][setq(arg,trim(%2))][setq(eq,strmatch(%q<arg>,*=*))][setq(lhs,trim(before(%q<arg>,=)))][setq(rhs,trim(after(%q<arg>,=)))][setq(me,u({{radio}}/FUN`KEY,%#))]; @assert cor(not(strlen(%q<sw>)),t(member(get({{radio}}/DATA`SWITCHES),%q<sw>)),hasattr({{radio}},EXT`%q<sw>))=@pemit %#=[notice(RADIO,+radio has no /%q<sw> switch. +help radio lists them.,warn)]; think [setq(ext,if(cand(strlen(%q<sw>),hasattr({{radio}},EXT`%q<sw>)),u({{radio}}/EXT`%q<sw>),{{radio}}))]; @include %q<ext>/INC`[firstof(%q<sw>,if(%q<eq>,SEND,if(strlen(%q<arg>),USAGE,LIST)))]
         flags: [REGEXP]
 
       # ---- reads ----------------------------------------------------------------
@@ -144,12 +148,6 @@ objects:
       # %5 the alterego it was sent under.
       FEED`RADIO`FORMAT: |-
         [u({{radio}}/FUN`LINE,%4,%2,firstof(%5,name(%2)),%3,%0,%1)]
-      # A tap on the radio kind: a line heard by a listener logging that frequency goes into the scene they
-      # are focused on, once per scene. %0 line id, %1 radio/<id>, %2 who heard it, %3 speaker, %4 style,
-      # %5 text, %6 alterego.
-      TAP`LOG: |-
-        think [setq(_f,after(%1,/))][setq(_d,)][setq(_p,)][iter(%2,if(cand(hasattr({{radio}},P`[u({{radio}}/FUN`KEY,%i0)]`LOG`%q<_f>),not(strmatch(setr(_x,scenefocus(%i0)),#-*)),not(member(%q<_d>,%q<_x>))),[setq(_d,%q<_d> %q<_x>)][setq(_p,%q<_p> %q<_x>~%i0)]))]; @dolist/inline %q<_p>=@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],emit,radio,[u({{radio}}/FUN`LINE,%q<_f>,%3,firstof(%6,name(%3)),%4,%5,after(##,~))]
-
       # ---- players --------------------------------------------------------------
       INC`USAGE: |-
         @pemit %#=[notice(RADIO,+radio <frequency>=<message> speaks. +help radio lists the rest.,warn)]
@@ -170,7 +168,7 @@ objects:
       INC`JOIN: |-
         @include {{radio}}/INC`NEED`ANY; @assert not(feedmember(radio/%q<id>,%#))=@pemit %#=[notice(RADIO,You are already tuned in to [u({{radio}}/FUN`NAME,%q<id>)].,warn)]; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; @feed/join radio/%q<id>=%#; @pemit %#=[notice(RADIO,You tune in to [u({{radio}}/FUN`NAME,%q<id>)].,ok)]
       INC`LEAVE: |-
-        @include {{radio}}/INC`NEED`JOINED; @feed/leave radio/%q<id>=%#; &P`%q<me>`LOG`%q<id> {{radio}}; @pemit %#=[notice(RADIO,You tune out of [u({{radio}}/FUN`NAME,%q<id>)].,ok)]
+        @include {{radio}}/INC`NEED`JOINED; @feed/leave radio/%q<id>=%#; @pemit %#=[notice(RADIO,You tune out of [u({{radio}}/FUN`NAME,%q<id>)].,ok)]
       # /gag and /ungag take a frequency or all. Every gag ends when the player disconnects (ADISCONNECT).
       INC`GAG: |-
         @assert strlen(%q<lhs>)=@pemit %#=[notice(RADIO,+radio/gag <frequency> or +radio/gag all,warn)]; @if strmatch(%q<lhs>,all)={@dolist/inline [feedsof(%#,radio)]=@feed/gag ##=%#; @pemit %#=[notice(RADIO,You hear none of your frequencies until you ungag them or disconnect.,ok)]},{@include {{radio}}/INC`NEED`JOINED; @feed/gag radio/%q<id>=%#; @pemit %#=[notice(RADIO,You hear nothing from [u({{radio}}/FUN`NAME,%q<id>)] until you ungag it or disconnect.,ok)]}
@@ -185,14 +183,9 @@ objects:
       INC`COLOR: |-
         @include {{radio}}/INC`NEED`JOINED; @assert cor(not(strlen(%q<rhs>)),not(strmatch(ansi(%q<rhs>,x),#-*)))=@pemit %#=[notice(RADIO,'%q<rhs>' is not a colour. See help ansi().,warn)]; &P`%q<me>`COLOR`%q<id> {{radio}}=%q<rhs>; @pemit %#=[notice(RADIO,You see [ansi(firstof(%q<rhs>,get({{radio}}/DATA`COLOR)),u({{radio}}/FUN`NAME,%q<id>))] like this now.,ok)]
       INC`EXAMINE: |-
-        @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; think [setq(ad,u({{radio}}/FUN`IS`ADMIN,%q<id>,%#))][setq(on,feedwho(radio/%q<id>,active))]; @pemit %#=[rule(u({{radio}}/FUN`NAME,%q<id>))]%r[fields(,Category,firstof(get({{radio}}/F`%q<id>`CATEGORY),none),About,firstof(get({{radio}}/F`%q<id>`DESC),none),You,switch(u({{radio}}/FUN`STATE,%q<id>,%#),on,tuned in,gagged,tuned in and gagged,not tuned in),Title,firstof(get({{radio}}/P`%q<me>`TITLE`%q<id>),none),Alterego,firstof(get({{radio}}/P`%q<me>`ALTEREGO`%q<id>),none),Logging,if(hasattr({{radio}},P`%q<me>`LOG`%q<id>),to your scene,no),Listening,u({{radio}}/FUN`NAMES,iter(%q<on>,if(hasflag(%i0,connected),%i0))),Admins,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`ADMIN)),Moderators,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MODERATOR)),Members,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MEMBER)))][if(%q<ad>,%r[fields(,Talk lock,firstof(get({{radio}}/F`%q<id>`LOCK`TALK),everyone),Moderate lock,firstof(get({{radio}}/F`%q<id>`LOCK`MODERATE),get({{radio}}/DATA`LOCK`MODERATE)),Admin lock,firstof(get({{radio}}/F`%q<id>`LOCK`ADMIN),get({{radio}}/DATA`LOCK`ADMIN)),Keeps,feedinfo(radio/%q<id>,max_messages) lines)])]%r[rule()]
+        @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; think [setq(ad,u({{radio}}/FUN`IS`ADMIN,%q<id>,%#))][setq(on,feedwho(radio/%q<id>,active))]; @pemit %#=[rule(u({{radio}}/FUN`NAME,%q<id>))]%r[fields(,Category,firstof(get({{radio}}/F`%q<id>`CATEGORY),none),About,firstof(get({{radio}}/F`%q<id>`DESC),none),You,switch(u({{radio}}/FUN`STATE,%q<id>,%#),on,tuned in,gagged,tuned in and gagged,not tuned in),Title,firstof(get({{radio}}/P`%q<me>`TITLE`%q<id>),none),Alterego,firstof(get({{radio}}/P`%q<me>`ALTEREGO`%q<id>),none),Listening,u({{radio}}/FUN`NAMES,iter(%q<on>,if(hasflag(%i0,connected),%i0))),Admins,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`ADMIN)),Moderators,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MODERATOR)),Members,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MEMBER)))][if(%q<ad>,%r[fields(,Talk lock,firstof(get({{radio}}/F`%q<id>`LOCK`TALK),everyone),Moderate lock,firstof(get({{radio}}/F`%q<id>`LOCK`MODERATE),get({{radio}}/DATA`LOCK`MODERATE)),Admin lock,firstof(get({{radio}}/F`%q<id>`LOCK`ADMIN),get({{radio}}/DATA`LOCK`ADMIN)),Keeps,feedinfo(radio/%q<id>,max_messages) lines)])]%r[rule()]
       INC`RECALL: |-
         @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; think [setq(n,firstof(%q<rhs>,get({{radio}}/DATA`RECALL)))]; @assert cand(isint(%q<n>),gt(%q<n>,0),lte(%q<n>,get({{radio}}/DATA`RECALL`MAX)))=@pemit %#=[notice(RADIO,Recall takes a number of lines from 1 to [get({{radio}}/DATA`RECALL`MAX)].,warn)]; think [setq(ln,feedrecall(radio/%q<id>,%q<n>))]; @assert words(%q<ln>)=@pemit %#=[notice(RADIO,Nothing has been said on [u({{radio}}/FUN`NAME,%q<id>)].)]; @pemit %#=[rule(Recall: [u({{radio}}/FUN`NAME,%q<id>)])]%r[iter(%q<ln>,u({{radio}}/FUN`LINE,%q<id>,feedmsg(%i0,speaker),firstof(feedmsg(%i0,display),feedmsg(%i0,name)),feedmsg(%i0,style),feedmsg(%i0,text),%#),%b,%r)]%r[rule(End of recall)]
-      # /log puts what the player hears on a frequency into the scene they are focused on (TAP`LOG).
-      INC`LOG: |-
-        @include {{radio}}/INC`NEED`JOINED; @assert not(strmatch(scenefocus(%#),#-*))=@pemit %#=[notice(RADIO,Join a scene first: what you hear is logged into the scene you are in.,warn)]; &P`%q<me>`LOG`%q<id> {{radio}}=1; @pemit %#=[notice(RADIO,What you hear on [u({{radio}}/FUN`NAME,%q<id>)] goes into your scene until +radio/stoplog.,ok)]
-      INC`STOPLOG: |-
-        @include {{radio}}/INC`NEED`JOINED; @assert hasattr({{radio}},P`%q<me>`LOG`%q<id>)=@pemit %#=[notice(RADIO,You are not logging [u({{radio}}/FUN`NAME,%q<id>)].,warn)]; &P`%q<me>`LOG`%q<id> {{radio}}; @pemit %#=[notice(RADIO,[u({{radio}}/FUN`NAME,%q<id>)] is no longer logged into your scene.,ok)]
 
       # ---- moderators -----------------------------------------------------------
       # /restrict <frequency>=<player>[/<duration>]: no speaking until it ends, or until /unrestrict.
@@ -248,9 +241,9 @@ objects:
       ADISCONNECT: |-
         @dolist/inline [feedsof(%#,radio)]=@feed/ungag ##=%#
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot. Defining the kind
-      # and its tap again changes nothing.
+      # again changes nothing.
       STARTUP: |-
-        @feed/define radio={{radio}}; @feed/describe radio=The +radio frequencies.; @feed/tap radio={{radio}}/TAP`LOG; @command/add/noparse/rsnoparse +radio; @hook/override/inline +radio={{radio}},CMD`RADIO
+        @feed/define radio={{radio}}; @feed/describe radio=The +radio frequencies.; @command/add/noparse/rsnoparse +radio; @hook/override/inline +radio={{radio}},CMD`RADIO
       AINSTALL: |-
         @teleport {{radio}}=#2; @trigger {{radio}}/STARTUP
 
@@ -288,10 +281,6 @@ objects:
         - `+radio/color <frequency>=<colour>` shows that frequency's name in a colour of your choosing, such as `hg`. See `help ansi\(\)`.
 
         Leave the part after `=` empty to clear a setting.
-
-        ## Logging into a scene
-
-        `+radio/log <frequency>` puts everything you hear on it into the scene you are in, until `+radio/stoplog <frequency>`. A line goes into a scene once, however many people in it are logging.
       HELP`RADIO`MODERATORS: |-
         A frequency's moderators keep order on it.
 

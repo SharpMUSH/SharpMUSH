@@ -1,0 +1,102 @@
+format: 1.2
+package: radio-scene
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Radio in scenes: +radio/log puts what a player hears on a frequency into the scene they are in. Joins the radio and scene packages through a tap on the radio feed kind."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [radio, scene, logging, feed]
+requires_server: ">=0.1"
+
+# Neither package knows about the other. The radio keeps frequencies and who hears them; the scene
+# package keeps scenes and their poses. This one listens to the radio's feed and writes into scenes.
+depends:
+  - package: radio
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/radio/
+      branch: main
+  - package: scene
+    version: ">=1.4 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/scene/
+      branch: main
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  # The logger: a tap on the radio feed kind, and the /log and /stoplog switches of +radio. WIZARD because
+  # it reads the WIZARD radio's attributes and adds poses to other people's scenes.
+  #
+  #   P`<key>`LOG`<id>   a player logs frequency <id> into the scene they are in; <key> is the radio's
+  #                      FUN`KEY for them, so it matches the radio's own settings
+  - ref: radiolog
+    type: thing
+    name: Radio Scene Log
+    flags: [WIZARD]
+    attributes:
+      # A tap on the radio kind, queued once per line after it is delivered. %0 line id, %1 radio/<id>,
+      # %2 who heard it, %3 speaker, %4 style, %5 text, %6 alterego. A listener who logs this frequency
+      # and is in a scene gets the line into that scene, drawn as they heard it, once per scene however
+      # many people in it are logging.
+      TAP`LOG: |-
+        think [setq(_f,after(%1,/))][setq(_d,)][setq(_p,)][iter(%2,if(cand(hasattr({{radiolog}},P`[u({{radio/radio}}/FUN`KEY,%i0)]`LOG`%q<_f>),not(strmatch(setr(_x,scenefocus(%i0)),#-*)),not(member(%q<_d>,%q<_x>))),[setq(_d,%q<_d> %q<_x>)][setq(_p,%q<_p> %q<_x>~%i0)]))]; @dolist/inline %q<_p>=@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],emit,radio,[u({{radio/radio}}/FUN`LINE,%q<_f>,%3,firstof(%6,name(%3)),%4,%5,after(##,~))]
+
+      # +radio includes these with its registers: %q<lhs> the frequency as typed, %q<me> the player's key and
+      # %q<ext> this object. The radio is the executor while they run, so they name it %! and this object
+      # %q<ext>: a {{ref}} is looked up on the executor, and the radio holds none of this package's.
+      # /log <frequency> starts logging it into the player's scene; /log alone lists what they log.
+      INC`LOG: |-
+        @assert strlen(%q<lhs>)=@include %q<ext>/INC`LOGGED; @include %!/INC`NEED`JOINED; @assert not(strmatch(scenefocus(%#),#-*))=@pemit %#=[notice(RADIO,Join a scene first: what you hear is logged into the scene you are in.,warn)]; &P`%q<me>`LOG`%q<id> %q<ext>=1; @pemit %#=[notice(RADIO,What you hear on [u(%!/FUN`NAME,%q<id>)] goes into your scene until +radio/stoplog.,ok)]
+      INC`STOPLOG: |-
+        @include %!/INC`NEED`JOINED; @assert hasattr(%q<ext>,P`%q<me>`LOG`%q<id>)=@pemit %#=[notice(RADIO,You are not logging [u(%!/FUN`NAME,%q<id>)].,warn)]; &P`%q<me>`LOG`%q<id> %q<ext>; @pemit %#=[notice(RADIO,[u(%!/FUN`NAME,%q<id>)] is no longer logged into your scene.,ok)]
+      # The frequencies the player logs that still exist.
+      INC`LOGGED: |-
+        think [setq(lg,squish(iter(lattr(%q<ext>/P`%q<me>`LOG`*),if(hasattr(%!,F`[last(%i0,`)]`NAME),last(%i0,`)))))]; @assert words(%q<lg>)=@pemit %#=[notice(RADIO,You log no frequency into your scene. +radio/log <frequency> starts.)]; @pemit %#=[notice(RADIO,Logged into your scene: [itemize(iter(%q<lg>,u(%!/FUN`NAME,%i0),,|),|)].)]
+
+      # Taps are stored, so this only puts the tap back after the radio kind was undefined and defined again.
+      STARTUP: |-
+        @feed/tap radio={{radiolog}}/TAP`LOG
+      AINSTALL: |-
+        @trigger {{radiolog}}/STARTUP
+
+  # +radio/log and /stoplog: the radio runs INC`LOG and INC`STOPLOG on the logger. Uninstalling this
+  # package takes them away again.
+  - ref: radio_switches
+    target: "{{radio/radio}}"
+    attributes:
+      EXT`LOG: |-
+        {{radiolog}}
+      EXT`STOPLOG: |-
+        {{radiolog}}
+
+  # The +help topic. A plain thing, not the WIZARD logger: the librarian cannot u() a privileged object's
+  # attributes. Bodies are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: radio_scene_help
+    type: thing
+    name: Radio Scene Help
+    location: "{{radiolog}}"
+    attributes:
+      HELP: |-
+        Radio in scenes: logging what you hear on a frequency into your scene.
+      SEE`RADIO`SCENES: |-
+        radio|scene
+      HELP`RADIO`SCENES: |-
+        What you hear on the radio can go into the scene you are in, so the log shows the calls that came in while you played.
+
+        - `+radio/log <frequency>` puts everything you hear on that frequency into your scene, until `+radio/stoplog <frequency>`.
+        - `+radio/log` lists the frequencies you log.
+
+        You must be tuned in to the frequency and in a scene. A line goes into a scene once, however many people in it are logging, and it reads the way the first of them heard it. Logging lasts until you stop it: when you move to another scene, what you hear goes there instead.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`RADIOSCENE: |-
+        {{radio_scene_help}}
