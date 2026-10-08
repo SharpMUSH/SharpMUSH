@@ -281,31 +281,30 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// After <paramref name="changed"/>'s THEME changed: that player's theme, or for any other object (a parent, the
-	/// ancestor) every connected player's, since any of them may inherit it.
+	/// After <paramref name="changed"/>'s THEME changed: every connected player's theme, since any object, a player
+	/// included, can be another's parent or ancestor. Only the players whose themes changed see a difference.
 	/// </summary>
 	private async ValueTask RefreshThemesAfterAsync(IMUSHCodeParser parser, AnySharpObject changed)
 	{
-		if (changed.IsPlayer)
-		{
-			await RefreshThemeAsync(parser, changed);
-			return;
-		}
-		await RefreshConnectedThemesAsync(parser);
+		if (changed.IsPlayer) await RefreshThemeAsync(parser, changed);
+		await RefreshConnectedThemesAsync(parser, tellUnreadable: false, except: changed.Object().DBRef);
 	}
 
-	/// <summary>Every connected player's theme, worked out again; a player whose theme stopped reading is told why.</summary>
-	private async ValueTask RefreshConnectedThemesAsync(IMUSHCodeParser parser)
+	/// <summary>
+	/// Every connected player's theme but <paramref name="except"/>'s, worked out again. When
+	/// <paramref name="tellUnreadable"/>, a player whose theme does not read is told why.
+	/// </summary>
+	private async ValueTask RefreshConnectedThemesAsync(IMUSHCodeParser parser, bool tellUnreadable = true, DBRef? except = null)
 	{
 		var players = await ConnectionService.GetAll()
-			.Where(connection => connection.Ref is not null)
+			.Where(connection => connection.Ref is not null && connection.Ref != except)
 			.Select(connection => connection.Ref!.Value)
 			.Distinct()
 			.ToArrayAsync();
 		foreach (var dbref in players)
 		{
 			if (await Mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject player) continue;
-			if (await RefreshThemeAsync(parser, player) is Error<string> error)
+			if (await RefreshThemeAsync(parser, player) is Error<string> error && tellUnreadable)
 				await NotifyService.NotifyLocalized(player, nameof(ErrorMessages.Notifications.ThemeUnreadableFormat), null, error.Value);
 		}
 	}
