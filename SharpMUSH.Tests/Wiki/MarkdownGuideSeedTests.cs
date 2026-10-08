@@ -12,6 +12,17 @@ namespace SharpMUSH.Tests.Wiki;
 public class MarkdownGuideSeedTests
 {
 	[Test]
+	public async Task Guide_OpensWithArchitecturalMarkdownArtwork()
+	{
+		var html = new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.MarkdownGuide);
+
+		await Assert.That(WikiImages.LeadImageUrl(html))
+			.IsEqualTo("/assets/presets/wiki/markdown-guide.webp");
+		await Assert.That(html)
+			.Contains("alt=\"An architectural cutaway maps headings, images, lists, and page hierarchy\"");
+	}
+
+	[Test]
 	public async Task Guide_RendersWithoutError_AndContainsCoreSections()
 	{
 		var html = new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.MarkdownGuide);

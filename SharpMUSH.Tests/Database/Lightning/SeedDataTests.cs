@@ -40,6 +40,24 @@ public class SeedDataTests
 	}
 
 	[Test]
+	public async Task ShowcaseObjectsHaveBlueprintImageAttributes()
+	{
+		var seeded = InitialObjectImageSeed.Objects.ToDictionary(x => x.Dbref);
+
+		await Assert.That(seeded.Keys).IsEquivalentTo([0L, 1L, 2L]);
+		await Assert.That(seeded[0].Image).IsEqualTo("/assets/presets/objects/room-zero.webp");
+		await Assert.That(seeded[1].Image).IsEqualTo("/assets/presets/objects/god.webp");
+		await Assert.That(seeded[2].Image).IsEqualTo("/assets/presets/objects/master-room.webp");
+
+		foreach (var image in seeded.Values)
+		{
+			await Assert.That(image.Banner).IsEqualTo(image.Image);
+			await Assert.That(image.Alt).IsNotNullOrWhiteSpace();
+			await Assert.That(image.Focal).IsNotNullOrWhiteSpace();
+		}
+	}
+
+	[Test]
 	public async Task TruecolorIsSeededAsAPlayerFlagWithCommonAliases()
 	{
 		var flag = FlagSeed.Flags.Single(f => f.Name == "TRUECOLOR");

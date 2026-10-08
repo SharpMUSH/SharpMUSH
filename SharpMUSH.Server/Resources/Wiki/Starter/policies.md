@@ -1,3 +1,5 @@
+![People collaborate in an inclusive workshop with shared, quiet, rest, and accessible spaces](/assets/presets/wiki/policies.webp)
+
 # Policies
 
 These apply to everyone on the game. Staff can explain any of them, so ask before

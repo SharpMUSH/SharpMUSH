@@ -1,3 +1,5 @@
+![Costumes and painted scenery fill a theatrical atelier](/assets/presets/wiki/theme.webp)
+
 # Theme
 
 ## The premise

@@ -106,7 +106,7 @@ else
             {
                 @if (HasBanner)
                 {
-                    <GlassBanner Title="@Article.Title" Kicker="@Kicker" ImageUrl="@LeadImage" Alt="@Article.Title"
+                    <GlassBanner Title="@Article.Title" Kicker="@Kicker" ImageUrl="@LeadImage?.Url" Alt="@(LeadImage?.Alt ?? Article.Title)"
                                  Height="200" TitleSize="hero" HeadingLevel="1"
                                  Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="@MinimisedFact">
                         <Secondary>@MetaLine</Secondary>
@@ -301,9 +301,9 @@ else
     private string? _moreLoadedFor;
 
     /// <summary>The image the page opens with, which becomes its banner; null when it opens with text.</summary>
-    private string? LeadImage => WikiImages.LeadImageUrl(Article?.RenderedHtml);
+    private WikiImages.ImageReference? LeadImage => WikiImages.LeadImage(Article?.RenderedHtml);
 
-    private bool HasBanner => Article is not null && ImageUrlPolicy.IsRenderable(LeadImage);
+    private bool HasBanner => Article is not null && ImageUrlPolicy.IsRenderable(LeadImage?.Url);
 
     private string PagePath => WikiRoutes.WikiPathFor(Namespace, Slug);
 
@@ -512,7 +512,7 @@ else
         // The banner shows the lead image; the body must not show it a second time.
         if (!Embedded && HasBanner)
         {
-            html = WikiImages.StripFirstImage(html, LeadImage!);
+            html = WikiImages.StripFirstImage(html, LeadImage!.Url);
         }
         html = ApiUrl.ResolveHtml(html);
 
