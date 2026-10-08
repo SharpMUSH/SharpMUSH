@@ -93,7 +93,7 @@ services:
       connectionserver:
         condition: service_started
     ports:
-      - "8080:8080" # Portal, REST API and live updates
+      - "127.0.0.1:8080:8080" # Portal, REST API and live updates; loopback only, so nobody else can claim /setup
       - "9092:9092" # Metrics endpoint (for external monitoring tools)
     volumes:
       - app-data:/app/data
