@@ -28,7 +28,7 @@ internal static class PlayPageServices
 			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
 			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), TestAccountAuth.Of(sp)))
 			.AddSingleton(sp => new CharacterProfileService(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<CharacterDirectoryService>()))
-			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<CharacterDirectoryService>()))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
 			.AddSingleton(new ApplicationCatalog(apps ?? []))

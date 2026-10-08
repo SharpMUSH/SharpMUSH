@@ -8,7 +8,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// The staff-only /admin/kit page exists so the D1 kit can be screenshotted against
 /// docs/design/d1/boards/20-patterns.png. This pins that it renders one of every kit piece.
 /// </summary>
-public class KitPreviewTests : BunitContext
+public class KitPreviewTests : TrackingBunitContext
 {
 	public KitPreviewTests()
 	{

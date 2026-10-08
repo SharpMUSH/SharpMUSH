@@ -57,9 +57,6 @@ else
 
     private bool IsGroup => Lead == SidebarLead.Avatar && (ImageUrl2 is not null || Name2 is not null);
 
-    private string SecondFallbackStyle =>
-        $"background:hsl({NameHue.Of(Name2)} 30% 24%);color:hsl({NameHue.Of(Name2)} 45% 82%);";
-
     /// <summary>Collapsed, a channel keeps its first letter so the strip can tell them apart (board 07).</summary>
     private string ChannelMark => Collapsed && Label.Length > 0 ? $"#{char.ToUpperInvariant(Label[0])}" : "#";
 
@@ -81,8 +78,6 @@ else
     /// <summary>Collapsed rows replace their accessible name with aria-label, so the unread count is folded in.</summary>
     private string? CollapsedName => !Collapsed ? null : Unread > 0 ? $"{Label}, {UnreadText}" : Label;
 
-    private int Hue => NameHue.Of(Name ?? Label);
-    private string FallbackStyle => $"background:hsl({Hue} 30% 24%);color:hsl({Hue} 45% 82%);";
     private string FallbackInitials => Initials.From(Name ?? Label);
 
     private RenderFragment Inner => __builder =>
@@ -105,21 +100,10 @@ else
                     }
                     break;
                 case SidebarLead.Avatar:
-                    @if (ImageUrlPolicy.IsRenderable(ImageUrl))
+                    <CharacterAvatar Class="kit-row-avatar" FallbackClass="kit-row-fallback" Name="@(Name ?? Label)" ImageUrl="@ImageUrl" />
+                    @if (IsGroup)
                     {
-                        <img class="kit-row-avatar" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
-                    }
-                    else
-                    {
-                        <span class="kit-row-avatar kit-row-fallback" style="@FallbackStyle">@FallbackInitials</span>
-                    }
-                    @if (IsGroup && ImageUrlPolicy.IsRenderable(ImageUrl2))
-                    {
-                        <img class="kit-row-avatar kit-row-avatar--second" src="@ApiUrl.Resolve(ImageUrl2!)" alt="" />
-                    }
-                    else if (IsGroup)
-                    {
-                        <span class="kit-row-avatar kit-row-avatar--second kit-row-fallback" style="@SecondFallbackStyle">@Initials.From(Name2)</span>
+                        <CharacterAvatar Class="kit-row-avatar kit-row-avatar--second" FallbackClass="kit-row-fallback" Name="@Name2" ImageUrl="@ImageUrl2" />
                     }
                     break;
                 case SidebarLead.Icon:

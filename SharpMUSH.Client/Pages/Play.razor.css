@@ -307,8 +307,8 @@
     flex-shrink: 0;
 }
 
-.play-me-img,
-.play-me-initial {
+::deep .play-me-img,
+::deep .play-me-initial {
     display: grid;
     place-items: center;
     width: 100%;

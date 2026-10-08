@@ -73,7 +73,7 @@ public sealed class CharactersApiFake : HttpMessageHandler
 			.AddSingleton(sp => new CharacterDirectoryService(factory, NullLogger<CharacterDirectoryService>.Instance))
 			.AddSingleton(sp => new CharacterProfileService(factory, sp.GetRequiredService<CharacterDirectoryService>()))
 			.AddSingleton(sp => new SceneService(factory, TestAccountAuth.Of(sp)))
-			.AddSingleton(new GalleryService(factory))
+			.AddSingleton(sp => new GalleryService(factory, sp.GetRequiredService<CharacterDirectoryService>()))
 			.AddSingleton<SidebarCollapseService>()
 			.AddLocalization();
 		// The profile's Page button asks whether a visitor could play as a guest.

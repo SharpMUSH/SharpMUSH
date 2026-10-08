@@ -10,7 +10,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 /// README §5.6 Here (boards 01, 10): characters as portrait tiles, then objects as square thumbnails.
 /// A character with a profile opens the sheet; anything else runs its <c>cmd</c>.
 /// </summary>
-public class HereCardTests : BunitContext
+public class HereCardTests : TrackingBunitContext
 {
 	public HereCardTests()
 	{

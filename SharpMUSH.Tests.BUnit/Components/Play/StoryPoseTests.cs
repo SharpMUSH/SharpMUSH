@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 /// README §5.4 story row (boards 01, 05): a 44px portrait, the name in its colour and the time, then
 /// the pose; an OOC pose is the band (§4.10); names of the others are mentions.
 /// </summary>
-public class StoryPoseTests : BunitContext
+public class StoryPoseTests : TrackingBunitContext
 {
 	public StoryPoseTests()
 	{
@@ -49,13 +49,22 @@ public class StoryPoseTests : BunitContext
 	}
 
 	[Test]
-	public async Task AnOocPose_IsTheBand_WithInitialsInPlaceOfThePortrait()
+	public async Task AnOocPose_IsTheBand_WithThePictureUnderTheOocTag()
 	{
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", tags: ["ooc"], markup: "brb, making tea"))
 			.Add(x => x.ImageUrl, "/w.jpg").Add(x => x.Color, "#6aa7ff"));
-		await Assert.That(cut.Find(".kit-ooc .kit-ooc-initials").TextContent).IsEqualTo("WH");
+		await Assert.That(cut.Find(".kit-ooc-tile img.kit-ooc-picture").GetAttribute("src")).EndsWith("/w.jpg");
+		await Assert.That(cut.Find(".kit-ooc-tag").TextContent).IsEqualTo("OOC");
 		await Assert.That(cut.Find(".kit-ooc-name").TextContent).IsEqualTo("Wren Halloway");
 		await Assert.That(cut.Find(".kit-ooc-text").TextContent).IsEqualTo("brb, making tea");
+		await Assert.That(cut.FindAll(".kit-ooc-initials").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task AnOocPose_WithoutAPicture_HasInitialsInPlaceOfThePortrait()
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", tags: ["ooc"], markup: "brb, making tea")));
+		await Assert.That(cut.Find(".kit-ooc .kit-ooc-initials").TextContent).IsEqualTo("WH");
 		await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
 	}
 

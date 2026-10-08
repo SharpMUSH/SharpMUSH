@@ -1,7 +1,6 @@
 @using SharpMUSH.Client.Services
 @inject ICommFeed Feed
 @inject IChannelWho Who
-@inject CharacterDirectoryService Directory
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
 @implements IDisposable
@@ -66,7 +65,7 @@
                     {
                         var end = GroupEnd(i);
                         <div class="comm-group">
-                            @Avatar(line.From, line.FromObjId, "comm-avatar")
+                            <CharacterAvatar Class="comm-avatar" Name="@line.From" Character="@line.FromObjId" />
                             <div class="comm-body">
                                 <div class="comm-meta">
                                     <span class="comm-name">@line.From</span>
@@ -96,7 +95,7 @@
                         @foreach (var member in members)
                         {
                             <li class="comm-member" @key="member.ObjId">
-                                @Avatar(member.Name, member.ObjId, "comm-avatar comm-avatar--small")
+                                <CharacterAvatar Class="comm-avatar comm-avatar--small" Name="@member.Name" Character="@member.ObjId" />
                                 <span class="comm-member-name">@member.Name</span>
                             </li>
                         }
@@ -133,7 +132,6 @@
     private static readonly TimeSpan GroupGap = TimeSpan.FromMinutes(5);
 
     private IReadOnlyList<CommMessage> _lines = [];
-    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
     private string? _openedKey;
     private int _newAt = -1;
 
@@ -156,14 +154,10 @@
     /// <summary>What the composer says it writes to: "#Public", or the people.</summary>
     private string Target => Conversation is { } c ? string.Join(", ", c.With) : $"#{Key}";
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         Feed.Changed += OnFeedChanged;
         Who.Changed += OnWhoChanged;
-        if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
-        {
-            _directory = rows;
-        }
     }
 
     protected override void OnParametersSet()
@@ -251,20 +245,6 @@
             : day == today.AddDays(-1) ? Loc["NavPlayYesterday"]
             : day.ToString("D");
     }
-
-    private RenderFragment Avatar(string name, string? objid, string css) => __builder =>
-    {
-        var image = _directory.FirstOrDefault(r => objid is not null && r.Objid == objid)?.Image;
-        @if (ImageUrlPolicy.IsRenderable(image))
-        {
-            <img class="@css" src="@ApiUrl.Resolve(image!)" alt="" />
-        }
-        else
-        {
-            var hue = NameHue.Of(name);
-            <span class="@css comm-avatar--initials" style="background:hsl(@hue 30% 24%);color:hsl(@hue 45% 82%);" aria-hidden="true">@Initials.From(name)</span>
-        }
-    };
 
     // Enter in a one-line input inserts nothing, so it needs no preventDefault.
     private Task OnKeyAsync(KeyboardEventArgs e) => e.Key == "Enter" ? SendAsync() : Task.CompletedTask;

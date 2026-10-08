@@ -437,7 +437,7 @@ else
     /// <summary>The viewer's own picture from the room's contents (the row marked as them).</summary>
     private ImageRef? ViewerImage => SelfRow?.Image;
 
-    /// <summary>A small avatar with a connection dot: the picture, else the name's initial on its hue.</summary>
+    /// <summary>A small avatar with a connection dot: the picture, else the initials on the name's hue.</summary>
     /// <summary>MainLayout's drawer; null outside the shell (tests).</summary>
     [CascadingParameter] private ShellNavigation? Shell { get; set; }
 
@@ -484,24 +484,20 @@ else
     private RenderFragment ViewerPicture => __builder =>
     {
         var connected = PlayTerminal.IsConnected;
-        var image = ViewerImage;
-        var hue = NameHue.Of(ViewerName);
         <span class="play-me @(connected ? "play-me--on" : null)">
-            @if (image is not null && ImageUrlPolicy.IsRenderable(image.Url))
-            {
-                <img class="play-me-img" src="@ApiUrl.Resolve(image.Url)" alt="" />
-            }
-            else
-            {
-                <span class="play-me-initial" aria-hidden="true" style="@($"background:hsl({hue} 30% 24%);color:hsl({hue} 45% 82%);")">@Initial(ViewerName)</span>
-            }
+            <CharacterAvatar Name="@ViewerName" ImageUrl="@ViewerImage?.Url" Character="@ViewerCharacter"
+                             ImageClass="play-me-img" FallbackClass="play-me-initial" />
             <span class="play-me-dot" title="@(connected ? Loc["Connected"] : Loc["Disconnected"])"></span>
             <span class="play-me-status">@(connected ? Loc["Connected"] : Loc["Disconnected"])</span>
         </span>
     };
 
-    private static string Initial(string name) =>
-        name.FirstOrDefault(char.IsLetterOrDigit) is var c && c != default ? char.ToUpperInvariant(c).ToString() : "?";
+    /// <summary>Who the viewer plays, to find their picture while the room has not listed them yet.</summary>
+    private string? ViewerCharacter =>
+        SelfRow?.ObjId is { Length: > 0 } objid ? objid
+        : PlayTerminal.ConnectedPlayerName is { Length: > 0 } connected ? connected
+        : AccountAuth.ActiveCharacter is { } active ? $"#{active.DbrefNumber}:{active.CreationTime}"
+        : null;
 
     /// <summary>
     /// The Room panel (Here, Exits, the scope panels) from the right, like a chat app's member list. Play.razor.css

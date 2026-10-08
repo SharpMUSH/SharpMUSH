@@ -12,7 +12,7 @@ namespace SharpMUSH.Client.Services;
 /// Every call answers with <see cref="ApiResult{T}"/>. A write answers with the gallery as the server
 /// now holds it, so the widget never has to guess what a refused delete left behind.
 /// </remarks>
-public class GalleryService(IHttpClientFactory httpClientFactory)
+public class GalleryService(IHttpClientFactory httpClientFactory, CharacterDirectoryService directory)
 {
 	public const long MaxUploadBytes = 10_485_760;
 
@@ -65,16 +65,23 @@ public class GalleryService(IHttpClientFactory httpClientFactory)
 			GalleryUse.Avatar => $"{GalleryUrl(name)}?use=avatar",
 			_ => GalleryUrl(name),
 		};
-		return await Client.PostContentApiAsync<List<GalleryEntry>>(url, content, NoGallery);
+		return Written(await Client.PostContentApiAsync<List<GalleryEntry>>(url, content, NoGallery));
 	}
 
 	/// <summary>Deletes an image and answers with the updated gallery.</summary>
-	public Task<ApiResult<List<GalleryEntry>>> DeleteAsync(string name, string assetId) =>
-		Client.DeleteApiAsync<List<GalleryEntry>>($"{GalleryUrl(name)}/{Uri.EscapeDataString(assetId)}", NoGallery);
+	public async Task<ApiResult<List<GalleryEntry>>> DeleteAsync(string name, string assetId) =>
+		Written(await Client.DeleteApiAsync<List<GalleryEntry>>($"{GalleryUrl(name)}/{Uri.EscapeDataString(assetId)}", NoGallery));
 
 	/// <summary>Replaces order/captions/icon and answers with the gallery as the server sanitized it.</summary>
-	public Task<ApiResult<List<GalleryEntry>>> ReplaceAsync(string name, IReadOnlyList<GalleryEntry> items) =>
-		Client.PutApiAsync<IReadOnlyList<GalleryEntry>, List<GalleryEntry>>(GalleryUrl(name), items, NoGallery);
+	public async Task<ApiResult<List<GalleryEntry>>> ReplaceAsync(string name, IReadOnlyList<GalleryEntry> items) =>
+		Written(await Client.PutApiAsync<IReadOnlyList<GalleryEntry>, List<GalleryEntry>>(GalleryUrl(name), items, NoGallery));
+
+	/// <summary>A write the server took may have moved the avatar, which every avatar on screen shows.</summary>
+	private ApiResult<List<GalleryEntry>> Written(ApiResult<List<GalleryEntry>> result)
+	{
+		if (result is List<GalleryEntry>) directory.PicturesChanged();
+		return result;
+	}
 
 	/// <summary>The gallery with <paramref name="assetId"/> as its only icon.</summary>
 	public static IReadOnlyList<GalleryEntry> WithIcon(IEnumerable<GalleryEntry> items, string assetId) =>

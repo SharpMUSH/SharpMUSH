@@ -79,14 +79,14 @@
 	object-fit: cover;
 }
 
-.kit-row-avatar {
+::deep .kit-row-avatar {
 	width: 28px;
 	height: 28px;
 	border-radius: 50%;
 	object-fit: cover;
 }
 
-.kit-row-lead--group .kit-row-avatar {
+.kit-row-lead--group ::deep .kit-row-avatar {
 	width: 24px;
 	height: 24px;
 	position: absolute;
@@ -94,12 +94,12 @@
 	top: 2px;
 }
 
-.kit-row-lead--group .kit-row-avatar--second {
+.kit-row-lead--group ::deep .kit-row-avatar--second {
 	left: 12px;
 	outline: 2px solid var(--surface-3);
 }
 
-.kit-row-fallback {
+::deep .kit-row-fallback {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -202,7 +202,7 @@
 
 /* the collapsed strip rings the current row's picture in accent (README §3) */
 .kit-row--current .kit-row-img,
-.kit-row--current .kit-row-lead--group .kit-row-avatar {
+.kit-row--current .kit-row-lead--group ::deep .kit-row-avatar {
 	outline: 2px solid var(--accent);
 	outline-offset: 1px;
 }

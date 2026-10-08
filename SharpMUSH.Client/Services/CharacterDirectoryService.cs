@@ -10,6 +10,7 @@ namespace SharpMUSH.Client.Services;
 /// addressed (the profile view is a schema-driven <see cref="SchemaAppService"/> fetch).
 /// </summary>
 public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILogger<CharacterDirectoryService> logger)
+	: ICharacterPictures
 {
 	private const string CharactersRoute = "http/characters";
 	private const string OnlineRoute = "http/online";
@@ -138,6 +139,33 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 				.DistinctBy(r => r.Objid, StringComparer.Ordinal)
 				.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
 				.ToList();
+
+	/// <inheritdoc />
+	public event Action? Changed;
+
+	/// <summary>
+	/// A gallery write changed a character's pictures: the next read asks the game again, and every avatar
+	/// on screen is told to.
+	/// </summary>
+	public void PicturesChanged()
+	{
+		_roster.Forget();
+		_online.Forget();
+		Changed?.Invoke();
+	}
+
+	/// <inheritdoc />
+	public async Task<string?> PictureOfAsync(string character, CancellationToken cancellationToken = default)
+	{
+		if (await ListAsync(cancellationToken) is not IReadOnlyList<CharacterSummary> rows) return null;
+
+		var row = character.StartsWith('#')
+			? rows.FirstOrDefault(r => character.Contains(':')
+				? string.Equals(r.Objid, character, StringComparison.Ordinal)
+				: string.Equals(r.Dbref, character, StringComparison.Ordinal))
+			: rows.FirstOrDefault(r => string.Equals(r.Name, character, StringComparison.OrdinalIgnoreCase));
+		return string.IsNullOrWhiteSpace(row?.Image) ? null : row.Image;
+	}
 
 	/// <summary>
 	/// Resolves a character's objid by (case-insensitive) name via the directory.

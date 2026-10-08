@@ -371,7 +371,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".scene-card-sub-text"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
 		await Assert.That(cut.Find(".scene-card-sub-text").TextContent).IsEqualTo("Lower Docks").Because("the folded banner's room is named in the header");
-		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I").Because("she has no picture in the room's contents");
+		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("IV").Because("she has no picture in the room's contents or the directory");
 		await Assert.That(cut.Find(".play-me").ClassList).Contains("play-me--on");
 		await Assert.That(cut.Find(".play-me-status").TextContent).IsEqualTo("Connected");
 
@@ -397,7 +397,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		PushRoom(scene: false);
 		cut.WaitForAssertion(() => cut.Find(".play-aside .exit"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".scene-card-title").TextContent).IsEqualTo("Ilsa Varn");
-		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("I");
+		await Assert.That(cut.Find(".play-me-initial").TextContent).IsEqualTo("IV");
 	}
 
 	[Test]
