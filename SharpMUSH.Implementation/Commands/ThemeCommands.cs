@@ -78,7 +78,8 @@ public partial class Commands
 
 				// A mode is added to the theme the text works out to; braces keep the JSON whole when it is evaluated.
 				var stored = mode is null ? spec : $"{{{InMode(await WorkedOutAsync(parser, target, spec), mode)}}}";
-				if (ReadTheme(await WorkedOutAsync(parser, target, stored)) is Error<string> error)
+				// Code that works out to nothing here, on a parent or the ancestor, means the game's theme, as it does for a player.
+				if (await WorkedOutAsync(parser, target, stored) is { Length: > 0 } worked && ReadTheme(worked) is Error<string> error)
 				{
 					await NotifyService.Notify(executor, error.Value, executor);
 					return new CallState(error.Value);

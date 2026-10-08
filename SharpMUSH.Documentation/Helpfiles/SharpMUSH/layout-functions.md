@@ -495,7 +495,7 @@ The theme is kept in the `THEME` attribute, and a player without one of their ow
 @theme #4=[if(strmatch(get(%#/FACTION),Rebel),horror,nord)]
 ```
 
-The theme is worked out when the player connects, when `@theme` sets it, and when someone runs `@theme/refresh <player>`. Softcode that changes the value can run `@theme/refresh %#` after it. `/refresh` with no player refreshes your own, and says the theme in use. `@theme` works a theme out for *<object>* itself before it is kept, and refuses one that does not read.
+The theme is worked out when the player connects, when `@theme` sets it, and when someone runs `@theme/refresh <player>`. Softcode that changes the value can run `@theme/refresh %#` after it. `/refresh` with no player refreshes your own, and says the theme in use. `@theme` works a theme out for *<object>* itself before it is kept, and refuses one that does not read. Code that works out to nothing is kept: for whoever it works out to nothing for, layouts use the game's theme.
 
 ## Which theme wins
 
