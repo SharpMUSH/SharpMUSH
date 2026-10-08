@@ -16,6 +16,17 @@ public class ApplicationSchemaGuideSeedTests
 		new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.ApplicationSchemaGuide);
 
 	[Test]
+	public async Task Guide_OpensWithCrystalSchemaArtwork()
+	{
+		var html = Render();
+
+		await Assert.That(WikiImages.LeadImageUrl(html))
+			.IsEqualTo("/assets/presets/wiki/application-schema-guide.webp");
+		await Assert.That(html)
+			.Contains("alt=\"Colored crystal types pass through schema validation and composition into an interconnected lattice\"");
+	}
+
+	[Test]
 	public async Task Guide_RendersWithoutError_AndContainsBothAudienceSections()
 	{
 		var html = Render();

@@ -1,3 +1,5 @@
+![Colored crystal types pass through schema validation and composition into an interconnected lattice](/assets/presets/wiki/application-schema-guide.webp)
+
 A **Dynamic Application** is a portal page or widget whose entire UI is described by a
 JSON **Portal Schema Document** your game emits in softcode — a character-generation
 wizard, a "submit your background" form, a character sheet, a faction roster — built
