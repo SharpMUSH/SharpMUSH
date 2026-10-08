@@ -9,14 +9,46 @@
 	overflow: hidden;
 }
 
-/* The opened room banner, as the card's top: the card's edge and corners are its own, and a rule parts it from the header. */
+/* The opened room banner, as the card's top: the card's edge and corners are its own, and no rule parts it from the
+   header. The picture's foot fades into the header's wash, the dark the picture's own scrim ends on, so the two read
+   as one surface. The wash is dark in every theme, so the header's text takes the on-image colours. */
 .scene-card-banner {
 	flex-shrink: 0;
+	--banner-foot: color-mix(in srgb, rgb(var(--scrim-ink)) 72%, var(--surface));
 }
 
 .scene-card-banner ::deep .kit-banner {
-	border-width: 0 0 1px;
+	border-width: 0;
 	border-radius: 0;
+}
+
+.scene-card-banner ::deep .kit-banner-scrim {
+	background: linear-gradient(to top, var(--banner-foot) 0%, transparent 30%), var(--scrim);
+}
+
+.scene-card-banner ::deep .kit-banner--open .kit-banner-scrim {
+	background: linear-gradient(to top, var(--banner-foot) 0%, transparent 30%), var(--scrim-open);
+}
+
+.scene-card-banner:has(.kit-banner) + .scene-card-head {
+	background: color-mix(in srgb, rgb(var(--scrim-ink)) 72%, var(--surface));
+}
+
+/* Over the picture or the wash, the header's text and buttons are light in every theme: what reads --text there
+   (the title, Play's buttons) reads the on-image colours instead. */
+.scene-card-head--image,
+.scene-card-banner:has(.kit-banner) + .scene-card-head {
+	--text: var(--text-over-image);
+	--text-dim: var(--text-on-image);
+	color: var(--text-over-image);
+}
+
+.scene-card-banner:has(.kit-banner) + .scene-card-head .scene-card-titles {
+	text-shadow: var(--on-image-shadow);
+}
+
+.scene-card-banner:has(.kit-banner) + .scene-card-head .scene-card-sub {
+	color: var(--text-on-image);
 }
 
 .scene-card-head {
@@ -230,4 +262,23 @@
 	.scene-card-viewtoggle {
 		display: grid;
 	}
+}
+
+/* Over the room's picture the header's icon buttons get a faint glass backing and a soft shadow on the glyph, the
+   banner's capsules in a lighter dose, so they read on a light picture as well as a dark one. */
+.scene-card-head--image :is(.scene-card-focus, .scene-card-viewtoggle),
+.scene-card-head--image ::deep :is(.play-menu-btn, .play-conn:not(.play-conn--connect), .play-settings-btn) {
+	background: var(--glass-bg);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+}
+
+.scene-card-head--image .scene-card-switch {
+	background: var(--glass-bg);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+}
+
+.scene-card-head--image ::deep svg {
+	filter: drop-shadow(0 1px 2px rgba(var(--scrim-ink), 0.6));
 }
