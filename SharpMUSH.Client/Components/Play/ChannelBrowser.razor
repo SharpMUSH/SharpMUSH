@@ -70,12 +70,13 @@
 
     private void OnFeedChanged() => _ = InvokeAsync(() =>
     {
-        foreach (var channel in Feed.Channels)
+        var confirmed = Feed.Channels
+            .Where(channel => _made.TryGetValue(channel.Name, out var made) && made == (channel.Joined, channel.Gagged))
+            .Select(channel => channel.Name)
+            .ToList();
+        foreach (var name in confirmed)
         {
-            if (_made.TryGetValue(channel.Name, out var made) && made == (channel.Joined, channel.Gagged))
-            {
-                _made.Remove(channel.Name);
-            }
+            _made.Remove(name);
         }
         StateHasChanged();
     });
