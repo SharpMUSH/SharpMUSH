@@ -219,6 +219,64 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(handler.Requests).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// The game's own picture is at an address relative to the portal, which an MXP or Pueblo client cannot
+	/// fetch, so it is shown the figure's art instead, even when the server can measure the picture.
+	/// </summary>
+	[Test]
+	[Arguments(OutputFormat.Mxp, "<IMAGE")]
+	[Arguments(OutputFormat.Pueblo, "<img")]
+	public async Task ARelativePicture_ShowsAClientThatFetchesPicturesTheArt(OutputFormat format, string element)
+	{
+		var handler = new PictureHandler(HttpStatusCode.OK, WidePng);
+		using var store = new TerminalPictureStore("https://game.example/", 1 << 20, NullLogger<TerminalPictureStore>.Instance, handler);
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+
+		var text = await RenderAsync(renderer, FigureMarkup("/assets/cat.png"), Context(new ProtocolCapabilities(Format: format)));
+
+		await Assert.That(text).Contains("(=^.^=)");
+		await Assert.That(text).DoesNotContain(element);
+		await Assert.That(handler.Requests).IsEqualTo(0);
+	}
+
+	/// <summary>With <c>mud_url</c> set, the game's own picture is sent at it.</summary>
+	[Test]
+	[Arguments(OutputFormat.Mxp)]
+	[Arguments(OutputFormat.Pueblo)]
+	public async Task ARelativePicture_IsSentAtTheGamesWebAddress(OutputFormat format)
+	{
+		var context = new RenderContext("telnet", new ProtocolCapabilities(Format: format), null, Handle: 7, SessionId: "s",
+			Website: "https://game.example");
+
+		var text = await RenderAsync(new MarkupOutputRenderer(), FigureMarkup("/assets/cat.png"), context);
+
+		await Assert.That(text).Contains("https://game.example/assets/");
+		await Assert.That(text).Contains(format == OutputFormat.Mxp ? "<IMAGE" : "<img");
+	}
+
+	[Test]
+	[Arguments("https://pictures.example/cat.png", null, "https://pictures.example/cat.png")]
+	[Arguments("/assets/cat.png", null, null)]
+	[Arguments("/assets/cat.png", "https://game.example", "https://game.example/assets/cat.png")]
+	[Arguments("/assets/cat.png", "https://game.example/portal/", "https://game.example/assets/cat.png")]
+	[Arguments("cat.png", "https://game.example/", "https://game.example/cat.png")]
+	[Arguments("//elsewhere.example/cat.png", "https://game.example", null)]
+	[Arguments("/assets/cat.png", "telnet://game.example", null)]
+	[Arguments("file:///etc/passwd", "https://game.example", null)]
+	public async Task WhereAClientFetchesAPicture(string source, string? website, string? expected) =>
+		await Assert.That(ClientFetchedPictures.Resolve(source, website)).IsEqualTo(expected);
+
+	[Test]
+	[Arguments(OutputFormat.Mxp, "<IMAGE")]
+	[Arguments(OutputFormat.Pueblo, "<img")]
+	public async Task AnAbsolutePicture_IsStillSentToAClientThatFetchesPictures(OutputFormat format, string element)
+	{
+		var text = await RenderAsync(new MarkupOutputRenderer(), FigureMarkup("https://pictures.example/cat.png"),
+			Context(new ProtocolCapabilities(Format: format)));
+
+		await Assert.That(text).Contains(element);
+	}
+
 	[Test]
 	public async Task NoPictureFeature_LeavesTheArtAndFetchesNothing()
 	{

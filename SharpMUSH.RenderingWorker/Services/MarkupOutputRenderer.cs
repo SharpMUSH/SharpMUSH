@@ -124,8 +124,19 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);
 		var ansi = AnsiOptionsFor(connection.Capabilities, depth, pictures);
 		// A notice()'s lead without its brackets for a screen reader, and without its tags for everyone.
+		var cells = ansi.Pictures is null ? null : PictureCellsFor(ansi);
+		var fetchesItself = connection.Capabilities.Format is OutputFormat.Mxp or OutputFormat.Pueblo;
+		if (fetchesItself && cells is not null)
+		{
+			// No cells kept for a picture the client cannot fetch, so its figure keeps the art.
+			var measured = cells;
+			cells = (image, columns) => ClientFetchedPictures.Resolve(image.Source, connection.Website) is not null
+				? measured(image, columns)
+				: null;
+		}
 		var ms = Relayout(NoticeMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), connection.Capabilities.ScreenReader),
-			connection.Capabilities, connection.Preferences?.Theme, ansi.Pictures is null ? null : PictureCellsFor(ansi));
+			connection.Capabilities, connection.Preferences?.Theme, cells);
+		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo, WireFor(depth)),

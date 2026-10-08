@@ -11,7 +11,7 @@ public record NetOptions(
 	[property: SharpConfig(Name = "mud_name", Category = "Net", Description = "Name of your MUSH as displayed to players", Group = "General", Order = 1)]
 	string MudName,
 
-	[property: SharpConfig(Name = "mud_url", Category = "Net", Description = "Web address of your MUSH for browser redirects", Group = "General", Order = 2)]
+	[property: SharpConfig(Name = "mud_url", Category = "Net", Description = "Web address of your MUSH for browser redirects, and where MXP and Pueblo clients fetch the game's pictures. Setup fills it in", Group = "General", Order = 2)]
 	string? MudUrl,
 
 	[property: SharpConfig(Name = "ip_addr", Category = "Net", Description = "Specific IP address to listen on (leave blank for all addresses)", Group = "Connection Settings", Order = 4, Unused = "The connection server listens on every address; there is no setting for one.")]

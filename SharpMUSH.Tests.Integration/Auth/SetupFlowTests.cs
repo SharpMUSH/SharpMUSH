@@ -235,4 +235,46 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 		wizard = await admin.GetFromJsonAsync<SetupWizardResponse>("api/setup/wizard");
 		await Assert.That(wizard!.Pending).IsFalse();
 	}
+	/// <summary>
+	/// Setup fills in <c>mud_url</c> with the address the administrator reached the portal at, which an MXP or
+	/// Pueblo client fetches the game's pictures from; never a loopback one, and never over one already set.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 8)]
+	public async Task Setup_SetsMudUrl_FromTheAddressTheAdministratorUsed()
+	{
+		var config = factory.Services.GetRequiredService<IConfigOptionWriter>();
+		var property = config.PropertyFor("mud_url")!;
+		var before = await config.CurrentTextAsync(property);
+		await config.SetAsync(property, null);
+		try
+		{
+			var db = factory.Services.GetRequiredService<ISharpDatabase>();
+			await db.SetServerSetupCompletedAsync(false);
+			var http = CreateClient();
+			var claim = await http.PostAsJsonAsync("api/setup/complete",
+				new SetupCompleteRequest(UniqueName("origin"), "origin-password-8!"));
+			await Assert.That(claim.StatusCode).IsEqualTo(HttpStatusCode.OK);
+			var account = await claim.Content.ReadFromJsonAsync<AccountLoginResponse>();
+			await Assert.That((await config.CurrentAsync()).Net.MudUrl).IsNullOrEmpty()
+				.Because("https://localhost is no one else's way in");
+
+			var admin = CreateClient();
+			admin.DefaultRequestHeaders.Authorization =
+				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", account!.AccountSessionToken);
+			admin.DefaultRequestHeaders.Add("Origin", "https://play.example");
+			await Assert.That((await admin.PostAsync("api/setup/wizard/finish", content: null)).StatusCode)
+				.IsEqualTo(HttpStatusCode.NoContent);
+			await Assert.That((await config.CurrentAsync()).Net.MudUrl).IsEqualTo("https://play.example");
+
+			admin.DefaultRequestHeaders.Remove("Origin");
+			admin.DefaultRequestHeaders.Add("Origin", "https://other.example");
+			await admin.PostAsync("api/setup/wizard/finish", content: null);
+			await Assert.That((await config.CurrentAsync()).Net.MudUrl).IsEqualTo("https://play.example");
+		}
+		finally
+		{
+			config.TryParse(property, before ?? string.Empty, out var restored);
+			await config.SetAsync(property, before is null ? null : restored);
+		}
+	}
 }

@@ -36,6 +36,7 @@ public class SetupController(
 	GameFeatureService features,
 	HandlerSetupService handlers,
 	StarterWikiService starterWiki,
+	IConfigOptionWriter config,
 	ILogger<SetupController> logger) : ControllerBase
 {
 	public record SetupStatusResponse(bool NeedsSetup);
@@ -135,6 +136,8 @@ public class SetupController(
 	[Authorize(Policy = PortalPermission.ServerAdmin)]
 	public async Task<IActionResult> FinishWizard()
 	{
+		// After the wizard's mush.cnf import, which may have named mud_url or cleared it.
+		await RememberWebsiteAsync();
 		await features.SetWizardPendingAsync(false);
 		return NoContent();
 	}
@@ -148,6 +151,8 @@ public class SetupController(
 	/// </summary>
 	private async Task<IActionResult> ClaimedAsync(SharpAccount account, string clientIp)
 	{
+		await RememberWebsiteAsync();
+
 		// The claim itself already succeeded (CompleteAsync flipped SetupCompleted) — everything
 		// below is best-effort auto-login enrichment. If any of it throws, the claimer must not
 		// be handed a bare 500: that would strand them mid-wizard with no way to re-run it (setup
@@ -179,6 +184,33 @@ public class SetupController(
 
 			return Ok(new AuthController.AccountLoginResponse(account.Id!, account.Username, [],
 				string.Empty, MustChangePassword: false, PortalRole.Guest.ToString(), []));
+		}
+	}
+	/// <summary>
+	/// Sets <c>mud_url</c>, while it is unset, to the address the administrator reached the portal at: the
+	/// browser's <c>Origin</c>, else the request's own scheme and host. It is the game's web address, which
+	/// <c>@version</c> and MSSP report and an MXP or Pueblo client fetches the game's pictures from. A
+	/// loopback address is left out: it is no one else's way in. Best-effort; setup never fails over it.
+	/// </summary>
+	private async Task RememberWebsiteAsync()
+	{
+		try
+		{
+			if (config.PropertyFor("mud_url") is not { } property
+				|| !string.IsNullOrWhiteSpace((await config.CurrentAsync()).Net.MudUrl))
+				return;
+
+			var origin = Uri.TryCreate(Request.Headers.Origin.ToString(), UriKind.Absolute, out var sent)
+				&& sent.Scheme is "http" or "https"
+				? sent
+				: Uri.TryCreate($"{Request.Scheme}://{Request.Host}", UriKind.Absolute, out var served) ? served : null;
+			if (origin is null || origin.IsLoopback) return;
+
+			await config.SetAsync(property, origin.GetLeftPart(UriPartial.Authority));
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			logger.LogWarning(ex, "Could not set mud_url from the setup request");
 		}
 	}
 }

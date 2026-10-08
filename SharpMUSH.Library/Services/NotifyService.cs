@@ -297,7 +297,7 @@ public class NotifyService(
 		if (!prompt && delivered.Length == 0) return;
 		// Listener routing has already run above. With no connection to deliver to, the NOSPOOF/PARANOID
 		// header would be built for nobody, so the recipient's connections are looked up first.
-		await using var bound = connections.Get(who).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
+		await using var bound = ConnectionsOf(who).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
 		if (!await bound.MoveNextAsync()) return;
 		var outgoing = await PrepareRecipient(Prepare(delivered), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
@@ -310,6 +310,10 @@ public class NotifyService(
 		}
 		while (await bound.MoveNextAsync());
 	}
+
+	/// <summary><paramref name="who"/>'s connections, less any a login in progress keeps its output from (<see cref="LoginOutput"/>).</summary>
+	private IAsyncEnumerable<IConnectionService.ConnectionData> ConnectionsOf(DBRef who) =>
+		connections.Get(who).Where(conn => !LoginOutput.Skips(who, conn.Handle));
 
 	public ValueTask Notify(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Notify(who.Object().DBRef, what, sender, type);
@@ -379,7 +383,7 @@ public class NotifyService(
 
 		var outgoing = await PrepareRecipient(Prepare(what), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
-		await foreach (var conn in connections.Get(who))
+		await foreach (var conn in ConnectionsOf(who))
 		{
 			if (!excludeHandles.Contains(conn.Handle) && await CanReceiveBound(conn.Handle, who, sender, perceptions))
 				await PublishMarkup(conn.Handle, outgoing);
@@ -451,7 +455,7 @@ public class NotifyService(
 		}
 
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
-		await foreach (var conn in connections.Get(who))
+		await foreach (var conn in ConnectionsOf(who))
 		{
 			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			conn.Metadata.TryGetValue("Locale", out var locale);
@@ -488,7 +492,7 @@ public class NotifyService(
 		}
 
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
-		await foreach (var conn in connections.Get(who))
+		await foreach (var conn in ConnectionsOf(who))
 		{
 			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			conn.Metadata.TryGetValue("Locale", out var locale);
