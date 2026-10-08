@@ -1,0 +1,313 @@
+/* Theme parts: card frames. A card (KitCard, LinkCard, the wiki's category cards) takes three parts:
+   [data-frame-marks]   what is drawn on the card (ThemeMarks):
+                          --card-marks                gradient layers over the surface, as a background list
+                          --card-mask-<colour>        a drawing filled with that colour (text, accent, accent-2,
+                                                      accent-3 or border), as a mask shorthand list
+                          --card-ink-<colour>         the colour itself, to make it fainter
+   [data-frame-edge]    its border: --card-border-style and --card-border-width
+   [data-frame-shadow]  its shadow: --card-shadow
+   Drawings are black on clear; every colour comes from the theme. */
+
+[data-frame-edge="line"] { --card-border-style: solid; --card-border-width: 1px; }
+[data-frame-edge="thick"] { --card-border-style: solid; --card-border-width: 2px; }
+[data-frame-edge="heavy"] { --card-border-style: solid; --card-border-width: 3px; }
+[data-frame-edge="double"] { --card-border-style: double; --card-border-width: 3px; }
+[data-frame-edge="outset"] { --card-border-style: outset; --card-border-width: 3px; }
+[data-frame-edge="none"] { --card-border-style: none; --card-border-width: 0px; }
+
+[data-frame-marks="none"] { --card-marks: none; }
+[data-frame-shadow="none"] { --card-shadow: none; }
+
+/* Filigree: a scrolled flourish in each corner. */
+[data-frame-marks="filigree"] { --card-mask-accent: url(/themes/drawings/frames/filigree-accent.svg) 0 0 / 100% 100% no-repeat; }
+/* Drip: drips running down from the top edge. */
+[data-frame-marks="drip"] { --card-mask-accent: url(/themes/drawings/frames/drip-accent.svg) left top / 120px 14px repeat-x; }
+/* Bar: a solid accent bar down the left side. */
+[data-frame-marks="bar"] { --card-marks: linear-gradient(var(--accent), var(--accent)) left top / 5px 100% no-repeat; }
+
+/* Glow: a faint accent ring and haze. */
+[data-frame-shadow="glow"] { --card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 22px color-mix(in srgb, var(--accent) 14%, transparent); }
+/* Inset: a second border line inside the first. */
+[data-frame-shadow="inset"] { --card-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px var(--border); }
+/* Engraved: an inner rule in the text colour, as on an engraved plate. */
+[data-frame-shadow="engraved"] { --card-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--text) 45%, transparent); }
+/* Drip: a faint accent haze. */
+[data-frame-shadow="drip"] { --card-shadow: 0 0 18px color-mix(in srgb, var(--accent) 10%, transparent); }
+
+/* Corners: accent ticks on a card's four corners. */
+[data-frame-marks="corners"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left 6px top 6px / 14px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 6px top 6px / 2px 14px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 6px top 6px / 14px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 6px top 6px / 2px 14px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 6px bottom 6px / 14px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 6px bottom 6px / 2px 14px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 6px bottom 6px / 14px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 6px bottom 6px / 2px 14px no-repeat;
+}
+/* Tape: a strip across each top corner in the second accent, as on a photograph pinned to a board. */
+[data-frame-marks="tape"] {
+	--card-mask-accent-2: url(/themes/drawings/frames/tape-left.svg) left 0 top 0 / 40px 40px no-repeat,
+		url(/themes/drawings/frames/tape-right.svg) right 0 top 0 / 40px 40px no-repeat;
+	--card-ink-accent-2: color-mix(in srgb, var(--accent-2) 45%, transparent);
+}
+[data-scheme="dark"][data-frame-marks="tape"] {
+	--card-ink-accent-2: color-mix(in srgb, var(--accent-2) 28%, transparent);
+}
+/* Art deco: three stepped rules ending in diamonds, in the accent on each corner. */
+[data-frame-marks="deco"] {
+	--card-mask-accent: url(/themes/drawings/frames/deco-top-left.svg) left 3px top 3px / 28px 28px no-repeat,
+		url(/themes/drawings/frames/deco-top-right.svg) right 3px top 3px / 28px 28px no-repeat,
+		url(/themes/drawings/frames/deco-bottom-right.svg) right 3px bottom 3px / 28px 28px no-repeat,
+		url(/themes/drawings/frames/deco-bottom-left.svg) left 3px bottom 3px / 28px 28px no-repeat;
+}
+/* Halo: a line of light along the top of a card, and a glow falling from it. */
+[data-frame-marks="halo"] {
+	--card-marks: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, transparent), transparent) center top / 60% 2px no-repeat,
+		radial-gradient(90% 60% at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+}
+/* Scallop: lace scallops along the top and bottom edges, with a dot under each top one. */
+[data-frame-marks="scallop"] {
+	--card-marks: radial-gradient(circle at 9px -2px, transparent 0 7px, color-mix(in srgb, var(--accent) 45%, transparent) 7.5px 8.5px, transparent 9px) left top / 18px 10px repeat-x,
+		radial-gradient(circle at 9px 10px, color-mix(in srgb, var(--accent) 50%, transparent) 0 1.2px, transparent 1.8px) left top / 18px 14px repeat-x,
+		radial-gradient(circle at 9px 12px, transparent 0 7px, color-mix(in srgb, var(--accent) 45%, transparent) 7.5px 8.5px, transparent 9px) left bottom / 18px 10px repeat-x;
+}
+/* Tape: the card lifted off the board. */
+[data-frame-shadow="tape"] { --card-shadow: 0 6px 14px rgba(0,0,0,0.10); }
+[data-scheme="dark"][data-frame-shadow="tape"] { --card-shadow: 0 8px 18px rgba(0,0,0,0.45); }
+/* Deco: a faint accent rule outside the border. */
+[data-frame-shadow="deco"] { --card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent); }
+/* Halo: a soft accent glow below the card. */
+[data-frame-shadow="halo"] { --card-shadow: 0 8px 26px color-mix(in srgb, var(--accent) 12%, transparent); }
+/* Scallop: a faint accent blush below the card. */
+[data-frame-shadow="scallop"] { --card-shadow: 0 4px 18px color-mix(in srgb, var(--accent) 10%, transparent); }
+/* A ribbon bow tied at the top corner with a sparkle on its loop, over a pink-to-lavender hem. */
+[data-frame-marks="ribbon"] {
+	--card-marks: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 35%, transparent) 40%, color-mix(in srgb, var(--accent-2) 45%, transparent)) left bottom / 100% 3px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/ribbon-bow.svg) right 8px top 2px / 66px 30px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/ribbon-sparkle.svg) right 8px top 2px / 66px 30px no-repeat;
+}
+/* A soft accent halo round the card and a pink glow beneath. */
+[data-frame-shadow="ribbon"] { --card-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent), 0 10px 24px color-mix(in srgb, var(--accent) 16%, transparent); }
+/* Sprays of blossoms and leaves in three colours at the card's two right-hand corners. */
+[data-frame-marks="bloom"] {
+	--card-mask-accent: url(/themes/drawings/frames/bloom-accent.svg) right 2px top 2px / 40px 40px no-repeat, url(/themes/drawings/frames/bloom-turned-accent.svg) right 2px bottom 2px / 40px 40px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/bloom-accent-2.svg) right 2px top 2px / 40px 40px no-repeat, url(/themes/drawings/frames/bloom-turned-accent-2.svg) right 2px bottom 2px / 40px 40px no-repeat;
+	--card-mask-accent-3: url(/themes/drawings/frames/bloom-turned-accent-3.svg) right 2px bottom 2px / 40px 40px no-repeat;
+}
+/* A faint, soft drop shadow. */
+[data-frame-shadow="bloom"] { --card-shadow: 0 6px 20px color-mix(in srgb, var(--text) 7%, transparent); }
+/* Rows of stage lights in three colours along the top and foot, light rising from the floor. */
+[data-frame-marks="stage"] {
+	--card-marks: linear-gradient(0deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent) left bottom / 100% 40% no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/stage-bulb.svg) left 6px top 4px / 30px 10px repeat-x, url(/themes/drawings/frames/stage-bulb.svg) left 21px bottom 4px / 30px 10px repeat-x;
+	--card-mask-accent-2: url(/themes/drawings/frames/stage-bulb.svg) left 16px top 4px / 30px 10px repeat-x, url(/themes/drawings/frames/stage-bulb.svg) left 31px bottom 4px / 30px 10px repeat-x;
+	--card-mask-accent-3: url(/themes/drawings/frames/stage-bulb.svg) left 26px top 4px / 30px 10px repeat-x, url(/themes/drawings/frames/stage-bulb.svg) left 41px bottom 4px / 30px 10px repeat-x;
+}
+/* An accent rim glowing out into the dark, with a second colour far out. */
+[data-frame-shadow="stage"] { --card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 20px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 44px color-mix(in srgb, var(--accent-2) 12%, transparent); }
+/* Washi tape: a dotted strip across the top edge and a two-colour striped one across the corner below. */
+[data-frame-marks="washi"] {
+	--card-mask-accent-3: url(/themes/drawings/frames/washi-dotted.svg) center top / 96px 24px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/washi-stripes-a.svg) right bottom / 54px 54px no-repeat;
+	--card-mask-border: url(/themes/drawings/frames/washi-stripes-b.svg) right bottom / 54px 54px no-repeat;
+	--card-ink-border: color-mix(in srgb, var(--link-missing) 55%, var(--surface));
+}
+/* A card stuck to the page: a hairline and a warm, low shadow. */
+[data-frame-shadow="washi"] { --card-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 6px 14px color-mix(in srgb, var(--text) 10%, transparent); }
+/* The same card in the dark: a deeper shadow. */
+[data-scheme="dark"][data-frame-shadow="washi"] { --card-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+/* A manga panel: screentone shading into the card's bottom right corner. */
+[data-frame-marks="panel"] {
+	--card-mask-text: url(/themes/drawings/frames/panel-tone.svg) right bottom / 140px 90px no-repeat;
+}
+/* A jersey's striped hem: an accent band along the foot, a pale stripe above it. */
+[data-frame-marks="jersey"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left bottom / 100% 4px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 85%, transparent), color-mix(in srgb, var(--text) 85%, transparent)) left 0 bottom 6px / 100% 2px no-repeat;
+}
+/* An armour plate: two corners cut off and edged in the accent, the border drawn round the rest, a hazard-striped tab (accent-2) and rivets. */
+[data-frame-marks="chamfer"] {
+	--card-marks: linear-gradient(135deg, var(--bg) 0 calc(50% - 1px), var(--accent) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)) left top / 20px 20px no-repeat,
+		linear-gradient(315deg, var(--bg) 0 calc(50% - 1px), var(--accent) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)) right bottom / 20px 20px no-repeat,
+		linear-gradient(var(--border), var(--border)) right top / calc(100% - 19px) 1px no-repeat,
+		linear-gradient(var(--border), var(--border)) right top / 1px calc(100% - 19px) no-repeat,
+		linear-gradient(var(--border), var(--border)) left bottom / calc(100% - 19px) 1px no-repeat,
+		linear-gradient(var(--border), var(--border)) left bottom / 1px calc(100% - 19px) no-repeat,
+		repeating-linear-gradient(-45deg, var(--accent-2) 0 5px, rgba(0, 0, 0, 0.9) 5px 10px) right 30px bottom 5px / 56px 6px no-repeat,
+		radial-gradient(circle, color-mix(in srgb, var(--text) 40%, transparent) 0 1.5px, transparent 2px) right 5px top 5px / 6px 6px no-repeat,
+		radial-gradient(circle, color-mix(in srgb, var(--text) 40%, transparent) 0 1.5px, transparent 2px) left 5px bottom 5px / 6px 6px no-repeat;
+}
+/* A game's status window: a lit band at the top, a diamond in each corner. */
+[data-frame-marks="status"] {
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--border) 40%, transparent), transparent) left top / 100% 44px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/status-diamond.svg) left 3px top 3px / 12px 12px no-repeat,
+		url(/themes/drawings/frames/status-diamond.svg) right 3px top 3px / 12px 12px no-repeat,
+		url(/themes/drawings/frames/status-diamond.svg) right 3px bottom 3px / 12px 12px no-repeat,
+		url(/themes/drawings/frames/status-diamond.svg) left 3px bottom 3px / 12px 12px no-repeat;
+}
+/* Shoji: lattice in the corners, and a seal stamped in the bottom right, its carving in accent-2 (cut out of the seal, which is drawn above it). */
+[data-frame-marks="shoji"] {
+	--card-mask-text: url(/themes/drawings/frames/shoji-kumiko.svg) 0 0 / 100% 100% no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/shoji-seal.svg) right 10px bottom 10px / 18px 18px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/shoji-seal-carving.svg) right 10px bottom 10px / 18px 18px no-repeat;
+}
+
+/* A jersey card lifted off the floor. */
+[data-frame-shadow="jersey"] { --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.45); }
+/* A status window's glow in the border colour. */
+[data-frame-shadow="status"] {
+	--card-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 35%, transparent), 0 0 18px color-mix(in srgb, var(--border) 40%, transparent);
+}
+/* A shoji frame's inner rule and a faint lantern glow. */
+[data-frame-shadow="shoji"] {
+	--card-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--text) 14%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 7%, transparent);
+}
+/* Inked: an accent-2 caption box ruled off in ink behind the heading, and a halftone swelling to the far corner. */
+[data-frame-marks="inked"] {
+	--card-marks: linear-gradient(var(--text), var(--text)) left 0 top 31px / 186px 3px no-repeat,
+		linear-gradient(var(--text), var(--text)) left 183px top 0 / 3px 34px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) left top / 186px 34px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/inked-halftone.svg) right 0 bottom 0 / 96px 64px no-repeat;
+}
+/* Inked: a hard ink shadow. */
+[data-frame-shadow="inked"] { --card-shadow: 6px 6px 0 var(--text); }
+/* Title card: a vignette darkening toward the card's edges. */
+[data-frame-marks="titlecard"] {
+	--card-marks: radial-gradient(ellipse at 50% 45%, transparent 55%, color-mix(in srgb, var(--text) 13%, transparent) 100%);
+}
+/* Title card: an inner ink rule inset from the border, and a soft drop. */
+[data-frame-shadow="titlecard"] {
+	--card-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 6px var(--text), 0 3px 0 color-mix(in srgb, var(--text) 25%, transparent);
+}
+/* Chunky: a plastic sheen across the top. */
+[data-frame-marks="chunky"] { --card-marks: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 38%); }
+/* Chunky: a lit top edge and a hard accent-2 shadow. */
+[data-frame-shadow="chunky"] { --card-shadow: inset 0 3px 0 rgba(255,255,255,0.10), 6px 7px 0 var(--accent-2); }
+/* Plating: an armour plate with corners cut on the bevel, an engraved panel line inside the edge, part-number ticks,
+   an accent tab with an accent-2 stripe, an accent-2 chin plate and accent-3 vents. */
+[data-frame-marks="plating"] {
+	--card-marks: linear-gradient(90deg, color-mix(in srgb, var(--text) 30%, transparent) 0 3px, transparent 3px 4px,
+			color-mix(in srgb, var(--text) 30%, transparent) 4px 5px, transparent 5px 6px, color-mix(in srgb, var(--text) 30%, transparent) 6px 7px,
+			transparent 7px 8px, color-mix(in srgb, var(--text) 30%, transparent) 8px 11px, transparent 11px 12px,
+			color-mix(in srgb, var(--text) 30%, transparent) 12px 13px, transparent 13px 14px, color-mix(in srgb, var(--text) 30%, transparent) 14px 15px,
+			transparent 15px 18px, color-mix(in srgb, var(--text) 30%, transparent) 18px 21px, transparent 21px 22px,
+			color-mix(in srgb, var(--text) 30%, transparent) 22px 23px, transparent 23px) right 46px bottom 12px / 26px 5px no-repeat,
+		linear-gradient(225deg, transparent calc(50% - 0.7px), var(--border) 0 calc(50% + 0.7px), transparent 0) right top / 18px 18px no-repeat,
+		linear-gradient(225deg, transparent calc(50% - 0.5px), color-mix(in srgb, var(--border) 75%, transparent) 0 calc(50% + 0.5px), transparent 0) right 5px top 5px / 15.1px 15.1px no-repeat,
+		linear-gradient(45deg, transparent calc(50% - 0.7px), var(--border) 0 calc(50% + 0.7px), transparent 0) left bottom / 18px 18px no-repeat,
+		linear-gradient(45deg, transparent calc(50% - 0.5px), color-mix(in srgb, var(--border) 75%, transparent) 0 calc(50% + 0.5px), transparent 0) left 5px bottom 5px / 15.1px 15.1px no-repeat,
+		linear-gradient(225deg, var(--bg) 0 50%, transparent 50%) right top / 18px 18px no-repeat,
+		linear-gradient(45deg, var(--bg) 0 50%, transparent 50%) left bottom / 18px 18px no-repeat,
+		linear-gradient(var(--border), var(--border)) left top / calc(100% - 18px) 1px no-repeat,
+		linear-gradient(var(--border), var(--border)) right bottom / 1px calc(100% - 18px) no-repeat,
+		linear-gradient(var(--border), var(--border)) right bottom / calc(100% - 18px) 2px no-repeat,
+		linear-gradient(var(--border), var(--border)) left top / 1px calc(100% - 18px) no-repeat,
+		linear-gradient(color-mix(in srgb, var(--border) 75%, transparent), color-mix(in srgb, var(--border) 75%, transparent)) left 5px top 5px / calc(100% - 25px) 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--border) 75%, transparent), color-mix(in srgb, var(--border) 75%, transparent)) left 5px top 5px / 1px calc(100% - 25px) no-repeat,
+		linear-gradient(color-mix(in srgb, var(--border) 75%, transparent), color-mix(in srgb, var(--border) 75%, transparent)) right 5px bottom 6px / calc(100% - 25px) 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--border) 75%, transparent), color-mix(in srgb, var(--border) 75%, transparent)) right 5px bottom 6px / 1px calc(100% - 26px) no-repeat,
+		linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--border) 20%, transparent)) 0 0 / 100% 100% no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/plating-tab.svg) left 14px top 0 / 66px 6px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/plating-tab-stripe.svg) left 14px top 0 / 66px 6px no-repeat,
+		url(/themes/drawings/frames/plating-chin.svg) center bottom / 34px 5px no-repeat;
+	--card-mask-accent-3: url(/themes/drawings/frames/plating-vents.svg) right 14px bottom 10px / 24px 9px no-repeat;
+	--card-mask-text: url(/themes/drawings/frames/plating-vents-edge.svg) right 14px bottom 10px / 24px 9px no-repeat;
+}
+/* Chrome armour: accent rivets in the corners, a chrome trim along the top over an accent-3 band, accent-3 side plates
+   scorched toward the edge, an accent-3 chevron edged in the accent, and a sheen falling off into shadow. */
+[data-frame-marks="chrome-armor"] {
+	--chrome-armor-ember: color-mix(in srgb, var(--accent-3) 56%, #000);
+	--card-marks: radial-gradient(circle at 7.1px 7.1px, rgba(255,255,255,0.9) 0.9px, rgba(255,255,255,0) 1.3px) left 3px top 3px / 16px 16px no-repeat,
+		radial-gradient(circle at 8.9px 7.1px, rgba(255,255,255,0.9) 0.9px, rgba(255,255,255,0) 1.3px) right 3px top 3px / 16px 16px no-repeat,
+		radial-gradient(circle at 8.9px 8.9px, rgba(255,255,255,0.9) 0.9px, rgba(255,255,255,0) 1.3px) right 3px bottom 3px / 16px 16px no-repeat,
+		radial-gradient(circle at 7.1px 8.9px, rgba(255,255,255,0.9) 0.9px, rgba(255,255,255,0) 1.3px) left 3px bottom 3px / 16px 16px no-repeat,
+		radial-gradient(circle at 8px 8px, var(--accent) 2.4px, rgba(0,0,0,0.6) 2.8px 3.2px, rgba(0,0,0,0) 3.6px) left 3px top 3px / 16px 16px no-repeat,
+		radial-gradient(circle at 8px 8px, var(--accent) 2.4px, rgba(0,0,0,0.6) 2.8px 3.2px, rgba(0,0,0,0) 3.6px) right 3px top 3px / 16px 16px no-repeat,
+		radial-gradient(circle at 8px 8px, var(--accent) 2.4px, rgba(0,0,0,0.6) 2.8px 3.2px, rgba(0,0,0,0) 3.6px) right 3px bottom 3px / 16px 16px no-repeat,
+		radial-gradient(circle at 8px 8px, var(--accent) 2.4px, rgba(0,0,0,0.6) 2.8px 3.2px, rgba(0,0,0,0) 3.6px) left 3px bottom 3px / 16px 16px no-repeat,
+		linear-gradient(180deg, #fff, color-mix(in srgb, var(--border) 50%, #fff) 30%, color-mix(in srgb, var(--border) 67%, #000) 55%,
+			color-mix(in srgb, var(--border) 32%, #fff) 80%, var(--border)) left top / 100% 6px no-repeat,
+		linear-gradient(var(--accent-3), var(--chrome-armor-ember)) left 0 top 6px / 100% 4px no-repeat,
+		linear-gradient(90deg, var(--chrome-armor-ember), var(--accent-3)) left top / 5px 100% no-repeat,
+		linear-gradient(270deg, var(--chrome-armor-ember), var(--accent-3)) right top / 5px 100% no-repeat,
+		linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 30%, rgba(0,0,0,0.28)) 0 0 / 100% 100% no-repeat;
+	--card-mask-accent-3: url(/themes/drawings/frames/chrome-armor-chevron.svg) right 24px top 10px / 46px 17px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/chrome-armor-chevron-edge.svg) right 24px top 10px / 46px 17px no-repeat;
+}
+/* Chrome armour: a lit top edge and shadowed foot, a hard black drop, a deep shadow and an accent-3 glow. */
+[data-frame-shadow="chrome-armor"] {
+	--card-shadow: inset 0 2px 0 rgba(255,255,255,0.22), inset 0 -3px 0 rgba(0,0,0,0.5), 0 5px 0 color-mix(in srgb, var(--accent-3) 2%, #000),
+		0 14px 30px rgba(0,0,0,0.7), 0 0 22px color-mix(in srgb, var(--accent-3) 18%, transparent);
+}
+/* Cyberpunk: two corners cut on the diagonal in the accent and accent-2, edges fading to the border, a glitch on the right. */
+[data-frame-marks="glitch"] {
+	--card-marks: linear-gradient(225deg, var(--bg) 0 11.3px, var(--accent) 11.3px 13px, transparent 13px) right top / 28px 28px no-repeat,
+		linear-gradient(45deg, var(--bg) 0 11.3px, var(--accent-2) 11.3px 13px, transparent 13px) left bottom / 28px 28px no-repeat,
+		linear-gradient(90deg, var(--accent), var(--accent)) left top / 34% 2px no-repeat,
+		linear-gradient(90deg, var(--accent), var(--border) 60%) left top / calc(100% - 16px) 1px no-repeat,
+		linear-gradient(180deg, var(--accent), var(--border) 50%) left top / 1px calc(100% - 16px) no-repeat,
+		linear-gradient(var(--border), var(--border)) right bottom / 1px calc(100% - 16px) no-repeat,
+		linear-gradient(90deg, var(--accent-2), var(--border) 40%) right bottom / calc(100% - 16px) 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--accent-2) 90%, transparent), color-mix(in srgb, var(--accent-2) 90%, transparent)) right 0 top 74% / 3px 11px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--accent) 90%, transparent), color-mix(in srgb, var(--accent) 90%, transparent)) right 4px top calc(74% + 14px) / 12px 2px no-repeat;
+}
+
+/* The glitch's split: the card's edge offset in accent-2 and the accent, in a faint glow. */
+[data-frame-shadow="glitch"] {
+	--card-shadow: -3px 0 0 -1px color-mix(in srgb, var(--accent-2) 30%, transparent), 3px 0 0 -1px color-mix(in srgb, var(--accent) 30%, transparent),
+		0 0 26px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* A neon tube's inner light: the accent from the top, accent-3 from the bottom. */
+[data-frame-marks="neon"] {
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 38%),
+		linear-gradient(0deg, color-mix(in srgb, var(--accent-3) 8%, transparent), transparent 30%);
+}
+
+/* A neon tube's glow round the card, inside and out. */
+[data-frame-shadow="neon"] {
+	--card-shadow: 0 0 0 1px var(--accent), 0 0 7px 1px color-mix(in srgb, var(--accent) 75%, transparent),
+		0 0 24px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 14px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* A worn hull plate: a bevel, rivets in the corners (discs in a grey between text and border, a glint, a dark rim),
+   a brushed grain, dark stains and a painted tab in the accent. The rim and the stains are black, on the accent-2
+   and accent-3 layers, which the plate draws nothing else on. */
+[data-frame-marks="hull"] {
+	--card-marks: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 35%, rgba(0,0,0,0.22)) 0 0 / 100% 100% no-repeat;
+	--card-mask-border: url(/themes/drawings/frames/hull-rivet.svg) left 3px top 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet.svg) right 3px top 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet.svg) right 3px bottom 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet.svg) left 3px bottom 3px / 16px 16px no-repeat;
+	--card-ink-border: color-mix(in srgb, var(--text) 20%, var(--border));
+	--card-mask-text: url(/themes/drawings/frames/hull-rivet-glint.svg) left 3px top 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet-glint.svg) right 3px top 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet-glint.svg) right 3px bottom 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet-glint.svg) left 3px bottom 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-brushed.svg) 0 0 / 300px 300px;
+	--card-mask-accent-2: url(/themes/drawings/frames/hull-rivet-rim.svg) left 3px top 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet-rim.svg) right 3px top 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet-rim.svg) right 3px bottom 3px / 16px 16px no-repeat,
+		url(/themes/drawings/frames/hull-rivet-rim.svg) left 3px bottom 3px / 16px 16px no-repeat;
+	--card-ink-accent-2: rgba(0,0,0,0.55);
+	--card-mask-accent-3: url(/themes/drawings/shared/clouds-360.svg) 0 0 / 360px 360px;
+	--card-ink-accent-3: rgba(0,0,0,0.35);
+	--card-mask-accent: linear-gradient(#000, #000) left 22px top 0 / 40px 3px no-repeat;
+}
+
+/* A hull plate's bevel and the shadow it casts. */
+[data-frame-shadow="hull"] {
+	--card-shadow: inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.45), 0 8px 20px rgba(0,0,0,0.55);
+}
+
+/* A console card: an accent elbow round the top-left corner, carried on as bars along the top (accent, accent-2,
+   peach: warn mixed with link-missing) and down the left (accent, accent-3). */
+[data-frame-marks="elbow"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left 60px top 0 / calc(55% - 60px) 8px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right 64px top 0 / calc(45% - 72px) 8px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--warn), var(--link-missing)), color-mix(in srgb, var(--warn), var(--link-missing))) right 0 top 0 / 56px 8px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 0 top 60px / 8px max(0px, calc(100% - 94px)) no-repeat,
+		linear-gradient(var(--accent-3), var(--accent-3)) left 0 bottom 0 / 8px 30px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/elbow-accent.svg) left top / 60px 60px no-repeat;
+}

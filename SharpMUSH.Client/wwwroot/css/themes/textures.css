@@ -1,0 +1,408 @@
+/* Theme parts: page textures. [data-texture] draws the page behind everything (ThemeTexture):
+     --texture, --texture-size          gradient layers and their sizes, as background-image and background-size
+     --texture-mask-<colour>            a drawing filled with that colour: text, accent, accent-2, accent-3 or
+                                        border. A mask shorthand list, e.g. url(/themes/drawings/...) 0 0 / 200px 200px
+     --texture-ink-<colour>             the colour itself, to make it fainter: color-mix(in srgb, var(--text) 6%, transparent)
+     --card-mask-grain, --card-ink-grain   paper textures also grain the cards
+   Drawings are black on clear; only their shape and transparency count. Every colour comes from the theme.
+   [data-texture-strength] fades the whole texture. */
+
+[data-texture-strength="normal"] { --texture-opacity: 1; }
+[data-texture-strength="soft"] { --texture-opacity: 0.7; }
+[data-texture-strength="faint"] { --texture-opacity: 0.4; }
+[data-texture-strength="off"] { --texture-opacity: 0; }
+
+[data-texture="none"] { --texture: none; --texture-size: auto; }
+
+/* Grain: fine noise over the page and the cards. */
+[data-texture="grain"] {
+	--texture: none;
+	--texture-size: auto;
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 8%, transparent);
+	--card-mask-grain: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--card-ink-grain: color-mix(in srgb, var(--text) 7%, transparent);
+}
+[data-scheme="dark"][data-texture="grain"] {
+	--texture-ink-text: color-mix(in srgb, var(--text) 6%, transparent);
+	--card-ink-grain: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+/* Paper: a grained page darkening toward its edges. */
+[data-texture="paper"] {
+	--texture: radial-gradient(ellipse at 50% 40%, transparent 55%, color-mix(in srgb, var(--text) 10%, transparent) 100%);
+	--texture-size: 100% 100%;
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 10%, transparent);
+	--card-mask-grain: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--card-ink-grain: color-mix(in srgb, var(--text) 7%, transparent);
+}
+[data-scheme="dark"][data-texture="paper"] {
+	--texture: radial-gradient(ellipse at 50% 40%, transparent 55%, color-mix(in srgb, var(--text) 18%, transparent) 100%);
+	--texture-ink-text: color-mix(in srgb, var(--text) 7%, transparent);
+	--card-ink-grain: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+/* Linen: a fine weave of crossed threads; the cards are grained. */
+[data-texture="linen"] {
+	--texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 3px),
+		repeating-linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 3px);
+	--texture-size: auto, auto;
+	--card-mask-grain: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--card-ink-grain: color-mix(in srgb, var(--text) 7%, transparent);
+}
+[data-scheme="dark"][data-texture="linen"] {
+	--texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 3.5%, transparent) 0 1px, transparent 1px 3px),
+		repeating-linear-gradient(90deg, color-mix(in srgb, var(--text) 3.5%, transparent) 0 1px, transparent 1px 3px);
+	--card-ink-grain: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+/* Grid: graph paper ruled every 28px. */
+[data-texture="grid"] {
+	--texture: linear-gradient(color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px);
+	--texture-size: 28px 28px, 28px 28px;
+}
+[data-scheme="dark"][data-texture="grid"] {
+	--texture: linear-gradient(color-mix(in srgb, var(--text) 4.9%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--text) 4.9%, transparent) 1px, transparent 1px);
+}
+
+/* Stars: a few points of light repeating every 190px, one in the accent. */
+[data-texture="stars"] {
+	--texture: radial-gradient(1px 1px at 23px 41px, color-mix(in srgb, var(--text) 55%, transparent), transparent),
+		radial-gradient(1px 1px at 97px 13px, color-mix(in srgb, var(--text) 40%, transparent), transparent),
+		radial-gradient(1.5px 1.5px at 151px 117px, color-mix(in srgb, var(--accent) 60%, transparent), transparent),
+		radial-gradient(1px 1px at 61px 163px, color-mix(in srgb, var(--text) 35%, transparent), transparent);
+	--texture-size: 190px 190px, 190px 190px, 190px 190px, 190px 190px;
+}
+
+/* Parchment: edges browned as if near a flame, stains, and fibres; the cards are grained. */
+[data-texture="parchment"] {
+	--texture: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 50%, color-mix(in srgb, var(--accent) 9%, transparent) 85%, color-mix(in srgb, var(--text) 15%, transparent) 100%);
+	--texture-size: 100% 100%;
+	--texture-mask-text: url(/themes/drawings/shared/clouds-500.svg) 0 0 / 100% 100%, url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 10%, transparent);
+	--card-mask-grain: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--card-ink-grain: color-mix(in srgb, var(--text) 7%, transparent);
+}
+[data-scheme="dark"][data-texture="parchment"] {
+	--texture: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 50%, color-mix(in srgb, var(--accent) 12%, transparent) 85%, color-mix(in srgb, var(--text) 20%, transparent) 100%);
+	--texture-ink-text: color-mix(in srgb, var(--text) 7.5%, transparent);
+	--card-ink-grain: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+/* Foxing: the brown spots of an old book, on a faint weave, browning at the edges; the cards are grained. */
+[data-texture="foxing"] {
+	--texture: radial-gradient(ellipse at 50% 45%, transparent 55%, color-mix(in srgb, var(--text) 9%, transparent) 100%),
+		radial-gradient(circle at 40px 70px, color-mix(in srgb, var(--accent) 14%, transparent) 0 2px, transparent 9px),
+		radial-gradient(circle at 210px 30px, color-mix(in srgb, var(--accent) 10%, transparent) 0 3px, transparent 12px),
+		radial-gradient(circle at 270px 240px, color-mix(in srgb, var(--accent) 12%, transparent) 0 1.5px, transparent 7px),
+		radial-gradient(circle at 120px 280px, color-mix(in srgb, var(--accent) 9%, transparent) 0 4px, transparent 14px),
+		repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 3px);
+	--texture-size: 100% 100%, 317px 289px, 411px 373px, 523px 467px, 389px 541px, auto;
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 9%, transparent);
+	--card-mask-grain: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--card-ink-grain: color-mix(in srgb, var(--text) 7%, transparent);
+}
+[data-scheme="dark"][data-texture="foxing"] {
+	--texture: radial-gradient(ellipse at 50% 45%, transparent 55%, color-mix(in srgb, var(--text) 14%, transparent) 100%),
+		radial-gradient(circle at 40px 70px, color-mix(in srgb, var(--accent) 14%, transparent) 0 2px, transparent 9px),
+		radial-gradient(circle at 210px 30px, color-mix(in srgb, var(--accent) 10%, transparent) 0 3px, transparent 12px),
+		radial-gradient(circle at 270px 240px, color-mix(in srgb, var(--accent) 12%, transparent) 0 1.5px, transparent 7px),
+		radial-gradient(circle at 120px 280px, color-mix(in srgb, var(--accent) 9%, transparent) 0 4px, transparent 14px),
+		repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 3.5%, transparent) 0 1px, transparent 1px 3px);
+	--texture-ink-text: color-mix(in srgb, var(--text) 6%, transparent);
+	--card-ink-grain: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+/* Blood: the accent pooling from below and the corner, stained and grainy. */
+[data-texture="blood"] {
+	--texture: radial-gradient(120% 70% at 50% 115%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 60%),
+		radial-gradient(60% 50% at 100% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/shared/clouds-400.svg) 0 0 / 100% 100%;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 10%, transparent);
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+/* Swiss: a layout grid, major lines in the accent every 168px over a fine 28px grid. */
+[data-texture="swiss"] {
+	--texture: linear-gradient(color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px),
+		linear-gradient(color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1px);
+	--texture-size: 168px 168px, 168px 168px, 28px 28px, 28px 28px;
+}
+[data-scheme="dark"][data-texture="swiss"] {
+	--texture: linear-gradient(color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px),
+		linear-gradient(color-mix(in srgb, var(--text) 4.2%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--text) 4.2%, transparent) 1px, transparent 1px);
+}
+
+/* Scanlines: fine horizontal lines in the accent under a glow from above. */
+[data-texture="scanlines"] {
+	--texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--accent) 4.5%, transparent) 0 1px, transparent 1px 4px),
+		radial-gradient(90% 60% at 50% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+	--texture-size: auto, 100% 100%;
+}
+/* Mist: an accent haze from the top left and a faint one in the bottom right. */
+[data-texture="mist"] {
+	--texture: radial-gradient(60% 45% at 15% 5%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
+		radial-gradient(55% 50% at 95% 95%, color-mix(in srgb, var(--text) 5%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+}
+[data-scheme="dark"][data-texture="mist"] {
+	--texture: radial-gradient(60% 45% at 15% 5%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%),
+		radial-gradient(55% 50% at 95% 95%, color-mix(in srgb, var(--text) 7%, transparent), transparent 70%);
+}
+/* Damask: accent dots on a fine diagonal lattice. */
+[data-texture="damask"] {
+	--texture: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 7%, transparent) 0 2px, transparent 3px),
+		repeating-linear-gradient(45deg, color-mix(in srgb, var(--accent) 3%, transparent) 0 1px, transparent 1px 14px),
+		repeating-linear-gradient(-45deg, color-mix(in srgb, var(--accent) 3%, transparent) 0 1px, transparent 1px 14px);
+	--texture-size: 20px 20px, auto, auto;
+}
+/* Lace: interlocking accent rings with a dot in each. */
+[data-texture="lace"] {
+	--texture: radial-gradient(circle at 0 0, transparent 9px, color-mix(in srgb, var(--accent) 9%, transparent) 10px, transparent 11px),
+		radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 8%, transparent) 0 1.5px, transparent 2px);
+	--texture-size: 20px 20px, 20px 20px;
+}
+/* Crushed velvet: a sheen from the top left, a mottled accent nap, and fine grain. */
+[data-texture="velvet"] {
+	--texture: radial-gradient(80% 60% at 15% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 65%),
+		radial-gradient(70% 70% at 100% 100%, color-mix(in srgb, var(--text) 5%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/shared/clouds-600.svg) 0 0 / 100% 100%;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 16%, transparent);
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 5%, transparent);
+}
+/* Light through venetian blinds over grain, falling off into the dark away from the window (the grain fades with it). */
+[data-texture="blinds"] {
+	--texture: radial-gradient(75% 90% at 90% 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0.12) 100%),
+		repeating-linear-gradient(-32deg, transparent 0 34px, color-mix(in srgb, var(--text) 6%, transparent) 34px 58px);
+	--texture-size: 100% 100%, auto;
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px intersect,
+		radial-gradient(75% 90% at 90% 0%, #000 25%, rgba(0,0,0,0.88) 100%);
+	--texture-ink-text: color-mix(in srgb, var(--text) 8%, transparent);
+}
+[data-scheme="dark"][data-texture="blinds"] {
+	--texture: radial-gradient(75% 90% at 90% 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0.6) 100%),
+		repeating-linear-gradient(-32deg, transparent 0 34px, color-mix(in srgb, var(--text) 7.5%, transparent) 34px 58px);
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px intersect,
+		radial-gradient(75% 90% at 90% 0%, #000 25%, rgba(0,0,0,0.4) 100%);
+	--texture-ink-text: color-mix(in srgb, var(--text) 6%, transparent);
+}
+/* Rose petals drifting across the page, under a blush from above. */
+[data-texture="petals"] {
+	--texture: radial-gradient(60% 40% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+	--texture-size: 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/petals-accent.svg) 0 0 / 340px 340px;
+}
+/* A mandala drawn in fine lines, rising from the top of the page in a soft light. */
+[data-texture="mandala"] {
+	--texture: radial-gradient(50% 45% at 50% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 75%);
+	--texture-size: 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/mandala-accent.svg) 0 0 / 100% 100%;
+}
+/* Transformation sparkles: four-point stars and glitter over a pink and lavender wash from two corners. */
+[data-texture="sparkles"] {
+	--texture: radial-gradient(55% 45% at 10% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), radial-gradient(55% 55% at 100% 100%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/sparkles-accent.svg) 0 0 / 300px 300px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/sparkles-accent-2.svg) 0 0 / 300px 300px;
+}
+/* Shojo bubbles: a screentone of fine dots behind pale floating bubbles and outlined blossoms in three colours. */
+[data-texture="bubbles"] {
+	--texture: radial-gradient(70% 50% at 85% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 70%), radial-gradient(circle, color-mix(in srgb, var(--text) 7%, transparent) 0 1px, transparent 1.4px);
+	--texture-size: 100% 100%, 7px 7px;
+	--texture-mask-border: url(/themes/drawings/textures/bubbles-light.svg) 0 0 / 460px 460px;
+	--texture-ink-border: rgb(255,255,255);
+	--texture-mask-text: url(/themes/drawings/textures/bubbles-rim.svg) 0 0 / 460px 460px;
+	--texture-mask-accent: url(/themes/drawings/textures/bubbles-accent.svg) 0 0 / 460px 460px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/bubbles-accent-2.svg) 0 0 / 460px 460px;
+	--texture-mask-accent-3: url(/themes/drawings/textures/bubbles-accent-3.svg) 0 0 / 460px 460px;
+}
+/* A concert stage: spotlight beams in three colours from the rig, a glow off the floor, glitter in the air. */
+[data-texture="spotlights"] {
+	--texture: radial-gradient(90% 40% at 50% 110%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%), radial-gradient(1.5px 1.5px at 30px 40px, color-mix(in srgb, var(--accent) 80%, transparent), transparent), radial-gradient(1.5px 1.5px at 120px 90px, color-mix(in srgb, var(--accent-2) 70%, transparent), transparent), radial-gradient(1.5px 1.5px at 75px 150px, color-mix(in srgb, var(--accent-3) 70%, transparent), transparent);
+	--texture-size: 100% 100%, 170px 170px, 170px 170px, 170px 170px;
+	--texture-mask-accent: url(/themes/drawings/textures/spotlights-accent.svg) 0 0 / 100% 100%;
+	--texture-mask-accent-2: url(/themes/drawings/textures/spotlights-accent-2.svg) 0 0 / 100% 100%;
+	--texture-mask-accent-3: url(/themes/drawings/textures/spotlights-accent-3.svg) 0 0 / 100% 100%;
+}
+/* School notebook paper: ruled lines, a double margin line just past the rail and sidebar, and a little grain. */
+[data-texture="notebook"] {
+	--texture: linear-gradient(90deg, transparent 0 316px, color-mix(in srgb, var(--link-missing) 30%, transparent) 316px 317px, transparent 317px 320px, color-mix(in srgb, var(--link-missing) 30%, transparent) 320px 321px, transparent 321px), repeating-linear-gradient(180deg, transparent 0 31px, color-mix(in srgb, var(--accent) 20%, transparent) 31px 32px);
+	--texture-size: 100% 100%, auto;
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 6%, transparent);
+}
+/* Notebook paper in the dark: fainter rules and grain. */
+[data-scheme="dark"][data-texture="notebook"] {
+	--texture: linear-gradient(90deg, transparent 0 316px, color-mix(in srgb, var(--link-missing) 30%, transparent) 316px 317px, transparent 317px 320px, color-mix(in srgb, var(--link-missing) 30%, transparent) 320px 321px, transparent 321px), repeating-linear-gradient(180deg, transparent 0 31px, color-mix(in srgb, var(--accent) 12%, transparent) 31px 32px);
+	--texture-ink-text: color-mix(in srgb, var(--text) 5%, transparent);
+}
+/* Manga focus lines converging on the page, over screentone rising from the foot (the tone faded by the last mask layer). */
+[data-texture="speedlines"] {
+	--texture: none;
+	--texture-size: auto;
+	--texture-mask-text: url(/themes/drawings/textures/speedlines-lines.svg) 0 0 / 100% 100%,
+		url(/themes/drawings/textures/speedlines-tone.svg) 0 0 / 100% 100% intersect, linear-gradient(rgba(0, 0, 0, 0.22) 0 0);
+}
+/* Speedlines on a dark page: the lines at 0.14 and the tone at 0.18. */
+[data-scheme="dark"][data-texture="speedlines"] {
+	--texture-ink-text: color-mix(in srgb, var(--text) 70%, transparent);
+	--texture-mask-text: url(/themes/drawings/textures/speedlines-lines.svg) 0 0 / 100% 100%,
+		url(/themes/drawings/textures/speedlines-tone.svg) 0 0 / 100% 100% intersect, linear-gradient(rgba(0, 0, 0, 0.257) 0 0);
+}
+/* A court's markings at night, under two floodlights, with a little grain. */
+[data-texture="court"] {
+	--texture: radial-gradient(45% 60% at 6% -8%, color-mix(in srgb, var(--text) 20%, transparent), transparent 70%),
+		radial-gradient(45% 60% at 94% -8%, color-mix(in srgb, var(--text) 20%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/court-lines.svg) 0 0 / 100% 100%,
+		url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px intersect, linear-gradient(rgba(0, 0, 0, 0.04) 0 0);
+	--texture-mask-accent: url(/themes/drawings/textures/court-centre.svg) 0 0 / 100% 100%;
+}
+/* Riveted armour plates under a work light, with a band of hazard stripes (accent-2) along the top. */
+[data-texture="hazard"] {
+	--texture: linear-gradient(rgba(0, 0, 0, 0.7) 0 9px, rgba(0, 0, 0, 0) 9px),
+		radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--text) 6%, transparent), transparent 70%),
+		linear-gradient(rgba(0, 0, 0, 0.5) 0 1px, rgba(0, 0, 0, 0) 1px),
+		linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 1px, rgba(0, 0, 0, 0) 1px);
+	--texture-size: 100% 100%, 100% 100%, 240px 160px, 240px 160px;
+	--texture-mask-text: url(/themes/drawings/textures/hazard-plates.svg) 0 0 / 240px 160px,
+		url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px intersect, linear-gradient(rgba(0, 0, 0, 0.04) 0 0);
+	--texture-mask-accent-2: url(/themes/drawings/textures/hazard-stripes.svg) 0 0 / 2400px 9px repeat-x;
+}
+/* A magic circle glowing behind the page, its seals in the accent, with motes of light. */
+[data-texture="sigil"] {
+	--texture: radial-gradient(40% 55% at 58% 55%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+		radial-gradient(1.5px 1.5px at 37px 51px, color-mix(in srgb, var(--accent) 55%, transparent), transparent),
+		radial-gradient(1px 1px at 141px 113px, color-mix(in srgb, var(--text) 45%, transparent), transparent);
+	--texture-size: 100% 100%, 173px 173px, 173px 173px;
+	--texture-mask-text: url(/themes/drawings/textures/sigil-rings.svg) 0 0 / 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/sigil-seals.svg) 0 0 / 100% 100%;
+}
+/* Sumi: a moon behind bands of mist, lantern light from below, waves along the foot (shaded under them), ink-wash cloud and washi fibres. */
+[data-texture="sumi"] {
+	--texture: radial-gradient(55% 45% at 0% 100%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
+		linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0) max(23.75%, 15.833vw));
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/sumi-sky.svg) 0 0 / 100% 100%,
+		url(/themes/drawings/textures/sumi-waves.svg) 0 0 / 100% 100%,
+		url(/themes/drawings/textures/sumi-fibres.svg) 0 0 / 260px 260px,
+		url(/themes/drawings/shared/clouds-800.svg) 0 0 / 800px 800px intersect, linear-gradient(rgba(0, 0, 0, 0.06) 0 0);
+}
+/* Ben-Day dots: accent and accent-3 halftone screens on yellowing newsprint, with grain. */
+[data-texture="benday"] {
+	--texture: radial-gradient(ellipse at 50% 45%, transparent 60%, color-mix(in srgb, var(--text) 8%, transparent) 100%),
+		radial-gradient(circle at 3px 3px, color-mix(in srgb, var(--accent) 20%, transparent) 0 1.9px, transparent 2.5px),
+		radial-gradient(circle at 8.5px 8.5px, color-mix(in srgb, var(--accent-3) 20%, transparent) 0 1.9px, transparent 2.5px);
+	--texture-size: 100% 100%, 11px 11px, 11px 11px;
+	--texture-mask-text: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 4.5%, transparent);
+}
+/* Film grain: a vignette, scratches and dust over grain held to 11% by the clear gradient under it, and a flicker of
+   low-frequency noise (on the border layer, inked in the text colour). */
+[data-texture="filmgrain"] {
+	--texture: radial-gradient(ellipse 80% 75% at 50% 45%, transparent 45%, color-mix(in srgb, var(--text) 42%, transparent) 100%);
+	--texture-size: 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/filmgrain-scratches.svg) 0 0 / 700px 820px add,
+		url(/themes/drawings/shared/noise.svg) 0 0 / 160px 160px intersect,
+		linear-gradient(rgba(0,0,0,0.11), rgba(0,0,0,0.11));
+	--texture-ink-text: var(--text);
+	--texture-mask-border: url(/themes/drawings/shared/clouds-600.svg) 0 0 / 600px 600px;
+	--texture-ink-border: color-mix(in srgb, var(--text) 6%, transparent);
+}
+/* Star bursts: a toy-box night sky of sparkles, bursts and a lightning bolt, lit accent-2 and accent-3 from the corners. */
+[data-texture="starburst"] {
+	--texture: radial-gradient(60% 50% at 0% 0%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 70%),
+		radial-gradient(55% 50% at 100% 100%, color-mix(in srgb, var(--accent-3) 16%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/starburst-text.svg) 0 0 / 520px 520px;
+	--texture-mask-accent: url(/themes/drawings/textures/starburst-accent.svg) 0 0 / 520px 520px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/starburst-accent-2.svg) 0 0 / 520px 520px;
+	--texture-mask-accent-3: url(/themes/drawings/textures/starburst-accent-3.svg) 0 0 / 520px 520px;
+}
+/* Armour panels: pale plating, panel lines (held to 20% by the clear gradient under them) with a lit edge (the border
+   layer, inked white), hatches and decals, an accent-2 stripe and accent-3 caution marks. */
+[data-texture="armor-panels"] {
+	--texture: linear-gradient(170deg, rgba(255,255,255,0.55), rgba(255,255,255,0) 45%);
+	--texture-size: 100% 100%;
+	--texture-mask-border: url(/themes/drawings/textures/armor-panels-seams.svg) 1px 1px / 560px 420px;
+	--texture-ink-border: rgba(255,255,255,0.85);
+	--texture-mask-text: url(/themes/drawings/textures/armor-panels-marks.svg) 0 0 / 560px 420px add,
+		url(/themes/drawings/textures/armor-panels-seams.svg) 0 0 / 560px 420px intersect,
+		linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2));
+	--texture-mask-accent: url(/themes/drawings/textures/armor-panels-accent.svg) 0 0 / 560px 420px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/armor-panels-accent-2.svg) 0 0 / 560px 420px;
+	--texture-mask-accent-3: url(/themes/drawings/textures/armor-panels-accent-3.svg) 0 0 / 560px 420px;
+}
+/* Armour panels on a dark theme: a fainter sheen and lit edge, stronger panel lines. */
+[data-scheme="dark"][data-texture="armor-panels"] {
+	--texture: linear-gradient(170deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 45%);
+	--texture-ink-border: rgba(255,255,255,0.05);
+	--texture-mask-text: url(/themes/drawings/textures/armor-panels-marks.svg) 0 0 / 560px 420px add,
+		url(/themes/drawings/textures/armor-panels-seams.svg) 0 0 / 560px 420px intersect,
+		linear-gradient(rgba(0,0,0,0.24), rgba(0,0,0,0.24));
+}
+/* A finishing-move backdrop: accent, accent-2 and accent-3 rays bursting from below the page round a hot glow (its
+   circle sized as the rays' drawing is), an accent-3 blaze, and drifting embers. */
+[data-texture="sunburst-rays"] {
+	--texture: radial-gradient(circle max(35vw, 52.5vh) at 50% calc(100% + max(8.333vw, 12.5vh)), color-mix(in srgb, var(--accent) 55%, transparent),
+			color-mix(in srgb, var(--accent-2) 22%, transparent) 45%, transparent),
+		radial-gradient(110% 70% at 50% 108%, color-mix(in srgb, var(--accent-3) 38%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/sunburst-rays-accent.svg) center bottom / 100% 100% no-repeat,
+		url(/themes/drawings/textures/sunburst-rays-embers-accent.svg) 0 0 / 340px 340px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/sunburst-rays-accent-2.svg) center bottom / 100% 100% no-repeat,
+		url(/themes/drawings/textures/sunburst-rays-embers-accent-2.svg) 0 0 / 340px 340px;
+	--texture-mask-accent-3: url(/themes/drawings/textures/sunburst-rays-accent-3.svg) center bottom / 100% 100% no-repeat;
+}
+/* Neon city rain: streaks falling past a magenta glow from the street, a cyan sign above and a yellow one below. */
+[data-texture="rain"] {
+	--texture: radial-gradient(45% 40% at 40% 104%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
+		radial-gradient(35% 30% at 96% 4%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 70%),
+		radial-gradient(18% 10% at 86% 78%, color-mix(in srgb, var(--accent-3) 10%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/rain-text.svg) 0 0 / 260px 260px;
+	--texture-mask-accent: url(/themes/drawings/textures/rain-accent.svg) 0 0 / 260px 260px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/rain-accent-2.svg) 0 0 / 260px 260px;
+}
+
+/* An outrun sunset: a striped sun (accent-2 to accent-3 to accent) sinking behind a neon grid floor. */
+[data-texture="outrun"] {
+	--texture-mask-accent: url(/themes/drawings/textures/outrun-accent.svg) 0 0 / 100% 100% no-repeat;
+	--texture-mask-accent-2: url(/themes/drawings/textures/outrun-accent-2.svg) 0 0 / 100% 100% no-repeat;
+	--texture-mask-accent-3: url(/themes/drawings/textures/outrun-accent-3.svg) 0 0 / 100% 100% no-repeat;
+}
+
+/* Deep space: three depths of stars, a faint galactic band, and a planet's lit rim rising from the corner, which
+   hides the stars behind it. */
+[data-texture="galaxy"] {
+	--texture: radial-gradient(circle at 112% 128%, var(--bg) 0 34%, color-mix(in srgb, var(--accent-2) 55%, transparent) 34.4%,
+			color-mix(in srgb, var(--accent-2) 16%, transparent) 36%, transparent 42%),
+		linear-gradient(118deg, transparent 32%, color-mix(in srgb, var(--accent-2) 5%, transparent) 44%,
+			color-mix(in srgb, var(--accent-3) 8%, transparent) 50%, color-mix(in srgb, var(--accent-2) 5%, transparent) 56%, transparent 68%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-text: radial-gradient(circle at 112% 128%, transparent 34%, #000 34.4%) intersect,
+		url(/themes/drawings/shared/starfield-200.svg) 0 0 / 200px 200px,
+		url(/themes/drawings/shared/starfield-320.svg) 0 0 / 320px 320px,
+		url(/themes/drawings/shared/starfield-530.svg) 0 0 / 530px 530px;
+}
+
+/* A console's quiet readout: segments in the accent, accent-2, peach (warn mixed with link-missing) and accent-3 down the page's right edge, with ticks. */
+[data-texture="readout"] {
+	--texture-mask-accent: url(/themes/drawings/textures/readout-accent.svg) 0 0 / 100% 100% no-repeat;
+	--texture-mask-accent-2: url(/themes/drawings/textures/readout-accent-2.svg) 0 0 / 100% 100% no-repeat;
+	--texture-mask-accent-3: url(/themes/drawings/textures/readout-accent-3.svg) 0 0 / 100% 100% no-repeat;
+	--texture-mask-text: url(/themes/drawings/textures/readout-peach.svg) 0 0 / 100% 100% no-repeat;
+	--texture-ink-text: color-mix(in srgb, var(--warn), var(--link-missing));
+}

@@ -8,9 +8,20 @@
 	display: flex;
 	overflow: hidden;
 	background: var(--bg);
-	background-image: var(--texture), var(--mud-palette-background-gradient);
-	background-size: var(--texture-size), auto;
+	background-image: var(--mud-palette-background-gradient);
 }
+
+/* The page texture (ThemeTexture, css/themes/layers.css) is pinned to the window over the page and the section
+   sidebar's surfaces, which are not positioned; the rail, the sidebar's content and the page content are raised
+   above it. */
+.phosphor-rail,
+.phosphor-content-col,
+.phosphor-widget-aside,
+.phosphor-pagebar > * {
+	position: relative;
+	z-index: 1;
+}
+
 
 /* Content column: topbar + scrollable main + footer/terminal */
 .phosphor-content-col {
@@ -143,7 +154,7 @@
 	height: 1px;
 	margin: 6px 0;
 	flex-shrink: 0;
-	background: var(--border);
+	background: color-mix(in srgb, var(--rail-ink) 45%, transparent);
 }
 
 .phosphor-rail-item {
@@ -157,7 +168,7 @@
 	border: 0;
 	border-radius: 14px;
 	background: transparent;
-	color: var(--text-dim);
+	color: var(--rail-ink);
 	cursor: pointer;
 	text-decoration: none;
 	transition: background var(--motion-pop), color var(--motion-pop);
@@ -186,7 +197,7 @@
 	width: 7px;
 	height: 7px;
 	border-radius: 50%;
-	background: var(--text-dim);
+	background: var(--rail-ink);
 }
 
 .phosphor-rail-dot--unread {
@@ -204,7 +215,7 @@
 	height: 44px;
 	display: grid;
 	place-items: center;
-	color: var(--text-dim);
+	color: var(--rail-ink);
 }
 
 /* the account in the rail is the avatar alone */
@@ -242,11 +253,8 @@
 	min-height: 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
+	/* The page's texture (ThemeTexture) lies over this surface, so it runs on from the page without a seam. */
 	background: var(--surface-3);
-	/* The page's texture, pinned to the window so it runs on from the page behind without a seam. */
-	background-image: var(--texture);
-	background-size: var(--texture-size);
-	background-attachment: fixed;
 	border-right: 1px solid var(--border-soft);
 	transition: width var(--motion-slide);
 }

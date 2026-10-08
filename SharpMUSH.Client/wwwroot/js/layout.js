@@ -137,6 +137,14 @@ window.sharpmushLayout = {
 		this._unwatchScreen('_shortScreen');
 	},
 
+	// ThemeProvider: the theme's parts as data attributes on <html> (data-texture="galaxy", ...), which the rules in
+	// css/themes/ match. A theme sets every part, so each call replaces the last one's values.
+	applyThemeParts: function (parts) {
+		for (const [name, value] of Object.entries(parts)) {
+			document.documentElement.setAttribute('data-' + name, value);
+		}
+	},
+
 	// ThemeService: the game's default theme follows the browser's light or dark preference.
 	watchLightScheme: function (dotnetRef) {
 		return this._watchScreen('_lightScheme', '(prefers-color-scheme: light)', dotnetRef, 'OnLightSchemeChanged');

@@ -1,4 +1,6 @@
 .kit-card {
+	position: relative;
+	isolation: isolate;
 	background: var(--card-bg);
 	border: var(--card-border-width) var(--card-border-style) var(--border);
 	border-radius: var(--radius-card);

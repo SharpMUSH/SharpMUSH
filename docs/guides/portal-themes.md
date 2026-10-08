@@ -18,6 +18,21 @@ character on the Account page has a palette button that opens it at that charact
 **Game default** follows the browser's light or dark preference. An accent that would be too faint on the chosen
 theme is moved toward white or black until it reads at 4.5:1.
 
+## Built-in themes
+
+`BuiltInThemes.All` (`SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`):
+
+- **Phosphor** (dark) and **Daylight** (light), the plain looks.
+- One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
+  `mystery`, `romance`, `science-fiction`, `spiritual`.
+- Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
+- Cartoons and comics: `comic-book`, `rubber-hose`, `eighties-cartoon`.
+- Neon and space: `cyberpunk`, `synthwave`, `space-opera`, `starship-console`.
+
+The anime, cartoon and space themes are portal themes only; there is no layout theme of the same name. Every theme
+after Phosphor and Daylight has a texture, a card frame and a title face no other theme uses
+(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`).
+
 ## Making themes (staff)
 
 `/admin/themes` (Admin > Portal > Themes) needs the `layout.admin` permission. Built-in themes are read-only;
@@ -86,18 +101,50 @@ var (colors, dark) = ThemeGenerator.FromPalette(palette);
 // (with style choices if you like); the caller needs layout.admin.
 ```
 
-### Style choices
+### Style choices and parts
 
-Typefaces, corners, page texture, title ornament, card frame, title lettering, title effect and picture tone. Each
-is one of a fixed list (`ThemeStyles.Choices`) and sets the custom properties in the Decoration, Type and Shape
-groups below.
+A theme's look is a set of named parts, never CSS of its own. `ThemeStyles` holds only the names; the CSS for each
+value is one rule in `SharpMUSH.Client/wwwroot/css/themes/`, keyed on a data attribute:
+
+| File | Attributes |
+|---|---|
+| `faces.css` | `data-font-display`, `data-font-body` |
+| `shape.css` | `data-corners`, `data-titles` |
+| `textures.css` | `data-texture`, `data-texture-strength` |
+| `frames.css` | `data-frame-marks`, `data-frame-edge`, `data-frame-shadow` |
+| `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow` |
+| `imagery.css` | `data-imagery` |
+
+`ThemeResolver.Resolve` returns them as `ResolvedTheme.Parts`, with `data-scheme` (`dark` or `light`) for rules that
+differ between the two (`[data-scheme="dark"][data-texture="paper"]`). `ThemeProvider` puts them on `<html>` (the
+boot script in `index.html` does it first, from the cached theme); `ThemeSwatch` puts another theme's on itself.
+
+Drawings are SVG files under `wwwroot/themes/drawings/` (`shared/` for noise, clouds and starfields several parts
+use), black on clear, used as CSS masks. `layers.css` paints them: the page texture (`ThemeTexture`) and every card's
+marks (`ThemeMarks`) are one layer per colour, filled with `--text`, `--accent`, `--accent-2`, `--accent-3` or
+`--border` (and on cards `--card-ink-grain`) wherever that colour's mask (`--texture-mask-accent`,
+`--card-mask-accent`, ...) is. So every drawing takes the theme's colours. `accent-2` and `accent-3` are two
+decorative colours that never carry text; a theme that sets none gets `link-missing` and `warn`.
+
+The editor has three modes, stored as the `mode` style token:
+
+- **Simple**: one menu per setting. A texture, frame, ornament or effect picks all its parts
+  (`ThemeStyles.Frames`, `Ornaments`, `Effects`); a theme's own part values are ignored.
+- **Complex**: a menu per part (`ThemeStyles.PartKeys`), and the two decorative colours.
+- **Custom**: Complex, and the theme's stylesheet. Only a Custom theme's stylesheet applies; a theme with a
+  stylesheet and no mode counts as Custom.
+
+`ThemePartsCssTests` checks that every choice has a rule, every rule names a choice, every drawing a rule names
+exists and is used, drawings carry no colour, and the parts CSS loads nothing but drawings.
 
 ### The stylesheet
 
-The **Stylesheet** box takes CSS for everything else. It loads after the theme's `:root` rule, so it wins over the
-colours and choices. A theme without one shows a starter: every variable with this theme's value, commented out, and
-an empty rule for each part of the portal listed below. The starter changes nothing until it is edited, and is not
-stored if left as it is.
+In Custom mode the **Stylesheet** box takes CSS for everything else. It is unlayered and loads after the theme's
+`:root` rule, so it wins over the colours and over every part rule (those sit in `@layer themes`). A theme without
+one shows a starter: every variable with this theme's value, commented out; the rules its parts apply, from
+`css/themes/`, rewritten as commented-out `:root` rules (`ThemeStylesheet.PartRules`); and an empty rule for each
+part of the portal listed below. The starter changes nothing until it is edited, and is not stored if left as it
+is.
 
 **Where things belong:**
 
@@ -119,14 +166,14 @@ the sign to double it.
 | Group | Properties |
 |---|---|
 | Surfaces | `--bg`, `--surface`, `--surface-2`, `--surface-3`, `--rail-bg`, `--card-bg` (may be a gradient or layered images), `--code-bg` |
-| Text | `--text`, `--text-dim`, `--text-faint`, `--title-color`, `--code-text` |
+| Text | `--text`, `--text-dim`, `--text-faint`, `--rail-ink` (rail icons, derived from `--text-dim` so they read on the rail), `--title-color`, `--code-text` |
 | Lines | `--border`, `--border-soft` |
-| Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill) |
+| Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill), `--accent-2`, `--accent-3` (decorative, drawings only) |
 | Status | `--warn`, `--link-missing`, `--danger`, `--success`, `--info`, `--special` |
 | Syntax | `--syntax-command`, `--syntax-function`, `--syntax-substitution`, `--syntax-dbref`, `--syntax-reference`, `--syntax-at-command`, `--syntax-danger` (softcode); `--syntax-string`, `--syntax-link`, `--syntax-heading`, `--syntax-emphasis` (help) |
 | Shape | `--radius`, `--radius-lg`, `--radius-card`, `--radius-row`, `--card-border-style`, `--card-border-width`, `--card-shadow`, `--shadow` |
 | Type | `--font-ui`, `--font-display`, `--font-mono`, `--font-title-weight`, `--title-transform`, `--title-tracking`, `--title-style` |
-| Decoration | `--texture`, `--texture-size`, `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-shadow`, `--image-filter` |
+| Decoration | `--texture`, `--texture-size`, `--texture-opacity`, `--texture-mask-<colour>` and `--texture-ink-<colour>` (colour: `text`, `accent`, `accent-2`, `accent-3`, `border`), `--card-marks`, `--card-mask-<colour>` and `--card-ink-<colour>` (also `grain`), `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-underline-height`, `--title-underline-pad`, `--title-shadow`, `--image-filter` |
 
 `ThemeStylesheet.Variables` is the list the starter is written from.
 

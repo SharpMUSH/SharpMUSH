@@ -1,0 +1,35 @@
+/* Theme parts: typefaces. [data-font-display] is the face page and card titles are set in, with the weight
+   they take (some faces have only one); [data-font-body] is the face for everything else. All but the portal's
+   own face are self-hosted, declared in tokens.css. */
+
+[data-font-display="ui"] { --font-display: 'Hanken Grotesk', system-ui, sans-serif; --font-title-weight: 700; }
+[data-font-display="cinzel"] { --font-display: 'Cinzel', 'Times New Roman', serif; --font-title-weight: 700; }
+[data-font-display="cormorant"] { --font-display: 'Cormorant Garamond', Georgia, serif; --font-title-weight: 600; }
+[data-font-display="fell"] { --font-display: 'IM Fell English', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="playfair"] { --font-display: 'Playfair Display', Georgia, serif; --font-title-weight: 700; }
+[data-font-display="grenze"] { --font-display: 'Grenze Gotisch', 'Times New Roman', serif; --font-title-weight: 600; }
+[data-font-display="space"] { --font-display: 'Space Grotesk', system-ui, sans-serif; --font-title-weight: 700; }
+[data-font-display="typewriter"] { --font-display: 'Special Elite', 'Courier New', monospace; --font-title-weight: 400; }
+[data-font-display="orbitron"] { --font-display: 'Orbitron', system-ui, sans-serif; --font-title-weight: 700; }
+[data-font-display="marcellus"] { --font-display: 'Marcellus', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="fredoka"] { --font-display: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; --font-title-weight: 700; }
+[data-font-display="dancing"] { --font-display: 'Dancing Script', 'Brush Script MT', cursive; --font-title-weight: 700; }
+[data-font-display="mochiy"] { --font-display: 'Mochiy Pop One', 'Arial Rounded MT Bold', system-ui, sans-serif; --font-title-weight: 400; }
+[data-font-display="patrick"] { --font-display: 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif; --font-title-weight: 400; }
+[data-font-display="dela"] { --font-display: 'Dela Gothic One', 'Arial Black', sans-serif; --font-title-weight: 400; }
+[data-font-display="graduate"] { --font-display: 'Graduate', Rockwell, serif; --font-title-weight: 400; }
+[data-font-display="saira-stencil"] { --font-display: 'Saira Stencil One', 'Arial Narrow', sans-serif; --font-title-weight: 400; }
+[data-font-display="pixelify"] { --font-display: 'Pixelify Sans', 'Courier New', monospace; --font-title-weight: 700; }
+[data-font-display="yuji"] { --font-display: 'Yuji Syuku', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="bangers"] { --font-display: 'Bangers', Impact, sans-serif; --font-title-weight: 400; }
+[data-font-display="lilita"] { --font-display: 'Lilita One', 'Arial Rounded MT Bold', sans-serif; --font-title-weight: 400; }
+[data-font-display="titan"] { --font-display: 'Titan One', 'Arial Black', sans-serif; --font-title-weight: 400; }
+[data-font-display="chakra"] { --font-display: 'Chakra Petch', system-ui, sans-serif; --font-title-weight: 600; }
+[data-font-display="monoton"] { --font-display: 'Monoton', system-ui, sans-serif; --font-title-weight: 400; }
+[data-font-display="michroma"] { --font-display: 'Michroma', system-ui, sans-serif; --font-title-weight: 400; }
+[data-font-display="antonio"] { --font-display: 'Antonio', 'Arial Narrow', sans-serif; --font-title-weight: 700; }
+[data-font-display="oxanium"] { --font-display: 'Oxanium', 'Arial Black', system-ui, sans-serif; --font-title-weight: 800; }
+[data-font-display="russo"] { --font-display: 'Russo One', 'Arial Black', Impact, sans-serif; --font-title-weight: 400; }
+
+[data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
+[data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

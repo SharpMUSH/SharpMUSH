@@ -79,6 +79,8 @@ public static class ThemeTokens
 	public const string Accent = "accent";
 	public const string Warn = "warn";
 	public const string LinkMissing = "link-missing";
+	public const string Accent2 = "accent-2";
+	public const string Accent3 = "accent-3";
 
 	/// <summary>
 	/// Every token a theme carries, in the order the editor lists them. Each is the name of a CSS custom property
@@ -91,6 +93,13 @@ public static class ThemeTokens
 		Border, BorderSoft,
 		Accent, Warn, LinkMissing,
 	];
+
+	/// <summary>
+	/// Two more colours a theme may set, for the drawings in its texture, frame and ornament only: they carry no
+	/// text, so no contrast pair checks them. A theme that leaves one out gets its <see cref="LinkMissing"/> and
+	/// <see cref="Warn"/> colours.
+	/// </summary>
+	public static readonly IReadOnlyList<string> Decorative = [Accent2, Accent3];
 
 	/// <summary>WCAG AA for body text (1.4.3).</summary>
 	public const double TextContrast = 4.5;
@@ -191,7 +200,8 @@ public static class BuiltInThemes
 	/// <summary>Mystery: noir, light through blinds, typewritten case notes taped up, pictures in hard black and white.</summary>
 	public static readonly PortalTheme Mystery = Genre("mystery", "Mystery", dark: true,
 		["#0f1012", "#17181b", "#1d1f23", "#131416", "#0a0a0c", "#e8e4dc", "#a8a49b", "#8e8a82", "#2c2d31", "#222327", "#d9a441", "#e8b45e", "#ff8a8a"],
-		display: "typewriter", body: "ui", corners: "sharp", texture: "blinds", ornament: "rule", frame: "tape", titles: "normal", effect: "bleed", imagery: "noir");
+		display: "typewriter", body: "ui", corners: "sharp", texture: "blinds", ornament: "rule", frame: "tape", titles: "normal", effect: "bleed", imagery: "noir",
+		accent2: "#e2d6ba");
 
 	/// <summary>Romance: blush and rose, scattered petals, an italic garamond between hearts, lace-edged cards.</summary>
 	public static readonly PortalTheme Romance = Genre("romance", "Romance", dark: false,
@@ -208,13 +218,125 @@ public static class BuiltInThemes
 		["#f5f1f9", "#fdfbff", "#f3eef9", "#ebe5f3", "#e3dbef", "#241f2e", "#574e66", "#6a6178", "#ddd4ea", "#ebe5f3", "#6b4fa8", "#8a5300", "#b3361e"],
 		display: "marcellus", body: "ui", corners: "round", texture: "mandala", ornament: "lotus", frame: "halo", titles: "normal", effect: "glow", imagery: "tint");
 
+	/// <summary>Magical girl: candy pink and lavender, twinkling sparkles, a rounded face that shines, cards tied with a bow.</summary>
+	public static readonly PortalTheme MagicalGirl = Genre("magical-girl", "Magical Girl", dark: false,
+		["#fcedf7", "#fffaff", "#f9eafa", "#f3e1f5", "#efd8f3", "#2e1538", "#614670", "#6b5279", "#ecc9ee", "#f5e0f6", "#b8157a", "#8f4b00", "#b3261e"],
+		display: "fredoka", body: "ui", corners: "candy", texture: "sparkles", ornament: "twinkle", frame: "ribbon", titles: "normal", effect: "shine", imagery: "pastel", accent2: "#966edc");
+
+	/// <summary>Shojo: a cream manga page in screentone, floating bubbles and big blossoms, script titles, flower-sprayed cards.</summary>
+	public static readonly PortalTheme Shojo = Genre("shojo", "Shojo", dark: false,
+		["#fdf8f1", "#fffdf9", "#fbf3ea", "#f6ece2", "#f2e5d8", "#2b2226", "#5e4f55", "#695a60", "#ecd9cf", "#f4e9e1", "#0f6f73", "#8f4b00", "#b3261e"],
+		display: "dancing", body: "ui", corners: "round", texture: "bubbles", ornament: "blossom", frame: "bloom", titles: "normal", effect: "dreamy", imagery: "airy", accent2: "#ee7a70", accent3: "#966edc");
+
+	/// <summary>Idol: a concert stage in indigo dark, coloured spotlights, pop lettering glowing like a lightstick, cards rimmed in stage lights.</summary>
+	public static readonly PortalTheme Idol = Genre("idol", "Idol", dark: true,
+		["#0c0a1d", "#151030", "#1c163f", "#100c25", "#07051a", "#f4efff", "#bbb2da", "#9e94c4", "#30275f", "#221b4a", "#ff58a8", "#ffd84a", "#ff8a8a"],
+		display: "mochiy", body: "ui", corners: "soft", texture: "spotlights", ornament: "encore", frame: "stage", titles: "normal", effect: "lightstick", imagery: "spotlit", accent2: "#36e2ff", accent3: "#ffde4a");
+
+	/// <summary>Slice of life: warm daylight on ruled notebook paper, a handwritten face, cards stuck up with patterned washi tape.</summary>
+	public static readonly PortalTheme SliceOfLife = Genre("slice-of-life", "Slice of Life", dark: false,
+		["#fbf7ec", "#fffefa", "#f8f3e6", "#f3ecdc", "#ece3cf", "#2a2722", "#57514a", "#615a51", "#e2d8c3", "#eee6d5", "#1f68a8", "#8f4b00", "#b3261e"],
+		display: "patrick", body: "ui", corners: "soft", texture: "notebook", ornament: "doodle", frame: "washi", titles: "normal", effect: "pencil", imagery: "sunny", accent2: "#ffd678", accent3: "#80ccb2");
+	/// <summary>Shonen: a battle-manga page, black ink on white with screentone and focus lines, heavy slanted titles, thick panel borders and one hot red.</summary>
+	public static readonly PortalTheme Shonen = Genre("shonen", "Shonen", dark: false,
+		["#f4f2ee", "#ffffff", "#f0eeea", "#e8e6e1", "#e2dfda", "#0d0d0d", "#3a3a3a", "#545454", "#141414", "#d4d1cb", "#c42d12", "#8f4b00", "#b3261e"],
+		display: "dela", body: "ui", corners: "razor", texture: "speedlines", ornament: "exclaim", frame: "panel", titles: "slant", effect: "inked", imagery: "ink");
+
+	/// <summary>Sports: a night match under floodlights, court markings on navy, varsity lettering outlined in jersey orange, striped hems.</summary>
+	public static readonly PortalTheme Sports = Genre("sports", "Sports", dark: true,
+		["#0a1428", "#101d36", "#162644", "#0c172e", "#060d1c", "#eef3fb", "#a9b6cc", "#8d9bb4", "#25395f", "#1a2b4b", "#ff8c2e", "#ffd166", "#ff8a8a"],
+		display: "graduate", body: "ui", corners: "soft", texture: "court", ornament: "varsity", frame: "jersey", titles: "caps", effect: "varsity", imagery: "floodlit");
+
+	/// <summary>Mech machine: a battle mech's hangar of riveted gunmetal plates, hazard stripes, stencilled capitals in warning yellow, cut-corner armour cards.</summary>
+	public static readonly PortalTheme MechMachine = Genre("mechmachine", "Mech Machine", dark: true,
+		["#16181b", "#1f2226", "#272b30", "#1a1c20", "#101113", "#e7e9eb", "#aab0b6", "#8f969d", "#3c434b", "#2b3036", "#ff6b1f", "#ffc62a", "#ff8a7a"],
+		display: "saira-stencil", body: "ui", corners: "razor", texture: "hazard", ornament: "warning", frame: "chamfer", titles: "caps", effect: "stencil", imagery: "steel",
+		accent2: "#f0b820");
+
+	/// <summary>Isekai: a game's status windows over a fantasy world, royal-blue panels edged in light, a magic circle behind, pixel titles in gold.</summary>
+	public static readonly PortalTheme Isekai = Genre("isekai", "Isekai", dark: true,
+		["#0a0e2c", "#121a4a", "#18225a", "#0e1540", "#070a22", "#eaf0ff", "#acb8e4", "#919dd0", "#4466cc", "#24347c", "#ffd35e", "#ffb35c", "#ff9aa8"],
+		display: "pixelify", body: "ui", corners: "sharp", texture: "sigil", ornament: "cursor", frame: "status", titles: "normal", effect: "pixel", imagery: "vivid");
+	/// <summary>Yokai: a folklore night in sumi and indigo, a moon in mist over waves, brushed titles sealed in vermilion, shoji-latticed cards.</summary>
+	public static readonly PortalTheme Yokai = Genre("yokai", "Yokai", dark: true,
+		["#0c0e1b", "#141728", "#1b1f34", "#0f111f", "#080913", "#efe6d4", "#b3ab9b", "#958d80", "#2b2e47", "#1e2135", "#f2643c", "#e8b04a", "#ff9580"],
+		display: "yuji", body: "ui", corners: "sharp", texture: "sumi", ornament: "hanko", frame: "shoji", titles: "normal", effect: "lantern", imagery: "indigo",
+		accent2: "#ffecdc");
+
+	/// <summary>Comic book: four-colour newsprint in Ben-Day dots, inked panels with hard shadows, outlined capitals that shout.</summary>
+	public static readonly PortalTheme ComicBook = Genre("comic-book", "Comic Book", dark: false,
+		["#f5eed6", "#fffdf4", "#fff3c4", "#fff1b8", "#1f57d6", "#111111", "#333333", "#4d4d4d", "#111111", "#dccfae", "#c8141c", "#8a5200", "#a3121a"],
+		display: "bangers", body: "ui", corners: "sharp", texture: "benday", ornament: "pow", frame: "inked", titles: "caps", effect: "inkpop", imagery: "print", accent2: "#ffe24a", accent3: "#0096d6");
+
+	/// <summary>Rubber hose: a 1930s cartoon title card, cream and ink on scratched, grainy film, bouncy letters between stars.</summary>
+	public static readonly PortalTheme RubberHose = Genre("rubber-hose", "Rubber Hose", dark: false,
+		["#ebe1c6", "#f7efd8", "#ede2c2", "#e6d9b5", "#221d19", "#1c1814", "#463d33", "#564b3f", "#221d19", "#d3c39d", "#a3302a", "#7a4d00", "#9c2a1f"],
+		display: "lilita", body: "ui", corners: "round", texture: "filmgrain", ornament: "vaudeville", frame: "titlecard", titles: "normal", effect: "cartoon", imagery: "film");
+
+	/// <summary>80s cartoon: a Saturday-morning toy-box sky of star bursts and lightning, chunky outlined yellow letters, cards with hard magenta shadows.</summary>
+	public static readonly PortalTheme EightiesCartoon = Genre("eighties-cartoon", "80s Cartoon", dark: true,
+		["#190e3c", "#24164f", "#2e1d63", "#1d1146", "#10082a", "#fff6ff", "#d3c2ee", "#b3a1d6", "#6a4bd6", "#33216e", "#ffe23a", "#ffa94d", "#ff86c2"],
+		display: "titan", body: "ui", corners: "round", texture: "starburst", ornament: "bolt", frame: "chunky", titles: "caps", effect: "toybox", imagery: "cel", accent2: "#ff2fb4", accent3: "#22e1ff");
+	/// <summary>Cyberpunk: a neon city at night, rain past magenta and cyan signs, split-signal capitals, cards cut on the diagonal.</summary>
+	public static readonly PortalTheme Cyberpunk = Genre("cyberpunk", "Cyberpunk", dark: true,
+		["#07060b", "#110d17", "#19131f", "#0c0a11", "#040307", "#f2edf7", "#b8acc6", "#9d90ad", "#2e2339", "#1e1727", "#ff2bd6", "#f3e600", "#ff8a8a"],
+		display: "chakra", body: "ui", corners: "sharp", texture: "rain", ornament: "slash", frame: "glitch", titles: "caps", effect: "rgbsplit", imagery: "neon",
+		accent2: "#05d9e8", accent3: "#f3e600");
+
+	/// <summary>Synthwave: an outrun sunset, a striped sun over a neon grid, chrome-lit inline lettering, cards lit like neon tubes.</summary>
+	public static readonly PortalTheme Synthwave = Genre("synthwave", "Synthwave", dark: true,
+		["#1a0b2e", "#25103f", "#311552", "#1d0c35", "#12061f", "#fdeeff", "#d8bfe6", "#bfa2d2", "#4a2470", "#331856", "#ff6b9d", "#ffd166", "#ff9a8a"],
+		display: "monoton", body: "ui", corners: "round", texture: "outrun", ornament: "sunset", frame: "neon", titles: "normal", effect: "retro", imagery: "dusk",
+		accent2: "#ffd166", accent3: "#ff8c42");
+
+	/// <summary>Space opera: a deep starfield with a planet on the horizon, wide gold capitals, worn riveted hull plates.</summary>
+	public static readonly PortalTheme SpaceOpera = Genre("space-opera", "Space Opera", dark: true,
+		["#04050b", "#14161d", "#1c1f28", "#0d0f15", "#03040a", "#eee7d4", "#b9b09a", "#9a927f", "#3b3d47", "#252731", "#f0b429", "#ff8c42", "#ff8a7a"],
+		display: "michroma", body: "ui", corners: "soft", texture: "galaxy", ornament: "insignia", frame: "hull", titles: "wide", effect: "gilt", imagery: "warm",
+		accent2: "#8cb4ff", accent3: "#ffe2be");
+
+	/// <summary>Starship console: pure black, tall condensed capitals, pill bars and elbows in orange, lavender, peach and periwinkle.</summary>
+	public static readonly PortalTheme StarshipConsole = Genre("starship-console", "Starship Console", dark: true,
+		["#000000", "#0b0a0f", "#16141c", "#060509", "#000000", "#f5e9da", "#cbbba8", "#a99a8b", "#2b2732", "#1a1820", "#ff9933", "#ffcc66", "#ff8a7a"],
+		display: "antonio", body: "ui", corners: "pill", texture: "readout", ornament: "segments", frame: "elbow", titles: "caps", effect: "console", imagery: "natural",
+		accent2: "#c39be0", accent3: "#8fa6ff");
+
+	/// <summary>Real robot: a military mobile suit's white armour plating with panel lines and decals, blue with signal red and yellow, beveled plate cards.</summary>
+	public static readonly PortalTheme RealRobot = Genre("real-robot", "Real Robot", dark: false,
+		["#e4e8ee", "#fcfdfe", "#f0f3f7", "#e9edf2", "#1b3478", "#121a28", "#3b4658", "#4f5a6b", "#a3aebd", "#d3dae3", "#1a49b5", "#8a5a00", "#b8141e"],
+		display: "oxanium", body: "ui", corners: "sharp", texture: "armor-panels", ornament: "tricolor", frame: "plating", titles: "caps", effect: "decal", imagery: "hangar", accent2: "#d6202a", accent3: "#f7c400");
+
+	/// <summary>Super robot: a 1970s giant robot's finishing move, gold capitals blazing over a red and gold sunburst, cards of chrome-trimmed red armour.</summary>
+	public static readonly PortalTheme SuperRobot = Genre("super-robot", "Super Robot", dark: true,
+		["#160609", "#210c10", "#2c1116", "#19080b", "#080a1c", "#fff3e3", "#e0bfb0", "#c09a8e", "#8a8f9d", "#3a1a1e", "#ffc82a", "#ff9a3c", "#ff8f80"],
+		display: "russo", body: "ui", corners: "sharp", texture: "sunburst-rays", ornament: "battlecry", frame: "chrome-armor", titles: "slant", effect: "blazing", imagery: "hotblooded", accent2: "#ff7a1a", accent3: "#d7221c");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
-		[Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual];
+	[
+		Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
+		MagicalGirl, Shojo, Idol, SliceOfLife,
+		Shonen, Sports, MechMachine, Isekai,
+		Yokai, ComicBook, RubberHose, EightiesCartoon,
+		Cyberpunk, Synthwave, SpaceOpera, StarshipConsole,
+		RealRobot,
+		SuperRobot,
+	];
 
 	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
-		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery)
+		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery,
+		string? accent2 = null, string? accent3 = null)
 	{
 		var tokens = ThemeTokens.Editable.Zip(colors).ToDictionary(p => p.First, p => p.Second);
+		if (accent2 is not null)
+		{
+			tokens[ThemeTokens.Accent2] = accent2;
+		}
+
+		if (accent3 is not null)
+		{
+			tokens[ThemeTokens.Accent3] = accent3;
+		}
+
 		tokens[ThemeStyles.FontDisplay] = display;
 		tokens[ThemeStyles.FontBody] = body;
 		tokens[ThemeStyles.Corners] = corners;
@@ -250,7 +372,11 @@ public static class BuiltInThemes
 /// <param name="AccentAdjusted">The chosen accent was too faint against this theme and was moved until it read.</param>
 /// <param name="Tokens">Every custom property this theme sets, by name without the <c>--</c>.</param>
 /// <param name="Style">The theme's <see cref="ThemeStyles"/> choices, by setting.</param>
-/// <param name="Stylesheet">The theme's own stylesheet (<see cref="ThemeStylesheet"/>), or null.</param>
+/// <param name="Parts">
+/// The data attributes the portal puts on the page for the theme's look (<see cref="ThemeStyles.Parts"/>), by
+/// name without <c>data-</c>.
+/// </param>
+/// <param name="Stylesheet">The theme's own stylesheet (<see cref="ThemeStylesheet"/>), or null; only a Custom theme's applies.</param>
 public sealed record ResolvedTheme(
 	string ThemeId,
 	string Name,
@@ -260,6 +386,7 @@ public sealed record ResolvedTheme(
 	bool AccentAdjusted,
 	IReadOnlyDictionary<string, string> Tokens,
 	IReadOnlyDictionary<string, string> Style,
+	IReadOnlyDictionary<string, string> Parts,
 	string? Stylesheet = null)
 {
 	/// <summary>The tokens a character's own accent sets, laid again after a theme's stylesheet so it keeps them.</summary>
@@ -321,7 +448,9 @@ public static class ThemeResolver
 
 	public static ResolvedTheme Resolve(PortalTheme theme, string? accent = null)
 	{
-		var (tokens, style) = Complete(ThemeStylesheet.WithColorOverrides(theme.Tokens, theme.Stylesheet));
+		var mode = ThemeStyles.ModeOf(theme.Tokens, theme.Stylesheet);
+		var stylesheet = mode == ThemeStyles.Custom && !string.IsNullOrWhiteSpace(theme.Stylesheet) ? theme.Stylesheet : null;
+		var (tokens, style) = Complete(ThemeStylesheet.WithColorOverrides(theme.Tokens, stylesheet));
 		var bg = ThemeColor.Parse(tokens[ThemeTokens.Background]);
 		var surface = ThemeColor.Parse(tokens[ThemeTokens.Surface]);
 		// A chosen accent is drawn on the page, cards, the current sidebar row and the sidebar itself.
@@ -334,15 +463,9 @@ public static class ThemeResolver
 		tokens[ThemeTokens.Accent] = accentColor.Hex;
 
 		Derive(tokens, theme.Dark, accentColor);
-		foreach (var (name, value) in ThemeStyles.Css(style, ThemeColor.Parse(tokens[ThemeTokens.Text]), accentColor,
-			ThemeColor.Parse(tokens[ThemeTokens.Border]), theme.Dark))
-		{
-			tokens[name] = value;
-		}
 
 		return new ResolvedTheme(theme.Id, theme.Name, theme.Dark, accentColor.Hex, requested?.Hex,
-			requested is { } asked && asked != accentColor, tokens, style,
-			string.IsNullOrWhiteSpace(theme.Stylesheet) ? null : theme.Stylesheet);
+			requested is { } asked && asked != accentColor, tokens, style, ThemeStyles.Parts(style, mode, theme.Dark), stylesheet);
 	}
 
 	/// <summary>
@@ -402,6 +525,13 @@ public static class ThemeResolver
 						problems.Add($"Style '{name}' is one of {string.Join(", ", choices)}, not '{value}'.");
 					}
 				}
+				else if (ThemeTokens.Decorative.Contains(name))
+				{
+					if (!ThemeColor.TryParse(value, out _))
+					{
+						problems.Add($"Token '{name}' is not a #rrggbb colour: '{value}'.");
+					}
+				}
 				else if (!ThemeTokens.Editable.Contains(name))
 				{
 					problems.Add($"Token '{name}' is not a theme token.");
@@ -423,8 +553,9 @@ public static class ThemeResolver
 			.ToList();
 
 	/// <summary>
-	/// The theme's colours, normalised to lower-case <c>#rrggbb</c> with Phosphor's for any it lacks, and its style
-	/// choices with the defaults for any it lacks.
+	/// The theme's colours, normalised to lower-case <c>#rrggbb</c> with Phosphor's for any it lacks (its decorative
+	/// colours only where it sets them), and its Simple settings with the defaults for any it lacks, plus the parts
+	/// and mode it sets itself.
 	/// </summary>
 	public static (Dictionary<string, string> Colors, Dictionary<string, string> Style) Complete(IReadOnlyDictionary<string, string> tokens)
 	{
@@ -436,8 +567,24 @@ public static class ThemeResolver
 				: BuiltInThemes.Phosphor.Tokens[name];
 		}
 
+		foreach (var name in ThemeTokens.Decorative)
+		{
+			if (tokens.TryGetValue(name, out var value) && ThemeColor.TryParse(value, out var color))
+			{
+				colors[name] = color.Hex;
+			}
+		}
+
 		var style = ThemeStyles.Keys.ToDictionary(k => k,
 			k => tokens.TryGetValue(k, out var value) && ThemeStyles.IsValid(k, value) ? value : ThemeStyles.Defaults[k], StringComparer.Ordinal);
+		foreach (var key in ThemeStyles.Choices.Keys.Except(ThemeStyles.Keys))
+		{
+			if (tokens.TryGetValue(key, out var value) && ThemeStyles.IsValid(key, value))
+			{
+				style[key] = value;
+			}
+		}
+
 		return (colors, style);
 	}
 
@@ -466,6 +613,17 @@ public static class ThemeResolver
 		("syntax-emphasis", "#dcdcaa"),
 	];
 
+	/// <summary>A colour's hue in degrees, whole, for the picture tones that tint toward the accent.</summary>
+	private static int Hue(ThemeColor c)
+	{
+		// Compared as the byte channels, so no floating-point equality is involved.
+		int r = c.R, g = c.G, b = c.B;
+		int max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b)), d = max - min;
+		if (d == 0) return 0;
+		var h = max == r ? (double)(g - b) / d % 6 : max == g ? (double)(b - r) / d + 2 : (double)(r - g) / d + 4;
+		return (int)Math.Round((h * 60 + 360) % 360);
+	}
+
 	private static void Derive(Dictionary<string, string> tokens, bool dark, ThemeColor accent)
 	{
 		ThemeColor Get(string name) => ThemeColor.Parse(tokens[name]);
@@ -474,13 +632,20 @@ public static class ThemeResolver
 		var surface3 = Get(ThemeTokens.Surface3);
 		var rail = Get(ThemeTokens.Rail);
 		var warn = Get(ThemeTokens.Warn);
+		var textDim = Get(ThemeTokens.TextDim);
 
 		tokens["accent-dim"] = accent.Mix(ThemeColor.Black, 0.22).Hex;
+		tokens["accent-hue"] = Hue(accent).ToString(CultureInfo.InvariantCulture);
+		tokens.TryAdd(ThemeTokens.Accent2, tokens[ThemeTokens.LinkMissing]);
+		tokens.TryAdd(ThemeTokens.Accent3, tokens[ThemeTokens.Warn]);
 		tokens["accent-on"] = OnAccent(accent).Hex;
 		tokens["glow"] = accent.Triple;
 		tokens["warn-tint"] = $"rgba({warn.Triple}, 0.14)";
 		tokens["unread-alert"] = tokens[ThemeTokens.LinkMissing];
 		tokens["mud-palette-background-gradient"] = $"radial-gradient(120% 100% at 80% -10%, {surface.Mix(bg, 0.1).Hex} 0%, {bg.Hex} 55%)";
+		// The rail's icons: secondary text where it reads on the rail, else moved toward whichever of white or black the rail
+		// sets off better. A light theme may have a dark or coloured rail, where its dark secondary text would vanish.
+		tokens["rail-ink"] = ReadableAgainst(textDim, ThemeColor.Contrast(ThemeColor.White, rail) > ThemeColor.Contrast(ThemeColor.Black, rail), ThemeTokens.TextContrast, rail).Hex;
 		tokens["mud-palette-navbar-gradient"] = $"linear-gradient(90deg, {surface3.Hex} 0%, {surface3.Mix(rail, 0.5).Hex} 100%)";
 
 		if (dark)

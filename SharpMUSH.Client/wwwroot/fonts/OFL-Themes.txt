@@ -8,6 +8,24 @@ Copyright (c) 2012 by Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astig
 Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron), with Reserved Font Name: "Orbitron".
 Copyright 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display), with Reserved Font Name "Playfair Display".
 Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
+Copyright 2013 The Antonio Project Authors (https://github.com/googlefonts/antonioFont)
+Copyright 2010 The Bangers Project Authors (https://github.com/googlefonts/bangers)
+Copyright 2018 The Chakra Petch Project Authors (https://github.com/m4rc1e/Chakra-Petch.git)
+Copyright 2016 The Dancing Script Project Authors (https://github.com/googlefonts/DancingScript), with Reserved Font Name "Dancing Script".
+Copyright 2020 The Dela Gothic Project Authors (https://github.com/syakuzen/DelaGothic)
+Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One)
+Copyright (c) 2012, Eduardo Tunni (http://www.tipo.net.ar), with Reserved Font Name "Graduate"
+Copyright (c) 2011 Juan Montoreano (juan@remolacha.biz), with Reserved Font Names "Lilita One"
+Copyright 2011 The Michroma Project Authors (https://github.com/googlefonts/Michroma-font)
+Copyright 2020 The MochiyPop Project Authors (https://github.com/fontdasu/Mochiypop)
+Copyright (c) 2011 by vernon adams. All rights reserved.
+Copyright 2019 The Oxanium Project Authors (https://github.com/sevmeyer/oxanium)
+Copyright (c) 2012 Patrick Wagesreiter (mail@patrickwagesreiter.at)
+Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans)
+Copyright (c) 2011-2012, Jovanny Lemonad (jovanny.ru), with Reserved Font Name "Russo"
+Copyright 2019 The Saira Stencil Project Authors (https://github.com/Omnibus-Type/Saira)
+Copyright (c) 2011 Rodrigo Fuenzalida (hello@rfuenzalida.com), with Reserved Font Name "Titan One"
+Copyright 2021 The Yuji Project Authors (https://github.com/Kinutafontfactory/Yuji)
 
 
 

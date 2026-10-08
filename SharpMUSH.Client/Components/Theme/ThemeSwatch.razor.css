@@ -1,4 +1,5 @@
 .theme-swatch {
+	position: relative;
 	display: inline-flex;
 	flex: none;
 	width: 72px;
@@ -6,12 +7,12 @@
 	padding: 6px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
-	background-color: var(--sw-bg);
-	background-image: var(--sw-texture);
-	background-size: var(--sw-texture-size);
+	background: var(--bg);
 }
 
 .theme-swatch-card {
+	position: relative;
+	isolation: isolate;
 	display: grid;
 	flex: 1;
 	grid-template-columns: auto 1fr;
@@ -19,19 +20,19 @@
 	align-items: center;
 	gap: 2px 5px;
 	padding: 2px 5px 4px;
-	border: min(var(--sw-frame-width), 2px) var(--sw-frame) var(--sw-border);
-	border-radius: min(var(--sw-radius), 8px);
-	background: var(--sw-surface);
+	border: min(var(--card-border-width), 2px) var(--card-border-style) var(--border);
+	border-radius: min(var(--radius-card), 8px);
+	background: var(--card-bg);
 }
 
 .theme-swatch-face {
 	grid-row: 1 / span 2;
-	font-family: var(--sw-face);
-	font-weight: var(--sw-weight);
-	font-style: var(--sw-face-style);
+	font-family: var(--font-display);
+	font-weight: var(--font-title-weight);
+	font-style: var(--title-style);
 	font-size: 15px;
 	line-height: 1;
-	color: var(--sw-text);
+	color: var(--text);
 }
 
 .theme-swatch-line {
@@ -39,7 +40,7 @@
 	align-self: end;
 	height: 3px;
 	border-radius: 2px;
-	background: var(--sw-dim);
+	background: var(--text-dim);
 }
 
 .theme-swatch-button {
@@ -47,5 +48,5 @@
 	width: 70%;
 	height: 5px;
 	border-radius: 3px;
-	background: var(--sw-accent);
+	background: var(--accent);
 }

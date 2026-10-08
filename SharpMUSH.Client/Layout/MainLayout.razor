@@ -31,6 +31,8 @@
 
 <div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_pagebarOpen ? "phosphor-shell--pagebar-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
 
+    <ThemeTexture />
+
     @* Touch chrome only: tapping the dimmed backdrop closes the off-canvas drawer or section panel. *@
     <div class="phosphor-nav-backdrop" @onclick="CloseMobilePanels"></div>
 

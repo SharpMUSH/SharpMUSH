@@ -70,6 +70,25 @@ public class ThemeProviderTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task PutsTheThemesPartsOnThePageAndFollowsAChange()
+	{
+		var cut = Render<ThemeProvider>(p => p.AddChildContent("<span></span>"));
+
+		_current.Theme = ThemeResolver.Resolve(BuiltInThemes.Fantasy);
+		_changed!.Invoke();
+
+		cut.WaitForAssertion(() =>
+		{
+			var applied = JSInterop.Invocations["sharpmushLayout.applyThemeParts"];
+			if (applied.Count != 2) throw new InvalidOperationException($"{applied.Count} calls");
+		});
+		var parts = JSInterop.Invocations["sharpmushLayout.applyThemeParts"].Select(i => (IReadOnlyDictionary<string, string>)i.Arguments[0]!).ToList();
+		await Assert.That(parts[0][ThemeStyles.Texture]).IsEqualTo("none");
+		await Assert.That(parts[1][ThemeStyles.Texture]).IsEqualTo("parchment");
+		await Assert.That(parts[1][ThemeStyles.Scheme]).IsEqualTo("light");
+	}
+
+	[TUnit.Core.Test]
 	public async Task StopsFollowingTheServiceWhenDisposed()
 	{
 		var cut = Render<ThemeProvider>(p => p.AddChildContent("<span></span>"));

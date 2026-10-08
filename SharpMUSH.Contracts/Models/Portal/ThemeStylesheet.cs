@@ -71,6 +71,7 @@ public static partial class ThemeStylesheet
 			(ThemeTokens.Text, "Body text."),
 			(ThemeTokens.TextDim, "Secondary text."),
 			(ThemeTokens.TextFaint, "Hints and timestamps."),
+			("rail-ink", "Icons on the icon rail; derived from secondary text so it reads on the rail."),
 			("title-color", "Page and card titles."),
 			("code-text", "Text in code blocks."),
 		]),
@@ -80,6 +81,8 @@ public static partial class ThemeStylesheet
 		]),
 		("Accent", [
 			(ThemeTokens.Accent, "Links, the current item, primary buttons. A character's own accent replaces it."),
+			(ThemeTokens.Accent2, "The first decorative colour: drawings only, never text."),
+			(ThemeTokens.Accent3, "The second decorative colour: drawings only, never text."),
 			("accent-dim", "The accent's quieter shade."),
 			("accent-on", "Text on an accent fill."),
 		]),
@@ -124,8 +127,16 @@ public static partial class ThemeStylesheet
 			("title-style", "Titles' style: normal or italic."),
 		]),
 		("Decoration", [
-			("texture", "The page texture, layered over the background."),
-			("texture-size", "The texture's background-size."),
+			("texture", "The page texture's gradient layers, over the background."),
+			("texture-size", "Their background-size."),
+			("texture-opacity", "How strongly the whole texture shows."),
+			("texture-mask-text", "A drawing on the page filled with the text colour (a mask: url(/themes/drawings/...) and its size)."),
+			("texture-mask-accent", "The same, filled with the accent. --texture-ink-accent is the colour, to make it fainter."),
+			("texture-mask-accent-2", "The same, filled with the first decorative colour."),
+			("texture-mask-accent-3", "The same, filled with the second decorative colour."),
+			("texture-mask-border", "The same, filled with the border colour."),
+			("card-marks", "Gradient layers drawn on every card, over its surface."),
+			("card-mask-text", "A drawing on every card filled with the text colour; -accent, -accent-2, -accent-3, -border and -grain likewise."),
 			("ornament-before", "A glyph before page titles."),
 			("ornament-after", "A glyph after page titles."),
 			("title-underline", "The rule under page titles."),
@@ -276,9 +287,10 @@ public static partial class ThemeStylesheet
 	/// <summary>
 	/// A stylesheet to start from, which changes nothing until it is edited: what goes where, every variable the portal
 	/// paints with at <paramref name="theme"/>'s value (commented out), and an empty rule for each of
-	/// <see cref="Hooks"/> with what it reaches.
+	/// <see cref="Hooks"/> with what it reaches. Given the portal's parts CSS (<c>css/themes/</c>), it also lists the
+	/// rules <paramref name="theme"/>'s parts apply, as <c>:root</c> rules to start from (<see cref="PartRules"/>).
 	/// </summary>
-	public static string Starter(ResolvedTheme theme)
+	public static string Starter(ResolvedTheme theme, string? partsCss = null)
 	{
 		var css = new StringBuilder();
 		css.Append(CultureInfo.InvariantCulture, $"/* {theme.Name.Replace("*/", "* /", StringComparison.Ordinal)}: the theme's own stylesheet.\n");
@@ -313,14 +325,29 @@ public static partial class ThemeStylesheet
 			{
 				var value = theme.Tokens.TryGetValue(name, out var set) ? set : SheetDefaults.GetValueOrDefault(name);
 				css.Append(CultureInfo.InvariantCulture, $"\t/* {what} */\n");
-				// Drawings (textures, frames) are long data URLs: name the property and leave its value to the style choice.
+				// A part's variables are set by the rules under the theme's parts, below; name them here.
 				css.Append(value is null || value.Length > 120 || value.Contains("*/", StringComparison.Ordinal)
-					? $"\t/* --{name}: (the style choice's); */\n"
+					? $"\t/* --{name}: (set by the theme's parts); */\n"
 					: $"\t/* --{name}: {value}; */\n");
 			}
 		}
 
 		css.Append("}\n");
+
+		if (PartRules(partsCss, theme.Parts) is { Count: > 0 } rules)
+		{
+			css.Append("""
+
+				/* The rules this theme's parts apply, from css/themes/. Remove the comment marks around one to
+				   make it the theme's own and change it; a later rule wins over an earlier one. Any drawing under
+				   /themes/drawings/ can be used the same way. */
+
+				""");
+			foreach (var rule in rules)
+			{
+				css.Append("/* ").Append(rule).Append(" */\n");
+			}
+		}
 
 		var number = 2;
 		foreach (var section in Hooks.GroupBy(h => h.Section switch { "Page headers" => "Cards", var s => s }))
@@ -334,6 +361,35 @@ public static partial class ThemeStylesheet
 		}
 
 		return css.ToString();
+	}
+
+	/// <summary>
+	/// The rules in <paramref name="partsCss"/> that apply to a page with <paramref name="parts"/> (its data attributes,
+	/// without <c>data-</c>), in order, each written as a <c>:root</c> rule. A rule applies when one of its selectors is
+	/// only attribute selectors on <c>data-</c> parts and every one of them matches.
+	/// </summary>
+	public static IReadOnlyList<string> PartRules(string? partsCss, IReadOnlyDictionary<string, string> parts)
+	{
+		if (string.IsNullOrWhiteSpace(partsCss) || !TryStripComments(partsCss, out var bare))
+		{
+			return [];
+		}
+
+		bool Applies(string selector)
+		{
+			var attributes = PartSelectorPattern().Matches(selector);
+			return attributes.Count > 0
+				&& string.IsNullOrWhiteSpace(PartSelectorPattern().Replace(selector, string.Empty))
+				&& attributes.All(a => parts.TryGetValue(a.Groups["name"].Value, out var value) && value == a.Groups["value"].Value);
+		}
+
+		return RulePattern().Matches(bare)
+			.Where(rule => rule.Groups["selector"].Value.Split(',').Any(Applies))
+			.Select(rule => ":root {\n" + string.Concat(rule.Groups["body"].Value.Split(';')
+				.Select(d => d.Trim())
+				.Where(d => d.Length > 0)
+				.Select(d => $"\t{d};\n")) + "}")
+			.ToList();
 	}
 
 	private static readonly (Regex Pattern, string What)[] Forbidden =
@@ -473,6 +529,12 @@ public static partial class ThemeStylesheet
 
 	[GeneratedRegex(@"\burl\(\s*(?<target>""[^""]*""|'[^']*'|[^)]*)\s*\)")]
 	private static partial Regex UrlPattern();
+
+	[GeneratedRegex(@"(?<selector>[^{}]+)\{(?<body>[^{}]*)\}")]
+	private static partial Regex RulePattern();
+
+	[GeneratedRegex(@"\[data-(?<name>[a-z0-9-]+)=""(?<value>[^""]*)""\]")]
+	private static partial Regex PartSelectorPattern();
 
 	[GeneratedRegex(@"(?<![\w-]):root\s*\{(?<body>[^{}]*)\}", RegexOptions.IgnoreCase)]
 	private static partial Regex RootRulePattern();
