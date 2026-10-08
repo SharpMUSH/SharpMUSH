@@ -7,7 +7,7 @@ using SharpMUSH.Library.Plugins;
 namespace HelloUiPlugin;
 
 /// <summary>
-/// A minimal end-to-end <b>UI plugin</b> example, shipped as a Phase-4 <c>kind: managed</c> package.
+/// A minimal end-to-end <b>UI plugin</b> example, shipped as a Phase-4 <c>kind: plugin</c> package.
 ///
 /// <para>It wires together three plugin seams in one assembly:</para>
 /// <list type="number">

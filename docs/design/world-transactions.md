@@ -34,8 +34,8 @@ cover.
 
 ### The contract
 
-This covers softcode and application packages. Managed packages (plugin binaries) are outside it;
-see *Managed packages* below.
+This covers softcode and application packages. Plugin packages (plugin binaries) are outside it;
+see *Plugin packages* below.
 
 An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. The
 operation commits with its last write, made straight to the registry: the revision record for an
@@ -89,21 +89,24 @@ operation's entry, never inside it.
    by the package-manager wizard, not listed by the package), then re-run the apply, rollback or
    uninstall (`force` for an uninstall whose dependents or attachments block it).
 
-### Managed packages
+### Plugin packages
 
-A managed package's apply and uninstall do not go through `PackageWriteTransaction`, and nothing
+A plugin package's apply and uninstall do not go through `PackageWriteTransaction`, and nothing
 reverts them. They change files first and the registry second:
 
-- **Apply** (`ManagedPackageInstaller.DeployAsync`) deletes `plugins/<id>/`, writes the verified
-  binaries into it, and then records the installed-package row, dependencies and revision.
-- **Uninstall** deletes `plugins/<id>/` and then removes the package's rows.
+- **Apply** (`PluginPackageInstaller.DeployAsync`) writes the verified binaries into a
+  `.incoming-<id>-<guid>` staging folder beside the installed plugins, replaces
+  `<installed plugins>/<id>/` with it once every file is written, and then records the
+  installed-package row, dependencies and revision.
+- **Uninstall** deletes `<installed plugins>/<id>/` and then removes the package's rows.
 
-A failure or crash between the two leaves the directory and the registry disagreeing: a partial
-or new set of binaries under an old registry row, or a registry row whose directory is gone. The
-plugin loader reads `plugins/<id>/` on the next boot. `@backup` copies the world only, not
-`plugins/`, so restoring a backup does not repair this. Both steps are safe to repeat, since
-deploy replaces the whole directory and removal checks it exists. To recover, re-run the install
-of the version you want, or re-run the uninstall, before relying on the plugin again.
+A failure or crash between the two leaves the folder and the registry disagreeing: a new set of
+binaries under an old registry row, or a registry row whose folder is gone. A crash while writing
+leaves only a staging folder, which the loader never reads (it skips folders starting with `.`).
+The plugin loader reads `<installed plugins>/<id>/` on the next start. `@backup` copies the world
+only, not the plugins folder, so restoring a backup does not repair this. Both steps are safe to
+repeat, since deploy replaces the whole folder and removal checks it exists. To recover, re-run
+the install of the version you want, or re-run the uninstall, before relying on the plugin again.
 
 ### Follow-ups this decision left
 

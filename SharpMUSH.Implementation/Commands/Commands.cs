@@ -84,6 +84,11 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IWorldBackupService WorldBackupService { get; }
 
+	private IServerRestart ServerRestart { get; }
+
+	/// <summary>Lazy: the plugin administration reaches the package installer, which runs softcode through the parser.</summary>
+	private Lazy<IPluginAdministration> PluginAdministration { get; }
+
 	private IStorageCapacityService StorageCapacity { get; }
 
 	private IHistoryRetentionService HistoryRetention { get; }
@@ -151,6 +156,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
 		IWorldBackupService worldBackupService,
+		IServerRestart serverRestart,
+		Lazy<IPluginAdministration> pluginAdministration,
 		IStorageCapacityService storageCapacity,
 		IHistoryRetentionService historyRetention,
 		IBooleanExpressionParser booleanExpressionParser,
@@ -203,6 +210,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
 		WorldBackupService = worldBackupService;
+		ServerRestart = serverRestart;
+		PluginAdministration = pluginAdministration;
 		StorageCapacity = storageCapacity;
 		HistoryRetention = historyRetention;
 		BooleanExpressionParser = booleanExpressionParser;

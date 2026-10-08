@@ -72,6 +72,8 @@ Key environment variables:
 - `SHARPMUSH_DATABASE_PROVIDER` — accepts only `lightning` (the default when unset); any other value fails startup
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
+- `SHARPMUSH_PLUGINS_PATH` — directory for plugins installed from plugin packages, one folder per plugin id, plus `plugins.state.json` and `.uploads/` (default: `<world path>.plugins`, beside the world so an image update keeps them); shipped plugins stay in `<app>/plugins/`
+- `SHARPMUSH_PLUGIN_INSTALL` — whether the server installs plugin packages at all, from a remote or by portal upload (default: on; only `false` turns it off). Each apply still needs the administrator's `AllowPluginCode` confirmation
 - `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`)
 - `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
 - `SHARPMUSH_BACKUP_PACKAGE_KEEP` — how many automatic copies taken before a portal package apply/rollback/uninstall stay, in `<backup path>/pre-package`, counted apart from the others (default: 2; `0` turns them off)

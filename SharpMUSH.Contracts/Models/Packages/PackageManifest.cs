@@ -20,9 +20,9 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Dependencies">Packages this package requires, with version constraints.</param>
 /// <param name="Configure"><c>{{?configure}}</c> parameters the installing admin supplies, keyed by name.</param>
 /// <param name="Objects">Objects the package manages, in manifest order (empty for <see cref="PackageKind.Application"/> packages).</param>
-/// <param name="Kind">Package kind: a softcode package (objects/attributes), an application package (a portal registration), or a managed package (a C# plugin DLL).</param>
+/// <param name="Kind">Package kind: a softcode package (objects/attributes), an application package (a portal registration), or a plugin package (a compiled C# plugin).</param>
 /// <param name="Application">The dynamic-application registration this package installs, when <see cref="Kind"/> is <see cref="PackageKind.Application"/>; otherwise null.</param>
-/// <param name="Binary">The compiled plugin DLL(s) this package carries, when <see cref="Kind"/> is <see cref="PackageKind.Managed"/>; otherwise null.</param>
+/// <param name="Binary">The compiled plugin DLL(s) this package carries, when <see cref="Kind"/> is <see cref="PackageKind.Plugin"/>; otherwise null.</param>
 /// <param name="Declarations">The roles, permissions and categories the package declares, or null for none (see <see cref="Declared"/>).</param>
 /// <param name="Settings">The configuration options the package sets (<c>settings:</c>, format 1.3), or null for none.</param>
 public sealed record PackageManifest(
@@ -57,9 +57,8 @@ public sealed record PackageManifest(
 /// An <see cref="Application"/> package carries no objects of its own — it
 /// registers a Dynamic Application (Area 21) in the portal and <c>depends</c>
 /// on the softcode package that provides its HTTP-handler routes. A
-/// <see cref="Managed"/> package distributes a compiled C# plugin DLL (Phase 4
-/// of the plugin system): installing it verifies the carried binaries against
-/// SHA-256 hashes in the manifest and, once the operator opts in (managed code
+/// <see cref="Plugin"/> package distributes a compiled C# plugin DLL: installing it verifies the carried binaries against
+/// SHA-256 hashes in the manifest and, once the operator opts in (plugin code
 /// runs in full server trust), deposits them into <c>plugins/&lt;id&gt;/</c> for
 /// the plugin loader to pick up on the next boot.
 /// </summary>
@@ -72,11 +71,11 @@ public enum PackageKind
 	Application,
 
 	/// <summary>A compiled C# plugin DLL. Requires <c>binaries:</c>; forbids <c>objects:</c>/<c>application:</c>.</summary>
-	Managed
+	Plugin
 }
 
 /// <summary>
-/// The binary payload a <see cref="PackageKind.Managed"/> package carries: the
+/// The binary payload a <see cref="PackageKind.Plugin"/> package carries: the
 /// hashed plugin DLL(s) (and optional dependency assemblies / <c>plugin.json</c>)
 /// shipped alongside <c>package.yaml</c> in the package source, plus the minimum
 /// server/plugin-contract version they were built against. Each file is verified

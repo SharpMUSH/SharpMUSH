@@ -13,6 +13,8 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Plugins;
+using SharpMUSH.Tests.Plugins;
 
 namespace SharpMUSH.Tests.Packages;
 
@@ -47,48 +49,34 @@ public class PackageInstallAdmissionTests
 		PackageManifestFailure failure => throw new InvalidOperationException(string.Join("; ", failure.Issues))
 	};
 
-	private static string CommandOnlyDllPath =>
-		Path.Join(AppContext.BaseDirectory, "plugins-unit", "command-only", "CommandOnlyPlugin.dll");
-
-	private static readonly string CommandOnlySha =
-		Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(CommandOnlyDllPath))).ToLowerInvariant();
-
-	private sealed class FixtureBinarySource : IManagedPackageBinarySource
-	{
-		public async Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default) =>
-			fileName == "CommandOnlyPlugin.dll" ? await File.ReadAllBytesAsync(CommandOnlyDllPath, cancellationToken) : null;
-	}
 
 	/// <summary>A scratch plugins root and an installer whose managed deployments land in it, trusting every id.</summary>
 	private sealed class ManagedScope : IDisposable
 	{
-		public required string PluginsRoot { get; init; }
+		public required PluginDirectories Directories { get; init; }
 		public required PackageInstallService Installer { get; init; }
 
-		public bool Deposited(string packageId) => Directory.Exists(Path.Join(PluginsRoot, packageId));
+		public bool Deposited(string packageId) => Directory.Exists(Path.Join(Directories.Installed, packageId));
 
 		public void Dispose()
 		{
-			if (Directory.Exists(PluginsRoot))
-			{
-				Directory.Delete(PluginsRoot, true);
-			}
+			PluginPackageFixture.Delete(Directories);
 		}
 	}
 
 	private ManagedScope CreateManagedScope()
 	{
-		var pluginsRoot = Path.Join(Path.GetTempPath(), $"mpkg-admission-{Guid.NewGuid():N}");
+		var directories = PluginPackageFixture.ScratchDirectories();
 		var services = WebAppFactoryArg.Services;
-		var managedInstaller = new ManagedPackageInstaller(
+		var managedInstaller = new PluginPackageInstaller(
 			services.GetRequiredService<IPluginManager>(),
-			new ManagedPackageTrustOptions(true, []),
-			NullLogger<ManagedPackageInstaller>.Instance,
-			pluginsRoot);
+			PluginPackageFixture.Allowed,
+			directories,
+			NullLogger<PluginPackageInstaller>.Instance);
 
 		return new ManagedScope
 		{
-			PluginsRoot = pluginsRoot,
+			Directories = directories,
 			Installer = new PackageInstallService(
 				Database, Database, Database, Database, Registry, Applications,
 				services.GetRequiredService<IPackagePlanService>(),
@@ -104,17 +92,8 @@ public class PackageInstallAdmissionTests
 		};
 	}
 
-	private PackageManifest ManagedManifest(string id, string version, string relations = "") => Parse($"""
-		package: {id}
-		version: "{version}"
-		kind: managed
-		{relations}
-		binaries:
-		  min_server_version: ">=1.0"
-		  files:
-		    - file: CommandOnlyPlugin.dll
-		      sha256: {CommandOnlySha}
-		""");
+	private PackageManifest ManagedManifest(string id, string version, string relations = "") =>
+		Parse(PluginPackageFixture.Yaml(id, version, relations));
 
 	private async Task InstallSoftcodeAsync(string id, string version)
 	{
@@ -148,7 +127,7 @@ public class PackageInstallAdmissionTests
 			""");
 
 		var result = await scope.Installer.ApplyAsync(
-			manifest, Request(allowManagedCode: true), CancellationToken.None, new FixtureBinarySource());
+			manifest, Request(allowManagedCode: true), CancellationToken.None, new PluginPackageFixture.BinarySource(manifest.Name));
 
 		await Assert.That(result.Expect<Error<string>>().Value).Contains("requires adm-absent-dependency");
 		await Assert.That(scope.Deposited("adm-managed-missing")).IsFalse();
@@ -168,7 +147,7 @@ public class PackageInstallAdmissionTests
 				""");
 
 			var result = await scope.Installer.ApplyAsync(
-				manifest, Request(allowManagedCode: true), CancellationToken.None, new FixtureBinarySource());
+				manifest, Request(allowManagedCode: true), CancellationToken.None, new PluginPackageFixture.BinarySource(manifest.Name));
 
 			await Assert.That(result.Expect<Error<string>>().Value).Contains("installed: 1.0.0");
 			await Assert.That(scope.Deposited("adm-managed-incompatible")).IsFalse();
@@ -193,7 +172,7 @@ public class PackageInstallAdmissionTests
 				""");
 
 			var result = await scope.Installer.ApplyAsync(
-				manifest, Request(allowManagedCode: true), CancellationToken.None, new FixtureBinarySource());
+				manifest, Request(allowManagedCode: true), CancellationToken.None, new PluginPackageFixture.BinarySource(manifest.Name));
 
 			await Assert.That(result.Expect<Error<string>>().Value).Contains("conflicts with installed adm-rival");
 			await Assert.That(scope.Deposited("adm-managed-conflict")).IsFalse();
@@ -220,7 +199,7 @@ public class PackageInstallAdmissionTests
 				""");
 
 			var result = await scope.Installer.ApplyAsync(
-				manifest, Request(allowManagedCode: true), CancellationToken.None, new FixtureBinarySource());
+				manifest, Request(allowManagedCode: true), CancellationToken.None, new PluginPackageFixture.BinarySource(manifest.Name));
 
 			await Assert.That(result.Value).IsTypeOf<PackageApplyResult>();
 			await Assert.That(scope.Deposited("adm-managed-happy")).IsTrue();
@@ -355,9 +334,9 @@ public class PackageInstallAdmissionTests
 		using var scope = CreateManagedScope();
 		var id = "adm-managed-rollback";
 		await Assert.That((await scope.Installer.ApplyAsync(ManagedManifest(id, "1.0.0"), Request(allowManagedCode: true),
-			CancellationToken.None, new FixtureBinarySource())).Value).IsTypeOf<PackageApplyResult>();
+			CancellationToken.None, new PluginPackageFixture.BinarySource(id))).Value).IsTypeOf<PackageApplyResult>();
 		await Assert.That((await scope.Installer.ApplyAsync(ManagedManifest(id, "2.0.0"), Request(allowManagedCode: true, commit: "commit-2"),
-			CancellationToken.None, new FixtureBinarySource())).Value).IsTypeOf<PackageApplyResult>();
+			CancellationToken.None, new PluginPackageFixture.BinarySource(id))).Value).IsTypeOf<PackageApplyResult>();
 
 		var result = await scope.Installer.RollbackAsync(id, 1);
 

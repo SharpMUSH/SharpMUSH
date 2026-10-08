@@ -61,4 +61,21 @@ public class ControllerAuthorizationTests
 			.ToList();
 		await Assert.That(anonymous).IsEmpty();
 	}
+
+	[Test]
+	public async Task PackagePluginsController_IsGatedOnPackagesAdmin()
+	{
+		await Assert.That(ClassAuthorize<PackagePluginsController>()?.Policy).IsEqualTo(PortalPermission.PackagesAdmin);
+		await Assert.That(typeof(PackagePluginsController).GetMethods()
+			.Any(method => Attribute.IsDefined(method, typeof(AllowAnonymousAttribute)))).IsFalse();
+	}
+
+	/// <summary>The portal's restart needs what <c>@shutdown/reboot</c> needs.</summary>
+	[Test]
+	public async Task ServerRestartController_IsGatedOnServerOperate()
+	{
+		await Assert.That(ClassAuthorize<ServerRestartController>()?.Policy).IsEqualTo(PortalPermission.ServerOperate);
+		await Assert.That(typeof(ServerRestartController).GetMethods()
+			.Any(method => Attribute.IsDefined(method, typeof(AllowAnonymousAttribute)))).IsFalse();
+	}
 }

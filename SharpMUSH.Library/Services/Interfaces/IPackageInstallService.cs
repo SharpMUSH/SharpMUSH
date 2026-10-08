@@ -28,7 +28,7 @@ public interface IPackageInstallService
 	/// state plus a revision snapshot. Fails without writing when the plan is
 	/// blocked or a conflict is undecided.
 	///
-	/// <para>For a <see cref="PackageKind.Managed"/> package (Phase 4 — a compiled
+	/// <para>For a <see cref="PackageKind.Plugin"/> package (Phase 4 — a compiled
 	/// C# plugin DLL), this instead verifies and deposits the carried binaries via
 	/// <paramref name="binarySource"/> into <c>plugins/&lt;id&gt;/</c> (subject to the
 	/// trust gate on <paramref name="request"/>) and records the deployed file
@@ -39,7 +39,7 @@ public interface IPackageInstallService
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
-		IManagedPackageBinarySource? binarySource = null);
+		IPluginPackageBinarySource? binarySource = null);
 
 	/// <summary>
 	/// Uninstalls a package: blocks when dependents exist (unless

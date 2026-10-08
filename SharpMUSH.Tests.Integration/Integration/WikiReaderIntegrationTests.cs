@@ -94,7 +94,9 @@ public class WikiReaderIntegrationTests
 				WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
 				installer,
 				WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
-				WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>());
+				WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
+				WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
+				WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>());
 			var applied = await controller.Apply(
 				new ApplyRequest(BundledPackages.RemoteName, "wiki-reader", null, null, null), CancellationToken.None);
 			await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("wiki-reader must install for +wiki to answer");
@@ -144,7 +146,9 @@ public class WikiReaderIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
-			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>());
+			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "wiki-reader", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("wiki-reader must install for +wiki to answer");

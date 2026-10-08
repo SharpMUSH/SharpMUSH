@@ -14,6 +14,7 @@ public sealed record InstalledPackageRecord
 	public string[]? DeployedFiles { get; init; }
 	public string? Owned { get; init; }
 	public string? Settings { get; init; }
+	public string? Kind { get; init; }
 }
 
 /// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.PackageObjectRecord</c>.</summary>

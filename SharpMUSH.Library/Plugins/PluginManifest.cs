@@ -19,10 +19,23 @@ namespace SharpMUSH.Library.Plugins;
 /// The host already has these loaded (it references the providers), so sharing by name works without the
 /// plugin framework referencing the client packages. Null/absent means none.
 /// </param>
+/// <param name="Entry">
+/// The file name of the assembly holding the <c>[SharpPlugin]</c> entry type. Needed when the plugin's folder
+/// carries more than one DLL; with exactly one, that one is the entry.
+/// </param>
+/// <param name="Name">The name the portal and <c>@plugin</c> show, or null to show the id.</param>
+/// <param name="Description">One line on what the plugin adds, or null.</param>
 public sealed record PluginManifest(
 	string Id,
 	string Version,
 	IReadOnlyList<string> Dependencies,
 	int Priority,
 	string? MinServerVersion,
-	IReadOnlyList<string>? SharedAssemblies = null);
+	IReadOnlyList<string>? SharedAssemblies = null,
+	string? Entry = null,
+	string? Name = null,
+	string? Description = null)
+{
+	/// <summary>The file a plugin package carries its manifest in.</summary>
+	public const string FileName = "plugin.json";
+}

@@ -67,7 +67,7 @@ public interface IPackageSourceService
 	/// the SHA-256 the manifest signed off on). The installer asks it for each
 	/// declared file name and verifies the hash before depositing.
 	/// </summary>
-	Task<Result<IManagedPackageBinarySource>> GetBinarySourceAsync(
+	Task<Result<IPluginPackageBinarySource>> GetBinarySourceAsync(
 		PackageRemoteRecord remote, string path, string commit,
 		CancellationToken cancellationToken = default);
 }

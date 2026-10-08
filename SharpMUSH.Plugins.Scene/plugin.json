@@ -1,5 +1,8 @@
 {
   "id": "scene",
+  "name": "Scene System",
+  "description": "Scenes, poses and pose order: the +scene commands, the scene functions and the portal's scene pages.",
+  "entry": "SharpMUSH.Plugins.Scene.dll",
   "version": "1.0.0",
   "dependencies": [],
   "priority": 0,

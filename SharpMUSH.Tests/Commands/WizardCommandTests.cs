@@ -926,9 +926,12 @@ public class WizardCommandTests
 	public async ValueTask ShutdownRebootCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var restarts = (RecordingServerRestart)WebAppFactoryArg.Services.GetRequiredService<IServerRestart>();
+		var before = restarts.Requests;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@shutdown/reboot"));
 
-		// /reboot switch → ShutdownRebootInitiated is sent in the REBOOT branch.
+		// /reboot asks the host to restart (a test host records it) and says so.
+		await Assert.That(restarts.Requests).IsGreaterThan(before);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor, executor)).IsTrue();
 	}
 

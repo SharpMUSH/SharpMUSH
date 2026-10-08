@@ -17,6 +17,16 @@
             <CapsuleButton Icon="@Icons.Material.Filled.TravelExplore" Href="/admin/packages/browse">@Loc["PkgBrowse"]</CapsuleButton>
             <CapsuleButton Icon="@Icons.Material.Filled.Cloud" Href="/admin/packages/remotes">@Loc["PkgRemotes"]</CapsuleButton>
             <CapsuleButton Icon="@Icons.Material.Filled.Edit" Href="/admin/packages/author">@Loc["PkgAuthor"]</CapsuleButton>
+            @if (_plugins?.InstallAllowed == true)
+            {
+                <MudFileUpload T="IBrowserFile" Accept=".zip" FilesChanged="@UploadPluginAsync" MaximumFileCount="1"
+                               MaxFileSize="@MaxPluginUploadBytes" Disabled="@_busy" Class="pkg-upload">
+                    <CustomContent Context="upload">
+                        <CapsuleButton Icon="@Icons.Material.Filled.Extension" Disabled="@_busy"
+                                       OnClick="@upload.OpenFilePickerAsync">@Loc["PkgUploadPlugin"]</CapsuleButton>
+                    </CustomContent>
+                </MudFileUpload>
+            }
             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" AriaLabel="@Loc["Refresh"]" OnClick="ReloadAsync" Disabled="_busy" />
         </Actions>
     </PlainPageHeader>
@@ -49,6 +59,11 @@
                     @Loc["PkgUpdates"]
                     <span class="pkg-tab-count">@updatesAvailable</span>
                 </button>
+                <button type="button" class="pkg-tab @(_tab == PkgTab.Plugins ? "active" : "")" aria-pressed="@(_tab == PkgTab.Plugins ? "true" : "false")"
+                        @onclick="@(() => _tab = PkgTab.Plugins)">
+                    @Loc["PkgPlugins"]
+                    <span class="pkg-tab-count">@(_plugins?.Plugins.Count.ToString() ?? "—")</span>
+                </button>
                 <div class="pkg-tabs-spacer"></div>
                 <div class="pkg-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Class="pkg-search-icon" />
@@ -63,6 +78,10 @@
             {
                 <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
                 @for (var i = 0; i < 4; i++) { <MudSkeleton Height="64px" Class="mb-2" /> }
+            }
+            else if (_tab == PkgTab.Plugins)
+            {
+                @PluginList
             }
             else if (_installed.Count == 0)
             {
@@ -85,10 +104,15 @@
                         var p = pkg;
                         _updates.TryGetValue(p.Package.Id, out var update);
                         <div class="pkg-row">
-                            <MudIcon Icon="@Icons.Material.Filled.Archive" Class="pkg-row-icon" />
+                            <MudIcon Icon="@KindIcon(p.Package.Kind)" Class="@($"pkg-row-icon pkg-kind-{p.Package.Kind.ToString().ToLowerInvariant()}")"
+                                     Title="@KindName(p.Package.Kind)" />
                             <div class="pkg-row-main">
                                 <div class="pkg-row-tags">
                                     <span class="pkg-row-name">@p.Package.Id</span>
+                                    @if (p.Package.Kind != PackageKind.Softcode)
+                                    {
+                                        <Pill Tag="true">@KindName(p.Package.Kind)</Pill>
+                                    }
                                     <Pill Tag="true">v@(p.Package.Version)</Pill>
                                     @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
                                     {
@@ -212,8 +236,143 @@
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="_showDisable">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Loc["PkgPluginDisableTitle", _disableTarget?.Name ?? string.Empty]</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_disableTarget is { } target)
+        {
+            @if (target.Dependents.Count > 0)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-2">
+                    @Loc["PkgPluginDisableDependents", string.Join(", ", target.Dependents)]
+                </MudAlert>
+            }
+            <MudText>@(target.Unloadable ? Loc["PkgPluginStopsNow", target.Name] : Loc["PkgPluginStopsAtRestart", target.Name])</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDisable = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" Disabled="@_busy" OnClick="@DisablePluginAsync">
+            @Loc["PkgPluginTurnOff"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showRestart">
+    <TitleContent><MudText Typo="Typo.h6">@Loc["PkgRestartTitle"]</MudText></TitleContent>
+    <DialogContent><MudText>@Loc["PkgRestartBody"]</MudText></DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showRestart = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Warning" Variant="Variant.Filled" Disabled="@_busy" OnClick="@RestartAsync">
+            @Loc["PkgRestart"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
-    private enum PkgTab { Installed, Updates }
+    private enum PkgTab { Installed, Updates, Plugins }
+
+    /// <summary>The largest plugin upload the server accepts (<c>PluginUploadStore.MaxUploadBytes</c>).</summary>
+    private const long MaxPluginUploadBytes = 20 * 1024 * 1024;
+
+    private PluginsResponse? _plugins;
+
+    private bool _showDisable;
+    private PluginStatusDto? _disableTarget;
+    private bool _showRestart;
+    private bool _restarting;
+
+    private RenderFragment PluginList => __builder =>
+    {
+        if (_plugins is null)
+        {
+            <EmptyState>@Loc["PkgPluginsUnavailable"]</EmptyState>
+        }
+        else if (_restarting)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-2">@Loc["PkgRestarting"]</MudAlert>
+        }
+        else if (_plugins.RestartPending)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-2">
+                <div class="pkg-restart-banner">
+                    <span>@Loc["PkgRestartPending"]</span>
+                    <AuthorizeView Policy="server.operate" Context="serverOperator">
+                        <Authorized>
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.RestartAlt"
+                                       Disabled="@_busy" OnClick="@(() => _showRestart = true)">@Loc["PkgRestart"]</MudButton>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            </MudAlert>
+        }
+
+        if (_plugins is { Plugins.Count: 0 })
+        {
+            <EmptyState>@Loc["PkgNoPlugins"]</EmptyState>
+        }
+        else if (_plugins is not null)
+        {
+        <div class="pkg-rows">
+            @foreach (var plugin in _plugins.Plugins)
+            {
+                var pl = plugin;
+                <div class="pkg-row">
+                    <MudIcon Icon="@Icons.Material.Filled.Extension" Class="pkg-row-icon pkg-kind-plugin" />
+                    <div class="pkg-row-main">
+                        <div class="pkg-row-tags">
+                            <span class="pkg-row-name">@pl.Name</span>
+                            @if (!string.Equals(pl.Name, pl.Id, StringComparison.Ordinal))
+                            {
+                                <Pill Tag="true">@pl.Id</Pill>
+                            }
+                            @if (pl.Version is not null)
+                            {
+                                <Pill Tag="true">v@(pl.Version)</Pill>
+                            }
+                            <Pill Tag="true">@OriginLabel(pl)</Pill>
+                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(pl.Status)">@StatusLabel(pl.Status)</MudChip>
+                            @if (pl.Pending != PluginPendingChange.None)
+                            {
+                                <Pill Tag="true" Warn="true">
+                                    @(pl.Pending == PluginPendingChange.Starts ? Loc["PkgPluginStartsAtRestart"] : Loc["PkgPluginStopsAtRestartShort"])
+                                </Pill>
+                            }
+                        </div>
+                        <div class="pkg-row-meta">
+                            @if (pl.Description is not null)
+                            {
+                                <span>@pl.Description</span>
+                            }
+                            @if (pl.Status == PluginBootStatus.Loaded)
+                            {
+                                <span>@Loc["PkgPluginAdds", pl.Commands, pl.Functions]</span>
+                            }
+                            @if (pl.Dependents.Count > 0)
+                            {
+                                <span>@Loc["PkgRequiredBy", string.Join(", ", pl.Dependents)]</span>
+                            }
+                            @if (pl.Reason is not null)
+                            {
+                                <span class="pkg-row-reason">@pl.Reason</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="pkg-row-actions">
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@(_busy || _restarting)"
+                                   Color="@(pl.Enabled ? Color.Error : Color.Primary)"
+                                   aria-label="@Loc[pl.Enabled ? "PkgPluginTurnOffNamed" : "PkgPluginTurnOnNamed", pl.Name]"
+                                   OnClick="@(() => TogglePluginAsync(pl, !pl.Enabled))">
+                            @(pl.Enabled ? Loc["PkgPluginTurnOff"] : Loc["PkgPluginTurnOn"])
+                        </MudButton>
+                    </div>
+                </div>
+            }
+        </div>
+        }
+    };
 
     private IReadOnlyList<InstalledPackageDto>? _installed;
 
@@ -261,6 +420,8 @@
             IReadOnlyList<PackageRemoteRecord> remotes => remotes.Count,
             ApiFailure => null
         };
+
+        await ReloadPluginsAsync();
 
         IReadOnlyList<InstalledPackageDto> Failed(ApiFailure failure)
         {
@@ -352,6 +513,135 @@
         }
         finally { _busy = false; }
     }
+
+    private async Task ReloadPluginsAsync() =>
+        _plugins = await Packages.GetPluginsAsync() switch
+        {
+            PluginsResponse plugins => plugins,
+            ApiFailure => null
+        };
+
+    private async Task TogglePluginAsync(PluginStatusDto plugin, bool on)
+    {
+        if (!on)
+        {
+            _disableTarget = plugin;
+            _showDisable = true;
+            return;
+        }
+
+        await SetPluginEnabledAsync(plugin, true);
+    }
+
+    private async Task DisablePluginAsync()
+    {
+        if (_disableTarget is not { } target) return;
+        await SetPluginEnabledAsync(target, false);
+        _showDisable = false;
+    }
+
+    private async Task SetPluginEnabledAsync(PluginStatusDto plugin, bool on)
+    {
+        _busy = true;
+        try
+        {
+            switch (await Packages.SetPluginEnabledAsync(plugin.Id, on))
+            {
+                case ApiFailure failure:
+                    Snackbar.Add(failure.Message, Severity.Error);
+                    break;
+                case PluginChangeResponse change:
+                    Snackbar.Add(on ? Loc["PkgPluginTurnedOn", change.Plugin.Name] : Loc["PkgPluginTurnedOff", change.Plugin.Name], Severity.Success);
+                    foreach (var removed in change.RemovedPackages)
+                        Snackbar.Add(Loc["PkgUninstalled", removed], Severity.Info);
+                    foreach (var note in change.Notes)
+                        Snackbar.Add(note, Severity.Info);
+                    break;
+            }
+
+            await ReloadAsync();
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task RestartAsync()
+    {
+        _busy = true;
+        try
+        {
+            if (await Packages.RestartServerAsync() is ApiFailure failure)
+            {
+                Snackbar.Add(failure.Message, Severity.Error);
+                return;
+            }
+
+            _showRestart = false;
+            _restarting = true;
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task UploadPluginAsync(IBrowserFile? file)
+    {
+        if (file is null) return;
+        _busy = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: MaxPluginUploadBytes);
+            switch (await Packages.UploadPluginAsync(stream, file.Name))
+            {
+                case ApiFailure failure:
+                    Snackbar.Add(failure.Message, Severity.Error);
+                    break;
+                case PluginUploadResponse staged:
+                    Nav.NavigateTo($"/admin/packages/review?remote={Uri.EscapeDataString(staged.Remote)}&path={Uri.EscapeDataString(staged.Path)}");
+                    break;
+            }
+        }
+        catch (IOException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally { _busy = false; }
+    }
+
+    private static string KindIcon(PackageKind kind) => kind switch
+    {
+        PackageKind.Application => Icons.Material.Filled.Apps,
+        PackageKind.Plugin => Icons.Material.Filled.Extension,
+        _ => Icons.Material.Filled.Archive
+    };
+
+    private string KindName(PackageKind kind) => kind switch
+    {
+        PackageKind.Application => Loc["PkgKindApplication"],
+        PackageKind.Plugin => Loc["PkgKindPlugin"],
+        _ => Loc["PkgKindSoftcode"]
+    };
+
+    private string OriginLabel(PluginStatusDto plugin) => plugin switch
+    {
+        { Origin: PluginOrigin.BuiltIn } => Loc["PkgPluginShipped"],
+        { Package: { } package } => Loc["PkgPluginFromPackage", package],
+        _ => Loc["PkgPluginFromFolder"]
+    };
+
+    private string StatusLabel(PluginBootStatus status) => status switch
+    {
+        PluginBootStatus.Loaded => Loc["PkgPluginRunning"],
+        PluginBootStatus.Disabled => Loc["PkgPluginOff"],
+        PluginBootStatus.Failed => Loc["PkgPluginFailed"],
+        PluginBootStatus.Incompatible => Loc["PkgPluginIncompatible"],
+        PluginBootStatus.Duplicate => Loc["PkgPluginDuplicate"],
+        _ => Loc["PkgPluginNotStarted"]
+    };
+
+    private static Color StatusColor(PluginBootStatus status) => status switch
+    {
+        PluginBootStatus.Loaded => Color.Success,
+        PluginBootStatus.Failed or PluginBootStatus.Incompatible or PluginBootStatus.Duplicate => Color.Error,
+        _ => Color.Default
+    };
 
     // RevisionDto.Kind is the wire string, so a revision written by a newer server may name a kind this
     // build has no PackageRevisionKind member (and no label) for; show it verbatim rather than guessing.

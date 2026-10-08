@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +30,9 @@ public class PackagesController(
 	IPackageManifestService manifests,
 	IPackageInstallService installer,
 	IPackageAuthoringService authoring,
-	IPackageOperationRunner operations) : ControllerBase
+	IPackageOperationRunner operations,
+	PluginUploadStore uploads,
+	IAuditLog audit) : ControllerBase
 {
 	/// <summary>The canonical official repo, used when no official remote is configured yet.</summary>
 	public const string DefaultOfficialRepoUrl = "https://github.com/SharpMUSH/SharpMUSH-Packages";
@@ -261,6 +264,12 @@ public class PackagesController(
 			return Ok(CatalogueUpdateInfo(installed));
 		}
 
+		// An uploaded package has nowhere to look for a newer version; the next one is another upload.
+		if (string.Equals(installed.SourceRepo, PluginUploadStore.SourceRepo, StringComparison.Ordinal))
+		{
+			return Ok(new PackageUpdateInfo(installed.Version, null, null, false, false, false));
+		}
+
 		var remotes = await registry.GetPackageRemotesAsync();
 		var remote = remotes.FirstOrDefault(r =>
 				string.Equals(r.Url, installed.SourceRepo, StringComparison.OrdinalIgnoreCase))
@@ -297,6 +306,11 @@ public class PackagesController(
 		if (BundledPackages.IsCatalogueRemote(request.Name))
 		{
 			return Conflict($"'{BundledPackages.RemoteName}' is reserved for the packages shipped with this server.");
+		}
+
+		if (PluginUploadStore.IsUploadRemote(request.Name))
+		{
+			return Conflict($"'{PluginUploadStore.RemoteName}' is reserved for uploaded plugin packages.");
 		}
 
 		if (string.IsNullOrWhiteSpace(request.Name) || !Uri.TryCreate(request.Url, UriKind.Absolute, out _))
@@ -357,7 +371,8 @@ public class PackagesController(
 	/// pattern flags. Read-only; re-run as configure answers arrive.
 	/// </summary>
 	[HttpPost("plan")]
-	public async Task<ActionResult<PlanResponse>> Plan([FromBody] PlanRequest request, CancellationToken cancellationToken)
+	public async Task<ActionResult<PlanResponse>> Plan([FromBody] PlanRequest request,
+		CancellationToken cancellationToken)
 		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
 			FetchedManifest fetched => await PlanManifestAsync(request, fetched, cancellationToken),
@@ -390,12 +405,13 @@ public class PackagesController(
 
 		return Ok(new PlanResponse(
 			manifest.Name, manifest.Version.ToString(), manifestSource.Commit,
-			changeset, configure, renders, warnings));
+			changeset, configure, renders, warnings, manifest.Kind, manifest.Binary));
 	}
 
 	/// <summary>Applies a reviewed plan (decision 20.8: never automatic — this is the explicit confirmation).</summary>
 	[HttpPost("apply")]
-	public async Task<ActionResult<ApplyResponse>> Apply([FromBody] ApplyRequest request, CancellationToken cancellationToken)
+	public async Task<ActionResult<ApplyResponse>> Apply([FromBody] ApplyRequest request,
+		CancellationToken cancellationToken)
 		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
 			FetchedManifest fetched => await ApplyManifestAsync(request, fetched, cancellationToken),
@@ -404,16 +420,22 @@ public class PackagesController(
 
 	/// <summary>Installs a fetched manifest from the remote it was fetched from.</summary>
 	private async Task<ActionResult<ApplyResponse>> ApplyManifestAsync(
-		ApplyRequest request, FetchedManifest fetched, CancellationToken cancellationToken)
+		ApplyRequest request, FetchedManifest fetched,
+		CancellationToken cancellationToken)
 	{
 		var (manifest, _, manifestSource) = fetched;
 
 		// FetchManifestAsync looked the remote up already, but it can be removed in between.
 		var isCatalogue = BundledPackages.IsCatalogueRemote(request.Remote);
+		var isUpload = PluginUploadStore.IsUploadRemote(request.Remote);
 		PackageRemoteRecord remote;
 		if (isCatalogue)
 		{
 			remote = CatalogueRemote;
+		}
+		else if (isUpload)
+		{
+			remote = new PackageRemoteRecord(PluginUploadStore.RemoteName, PluginUploadStore.SourceRepo, PackageRemoteTrust.Unknown, null);
 		}
 		else if (await registry.GetPackageRemoteAsync(request.Remote) is PackageRemoteRecord configured)
 		{
@@ -424,25 +446,34 @@ public class PackagesController(
 			return NotFound($"No configured remote named '{request.Remote}'.");
 		}
 
-		// Managed packages (Phase 4) carry a compiled DLL alongside package.yaml;
-		// resolve a binary reader over the same commit so the installer can verify
-		// and deposit the bytes. Softcode/application packages need none.
-		IManagedPackageBinarySource? binarySource = null;
-		if (manifest.Kind == PackageKind.Managed && isCatalogue)
+		// Plugin packages carry a compiled DLL alongside package.yaml; resolve a binary reader over
+		// the same commit (or the staged upload) so the installer can verify and deposit the bytes.
+		// Softcode/application packages need none.
+		IPluginPackageBinarySource? binarySource = null;
+		if (manifest.Kind == PackageKind.Plugin && isCatalogue)
 		{
 			// The catalogue embeds manifests, not DLLs: there is nothing to read the binaries out
-			// of. No bundled package is managed today, and this refuses rather than handing the
+			// of. No bundled package is a plugin package today, and this refuses rather than handing the
 			// installer a git source that would try to clone "bundled:sharpmush".
-			return BadRequest("A managed package cannot be installed from the bundled catalogue.");
+			return BadRequest("A plugin package cannot be installed from the bundled catalogue.");
 		}
 
-		if (manifest.Kind == PackageKind.Managed)
+		if (isUpload)
+		{
+			if (uploads.Binaries(request.Path) is not { } staged)
+			{
+				return NotFound("That upload is no longer waiting; upload the package again.");
+			}
+
+			binarySource = staged;
+		}
+		else if (manifest.Kind == PackageKind.Plugin)
 		{
 			switch (await source.GetBinarySourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken))
 			{
 				case Error<string> error:
 					return BadRequest(error.Value);
-				case IManagedPackageBinarySource binary:
+				case IPluginPackageBinarySource binary:
 					binarySource = binary;
 					break;
 			}
@@ -458,10 +489,26 @@ public class PackagesController(
 			request.ConfigureAnswers ?? new Dictionary<string, string>(),
 			request.Decisions ?? [],
 			request.KeepRevisions,
-			request.AllowManagedCode);
+			request.AllowPluginCode);
 
-		return await operations.RunAsync("apply",
-				token => installer.ApplyAsync(manifest, applyRequest, token, binarySource), cancellationToken) switch
+		var outcome = await operations.RunAsync("apply",
+			token => installer.ApplyAsync(manifest, applyRequest, token, binarySource), cancellationToken);
+		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult } && manifest.Kind == PackageKind.Plugin)
+		{
+			if (isUpload)
+			{
+				uploads.Discard(request.Path);
+			}
+
+			if (User.FindFirstValue(ClaimTypes.NameIdentifier) is { } accountId)
+			{
+				await audit.RecordPortalAsync(accountId, AuditActions.PluginInstall,
+					new AuditTarget(AuditTargetKinds.Plugin, manifest.Name, manifest.Name),
+					$"v{manifest.Version} from {(isUpload ? "an upload" : remote.Url)}", cancellationToken);
+			}
+		}
+
+		return outcome switch
 		{
 			PackageOperationRan<Result<PackageApplyResult>> ran => Applied(ran.Result, ran.Backup),
 			PackageOperationRefused refused => Unavailable(refused)
@@ -487,6 +534,13 @@ public class PackagesController(
 		if (isCatalogue)
 		{
 			fetched = FetchCatalogueManifest(path);
+		}
+		else if (PluginUploadStore.IsUploadRemote(remoteName))
+		{
+			// An upload has no commit; its token stands in for one, so the record says which upload it was.
+			fetched = uploads.ManifestYaml(path) is { } yaml
+				? new PackageManifestSource(yaml, path, null)
+				: NotFound("That upload is no longer waiting; upload the package again.");
 		}
 		else
 		{

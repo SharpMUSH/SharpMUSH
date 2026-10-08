@@ -90,6 +90,7 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 		builder.ConfigureTestServices(services =>
 		{
 			TestHostServices.RemoveRecurringJobRunner(services);
+			TestHostServices.RecordServerRestarts(services);
 			// SHARPMUSH_LIGHTNING_PATH names the primary host's world when one is running in this process.
 			services.RemoveAll<LightningWorldPath>();
 			services.AddSingleton(new LightningWorldPath(worldPath));

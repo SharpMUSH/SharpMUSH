@@ -1,5 +1,8 @@
 {
   "id": "PLUGIN_ID",
+  "name": "PLUGIN_NAME",
+  "description": "PACKAGE_DESCRIPTION",
+  "entry": "PLUGIN_NAME.dll",
   "version": "0.1.0",
   "dependencies": [],
   "priority": 0,

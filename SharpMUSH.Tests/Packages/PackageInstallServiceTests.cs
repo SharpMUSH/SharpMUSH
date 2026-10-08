@@ -182,7 +182,7 @@ public class PackageInstallServiceTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackagePlanService>(),
 			unset,
 			WebAppFactoryArg.Services.GetRequiredService<IPackageLifecycleRunner>(),
-			WebAppFactoryArg.Services.GetRequiredService<IManagedPackageInstaller>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPluginPackageInstaller>(),
 			WebAppFactoryArg.Services.GetRequiredService<IMediator>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationGate>(),
 			WebAppFactoryArg.Services.GetRequiredService<ILockService>(),
@@ -990,59 +990,27 @@ public class PackageInstallServiceTests
 		await Assert.That((await Installer.UninstallAsync("struct-pkg")).Value).IsTypeOf<Success>();
 	}
 
-	private static string CommandOnlyDllPath =>
-		System.IO.Path.Combine(AppContext.BaseDirectory, "plugins-unit", "command-only", "CommandOnlyPlugin.dll");
-
-	private sealed class DirectoryBinarySource(string directory)
-		: SharpMUSH.Library.Services.Interfaces.IManagedPackageBinarySource
-	{
-		public async Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default)
-		{
-			var path = System.IO.Path.Combine(directory, fileName);
-			return System.IO.File.Exists(path) ? await System.IO.File.ReadAllBytesAsync(path, cancellationToken) : null;
-		}
-	}
-
 	/// <summary>
-	/// End-to-end through the real DB registry: a managed package deposits its
-	/// carried DLL into a scratch plugins root, the install records the deployed
-	/// file list on the installed-package record (proving the registry-record
-	/// extension threads through the active provider), and uninstall removes the
-	/// directory. Uses a dedicated installer pointed at a scratch root + allow-all
-	/// trust so the real plugins/ folder is never touched.
+	/// End-to-end through the real DB registry: a plugin package deposits its carried DLL into scratch plugin
+	/// directories, the install records the deployed file list and the plugin kind on the installed-package record
+	/// (proving both round-trip through the active provider), and uninstall removes the directory. A dedicated
+	/// installer points at the scratch directories, so the real plugins folder is never touched.
 	/// </summary>
 	[Test, NotInParallel]
-	public async Task ManagedPackage_InstallRecordsDeployedFiles_UninstallRemovesThem()
+	public async Task PluginPackage_InstallRecordsDeployedFilesAndKind_UninstallRemovesThem()
 	{
-		await Assert.That(System.IO.File.Exists(CommandOnlyDllPath)).IsTrue()
-			.Because("the CommandOnlyPlugin fixture DLL is reused as the carried managed binary");
-
-		var sourceDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"mpkg-src-{Guid.NewGuid():N}");
-		var pluginsRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"mpkg-plugins-{Guid.NewGuid():N}");
-		System.IO.Directory.CreateDirectory(sourceDir);
-		System.IO.File.Copy(CommandOnlyDllPath, System.IO.Path.Combine(sourceDir, "CommandOnlyPlugin.dll"));
-		var sha = Convert.ToHexString(
-			System.Security.Cryptography.SHA256.HashData(System.IO.File.ReadAllBytes(CommandOnlyDllPath))).ToLowerInvariant();
-
+		const string id = "e2e-plugin";
+		var directories = SharpMUSH.Tests.Plugins.PluginPackageFixture.ScratchDirectories();
 		try
 		{
-			var manifest = Parse($"""
-				package: e2e-managed
-				version: "1.0.0"
-				kind: managed
-				binaries:
-				  min_server_version: ">=1.0"
-				  files:
-				    - file: CommandOnlyPlugin.dll
-				      sha256: {sha}
-				""");
+			var manifest = Parse(SharpMUSH.Tests.Plugins.PluginPackageFixture.Yaml(id));
+			var source = new SharpMUSH.Tests.Plugins.PluginPackageFixture.BinarySource(id);
 
-			var pluginManager = WebAppFactoryArg.Services.GetRequiredService<IPluginManager>();
-			var managedInstaller = new SharpMUSH.Library.Services.ManagedPackageInstaller(
-				pluginManager,
-				new SharpMUSH.Library.Services.ManagedPackageTrustOptions(false, ["e2e-managed"]),
-				Microsoft.Extensions.Logging.Abstractions.NullLogger<SharpMUSH.Library.Services.ManagedPackageInstaller>.Instance,
-				pluginsRoot);
+			var pluginInstaller = new SharpMUSH.Library.Services.PluginPackageInstaller(
+				WebAppFactoryArg.Services.GetRequiredService<IPluginManager>(),
+				SharpMUSH.Tests.Plugins.PluginPackageFixture.Allowed,
+				directories,
+				Microsoft.Extensions.Logging.Abstractions.NullLogger<SharpMUSH.Library.Services.PluginPackageInstaller>.Instance);
 
 			var installer = new PackageInstallService(
 				Database,
@@ -1054,7 +1022,7 @@ public class PackageInstallServiceTests
 				WebAppFactoryArg.Services.GetRequiredService<IPackagePlanService>(),
 				WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(),
 				WebAppFactoryArg.Services.GetRequiredService<IPackageLifecycleRunner>(),
-				managedInstaller,
+				pluginInstaller,
 				WebAppFactoryArg.Services.GetRequiredService<IMediator>(),
 				WebAppFactoryArg.Services.GetRequiredService<IPackageOperationGate>(),
 				WebAppFactoryArg.Services.GetRequiredService<ILockService>(),
@@ -1064,37 +1032,38 @@ public class PackageInstallServiceTests
 
 			var refused = await installer.ApplyAsync(
 				manifest,
-				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowManagedCode: false),
+				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowPluginCode: false),
 				CancellationToken.None,
-				new DirectoryBinarySource(sourceDir));
-			await Assert.That(refused.Value).IsTypeOf<Error<string>>().Because("a managed install without the opt-in must be refused");
-			await Assert.That((await Registry.GetInstalledPackageAsync("e2e-managed")).Value).IsTypeOf<NotFound>()
-				.Because("a refused managed install records nothing");
+				source);
+			await Assert.That(refused.Value).IsTypeOf<Error<string>>().Because("a plugin install without the confirmation must be refused");
+			await Assert.That((await Registry.GetInstalledPackageAsync(id)).Value).IsTypeOf<NotFound>()
+				.Because("a refused plugin install records nothing");
 
 			var applied = await installer.ApplyAsync(
 				manifest,
-				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowManagedCode: true),
+				new PackageApplyRequest(Source(), new Dictionary<string, string>(), [], 10, AllowPluginCode: true),
 				CancellationToken.None,
-				new DirectoryBinarySource(sourceDir));
-			await Assert.That(applied.Value).IsTypeOf<PackageApplyResult>().Because("the opt-in + allow-list + matching hash should install");
+				source);
+			await Assert.That(applied.Value).IsTypeOf<PackageApplyResult>().Because("the confirmation and matching hashes install it");
 
-			var depositedDll = System.IO.Path.Combine(pluginsRoot, "e2e-managed", "CommandOnlyPlugin.dll");
+			var depositedDll = System.IO.Path.Combine(directories.Installed, id, SharpMUSH.Tests.Plugins.PluginPackageFixture.DllName);
 			await Assert.That(System.IO.File.Exists(depositedDll)).IsTrue();
 
-			var record = (await Registry.GetInstalledPackageAsync("e2e-managed")).Expect<InstalledPackageRecord>();
+			var record = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+			await Assert.That(record.Kind).IsEqualTo(PackageKind.Plugin)
+				.Because("the package's kind must round-trip, so the portal can show a plugin package as one");
 			await Assert.That(record.DeployedFiles).IsNotNull();
-			await Assert.That(record.DeployedFiles!).Contains("CommandOnlyPlugin.dll")
+			await Assert.That(record.DeployedFiles!).Contains(SharpMUSH.Tests.Plugins.PluginPackageFixture.DllName)
 				.Because("the deployed file list must round-trip through the active DB provider");
 
-			var uninstalled = await installer.UninstallAsync("e2e-managed");
+			var uninstalled = await installer.UninstallAsync(id);
 			await Assert.That(uninstalled.Value).IsTypeOf<Success>();
-			await Assert.That(System.IO.Directory.Exists(System.IO.Path.Combine(pluginsRoot, "e2e-managed"))).IsFalse();
-			await Assert.That((await Registry.GetInstalledPackageAsync("e2e-managed")).Value).IsTypeOf<NotFound>();
+			await Assert.That(System.IO.Directory.Exists(System.IO.Path.Combine(directories.Installed, id))).IsFalse();
+			await Assert.That((await Registry.GetInstalledPackageAsync(id)).Value).IsTypeOf<NotFound>();
 		}
 		finally
 		{
-			System.IO.Directory.Delete(sourceDir, true);
-			if (System.IO.Directory.Exists(pluginsRoot)) System.IO.Directory.Delete(pluginsRoot, true);
+			SharpMUSH.Tests.Plugins.PluginPackageFixture.Delete(directories);
 		}
 	}
 }
