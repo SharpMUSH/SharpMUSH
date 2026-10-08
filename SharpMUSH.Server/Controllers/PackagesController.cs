@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
@@ -21,6 +22,7 @@ namespace SharpMUSH.Server.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/packages")]
+[Authorize(Policy = PortalPermission.PackagesAdmin)]
 public class PackagesController(
 	IPackageRegistryService registry,
 	IPackageSourceService source,
@@ -50,7 +52,6 @@ public class PackagesController(
 	/// the canonical SharpMUSH-Packages repo when none is configured).
 	/// </summary>
 	[HttpGet("community")]
-	[Authorize]
 	public async Task<ActionResult<CommunityReposResponse>> GetCommunityRepos(CancellationToken cancellationToken) =>
 		Ok(await BuildCommunityDirectoryAsync(cancellationToken));
 
@@ -98,7 +99,6 @@ public class PackagesController(
 	/// endpoint never clones arbitrary URLs.
 	/// </summary>
 	[HttpGet("community/readme")]
-	[Authorize]
 	public async Task<ActionResult<ReadmeResponse>> GetCommunityRepoReadme(
 		[FromQuery] string url, CancellationToken cancellationToken)
 	{
@@ -136,7 +136,6 @@ public class PackagesController(
 
 	/// <summary>Scans selected live objects: attrs, flags, parents, and external dbrefs needing classification.</summary>
 	[HttpPost("author/scan")]
-	[Authorize]
 	public async Task<ActionResult<PackageAuthoringScan>> AuthorScan(
 		[FromBody] List<string> objids, CancellationToken cancellationToken)
 	{
@@ -149,7 +148,6 @@ public class PackagesController(
 
 	/// <summary>Exports a classified selection as a validated package.yaml document.</summary>
 	[HttpPost("author/export")]
-	[Authorize]
 	public async Task<IActionResult> AuthorExport(
 		[FromBody] PackageAuthoringRequest request, CancellationToken cancellationToken)
 	{
@@ -162,7 +160,6 @@ public class PackagesController(
 
 	/// <summary>Lists installed packages with dashboard context.</summary>
 	[HttpGet]
-	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<InstalledPackageDto>>> GetInstalled()
 	{
 		var installed = await registry.GetInstalledPackagesAsync();
@@ -185,7 +182,6 @@ public class PackagesController(
 
 	/// <summary>Revision history for an installed package (snapshot payloads omitted).</summary>
 	[HttpGet("{id}/revisions")]
-	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<RevisionDto>>> GetRevisions(string id)
 	{
 		var revisions = await registry.GetPackageRevisionsAsync(id);
@@ -199,7 +195,6 @@ public class PackagesController(
 	/// after a pre-operation backup; see <see cref="IPackageOperationRunner"/>.
 	/// </summary>
 	[HttpPost("{id}/rollback/{revision:int}")]
-	[Authorize]
 	public async Task<ActionResult<PackageRollbackResult>> Rollback(string id, int revision, CancellationToken cancellationToken)
 		=> await operations.RunAsync("rollback", token => installer.RollbackAsync(id, revision, token), cancellationToken) switch
 		{
@@ -226,7 +221,6 @@ public class PackagesController(
 	/// installs at first boot is recorded as turned off, so the next restart does not put it back.
 	/// </summary>
 	[HttpDelete("{id}")]
-	[Authorize]
 	public async Task<IActionResult> Uninstall(string id, [FromQuery] bool force, [FromServices] GameFeatureService features,
 		CancellationToken cancellationToken)
 	{
@@ -252,7 +246,6 @@ public class PackagesController(
 	/// path changes, and the moved-tag trust warning (decision 20.14).
 	/// </summary>
 	[HttpGet("{id}/update")]
-	[Authorize]
 	public async Task<ActionResult<PackageUpdateInfo>> CheckForUpdate(string id, CancellationToken cancellationToken)
 	{
 		if (await registry.GetInstalledPackageAsync(id) is not InstalledPackageRecord installed)
@@ -288,7 +281,6 @@ public class PackagesController(
 	/// reservation, since <see cref="UpsertRemote"/> now refuses that name.
 	/// </summary>
 	[HttpGet("remotes")]
-	[Authorize]
 	public async Task<ActionResult<IReadOnlyList<PackageRemoteRecord>>> GetRemotes()
 	{
 		var configured = await registry.GetPackageRemotesAsync();
@@ -300,7 +292,6 @@ public class PackagesController(
 
 	/// <summary>Adds or updates a configured remote.</summary>
 	[HttpPost("remotes")]
-	[Authorize]
 	public async Task<IActionResult> UpsertRemote([FromBody] RemoteRequest request)
 	{
 		if (BundledPackages.IsCatalogueRemote(request.Name))
@@ -326,7 +317,6 @@ public class PackagesController(
 
 	/// <summary>Removes a configured remote.</summary>
 	[HttpDelete("remotes/{name}")]
-	[Authorize]
 	public async Task<IActionResult> DeleteRemote(string name)
 	{
 		if (BundledPackages.IsCatalogueRemote(name))
@@ -341,7 +331,6 @@ public class PackagesController(
 
 	/// <summary>Refreshes a remote's cache and returns its discovered packages with version tags.</summary>
 	[HttpGet("remotes/{name}/browse")]
-	[Authorize]
 	public async Task<ActionResult<PackageRepoSnapshot>> Browse(string name, CancellationToken cancellationToken)
 	{
 		if (BundledPackages.IsCatalogueRemote(name))
@@ -368,7 +357,6 @@ public class PackagesController(
 	/// pattern flags. Read-only; re-run as configure answers arrive.
 	/// </summary>
 	[HttpPost("plan")]
-	[Authorize]
 	public async Task<ActionResult<PlanResponse>> Plan([FromBody] PlanRequest request, CancellationToken cancellationToken)
 		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
@@ -407,7 +395,6 @@ public class PackagesController(
 
 	/// <summary>Applies a reviewed plan (decision 20.8: never automatic — this is the explicit confirmation).</summary>
 	[HttpPost("apply")]
-	[Authorize]
 	public async Task<ActionResult<ApplyResponse>> Apply([FromBody] ApplyRequest request, CancellationToken cancellationToken)
 		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
@@ -693,7 +680,6 @@ public class PackagesController(
 	/// directory (optionally at a release version).
 	/// </summary>
 	[HttpGet("remotes/{name}/readme")]
-	[Authorize]
 	public async Task<ActionResult<ReadmeResponse>> GetRemoteReadme(
 		string name, [FromQuery] string? path, [FromQuery] string? version, CancellationToken cancellationToken)
 	{

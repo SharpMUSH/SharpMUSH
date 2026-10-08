@@ -45,4 +45,20 @@ public class ControllerAuthorizationTests
 		var attr = (AuthorizeAttribute?)Attribute.GetCustomAttribute(boot, typeof(AuthorizeAttribute));
 		await Assert.That(attr?.Policy).IsEqualTo(PortalPermission.PlayersModerate);
 	}
+
+	/// <summary>
+	/// Every package operation takes packages.admin. The actions carried only a bare [Authorize], so any signed-in
+	/// account could add a remote and apply from it, and a softcode package can create WIZARD objects.
+	/// </summary>
+	[Test]
+	public async Task PackagesController_IsGatedOnPackagesAdmin()
+	{
+		await Assert.That(ClassAuthorize<PackagesController>()?.Policy).IsEqualTo(PortalPermission.PackagesAdmin);
+
+		var anonymous = typeof(PackagesController).GetMethods()
+			.Where(method => Attribute.IsDefined(method, typeof(AllowAnonymousAttribute)))
+			.Select(method => method.Name)
+			.ToList();
+		await Assert.That(anonymous).IsEmpty();
+	}
 }
