@@ -72,6 +72,20 @@ public static class Tables
 	public static readonly TableDef PageConversation = TableDef.Node("page.conv");
 	public static readonly TableDef PageConversationLatest = TableDef.Index("page.conv.latest");
 	public static readonly TableDef PageLogTime = TableDef.Index("page.time");
+	/// <summary>Feed kinds, by name.</summary>
+	public static readonly TableDef FeedKind = TableDef.Node("feed.kind");
+	/// <summary>Feeds, by kind + 0x00 + key.</summary>
+	public static readonly TableDef Feed = TableDef.Node("feed");
+	/// <summary>Feed lines, by kind + 0x00 + key + 0x00 + id, so a feed's lines are one range, oldest first.</summary>
+	public static readonly TableDef FeedMessage = TableDef.Node("feed.msg");
+	/// <summary>A feed line's id → its key in <see cref="FeedMessage"/>, so <c>feedmsg()</c> finds a line by id alone.</summary>
+	public static readonly TableDef FeedMessageId = TableDef.Index("feed.msg.id");
+	/// <summary>Feed members, by kind + 0x00 + key + 0x00 + dbref.</summary>
+	public static readonly TableDef FeedMember = TableDef.Node("feed.member");
+	/// <summary>dbref + kind + 0x00 + key → nothing: the feeds an object is a member of, and what the object-delete cascade drops.</summary>
+	public static readonly TableDef FeedMemberOf = TableDef.Index("feed.member.of");
+	/// <summary>Taps, by kind (or <c>*</c>) + 0x00 + objid + 0x00 + attribute → nothing.</summary>
+	public static readonly TableDef FeedTap = TableDef.Node("feed.tap");
 	/// <summary>Staff actions: big-endian millis + big-endian sequence → the entry, so the log reads newest first and a date range is one key range.</summary>
 	public static readonly TableDef Audit = TableDef.Node("audit");
 	public static readonly TableDef State = TableDef.Node("state");

@@ -69,6 +69,12 @@ public static class PortalPermission
 	public const string ChatAdmin = "chat.admin";
 
 	/// <summary>
+	/// Defines and runs feeds (<c>help @feed</c>): kinds, their taps, members and limits. A kind's owner runs
+	/// its own feeds without it. The <c>wizard</c> role allows it.
+	/// </summary>
+	public const string FeedAdmin = "feed.admin";
+
+	/// <summary>
 	/// Operates the running server: @shutdown, @dump, @dbck, @purge, @backup, @storage, @log and the
 	/// like. Part of what WIZARD meant; the <c>wizard</c> role allows it. Not <see cref="ServerAdmin"/>,
 	/// which is the owner's.
@@ -140,6 +146,7 @@ public static class PortalPermission
 		new(GameWizard, "EnumPermGameWizard", GroupGame, "EnumPermGameWizardDesc"),
 		new(GameRoyalty, "EnumPermGameRoyalty", GroupGame, "EnumPermGameRoyaltyDesc"),
 		new(ChatAdmin, "EnumPermChatAdmin", GroupGame, "EnumPermChatAdminDesc"),
+		new(FeedAdmin, "EnumPermFeedAdmin", GroupGame, "EnumPermFeedAdminDesc"),
 		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
 		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),
 		new(ProtectWizard, "EnumPermProtectWizard", GroupGame, "EnumPermProtectWizardDesc"),

@@ -92,13 +92,13 @@ These '@' commands are only usable by wizards or privileged players:
 | [@account]     | [@allhalt]     | [@allquota]    | [@backup]      | [@boot]        |
 | [cd]           | [ch]           | [@chownall]    | [@chzoneall]   | [@comment]     |
 | [cv]           | [@dbck]        | [@disable]     | [@dump]        | [@enable]      |
-| [@flag]        | [@hide]        | [@hook]        | [@http]        | [@kick]        |
-| [@log]         | [@motd]        | [@newpassword] | [@package]     | [@pcreate]     |
-| [@permission]  | [@poll]        | [@poor]        | [@power]       | [@purge]       |
-| [@quota]       | [@readcache]   | [@reality]     | [@rejectmotd]  | [@respond]     |
-| [@role]        | [@shutdown]    | [@sitelock]    | [@snapshot]    | [@sql]         |
-| [@squota]      | [@storage]     | [@suggest]     | [@uptime]      | [@wall]        |
-| [@wizmotd]     | [@wizwall]     |                |                |                |
+| [@feed]        | [@flag]        | [@hide]        | [@hook]        | [@http]        |
+| [@kick]        | [@log]         | [@motd]        | [@newpassword] | [@package]     |
+| [@pcreate]     | [@permission]  | [@poll]        | [@poor]        | [@power]       |
+| [@purge]       | [@quota]       | [@readcache]   | [@reality]     | [@rejectmotd]  |
+| [@respond]     | [@role]        | [@shutdown]    | [@sitelock]    | [@snapshot]    |
+| [@sql]         | [@squota]      | [@storage]     | [@suggest]     | [@uptime]      |
+| [@wall]        | [@wizmotd]     | [@wizwall]     |                |                |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.

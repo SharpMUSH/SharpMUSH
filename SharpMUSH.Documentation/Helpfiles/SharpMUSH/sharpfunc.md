@@ -9,6 +9,7 @@
   [Communication functions]: send messages to objects (PEMIT, OEMIT) <br>
   [Connection functions]: get information about a player's connection (CONN) <br>
   [Dbref functions]: return dbref info related to objects (LOC, LEXITS) <br>
+  [Feed functions]: read the feeds a game's systems run (FEEDMSG, FEEDWHO) <br>
   [HTML FUNCTIONS]: output HTML tags for Pueblo and WebSocket clients <br>
   [Information functions]: find out something about objects (FLAGS, MONEY) <br>
   [JSON FUNCTIONS]: create and manipulate JSON objects (JSON, JSON_MAP) <br>
