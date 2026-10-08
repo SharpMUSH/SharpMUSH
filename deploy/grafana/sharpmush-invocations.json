@@ -435,7 +435,7 @@
       "id": 8,
       "type": "timeseries",
       "title": "Commands: failed calls per second",
-      "description": "Calls that errored, were refused, or hit a limit.",
+      "description": "Commands that threw an error while running. A command refused before it runs (bad switch, permission denied) is not timed, and one that reports an error is counted as a success.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"

@@ -163,8 +163,11 @@ A label holds the function's or command's registered name in capitals, whatever 
 `exp()` is counted as `E` and `@pe` as `@PEMIT`. A call to a function that does not exist is
 counted as `(unknown)`, so players cannot add series by typing names. `@function` globals and
 `@command/add` commands appear under their own names. Softcode `$-commands` are not timed on their
-own; their time shows in the built-ins they run. `success` is `false` for a call that errored, was
-refused, or hit a limit. A call's time includes every call nested inside it.
+own; their time shows in the built-ins they run. A call's time includes every call nested inside it.
+
+For a function, `success` is `false` when the call errored, was refused, or hit a limit. A command is
+timed only once it starts running: one refused first (a bad switch, permission denied) is not
+counted at all, and `success` is `false` only when the command throws, not when it reports an error.
 
 The buckets run from 0.01 ms to 5 s in 1-2.5-5 steps. Each name that has been called adds 20
 series per `success` value.
