@@ -805,21 +805,22 @@ public class MarkdownFunctionUnitTests
 	}
 
 	/// <summary>
-	/// A table on an object with no TABLE template renders exactly as <c>rendermarkdown()</c> would, and
-	/// no payload is built at all — the template is looked up before the table is taken apart.
+	/// A table on an object with no TABLE template is the built-in one, spanning the width it was asked
+	/// for: a package draws this output inside a screen of its own, and a heading rule as wide as the cells
+	/// stopped short of the screen's lines. <c>rendermarkdown()</c> keeps a table as wide as its cells.
 	/// </summary>
 	[Test]
-	public async Task RenderMarkdownCustom_NoTableTemplate_MatchesDefaultRendering()
+	public async Task RenderMarkdownCustom_NoTableTemplate_SpansTheWidth()
 	{
 		var obj = await CreateTemplateObject("MarkdownNoTableTemplateObj");
 
 		var markdown = "| A | B |%r|---|---|%r| 1 | 2 |";
 
-		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj})");
+		var result = await EvaluateAsync($"rendermarkdowncustom({markdown},{obj},40)");
+		var plain = await EvaluateAsync($"rendermarkdown({markdown},40)");
 
-		var expected = RecursiveMarkdownHelper.RenderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
-
-		await AssertMarkupStringEquals(result, expected);
+		await Assert.That(result.ToPlainText().Split('\n')).Contains(new string('-', 40));
+		await Assert.That(plain.ToPlainText().Split('\n')).DoesNotContain(new string('-', 40));
 	}
 
 	/// <summary>

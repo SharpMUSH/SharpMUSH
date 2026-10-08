@@ -684,7 +684,10 @@ public partial class Commands
 
 				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Truthy(parser):
-				var command = await args["1"].ParsedMessage();
+				// The action is a command list, run as it was written: evaluating it here as well evaluated it
+				// twice, so @assert 0=@pemit me=\[X\] said X, and a notice()'s [SOURCE] badge lost its brackets.
+				// RSBrace keeps the outer braces of {action}; they come off here, as @wait does.
+				var command = HelperFunctions.StripOuterBraces(args["1"].Message!);
 
 				if (useQueue)
 				{
@@ -738,7 +741,10 @@ public partial class Commands
 
 				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Falsy(parser):
-				var command = await args["1"].ParsedMessage();
+				// The action is a command list, run as it was written: evaluating it here as well evaluated it
+				// twice, so @assert 0=@pemit me=\[X\] said X, and a notice()'s [SOURCE] badge lost its brackets.
+				// RSBrace keeps the outer braces of {action}; they come off here, as @wait does.
+				var command = HelperFunctions.StripOuterBraces(args["1"].Message!);
 
 				if (useQueue)
 				{

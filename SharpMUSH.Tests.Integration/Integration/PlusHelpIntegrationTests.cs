@@ -632,4 +632,136 @@ public class PlusHelpIntegrationTests
 		await RunAs(await StaffAsync(), "+help/unsource rival");
 		await God1($"@destroy {rival}");
 	}
+
+	// ── Finding a topic by what a player types ──────────────────────────────
+
+	/// <summary>
+	/// A player types the command they saw, or a word from it. A leading + and a command's switch are
+	/// read as the topic they name, and a command finds the topic that shows it in code.
+	/// </summary>
+	[Test]
+	[Arguments("+help +scene", "scene/scene")]
+	[Arguments("+help +scene/join", "scene/scene join")]
+	[Arguments("+help event", "scene/scene")]
+	[Arguments("+help +events", "scene/scene schedule")]
+	[Arguments("+help join", "scene/scene join")]
+	public async Task ACommandOrAWordFromOne_FindsItsTopic(string command, string title)
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), command));
+
+		await Assert.That(said).Contains($"< {title} >").Because($"{command} is about {title}");
+		await Assert.That(said).DoesNotContain("No local topic");
+	}
+
+	/// <summary>Several matches list the way +help/list does, titled with how they were found.</summary>
+	[Test]
+	[Arguments("+help sce", "Topics with 'sce' in their names")]
+	[Arguments("+help scene*", "Topics matching 'scene*'")]
+	public async Task SeveralMatches_AreListedAsAListing(string command, string title)
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), command));
+
+		await Assert.That(said).Contains(title);
+		await Assert.That(said).Contains("scene/scene pitch");
+		await Assert.That(said).Contains("page 1 of 1");
+		await Assert.That(said).DoesNotContain("Here are the entries");
+	}
+
+	[Test]
+	public async Task AMiss_OffersBothSearches_InSingleSpaces()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), $"+help zq{Tag}"));
+
+		await Assert.That(said).Contains($"No local topic 'zq{Tag}'. Try help zq{Tag} or +help/search zq{Tag}.");
+	}
+
+	/// <summary>A page is a whole number from 1; anything else is answered with the usage line, not Huh?.</summary>
+	[Test]
+	[Arguments("+help/list=0", "Usage: +help/list [<source>][=<page>]")]
+	[Arguments("+help/list=-1", "Usage: +help/list [<source>][=<page>]")]
+	[Arguments("+help/list=abc", "Usage: +help/list [<source>][=<page>]")]
+	[Arguments("+help/search scene=0", "Usage: +help/search <text>[=<page>]")]
+	[Arguments("+help/search", "Usage: +help/search <text>[=<page>]")]
+	[Arguments("+help/sources foo", "Usage: +help/sources")]
+	[Arguments("+help scene*=0", "Usage: +help <topic>[=<page>]")]
+	public async Task AMistypedArgument_IsAnsweredWithTheUsageLine(string command, string usage)
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), command));
+
+		await Assert.That(said).Contains(usage);
+		await Assert.That(said).DoesNotContain("Huh?");
+		await Assert.That(said).DoesNotContain("page 0");
+	}
+
+	/// <summary>A switch may be cut to any beginning no other switch has; one that names none or several says so.</summary>
+	[Test]
+	public async Task ASwitch_MayBeCutShort_AndAMistypedOneIsAnswered()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var reader = await ReaderAsync();
+
+		await Assert.That(Joined(await RunAs(reader, "+help/l plus-help"))).Contains("plus-help/sources");
+		await Assert.That(Joined(await RunAs(reader, "+help/lis plus-help"))).Contains("plus-help/sources");
+		await Assert.That(Joined(await RunAs(reader, "+help/so"))).Contains("+help/so could be /sources or /source.");
+		await Assert.That(Joined(await RunAs(reader, "+help/bogus"))).Contains("+help has no /bogus switch.");
+		await Assert.That(Joined(await RunAs(reader, "+help/"))).Contains("+help/ needs a switch.");
+
+		var switches = Joined(await RunAs(reader, "+help/bogus"));
+		await Assert.That(switches).Contains("/list /search /sources");
+		await Assert.That(switches).DoesNotContain("/write").Because("a reader is offered the switches a reader can use");
+	}
+
+	/// <summary>
+	/// A line whose brackets do not close cannot be evaluated, so nothing in it runs. It used to say
+	/// nothing at all.
+	/// </summary>
+	[Test]
+	public async Task ALineThatDoesNotParse_IsAnswered()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), "+help/search ["));
+
+		await Assert.That(said).Contains("PARSER FAILURE");
+	}
+
+	/// <summary>The write topic's examples are shown as written, not evaluated for the reader.</summary>
+	[Test]
+	public async Task TheWriteTopic_ShowsItsExamplesAsWritten()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), "+help write"));
+
+		await Assert.That(said).Contains("[ansi(hc,...)] and [name(%#)] both work");
+		await Assert.That(said).Contains("%% shows a %.");
+		await Assert.That(said).Contains(@"stores").And.Contains(@"\[write\]");
+	}
+
+	/// <summary>A list item's wrapped source line reads with one space where the line broke.</summary>
+	[Test]
+	[Arguments("+help scene")]
+	[Arguments("+help scene pose")]
+	[Arguments("+help scene privacy")]
+	[Arguments("+help scene schedule")]
+	public async Task AWrappedSourceLine_LeavesOneSpace(string command)
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var said = Joined(await RunAs(await ReaderAsync(), command));
+
+		await Assert.That(System.Text.RegularExpressions.Regex.IsMatch(said, @"\S  +\S")).IsFalse()
+			.Because($"{command} has no double space inside a line");
+	}
+
+	/// <summary>The server's help answers for +help, which a player meets in every game's help index.</summary>
+	[Test]
+	public async Task TheServersHelp_ExplainsPlusHelp()
+	{
+		var said = Joined(await RunAs(await ReaderAsync(), "help +help"));
+
+		await Assert.That(said).Contains("+help is this game's");
+		await Assert.That(said).DoesNotContain("No entry");
+	}
 }

@@ -1,4 +1,5 @@
 using Markdig;
+using Markdig.Extensions.EmphasisExtras;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SharpMUSH.Library.ParserInterfaces;
@@ -16,6 +17,7 @@ public static class RecursiveMarkdownHelper
 	/// Extensions enabled:
 	/// <list type="bullet">
 	/// <item><see cref="MarkdownExtensions.UsePipeTables"/></item>
+	/// <item><see cref="MarkdownExtensions.UseEmphasisExtras"/> — <c>~~strikethrough~~</c> only.</item>
 	/// <item><see cref="MarkdownExtensions.EnableTrackTrivia"/></item>
 	/// <item><see cref="HelpTopicLinkExtensions.UseHelpTopicLinks"/> — converts
 	///   bare <c>[topic]</c> shortcut references into ANSI OSC 8 hyperlinks with
@@ -49,6 +51,7 @@ public static class RecursiveMarkdownHelper
 	public static MarkdownPipelineBuilder ConfigureHelpSyntax(MarkdownPipelineBuilder builder) =>
 		builder
 			.UsePipeTables()
+			.UseEmphasisExtras(EmphasisExtraOptions.Strikethrough) // ~~struck~~, as the portal's editor writes it
 			.UseHelpTopicLinks() // [topic] → help <topic> hyperlinks
 			.UseCustomContainers()
 			.UseTaskLists()

@@ -1,6 +1,6 @@
 format: 1
 package: plus-help
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -188,6 +188,41 @@ objects:
         value: |-
           [@@(%0 records — the registered sources that actually have topics)][trim(squish(iter(u(%!/FUN`GET`SOURCES),if(words(u(%!/FUN`GET`OF,%0,%i0)),%i0),%b,%b)))]
         flags: [funsyntax]
+      # What a reader typed, as a topic name: lower case, and a command typed as one ("+scene" or
+      # "+scene/join") read as the topic it names, its switch a word of the topic ("scene join").
+      FUN`GET`QUERY:
+        value: |-
+          [@@(%0 the query as typed — the topic name it asks for)][setq(x,lcstr(trim(squish(%0))))][if(strmatch(%q<x>,+*),trim(edit(after(%q<x>,+),/,%b)),%q<x>)]
+        flags: [funsyntax]
+      # The command a bare word would be: "bug" asks about +bug, "+scene" about itself.
+      FUN`GET`COMMAND:
+        value: |-
+          [@@(%0 the query as typed — the +command it names)][setq(x,lcstr(trim(%0)))][if(strmatch(%q<x>,+*),%q<x>,+%q<x>)]
+        flags: [funsyntax]
+      # A command's topic is the one that documents it, so "+help bug" finds the topic showing `+bug`
+      # without the topic having to be called "bug". A topic documents a command when its body names it
+      # in code, whole: `+event <id>` documents +event, `+events` does not.
+      FUN`GET`DOCUMENTING:
+        value: |-
+          [@@(%0 records · %1 a +command — the records whose body shows it in code)][trim(squish(iter(%0,if(cor(strmatch(setr(b,u(%!/FUN`GET`RBODY,%i0)),*`%1`*),strmatch(%q<b>,*`%1 *),strmatch(%q<b>,*`%1/*),strmatch(%q<b>,*`%1=*)),%i0),%b,%b)))]
+        flags: [funsyntax]
+      # A word that is no topic's whole name: the topics whose name begins with it, then those holding it.
+      FUN`GET`NEAR:
+        value: |-
+          [@@(%0 records · %1 a word — the records whose bare name starts with it, then those containing it)][setq(st,trim(squish(iter(%0,if(strmatch(u(%!/FUN`GET`RTOPIC,%i0),%1*),%i0),%b,%b))))][trim(squish(%q<st> [iter(%0,if(cand(strmatch(u(%!/FUN`GET`RTOPIC,%i0),*%1*),not(member(%q<st>,%i0))),%i0),%b,%b)]))]
+        flags: [funsyntax]
+      # Every way a name finds topics, in order, stopping at the first that finds any: the name itself
+      # (wildcards included), the command it is, then names that start with or contain it. A wildcard
+      # or a source/topic name is only ever the first.
+      FUN`GET`LOOKUP:
+        value: |-
+          [@@(%0 records · %1 the query as typed — the records it finds, and %q<how> set to name, command or near)][setq(q,u(%!/FUN`GET`QUERY,%1),how,name)][if(words(setr(m,u(%!/FUN`GET`FOUND,%0,%q<q>))),%q<m>,if(regmatch(%q<q>,\[*?/\]),,if(words(setr(m,u(%!/FUN`GET`DOCUMENTING,%0,u(%!/FUN`GET`COMMAND,%1)))),[setq(how,command)]%q<m>,[setq(how,near)][u(%!/FUN`GET`NEAR,%0,%q<q>)])))]
+        flags: [funsyntax]
+      # A page number is a whole number from 1; =0, =-1 and =abc are mistakes, not page 1.
+      FUN`IS`PAGE:
+        value: |-
+          [@@(%0 a page number as typed)][cand(isint(%0),gt(%0,0))]
+        flags: [funsyntax]
       FUN`GET`SEARCHED:
         value: |-
           [@@(%0 records · %1 the text — records whose name or body contains it)][trim(squish(iter(%0,if(cor(strmatch(u(%!/FUN`GET`RNAME,%i0),*%1*),strmatch(u(%!/FUN`GET`RBODY,%i0),*%1*)),%i0),%b,%b)))]
@@ -350,7 +385,17 @@ objects:
       # answer "does this GAME document this?", which a fallthrough would cost.
       INC`DISPLAY`MISS:
         value: |-
-          @@ %0 the query that matched nothing; @pemit %#=[notice(HELP,No local topic '%0'.%b%bTry:%b%b[cmdlink(help %0,help %0)],warn)]
+          @@ no arguments — %q<q> matched nothing; @pemit %#=[notice(HELP,No local topic '%q<q>'. Try [cmdlink(help %q<q>,help %q<q>)] or [cmdlink(+help/search %q<q>,+help/search %q<q>)].,warn)]
+        flags: [cmdsyntax]
+      # A usage line names the switch as typed in full, so a reader who wrote /lis sees /list.
+      INC`DISPLAY`USAGE:
+        value: |-
+          @@ no arguments — the usage of switch %q<sw>; @pemit %#=[notice(HELP,Usage: [trim(+help/%q<sw> [u(%!/FUN`GET`USAGE,%q<sw>)])],warn)]
+        flags: [cmdsyntax]
+      # A switch that names none, or several, says which it could be and what there is.
+      INC`DISPLAY`BADSWITCH:
+        value: |-
+          @@ no arguments — %q<typed> is a switch naming no single one; @pemit %#=[notice(HELP,[if(not(strlen(%q<typed>)),+help/ needs a switch.,if(words(setr(c,graball(u(%!/FUN`GET`SWITCHES),%q<typed>*))),+help/%q<typed> could be [itemize(iter(%q<c>,/%i0,%b,|),|,or)].,+help has no /%q<typed> switch.))] Switches: [iter(u(%!/FUN`GET`SWITCHES,%#),cmdlink(/%i0,+help/%i0),%b,%b)],warn)]
         flags: [cmdsyntax]
       INC`IS`STAFF:
         value: |-
@@ -370,15 +415,17 @@ objects:
         value: |-
           @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert strlen(%q<topic>)=@include %!/INC`DISPLAY`WARN=Which topic?; @assert regmatch(%q<topic>,^\[^*?/\]+$)=@include %!/INC`DISPLAY`WARN=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think [setq(attr,HELP`[edit(trim(squish(%q<topic>)),%b,`)])]; @assert valid(attrname,%q<attr>)=@include %!/INC`DISPLAY`WARN=A topic name has to be storable as an attribute name.; think [setq(obj,u(%!/SRC`GAME))]
         flags: [cmdsyntax]
+      # Reads registers rather than arguments: @include splits its arguments on commas, and a title
+      # carries what the reader typed.
       INC`DO`LISTING:
         value: |-
-          @@ %0 title · %1 records · %2 page · %3 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3)]
+          @@ no arguments — lists %q<list> under the title %q<title>, page %q<page>, paging with %q<stem>=<n>; @assert words(%q<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%q<list>))]; @assert lte(%q<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%q<title>,%q<list>,%q<page>,%q<stem>)]
         flags: [cmdsyntax]
-      # One topic renders; none reports the miss; several list the qualified candidates, in the
-      # engine's own words for an ambiguous topic.
+      # One topic renders; none reports the miss; several list the qualified candidates as +help/list
+      # does, titled with how they were found.
       INC`DO`SHOW:
         value: |-
-          @@ %0 the query as typed; think [setq(q,lcstr(trim(%0)))]; @assert %q<q>=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))]; think [setq(m,u(%!/FUN`GET`FOUND,%q<recs>,%q<q>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS=%q<q>; @break gt(words(%q<m>),1)={@pemit %#=[notice(HELP,Here are the entries which match '%q<q>':)];@pemit %#=[iter(%q<m>,u(%!/FUN`DISPLAY`REF,%i0),%b,%b)]}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
+          @@ %q<query> the query as typed · %q<page> the page, for several matches; @assert strlen(trim(%q<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))][setq(m,u(%!/FUN`GET`LOOKUP,%q<recs>,%q<query>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<m>),1)={think [setq(list,%q<m>,title,switch(%q<how>,command,Topics about [u(%!/FUN`GET`COMMAND,%q<query>)],near,Topics with '%q<q>' in their names,Topics matching '%q<q>'),stem,+help [trim(%q<query>)])]; @include %!/INC`DO`LISTING}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────
@@ -387,26 +434,50 @@ objects:
         value: |-
           $^\+help\s*$:@pemit %#=[u(%!/FUN`DISPLAY`INDEX,u(%!/FUN`GET`RECORDS))]
         flags: [regexp, cmdsyntax]
+      # A page of several matches is asked for as +help <topic>=<n>.
       CMD`TOPIC:
         value: |-
-          $(?s)^\+help\s+(?<q>\S.*)$:@include %!/INC`DO`SHOW=[trim(r(q,args))]
+          $(?s)^\+help\s+(?<q>[^=]*?)\s*(?\:=(?<page>.*))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; @assert u(%!/FUN`IS`PAGE,%q<page>)=@pemit %#=[notice(HELP,Usage: +help <topic>[chr(91)]=<page>[chr(93)],warn)]; @include %!/INC`DO`SHOW
         flags: [regexp, cmdsyntax]
-      CMD`LIST:
+      # Every switch comes through here, named in full or by any beginning only it has (/l is /list),
+      # and runs its INC`SW leaf with %q<rest>, whatever followed the switch. Matching every switch in
+      # one pattern is what lets a mistyped one answer rather than fall through to Huh?.
+      CMD`SWITCH:
         value: |-
-          $^\+help/list(?\:\s+(?<src>[^\s=]+))?(?\:=(?<page>\d+))?$:think [setq(src,lcstr(r(src,args)),page,strfirstof(r(page,args),1))]; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(%q<src>),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`WARN=No such help source: %q<src>. Try +help/sources.; @include %!/INC`DO`LISTING=Topics[if(%q<src>,: %q<src>)],[if(%q<src>,u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>)],%q<page>,[trim(+help/list %q<src>)]
+          $(?s)^\+help/(?<sw>[^\s=]*)(?<rest>.*)$:think [setq(typed,lcstr(r(sw,args)),rest,r(rest,args))][setq(sw,u(%!/FUN`GET`SWITCH,%q<typed>))]; @assert strlen(%q<sw>)=@include %!/INC`DISPLAY`BADSWITCH; @include %!/INC`SW`[ucstr(%q<sw>)]
         flags: [regexp, cmdsyntax]
-      CMD`SEARCH:
+      # The order a reader is shown them in; the staff verbs only to staff.
+      FUN`GET`SWITCHES:
         value: |-
-          $(?s)^\+help/search\s+(?<q>\S.*?)(?\:=(?<page>\d+))?$:think [setq(q,lcstr(trim(r(q,args))),page,strfirstof(r(page,args),1))]; think [setq(recs,u(%!/FUN`GET`SEARCHED,u(%!/FUN`GET`RECORDS),%q<q>))]; @include %!/INC`DO`LISTING=Search: %q<q>,%q<recs>,%q<page>,+help/search %q<q>
-        flags: [regexp, cmdsyntax]
-      CMD`SOURCES:
+          [@@(%0 the reader, optional — the switches, the staff ones too when %0 is staff or not given)]list search sources[if(cor(not(strlen(%0)),orflags(%0,Wr)),%bwrite delete source unsource)]
+        flags: [funsyntax]
+      FUN`GET`SWITCH:
         value: |-
-          $^\+help/sources$:@pemit %#=[u(%!/FUN`DISPLAY`SOURCES,u(%!/FUN`GET`RECORDS))]
-        flags: [regexp, cmdsyntax]
-      CMD`USAGE:
+          [@@(%0 a switch as typed — the one it names, whole or by a beginning no other switch has, or nothing)][if(regmatch(%0,^\[a-z\]+$),if(member(setr(l,u(%!/FUN`GET`SWITCHES)),%0),%0,if(eq(words(setr(c,graball(%q<l>,%0*))),1),%q<c>)))]
+        flags: [funsyntax]
+      FUN`GET`USAGE:
         value: |-
-          $^\+help/(?<sw>search|write|delete|source|unsource)\s*$:@include %!/INC`DISPLAY`WARN=Usage: +help/[r(sw,args)] [switch(r(sw,args),search,<text>,write,<topic>=<text>,delete,<topic>,source,<name>=<object>,<name>)]
-        flags: [regexp, cmdsyntax]
+          [@@(%0 a switch — what follows it)][switch(%0,list,\[<source>\]\[=<page>\],search,<text>\[=<page>\],sources,,write,<topic>=<text>,delete,<topic>,source,<name>=<object>,unsource,<name>)]
+        flags: [funsyntax]
+      # Splits what followed a switch into its argument and the page after an =. A listing's = always
+      # starts the page; a search's only when a number (or nothing) follows its last one, so a search
+      # for text holding an = is still a search.
+      FUN`GET`PAGED:
+        value: |-
+          [@@(%0 what followed a switch · %1 1 when every = starts the page — sets %q<arg> and %q<page>)][setq(p,if(%1,after(%0,=),last(%0,=)))][if(cand(strmatch(%0,*=*),cor(%1,isint(%q<p>),not(strlen(%q<p>)))),setq(arg,trim(left(%0,sub(strlen(%0),inc(strlen(%q<p>))))),page,%q<p>),setq(arg,trim(%0),page,1))]
+        flags: [funsyntax]
+      INC`SW`LIST:
+        value: |-
+          @@ %q<rest> — \[<source>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(src,lcstr(%q<arg>))]; @assert cand(lte(words(%q<src>),1),u(%!/FUN`IS`PAGE,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(strlen(%q<src>)),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`WARN=No such help source: %q<src>. Try +help/sources.; think [setq(list,if(strlen(%q<src>),u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>),title,Topics[if(strlen(%q<src>),: %q<src>)],stem,trim(+help/list %q<src>))]; @include %!/INC`DO`LISTING
+        flags: [cmdsyntax]
+      INC`SW`SEARCH:
+        value: |-
+          @@ %q<rest> — <text>\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>)][setq(q,lcstr(%q<arg>))]; @assert cand(strlen(%q<q>),u(%!/FUN`IS`PAGE,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(list,u(%!/FUN`GET`SEARCHED,u(%!/FUN`GET`RECORDS),%q<q>),title,Search: %q<q>,stem,+help/search %q<q>)]; @include %!/INC`DO`LISTING
+        flags: [cmdsyntax]
+      INC`SW`SOURCES:
+        value: |-
+          @@ %q<rest> — nothing; @assert not(strlen(trim(%q<rest>)))=@include %!/INC`DISPLAY`USAGE; @pemit %#=[u(%!/FUN`DISPLAY`SOURCES,u(%!/FUN`GET`RECORDS))]
+        flags: [cmdsyntax]
       # attrib_set() rather than "&": the attribute NAME is computed here, and @set obj/attr= sets
       # attribute FLAGS on this engine rather than a value, so it is not an option at all. The body
       # arrives already evaluated once — the line staff typed was evaluated on its way in, exactly
@@ -415,24 +486,24 @@ objects:
       #
       # attrib_set() is a side-effect function, so a game that sets function_side_effects=no loses
       # +help/write. That is the trade for a computed attribute name; nothing else here needs it.
-      CMD`WRITE:
+      INC`SW`WRITE:
         value: |-
-          $(?s)^\+help/write\s+(?<topic>[^=]+)=(?<body>.*)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(setr(body,r(body,args)))=@include %!/INC`DISPLAY`WARN=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[notice(HELP,Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
-        flags: [regexp, cmdsyntax]
-      CMD`DELETE:
+          @@ %q<rest> — <topic>=<text>; @include %!/INC`IS`STAFF; @assert cand(strmatch(%q<rest>,*=*),strlen(trim(before(%q<rest>,=))))=@include %!/INC`DISPLAY`USAGE; think [setq(topic,ucstr(trim(before(%q<rest>,=))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(setr(body,after(%q<rest>,=)))=@include %!/INC`DISPLAY`WARN=A topic needs a body. Use +help/delete to remove one.; think [attrib_set(%q<obj>/%q<attr>,%q<body>)]; @pemit %#=[notice(HELP,Wrote game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
+        flags: [cmdsyntax]
+      INC`SW`DELETE:
         value: |-
-          $(?s)^\+help/delete\s+(?<topic>.+)$:@include %!/INC`IS`STAFF; think [setq(topic,ucstr(trim(r(topic,args))))]; @include %!/INC`IS`TOPICNAME; @assert strlen(get(%q<obj>/%q<attr>))=@include %!/INC`DISPLAY`WARN=No game topic by that name.; think [attrib_set(%q<obj>/%q<attr>)]; @pemit %#=[notice(HELP,Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
-        flags: [regexp, cmdsyntax]
+          @@ %q<rest> — <topic>; @include %!/INC`IS`STAFF; @assert strlen(setr(topic,ucstr(trim(%q<rest>))))=@include %!/INC`DISPLAY`USAGE; @include %!/INC`IS`TOPICNAME; @assert strlen(get(%q<obj>/%q<attr>))=@include %!/INC`DISPLAY`WARN=No game topic by that name.; think [attrib_set(%q<obj>/%q<attr>)]; @pemit %#=[notice(HELP,Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)]
+        flags: [cmdsyntax]
       # The escape hatch for a system no package installed. A package that ships a manifest should
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
-      CMD`SOURCE:
+      INC`SW`SOURCE:
         value: |-
-          $(?s)^\+help/source\s+(?<name>[^=]+)=(?<obj>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`WARN=A source name is letters, digits, and _ . or -.; @assert isdbref(setr(o,locate(%#,trim(r(obj,args)),*)))=@include %!/INC`DISPLAY`WARN=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[notice(HELP,[lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.,ok)]
-        flags: [regexp, cmdsyntax]
-      CMD`UNSOURCE:
+          @@ %q<rest> — <name>=<object>; @include %!/INC`IS`STAFF; @assert cand(strlen(trim(before(%q<rest>,=))),strlen(trim(after(%q<rest>,=))))=@include %!/INC`DISPLAY`USAGE; think [setq(name,ucstr(trim(before(%q<rest>,=))))]; @assert regmatch(%q<name>,^\[A-Z0-9_.-\]+$)=@include %!/INC`DISPLAY`WARN=A source name is made of letters and digits and _ . -; @assert isdbref(setr(o,locate(%#,trim(after(%q<rest>,=)),*)))=@include %!/INC`DISPLAY`WARN=I cannot find that object.; think [attrib_set(%!/SRC`%q<name>,%q<o>)]; @pemit %#=[notice(HELP,[lcstr(%q<name>)] now reads help from [name(%q<o>)] - [words(lattr(%q<o>/HELP`**))] topics.,ok)]
+        flags: [cmdsyntax]
+      INC`SW`UNSOURCE:
         value: |-
-          $(?s)^\+help/unsource\s+(?<name>.+)$:@include %!/INC`IS`STAFF; think [setq(name,ucstr(trim(r(name,args))))]; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`WARN=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[notice(HELP,Dropped help source [lcstr(%q<name>)].,ok)]
-        flags: [regexp, cmdsyntax]
+          @@ %q<rest> — <name>; @include %!/INC`IS`STAFF; @assert strlen(setr(name,ucstr(trim(%q<rest>))))=@include %!/INC`DISPLAY`USAGE; @assert strlen(get(%!/SRC`%q<name>))=@include %!/INC`DISPLAY`WARN=No such help source: [lcstr(%q<name>)]; think [attrib_set(%!/SRC`%q<name>)]; @pemit %#=[notice(HELP,Dropped help source [lcstr(%q<name>)].,ok)]
+        flags: [cmdsyntax]
 
   # ---- this package's own topics ---------------------------------------------
   # A source like any other: an ordinary object with a HELP tree, pointed at by SRC`PLUS-HELP. It is
@@ -473,7 +544,12 @@ objects:
           - `+help/search <text>` — topic names and bodies containing the text
           - `+help/sources` — where the topics come from
 
-          A topic name can be several words: `+help scene join`.
+          A topic name can be several words: `+help scene join`. A command finds the topic that
+          shows it, so `+help +scene/join`, `+help event` and `+help +events` all work. A word that
+          is no topic's name finds the topics whose names start with it or hold it: `+help join`.
+          When several match, they are listed, and `+help <topic>=2` shows the next page.
+
+          A switch can be cut short to any beginning no other switch has: `+help/l` is `+help/list`.
       HELP`SEARCH:
         value: |-
           `+help/search <text>` lists every topic whose name or body contains `<text>`, as stored —
@@ -511,17 +587,18 @@ objects:
           A topic name is words of letters, digits, and `_ . -`. Several words make a multi-word
           topic: `+help/write house rules=...` is then read by `+help house rules`.
 
-          `<text>` is markdown, and it is **evaluated when it is read** — so a topic can carry
-          colour or the reader's own name: `[ansi(hc,...)]` and `[name(%#)]` both work. Because it
+          `<text>` is markdown, and it is **evaluated when it is read**, so a topic can carry
+          colour or the reader's own name: `\[ansi(hc,...)\]` and `\[name(%%#)\]` both work. Because it
           is evaluated, writing help is a staff verb.
 
           The line you type is evaluated once on its way in, exactly as `&attr obj=...` is, so you
           choose what happens when: leave code unescaped and it resolves as you type it, escape it
           and it resolves for each reader instead. A backslash before a `\[`, `\(` or `\)` shows the
-          character; `%%` shows a `%%`.
+          character; `%%%%` shows a `%%`.
 
-          Cross-references are written the same way — escape the brackets around a topic's name
-          \(like this\) and the reader gets a clickable link to it.
+          A topic's name in brackets is a clickable link to it, once the brackets reach the reader.
+          They are escaped twice for that: typing `\\\\\\\[write\\\\\\\]` stores `\\\[write\\\]`, which reads as
+          a link to write.
 
           Game-authored topics live in the source `game`, and a `game` topic outranks a package's
           when both claim the same name.

@@ -117,7 +117,8 @@ help:markdown_guide
 
 Returns a space-separated list of page references whose title or content
 contains *<text>* (case-insensitive), in any locale the page has been
-translated into. Each page appears once however many of its locales matched.
+translated into. `*` and `?` in *<text>* are wildcards, matched anywhere in the
+title or content: `wikisearch(home*)` finds what `wikisearch(home)` does. Each page appears once however many of its locales matched.
 Unpublished pages and unpublished translations are never returned. Limited to
 the first 100 matches.
 

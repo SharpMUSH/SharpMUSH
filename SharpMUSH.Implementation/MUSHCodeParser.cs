@@ -303,7 +303,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// error-recovery tree so the best-effort split is returned to the caller.
 		if (errorListener.HasErrors && !lenient)
 		{
-			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, true);
+			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true, IsParseFailure = true }, true);
 		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser, Configuration, Services, text);
@@ -528,6 +528,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var newParser = Push(ParserState.ForTypedLine(player, handle, expectedSession, outputLimit));
 
 		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
+		// Nothing in a line that does not parse ran, so nothing else answers it: say why, as Huh? would be
+		// said, rather than nothing. Before login there is only the connection to tell.
+		if (result is { IsParseFailure: true, Message: { } failure })
+		{
+			await (player is { } typist
+				? _services.NotifyService.Notify(typist, failure)
+				: _services.NotifyService.Notify(handle, failure));
+		}
 
 		return result ?? CallState.Empty;
 	}
@@ -543,6 +551,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var outputLimit = await OutputLimitForAsync(player);
 		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit));
 		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
+		if (result is { IsParseFailure: true, Message: { } failure })
+		{
+			await _services.NotifyService.Notify(player, failure);
+		}
+
 		return result ?? CallState.Empty;
 	}
 

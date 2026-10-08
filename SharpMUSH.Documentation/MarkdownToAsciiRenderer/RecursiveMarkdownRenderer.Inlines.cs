@@ -13,6 +13,12 @@ public partial class RecursiveMarkdownRenderer
 	private MString RenderLiteral(LiteralInline literal)
 	{
 		var text = literal.Content.ToString();
+		// A soft break renders as one space. EnableTrackTrivia leaves the next line's indentation at the
+		// start of its first literal, which would follow that space: an item's wrapped line read "a  b".
+		if (literal.PreviousSibling is LineBreakInline { IsHard: false })
+		{
+			text = text.TrimStart(' ', '\t');
+		}
 		return string.IsNullOrEmpty(text)
 			? MarkupText.Empty
 			: MarkupText.Plain(text);
@@ -26,6 +32,11 @@ public partial class RecursiveMarkdownRenderer
 	private MString RenderEmphasis(EmphasisInline emphasis)
 	{
 		var content = RenderInlines(emphasis.FirstChild);
+
+		if (emphasis.DelimiterChar == '~')
+		{
+			return RenderStrikethrough(content);
+		}
 
 		// DelimiterCount determines bold (2) vs italic (1)
 		if (emphasis.DelimiterCount == 2 || emphasis.DelimiterChar == '*')
@@ -43,6 +54,13 @@ public partial class RecursiveMarkdownRenderer
 	/// </summary>
 	protected virtual MString RenderBold(MString content)
 		=> MarkupText.Wrap(_boldStyle, content.ToPlainText());
+
+	/// <summary>
+	/// Render <c>~~struck~~</c> text: struck through where the client draws it, and plain text, never the
+	/// tildes, where it does not.
+	/// </summary>
+	protected virtual MString RenderStrikethrough(MString content)
+		=> MarkupText.Wrap(_strikeStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render italic text. Can be overridden for custom rendering.

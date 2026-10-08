@@ -135,4 +135,88 @@ public class WikiReaderIntegrationTests
 			await installer.UninstallAsync("wiki-reader", force: true, CancellationToken.None);
 		}
 	}
+
+	private async Task InstallAsync()
+	{
+		var controller = new PackagesController(
+			WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageSourceService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>());
+		var applied = await controller.Apply(
+			new ApplyRequest(BundledPackages.RemoteName, "wiki-reader", null, null, null), CancellationToken.None);
+		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("wiki-reader must install for +wiki to answer");
+	}
+
+	/// <summary>
+	/// What a QA pass typed and got Huh?, "Nothing to show" or the wrong page for: a page named without its
+	/// namespace, a wildcard search, the category list, a category named by its page, and arguments that
+	/// are not what a switch takes.
+	/// </summary>
+	[Test]
+	public async Task WhatAPlayerTypes_FindsThePageOrTheUsageLine()
+	{
+		var reader = await CreatePlayerAsync($"WikiQ{Tag}");
+		var guide = (await Wiki.CreateAsync($"Quill Guide {Tag}", "Struck ~~out~~ here.", "#1", WikiNamespace.Help, "en"))
+			.Expect<WikiPage>();
+		var twinTitle = $"Twin {Tag}";
+		var twinHelp = (await Wiki.CreateAsync(twinTitle, "In help.", "#1", WikiNamespace.Help, "en")).Expect<WikiPage>();
+		await Wiki.CreateAsync(twinTitle, "A character.", "#1", WikiNamespace.Character, "en");
+		var categoryTitle = $"Lanterns {Tag}";
+		await Wiki.CreateAsync(categoryTitle, "Things that glow.", "#1", WikiNamespace.Category, "en");
+		var lit = (await Wiki.CreateAsync($"Harbour Lamp {Tag}", "A lamp.", "#1", WikiNamespace.Main, "en", [categoryTitle]))
+			.Expect<WikiPage>();
+		var categoryKey = WikiHelpers.CategoryKey(categoryTitle);
+
+		await InstallAsync();
+		try
+		{
+			var bare = await RunAs(reader, $"+wiki {guide.Slug}");
+			await Assert.That(bare).Contains("Struck out here.")
+				.Because("a slug only one namespace has opens that page, and ~~ strikes rather than printing");
+
+			var twin = await RunAs(reader, $"+wiki {twinHelp.Slug}");
+			await Assert.That(twin).Contains($"help:{twinHelp.Slug}").And.Contains($"character:{twinHelp.Slug}")
+				.Because("a slug two namespaces have names both");
+
+			var search = await RunAs(reader, $"+wiki/search harbour lam*");
+			await Assert.That(search).Contains($"main:{lit.Slug}").Because("+wiki/search takes * as +help/search does");
+
+			var categories = await RunAs(reader, "+wiki/category");
+			await Assert.That(categories).Contains("Categories").And.Contains(categoryTitle);
+
+			var byPage = await RunAs(reader, $"+wiki/category category:{categoryKey}");
+			await Assert.That(byPage).Contains($"Category: {categoryTitle}");
+			await Assert.That(byPage).DoesNotContain("Category: Category:");
+			await Assert.That(byPage).Contains($"main:{lit.Slug}");
+
+			var info = await RunAs(reader, $"+wiki/i main:{lit.Slug}");
+			await Assert.That(info).Contains($"+wiki main:{lit.Slug}").Because("/info ends with how to read the page");
+
+			foreach (var (command, usage) in new[]
+			{
+				("+wiki/recent -1", "Usage: +wiki/recent [<n>][=<page>]"),
+				("+wiki/recent abc", "Usage: +wiki/recent [<n>][=<page>]"),
+				("+wiki/list main=abc", "Usage: +wiki/list [<namespace>][=<page>]"),
+				("+wiki/list main=0", "Usage: +wiki/list [<namespace>][=<page>]"),
+				("+wiki/search=2", "Usage: +wiki/search <text>[=<page>]"),
+				("+wiki/bogus", "+wiki has no /bogus switch."),
+			})
+			{
+				var said = await RunAs(reader, command);
+				await Assert.That(said).Contains(usage).Because(command);
+				await Assert.That(said).DoesNotContain("Huh?").Because(command);
+			}
+
+			await Assert.That(await RunAs(reader, "+wiki/lis main")).Contains("< Pages: main >")
+				.Because("a switch may be cut short");
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>()
+				.UninstallAsync("wiki-reader", force: true, CancellationToken.None);
+		}
+	}
 }

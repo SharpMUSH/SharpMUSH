@@ -29,6 +29,7 @@ public partial class RecursiveMarkdownRenderer
 	protected readonly Ansi _dimStyle = Ansi.Create(faint: true);
 	private readonly Ansi _boldStyle = Ansi.Create(foreground: Color.White.ToAnsiColor(), bold: true);
 	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
+	private readonly Ansi _strikeStyle = Ansi.Create(strikeThrough: true);
 	private readonly Ansi _headingStyle = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true, bold: true);
 	private readonly Ansi _heading3Style = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true);
 	private int _maxWidth;

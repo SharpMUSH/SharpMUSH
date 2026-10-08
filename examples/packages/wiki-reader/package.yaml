@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -148,6 +148,33 @@ objects:
           [@@(%0 a category name — true when a published page is in it)][words(wikicategory(%0))]
         flags: [funsyntax]
 
+      # A page named without its namespace is looked for in the others when main has none, so
+      # "+wiki god" opens character:god. Several namespaces holding the name answer none, and
+      # FUN`GET`ELSEWHERE lists them.
+      FUN`GET`ELSEWHERE:
+        value: |-
+          [@@(%0 a page name with no namespace — the references in each namespace that has one by that name)][if(strmatch(%0,*:*),,trim(squish(iter(u(%!/FUN`GET`NAMESPACES),if(u(%!/FUN`IS`PAGE,%i0:%0),%i0:%0),%b,%b))))]
+        flags: [funsyntax]
+      FUN`GET`RESOLVE:
+        value: |-
+          [@@(%0 a page reference as typed — the page it names, or the one page of that name in another namespace, or nothing)][if(u(%!/FUN`IS`PAGE,%0),%0,if(eq(words(setr(e,u(%!/FUN`GET`ELSEWHERE,%0))),1),%q<e>))]
+        flags: [funsyntax]
+      # Every category any page is in, and every one with a page of its own, by key.
+      FUN`GET`CATEGORIES:
+        value: |-
+          [@@(no arguments — every category key, sorted)][setunion(iter(wikilist(),wiki(%i0,categories),%b,%b),iter(wikilist(category),after(%i0,:),%b,%b))]
+        flags: [funsyntax]
+      # "category:setting" names the category setting, as its page's reference does.
+      FUN`GET`CATKEY:
+        value: |-
+          [@@(%0 a category name as typed — its key)][edit(lcstr(trim(if(strmatch(trim(%0),category:*),after(%0,:),%0))),%b,_)]
+        flags: [funsyntax]
+      # A page number is a whole number from 1; =0, =-1 and =abc are mistakes, not page 1.
+      FUN`IS`PAGENUM:
+        value: |-
+          [@@(%0 a page number as typed)][cand(isint(%0),gt(%0,0))]
+        flags: [funsyntax]
+
       FUN`DISPLAY`COUNT:
         value: |-
           [@@(%0 a count · %1 the singular noun · %2 the plural — English does not pluralise by appending s, and "3 entrys" is what pretending it does looks like)]%0 [if(eq(%0,1),%1,%2)]
@@ -176,6 +203,10 @@ objects:
         value: |-
           [@@(%0 page references — a table of each page and its title, joined with %r and split on a newline so a title holding a | stays one cell. The title takes the spare width)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12),grow,json(string,%r1)),[ansi(h,Page)]%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[ansi(h,Title)]%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)])]
         flags: [funsyntax]
+      FUN`DISPLAY`CATTABLE:
+        value: |-
+          [@@(%0 category keys — each category, clickable, and how many pages are in it)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2),min,json(string,12),grow,json(string,1)),[ansi(h,Category)]%r[iter(%0,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(%0,words(wikicategory(%i0)),%b,%r)])]
+        flags: [funsyntax]
       FUN`DISPLAY`RECENTTABLE:
         value: |-
           [@@(%0 page references — same as TABLE with the last edit's age)][datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r1%r2),grow,json(string,%r1)),[ansi(h,Page)]%r[iter(%0,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[ansi(h,Title)]%r[iter(%0,edit(wiki(%i0,title),%r,%b),%b,%r)],[ansi(h,Edited)]%r[iter(%0,[trim(timestring(sub(secs(),wiki(%i0,updated))))] ago,%b,%r)])]
@@ -191,7 +222,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`FIELDS:
         value: |-
-          [@@(%0 a page reference — its metadata as a field list)][box([fields(,Title,firstof(wiki(%0,title),-),Namespace,firstof(wiki(%0,namespace),-),Revision,firstof(wiki(%0,revision),-),Locale,firstof(wiki(%0,locale),-),Categories,if(words(setr(c,wiki(%0,categories))),iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b),-),Author,if(isdbref(setr(a,wiki(%0,author))),[name(%q<a>)]%b%(%q<a>%),firstof(%q<a>,-)),Updated,[trim(timestring(sub(secs(),wiki(%0,updated))))] ago)]%r[rule()]%r%0,wiki(%0,title),,u(%!/FUN`GET`FRAME))]
+          [@@(%0 a page reference — its metadata as a field list)][box([fields(,Title,firstof(wiki(%0,title),-),Namespace,firstof(wiki(%0,namespace),-),Revision,firstof(wiki(%0,revision),-),Locale,firstof(wiki(%0,locale),-),Categories,if(words(setr(c,wiki(%0,categories))),iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b),-),Author,if(isdbref(setr(a,wiki(%0,author))),[name(%q<a>)]%b%(%q<a>%),firstof(%q<a>,-)),Updated,[trim(timestring(sub(secs(),wiki(%0,updated))))] ago)]%r[rule()]%r[cmdlink(+wiki %0,+wiki %0,Read %0)]%b·%b[cmdlink(+wiki/category,+wiki/category,Every category)],wiki(%0,title),,u(%!/FUN`GET`FRAME))]
         flags: [funsyntax]
       FUN`DISPLAY`AUDITSECTION:
         value: |-
@@ -203,12 +234,22 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`INDEX:
         value: |-
-          [@@(no arguments — each namespace, clickable to its listing, with what it holds and how many pages. What it holds is left out first on a narrow screen)][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r2%r1),grow,json(string,%r1)),[ansi(h,Namespace)]%r[iter(u(%!/FUN`GET`NAMESPACES),cmdlink(%i0,+wiki/list %i0,Pages in %i0),%b,%r)],[ansi(h,Holds)]%r[iter(u(%!/FUN`GET`NAMESPACES),u(%!/FUN`GET`NSDESC,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,%r)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category <name>%b·%b+wiki/recent %[<n>%],Wiki,,u(%!/FUN`GET`FRAME))]
+          [@@(no arguments — each namespace, clickable to its listing, with what it holds and how many pages. What it holds is left out first on a narrow screen)][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r2%r1),grow,json(string,%r1)),[ansi(h,Namespace)]%r[iter(u(%!/FUN`GET`NAMESPACES),cmdlink(%i0,+wiki/list %i0,Pages in %i0),%b,%r)],[ansi(h,Holds)]%r[iter(u(%!/FUN`GET`NAMESPACES),u(%!/FUN`GET`NSDESC,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,%r)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category %[<name>%]%b·%b+wiki/recent %[<n>%],Wiki,,u(%!/FUN`GET`FRAME))]
         flags: [funsyntax]
 
+      # Reads registers rather than arguments: @include splits its arguments on commas, and a title
+      # carries what the reader typed.
       INC`DO`LISTING:
         value: |-
-          @@ %0 title · %1 refs · %2 page · %3 row attribute · %4 paging stem; @assert %1=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%1))]; @assert lte(%2,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %2.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%0,%1,%2,%3,%4)]
+          @@ no arguments — lists %q<list> with the table %q<table> under the title %q<title>, page %q<page>, paging with %q<stem>=<n>; @assert words(%q<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%q<list>))]; @assert lte(%q<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%q<title>,%q<list>,%q<page>,%q<table>,%q<stem>)]
+        flags: [cmdsyntax]
+      INC`DISPLAY`USAGE:
+        value: |-
+          @@ no arguments — the usage of switch %q<sw>; @pemit %#=[notice(WIKI,Usage: [trim(+wiki/%q<sw> [u(%!/FUN`GET`USAGE,%q<sw>)])],warn)]
+        flags: [cmdsyntax]
+      INC`DISPLAY`BADSWITCH:
+        value: |-
+          @@ no arguments — %q<typed> is a switch naming no single one; @pemit %#=[notice(WIKI,[if(not(strlen(%q<typed>)),+wiki/ needs a switch.,if(words(setr(c,graball(u(%!/FUN`GET`SWITCHES),%q<typed>*))),+wiki/%q<typed> could be [itemize(iter(%q<c>,/%i0,%b,|),|,or)].,+wiki has no /%q<typed> switch.))] Switches: [iter(u(%!/FUN`GET`SWITCHES,%#),cmdlink(/%i0,+wiki/%i0),%b,%b)],warn)]
         flags: [cmdsyntax]
 
       INC`IS`NAMESPACE:
@@ -222,7 +263,7 @@ objects:
         flags: [cmdsyntax]
       INC`IS`PAGE:
         value: |-
-          @@ no arguments — validates %q<ref>, which the calling command stages; @assert %q<ref>=@include %!/INC`DISPLAY`WARN=Which page? Try +wiki/list.; @assert u(%!/FUN`IS`PAGE,%q<ref>)=@include %!/INC`DISPLAY`WARN=No such wiki page: %q<ref>
+          @@ no arguments — validates %q<ref>, which the calling command stages, and resolves it to the page it names; @assert strlen(%q<ref>)=@include %!/INC`DISPLAY`WARN=Which page? Try +wiki/list.; think [setq(found,u(%!/FUN`GET`RESOLVE,%q<ref>))]; @assert cor(strlen(%q<found>),lte(words(setr(also,u(%!/FUN`GET`ELSEWHERE,%q<ref>))),1))=@pemit %#=[notice(WIKI,There is no main page called %q<ref>. Did you mean [itemize(iter(%q<also>,u(%!/FUN`DISPLAY`REF,%i0),%b,|),|,or)]?,warn)]; @assert strlen(%q<found>)=@include %!/INC`DISPLAY`WARN=No such wiki page: %q<ref>; think [setq(ref,%q<found>)]
         flags: [cmdsyntax]
 
       # Non-capturing groups are "(?\:" — a bare colon would end the pattern.
@@ -236,42 +277,62 @@ objects:
           $(?s)^\+wiki\s+(?<ref>\S.*)$:think [setq(ref,trim(r(ref,args)))]; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`ARTICLE,%q<ref>)]
         flags: [regexp, cmdsyntax]
 
-      CMD`LIST:
+      # Every switch comes through here, named in full or by any beginning only it has (/l is /list),
+      # and runs its INC`SW leaf with %q<rest>, whatever followed the switch. Matching every switch in
+      # one pattern is what lets a mistyped one answer rather than fall through to Huh?.
+      CMD`SWITCH:
         value: |-
-          $^\+wiki/list(?\:\s+(?<ns>[^\s=]+))?(?\:=(?<page>\d+))?$:think [setq(namespace,r(ns,args),page,strfirstof(r(page,args),1))]; @include %!/INC`IS`NAMESPACE; think [setq(refs,wikilist(%q<namespace>),title,Pages[if(%q<namespace>,: %q<namespace>)],hint,trim(+wiki/list %q<namespace>))]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`TABLE,%q<hint>
+          $(?s)^\+wiki/(?<sw>[^\s=]*)(?<rest>.*)$:think [setq(typed,lcstr(r(sw,args)),rest,r(rest,args))][setq(sw,u(%!/FUN`GET`SWITCH,%q<typed>))]; @assert strlen(%q<sw>)=@include %!/INC`DISPLAY`BADSWITCH; @include %!/INC`SW`[ucstr(%q<sw>)]
         flags: [regexp, cmdsyntax]
-
-      CMD`SEARCH:
+      FUN`GET`SWITCHES:
         value: |-
-          $(?s)^\+wiki/search\s+(?<q>\S.*?)(?\:=(?<page>\d+))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; think [setq(refs,wikisearch(%q<query>),title,Search: %q<query>,hint,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`TABLE,%q<hint>
-        flags: [regexp, cmdsyntax]
+          [@@(%0 the reader, optional — the switches, the staff one too when %0 is staff or not given)]list search category recent info[if(cor(not(strlen(%0)),orflags(%0,Wr)),%baudit)]
+        flags: [funsyntax]
+      FUN`GET`SWITCH:
+        value: |-
+          [@@(%0 a switch as typed — the one it names, whole or by a beginning no other switch has, or nothing)][if(regmatch(%0,^\[a-z\]+$),if(member(setr(l,u(%!/FUN`GET`SWITCHES)),%0),%0,if(eq(words(setr(c,graball(%q<l>,%0*))),1),%q<c>)))]
+        flags: [funsyntax]
+      FUN`GET`USAGE:
+        value: |-
+          [@@(%0 a switch — what follows it)][switch(%0,list,\[<namespace>\]\[=<page>\],search,<text>\[=<page>\],category,\[<name>\]\[=<page>\],recent,\[<n>\]\[=<page>\],info,<page>,audit,)]
+        flags: [funsyntax]
+      # Splits what followed a switch into its argument and the page after an =. A listing's = always
+      # starts the page; a search's only when a number (or nothing) follows its last one, so a search
+      # for text holding an = is still a search.
+      FUN`GET`PAGED:
+        value: |-
+          [@@(%0 what followed a switch · %1 1 when every = starts the page — sets %q<arg> and %q<page>)][setq(p,if(%1,after(%0,=),last(%0,=)))][if(cand(strmatch(%0,*=*),cor(%1,isint(%q<p>),not(strlen(%q<p>)))),setq(arg,trim(left(%0,sub(strlen(%0),inc(strlen(%q<p>))))),page,%q<p>),setq(arg,trim(%0),page,1))]
+        flags: [funsyntax]
 
+      INC`SW`LIST:
+        value: |-
+          @@ %q<rest> — \[<namespace>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(namespace,%q<arg>)]; @assert cand(lte(words(%q<namespace>),1),u(%!/FUN`IS`PAGENUM,%q<page>))=@include %!/INC`DISPLAY`USAGE; @include %!/INC`IS`NAMESPACE; think [setq(list,wikilist(%q<namespace>),title,Pages[if(strlen(%q<namespace>),: %q<namespace>)],table,FUN`DISPLAY`TABLE,stem,trim(+wiki/list %q<namespace>))]; @include %!/INC`DO`LISTING
+        flags: [cmdsyntax]
+      # A * or ? in the text is a wildcard, as in +help/search: wikisearch() takes them.
+      INC`SW`SEARCH:
+        value: |-
+          @@ %q<rest> — <text>\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>)][setq(query,%q<arg>)]; @assert cand(strlen(%q<query>),u(%!/FUN`IS`PAGENUM,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikisearch(%q<query>),title,Search: %q<query>,table,FUN`DISPLAY`TABLE,stem,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING
+        flags: [cmdsyntax]
       # Categories are not in a page's name: a category is a list of pages, read with wikicategory().
-      CMD`CATEGORY:
+      # With no name, the categories themselves.
+      INC`SW`CATEGORY:
         value: |-
-          $^\+wiki/category\s+(?<name>[^=]*\S)(?\:=(?<page>\d+))?$:think [setq(category,trim(r(name,args)),page,strfirstof(r(page,args),1))]; think [setq(refs,wikicategory(%q<category>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,edit(lcstr(%q<category>),%b,_))],hint,+wiki/category %q<category>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`TABLE,%q<hint>
-        flags: [regexp, cmdsyntax]
-
-      CMD`RECENT:
+          @@ %q<rest> — \[<name>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(key,u(%!/FUN`GET`CATKEY,%q<arg>))]; @assert u(%!/FUN`IS`PAGENUM,%q<page>)=@include %!/INC`DISPLAY`USAGE; think [if(strlen(%q<key>),setq(list,wikicategory(%q<key>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,%q<key>)],table,FUN`DISPLAY`TABLE,stem,+wiki/category %q<key>),setq(list,u(%!/FUN`GET`CATEGORIES),title,Categories,table,FUN`DISPLAY`CATTABLE,stem,+wiki/category))]; @include %!/INC`DO`LISTING
+        flags: [cmdsyntax]
+      # wikirecent() takes 1 to 50.
+      INC`SW`RECENT:
         value: |-
-          $^\+wiki/recent(?\:\s+(?<count>\d+))?(?\:=(?<page>\d+))?$:think [setq(count,strfirstof(r(count,args),10),page,strfirstof(r(page,args),1))]; think [setq(refs,wikirecent(%q<count>),title,Recently edited,hint,+wiki/recent %q<count>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`RECENTTABLE,%q<hint>
-        flags: [regexp, cmdsyntax]
-
-      CMD`INFO:
+          @@ %q<rest> — \[<n>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(count,strfirstof(%q<arg>,10))]; @assert cand(isint(%q<count>),gt(%q<count>,0),lte(%q<count>,50),u(%!/FUN`IS`PAGENUM,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikirecent(%q<count>),title,Recently edited,table,FUN`DISPLAY`RECENTTABLE,stem,+wiki/recent %q<count>)]; @include %!/INC`DO`LISTING
+        flags: [cmdsyntax]
+      INC`SW`INFO:
         value: |-
-          $(?s)^\+wiki/info\s+(?<ref>\S.*)$:think [setq(ref,trim(r(ref,args)))]; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`FIELDS,%q<ref>)]
-        flags: [regexp, cmdsyntax]
-
-      CMD`USAGE:
-        value: |-
-          $^\+wiki/(?<sw>search|info|category)\s*$:@include %!/INC`DISPLAY`WARN=Usage: +wiki/[r(sw,args)] [switch(r(sw,args),info,<page>,category,<name>,<text>)]
-        flags: [regexp, cmdsyntax]
-
+          @@ %q<rest> — <page>; think [setq(ref,trim(%q<rest>))]; @assert strlen(%q<ref>)=@include %!/INC`DISPLAY`USAGE; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`FIELDS,%q<ref>)]
+        flags: [cmdsyntax]
       # Drafts never appear in wikilist(), so this audits published pages only.
-      CMD`AUDIT:
+      INC`SW`AUDIT:
         value: |-
-          $^\+wiki/audit$:@include %!/INC`IS`ADMIN; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>)]
-        flags: [regexp, cmdsyntax]
+          @@ %q<rest> — nothing; @include %!/INC`IS`ADMIN; @assert not(strlen(trim(%q<rest>)))=@include %!/INC`DISPLAY`USAGE; think [setq(published,wikilist())]; @assert %q<published>=@include %!/INC`DISPLAY`INFO=No published pages to audit yet.; think [setq(uncategorised,filterq(categorised,%!/FUN`IS`UNCATEGORISED,%q<published>))]; @pemit %#=[u(%!/FUN`DISPLAY`AUDIT,%q<published>,%q<uncategorised>)]
+        flags: [cmdsyntax]
 
       # ---- +help topics -------------------------------------------------------
       # These sit on wiki_global itself, which is fine because it carries no privileged flag — the
@@ -290,16 +351,19 @@ objects:
         - `+wiki` — what is there, by namespace
         - `+wiki <page>` — read one, rendered
         - `+wiki/list %[<namespace>%]` — every published page, or one namespace's
-        - `+wiki/search <text>` — pages matching the text
-        - `+wiki/recent %[<n>%]` — what changed lately
-        - `+wiki/category <name>` — the pages in a category
+        - `+wiki/search <text>` — pages matching the text; `*` and `?` are wildcards
+        - `+wiki/recent %[<n>%]` — what changed lately, 1 to 50 pages
+        - `+wiki/category %[<name>%]` — the pages in a category, or every category
         - `+wiki/info <page>` — a page's title, categories and revision
 
         The namespaces are `main`, `help`, `character`, `system` and `category`. A page is named
-        `<namespace>:<slug>` (`help:markdown_guide`); a main page by its slug alone. Its categories
+        `<namespace>:<slug>` (`help:markdown_guide`); a main page by its slug alone. A slug main has
+        no page for is looked for in the others, so `+wiki god` opens `character:god`. Its categories
         are not part of its name: they are listed under the article, the same in every language,
         and staff set them with `@wiki/category <page>=<name>, <name>`. Long listings page with
         `=<n>`: `+wiki/list main=2`.
+
+        A switch can be cut short to any beginning no other switch has: `+wiki/c` is `+wiki/category`.
 
         Drafts are invisible here — a page appears once it is published.
       HELP`WIKI`AUDIT: |-

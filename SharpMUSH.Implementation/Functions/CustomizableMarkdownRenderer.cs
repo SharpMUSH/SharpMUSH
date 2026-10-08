@@ -51,6 +51,12 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
+	/// A package draws this output inside a screen of its own, so a table spans it and its heading rule
+	/// meets the screen's lines.
+	/// </summary>
+	protected override bool TablesFillWidth => true;
+
+	/// <summary>
 	/// The markdown this renderer was handed, kept so <c>RENDERMARKUP`TABLE</c> can give a template each
 	/// cell's raw source. Markdig records cell positions as offsets into the string it parsed, so the
 	/// string has to outlive the parse.
