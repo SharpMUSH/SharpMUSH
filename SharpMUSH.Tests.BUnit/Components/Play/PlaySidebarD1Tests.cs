@@ -180,42 +180,47 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".play-side-empty, .kit-section-label, .play-side-browse").Count).IsEqualTo(0);
 	}
 
-	private const string TwoChannels = """
-		[
-		  {"name":"Public","description":"Chatter about anything","members":12,"joined":false,"gagged":false,"canJoin":true},
-		  {"name":"Staff","description":"","members":3,"joined":false,"gagged":false,"canJoin":false}
-		]
-		""";
+	private static readonly CommChannel[] TwoChannels =
+	[
+		new("Public", 0, Joined: false, Members: 12, Description: "Chatter about anything"),
+		new("Staff", 0, Joined: false, Members: 3),
+	];
 
-	private List<string> CaptureCommands()
+	/// <summary>
+	/// The commands the browser sends, answering each with <paramref name="output"/> and, as the character's
+	/// standing read straight after, <paramref name="standing"/>.
+	/// </summary>
+	private List<(string Command, string? Result)> CaptureCommands(string standing, params string[] output)
 	{
 		Services.AddSingleton<GameCommandService>();
 		Services.AddSingleton<ChannelBrowserService>();
-		var sent = new List<string>();
-		_api.Extra["/api/comm/channels"] = TwoChannels;
-		_api.Extra["POST /api/commands"] = """{"output":[],"result":null,"truncated":false}""";
+		var sent = new List<(string, string?)>();
+		_api.Extra["POST /api/commands"] = System.Text.Json.JsonSerializer.Serialize(
+			new { output, result = standing, truncated = false });
 		_api.OnRequest = async request =>
 		{
 			if (request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath == "/api/commands")
 			{
 				using var body = System.Text.Json.JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
-				sent.Add(body.RootElement.GetProperty("command").GetString()!);
+				sent.Add((body.RootElement.GetProperty("command").GetString()!,
+					body.RootElement.TryGetProperty("result", out var result) ? result.GetString() : null));
 			}
 		};
 		return sent;
 	}
 
 	/// <summary>
-	/// Browse channels opens the browser in place: every channel the character may see, with its description,
-	/// its member count and a switch, off for one they are not on and disabled for one they may not join.
+	/// Browse channels opens the browser in place: every channel the comm.channels push lists, with its
+	/// description, its member count and a switch, off for one the character is not on.
 	/// </summary>
 	[Test]
-	public async Task BrowseChannels_ListsEveryVisibleChannel_WithAJoinSwitch()
+	public async Task BrowseChannels_ListsEveryChannelThePushLists_WithAJoinSwitch()
 	{
-		CaptureCommands();
+		CaptureCommands("OFF");
+		_feed.ChannelList = TwoChannels;
 		var cut = RenderSidebar();
+		await Assert.That(cut.FindAll(".play-side-channels").Count).IsEqualTo(0).Because("neither is joined");
 		await cut.Find(".play-side-browse").ClickAsync();
-		cut.WaitForAssertion(() => cut.Find(".chan-browse-row"), TimeSpan.FromSeconds(5));
 
 		var rows = cut.FindAll(".chan-browse-row");
 		await Assert.That(rows.Count).IsEqualTo(2);
@@ -224,7 +229,7 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(rows[0].QuerySelector(".chan-browse-count")!.TextContent).IsEqualTo("12 members");
 		await Assert.That(rows[0].QuerySelector("[role=switch]")!.GetAttribute("aria-checked")).IsEqualTo("false");
 		await Assert.That(rows[0].QuerySelector(".chan-browse-gag")).IsNull().Because("only a channel you are on can be gagged");
-		await Assert.That(rows[1].QuerySelector("[role=switch]")!.HasAttribute("disabled")).IsTrue();
+		await Assert.That(rows[1].QuerySelector(".chan-browse-desc")).IsNull();
 		await Assert.That(cut.FindAll(".play-side-channels-empty").Count).IsEqualTo(0).Because("the browser says it instead");
 	}
 
@@ -232,13 +237,13 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	[Test]
 	public async Task BrowseChannels_ReplacesTheChannelRows_UntilDone()
 	{
-		CaptureCommands();
-		_feed.ChannelList = [new CommChannel("Public", 0)];
+		CaptureCommands("OFF");
+		_feed.ChannelList = [new CommChannel("Public", 0), new CommChannel("Newbie", 0, Joined: false)];
 		var cut = RenderSidebar();
 		await Assert.That(cut.FindAll(".play-side-channels .kit-row").Count).IsEqualTo(1);
 
 		await cut.Find(".play-side-browse").ClickAsync();
-		cut.WaitForAssertion(() => cut.Find(".chan-browse-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".chan-browse-row").Count).IsEqualTo(2);
 		await Assert.That(cut.FindAll(".play-side-channels").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".play-side-browse").GetAttribute("aria-expanded")).IsEqualTo("true");
 		await Assert.That(cut.Find(".play-side-browse").TextContent.Trim()).IsEqualTo("Done");
@@ -248,42 +253,44 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".play-side-channels .kit-row").Count).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// The switch runs @channel/on and reads the standing in the same queue entry; it shows the change at
+	/// once, and keeps showing it once the push agrees.
+	/// </summary>
 	[Test]
-	public async Task BrowseChannels_TheSwitchJoins_AndTheListIsReadAgain()
+	public async Task BrowseChannels_TheSwitchJoins_AndShowsItBeforeThePushArrives()
 	{
-		var sent = CaptureCommands();
+		var sent = CaptureCommands("ON", "CHAT: You join channel <Public>.");
+		_feed.ChannelList = TwoChannels;
 		var cut = RenderSidebar();
 		await cut.Find(".play-side-browse").ClickAsync();
-		cut.WaitForAssertion(() => cut.Find(".chan-browse-row"), TimeSpan.FromSeconds(5));
 
-		_api.Extra["/api/comm/channels"] = """
-			[{"name":"Public","description":"","members":13,"joined":true,"gagged":false,"canJoin":true}]
-			""";
 		await cut.Find("[data-channel=Public] [role=switch]").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find("[data-channel=Public] .chan-browse-gag"), TimeSpan.FromSeconds(5));
-		await Assert.That(sent).IsEquivalentTo(["@channel/on Public"]);
+		await Assert.That(sent).IsEquivalentTo([("@channel/on Public", (string?)"cstatus(%#,Public)")]);
 		await Assert.That(cut.Find("[data-channel=Public] [role=switch]").GetAttribute("aria-checked")).IsEqualTo("true");
 		await Assert.That(cut.FindAll(".chan-browse-error").Count).IsEqualTo(0);
+
+		_feed.ChannelList = [TwoChannels[0] with { Joined = true }, TwoChannels[1]];
+		await cut.InvokeAsync(_feed.Raise);
+		await Assert.That(cut.Find("[data-channel=Public] [role=switch]").GetAttribute("aria-checked")).IsEqualTo("true");
 	}
 
 	[Test]
 	public async Task BrowseChannels_TheBellGags_AndARefusalSaysWhy()
 	{
-		var sent = CaptureCommands();
-		_api.Extra["/api/comm/channels"] = """
-			[{"name":"Public","description":"","members":13,"joined":true,"gagged":false,"canJoin":true}]
-			""";
-		_api.Extra["POST /api/commands"] = """{"output":["CHAT: You can't do that."],"result":null,"truncated":false}""";
+		var sent = CaptureCommands("ON", "CHAT: You can't do that.");
+		_feed.ChannelList = [new CommChannel("Public", 0, Members: 13)];
 		var cut = RenderSidebar();
 		await cut.Find(".play-side-browse").ClickAsync();
-		cut.WaitForAssertion(() => cut.Find(".chan-browse-gag"), TimeSpan.FromSeconds(5));
 
 		await cut.Find(".chan-browse-gag").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".chan-browse-error"), TimeSpan.FromSeconds(5));
-		await Assert.That(sent).IsEquivalentTo(["@channel/gag Public=yes"]);
+		await Assert.That(sent.Select(s => s.Command)).IsEquivalentTo(["@channel/gag Public=yes"]);
 		await Assert.That(cut.Find(".chan-browse-error").TextContent).Contains("You can't do that.");
+		await Assert.That(cut.Find(".chan-browse-gag").GetAttribute("aria-pressed")).IsEqualTo("false");
 	}
 
 	[Test]
@@ -291,6 +298,14 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	[Arguments("[a]%b=c", @"\[a\]\%b\=c")]
 	public async Task AChannelName_GoesIntoTheCommand_Literally(string name, string expected)
 		=> await Assert.That(ChannelBrowserService.Argument(name)).IsEqualTo(expected);
+
+	[Test]
+	[Arguments("OFF", false, false)]
+	[Arguments("ON", true, false)]
+	[Arguments("ON GAG HIDE", true, true)]
+	[Arguments("#-1 NO SUCH CHANNEL", false, false)]
+	public async Task TheStanding_IsReadFromCstatus(string result, bool joined, bool gagged)
+		=> await Assert.That(ChannelBrowserService.ReadStanding(result)).IsEqualTo((joined, gagged));
 
 	[Test]
 	public async Task TheFeedChanging_Rerenders()

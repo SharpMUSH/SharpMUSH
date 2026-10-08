@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Listo</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Cargando canales…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>No hay canales que puedas ver.</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Silenciar: seguir en el canal sin oír nada.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>No puedes unirte a este canal.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>El juego no hizo ese cambio.</value>

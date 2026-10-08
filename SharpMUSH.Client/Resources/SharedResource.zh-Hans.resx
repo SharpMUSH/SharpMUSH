@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>完成</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>正在加载频道…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>没有你能看到的频道。</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>屏蔽：留在频道中，但不接收任何消息。</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>你无法加入此频道。</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>游戏没有做出该更改。</value>

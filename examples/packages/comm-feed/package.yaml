@@ -2,7 +2,7 @@ format: 1
 package: comm-feed
 version: 1.0.0
 authors: [SharpMUSH]
-description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — a player's channels, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
+description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — the channels a player may see and which they are on, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [oob, portal, play, channels, pages]
@@ -55,21 +55,21 @@ objects:
       # message alone — the speaker's name is the payload's from.
       FN`COMM`TEXT: |-
         switch(%0,pose,%1 %2,semipose,%1%2,%2)
-      # One channel row (%0 = the channel's name, %1 = the viewer): joined is
-      # always true for the channels listed, and gagged appears only on a
-      # channel the viewer has gagged (it stays on the channel, hearing
-      # nothing). A game that lists joinable channels too redefines
-      # FN`COMM`CHANNELS and sends those rows with "joined": false.
-      # cstatus() takes the object first on SharpMUSH, the channel second.
+      # One channel row (%0 = the channel's name, %1 = the viewer): whether
+      # the viewer is on it, how many are, and its description, for the Play
+      # drawer's channel browser; gagged appears only on a channel the viewer
+      # is on and has gagged (they stay on it, hearing nothing).
+      # cstatus() takes the object first on SharpMUSH, the channel second, and
+      # answers OFF, ON, or ON with its flags (GAG among them).
       FN`COMM`CHANNELROW: |-
-        json_mod(json(object,name,json(string,%0),joined,true),patch,json(object,gagged,if(match(cstatus(%1,%0),GAG),true,null)))
+        json_mod(json(object,name,json(string,%0),joined,if(member(cstatus(%1,%0),ON),true,false),members,json(number,cusers(%0)),description,json(string,cdesc(%0))),patch,json(object,gagged,if(member(cstatus(%1,%0),GAG),true,null)))
 
       # ── Payloads ─────────────────────────────────────────────────────────
-      # comm.channels for a viewer (%0): who it is for, and the channels they
-      # are on. channels(<player>,on) as this wizard handler lists every
-      # channel the player is on.
+      # comm.channels for a viewer (%0): who it is for, and every channel they
+      # may see, on it or not. channels() lists what its executor may see, so
+      # objeval() asks it as the viewer: this wizard handler would see them all.
       FN`COMM`CHANNELS: |-
-        json(object,v,json(number,2),viewer,json(object,name,json(string,name(%0)),objid,json(string,objid(%0))),channels,json_array(iter(channels(%0,on),u(me/FN`COMM`CHANNELROW,%i0,%0),,%r),%r))
+        json(object,v,json(number,2),viewer,json(object,name,json(string,name(%0)),objid,json(string,objid(%0))),channels,json_array(iter(objeval(%0,channels()),u(me/FN`COMM`CHANNELROW,%i0,%0),,%r),%r))
       # comm.message. %0 kind (channel|page), %1 channel name (empty for a
       # page), %2 speaker objid (empty for a sourceless line), %3 speaker name,
       # %4 style, %5 message, %6 unix-ms, %7 page recipients' objids (empty for

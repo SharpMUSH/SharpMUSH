@@ -29,18 +29,6 @@ public sealed record ChannelWhoList(string Channel, IReadOnlyList<ChannelWhoMemb
 /// <summary>One member <c>@channel/who</c> lists.</summary>
 public sealed record ChannelWhoMember(string Name, string Objid);
 
-/// <summary>
-/// A channel the acting character may see, as <c>@channel/list</c> lists it, with their own standing on it: the
-/// portal's channel browser, which joins, leaves and gags through the <c>@channel</c> commands.
-/// </summary>
-/// <param name="Name">The channel's name.</param>
-/// <param name="Description">Its <c>@channel/describe</c> text, plain; empty when it has none.</param>
-/// <param name="Members">How many are on it, connected or not: <c>@channel/list</c>'s Users column.</param>
-/// <param name="Joined">The character is on it.</param>
-/// <param name="Gagged">The character is on it with it gagged: still on, hearing nothing.</param>
-/// <param name="CanJoin">The character is on it, or its join rules would let them on.</param>
-public sealed record ChannelListing(string Name, string Description, int Members, bool Joined, bool Gagged, bool CanJoin);
-
 /// <summary>Where the acting character has read up to, on every channel they are on and every conversation they marked.</summary>
 /// <param name="Character">The objid of the character these are for. A client holding a different character's
 /// feed ignores them.</param>

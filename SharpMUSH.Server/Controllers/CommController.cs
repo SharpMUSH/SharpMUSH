@@ -21,8 +21,6 @@ namespace SharpMUSH.Server.Controllers;
 /// character.
 ///
 /// Routes:
-///   GET /api/comm/channels                          — every channel the character may see, with whether they are
-///                                                    on it, have it gagged, and may join it
 ///   GET /api/comm/channels/{channel}/recall?lines=N&amp;after=ID — the channel's recall buffer (the last N lines, or
 ///                                                    all; with after, also every line after that id)
 ///   GET /api/comm/channels/{channel}/who             — who is on the channel now, as @channel/who lists them
@@ -249,35 +247,6 @@ public class CommController(
 		}
 
 		return recalled;
-	}
-
-	/// <summary>
-	/// The channels the acting character may see, in <c>@channel/list</c>'s order, each with the character's own
-	/// standing on it. A channel they are on counts as seen, as <see cref="ChannelHelper.CanSeeChannel"/> has it,
-	/// so one they joined never drops out of the list they leave it from.
-	/// </summary>
-	[HttpGet("channels")]
-	public async Task<ActionResult<IReadOnlyList<ChannelListing>>> Channels(CancellationToken ct)
-	{
-		if (await User.ResolveExecutorAsync(projection, ct) is not { } executor) return Unauthorized();
-
-		var listing = new List<ChannelListing>();
-		await foreach (var channel in mediator.CreateStream(new GetChannelListQuery(), ct))
-		{
-			if (!await ChannelHelper.CanSeeChannel(channelPermissions, mediator, executor, channel)) continue;
-
-			var membership = await ChannelHelper.ChannelMemberStatus(mediator, executor, channel);
-			var joined = membership is not null;
-			listing.Add(new ChannelListing(
-				channel.Name.ToPlainText(),
-				channel.Description.ToPlainText(),
-				await mediator.Send(new GetChannelMemberCountQuery(channel), ct),
-				joined,
-				membership?.Status.Gagged ?? false,
-				joined || await channelPermissions.ChannelCanJoin(executor, channel)));
-		}
-
-		return listing;
 	}
 
 	/// <summary>

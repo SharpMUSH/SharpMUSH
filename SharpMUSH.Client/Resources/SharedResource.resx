@@ -4565,9 +4565,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Done</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Loading channels…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>There are no channels you can see.</value>
   </data>
@@ -4585,9 +4582,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Gag: stay on the channel but hear nothing.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>You can't join this channel.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>The game didn't make that change.</value>

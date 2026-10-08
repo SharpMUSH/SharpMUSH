@@ -150,35 +150,6 @@ public class CommApiTests(ServerWebAppFactory factory)
 		await Assert.That(staff.Members.Select(m => m.Objid)).IsEquivalentTo(new[] { godObjid, onlineObjid, hiderObjid });
 	}
 
-	/// <summary>
-	/// The channel browser's list is <c>@channel/list</c>'s channels with the actor's own standing on each: on
-	/// and gagged, off but free to join, off and locked out. A channel the actor may not see is not in it.
-	/// </summary>
-	[Test]
-	public async Task Channels_ListsTheVisibleChannels_WithTheActorsStanding()
-	{
-		var player = await NewPlayerAsync("CommListPlayer");
-		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player);
-		var gagged = await ChannelAsync("CommListGagged", player);
-		await God($"@channel/describe {gagged}=Gagged here");
-		await factory.CommandParser.CommandParse(handle, ConnectionService, MarkupText.Plain($"@channel/gag {gagged}=yes"));
-		var open = await ChannelAsync("CommListOpen");
-		var locked = UniqueChannel("CommListLocked");
-		await God($"@channel/add {locked}=player");
-		await God($"@clock/join {locked}=#1");
-		var hidden = UniqueChannel("CommListHidden");
-		await God($"@channel/add {hidden}=player wizard");
-		await God($"@clock/join {hidden}=#1");
-
-		var listing = Value(await (await As(player)).Channels(CancellationToken.None)).ToDictionary(c => c.Name);
-
-		await Assert.That(listing[gagged]).IsEqualTo(new ChannelListing(gagged, "Gagged here", 2, true, true, true));
-		await Assert.That(listing[open]).IsEqualTo(new ChannelListing(open, string.Empty, 1, false, false, true));
-		await Assert.That(listing[locked].CanJoin).IsFalse();
-		await Assert.That(listing[locked].Joined).IsFalse();
-		await Assert.That(listing.ContainsKey(hidden)).IsFalse();
-	}
-
 	[Test]
 	public async Task Who_OnAChannelTheActorCannotSee_IsNotFound()
 	{

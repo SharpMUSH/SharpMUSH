@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Klar</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Läser in kanaler…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Det finns inga kanaler du kan se.</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Tysta: stanna i kanalen men hör ingenting.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>Du kan inte gå med i den här kanalen.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Spelet gjorde inte den ändringen.</value>

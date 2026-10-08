@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Готово</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Каналите се зареждат…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Няма канали, които можете да видите.</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Заглуши: остани в канала, без да чуваш нищо.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>Не можете да се присъедините към този канал.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Играта не направи тази промяна.</value>

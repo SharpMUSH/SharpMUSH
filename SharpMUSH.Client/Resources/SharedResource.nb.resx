@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Ferdig</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Laster inn kanaler…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Det finnes ingen kanaler du kan se.</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Demp: bli i kanalen, men hør ingenting.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>Du kan ikke bli med i denne kanalen.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Spillet gjorde ikke den endringen.</value>

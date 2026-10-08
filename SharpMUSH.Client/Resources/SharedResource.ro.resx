@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Gata</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Se încarcă canalele…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Nu există canale pe care le poți vedea.</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Amuțește: rămâi pe canal, dar nu auzi nimic.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>Nu te poți alătura acestui canal.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Jocul nu a făcut această schimbare.</value>

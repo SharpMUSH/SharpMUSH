@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Kész</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Csatornák betöltése…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Nincs olyan csatorna, amelyet láthatsz.</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Némítás: maradj a csatornán, de ne hallj semmit.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>Ehhez a csatornához nem csatlakozhatsz.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>A játék nem hajtotta végre ezt a változtatást.</value>

@@ -4437,9 +4437,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Terminé</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Chargement des canaux…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Aucun canal ne vous est visible.</value>
   </data>
@@ -4457,9 +4454,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Bâillonner : rester sur le canal sans rien entendre.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>Vous ne pouvez pas rejoindre ce canal.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Le jeu n'a pas effectué ce changement.</value>

@@ -5143,9 +5143,6 @@
   <data name="NavPlayChannelsDone" xml:space="preserve">
     <value>Готово</value>
   </data>
-  <data name="NavPlayChannelsLoading" xml:space="preserve">
-    <value>Загрузка каналов…</value>
-  </data>
   <data name="NavPlayChannelsNone" xml:space="preserve">
     <value>Нет каналов, которые вы можете видеть.</value>
   </data>
@@ -5163,9 +5160,6 @@
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
     <value>Заглушить: остаться в канале, ничего не слыша.</value>
-  </data>
-  <data name="NavPlayChannelsLocked" xml:space="preserve">
-    <value>Вы не можете вступить в этот канал.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Игра не внесла это изменение.</value>
