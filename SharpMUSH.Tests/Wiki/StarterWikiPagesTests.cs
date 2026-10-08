@@ -77,6 +77,16 @@ public class StarterWikiPagesTests
 	}
 
 	[Test]
+	public async Task Policies_OpensWithCooperativeWorkshopArtwork()
+	{
+		var page = StarterWikiPages.All.Single(p => p is { Title: "Policies", Namespace: WikiNamespace.Main });
+		var html = new WikiMarkdigPipeline().RenderToHtml(page.Markdown);
+
+		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/assets/presets/wiki/policies.webp");
+		await Assert.That(html).Contains("alt=\"People collaborate in an inclusive workshop with shared, quiet, rest, and accessible spaces\"");
+	}
+
+	[Test]
 	public async Task Setting_ListsItsSubcategories()
 	{
 		var setting = StarterWikiPages.All.Single(p => p is { Title: "Setting", Namespace: WikiNamespace.Main });
