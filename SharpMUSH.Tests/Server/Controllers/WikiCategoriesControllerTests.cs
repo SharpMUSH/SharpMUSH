@@ -35,6 +35,7 @@ public class WikiCategoriesControllerTests
 		{
 			new WikiCategorySummaryDto("beasts", "Beasts", 2, HasPage: false),
 			new WikiCategorySummaryDto("character", "Character", 0, HasPage: false, Pinned: true),
+			new WikiCategorySummaryDto("help", "Help", 0, HasPage: false, Pinned: true),
 			new WikiCategorySummaryDto("lore", "Lore", 1, HasPage: false),
 			new WikiCategorySummaryDto("lore_of_the_deep", "Lore of the Deep", 0, HasPage: true),
 		}).Because("a draft the caller may not see is not counted, so its category is not listed; a pinned one is listed though empty");
@@ -82,6 +83,7 @@ public class WikiCategoriesControllerTests
 		await Assert.That(categories).IsEquivalentTo(new[]
 			{
 				new WikiCategorySummaryDto("character", "Character", 0, HasPage: false, Pinned: true),
+			new WikiCategorySummaryDto("help", "Help", 0, HasPage: false, Pinned: true),
 				new WikiCategorySummaryDto("magic_items", "Magic Items", 1, HasPage: true),
 			})
 			.Because("a caller who sees drafts sees the draft category page, so the category is not offered as new");
@@ -119,10 +121,11 @@ public class WikiCategoriesControllerTests
 		await storage.CreateAsync("Harbour", "x", "#1", categories: ["Lore"]);
 
 		var pinned = (OkObjectResult)await wiki.Admin.SetCategoryPinned("Lore", new SetCategoryPinnedRequest(true));
-		await Assert.That((IEnumerable<string>)pinned.Value!).IsEquivalentTo(["character", "lore"]);
+		await Assert.That((IEnumerable<string>)pinned.Value!).IsEquivalentTo(["character", "help", "lore"]);
 		await Assert.That((await CategoriesAsync(wiki)).Single(c => c.Key == "lore").Pinned).IsTrue();
 
 		await wiki.Admin.SetCategoryPinned("character", new SetCategoryPinnedRequest(false));
+		await wiki.Admin.SetCategoryPinned("help", new SetCategoryPinnedRequest(false));
 		var home = (OkObjectResult)await wiki.Browse.GetPinnedCategories();
 		await Assert.That((IEnumerable<string>)home.Value!).IsEquivalentTo(["lore"]);
 	}

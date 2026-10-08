@@ -51,7 +51,7 @@ public class WikiNamespaceCategoryTests
 		var wiki = InMemoryWikiStore.CreateService();
 
 		await Assert.That((await wiki.SetCategoryPinnedAsync("Places of Note", true)).Expect<bool>()).IsTrue();
-		await Assert.That(await wiki.GetPinnedCategoriesAsync()).IsEquivalentTo(["character", "places_of_note"]);
+		await Assert.That(await wiki.GetPinnedCategoriesAsync()).IsEquivalentTo(["character", "help", "places_of_note"]);
 		await Assert.That(await wiki.SetCategoryPinnedAsync("  ", true) is Error<string>).IsTrue();
 	}
 }

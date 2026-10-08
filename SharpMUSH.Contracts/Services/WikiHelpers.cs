@@ -89,6 +89,15 @@ public static class WikiHelpers
 	/// <summary>The category every character biography is in.</summary>
 	public const string CharacterCategory = "character";
 
+	/// <summary>The category of the help pages seeded at every boot.</summary>
+	public const string HelpCategory = "help";
+
+	/// <summary>
+	/// The categories a new world pins to the wiki home: the two every game has from its first boot. The starter
+	/// wiki pins its own categories when the setup wizard writes them.
+	/// </summary>
+	public static IReadOnlyList<string> SeededPinnedCategories { get; } = [CharacterCategory, HelpCategory];
+
 	/// <summary>
 	/// <see cref="NormalizeCategories(IEnumerable{string}?)"/> with the categories <paramref name="ns"/> puts every
 	/// page in (<see cref="NamespaceCategories(WikiNamespace?)"/>).

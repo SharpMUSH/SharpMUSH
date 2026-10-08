@@ -45,7 +45,8 @@ public class StarterWikiService(
 	/// <summary>
 	/// Writes each starter page the game does not have, and replaces Home while it is still the page seeded at
 	/// boot. A page the game already has is left as it is. Theme, Setting and Policies are protected (a page requirement of
-	/// wiki.admin to edit and delete), so only wiki administrators edit them. Records that the set was applied even when some pages failed, naming those.
+	/// wiki.admin to edit and delete), so only wiki administrators edit them. Every category the set creates is
+	/// pinned to the wiki home. Records that the set was applied even when some pages failed, naming those.
 	/// Once applied, it writes nothing again, so a starter page an administrator deleted stays deleted.
 	/// </summary>
 	public async Task<Result<Success>> ApplyAsync()
@@ -70,6 +71,7 @@ public class StarterWikiService(
 				categories: page.Categories))
 			{
 				case WikiPage created:
+					await PinAsync(page, failures);
 					if (page.Protect && await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(created.Id), WikiRequirementSet.Protection, Author) is NotFound)
 					{
 						failures.Add($"{page.Title} was written but could not be protected.");
@@ -77,6 +79,7 @@ public class StarterWikiService(
 
 					break;
 				case Error<string> error when await wiki.GetBySlugAsync(WikiHelpers.Slugify(page.Title), page.Namespace) is WikiPage:
+					await PinAsync(page, failures);
 					logger.LogDebug("Starter wiki page {Title} already exists ({Reason}); left as it is.", page.Title, error.Value);
 					break;
 				case Error<string> error:
@@ -89,6 +92,19 @@ public class StarterWikiService(
 		await serverData.SetExpandedServerDataAsync(new StarterWikiState { Applied = true });
 
 		return failures.Count == 0 ? new Success() : new Error<string>(string.Join(" ", failures));
+	}
+
+	/// <summary>
+	/// Pins a starter category page's category to the wiki home, so every category the starter set creates is
+	/// shown there until an administrator unpins it.
+	/// </summary>
+	private async Task PinAsync(StarterWikiPages.Page page, List<string> failures)
+	{
+		if (page.Namespace == WikiNamespace.Category
+			&& await wiki.SetCategoryPinnedAsync(page.Title, pinned: true) is Error<string> error)
+		{
+			failures.Add($"Category {page.Title} could not be pinned: {error.Value}");
+		}
 	}
 
 	/// <summary>

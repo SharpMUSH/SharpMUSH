@@ -564,7 +564,9 @@ dash and `1 page(s), 0 subcategory(ies):`, then one line per member:
 
 The portal's wiki home shows a card for each pinned category, with its newest
 pages. Other categories are still listed in the wiki sidebar, and a search on
-the wiki home looks through all of them. A new game pins Character.
+the wiki home looks through all of them. A new game pins Character and Help,
+and the starter wiki pages the setup wizard offers pin each category they
+create.
 
 `@wiki/pin <category>` pins a category and `@wiki/unpin <category>` unpins
 it; both need `wiki.admin`. A category need not have a page or any member to
@@ -577,7 +579,7 @@ card on the portal's wiki admin page.
 > @wiki/pin Rules
 WIKI: Category 'Rules' is now pinned to the wiki home.
 > @wiki/pin
-WIKI: Pinned to the wiki home: Character, Rules.
+WIKI: Pinned to the wiki home: Character, Help, Rules.
 ```
 
 ::: seealso
