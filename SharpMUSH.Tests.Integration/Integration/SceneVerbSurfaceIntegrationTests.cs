@@ -630,6 +630,28 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
+	/// Someone who RSVP'd and then takes part is a participant, not still an RSVP: otherwise a later
+	/// <c>+scene/unrsvp</c> would take them out of a scene they posed in.
+	/// </summary>
+	[Test]
+	[Arguments("A", "+scene/activate {0}")]
+	[Arguments("E", "+scene/emit {0}=A door creaks.")]
+	public async Task AnRsvpThatTakesPart_BecomesAParticipant(string key, string verb)
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, ownerHandle) = await CreatePlayerAsync($"Abe{key}{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"Bo{key}{Tag}");
+
+		await RunAs(ownerHandle, $"+scene/create Abe Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
+		await RunAs(ownerHandle, "+scene/start");
+		await RunAs(guestHandle, $"+scene/rsvp {sceneId}");
+		await RunAs(guestHandle, string.Format(verb, sceneId));
+
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(guest)},role)")).IsEqualTo("participant");
+	}
+
+	/// <summary>
 	/// <c>+scene/unrsvp</c> withdraws an RSVP and nothing else: it removes every role the player holds,
 	/// so run by the owner or a participant it would have taken them out of the scene.
 	/// </summary>
