@@ -48,6 +48,12 @@
       "aliases": []
     },
     {
+      "id": "feedpass",
+      "heading": "feedpass()",
+      "lookup": "feedpass()",
+      "aliases": []
+    },
+    {
       "id": "feedsof",
       "heading": "feedsof()",
       "lookup": "feedsof()",
@@ -69,7 +75,7 @@ These functions read feeds (see [@feed]); they change nothing. Like @feed, they 
 
 `feedmsg(<id>, <factor>)`
 
-- **feedmsg()**: One fact of a stored line: `id`, `feed` (`<kind>/<key>`), `kind`, `key`, `time` (seconds since the epoch), `speaker` (objid), `name` (the speaker's name when it was sent), `executor` (the objid of the object whose code sent it), `location` (the speaker's location then), `style` or `text` (the message as written, markup kept). It returns `#-1 NO SUCH FEED LINE` for a line that is not stored, because it was never logged or has been dropped.
+- **feedmsg()**: One fact of a stored line: `id`, `feed` (`<kind>/<key>`), `kind`, `key`, `time` (seconds since the epoch), `speaker` (objid), `name` (the speaker's name when it was sent), `executor` (the objid of the object whose code sent it), `executor_name` (its name then), `location` (the speaker's location then), `location_name` (its name then), `style`, `text` (the message as written, markup kept) or `display` (the `@feed/send/as` name, or empty). Names are kept as they were, so a line still reads whole after its speaker is destroyed or renamed. It returns `#-1 NO SUCH FEED LINE` for a line that is not stored, because it was never logged or has been dropped.
 
 ## feedrecall()
 
@@ -87,7 +93,7 @@ These functions read feeds (see [@feed]); they change nothing. Like @feed, they 
 
 `feedinfo(<kind or feed>, <option>)`
 
-- **feedinfo()**: A setting as it applies: `max_messages`, `max_bytes`, `max_length`, `max_age` (in seconds), `logged` (1 or 0) or `style`; 0 is no limit. `read` and `send` are the locks set on the kind or feed itself. A kind also has `owner` and `description`; a feed has `messages` and `bytes` (what it holds), `last` (the newest line id) and `members`.
+- **feedinfo()**: A setting as it applies: `max_messages`, `max_bytes`, `max_length`, `max_age` (in seconds), `logged` (1 or 0) or `style`; 0 is no limit. `read`, `send` and `lock:<name>` are the locks set on the kind or feed itself. A kind also has `owner` and `description`; a feed has `messages` and `bytes` (what it holds), `last` (the newest line id) and `members`.
 
 ## feedwho()
 
@@ -106,6 +112,12 @@ These functions read feeds (see [@feed]); they change nothing. Like @feed, they 
 `feedunread(<feed>, <object>)`
 
 - **feedunread()**: How many stored lines of the feed are newer than the member's `last_seen` (see `@feed/seen`). Empty for an object that is not a member.
+
+## feedpass()
+
+`feedpass(<feed>, <lock name>, <object>)`
+
+- **feedpass()**: 1 if *\<object\>* passes both the kind's and the feed's lock of that name, else 0. A lock that is not set passes. This is how a system checks the locks of its own, such as `talk` or `moderate` (see [@feed settings]). `#-1 INVALID LOCK NAME` for a name that is not a lower-case word.
 
 ## feedsof()
 

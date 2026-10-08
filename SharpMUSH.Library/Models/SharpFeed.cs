@@ -42,17 +42,21 @@ public sealed record FeedSettings(
 /// <c>`DELIVER</c> and <c>`FORMAT</c> attributes are the kind's tie-ins.</param>
 /// <param name="Description">What it is for, for listings.</param>
 /// <param name="Settings">The kind's limits and defaults; unset ones are <see cref="FeedSettings.Defaults"/>.</param>
-/// <param name="ReadLock">Who may be joined to its feeds; empty passes everyone.</param>
-/// <param name="SendLock">What, besides its owner's controllers, may send into its feeds; empty passes nothing else.</param>
+/// <param name="Locks">
+/// Its locks by name (<see cref="FeedLocks"/>): <c>read</c> decides who may be joined to its feeds and
+/// <c>send</c> who may speak on them; any other is the kind's own, checked by its code with <c>feedpass()</c>.
+/// A lock that is not set passes everyone.
+/// </param>
 public sealed record SharpFeedKind(
 	string Name,
 	DBRef Owner,
 	string Description,
 	FeedSettings Settings,
-	string ReadLock,
-	string SendLock)
+	IReadOnlyDictionary<string, string> Locks)
 {
 	public FeedSettings Effective => Settings.Over(FeedSettings.Defaults);
+
+	public string Lock(string name) => Locks.GetValueOrDefault(name, "");
 }
 
 /// <summary>
@@ -62,8 +66,7 @@ public sealed record SharpFeedKind(
 /// <param name="Kind">Its kind's name.</param>
 /// <param name="Key">Which stream within the kind, lower case: <c>101.5</c>.</param>
 /// <param name="Settings">Overrides of the kind's settings; unset ones are the kind's.</param>
-/// <param name="ReadLock">Applies on top of the kind's read lock.</param>
-/// <param name="SendLock">Applies on top of the kind's send lock.</param>
+/// <param name="Locks">Its locks by name; each applies on top of the kind's lock of the same name.</param>
 /// <param name="Messages">How many lines it holds.</param>
 /// <param name="Bytes">Their stored size.</param>
 /// <param name="LastId">The newest line's id, or 0.</param>
@@ -71,15 +74,16 @@ public sealed record SharpFeed(
 	string Kind,
 	string Key,
 	FeedSettings Settings,
-	string ReadLock,
-	string SendLock,
+	IReadOnlyDictionary<string, string> Locks,
 	int Messages,
 	long Bytes,
 	long LastId)
 {
 	public string Name => $"{Kind}/{Key}";
 
-	public static SharpFeed New(string kind, string key) => new(kind, key, FeedSettings.None, "", "", 0, 0, 0);
+	public string Lock(string name) => Locks.GetValueOrDefault(name, "");
+
+	public static SharpFeed New(string kind, string key) => new(kind, key, FeedSettings.None, FeedLocks.None, 0, 0, 0);
 }
 
 /// <summary>A member of a feed and where they stand in it.</summary>
@@ -99,6 +103,7 @@ public sealed record SharpFeedMember(
 
 /// <summary>
 /// One line on a feed, as stored: facts only. How it looks is decided for each reader when it is shown.
+/// Every object is kept with its name as it was, so a line still reads whole after the object is destroyed.
 /// </summary>
 /// <param name="Id">From the same sequence as channel lines and pages, so it rises with time.</param>
 /// <param name="Kind">The feed's kind.</param>
@@ -107,9 +112,12 @@ public sealed record SharpFeedMember(
 /// <param name="Speaker">Who it is attributed to, by objid.</param>
 /// <param name="SpeakerName">Their name when it was sent.</param>
 /// <param name="Executor">The object whose code sent it, by objid.</param>
+/// <param name="ExecutorName">Its name when it was sent.</param>
 /// <param name="Location">The speaker's location when it was sent, by objid, or null.</param>
+/// <param name="LocationName">The location's name when it was sent, or empty.</param>
 /// <param name="Style"><c>say</c>, <c>pose</c>, <c>semipose</c>, <c>emit</c> or <c>announce</c>.</param>
 /// <param name="Text">The message as written, markup kept.</param>
+/// <param name="DisplayName">The name the speaker chose to appear under for this line (a persona, a callsign), or empty.</param>
 public sealed record SharpFeedMessage(
 	long Id,
 	string Kind,
@@ -118,9 +126,12 @@ public sealed record SharpFeedMessage(
 	DBRef Speaker,
 	string SpeakerName,
 	DBRef Executor,
+	string ExecutorName,
 	DBRef? Location,
+	string LocationName,
 	string Style,
-	MString Text)
+	MString Text,
+	string DisplayName = "")
 {
 	public string Feed => $"{Kind}/{Key}";
 }
@@ -130,6 +141,33 @@ public sealed record SharpFeedMessage(
 /// <param name="Object">The object holding the attribute, by objid.</param>
 /// <param name="Attribute">The attribute's name, upper case.</param>
 public sealed record SharpFeedTap(string Kind, DBRef Object, string Attribute);
+
+/// <summary>The lock names the engine itself checks, and the lock-name rule.</summary>
+public static partial class FeedLocks
+{
+	/// <summary>Checked against an object being joined.</summary>
+	public const string Read = "read";
+
+	/// <summary>Checked against the speaker of a line.</summary>
+	public const string Send = "send";
+
+	public static readonly IReadOnlyDictionary<string, string> None = new Dictionary<string, string>();
+
+	[System.Text.RegularExpressions.GeneratedRegex("^[a-z][a-z0-9_]{0,31}$")]
+	private static partial System.Text.RegularExpressions.Regex NamePattern();
+
+	/// <summary>A lock name: a lower-case word of up to 32 letters, digits and <c>_</c>.</summary>
+	public static bool IsName(string name) => NamePattern().IsMatch(name);
+
+	/// <summary><paramref name="locks"/> with <paramref name="name"/> set, or removed when <paramref name="value"/> is empty.</summary>
+	public static IReadOnlyDictionary<string, string> With(IReadOnlyDictionary<string, string> locks, string name, string value)
+	{
+		var changed = new Dictionary<string, string>(locks);
+		if (value.Length == 0) changed.Remove(name);
+		else changed[name] = value;
+		return changed;
+	}
+}
 
 /// <summary>The styles a feed line can have, and the names a feed's settings accept for them.</summary>
 public static class FeedStyles

@@ -35,13 +35,18 @@ public class FeedService(
 		=> await executor.Can(PortalPermission.FeedAdmin)
 			|| (await OwnerAsync(kind) is AnySharpObject owner && await permissionService.Controls(executor, owner));
 
-	public async ValueTask<bool> PassesAsync(SharpFeedKind kind, SharpFeed feed, string lockType, AnySharpObject unlocker)
+	public async ValueTask<bool> PassesAsync(SharpFeedKind kind, SharpFeed feed, string lockName, AnySharpObject unlocker)
 	{
-		var (kindLock, feedLock) = lockType == "read" ? (kind.ReadLock, feed.ReadLock) : (kind.SendLock, feed.SendLock);
+		var (kindLock, feedLock) = (kind.Lock(lockName), feed.Lock(lockName));
 		if (kindLock.Length == 0 && feedLock.Length == 0) return true;
 
 		// A lock is evaluated as if it were on the kind's owner; with no owner left, nothing passes it.
 		if (await OwnerAsync(kind) is not AnySharpObject owner) return false;
+		using var arguments = LockEvaluationArguments.Enter(new Dictionary<string, MString>
+		{
+			["0"] = MarkupText.Plain(feed.Key),
+			["1"] = MarkupText.Plain(kind.Name)
+		});
 		return (kindLock.Length == 0 || await lockService.Evaluate(kindLock, owner, unlocker))
 			&& (feedLock.Length == 0 || await lockService.Evaluate(feedLock, owner, unlocker));
 	}
@@ -49,7 +54,7 @@ public class FeedService(
 	public async ValueTask<Result<FeedDelivery>> SendAsync(IMUSHCodeParser parser, FeedSend send)
 	{
 		var ct = ExecutionBudget.CurrentToken;
-		var (kind, feed, speaker, executor, style, text, to) = send;
+		var (kind, feed, speaker, executor, style, text, to, displayName) = send;
 		var settings = feed.Settings.Over(kind.Effective);
 		if (settings.MaxLength is > 0 and var maxLength && text.ToPlainText().Length > maxLength)
 			return new Error<string>($"That is longer than {feed.Name} takes ({maxLength} characters).");
@@ -58,9 +63,11 @@ public class FeedService(
 
 		var id = await ids.NextAsync(ct);
 		var speakerObject = speaker.Object();
-		var location = (await speaker.Where()).Object().DBRef;
+		var executorObject = executor.Object();
+		var location = (await speaker.Where()).Object();
 		var message = new SharpFeedMessage(id, kind.Name, feed.Key, DateTimeOffset.UtcNow, speakerObject.DBRef,
-			speakerObject.Name, executor.Object().DBRef, location, style, text);
+			speakerObject.Name, executorObject.DBRef, executorObject.Name, location.DBRef, location.Name, style, text,
+			displayName);
 
 		// Stored first, so feedmsg() answers for it inside ROUTE, DELIVER, FORMAT and the taps.
 		var stored = settings.Logged == true;
@@ -93,7 +100,7 @@ public class FeedService(
 			var result = await attributeService.EvaluateAttributeFunctionAsync(parser, owner, owner,
 				IFeedService.TieIn(message.Kind, "ROUTE"), Arguments(
 					message.Id.ToString(), message.Key, message.Speaker.ToString(), message.Style, message.Text,
-					Objids(audience), Objids(to)));
+					Objids(audience), Objids(to), message.DisplayName));
 			routed = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(word => DBRef.TryParse(word, out var dbref) ? dbref : null)
 				.OfType<DBRef>();
@@ -120,7 +127,8 @@ public class FeedService(
 		if (await TieInAsync(owner, message.Kind, "DELIVER") is [.., var deliver])
 		{
 			var arguments = Arguments(message.Id.ToString(), message.Key,
-				Objids(recipients.Select(r => r.Object().DBRef)), message.Speaker.ToString(), message.Style, message.Text);
+				Objids(recipients.Select(r => r.Object().DBRef)), message.Speaker.ToString(), message.Style, message.Text,
+				message.DisplayName);
 			var registers = new ConcurrentStack<Dictionary<string, MString>>();
 			registers.Push([]);
 			await parser.With(state => state with
@@ -153,7 +161,8 @@ public class FeedService(
 			var line = format
 				? await attributeService.EvaluateAttributeFunctionAsync(parser, owner, owner,
 					IFeedService.TieIn(message.Kind, "FORMAT"), Arguments(message.Text,
-						recipient.Object().DBRef.ToString(), message.Speaker.ToString(), message.Style, message.Key))
+						recipient.Object().DBRef.ToString(), message.Speaker.ToString(), message.Style, message.Key,
+						message.DisplayName, message.Id.ToString()))
 				: DefaultLine(message);
 			if (line.Length == 0) continue;
 
@@ -168,12 +177,13 @@ public class FeedService(
 	public static MString DefaultLine(SharpFeedMessage message)
 	{
 		var prefix = $"<{message.Feed}> ";
+		var name = message.DisplayName.Length > 0 ? message.DisplayName : message.SpeakerName;
 		return message.Style switch
 		{
-			FeedStyles.Pose => MarkupText.Concat(MarkupText.Plain($"{prefix}{message.SpeakerName} "), message.Text),
-			FeedStyles.SemiPose => MarkupText.Concat(MarkupText.Plain($"{prefix}{message.SpeakerName}"), message.Text),
+			FeedStyles.Pose => MarkupText.Concat(MarkupText.Plain($"{prefix}{name} "), message.Text),
+			FeedStyles.SemiPose => MarkupText.Concat(MarkupText.Plain($"{prefix}{name}"), message.Text),
 			FeedStyles.Emit or FeedStyles.Announce => MarkupText.Concat(MarkupText.Plain(prefix), message.Text),
-			_ => MarkupText.Concat(MarkupText.Concat(MarkupText.Plain($"{prefix}{message.SpeakerName} says, \""), message.Text),
+			_ => MarkupText.Concat(MarkupText.Concat(MarkupText.Plain($"{prefix}{name} says, \""), message.Text),
 				MarkupText.Plain("\""))
 		};
 	}
@@ -197,7 +207,7 @@ public class FeedService(
 			}
 
 			var arguments = Arguments(message.Id.ToString(), message.Feed, Objids(recipients), message.Speaker.ToString(),
-				message.Style, message.Text);
+				message.Style, message.Text, message.DisplayName);
 			var state = ParserState.RootFor(tapObject.Object().DBRef) with
 			{
 				Enactor = message.Speaker,

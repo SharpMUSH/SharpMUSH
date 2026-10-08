@@ -34,12 +34,12 @@ public partial class Commands
 
 	/// <summary>
 	/// <c>@feed</c>: the feed pipeline (<c>help @feed</c>). Kinds, their settings, locks and taps need
-	/// <c>feed.admin</c>; members and lines need control of the kind's owner (or <c>feed.admin</c>), and are meant
-	/// to be run by a system's own code, never typed by players.
+	/// <c>feed.admin</c>; one feed's members, lines, settings and locks need control of the kind's owner (or
+	/// <c>feed.admin</c>), and are meant to be run by a system's own code, never typed by players.
 	/// </summary>
 	[SharpCommand(Name = "@FEED",
 		Switches = ["LIST", "INFO", "DEFINE", "UNDEFINE", "DESCRIBE", "SET", "LOCK", "UNLOCK", "TAP", "UNTAP", "PURGE",
-			"DELETE", "JOIN", "LEAVE", "GAG", "UNGAG", "MUTE", "UNMUTE", "HIDE", "UNHIDE", "SEEN", "WHO", "SEND", "TO", "SAY",
+			"DELETE", "JOIN", "LEAVE", "GAG", "UNGAG", "MUTE", "UNMUTE", "HIDE", "UNHIDE", "SEEN", "WHO", "SEND", "TO", "AS", "SAY",
 			"POSE", "SEMIPOSE", "EMIT", "ANNOUNCE"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["feed", "value"])]
 	public async ValueTask<Option<CallState>> Feed(IMUSHCodeParser parser, SharpCommandAttribute _)
@@ -55,7 +55,7 @@ public partial class Commands
 
 		var operation = operations.Length switch
 		{
-			0 when styles.Length > 0 || switches.Contains("TO") => "SEND",
+			0 when styles.Length > 0 || switches.Contains("TO") || switches.Contains("AS") => "SEND",
 			0 => left.Length == 0 ? "LIST" : "INFO",
 			1 => operations[0],
 			_ => ""
@@ -66,8 +66,8 @@ public partial class Commands
 			output = MarkupText.Plain("Choose one @feed operation.");
 		else if (styles.Length > 1)
 			output = MarkupText.Plain("Choose one style: /say, /pose, /semipose, /emit or /announce.");
-		else if (operation != "SEND" && (styles.Length > 0 || switches.Contains("TO")))
-			output = MarkupText.Plain("Styles and /to go with @feed/send.");
+		else if (operation != "SEND" && (styles.Length > 0 || switches.Contains("TO") || switches.Contains("AS")))
+			output = MarkupText.Plain("Styles, /to and /as go with @feed/send.");
 		else
 		{
 			output = operation switch
@@ -82,7 +82,7 @@ public partial class Commands
 				"SEND" => MarkupText.Plain(await FeedTargetAsync(parser, executor, left) switch
 				{
 					FeedTarget target => await FeedSendAsync(parser, executor, target, rightText,
-						styles.FirstOrDefault()?.ToLowerInvariant(), switches.Contains("TO")),
+						styles.FirstOrDefault()?.ToLowerInvariant(), switches.Contains("TO"), switches.Contains("AS")),
 					Error<string> error => error.Value
 				}),
 				"JOIN" or "LEAVE" or "GAG" or "UNGAG" or "MUTE" or "UNMUTE" or "HIDE" or "UNHIDE" or "SEEN"
@@ -96,6 +96,12 @@ public partial class Commands
 					FeedTarget target => await FeedDeleteAsync(target),
 					Error<string> error => error.Value
 				}),
+				"PURGE" => MarkupText.Plain(await FeedTargetAsync(parser, executor, left) switch
+				{
+					FeedTarget target => await FeedPurgeAsync(target, right),
+					Error<string> error => error.Value
+				}),
+				"SET" or "LOCK" or "UNLOCK" => MarkupText.Plain(await FeedOptionAsync(parser, executor, operation, left, right)),
 				_ => MarkupText.Plain(await FeedKindChangeAsync(parser, executor, operation, left, right))
 			};
 		}
@@ -213,8 +219,7 @@ public partial class Commands
 				("Owner", MarkupText.Plain(await DisplayAsync(kind.Owner))),
 				("Description", MarkupText.Plain(kind.Description.Length == 0 ? "none" : kind.Description)),
 				.. SettingRows(kind.Settings, FeedSettings.Defaults, "default"),
-				("Read lock", MarkupText.Plain(kind.ReadLock.Length == 0 ? "none" : kind.ReadLock)),
-				("Send lock", MarkupText.Plain(kind.SendLock.Length == 0 ? "none" : kind.SendLock)),
+				("Locks", MarkupText.Plain(LockList(kind.Locks))),
 				("Feeds", MarkupText.Plain(feeds.Count.ToString(CultureInfo.InvariantCulture))),
 				("Taps", MarkupText.Plain(taps.Count == 0 ? "none" : string.Join(", ", taps.Select(tap => $"{tap.Object}/{tap.Attribute}")))),
 			];
@@ -230,11 +235,13 @@ public partial class Commands
 			("Newest", MarkupText.Plain(feed.LastId == 0 ? "none" : feed.LastId.ToString(CultureInfo.InvariantCulture))),
 			("Members", MarkupText.Plain(members.Count.ToString(CultureInfo.InvariantCulture))),
 			.. SettingRows(feed.Settings, effective, "kind"),
-			("Read lock", MarkupText.Plain(feed.ReadLock.Length == 0 ? "none" : feed.ReadLock)),
-			("Send lock", MarkupText.Plain(feed.SendLock.Length == 0 ? "none" : feed.SendLock)),
+			("Locks", MarkupText.Plain(LockList(feed.Locks))),
 		];
 		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed {feed.Name}"), ServerLayout.KeyValues(fields)), 78);
 	}
+
+	private static string LockList(IReadOnlyDictionary<string, string> locks)
+		=> locks.Count == 0 ? "none" : string.Join("; ", locks.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}: {pair.Value}"));
 
 	/// <summary>One row per option: its value, and where it comes from when it is not set here.</summary>
 	private static IEnumerable<(string, MString)> SettingRows(FeedSettings set, FeedSettings fallback, string from)
@@ -292,13 +299,13 @@ public partial class Commands
 	/// is given.
 	/// </summary>
 	private async ValueTask<string> FeedSendAsync(IMUSHCodeParser parser, AnySharpObject executor, FeedTarget target,
-		MString right, string? style, bool hasTo)
+		MString right, string? style, bool hasTo, bool hasAs)
 	{
 		var to = new List<DBRef>();
 		var text = right;
 		if (hasTo)
 		{
-			var plain = right.ToPlainText();
+			var plain = text.ToPlainText();
 			var slash = plain.IndexOf('/');
 			if (slash < 0) return "Usage: @feed/send/to <kind>/<key>=<objids>/<message>.";
 			foreach (var word in plain[..slash].Split(' ', StringSplitOptions.RemoveEmptyEntries))
@@ -308,7 +315,17 @@ public partial class Commands
 				to.Add(parsed);
 			}
 
-			text = right.Substring(slash + 1);
+			text = text.Substring(slash + 1);
+		}
+
+		var displayName = "";
+		if (hasAs)
+		{
+			var plain = text.ToPlainText();
+			var slash = plain.IndexOf('/');
+			if (slash < 0) return "Usage: @feed/send/as <kind>/<key>=<name>/<message>.";
+			displayName = plain[..slash].Trim();
+			text = text.Substring(slash + 1);
 		}
 
 		if (style is null)
@@ -326,11 +343,11 @@ public partial class Commands
 
 		var speaker = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var feeds = Feeds(parser);
-		if (!await feeds.CanRunAsync(speaker, target.Kind) && !await feeds.PassesAsync(target.Kind, target.Feed, "send", speaker))
+		if (!await feeds.CanRunAsync(speaker, target.Kind) && !await feeds.PassesAsync(target.Kind, target.Feed, FeedLocks.Send, speaker))
 			return $"{Display(speaker)} may not send to {target.Feed.Name}.";
 
 		var send = new FeedSend(target.Kind, target.Feed, speaker, executor,
-			style ?? target.Feed.Settings.Over(target.Kind.Effective).Style ?? FeedStyles.Say, text, to);
+			style ?? target.Feed.Settings.Over(target.Kind.Effective).Style ?? FeedStyles.Say, text, to, displayName);
 		return await feeds.SendAsync(parser, send) switch
 		{
 			FeedDelivery => "",
@@ -377,7 +394,7 @@ public partial class Commands
 		if (operation == "JOIN")
 		{
 			if (member is not null) return $"{Display(who)} is already on {feed.Name}.";
-			if (!await Feeds(parser).PassesAsync(kind, feed, "read", who))
+			if (!await Feeds(parser).PassesAsync(kind, feed, FeedLocks.Read, who))
 				return $"{Display(who)} does not pass the read lock of {feed.Name}.";
 			await Mediator.Send(new SetFeedMemberCommand(kind.Name, feed.Key,
 				new SharpFeedMember(dbref, feed.LastId, false, false, false, feed.LastId)), ct);
@@ -414,7 +431,7 @@ public partial class Commands
 		};
 	}
 
-	/// <summary>The <c>feed.admin</c> operations: kinds, settings, locks, taps and purges.</summary>
+	/// <summary>The <c>feed.admin</c> operations on kinds: defining, describing and tapping them.</summary>
 	private async ValueTask<string> FeedKindChangeAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string operation, string left, string right)
 	{
@@ -446,19 +463,9 @@ public partial class Commands
 					SharpFeedKind kind => await DescribeKindAsync(kind with { Description = right }),
 					Error<string> error => error.Value
 				};
-			case "SET":
-			case "LOCK":
-			case "UNLOCK":
-				return await FeedOptionAsync(parser, operation, left, right);
 			case "TAP":
 			case "UNTAP":
 				return await FeedTapAsync(parser, executor, operation, left, right);
-			case "PURGE":
-				return await FeedTargetAsync(parser, executor, left) switch
-				{
-					FeedTarget target => await FeedPurgeAsync(target, right),
-					Error<string> error => error.Value
-				};
 			default:
 				return "Choose one @feed operation.";
 		}
@@ -468,7 +475,7 @@ public partial class Commands
 			var existing = await feeds.GetKindAsync(kindName);
 			var kind = existing is SharpFeedKind found
 				? found with { Owner = owner.Object().DBRef }
-				: new SharpFeedKind(kindName, owner.Object().DBRef, "", FeedSettings.None, "", "");
+				: new SharpFeedKind(kindName, owner.Object().DBRef, "", FeedSettings.None, FeedLocks.None);
 			await Mediator.Send(new SetFeedKindCommand(kind), ct);
 			return existing is SharpFeedKind
 				? $"Feed kind {kindName} is now owned by {Display(owner)}."
@@ -482,14 +489,22 @@ public partial class Commands
 		}
 	}
 
-	/// <summary><c>@feed/set &lt;target&gt;/&lt;option&gt;=&lt;value&gt;</c>, <c>/lock</c> and <c>/unlock</c>, on a kind or one feed.</summary>
-	private async ValueTask<string> FeedOptionAsync(IMUSHCodeParser parser, string operation, string left, string right)
+	/// <summary>
+	/// <c>@feed/set &lt;target&gt;/&lt;option&gt;=&lt;value&gt;</c>, <c>/lock</c> and <c>/unlock</c>: on a kind with
+	/// <c>feed.admin</c>, on one feed by whatever may run the kind.
+	/// </summary>
+	private async ValueTask<string> FeedOptionAsync(IMUSHCodeParser parser, AnySharpObject executor, string operation,
+		string left, string right)
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		if (!FeedNames.TryParseOption(left, out var kindName, out var key, out var option))
-			return $"Usage: @feed/{operation.ToLowerInvariant()} <kind>[/<key>]/<{(operation == "SET" ? "option" : "read or send")}>{(operation == "UNLOCK" ? "" : "=<value>")}.";
+			return $"Usage: @feed/{operation.ToLowerInvariant()} <kind>[/<key>]/<{(operation == "SET" ? "option" : "lock")}>{(operation == "UNLOCK" ? "" : "=<value>")}.";
 		if (await Feeds(parser).GetKindAsync(kindName) is not SharpFeedKind kind)
 			return $"No feed kind named '{kindName}'. See @feed/list.";
+		if (key is null && !await executor.Can(PortalPermission.FeedAdmin))
+			return $"@feed/{operation.ToLowerInvariant()} on a kind needs the {PortalPermission.FeedAdmin} permission.";
+		if (key is not null && !await Feeds(parser).CanRunAsync(executor, kind))
+			return $"Running feed kind '{kind.Name}' needs control of its owner or the {PortalPermission.FeedAdmin} permission.";
 
 		var feed = key is null
 			? null
@@ -504,13 +519,13 @@ public partial class Commands
 		{
 			return SetFeedOption(feed?.Settings ?? kind.Settings, option, right) switch
 			{
-				FeedSettings settings => await SaveAsync(settings, null, null,
+				FeedSettings settings => await SaveAsync(settings, null,
 					$"Set {option} on {target} to {(right.Length == 0 ? (key is null ? "the default" : "the kind's") : right)}."),
 				Error<string> error => error.Value
 			};
 		}
 
-		if (option is not ("read" or "send")) return "A feed has two locks: read and send.";
+		if (!FeedLocks.IsName(option)) return $"'{option}' is not a lock name: a word in lower case, such as read, send or talk.";
 		var lockString = operation == "LOCK" ? right : "";
 		if (lockString.Length > 0)
 		{
@@ -519,24 +534,22 @@ public partial class Commands
 			if (!Locks(parser).Validate(lockString, owner)) return $"'{lockString}' is not a valid lock.";
 		}
 
-		return await SaveAsync(null, option == "read" ? lockString : null, option == "send" ? lockString : null,
+		return await SaveAsync(null, lockString,
 			lockString.Length == 0 ? $"Unlocked {option} on {target}." : $"Locked {option} on {target}.");
 
-		async ValueTask<string> SaveAsync(FeedSettings? settings, string? readLock, string? sendLock, string done)
+		async ValueTask<string> SaveAsync(FeedSettings? settings, string? lockString, string done)
 		{
 			if (feed is null)
 				await Mediator.Send(new SetFeedKindCommand(kind with
 				{
 					Settings = settings ?? kind.Settings,
-					ReadLock = readLock ?? kind.ReadLock,
-					SendLock = sendLock ?? kind.SendLock
+					Locks = lockString is null ? kind.Locks : FeedLocks.With(kind.Locks, option, lockString)
 				}), ct);
 			else
 				await Mediator.Send(new SetFeedCommand(feed with
 				{
 					Settings = settings ?? feed.Settings,
-					ReadLock = readLock ?? feed.ReadLock,
-					SendLock = sendLock ?? feed.SendLock
+					Locks = lockString is null ? feed.Locks : FeedLocks.With(feed.Locks, option, lockString)
 				}), ct);
 			return done;
 		}

@@ -18,8 +18,7 @@ public sealed record FeedKindRecord
 	public string Owner { get; init; } = "";
 	public string Description { get; init; } = "";
 	public FeedSettingsRecord Settings { get; init; } = new();
-	public string ReadLock { get; init; } = "";
-	public string SendLock { get; init; } = "";
+	public Dictionary<string, string> Locks { get; init; } = [];
 }
 
 /// <summary>A feed, keyed kind + 0x00 + key: its settings, locks and what it holds.</summary>
@@ -28,8 +27,7 @@ public sealed record FeedRecord
 	public string Kind { get; init; } = "";
 	public string Key { get; init; } = "";
 	public FeedSettingsRecord Settings { get; init; } = new();
-	public string ReadLock { get; init; } = "";
-	public string SendLock { get; init; } = "";
+	public Dictionary<string, string> Locks { get; init; } = [];
 	public int Messages { get; init; }
 	public long Bytes { get; init; }
 	public long LastId { get; init; }
@@ -57,9 +55,12 @@ public sealed record FeedMessageRecord
 	public string Speaker { get; init; } = "";
 	public string SpeakerName { get; init; } = "";
 	public string Executor { get; init; } = "";
+	public string ExecutorName { get; init; } = "";
 	public string? Location { get; init; }
+	public string LocationName { get; init; } = "";
 	public string Style { get; init; } = "";
 	public string Text { get; init; } = "";
+	public string DisplayName { get; init; } = "";
 
 	/// <summary>What the line counts against the feed's byte limit.</summary>
 	public long Bytes { get; init; }

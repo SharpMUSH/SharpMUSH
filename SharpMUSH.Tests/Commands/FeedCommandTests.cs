@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Commands;
@@ -162,6 +163,60 @@ public class FeedCommandTests : ServerTestBase
 		var id = await Eval($"feedrecall({_kind}/1,1)");
 		await Assert.That(await Eval($"feedmsg({id},speaker)")).IsEqualTo(await Objid(_ann));
 		await Assert.That(await Eval($"feedmsg({id},executor)")).IsEqualTo((await Eval($"objid({Ref(radio)})")));
+	}
+
+	/// <summary>A line keeps the names of its speaker, executor and location, so it reads whole after they are gone.</summary>
+	[Test]
+	public async Task ALineKeepsItsNames_AfterItsObjectsAreDestroyed()
+	{
+		var radio = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "FeedGone");
+		var command = "+" + TestIsolationHelpers.GenerateUniqueName("fg").ToLowerInvariant();
+		await Cmd($"@tel {Ref(radio)}=[loc({Ref(_ann)})]");
+		await Cmd($"@feed/define {_kind}={Ref(radio)}");
+		await Cmd($"&CMD {Ref(radio)}=${command} *:@feed/send {_kind}/1=%0");
+		var radioName = await Eval($"name({Ref(radio)})");
+		var roomName = await Eval($"name(loc({Ref(_ann)}))");
+
+		await CmdAs(_ann.DbRef, _ann.Handle, $"{command} still here");
+		var id = await Eval($"feedrecall({_kind}/1,1)");
+		await Mediator.Send(new DeleteObjectCommand(radio));
+
+		await Assert.That(await Eval($"feedmsg({id},name)")).IsEqualTo(_ann.Name);
+		await Assert.That(await Eval($"feedmsg({id},executor_name)")).IsEqualTo(radioName);
+		await Assert.That(await Eval($"feedmsg({id},location_name)")).IsEqualTo(roomName);
+		await Assert.That(await Eval($"feedmsg({id},text)")).IsEqualTo("still here");
+	}
+
+	/// <summary>A lock of the kind's own, checked by its code with feedpass(); an evaluation lock learns the feed from %0.</summary>
+	[Test]
+	public async Task NamedLocksAreCheckedWithFeedPass()
+	{
+		await Cmd($"&LK`OPEN {Ref(_system)}=[strmatch(%0,open)]");
+		await Assert.That(await Cmd($"@feed/lock {_kind}/talk=LK`OPEN/1")).Contains("Locked talk");
+
+		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/open,talk,{Ref(_ann)})")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/shut,talk,{Ref(_ann)})")).IsEqualTo("0");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/shut,moderate,{Ref(_ann)})")).IsEqualTo("1");
+
+		// The kind's owner may lock one feed, on top of the kind's lock, but not the kind itself.
+		await Assert.That(await Heard(_system, $"@feed/lock {_kind}/open/talk={Ref(_bo)}")).Contains("Locked talk");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/open,talk,{Ref(_ann)})")).IsEqualTo("0");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/open,talk,{Ref(_bo)})")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedinfo({_kind}/open,lock:talk)")).IsEqualTo(Ref(_bo));
+		await Assert.That(await Heard(_system, $"@feed/unlock {_kind}/talk")).Contains("needs the feed.admin permission");
+	}
+
+	[Test]
+	public async Task SendAsKeepsADisplayNameOnTheLine()
+	{
+		await Heard(_system, $"@feed/join {_kind}/1={Ref(_ann)}");
+		var text = TestIsolationHelpers.GenerateUniqueName("FeedAs");
+		await Heard(_system, $"@feed/send/as {_kind}/1=Ghost/{text}");
+
+		await Assert.That(Lines(_ann, text)).IsEquivalentTo(new[] { $"<{_kind}/1> Ghost says, \"{text}\"" });
+		var id = await EvalAs(_system.DbRef, $"feedrecall({_kind}/1,1)");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedmsg({id},display)")).IsEqualTo("Ghost");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedmsg({id},name)")).IsEqualTo(_system.Name);
 	}
 
 	[Test]

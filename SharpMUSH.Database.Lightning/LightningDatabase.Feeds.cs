@@ -44,8 +44,7 @@ public partial class LightningDatabase
 			Owner = kind.Owner.ToString(),
 			Description = kind.Description,
 			Settings = ToRecord(kind.Settings),
-			ReadLock = kind.ReadLock,
-			SendLock = kind.SendLock
+			Locks = new Dictionary<string, string>(kind.Locks)
 		};
 		await Store.WriteAsync(tx => tx.Put(Tables.FeedKind, Keys.Str(kind.Name), Codec.Serialize(record)), cancellationToken);
 	}
@@ -85,8 +84,7 @@ public partial class LightningDatabase
 			tx.Put(Tables.Feed, FeedKey(feed.Kind, feed.Key), Codec.Serialize(current with
 			{
 				Settings = ToRecord(feed.Settings),
-				ReadLock = feed.ReadLock,
-				SendLock = feed.SendLock
+				Locks = new Dictionary<string, string>(feed.Locks)
 			}));
 		}, cancellationToken);
 
@@ -162,9 +160,12 @@ public partial class LightningDatabase
 			Speaker = message.Speaker.ToString(),
 			SpeakerName = message.SpeakerName,
 			Executor = message.Executor.ToString(),
+			ExecutorName = message.ExecutorName,
 			Location = message.Location?.ToString(),
+			LocationName = message.LocationName,
 			Style = message.Style,
 			Text = text,
+			DisplayName = message.DisplayName,
 			Bytes = Keys.Str(text).Length
 		};
 
@@ -357,16 +358,16 @@ public partial class LightningDatabase
 		=> new(new DBRef((int)number, record.CreationTime), record.JoinedAt, record.Gag, record.Mute, record.Hide, record.LastSeen);
 
 	private static SharpFeedKind ToKind(FeedKindRecord record)
-		=> new(record.Name, DBRef.Parse(record.Owner), record.Description, ToSettings(record.Settings), record.ReadLock, record.SendLock);
+		=> new(record.Name, DBRef.Parse(record.Owner), record.Description, ToSettings(record.Settings), record.Locks);
 
 	private static SharpFeed ToFeed(FeedRecord record)
-		=> new(record.Kind, record.Key, ToSettings(record.Settings), record.ReadLock, record.SendLock, record.Messages,
-			record.Bytes, record.LastId);
+		=> new(record.Kind, record.Key, ToSettings(record.Settings), record.Locks, record.Messages, record.Bytes,
+			record.LastId);
 
 	private static SharpFeedMessage ToMessage(string kind, string key, FeedMessageRecord record)
 		=> new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), DBRef.Parse(record.Speaker),
-			record.SpeakerName, DBRef.Parse(record.Executor), record.Location is null ? null : DBRef.Parse(record.Location),
-			record.Style, MarkupTextSerializer.Deserialize(record.Text));
+			record.SpeakerName, DBRef.Parse(record.Executor), record.ExecutorName,
+			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName, record.Style, MarkupTextSerializer.Deserialize(record.Text), record.DisplayName);
 
 	private static FeedSettings ToSettings(FeedSettingsRecord record)
 		=> new(record.MaxMessages, record.MaxBytes, record.MaxLength,

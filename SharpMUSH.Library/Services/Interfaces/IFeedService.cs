@@ -23,10 +23,11 @@ public interface IFeedService
 	ValueTask<bool> CanRunAsync(AnySharpObject executor, SharpFeedKind kind);
 
 	/// <summary>
-	/// Whether <paramref name="unlocker"/> passes both the kind's and the feed's lock of one type
-	/// (<c>read</c> or <c>send</c>), each evaluated against the kind's owner. An empty lock passes.
+	/// Whether <paramref name="unlocker"/> passes both the kind's and the feed's lock named
+	/// <paramref name="lockName"/>, each evaluated as if it were on the kind's owner, with <c>%0</c> the feed key
+	/// and <c>%1</c> the kind for an evaluation lock. A lock that is not set passes.
 	/// </summary>
-	ValueTask<bool> PassesAsync(SharpFeedKind kind, SharpFeed feed, string lockType, AnySharpObject unlocker);
+	ValueTask<bool> PassesAsync(SharpFeedKind kind, SharpFeed feed, string lockName, AnySharpObject unlocker);
 
 	/// <summary>
 	/// Sends a line: stores it within the feed's limits (when it is logged), routes it, delivers it through the
@@ -44,6 +45,7 @@ public interface IFeedService
 /// <param name="Style">One of <see cref="FeedStyles.All"/>.</param>
 /// <param name="Text">The message as written.</param>
 /// <param name="To">The <c>/to</c> list, which <c>ROUTE</c> gets as <c>%6</c>; empty when none was given.</param>
+/// <param name="DisplayName">The <c>/as</c> name, or empty.</param>
 public sealed record FeedSend(
 	SharpFeedKind Kind,
 	SharpFeed Feed,
@@ -51,7 +53,8 @@ public sealed record FeedSend(
 	AnySharpObject Executor,
 	string Style,
 	MString Text,
-	IReadOnlyList<DBRef> To);
+	IReadOnlyList<DBRef> To,
+	string DisplayName = "");
 
 /// <summary>What became of a line.</summary>
 /// <param name="Id">Its id.</param>

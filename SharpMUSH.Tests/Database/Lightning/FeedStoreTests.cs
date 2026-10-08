@@ -54,7 +54,8 @@ public class FeedStoreTests
 	}
 
 	private static SharpFeedMessage Line(long id, DBRef speaker, string text, string key = "101.5", DateTimeOffset? at = null)
-		=> new(id, "radio", key, at ?? At.AddSeconds(id), speaker, "Ann", speaker, null, FeedStyles.Say, MarkupText.Plain(text));
+		=> new(id, "radio", key, at ?? At.AddSeconds(id), speaker, "Ann", speaker, "Ann", null, "", FeedStyles.Say, MarkupText.Plain(text),
+			id == 4 ? "Ghost" : "");
 
 	private static FeedSettings Keep(int messages = 0, long bytes = 0, TimeSpan? age = null) => new(messages, bytes, 0, age, true, "say");
 
@@ -63,10 +64,12 @@ public class FeedStoreTests
 	{
 		var owner = await NewPlayer("RadioOwner");
 		var kind = new SharpFeedKind("radio", owner, "Short-wave", new FeedSettings(MaxMessages: 50, MaxAge: TimeSpan.FromDays(2)),
-			"role^police", "");
+			new Dictionary<string, string> { ["read"] = "role^police", ["talk"] = "LK`MEMBER/1" });
 		await _db.SetFeedKindAsync(kind);
 
-		await Assert.That((await _db.GetFeedKindAsync("radio")).Expect<SharpFeedKind>()).IsEqualTo(kind);
+		var read = (await _db.GetFeedKindAsync("radio")).Expect<SharpFeedKind>();
+		await Assert.That(read with { Locks = kind.Locks }).IsEqualTo(kind);
+		await Assert.That(read.Locks).IsEquivalentTo(kind.Locks);
 		await Assert.That(await _db.GetFeedKindAsync("text") is NotFound).IsTrue();
 
 		await _db.SetFeedKindAsync(kind with { Description = "Radio" });
@@ -90,6 +93,7 @@ public class FeedStoreTests
 		await Assert.That(feed.LastId).IsEqualTo(5);
 		await Assert.That(await _db.GetFeedMessageAsync(1) is NotFound).IsTrue();
 		await Assert.That((await _db.GetFeedMessageAsync(4)).Expect<SharpFeedMessage>().Feed).IsEqualTo("radio/101.5");
+		await Assert.That((await _db.GetFeedMessageAsync(4)).Expect<SharpFeedMessage>().DisplayName).IsEqualTo("Ghost");
 	}
 
 	[Test]
@@ -124,7 +128,7 @@ public class FeedStoreTests
 		var owner = await NewPlayer("RadioOwner");
 		var ann = await NewPlayer("Ann");
 		var bo = await NewPlayer("Bo");
-		await _db.SetFeedKindAsync(new SharpFeedKind("radio", owner, "", FeedSettings.None, "", ""));
+		await _db.SetFeedKindAsync(new SharpFeedKind("radio", owner, "", FeedSettings.None, FeedLocks.None));
 		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 0, false, false, false, 0));
 		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(bo, 0, true, false, false, 0));
 		await _db.SetFeedMemberAsync("radio", "99.1", new SharpFeedMember(ann, 3, false, true, false, 4));
@@ -161,7 +165,7 @@ public class FeedStoreTests
 	{
 		var owner = await NewPlayer("RadioOwner");
 		var ann = await NewPlayer("Ann");
-		await _db.SetFeedKindAsync(new SharpFeedKind("radio", owner, "", FeedSettings.None, "", ""));
+		await _db.SetFeedKindAsync(new SharpFeedKind("radio", owner, "", FeedSettings.None, FeedLocks.None));
 		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 0, false, false, false, 0));
 		await _db.AppendFeedMessageAsync(Line(1, ann, "hello"), Keep());
 		await _db.AddFeedTapAsync(new SharpFeedTap("radio", owner, "LOG"));

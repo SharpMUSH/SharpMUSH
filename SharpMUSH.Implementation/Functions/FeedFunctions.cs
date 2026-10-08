@@ -84,9 +84,12 @@ public partial class Functions
 			"speaker" => new CallState(message.Speaker),
 			"name" => new CallState(message.SpeakerName),
 			"executor" => new CallState(message.Executor),
+			"executor_name" => new CallState(message.ExecutorName),
 			"location" => message.Location is { } location ? new CallState(location) : CallState.Empty,
+			"location_name" => new CallState(message.LocationName),
 			"style" => new CallState(message.Style),
 			"text" => new CallState(message.Text),
+			"display" => new CallState(message.DisplayName),
 			_ => new CallState("#-1 NO SUCH FACTOR")
 		};
 	}
@@ -165,8 +168,8 @@ public partial class Functions
 			{
 				"owner" => new CallState(kind.Owner),
 				"description" => new CallState(kind.Description),
-				"read" => new CallState(kind.ReadLock),
-				"send" => new CallState(kind.SendLock),
+				"read" or "send" => new CallState(kind.Lock(option)),
+				_ when option.StartsWith("lock:", StringComparison.Ordinal) => new CallState(kind.Lock(option[5..])),
 				_ => SettingValue(kind.Effective, option)
 			};
 
@@ -181,8 +184,8 @@ public partial class Functions
 			"bytes" => new CallState(feed.Bytes),
 			"last" => new CallState(feed.LastId),
 			"members" => new CallState((await Mediator.Send(new GetFeedMembersQuery(kind.Name, key), ExecutionBudget.CurrentToken)).Count),
-			"read" => new CallState(feed.ReadLock),
-			"send" => new CallState(feed.SendLock),
+			"read" or "send" => new CallState(feed.Lock(option)),
+			_ when option.StartsWith("lock:", StringComparison.Ordinal) => new CallState(feed.Lock(option[5..])),
 			_ => SettingValue(feed.Settings.Over(kind.Effective), option)
 		};
 	}
@@ -261,6 +264,32 @@ public partial class Functions
 					ExecutionBudget.CurrentToken)).Count)),
 			Error<string> error => new CallState(error.Value)
 		};
+
+	/// <summary>
+	/// <c>feedpass(&lt;feed&gt;, &lt;lock&gt;, &lt;object&gt;)</c>: 1 when the object passes the kind's and the feed's
+	/// lock of that name (an unset lock passes), else 0. An evaluation lock gets <c>%0</c> the feed key and
+	/// <c>%1</c> the kind.
+	/// </summary>
+	[SharpFunction(Name = "feedpass", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["feed", "lock", "object"])]
+	public async ValueTask<CallState> FeedPass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var lockName = FeedArg(parser, 1).ToLowerInvariant();
+		if (!FeedLocks.IsName(lockName)) return new CallState("#-1 INVALID LOCK NAME");
+		return await RunnableFeedAsync(parser, FeedArg(parser, 0)) switch
+		{
+			FeedArgument target => await WithFeedObjectAsync(parser, 2, async found =>
+				new CallState(await FeedRules(parser).PassesAsync(target.Kind, target.Feed, lockName, found))),
+			Error<string> error => new CallState(error.Value)
+		};
+	}
+
+	private async ValueTask<CallState> WithFeedObjectAsync(IMUSHCodeParser parser, int index,
+		Func<AnySharpObject, ValueTask<CallState>> answer)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+			FeedArg(parser, index), LocateFlags.All, answer);
+	}
 
 	/// <summary><c>feedsof(&lt;object&gt;[, &lt;kind&gt;])</c>: the feeds the object is a member of, of the kinds the executor runs.</summary>
 	[SharpFunction(Name = "feedsof", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "kind"])]

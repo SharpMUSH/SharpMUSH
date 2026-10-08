@@ -51,8 +51,8 @@
 `@feed/undefine <kind>`<br>
 `@feed/describe <kind>=<description>`<br>
 `@feed/set <kind>[/<key>]/<option>=[<value>]`<br>
-`@feed/lock <kind>[/<key>]/<read|send>=<lock>`<br>
-`@feed/unlock <kind>[/<key>]/<read|send>`<br>
+`@feed/lock <kind>[/<key>]/<lock name>=<lock>`<br>
+`@feed/unlock <kind>[/<key>]/<lock name>`<br>
 `@feed/tap <kind>=<object>/<attribute>`<br>
 `@feed/untap <kind>=<object>/<attribute>`<br>
 `@feed/purge <kind>/<key>[=<age>]`<br>
@@ -63,13 +63,14 @@
 `@feed/seen <kind>/<key>=<object>[/<id>]`<br>
 `@feed/who <kind>/<key>`<br>
 `@feed/send[/<style>] <kind>/<key>=<message>`<br>
-`@feed/send/to <kind>/<key>=<objids>/<message>`
+`@feed/send/to <kind>/<key>=<objids>/<message>`<br>
+`@feed/send/as <kind>/<key>=<name>/<message>`
 
 A feed is a stream of messages that a game's own systems are built on: a radio, a phone's text messages, a staff log. The engine gives every message an id, keeps it within the feed's limits, hands it to the system to deliver, and passes it on to anything else that listens. Players never use @feed. They use the system's own commands (`+radio`, `+text`), and the system's code runs @feed for them.
 
 A feed belongs to a **kind**, such as `radio`, and is named `<kind>/<key>`: `radio/101.5`. A kind is a word in lower case of up to 32 letters, digits, `.`, `-` and `_`, starting with a letter. A key is up to 200 characters with no `/` and no spaces. A feed starts when it gets its first member or line; there is no command to create one.
 
-Kinds, their settings, locks, taps and purges need the `feed.admin` permission, which the wizard role allows. Everything else (members, lines, `/who`, `/info`, `/delete`) needs control of the kind's owner object, or `feed.admin`.
+Defining a kind, and its description, settings, locks and taps, need the `feed.admin` permission, which the wizard role allows. Everything about one feed (members, lines, its own settings and locks, `/who`, `/info`, `/purge`, `/delete`) needs control of the kind's owner object, or `feed.admin`.
 
 ## Kinds
 
@@ -99,6 +100,8 @@ A line has a style: `say`, `pose`, `semipose`, `emit` or `announce`. A leading `
 
 `/to` passes a list of objids before the message, separated from it by `/`, for the kind's ROUTE attribute to use: `@feed/send/to text/ann-bo=#5:1700000000 #9:1700000123/On my way.`
 
+`/as` gives the line a name to appear under, such as a persona or a callsign, separated from the message by `/`: `@feed/send/as radio/101.5=Ghost/Anyone out there?`. It is stored with the line, so recall shows it as it was; the default line uses it in place of the speaker's name. With both, the objids come first: `=<objids>/<name>/<message>`.
+
 Each line:
 
 1. is refused if it is longer than the feed's `max_length`;
@@ -113,19 +116,19 @@ The default line is `<radio/101.5> Ann says, "Coming in."`, or `<radio/101.5> An
 
 These attributes on the kind's owner decide where a line goes and how it reads. Each is named after the kind, and each is optional. They are evaluated as the owner, with the speaker as enactor (`%#`). Each line has been stored by then, so [feedmsg()] can read it from `%0`.
 
-- `FEED`<KIND>`ROUTE` returns the objids that should receive the line, separated by spaces. Without it, the line goes to the members who are not gagged. It gets `%0` the line id, `%1` the feed key, `%2` the speaker, `%3` the style, `%4` the message, `%5` the members who are not gagged and `%6` the `/to` list.
-- `FEED`<KIND>`DELIVER` is run as an action list, in place, once per line, and does the delivery itself (`@pemit`, `@message`, anything). It gets `%0` the line id, `%1` the feed key, `%2` the recipients, `%3` the speaker, `%4` the style and `%5` the message.
-- `FEED`<KIND>`FORMAT`, when there is no DELIVER, is evaluated for each recipient who can hear the speaker, and is the line that recipient sees; an empty result sends them nothing. It gets `%0` the message, `%1` the recipient, `%2` the speaker, `%3` the style and `%4` the feed key.
+- `FEED`<KIND>`ROUTE` returns the objids that should receive the line, separated by spaces. Without it, the line goes to the members who are not gagged. It gets `%0` the line id, `%1` the feed key, `%2` the speaker, `%3` the style, `%4` the message, `%5` the members who are not gagged, `%6` the `/to` list and `%7` the `/as` name.
+- `FEED`<KIND>`DELIVER` is run as an action list, in place, once per line, and does the delivery itself (`@pemit`, `@message`, anything). It gets `%0` the line id, `%1` the feed key, `%2` the recipients, `%3` the speaker, `%4` the style, `%5` the message and `%6` the `/as` name.
+- `FEED`<KIND>`FORMAT`, when there is no DELIVER, is evaluated for each recipient who can hear the speaker, and is the line that recipient sees; an empty result sends them nothing. It gets `%0` the message, `%1` the recipient, `%2` the speaker, `%3` the style, `%4` the feed key, `%5` the `/as` name and `%6` the line id.
 
 ## Taps
 
 A tap is another system that hears every line of a kind, such as a scene recorder or a staff log. `@feed/tap radio=Logger/LOG`RADIO` adds one; `*` in place of the kind hears every kind. You must control the tap's object. `@feed/untap` removes one.
 
-For each line, after it is delivered, the tap's attribute is queued on its object with the speaker as enactor. It gets `%0` the line id, `%1` the feed (`<kind>/<key>`), `%2` who received it, `%3` the speaker, `%4` the style and `%5` the message. A tap whose object or attribute is gone is skipped.
+For each line, after it is delivered, the tap's attribute is queued on its object with the speaker as enactor. It gets `%0` the line id, `%1` the feed (`<kind>/<key>`), `%2` who received it, `%3` the speaker, `%4` the style, `%5` the message and `%6` the `/as` name. A tap whose object or attribute is gone is skipped.
 
 ## Settings and locks
 
-`@feed/set <kind>/<option>=<value>` sets an option for every feed of a kind; `@feed/set <kind>/<key>/<option>=<value>` sets it for one feed, over the kind's. An empty value unsets it, so a feed goes back to its kind's value and a kind to the default.
+`@feed/set <kind>/<option>=<value>` sets an option for every feed of a kind (with `feed.admin`); `@feed/set <kind>/<key>/<option>=<value>` sets it for one feed, over the kind's. An empty value unsets it, so a feed goes back to its kind's value and a kind to the default.
 
 | Option | Default | Takes |
 |---|---|---|
@@ -136,7 +139,14 @@ For each line, after it is delivered, the tap's attribute is queued on its objec
 | `logged` | yes | `no` keeps no lines; they are still delivered and tapped |
 | `style` | say | the style a line has when the sender gives none |
 
-A feed has two locks, each an ordinary lock evaluated as if it were on the kind's owner (see [lock keys]; `role^` and `perm^` keys work, see [roles]). The read lock decides who may be joined to it, checked against the object being joined. The send lock decides who may speak on it, checked against the speaker. `@feed/lock <kind>[/<key>]/<read|send>=<lock>` sets one, and `@feed/unlock` clears it. A feed's lock applies on top of its kind's.
+Locks are ordinary locks evaluated as if they were on the kind's owner (see [lock keys]; `role^` and `perm^` keys work, see [roles]). Each has a name, a lower-case word. The engine checks two:
+
+- `read` decides who may be joined, checked against the object being joined.
+- `send` decides who may speak, checked against the speaker.
+
+Any other name (`talk`, `moderate`) is the kind's own, for its code to check with [feedpass()]. `@feed/lock <kind>[/<key>]/<lock name>=<lock>` sets one, and `@feed/unlock` clears it. A lock on a kind needs `feed.admin`; a lock on one feed needs only control of the owner, and applies on top of the kind's lock of the same name. A lock that is not set passes everyone.
+
+An evaluation lock (`<attribute>/<value>`) gets `%0` the feed key and `%1` the kind, so one attribute on the owner can answer for every feed: with `@feed/lock radio/talk=LK`MEMBER/1`, `LK`MEMBER` can look `%0` up in the radio's own member lists.
 
 `@feed/purge <kind>/<key>` drops every stored line of a feed, and `@feed/purge <kind>/<key>=30d` the lines older than 30 days.
 
