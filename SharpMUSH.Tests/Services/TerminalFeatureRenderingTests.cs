@@ -176,6 +176,48 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(store.AddressCount).IsLessThanOrEqualTo(TerminalPictureStore.MaxFailures + 1);
 	}
 
+	/// <summary>An 80x40 opaque PNG: eight cells by two at the default cell size.</summary>
+	private static readonly byte[] WidePng = Convert.FromBase64String(
+		"iVBORw0KGgoAAAANSUhEUgAAAFAAAAAoCAIAAADmAupWAAAAQ0lEQVR42u3PMQ0AAAgDsMmZfxXIwgUPTWqgmfaVCAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsL31p8N6zEucp5cQAAAABJRU5ErkJggg==");
+
+	private static string ArtlessFigureMarkup(string source) => MarkupTextSerializer.Serialize(ServerLayout.Build(
+		new Figure(new ImageMarkup(source, "a cat"), MarkupText.Empty), 40));
+
+	/// <summary>
+	/// An MXP client draws the picture itself, but in the cells the figure keeps for it: those are the picture's
+	/// shape once the server knows its size, rather than one line of its description.
+	/// </summary>
+	[Test]
+	public async Task Mxp_AFigureKeepsCellsOfThePicturesShape()
+	{
+		var handler = new PictureHandler(HttpStatusCode.OK, WidePng);
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance, handler);
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+
+		var text = await RenderAsync(renderer, ArtlessFigureMarkup("https://pictures.example/cat.png"),
+			Context(new ProtocolCapabilities(Format: OutputFormat.Mxp)));
+
+		var lines = text.Split("\r\n");
+		await Assert.That(lines.Length).IsEqualTo(2).Because("the picture is two cells tall");
+		await Assert.That(lines[0]).Contains("<IMAGE cat.png");
+		await Assert.That(lines.Count(line => line.Contains("<IMAGE"))).IsEqualTo(1);
+		await Assert.That(handler.Requests).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task Mxp_AClientThatDoesNotDrawImages_FetchesNothing()
+	{
+		var handler = new PictureHandler(HttpStatusCode.OK, WidePng);
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance, handler);
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+
+		var text = await RenderAsync(renderer, ArtlessFigureMarkup("https://pictures.example/cat.png"),
+			Context(new ProtocolCapabilities(Format: OutputFormat.Mxp, MxpSupported: "SEND")));
+
+		await Assert.That(text).Contains("[a cat]");
+		await Assert.That(handler.Requests).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task NoPictureFeature_LeavesTheArtAndFetchesNothing()
 	{
