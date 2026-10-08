@@ -689,6 +689,7 @@ public class PlusHelpIntegrationTests
 	[Arguments("+help/0 scene*", "Usage: +help[/<page>] <topic>")]
 	[Arguments("+help/list/999", "you asked for page 999.")]
 	[Arguments("+help/2 scene*", "There is one page — you asked for page 2.")]
+	[Arguments("+help/2 plus-help/write", "There is one page — you asked for page 2.")]
 	public async Task AMistypedArgument_IsAnsweredWithTheUsageLine(string command, string usage)
 	{
 		await PutLibrarianInMasterRoomAsync();

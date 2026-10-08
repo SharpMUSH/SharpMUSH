@@ -425,7 +425,7 @@ objects:
       # does, titled with how they were found.
       INC`DO`SHOW:
         value: |-
-          @@ %q<query> the query as typed · %q<page> the page, for several matches; @assert strlen(trim(%q<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))][setq(m,u(%!/FUN`GET`LOOKUP,%q<recs>,%q<query>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<m>),1)={think [setq(list,%q<m>,title,switch(%q<how>,command,Topics about [u(%!/FUN`GET`COMMAND,%q<query>)],near,Topics with '%q<q>' in their names,Topics matching '%q<q>'),head,+help,tail,trim(%q<query>))]; @include %!/INC`DO`LISTING}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
+          @@ %q<query> the query as typed · %q<page> the page, for several matches; @assert strlen(trim(%q<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))][setq(m,u(%!/FUN`GET`LOOKUP,%q<recs>,%q<query>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<m>),1)={think [setq(list,%q<m>,title,switch(%q<how>,command,Topics about [u(%!/FUN`GET`COMMAND,%q<query>)],near,Topics with '%q<q>' in their names,Topics matching '%q<q>'),head,+help,tail,trim(%q<query>))]; @include %!/INC`DO`LISTING}; @assert lte(%q<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────
