@@ -301,7 +301,6 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				}
 
 				// 5. Execute the built-in command
-				var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 				var commandSuccess = true;
 				Option<CallState> commandResult;
 
@@ -314,6 +313,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				var commandText = newParser.CurrentState.CommandText;
 				var outputVersion = commandText?.OutputVersion;
 				var outputBefore = commandText?.Output;
+				var clock = InvocationClock.Start();
 				try
 				{
 					// Track command history for @retry support (shared mutable reference, persists across With() copies).
@@ -329,9 +329,10 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				}
 				finally
 				{
-					var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+					clock.Stop();
 					// The registered name, not the abbreviation or case typed, so @pe and @PEMIT are one series.
-					services.Telemetry?.RecordCommandInvocation(libraryCommandDefinition.Attribute.Name.ToUpperInvariant(), elapsedMs, commandSuccess);
+					services.Telemetry?.RecordCommandInvocation(libraryCommandDefinition.Attribute.Name.ToUpperInvariant(),
+						clock.OwnMilliseconds, clock.InclusiveMilliseconds, commandSuccess);
 				}
 
 				// %> is recorded before the after hook runs, so the hook reads the command's own output.
