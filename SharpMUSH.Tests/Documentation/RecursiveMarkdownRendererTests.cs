@@ -996,4 +996,38 @@ public class RecursiveMarkdownRendererWithParserTests
 		}
 		return null;
 	}
+
+	/// <summary>~~text~~ is struck through, and a client that draws no strike-through reads the text alone.</summary>
+	[Test]
+	public async Task RenderStrikethrough_StrikesTheTextAndDropsTheTildes()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("a ~~b~~ c");
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("a b c");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[9m");
+	}
+
+	/// <summary>
+	/// A soft break is one space. The next line's indentation is not more of it: a list item's wrapped
+	/// line read "holding the  scene.close".
+	/// </summary>
+	[Test]
+	[Arguments("- holding the\n  `scene.close` permission", "holding the scene.close permission")]
+	[Arguments("- bare\n  gives you two", "bare gives you two")]
+	[Arguments("one\n   two", "one two")]
+	public async Task RenderSoftBreak_IsOneSpaceWhateverTheNextLinesIndent(string markdown, string expected)
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		await Assert.That(result.ToPlainText()).Contains(expected);
+	}
+
+	/// <summary>A line after a &lt;br&gt; keeps its indentation: the help index lines its entries up with it.</summary>
+	[Test]
+	public async Task RenderBreakTag_KeepsTheNextLinesIndent()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("  one<br>\n  two");
+
+		await Assert.That(result.ToPlainText()).Contains("\n  two");
+	}
 }

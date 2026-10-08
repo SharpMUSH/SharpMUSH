@@ -61,6 +61,8 @@ Renders CommonMark/Markdown text with customizable rendering controlled by attri
 - `<object>` - Object reference (dbref) containing rendering template attributes
 - `<width>` - Optional. Maximum width for rendered output (default: 78). Must be between 10-1000.
 
+Without a ``RENDERMARKUP`TABLE`` template, a table with headings spans the whole `<width>`, its last column taking the room its cells leave, so its heading rule is as wide as a screen drawn around it. `rendermarkdown()` keeps a table as wide as its cells.
+
 ## Custom Template System
 The function looks for attributes on `<object>` with specific names that define how to render each markdown element. These attributes contain softcode that is evaluated with markdown content passed as arguments. If a template attribute is not found, the default rendering is used.
 

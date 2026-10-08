@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -5,6 +6,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Commands.WikiCommand;
 
@@ -253,9 +255,16 @@ public static class ListWiki
 		var byPage = new Dictionary<string, WikiSearchMatch>(StringComparer.Ordinal);
 		var order = new List<string>();
 
-		bool Hit(string title, string plainText) =>
-			title.Contains(needle, StringComparison.OrdinalIgnoreCase)
-			|| plainText.Contains(needle, StringComparison.OrdinalIgnoreCase);
+		// A needle with a * or ? is a wildcard pattern found anywhere in the text, as +help/search reads
+		// one: "home*" finds what "home" does, and "h?me" finds "home" and "hame".
+		var glob = needle.AsSpan().IndexOfAny('*', '?') >= 0
+			? SoftcodeRegex.Wildcard($"*{needle}*", RegexOptions.CultureInvariant)
+			: null;
+
+		bool Hit(string title, string plainText) => glob is not null
+			? SoftcodeRegex.IsMatch(glob, title) || SoftcodeRegex.IsMatch(glob, plainText)
+			: title.Contains(needle, StringComparison.OrdinalIgnoreCase)
+				|| plainText.Contains(needle, StringComparison.OrdinalIgnoreCase);
 
 		void Record(WikiPage page, string locale)
 		{

@@ -169,7 +169,8 @@ the one it was written in, so you find a page by whatever wording you remember.
 Each page is listed once however many of its locales matched; when the text
 that matched was not the page's own source locale, that locale appears in
 brackets after the line, and if several locales matched, yours is the one
-shown. `@wiki/search/source <text>` matches source text only.
+shown. `@wiki/search/source <text>` matches source text only. `*` and `?` in
+`<text>` are wildcards, matched anywhere in a title or body.
 
 Not every page is listed for everybody. Drafts are left out for anyone who may
 not read them (see [wiki reading drafts]). A page you may not read because its

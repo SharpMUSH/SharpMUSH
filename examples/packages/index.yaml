@@ -54,7 +54,7 @@ packages:
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.2.0
+    version: 1.3.0
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: hello-ui/
     name: Hello UI
@@ -64,7 +64,7 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.3.0
+    version: 1.4.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit
   - path: jobs/
     name: Jobs

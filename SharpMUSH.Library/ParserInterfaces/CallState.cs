@@ -106,6 +106,12 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	/// </summary>
 	public bool HadErrors { get; init; }
 
+	/// <summary>
+	/// True when the text could not be parsed at all, so nothing in it ran; <see cref="Message"/> is the
+	/// <c>#-1 PARSER FAILURE</c> saying why. A line a player types that ends this way is answered with it.
+	/// </summary>
+	public bool IsParseFailure { get; init; }
+
 	/// <summary>Optional full-result counterpart to the published text-only deferred delegate.</summary>
 	public Func<ValueTask<CallState?>>? ParsedResult { get; init; }
 

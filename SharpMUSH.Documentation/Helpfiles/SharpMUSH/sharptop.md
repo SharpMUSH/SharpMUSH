@@ -20,6 +20,9 @@ This is the index to the MUSH online help files.
 
   If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 
+# +help
+  `help` is the server's own help, the same on every SharpMUSH game. `+help` is this game's: the topics its installed systems carry, such as `+scene` and `+request`, and whatever its staff have written down. Type `+help` for its index and `+help <topic>` for a topic.
+
 # Getting Started
 # GS
 # Walkthrough

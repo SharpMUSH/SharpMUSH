@@ -13,6 +13,13 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 public partial class RecursiveMarkdownRenderer
 {
 	/// <summary>
+	/// Whether a table with headings spans the whole width, its last column taking what its cells leave,
+	/// so its heading rule meets the lines of a screen drawn round it. Off for help, where a table is as
+	/// wide as its cells.
+	/// </summary>
+	protected virtual bool TablesFillWidth => false;
+
+	/// <summary>
 	/// A table with headings as a layout <see cref="LayoutTable"/>; one whose headings are all empty
 	/// as plain columns, the way a topic list is written.
 	/// </summary>
@@ -92,7 +99,8 @@ public partial class RecursiveMarkdownRenderer
 						_ => Alignment.Left
 					}
 					: Alignment.Left,
-				Min = Math.Max(MinimumColumnWidth, heading.ToPlainText().Split(' ').Max(word => word.Length))
+				Min = Math.Max(MinimumColumnWidth, heading.ToPlainText().Split(' ').Max(word => word.Length)),
+				Grow = TablesFillWidth && col == columnCount - 1 ? 1 : 0
 			})
 			.ToImmutableArray();
 		var body = allRows

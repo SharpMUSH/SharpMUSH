@@ -130,8 +130,7 @@ public class ExamplePackageTests
 	/// enforced here instead.
 	///
 	/// <para>Scoped to the patterns that use <c>.</c> as a wildcard to take a remainder — <c>.*</c> or
-	/// <c>.+</c>, since <c>+help/delete</c> and the <c>/source</c> pair spell theirs the second way —
-	/// which are the ones whose argument can hold a line break. A pattern that only recognises a bare
+	/// <c>.+</c> — which are the ones whose argument can hold a line break. A pattern that only recognises a bare
 	/// verb (plus-help's <c>^\+help\s*$</c>) has no remainder to lose and needs nothing.</para>
 	/// </summary>
 	[Test]
