@@ -219,6 +219,37 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(handler.Requests).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// The game's own picture is at an address relative to the portal, which an MXP or Pueblo client cannot
+	/// fetch, so it is shown the figure's art instead, even when the server can measure the picture.
+	/// </summary>
+	[Test]
+	[Arguments(OutputFormat.Mxp, "<IMAGE")]
+	[Arguments(OutputFormat.Pueblo, "<img")]
+	public async Task ARelativePicture_ShowsAClientThatFetchesPicturesTheArt(OutputFormat format, string element)
+	{
+		var handler = new PictureHandler(HttpStatusCode.OK, WidePng);
+		using var store = new TerminalPictureStore("https://game.example/", 1 << 20, NullLogger<TerminalPictureStore>.Instance, handler);
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+
+		var text = await RenderAsync(renderer, FigureMarkup("/assets/cat.png"), Context(new ProtocolCapabilities(Format: format)));
+
+		await Assert.That(text).Contains("(=^.^=)");
+		await Assert.That(text).DoesNotContain(element);
+		await Assert.That(handler.Requests).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(OutputFormat.Mxp, "<IMAGE")]
+	[Arguments(OutputFormat.Pueblo, "<img")]
+	public async Task AnAbsolutePicture_IsStillSentToAClientThatFetchesPictures(OutputFormat format, string element)
+	{
+		var text = await RenderAsync(new MarkupOutputRenderer(), FigureMarkup("https://pictures.example/cat.png"),
+			Context(new ProtocolCapabilities(Format: format)));
+
+		await Assert.That(text).Contains(element);
+	}
+
 	[Test]
 	public async Task NoPictureFeature_LeavesTheArtAndFetchesNothing()
 	{
