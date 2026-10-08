@@ -165,20 +165,18 @@ public class ThemeResolverTests
 	}
 
 	[Test]
-	public async Task PhosphorsStyleIsWhatTokensCssShips()
+	public async Task PhosphorsPartsAreTheDefaultsTokensCssShips()
 	{
 		var theme = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
 
-		await Assert.That(theme.Token("font-display")).IsEqualTo("'Hanken Grotesk', system-ui, sans-serif");
-		await Assert.That(theme.Token("radius")).IsEqualTo("9px");
-		await Assert.That(theme.Token("radius-card")).IsEqualTo("16px");
-		await Assert.That(theme.Token("texture")).IsEqualTo("none");
-		await Assert.That(theme.Token("ornament-before")).IsEqualTo("none");
-		await Assert.That(theme.Token("card-bg")).IsEqualTo("var(--surface)");
-		await Assert.That(theme.Token("title-underline-pad")).IsEqualTo("0px");
-		await Assert.That(theme.Token("title-color")).IsEqualTo("var(--text)");
-		await Assert.That(theme.Token("title-shadow")).IsEqualTo("none");
-		await Assert.That(theme.Token("image-filter")).IsEqualTo("none");
+		await Assert.That(theme.Parts[ThemeStyles.FontDisplay]).IsEqualTo("ui");
+		await Assert.That(theme.Parts[ThemeStyles.Texture]).IsEqualTo("none");
+		await Assert.That(theme.Parts[ThemeStyles.FrameMarks]).IsEqualTo("none");
+		await Assert.That(theme.Parts[ThemeStyles.FrameEdge]).IsEqualTo("line");
+		await Assert.That(theme.Parts[ThemeStyles.OrnamentGlyphs]).IsEqualTo("none");
+		await Assert.That(theme.Parts[ThemeStyles.EffectColor]).IsEqualTo("text");
+		await Assert.That(theme.Parts[ThemeStyles.Imagery]).IsEqualTo("natural");
+		await Assert.That(theme.Parts[ThemeStyles.Scheme]).IsEqualTo("dark");
 	}
 
 	[Test]
@@ -192,43 +190,92 @@ public class ThemeResolverTests
 	}
 
 	[Test]
-	public async Task DrawnFramesAreEscapedDataUris()
+	public async Task AThemesCssIsColoursOnlyAndItsLookIsItsParts()
 	{
 		foreach (var theme in BuiltInThemes.All)
 		{
-			var css = ThemeResolver.Resolve(theme).Css;
-			await Assert.That(css).DoesNotContain("<").Because(theme.Id);
-			await Assert.That(css).DoesNotContain(">").Because(theme.Id);
+			var resolved = ThemeResolver.Resolve(theme);
+			await Assert.That(resolved.Css).DoesNotContain("url(").Because(theme.Id);
+			await Assert.That(resolved.Css).DoesNotContain("--texture").Because(theme.Id);
+			await Assert.That(resolved.Parts.Keys).IsEquivalentTo(ThemeStyles.PartKeys.Append(ThemeStyles.Scheme)).Because(theme.Id);
 		}
-
-		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Fantasy).Token("card-bg")).Contains("data:image/svg+xml,%3Csvg").And.Contains("%23");
 	}
 
 	[Test]
 	public async Task PicturesAreTintedTowardTheAccentInUse()
 	{
-		var horror = ThemeResolver.Resolve(BuiltInThemes.Horror);
-		var cyan = ThemeResolver.Resolve(BuiltInThemes.Horror, "#00c8ff");
-
-		// #e0453a is hue 4, #00c8ff hue 193; sepia sits near 38.
-		await Assert.That(horror.Token("image-filter")).Contains("hue-rotate(-34deg)");
-		await Assert.That(cyan.Token("image-filter")).Contains("hue-rotate(155deg)");
-		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Mystery).Token("image-filter")).StartsWith("grayscale(1)");
+		// #e0453a is hue 4, #00c8ff hue 193; imagery.css turns sepia (near 38) toward it.
+		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Horror).Token("accent-hue")).IsEqualTo("4");
+		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Horror, "#00c8ff").Token("accent-hue")).IsEqualTo("193");
+		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Mystery).Parts[ThemeStyles.Imagery]).IsEqualTo("noir");
 	}
 
 	[Test]
 	public async Task AGenreThemeCarriesItsEmbellishments()
 	{
-		var scifi = ThemeResolver.Resolve(BuiltInThemes.ScienceFiction);
-		var fantasy = ThemeResolver.Resolve(BuiltInThemes.Fantasy);
+		var scifi = ThemeResolver.Resolve(BuiltInThemes.ScienceFiction).Parts;
+		var fantasy = ThemeResolver.Resolve(BuiltInThemes.Fantasy).Parts;
 
-		await Assert.That(scifi.Token("font-display")).StartsWith("'Orbitron'");
-		await Assert.That(scifi.Token("title-transform")).IsEqualTo("uppercase");
-		await Assert.That(scifi.Token("ornament-before")).IsEqualTo("\"\\5B\"");
-		await Assert.That(scifi.Token("texture")).Contains("repeating-linear-gradient");
-		await Assert.That(scifi.Token("card-bg")).Contains("no-repeat").And.EndsWith("var(--surface)");
-		await Assert.That(fantasy.Token("texture")).Contains("feTurbulence");
-		await Assert.That(fantasy.Token("font-ui")).StartsWith("Georgia");
+		await Assert.That(scifi[ThemeStyles.FontDisplay]).IsEqualTo("orbitron");
+		await Assert.That(scifi[ThemeStyles.Titles]).IsEqualTo("caps");
+		await Assert.That(scifi[ThemeStyles.OrnamentGlyphs]).IsEqualTo("brackets");
+		await Assert.That(scifi[ThemeStyles.Texture]).IsEqualTo("scanlines");
+		await Assert.That(scifi[ThemeStyles.FrameMarks]).IsEqualTo("corners");
+		await Assert.That(fantasy[ThemeStyles.FontBody]).IsEqualTo("serif");
+		await Assert.That(fantasy[ThemeStyles.OrnamentUnderline]).IsEqualTo("fade");
+		await Assert.That(fantasy[ThemeStyles.EffectColor]).IsEqualTo("accent");
+	}
+
+	[Test]
+	public async Task ASimpleThemeTakesThePartsItsSettingsBringAndIgnoresItsOwn()
+	{
+		var tokens = BuiltInThemes.Fantasy.Tokens.ToDictionary();
+		tokens[ThemeStyles.FrameMarks] = "plating";
+
+		var parts = ThemeStyles.PartsOf(tokens, ThemeStyles.Simple);
+
+		await Assert.That(parts[ThemeStyles.FrameMarks]).IsEqualTo("filigree");
+		await Assert.That(ThemeStyles.ModeOf(tokens, null)).IsEqualTo(ThemeStyles.Simple);
+	}
+
+	[Test]
+	public async Task AComplexThemeMixesPartsFromDifferentSettings()
+	{
+		var tokens = BuiltInThemes.Fantasy.Tokens.ToDictionary();
+		tokens[ThemeStyles.Mode] = ThemeStyles.Complex;
+		tokens[ThemeStyles.FrameMarks] = "plating";
+		tokens[ThemeStyles.EffectShadow] = "neon-does-not-exist";
+
+		var parts = ThemeResolver.Resolve(BuiltInThemes.Fantasy with { Tokens = tokens }).Parts;
+
+		await Assert.That(parts[ThemeStyles.FrameMarks]).IsEqualTo("plating");
+		// The rest of the filigree frame, and the gilt effect's shadow where the theme's own is not a choice.
+		await Assert.That(parts[ThemeStyles.FrameEdge]).IsEqualTo("line");
+		await Assert.That(parts[ThemeStyles.EffectShadow]).IsEqualTo("gilt");
+		await Assert.That(ThemeResolver.Validate(tokens)).Contains(p => p.Contains("effect-shadow", StringComparison.Ordinal));
+	}
+
+	[Test]
+	public async Task AStylesheetCountsOnlyInCustomMode()
+	{
+		const string sheet = ":root { --radius: 0px; }";
+		var custom = BuiltInThemes.Phosphor with { Tokens = new Dictionary<string, string>(BuiltInThemes.Phosphor.Tokens) { [ThemeStyles.Mode] = ThemeStyles.Custom }, Stylesheet = sheet };
+		var complex = BuiltInThemes.Phosphor with { Tokens = new Dictionary<string, string>(BuiltInThemes.Phosphor.Tokens) { [ThemeStyles.Mode] = ThemeStyles.Complex }, Stylesheet = sheet };
+		var unmarked = BuiltInThemes.Phosphor with { Stylesheet = sheet };
+
+		await Assert.That(ThemeResolver.Resolve(custom).Stylesheet).IsEqualTo(sheet);
+		await Assert.That(ThemeResolver.Resolve(complex).Stylesheet).IsNull();
+		await Assert.That(ThemeStyles.ModeOf(unmarked.Tokens, unmarked.Stylesheet)).IsEqualTo(ThemeStyles.Custom);
+		await Assert.That(ThemeResolver.Resolve(unmarked).Stylesheet).IsEqualTo(sheet);
+	}
+
+	[Test]
+	public async Task ADecorativeColourIsTheThemesOwnOrDerived()
+	{
+		await Assert.That(ThemeResolver.Resolve(BuiltInThemes.RealRobot).Token(ThemeTokens.Accent2)).IsEqualTo("#d6202a");
+		var phosphor = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
+		await Assert.That(phosphor.Token(ThemeTokens.Accent2)).IsEqualTo(phosphor.Token(ThemeTokens.LinkMissing));
+		await Assert.That(phosphor.Token(ThemeTokens.Accent3)).IsEqualTo(phosphor.Token(ThemeTokens.Warn));
 	}
 
 	[Test]
@@ -242,11 +289,13 @@ public class ThemeResolverTests
 	}
 
 	[Test]
-	public async Task AStyleValueThatIsNotAChoiceNeverReachesTheStylesheet()
+	public async Task AStyleValueThatIsNotAChoiceNeverReachesThePage()
 	{
 		var theme = BuiltInThemes.Phosphor with { Tokens = new Dictionary<string, string>(BuiltInThemes.Phosphor.Tokens) { [ThemeStyles.Texture] = "url(evil)" } };
+		var resolved = ThemeResolver.Resolve(theme);
 
-		await Assert.That(ThemeResolver.Resolve(theme).Css).DoesNotContain("evil");
+		await Assert.That(resolved.Css).DoesNotContain("evil");
+		await Assert.That(resolved.Parts[ThemeStyles.Texture]).IsEqualTo("none");
 	}
 
 	[Test]

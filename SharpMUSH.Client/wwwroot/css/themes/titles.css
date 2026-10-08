@@ -1,0 +1,219 @@
+/* Theme parts: page and card titles.
+   [data-ornament-glyphs]     a glyph either side of page and banner titles: --ornament-before, --ornament-after
+                              (a CSS string; write a character by its code point, "\2726")
+   [data-ornament-underline]  the line under page titles: --title-underline (a gradient), its height
+                              (--title-underline-height) and the space above it (--title-underline-pad)
+   [data-effect-color]        the colour titles are set in: --title-color
+   [data-effect-shadow]       what is drawn behind them: --title-shadow (a text-shadow list) */
+
+[data-effect-color="text"] { --title-color: var(--text); }
+[data-effect-color="accent"] { --title-color: var(--accent); }
+[data-effect-color="warn"] { --title-color: var(--warn); }
+
+[data-ornament-glyphs="none"] { --ornament-before: none; --ornament-after: none; }
+[data-ornament-underline="none"] { --title-underline: none; --title-underline-height: 2px; --title-underline-pad: 0px; }
+[data-effect-shadow="none"] { --title-shadow: none; }
+
+/* Fleuron: a hedera before, a rotated floral heart after. */
+[data-ornament-glyphs="fleuron"] { --ornament-before: "\2619"; --ornament-after: "\2767"; }
+/* Cross: a dagger either side. */
+[data-ornament-glyphs="cross"] { --ornament-before: "\2020"; --ornament-after: "\2020"; }
+/* Block: a solid square before. */
+[data-ornament-glyphs="block"] { --ornament-before: "\25A0"; --ornament-after: none; }
+/* Diamond: an open diamond either side. */
+[data-ornament-glyphs="diamond"] { --ornament-before: "\25C7"; --ornament-after: "\25C7"; }
+/* Star: a four-pointed star either side. */
+[data-ornament-glyphs="star"] { --ornament-before: "\2726"; --ornament-after: "\2726"; }
+
+/* Fade: an accent rule fading out to the right. */
+[data-ornament-underline="fade"] {
+	--title-underline: linear-gradient(90deg, var(--accent), transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Double: a thick and a thin accent rule. */
+[data-ornament-underline="double"] {
+	--title-underline: linear-gradient(180deg, var(--accent) 0 2px, transparent 2px 4px, var(--accent) 4px 5px);
+	--title-underline-height: 5px;
+	--title-underline-pad: 9px;
+}
+
+/* Gilt: a light catching the lower edge (dark: a shadow and a faint accent glow). */
+[data-effect-shadow="gilt"] { --title-shadow: 0 1px 0 rgba(255,255,255,0.7); }
+[data-scheme="dark"][data-effect-shadow="gilt"] { --title-shadow: 0 1px 0 rgba(0,0,0,0.5), 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent); }
+/* Emboss: a highlight below and a shade above, pressed into the page. */
+[data-effect-shadow="emboss"] { --title-shadow: 0 1px 0 rgba(255,255,255,0.9), 0 -1px 0 rgba(0,0,0,0.12); }
+[data-scheme="dark"][data-effect-shadow="emboss"] { --title-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 -1px 0 rgba(0,0,0,0.6); }
+/* Ember: a dark drop and an accent glow. */
+[data-effect-shadow="ember"] { --title-shadow: 0 1px 0 rgba(0,0,0,0.7), 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent); }
+/* Glow: an accent glow, tight and wide. */
+[data-effect-shadow="glow"] { --title-shadow: 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+/* Heart: an outlined heart either side. */
+[data-ornament-glyphs="heart"] { --ornament-before: "\2661"; --ornament-after: "\2661"; }
+/* Brackets: square brackets either side, as on a readout. */
+[data-ornament-glyphs="brackets"] { --ornament-before: "\5B"; --ornament-after: "\5D"; }
+/* Lotus: a flower either side. */
+[data-ornament-glyphs="lotus"] { --ornament-before: "\2741"; --ornament-after: "\2741"; }
+/* Deco: an art deco diamond either side. */
+[data-ornament-glyphs="deco"] { --ornament-before: "\2756"; --ornament-after: "\2756"; }
+/* Bleed: ink spread into the paper, as from a typewriter. */
+[data-effect-shadow="bleed"] { --title-shadow: 0 0 1px color-mix(in srgb, var(--text) 75%, transparent), 0.6px 0.6px 0 color-mix(in srgb, var(--text) 30%, transparent); }
+/* Twinkles either side of the title. */
+[data-ornament-glyphs="twinkle"] { --ornament-before: "\2727"; --ornament-after: "\2727"; }
+/* An underline running from the accent into lavender and fading out. */
+[data-ornament-underline="twinkle"] { --title-underline: linear-gradient(90deg, var(--accent), var(--accent-2) 55%, transparent); --title-underline-height: 2px; --title-underline-pad: 6px; }
+/* Blossoms either side of the title. */
+[data-ornament-glyphs="blossom"] { --ornament-before: "\2740"; --ornament-after: "\2740"; }
+/* A dotted underline of short dashes. */
+[data-ornament-underline="blossom"] { --title-underline: repeating-linear-gradient(90deg, var(--accent) 0 2px, transparent 2px 5px); --title-underline-height: 2px; --title-underline-pad: 6px; }
+/* Stars either side of the title. */
+[data-ornament-glyphs="encore"] { --ornament-before: "\2605"; --ornament-after: "\2605"; }
+/* An underline in the three stage-light colours. */
+[data-ornament-underline="encore"] { --title-underline: linear-gradient(90deg, var(--accent), var(--accent-2) 50%, var(--accent-3)); --title-underline-height: 2px; --title-underline-pad: 6px; }
+/* A pencil before the title. */
+[data-ornament-glyphs="doodle"] { --ornament-before: "\270E"; --ornament-after: none; }
+/* A dashed underline, as if drawn by hand. */
+[data-ornament-underline="doodle"] { --title-underline: repeating-linear-gradient(90deg, var(--accent) 0 9px, transparent 9px 13px); --title-underline-height: 2px; --title-underline-pad: 6px; }
+/* A glossy highlight above, a lavender edge below and a soft accent glow. */
+[data-effect-shadow="shine"] { --title-shadow: 0 1px 0 rgba(255,255,255,0.9), 0 2px 0 color-mix(in srgb, var(--accent-2) 45%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 30%, transparent); }
+/* A white halo with a faint accent glow beneath. */
+[data-effect-shadow="dreamy"] { --title-shadow: 0 0 6px rgba(255,255,255,0.95), 0 0 2px rgba(255,255,255,0.95), 0 3px 12px color-mix(in srgb, var(--accent) 28%, transparent); }
+/* Glowing like a lightstick in the accent, a second colour offset behind. */
+[data-effect-shadow="lightstick"] { --title-shadow: 0 0 3px color-mix(in srgb, var(--accent) 90%, transparent), 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent), 2px 2px 0 color-mix(in srgb, var(--accent-2) 55%, transparent), 0 0 28px color-mix(in srgb, var(--accent-2) 25%, transparent); }
+/* A faint pencil echo offset down and right. */
+[data-effect-shadow="pencil"] { --title-shadow: 1.5px 1.5px 0 color-mix(in srgb, var(--accent) 22%, transparent); }
+/* Exclaim: a shout after the title, and a bar under most of it. */
+[data-ornament-glyphs="exclaim"] { --ornament-before: none; --ornament-after: "\21\21"; }
+/* Varsity: a star either side. */
+[data-ornament-glyphs="varsity"] { --ornament-before: "\2605"; --ornament-after: "\2605"; }
+/* Warning: corner wedges either side, like a hazard sign. */
+[data-ornament-glyphs="warning"] { --ornament-before: "\25E2"; --ornament-after: "\25E3"; }
+/* Cursor: a menu's pointer before the title. */
+[data-ornament-glyphs="cursor"] { --ornament-before: "\25B6"; --ornament-after: none; }
+/* Hanko: a seal after the title. */
+[data-ornament-glyphs="hanko"] { --ornament-before: none; --ornament-after: "\25A3"; }
+
+/* Exclaim: a hard bar under the first seven tenths. */
+[data-ornament-underline="exclaim"] {
+	--title-underline: linear-gradient(90deg, var(--accent) 0 70%, transparent 70%);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Hanko: a brush stroke laid on in one pass, running dry at its end. */
+[data-ornament-underline="hanko"] {
+	--title-underline: linear-gradient(90deg, color-mix(in srgb, var(--accent) 37%, transparent), color-mix(in srgb, var(--accent) 68%, transparent) 7%,
+		color-mix(in srgb, var(--accent) 75%, transparent) 11% 18%, color-mix(in srgb, var(--accent) 88%, transparent) 25% 32%, var(--accent) 39% 54%,
+		color-mix(in srgb, var(--accent) 76%, transparent) 64% 71%, color-mix(in srgb, var(--accent) 35%, transparent) 78.5% 86%,
+		color-mix(in srgb, var(--accent) 10%, transparent) 93%, transparent 97%);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+
+/* Inked: a hard accent shadow, offset like a misregistered print. */
+[data-effect-shadow="inked"] { --title-shadow: 2px 2px 0 color-mix(in srgb, var(--accent) 90%, transparent); }
+/* Varsity: outlined in the accent, with a drop shadow. */
+[data-effect-shadow="varsity"] {
+	--title-shadow: -1px -1px 0 var(--accent), 1px -1px 0 var(--accent), -1px 1px 0 var(--accent), 1px 1px 0 var(--accent), 3px 3px 0 rgba(0, 0, 0, 0.55);
+}
+/* Stencil: a hard shadow under sprayed letters. */
+[data-effect-shadow="stencil"] { --title-shadow: 0 2px 0 rgba(0, 0, 0, 0.55); }
+/* Pixel: a hard drop shadow and a soft accent glow. */
+[data-effect-shadow="pixel"] { --title-shadow: 2px 2px 0 rgba(0, 0, 0, 0.65), 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent); }
+/* Lantern: lit from behind in the accent. */
+[data-effect-shadow="lantern"] {
+	--title-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 34px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* Pow: a comic burst either side. */
+[data-ornament-glyphs="pow"] { --ornament-before: "\2739"; --ornament-after: "\2739"; }
+/* Vaudeville: a star either side. */
+[data-ornament-glyphs="vaudeville"] { --ornament-before: "\2605"; --ornament-after: "\2605"; }
+/* Vaudeville: a plain ink rule. */
+[data-ornament-underline="vaudeville"] {
+	--title-underline: linear-gradient(var(--text), var(--text));
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Bolt: a zigzag arrow before, an eight-point star after. */
+[data-ornament-glyphs="bolt"] { --ornament-before: "\21AF"; --ornament-after: "\2734"; }
+/* Bolt: accent-2, accent and accent-3 thirds. */
+[data-ornament-underline="bolt"] {
+	--title-underline: linear-gradient(90deg, var(--accent-2) 0 33%, var(--accent) 33% 66%, var(--accent-3) 66%);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Tricolor: a cut corner before. */
+[data-ornament-glyphs="tricolor"] { --ornament-before: "\25E5"; --ornament-after: none; }
+/* Tricolor: an accent bar, then shorter accent-2 and accent-3 bars, with gaps. */
+[data-ornament-underline="tricolor"] {
+	--title-underline: linear-gradient(90deg, var(--accent) 0 58%, transparent 58% 61%, var(--accent-2) 61% 76%,
+		transparent 76% 79%, var(--accent-3) 79% 90%, transparent 90%);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Battle cry: guillemets pointing in at the title. */
+[data-ornament-glyphs="battlecry"] { --ornament-before: "\BB"; --ornament-after: "\AB"; }
+/* Battle cry: accent, accent-2 and accent-3 bands burning out. */
+[data-ornament-underline="battlecry"] {
+	--title-underline: linear-gradient(90deg, var(--accent) 0 34%, var(--accent-2) 34% 62%, var(--accent-3) 62% 86%, transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Ink pop: a thin ink outline and a hard ink drop. */
+[data-effect-shadow="inkpop"] {
+	--title-shadow: 0.035em 0 0 var(--text), -0.035em 0 0 var(--text), 0 0.035em 0 var(--text), 0 -0.035em 0 var(--text),
+		0.035em 0.035em 0 var(--text), -0.035em -0.035em 0 var(--text), 0.035em -0.035em 0 var(--text), -0.035em 0.035em 0 var(--text),
+		0.07em 0.07em 0 var(--text);
+}
+/* Cartoon: a soft accent drop. */
+[data-effect-shadow="cartoon"] { --title-shadow: 0.08em 0.08em 0 color-mix(in srgb, var(--accent) 60%, transparent); }
+/* Toy box: a thick black outline and a deep accent-2 drop. */
+[data-effect-shadow="toybox"] {
+	--title-shadow: 0.065em 0 0 #000, -0.065em 0 0 #000, 0 0.065em 0 #000, 0 -0.065em 0 #000,
+		0.065em 0.065em 0 #000, -0.065em -0.065em 0 #000, 0.065em -0.065em 0 #000, -0.065em 0.065em 0 #000,
+		0.15em 0.15em 0 var(--accent-2);
+}
+/* Decal: an accent-2 offset print. */
+[data-effect-shadow="decal"] { --title-shadow: 0.05em 0.05em 0 color-mix(in srgb, var(--accent-2) 85%, transparent); }
+/* Blazing: a scorched accent-3 extrusion, a black edge, and accent-2 and accent-3 fire behind. */
+[data-effect-shadow="blazing"] {
+	--title-shadow: 2px 2px 0 color-mix(in srgb, var(--accent-3) 56%, #000), 3px 3px 0 color-mix(in srgb, var(--accent-3) 56%, #000), 4px 4px 0 #000,
+		0 0 10px color-mix(in srgb, var(--accent-2) 70%, transparent), 0 0 26px color-mix(in srgb, var(--accent-3) 60%, transparent);
+}
+/* Cyberpunk: a double slash before the title. */
+[data-ornament-glyphs="slash"] { --ornament-before: "//"; --ornament-after: none; }
+/* Space opera: a bar and a diamond either side. */
+[data-ornament-glyphs="insignia"] { --ornament-before: "\2501\25C6"; --ornament-after: "\25C6\2501"; }
+/* Starship console: a pill bar before the title. */
+[data-ornament-glyphs="segments"] { --ornament-before: "\25AC"; --ornament-after: none; }
+
+/* The accent running into accent-2, fading out. */
+[data-ornament-underline="slash"] {
+	--title-underline: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent-2) 90%, transparent) 55%, transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* A sunset: accent-2 to accent-3 to the accent, fading out. */
+[data-ornament-underline="sunset"] {
+	--title-underline: linear-gradient(90deg, var(--accent-2), var(--accent-3) 35%, var(--accent) 70%, transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Console segments: accent, accent-2, peach (warn mixed with link-missing) and accent-3 bars with gaps. */
+[data-ornament-underline="segments"] {
+	--title-underline: linear-gradient(90deg, var(--accent) 0 46%, transparent 46% 49%, var(--accent-2) 49% 70%, transparent 70% 73%,
+		color-mix(in srgb, var(--warn), var(--link-missing)) 73% 86%, transparent 86% 89%, var(--accent-3) 89%);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+
+/* A split signal: accent-2 to the left, the accent to the right, in a glow. */
+[data-effect-shadow="rgbsplit"] {
+	--title-shadow: -2px 0 0 color-mix(in srgb, var(--accent-2) 80%, transparent), 2px 0 0 color-mix(in srgb, var(--accent) 80%, transparent),
+		0 0 16px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+/* Chrome-lit retro neon: the accent with an accent-3 drop and glow. */
+[data-effect-shadow="retro"] {
+	--title-shadow: 0 0 2px color-mix(in srgb, var(--accent) 90%, transparent), 0 2px 0 var(--accent), 0 3px 0 color-mix(in srgb, var(--accent-3) 70%, transparent),
+		0 0 14px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 30px color-mix(in srgb, var(--accent-3) 35%, transparent);
+}

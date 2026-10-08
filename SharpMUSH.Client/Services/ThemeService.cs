@@ -90,7 +90,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 		try
 		{
 			return await _js.GetItemAsync(BrowserStore.Local, key) is { Length: > 0 } json
-				&& JsonSerializer.Deserialize<ResolvedTheme>(json) is { Tokens: not null, Style: not null } cached
+				&& JsonSerializer.Deserialize<ResolvedTheme>(json) is { Tokens: not null, Style: not null, Parts: not null } cached
 					? cached
 					: null;
 		}
@@ -242,7 +242,7 @@ public static class ResolvedThemeExtensions
 
 		var layout = new LayoutProperties
 		{
-			DefaultBorderRadius = theme.Tokens.GetValueOrDefault("radius", "9px"),
+			DefaultBorderRadius = "var(--radius)",
 			DrawerWidthLeft = "250px",
 			DrawerMiniWidthLeft = "60px",
 		};

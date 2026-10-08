@@ -8,4 +8,6 @@ internal static class ClientSource
 {
 	public static string RazorRoot => Path.Join(AppContext.BaseDirectory, "client", "razor");
 	public static string CssRoot => Path.Join(AppContext.BaseDirectory, "client", "css");
+	public static string ThemePartsRoot => Path.Join(CssRoot, "themes");
+	public static string DrawingsRoot => Path.Join(AppContext.BaseDirectory, "client", "drawings");
 }

@@ -6,6 +6,7 @@
 @inject IThemeService Themes
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IHttpClientFactory HttpFactory
 @using ThemePalette = MarkupString.ThemePalette
 @using ThemeHarmony = MarkupString.ThemeHarmony
 @using SharpMUSH.Library.DiscriminatedUnions
@@ -199,30 +200,61 @@
                             </section>
                         }
 
-                        <section class="adm-theme-group">
+                        <section class="adm-theme-group" id="theme-style">
                             <h3 class="adm-theme-group-title">@Loc["AdmThemesGroupStyle"]</h3>
-                            <p class="adm-theme-hint">@Loc["AdmThemesStyleHint"]</p>
-                            <div class="adm-theme-styles">
-                                @foreach (var key in ThemeStyles.Keys)
+                            <div class="adm-theme-mode adm-theme-edit-mode" role="radiogroup" aria-label="@Loc["AdmThemesEditMode"]" id="theme-edit-mode">
+                                @foreach (var mode in ThemeStyles.Modes)
                                 {
-                                    <MudSelect T="string" Value="@_draft.Tokens[key]" ValueChanged="v => SetStyle(key, v)" Label="@Loc[StyleKey(key)]"
+                                    var on = Mode == mode;
+                                    <button type="button" role="radio" class="adm-theme-mode-choice @(on ? "is-on" : null)" disabled="@locked"
+                                            aria-checked="@(on ? "true" : "false")" data-mode="@mode" @onclick="() => SetModeAsync(mode)">
+                                        @Loc[ModeKey(mode)]
+                                    </button>
+                                }
+                            </div>
+                            <p class="adm-theme-hint">@Loc[ModeKey(Mode) + "Hint"]</p>
+                            <div class="adm-theme-styles">
+                                @foreach (var key in Mode == ThemeStyles.Simple ? ThemeStyles.Keys : ThemeStyles.PartKeys)
+                                {
+                                    <MudSelect T="string" Value="@StyleValue(key)" ValueChanged="v => SetStyle(key, v)" Label="@Loc[StyleKey(key)]"
                                                Disabled="locked" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" id="@($"theme-style-{key}")">
                                         @foreach (var choice in ThemeStyles.Choices[key])
                                         {
                                             <MudSelectItem T="string" Value="@choice">
                                                 @if (key == ThemeStyles.FontDisplay)
                                                 {
-                                                    <span class="adm-theme-face" style="@($"--face:{ThemeStyles.DisplayFaces[choice].Stack}")">@FaceName(choice)</span>
+                                                    <span class="adm-theme-face" data-font-display="@choice">@FaceName(choice)</span>
                                                 }
                                                 else
                                                 {
-                                                    @Loc[StyleKey(key, choice)]
+                                                    @Loc[ChoiceKey(key, choice)]
                                                 }
                                             </MudSelectItem>
                                         }
                                     </MudSelect>
                                 }
                             </div>
+                            @if (Mode != ThemeStyles.Simple)
+                            {
+                                <h4 class="adm-theme-subtitle">@Loc["AdmThemesDecorative"]</h4>
+                                <p class="adm-theme-hint">@Loc["AdmThemesDecorativeHint"]</p>
+                                <div class="adm-theme-tokens" id="theme-decorative">
+                                    @foreach (var token in ThemeTokens.Decorative)
+                                    {
+                                        var value = DecorativeValue(token);
+                                        <label class="adm-theme-token" data-token="@token">
+                                            <input type="color" class="adm-theme-color" value="@value" disabled="@locked"
+                                                   aria-label="@Loc[TokenKey(token)]" @onchange="e => SetToken(token, e.Value?.ToString())" />
+                                            <span class="adm-theme-token-text">
+                                                <span class="adm-theme-token-name">@Loc[TokenKey(token)]</span>
+                                                <input type="text" class="adm-theme-hex" value="@value" disabled="@locked" spellcheck="false"
+                                                       maxlength="7" aria-label="@($"{Loc[TokenKey(token)]} (hex)")"
+                                                       @onchange="e => SetToken(token, e.Value?.ToString())" />
+                                            </span>
+                                        </label>
+                                    }
+                                </div>
+                            }
                         </section>
 
                         <section class="adm-theme-group">
@@ -244,30 +276,33 @@
                             </ul>
                         </section>
 
-                        <section class="adm-theme-group" id="theme-stylesheet">
-                            <h3 class="adm-theme-group-title">@Loc["AdmThemesStylesheet"]</h3>
-                            <p class="adm-theme-hint">@Loc["AdmThemesStylesheetHint"]</p>
-                            <textarea class="adm-theme-sheet" id="theme-sheet" spellcheck="false" rows="24" disabled="@locked"
-                                      aria-label="@Loc["AdmThemesStylesheet"]" value="@SheetText"
-                                      @onchange="e => SetStylesheet(e.Value?.ToString())"></textarea>
-                            <div class="adm-theme-sheet-bar">
-                                <span class="adm-theme-hint">@Loc["AdmThemesStylesheetSize", SheetText.Length, ThemeStylesheet.MaxLength]</span>
-                                <span class="adm-theme-spacer"></span>
-                                @if (!locked && _draft.Stylesheet is not null)
-                                {
-                                    <MudButton Variant="Variant.Text" OnClick="ResetStylesheet" id="theme-sheet-reset">@Loc["AdmThemesStylesheetReset"]</MudButton>
-                                }
-                            </div>
-                            @if (SheetProblems is { Count: > 0 } problems)
-                            {
-                                <ul class="adm-theme-sheet-problems" id="theme-sheet-problems">
-                                    @foreach (var problem in problems)
+                        @if (Mode == ThemeStyles.Custom)
+                        {
+                            <section class="adm-theme-group" id="theme-stylesheet">
+                                <h3 class="adm-theme-group-title">@Loc["AdmThemesStylesheet"]</h3>
+                                <p class="adm-theme-hint">@Loc["AdmThemesStylesheetHint"]</p>
+                                <textarea class="adm-theme-sheet" id="theme-sheet" spellcheck="false" rows="24" disabled="@locked"
+                                          aria-label="@Loc["AdmThemesStylesheet"]" value="@SheetText"
+                                          @onchange="e => SetStylesheet(e.Value?.ToString())"></textarea>
+                                <div class="adm-theme-sheet-bar">
+                                    <span class="adm-theme-hint">@Loc["AdmThemesStylesheetSize", SheetText.Length, ThemeStylesheet.MaxLength]</span>
+                                    <span class="adm-theme-spacer"></span>
+                                    @if (!locked && _draft.Stylesheet is not null)
                                     {
-                                        <li>@problem</li>
+                                        <MudButton Variant="Variant.Text" OnClick="ResetStylesheet" id="theme-sheet-reset">@Loc["AdmThemesStylesheetReset"]</MudButton>
                                     }
-                                </ul>
-                            }
-                        </section>
+                                </div>
+                                @if (SheetProblems is { Count: > 0 } problems)
+                                {
+                                    <ul class="adm-theme-sheet-problems" id="theme-sheet-problems">
+                                        @foreach (var problem in problems)
+                                        {
+                                            <li>@problem</li>
+                                        }
+                                    </ul>
+                                }
+                            </section>
+                        }
 
                         <div class="adm-theme-actions">
                             <MudSwitch T="bool" Value="_trying" ValueChanged="Try" Color="Color.Primary" Label="@Loc["AdmThemesTry"]" id="theme-try" />
@@ -358,7 +393,15 @@
     private ResolvedTheme Draft => ThemeResolver.Resolve(_draft!.ToTheme());
 
     /// <summary>What the stylesheet box shows: the theme's own, or the starter while it has none.</summary>
-    private string SheetText => _draft?.Stylesheet ?? (_draft is null ? string.Empty : ThemeStylesheet.Starter(Draft));
+    private string SheetText => _draft?.Stylesheet ?? (_draft is null ? string.Empty : ThemeStylesheet.Starter(Draft, _partsCss));
+
+    /// <summary>The portal's parts CSS (css/themes/), which the stylesheet's starter lists the theme's rules from.</summary>
+    private string? _partsCss;
+
+    private static readonly string[] PartsFiles = ["faces", "shape", "textures", "frames", "titles", "imagery"];
+
+    /// <summary>How the draft is edited: Simple, Complex or Custom.</summary>
+    private string Mode => _draft is null ? ThemeStyles.Simple : ThemeStyles.ModeOf(_draft.Tokens, _draft.Stylesheet);
 
     private IReadOnlyList<string> SheetProblems => ThemeStylesheet.Validate(_draft?.Stylesheet);
 
@@ -383,6 +426,33 @@
     /// <summary>"font-body" is "AdmThemeStyleFontBody"; with "serif", "AdmThemeStyleFontBodySerif".</summary>
     private static string StyleKey(string key, string? choice = null) => "AdmThemeStyle" + Pascal(key) + (choice is null ? "" : Pascal(choice));
 
+    /// <summary>
+    /// A choice's label. A part takes the label of the Simple choice of the same name (the frame-marks "plating" is the
+    /// frame "plating"), and has its own only where no Simple choice is named the same.
+    /// </summary>
+    private string ChoiceKey(string key, string choice)
+    {
+        var simple = key switch
+        {
+            ThemeStyles.FrameMarks or ThemeStyles.FrameShadow => ThemeStyles.Frame,
+            ThemeStyles.OrnamentGlyphs or ThemeStyles.OrnamentUnderline => ThemeStyles.Ornament,
+            ThemeStyles.EffectShadow => ThemeStyles.Effect,
+            _ => null,
+        };
+        return simple is not null && ThemeStyles.Choices[simple].Contains(choice) ? StyleKey(simple, choice) : StyleKey(key, choice);
+    }
+
+    /// <summary>"complex" is "AdmThemesEditModeComplex".</summary>
+    private static string ModeKey(string mode) => "AdmThemesEditMode" + Pascal(mode);
+
+    /// <summary>What a menu shows: the draft's own value, or for a part it leaves unset, what its Simple setting brings.</summary>
+    private string StyleValue(string key)
+        => _draft!.Tokens.TryGetValue(key, out var value) ? value : ThemeStyles.PartsOf(_draft.Tokens, Mode)[key];
+
+    /// <summary>A decorative colour: the draft's own, or the one the theme derives when it sets none.</summary>
+    private string DecorativeValue(string token)
+        => _draft!.Tokens.TryGetValue(token, out var value) ? value : Draft.Tokens[token];
+
     private static string Pascal(string name) => string.Concat(name.Split('-').Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
 
     /// <summary>A title face by its own name; the portal's own face is the one choice described rather than named.</summary>
@@ -398,6 +468,24 @@
         "typewriter" => "Special Elite",
         "orbitron" => "Orbitron",
         "marcellus" => "Marcellus",
+        "fredoka" => "Fredoka",
+        "dancing" => "Dancing Script",
+        "mochiy" => "Mochiy Pop One",
+        "patrick" => "Patrick Hand",
+        "dela" => "Dela Gothic One",
+        "graduate" => "Graduate",
+        "saira-stencil" => "Saira Stencil One",
+        "pixelify" => "Pixelify Sans",
+        "yuji" => "Yuji Syuku",
+        "bangers" => "Bangers",
+        "lilita" => "Lilita One",
+        "titan" => "Titan One",
+        "chakra" => "Chakra Petch",
+        "monoton" => "Monoton",
+        "michroma" => "Michroma",
+        "antonio" => "Antonio",
+        "oxanium" => "Oxanium",
+        "russo" => "Russo One",
         _ => face,
     };
 
@@ -406,6 +494,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var partsCss = LoadPartsCssAsync();
         switch (await Api.GetAsync())
         {
             case PortalThemesResponse state:
@@ -415,6 +504,23 @@
             case ApiFailure failure:
                 _error = failure.Message;
                 break;
+        }
+
+        _partsCss = await partsCss;
+    }
+
+    /// <summary>The parts CSS, for the starter; without it the starter lists variables and hooks only.</summary>
+    private async Task<string?> LoadPartsCssAsync()
+    {
+        try
+        {
+            var http = HttpFactory.CreateClient("help");
+            var files = await Task.WhenAll(PartsFiles.Select(f => http.GetStringAsync($"css/themes/{f}.css")));
+            return string.Join("\n", files);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        {
+            return null;
         }
     }
 
@@ -455,6 +561,56 @@
         Edited();
     }
 
+    /// <summary>
+    /// Moves the draft to another mode. Into Complex or Custom, each part takes the value its Simple setting brings, so
+    /// nothing changes on the page. Back to Simple, the parts set apart go; out of Custom, the stylesheet goes. Either
+    /// is asked first when it would change the look.
+    /// </summary>
+    private async Task SetModeAsync(string mode)
+    {
+        var from = Mode;
+        if (_draft is null || mode == from) return;
+
+        if (from == ThemeStyles.Custom && _draft.Stylesheet is not null
+            && !await ConfirmAsync("AdmThemesLeaveCustomTitle", "AdmThemesLeaveCustomBody"))
+        {
+            return;
+        }
+
+        if (mode == ThemeStyles.Simple)
+        {
+            var parts = ThemeStyles.PartsOf(_draft.Tokens, from);
+            if (!parts.SequenceEqual(ThemeStyles.PartsOf(_draft.Tokens, ThemeStyles.Simple))
+                && !await ConfirmAsync("AdmThemesLeaveComplexTitle", "AdmThemesLeaveComplexBody"))
+            {
+                return;
+            }
+
+            foreach (var key in ThemeStyles.PartKeys.Except(ThemeStyles.Keys))
+            {
+                _draft.Tokens.Remove(key);
+            }
+        }
+        else
+        {
+            foreach (var (key, value) in ThemeStyles.PartsOf(_draft.Tokens, from))
+            {
+                _draft.Tokens[key] = value;
+            }
+        }
+
+        if (from == ThemeStyles.Custom)
+        {
+            _draft.Stylesheet = null;
+        }
+
+        _draft.Tokens[ThemeStyles.Mode] = mode;
+        Edited();
+    }
+
+    private async Task<bool> ConfirmAsync(string title, string body)
+        => await DialogService.ShowMessageBoxAsync(Loc[title], Loc[body], yesText: Loc["AdmThemesSwitchMode"], cancelText: Loc["Cancel"]) == true;
+
     private void SetStyle(string key, string? value)
     {
         if (ThemeStyles.IsValid(key, value))
@@ -478,7 +634,7 @@
     private void SetStylesheet(string? css)
     {
         // The starter, untouched, changes nothing: keep the theme without a stylesheet rather than store it.
-        _draft!.Stylesheet = string.IsNullOrWhiteSpace(css) || css == ThemeStylesheet.Starter(Draft) ? null : css;
+        _draft!.Stylesheet = string.IsNullOrWhiteSpace(css) || css == ThemeStylesheet.Starter(Draft, _partsCss) ? null : css;
         Edited();
     }
 

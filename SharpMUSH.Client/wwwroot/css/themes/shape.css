@@ -1,0 +1,17 @@
+/* Theme parts: corners and title lettering.
+   [data-corners] rounds controls (--radius), menus and rail items (--radius-lg), cards (--radius-card), list rows
+   (--radius-row) and picture tiles (--radius-tile).
+   [data-titles] sets how page and card titles are lettered: case, tracking and slant. */
+
+[data-corners="soft"] { --radius: 9px; --radius-lg: 14px; --radius-card: 16px; --radius-row: 10px; --radius-tile: 10px; }
+[data-corners="sharp"] { --radius: 3px; --radius-lg: 4px; --radius-card: 4px; --radius-row: 3px; --radius-tile: 3px; }
+[data-corners="round"] { --radius: 14px; --radius-lg: 20px; --radius-card: 22px; --radius-row: 14px; --radius-tile: 14px; }
+[data-corners="candy"] { --radius: 16px; --radius-lg: 24px; --radius-card: 26px; --radius-row: 999px; --radius-tile: 18px; }
+[data-corners="razor"] { --radius: 0px; --radius-lg: 0px; --radius-card: 0px; --radius-row: 0px; --radius-tile: 0px; }
+[data-corners="pill"] { --radius: 12px; --radius-lg: 20px; --radius-card: 24px; --radius-row: 999px; --radius-tile: 16px; }
+
+[data-titles="normal"] { --title-transform: none; --title-tracking: normal; --title-style: normal; }
+[data-titles="caps"] { --title-transform: uppercase; --title-tracking: 0.08em; --title-style: normal; }
+[data-titles="italic"] { --title-transform: none; --title-tracking: 0.01em; --title-style: italic; }
+[data-titles="slant"] { --title-transform: uppercase; --title-tracking: 0.01em; --title-style: italic; }
+[data-titles="wide"] { --title-transform: uppercase; --title-tracking: 0.14em; --title-style: normal; }

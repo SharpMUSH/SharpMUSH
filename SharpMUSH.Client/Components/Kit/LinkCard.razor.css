@@ -1,4 +1,6 @@
 .kit-link-card {
+	position: relative;
+	isolation: isolate;
 	display: flex;
 	align-items: center;
 	gap: 12px;

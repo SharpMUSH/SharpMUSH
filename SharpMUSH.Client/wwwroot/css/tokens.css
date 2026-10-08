@@ -305,10 +305,25 @@
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
-	/* ── theme style (ThemeStyles.Css); these are Phosphor's, a theme's stylesheet replaces them ── */
+	/* ── theme parts: Phosphor's look. The rules in css/themes/ set these per part (data-texture,
+	   data-frame-marks, ...); a Custom theme's stylesheet can set any of them. See docs/guides/portal-themes.md. ── */
 	--font-title-weight: 700;
-	--texture: none;                /* page background texture, layered over the background gradient */
+	--texture: none;                /* page texture: gradient layers, then drawn layers (masks) in the theme's colours */
 	--texture-size: auto;
+	--texture-opacity: 1;           /* the texture's strength */
+	--no-drawing: linear-gradient(transparent, transparent);
+	/* Drawings filled with each colour: an SVG under /themes/drawings, used as a mask. "Nothing drawn" is a clear
+	   gradient, since a mask of none would show the colour everywhere. */
+	--texture-mask-text: var(--no-drawing);
+	--texture-mask-accent: var(--no-drawing);
+	--texture-mask-accent-2: var(--no-drawing);
+	--texture-mask-accent-3: var(--no-drawing);
+	--texture-mask-border: var(--no-drawing);
+	--texture-ink-text: var(--text);
+	--texture-ink-accent: var(--accent);
+	--texture-ink-accent-2: var(--accent-2);
+	--texture-ink-accent-3: var(--accent-3);
+	--texture-ink-border: var(--border);
 	--ornament-before: none;        /* page and banner titles: a glyph either side, and a rule under */
 	--ornament-after: none;
 	--title-underline: none;
@@ -320,10 +335,25 @@
 	--title-color: var(--text);     /* titles' colour and effect (glow, gilt, letterpress...) */
 	--title-shadow: none;
 	--image-filter: none;           /* the tone pictures take: banners, covers */
-	--card-bg: var(--surface);      /* KitCard: frame layers and grain over the surface */
+	--card-marks: none;             /* the frame's gradient layers over a card's surface */
+	--card-mask-text: var(--no-drawing); /* the frame's drawings, filled with each colour, as for the texture */
+	--card-mask-accent: var(--no-drawing);
+	--card-mask-accent-2: var(--no-drawing);
+	--card-mask-accent-3: var(--no-drawing);
+	--card-mask-border: var(--no-drawing);
+	--card-mask-grain: var(--no-drawing); /* set by a paper texture, so cards share the page's grain */
+	--card-ink-text: var(--text);
+	--card-ink-accent: var(--accent);
+	--card-ink-accent-2: var(--accent-2);
+	--card-ink-accent-3: var(--accent-3);
+	--card-ink-border: var(--border);
+	--card-ink-grain: var(--text);
 	--card-border-style: solid;
 	--card-border-width: 1px;
 	--card-shadow: none;
+	--accent-2: #ff8a8a;            /* decorative colours for drawings only; a theme without them gets --link-missing and --warn */
+	--accent-3: #ffb454;
+	--accent-hue: 163;              /* the accent's hue in degrees, for picture tones that tint toward it */
 	--shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 4px 16px rgba(0,0,0,0.4);
 	--mud-palette-background-gradient: radial-gradient(120% 100% at 80% -10%, #16181c 0%, #0e0f11 55%);
 	--mud-palette-navbar-gradient: linear-gradient(90deg, #101113 0%, #0d0e10 100%);
@@ -412,6 +442,12 @@
 	/* ── name mentions (README §4.8): set --name per mention; the viewer's own name uses --accent ── */
 	--mention-offset: 3px;
 	--mention-alpha: 50%;
+}
+
+/* A card's background: the frame's gradient layers over the surface. Worked out again wherever a theme's
+   attributes are (<html>, or an element previewing another theme), so each gets its own. */
+:root, [data-scheme] {
+	--card-bg: var(--card-marks), var(--surface);
 }
 
 /* CJK locales replace the whole mono stack instead of falling back per glyph. Cascadia's

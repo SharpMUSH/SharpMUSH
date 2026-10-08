@@ -68,6 +68,7 @@
                     var g = group;
                     var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"], _names);
                     <div class="wiki-cat-card">
+                        <ThemeMarks />
                         @if (ImageUrlPolicy.IsRenderable(g.Cover))
                         {
                             <img class="wiki-cat-cover" src="@ApiUrl.Resolve(g.Cover!)" alt="" loading="lazy" />

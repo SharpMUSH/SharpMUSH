@@ -1,6 +1,7 @@
 @* D1 §4.4 card: --surface, 1px --border, radius --radius-card. A main card gets a 52px header row
    with a 15px title and a 12px dim sub-line; an aside card is padded 12px with a 13px title. *@
 <section class="kit-card @(Aside ? "kit-card--aside" : null) @Class">
+    <ThemeMarks />
     @if (Title is not null || Controls is not null)
     {
         <header class="kit-card-head">

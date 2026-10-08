@@ -134,6 +134,18 @@
 	gap: 10px;
 }
 
+/* The Simple / Complex / Custom switch sits at its own width, not the group's. */
+.adm-theme-edit-mode {
+	align-self: flex-start;
+}
+
+.adm-theme-subtitle {
+	margin: 6px 0 0;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--text-dim);
+}
+
 .adm-theme-group-title {
 	margin: 0;
 	font-family: var(--font-mono);
@@ -215,7 +227,7 @@
 
 /* Each title face listed in itself. */
 .adm-theme-face {
-	font-family: var(--face);
+	font-family: var(--font-display);
 }
 
 .adm-theme-contrast {

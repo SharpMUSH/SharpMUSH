@@ -1,10 +1,15 @@
 @inject IThemeService ThemeService
+@inject IJSRuntime JS
+@inject Microsoft.Extensions.Logging.ILogger<ThemeProvider> Logger
 @implements IDisposable
 
 @* The theme's tokens as a :root rule. It sits after tokens.css (and after the copy index.html applies
    from localStorage before the runtime starts), and is unlayered, so it overrides both. *@
 <style id="sharp-theme">@_css</style>
 <MudThemeProvider Theme="_theme" IsDarkMode="_isDarkMode" />
+@* The theme's look is one data attribute per part (data-texture, data-frame-marks, ...) on <html>, which the
+   rules in css/themes/ match. They sit on <html> rather than on an element here so that a theme's own stylesheet,
+   whose :root rule is unlayered, wins over the parts it changes. *@
 @ChildContent
 
 @code {
@@ -14,6 +19,8 @@
     private MudTheme _theme = new();
     private bool _isDarkMode = true;
     private string _css = string.Empty;
+    private IReadOnlyDictionary<string, string> _parts = new Dictionary<string, string>();
+    private IReadOnlyDictionary<string, string>? _applied;
 
     protected override void OnInitialized()
     {
@@ -34,6 +41,21 @@
         _theme = current.ToMudTheme();
         _isDarkMode = current.Dark;
         _css = current.Css;
+        _parts = current.Parts;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (ReferenceEquals(_applied, _parts)) return;
+        _applied = _parts;
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.applyThemeParts", _parts);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Could not set the theme's parts on the page");
+        }
     }
 
     public void Dispose()

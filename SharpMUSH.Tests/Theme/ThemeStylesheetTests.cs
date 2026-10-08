@@ -157,6 +157,48 @@ public class ThemeStylesheetTests
 		}
 	}
 
+	private const string PartsCss = """
+		/* A drawing: [data-texture="stars"] in a comment is not a rule. */
+		[data-texture="stars"] { --texture-mask-text: url(/themes/drawings/shared/starfield-200.svg) 0 0 / 200px 200px; --texture-size: auto; }
+		[data-scheme="dark"][data-texture="stars"] { --texture-ink-text: color-mix(in srgb, var(--text) 40%, transparent); }
+		[data-scheme="light"][data-texture="stars"] { --texture-ink-text: var(--text); }
+		[data-frame-marks="bar"], [data-frame-marks="tape"] { --card-marks: linear-gradient(var(--accent), var(--accent)); }
+		[data-texture="grid"] { --texture: none; }
+		.theme-texture { position: fixed; }
+		""";
+
+	[Test]
+	public async Task PartRulesAreTheRulesAThemesPartsApplyAsRootRules()
+	{
+		var parts = new Dictionary<string, string> { ["texture"] = "stars", ["scheme"] = "dark", ["frame-marks"] = "tape" };
+
+		var rules = ThemeStylesheet.PartRules(PartsCss, parts);
+
+		await Assert.That(rules).IsEquivalentTo((string[])
+		[
+			":root {\n\t--texture-mask-text: url(/themes/drawings/shared/starfield-200.svg) 0 0 / 200px 200px;\n\t--texture-size: auto;\n}",
+			":root {\n\t--texture-ink-text: color-mix(in srgb, var(--text) 40%, transparent);\n}",
+			":root {\n\t--card-marks: linear-gradient(var(--accent), var(--accent));\n}",
+		], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task TheStarterListsThePartRulesCommentedOut()
+	{
+		var resolved = ThemeResolver.Resolve(BuiltInThemes.Phosphor with
+		{
+			Tokens = new Dictionary<string, string>(BuiltInThemes.Phosphor.Tokens) { [ThemeStyles.Texture] = "stars" },
+		});
+
+		var starter = ThemeStylesheet.Starter(resolved, PartsCss);
+
+		await Assert.That(starter).Contains("/* :root {\n\t--texture-mask-text: url(/themes/drawings/shared/starfield-200.svg)");
+		await Assert.That(starter).Contains("/* :root {\n\t--texture-ink-text: color-mix(in srgb, var(--text) 40%, transparent);\n} */");
+		await Assert.That(starter).DoesNotContain("--texture: none");
+		await Assert.That(ThemeStylesheet.Validate(starter)).IsEmpty();
+		await Assert.That(starter).IsNotEqualTo(ThemeStylesheet.Starter(resolved));
+	}
+
 	[Test]
 	[MethodDataSource(nameof(BuiltInIds))]
 	public async Task EveryThemeDerivesReadableStatusAndSyntaxColours(string id)

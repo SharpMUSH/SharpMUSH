@@ -1,0 +1,15 @@
+@* The page texture: the theme's gradients, then one layer per colour its drawings use (css/themes/layers.css,
+   .theme-texture). Pinned to the window, or with Contained to the positioned element holding it (a theme's
+   swatch). Decoration only, so screen readers skip it. *@
+<div class="theme-texture @(Contained ? "theme-texture--contained" : null)" aria-hidden="true">
+    <i class="theme-texture-base"></i>
+    <i class="theme-texture-border"></i>
+    <i class="theme-texture-text"></i>
+    <i class="theme-texture-accent-3"></i>
+    <i class="theme-texture-accent-2"></i>
+    <i class="theme-texture-accent"></i>
+</div>
+
+@code {
+    [Parameter] public bool Contained { get; set; }
+}

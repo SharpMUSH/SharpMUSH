@@ -12,7 +12,8 @@ public partial class ThemeVariableTests
 {
 	private static IEnumerable<string> ComponentCss() =>
 		Directory.EnumerateFiles(ClientSource.RazorRoot, "*.css", SearchOption.AllDirectories)
-			.Concat(Directory.EnumerateFiles(ClientSource.CssRoot, "*.css").Where(f => Path.GetFileName(f) != "tokens.css"));
+			.Concat(Directory.EnumerateFiles(ClientSource.CssRoot, "*.css").Where(f => Path.GetFileName(f) != "tokens.css"))
+			.Concat(Directory.EnumerateFiles(ClientSource.ThemePartsRoot, "*.css"));
 
 	[Test]
 	public async Task NoComponentStylesheetWritesAColourOfItsOwn()
@@ -67,8 +68,8 @@ public partial class ThemeVariableTests
 		}
 	}
 
-	// A hex colour, or rgb()/rgba() of anything but pure black or white.
-	[GeneratedRegex(@"#[0-9a-fA-F]{3,8}\b|rgba?\(\s*(?!0\s*,\s*0\s*,\s*0\s*[,)]|255\s*,\s*255\s*,\s*255\s*[,)]|var\()[^)]*\)")]
+	// A hex colour, or rgb()/rgba(), of anything but pure black or white.
+	[GeneratedRegex(@"#(?!(?:000|fff|000000|ffffff)\b)[0-9a-fA-F]{3,8}\b|rgba?\(\s*(?!0\s*,\s*0\s*,\s*0\s*[,)]|255\s*,\s*255\s*,\s*255\s*[,)]|var\()[^)]*\)")]
 	private static partial Regex Literal();
 
 	[GeneratedRegex(@"var\(--[\w-]+\s*,\s*(var\(--[\w-]+\s*,\s*)?$")]

@@ -1,0 +1,61 @@
+/* The layers theme parts draw on: the page texture and a card's marks. Each colour layer is filled with one of
+   the theme's colours and shows only where its drawing (a mask) is. A Custom theme's stylesheet can set the same
+   variables, or style these classes, to draw something of its own. */
+
+/* The page texture (ThemeTexture): pinned to the window, under anything positioned above z-index 0. The first
+   layer is the texture's gradients; each other is filled with one of the theme's colours through the texture's
+   drawing for it, used as a mask. */
+.theme-texture {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	pointer-events: none;
+	opacity: var(--texture-opacity);
+}
+
+/* A texture inside a positioned element (a theme's swatch) rather than the window. */
+.theme-texture--contained {
+	position: absolute;
+	z-index: auto;
+	border-radius: inherit;
+	overflow: hidden;
+}
+
+.theme-texture > i {
+	position: absolute;
+	inset: 0;
+}
+
+.theme-texture-base {
+	background-image: var(--texture);
+	background-size: var(--texture-size);
+}
+
+.theme-texture-text { background: var(--texture-ink-text); mask: var(--texture-mask-text); }
+.theme-texture-accent { background: var(--texture-ink-accent); mask: var(--texture-mask-accent); }
+.theme-texture-accent-2 { background: var(--texture-ink-accent-2); mask: var(--texture-mask-accent-2); }
+.theme-texture-accent-3 { background: var(--texture-ink-accent-3); mask: var(--texture-mask-accent-3); }
+.theme-texture-border { background: var(--texture-ink-border); mask: var(--texture-mask-border); }
+
+/* A card's drawn marks (ThemeMarks): one layer per colour, as for the texture, over the card's surface and under
+   its content. The card is position: relative and isolation: isolate. */
+.theme-marks {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	border-radius: inherit;
+	overflow: hidden;
+}
+
+.theme-marks > i {
+	position: absolute;
+	inset: 0;
+}
+
+.theme-marks-grain { background: var(--card-ink-grain); mask: var(--card-mask-grain); }
+.theme-marks-text { background: var(--card-ink-text); mask: var(--card-mask-text); }
+.theme-marks-accent { background: var(--card-ink-accent); mask: var(--card-mask-accent); }
+.theme-marks-accent-2 { background: var(--card-ink-accent-2); mask: var(--card-mask-accent-2); }
+.theme-marks-accent-3 { background: var(--card-ink-accent-3); mask: var(--card-mask-accent-3); }
+.theme-marks-border { background: var(--card-ink-border); mask: var(--card-mask-border); }

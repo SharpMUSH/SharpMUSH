@@ -6866,4 +6866,403 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Page text (Markdown)</value>
   </data>
+  <data name="AdmThemeStyleCornersCandy" xml:space="preserve">
+    <value>Candy</value>
+  </data>
+  <data name="AdmThemeStyleCornersRazor" xml:space="preserve">
+    <value>Razor</value>
+  </data>
+  <data name="AdmThemeStyleCornersPill" xml:space="preserve">
+    <value>Pill</value>
+  </data>
+  <data name="AdmThemeStyleTextureSparkles" xml:space="preserve">
+    <value>Sparkles</value>
+  </data>
+  <data name="AdmThemeStyleTextureBubbles" xml:space="preserve">
+    <value>Bubbles</value>
+  </data>
+  <data name="AdmThemeStyleTextureSpotlights" xml:space="preserve">
+    <value>Spotlights</value>
+  </data>
+  <data name="AdmThemeStyleTextureNotebook" xml:space="preserve">
+    <value>Notebook paper</value>
+  </data>
+  <data name="AdmThemeStyleTextureSpeedlines" xml:space="preserve">
+    <value>Speed lines</value>
+  </data>
+  <data name="AdmThemeStyleTextureCourt" xml:space="preserve">
+    <value>Court lines</value>
+  </data>
+  <data name="AdmThemeStyleTextureHazard" xml:space="preserve">
+    <value>Hazard stripes</value>
+  </data>
+  <data name="AdmThemeStyleTextureSigil" xml:space="preserve">
+    <value>Magic circle</value>
+  </data>
+  <data name="AdmThemeStyleTextureSumi" xml:space="preserve">
+    <value>Ink wash</value>
+  </data>
+  <data name="AdmThemeStyleTextureBenday" xml:space="preserve">
+    <value>Halftone dots</value>
+  </data>
+  <data name="AdmThemeStyleTextureFilmgrain" xml:space="preserve">
+    <value>Film grain</value>
+  </data>
+  <data name="AdmThemeStyleTextureStarburst" xml:space="preserve">
+    <value>Starburst</value>
+  </data>
+  <data name="AdmThemeStyleTextureRain" xml:space="preserve">
+    <value>Neon rain</value>
+  </data>
+  <data name="AdmThemeStyleTextureOutrun" xml:space="preserve">
+    <value>Sunset grid</value>
+  </data>
+  <data name="AdmThemeStyleTextureGalaxy" xml:space="preserve">
+    <value>Galaxy</value>
+  </data>
+  <data name="AdmThemeStyleTextureReadout" xml:space="preserve">
+    <value>Console readout</value>
+  </data>
+  <data name="AdmThemeStyleTextureArmorPanels" xml:space="preserve">
+    <value>Armour panels</value>
+  </data>
+  <data name="AdmThemeStyleTextureSunburstRays" xml:space="preserve">
+    <value>Sunburst rays</value>
+  </data>
+  <data name="AdmThemeStyleTitlesSlant" xml:space="preserve">
+    <value>Slanted</value>
+  </data>
+  <data name="AdmThemeStyleTitlesWide" xml:space="preserve">
+    <value>Wide capitals</value>
+  </data>
+  <data name="AdmThemeStyleImageryPastel" xml:space="preserve">
+    <value>Pastel</value>
+  </data>
+  <data name="AdmThemeStyleImageryAiry" xml:space="preserve">
+    <value>Airy</value>
+  </data>
+  <data name="AdmThemeStyleImagerySpotlit" xml:space="preserve">
+    <value>Spotlit</value>
+  </data>
+  <data name="AdmThemeStyleImagerySunny" xml:space="preserve">
+    <value>Sunny</value>
+  </data>
+  <data name="AdmThemeStyleImageryInk" xml:space="preserve">
+    <value>Ink</value>
+  </data>
+  <data name="AdmThemeStyleImageryFloodlit" xml:space="preserve">
+    <value>Floodlit</value>
+  </data>
+  <data name="AdmThemeStyleImagerySteel" xml:space="preserve">
+    <value>Steel</value>
+  </data>
+  <data name="AdmThemeStyleImageryVivid" xml:space="preserve">
+    <value>Vivid</value>
+  </data>
+  <data name="AdmThemeStyleImageryIndigo" xml:space="preserve">
+    <value>Indigo</value>
+  </data>
+  <data name="AdmThemeStyleImageryPrint" xml:space="preserve">
+    <value>Comic print</value>
+  </data>
+  <data name="AdmThemeStyleImageryFilm" xml:space="preserve">
+    <value>Old film</value>
+  </data>
+  <data name="AdmThemeStyleImageryCel" xml:space="preserve">
+    <value>Cel animation</value>
+  </data>
+  <data name="AdmThemeStyleImageryNeon" xml:space="preserve">
+    <value>Neon</value>
+  </data>
+  <data name="AdmThemeStyleImageryDusk" xml:space="preserve">
+    <value>Dusk</value>
+  </data>
+  <data name="AdmThemeStyleImageryWarm" xml:space="preserve">
+    <value>Warm</value>
+  </data>
+  <data name="AdmThemeStyleImageryHangar" xml:space="preserve">
+    <value>Hangar</value>
+  </data>
+  <data name="AdmThemeStyleImageryHotblooded" xml:space="preserve">
+    <value>Hot-blooded</value>
+  </data>
+  <data name="AdmThemeStyleFrameRibbon" xml:space="preserve">
+    <value>Ribbon</value>
+  </data>
+  <data name="AdmThemeStyleFrameBloom" xml:space="preserve">
+    <value>Blossom corners</value>
+  </data>
+  <data name="AdmThemeStyleFrameStage" xml:space="preserve">
+    <value>Stage lights</value>
+  </data>
+  <data name="AdmThemeStyleFrameWashi" xml:space="preserve">
+    <value>Washi tape</value>
+  </data>
+  <data name="AdmThemeStyleFramePanel" xml:space="preserve">
+    <value>Manga panel</value>
+  </data>
+  <data name="AdmThemeStyleFrameJersey" xml:space="preserve">
+    <value>Jersey stripe</value>
+  </data>
+  <data name="AdmThemeStyleFrameChamfer" xml:space="preserve">
+    <value>Cut corners</value>
+  </data>
+  <data name="AdmThemeStyleFrameStatus" xml:space="preserve">
+    <value>Status window</value>
+  </data>
+  <data name="AdmThemeStyleFrameShoji" xml:space="preserve">
+    <value>Paper screen</value>
+  </data>
+  <data name="AdmThemeStyleFrameInked" xml:space="preserve">
+    <value>Inked panel</value>
+  </data>
+  <data name="AdmThemeStyleFrameTitlecard" xml:space="preserve">
+    <value>Title card</value>
+  </data>
+  <data name="AdmThemeStyleFrameChunky" xml:space="preserve">
+    <value>Chunky toy</value>
+  </data>
+  <data name="AdmThemeStyleFrameGlitch" xml:space="preserve">
+    <value>Glitch</value>
+  </data>
+  <data name="AdmThemeStyleFrameNeon" xml:space="preserve">
+    <value>Neon tube</value>
+  </data>
+  <data name="AdmThemeStyleFrameHull" xml:space="preserve">
+    <value>Hull plate</value>
+  </data>
+  <data name="AdmThemeStyleFrameElbow" xml:space="preserve">
+    <value>Console elbow</value>
+  </data>
+  <data name="AdmThemeStyleFramePlating" xml:space="preserve">
+    <value>Armour plating</value>
+  </data>
+  <data name="AdmThemeStyleFrameChromeArmor" xml:space="preserve">
+    <value>Chrome armour</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentTwinkle" xml:space="preserve">
+    <value>Twinkles</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentBlossom" xml:space="preserve">
+    <value>Blossoms</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentEncore" xml:space="preserve">
+    <value>Encore hearts</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentDoodle" xml:space="preserve">
+    <value>Doodles</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentExclaim" xml:space="preserve">
+    <value>Exclamations</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentVarsity" xml:space="preserve">
+    <value>Varsity stars</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentWarning" xml:space="preserve">
+    <value>Warning signs</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCursor" xml:space="preserve">
+    <value>Cursor</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentHanko" xml:space="preserve">
+    <value>Seal stamp</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentPow" xml:space="preserve">
+    <value>Pow burst</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentVaudeville" xml:space="preserve">
+    <value>Vaudeville stars</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentBolt" xml:space="preserve">
+    <value>Lightning bolts</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentSlash" xml:space="preserve">
+    <value>Slashes</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentSunset" xml:space="preserve">
+    <value>Sunset stripes underneath</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentInsignia" xml:space="preserve">
+    <value>Insignia</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentSegments" xml:space="preserve">
+    <value>Segment bars</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentTricolor" xml:space="preserve">
+    <value>Three-colour stripes</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentBattlecry" xml:space="preserve">
+    <value>Battle cry</value>
+  </data>
+  <data name="AdmThemeStyleEffectShine" xml:space="preserve">
+    <value>Shine</value>
+  </data>
+  <data name="AdmThemeStyleEffectDreamy" xml:space="preserve">
+    <value>Dreamy</value>
+  </data>
+  <data name="AdmThemeStyleEffectLightstick" xml:space="preserve">
+    <value>Lightstick</value>
+  </data>
+  <data name="AdmThemeStyleEffectPencil" xml:space="preserve">
+    <value>Pencil</value>
+  </data>
+  <data name="AdmThemeStyleEffectInked" xml:space="preserve">
+    <value>Inked outline</value>
+  </data>
+  <data name="AdmThemeStyleEffectVarsity" xml:space="preserve">
+    <value>Varsity outline</value>
+  </data>
+  <data name="AdmThemeStyleEffectStencil" xml:space="preserve">
+    <value>Stencil</value>
+  </data>
+  <data name="AdmThemeStyleEffectPixel" xml:space="preserve">
+    <value>Pixel shadow</value>
+  </data>
+  <data name="AdmThemeStyleEffectLantern" xml:space="preserve">
+    <value>Lantern glow</value>
+  </data>
+  <data name="AdmThemeStyleEffectInkpop" xml:space="preserve">
+    <value>Ink pop</value>
+  </data>
+  <data name="AdmThemeStyleEffectCartoon" xml:space="preserve">
+    <value>Cartoon</value>
+  </data>
+  <data name="AdmThemeStyleEffectToybox" xml:space="preserve">
+    <value>Toy box</value>
+  </data>
+  <data name="AdmThemeStyleEffectRgbsplit" xml:space="preserve">
+    <value>Colour split</value>
+  </data>
+  <data name="AdmThemeStyleEffectRetro" xml:space="preserve">
+    <value>Retro chrome</value>
+  </data>
+  <data name="AdmThemeStyleEffectConsole" xml:space="preserve">
+    <value>Console</value>
+  </data>
+  <data name="AdmThemeStyleEffectDecal" xml:space="preserve">
+    <value>Decal</value>
+  </data>
+  <data name="AdmThemeStyleEffectBlazing" xml:space="preserve">
+    <value>Blazing</value>
+  </data>
+  <data name="AdmThemeStyleTextureStrength" xml:space="preserve">
+    <value>Texture strength</value>
+  </data>
+  <data name="AdmThemeStyleTextureStrengthNormal" xml:space="preserve">
+    <value>Full</value>
+  </data>
+  <data name="AdmThemeStyleTextureStrengthSoft" xml:space="preserve">
+    <value>Soft</value>
+  </data>
+  <data name="AdmThemeStyleTextureStrengthFaint" xml:space="preserve">
+    <value>Faint</value>
+  </data>
+  <data name="AdmThemeStyleTextureStrengthOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="AdmThemeStyleFrameMarks" xml:space="preserve">
+    <value>Card drawing</value>
+  </data>
+  <data name="AdmThemeStyleFrameMarksNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleFrameEdge" xml:space="preserve">
+    <value>Card border</value>
+  </data>
+  <data name="AdmThemeStyleFrameEdgeLine" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="AdmThemeStyleFrameEdgeThick" xml:space="preserve">
+    <value>Thick</value>
+  </data>
+  <data name="AdmThemeStyleFrameEdgeHeavy" xml:space="preserve">
+    <value>Heavy</value>
+  </data>
+  <data name="AdmThemeStyleFrameEdgeDouble" xml:space="preserve">
+    <value>Double</value>
+  </data>
+  <data name="AdmThemeStyleFrameEdgeOutset" xml:space="preserve">
+    <value>Raised</value>
+  </data>
+  <data name="AdmThemeStyleFrameEdgeNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleFrameShadow" xml:space="preserve">
+    <value>Card shadow</value>
+  </data>
+  <data name="AdmThemeStyleFrameShadowNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentGlyphs" xml:space="preserve">
+    <value>Title glyphs</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentUnderline" xml:space="preserve">
+    <value>Title underline</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentUnderlineFade" xml:space="preserve">
+    <value>Fading rule</value>
+  </data>
+  <data name="AdmThemeStyleEffectColor" xml:space="preserve">
+    <value>Title colour</value>
+  </data>
+  <data name="AdmThemeStyleEffectColorText" xml:space="preserve">
+    <value>Text colour</value>
+  </data>
+  <data name="AdmThemeStyleEffectColorAccent" xml:space="preserve">
+    <value>Accent colour</value>
+  </data>
+  <data name="AdmThemeStyleEffectColorWarn" xml:space="preserve">
+    <value>Warning colour</value>
+  </data>
+  <data name="AdmThemeStyleEffectShadow" xml:space="preserve">
+    <value>Title shadow</value>
+  </data>
+  <data name="AdmThemesEditMode" xml:space="preserve">
+    <value>How this theme is edited</value>
+  </data>
+  <data name="AdmThemesEditModeSimple" xml:space="preserve">
+    <value>Simple</value>
+  </data>
+  <data name="AdmThemesEditModeComplex" xml:space="preserve">
+    <value>Complex</value>
+  </data>
+  <data name="AdmThemesEditModeCustom" xml:space="preserve">
+    <value>Custom (CSS)</value>
+  </data>
+  <data name="AdmThemesEditModeSimpleHint" xml:space="preserve">
+    <value>One menu for each part of the look. A texture, frame, ornament or effect brings everything that goes with it.</value>
+  </data>
+  <data name="AdmThemesEditModeComplexHint" xml:space="preserve">
+    <value>Each part on its own menu, so you can mix them: one theme's card drawing with another's border and shadow. The decorative colours fill the drawings.</value>
+  </data>
+  <data name="AdmThemesEditModeCustomHint" xml:space="preserve">
+    <value>The menus of Complex, and a stylesheet of your own laid over them.</value>
+  </data>
+  <data name="AdmThemesDecorative" xml:space="preserve">
+    <value>Decorative colours</value>
+  </data>
+  <data name="AdmThemesDecorativeHint" xml:space="preserve">
+    <value>Two more colours the drawings use. They never carry text, so they need no contrast.</value>
+  </data>
+  <data name="AdmThemeTokenAccent2" xml:space="preserve">
+    <value>Decorative 1</value>
+  </data>
+  <data name="AdmThemeTokenAccent3" xml:space="preserve">
+    <value>Decorative 2</value>
+  </data>
+  <data name="AdmThemesSwitchMode" xml:space="preserve">
+    <value>Switch</value>
+  </data>
+  <data name="AdmThemesLeaveCustomTitle" xml:space="preserve">
+    <value>Remove the stylesheet?</value>
+  </data>
+  <data name="AdmThemesLeaveCustomBody" xml:space="preserve">
+    <value>Leaving Custom removes this theme's stylesheet. The menus keep their choices.</value>
+  </data>
+  <data name="AdmThemesLeaveComplexTitle" xml:space="preserve">
+    <value>Go back to the Simple menus?</value>
+  </data>
+  <data name="AdmThemesLeaveComplexBody" xml:space="preserve">
+    <value>Some parts no longer match a Simple choice. Going back to Simple puts every part back to what its Simple menu brings.</value>
+  </data>
 </root>
