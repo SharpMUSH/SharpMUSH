@@ -43,6 +43,20 @@ public class WikiReaderIntegrationTests
 		return string.Join("\n", Notifications.For(actor).Skip(before));
 	}
 
+	/// <summary>Every raw notification <paramref name="command"/> sent the reader, as one string of markup.</summary>
+	private async Task<MString> ShownAsync(long handle, string command)
+	{
+		var actor = _actors[handle];
+		var before = Notifications.RawCountFor(actor);
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
+		return MarkupText.Join(MarkupText.Plain("\n"), Notifications.RawFor(actor).Skip(before)
+			.Select(m => m switch
+			{
+				MString markup => markup,
+				string text => MarkupText.Plain(text),
+			}));
+	}
+
 	private async Task<long> CreatePlayerAsync(string name)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
@@ -99,6 +113,17 @@ public class WikiReaderIntegrationTests
 			var listing = await RunAs(reader, $"+wiki/category {categoryTitle}");
 			await Assert.That(listing).Contains(page.Slug).Because("+wiki/category lists the pages in a category");
 			await Assert.That(listing).Contains($"Category: {categoryTitle}");
+
+			// A listing's table takes the screen's width rather than its content's, and no screen has
+			// sides: a line copied from a terminal carries no border.
+			foreach (var command in new[] { "+wiki", "+wiki/list main", $"+wiki/category {categoryTitle}" })
+			{
+				var shown = await ShownAsync(reader, command);
+				await Assert.That(shown.Render(MarkupFormat.Html)).Contains("ms-fill")
+					.Because($"{command} spans the full width");
+				await Assert.That(shown.ToPlainText().Split('\n').Any(line => line.TrimStart().StartsWith('|') || line.TrimStart().StartsWith('│')))
+					.IsFalse().Because($"{command} draws no sides");
+			}
 
 			await RunAs(reader, "@locale fr");
 			var french = await RunAs(reader, $"+wiki main:{page.Slug}");
