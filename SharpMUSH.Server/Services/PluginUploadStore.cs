@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Logging;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
@@ -208,7 +209,7 @@ public sealed partial class PluginUploadStore(
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
-			logger.LogWarning(ex, "Could not remove the staged upload {Folder}.", folder);
+			logger.LogWarning(ex, "Could not remove the staged upload {Folder}.", LogSanitizer.Sanitize(folder));
 		}
 	}
 
