@@ -8,8 +8,8 @@ public class WikiPinStoreTests : LightningDatabaseFixture
 	private IWikiStore Wiki => Db;
 
 	[Test]
-	public async Task ANewWorldPinsCharacter()
-		=> await Assert.That(await Wiki.GetPinnedCategoriesAsync()).IsEquivalentTo(["character"]);
+	public async Task ANewWorldPinsCharacterAndHelp()
+		=> await Assert.That(await Wiki.GetPinnedCategoriesAsync()).IsEquivalentTo(["character", "help"]);
 
 	[Test]
 	public async Task PinsSurviveAReopenAndSayWhetherAnythingChanged()
@@ -18,6 +18,7 @@ public class WikiPinStoreTests : LightningDatabaseFixture
 		await Assert.That(await Wiki.SetCategoryPinnedAsync("lore", true)).IsFalse();
 		await Assert.That(await Wiki.SetCategoryPinnedAsync("character", false)).IsTrue();
 		await Assert.That(await Wiki.SetCategoryPinnedAsync("character", false)).IsFalse();
+		await Assert.That(await Wiki.SetCategoryPinnedAsync("help", false)).IsTrue();
 		await ReopenAsync();
 
 		await Assert.That(await Wiki.GetPinnedCategoriesAsync()).IsEquivalentTo(["lore"]);

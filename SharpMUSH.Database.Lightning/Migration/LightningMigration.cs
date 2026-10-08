@@ -269,7 +269,10 @@ public partial class LightningDatabase
 			UpdatedAt = now,
 		}));
 
-		tx.Put(Tables.WikiPin, WikiPinKey(WikiHelpers.CharacterCategory), WikiPinValue);
+		foreach (var category in WikiHelpers.SeededPinnedCategories)
+		{
+			tx.Put(Tables.WikiPin, WikiPinKey(category), WikiPinValue);
+		}
 	}
 
 	private static void WriteInitialAttribute(ITx tx, long dbref, string longName, string value)

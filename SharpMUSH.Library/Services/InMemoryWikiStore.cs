@@ -21,8 +21,9 @@ public sealed class InMemoryWikiStore : IWikiStore
 	private readonly ConcurrentDictionary<(string PageId, string Locale), WikiTranslation> _translations = new();
 	private readonly ConcurrentDictionary<WikiRuleTarget, WikiRequirementSet> _requirements = new();
 
-	/// <summary>Pinned category keys; <c>character</c> to start with, as a new Lightning world has.</summary>
-	private readonly ConcurrentDictionary<string, byte> _pinned = new(StringComparer.Ordinal) { [WikiHelpers.CharacterCategory] = 0 };
+	/// <summary>Pinned category keys; the seeded ones to start with, as a new Lightning world has.</summary>
+	private readonly ConcurrentDictionary<string, byte> _pinned =
+		new(WikiHelpers.SeededPinnedCategories.Select(c => KeyValuePair.Create(c, (byte)0)), StringComparer.Ordinal);
 
 	private int _idCounter;
 

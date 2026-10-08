@@ -63,6 +63,7 @@ public class StarterWikiServiceTests
 				.Returns(Task.FromResult<Found<WikiPage>>(Page(title, ns, "the game's own")));
 		}
 
+		wiki.SetCategoryPinnedAsync(Arg.Any<string>(), Arg.Any<bool>()).Returns(Task.FromResult<Result<bool>>(true));
 		wiki.SetRequirementsAsync(Arg.Any<WikiRuleTarget>(), Arg.Any<IReadOnlyDictionary<WikiAction, IReadOnlyList<string>>>(), Arg.Any<string>()).Returns(Task.FromResult<Found<None>>(new None()));
 		return wiki;
 	}
@@ -89,6 +90,25 @@ public class StarterWikiServiceTests
 		await wiki.Received(3).SetRequirementsAsync(Arg.Any<WikiRuleTarget>(), WikiRequirementSet.Protection, "#1");
 		await wiki.Received(1).UpdateAsync("Main:Home", StarterWikiPages.Home, "#1", Arg.Any<string?>());
 		await Assert.That(await service.AppliedAsync()).IsTrue();
+	}
+
+	/// <summary>Every category the starter set creates is pinned to the wiki home, the game's own included.</summary>
+	[Test]
+	public async Task Apply_PinsEveryStarterCategory()
+	{
+		var wiki = Wiki(SeededWikiPages.Home, ("Places", WikiNamespace.Category));
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), NullLogger<StarterWikiService>.Instance);
+
+		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
+
+		var categories = StarterWikiPages.All.Where(p => p.Namespace == WikiNamespace.Category).Select(p => p.Title).ToList();
+		await Assert.That(categories).Contains("Places");
+		foreach (var category in categories)
+		{
+			await wiki.Received(1).SetCategoryPinnedAsync(category, true);
+		}
+
+		await wiki.Received(categories.Count).SetCategoryPinnedAsync(Arg.Any<string>(), Arg.Any<bool>());
 	}
 
 	/// <summary>A page the game already has stays as it is, and is not a failure.</summary>
