@@ -986,20 +986,6 @@ objects:
 
         Each pose is introduced by a rule naming who posed it and its number, which is the `<pose>` the
         commands above take. An out-of-character line starts with `<OOC>`.
-
-        The explicit forms name the scene instead of inferring it from the room, which is what the
-        portal's compose box sends:
-
-        - `+scene/pose <id>=<text>` · `+scene/say <id>=<text>` · `+scene/semipose <id>=<text>`
-        - `+scene/emit <id>=<text>` · `+scene/ooc <id>=<text>` \(out of character\)
-        - `+scene/as <name>` — pose under a different name from here on
-        - `+scene/edit <id>=<old>^^^<new>` — fix a typo in your own pose
-        - `+scene/rewrite <id>=<text>` — replace your own pose's whole text \(the portal's Edit\)
-        - `+scene/undo <id>` · `+scene/redo <id>`
-        - `+scene/recall <n>` — the last `<n>` poses of your focused scene; bare `+scene/recall`
-          gives you two rounds of the room \(twice the size of the cast\). Each pose is introduced
-          by a rule naming who posed it and its id, which is the id `+scene/edit` and `+scene/undo`
-          take
       HELP`SCENE`PITCH: |-
         `+scene/pitch <text>` sets the summary shown on a scene's card and its page on the website. It is
         how someone browsing decides whether to come. `+scene/pitch <id>=<text>` sets it on a scene you
