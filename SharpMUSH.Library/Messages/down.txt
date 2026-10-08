@@ -1,3 +1,2 @@
 
-This server is currently unavailable. Please try again later.
-
+[1;33mWarning:[0m This game is closed to logins for now. Please try again later.

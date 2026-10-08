@@ -84,7 +84,7 @@ public class AccountSocketArgSplitTests
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == handle),
 			Arg.Is<SharpMessage>(s =>
-				TestHelpers.MessagePlainTextEquals(s, "Usage: register <username> [email] <password>")),
+				TestHelpers.MessagePlainTextEquals(s, "Usage: register <name> [email] <password>")),
 			null, INotifyService.NotificationType.Announce);
 
 		var state = ConnectionService.Get(handle)?.State;

@@ -70,16 +70,16 @@ public class ConnectBannerTests
 		var messages = ConnectScreenTests.NotificationsTo(WebAppFactoryArg, handle);
 
 		await Assert.That(messages.Any(m => m.Contains("Welcome to SharpMUSH!"))).IsTrue();
-		await Assert.That(messages.Any(m => m.Contains("play <character>"))).IsTrue();
+		await Assert.That(messages.Any(m => Regex.IsMatch(m, @"play +<character>"))).IsTrue();
 	}
 
 	/// <summary>
-	/// Command words the banner instructs a player to type: the first word of any line that is
-	/// indented past the ASCII art and is not a section heading.
+	/// Command words the banner instructs a player to type: the first word of any line beside the logo (its 33
+	/// columns and the gap of two after them) that is not a section heading.
 	/// </summary>
 	private static string[] AdvertisedCommands(string banner) =>
 		banner.Split('\n')
-			.Select(line => line.Length > 37 ? line[37..].Trim() : string.Empty)
+			.Select(line => line.Length > 35 ? line[35..].Trim() : string.Empty)
 			.Where(text => text.Length > 0 && !text.EndsWith(':') && !text.EndsWith('!'))
 			.Select(text => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0])
 			.Where(word => Regex.IsMatch(word, "^[A-Za-z]+$"))

@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using MarkupString.Layout;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
@@ -12,6 +14,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Common;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -67,7 +70,7 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService.Notify(handle, "Usage: register <username> [email] <password>");
+			await NotifyService.Notify(handle, "Usage: register <name> [email] <password>");
 			return new None();
 		}
 
@@ -95,8 +98,7 @@ public partial class Commands
 		await NotifyService.Notify(handle, $"Account '{account.Username}' created successfully.");
 		await NotifyService.Notify(handle, await MessageService.RenderAsync(GameMessage.NewUser, handle) is MString newUserText
 			? newUserText
-			: MarkupText.Plain("You have no characters yet.\nUse: make <character-name> <password>    to create your first character.\n" +
-				"Use: claim <character-name> <password>   to link a character you already have."));
+			: AccountMenu("You have no characters yet.", [], MenuMakeFirst, MenuClaim));
 		return new CallState(account.Id!);
 	}
 
@@ -144,7 +146,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(password))
 		{
-			await NotifyService.Notify(handle, "Usage: login <display-name-or-email> <password>");
+			await NotifyService.Notify(handle, "Usage: login <name-or-email> <password>");
 			return new None();
 		}
 
@@ -177,24 +179,36 @@ public partial class Commands
 		await ConnectionService.BindAccount(handle, account.Id!);
 
 		var characters = await AccountService.GetCharactersAsync(account.Id!);
-		if (characters.Count == 0)
-		{
-			await NotifyService.Notify(handle,
-				$"Logged in as {account.Username}. You have no characters yet.\n" +
-				"Use: make <character-name> <password>    to create a character.\n" +
-				"Use: claim <character-name> <password>   to link a character you already have.");
-		}
-		else
-		{
-			var charList = string.Join("\n", characters.Select(c => $"  {c.Object.Name} (#{c.Object.Key})"));
-			await NotifyService.Notify(handle,
-				$"Logged in as {account.Username}. Your characters:\n{charList}\n" +
-				"Use: play <name>    to connect as a character\n" +
-				"Use: make <name> <password>    to create a new character\n" +
-				"Use: claim <name> <password>   to link a character you already have");
-		}
+		await NotifyService.Notify(handle, characters.Count == 0
+			? AccountMenu($"Logged in as {account.Username}. You have no characters yet.", [], MenuMakeFirst, MenuClaim)
+			: AccountMenu($"Logged in as {account.Username}. Your characters:",
+				[.. characters.Select(c => ServerLayout.CommandLink($"{c.Object.Name} (#{c.Object.Key})", $"play {c.Object.Name}"))],
+				MenuPlay, MenuMakeAnother, MenuClaim));
 
 		return new CallState(account.Id!);
+	}
+
+	private static readonly (string Command, string Does) MenuMakeFirst = ("make <character> <password>", "create your first character");
+	private static readonly (string Command, string Does) MenuMakeAnother = ("make <character> <password>", "create another character");
+	private static readonly (string Command, string Does) MenuClaim = ("claim <character> <password>", "add a character you already have");
+	private static readonly (string Command, string Does) MenuPlay = ("play <character>", "enter the game as one of them");
+
+	/// <summary>
+	/// The account menu: <paramref name="heading"/>, the account's characters as a list (each a link that plays
+	/// it), then the commands that come next with what each does, the descriptions lined up.
+	/// </summary>
+	private static MarkupText AccountMenu(string heading, ImmutableArray<MarkupText> characters,
+		params ReadOnlySpan<(string Command, string Does)> commands)
+	{
+		var list = new Fields([.. commands.ToArray().Select(command =>
+			new Field(MarkupText.Plain(command.Command), new TextBlock(MarkupText.Plain(command.Does))))])
+		{
+			Separator = MarkupText.Plain("  ")
+		};
+		Block[] parts = characters.IsEmpty
+			? [new TextBlock(MarkupText.Plain(heading)), list]
+			: [new TextBlock(MarkupText.Plain(heading)), new Bullets([.. characters.Select(name => (Block)new TextBlock(name))]), list];
+		return ServerLayout.Build(new Stack([.. parts]), 78);
 	}
 
 	/// <summary>
@@ -248,7 +262,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(charName) || string.IsNullOrWhiteSpace(charPassword))
 		{
-			await NotifyService.Notify(handle, "Usage: make <character-name> <password>");
+			await NotifyService.Notify(handle, "Usage: make <character> <password>");
 			return new None();
 		}
 
@@ -326,7 +340,7 @@ public partial class Commands
 		var charName = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText()?.Trim() : null;
 		if (string.IsNullOrWhiteSpace(charName))
 		{
-			await NotifyService.Notify(handle, "Usage: play <character-name>");
+			await NotifyService.Notify(handle, "Usage: play <character>");
 			return new None();
 		}
 
@@ -390,7 +404,7 @@ public partial class Commands
 		var split = arg0?.LastIndexOfAny([' ', '\t']) ?? -1;
 		if (arg0 is null || split <= 0)
 		{
-			await NotifyService.Notify(handle, "Usage: claim <character-name> <password>");
+			await NotifyService.Notify(handle, "Usage: claim <character> <password>");
 			return new None();
 		}
 
@@ -460,7 +474,7 @@ public partial class Commands
 		await NotifyService.Notify(handle, state is IConnectionService.ConnectionState.LoggedIn
 			? $"You are already playing a character. {inGameReason} " +
 				"To play a different one, disconnect and connect again."
-			: "You must be logged in to an account first. Use: login <display-name-or-email> <password>");
+			: "You must be logged in to an account first. Log in with: login <name-or-email> <password>");
 
 	/// <summary>
 	/// PennMUSH-style refusal for a disabled <c>Net.PlayerCreation</c>: the register message, or the fixed line when

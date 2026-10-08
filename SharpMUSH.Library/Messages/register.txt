@@ -1,3 +1,2 @@
 
-Registration is not available on this server.
-
+[1;33mWarning:[0m This game is not taking new accounts.
