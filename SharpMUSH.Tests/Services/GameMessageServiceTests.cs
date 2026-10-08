@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Mediator;
 using MarkupString.Ansi;
+using MarkupString.Layout;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -42,7 +43,7 @@ public class GameMessageServiceTests
 
 		var html = AnsiEscapeParser.Parse(service.ShippedText(GameMessage.Connect)).Render(MarkupFormat.Html);
 
-		await Assert.That(html).Contains($"<span style=\"{LogoGreen}\">==</span>");
+		await Assert.That(html).Contains($"<span style=\"{LogoGreen}\">          ==         ==</span>");
 		await Assert.That(html).Contains("Welcome to");
 	}
 
@@ -98,27 +99,60 @@ public class GameMessageServiceTests
 		await Assert.That((await service.RenderAsync(GameMessage.Guest, 0)).Value).IsTypeOf<None>();
 	}
 
-	/// <summary>The bundled object's connect screen is the shipped one, line for line, with the logo still green.</summary>
+	/// <summary>
+	/// The bundled object's connect screen, as an ASCII client 78 columns wide is sent it, is the shipped one line for
+	/// line, with the logo's art still green.
+	/// </summary>
 	[Test]
 	public async Task TheMessagesObjectShowsTheSameConnectScreen()
 	{
 		var (service, _) = await WithMessagesObjectAsync();
 
 		var shown = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>();
+		var ascii = BlockLayout.Relayout(shown, 78, new LayoutContext { AsciiOnly = true }).ToPlainText().Replace(MudName, "SharpMUSH");
 
-		await Assert.That(Lines(shown.ToPlainText())).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
-		await Assert.That(shown.Render(MarkupFormat.Html)).Contains(LogoGreen);
+		await Assert.That(Lines(ascii)).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
+		await Assert.That(shown.Render(MarkupFormat.Ansi)).Contains("\u001b[38;2;0;245;183m          ==         ==");
+	}
+
+	/// <summary>The object shows the logo as a picture, with the text art as the description's stand-in for a terminal.</summary>
+	[Test]
+	public async Task TheMessagesObjectShowsTheLogoAsAPicture()
+	{
+		var (service, _) = await WithMessagesObjectAsync();
+
+		var html = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>().Render(MarkupFormat.Html);
+
+		await Assert.That(html).Contains("src=\"/assets/logo.png\" alt=\"The SharpMUSH logo\"");
+	}
+
+	/// <summary>A way in the game has turned off is not offered: <c>config()</c> answers <c>No</c>, not an empty string.</summary>
+	[Test]
+	public async Task TheMessagesObjectLeavesOutWaysInThatAreOff()
+	{
+		var (service, _) = await WithMessagesObjectAsync();
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Net = options.Net with { PlayerCreation = false, Guests = false }
+		});
+
+		var connect = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>().ToPlainText();
+		var register = (await service.RenderAsync(GameMessage.Register, 0)).Expect<MString>().ToPlainText();
+
+		await Assert.That(connect).Contains("Have an account?");
+		await Assert.That(connect).DoesNotContain("New here?");
+		await Assert.That(connect).DoesNotContain("Just looking?");
+		await Assert.That(register).DoesNotContain("connect guest");
 	}
 
 	[Test]
 	public async Task TheMessagesObjectEvaluatesItsAttributes()
 	{
 		var (service, _) = await WithMessagesObjectAsync();
-		var mudName = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Net.MudName;
 
 		var shown = (await service.RenderAsync(GameMessage.Quit, 0)).Expect<MString>();
 
-		await Assert.That(shown.ToPlainText()).IsEqualTo($"\nGoodbye from {mudName}!");
+		await Assert.That(shown.ToPlainText()).IsEqualTo($"\nGoodbye from {MudName}. Come back soon!");
 	}
 
 	[Test]
@@ -190,13 +224,20 @@ public class GameMessageServiceTests
 
 		var manifest = new PackageManifestService().ParseManifest(BundledPackages.ManifestYaml(GameMessages.PackageId))
 			.Expect<ParsedPackageManifest>().Manifest;
-		foreach (var (name, attribute) in manifest.Objects.Single(o => o.Ref == GameMessages.ObjectRef).Attributes)
+		var spec = manifest.Objects.Single(o => o.Ref == GameMessages.ObjectRef);
+		foreach (var (name, attribute) in spec.Attributes)
 		{
 			await AttributeService.SetAttributeAsync(holder, holder, name, MarkupText.Plain(attribute.Value));
+		}
+		foreach (var power in spec.Powers)
+		{
+			await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power #{dbref.Number}={power}"));
 		}
 
 		return (Build(holder.Object().DBRef.Number), holder);
 	}
+
+	private string MudName => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Net.MudName;
 
 	private static string Plain(string ansi) => AnsiEscapeParser.Parse(ansi).ToPlainText();
 

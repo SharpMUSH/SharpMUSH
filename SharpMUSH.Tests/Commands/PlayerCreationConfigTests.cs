@@ -1,3 +1,4 @@
+using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -85,7 +86,7 @@ public class PlayerCreationConfigTests
 		var handle = AllocateHandle();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {TestIsolationHelpers.GenerateUniqueName("RegisterBlocked")} somepassword"));
 
-		await Assert.That(HeardBy(handle)).Contains(Messages.ShippedText(GameMessage.Register));
+		await Assert.That(HeardBy(handle)).Contains(AnsiEscapeParser.Parse(Messages.ShippedText(GameMessage.Register)).ToPlainText());
 	}
 
 	[Test]

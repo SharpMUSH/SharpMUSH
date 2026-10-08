@@ -1,4 +1,3 @@
 
-Welcome, Guest! You are connected as a temporary guest character.
-Type 'help' for assistance.
-
+[1;36m[GUEST][0m You are playing a temporary guest character.
+Type help for the commands.

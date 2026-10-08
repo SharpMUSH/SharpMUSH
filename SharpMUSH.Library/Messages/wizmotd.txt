@@ -1,3 +1,2 @@
 
-Wizard Message of the Day
-
+[1;30m[STAFF][0m Nothing new for staff. Leave a note here with @wizmotd <message>.
