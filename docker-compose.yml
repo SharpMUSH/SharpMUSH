@@ -77,7 +77,6 @@ services:
     environment:
       # Embedded LMDB world on the app-data volume; no database container needed. See deploy/README.md
       # for the durability setting and the map-size ceiling.
-      - SHARPMUSH_DATABASE_PROVIDER=lightning
       - SHARPMUSH_LIGHTNING_PATH=data/lightning
       - SHARPMUSH_LIGHTNING_SYNC=periodic
       - NATS_URL=nats://nats:4222
