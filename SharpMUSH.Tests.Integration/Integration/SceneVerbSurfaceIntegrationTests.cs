@@ -691,4 +691,88 @@ public class SceneVerbSurfaceIntegrationTests
 		await Assert.That(deleted.Any(m => m.Contains($"Pose {poseId} deleted.", StringComparison.Ordinal))).IsTrue();
 		await Assert.That(await Eval($"scenepose({sceneId},{poseId},deleted)")).IsEqualTo("1");
 	}
+
+	/// <summary>
+	/// A wizard may undo, redo or delete anyone's pose; the author check is for everyone else.
+	/// </summary>
+	[Test]
+	public async Task AWizard_MayDeleteAnyonesPose()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (author, authorHandle) = await CreatePlayerAsync($"Uma{Tag}");
+		var (wizard, wizardHandle) = await CreatePlayerAsync($"Vex{Tag}");
+		await God1($"@set {wizard}=WIZARD");
+
+		await RunAs(authorHandle, $"+scene/create Uma Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(author)})");
+		await RunAs(authorHandle, "+scene/start");
+		await RunAs(authorHandle, $"+scene/emit {sceneId}=A bell rings {Tag}.");
+		var poseId = await Eval($"last(sceneposes({sceneId}))");
+
+		var said = await RunAs(wizardHandle, $"+scene/delete {poseId}");
+
+		await Assert.That(said.Any(m => m.Contains($"Pose {poseId} deleted.", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},deleted)")).IsEqualTo("1");
+	}
+
+	/// <summary>
+	/// An owner cancels only a scene with no poses in it; a scene with poses is a wizard's to cancel. A
+	/// paused scene is not running, so before this rule its owner could cancel it and take its log out of
+	/// every list.
+	/// </summary>
+	[Test]
+	public async Task Cancel_IsTheOwnersOnlyWhileTheSceneHasNoPoses()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Wynn{Tag}");
+		var (wizard, wizardHandle) = await CreatePlayerAsync($"Xan{Tag}");
+		await God1($"@set {wizard}=WIZARD");
+
+		await RunAs(ownerHandle, $"+scene/create Wynn Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await RunAs(ownerHandle, "+scene/start");
+		await RunAs(ownerHandle, $"+scene/emit {sceneId}=Rain on the roof {Tag}.");
+		await RunAs(ownerHandle, $"+scene/pause {sceneId}");
+
+		var refused = await RunAs(ownerHandle, $"+scene/cancel {sceneId}");
+		await Assert.That(refused.Any(m => m.Contains("only a wizard can cancel it", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(await Eval($"scene({sceneId},status)")).IsEqualTo("paused");
+
+		await RunAs(wizardHandle, $"+scene/cancel {sceneId}");
+		await Assert.That(await Eval($"scene({sceneId},status)")).IsEqualTo("cancelled");
+
+		var scheduled = string.Join(" ", await RunAs(ownerHandle, $"+scene/schedule Empty {Tag}=2524608000"));
+		var emptyId = System.Text.RegularExpressions.Regex.Match(scheduled, @"Scheduled scene (\d+)").Groups[1].Value;
+		await Assert.That(emptyId).IsNotEmpty().Because($"+scene/schedule names the scene it made: {scheduled}");
+		await RunAs(ownerHandle, $"+scene/cancel {emptyId}");
+		await Assert.That(await Eval($"scene({emptyId},status)")).IsEqualTo("cancelled")
+			.Because("a scene with no poses is still its owner's to cancel");
+	}
+
+	/// <summary>
+	/// <c>+scene/move</c> checks that its owner owns the focused scene, so the pose it moves has to be in
+	/// that scene: a pose id from another scene used to be reordered in a scene the mover did not own.
+	/// </summary>
+	[Test]
+	public async Task Move_RefusesAPoseFromAnotherScene()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (victim, victimHandle) = await CreatePlayerAsync($"Yara{Tag}");
+		var (mover, moverHandle) = await CreatePlayerAsync($"Zed{Tag}");
+
+		await RunAs(victimHandle, $"+scene/create Yara Scene {Tag}");
+		var theirs = await Eval($"scenefocus({Num(victim)})");
+		await RunAs(victimHandle, "+scene/start");
+		await RunAs(victimHandle, $"+scene/emit {theirs}=First {Tag}.");
+		await RunAs(victimHandle, $"+scene/emit {theirs}=Second {Tag}.");
+		var order = await Eval($"sceneposes({theirs})");
+		var second = order.Split(' ').Last();
+
+		await RunAs(moverHandle, $"+scene/create Zed Scene {Tag}");
+		var said = await RunAs(moverHandle, $"+scene/move {second}=");
+
+		await Assert.That(said.Any(m => m.Contains($"No pose {second} in scene", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(await Eval($"sceneposes({theirs})")).IsEqualTo(order)
+			.Because("a pose in someone else's scene must not move");
+	}
 }

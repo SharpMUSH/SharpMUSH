@@ -125,6 +125,8 @@ objects:
         That scene is not yours to finish. Its owner, a wizard, or anyone holding the scene.close permission can.
       DATA`DENY_NOT_AUTHOR: |-
         That pose is not yours to edit. Only its author can.
+      DATA`DENY_NOT_POSER: |-
+        That pose is not yours. Only its author or a wizard can undo, redo or delete it.
       # +scene/rewrite <id>= would otherwise blank the pose; deleting one is +scene/delete.
       DATA`DENY_EMPTY: |-
         A pose can't be rewritten to nothing. Use +scene/delete <id> to remove it.
@@ -391,19 +393,21 @@ objects:
       CMD`REWRITE: |-
         $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @assert strlen(%1)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_EMPTY)],warn)]; @scene/editpose %q<pid>=%#,%1
 
-      # Undo, redo and delete check the pose the way CMD`EDIT does (it exists, and it is the player's), then
+      # Undo, redo and delete check the pose exists and is the player's (a wizard may act on anyone's), then
       # call the function, whose answer is the pose id or why it could not: @scene/undo tells only the Logger.
       CMD`UNDO: |-
-        $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert strmatch(scenepose(,%0,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @pemit %#=[if(isint(setr(Result,sceneundo(%0))),notice(SCENE,Pose %0 undone.,ok),notice(SCENE,%q<Result>,warn))]
+        $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert or(orflags(%#,Wz),strmatch(scenepose(,%0,author),num(%#)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_POSER)],error)]; @pemit %#=[if(isint(setr(Result,sceneundo(%0))),notice(SCENE,Pose %0 undone.,ok),notice(SCENE,%q<Result>,warn))]
 
       CMD`REDO: |-
-        $+scene/redo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert strmatch(scenepose(,%0,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @pemit %#=[if(isint(setr(Result,sceneredo(%0))),notice(SCENE,Pose %0 redone.,ok),notice(SCENE,%q<Result>,warn))]
+        $+scene/redo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert or(orflags(%#,Wz),strmatch(scenepose(,%0,author),num(%#)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_POSER)],error)]; @pemit %#=[if(isint(setr(Result,sceneredo(%0))),notice(SCENE,Pose %0 redone.,ok),notice(SCENE,%q<Result>,warn))]
 
       CMD`DELETE: |-
-        $+scene/delete *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert strmatch(scenepose(,%0,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @pemit %#=[if(isint(setr(Result,scenedelpose(%0))),notice(SCENE,Pose %0 deleted.,ok),notice(SCENE,%q<Result>,warn))]
+        $+scene/delete *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert or(orflags(%#,Wz),strmatch(scenepose(,%0,author),num(%#)))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_POSER)],error)]; @pemit %#=[if(isint(setr(Result,scenedelpose(%0))),notice(SCENE,Pose %0 deleted.,ok),notice(SCENE,%q<Result>,warn))]
 
+      # The pose must be in the focused scene: a move reorders whichever scene the pose is in, which is
+      # not necessarily the one the owner check was about.
       CMD`MOVE: |-
-        $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @scene/move %0=%1
+        $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert strmatch(scenepose(%q<SceneID>,%0,id),%0)=@pemit %#=[notice(SCENE,No pose %0 in scene %q<SceneID>.,warn)]; @pemit %#=[if(isint(setr(Result,scenemovepose(%0,%1))),notice(SCENE,Pose %0 moved.,ok),notice(SCENE,%q<Result>,warn))]
 
       # ---- visibility -----------------------------------------------------------
       # +scene/public [<id>] and +scene/private [<id>]: the focused scene, or the one named.
@@ -547,10 +551,11 @@ objects:
         $+scene/reschedule *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %0,warn)]; @assert u(%!/FUN`OWNS,%#,%0)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @scene/set %0/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @scene/set %0/status=[switch(setr(st,scene(%0,status)),active,paused,%q<st>)]; @pemit %#=[notice(SCENE,Rescheduled scene %0 for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].[if(strmatch(scene(%0,status),paused),%bIt is paused until +scene/start %0 resumes it.)],ok)]
       # +scene/unschedule and +scene/cancel take a scene off the schedule for good: its time is cleared
       # and its status is `cancelled`, so it is in no list but the archive. (@scene/delete is the POSE
-      # delete; it never removed a scene.) A running scene is ended with +scene/finish instead.
+      # delete; it never removed a scene.) A running scene is ended with +scene/finish instead. An owner can
+      # cancel only a scene with no poses in it; one with poses is a wizard's call.
       CMD`UNSCHEDULE:
         value: |-
-          $(?is)^\+scene/(?\:unschedule|cancel) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %1,warn)]; @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert not(match(active finished,scene(%1,status)))=@pemit %#=[notice(SCENE,Scene %1 is [scene(%1,status)]. Only a scene that has not started can be cancelled.,warn)]; @scene/set %1/scheduledfor=; @scene/set %1/status=cancelled; @pemit %#=[notice(SCENE,Cancelled scene %1.,ok)]
+          $(?is)^\+scene/(?\:unschedule|cancel) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %1,warn)]; @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @assert or(orflags(%#,Wz),not(match(active finished,scene(%1,status))))=@pemit %#=[notice(SCENE,Scene %1 is [scene(%1,status)]. Only a scene that has not started can be cancelled.,warn)]; @assert or(orflags(%#,Wz),not(scene(%1,posecount)))=@pemit %#=[notice(SCENE,Scene %1 has poses in it\, so only a wizard can cancel it.,error)]; @scene/set %1/scheduledfor=; @scene/set %1/status=cancelled; @pemit %#=[notice(SCENE,Cancelled scene %1.,ok)]
         flags: [REGEXP]
       # The schedule reads like a calendar: scenes in time order, the day named on the first scene of
       # each day, the scenes with no time last. One table, so the columns line up from day to day.
