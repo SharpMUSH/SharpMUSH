@@ -55,6 +55,10 @@ public abstract class MudBlazorTestContext : BunitContext
 		// the server's Net.Guests flag. The stub factory returns "[]" for its api/server-info fetch,
 		// which the service treats as an unreadable response and degrades to the config default (true).
 		Services.AddSingleton(new ServerInfoService(StubFactoryReturningEmptyList()));
+		// The account block draws the acting character's avatar, which looks its picture up in the
+		// character directory; the empty list leaves every avatar as initials.
+		Services.AddSingleton<ICharacterPictures>(new CharacterDirectoryService(
+			StubFactoryReturningEmptyList(), NullLogger<CharacterDirectoryService>.Instance));
 	}
 
 	private IHttpClientFactory StubFactoryReturningEmptyList()
