@@ -18,6 +18,21 @@ character on the Account page has a palette button that opens it at that charact
 **Game default** follows the browser's light or dark preference. An accent that would be too faint on the chosen
 theme is moved toward white or black until it reads at 4.5:1.
 
+## Built-in themes
+
+`BuiltInThemes.All` (`SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`):
+
+- **Phosphor** (dark) and **Daylight** (light), the plain looks.
+- One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
+  `mystery`, `romance`, `science-fiction`, `spiritual`.
+- Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mecha`, `isekai`, `yokai`.
+- Cartoons and comics: `comic-book`, `rubber-hose`, `eighties-cartoon`.
+- Neon and space: `cyberpunk`, `synthwave`, `space-opera`, `starship-console`.
+
+The anime, cartoon and space themes are portal themes only; there is no layout theme of the same name. Every theme
+after Phosphor and Daylight has a texture, a card frame and a title face no other theme uses
+(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`).
+
 ## Making themes (staff)
 
 `/admin/themes` (Admin > Portal > Themes) needs the `layout.admin` permission. Built-in themes are read-only;

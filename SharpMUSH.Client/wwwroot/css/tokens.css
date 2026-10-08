@@ -137,6 +137,118 @@
     font-style: normal;
     font-display: swap;
 }
+@font-face {
+    font-family: "Fredoka";
+    src: url("/fonts/fredoka-latin.woff2") format("woff2");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Dancing Script";
+    src: url("/fonts/dancing-script-latin.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Mochiy Pop One";
+    src: url("/fonts/mochiy-pop-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Patrick Hand";
+    src: url("/fonts/patrick-hand-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Dela Gothic One";
+    src: url("/fonts/dela-gothic-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Graduate";
+    src: url("/fonts/graduate-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/fonts/pixelify-sans-latin.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Saira Stencil One";
+    src: url("/fonts/saira-stencil-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Yuji Syuku";
+    src: url("/fonts/yuji-syuku-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Bangers";
+    src: url("/fonts/bangers-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Lilita One";
+    src: url("/fonts/lilita-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Titan One";
+    src: url("/fonts/titan-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Chakra Petch";
+    src: url("/fonts/chakra-petch-latin.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Monoton";
+    src: url("/fonts/monoton-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Michroma";
+    src: url("/fonts/michroma-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Antonio";
+    src: url("/fonts/antonio-latin.woff2") format("woff2");
+    font-weight: 100 700;
+    font-style: normal;
+    font-display: swap;
+}
 
 :root {
 	/* ── Phosphor Refined design tokens ── */

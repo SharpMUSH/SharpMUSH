@@ -208,8 +208,91 @@ public static class BuiltInThemes
 		["#f5f1f9", "#fdfbff", "#f3eef9", "#ebe5f3", "#e3dbef", "#241f2e", "#574e66", "#6a6178", "#ddd4ea", "#ebe5f3", "#6b4fa8", "#8a5300", "#b3361e"],
 		display: "marcellus", body: "ui", corners: "round", texture: "mandala", ornament: "lotus", frame: "halo", titles: "normal", effect: "glow", imagery: "tint");
 
+	/// <summary>Magical girl: candy pink and lavender, twinkling sparkles, a rounded face that shines, cards tied with a bow.</summary>
+	public static readonly PortalTheme MagicalGirl = Genre("magical-girl", "Magical Girl", dark: false,
+		["#fcedf7", "#fffaff", "#f9eafa", "#f3e1f5", "#efd8f3", "#2e1538", "#614670", "#6b5279", "#ecc9ee", "#f5e0f6", "#b8157a", "#8f4b00", "#b3261e"],
+		display: "fredoka", body: "ui", corners: "candy", texture: "sparkles", ornament: "twinkle", frame: "ribbon", titles: "normal", effect: "shine", imagery: "pastel");
+
+	/// <summary>Shojo: a cream manga page in screentone, floating bubbles and big blossoms, script titles, flower-sprayed cards.</summary>
+	public static readonly PortalTheme Shojo = Genre("shojo", "Shojo", dark: false,
+		["#fdf8f1", "#fffdf9", "#fbf3ea", "#f6ece2", "#f2e5d8", "#2b2226", "#5e4f55", "#695a60", "#ecd9cf", "#f4e9e1", "#0f6f73", "#8f4b00", "#b3261e"],
+		display: "dancing", body: "ui", corners: "round", texture: "bubbles", ornament: "blossom", frame: "bloom", titles: "normal", effect: "dreamy", imagery: "airy");
+
+	/// <summary>Idol: a concert stage in indigo dark, coloured spotlights, pop lettering glowing like a lightstick, cards rimmed in stage lights.</summary>
+	public static readonly PortalTheme Idol = Genre("idol", "Idol", dark: true,
+		["#0c0a1d", "#151030", "#1c163f", "#100c25", "#07051a", "#f4efff", "#bbb2da", "#9e94c4", "#30275f", "#221b4a", "#ff58a8", "#ffd84a", "#ff8a8a"],
+		display: "mochiy", body: "ui", corners: "soft", texture: "spotlights", ornament: "encore", frame: "stage", titles: "normal", effect: "lightstick", imagery: "spotlit");
+
+	/// <summary>Slice of life: warm daylight on ruled notebook paper, a handwritten face, cards stuck up with patterned washi tape.</summary>
+	public static readonly PortalTheme SliceOfLife = Genre("slice-of-life", "Slice of Life", dark: false,
+		["#fbf7ec", "#fffefa", "#f8f3e6", "#f3ecdc", "#ece3cf", "#2a2722", "#57514a", "#615a51", "#e2d8c3", "#eee6d5", "#1f68a8", "#8f4b00", "#b3261e"],
+		display: "patrick", body: "ui", corners: "soft", texture: "notebook", ornament: "doodle", frame: "washi", titles: "normal", effect: "pencil", imagery: "sunny");
+	/// <summary>Shonen: a battle-manga page, black ink on white with screentone and focus lines, heavy slanted titles, thick panel borders and one hot red.</summary>
+	public static readonly PortalTheme Shonen = Genre("shonen", "Shonen", dark: false,
+		["#f4f2ee", "#ffffff", "#f0eeea", "#e8e6e1", "#e2dfda", "#0d0d0d", "#3a3a3a", "#545454", "#141414", "#d4d1cb", "#c42d12", "#8f4b00", "#b3261e"],
+		display: "dela", body: "ui", corners: "razor", texture: "speedlines", ornament: "exclaim", frame: "panel", titles: "slant", effect: "inked", imagery: "ink");
+
+	/// <summary>Sports: a night match under floodlights, court markings on navy, varsity lettering outlined in jersey orange, striped hems.</summary>
+	public static readonly PortalTheme Sports = Genre("sports", "Sports", dark: true,
+		["#0a1428", "#101d36", "#162644", "#0c172e", "#060d1c", "#eef3fb", "#a9b6cc", "#8d9bb4", "#25395f", "#1a2b4b", "#ff8c2e", "#ffd166", "#ff8a8a"],
+		display: "graduate", body: "ui", corners: "soft", texture: "court", ornament: "varsity", frame: "jersey", titles: "caps", effect: "varsity", imagery: "floodlit");
+
+	/// <summary>Mecha: a hangar of riveted gunmetal plates, hazard stripes, stencilled capitals in warning yellow, cut-corner armour cards.</summary>
+	public static readonly PortalTheme Mecha = Genre("mecha", "Mecha", dark: true,
+		["#16181b", "#1f2226", "#272b30", "#1a1c20", "#101113", "#e7e9eb", "#aab0b6", "#8f969d", "#3c434b", "#2b3036", "#ff6b1f", "#ffc62a", "#ff8a7a"],
+		display: "saira-stencil", body: "ui", corners: "razor", texture: "hazard", ornament: "warning", frame: "chamfer", titles: "caps", effect: "stencil", imagery: "steel");
+
+	/// <summary>Isekai: a game's status windows over a fantasy world, royal-blue panels edged in light, a magic circle behind, pixel titles in gold.</summary>
+	public static readonly PortalTheme Isekai = Genre("isekai", "Isekai", dark: true,
+		["#0a0e2c", "#121a4a", "#18225a", "#0e1540", "#070a22", "#eaf0ff", "#acb8e4", "#919dd0", "#4466cc", "#24347c", "#ffd35e", "#ffb35c", "#ff9aa8"],
+		display: "pixelify", body: "ui", corners: "sharp", texture: "sigil", ornament: "cursor", frame: "status", titles: "normal", effect: "pixel", imagery: "vivid");
+	/// <summary>Yokai: a folklore night in sumi and indigo, a moon in mist over waves, brushed titles sealed in vermilion, shoji-latticed cards.</summary>
+	public static readonly PortalTheme Yokai = Genre("yokai", "Yokai", dark: true,
+		["#0c0e1b", "#141728", "#1b1f34", "#0f111f", "#080913", "#efe6d4", "#b3ab9b", "#958d80", "#2b2e47", "#1e2135", "#f2643c", "#e8b04a", "#ff9580"],
+		display: "yuji", body: "ui", corners: "sharp", texture: "sumi", ornament: "hanko", frame: "shoji", titles: "normal", effect: "lantern", imagery: "indigo");
+
+	/// <summary>Comic book: four-colour newsprint in Ben-Day dots, inked panels with hard shadows, outlined capitals that shout.</summary>
+	public static readonly PortalTheme ComicBook = Genre("comic-book", "Comic Book", dark: false,
+		["#f5eed6", "#fffdf4", "#fff3c4", "#fff1b8", "#1f57d6", "#111111", "#333333", "#4d4d4d", "#111111", "#dccfae", "#c8141c", "#8a5200", "#a3121a"],
+		display: "bangers", body: "ui", corners: "sharp", texture: "benday", ornament: "pow", frame: "inked", titles: "caps", effect: "inkpop", imagery: "print");
+
+	/// <summary>Rubber hose: a 1930s cartoon title card, cream and ink on scratched, grainy film, bouncy letters between stars.</summary>
+	public static readonly PortalTheme RubberHose = Genre("rubber-hose", "Rubber Hose", dark: false,
+		["#ebe1c6", "#f7efd8", "#ede2c2", "#e6d9b5", "#221d19", "#1c1814", "#463d33", "#564b3f", "#221d19", "#d3c39d", "#a3302a", "#7a4d00", "#9c2a1f"],
+		display: "lilita", body: "ui", corners: "round", texture: "filmgrain", ornament: "vaudeville", frame: "titlecard", titles: "normal", effect: "cartoon", imagery: "film");
+
+	/// <summary>80s cartoon: a Saturday-morning toy-box sky of star bursts and lightning, chunky outlined yellow letters, cards with hard magenta shadows.</summary>
+	public static readonly PortalTheme EightiesCartoon = Genre("eighties-cartoon", "80s Cartoon", dark: true,
+		["#190e3c", "#24164f", "#2e1d63", "#1d1146", "#10082a", "#fff6ff", "#d3c2ee", "#b3a1d6", "#6a4bd6", "#33216e", "#ffe23a", "#ffa94d", "#ff86c2"],
+		display: "titan", body: "ui", corners: "round", texture: "starburst", ornament: "bolt", frame: "chunky", titles: "caps", effect: "toybox", imagery: "cel");
+	/// <summary>Cyberpunk: a neon city at night, rain past magenta and cyan signs, split-signal capitals, cards cut on the diagonal.</summary>
+	public static readonly PortalTheme Cyberpunk = Genre("cyberpunk", "Cyberpunk", dark: true,
+		["#07060b", "#110d17", "#19131f", "#0c0a11", "#040307", "#f2edf7", "#b8acc6", "#9d90ad", "#2e2339", "#1e1727", "#ff2bd6", "#f3e600", "#ff8a8a"],
+		display: "chakra", body: "ui", corners: "sharp", texture: "rain", ornament: "slash", frame: "glitch", titles: "caps", effect: "rgbsplit", imagery: "neon");
+
+	/// <summary>Synthwave: an outrun sunset, a striped sun over a neon grid, chrome-lit inline lettering, cards lit like neon tubes.</summary>
+	public static readonly PortalTheme Synthwave = Genre("synthwave", "Synthwave", dark: true,
+		["#1a0b2e", "#25103f", "#311552", "#1d0c35", "#12061f", "#fdeeff", "#d8bfe6", "#bfa2d2", "#4a2470", "#331856", "#ff6b9d", "#ffd166", "#ff9a8a"],
+		display: "monoton", body: "ui", corners: "round", texture: "outrun", ornament: "sunset", frame: "neon", titles: "normal", effect: "retro", imagery: "dusk");
+
+	/// <summary>Space opera: a deep starfield and nebula, wide gold capitals, worn riveted hull plates.</summary>
+	public static readonly PortalTheme SpaceOpera = Genre("space-opera", "Space Opera", dark: true,
+		["#04050b", "#14161d", "#1c1f28", "#0d0f15", "#03040a", "#eee7d4", "#b9b09a", "#9a927f", "#3b3d47", "#252731", "#f0b429", "#ff8c42", "#ff8a7a"],
+		display: "michroma", body: "ui", corners: "soft", texture: "nebula", ornament: "insignia", frame: "hull", titles: "wide", effect: "gilt", imagery: "warm");
+
+	/// <summary>Starship console: pure black, tall condensed capitals, pill bars and elbows in orange, lavender, peach and periwinkle.</summary>
+	public static readonly PortalTheme StarshipConsole = Genre("starship-console", "Starship Console", dark: true,
+		["#000000", "#0b0a0f", "#16141c", "#060509", "#000000", "#f5e9da", "#cbbba8", "#a99a8b", "#2b2732", "#1a1820", "#ff9933", "#ffcc66", "#ff8a7a"],
+		display: "antonio", body: "ui", corners: "pill", texture: "readout", ornament: "segments", frame: "elbow", titles: "caps", effect: "console", imagery: "natural");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
-		[Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual];
+	[
+		Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
+		MagicalGirl, Shojo, Idol, SliceOfLife,
+		Shonen, Sports, Mecha, Isekai,
+		Yokai, ComicBook, RubberHose, EightiesCartoon,
+		Cyberpunk, Synthwave, SpaceOpera, StarshipConsole,
+	];
 
 	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
 		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery)
