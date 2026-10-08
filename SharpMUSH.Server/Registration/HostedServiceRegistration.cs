@@ -78,6 +78,8 @@ internal static class HostedServiceRegistration
 		services.AddSingleton<IBundledPackageBootstrap>(sp => sp.GetRequiredService<Services.DefaultPackagesBootstrapService>());
 		services.AddHostedService(sp => sp.GetRequiredService<Services.DefaultPackagesBootstrapService>());
 		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
+		// The game's own layout themes, before softcode can name one.
+		services.AddHostedService<Services.LayoutThemeBootstrapService>();
 		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so
 		// any objects/attributes they seed already exist. Re-establishes in-memory @function regs.
 		services.AddHostedService<Services.StartupAttributeBootstrapService>();

@@ -30,7 +30,7 @@ public partial class Functions
 		.Int("bar", 1, MaxLayoutWidth, (laid, bar) => laid with { Block = laid.Block with { BarWidth = bar } })
 		.Gradient(color, laid => laid.Block.Gradient, (laid, gradient) => laid with { Block = laid.Block with { Gradient = gradient } })
 		.Choice("shade", Names<GaugeShade>(), (laid, shade) => laid with { Block = laid.Block with { Shade = shade } })
-		.Theme((laid, theme) => laid with { Theme = theme });
+		.Theme(laid => laid.ReadTheme, (laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Gauge>> GaugeSchema { get; } = GaugeOptions(_ => null);
 
@@ -50,7 +50,7 @@ public partial class Functions
 	/// A table's options. The per-column lists are kept as written: they are read once the delimiter
 	/// (applied first) has split the headings into columns.
 	/// </summary>
-	private sealed record TableSettings(Table Table, MString Width, MString Delimiter, BorderStyle House)
+	private sealed record TableSettings(Table Table, MString Width, MString Delimiter, BorderStyle House, Func<string, Result<ThemePalette>> ReadTheme)
 	{
 		public ImmutableList<(string Key, MString List)> ColumnLists { get; init; } = [];
 
@@ -76,7 +76,7 @@ public partial class Functions
 		.Text("max", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("max", list)) })
 		.Text("nowrap", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("nowrap", list)) })
 		.Text("grow", (settings, list) => settings with { ColumnLists = settings.ColumnLists.Add(("grow", list)) })
-		.Theme((settings, theme) => settings with { Theme = theme })
+		.Theme(settings => settings.ReadTheme, (settings, theme) => settings with { Theme = theme })
 		.Stripe((settings, codes) => settings with { Table = settings.Table with { Striped = codes is not null }, Stripe = codes });
 
 	/// <summary>A gradient's colours and the way it runs.</summary>
@@ -112,7 +112,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
-		return ValueTask.FromResult(BulletsSchema.Apply(Arg(args, 2), new Laid<Bullets>(new Bullets([.. items.Select(item => Body(item))]), MarkupText.Empty, DefaultBorder())) switch
+		return ValueTask.FromResult(BulletsSchema.Apply(Arg(args, 2), new Laid<Bullets>(new Bullets([.. items.Select(item => Body(item))]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
 		{
 			Laid<Bullets> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
@@ -128,7 +128,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
-		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items]), MarkupText.Empty, DefaultBorder())) switch
+		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
 		{
 			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
@@ -175,7 +175,7 @@ public partial class Functions
 
 	/// <summary>A table from its options and, once the delimiter is known, its headings and rows of cells.</summary>
 	private CallState BuildDataTable(IMUSHCodeParser parser, MString options, Func<MString, (MString[] Headings, MString[][] Rows)> read) =>
-		DataTableSchema.Apply(options, new TableSettings(new Table([], []), MarkupText.Empty, MarkupText.Plain("|"), DefaultBorder())) switch
+		DataTableSchema.Apply(options, new TableSettings(new Table([], []), MarkupText.Empty, MarkupText.Plain("|"), DefaultBorder(), LayoutThemeService.Read)) switch
 		{
 			TableSettings settings => BuildDataTable(parser, settings, read),
 			Error<string> error => new CallState(error.Value),

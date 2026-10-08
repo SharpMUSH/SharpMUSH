@@ -666,11 +666,12 @@ public partial class Commands
 		// run after the look.
 		await SyncPlayerOutputPreferences(handle, player.Object);
 		// After the flags, which set the preferences the theme joins; null clears a theme the socket kept.
-		// A THEME that no longer reads (set by hand, or naming a preset since renamed) is not sent; the
-		// player is told why after the login messages, and layouts use the game's theme meanwhile.
-		var theme = await ThemeOf(new AnySharpObject(player));
-		var unreadable = theme is not null && LayoutThemes.Read(theme) is Error<string> error ? error.Value : null;
-		await MessageBus.Publish(new UpdateThemeMessage(handle, unreadable is null ? theme : null));
+		// A THEME that no longer reads (set by hand, naming a theme since disabled or removed, or code that
+		// works out to nothing usable) is not sent; the player is told why after the login messages, and
+		// layouts use the game's theme meanwhile.
+		var theme = await PlayerThemeAsync(parser, new AnySharpObject(player));
+		var unreadable = theme is Error<string> error ? error.Value : null;
+		await MessageBus.Publish(new UpdateThemeMessage(handle, theme is string spec ? spec : null));
 		await ShowPostLoginMessages(handle, new AnySharpObject(player), isGuest);
 		if (unreadable is not null)
 		{
