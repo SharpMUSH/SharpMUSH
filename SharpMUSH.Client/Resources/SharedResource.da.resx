@@ -5128,11 +5128,41 @@
   <data name="NavPlayScenesEmpty" xml:space="preserve">
     <value>Der kører ingen scene i dette rum.</value>
   </data>
-  <data name="NavPlayScenesBrowse" xml:space="preserve">
-    <value>Se scener</value>
-  </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Du er ikke med i nogen kanaler. Skriv `@channel/list` for at se dem og `@channel/on &lt;kanal&gt;` for at deltage.</value>
+    <value>Du er ikke med i nogen kanaler endnu.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Gennemse kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Luk kanallisten</value>
+  </data>
+  <data name="NavPlayChannelsLoading" xml:space="preserve">
+    <value>Henter kanaler…</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Der er ingen kanaler, du kan se.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# medlem} other {# medlemmer}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Deltag i #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Gag #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Gagget: du er stadig med i kanalen, men hører intet. Vælg for at høre den igen.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Gag: bliv i kanalen, men hør intet.</value>
+  </data>
+  <data name="NavPlayChannelsLocked" xml:space="preserve">
+    <value>Du kan ikke deltage i denne kanal.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Spillet foretog ikke den ændring.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
     <value>Ingen beskeder endnu. Skriv `page &lt;navn&gt;=&lt;besked&gt;` for at sende en privat besked.</value>

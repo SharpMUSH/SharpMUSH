@@ -5128,11 +5128,41 @@
   <data name="NavPlayScenesEmpty" xml:space="preserve">
     <value>Nenhuma cena está acontecendo nesta sala.</value>
   </data>
-  <data name="NavPlayScenesBrowse" xml:space="preserve">
-    <value>Ver cenas</value>
-  </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Você não entrou em nenhum canal. Digite `@channel/list` para vê-los e `@channel/on &lt;canal&gt;` para entrar em um.</value>
+    <value>Você ainda não entrou em nenhum canal.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Explorar canais</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Fechar a lista de canais</value>
+  </data>
+  <data name="NavPlayChannelsLoading" xml:space="preserve">
+    <value>Carregando canais…</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Não há canais que você possa ver.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# membro} other {# membros}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Entrar em #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Silenciar #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Silenciado: você continua no canal, mas não ouve nada. Selecione para ouvi-lo de novo.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Silenciar: continuar no canal sem ouvir nada.</value>
+  </data>
+  <data name="NavPlayChannelsLocked" xml:space="preserve">
+    <value>Você não pode entrar neste canal.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>O jogo não fez essa alteração.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
     <value>Nenhuma mensagem privada ainda. Digite `page &lt;nome&gt;=&lt;mensagem&gt;` para falar com alguém em particular.</value>

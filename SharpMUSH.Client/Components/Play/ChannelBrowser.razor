@@ -1,0 +1,112 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Portal
+@inject ChannelBrowserService Channels
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Play drawer's channel browser, as Discord's channel toggles: every channel the character may see,
+   a switch to be on it or not, and a bell to gag one they are on. Each change is the @channel command a
+   player would type, so the game's join rules and messages apply; the list is read again after it. *@
+<div class="chan-browse" role="group" aria-label="@Loc["NavPlayChannelsBrowse"]">
+    @if (_channels is null && _error is null)
+    {
+        <SidebarNote>@Loc["NavPlayChannelsLoading"]</SidebarNote>
+    }
+    else if (_channels is { Count: 0 })
+    {
+        <SidebarNote Class="chan-browse-none">@Loc["NavPlayChannelsNone"]</SidebarNote>
+    }
+    else if (_channels is not null)
+    {
+        @foreach (var channel in _channels)
+        {
+            var name = channel.Name;
+            var busy = _busy == name;
+            <div class="chan-browse-row @(channel.Joined ? "chan-browse-row--on" : null)" data-channel="@name">
+                <div class="chan-browse-text">
+                    <span class="chan-browse-name">#@name</span>
+                    @if (!string.IsNullOrWhiteSpace(channel.Description))
+                    {
+                        <span class="chan-browse-desc">@channel.Description</span>
+                    }
+                    <span class="chan-browse-count">@Loc.Plural("NavPlayChannelsMembers", "count", channel.Members)</span>
+                </div>
+                @if (channel.Joined)
+                {
+                    <button type="button" class="chan-browse-gag" aria-pressed="@(channel.Gagged ? "true" : "false")"
+                            aria-label="@Loc["NavPlayChannelsGag", name]" title="@(channel.Gagged ? Loc["NavPlayChannelsGagged"] : Loc["NavPlayChannelsGagHint"])"
+                            disabled="@busy" @onclick="() => GagAsync(channel)">
+                        <MudIcon Icon="@(channel.Gagged ? Icons.Material.Outlined.NotificationsOff : Icons.Material.Outlined.Notifications)" Size="Size.Small" />
+                    </button>
+                }
+                <button type="button" role="switch" class="chan-browse-switch" aria-checked="@(channel.Joined ? "true" : "false")"
+                        aria-label="@Loc["NavPlayChannelsJoin", name]" title="@(channel.CanJoin ? null : Loc["NavPlayChannelsLocked"].Value)"
+                        disabled="@(busy || !channel.CanJoin)" @onclick="() => ToggleAsync(channel)">
+                    <span class="chan-browse-thumb"></span>
+                </button>
+            </div>
+        }
+    }
+    @if (_error is not null)
+    {
+        <SidebarNote Class="chan-browse-error">@_error</SidebarNote>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<ChannelListing>? _channels;
+    private string? _error;
+
+    /// <summary>The channel a command is running for; its controls wait for it.</summary>
+    private string? _busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        switch (await Channels.ListAsync())
+        {
+            case IReadOnlyList<ChannelListing> channels:
+                _channels = channels;
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private Task ToggleAsync(ChannelListing channel) =>
+        RunAsync(channel, channel.Joined ? Channels.LeaveAsync(channel.Name) : Channels.JoinAsync(channel.Name),
+            changed => changed.Joined != channel.Joined);
+
+    private Task GagAsync(ChannelListing channel) =>
+        RunAsync(channel, Channels.GagAsync(channel.Name, !channel.Gagged), changed => changed.Gagged != channel.Gagged);
+
+    /// <summary>
+    /// Runs the command, then reads the list again. A row that did not change is a refusal, and what the
+    /// command said is why (a join lock, a channel that will not take your type of object).
+    /// </summary>
+    private async Task RunAsync(ChannelListing channel, Task<ApiResult<PortalCommandResponse>> command,
+        Func<ChannelListing, bool> changed)
+    {
+        _busy = channel.Name;
+        _error = null;
+        try
+        {
+            var answer = await command;
+            await LoadAsync();
+            var row = _channels?.FirstOrDefault(c => string.Equals(c.Name, channel.Name, StringComparison.Ordinal));
+            _error = answer switch
+            {
+                ApiFailure failure => failure.Message,
+                PortalCommandResponse response when row is not null && !changed(row) =>
+                    response.Output.Count > 0 ? string.Join(" ", response.Output) : Loc["NavPlayChannelsUnchanged"],
+                _ => _error,
+            };
+        }
+        finally
+        {
+            _busy = null;
+        }
+    }
+}

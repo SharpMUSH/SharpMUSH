@@ -5128,11 +5128,41 @@
   <data name="NavPlayScenesEmpty" xml:space="preserve">
     <value>Ebben a szobában nem fut jelenet.</value>
   </data>
-  <data name="NavPlayScenesBrowse" xml:space="preserve">
-    <value>Jelenetek böngészése</value>
-  </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Még nem csatlakoztál egy csatornához sem. Írd be: `@channel/list` a listához, majd `@channel/on &lt;csatorna&gt;` a csatlakozáshoz.</value>
+    <value>Még egy csatornához sem csatlakoztál.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Csatornák böngészése</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Csatornalista bezárása</value>
+  </data>
+  <data name="NavPlayChannelsLoading" xml:space="preserve">
+    <value>Csatornák betöltése…</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Nincs olyan csatorna, amelyet láthatsz.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# tag} other {# tag}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Csatlakozás: #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Némítás: #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Némítva: a csatornán maradsz, de semmit sem hallasz. Válaszd ki, hogy újra halld.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Némítás: maradj a csatornán, de ne hallj semmit.</value>
+  </data>
+  <data name="NavPlayChannelsLocked" xml:space="preserve">
+    <value>Ehhez a csatornához nem csatlakozhatsz.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>A játék nem hajtotta végre ezt a változtatást.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
     <value>Még nincs privát üzenet. Írd be: `page &lt;név&gt;=&lt;üzenet&gt;`, ha privátban írnál valakinek.</value>

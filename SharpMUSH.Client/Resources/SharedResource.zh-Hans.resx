@@ -5128,11 +5128,41 @@
   <data name="NavPlayScenesEmpty" xml:space="preserve">
     <value>这个房间里没有正在进行的场景。</value>
   </data>
-  <data name="NavPlayScenesBrowse" xml:space="preserve">
-    <value>浏览场景</value>
-  </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>你还没有加入任何频道。输入 `@channel/list` 查看频道，再输入 `@channel/on &lt;频道&gt;` 加入。</value>
+    <value>你还没有加入任何频道。</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>浏览频道</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>关闭频道列表</value>
+  </data>
+  <data name="NavPlayChannelsLoading" xml:space="preserve">
+    <value>正在加载频道…</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>没有你能看到的频道。</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, other {# 名成员}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>加入 #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>屏蔽 #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>已屏蔽：你仍在频道中，但听不到任何消息。选择以重新收听。</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>屏蔽：留在频道中，但不接收任何消息。</value>
+  </data>
+  <data name="NavPlayChannelsLocked" xml:space="preserve">
+    <value>你无法加入此频道。</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>游戏没有做出该更改。</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
     <value>还没有私信。输入 `page &lt;名字&gt;=&lt;消息&gt;` 给别人发私信。</value>

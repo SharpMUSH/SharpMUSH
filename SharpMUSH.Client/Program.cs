@@ -54,6 +54,7 @@ builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 builder.Services.AddSingleton<SceneService>();
 // Commands the portal issues itself, run as the acting character (POST api/commands).
 builder.Services.AddSingleton<GameCommandService>();
+builder.Services.AddSingleton<ChannelBrowserService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();

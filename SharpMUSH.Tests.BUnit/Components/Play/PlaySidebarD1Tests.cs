@@ -150,9 +150,9 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(labels).Contains("Scenes");
 		await Assert.That(labels).Contains("Channels");
 		await Assert.That(labels).Contains("Pages");
-		await Assert.That(cut.Find(".play-side-scene-empty a").GetAttribute("href")).IsEqualTo("/scenes");
-		await Assert.That(cut.FindAll(".play-side-channels-empty code").Select(c => c.TextContent).ToList())
-			.IsEquivalentTo(["@channel/list", "@channel/on <channel>"]);
+		await Assert.That(cut.FindAll(".play-side-scene-empty a").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-side-channels-empty").TextContent).Contains("haven't joined any channels");
+		await Assert.That(cut.Find(".play-side-browse .kit-row-label").TextContent).IsEqualTo("Browse channels");
 		await Assert.That(cut.Find(".play-side-pages-empty code").TextContent).IsEqualTo("page <name>=<message>");
 		await Assert.That(cut.Find(".play-side-pages-empty").TextContent).DoesNotContain("`");
 	}
@@ -174,8 +174,100 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 	public async Task Collapsed_NothingYet_ShowsNoEmptyGroups()
 	{
 		var cut = RenderSidebar(collapsed: true);
-		await Assert.That(cut.FindAll(".play-side-empty, .kit-section-label").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".play-side-empty, .kit-section-label, .play-side-browse").Count).IsEqualTo(0);
 	}
+
+	private const string TwoChannels = """
+		[
+		  {"name":"Public","description":"Chatter about anything","members":12,"joined":false,"gagged":false,"canJoin":true},
+		  {"name":"Staff","description":"","members":3,"joined":false,"gagged":false,"canJoin":false}
+		]
+		""";
+
+	private List<string> CaptureCommands()
+	{
+		Services.AddSingleton<GameCommandService>();
+		Services.AddSingleton<ChannelBrowserService>();
+		var sent = new List<string>();
+		_api.Extra["/api/comm/channels"] = TwoChannels;
+		_api.Extra["POST /api/commands"] = """{"output":[],"result":null,"truncated":false}""";
+		_api.OnRequest = async request =>
+		{
+			if (request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath == "/api/commands")
+			{
+				using var body = System.Text.Json.JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
+				sent.Add(body.RootElement.GetProperty("command").GetString()!);
+			}
+		};
+		return sent;
+	}
+
+	/// <summary>
+	/// Browse channels opens the browser in place: every channel the character may see, with its description,
+	/// its member count and a switch, off for one they are not on and disabled for one they may not join.
+	/// </summary>
+	[Test]
+	public async Task BrowseChannels_ListsEveryVisibleChannel_WithAJoinSwitch()
+	{
+		CaptureCommands();
+		var cut = RenderSidebar();
+		await cut.Find(".play-side-browse").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".chan-browse-row"), TimeSpan.FromSeconds(5));
+
+		var rows = cut.FindAll(".chan-browse-row");
+		await Assert.That(rows.Count).IsEqualTo(2);
+		await Assert.That(rows[0].QuerySelector(".chan-browse-name")!.TextContent).IsEqualTo("#Public");
+		await Assert.That(rows[0].QuerySelector(".chan-browse-desc")!.TextContent).IsEqualTo("Chatter about anything");
+		await Assert.That(rows[0].QuerySelector(".chan-browse-count")!.TextContent).IsEqualTo("12 members");
+		await Assert.That(rows[0].QuerySelector("[role=switch]")!.GetAttribute("aria-checked")).IsEqualTo("false");
+		await Assert.That(rows[0].QuerySelector(".chan-browse-gag")).IsNull().Because("only a channel you are on can be gagged");
+		await Assert.That(rows[1].QuerySelector("[role=switch]")!.HasAttribute("disabled")).IsTrue();
+		await Assert.That(cut.FindAll(".play-side-channels-empty").Count).IsEqualTo(0).Because("the browser says it instead");
+	}
+
+	[Test]
+	public async Task BrowseChannels_TheSwitchJoins_AndTheListIsReadAgain()
+	{
+		var sent = CaptureCommands();
+		var cut = RenderSidebar();
+		await cut.Find(".play-side-browse").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".chan-browse-row"), TimeSpan.FromSeconds(5));
+
+		_api.Extra["/api/comm/channels"] = """
+			[{"name":"Public","description":"","members":13,"joined":true,"gagged":false,"canJoin":true}]
+			""";
+		await cut.Find("[data-channel=Public] [role=switch]").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find("[data-channel=Public] .chan-browse-gag"), TimeSpan.FromSeconds(5));
+		await Assert.That(sent).IsEquivalentTo(["@channel/on Public"]);
+		await Assert.That(cut.Find("[data-channel=Public] [role=switch]").GetAttribute("aria-checked")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".chan-browse-error").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task BrowseChannels_TheBellGags_AndARefusalSaysWhy()
+	{
+		var sent = CaptureCommands();
+		_api.Extra["/api/comm/channels"] = """
+			[{"name":"Public","description":"","members":13,"joined":true,"gagged":false,"canJoin":true}]
+			""";
+		_api.Extra["POST /api/commands"] = """{"output":["CHAT: You can't do that."],"result":null,"truncated":false}""";
+		var cut = RenderSidebar();
+		await cut.Find(".play-side-browse").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".chan-browse-gag"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".chan-browse-gag").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".chan-browse-error"), TimeSpan.FromSeconds(5));
+		await Assert.That(sent).IsEquivalentTo(["@channel/gag Public=yes"]);
+		await Assert.That(cut.Find(".chan-browse-error").TextContent).Contains("You can't do that.");
+	}
+
+	[Test]
+	[Arguments("Public", "Public")]
+	[Arguments("[a]%b=c", @"\[a\]\%b\=c")]
+	public async Task AChannelName_GoesIntoTheCommand_Literally(string name, string expected)
+		=> await Assert.That(ChannelBrowserService.Argument(name)).IsEqualTo(expected);
 
 	[Test]
 	public async Task TheFeedChanging_Rerenders()

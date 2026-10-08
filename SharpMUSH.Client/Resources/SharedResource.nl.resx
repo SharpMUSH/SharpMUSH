@@ -5128,11 +5128,41 @@
   <data name="NavPlayScenesEmpty" xml:space="preserve">
     <value>Er loopt geen scène in deze kamer.</value>
   </data>
-  <data name="NavPlayScenesBrowse" xml:space="preserve">
-    <value>Scènes bekijken</value>
-  </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Je zit nog in geen enkel kanaal. Typ `@channel/list` om ze te zien en `@channel/on &lt;kanaal&gt;` om er een te volgen.</value>
+    <value>Je zit nog in geen enkel kanaal.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Kanalen bekijken</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Kanalenlijst sluiten</value>
+  </data>
+  <data name="NavPlayChannelsLoading" xml:space="preserve">
+    <value>Kanalen laden…</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Er zijn geen kanalen die je kunt zien.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# lid} other {# leden}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>#{0} volgen</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>#{0} dempen</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Gedempt: je blijft in het kanaal maar hoort niets. Kies om het weer te horen.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Dempen: in het kanaal blijven maar niets horen.</value>
+  </data>
+  <data name="NavPlayChannelsLocked" xml:space="preserve">
+    <value>Je kunt dit kanaal niet volgen.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Het spel heeft die wijziging niet doorgevoerd.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
     <value>Nog geen pages. Typ `page &lt;naam&gt;=&lt;bericht&gt;` om iemand een privébericht te sturen.</value>

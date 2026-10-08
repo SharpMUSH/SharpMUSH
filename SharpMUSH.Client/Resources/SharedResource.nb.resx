@@ -5128,11 +5128,41 @@
   <data name="NavPlayScenesEmpty" xml:space="preserve">
     <value>Det pågår ingen scene i dette rommet.</value>
   </data>
-  <data name="NavPlayScenesBrowse" xml:space="preserve">
-    <value>Se scener</value>
-  </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Du er ikke med i noen kanaler. Skriv `@channel/list` for å se dem, og `@channel/on &lt;kanal&gt;` for å bli med.</value>
+    <value>Du er ikke med i noen kanaler ennå.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Bla gjennom kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Lukk kanallisten</value>
+  </data>
+  <data name="NavPlayChannelsLoading" xml:space="preserve">
+    <value>Laster inn kanaler…</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Det finnes ingen kanaler du kan se.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# medlem} other {# medlemmer}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Bli med i #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Demp #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Dempet: du er fortsatt med i kanalen, men hører ingenting. Velg for å høre den igjen.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Demp: bli i kanalen, men hør ingenting.</value>
+  </data>
+  <data name="NavPlayChannelsLocked" xml:space="preserve">
+    <value>Du kan ikke bli med i denne kanalen.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Spillet gjorde ikke den endringen.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
     <value>Ingen meldinger ennå. Skriv `page &lt;navn&gt;=&lt;melding&gt;` for å sende noen en privat melding.</value>

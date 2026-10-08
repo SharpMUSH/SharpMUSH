@@ -5128,11 +5128,41 @@
   <data name="NavPlayScenesEmpty" xml:space="preserve">
     <value>U ovoj sobi ne traje nijedna scena.</value>
   </data>
-  <data name="NavPlayScenesBrowse" xml:space="preserve">
-    <value>Pregledaj scene</value>
-  </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Niste ni u jednom kanalu. Upišite `@channel/list` da ih vidite, zatim `@channel/on &lt;kanal&gt;` da se pridružite.</value>
+    <value>Još niste ni u jednom kanalu.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Pregledaj kanale</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Zatvori popis kanala</value>
+  </data>
+  <data name="NavPlayChannelsLoading" xml:space="preserve">
+    <value>Učitavanje kanala…</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Nema kanala koje možete vidjeti.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# član} few {# člana} other {# članova}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Pridruži se #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Utišaj #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Utišano: ostajete u kanalu, ali ništa ne čujete. Odaberite da ga opet čujete.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Utišaj: ostani u kanalu, ali ništa ne čuj.</value>
+  </data>
+  <data name="NavPlayChannelsLocked" xml:space="preserve">
+    <value>Ne možete se pridružiti ovom kanalu.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Igra nije napravila tu promjenu.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
     <value>Još nema privatnih poruka. Upišite `page &lt;ime&gt;=&lt;poruka&gt;` da nekome pišete privatno.</value>
