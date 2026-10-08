@@ -463,14 +463,14 @@ public class BuildingRequestedDbrefTests
 	}
 
 	/// <summary>
-	/// The requested-dbref gate covers the allocation and nothing after it.
-	/// <c>IEventService.TriggerEventAsync</c> runs its handler inline
-	/// (<c>await evalParser.CommandListParse(...)</c>, <c>EventService.cs:153</c>), so an
-	/// <c>OBJECT`CREATE</c> handler that itself builds at a requested dbref re-enters the gate on the
-	/// same call stack — and <c>SemaphoreSlim</c> is not reentrant. Holding the gate across the event
-	/// deadlocked the server, not merely the caller.
+	/// The requested-dbref gate covers the allocation and nothing after it. An <c>OBJECT`CREATE</c>
+	/// handler that itself builds at a requested dbref asks for the gate again, and
+	/// <c>SemaphoreSlim</c> is not reentrant: holding the gate across the event deadlocked the server,
+	/// not merely the caller.
 	/// </summary>
 	/// <remarks>
+	/// The handler is a queue entry of its own (<c>queue_event</c>, <c>EventService</c>), so the outer
+	/// build returns before the inner one runs; the test waits for the inner build to appear.
 	/// Bounded rather than left to hang: a regression here would otherwise wedge the whole suite,
 	/// because the gate is process-wide and would never be released.
 	/// </remarks>
@@ -495,7 +495,14 @@ public class BuildingRequestedDbrefTests
 			await Assert.That(finished).IsSameReferenceAs(build)
 				.Because("the gate must be released before the creation event runs its handler");
 			await Assert.That(DBRef.Parse(await build).Number).IsEqualTo(outerHole.Number);
-			await Assert.That(await NumbersNamed($"BrdReentrantInner{uid}")).IsEquivalentTo([innerHole.Number])
+			var inner = await NumbersNamed($"BrdReentrantInner{uid}");
+			for (var deadline = DateTime.UtcNow.AddSeconds(30); inner.Length == 0 && DateTime.UtcNow < deadline;)
+			{
+				await Task.Delay(50);
+				inner = await NumbersNamed($"BrdReentrantInner{uid}");
+			}
+
+			await Assert.That(inner).IsEquivalentTo([innerHole.Number])
 				.Because("the handler's own requested build has to have gone through");
 		}
 		finally
