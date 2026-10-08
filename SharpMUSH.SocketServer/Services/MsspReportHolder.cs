@@ -20,20 +20,31 @@ public sealed class MsspReportHolder
 
 	public MSSPConfig Current => _current;
 
+	/// <summary>
+	/// The game's web address (<c>mud_url</c>, reported as <c>WEBSITE</c>), which the game's own pictures are
+	/// relative to; null while it is unset.
+	/// </summary>
+	public string? Website => _website;
+
+	private volatile string? _website;
+
 	/// <summary>Completes when the first report from the main process arrives.</summary>
 	public Task Received => _received.Task;
 
 	public void Replace(IEnumerable<MSSPVariable> variables)
 	{
 		var config = new MSSPConfig();
+		string? website = null;
 		foreach (var variable in variables)
 		{
+			if (variable.Name == "WEBSITE") website ??= variable.Values.FirstOrDefault();
 			foreach (var value in variable.Values)
 			{
 				config.Variables.Add(variable.Name, value);
 			}
 		}
 
+		_website = website;
 		_current = config.Variables.Count == 0 ? Fallback() : config;
 		_received.TrySetResult();
 	}

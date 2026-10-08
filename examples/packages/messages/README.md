@@ -23,7 +23,8 @@ messages from it; removing the package puts the option back as it was, unless it
 package.
 
 `CONNECT` puts the logo beside the ways in, with the layout functions: a `flex()` of the logo as a `figure()`
-(the picture `/assets/logo.png` in the web portal, `LOGO` in the logo's green in a terminal) and the commands,
+(the picture `/assets/logo.png` in the web portal, and in an MXP or Pueblo client once `mud_url` is set; `LOGO` in the
+logo's green in a terminal) and the commands,
 each section a `rule()` over a `fields()` list. On a screen too narrow for both, the commands go under the logo. A
 section is left out while the option behind it (`player_creation`, `guests`) is off. `FUN`MENU`, `FUN`SECTION`,
 `FUN`LIST` and `FUN`COMMAND` build it.

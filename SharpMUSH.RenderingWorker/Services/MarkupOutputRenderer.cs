@@ -130,11 +130,13 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		{
 			// No cells kept for a picture the client cannot fetch, so its figure keeps the art.
 			var measured = cells;
-			cells = (image, columns) => ClientFetchedPictures.Reachable(image.Source) ? measured(image, columns) : null;
+			cells = (image, columns) => ClientFetchedPictures.Resolve(image.Source, connection.Website) is not null
+				? measured(image, columns)
+				: null;
 		}
 		var ms = Relayout(NoticeMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), connection.Capabilities.ScreenReader),
 			connection.Capabilities, connection.Preferences?.Theme, cells);
-		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms);
+		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo, WireFor(depth)),

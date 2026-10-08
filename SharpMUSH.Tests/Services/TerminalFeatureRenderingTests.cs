@@ -239,6 +239,33 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(handler.Requests).IsEqualTo(0);
 	}
 
+	/// <summary>With <c>mud_url</c> set, the game's own picture is sent at it.</summary>
+	[Test]
+	[Arguments(OutputFormat.Mxp)]
+	[Arguments(OutputFormat.Pueblo)]
+	public async Task ARelativePicture_IsSentAtTheGamesWebAddress(OutputFormat format)
+	{
+		var context = new RenderContext("telnet", new ProtocolCapabilities(Format: format), null, Handle: 7, SessionId: "s",
+			Website: "https://game.example");
+
+		var text = await RenderAsync(new MarkupOutputRenderer(), FigureMarkup("/assets/cat.png"), context);
+
+		await Assert.That(text).Contains("https://game.example/assets/");
+		await Assert.That(text).Contains(format == OutputFormat.Mxp ? "<IMAGE" : "<img");
+	}
+
+	[Test]
+	[Arguments("https://pictures.example/cat.png", null, "https://pictures.example/cat.png")]
+	[Arguments("/assets/cat.png", null, null)]
+	[Arguments("/assets/cat.png", "https://game.example", "https://game.example/assets/cat.png")]
+	[Arguments("/assets/cat.png", "https://game.example/portal/", "https://game.example/assets/cat.png")]
+	[Arguments("cat.png", "https://game.example/", "https://game.example/cat.png")]
+	[Arguments("//elsewhere.example/cat.png", "https://game.example", null)]
+	[Arguments("/assets/cat.png", "telnet://game.example", null)]
+	[Arguments("file:///etc/passwd", "https://game.example", null)]
+	public async Task WhereAClientFetchesAPicture(string source, string? website, string? expected) =>
+		await Assert.That(ClientFetchedPictures.Resolve(source, website)).IsEqualTo(expected);
+
 	[Test]
 	[Arguments(OutputFormat.Mxp, "<IMAGE")]
 	[Arguments(OutputFormat.Pueblo, "<img")]

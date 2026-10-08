@@ -12,11 +12,13 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 	private readonly SemaphoreSlim _concurrency = new(16);
 	private readonly CancellationToken _stopping;
 	private readonly ILogger<RemoteOutputRenderer> _logger;
+	private readonly MsspReportHolder? _mssp;
 
 	public RemoteOutputRenderer(IConfiguration configuration, IHostApplicationLifetime lifetime,
-		ILogger<RemoteOutputRenderer> logger)
+		ILogger<RemoteOutputRenderer> logger, MsspReportHolder? mssp = null)
 	{
 		_logger = logger;
+		_mssp = mssp;
 		_stopping = lifetime.ApplicationStopping;
 		var socketPath = configuration["Rendering:SocketPath"] ?? "/run/sharpmush/render.sock";
 		_client = new HttpClient(new SocketsHttpHandler
@@ -49,7 +51,7 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 		ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default) =>
 		new(await SendAsync(new RenderRequest(markup, null,
 			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences,
-				connection.Handle, connection.SessionId), prompt), ct), false);
+				connection.Handle, connection.SessionId, _mssp?.Website), prompt), ct), false);
 
 	public ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
 		CancellationToken ct = default) =>

@@ -137,7 +137,7 @@ These options affect logging.
 Networking and connection-related options.
 
 - `mud_name=<string>`: The name of the mush for mudname() and @version and the like.
-- `mud_url=<string>`: If this is set, the welcome message for the mush is bracketed in <!-- ... --> for all clients, and web browsers are redirected to the url described in mud_url.
+- `mud_url=<string>`: If this is set, the welcome message for the mush is bracketed in <!-- ... --> for all clients, and web browsers are redirected to the url described in mud_url. First-run setup fills it in with the address the web portal was reached at, unless that is the server's own machine. An MXP or Pueblo client is sent the game's own pictures, such as the connect screen's logo, at this address; while it is unset, such a client is shown their text instead.
 - `http_handler=<dbref/number>`: If this is set, support HTTP requests to MUSH port.
 - `http_per_second=<number>`: If this is set, limit HTTP requests allowed per second.
 - `use_dns=<boolean>`: Are IP addresses resolved into hostnames?

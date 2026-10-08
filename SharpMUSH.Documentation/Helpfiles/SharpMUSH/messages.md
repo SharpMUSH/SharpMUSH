@@ -42,7 +42,7 @@ The object's attributes are evaluated with the object as executor. `%#` is the p
 
 The package's messages are built with the layout functions (see [LAYOUT FUNCTIONS]), so each reader gets them at their own width:
 
-- `CONNECT` is a [FLEX()] of two items: the logo as a [FIGURE()] and the ways in beside it, each section under a [RULE()] with its commands lined up by [FIELDS()]. The web portal shows the logo as a picture, the game's own `/assets/logo.png`, and a terminal that cannot show it the text art in `LOGO`, in the logo's green. On a screen too narrow for both, the ways in go under the logo. A section is left out while the option behind it (`player_creation`, `guests`) is off.
+- `CONNECT` is a [FLEX()] of two items: the logo as a [FIGURE()] and the ways in beside it, each section under a [RULE()] with its commands lined up by [FIELDS()]. The web portal shows the logo as a picture, the game's own `/assets/logo.png`, and so does an MXP or Pueblo client once `mud_url` is set (see [@CONFIG NET]). A terminal that cannot show it gets the text art in `LOGO`, in the logo's green. On a screen too narrow for both, the ways in go under the logo. A section is left out while the option behind it (`player_creation`, `guests`) is off.
 - `MOTD` greets the player by name and says how many players are connected.
 - `WIZMOTD`, `GUEST`, `REGISTER` and `DOWN` are a [NOTICE()].
 - The screens shown before login, `CONNECT` and `REGISTER`, carry no command links. After login, `help` and `WHO` in `MOTD` and `GUEST` are command links ([CMDLINK()]). The object holds the Send_OOB @power for the links and the picture.
