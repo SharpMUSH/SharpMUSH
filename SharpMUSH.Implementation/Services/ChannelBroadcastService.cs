@@ -396,7 +396,6 @@ public class ChannelBroadcastService(
 			Timestamp = sentAt,
 			Sender = sender.Object().DBRef,
 			Message = message,
-			MessageType = notification.MessageType.ToString(),
 			SeeAllOnly = notification.SeeAllOnly,
 			Style = StyleFor(line.ChatType),
 			SpeakerName = Named(notification) ? line.PlayerName.ToPlainText() : string.Empty,

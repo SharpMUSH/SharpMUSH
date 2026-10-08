@@ -174,24 +174,6 @@ public static partial class ErrorMessages
 		public const string BackupListEmpty = "No backups have been taken yet.";
 
 		// @storage: capacity (#1465) and history retention (#1464).
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StorageWorldFormat = "World {0}: map limit {1}, file length {2}, allocated on disk {3}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StoragePagesFormat = "Live data {0}; reusable free space inside the file {1}; the file can grow {2} more before the map is full.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StorageDiskFreeFormat = "Disk free beside the world: {0}.";
-		public const string StorageStaleReadersFormat = "{0} reader slot(s) freed since startup: a process holding the world open died while reading it, and its slot kept writers from reusing pages until it was freed. Another tool attached to the live world is the usual cause (deploy/README.md).";
-		public const string StorageCompactionNote = "Deleting records frees pages inside the file for reuse; it never shrinks the file. To shrink it, replace it with a compacted copy (deploy/README.md).";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StorageBackupFormat = "Backups in {0}: {1} on disk ({2}), keeping {3}. The next copy is about {4}; a run needs {5} free and {6} is. At its peak, before pruning, the directory holds {7}.";
-		public const string StorageBackupSharesDisk = "The backups are on the same disk as the world, so each eats into the other's headroom.";
-		public const string StorageBackupWontFit = "The next backup run will refuse to start: there is not enough free disk for a new copy beside the ones kept.";
-		public const string StorageBackupUnavailable = "This provider cannot take backups.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StorageLeftoverFormat = "Left over: {0} ({1}, {2}). Delete it once you no longer need it.";
-		public const string StorageHistoryHeader = "History kept in the live world:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StorageHistoryRowFormat = "  {0} ({1}): {2} records, {3}, in {4} streams. Policy: {5}.";
 		public const string StorageHistoryNone = "No kind of history is installed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StorageHistoryArchiveFormat = "Purged records are archived to {0} before they are deleted.";

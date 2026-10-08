@@ -6,8 +6,8 @@ namespace SharpMUSH.Tests.Services;
 
 /// <summary>
 /// The id a channel line carries in the recall buffer and in the <c>CHANNEL`MESSAGE</c> event, so the
-/// portal can drop a pushed line it already pulled. Read markers persist these ids, and the buffer does
-/// not survive a restart, so they must keep rising across one — even when the clock does not.
+/// portal can drop a pushed line it already pulled. Read markers and the recall buffer persist these ids,
+/// so they must keep rising across a restart — even when the clock does not.
 /// </summary>
 public class ChannelMessageIdTests
 {
@@ -140,74 +140,4 @@ public class ChannelMessageIdTests
 		var all = taken.SelectMany(x => x).ToArray();
 		await Assert.That(all.Distinct().Count()).IsEqualTo(all.Length);
 	}
-
-	[Test]
-	public async Task TheBuffer_GivesALineWithoutAnIdTheNextOne_AndKeepsAGivenOne()
-	{
-		var ids = new ChannelMessageIdSource(new ServerData(), new StoppedClock(At));
-		var buffer = new InMemoryChannelBufferService(ids);
-		var channel = Guid.NewGuid().ToString("N");
-
-		await buffer.AddMessageAsync(Line(channel, id: 0));
-		await buffer.AddMessageAsync(Line(channel, id: 42));
-
-		var lines = await buffer.GetMessagesAsync(channel, 10).ToListAsync();
-		await Assert.That(lines[0].Id).IsEqualTo(Micros(At))
-			.Because("cbufferadd() writes straight to the buffer, and its line needs an id too");
-		await Assert.That(lines[1].Id).IsEqualTo(42);
-	}
-
-	/// <summary>
-	/// A rename moves the buffer to the new id. A line that reached a buffer already under the new id
-	/// (a broadcast in the moment between the rename and the move) is kept, in id order, not overwritten.
-	/// </summary>
-	[Test]
-	public async Task MovingABuffer_MergesWithOneAlreadyAtTheDestination()
-	{
-		var buffer = new InMemoryChannelBufferService(new ChannelMessageIdSource(new ServerData(), new StoppedClock(At)));
-		var from = Guid.NewGuid().ToString("N");
-		var to = Guid.NewGuid().ToString("N");
-		await buffer.AddMessageAsync(Line(from, id: 1));
-		await buffer.AddMessageAsync(Line(from, id: 3));
-		await buffer.AddMessageAsync(Line(to, id: 2));
-		await buffer.AddMessageAsync(Line(to, id: 4));
-
-		await buffer.MoveBufferAsync(from, to);
-
-		var lines = await buffer.GetMessagesAsync(to, 10).ToListAsync();
-		await Assert.That(lines.Select(line => line.Id)).IsEquivalentTo(new long[] { 1, 2, 3, 4 },
-			TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(lines.All(line => line.ChannelId == to)).IsTrue();
-		await Assert.That(await buffer.CountMessagesAsync(from)).IsEqualTo(0);
-	}
-
-	[Test]
-	public async Task AMergedBuffer_KeepsTheNewestHundred()
-	{
-		var buffer = new InMemoryChannelBufferService(new ChannelMessageIdSource(new ServerData(), new StoppedClock(At)));
-		var from = Guid.NewGuid().ToString("N");
-		var to = Guid.NewGuid().ToString("N");
-		for (var i = 1; i <= 80; i++)
-		{
-			await buffer.AddMessageAsync(Line(from, id: i * 2));
-			await buffer.AddMessageAsync(Line(to, id: i * 2 + 1));
-		}
-
-		await buffer.MoveBufferAsync(from, to);
-
-		var lines = await buffer.GetMessagesAsync(to, int.MaxValue).ToListAsync();
-		await Assert.That(lines.Count).IsEqualTo(100);
-		await Assert.That(lines[0].Id).IsEqualTo(62);
-		await Assert.That(lines[^1].Id).IsEqualTo(161);
-	}
-
-	private static SharpChannelMessage Line(string channel, long id) => new()
-	{
-		Id = id,
-		ChannelId = channel,
-		Timestamp = At,
-		Sender = new DBRef(1),
-		Message = MarkupText.Plain("hello"),
-		MessageType = "Say"
-	};
 }

@@ -986,6 +986,9 @@ public partial class LightningDatabase
 			// Their copies of logged pages and their page conversations; the other participants keep theirs.
 			DeletePageLog(tx, n);
 
+			// Its feed memberships and the taps on its attributes; feeds it owns stay, ownerless, for feed.admin.
+			DeleteFeedMemberships(tx, n);
+
 			// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge): the
 			// mail row, its sent-index entry (found directly via the row's own Sender field rather than
 			// a full-table scan), and the box entry itself. Mail it sent to others survives with a

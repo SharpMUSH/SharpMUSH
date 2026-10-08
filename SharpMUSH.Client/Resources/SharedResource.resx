@@ -5045,6 +5045,12 @@
   <data name="EnumPermChatAdminDesc" xml:space="preserve">
     <value>Runs channels and staff messaging in game: Wizard channels, channel administration, @wizwall and @wall, the MOTDs and mail administration.</value>
   </data>
+  <data name="EnumPermFeedAdmin" xml:space="preserve">
+    <value>Game · Feed admin</value>
+  </data>
+  <data name="EnumPermFeedAdminDesc" xml:space="preserve">
+    <value>Defines and runs feeds, the message pipelines game systems such as a radio or a phone are built on: their kinds, taps, members and limits.</value>
+  </data>
   <data name="EnumPermServerOperate" xml:space="preserve">
     <value>Game · Operate the server</value>
   </data>
