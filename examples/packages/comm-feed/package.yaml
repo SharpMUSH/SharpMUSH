@@ -61,10 +61,11 @@ objects:
       # is on and has gagged (they stay on it, hearing nothing).
       # cstatus() takes the object first on SharpMUSH, the channel second, and
       # answers OFF, ON, or ON with its flags (GAG among them). A channel
-      # deleted or renamed since channels() listed it has no member count, and
-      # its row is left out rather than spoiling the list.
+      # deleted or renamed since channels() listed it is left out rather than
+      # spoiling the list: it has no member count, or its old name now only
+      # abbreviates another channel, whose name cinfo() gives back.
       FN`COMM`CHANNELROW: |-
-        if(isnum(setr(m,cusers(%0))),json_mod(json(object,name,json(string,%0),joined,if(member(cstatus(%1,%0),ON),true,false),members,json(number,%qm),description,json(string,cdesc(%0))),patch,json(object,gagged,if(member(cstatus(%1,%0),GAG),true,null))))
+        if(and(not(comp(cinfo(%0,name),%0)),isnum(setr(m,cusers(%0)))),json_mod(json(object,name,json(string,%0),joined,if(member(cstatus(%1,%0),ON),true,false),members,json(number,%qm),description,json(string,cdesc(%0))),patch,json(object,gagged,if(member(cstatus(%1,%0),GAG),true,null))))
 
       # ── Payloads ─────────────────────────────────────────────────────────
       # comm.channels for a viewer (%0): who it is for, and every channel they

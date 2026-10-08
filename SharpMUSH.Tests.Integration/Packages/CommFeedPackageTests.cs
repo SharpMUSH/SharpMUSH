@@ -752,6 +752,23 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// A listed name that is gone but abbreviates another channel (renamed from <c>Public</c> to
+	/// <c>Public Chat</c>, say) still has no row: the lookup would take the other channel's figures under
+	/// the stale name.
+	/// </summary>
+	[Test]
+	public async Task AChannelGoneThatAbbreviatesAnother_HasNoRow()
+	{
+		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
+		var longer = await ChannelAsync("CommAbbrev");
+		var gone = longer[..^2];
+		var row = (await factory.FunctionParser.FunctionParse(
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message!.ToPlainText();
+
+		await Assert.That(row).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>
 	/// Renaming or deleting a channel changes every member's list, not the admin's who did it, so each
 	/// member is sent theirs. Deletion reads the members before the channel is gone.
 	/// </summary>
