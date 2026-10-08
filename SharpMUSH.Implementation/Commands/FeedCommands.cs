@@ -171,15 +171,18 @@ public partial class Commands
 				: "You run no feed kinds.");
 
 		var taps = await Mediator.Send(new GetFeedTapsQuery(null), ct);
+		var usage = (await Mediator.Send(new GetFeedUsageQuery(), ct)).ToDictionary(held => held.Kind, StringComparer.Ordinal);
 		var rows = new List<string[]>();
 		foreach (var kind in kinds)
 		{
-			var feeds = await Mediator.Send(new GetFeedsQuery(kind.Name), ct);
+			var held = usage.GetValueOrDefault(kind.Name) ?? new SharpFeedUsage(kind.Name, 0, 0, 0, 0);
 			rows.Add(
 			[
 				kind.Name,
 				await DisplayAsync(kind.Owner),
-				feeds.Count.ToString(CultureInfo.InvariantCulture),
+				held.Feeds.ToString(CultureInfo.InvariantCulture),
+				held.Messages.ToString(CultureInfo.InvariantCulture),
+				DescribeBytes(held.StoredBytes),
 				taps.Count(tap => tap.Kind == kind.Name).ToString(CultureInfo.InvariantCulture),
 				kind.Description
 			]);
@@ -190,6 +193,8 @@ public partial class Commands
 				new TableColumn(MarkupText.Plain("Kind")) { Wrap = false },
 				new TableColumn(MarkupText.Plain("Owner")) { Wrap = false, Priority = 2 },
 				new TableColumn(MarkupText.Plain("Feeds")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+				new TableColumn(MarkupText.Plain("Lines")) { Alignment = Alignment.Right, Wrap = false },
+				new TableColumn(MarkupText.Plain("Stored")) { Alignment = Alignment.Right, Wrap = false },
 				new TableColumn(MarkupText.Plain("Taps")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
 				new TableColumn(MarkupText.Plain("Description")) { Min = 10 },
 			],
@@ -212,7 +217,8 @@ public partial class Commands
 		var effective = kind.Effective;
 		if (key is null)
 		{
-			var feeds = await Mediator.Send(new GetFeedsQuery(kind.Name), ct);
+			var held = (await Mediator.Send(new GetFeedUsageQuery(), ct)).FirstOrDefault(usage => usage.Kind == kind.Name)
+				?? new SharpFeedUsage(kind.Name, 0, 0, 0, 0);
 			var taps = await Mediator.Send(new GetFeedTapsQuery(kind.Name), ct);
 			(string, MString)[] kindFields =
 			[
@@ -220,7 +226,8 @@ public partial class Commands
 				("Description", MarkupText.Plain(kind.Description.Length == 0 ? "none" : kind.Description)),
 				.. SettingRows(kind.Settings, FeedSettings.Defaults, "default"),
 				("Locks", MarkupText.Plain(LockList(kind.Locks))),
-				("Feeds", MarkupText.Plain(feeds.Count.ToString(CultureInfo.InvariantCulture))),
+				("Feeds", MarkupText.Plain(held.Feeds.ToString(CultureInfo.InvariantCulture))),
+				("Lines", MarkupText.Plain(LinesHeld(held.Messages, held.Bytes, held.StoredBytes))),
 				("Taps", MarkupText.Plain(taps.Count == 0 ? "none" : string.Join(", ", taps.Select(tap => $"{tap.Object}/{tap.Attribute}")))),
 			];
 			return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed kind {kind.Name}"), ServerLayout.KeyValues(kindFields)), 78);
@@ -231,7 +238,7 @@ public partial class Commands
 		var members = await Mediator.Send(new GetFeedMembersQuery(kind.Name, key), ct);
 		(string, MString)[] fields =
 		[
-			("Lines", MarkupText.Plain($"{feed.Messages.ToString(CultureInfo.InvariantCulture)}, {feed.Bytes.ToString(CultureInfo.InvariantCulture)} bytes")),
+			("Lines", MarkupText.Plain(LinesHeld(feed.Messages, feed.Bytes, feed.StoredBytes))),
 			("Newest", MarkupText.Plain(feed.LastId == 0 ? "none" : feed.LastId.ToString(CultureInfo.InvariantCulture))),
 			("Members", MarkupText.Plain(members.Count.ToString(CultureInfo.InvariantCulture))),
 			.. SettingRows(feed.Settings, effective, "kind"),
@@ -239,6 +246,10 @@ public partial class Commands
 		];
 		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed {feed.Name}"), ServerLayout.KeyValues(fields)), 78);
 	}
+
+	/// <summary>A line count with the size of the text, which <c>max_bytes</c> limits, and what the lines take stored.</summary>
+	private static string LinesHeld(long lines, long textBytes, long storedBytes)
+		=> $"{lines.ToString(CultureInfo.InvariantCulture)}, {DescribeBytes(textBytes)} of text, {DescribeBytes(storedBytes)} stored";
 
 	private static string LockList(IReadOnlyDictionary<string, string> locks)
 		=> locks.Count == 0 ? "none" : string.Join("; ", locks.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}: {pair.Value}"));

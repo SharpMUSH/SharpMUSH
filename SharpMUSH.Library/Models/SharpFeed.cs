@@ -67,8 +67,10 @@ public sealed record SharpFeedKind(
 /// <param name="Settings">Overrides of the kind's settings; unset ones are the kind's.</param>
 /// <param name="Locks">Its locks by name; each applies on top of the kind's lock of the same name.</param>
 /// <param name="Messages">How many lines it holds.</param>
-/// <param name="Bytes">Their stored size.</param>
+/// <param name="Bytes">The size of their text, which <see cref="FeedSettings.MaxBytes"/> limits.</param>
 /// <param name="LastId">The newest line's id, or 0.</param>
+/// <param name="StoredBytes">What the lines take in the store: each line's record with its names, and its keys,
+/// before the store's own page overhead.</param>
 public sealed record SharpFeed(
 	string Kind,
 	string Key,
@@ -76,7 +78,8 @@ public sealed record SharpFeed(
 	IReadOnlyDictionary<string, string> Locks,
 	int Messages,
 	long Bytes,
-	long LastId)
+	long LastId,
+	long StoredBytes = 0)
 {
 	public string Name => $"{Kind}/{Key}";
 
@@ -84,6 +87,14 @@ public sealed record SharpFeed(
 
 	public static SharpFeed New(string kind, string key) => new(kind, key, FeedSettings.None, FeedLocks.None, 0, 0, 0);
 }
+
+/// <summary>What one kind's feeds hold, for <c>@feed/list</c>, <c>@storage</c> and the feed gauges.</summary>
+/// <param name="Kind">The kind's name.</param>
+/// <param name="Feeds">How many feeds it has.</param>
+/// <param name="Messages">Their lines.</param>
+/// <param name="Bytes">The size of the lines' text.</param>
+/// <param name="StoredBytes">What the lines take in the store (<see cref="SharpFeed.StoredBytes"/>).</param>
+public sealed record SharpFeedUsage(string Kind, int Feeds, long Messages, long Bytes, long StoredBytes);
 
 /// <summary>A member of a feed and where they stand in it.</summary>
 /// <param name="Member">The member, by objid.</param>

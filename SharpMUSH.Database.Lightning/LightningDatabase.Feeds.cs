@@ -72,6 +72,18 @@ public partial class LightningDatabase
 		return ValueTask.FromResult(feeds);
 	}
 
+	public ValueTask<IReadOnlyList<SharpFeedUsage>> GetFeedUsageAsync(CancellationToken cancellationToken = default)
+	{
+		// One pass over the feed rows, which carry their own counts; no line is read.
+		IReadOnlyList<SharpFeedUsage> usage = Store.Read(tx => tx.Range(Tables.Feed, [])
+			.Select(entry => Codec.Deserialize<FeedRecord>(entry.Value))
+			.GroupBy(feed => feed.Kind, StringComparer.Ordinal)
+			.Select(kind => new SharpFeedUsage(kind.Key, kind.Count(), kind.Sum(feed => (long)feed.Messages),
+				kind.Sum(feed => feed.Bytes), kind.Sum(feed => feed.StoredBytes)))
+			.ToList());
+		return ValueTask.FromResult(usage);
+	}
+
 	public ValueTask<Found<SharpFeed>> GetFeedAsync(string kind, string key, CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult(Store.Read<Found<SharpFeed>>(tx => tx.TryGet(Tables.Feed, FeedKey(kind, key), out var bytes)
 			? ToFeed(Codec.Deserialize<FeedRecord>(bytes))
@@ -167,16 +179,20 @@ public partial class LightningDatabase
 			Bytes = Keys.Str(text).Length
 		};
 
+		var key = MessageKey(message.Kind, message.Key, message.Id);
+		var idKey = Keys.Dbref(message.Id);
+		record = record with { StoredBytes = Codec.Serialize(record).Length + key.Length + idKey.Length + key.Length };
+
 		await Store.WriteAsync(tx =>
 		{
 			var feed = ReadFeed(tx, message.Kind, message.Key);
-			var key = MessageKey(message.Kind, message.Key, message.Id);
 			tx.Put(Tables.FeedMessage, key, Codec.Serialize(record));
-			tx.Put(Tables.FeedMessageId, Keys.Dbref(message.Id), key);
+			tx.Put(Tables.FeedMessageId, idKey, key);
 			feed = feed with
 			{
 				Messages = feed.Messages + 1,
 				Bytes = feed.Bytes + record.Bytes,
+				StoredBytes = feed.StoredBytes + record.StoredBytes,
 				LastId = Math.Max(feed.LastId, message.Id)
 			};
 
@@ -195,7 +211,7 @@ public partial class LightningDatabase
 
 				tx.Delete(Tables.FeedMessage, oldKey);
 				tx.Delete(Tables.FeedMessageId, Keys.Dbref(old.Id));
-				feed = feed with { Messages = feed.Messages - 1, Bytes = feed.Bytes - old.Bytes };
+				feed = Without(feed, old);
 			}
 
 			tx.Put(Tables.Feed, FeedKey(message.Kind, message.Key), Codec.Serialize(feed));
@@ -246,7 +262,7 @@ public partial class LightningDatabase
 
 				tx.Delete(Tables.FeedMessage, oldKey);
 				tx.Delete(Tables.FeedMessageId, Keys.Dbref(old.Id));
-				feed = feed with { Messages = feed.Messages - 1, Bytes = feed.Bytes - old.Bytes };
+				feed = Without(feed, old);
 				purged++;
 			}
 
@@ -308,6 +324,14 @@ public partial class LightningDatabase
 		tx.Delete(Tables.Feed, FeedKey(kind, key));
 	}
 
+	/// <summary>A feed's counts with <paramref name="line"/> gone.</summary>
+	private static FeedRecord Without(FeedRecord feed, FeedMessageRecord line) => feed with
+	{
+		Messages = feed.Messages - 1,
+		Bytes = feed.Bytes - line.Bytes,
+		StoredBytes = feed.StoredBytes - line.StoredBytes
+	};
+
 	private static FeedRecord ReadFeed(ITx tx, string kind, string key)
 		=> tx.TryGet(Tables.Feed, FeedKey(kind, key), out var bytes)
 			? Codec.Deserialize<FeedRecord>(bytes)
@@ -360,7 +384,7 @@ public partial class LightningDatabase
 
 	private static SharpFeed ToFeed(FeedRecord record)
 		=> new(record.Kind, record.Key, ToSettings(record.Settings), record.Locks, record.Messages, record.Bytes,
-			record.LastId);
+			record.LastId, record.StoredBytes);
 
 	private static SharpFeedMessage ToMessage(string kind, string key, FeedMessageRecord record)
 		=> new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), DBRef.Parse(record.Speaker),

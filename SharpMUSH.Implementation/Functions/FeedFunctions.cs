@@ -147,7 +147,8 @@ public partial class Functions
 	/// <c>feedinfo(&lt;kind or feed&gt;, &lt;option&gt;)</c>: a setting as it applies (<c>max_messages</c>,
 	/// <c>max_bytes</c>, <c>max_length</c>, <c>max_age</c> in seconds, <c>logged</c>, <c>style</c>), a lock
 	/// (<c>read</c>, <c>send</c>), or <c>owner</c> and <c>description</c> of a kind, <c>messages</c>,
-	/// <c>bytes</c>, <c>last</c> and <c>members</c> of a feed.
+	/// <c>bytes</c>, <c>stored</c>, <c>last</c> and <c>members</c> of a feed; <c>feeds</c>, <c>messages</c>,
+	/// <c>bytes</c> and <c>stored</c> totalled over a kind.
 	/// </summary>
 	[SharpFunction(Name = "feedinfo", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["kind or feed", "option"])]
 	public async ValueTask<CallState> FeedInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -169,6 +170,9 @@ public partial class Functions
 				"owner" => new CallState(kind.Owner),
 				"description" => new CallState(kind.Description),
 				"read" or "send" => new CallState(kind.Lock(option)),
+				"feeds" or "messages" or "bytes" or "stored" => KindHeld(
+					(await Mediator.Send(new GetFeedUsageQuery(), ExecutionBudget.CurrentToken)).FirstOrDefault(usage => usage.Kind == kind.Name)
+						?? new SharpFeedUsage(kind.Name, 0, 0, 0, 0), option),
 				_ => SettingValue(kind.Effective, option)
 			};
 
@@ -181,12 +185,21 @@ public partial class Functions
 		{
 			"messages" => new CallState(feed.Messages),
 			"bytes" => new CallState(feed.Bytes),
+			"stored" => new CallState(feed.StoredBytes),
 			"last" => new CallState(feed.LastId),
 			"members" => new CallState((await Mediator.Send(new GetFeedMembersQuery(kind.Name, key), ExecutionBudget.CurrentToken)).Count),
 			"read" or "send" => new CallState(feed.Lock(option)),
 			_ => SettingValue(feed.Settings.Over(kind.Effective), option)
 		};
 	}
+
+	private static CallState KindHeld(SharpFeedUsage usage, string option) => option switch
+	{
+		"feeds" => new CallState(usage.Feeds),
+		"messages" => new CallState(usage.Messages),
+		"bytes" => new CallState(usage.Bytes),
+		_ => new CallState(usage.StoredBytes)
+	};
 
 	private static CallState SettingValue(FeedSettings settings, string option) => option switch
 	{

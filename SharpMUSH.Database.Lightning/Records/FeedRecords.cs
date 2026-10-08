@@ -31,6 +31,7 @@ public sealed record FeedRecord
 	public int Messages { get; init; }
 	public long Bytes { get; init; }
 	public long LastId { get; init; }
+	public long StoredBytes { get; init; }
 }
 
 /// <summary>
@@ -62,4 +63,10 @@ public sealed record FeedMessageRecord
 
 	/// <summary>What the line counts against the feed's byte limit.</summary>
 	public long Bytes { get; init; }
+
+	/// <summary>
+	/// What the line takes in the store: this record (measured before this field was filled in), its key, and
+	/// its id index entry.
+	/// </summary>
+	public long StoredBytes { get; init; }
 }

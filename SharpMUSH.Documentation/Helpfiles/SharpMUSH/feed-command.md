@@ -78,7 +78,7 @@ Defining a kind, and its description, settings, locks and taps, need the `feed.a
 
 `@feed/describe` sets the description `@feed/list` shows. `@feed/undefine` removes a kind with all of its feeds, their members and lines, and its taps.
 
-`@feed/list` lists the kinds you run, with their owners, how many feeds and taps each has, and their descriptions. `@feed/info <kind>` shows a kind's settings, locks and taps; `@feed/info <kind>/<key>` shows one feed's lines, members, settings and locks.
+`@feed/list` lists the kinds you run, with their owners, how many feeds, lines and taps each has, what its lines take on disk, and their descriptions. `@feed/info <kind>` shows a kind's settings, locks, taps and the same totals; `@feed/info <kind>/<key>` shows one feed's lines, members, settings and locks. A feed's lines are counted three ways: how many, the size of their text (what `max_bytes` limits), and what they take stored, which includes the names and keys kept with each line. The same totals are the `sharpmush_feed_lines` and `sharpmush_feed_stored_bytes` gauges, one per kind.
 
 ## Members
 
@@ -134,7 +134,7 @@ For each line, after it is delivered, the tap's attribute is queued on its objec
 | `max_messages` | 500 | lines kept; the oldest go first; 0 keeps every line |
 | `max_bytes` | none | total size of the lines kept; 0 for none |
 | `max_length` | none | the longest message, in characters; a longer one is refused, not cut; 0 for none |
-| `max_age` | none | lines older than this go when the feed is next written to: `30d`, `12h`, `90m`; 0 for none |
+| `max_age` | none | lines older than this go when the feed is next written to, and in an hourly pass for feeds nobody writes to: `30d`, `12h`, `90m`; 0 for none |
 | `logged` | yes | `no` keeps no lines; they are still delivered and tapped |
 | `style` | say | the style a line has when the sender gives none |
 

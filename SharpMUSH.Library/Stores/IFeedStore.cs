@@ -22,6 +22,9 @@ public interface IFeedStore
 	/// <summary>A kind's feeds, by key.</summary>
 	ValueTask<IReadOnlyList<SharpFeed>> GetFeedsAsync(string kind, CancellationToken cancellationToken = default);
 
+	/// <summary>What each kind's feeds hold, by kind; a kind with no feeds is not listed.</summary>
+	ValueTask<IReadOnlyList<SharpFeedUsage>> GetFeedUsageAsync(CancellationToken cancellationToken = default);
+
 	ValueTask<Found<SharpFeed>> GetFeedAsync(string kind, string key, CancellationToken cancellationToken = default);
 
 	/// <summary>

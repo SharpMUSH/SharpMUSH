@@ -51,6 +51,22 @@ public class FeedService(
 			&& (feedLock.Length == 0 || await lockService.Evaluate(feedLock, owner, unlocker));
 	}
 
+	public async ValueTask<int> PurgeExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
+	{
+		var purged = 0;
+		foreach (var kind in await mediator.Send(new GetFeedKindsQuery(), cancellationToken))
+		{
+			foreach (var feed in await mediator.Send(new GetFeedsQuery(kind.Name), cancellationToken))
+			{
+				if (feed.Messages == 0 || feed.Settings.Over(kind.Effective).MaxAge is not { } age || age <= TimeSpan.Zero)
+					continue;
+				purged += await mediator.Send(new PurgeFeedCommand(kind.Name, feed.Key, now - age), cancellationToken);
+			}
+		}
+
+		return purged;
+	}
+
 	public async ValueTask<Result<FeedDelivery>> SendAsync(IMUSHCodeParser parser, FeedSend send)
 	{
 		var ct = ExecutionBudget.CurrentToken;

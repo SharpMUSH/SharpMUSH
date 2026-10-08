@@ -35,6 +35,12 @@ public interface IFeedService
 	/// when it is longer than the feed's <c>max_length</c>.
 	/// </summary>
 	ValueTask<Result<FeedDelivery>> SendAsync(IMUSHCodeParser parser, FeedSend send);
+
+	/// <summary>
+	/// Drops every line older than its feed's <c>max_age</c> as of <paramref name="now"/>, in every feed that has
+	/// one, so a feed nobody writes to ages too. Returns how many lines went.
+	/// </summary>
+	ValueTask<int> PurgeExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken = default);
 }
 
 /// <summary>A line to send.</summary>

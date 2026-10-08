@@ -29,6 +29,9 @@ public record GetMemberFeedsQuery(DBRef Member, string? Kind) : IQuery<IReadOnly
 public record GetFeedMessagesQuery(string Kind, string Key, int Count, long AfterId = 0)
 	: IQuery<IReadOnlyList<SharpFeedMessage>>;
 
+/// <summary>What each kind's feeds hold. See <see cref="IFeedStore.GetFeedUsageAsync"/>.</summary>
+public record GetFeedUsageQuery : IQuery<IReadOnlyList<SharpFeedUsage>>;
+
 public record GetFeedMessageQuery(long Id) : IQuery<Found<SharpFeedMessage>>;
 
 /// <summary>The taps on <paramref name="Kind"/> (or on <c>*</c>), or every tap when null.</summary>

@@ -1,5 +1,7 @@
 using SharpMUSH.Library.Commands.Database;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -293,5 +295,27 @@ public class FeedCommandTests : ServerTestBase
 			await Cmd("@feed/undefine radio");
 			await Cmd($"@tel {Ref(radio)}=#0");
 		}
+	}
+
+	[Test]
+	public async Task AKindTotalsItsFeeds_AndAQuietFeedStillAges()
+	{
+		await Cmd($"@feed/send {_kind}/1=one");
+		await Cmd($"@feed/send {_kind}/1=two");
+		await Cmd($"@feed/send {_kind}/2=three");
+		await Assert.That(await Eval($"feedinfo({_kind},feeds)")).IsEqualTo("2");
+		await Assert.That(await Eval($"feedinfo({_kind},messages)")).IsEqualTo("3");
+		var stored = long.Parse(await Eval($"feedinfo({_kind},stored)"));
+		await Assert.That(stored).IsEqualTo(long.Parse(await Eval($"feedinfo({_kind}/1,stored)")) + long.Parse(await Eval($"feedinfo({_kind}/2,stored)")));
+		await Assert.That(stored).IsGreaterThan(long.Parse(await Eval($"feedinfo({_kind},bytes)")));
+		await Assert.That(await Cmd($"@feed/info {_kind}/1")).Contains("2, ").And.Contains(" stored");
+
+		// Nothing is written to either feed again; the upkeep pass alone ages /1.
+		await Cmd($"@feed/set {_kind}/1/max_age=1h");
+		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
+		await feeds.PurgeExpiredAsync(DateTimeOffset.UtcNow.AddHours(2));
+		await Assert.That(await Eval($"feedinfo({_kind}/1,messages)")).IsEqualTo("0");
+		await Assert.That(await Eval($"feedinfo({_kind}/1,stored)")).IsEqualTo("0");
+		await Assert.That(await Eval($"feedinfo({_kind}/2,messages)")).IsEqualTo("1").Because("a feed with no max_age keeps its lines");
 	}
 }

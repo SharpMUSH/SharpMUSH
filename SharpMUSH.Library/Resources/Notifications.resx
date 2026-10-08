@@ -2578,6 +2578,9 @@
   <data name="StorageDiskFreeFormat" xml:space="preserve">
     <value>Disk free beside the world: {0}.</value>
   </data>
+  <data name="StorageFeedsFormat" xml:space="preserve">
+    <value>Feeds: {0} line(s) in {1} feed(s) of {2} kind(s), {3} stored. @feed/list shows each kind.</value>
+  </data>
   <data name="StorageStaleReadersFormat" xml:space="preserve">
     <value>{0} reader slot(s) freed since startup: a process holding the world open died while reading it, and its slot kept writers from reusing pages until it was freed. Another tool attached to the live world is the usual cause (deploy/README.md).</value>
   </data>

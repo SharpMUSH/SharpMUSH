@@ -189,4 +189,32 @@ public class FeedStoreTests
 		await Assert.That((await _db.GetFeedMessagesAsync("radio", "101.5", 0, 0)).Select(l => l.Id)).IsEquivalentTo(new long[] { 3, 4 });
 		await Assert.That((await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().Messages).IsEqualTo(2);
 	}
+
+	[Test]
+	public async Task Usage_TotalsEachKind_AndStoredBytesFollowTheLinesKept()
+	{
+		var ann = await NewPlayer("Ann");
+		for (var id = 1; id <= 4; id++) await _db.AppendFeedMessageAsync(Line(id, ann, $"line {id}"), Keep());
+		await _db.AppendFeedMessageAsync(Line(5, ann, "elsewhere", key: "99.1"), Keep());
+
+		var feed = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+		await Assert.That(feed.StoredBytes).IsGreaterThan(feed.Bytes).Because("a stored line holds names and keys besides its text");
+
+		var usage = (await _db.GetFeedUsageAsync()).Single();
+		var other = (await _db.GetFeedAsync("radio", "99.1")).Expect<SharpFeed>();
+		await Assert.That(usage).IsEqualTo(new SharpFeedUsage("radio", 2, 5, feed.Bytes + other.Bytes, feed.StoredBytes + other.StoredBytes));
+
+		// Every way a line goes takes its stored size with it.
+		await _db.PurgeFeedAsync("radio", "101.5", null);
+		await _db.AppendFeedMessageAsync(Line(6, ann, "one"), Keep(messages: 1));
+		var one = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().StoredBytes;
+		await _db.AppendFeedMessageAsync(Line(7, ann, "two"), Keep(messages: 1));
+		await Assert.That((await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().StoredBytes).IsEqualTo(one);
+		await _db.PurgeFeedAsync("radio", "101.5", null);
+		await Assert.That((await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().StoredBytes).IsEqualTo(0);
+
+		await _db.DeleteFeedAsync("radio", "101.5");
+		await _db.DeleteFeedAsync("radio", "99.1");
+		await Assert.That(await _db.GetFeedUsageAsync()).IsEmpty();
+	}
 }

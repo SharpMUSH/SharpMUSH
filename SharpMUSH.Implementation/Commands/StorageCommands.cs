@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -56,6 +57,10 @@ public partial class Commands
 			DescribeKnownBytes(report.MapHeadroomBytes));
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageDiskFreeFormat), executor,
 			DescribeKnownBytes(report.WorldDiskFreeBytes));
+		var feeds = await Mediator.Send(new GetFeedUsageQuery(), ExecutionBudget.CurrentToken);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageFeedsFormat), executor,
+			feeds.Sum(kind => kind.Messages), feeds.Sum(kind => kind.Feeds), feeds.Count,
+			DescribeBytes(feeds.Sum(kind => kind.StoredBytes)));
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageCompactionNote), executor);
 		if (report.StaleReadersCleared > 0)
 		{

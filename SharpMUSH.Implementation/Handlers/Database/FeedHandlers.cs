@@ -134,6 +134,12 @@ public class GetFeedMessageQueryHandler(IFeedStore store) : IQueryHandler<GetFee
 		=> store.GetFeedMessageAsync(query.Id, cancellationToken);
 }
 
+public class GetFeedUsageQueryHandler(IFeedStore store) : IQueryHandler<GetFeedUsageQuery, IReadOnlyList<SharpFeedUsage>>
+{
+	public ValueTask<IReadOnlyList<SharpFeedUsage>> Handle(GetFeedUsageQuery query, CancellationToken cancellationToken)
+		=> store.GetFeedUsageAsync(cancellationToken);
+}
+
 public class GetFeedTapsQueryHandler(IFeedStore store) : IQueryHandler<GetFeedTapsQuery, IReadOnlyList<SharpFeedTap>>
 {
 	public ValueTask<IReadOnlyList<SharpFeedTap>> Handle(GetFeedTapsQuery query, CancellationToken cancellationToken)

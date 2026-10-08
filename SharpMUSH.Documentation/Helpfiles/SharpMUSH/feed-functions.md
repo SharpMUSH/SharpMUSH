@@ -87,7 +87,7 @@ These functions read feeds (see [@feed]); they change nothing. Like @feed, they 
 
 `feedinfo(<kind or feed>, <option>)`
 
-- **feedinfo()**: A setting as it applies: `max_messages`, `max_bytes`, `max_length`, `max_age` (in seconds), `logged` (1 or 0) or `style`; 0 is no limit. `read` and `send` are the locks set on the kind or feed itself. A kind also has `owner` and `description`; a feed has `messages` and `bytes` (what it holds), `last` (the newest line id) and `members`.
+- **feedinfo()**: A setting as it applies: `max_messages`, `max_bytes`, `max_length`, `max_age` (in seconds), `logged` (1 or 0) or `style`; 0 is no limit. `read` and `send` are the locks set on the kind or feed itself. A kind also has `owner` and `description`. A feed has `messages` (its lines), `bytes` (the size of their text, which `max_bytes` limits), `stored` (what the lines take on disk, names and keys included), `last` (the newest line id) and `members`. On a kind, `feeds`, `messages`, `bytes` and `stored` are totals over all its feeds.
 
 ## feedwho()
 

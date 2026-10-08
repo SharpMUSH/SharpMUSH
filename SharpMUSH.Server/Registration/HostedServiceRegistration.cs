@@ -92,6 +92,7 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.ScheduledTaskManagementService>();
 		services.AddHostedService<Services.HistoryRetentionScheduleService>();
 		services.AddHostedService<Services.StorageCapacityMetrics>();
+		services.AddHostedService<Services.FeedUpkeepService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
 		services.AddHostedService<Services.RecurringJobRunner>();
