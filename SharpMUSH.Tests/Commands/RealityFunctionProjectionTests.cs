@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -36,7 +37,7 @@ public class RealityFunctionProjectionTests
 		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("function scan room", owner)))).Expect<SharpRoom>();
 		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("function scanner", room, owner, room)))).Expect<SharpThing>();
 		AnySharpContainer container = scope == "inventory" ? actor : scope == "globals"
-			? (await objects.GetObjectNodeAsync(new DBRef(0))).Expect<SharpRoom>() : room;
+			? (await objects.GetObjectNodeAsync(new DBRef((int)Get<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom))).Expect<SharpRoom>() : room;
 		var visible = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible command", container, owner, room)))).Expect<SharpThing>();
 		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden command", container, owner, room)))).Expect<SharpThing>();
 		var command = "scanprojection" + Guid.NewGuid().ToString("N");

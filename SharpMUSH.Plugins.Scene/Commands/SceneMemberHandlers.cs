@@ -95,7 +95,7 @@ public static class SceneMemberHandlers
 		MString lhs,
 		MString nameArg)
 	{
-		// @scene/showas <sceneId>/<playerDbref>=<name>
+		// @scene/showas <sceneId>/<playerDbref>=<name>; an empty name clears the persona.
 		var (sceneId, playerDbref) = SceneCommandHelper.SplitIdKey(lhs);
 		if (string.IsNullOrEmpty(playerDbref))
 		{
@@ -110,8 +110,9 @@ public static class SceneMemberHandlers
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
-		await notifyService.Notify(executor,
-			$"SCENE: {member.MemberName} now shown as '{member.ShowAs}' in scene #{sceneId}.");
+		await notifyService.Notify(executor, member.ShowAs.Length == 0
+			? $"SCENE: {member.MemberName} shown under their own name in scene #{sceneId}."
+			: $"SCENE: {member.MemberName} now shown as '{member.ShowAs}' in scene #{sceneId}.");
 		return MarkupText.Plain(sceneId);
 	}
 }

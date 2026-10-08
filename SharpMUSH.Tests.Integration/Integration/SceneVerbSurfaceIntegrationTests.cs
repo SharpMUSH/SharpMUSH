@@ -218,7 +218,10 @@ public class SceneVerbSurfaceIntegrationTests
 		await Assert.That(shut).Contains("Members").Because("the card must reflect the exception once it is made");
 	}
 
-	/// <summary>The verb it replaces is gone rather than left as a second way to ask.</summary>
+	/// <summary>
+	/// The verb it replaces is gone rather than left as a second way to ask: the player is told there is
+	/// no such switch, as for any other.
+	/// </summary>
 	[Test]
 	public async Task SceneWho_IsNoLongerACommand()
 	{
@@ -229,7 +232,7 @@ public class SceneVerbSurfaceIntegrationTests
 
 		var said = string.Join(" ", await RunAs(handle, $"+scene/who {sceneId}"));
 
-		await Assert.That(said).Contains("Huh?").Because("+scene/who was replaced by +scene/info");
+		await Assert.That(said).Contains("+scene has no /who switch.").Because("+scene/who was replaced by +scene/info");
 	}
 
 	/// <summary>

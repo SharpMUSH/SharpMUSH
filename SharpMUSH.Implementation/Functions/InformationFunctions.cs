@@ -1596,7 +1596,9 @@ public partial class Functions
 
 		if (checkGlobals)
 		{
-			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(0))) is AnySharpObject masterRoom)
+			// The configured master room, where command dispatch looks for global $-commands; it is not #0.
+			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(Configuration.CurrentValue.Database.MasterRoom))))
+					is AnySharpObject masterRoom)
 			{
 				objectsToScan.Add(masterRoom);
 

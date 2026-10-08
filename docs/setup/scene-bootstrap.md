@@ -82,27 +82,28 @@ full set — `CAPTURE`, `DEFAULT_STATUS`, `RECALL_ROUNDS`, and the three refusal
 The package follows **[Volund's SceneSys](https://github.com/volundmush/mushcode)** command
 surface — a unified `+scene/<switch>` verb plus a standalone `+pot`. Default permission:
 anyone may create/schedule (and becomes owner); owner-only for lifecycle/management; authors
-edit their own poses.
+(and wizards) edit poses. Every switch takes a unique prefix (`+scene/lis` is `+scene/list`), and a
+line no verb matches answers with the switch's usage line instead of `Huh?`.
 
 | Command | Does |
 |---|---|
 | `+scene` · `/list` | list active scenes |
-| `+scene <id>` · `+event <id>` | scene details card |
+| `+scene <id or title>` · `+event <id>` | scene details card; a title, or its start, finds the scene too |
 | `+scene/old` &nbsp;·&nbsp; `+scene/mine` | finished &nbsp;·&nbsp; your scenes |
 | `+scene/create <title>` | create + focus (active by default) |
-| `+scene/start [<id>]` · `/pause [<id>][=<when>]` · `/finish` | lifecycle; a paused scene leaves the live list for the schedule until started again |
+| `+scene/start [<id>]` · `/pause [<id>][=<when>]` · `/finish` | lifecycle; a paused scene leaves the live list for the schedule until started again; a finished or cancelled scene stays that way |
 | `+scene/join <id>` · `/leave` | membership + focus |
 | `+scene/tag <id>` · `/untag <id>` (`/rsvp` · `/unrsvp`) | RSVP |
 | `+scene/activate <id>` · `/deactivate` | resume / pause recording without leaving |
-| `+scene/as <persona>` | display persona for your future poses |
+| `+scene/as [<persona>]` | display persona for your future poses; bare, or your own name, clears it |
 | `+scene/title [<id>=]<text>` · `/pitch [<id>=]<text>` | rename it · set the scene blurb (the focused scene, or the one named) |
 | `+scene/public [<id>]` · `/private [<id>]` | visibility |
-| `+scene/pose <id>=<text>` · `/say` · `/semipose` · `/emit` | pose into a named scene (what the portal's compose box sends); joins and focuses you on it |
-| `+scene/recall [<n>]` | print the last `<n>` poses, each under a rule naming its poser and id; bare, ``DATA`RECALL_ROUNDS`` rounds of the cast (2 × its size) |
-| `+scene/edit <id>=<before>^^^<after>` | fix a typo in your pose |
+| `+scene/pose <id>=<text>` · `/say` · `/semipose` · `/emit` · `/ooc` | pose into a named scene (what the portal's compose box sends); joins and focuses you on it, and the room sees it framed as a captured pose |
+| `+scene/recall [<n>]` · `/recall <id>=[<n>]` · `/log [<id>]` | print the last `<n>` poses, each under a rule naming its poser and id, and `<OOC>` before an out-of-character line; bare, ``DATA`RECALL_ROUNDS`` rounds of the cast (2 × its size). Named, any scene you can read; `/log` the whole of it |
+| `+scene/edit <id>=<before>^^^<after>` · `/rewrite <id>=<text>` | fix a typo in your pose · replace its text |
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |
-| `+scene/schedule <title>=<when>` | schedule a roomless future scene |
+| `+scene/schedule <title>=<when>` | schedule a roomless future scene; `<when>` is a date `convtime()` reads (`2026-12-31 20:00`), `+<n>h`/`+<n>d`/`+<n>w` from now, or epoch seconds, and must be to come |
 | `+scene/reschedule <id>=<when>` · `/unschedule <id>` (`/cancel`) · `/upcoming [<days>\|all]` (`+scenes`, `+events`) | manage / list scheduled, grouped by day, 30 days ahead unless told (``DATA`SCHEDULE_DAYS``); rescheduling a running scene pauses it, cancelling marks a scene that has not started `cancelled` |
 | `+pot` | pose tracker (turn order for the focused scene, idle time and the length of each last pose) |
 

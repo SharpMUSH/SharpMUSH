@@ -304,7 +304,7 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenewhere({roomDbref})")).IsEqualTo(sceneId)
 			.Because("a created-active scene is the room's active scene with no separate start");
 
-		// +scene/start is idempotent on an already-active scene (it also resumes a paused one).
+		// +scene/start on an already-active scene says so and leaves it running (it also resumes a paused one).
 		var startMsgs = await RunAndCollectAs(aliceHandle, "+scene/start");
 		Log($"[START] {string.Join(" | ", startMsgs)}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active")
@@ -450,7 +450,7 @@ public class SceneRoleplayIntegrationTests
 		var refusal = string.Join("\n", await RunAndCollectAs(bobHandle, $"+scene/rewrite {bobPoseId}="));
 		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, markup)")).IsEqualTo(markup)
 			.Because("+scene/rewrite with no text must leave the pose as it was");
-		await Assert.That(refusal).Contains("can't be rewritten to nothing")
+		await Assert.That(refusal).Contains("can't be left empty")
 			.Because("the author is told why nothing changed");
 
 		// The pose tracker and the scene browser are the two tables whose rows come out of an iter()
@@ -673,15 +673,21 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("0")
 			.Because("the portal's compose path names the scene, and a paused one records nothing");
 
-		// Paused again, focused and with no time: the earlier time goes, so the schedule shows no stale one.
-		await RunAndCollectAs(unaHandle, "+scene/pause");
-		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("paused");
-		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo(string.Empty);
+		// Pausing a paused scene says so and changes nothing.
+		var again = string.Join(" ", await RunAndCollectAs(unaHandle, "+scene/pause"));
+		await Assert.That(again).Contains($"Scene {sceneId} is already paused.");
+		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo("2524608000000");
 
 		await RunAndCollectAs(unaHandle, $"+scene/start {sceneId}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active");
 		await Assert.That(await Eval($"scenewhere({room})")).IsEqualTo(sceneId)
 			.Because("a resumed scene keeps its room and is live there again");
+
+		// Paused again, focused and with no time: the earlier time goes, so the schedule shows no stale one.
+		await RunAndCollectAs(unaHandle, "+scene/pause");
+		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("paused");
+		await Assert.That(await Eval($"scene({sceneId}, scheduledfor)")).IsEqualTo(string.Empty);
+		await RunAndCollectAs(unaHandle, $"+scene/start {sceneId}");
 
 		// Rescheduling a running scene pauses it: a scene with a time to come is not live.
 		await RunAndCollectAs(unaHandle, $"+scene/reschedule {sceneId}=2524608000");
@@ -765,10 +771,15 @@ public class SceneRoleplayIntegrationTests
 		var width = int.Parse(await Eval($"width({xan})"));
 
 		long At(int days, int hours) => new DateTimeOffset(DateTime.Today.AddDays(days).AddHours(hours)).ToUnixTimeSeconds();
+		// +scene/schedule refuses a time already gone, so a scene that is late is scheduled ahead and then
+		// moved back, as the clock would have done.
 		async Task<string> Schedule(string title, long when)
 		{
-			var said = await RunAndCollectHeardBy(xanHandle, xan, $"+scene/schedule {title}=" + when);
-			return said.First(m => m.Contains("Scheduled scene")).Split("Scheduled scene ")[1].Split(' ')[0];
+			var past = when <= DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+			var said = await RunAndCollectHeardBy(xanHandle, xan, $"+scene/schedule {title}=" + (past ? "+1d" : when));
+			var id = said.First(m => m.Contains("Scheduled scene")).Split("Scheduled scene ")[1].Split(' ')[0];
+			if (past) await God1($"@scene/set {id}/scheduledfor={when * 1000}");
+			return id;
 		}
 
 		await Schedule($"Evening_{Tag}", At(3, 18));
