@@ -151,8 +151,10 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(labels).Contains("Channels");
 		await Assert.That(labels).Contains("Pages");
 		await Assert.That(cut.Find(".play-side-scene-empty a").GetAttribute("href")).IsEqualTo("/scenes");
-		await Assert.That(cut.Find(".play-side-channels-empty").TextContent).Contains("@channel/on");
-		await Assert.That(cut.Find(".play-side-pages-empty").TextContent).Contains("page <name>=<message>");
+		await Assert.That(cut.FindAll(".play-side-channels-empty code").Select(c => c.TextContent).ToList())
+			.IsEquivalentTo(["@channel/list", "@channel/on <channel>"]);
+		await Assert.That(cut.Find(".play-side-pages-empty code").TextContent).IsEqualTo("page <name>=<message>");
+		await Assert.That(cut.Find(".play-side-pages-empty").TextContent).DoesNotContain("`");
 	}
 
 	[Test]

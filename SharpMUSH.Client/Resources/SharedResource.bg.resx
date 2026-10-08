@@ -5132,10 +5132,10 @@
     <value>Разгледай сцените</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Не сте се присъединили към канали. Напишете @channel/list, за да ги видите, и @channel/on &lt;канал&gt;, за да се присъедините.</value>
+    <value>Не сте се присъединили към канали. Напишете `@channel/list`, за да ги видите, и `@channel/on &lt;канал&gt;`, за да се присъедините.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Още няма лични съобщения. Напишете page &lt;име&gt;=&lt;съобщение&gt;, за да пишете някому насаме.</value>
+    <value>Още няма лични съобщения. Напишете `page &lt;име&gt;=&lt;съобщение&gt;`, за да пишете някому насаме.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# тук}}</value>

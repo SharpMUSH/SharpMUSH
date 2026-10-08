@@ -5132,10 +5132,10 @@
     <value>浏览场景</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>你还没有加入任何频道。输入 @channel/list 查看频道，再输入 @channel/on &lt;频道&gt; 加入。</value>
+    <value>你还没有加入任何频道。输入 `@channel/list` 查看频道，再输入 `@channel/on &lt;频道&gt;` 加入。</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>还没有私信。输入 page &lt;名字&gt;=&lt;消息&gt; 给别人发私信。</value>
+    <value>还没有私信。输入 `page &lt;名字&gt;=&lt;消息&gt;` 给别人发私信。</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {此处 # 人}}</value>

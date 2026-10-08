@@ -5132,10 +5132,10 @@
     <value>Se scener</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Du er ikke med i noen kanaler. Skriv @channel/list for å se dem, og @channel/on &lt;kanal&gt; for å bli med.</value>
+    <value>Du er ikke med i noen kanaler. Skriv `@channel/list` for å se dem, og `@channel/on &lt;kanal&gt;` for å bli med.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Ingen meldinger ennå. Skriv page &lt;navn&gt;=&lt;melding&gt; for å sende noen en privat melding.</value>
+    <value>Ingen meldinger ennå. Skriv `page &lt;navn&gt;=&lt;melding&gt;` for å sende noen en privat melding.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# her}}</value>

@@ -5132,10 +5132,10 @@
     <value>Pregledaj scene</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Niste ni u jednom kanalu. Upišite @channel/list da ih vidite, zatim @channel/on &lt;kanal&gt; da se pridružite.</value>
+    <value>Niste ni u jednom kanalu. Upišite `@channel/list` da ih vidite, zatim `@channel/on &lt;kanal&gt;` da se pridružite.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Još nema privatnih poruka. Upišite page &lt;ime&gt;=&lt;poruka&gt; da nekome pišete privatno.</value>
+    <value>Još nema privatnih poruka. Upišite `page &lt;ime&gt;=&lt;poruka&gt;` da nekome pišete privatno.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# ovdje}}</value>

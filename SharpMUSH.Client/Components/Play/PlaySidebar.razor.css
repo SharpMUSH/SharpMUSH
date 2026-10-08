@@ -25,3 +25,10 @@
 	padding-bottom: 6px;
 	border-bottom: 1px solid var(--border);
 }
+
+.play-side-command {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	white-space: nowrap;
+	color: var(--text);
+}

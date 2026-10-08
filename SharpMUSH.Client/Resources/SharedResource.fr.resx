@@ -4426,10 +4426,10 @@
     <value>Parcourir les scènes</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Vous n'avez rejoint aucun canal. Tapez @channel/list pour les voir, puis @channel/on &lt;canal&gt; pour en rejoindre un.</value>
+    <value>Vous n'avez rejoint aucun canal. Tapez `@channel/list` pour les voir, puis `@channel/on &lt;canal&gt;` pour en rejoindre un.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Aucun message privé pour l'instant. Tapez page &lt;nom&gt;=&lt;message&gt; pour écrire à quelqu'un en privé.</value>
+    <value>Aucun message privé pour l'instant. Tapez `page &lt;nom&gt;=&lt;message&gt;` pour écrire à quelqu'un en privé.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# ici}}</value>

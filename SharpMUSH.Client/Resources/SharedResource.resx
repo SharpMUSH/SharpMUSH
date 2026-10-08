@@ -4554,10 +4554,10 @@
     <value>Browse scenes</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>You haven't joined any channels. Type @channel/list to see them, then @channel/on &lt;channel&gt; to join one.</value>
+    <value>You haven't joined any channels. Type `@channel/list` to see them, then `@channel/on &lt;channel&gt;` to join one.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>No pages yet. Type page &lt;name&gt;=&lt;message&gt; to send someone a private message.</value>
+    <value>No pages yet. Type `page &lt;name&gt;=&lt;message&gt;` to send someone a private message.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# here}}</value>

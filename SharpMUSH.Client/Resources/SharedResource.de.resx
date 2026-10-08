@@ -5132,10 +5132,10 @@
     <value>Szenen ansehen</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Du bist in keinem Kanal. Gib @channel/list ein, um sie zu sehen, und @channel/on &lt;Kanal&gt;, um einem beizutreten.</value>
+    <value>Du bist in keinem Kanal. Gib `@channel/list` ein, um sie zu sehen, und `@channel/on &lt;Kanal&gt;`, um einem beizutreten.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Noch keine Pages. Gib page &lt;Name&gt;=&lt;Nachricht&gt; ein, um jemandem privat zu schreiben.</value>
+    <value>Noch keine Pages. Gib `page &lt;Name&gt;=&lt;Nachricht&gt;` ein, um jemandem privat zu schreiben.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# hier}}</value>

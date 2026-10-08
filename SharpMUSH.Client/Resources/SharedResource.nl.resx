@@ -5132,10 +5132,10 @@
     <value>Scènes bekijken</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Je zit nog in geen enkel kanaal. Typ @channel/list om ze te zien en @channel/on &lt;kanaal&gt; om er een te volgen.</value>
+    <value>Je zit nog in geen enkel kanaal. Typ `@channel/list` om ze te zien en `@channel/on &lt;kanaal&gt;` om er een te volgen.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Nog geen pages. Typ page &lt;naam&gt;=&lt;bericht&gt; om iemand een privébericht te sturen.</value>
+    <value>Nog geen pages. Typ `page &lt;naam&gt;=&lt;bericht&gt;` om iemand een privébericht te sturen.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# hier}}</value>

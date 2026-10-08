@@ -5132,10 +5132,10 @@
     <value>Jelenetek böngészése</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Még nem csatlakoztál egy csatornához sem. Írd be: @channel/list a listához, majd @channel/on &lt;csatorna&gt; a csatlakozáshoz.</value>
+    <value>Még nem csatlakoztál egy csatornához sem. Írd be: `@channel/list` a listához, majd `@channel/on &lt;csatorna&gt;` a csatlakozáshoz.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Még nincs privát üzenet. Írd be: page &lt;név&gt;=&lt;üzenet&gt;, ha privátban írnál valakinek.</value>
+    <value>Még nincs privát üzenet. Írd be: `page &lt;név&gt;=&lt;üzenet&gt;`, ha privátban írnál valakinek.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# itt}}</value>

@@ -62,7 +62,7 @@
     else if (!Collapsed)
     {
         <SectionLabel>@Loc["NavPlayChannels"]</SectionLabel>
-        <SidebarNote Class="play-side-empty play-side-channels-empty">@Loc["NavPlayChannelsEmpty"]</SidebarNote>
+        <SidebarNote Class="play-side-empty play-side-channels-empty">@WithCommands(Loc["NavPlayChannelsEmpty"])</SidebarNote>
     }
     @if (Feed.Conversations.Count > 0)
     {
@@ -86,7 +86,7 @@
     else if (!Collapsed)
     {
         <SectionLabel>@Loc["NavPlayPages"]</SectionLabel>
-        <SidebarNote Class="play-side-empty play-side-pages-empty">@Loc["NavPlayPagesEmpty"]</SidebarNote>
+        <SidebarNote Class="play-side-empty play-side-pages-empty">@WithCommands(Loc["NavPlayPagesEmpty"])</SidebarNote>
     }
     @if (_apps.Count > 0)
     {
@@ -159,6 +159,23 @@
             .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Page)
             .ToList();
     }
+
+    /// <summary>A hint whose `backticked` spans are commands to type, set as code that does not wrap.</summary>
+    private static RenderFragment WithCommands(string hint) => __builder =>
+    {
+        var parts = hint.Split('`');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i % 2 == 1)
+            {
+                <code class="play-side-command">@parts[i]</code>
+            }
+            else
+            {
+                @parts[i]
+            }
+        }
+    };
 
     private void OnFeedChanged() => _ = InvokeAsync(StateHasChanged);
 

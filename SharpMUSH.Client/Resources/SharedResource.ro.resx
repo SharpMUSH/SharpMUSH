@@ -5132,10 +5132,10 @@
     <value>Răsfoiește scenele</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Nu te-ai alăturat niciunui canal. Scrie @channel/list ca să le vezi, apoi @channel/on &lt;canal&gt; ca să intri într-unul.</value>
+    <value>Nu te-ai alăturat niciunui canal. Scrie `@channel/list` ca să le vezi, apoi `@channel/on &lt;canal&gt;` ca să intri într-unul.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Încă nu ai mesaje private. Scrie page &lt;nume&gt;=&lt;mesaj&gt; ca să-i scrii cuiva în privat.</value>
+    <value>Încă nu ai mesaje private. Scrie `page &lt;nume&gt;=&lt;mesaj&gt;` ca să-i scrii cuiva în privat.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# aici}}</value>

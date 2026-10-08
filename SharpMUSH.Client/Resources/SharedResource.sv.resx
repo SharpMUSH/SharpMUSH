@@ -5132,10 +5132,10 @@
     <value>Bläddra bland scener</value>
   </data>
   <data name="NavPlayChannelsEmpty" xml:space="preserve">
-    <value>Du är inte med i några kanaler. Skriv @channel/list för att se dem och @channel/on &lt;kanal&gt; för att gå med i en.</value>
+    <value>Du är inte med i några kanaler. Skriv `@channel/list` för att se dem och `@channel/on &lt;kanal&gt;` för att gå med i en.</value>
   </data>
   <data name="NavPlayPagesEmpty" xml:space="preserve">
-    <value>Inga meddelanden än. Skriv page &lt;namn&gt;=&lt;meddelande&gt; för att skicka ett privat meddelande.</value>
+    <value>Inga meddelanden än. Skriv `page &lt;namn&gt;=&lt;meddelande&gt;` för att skicka ett privat meddelande.</value>
   </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# här}}</value>
