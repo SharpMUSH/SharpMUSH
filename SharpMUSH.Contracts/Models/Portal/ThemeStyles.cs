@@ -1126,7 +1126,7 @@ public static class ThemeStyles
 		var tab = Svg($"<path d='M0 0H50L44 6H0Z' fill='{accent.Hex}'/><path d='M54 0H66L60 6H48Z' fill='{RealRobotRed.Hex}'/>", 66, 6);
 		var chin = Svg($"<path d='M0 5L4 0H30L34 5Z' fill='{RealRobotRed.Hex}'/>", 34, 5);
 		var vents = Svg(string.Concat(Enumerable.Range(0, 3).Select(i =>
-			$"<path d='M{F(i * 7 + 0.5)} 8.5L{F(i * 7 + 4.5)} 0.5H{F(i * 7 + 8)}L{F(i * 7 + 4)} 8.5Z' fill='{RealRobotYellow.Hex}' stroke='{Rgba(text, 0.55)}' stroke-width='0.6'/>")), 24, 9);
+			$"<path d='M{F(i * 7.0 + 0.5)} 8.5L{F(i * 7.0 + 4.5)} 0.5H{F(i * 7.0 + 8)}L{F(i * 7.0 + 4)} 8.5Z' fill='{RealRobotYellow.Hex}' stroke='{Rgba(text, 0.55)}' stroke-width='0.6'/>")), 24, 9);
 		var ticks = Svg(string.Concat(new[] { 0, 4, 6, 8, 12, 14, 18, 20, 22 }.Select((x, i) =>
 			$"<rect x='{x}' y='0' width='{(i % 3 == 0 ? 3 : 1)}' height='5' fill='{text.Hex}' fill-opacity='0.3'/>")), 26, 5);
 		return string.Join(", ",
