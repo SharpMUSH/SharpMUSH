@@ -60,16 +60,18 @@ objects:
       # drawer's channel browser; gagged appears only on a channel the viewer
       # is on and has gagged (they stay on it, hearing nothing).
       # cstatus() takes the object first on SharpMUSH, the channel second, and
-      # answers OFF, ON, or ON with its flags (GAG among them).
+      # answers OFF, ON, or ON with its flags (GAG among them). A channel
+      # deleted or renamed since channels() listed it has no member count, and
+      # its row is left out rather than spoiling the list.
       FN`COMM`CHANNELROW: |-
-        json_mod(json(object,name,json(string,%0),joined,if(member(cstatus(%1,%0),ON),true,false),members,json(number,cusers(%0)),description,json(string,cdesc(%0))),patch,json(object,gagged,if(member(cstatus(%1,%0),GAG),true,null)))
+        if(isnum(setr(m,cusers(%0))),json_mod(json(object,name,json(string,%0),joined,if(member(cstatus(%1,%0),ON),true,false),members,json(number,%qm),description,json(string,cdesc(%0))),patch,json(object,gagged,if(member(cstatus(%1,%0),GAG),true,null))))
 
       # ── Payloads ─────────────────────────────────────────────────────────
       # comm.channels for a viewer (%0): who it is for, and every channel they
       # may see, on it or not. channels() lists what its executor may see, so
       # objeval() asks it as the viewer: this wizard handler would see them all.
       FN`COMM`CHANNELS: |-
-        json(object,v,json(number,2),viewer,json(object,name,json(string,name(%0)),objid,json(string,objid(%0))),channels,json_array(iter(objeval(%0,channels()),u(me/FN`COMM`CHANNELROW,%i0,%0),,%r),%r))
+        json(object,v,json(number,2),viewer,json(object,name,json(string,name(%0)),objid,json(string,objid(%0))),channels,json_array(squish(iter(objeval(%0,channels()),u(me/FN`COMM`CHANNELROW,%i0,%0),,%r),%r),%r))
       # comm.message. %0 kind (channel|page), %1 channel name (empty for a
       # page), %2 speaker objid (empty for a sourceless line), %3 speaker name,
       # %4 style, %5 message, %6 unix-ms, %7 page recipients' objids (empty for

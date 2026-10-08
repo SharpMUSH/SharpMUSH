@@ -736,6 +736,22 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// A channel deleted or renamed after <c>channels()</c> listed it, by someone else while the list is
+	/// being built, has no row: one missing count would otherwise make the whole payload invalid JSON,
+	/// and <c>oob()</c> would send nothing.
+	/// </summary>
+	[Test]
+	public async Task AChannelGoneSinceItWasListed_HasNoRow()
+	{
+		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
+		var gone = UniqueChannel("CommGone");
+		var row = (await factory.FunctionParser.FunctionParse(
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message!.ToPlainText();
+
+		await Assert.That(row).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>
 	/// Renaming or deleting a channel changes every member's list, not the admin's who did it, so each
 	/// member is sent theirs. Deletion reads the members before the channel is gone.
 	/// </summary>
