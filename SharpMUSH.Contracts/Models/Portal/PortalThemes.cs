@@ -275,10 +275,10 @@ public static class BuiltInThemes
 		["#1a0b2e", "#25103f", "#311552", "#1d0c35", "#12061f", "#fdeeff", "#d8bfe6", "#bfa2d2", "#4a2470", "#331856", "#ff6b9d", "#ffd166", "#ff9a8a"],
 		display: "monoton", body: "ui", corners: "round", texture: "outrun", ornament: "sunset", frame: "neon", titles: "normal", effect: "retro", imagery: "dusk");
 
-	/// <summary>Space opera: a deep starfield and nebula, wide gold capitals, worn riveted hull plates.</summary>
+	/// <summary>Space opera: a deep starfield with a planet on the horizon, wide gold capitals, worn riveted hull plates.</summary>
 	public static readonly PortalTheme SpaceOpera = Genre("space-opera", "Space Opera", dark: true,
 		["#04050b", "#14161d", "#1c1f28", "#0d0f15", "#03040a", "#eee7d4", "#b9b09a", "#9a927f", "#3b3d47", "#252731", "#f0b429", "#ff8c42", "#ff8a7a"],
-		display: "michroma", body: "ui", corners: "soft", texture: "nebula", ornament: "insignia", frame: "hull", titles: "wide", effect: "gilt", imagery: "warm");
+		display: "michroma", body: "ui", corners: "soft", texture: "galaxy", ornament: "insignia", frame: "hull", titles: "wide", effect: "gilt", imagery: "warm");
 
 	/// <summary>Starship console: pure black, tall condensed capitals, pill bars and elbows in orange, lavender, peach and periwinkle.</summary>
 	public static readonly PortalTheme StarshipConsole = Genre("starship-console", "Starship Console", dark: true,

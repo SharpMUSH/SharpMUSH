@@ -71,7 +71,7 @@ public static class ThemeStyles
 			"sparkles", "bubbles", "spotlights", "notebook",
 			"speedlines", "court", "hazard", "sigil",
 			"sumi", "benday", "filmgrain", "starburst",
-			"rain", "outrun", "nebula", "readout",
+			"rain", "outrun", "galaxy", "readout",
 		],
 		[Ornament] = ["none", "rule", "diamond", "fleuron", "star", "brackets", "cross", "heart", "lotus", "deco", "double", "block",
 			"twinkle", "blossom", "encore", "doodle",
@@ -195,7 +195,7 @@ public static class ThemeStyles
 			"ribbon" => ($"{Bow(accent)} right 8px top 2px / 66px 30px no-repeat, "
 				+ $"linear-gradient(90deg, {Rgba(accent, 0)}, {Rgba(accent, 0.35)} 40%, {Rgba(AnimeLavender, 0.45)}) left bottom / 100% 3px no-repeat",
 				"solid", "2px", $"0 0 0 4px {Rgba(accent, 0.08)}, 0 10px 24px {Rgba(accent, 0.16)}"),
-			"bloom" => ($"{Blooms(accent, turned: false)} right 2px top 2px / 50px 50px no-repeat, {Blooms(accent, turned: true)} right 2px bottom 2px / 50px 50px no-repeat",
+			"bloom" => ($"{Blooms(accent, turned: false)} right 2px top 2px / 40px 40px no-repeat, {Blooms(accent, turned: true)} right 2px bottom 2px / 40px 40px no-repeat",
 				"solid", "1px", $"0 6px 20px {Rgba(text, 0.07)}"),
 			"stage" => ($"{Bulbs(accent)} left 6px top 4px / 30px 10px repeat-x, {Bulbs(accent)} left 21px bottom 4px / 30px 10px repeat-x, "
 				+ $"linear-gradient(0deg, {Rgba(accent, 0.16)}, {Rgba(accent, 0)}) left bottom / 100% 40% no-repeat",
@@ -497,7 +497,7 @@ public static class ThemeStyles
 				+ $"repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 31px, rgba(96,150,210,{(dark ? "0.18" : "0.30")}) 31px 32px), {Noise(ink, dark ? 0.05 : 0.06)}",
 				"100% 100%, auto, 180px 180px"),
 			// Manga focus lines converging on the page, over screentone rising from the foot.
-			"speedlines" => ($"{SpeedLines(ink, dark)}, {Tone(ink, dark ? 0.25 : 0.32, 1280, 800, "<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0.4' stop-color='black'/><stop offset='1' stop-color='white'/></linearGradient>")}",
+			"speedlines" => ($"{SpeedLines(ink, dark)}, {Tone(ink, dark ? 0.18 : 0.22, 1280, 800, "<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0.4' stop-color='black'/><stop offset='1' stop-color='white'/></linearGradient>")}",
 				"100% 100%, 100% 100%"),
 			// A court's markings at night, under two floodlights.
 			"court" => ($"radial-gradient(45% 60% at 6% -8%, {Rgba(ink, 0.2)}, {Rgba(ink, 0)} 70%), "
@@ -536,13 +536,11 @@ public static class ThemeStyles
 				+ $"{RainStreaks(ink, accent)}", "100% 100%, 100% 100%, 100% 100%, 260px 260px"),
 			// An outrun sunset: a striped sun sinking behind a neon grid floor that runs to the horizon.
 			"outrun" => (Outrun(accent), "100% 100%"),
-			// A rich starfield in two depths over coloured nebula clouds.
-			"nebula" => ($"{Starfield(ink, 320, 90, 11, 0.8)}, {Starfield(ink, 530, 16, 29, 1.4)}, "
-				+ $"radial-gradient(50% 42% at 80% 16%, rgba(150,60,210,0.40), rgba(150,60,210,0) 70%), "
-				+ $"radial-gradient(42% 38% at 22% 90%, rgba(30,150,200,0.30), rgba(30,150,200,0) 70%), "
-				+ $"radial-gradient(28% 22% at 62% 34%, rgba(230,80,140,0.16), rgba(230,80,140,0) 70%), "
-				+ $"{Noise(new ThemeColor(190, 120, 255), 0.30, 0.006, 900)}",
-				"320px 320px, 530px 530px, 100% 100%, 100% 100%, 100% 100%, 900px 900px"),
+			// Deep space: three depths of crisp stars, a faint galactic band, and a planet's lit rim rising from the corner.
+			"galaxy" => ($"radial-gradient(circle at 112% 128%, rgb(5,7,13) 0 34%, rgba(140,180,255,0.55) 34.4%, rgba(110,150,240,0.16) 36%, rgba(110,150,240,0) 42%), "
+				+ $"linear-gradient(118deg, rgba(0,0,0,0) 32%, rgba(170,160,230,0.05) 44%, rgba(255,226,190,0.08) 50%, rgba(170,160,230,0.05) 56%, rgba(0,0,0,0) 68%), "
+				+ $"{Starfield(ink, 200, 70, 5, 0.3)}, {Starfield(ink, 320, 60, 11, 0.8)}, {Starfield(ink, 530, 14, 29, 1.4)}",
+				"100% 100%, 100% 100%, 200px 200px, 320px 320px, 530px 530px"),
 			// A console's quiet readout: coloured segments stacked down the page's right edge.
 			"readout" => (Readout(accent), "100% 100%"),
 			_ => ("none", "auto"),
@@ -582,9 +580,40 @@ public static class ThemeStyles
 	{
 		var petals = string.Concat(Enumerable.Range(0, 5).Select(i =>
 			$"<ellipse cx='0' cy='{F(-r * 0.55)}' rx='{F(r * 0.36)}' ry='{F(r * 0.55)}' transform='rotate({i * 72})'/>"));
-		return $"<g transform='translate({F(x)} {F(y)}) rotate({turn})' fill='{color.Hex}' fill-opacity='{F(alpha * 0.45)}' stroke='{color.Hex}' stroke-opacity='{F(alpha)}' stroke-width='1.2'>"
-			+ $"{petals}<circle r='{F(r * 0.18)}' fill-opacity='{F(alpha)}'/></g>";
+		return Flower(x, y, turn, color, alpha, $"{petals}<circle r='{F(r * 0.18)}' fill-opacity='{F(alpha)}'/>");
 	}
+
+	/// <summary>A cherry blossom: five petals, each notched at the tip.</summary>
+	private static string Sakura(double x, double y, double r, ThemeColor color, double alpha, int turn = 0)
+	{
+		var petal = $"<path d='M0 0C{F(-r * 0.5)} {F(-r * 0.3)} {F(-r * 0.45)} {F(-r * 0.95)} {F(-r * 0.14)} {F(-r)}L0 {F(-r * 0.8)}"
+			+ $"L{F(r * 0.14)} {F(-r)}C{F(r * 0.45)} {F(-r * 0.95)} {F(r * 0.5)} {F(-r * 0.3)} 0 0Z' transform='rotate({{0}})'/>";
+		var petals = string.Concat(Enumerable.Range(0, 5).Select(i => petal.Replace("{0}", (i * 72).ToString(CultureInfo.InvariantCulture))));
+		return Flower(x, y, turn, color, alpha, $"{petals}<circle r='{F(r * 0.12)}' fill-opacity='{F(alpha)}'/>");
+	}
+
+	/// <summary>A daisy: a ring of narrow petals round a solid heart.</summary>
+	private static string Daisy(double x, double y, double r, ThemeColor color, double alpha, int turn = 0)
+	{
+		var petals = string.Concat(Enumerable.Range(0, 12).Select(i =>
+			$"<ellipse cx='0' cy='{F(-r * 0.58)}' rx='{F(r * 0.12)}' ry='{F(r * 0.4)}' transform='rotate({i * 30})'/>"));
+		return Flower(x, y, turn, color, alpha, $"{petals}<circle r='{F(r * 0.22)}' fill-opacity='{F(alpha)}'/>");
+	}
+
+	/// <summary>A floret of four round petals, as in a hydrangea head.</summary>
+	private static string Floret(double x, double y, double r, ThemeColor color, double alpha, int turn = 0)
+	{
+		var petals = string.Concat(Enumerable.Range(0, 4).Select(i =>
+		{
+			var (px, py) = Polar(r * 0.42, i * 90);
+			return $"<circle cx='{F(px)}' cy='{F(py)}' r='{F(r * 0.36)}'/>";
+		}));
+		return Flower(x, y, turn, color, alpha, $"{petals}<circle r='{F(r * 0.1)}' fill-opacity='{F(alpha)}'/>");
+	}
+
+	/// <summary>Places a flower's petals: tinted fill, a finer outline in the same colour.</summary>
+	private static string Flower(double x, double y, int turn, ThemeColor color, double alpha, string petals) =>
+		$"<g transform='translate({F(x)} {F(y)}) rotate({turn})' fill='{color.Hex}' fill-opacity='{F(alpha * 0.45)}' stroke='{color.Hex}' stroke-opacity='{F(alpha)}' stroke-width='1.1'>{petals}</g>";
 
 	/// <summary>Shojo background bubbles, white with a fine rim and a highlight, among large blossoms.</summary>
 	private static string BubbleField(ThemeColor ink, ThemeColor accent)
@@ -593,7 +622,11 @@ public static class ThemeStyles
 		var body = string.Concat(bubbles.Select(b =>
 			$"<circle cx='{b.X}' cy='{b.Y}' r='{b.R}' fill='rgb(255,255,255)' fill-opacity='0.55' stroke='{ink.Hex}' stroke-opacity='0.10' stroke-width='1'/>"
 			+ $"<path d='M{F(b.X - b.R * 0.62)} {F(b.Y - b.R * 0.2)}A{F(b.R * 0.66)} {F(b.R * 0.66)} 0 0 1 {F(b.X - b.R * 0.15)} {F(b.Y - b.R * 0.64)}' fill='none' stroke='rgb(255,255,255)' stroke-width='{F(Math.Max(1.5, b.R / 10.0))}' stroke-linecap='round'/>"));
-		body += Blossom(200, 60, 30, ShojoCoral, 0.30, 10) + Blossom(40, 230, 22, accent, 0.22, 40) + Blossom(400, 360, 36, ShojoCoral, 0.26, 25) + Blossom(230, 340, 14, ShojoCoral, 0.3);
+		// Small flowers of four kinds and three colours, so no two near each other match.
+		body += Sakura(200, 62, 15, ShojoCoral, 0.26, 10) + Daisy(36, 226, 12, accent, 0.2) + Floret(410, 350, 11, AnimeLavender, 0.3, 20)
+			+ Blossom(238, 336, 9, ShojoCoral, 0.24, 30) + Sakura(150, 420, 8, accent, 0.22, 50) + Daisy(340, 140, 8, ShojoCoral, 0.2, 15)
+			+ Floret(120, 160, 7, ShojoCoral, 0.24) + Sakura(440, 40, 10, AnimeLavender, 0.24, 64) + Blossom(20, 420, 11, accent, 0.18, 5)
+			+ Floret(290, 260, 6, accent, 0.22, 45);
 		return Svg(body, 460, 460);
 	}
 
@@ -625,7 +658,9 @@ public static class ThemeStyles
 		$"<g transform='{(turned ? "rotate(90 29 29)" : "")}'>"
 		+ $"<path d='M50 40C40 40 34 34 32 26C40 26 46 30 50 40Z' fill='{accent.Hex}' fill-opacity='0.45'/>"
 		+ $"<path d='M12 10C14 20 20 24 28 24C26 16 20 10 12 10Z' fill='{accent.Hex}' fill-opacity='0.40'/>"
-		+ Blossom(36, 20, 20, ShojoCoral, 0.85, 12) + Blossom(16, 36, 12, ShojoCoral, 0.7, 40) + Blossom(48, 46, 8, accent, 0.7) + "</g>",
+		+ (turned
+			? Floret(34, 22, 13, AnimeLavender, 0.75, 20) + Daisy(16, 38, 10, accent, 0.7) + Blossom(47, 45, 7, ShojoCoral, 0.7)
+			: Sakura(36, 20, 15, ShojoCoral, 0.8, 12) + Blossom(17, 36, 9, accent, 0.65, 40) + Floret(47, 45, 6, ShojoCoral, 0.7)) + "</g>",
 		58, 58, "0 0 58 58");
 
 	/// <summary>A row of stage lights: pink, cyan and yellow bulbs with their glow.</summary>
@@ -668,15 +703,15 @@ public static class ThemeStyles
 			seed = seed * 1664525u + 1013904223u;
 			return (seed >> 8) / 16777216.0;
 		}
-		for (var a = 0.0; a < 360; a += 1.4 + Next() * 2.4)
+		for (var a = 0.0; a < 360; a += 2.6 + Next() * 3.6)
 		{
-			var spread = 0.3 + Next() * 1.1;
-			var (x0, y0) = Polar(330 + Next() * 190, a);
+			var spread = 0.2 + Next() * 0.6;
+			var (x0, y0) = Polar(430 + Next() * 220, a);
 			var (x1, y1) = Polar(1400, a - spread / 2);
 			var (x2, y2) = Polar(1400, a + spread / 2);
 			lines.Append($"<path d='M{F(x0)} {F(y0)}L{F(x1)} {F(y1)}L{F(x2)} {F(y2)}Z' fill-opacity='{F(0.45 + Next() * 0.55)}'/>");
 		}
-		var body = $"<g transform='translate(700 400)' fill='{ink.Hex}' opacity='{(dark ? "0.2" : "0.3")}'>{lines}</g>";
+		var body = $"<g transform='translate(700 400)' fill='{ink.Hex}' opacity='{(dark ? "0.14" : "0.2")}'>{lines}</g>";
 		return Svg(body, 1280, 800, "0 0 1280 800", "xMidYMid slice");
 	}
 
