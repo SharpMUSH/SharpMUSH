@@ -433,6 +433,8 @@ pennmush
 # Local LMDB world from running the server locally on the lightning provider
 lightning-data/
 lightning-data.previous/
+lightning-data.dataprotection-keys/
+lightning-data.backups/
 
 # Responsive sweep screenshots — regenerated per run, not build output worth tracking
 tools/responsive-sweep/out/

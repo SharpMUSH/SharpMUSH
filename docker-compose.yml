@@ -81,12 +81,20 @@ services:
       - SHARPMUSH_LIGHTNING_PATH=data/lightning
       - SHARPMUSH_LIGHTNING_SYNC=periodic
       - NATS_URL=nats://nats:4222
+      # Plain HTTP on 8080, published below, so the portal is at http://localhost:8080. The image
+      # also names a dev certificate for HTTPS on 8081 that a fresh checkout does not have, and
+      # Kestrel loads a configured default certificate even when nothing listens on HTTPS, so the
+      # path is cleared as well.
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=
     depends_on:
       nats:
         condition: service_healthy
       connectionserver:
         condition: service_started
     ports:
+      - "8080:8080" # Portal, REST API and live updates
       - "9092:9092" # Metrics endpoint (for external monitoring tools)
     volumes:
       - app-data:/app/data
