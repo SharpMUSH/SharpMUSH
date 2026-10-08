@@ -99,6 +99,7 @@ public class ObjectDestructionService(
 		await RelinkEntrancesAsync(dbref, cancellationToken);
 		await RehomeDependentsAsync(dbref, cancellationToken);
 		await LeaveChannelsAsync(target, cancellationToken);
+		await ReleaseFeedsAsync(target, cancellationToken);
 
 		// Read while the object still exists; the event fires once it does not.
 		var eventArguments = await DescribeForDestroyEventAsync(target, cancellationToken);
@@ -128,6 +129,44 @@ public class ObjectDestructionService(
 		foreach (var channel in channels)
 		{
 			await mediator.Send(new RemoveUserFromChannelCommand(channel, target), cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// Takes the object out of every feed: off each one it reads, its taps removed, and any kind it owns
+	/// handed on. A thing, room or exit passes its kinds to its owner, who controlled it and so could already
+	/// run them; a player passes theirs to the probate judge, as their channels go. Freeing a player frees
+	/// their possessions first, so a kind owned by one of those reaches the player and then the judge.
+	/// </summary>
+	private async ValueTask ReleaseFeedsAsync(AnySharpObject target, CancellationToken cancellationToken)
+	{
+		var obj = target.Object();
+		var number = obj.DBRef.Number;
+
+		foreach (var (kind, key) in await mediator.Send(new GetMemberFeedsQuery(obj.DBRef, null), cancellationToken))
+		{
+			await mediator.Send(new RemoveFeedMemberCommand(kind, key, obj.DBRef), cancellationToken);
+		}
+
+		foreach (var tap in (await mediator.Send(new GetFeedTapsQuery(null), cancellationToken))
+			.Where(tap => tap.Object.Number == number))
+		{
+			await mediator.Send(new RemoveFeedTapCommand(tap), cancellationToken);
+		}
+
+		var owned = (await mediator.Send(new GetFeedKindsQuery(), cancellationToken))
+			.Where(kind => kind.Owner.Number == number)
+			.ToList();
+		if (owned.Count == 0) return;
+
+		var heir = target is SharpPlayer
+			? (await ResolveProbatePlayerAsync(cancellationToken))?.Object.DBRef
+			: (await obj.Owner.WithCancellation(cancellationToken)).Object.DBRef;
+		if (heir is not { } newOwner) return;
+
+		foreach (var kind in owned)
+		{
+			await mediator.Send(new SetFeedKindCommand(kind with { Owner = newOwner }), cancellationToken);
 		}
 	}
 

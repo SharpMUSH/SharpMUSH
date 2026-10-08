@@ -82,6 +82,8 @@ Defining a kind, and its description, settings, locks and taps, need the `feed.a
 
 `@feed/define radio=Radio` makes the kind `radio`, owned by the object `Radio`. The owner's attributes are the kind's tie-ins (see [@feed tie-ins]), and code that controls the owner runs its feeds. Defining a kind that exists gives it a new owner. The name `channel` is taken: channel recall is kept as feed lines of the engine's own `channel` kind, which `@storage` counts but `@feed` and the feed functions cannot reach.
 
+When the owner object is destroyed, its kinds go to the player who owned it, who could already run them. A destroyed player's kinds go to the probate judge (`@config probate_judge`), as their channels do. The kinds keep their feeds and lines. A destroyed object also leaves every feed it was on, and its taps are removed. See [@destroy].
+
 `@feed/describe` sets the description `@feed/list` shows. `@feed/undefine` removes a kind with all of its feeds, their members and lines, and its taps.
 
 `@feed/list` lists the kinds you run, with their owners, how many feeds, lines and taps each has, what its lines take on disk, and their descriptions. `@feed/info <kind>` shows a kind's settings, locks, taps and the same totals; `@feed/info <kind>/<key>` shows one feed's lines, members, settings and locks. A feed's lines are counted three ways: how many, the size of their text (what `max_bytes` limits), and what they take stored, which includes the names and keys kept with each line. The same totals are the `sharpmush_feed_lines` and `sharpmush_feed_stored_bytes` gauges, one per kind.

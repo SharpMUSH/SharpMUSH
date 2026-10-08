@@ -190,6 +190,43 @@ public class FeedCommandTests : ServerTestBase
 		await Assert.That(await Eval($"feedmsg({id},text)")).IsEqualTo("still here");
 	}
 
+	/// <summary>
+	/// A destroyed object leaves its feeds and loses its taps, and a kind it owned goes to its owner; a
+	/// destroyed player's kinds go to the probate judge (#1 in tests), as their channels do.
+	/// </summary>
+	[Test]
+	public async Task ADestroyedOwnersKindGoesToItsOwner_AndAPlayersToTheProbateJudge()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "FeedHeir");
+		var radio = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "FeedHeirRadio");
+		var kind = _kind + "h";
+		try
+		{
+			await Cmd($"@chown {Ref(radio)}={Ref(player)}");
+			await Cmd($"@feed/define {kind}={Ref(radio)}");
+			await Cmd($"&LOG {Ref(radio)}=think");
+			await Cmd($"@feed/tap {_kind}={Ref(radio)}/LOG");
+			await Heard(_system, $"@feed/join {_kind}/1={Ref(radio)}");
+			await Assert.That(await Eval($"words(feedwho({_kind}/1))")).IsEqualTo("1");
+
+			await Cmd($"@nuke {Ref(radio)}");
+			await Cmd($"@nuke {Ref(radio)}");
+
+			await Assert.That(await Eval($"num(feedinfo({kind},owner))")).IsEqualTo(Ref(player));
+			await Assert.That(await Eval($"words(feedwho({_kind}/1))")).IsEqualTo("0");
+			await Assert.That(await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedTapsQuery(_kind))).IsEmpty();
+
+			await Cmd($"@nuke {Ref(player)}");
+			await Cmd($"@nuke {Ref(player)}");
+
+			await Assert.That(await Eval($"num(feedinfo({kind},owner))")).IsEqualTo("#1");
+		}
+		finally
+		{
+			await Cmd($"@feed/undefine {kind}");
+		}
+	}
+
 	/// <summary>An evaluation lock on the kind learns the feed from %0; a feed's own lock applies on top of it.</summary>
 	[Test]
 	public async Task AnEvaluationLockLearnsTheFeedFromPercentZero()
