@@ -54,6 +54,17 @@ file sealed class PictureRosterHandler : HttpMessageHandler
 	}
 }
 
+/// <summary>A redefined handler's answer with a null row and a row missing its objid among real ones.</summary>
+file sealed class MalformedRowsHandler : HttpMessageHandler
+{
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = new StringContent("""[null, {"name":"Ghost"}, {"name":"Castor","objid":"#12:1200","created":1200,"image":"/c.jpg"}]""",
+				System.Text.Encoding.UTF8, "application/json")
+		});
+}
+
 /// <summary>Answers immediately with an empty list, for the caller-cancellation cases.</summary>
 file sealed class EmptyListHandler : HttpMessageHandler
 {
@@ -199,5 +210,14 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 		await service.PictureOfAsync("Castor");
 		await Assert.That(handler.Reads).IsEqualTo(2);
 		await Assert.That(told).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task RowsThatAreNotCharacters_AreLeftOut_NotThrown()
+	{
+		var service = Build(new MalformedRowsHandler());
+		var rows = (await service.ListAsync()).Expect<IReadOnlyList<CharacterDirectoryService.CharacterSummary>>();
+		await Assert.That(rows.Select(r => r.Name)).IsEquivalentTo(["Castor"]);
+		await Assert.That(await service.PictureOfAsync("Castor")).IsEqualTo("/c.jpg");
 	}
 }

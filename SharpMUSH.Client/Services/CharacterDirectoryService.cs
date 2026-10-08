@@ -136,6 +136,8 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 		rows is null
 			? []
 			: rows
+				// A redefined handler may answer [null] or rows without an objid; neither is a character.
+				.Where(r => r is { Objid: not null, Name: not null })
 				.DistinctBy(r => r.Objid, StringComparer.Ordinal)
 				.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
 				.ToList();
