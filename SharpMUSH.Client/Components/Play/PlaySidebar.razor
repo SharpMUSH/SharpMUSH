@@ -12,8 +12,8 @@
    row per conversation: a portrait, or a stacked pair for a group page). Channels and pages come from
    the comm feed (§7.3). An empty group still shows its label and a line saying what will be there, so a
    new player learns the drawer holds scenes, channels and pages; the Scenes line only while the game has
-   the Scene System. Channels ends with Browse channels, which opens the channel browser in place: every
-   channel the character may see, with switches to join, leave and gag. Collapsed keeps only the leads,
+   the Scene System. Channels' heading carries Browse, which shows the channel browser in place of the
+   channel rows: every channel the character may see, with switches to join, leave and gag. Collapsed keeps only the leads,
    so it drops an empty group. *@
 <div class="play-side @(Collapsed ? "play-side--collapsed" : null)">
     @if (!Collapsed)
@@ -46,9 +46,21 @@
     }
     @if (!Collapsed)
     {
-        <SectionLabel>@Loc["NavPlayChannels"]</SectionLabel>
+        <div class="play-side-head">
+            <SectionLabel>@Loc["NavPlayChannels"]</SectionLabel>
+            <button type="button" class="play-side-browse" aria-expanded="@(_browsing ? "true" : "false")"
+                    aria-label="@(_browsing ? Loc["NavPlayChannelsBrowseClose"] : Loc["NavPlayChannelsBrowse"])"
+                    @onclick="@(() => _browsing = !_browsing)">
+                <MudIcon Icon="@(_browsing ? Icons.Material.Outlined.Check : Icons.Material.Outlined.PlaylistAdd)" Size="Size.Small" />
+                <span>@(_browsing ? Loc["NavPlayChannelsDone"] : Loc["NavPlayChannelsBrowseShort"])</span>
+            </button>
+        </div>
     }
-    @if (Channels.Count > 0)
+    @if (!Collapsed && _browsing)
+    {
+        <ChannelBrowser />
+    }
+    else if (Channels.Count > 0)
     {
         <nav class="play-side-channels" aria-label="@Loc["NavPlayChannels"]">
             @foreach (var channel in Channels)
@@ -59,20 +71,9 @@
             }
         </nav>
     }
-    else if (!Collapsed && !_browsing)
+    else if (!Collapsed)
     {
         <SidebarNote Class="play-side-empty play-side-channels-empty">@Loc["NavPlayChannelsEmpty"]</SidebarNote>
-    }
-    @if (!Collapsed)
-    {
-        <SidebarRow Class="play-side-browse" Lead="SidebarRow.SidebarLead.Icon"
-                    Icon="@(_browsing ? Icons.Material.Outlined.ExpandLess : Icons.Material.Outlined.PlaylistAdd)"
-                    Label="@(_browsing ? Loc["NavPlayChannelsBrowseClose"] : Loc["NavPlayChannelsBrowse"])"
-                    Dim="true" OnClick="@(() => _browsing = !_browsing)" />
-        @if (_browsing)
-        {
-            <ChannelBrowser />
-        }
     }
     @if (Feed.Conversations.Count > 0)
     {

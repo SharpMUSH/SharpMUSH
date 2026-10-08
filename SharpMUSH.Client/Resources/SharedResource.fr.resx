@@ -4429,7 +4429,13 @@
     <value>Parcourir les canaux</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Fermer la liste des canaux</value>
+    <value>Terminer le parcours des canaux</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Parcourir</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Terminé</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Chargement des canaux…</value>

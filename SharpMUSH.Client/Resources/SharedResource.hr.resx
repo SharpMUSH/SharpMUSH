@@ -5135,7 +5135,13 @@
     <value>Pregledaj kanale</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Zatvori popis kanala</value>
+    <value>Završi pregled kanala</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Pregledaj</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Gotovo</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Učitavanje kanala…</value>

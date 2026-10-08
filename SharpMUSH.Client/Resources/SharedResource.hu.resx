@@ -5135,7 +5135,13 @@
     <value>Csatornák böngészése</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Csatornalista bezárása</value>
+    <value>Csatornák böngészésének befejezése</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Kész</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Csatornák betöltése…</value>

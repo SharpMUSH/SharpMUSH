@@ -5135,7 +5135,13 @@
     <value>Разгледай каналите</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Затвори списъка с канали</value>
+    <value>Приключи с разглеждането на каналите</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Разгледай</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Готово</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Каналите се зареждат…</value>

@@ -5135,7 +5135,13 @@
     <value>Kanäle durchsuchen</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Kanalliste schließen</value>
+    <value>Kanalsuche beenden</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Durchsuchen</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Fertig</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Kanäle werden geladen…</value>

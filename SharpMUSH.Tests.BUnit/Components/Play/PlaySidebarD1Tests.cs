@@ -152,7 +152,10 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(labels).Contains("Pages");
 		await Assert.That(cut.FindAll(".play-side-scene-empty a").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".play-side-channels-empty").TextContent).Contains("haven't joined any channels");
-		await Assert.That(cut.Find(".play-side-browse .kit-row-label").TextContent).IsEqualTo("Browse channels");
+		var browse = cut.Find(".play-side-head .play-side-browse");
+		await Assert.That(browse.GetAttribute("aria-label")).IsEqualTo("Browse channels");
+		await Assert.That(browse.GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(browse.TextContent.Trim()).IsEqualTo("Browse");
 		await Assert.That(cut.Find(".play-side-pages-empty code").TextContent).IsEqualTo("page <name>=<message>");
 		await Assert.That(cut.Find(".play-side-pages-empty").TextContent).DoesNotContain("`");
 	}
@@ -223,6 +226,26 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(rows[0].QuerySelector(".chan-browse-gag")).IsNull().Because("only a channel you are on can be gagged");
 		await Assert.That(rows[1].QuerySelector("[role=switch]")!.HasAttribute("disabled")).IsTrue();
 		await Assert.That(cut.FindAll(".play-side-channels-empty").Count).IsEqualTo(0).Because("the browser says it instead");
+	}
+
+	/// <summary>The browser takes the place of the channel rows while it is open, and Done brings them back.</summary>
+	[Test]
+	public async Task BrowseChannels_ReplacesTheChannelRows_UntilDone()
+	{
+		CaptureCommands();
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		var cut = RenderSidebar();
+		await Assert.That(cut.FindAll(".play-side-channels .kit-row").Count).IsEqualTo(1);
+
+		await cut.Find(".play-side-browse").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".chan-browse-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-side-channels").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-side-browse").GetAttribute("aria-expanded")).IsEqualTo("true");
+		await Assert.That(cut.Find(".play-side-browse").TextContent.Trim()).IsEqualTo("Done");
+
+		await cut.Find(".play-side-browse").ClickAsync();
+		await Assert.That(cut.FindAll(".chan-browse").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".play-side-channels .kit-row").Count).IsEqualTo(1);
 	}
 
 	[Test]

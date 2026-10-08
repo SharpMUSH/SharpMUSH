@@ -5135,7 +5135,13 @@
     <value>Bläddra bland kanaler</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Stäng kanallistan</value>
+    <value>Klar med att bläddra bland kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Bläddra</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Klar</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Läser in kanaler…</value>

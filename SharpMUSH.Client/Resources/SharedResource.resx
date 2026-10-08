@@ -4557,7 +4557,13 @@
     <value>Browse channels</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Close channel list</value>
+    <value>Done browsing channels</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Done</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Loading channels…</value>

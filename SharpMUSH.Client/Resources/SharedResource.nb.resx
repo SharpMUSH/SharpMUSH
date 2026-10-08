@@ -5135,7 +5135,13 @@
     <value>Bla gjennom kanaler</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Lukk kanallisten</value>
+    <value>Ferdig med å bla gjennom kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Bla gjennom</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Ferdig</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Laster inn kanaler…</value>

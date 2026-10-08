@@ -5135,7 +5135,13 @@
     <value>Gennemse kanaler</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Luk kanallisten</value>
+    <value>Færdig med at gennemse kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Gennemse</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Færdig</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Henter kanaler…</value>

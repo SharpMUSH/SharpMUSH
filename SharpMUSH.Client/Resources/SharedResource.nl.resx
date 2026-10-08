@@ -5135,7 +5135,13 @@
     <value>Kanalen bekijken</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>Kanalenlijst sluiten</value>
+    <value>Klaar met kanalen bekijken</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Bekijken</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Klaar</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>Kanalen laden…</value>

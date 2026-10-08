@@ -5135,7 +5135,13 @@
     <value>浏览频道</value>
   </data>
   <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
-    <value>关闭频道列表</value>
+    <value>完成浏览频道</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>完成</value>
   </data>
   <data name="NavPlayChannelsLoading" xml:space="preserve">
     <value>正在加载频道…</value>
