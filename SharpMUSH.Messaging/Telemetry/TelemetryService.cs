@@ -22,6 +22,19 @@ public class TelemetryService : ITelemetryService, IDisposable
 	private readonly ObservableGauge<int> _serverHealthState;
 	private readonly ObservableGauge<int> _connectionServerHealthState;
 
+	/// <summary>
+	/// Bucket bounds, in milliseconds, of the function and command invocation histograms. Most built-ins
+	/// finish in microseconds, so the SDK's default bounds (0, 5, 10, 25 ms, ...) would put nearly every
+	/// call in the first bucket; these run in 1-2.5-5 steps from 10 microseconds to 5 seconds.
+	/// </summary>
+	public static readonly IReadOnlyList<double> DurationBucketsMs =
+		[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25, 50, 100, 250, 500, 1000, 5000];
+
+	/// <summary>The <c>function.name</c> recorded for a call to a function that does not exist.</summary>
+	public const string UnknownFunction = "(unknown)";
+
+	private static readonly InstrumentAdvice<double> DurationAdvice = new() { HistogramBucketBoundaries = DurationBucketsMs };
+
 	private int _currentActiveConnectionCount;
 	private int _currentLoggedInPlayerCount;
 	private bool _currentServerHealthState = true;
@@ -37,12 +50,14 @@ public class TelemetryService : ITelemetryService, IDisposable
 		_functionInvocationDuration = _meter.CreateHistogram<double>(
 			"sharpmush.function.invocation.duration",
 			unit: "ms",
-			description: "Time taken to invoke a function");
+			description: "Time taken to invoke a function",
+			advice: DurationAdvice);
 
 		_commandInvocationDuration = _meter.CreateHistogram<double>(
 			"sharpmush.command.invocation.duration",
 			unit: "ms",
-			description: "Time taken to invoke a command");
+			description: "Time taken to invoke a command",
+			advice: DurationAdvice);
 
 		_notificationSpeed = _meter.CreateHistogram<double>(
 			"sharpmush.notification.speed",
