@@ -40,7 +40,8 @@ public partial class LightningDatabase
 		CurrentRevision = package.CurrentRevision,
 		DeployedFiles = package.DeployedFiles?.ToArray(),
 		Owned = package.Owned is { IsEmpty: false } owned ? owned.ToJson() : null,
-		Settings = package.Settings is { Count: > 0 } settings ? PackageSettingRecord.ToJson(settings) : null
+		Settings = package.Settings is { Count: > 0 } settings ? PackageSettingRecord.ToJson(settings) : null,
+		Kind = package.Kind == PackageKind.Softcode ? null : package.Kind.ToString().ToLowerInvariant()
 	};
 
 	private static InstalledPackageRecord MapInstalledPackage(Records.InstalledPackageRecord r) => new(
@@ -48,7 +49,8 @@ public partial class LightningDatabase
 		ParsePackageTimestamp(r.InstalledAt), r.CurrentRevision,
 		r.DeployedFiles is { Length: > 0 } ? r.DeployedFiles : null,
 		r.Owned is { Length: > 0 } owned ? PackageDeclarations.FromJson(owned) : null,
-		r.Settings is { Length: > 0 } settings ? PackageSettingRecord.FromJson(settings) : null);
+		r.Settings is { Length: > 0 } settings ? PackageSettingRecord.FromJson(settings) : null,
+		Enum.TryParse<PackageKind>(r.Kind, ignoreCase: true, out var kind) ? kind : PackageKind.Softcode);
 
 	public async Task UpsertInstalledPackageAsync(InstalledPackageRecord package)
 		=> await Store.WriteAsync(tx =>

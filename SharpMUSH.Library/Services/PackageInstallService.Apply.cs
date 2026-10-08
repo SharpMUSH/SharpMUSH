@@ -23,7 +23,7 @@ public partial class PackageInstallService
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
-		IManagedPackageBinarySource? binarySource = null)
+		IPluginPackageBinarySource? binarySource = null)
 		=> await gate.RunAsync(() => ApplyExclusiveAsync(manifest, request, binarySource, cancellationToken), cancellationToken) switch
 		{
 			CommittedApply committed => await RunLifecycleAsync(committed, cancellationToken),
@@ -55,14 +55,14 @@ public partial class PackageInstallService
 	private async Task<Result<CommittedApply>> ApplyExclusiveAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		IManagedPackageBinarySource? binarySource,
+		IPluginPackageBinarySource? binarySource,
 		CancellationToken cancellationToken)
 	{
 		// Managed packages (Phase 4) carry a compiled C# plugin DLL rather than
 		// softcode: there is no plan/changeset to compute. Verify + trust-gate +
 		// deposit the binaries, then record the install (with the deployed file
 		// list) and return. The plugin loads on the next boot.
-		if (manifest.Kind == PackageKind.Managed)
+		if (manifest.Kind == PackageKind.Plugin)
 		{
 			return await ApplyManagedAsync(manifest, request, binarySource, cancellationToken) switch
 			{
@@ -488,7 +488,8 @@ public partial class PackageInstallService
 		var source = run.Request.Source;
 		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
-			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings));
+			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings,
+			Kind: manifest.Kind));
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -523,8 +524,8 @@ public partial class PackageInstallService
 	}
 
 	/// <summary>
-	/// Applies a <see cref="PackageKind.Managed"/> package (Phase 4): delegates to
-	/// <see cref="IManagedPackageInstaller"/> to verify + trust-gate + deposit the
+	/// Applies a <see cref="PackageKind.Plugin"/> package (Phase 4): delegates to
+	/// <see cref="IPluginPackageInstaller"/> to verify + trust-gate + deposit the
 	/// carried plugin DLL(s), then records the install with the deployed file list
 	/// and a revision. No game objects, attributes, or plan are involved. The
 	/// plugin loads on the next server boot.
@@ -532,13 +533,13 @@ public partial class PackageInstallService
 	private async Task<Result<PackageApplyResult>> ApplyManagedAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
-		IManagedPackageBinarySource? binarySource,
+		IPluginPackageBinarySource? binarySource,
 		CancellationToken cancellationToken)
 	{
 		if (binarySource is null)
 		{
 			return new Error<string>(
-				$"Managed package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
+				$"Plugin package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
 		}
 
 		// The same dependency/conflict gate a softcode plan enforces, and it must run here: once
@@ -563,7 +564,7 @@ public partial class PackageInstallService
 				: $"requires {i.PackageId} {i.Constraint}{(i.InstalledVersion is null ? " (not installed)" : $" (installed: {i.InstalledVersion})")}"))}");
 
 	/// <summary>
-	/// Records a managed package whose binaries <see cref="IManagedPackageInstaller"/> has deposited: the
+	/// Records a managed package whose binaries <see cref="IPluginPackageInstaller"/> has deposited: the
 	/// install row with the deployed file list, its dependencies, and a revision.
 	/// </summary>
 	private async Task<PackageApplyResult> RecordManagedDeploymentAsync(
@@ -576,7 +577,8 @@ public partial class PackageInstallService
 
 		await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), request.Source.Repo, request.Source.Path,
-			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed));
+			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed,
+			Kind: PackageKind.Plugin));
 
 		await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -598,8 +600,8 @@ public partial class PackageInstallService
 
 		var notes = new List<string>
 		{
-			$"Deposited {deployed.Count} verified binary file(s) into plugins/{manifest.Name}/. "
-			+ "The plugin loads on the next server boot."
+			$"Installed {deployed.Count} verified file(s) for plugin {manifest.Name}. "
+			+ "It starts when the server restarts."
 		};
 		return new PackageApplyResult(revision, new Dictionary<string, string>(StringComparer.Ordinal), notes);
 	}

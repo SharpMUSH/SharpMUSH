@@ -117,6 +117,17 @@ public sealed class PluginManager(
 	}
 
 	/// <inheritdoc />
+	public PluginRegistration? Registration(string pluginId)
+	{
+		lock (_gate)
+		{
+			return _tracked.TryGetValue(pluginId, out var tracked)
+				? new PluginRegistration(tracked.IsUnloadable, tracked.CommandNames.Count, tracked.FunctionNames.Count)
+				: null;
+		}
+	}
+
+	/// <inheritdoc />
 	public async Task<Result<Success>> UnloadAsync(string pluginId)
 	{
 		var result = Unload(pluginId, forReload: false);

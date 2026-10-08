@@ -29,14 +29,21 @@ else
     <PlainPageHeader Kicker="@Loc["PkgKickerRegistry"]"
                      Title="@($"{(_plan.Changeset.Kind == PackageRevisionKind.Install ? Loc["PkgInstallHeading"] : Loc["PkgUpgradeHeading"])}: {_plan.PackageId} {_plan.Version}")">
         <DescriptionContent>
-            @Loc["PkgPlanLocation", _remote, _path, _plan.Commit[..Math.Min(10, _plan.Commit.Length)]]
+            @if (IsUpload)
+            {
+                @Loc["PkgPlanUploaded", _plan.PackageId]
+            }
+            else
+            {
+                @Loc["PkgPlanLocation", _remote, _path, _plan.Commit[..Math.Min(10, _plan.Commit.Length)]]
+            }
             @if (_plan.Changeset.FromVersion is not null)
             {
                 <text> @Loc["PkgUpgradingFrom", _plan.Changeset.FromVersion]</text>
             }
         </DescriptionContent>
         <Actions>
-            <CapsuleButton Href="/admin/packages/browse">@Loc["Cancel"]</CapsuleButton>
+            <CapsuleButton Href="@(IsUpload ? "/admin/packages" : "/admin/packages/browse")">@Loc["Cancel"]</CapsuleButton>
             <CapsuleButton Primary="true" Disabled="@(!CanApply || _busy)" OnClick="@ApplyAsync">@Loc["PkgApply"]</CapsuleButton>
         </Actions>
     </PlainPageHeader>
@@ -85,6 +92,27 @@ else
     @foreach (var note in _plan.Changeset.Notes)
     {
         <MudAlert Severity="Severity.Info" Dense="true">@note</MudAlert>
+    }
+
+    @* ── Plugin code ──────────────────────────────────────────────────── *@
+    @if (_plan.Kind == PackageKind.Plugin && _plan.Binary is { } binary)
+    {
+        <KitCard Title="@Loc["PkgPluginCode"]" Sub="@Loc["PkgPluginCodeSub"]">
+            <div class="pkg-review-body">
+                <MudTable Items="binary.Files" Dense="true" Elevation="0" Class="pkg-objects-table">
+                    <HeaderContent>
+                        <MudTh>@Loc["PkgPluginFile"]</MudTh><MudTh>@Loc["PkgPluginSha"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd data-label="@Loc["PkgPluginFile"]"><code>@context.FileName</code></MudTd>
+                        <MudTd data-label="@Loc["PkgPluginSha"]"><code class="pkg-sha">@context.Sha256</code></MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudText Typo="Typo.caption">@Loc["PkgPluginMinServer", binary.MinServerVersion.ToString()]</MudText>
+                <MudCheckBox T="bool" @bind-Value="_pluginTrusted" Color="Color.Error" id="pkg-plugin-trust"
+                             Label="@Loc["PkgPluginTrust", _plan.PackageId]" />
+            </div>
+        </KitCard>
     }
 
     @* ── Configure ────────────────────────────────────────────────────── *@
@@ -295,6 +323,13 @@ else
 
     private bool _settingsConfirmed;
 
+    /// <summary>Whether the administrator confirmed they trust a plugin package's author; a plugin cannot install without it.</summary>
+    private bool _pluginTrusted;
+
+    private bool IsPlugin => _plan?.Kind == PackageKind.Plugin;
+
+    private bool IsUpload => string.Equals(_remote, "upload", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Whether applying changes a configuration option, which the admin confirms before applying.</summary>
     private bool ChangesSettings =>
         _plan?.Changeset.Settings?.Any(s => s.Action is PackageSettingAction.Set or PackageSettingAction.Restore) ?? false;
@@ -303,6 +338,7 @@ else
         _plan is not null
         && !_plan.Changeset.IsBlocked
         && (!ChangesSettings || _settingsConfirmed)
+        && (!IsPlugin || _pluginTrusted)
         && _conflicts.All(c => !string.IsNullOrEmpty(_decisions.GetValueOrDefault(DecisionKey(c))));
 
     protected override async Task OnInitializedAsync()
@@ -374,7 +410,7 @@ else
             }).ToList();
 
             switch (await Packages.ApplyAsync(new ApplyRequest(
-                _remote, _path, _version, new(_answers), decisions)))
+                _remote, _path, _version, new(_answers), decisions, AllowPluginCode: IsPlugin && _pluginTrusted)))
             {
                 case ApiFailure failure:
                     Snackbar.Add(failure.Message, Severity.Error);

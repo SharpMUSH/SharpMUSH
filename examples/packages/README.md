@@ -310,7 +310,7 @@ roles:
 A role may allow or deny only custom permissions. Built-in ones (`wiki.admin`,
 `game.wizard`, ...) are the game's to hand out with `@role`, so installing a
 package never grants staff powers. A package cannot declare a system role, and
-a managed (`kind: managed`) package cannot declare any of these blocks.
+a plugin (`kind: plugin`) package cannot declare any of these blocks.
 
 What install, upgrade and uninstall do:
 
@@ -360,7 +360,7 @@ must be one the option takes; the manifest is refused otherwise. A ref is
 allowed only on a dbref option, and must be the whole value. When the package
 is planned, each value is also checked against the live configuration: a
 value outside the option's range, or one the game's validators refuse, blocks
-the plan rather than being clamped. A managed package cannot declare
+the plan rather than being clamped. A plugin package cannot declare
 `settings:`.
 
 The review screen lists each option with its value now and after, and asks

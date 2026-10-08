@@ -1,6 +1,7 @@
 # Plugin System (C# DLL plugins)
 
-SharpMUSH supports loading **compiled C# plugins** from a `plugins/` directory at boot. A plugin is an
+SharpMUSH supports loading **compiled C# plugins** at boot, from the shipped `plugins/` folder beside the
+server binary and from the installed-plugins folder on the data volume. A plugin is an
 ordinary .NET assembly that contributes `[SharpCommand]`/`[SharpFunction]` definitions (and, in later
 phases, services, migrations, flags, bridge subscriptions, and extension hooks) into the live engine —
 without recompiling the server.
@@ -9,8 +10,9 @@ This document describes the **Phase 1** architecture (command/function contribut
 contribution seams (DI services, DB migrations, engine flags, NATS bridge subscriptions), the **Phase 2b**
 engine-extension hooks (command interception + connection/object lifecycle — the C# analog of softcode
 `@hook`), the **Phase 3** runtime **unload/reload** model, and the **Phase 4** **package-manager DLL
-distribution** (a `kind: managed` package carries a hashed plugin DLL, verified + trust-gated + deposited into
-`plugins/<id>/`), and notes the seams reserved for later phases.
+distribution** (a `kind: plugin` package carries a hashed plugin DLL, verified, confirmed by the administrator
+and deposited into the installed-plugins folder), plugin administration (turning plugins on and off, upload,
+restart), and notes the seams reserved for later phases.
 
 ## Why a plugin loader
 
@@ -67,8 +69,9 @@ definition:
 - **`[SharpPlugin]`** — marks the single entry type per assembly so discovery needs no blind scan.
 - **`ICommandSource`** → `IEnumerable<CommandDefinition> GetCommands()` and
   **`IFunctionSource`** → `IEnumerable<FunctionDefinition> GetFunctions()` — the contribution surfaces.
-- **`PluginManifest`** — `Id`, `Version`, `Dependencies`, `Priority`, `MinServerVersion`; loaded from a
-  `plugin.json` next to the DLL (`System.Text.Json`). Drives load order and compatibility.
+- **`PluginManifest`** — `Id`, `Version`, `Dependencies`, `Priority`, `MinServerVersion`, `SharedAssemblies`,
+  and the optional `Entry`, `Name`, `Description`; loaded from a `plugin.json` next to the DLL
+  (`System.Text.Json`). Drives load order, compatibility, and what the portal shows.
 - **`PluginBase : IPlugin, ICommandSource, IFunctionSource`** — convenience base. Its default
   `GetCommands`/`GetFunctions` use reflection to read the generator-produced
   `SharpMUSH.Implementation.Generated.CommandLibrary.Commands` /
@@ -107,15 +110,20 @@ existing definition wins.
 
 `SharpMUSH.Implementation.Services.PluginLoaderService` is the **one** place a DLL is loaded:
 
-1. **Discovery.** Scan `AppContext.BaseDirectory/plugins` for `*.dll` at the top level and one level down
-   (`plugins/<id>/*.dll`). Read a sibling `plugin.json` for ordering metadata; fall back to file-name
-   defaults when absent.
+1. **Discovery.** Scan the shipped folder (`AppContext.BaseDirectory/plugins`) and then the installed folder
+   (see **Plugin folders** below) for `*.dll` at the top level and one level down (`<folder>/<id>/*.dll`);
+   folders whose name starts with `.` are skipped. In a plugin folder the entry DLL is the one `plugin.json`
+   names in `entry`, or the only DLL there. Read the sibling `plugin.json` for ordering metadata (fall back to
+   file-name defaults when absent), mark the plugin Incompatible when its `minServerVersion` does not fit the
+   plugin contract version, Duplicate when a shipped plugin already has its id, and Disabled when an
+   administrator turned it off.
 2. **Order resolution.** Topological sort by `Dependencies` so every plugin loads after all of its declared
    dependencies. Ties (no dependency relationship) break by `Priority` then `Id`. Dependency cycles are
    detected, logged, and the cyclic plugins are skipped (the rest still load). Missing declared dependencies
    are logged and the dependent still loads.
 3. **Load.** For each candidate in order: create its `PluginLoader`, `LoadDefaultAssembly()`, find the single
-   `[SharpPlugin] IPlugin` type, `Activator.CreateInstance`. Every plugin is wrapped in `try/catch` so **one
+   `[SharpPlugin] IPlugin` type, `Activator.CreateInstance`. The instance's `Id` must equal its `plugin.json`
+   id. Every plugin is wrapped in `try/catch` so **one
    bad DLL never aborts boot**. The loader returns the instantiated plugins; it does **not** initialize them
    or apply any contribution — that is the catalog's / manager's job.
 
@@ -280,8 +288,9 @@ The architecture leaves these seams for the committed later phases:
   `IPluginHookDispatcher` and `IConnectionService.ListenState` (see above). Hook-only plugins stay unloadable.
 - **Phase 3** — *implemented* — hot-reload/unload of command/function-only (and hook-only) plugins via
   collectible ALCs, with a `WeakReference`-dead gate (see above).
-- **Phase 4** — *implemented* — package-manager DLL distribution: a `kind: managed` package carries a
-  hashed plugin DLL, verified + trust-gated + deposited into `plugins/<id>/` on install (see below).
+- **Phase 4** — *implemented* — package-manager DLL distribution: a `kind: plugin` package carries a
+  hashed plugin DLL, verified, confirmed by the administrator and deposited into
+  `<installed plugins>/<id>/` on install (see below).
 - **Phase 5** — *implemented* — the Scene system is extracted into the standalone `SharpMUSH.Plugins.Scene`
   plugin via the Phase-1/2a seams (see below).
 - **Phase 8** — *implemented* — plugin-owned **storage**: the `ISceneService` implementations moved out of
@@ -300,16 +309,29 @@ The architecture leaves these seams for the committed later phases:
 
 ## Phase 4 — package-manager DLL distribution
 
-Until Phase 4, a plugin DLL could only reach `plugins/` by a **manual drop**. Phase 4 lets the Area-20
-**package manager** distribute compiled plugins: a package can declare `kind: managed` and carry a plugin
-DLL (plus optional dependency assemblies) alongside its `package.yaml`. Installing it **verifies** the
-binaries against SHA-256 hashes in the manifest and, once the operator opts in, **deposits** them into
-`plugins/<packageId>/` so the existing boot-time loader picks them up. Uninstalling **removes** the directory
+A plugin reaches the server either by a manual drop into a plugins folder or through the Area-20 **package
+manager**: a package can declare `kind: plugin` and carry a plugin DLL (plus its `plugin.json` and any
+dependency assemblies) alongside its `package.yaml`. Installing it **verifies** the binaries against SHA-256
+hashes in the manifest, checks the carried `plugin.json`, and **deposits** them into
+`<installed plugins>/<packageId>/` so the boot-time loader picks them up. Uninstalling **removes** that folder
 (and unloads the plugin if it is loaded + unloadable).
+
+### Plugin folders
+
+The loader reads two folders (`PluginDirectories`):
+
+| Folder | Holds | Where |
+|--------|-------|-------|
+| Shipped (`BuiltIn`) | plugins the server image ships, e.g. the Scene System at `plugins/scene/` | `<app>/plugins/`, beside the server binary; nothing writes there |
+| Installed (`Installed`) | plugins deposited by plugin packages, one folder per package id | `<world path>.plugins/` on the data volume (e.g. `/app/data/lightning.plugins`), or `SHARPMUSH_PLUGINS_PATH` |
+
+Because the installed folder sits beside the world, an image update keeps installed plugins. It also holds
+`plugins.state.json` (see **Plugin administration** below) and `.uploads/` (portal uploads waiting to be
+applied). A folder whose name starts with `.` is never loaded.
 
 ### The manifest binary section
 
-A managed package's `package.yaml` declares `kind: managed` and a `binaries:` block, and **must not** declare
+A plugin package's `package.yaml` declares `kind: plugin` and a `binaries:` block, and **must not** declare
 softcode `objects:` or an `application:` block (validated in `PackageManifestService`, mirroring how the
 Softcode/Application kinds are validated). The shape (`PackageBinarySpec` / `PackageBinaryFile` in
 `SharpMUSH.Library/Models/Packages/PackageManifest.cs`):
@@ -317,7 +339,7 @@ Softcode/Application kinds are validated). The shape (`PackageBinarySpec` / `Pac
 ```yaml
 package: my-plugin
 version: "1.0.0"
-kind: managed
+kind: plugin
 binaries:
   min_server_version: ">=1.1"        # plugin/server contract version constraint (refused if too new)
   files:
@@ -325,60 +347,130 @@ binaries:
       sha256: <64-hex SHA-256>       # the installer rejects a mismatch
     - file: MyPlugin.deps.json
       sha256: <64-hex SHA-256>
-    - file: plugin.json              # ordering metadata for the loader (optional)
+    - file: plugin.json              # required; its id must equal the package id
       sha256: <64-hex SHA-256>
 ```
 
 `min_server_version` is checked against `PluginContractVersion.Current` (a `PackageVersion` in
 `SharpMUSH.Library/Plugins/PluginContractVersion.cs`, tracking the shared contract surface plugins bind to).
-File names are constrained to bare names so they deposit flat into `plugins/<id>/`.
+File names are constrained to bare names so they deposit flat into `<installed plugins>/<id>/`.
+
+The carried `plugin.json` must be listed in `binaries.files`, and its `id` must equal the package id. A
+package may not take the id of a shipped plugin. When the folder carries more than one DLL, `plugin.json` must
+name the plugin's own DLL in `entry`.
 
 ### Distribution: bytes alongside `package.yaml`
 
 The DLL bytes live in the **package source** — the git directory `package.yaml` is in. `IPackageSourceService`
 gained `GetBinarySourceAsync(remote, path, commit, …)`, which reads the package directory's blobs from the
 **exact commit** the manifest was fetched at (a moved tag therefore cannot smuggle different bytes than the
-SHA-256 the manifest signed off on) and returns an `IManagedPackageBinarySource` — a tiny `ReadBinaryAsync(fileName)`
-seam. Tests back it with a directory; the controller backs it with the git commit snapshot.
+SHA-256 the manifest signed off on) and returns an `IPluginPackageBinarySource` — a tiny `ReadBinaryAsync(fileName)`
+seam. Tests back it with a directory; the controller backs it with the git commit snapshot, or, for a portal
+upload, with the staged upload (remote `upload`; see **Plugin administration**).
 
 ### Install / verify / trust / uninstall flow
 
-`PackageInstallService.ApplyAsync` short-circuits a `kind: managed` manifest to `ApplyManagedAsync`, which
-delegates to **`IManagedPackageInstaller`** (`ManagedPackageInstaller` in `SharpMUSH.Library/Services/`):
+`PackageInstallService.ApplyAsync` short-circuits a `kind: plugin` manifest to the plugin path, which
+delegates to **`IPluginPackageInstaller`** (`PluginPackageInstaller` in `SharpMUSH.Library/Services/`):
 
-1. **Trust gate (two parts, both required).** Managed installs are distinct from softcode: the apply needs the
-   operator's explicit per-apply opt-in **`PackageApplyRequest.AllowManagedCode`** *and* the package id must be
-   on the server's standing allow-list (`ManagedPackageTrustOptions`, from the `ManagedPackages` config section
-   — `AllowAll` or `AllowList`). Both are server-side / operator-supplied; a package never self-declares trust.
-2. **Server-version check.** `PluginContractVersion.Satisfies(min_server_version)` — refuse a package built for
+1. **Host switch.** `SHARPMUSH_PLUGIN_INSTALL` (`PluginInstallOptions`) decides whether this server installs
+   plugin packages at all, from a remote or by upload. It is on unless set to `false`.
+2. **Per-apply confirmation.** The apply needs the administrator's explicit
+   **`PackageApplyRequest.AllowPluginCode`** (`allow_plugin_code`; the "I trust this author" checkbox on the
+   portal's review page). A package never declares its own trust.
+3. **Server-version check.** `PluginContractVersion.Satisfies(min_server_version)` — refuse a package built for
    a newer contract than this server provides.
-3. **Hash verification.** Every declared file is read through the binary source and its SHA-256 compared to the
+4. **Hash verification.** Every declared file is read through the binary source and its SHA-256 compared to the
    manifest. A missing file or any mismatch **rejects the apply, having written nothing**.
-4. **Deposit.** The verified bytes are written into `plugins/<packageId>/` (a clean re-deploy replaces any prior
-   directory for that id). The deposited file names are recorded on the installed-package registry record.
-5. **Uninstall.** `UninstallAsync` sees a managed package by its recorded `DeployedFiles`, calls
-   `IManagedPackageInstaller.RemoveAsync` — which **unloads** the plugin first if it is loaded + unloadable
-   (`IPluginManager.UnloadAsync`; a load-once plugin can't unload at runtime, but its directory is still removed
-   so the next boot does not re-load it), then deletes `plugins/<packageId>/` — and drops the registry records.
+5. **`plugin.json` check.** It must be present, carry the package id, not take a shipped plugin's id, and name
+   its `entry` when there is more than one DLL.
+6. **Deposit.** The verified bytes are written into a `.incoming-<id>-<guid>` staging folder, which replaces
+   `<installed plugins>/<packageId>/` only once every file is written. The deposited file names are recorded on
+   the installed-package registry record.
+7. **Uninstall.** `UninstallAsync` sees a plugin package by its recorded `DeployedFiles`, calls
+   `IPluginPackageInstaller.RemoveAsync` — which **unloads** the plugin first if it is loaded + unloadable
+   (`IPluginManager.UnloadAsync`; a load-once plugin can't unload at runtime, but its folder is still removed
+   so the next start does not load it), then deletes the folder — and drops the registry records.
 
-A freshly-installed managed plugin is **loaded on the next boot** — the loader (`PluginLoaderService`) runs at
-startup. Live hot-load of a newly-installed package is a possible future nicety, **not** implemented here.
+A freshly-installed plugin is **loaded at the next start**; the loader (`PluginLoaderService`) runs at startup.
+The Plugins tab and `@shutdown/reboot` restart the engine (see **Plugin administration**).
 
-### The trust model (arbitrary managed code = full server trust)
+### The trust model (a plugin runs in full server trust)
 
-A managed package distributes **arbitrary compiled C#** that, once loaded, runs in **full server trust** — there
-is no sandbox, exactly as for a plugin dropped into `plugins/` by hand. This mirrors the trust posture in
-`docs/design/custom-widgets.md`. SHA-256 verification guards **integrity** (the bytes are what the manifest
-committed to), not trust; trust is the operator's two-part opt-in. The default `ManagedPackageTrustOptions` is
-**deny** — a server installs no managed packages until the operator configures the allow-list (or `AllowAll`)
-**and** confirms each install.
+A plugin package distributes **arbitrary compiled C#** that, once loaded, runs in **full server trust** — there
+is no sandbox, exactly as for a plugin dropped into a plugins folder by hand. This mirrors the trust posture in
+`docs/design/custom-widgets.md`. Whoever runs the server and installs a DLL takes responsibility for it: the host
+switch says whether this server installs plugins at all, and each apply needs the administrator's confirmation.
+SHA-256 verification guards **integrity** (the bytes are what the manifest committed to), not trust.
 
 ### The installed-package registry record extension
 
 The existing `InstalledPackageRecord` gained one field — `IReadOnlyList<string>? DeployedFiles` (default empty)
 — **no new collection**. It is threaded read+write through Lightning. Empty for
-softcode/application packages; populated for managed
+softcode/application packages; populated for plugin
 packages so uninstall removes exactly what install deposited.
+
+## Plugin administration
+
+### Load status and `plugin.json`
+
+`plugin.json` carries `id`, `version`, `dependencies`, `priority`, `minServerVersion`, `sharedAssemblies`, and
+three optional display/loading fields: `name` (display name), `description` (one line), and `entry` (the
+plugin's own DLL file name; required when the folder has more than one DLL, otherwise the single DLL is the
+entry). At start the loader gives every plugin it finds a status (`PluginBootEntry`):
+
+- **Incompatible** — `minServerVersion` does not fit `PluginContractVersion.Current`.
+- **Duplicate** — an installed plugin has the same id as a shipped one; the shipped one wins.
+- **Failed** — it threw while loading, its dependencies form a cycle, or its runtime `Id` does not equal its
+  `plugin.json` id.
+- **Disabled** — an administrator turned it off.
+- **Loaded** — running.
+
+### Turning plugins off: `plugins.state.json`
+
+Which plugins are turned off is recorded in `<installed plugins>/plugins.state.json`
+(`{"disabled": ["scene"]}`). It is a file rather than a world record because the loader reads it before the
+world is open.
+
+Turning a plugin off first uninstalls the installed packages that need it (after the usual pre-package
+backup) and records shipped ones as declined, so first boot does not reinstall them. Turning it back on lets
+the next start reinstall those. A plugin that only adds commands and functions stops at once when turned off;
+any other plugin starts or stops at the next restart.
+
+### Portal and commands
+
+The Packages admin area (`/admin/packages`, gated on `packages.admin`, as is the whole packages API) shows each
+package's kind with its own icon (softcode, application, plugin). Its **Plugins** tab lists every plugin,
+shipped and installed: version, origin, state (running, off, failed, incompatible, duplicate, not started),
+what it adds, which packages need it, and whether a change waits for a restart. Each can be turned on or off.
+
+**Upload plugin** takes a `.zip` (at most 20 MB, unpacking to at most 64 MB) of a plugin package's folder:
+`package.yaml` plus the files its `binaries` block lists, all at the top level of the zip (no folders, no
+links). The upload is staged in `.uploads/` (cleared after a day) and opens the normal review page with remote
+`upload`, where the administrator ticks the trust box and applies it. A configured remote may not be named
+`upload`.
+
+In game, `@plugin[/list]`, `@plugin <id>`, `@plugin/enable <id>` and `@plugin/disable <id>` do the same and
+need `packages.admin`.
+
+| Route | Does | Needs |
+|-------|------|-------|
+| `GET api/packages/plugins` | list plugins and their state | `packages.admin` |
+| `POST api/packages/plugins/{id}/enable` | turn a plugin on | `packages.admin` |
+| `POST api/packages/plugins/{id}/disable` | turn a plugin off | `packages.admin` |
+| `POST api/packages/plugins/upload` | stage an uploaded zip (multipart field `file`) | `packages.admin` |
+| `POST api/server/restart` | restart the engine | `server.operate` |
+
+Audit actions: `plugin.enable`, `plugin.disable`, `plugin.upload`, `plugin.install`, `server.restart`.
+
+### Restart
+
+`@shutdown/reboot` (needs `server.operate`) and the **Restart** button on the Plugins tab
+(`POST api/server/restart`) restart the engine. Everyone is told
+`GAME: Reboot w/o disconnect by <name>, please wait.`, then the process stops and its supervisor starts it
+again (Docker `restart: unless-stopped`, which every shipped compose file sets; Kubernetes; systemd). Client
+connections stay open because the connection server holds them. Run by hand without a supervisor, the server
+simply stops.
 
 ## Phase 5 — Scene as the reference plugin
 

@@ -26,12 +26,12 @@ public partial class PackageManifestService
 	private static PackageDeclarations ReadDeclarations(
 		Dictionary<string, object?> doc, PackageKind kind, List<PackageManifestIssue> issues)
 	{
-		if (kind == PackageKind.Managed)
+		if (kind == PackageKind.Plugin)
 		{
 			foreach (var key in new[] { "categories", "permissions", "roles" }.Where(doc.ContainsKey))
 			{
 				issues.Add(PackageManifestIssue.Error(key,
-					$"A managed package cannot declare '{key}'; declare them in a softcode package it depends on."));
+					$"A plugin package cannot declare '{key}'; declare them in a softcode package it depends on."));
 			}
 
 			return PackageDeclarations.None;

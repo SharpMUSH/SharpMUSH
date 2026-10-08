@@ -376,7 +376,7 @@ public class PackageManifestWriterTests
 			null, null, [], null, null, null, [], [],
 			new Dictionary<string, PackageConfigureSpec>(),
 			[],
-			PackageKind.Managed,
+			PackageKind.Plugin,
 			null,
 			new PackageBinarySpec(Constraint(">=1.0"),
 			[
@@ -387,7 +387,7 @@ public class PackageManifestWriterTests
 		var again = RoundTrip(original);
 		var binary = again.Binary!;
 
-		await Assert.That(again.Kind).IsEqualTo(PackageKind.Managed);
+		await Assert.That(again.Kind).IsEqualTo(PackageKind.Plugin);
 		await Assert.That(binary.MinServerVersion.ToString()).IsEqualTo(">=1.0.0");
 		await Assert.That(binary.Files.Count).IsEqualTo(2);
 		await Assert.That(binary.Files[0].FileName).IsEqualTo("Sink.Plugin.dll");

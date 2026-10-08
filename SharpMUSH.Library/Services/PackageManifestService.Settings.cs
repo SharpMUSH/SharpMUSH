@@ -19,10 +19,10 @@ public partial class PackageManifestService
 			return [];
 		}
 
-		if (kind == PackageKind.Managed)
+		if (kind == PackageKind.Plugin)
 		{
 			issues.Add(PackageManifestIssue.Error("settings",
-				"A managed package cannot declare 'settings'; declare them in a softcode package it depends on."));
+				"A plugin package cannot declare 'settings'; declare them in a softcode package it depends on."));
 			return [];
 		}
 

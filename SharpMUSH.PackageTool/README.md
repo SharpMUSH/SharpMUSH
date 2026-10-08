@@ -1,13 +1,13 @@
 # sharpmush-package
 
 An **offline** validator for SharpMUSH `package.yaml` manifests. It lints
-softcode, application, and managed package manifests using the same engine the
+softcode, application, and plugin package manifests using the same engine the
 SharpMUSH server uses (`PackageManifestService.ParseManifest`) — **no server,
 database, or network connection required**. This makes it ideal for plugin /
 package-template CI: a template repo can lint its `package.yaml` on every push
 without booting a server.
 
-For a `kind: managed` manifest it additionally verifies that every declared
+For a `kind: plugin` manifest it additionally verifies that every declared
 binary file exists in the package directory and that its bytes match the
 SHA-256 hash recorded in the manifest.
 
@@ -83,12 +83,12 @@ PASSED   (or FAILED)
 ## What it checks
 
 - The manifest parses and every field is valid for its declared `kind`
-  (`softcode`, `application`, `managed`).
+  (`softcode`, `application`, `plugin`).
 - Symbolic `{{refs}}` resolve (internal object refs, `{{$well_known}}`,
   `{{?configure}}`, and `{{dependency/ref}}` against declared `depends`).
 - Object/configure/well-known ref collisions, parent cycles, dependency vs.
   conflict overlaps, and the structural rules for each kind.
-- For `kind: managed`: each `binaries.files[*]` entry's `file` exists in the
+- For `kind: plugin`: each `binaries.files[*]` entry's `file` exists in the
   package directory and its SHA-256 matches the manifest `sha256`.
 
 ## Use in GitHub Actions

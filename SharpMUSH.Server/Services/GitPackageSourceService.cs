@@ -228,7 +228,7 @@ public class GitPackageSourceService(
 		}, cancellationToken);
 	}
 
-	public async Task<Result<IManagedPackageBinarySource>> GetBinarySourceAsync(
+	public async Task<Result<IPluginPackageBinarySource>> GetBinarySourceAsync(
 		PackageRemoteRecord remote, string path, string commit, CancellationToken cancellationToken = default)
 	{
 		return await WithRepoAsync(remote, repository =>
@@ -236,7 +236,7 @@ public class GitPackageSourceService(
 			var resolved = repository.Lookup<Commit>(commit);
 			if (resolved is null)
 			{
-				return new Result<IManagedPackageBinarySource>(
+				return new Result<IPluginPackageBinarySource>(
 					new Error<string>($"Remote '{remote.Name}': commit '{commit}' is not in the cache."));
 			}
 
@@ -260,12 +260,12 @@ public class GitPackageSourceService(
 				}
 			}
 
-			return new Result<IManagedPackageBinarySource>(new GitCommitBinarySource(files));
+			return new Result<IPluginPackageBinarySource>(new GitCommitBinarySource(files));
 		}, cancellationToken);
 	}
 
 	/// <summary>An in-memory snapshot of a package directory's blob bytes at one commit.</summary>
-	private sealed class GitCommitBinarySource(IReadOnlyDictionary<string, byte[]> files) : IManagedPackageBinarySource
+	private sealed class GitCommitBinarySource(IReadOnlyDictionary<string, byte[]> files) : IPluginPackageBinarySource
 	{
 		public Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default) =>
 			Task.FromResult(files.GetValueOrDefault(fileName));
