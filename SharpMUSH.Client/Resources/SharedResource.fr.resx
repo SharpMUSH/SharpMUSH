@@ -4416,6 +4416,21 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Messages</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scènes</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>Aucune scène n'est en cours dans cette pièce.</value>
+  </data>
+  <data name="NavPlayScenesBrowse" xml:space="preserve">
+    <value>Parcourir les scènes</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Vous n'avez rejoint aucun canal. Tapez @channel/list pour les voir, puis @channel/on &lt;canal&gt; pour en rejoindre un.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Aucun message privé pour l'instant. Tapez page &lt;nom&gt;=&lt;message&gt; pour écrire à quelqu'un en privé.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# ici}}</value>
   </data>

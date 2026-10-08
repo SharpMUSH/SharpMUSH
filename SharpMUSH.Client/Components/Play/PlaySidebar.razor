@@ -10,7 +10,9 @@
 @* D1 §5.1 Play page sidebar (boards 01, 07): "Play · ● Connected as {name}", then In scene (the room's
    picture, the scene's title and its cast), Channels (# rows, bold with an unread pill) and Pages (one
    row per conversation: a portrait, or a stacked pair for a group page). Channels and pages come from
-   the comm feed (§7.3); an empty feed shows neither group. Collapsed keeps only the leads. *@
+   the comm feed (§7.3). An empty group still shows its label and a line on how to fill it, so a new
+   player learns the drawer holds scenes, channels and pages; the Scenes line only while the game has the
+   Scene System. Collapsed keeps only the leads, so it drops an empty group. *@
 <div class="play-side @(Collapsed ? "play-side--collapsed" : null)">
     @if (!Collapsed)
     {
@@ -33,6 +35,15 @@
                         Collapsed="@Collapsed" OnClick="OnOpenScene" />
         </nav>
     }
+    else if (!Collapsed)
+    {
+        <FeatureGate Feature="@GameFeatures.Scenes">
+            <SectionLabel>@Loc["NavPlayScenes"]</SectionLabel>
+            <SidebarNote Class="play-side-empty play-side-scene-empty">
+                @Loc["NavPlayScenesEmpty"] <a href="/scenes">@Loc["NavPlayScenesBrowse"]</a>
+            </SidebarNote>
+        </FeatureGate>
+    }
     @if (Channels.Count > 0)
     {
         @if (!Collapsed)
@@ -47,6 +58,11 @@
                             IsCurrent="@(Current == name)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(name))" />
             }
         </nav>
+    }
+    else if (!Collapsed)
+    {
+        <SectionLabel>@Loc["NavPlayChannels"]</SectionLabel>
+        <SidebarNote Class="play-side-empty play-side-channels-empty">@Loc["NavPlayChannelsEmpty"]</SidebarNote>
     }
     @if (Feed.Conversations.Count > 0)
     {
@@ -66,6 +82,11 @@
                             IsCurrent="@(Current == key)" Collapsed="@Collapsed" OnClick="@(() => OnOpen.InvokeAsync(key))" />
             }
         </nav>
+    }
+    else if (!Collapsed)
+    {
+        <SectionLabel>@Loc["NavPlayPages"]</SectionLabel>
+        <SidebarNote Class="play-side-empty play-side-pages-empty">@Loc["NavPlayPagesEmpty"]</SidebarNote>
     }
     @if (_apps.Count > 0)
     {

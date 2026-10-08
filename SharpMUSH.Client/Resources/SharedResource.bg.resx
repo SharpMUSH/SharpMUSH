@@ -5122,6 +5122,21 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Съобщения</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Сцени</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>В тази стая не тече сцена.</value>
+  </data>
+  <data name="NavPlayScenesBrowse" xml:space="preserve">
+    <value>Разгледай сцените</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Не сте се присъединили към канали. Напишете @channel/list, за да ги видите, и @channel/on &lt;канал&gt;, за да се присъедините.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Още няма лични съобщения. Напишете page &lt;име&gt;=&lt;съобщение&gt;, за да пишете някому насаме.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# тук}}</value>
   </data>

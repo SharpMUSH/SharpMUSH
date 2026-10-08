@@ -135,12 +135,44 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(opened).IsEqualTo("#312:1|#315:1");
 	}
 
+	/// <summary>
+	/// A new player with no scene, channel or page still sees the three groups, each saying how to fill
+	/// it, so the drawer is not just a Menu button.
+	/// </summary>
 	[Test]
-	public async Task AnEmptyFeed_ShowsNeitherGroup()
+	public async Task NothingYet_ListsEachGroup_WithHowToFillIt()
 	{
-		var cut = RenderSidebar(Docks);
-		await Assert.That(cut.FindAll(".play-side-channels").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll(".play-side-pages").Count).IsEqualTo(0);
+		var cut = RenderSidebar();
+		cut.WaitForAssertion(() => cut.Find(".play-side-scene-empty"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-side-channels, .play-side-pages, .play-side-scene").Count).IsEqualTo(0)
+			.Because("there are no rows to list");
+		var labels = cut.FindAll(".kit-section-label").Select(l => l.TextContent.Trim()).ToList();
+		await Assert.That(labels).Contains("Scenes");
+		await Assert.That(labels).Contains("Channels");
+		await Assert.That(labels).Contains("Pages");
+		await Assert.That(cut.Find(".play-side-scene-empty a").GetAttribute("href")).IsEqualTo("/scenes");
+		await Assert.That(cut.Find(".play-side-channels-empty").TextContent).Contains("@channel/on");
+		await Assert.That(cut.Find(".play-side-pages-empty").TextContent).Contains("page <name>=<message>");
+	}
+
+	[Test]
+	public async Task NothingYet_WithoutTheSceneSystem_HasNoScenesGroup()
+	{
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true, features: []));
+		var cut = RenderSidebar();
+		cut.WaitForAssertion(() => cut.Find(".play-side-channels-empty"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-side-scene-empty").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task InAScene_ShowsNoScenesHint()
+		=> await Assert.That(RenderSidebar(Docks).FindAll(".play-side-scene-empty").Count).IsEqualTo(0);
+
+	[Test]
+	public async Task Collapsed_NothingYet_ShowsNoEmptyGroups()
+	{
+		var cut = RenderSidebar(collapsed: true);
+		await Assert.That(cut.FindAll(".play-side-empty, .kit-section-label").Count).IsEqualTo(0);
 	}
 
 	[Test]

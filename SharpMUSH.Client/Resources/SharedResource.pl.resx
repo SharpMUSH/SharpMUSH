@@ -5122,6 +5122,21 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Wiadomości</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Sceny</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>W tym pokoju nie toczy się żadna scena.</value>
+  </data>
+  <data name="NavPlayScenesBrowse" xml:space="preserve">
+    <value>Przeglądaj sceny</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Nie dołączyłeś do żadnego kanału. Wpisz @channel/list, aby je zobaczyć, a potem @channel/on &lt;kanał&gt;, aby dołączyć.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Brak wiadomości prywatnych. Wpisz page &lt;imię&gt;=&lt;wiadomość&gt;, aby napisać do kogoś prywatnie.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# tutaj}}</value>
   </data>

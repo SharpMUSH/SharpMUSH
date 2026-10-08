@@ -5122,6 +5122,21 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Üzenetek</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Jelenetek</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>Ebben a szobában nem fut jelenet.</value>
+  </data>
+  <data name="NavPlayScenesBrowse" xml:space="preserve">
+    <value>Jelenetek böngészése</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Még nem csatlakoztál egy csatornához sem. Írd be: @channel/list a listához, majd @channel/on &lt;csatorna&gt; a csatlakozáshoz.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Még nincs privát üzenet. Írd be: page &lt;név&gt;=&lt;üzenet&gt;, ha privátban írnál valakinek.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# itt}}</value>
   </data>

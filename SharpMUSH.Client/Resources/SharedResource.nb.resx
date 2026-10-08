@@ -5122,6 +5122,21 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Meldinger</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scener</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>Det pågår ingen scene i dette rommet.</value>
+  </data>
+  <data name="NavPlayScenesBrowse" xml:space="preserve">
+    <value>Se scener</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Du er ikke med i noen kanaler. Skriv @channel/list for å se dem, og @channel/on &lt;kanal&gt; for å bli med.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Ingen meldinger ennå. Skriv page &lt;navn&gt;=&lt;melding&gt; for å sende noen en privat melding.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# her}}</value>
   </data>

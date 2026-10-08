@@ -169,6 +169,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await cut.Find("button.play-menu-btn").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".play-sheet-body"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".play-side-scene")).IsEmpty();
+		await Assert.That(cut.FindAll(".play-side-scene-empty")).IsEmpty()
+			.Because("no hint points at scenes the game does not have");
 	}
 
 	[Test]
