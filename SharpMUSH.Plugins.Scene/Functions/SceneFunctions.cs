@@ -1,3 +1,4 @@
+using MarkupString.Layout;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -289,7 +290,8 @@ public static class SceneFunctions
 	/// deleted, editcount, lasteditedat, lasteditor, lasteditorname, or any meta key.
 	/// <para><c>content</c> is the pose as it was written, colours, boxes and pictures included, so a
 	/// recall prints it the way the room saw it and lays it out again at the reader's width;
-	/// <c>markup</c> is the same pose serialised.</para>
+	/// <c>markup</c> is the same pose serialised; <c>unboxed</c> is <c>content</c> with every box it holds
+	/// taken off, for a log people copy from.</para>
 	/// </summary>
 	[SharpFunction(Name = "scenepose", MinArgs = 2, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -329,6 +331,7 @@ public static class SceneFunctions
 		return field switch
 		{
 			"content" => new CallState(Written(pose)),
+			"unboxed" => new CallState(Unboxed(Written(pose))),
 			"markup" => new CallState(pose.Markup),
 			"id" => new CallState(pose.Id),
 			"scene" => new CallState(pose.SceneId),
@@ -364,6 +367,47 @@ public static class SceneFunctions
 			return MarkupText.Plain(pose.Content);
 		}
 	}
+
+	/// <summary>
+	/// <paramref name="text"/> with each box standing on lines of its own replaced by what it holds, laid out at
+	/// the box's width: its title becomes a titled rule above the body. A side border is copied along with
+	/// every line it sits beside, so a log people copy from has none. Text that is not in a box is kept.
+	/// </summary>
+	private static MString Unboxed(MString text)
+	{
+		var laidOut = text.Runs.IsDefaultOrEmpty
+			? []
+			: text.Runs.SelectMany(run => run.Markups).OfType<LayoutMarkup>().DistinctBy(layout => layout.Root).ToArray();
+		if (!laidOut.Any(layout => Unbox(layout.Root) is not null)) return text;
+
+		var parts = new List<MString>();
+		foreach (var block in BlockLayout.Blocks(text))
+		{
+			if (block is TextBlock { Alignment: null } plain)
+			{
+				parts.Add(plain.Content);
+				continue;
+			}
+
+			// Blocks() hands back each intact block as the very tree its layout carries.
+			var layout = laidOut.First(candidate => ReferenceEquals(candidate.Root, block));
+			parts.Add(BlockLayout.Build(Unbox(block) ?? block, layout.Width, layout.Fluid));
+		}
+
+		return MarkupText.Join(MarkupText.NewLine, parts);
+	}
+
+	/// <summary>
+	/// What the box <paramref name="block"/> holds, under the looks around it, with its title as a rule above;
+	/// or none when <paramref name="block"/> is not a box.
+	/// </summary>
+	private static Block? Unbox(Block block) => block switch
+	{
+		Themed themed => Unbox(themed.Content) is { } body ? themed with { Content = body } : null,
+		Frame { Title: { Length: > 0 } title } frame => new Stack([new Rule(title) { Border = frame.Border, TitleAlignment = frame.TitleAlignment }, frame.Body]),
+		Frame frame => frame.Body,
+		_ => null,
+	};
 
 	/// <summary>
 	/// sceneedits(&lt;scene&gt;, &lt;poseId&gt;)

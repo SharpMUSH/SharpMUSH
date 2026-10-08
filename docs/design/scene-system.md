@@ -209,7 +209,7 @@ take **dbrefs**, and return the new id/value inline. Reads are `Regular`.
 (`active`/`recent`/`scheduled`/`mine`; windowed UTC-ms for `scheduled`, sorted by
 `ScheduledFor`) · `scenewhere(<roomDbref>)` (active scene bound to a room) ·
 `sceneposes(<id>[,<authorDbref>][,<count>])` (ordered pose ids) ·
-`scenepose(<id>,<poseId>[,<field>])` (field from `current_edit` + pose props) ·
+`scenepose(<id>,<poseId>[,<field>])` (field from `current_edit` + pose props; `unboxed` is `content` with its boxes taken off, which `+scene/recall` prints) ·
 `sceneedits(<id>,<poseId>)` (edit-version history) · `scenemembers(<id>[,<role>])`
 · `scenemember(<id>,<playerDbref>[,<field>])` (role/showas/current/grantedat) ·
 `scenefocus(<playerDbref>)` (the player's current scene id) · `scenetags(<id>)`

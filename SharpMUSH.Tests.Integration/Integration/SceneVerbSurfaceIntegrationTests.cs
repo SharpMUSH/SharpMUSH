@@ -499,6 +499,31 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
+	/// A pose written inside a box is recalled without it. Recall is what people copy into logs, and a box's
+	/// side border is copied along with every line it sits beside. The box's title stays, as a titled rule.
+	/// </summary>
+	[Test]
+	public async Task Recall_ShowsABoxedPoseWithoutItsBox()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (who, handle) = await CreatePlayerAsync($"Bix{Tag}");
+
+		await RunAs(handle, $"+scene/create Bix Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+		await RunAs(handle, $"+scene/emit {sceneId}=[box(The rain does not stop.,Night {Tag})]");
+
+		var recalled = string.Join("\n", await RunAs(handle, "+scene/recall 1")).Split('\n');
+
+		var pose = recalled.Single(line => line.Contains("The rain does not stop.", StringComparison.Ordinal));
+		await Assert.That(pose.TrimEnd()).IsEqualTo("The rain does not stop.")
+			.Because("the pose's line carries no side border or padding to copy along with it");
+		await Assert.That(recalled.Any(line => line.Contains($"Night {Tag}", StringComparison.Ordinal))).IsTrue()
+			.Because("the box's title is kept, as a titled rule above what it held");
+		await Assert.That(await Eval($"strmatch(scenepose({sceneId},last(sceneposes({sceneId})),content),*|*)")).IsEqualTo("1")
+			.Because("the pose itself still holds the box the room saw");
+	}
+
+	/// <summary>
 	/// A count that is not a whole number of at least one is refused in words.
 	///
 	/// <para><c>sceneposes()</c> answers a sentinel for anything below 1, and the verb would then iterate
