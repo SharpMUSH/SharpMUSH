@@ -945,6 +945,7 @@ public static partial class ErrorMessages
 		public const string ThemeSet = "Theme set.";
 		public const string ThemeCleared = "Theme cleared.";
 		public const string ThemeUnreadableFormat = "Your @theme does not read ({0}), so layouts use the game's theme. @theme me=<theme> sets another; @theme me= clears it.";
+		public const string ThemeModeNeedsTheme = "That works out to nothing, so there is no theme for /light or /dark to keep.";
 		public const string ThemeUsage = "Usage: @theme[/light|/dark] <object>=[<theme>], @theme/refresh [<player>], @theme/list.";
 		public const string ThemeAdminUsage = "Usage: @theme/add <name>=<theme>, @theme/remove <name>, @theme/disable <name>, @theme/enable <name>.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

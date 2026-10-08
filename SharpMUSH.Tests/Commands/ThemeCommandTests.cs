@@ -135,6 +135,18 @@ public class ThemeCommandTests
 	}
 
 	[Test]
+	public async Task Theme_InAModeWorkingOutToNothing_IsRefused()
+	{
+		var (player, _) = await PlayerWithParent();
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Run(player, "@theme/light me=[switch(get(%#/FACTION),Rebel,horror)]");
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(told).Contains(ErrorMessages.Notifications.ThemeModeNeedsTheme);
+		await Assert.That(await InUse(player)).IsEqualTo(ErrorMessages.Notifications.ThemeNoneInUse);
+	}
+
+	[Test]
 	public async Task Theme_SetBeforeTheParent_IsInherited()
 	{
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Expect<SharpPlayer>();

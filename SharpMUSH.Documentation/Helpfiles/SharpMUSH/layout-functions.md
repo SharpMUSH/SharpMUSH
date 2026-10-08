@@ -481,7 +481,7 @@ Output: none.
 
 ## Light and dark
 
-`/light` makes the theme for a client with a light background, and `/dark` for a dark one. A theme made from one colour, which includes the genre themes, is made again for that background; a well-known scheme such as `nord` stays as it is. Code given with `/light` or `/dark` is worked out first, and the theme it gives is kept, not the code.
+`/light` makes the theme for a client with a light background, and `/dark` for a dark one. A theme made from one colour, which includes the genre themes, is made again for that background; a well-known scheme such as `nord` stays as it is. Code given with `/light` or `/dark` is worked out first, and the theme it gives is kept, not the code. Code that works out to nothing is refused with them, since there is no theme to keep.
 
 ## Parents and the player ancestor
 
