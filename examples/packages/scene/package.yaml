@@ -1,6 +1,6 @@
 format: 1.2
 package: scene
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -348,9 +348,11 @@ objects:
 
       # ---- membership / RSVP / focus --------------------------------------------
       # An owner who joins their own scene again (the portal's Join, after focusing elsewhere) stays its
-      # owner: @scene/member sets the role outright, so it is skipped for them.
+      # owner: @scene/member sets the role outright, so it is skipped for them. @scene/member and @scene/focus
+      # refuse a missing scene but tell the Logger, not the player, so each verb that names a scene checks it
+      # exists first; scene() also hides a private scene from a non-member, so it cannot be joined by its id.
       CMD`JOIN: |-
-        $+scene/join *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @if not(strmatch(scenemember(%0,%#,role),owner))={@scene/member %0/participant=%#}; @scene/focus %#=%0; @pemit %#=[notice(SCENE,Joined and focused on scene %0.,ok)]
+        $+scene/join *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %0,warn)]; @if not(strmatch(scenemember(%0,%#,role),owner))={@scene/member %0/participant=%#}; @scene/focus %#=%0; @pemit %#=[notice(SCENE,Joined and focused on scene %0.,ok)]
 
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
       # Capture the focused scene id into %q<SceneID> BEFORE @scene/focus clears it (@assert sets the
@@ -361,12 +363,12 @@ objects:
       # +scene/tag and its common name, +scene/rsvp.
       CMD`TAG:
         value: |-
-          $(?is)^\+scene/(?\:tag|rsvp) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @scene/member %1/attending=%#; @pemit %#=[notice(SCENE,RSVP'd to scene %1.,ok)]
+          $(?is)^\+scene/(?\:tag|rsvp) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %1,warn)]; @assert not(match(owner participant,scenemember(%1,%#,role)))=@pemit %#=[notice(SCENE,You are already in scene %1.,warn)]; @scene/member %1/attending=%#; @pemit %#=[notice(SCENE,RSVP'd to scene %1.,ok)]
         flags: [REGEXP]
 
       CMD`UNTAG:
         value: |-
-          $(?is)^\+scene/(?\:untag|unrsvp) (.+)$: @scene/unmember %1=%#; @pemit %#=[notice(SCENE,Removed RSVP from scene %1.,ok)]
+          $(?is)^\+scene/(?\:untag|unrsvp) (.+)$: @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %1,warn)]; @assert strmatch(scenemember(%1,%#,role),attending)=@pemit %#=[notice(SCENE,You have not RSVP'd to scene %1.,warn)]; @scene/unmember %1=%#; @pemit %#=[notice(SCENE,Removed RSVP from scene %1.,ok)]
         flags: [REGEXP]
 
       CMD`AS: |-
@@ -389,14 +391,16 @@ objects:
       CMD`REWRITE: |-
         $+scene/rewrite *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert setr(pid,%0); @assert strmatch(scenepose(,%q<pid>,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @assert strlen(%1)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_EMPTY)],warn)]; @scene/editpose %q<pid>=%#,%1
 
+      # Undo, redo and delete check the pose the way CMD`EDIT does (it exists, and it is the player's), then
+      # call the function, whose answer is the pose id or why it could not: @scene/undo tells only the Logger.
       CMD`UNDO: |-
-        $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @scene/undo %0
+        $+scene/undo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert strmatch(scenepose(,%0,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @pemit %#=[if(isint(setr(Result,sceneundo(%0))),notice(SCENE,Pose %0 undone.,ok),notice(SCENE,%q<Result>,warn))]
 
       CMD`REDO: |-
-        $+scene/redo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @scene/redo %0
+        $+scene/redo *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert strmatch(scenepose(,%0,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @pemit %#=[if(isint(setr(Result,sceneredo(%0))),notice(SCENE,Pose %0 redone.,ok),notice(SCENE,%q<Result>,warn))]
 
       CMD`DELETE: |-
-        $+scene/delete *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @scene/delete %0
+        $+scene/delete *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scenepose(,%0,author),#-1*))=@pemit %#=[notice(SCENE,No such pose: %0,warn)]; @assert strmatch(scenepose(,%0,author),num(%#))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_AUTHOR)],error)]; @pemit %#=[if(isint(setr(Result,scenedelpose(%0))),notice(SCENE,Pose %0 deleted.,ok),notice(SCENE,%q<Result>,warn))]
 
       CMD`MOVE: |-
         $+scene/move *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @assert u(%!/FUN`OWNS,%#,%q<SceneID>)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @scene/move %0=%1
@@ -540,7 +544,7 @@ objects:
       CMD`SCHEDULE: |-
         $+scene/schedule *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert setr(SceneID,scenecreate(,%#,%0)); @scene/member %q<SceneID>/owner=%#; @scene/set %q<SceneID>/status=scheduled; @scene/set %q<SceneID>/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @pemit %#=[notice(SCENE,Scheduled scene %q<SceneID> "%0" for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].,ok)]
       CMD`RESCHEDULE: |-
-        $+scene/reschedule *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert u(%!/FUN`OWNS,%#,%0); @scene/set %0/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @scene/set %0/status=[switch(setr(st,scene(%0,status)),active,paused,%q<st>)]; @pemit %#=[notice(SCENE,Rescheduled scene %0 for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].[if(strmatch(scene(%0,status),paused),%bIt is paused until +scene/start %0 resumes it.)],ok)]
+        $+scene/reschedule *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %0,warn)]; @assert u(%!/FUN`OWNS,%#,%0)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NOT_OWNER)],error)]; @scene/set %0/scheduledfor=[u(%!/FUN`SCHED_WHEN,%1)]; @scene/set %0/status=[switch(setr(st,scene(%0,status)),active,paused,%q<st>)]; @pemit %#=[notice(SCENE,Rescheduled scene %0 for [convsecs(div(u(%!/FUN`SCHED_WHEN,%1),1000))].[if(strmatch(scene(%0,status),paused),%bIt is paused until +scene/start %0 resumes it.)],ok)]
       # +scene/unschedule and +scene/cancel take a scene off the schedule for good: its time is cleared
       # and its status is `cancelled`, so it is in no list but the archive. (@scene/delete is the POSE
       # delete; it never removed a scene.) A running scene is ended with +scene/finish instead.
@@ -587,7 +591,7 @@ objects:
       CMD`DEACTIVATE: |-
         $+scene/deactivate: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_NO_FOCUS)],warn)]; @scene/focus %#=; @pemit %#=[notice(SCENE,Deactivated scene %q<SceneID> - still a member\, poses paused. +scene/activate %q<SceneID> to resume.,ok)]
       CMD`ACTIVATE: |-
-        $+scene/activate *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @scene/member %0/participant=%#; @scene/focus %#=%0; @pemit %#=[notice(SCENE,Activated scene %0 - your poses are recorded again.,ok)]
+        $+scene/activate *: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_APPROVAL)],error)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=[notice(SCENE,No such scene: %0,warn)]; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @pemit %#=[notice(SCENE,Activated scene %0 - your poses are recorded again.,ok)]
 
       # ---- summary + info card --------------------------------------------------
       # SCENE_FIELD(scene,field,default) reads a field, substituting <default> for an unset/#-1 result.

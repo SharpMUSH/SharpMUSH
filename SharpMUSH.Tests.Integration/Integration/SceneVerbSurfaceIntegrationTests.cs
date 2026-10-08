@@ -547,4 +547,148 @@ public class SceneVerbSurfaceIntegrationTests
 		await Assert.That(said.Any(m => m.Contains("#-1", StringComparison.Ordinal))).IsFalse()
 			.Because($"'{command}' leaked the not-found sentinel into a player-facing message");
 	}
+
+	/// <summary>
+	/// A verb that names a scene by id refuses an id that names no scene. <c>+scene/join 324</c> used to
+	/// answer "Joined and focused on scene 324." for a scene that did not exist: <c>@scene/member</c> and
+	/// <c>@scene/focus</c> refused it, but they tell the Logger, not the player, and the verb went on to
+	/// report success.
+	/// </summary>
+	[Test]
+	[Arguments("J", "+scene/join {0}")]
+	[Arguments("T", "+scene/tag {0}")]
+	[Arguments("R", "+scene/rsvp {0}")]
+	[Arguments("U", "+scene/untag {0}")]
+	[Arguments("A", "+scene/activate {0}")]
+	[Arguments("S", "+scene/reschedule {0}=2524608000")]
+	public async Task VerbNamingAMissingScene_SaysSo(string key, string verb)
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (who, handle) = await CreatePlayerAsync($"Nix{key}{Tag}");
+		const string missing = "987654321";
+		var command = string.Format(verb, missing);
+
+		var said = await RunAs(handle, command);
+
+		await Assert.That(said.Any(m => m.Contains($"No such scene: {missing}", StringComparison.Ordinal))).IsTrue()
+			.Because($"'{command}' names a scene that does not exist");
+		await Assert.That(said.Any(m => m.Contains("#-1", StringComparison.Ordinal))).IsFalse()
+			.Because($"'{command}' leaked the not-found sentinel into a player-facing message");
+		await Assert.That(said.Any(m =>
+				m.Contains("Joined", StringComparison.Ordinal)
+				|| m.Contains("RSVP'd", StringComparison.Ordinal)
+				|| m.Contains("Removed RSVP", StringComparison.Ordinal)
+				|| m.Contains("Activated", StringComparison.Ordinal)
+				|| m.Contains("Rescheduled", StringComparison.Ordinal)))
+			.IsFalse()
+			.Because($"'{command}' reported success for a scene that does not exist");
+		await Assert.That(await Eval($"scenefocus({Num(who)})")).StartsWith("#-1")
+			.Because("nothing may be focused on a scene that does not exist");
+	}
+
+	/// <summary>
+	/// A private scene reads as missing to someone who is not in it, so it cannot be joined by guessing
+	/// its id; its owner can still let them in.
+	/// </summary>
+	[Test]
+	public async Task JoiningAPrivateSceneYouAreNotIn_IsRefused()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (_, ownerHandle) = await CreatePlayerAsync($"Opal{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"Pike{Tag}");
+
+		await RunAs(ownerHandle, $"+scene/create Opal Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
+		await RunAs(ownerHandle, "+scene/private");
+
+		var said = await RunAs(guestHandle, $"+scene/join {sceneId}");
+
+		await Assert.That(said.Any(m => m.Contains($"No such scene: {sceneId}", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(await Eval($"scenefocus({Num(guest)})")).StartsWith("#-1");
+	}
+
+	/// <summary>
+	/// RSVP and /activate set a role, and setting a role replaces the one there: the owner who RSVP'd to
+	/// their own scene, or resumed recording in it, used to stop being its owner.
+	/// </summary>
+	[Test]
+	public async Task TheOwner_KeepsTheScene_AfterRsvpAndActivate()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, handle) = await CreatePlayerAsync($"Quin{Tag}");
+
+		await RunAs(handle, $"+scene/create Quin Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+
+		var rsvp = await RunAs(handle, $"+scene/rsvp {sceneId}");
+		await Assert.That(rsvp.Any(m => m.Contains($"already in scene {sceneId}", StringComparison.Ordinal))).IsTrue();
+		await RunAs(handle, "+scene/deactivate");
+		await RunAs(handle, $"+scene/activate {sceneId}");
+
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(owner)},role)")).IsEqualTo("owner");
+		await Assert.That(await Eval($"scenefocus({Num(owner)})")).IsEqualTo(sceneId);
+	}
+
+	/// <summary>
+	/// <c>+scene/unrsvp</c> withdraws an RSVP and nothing else: it removes every role the player holds,
+	/// so run by the owner or a participant it would have taken them out of the scene.
+	/// </summary>
+	[Test]
+	public async Task Unrsvp_WithoutAnRsvp_LeavesTheMembershipAlone()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (owner, handle) = await CreatePlayerAsync($"Rhea{Tag}");
+
+		await RunAs(handle, $"+scene/create Rhea Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+
+		var said = await RunAs(handle, $"+scene/unrsvp {sceneId}");
+
+		await Assert.That(said.Any(m => m.Contains("have not RSVP'd", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(await Eval($"scenemember({sceneId},{Num(owner)},role)")).IsEqualTo("owner");
+	}
+
+	/// <summary>
+	/// The pose verbs answer the player: a pose id that names no pose, and a pose someone else wrote, are
+	/// refused in words, and a pose of their own is undone, redone or deleted with a line saying so. They
+	/// used to run the wizard primitive straight away, which edited or deleted anyone's pose and told
+	/// only the Logger how it went.
+	/// </summary>
+	[Test]
+	public async Task PoseVerbs_CheckThePoseAndItsAuthor()
+	{
+		await PutLoggerInMasterRoomAsync();
+		var (author, authorHandle) = await CreatePlayerAsync($"Sela{Tag}");
+		var (_, otherHandle) = await CreatePlayerAsync($"Tamm{Tag}");
+
+		await RunAs(authorHandle, $"+scene/create Sela Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(author)})");
+		await RunAs(authorHandle, "+scene/start");
+		await RunAs(authorHandle, $"+scene/emit {sceneId}=The tide turns {Tag}.");
+		var poseId = await Eval($"last(sceneposes({sceneId}))");
+		await Assert.That(poseId).DoesNotStartWith("#-1");
+		await RunAs(otherHandle, $"+scene/join {sceneId}");
+
+		foreach (var verb in new[] { "undo", "redo", "delete" })
+		{
+			var missing = await RunAs(authorHandle, $"+scene/{verb} 987654321");
+			await Assert.That(missing.Any(m => m.Contains("No such pose: 987654321", StringComparison.Ordinal))).IsTrue()
+				.Because($"+scene/{verb} names a pose that does not exist");
+
+			var notMine = await RunAs(otherHandle, $"+scene/{verb} {poseId}");
+			await Assert.That(notMine.Any(m => m.Contains("not yours", StringComparison.Ordinal))).IsTrue()
+				.Because($"+scene/{verb} on someone else's pose is refused");
+		}
+
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},deleted)")).IsEqualTo("0")
+			.Because("the refused delete must not have deleted anything");
+
+		var undo = await RunAs(authorHandle, $"+scene/undo {poseId}");
+		await Assert.That(undo.Any(m => m.Contains("oldest version", StringComparison.Ordinal))).IsTrue()
+			.Because("an unedited pose has nothing to undo, and the player is told so");
+
+		var deleted = await RunAs(authorHandle, $"+scene/delete {poseId}");
+		await Assert.That(deleted.Any(m => m.Contains($"Pose {poseId} deleted.", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},deleted)")).IsEqualTo("1");
+	}
 }
