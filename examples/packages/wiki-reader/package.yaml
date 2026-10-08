@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -169,7 +169,7 @@ objects:
         value: |-
           [@@(%0 a category name as typed — its key)][edit(lcstr(trim(if(strmatch(trim(%0),category:*),after(%0,:),%0))),%b,_)]
         flags: [funsyntax]
-      # A page number is a whole number from 1; =0, =-1 and =abc are mistakes, not page 1.
+      # A page number is a whole number from 1; /0 is a mistake, not page 1.
       FUN`IS`PAGENUM:
         value: |-
           [@@(%0 a page number as typed)][cand(isint(%0),gt(%0,0))]
@@ -214,7 +214,7 @@ objects:
 
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(%0 title · %1 refs · %2 page · %3 table attribute · %4 paging stem — reads %q<pages>)][box([u(%!/%3,u(%!/FUN`GET`SLICE,%1,%2))]%r[rule()]%r[u(%!/FUN`DISPLAY`COUNT,words(%1),entry,entries)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%4=[add(%2,1)])],%0,,u(%!/FUN`GET`FRAME))]
+          [@@(%0 title · %1 refs · %2 page · %3 table attribute · %4 the command and its switches · %5 what follows them — reads %q<pages>. The next page is %4/<n> %5)][box([u(%!/%3,u(%!/FUN`GET`SLICE,%1,%2))]%r[rule()]%r[u(%!/FUN`DISPLAY`COUNT,words(%1),entry,entries)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%4/[add(%2,1)][if(strlen(%5),%b%5)])],%0,,u(%!/FUN`GET`FRAME))]
         flags: [funsyntax]
       FUN`DISPLAY`ARTICLE:
         value: |-
@@ -241,11 +241,11 @@ objects:
       # carries what the reader typed.
       INC`DO`LISTING:
         value: |-
-          @@ no arguments — lists %q<list> with the table %q<table> under the title %q<title>, page %q<page>, paging with %q<stem>=<n>; @assert words(%q<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%q<list>))]; @assert lte(%q<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%q<title>,%q<list>,%q<page>,%q<table>,%q<stem>)]
+          @@ no arguments — lists %q<list> with the table %q<table> under the title %q<title>, page %q<page>, the next page being %q<head>/<n> %q<tail>; @assert words(%q<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%q<list>))]; @assert lte(%q<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%q<title>,%q<list>,%q<page>,%q<table>,%q<head>,%q<tail>)]
         flags: [cmdsyntax]
       INC`DISPLAY`USAGE:
         value: |-
-          @@ no arguments — the usage of switch %q<sw>; @pemit %#=[notice(WIKI,Usage: [trim(+wiki/%q<sw> [u(%!/FUN`GET`USAGE,%q<sw>)])],warn)]
+          @@ no arguments — the usage of switch %q<sw>; @pemit %#=[notice(WIKI,Usage: +wiki/[u(%!/FUN`GET`USAGE,%q<sw>)],warn)]
         flags: [cmdsyntax]
       INC`DISPLAY`BADSWITCH:
         value: |-
@@ -279,10 +279,11 @@ objects:
 
       # Every switch comes through here, named in full or by any beginning only it has (/l is /list),
       # and runs its INC`SW leaf with %q<rest>, whatever followed the switch. Matching every switch in
-      # one pattern is what lets a mistyped one answer rather than fall through to Huh?.
+      # one pattern is what lets a mistyped one answer rather than fall through to Huh?. A page is a
+      # last switch of digits: +wiki/list/2 main.
       CMD`SWITCH:
         value: |-
-          $(?s)^\+wiki/(?<sw>[^\s=]*)(?<rest>.*)$:think [setq(typed,lcstr(r(sw,args)),rest,r(rest,args))][setq(sw,u(%!/FUN`GET`SWITCH,%q<typed>))]; @assert strlen(%q<sw>)=@include %!/INC`DISPLAY`BADSWITCH; @include %!/INC`SW`[ucstr(%q<sw>)]
+          $(?s)^\+wiki/(?<sw>[^\s=]*)(?<rest>.*)$:think [setq(typed,lcstr(r(sw,args)),rest,r(rest,args))][setq(page,u(%!/FUN`GET`PAGE,%q<typed>))][if(strlen(%q<page>),setq(typed,if(strmatch(%q<typed>,*/*),before(%q<typed>,/))))][setq(sw,u(%!/FUN`GET`SWITCH,%q<typed>))]; @assert strlen(%q<sw>)=@include %!/INC`DISPLAY`BADSWITCH; @assert cor(not(strlen(%q<page>)),u(%!/FUN`IS`PAGED,%q<sw>))=@include %!/INC`DISPLAY`WARN=+wiki/%q<sw> takes no page number.; @assert u(%!/FUN`IS`PAGENUM,setr(page,strfirstof(%q<page>,1)))=@include %!/INC`DISPLAY`USAGE; @include %!/INC`SW`[ucstr(%q<sw>)]
         flags: [regexp, cmdsyntax]
       FUN`GET`SWITCHES:
         value: |-
@@ -294,35 +295,37 @@ objects:
         flags: [funsyntax]
       FUN`GET`USAGE:
         value: |-
-          [@@(%0 a switch — what follows it)][switch(%0,list,\[<namespace>\]\[=<page>\],search,<text>\[=<page>\],category,\[<name>\]\[=<page>\],recent,\[<n>\]\[=<page>\],info,<page>,audit,)]
+          [@@(%0 a switch — how it is typed, after +wiki/)][switch(%0,list,list\[/<page>\] \[<namespace>\],search,search\[/<page>\] <text>,category,category\[/<page>\] \[<name>\],recent,recent\[/<page>\] \[<n>\],info,info <page>,audit,audit)]
         flags: [funsyntax]
-      # Splits what followed a switch into its argument and the page after an =. A listing's = always
-      # starts the page; a search's only when a number (or nothing) follows its last one, so a search
-      # for text holding an = is still a search.
-      FUN`GET`PAGED:
+      FUN`IS`PAGED:
         value: |-
-          [@@(%0 what followed a switch · %1 1 when every = starts the page — sets %q<arg> and %q<page>)][setq(p,if(%1,after(%0,=),last(%0,=)))][if(cand(strmatch(%0,*=*),cor(%1,isint(%q<p>),not(strlen(%q<p>)))),setq(arg,trim(left(%0,sub(strlen(%0),inc(strlen(%q<p>))))),page,%q<p>),setq(arg,trim(%0),page,1))]
+          [@@(%0 a switch — whether what it lists comes in pages)][t(member(list search category recent,%0))]
+        flags: [funsyntax]
+      # The page is the last switch, and digits only: +wiki/list/2. Nothing when there is none.
+      FUN`GET`PAGE:
+        value: |-
+          [@@(%0 the switches as typed — the page they end with, or nothing)][if(cor(regmatch(%0,^\[0-9\]+$),regmatch(%0,^\[a-z\]+/\[0-9\]+$)),last(%0,/))]
         flags: [funsyntax]
 
       INC`SW`LIST:
         value: |-
-          @@ %q<rest> — \[<namespace>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(namespace,%q<arg>)]; @assert cand(lte(words(%q<namespace>),1),u(%!/FUN`IS`PAGENUM,%q<page>))=@include %!/INC`DISPLAY`USAGE; @include %!/INC`IS`NAMESPACE; think [setq(list,wikilist(%q<namespace>),title,Pages[if(strlen(%q<namespace>),: %q<namespace>)],table,FUN`DISPLAY`TABLE,stem,trim(+wiki/list %q<namespace>))]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — \[<namespace>\] · %q<page> the page; think [setq(namespace,trim(%q<rest>))]; @assert lte(words(%q<namespace>),1)=@include %!/INC`DISPLAY`USAGE; @include %!/INC`IS`NAMESPACE; think [setq(list,wikilist(%q<namespace>),title,Pages[if(strlen(%q<namespace>),: %q<namespace>)],table,FUN`DISPLAY`TABLE,head,+wiki/list,tail,%q<namespace>)]; @include %!/INC`DO`LISTING
         flags: [cmdsyntax]
       # A * or ? in the text is a wildcard, as in +help/search: wikisearch() takes them.
       INC`SW`SEARCH:
         value: |-
-          @@ %q<rest> — <text>\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>)][setq(query,%q<arg>)]; @assert cand(strlen(%q<query>),u(%!/FUN`IS`PAGENUM,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikisearch(%q<query>),title,Search: %q<query>,table,FUN`DISPLAY`TABLE,stem,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — <text> · %q<page> the page; think [setq(query,trim(%q<rest>))]; @assert strlen(%q<query>)=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikisearch(%q<query>),title,Search: %q<query>,table,FUN`DISPLAY`TABLE,head,+wiki/search,tail,%q<query>)]; @include %!/INC`DO`LISTING
         flags: [cmdsyntax]
       # Categories are not in a page's name: a category is a list of pages, read with wikicategory().
       # With no name, the categories themselves.
       INC`SW`CATEGORY:
         value: |-
-          @@ %q<rest> — \[<name>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(key,u(%!/FUN`GET`CATKEY,%q<arg>))]; @assert u(%!/FUN`IS`PAGENUM,%q<page>)=@include %!/INC`DISPLAY`USAGE; think [if(strlen(%q<key>),setq(list,wikicategory(%q<key>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,%q<key>)],table,FUN`DISPLAY`TABLE,stem,+wiki/category %q<key>),setq(list,u(%!/FUN`GET`CATEGORIES),title,Categories,table,FUN`DISPLAY`CATTABLE,stem,+wiki/category))]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — \[<name>\] · %q<page> the page; think [setq(key,u(%!/FUN`GET`CATKEY,%q<rest>))]; think [if(strlen(%q<key>),setq(list,wikicategory(%q<key>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,%q<key>)],table,FUN`DISPLAY`TABLE,head,+wiki/category,tail,%q<key>),setq(list,u(%!/FUN`GET`CATEGORIES),title,Categories,table,FUN`DISPLAY`CATTABLE,head,+wiki/category,tail,))]; @include %!/INC`DO`LISTING
         flags: [cmdsyntax]
       # wikirecent() takes 1 to 50.
       INC`SW`RECENT:
         value: |-
-          @@ %q<rest> — \[<n>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(count,strfirstof(%q<arg>,10))]; @assert cand(isint(%q<count>),gt(%q<count>,0),lte(%q<count>,50),u(%!/FUN`IS`PAGENUM,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikirecent(%q<count>),title,Recently edited,table,FUN`DISPLAY`RECENTTABLE,stem,+wiki/recent %q<count>)]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — \[<n>\] · %q<page> the page; think [setq(count,strfirstof(trim(%q<rest>),10))]; @assert cand(isint(%q<count>),gt(%q<count>,0),lte(%q<count>,50))=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikirecent(%q<count>),title,Recently edited,table,FUN`DISPLAY`RECENTTABLE,head,+wiki/recent,tail,%q<count>)]; @include %!/INC`DO`LISTING
         flags: [cmdsyntax]
       INC`SW`INFO:
         value: |-
@@ -360,8 +363,8 @@ objects:
         `<namespace>:<slug>` (`help:markdown_guide`); a main page by its slug alone. A slug main has
         no page for is looked for in the others, so `+wiki god` opens `character:god`. Its categories
         are not part of its name: they are listed under the article, the same in every language,
-        and staff set them with `@wiki/category <page>=<name>, <name>`. Long listings page with
-        `=<n>`: `+wiki/list main=2`.
+        and staff set them with `@wiki/category <page>=<name>, <name>`. A long listing comes in
+        pages, and the page is a last switch: `+wiki/list/2 main`.
 
         A switch can be cut short to any beginning no other switch has: `+wiki/c` is `+wiki/category`.
 

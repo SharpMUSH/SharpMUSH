@@ -1,6 +1,6 @@
 format: 1.2
 package: scene
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -592,8 +592,9 @@ objects:
 
       # ---- scene browser: tables of scenes ---------------------------------------
       # Volund-style listing: bare `+scene` = active scenes, `+scene/old` = finished, `+scene/mine` =
-      # yours. FUN`LIST_RENDER(<filter>) builds the whole box. (Scene DETAILS are `+scene <id>`;
-      # scheduled scenes `+scene/upcoming`.)
+      # yours. FUN`LIST_RENDER builds the whole box. (Scene DETAILS are `+scene <id>`; scheduled scenes
+      # `+scene/upcoming`.) A list longer than the reader's screen comes in pages, and the page is a
+      # last switch: +scene/old/2. No page is the first.
       #
       # The title wraps and every other column is nowrap: on a narrow screen Where goes first, then
       # Cast and Status, and an id or a status is never broken across lines.
@@ -605,20 +606,30 @@ objects:
         [cmdlink(edit(u(%!/FUN`LIST_TITLE,%0),%r,%b),+scene %0,+scene %0)]
       FUN`LIST_TABLE: |-
         [datacolumns(u(%!/FUN`TABLE`OPTS,1|3|4|5,|12,1|1|3|2|2,|1),>[ansi(h,ID)]%r[iter(%0,%i0,,%r)],[ansi(h,Title)]%r[iter(%0,u(%!/FUN`LIST_LINK,%i0),,%r)],[ansi(h,Where)]%r[iter(%0,u(%!/FUN`SCENE_FIELD,%i0,roomname,-),,%r)],>[ansi(h,Cast)]%r[iter(%0,words(scenemembers(%i0)),,%r)],[ansi(h,Status)]%r[iter(%0,scene(%i0,status),,%r)])]
+      # Rows a page holds: what fits the reader's screen under the title, headings, rule and footer.
+      FUN`LIST_ROWS: |-
+        [max(5,sub(height(%#,24),8))]
+      FUN`LIST_PAGES: |-
+        [add(1,div(sub(max(1,words(%0)),1),u(%!/FUN`LIST_ROWS)))]
+      # %0 the filter, %1 its scenes, %2 the page, %3 how many pages, %4 the command that lists them.
       FUN`LIST_RENDER: |-
-        [setq(lst,scenelist(%0))][box([if(words(%q<lst>),u(%!/FUN`LIST_TABLE,%q<lst>),No scenes.)],Scenes: %0,,u(%!/FUN`FRAME))]%r[words(%q<lst>)] [if(eq(words(%q<lst>),1),scene,scenes)]
+        [setq(sl,extract(%1,add(1,mul(sub(%2,1),u(%!/FUN`LIST_ROWS))),u(%!/FUN`LIST_ROWS)))][box([if(words(%q<sl>),u(%!/FUN`LIST_TABLE,%q<sl>),No scenes.)],Scenes: %0,,u(%!/FUN`FRAME))]%r[words(%1)] [if(eq(words(%1),1),scene,scenes)][if(gt(%3,1),%b-%bpage %2 of %3[if(lt(%2,%3),%b-%b%4/[add(%2,1)])])]
+      # %q<Filter> the scenelist() filter, %q<Page> the page as typed (empty for the first), %q<Switch>
+      # the switch whose usage line answers a page of 0.
+      INC`LIST: |-
+        think [setq(Page,strfirstof(%q<Page>,1))][setq(lst,scenelist(%q<Filter>))][setq(pages,u(%!/FUN`LIST_PAGES,%q<lst>))]; @assert gt(%q<Page>,0)=@pemit %#=[notice(SCENE,[get(%!/DATA`USAGE`%q<Switch>)],warn)]; @assert lte(%q<Page>,%q<pages>)=@pemit %#=[notice(SCENE,There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] - you asked for page %q<Page>.,warn)]; @pemit %#=[u(%!/FUN`LIST_RENDER,%q<Filter>,%q<lst>,%q<Page>,%q<pages>,+scene[if(strmatch(%q<Switch>,LIST),,/[lcstr(%q<Switch>)])])]
       # +scene and +scene/list.
       CMD`BROWSE:
         value: |-
-          $(?is)^\+scene(?\:/li(?\:s(?\:t)?)?)?$: @pemit %#=[u(%!/FUN`LIST_RENDER,active)]
+          $(?is)^\+scene(?\:/li(?\:s(?\:t)?)?)?(?\:/(\d+))?$: think [setq(Filter,active,Page,%1,Switch,LIST)]; @include %!/INC`LIST
         flags: [REGEXP]
       CMD`OLD:
         value: |-
-          $(?is)^\+scene/ol(?\:d)?$: @pemit %#=[u(%!/FUN`LIST_RENDER,finished)]
+          $(?is)^\+scene/ol(?\:d)?(?\:/(\d+))?$: think [setq(Filter,finished,Page,%1,Switch,OLD)]; @include %!/INC`LIST
         flags: [REGEXP]
       CMD`MINE:
         value: |-
-          $(?is)^\+scene/mi(?\:n(?\:e)?)?$: @pemit %#=[u(%!/FUN`LIST_RENDER,mine)]
+          $(?is)^\+scene/mi(?\:n(?\:e)?)?(?\:/(\d+))?$: think [setq(Filter,mine,Page,%1,Switch,MINE)]; @include %!/INC`LIST
         flags: [REGEXP]
 
       # ---- scheduling (+scene/schedule ...): roomless future scenes --------------
@@ -812,15 +823,15 @@ objects:
       DATA`USAGE`LEAVE: |-
         +scene/leave
       DATA`USAGE`LIST: |-
-        +scene/list
+        +scene/list[/<page>]
       DATA`USAGE`LOG: |-
         +scene/log [<id>]
       DATA`USAGE`MINE: |-
-        +scene/mine
+        +scene/mine[/<page>]
       DATA`USAGE`MOVE: |-
         +scene/move <pose>=<after>
       DATA`USAGE`OLD: |-
-        +scene/old
+        +scene/old[/<page>]
       DATA`USAGE`OOC: |-
         +scene/ooc <id>=<text>
       DATA`USAGE`PAUSE: |-
@@ -924,11 +935,15 @@ objects:
         ## Getting in
 
         - `+scene` \(or `+scene/list`\) — the scenes running now
+        - `+scene/old` — the finished ones; `+scene/mine` — yours
         - `+scene <id>` \(or `+event <id>`\) — what a scene is, where it is, and who is in it. Its
           title, or the start of it, works as well as its number
         - `+scene/log \[<id>\]` — read a scene's log, your focused one or any you can see
         - `+scene/join <id>` — join it and make it your focus
         - `+scene/leave` — stop posing into it
+
+        A list longer than your screen comes in pages, and the page is a last switch:
+        `+scene/old/2` is the second page of finished scenes.
 
         Once you have joined, ordinary `pose`, `say` and `@emit` in that room are recorded. You do
         not have to use a special command to speak.

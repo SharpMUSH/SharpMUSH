@@ -114,6 +114,10 @@ public class JobsIntegrationTests
 				.And.DoesNotContain("+jobs/all").Because("the staff-only hints are for staff");
 			await Assert.That(await As(staff, "+buckets")).Contains("* you work it \u00b7 +request");
 			await Assert.That(await As(player, "+buckets")).DoesNotContain("you work it");
+			await Assert.That(await As(player, "+jobs/1")).Contains("Need a room").Because("a list's page is a last switch");
+			await Assert.That(await As(player, "+jobs/old/2")).Contains("There is one page - you asked for page 2.");
+			await Assert.That(await As(player, "+job/reply/2 1=Hi")).Contains("+job/reply takes no page number.");
+			await Assert.That(await As(player, "+request/2 Hi=There")).Contains("+request has no /2 switch.");
 
 			await As(staff, "+job/claim 1");
 			await Assert.That(await God("think [job(1,state)]")).IsEqualTo("staff");

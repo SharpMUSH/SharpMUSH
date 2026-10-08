@@ -14,15 +14,16 @@ game installed and what *this* game's staff wrote. The two never merge.
 | `+help` | all | The index: every source that has topics, and what it covers |
 | `+help <topic>` | all | A topic. `*` and `?` wildcard |
 | `+help <source>/<topic>` | all | The qualified form, for when two sources claim a name |
-| `+help/list [<source>]` | all | Every topic, or one source's. Pages with `=<n>` |
-| `+help/search <text>` | all | Topic names and bodies containing the text |
+| `+help/list[/<page>] [<source>]` | all | Every topic, or one source's |
+| `+help/search[/<page>] <text>` | all | Topic names and bodies containing the text |
 | `+help/sources` | all | Where the topics come from |
 | `+help/write <topic>=<text>` | staff | Write a topic belonging to no package |
 | `+help/delete <topic>` | staff | Remove one |
 | `+help/source <name>=<object>` | staff | Register a source by hand |
 | `+help/unsource <name>` | staff | Drop a hand-registered source |
 
-A topic name can be several words: `+help scene join`. `+help` itself renders the `index` topic —
+A long listing comes in pages, asked for as a last switch: `+help/list/2`, `+help/search/3 combat`,
+and `+help/2 <topic>` when several topics match. A topic name can be several words: `+help scene join`. `+help` itself renders the `index` topic —
 which a game replaces by writing its own, since the `game` source outranks a package's.
 
 ## Contributing topics from a package

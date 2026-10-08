@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -232,31 +232,32 @@ objects:
       # switches, %2 what follows, both exactly as typed.
       CMD`JOB:
         value: |-
-          $(?is)^\+(?\:my)?(?\:jobs?|tickets?)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)][setq(swm,u({{jobs}}/FUN`SWITCH,%q<sw>,JOB))]; @assert cor(not(strlen(%q<sw>)),strlen(%q<swm>))=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`ERR`SWITCH,%q<sw>,JOB,+job,jobs commands)],warn)]; think [setq(sw,%q<swm>)][setq(route,u({{jobs}}/FUN`ROUTE,%q<sw>,%q<arg>))]; @include {{jobs}}/INC`JOB`%q<route>
+          $(?is)^\+(?\:my)?(?\:jobs?|tickets?)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)][setq(swm,u({{jobs}}/FUN`SWITCH,%q<sw>,JOB))]; @assert cor(not(strlen(%q<sw>)),strlen(%q<swm>))=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`ERR`SWITCH,%q<sw>,JOB,+job,jobs commands)],warn)]; think [setq(sw,%q<swm>)][setq(route,u({{jobs}}/FUN`ROUTE,%q<sw>,%q<arg>))]; @assert cor(not(strlen(%q<page>)),t(member(get({{jobs}}/DATA`PAGED),%q<route>)))=@pemit %#=[notice(JOBS,[if(strlen(%q<sw>),+job/%q<sw>,+job <#>)] takes no page number.,warn)]; @include {{jobs}}/INC`JOB`%q<route>
         flags: [REGEXP]
       # +request [<bucket>/]<title>=<text>. What comes before the first / names a bucket only when it is
       # a bucket's full name, so "+request Help w/ exits=..." is a title in the default bucket.
       CMD`REQUEST:
         value: |-
-          $(?is)^\+request(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)]; @assert not(strlen(%q<sw>))=@pemit %#=[notice(JOBS,+request has no /%q<sw> switch. Add /softcode to show your text as typed.,warn)]; @assert cand(%q<eq>,strlen(%q<lhs>))=@pemit %#=[notice(JOBS,+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,warn)]; think [setq(fb,if(strmatch(%q<lhs>,*/*),u({{jobs}}/FUN`BUCKET`SEEN,before(%q<lhs>,/),%#)))][setq(title,if(strlen(%q<fb>),trim(after(%q<lhs>,/)),%q<lhs>))][setq(fb,firstof(%q<fb>,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`DEFAULT`BUCKET))))][setq(text,%q<rhs>)]; @include {{jobs}}/INC`FILE`CHECKED
+          $(?is)^\+request(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)]; @assert not(strlen(%q<sw>%q<page>))=@pemit %#=[notice(JOBS,+request has no /%q<sw>%q<page> switch. Add /softcode to show your text as typed.,warn)]; @assert cand(%q<eq>,strlen(%q<lhs>))=@pemit %#=[notice(JOBS,+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,warn)]; think [setq(fb,if(strmatch(%q<lhs>,*/*),u({{jobs}}/FUN`BUCKET`SEEN,before(%q<lhs>,/),%#)))][setq(title,if(strlen(%q<fb>),trim(after(%q<lhs>,/)),%q<lhs>))][setq(fb,firstof(%q<fb>,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`DEFAULT`BUCKET))))][setq(text,%q<rhs>)]; @include {{jobs}}/INC`FILE`CHECKED
         flags: [REGEXP]
       # +bug, +typo, +pitch and +apply <title>=<text>: +request into a set bucket (DATA`SHORTCUT`<word>).
       CMD`SHORTCUT:
         value: |-
-          $(?is)^\+(bug|typo|pitch|apply)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%2,%3)]; @assert not(strlen(%q<sw>))=@pemit %#=[notice(JOBS,+[lcstr(%1)] has no /%q<sw> switch.,warn)]; @assert strlen(%q<arg>)=@pemit %#=[notice(JOBS,+[lcstr(%1)] <title>=<text>,warn)]; think [setq(fb,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`SHORTCUT`%1)))][setq(title,if(%q<eq>,%q<lhs>,left(%q<arg>,60)))][setq(text,if(%q<eq>,%q<rhs>,%q<arg>))]; @include {{jobs}}/INC`FILE`CHECKED
+          $(?is)^\+(bug|typo|pitch|apply)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%2,%3)]; @assert not(strlen(%q<sw>%q<page>))=@pemit %#=[notice(JOBS,+[lcstr(%1)] has no /%q<sw>%q<page> switch.,warn)]; @assert strlen(%q<arg>)=@pemit %#=[notice(JOBS,+[lcstr(%1)] <title>=<text>,warn)]; think [setq(fb,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`SHORTCUT`%1)))][setq(title,if(%q<eq>,%q<lhs>,left(%q<arg>,60)))][setq(text,if(%q<eq>,%q<rhs>,%q<arg>))]; @include {{jobs}}/INC`FILE`CHECKED
         flags: [REGEXP]
       # +buckets lists buckets, +bucket <name> shows one, and +bucket/<switch> manages them.
       CMD`BUCKET:
         value: |-
-          $(?is)^\+buckets?(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)][setq(swm,u({{jobs}}/FUN`SWITCH,%q<sw>,BUCKET))]; @assert cor(not(strlen(%q<sw>)),strlen(%q<swm>))=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`ERR`SWITCH,%q<sw>,BUCKET,+bucket,buckets)],warn)]; think [setq(sw,%q<swm>)][setq(route,firstof(%q<sw>,if(strlen(%q<arg>),info,list)))]; @include {{jobs}}/INC`BUCKET`%q<route>
+          $(?is)^\+buckets?(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)][setq(swm,u({{jobs}}/FUN`SWITCH,%q<sw>,BUCKET))]; @assert cor(not(strlen(%q<sw>)),strlen(%q<swm>))=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`ERR`SWITCH,%q<sw>,BUCKET,+bucket,buckets)],warn)]; @assert not(strlen(%q<page>))=@pemit %#=[notice(JOBS,+bucket takes no page number.,warn)]; think [setq(sw,%q<swm>)][setq(route,firstof(%q<sw>,if(strlen(%q<arg>),info,list)))]; @include {{jobs}}/INC`BUCKET`%q<route>
         flags: [REGEXP]
 
       # ---- parsing --------------------------------------------------------------
       # %0 switches, %1 the argument, both raw. Sets %q<sw> (the first switch that is not /softcode or
-      # /markdown), %q<fmt>, %q<arg>, %q<lhs> and %q<rhs> around the first =, %q<eq> (1 when there was an
-      # =), %q<me> (the actor's key) and %q<actor>.
+      # /markdown), %q<page> (a last switch of digits, as in +jobs/old/2, or nothing), %q<fmt>, %q<arg>,
+      # %q<lhs> and %q<rhs> around the first =, %q<eq> (1 when there was an =), %q<me> (the actor's key)
+      # and %q<actor>.
       FUN`PARSE: |-
-        [setq(sws,lcstr(trim(edit(%0,/,%b))))][setq(fmt,if(t(member(iter(%q<sws>,u({{jobs}}/FUN`FMTSW,%i0)),softcode)),softcode,markdown))][setq(sw,first(trim(iter(%q<sws>,if(strlen(u({{jobs}}/FUN`FMTSW,%i0)),,%i0)))))][setq(arg,trim(%1))][setq(eq,strmatch(%1,*=*))][setq(lhs,trim(before(%1,=)))][setq(rhs,trim(after(%1,=)))][setq(me,u({{jobs}}/FUN`KEY,%#))][setq(actor,objid(%#))]
+        [setq(sws,lcstr(trim(edit(%0,/,%b))))][setq(page,if(regmatch(last(%q<sws>),^\[0-9\]+$),last(%q<sws>)))][if(strlen(%q<page>),setq(sws,ldelete(%q<sws>,words(%q<sws>))))][setq(fmt,if(t(member(iter(%q<sws>,u({{jobs}}/FUN`FMTSW,%i0)),softcode)),softcode,markdown))][setq(sw,first(trim(iter(%q<sws>,if(strlen(u({{jobs}}/FUN`FMTSW,%i0)),,%i0)))))][setq(arg,trim(%1))][setq(eq,strmatch(%1,*=*))][setq(lhs,trim(before(%1,=)))][setq(rhs,trim(after(%1,=)))][setq(me,u({{jobs}}/FUN`KEY,%#))][setq(actor,objid(%#))]
       # %0 a switch as typed: softcode or markdown when it is one of those or a prefix of three letters or
       # more (/soft), else nothing.
       FUN`FMTSW: |-
@@ -521,7 +522,28 @@ objects:
         [box([if(words(%0),u({{jobs}}/FUN`TABLE,%0,%1),No jobs.)][if(strlen(%3),%r[rule()]%r%3)],%2,,u({{jobs}}/FUN`FRAME))]
       # Lists predicate %q<sel> (with %q<selarg>) under %q<ltitle> and %q<lfoot>.
       INC`SHOW`LIST: |-
-        @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,%q<sel>,%q<selarg>)),%#,%q<ltitle>,%q<lfoot>)]
+        think [setq(lj,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,%q<sel>,%q<selarg>)))]; @include {{jobs}}/INC`SHOW`PAGE
+
+      # ---- pages ----------------------------------------------------------------
+      # A list longer than the reader's screen comes in pages, and the page is a last switch: +jobs/2,
+      # +job/old/3 Requests. No page is the first. The routes that list, and so take one:
+      DATA`PAGED: |-
+        list all mine new overdue player held scan search who from old
+      # Rows a page holds: what fits the reader's screen under the title, headings and footer.
+      FUN`PAGE`ROWS: |-
+        [max(5,sub(height(%#,24),9))]
+      FUN`PAGE`COUNT: |-
+        [add(1,div(sub(max(1,words(%0)),1),u({{jobs}}/FUN`PAGE`ROWS)))]
+      # Page %1 of jobs %0.
+      FUN`PAGE`OF: |-
+        [extract(%0,add(1,mul(sub(%1,1),u({{jobs}}/FUN`PAGE`ROWS))),u({{jobs}}/FUN`PAGE`ROWS))]
+      # Footer %0, and below it, when there is more than one page, which this is (%1 of %2) and how to
+      # ask for the next: the command as typed, with the page after its switches.
+      FUN`PAGE`FOOT: |-
+        [setq(_pf,if(gt(%2,1),Page %1 of %2[if(lt(%1,%2),%b-%b[if(strlen(%q<sw>),+job/%q<sw>,+jobs)]/[add(%1,1)][if(strlen(%q<arg>),%b%q<arg>)])]))]%0[if(cand(strlen(%0),strlen(%q<_pf>)),%r)]%q<_pf>
+      # Page %q<page> of jobs %q<lj>, under %q<ltitle> and %q<lfoot>.
+      INC`SHOW`PAGE: |-
+        think [setq(page,strfirstof(%q<page>,1))][setq(pages,u({{jobs}}/FUN`PAGE`COUNT,%q<lj>))]; @assert gt(%q<page>,0)=@pemit %#=[notice(JOBS,Pages start at 1.,warn)]; @assert lte(%q<page>,%q<pages>)=@pemit %#=[notice(JOBS,There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] - you asked for page %q<page>.,warn)]; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`PAGE`OF,%q<lj>,%q<page>),%#,%q<ltitle>,u({{jobs}}/FUN`PAGE`FOOT,%q<lfoot>,%q<page>,%q<pages>))]
 
       # ---- one job --------------------------------------------------------------
       # Job %0 entry %1, %2 1 for staff, %3 the mode. Replies are public, notes staff-only, and the action
@@ -591,10 +613,10 @@ objects:
       INC`JOB`WHO: |-
         @assert strlen(%q<arg>)=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`USAGE)],warn)]; @assert strlen(setr(tp,u({{jobs}}/FUN`PLAYER,%q<arg>,%#)))=@pemit %#=[notice(JOBS,I don't know a player called %q<arg>.,warn)]; think [setq(sel,WHO)][setq(selarg,%q<tp>)][setq(ltitle,Jobs [name(%q<tp>)] handles)][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`LIST
       INC`JOB`FROM: |-
-        @assert strlen(%q<arg>)=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`USAGE)],warn)]; @assert strlen(setr(tp,u({{jobs}}/FUN`PLAYER,%q<arg>,%#)))=@pemit %#=[notice(JOBS,I don't know a player called %q<arg>.,warn)]; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,FROM,%q<tp>)),%#,Jobs filed by [name(%q<tp>)],)]
+        @assert strlen(%q<arg>)=@pemit %#=[notice(JOBS,[u({{jobs}}/FUN`USAGE)],warn)]; @assert strlen(setr(tp,u({{jobs}}/FUN`PLAYER,%q<arg>,%#)))=@pemit %#=[notice(JOBS,I don't know a player called %q<arg>.,warn)]; think [setq(lj,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,FROM,%q<tp>)))][setq(ltitle,Jobs filed by [name(%q<tp>)])][setq(lfoot,)]; @include {{jobs}}/INC`SHOW`PAGE
       # +myjobs/old and +job/old [<bucket>]: closed jobs, newest first.
       INC`JOB`OLD: |-
-        think [setq(selarg,if(strlen(%q<arg>),u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))]; @assert cor(not(strlen(%q<arg>)),strlen(%q<selarg>))=@pemit %#=[notice(JOBS,There is no bucket called %q<arg>.,warn)]; @pemit %#=[u({{jobs}}/FUN`LIST,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,OLD,%q<selarg>)),%#,Closed jobs[if(strlen(%q<selarg>),%bin [name(%q<selarg>)])],+job <#> reads one)]
+        think [setq(selarg,if(strlen(%q<arg>),u({{jobs}}/FUN`BUCKET`SEEN,%q<arg>,%#)))]; @assert cor(not(strlen(%q<arg>)),strlen(%q<selarg>))=@pemit %#=[notice(JOBS,There is no bucket called %q<arg>.,warn)]; think [setq(lj,u({{jobs}}/FUN`SORT`NUM,u({{jobs}}/FUN`SELECT,%#,OLD,%q<selarg>)))][setq(ltitle,Closed jobs[if(strlen(%q<selarg>),%bin [name(%q<selarg>)])])][setq(lfoot,+job <#> reads one)]; @include {{jobs}}/INC`SHOW`PAGE
       INC`JOB`NEXT: |-
         @assert words(setr(nx,u({{jobs}}/FUN`SORT,u({{jobs}}/FUN`SELECT,%#,UNREAD))))=@pemit %#=[notice(JOBS,Nothing is unread.)]; think [setq(lhs,get(first(%q<nx>)/NUM))][setq(sw,)]; @include {{jobs}}/INC`JOB`VIEW
       INC`JOB`BRIEF: |-
@@ -1539,6 +1561,7 @@ objects:
         - `+jobs`: your open jobs. A `*` marks something new.
         - `+jobs/old`: your closed jobs.
         - `+job <#>`: read one.
+        - A list longer than your screen comes in pages, and the page is a last switch: `+jobs/old/2`.
         - `+job/reply <#>=<text>`: answer. Within a few days of a job closing, a reply opens it again.
         - `+job/cancel <#>`: withdraw a job you filed.
         - `+job/addhelper <#>=<player>`: let someone else read and answer it. `+job/remhelper <#>=<player>` takes it back; a helper can remove themselves.
@@ -1558,6 +1581,8 @@ objects:
         - `+jobs/who <player>` \(jobs they handle\), `/from <player>` \(jobs they filed\), `/search <text>`.
         - `+job/old \[<bucket>\]`: closed jobs.
         - `+job/next` reads the next unread job, `+job/scan` lists them, `+job/brief` counts.
+        - Every list comes in pages when it outgrows your screen, and the page is a last switch:
+          `+jobs/2`, `+jobs/new/2`, `+job/old/3 Requests`.
 
         ## Working a job
 
@@ -1580,6 +1605,7 @@ objects:
         | `/all` | every open job; `/all <#>` reads one with its log |
         | `/mine` `/new` `/overdue` `/player` `/held` | lists |
         | `/who <player>` `/from <player>` `/search <text>` `/old \[<bucket>\]` | lists |
+        | `/<page>` after any list's switches | that page of it: `+jobs/2`, `+job/old/3 <bucket>` |
         | `/next` `/scan` `/brief` `/catchup` | unread jobs |
         | `/last <#>=<n>` `/act <#>` | the last few messages; the log |
         | `/reply <#>=<text>` | public reply |

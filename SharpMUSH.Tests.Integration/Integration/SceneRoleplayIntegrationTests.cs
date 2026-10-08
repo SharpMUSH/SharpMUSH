@@ -850,6 +850,12 @@ public class SceneRoleplayIntegrationTests
 		TestDiagnostics.WriteLine("=== +scene/mine ===\n" + string.Join("\n", mine));
 		await Assert.That(mine.Where(l => l.Length > width)).IsEmpty();
 		await Assert.That(mine.Single(l => l.Contains($"Far_{Tag}"))).EndsWith(" scheduled").Because("a status is never broken across lines");
+
+		// A list's page is a last switch.
+		var firstPage = string.Join("\n", await RunAndCollectAs(xanHandle, "+scene/mine/1"));
+		await Assert.That(firstPage).Contains($"Far_{Tag}");
+		await Assert.That(string.Join("\n", await RunAndCollectAs(xanHandle, "+scene/mine/999"))).Contains("you asked for page 999.");
+		await Assert.That(string.Join("\n", await RunAndCollectAs(xanHandle, "+scene/old/0"))).Contains("+scene/old[/<page>]");
 	}
 
 	/// <summary>+scene/deactivate keeps membership but clears focus; +scene/activate restores it.
