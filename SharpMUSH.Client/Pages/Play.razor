@@ -63,8 +63,8 @@ else if (_needsCharacter)
 }
 else
 {
-    @* D1 §5 (boards 01–11): the Play sidebar in the shell's page-sidebar slot; main is the room banner
-       and the scene card (Story | Terminal, focus mode, the composer); the aside is Here then Exits.
+    @* D1 §5 (boards 01–11): the Play sidebar in the shell's page-sidebar slot; main is the scene card, headed by
+       the room banner when it is open (Story | Terminal, focus mode, the composer); the aside is Here then Exits.
        Focus mode steps the sidebar, the banner and the aside away, and the shell chrome with them
        (shell.css: the rail, the touch header, the zones). On a phone Play is laid out like a chat app: the
        card header is the one bar, its menu button opens Play's sidebar from the left (with the site menu at
@@ -73,11 +73,6 @@ else
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
         <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
             <div class="play-main">
-                @if (BannerShown)
-                {
-                    <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" BottomActions="@BannerControls(SettingsMenu.Banner)" />
-                }
                 @if (_commKey is { } commKey)
                 {
                     <div class="play-comm">
@@ -90,6 +85,14 @@ else
                                    OnSubtitle="@(BannerFolded ? EventCallback.Factory.Create(this, OpenFoldedBanner) : default)"
                                    SubtitleAction="@Loc["NavBannerRestore"]" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged"
                                    Footer="@(View == PlayView.Story ? StoryComposer : null)">
+                        <Banner>
+                            @* The opened banner is the card's top, not a box of its own above it: one unit over the game. *@
+                            @if (BannerShown)
+                            {
+                                <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
+                                            Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" BottomActions="@BannerControls(SettingsMenu.Banner)" />
+                            }
+                        </Banner>
                         <Lead>@ViewerAvatar</Lead>
                         <Controls>
                             @* On a phone these step back into the banner's controls row (Play.razor.css). *@

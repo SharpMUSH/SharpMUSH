@@ -6,6 +6,10 @@
    (the composer). Each radio is an icon named by its aria-label; its tooltip names the view and describes it. With a HeaderImage the header carries the
    room's picture behind a scrim: Play passes it while no banner shows the room. *@
 <section class="scene-card" aria-labelledby="scene-card-title">
+    @if (Banner is not null)
+    {
+        <div class="scene-card-banner">@Banner</div>
+    }
     <header class="scene-card-head @(HeaderImage is null ? null : "scene-card-head--image")">
         @if (HeaderImage is not null)
         {
@@ -94,6 +98,9 @@
     /// <summary>Focus mode: the page sidebar, the banner and the aside step away (board 05).</summary>
     [Parameter] public bool Focus { get; set; }
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }
+
+    /// <summary>Above the header, inside the card: Play puts the opened room banner here, so the two read as one unit.</summary>
+    [Parameter] public RenderFragment? Banner { get; set; }
 
     /// <summary>Before the titles: Play puts the viewer's avatar here.</summary>
     [Parameter] public RenderFragment? Lead { get; set; }

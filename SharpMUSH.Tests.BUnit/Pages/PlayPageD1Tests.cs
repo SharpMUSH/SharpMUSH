@@ -840,6 +840,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		PushRoom();
 		cut.WaitForAssertion(() => cut.Find(".kit-banner"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".scene-card-head-img").Count).IsEqualTo(0).Because("the banner carries the picture");
+		await Assert.That(cut.FindAll(".scene-card > .scene-card-banner .kit-banner").Count).IsEqualTo(1)
+			.Because("the opened banner is the scene card's top, not a box of its own above it");
 	}
 
 	[Test]
