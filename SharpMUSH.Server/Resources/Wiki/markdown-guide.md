@@ -1,3 +1,5 @@
+![An architectural cutaway maps headings, images, lists, and page hierarchy](/assets/presets/wiki/markdown-guide.webp)
+
 The wiki uses **CommonMark** Markdown with the extensions described below.
 Raw HTML is **disabled** for security — typing `<b>`, `<img>`, or `<script>` renders
 the text literally instead of acting as HTML. Everything you need has a Markdown
