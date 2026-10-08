@@ -202,4 +202,38 @@ public class FeedCommandTests : ServerTestBase
 
 		await Assert.That(await Cmd($"@feed/untap {_kind}={Ref(logger)}/LOG")).Contains("Removed the tap");
 	}
+
+	/// <summary>The radio in <c>help @feed example</c>, as written there: global commands in the master room.</summary>
+	[Test]
+	public async Task TheHelpRadioExampleWorks()
+	{
+		var radio = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "Radio");
+		try
+		{
+			await Cmd($"@tel {Ref(radio)}=[config(master_room)]");
+			await Cmd($"@feed/define radio={Ref(radio)}");
+			await Cmd($"&FEED`RADIO`FORMAT {Ref(radio)}=<Radio %4> [name(%2)]: %0");
+			await Cmd($"&CMD`TUNE {Ref(radio)}=$+tune *:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@feed/join radio/%0=%#;@pemit %#=Tuned to %0.");
+			await Cmd($"&CMD`RADIO {Ref(radio)}=$+radio *:@assert setr(f,first(feedsof(%#,radio)))=@pemit %#=Tune in first.;@feed/send %q<f>=%0");
+			await Cmd($"&CMD`OFF {Ref(radio)}=$+radio/off:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@pemit %#=Radio off.");
+
+			var said = TestIsolationHelpers.GenerateUniqueName("Coming");
+			await Assert.That(await Heard(_ann, $"+radio {said}")).Contains("Tune in first.");
+			await Assert.That(await Heard(_ann, "+tune 101.5")).Contains("Tuned to 101.5.");
+			await Heard(_bo, "+tune 101.5");
+			await Heard(_ann, $"+radio {said}");
+			await Assert.That(Lines(_ann, said)).IsEquivalentTo(new[] { $"<Radio 101.5> {_ann.Name}: {said}" });
+			await Assert.That(Lines(_bo, said)).IsEquivalentTo(new[] { $"<Radio 101.5> {_ann.Name}: {said}" });
+
+			await Heard(_bo, "+tune 99.1");
+			await Assert.That(await Eval("feedwho(radio/101.5)")).IsEqualTo(await Objid(_ann));
+			await Assert.That(await Heard(_ann, "+radio/off")).Contains("Radio off.");
+			await Assert.That(await Eval($"feedsof({Ref(_ann)})")).IsEqualTo("");
+		}
+		finally
+		{
+			await Cmd("@feed/undefine radio");
+			await Cmd($"@tel {Ref(radio)}=#0");
+		}
+	}
 }

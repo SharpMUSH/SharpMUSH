@@ -156,9 +156,9 @@ The Radio object sits in the master room, so its commands are global. It needs n
 ```sharp
 > @feed/define radio=Radio
 > &FEED`RADIO`FORMAT Radio=<Radio %4> [name(%2)]: %0
-> &CMD`TUNE Radio=$+tune *:@dolist feedsof(%#,radio)=@feed/leave ##=%#;@feed/join radio/%0=%#;@pemit %#=Tuned to %0.
+> &CMD`TUNE Radio=$+tune *:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@feed/join radio/%0=%#;@pemit %#=Tuned to %0.
 > &CMD`RADIO Radio=$+radio *:@assert setr(f,first(feedsof(%#,radio)))=@pemit %#=Tune in first.;@feed/send %q<f>=%0
-> &CMD`OFF Radio=$+radio/off:@dolist feedsof(%#,radio)=@feed/leave ##=%#;@pemit %#=Radio off.
+> &CMD`OFF Radio=$+radio/off:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@pemit %#=Radio off.
 > +tune 101.5
 Tuned to 101.5.
 > +radio Coming in.
