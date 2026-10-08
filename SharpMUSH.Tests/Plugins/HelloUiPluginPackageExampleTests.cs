@@ -20,11 +20,11 @@ namespace SharpMUSH.Tests.Plugins;
 ///   its own controller);</item>
 ///   <item>the app surfaces through the registry overlay (<see cref="PluginApplicationRegistryDecorator"/>)
 ///   exactly as the booting server would expose it on <c>/api/applications</c>;</item>
-///   <item>its <c>examples/packages/hello-ui/package.yaml</c> parses as a valid <c>kind: managed</c> manifest
+///   <item>its <c>examples/packages/hello-ui/package.yaml</c> parses as a valid <c>kind: plugin</c> manifest
 ///   carrying the DLL with a SHA-256 per file.</item>
 /// </list>
 /// </summary>
-public class HelloUiManagedPackageExampleTests
+public class HelloUiPluginPackageExampleTests
 {
 	private static string HelloUiDllPath =>
 		Path.Combine(AppContext.BaseDirectory, "plugins-unit", "hello-ui", "HelloUiPlugin.dll");
@@ -95,7 +95,7 @@ public class HelloUiManagedPackageExampleTests
 		var manifest = parsed.Manifest;
 		await Assert.That(manifest.Name).IsEqualTo(AppSlug);
 		await Assert.That(manifest.Binary).IsNotNull()
-			.Because("a kind: managed package must carry a binaries block");
+			.Because("a kind: plugin package must carry a binaries block");
 		await Assert.That(manifest.Binary!.Files.Any(f =>
 			f.FileName.Equals("HelloUiPlugin.dll", StringComparison.OrdinalIgnoreCase))).IsTrue();
 		await Assert.That(manifest.Binary.Files.All(f => f.Sha256.Length == 64)).IsTrue();

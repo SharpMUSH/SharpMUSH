@@ -36,7 +36,7 @@ public class PackageOperationGateTests
 			services.GetRequiredService<IPackagePlanService>(),
 			services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			services.GetRequiredService<IPackageLifecycleRunner>(),
-			services.GetRequiredService<IManagedPackageInstaller>(),
+			services.GetRequiredService<IPluginPackageInstaller>(),
 			services.GetRequiredService<IMediator>(),
 			gate,
 			services.GetRequiredService<ILockService>(),

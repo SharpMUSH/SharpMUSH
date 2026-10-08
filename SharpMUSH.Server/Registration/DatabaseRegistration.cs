@@ -69,21 +69,6 @@ internal static class DatabaseRegistration
 	public static IServiceCollection AddSharpMushDatabase(
 		this IServiceCollection services, IConfiguration configuration)
 	{
-		// PHASE 2a TWO-PHASE BOOT — build the plugin catalog ONCE, pre-build, before any service the
-		// plugins might extend is registered. The catalog runs the single McMaster DLL-load pass, applies
-		// every IServiceRegistrar straight into this IServiceCollection, and stashes the migration/flag/
-		// bridge contributions. It is registered as a singleton so the DB factory (migrations + flags),
-		// NatsBridgeService (bridge subscriptions), and the post-build PluginManager (commands/functions)
-		// all read the same already-loaded set rather than loading any DLL a second time.
-		using var pluginCatalogLoggerFactory = LoggerFactory.Create(b => b.AddSerilog(
-			new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger(), dispose: true));
-		var pluginCatalog = Implementation.Services.PluginCatalog.Build(
-			services, pluginCatalogLoggerFactory.CreateLogger<Implementation.Services.PluginCatalog>());
-		services.AddSingleton(pluginCatalog);
-
-		var pluginMigrationSources = pluginCatalog.MigrationSources;
-		var pluginFlags = pluginCatalog.AllFlags;
-
 		// Relations a provider cannot own - an object's location changes under other actors - resolve
 		// through the Mediator's cached queries; the providers ask through this seam and know nothing
 		// of the cache.
@@ -100,6 +85,27 @@ internal static class DatabaseRegistration
 		var lightningSyncSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_SYNC");
 		var lightningFlushSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_FLUSH_MS");
 		services.AddSingleton(new LightningWorldPath(lightningPath));
+
+		// Shipped plugins sit beside the binary; installed ones on the data volume beside the world, so an image
+		// update keeps them (SHARPMUSH_PLUGINS_PATH names another directory).
+		var pluginDirectories = PluginDirectories.ForWorld(lightningPath,
+			Environment.GetEnvironmentVariable(PluginDirectories.PathVariable));
+		services.AddSingleton(pluginDirectories);
+		// PHASE 2a TWO-PHASE BOOT — build the plugin catalog ONCE, pre-build, before any service the
+		// plugins might extend is registered. The catalog runs the single McMaster DLL-load pass, applies
+		// every IServiceRegistrar straight into this IServiceCollection, and stashes the migration/flag/
+		// bridge contributions. It is registered as a singleton so the DB factory (migrations + flags),
+		// NatsBridgeService (bridge subscriptions), and the post-build PluginManager (commands/functions)
+		// all read the same already-loaded set rather than loading any DLL a second time.
+		using var pluginCatalogLoggerFactory = LoggerFactory.Create(b => b.AddSerilog(
+			new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger(), dispose: true));
+		var pluginCatalog = Implementation.Services.PluginCatalog.Build(
+			services, pluginDirectories, pluginCatalogLoggerFactory.CreateLogger<Implementation.Services.PluginCatalog>());
+		services.AddSingleton(pluginCatalog);
+		var pluginMigrationSources = pluginCatalog.MigrationSources;
+		var pluginFlags = pluginCatalog.AllFlags;
+
+
 		var compactOnStart = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_COMPACT_ON_START"), "true",
 			StringComparison.OrdinalIgnoreCase);
 		services.AddSingleton<LightningDatabase>(x =>

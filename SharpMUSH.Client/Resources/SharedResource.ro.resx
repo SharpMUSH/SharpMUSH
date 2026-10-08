@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Mesaje</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scene</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>Nu rulează nicio scenă în această cameră.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Nu te-ai alăturat încă niciunui canal.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Răsfoiește canalele</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Termină de răsfoit canalele</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Răsfoiește</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Gata</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Nu există canale pe care le poți vedea.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# membru} few {# membri} other {# de membri}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Alătură-te #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Amuțește #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Amuțit: rămâi pe canal, dar nu auzi nimic. Selectează ca să-l auzi din nou.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Amuțește: rămâi pe canal, dar nu auzi nimic.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Jocul nu a făcut această schimbare.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Încă nu ai mesaje private. Scrie `page &lt;nume&gt;=&lt;mesaj&gt;` ca să-i scrii cuiva în privat.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# aici}}</value>
   </data>

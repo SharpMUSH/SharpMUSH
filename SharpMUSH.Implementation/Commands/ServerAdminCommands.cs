@@ -59,14 +59,17 @@ public partial class Commands
 		}
 		else if (switches.Contains("REBOOT"))
 		{
-			// Broadcast reboot to all connected players (PennMUSH src/bsd.c).
-			await GameBroadcastService.BroadcastAsync(
-				string.Format(ErrorMessages.Notifications.GameRebootBy, executorName));
+			// PennMUSH's reboot keeps connections; here the connection server holds them while the engine restarts.
+			if (!await ServerRestart.RestartAsync(executorName))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootPending), executor);
+				return CallState.Empty;
+			}
+
+			await Audit.RecordAsync(executor, AuditActions.ServerRestart,
+				new AuditTarget(AuditTargetKinds.Server, "engine", "Game engine"));
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootDocker), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootStandalone), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootRedis), executor);
-			Logger.LogWarning("REBOOT requested by {Executor}", executorName);
+			return CallState.Empty;
 		}
 		else if (switches.Contains("PARANOID"))
 		{

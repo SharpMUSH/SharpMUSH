@@ -14,8 +14,8 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="InstalledAt">UTC time of the most recent apply.</param>
 /// <param name="CurrentRevision">Monotonic revision number of the latest apply (see <see cref="PackageRevisionRecord"/>).</param>
 /// <param name="DeployedFiles">
-/// For a <see cref="PackageKind.Managed"/> package (Phase 4): the file names this
-/// install deposited into <c>plugins/&lt;id&gt;/</c>, recorded so uninstall removes
+/// For a <see cref="PackageKind.Plugin"/> package: the file names this
+/// install deposited into the installed plugins' <c>&lt;id&gt;/</c> folder, recorded so uninstall removes
 /// exactly what it deposited. Empty for softcode/application packages. A simple
 /// string list on the existing record — no separate collection.
 /// </param>
@@ -25,6 +25,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// Null when it owns none.
 /// </param>
 /// <param name="Settings">The configuration options this package set and still owns. Null when it owns none.</param>
+/// <param name="Kind">What the package is: softcode, a portal application, or a plugin.</param>
 public sealed record InstalledPackageRecord(
 	string Id,
 	string Version,
@@ -36,7 +37,8 @@ public sealed record InstalledPackageRecord(
 	int CurrentRevision,
 	IReadOnlyList<string>? DeployedFiles = null,
 	PackageDeclarations? Owned = null,
-	IReadOnlyList<PackageSettingRecord>? Settings = null);
+	IReadOnlyList<PackageSettingRecord>? Settings = null,
+	PackageKind Kind = PackageKind.Softcode);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

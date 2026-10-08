@@ -35,7 +35,7 @@ public partial class PackageInstallService(
 	IPackagePlanService planner,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IPackageLifecycleRunner lifecycle,
-	IManagedPackageInstaller managedInstaller,
+	IPluginPackageInstaller managedInstaller,
 	IMediator mediator,
 	IPackageOperationGate gate,
 	ILockService locks,

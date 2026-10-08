@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Beskeder</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scener</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>Der kører ingen scene i dette rum.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Du er ikke med i nogen kanaler endnu.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Gennemse kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Færdig med at gennemse kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Gennemse</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Færdig</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Der er ingen kanaler, du kan se.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# medlem} other {# medlemmer}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Deltag i #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Gag #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Gagget: du er stadig med i kanalen, men hører intet. Vælg for at høre den igen.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Gag: bliv i kanalen, men hør intet.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Spillet foretog ikke den ændring.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Ingen beskeder endnu. Skriv `page &lt;navn&gt;=&lt;besked&gt;` for at sende en privat besked.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# her}}</value>
   </data>

@@ -94,11 +94,11 @@ These '@' commands are only usable by wizards or privileged players:
 | [cv]           | [@dbck]        | [@disable]     | [@dump]        | [@enable]      |
 | [@feed]        | [@flag]        | [@hide]        | [@hook]        | [@http]        |
 | [@kick]        | [@log]         | [@motd]        | [@newpassword] | [@package]     |
-| [@pcreate]     | [@permission]  | [@poll]        | [@poor]        | [@power]       |
-| [@purge]       | [@quota]       | [@readcache]   | [@reality]     | [@rejectmotd]  |
-| [@respond]     | [@role]        | [@shutdown]    | [@sitelock]    | [@snapshot]    |
-| [@sql]         | [@squota]      | [@storage]     | [@suggest]     | [@uptime]      |
-| [@wall]        | [@wizmotd]     | [@wizwall]     |                |                |
+| [@pcreate]     | [@permission]  | [@plugin]      | [@poll]        | [@poor]        |
+| [@power]       | [@purge]       | [@quota]       | [@readcache]   | [@reality]     |
+| [@rejectmotd]  | [@respond]     | [@role]        | [@shutdown]    | [@sitelock]    |
+| [@snapshot]    | [@sql]         | [@squota]      | [@storage]     | [@suggest]     |
+| [@uptime]      | [@wall]        | [@wizmotd]     | [@wizwall]     |                |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.
@@ -2027,6 +2027,33 @@ This single-step export only succeeds when the selection is **self-contained**: 
 ::: seealso
 - [@decompile]
 :::
+# @plugin
+`@plugin[/list]`<br>
+`@plugin <plugin>`<br>
+`@plugin/enable <plugin>`<br>
+`@plugin/disable <plugin>`
+
+Needs the `packages.admin` permission. A plugin is compiled C# that adds commands, functions, flags and portal pages to the server; the Scene System is one, shipped with the server. Plugins installed from a plugin package, from a remote or uploaded in the portal's Packages page, sit beside the world on the data volume, so they survive an update of the server's image.
+
+`@plugin` lists every plugin the server found: its version, whether it shipped with the server or came from a package, and its state. `@plugin <plugin>` shows one, with what it adds, which packages need it, and why it did not start if it failed.
+
+`@plugin/disable <plugin>` turns a plugin off. The packages that need it are uninstalled first, after a backup; a package that shipped with the server is not reinstalled while the plugin is off. A plugin that only adds commands and functions stops at once. Any other plugin stops at the next restart (`@shutdown/reboot`), because what it registered at start-up stays until then.
+
+`@plugin/enable <plugin>` turns it on again. It starts at the next restart, and the packages that shipped with it are reinstalled then.
+
+### Examples
+
+```sharp
+> @plugin
+> @plugin/disable scene
+Uninstalled scene. Scene System is off. Scene System stops when the server restarts.
+> @shutdown/reboot
+```
+
+::: seealso
+- [@shutdown]
+- [@package]
+:::
 # @password
 `@password <old password>=<new password>`
 
@@ -2331,7 +2358,7 @@ You can use this command to set yourself or any of your objects to be male, fema
 
 `@shutdown/panic` performs a panic shutdown of the game, using a seperate database file, not the normal one. It may only be used by God.
 
-`@shutdown/reboot` restarts the game without disconnecting the users. This is necessary to load changes to the MUSH's configuration files (mush.cnf, restrict.cnf, etc), though not changes to names.cnf, which take effect without a reboot.
+`@shutdown/reboot` restarts the game engine without disconnecting anyone: connections are held by the connection server while the engine stops and starts again. Everyone connected is told first. The engine is started again by whatever runs it, such as Docker's restart policy; run by hand, it just stops. A restart is what starts or stops a plugin after [@plugin] changes it. It needs the `server.operate` permission.
 
 If the `/paranoid` switch is added, the shutdown dump will be a paranoid dump (see @dump).
 # @slave

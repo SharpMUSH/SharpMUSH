@@ -5,11 +5,12 @@ The ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS`` and
 20.3). They are what fills the web portal's Play sidebar **Channels** and
 **Pages** groups and its channel view and member list, as `room-contents` fills *Here* and *Exits*.
 
-- **`comm.channels`** — `{"v": 2, "viewer": {…}, "channels": [ … ]}`, the
-  channels the player is on, sent to that player on connect, on resume (a
-  reloaded page keeps its session), and whenever
+- **`comm.channels`** — `{"v": 2, "viewer": {…}, "channels": [ … ]}`, every
+  channel the player may see, each saying whether they are on it, how many
+  are, its description and whether they gagged it. It is sent to that player
+  on connect, on resume (a reloaded page keeps its session), and whenever
   their list changes (join, leave, their own channel flags, a rename or
-  deletion).
+  deletion). The Play drawer lists the joined ones and browses the rest.
 - **`comm.message`** — `{"v": 2, "kind": "channel" | "page", …}`, one channel
   line or page, sent only to the players who received it: the engine names
   them, after every channel lock, gag, mute, `@chatformat`, page lock, HAVEN

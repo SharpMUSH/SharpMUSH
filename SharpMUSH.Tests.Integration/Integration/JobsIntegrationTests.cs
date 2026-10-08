@@ -70,7 +70,9 @@ public class JobsIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
 			Installer,
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
-			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>());
+			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");

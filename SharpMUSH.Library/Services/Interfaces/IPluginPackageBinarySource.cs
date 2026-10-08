@@ -8,7 +8,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// only for the flat file names the manifest's <c>binaries:</c> block declares,
 /// then verifies each against its SHA-256 before depositing it.
 /// </summary>
-public interface IManagedPackageBinarySource
+public interface IPluginPackageBinarySource
 {
 	/// <summary>
 	/// Returns the bytes of <paramref name="fileName"/> from the package source,

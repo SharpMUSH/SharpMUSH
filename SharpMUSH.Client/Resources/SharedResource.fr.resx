@@ -4416,6 +4416,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Messages</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scènes</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>Aucune scène n'est en cours dans cette pièce.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Vous n'avez encore rejoint aucun canal.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Parcourir les canaux</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Terminer le parcours des canaux</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Parcourir</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Terminé</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Aucun canal ne vous est visible.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# membre} other {# membres}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Rejoindre #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Bâillonner #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Bâillonné : vous restez sur le canal mais n'entendez rien. Sélectionnez pour l'entendre à nouveau.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Bâillonner : rester sur le canal sans rien entendre.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Le jeu n'a pas effectué ce changement.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Aucun message privé pour l'instant. Tapez `page &lt;nom&gt;=&lt;message&gt;` pour écrire à quelqu'un en privé.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# ici}}</value>
   </data>

@@ -327,7 +327,7 @@ public class ApplicationPackageManifestTests
 			"""
 			package: weird
 			version: 1.0.0
-			kind: plugin
+			kind: managed
 			objects:
 			  - ref: room
 			    type: room

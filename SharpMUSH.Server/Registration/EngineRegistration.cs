@@ -169,20 +169,14 @@ internal static class EngineRegistration
 		services.AddSingleton<IPackagePlanService, PackagePlanService>();
 		// Parser-layer runner for package AINSTALL/AUPDATE softcode; required by PackageInstallService.
 		services.AddSingleton<IPackageLifecycleRunner, SharpMUSH.Implementation.Services.PackageLifecycleRunner>();
-		// Phase-4 managed-package (compiled C# plugin DLL) installer + its server-side trust allow-list.
-		// The allow-list is read from the "ManagedPackages" config section (AllowAll / AllowList) and is
-		// the standing half of the trust gate; the per-apply allow_managed_code flag is the other half.
-		services.AddSingleton(_ =>
-		{
-			var section = configuration.GetSection("ManagedPackages");
-			var allowAll = section.GetValue("AllowAll", false);
-			var allowList = section.GetSection("AllowList").Get<string[]>() ?? [];
-			return new ManagedPackageTrustOptions(allowAll, allowList);
-		});
-		services.AddSingleton<IManagedPackageInstaller>(sp => new ManagedPackageInstaller(
-			sp.GetRequiredService<IPluginManager>(),
-			sp.GetRequiredService<ManagedPackageTrustOptions>(),
-			sp.GetRequiredService<ILogger<ManagedPackageInstaller>>()));
+		// The plugin-package installer and the host's SHARPMUSH_PLUGIN_INSTALL switch (on unless set to false).
+		services.AddSingleton(_ => PluginInstallOptions.FromEnvironment());
+		services.AddSingleton<IPluginPackageInstaller, PluginPackageInstaller>();
+		// The Packages page's Plugins tab and @plugin: what runs, turning plugins on and off, and portal uploads.
+		services.AddSingleton<Services.PluginAdministrationService>();
+		services.AddSingleton<IPluginAdministration>(sp => sp.GetRequiredService<Services.PluginAdministrationService>());
+		services.AddSingleton<Services.PluginUploadStore>();
+		services.AddSingleton<IServerRestart, Services.ServerRestartService>();
 		// Serves a managed plugin's compiled UI assembly bytes to the WASM client, re-verifying them against
 		// the Phase-4 install-time SHA-256 sidecar before serving. The PluginsUiController gates it on
 		// allow_browser_code; this provider enforces the hash/traversal guards regardless.

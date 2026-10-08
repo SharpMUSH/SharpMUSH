@@ -55,11 +55,10 @@ public sealed record PlanRequest(
 	Dictionary<string, string>? ConfigureAnswers);
 
 /// <summary>Request body for applying a reviewed plan.</summary>
-/// <param name="AllowManagedCode">
-/// Phase-4 trust opt-in for <c>kind: managed</c> packages: the operator's explicit
-/// confirmation that they trust this package to deposit and run arbitrary compiled
-/// C# in full server trust. Required (alongside the server allow-list) for a
-/// managed install; ignored for softcode/application packages.
+/// <param name="AllowPluginCode">
+/// For a <c>kind: plugin</c> package, the administrator's confirmation that they trust its author: a plugin runs
+/// compiled C# in full server trust. A plugin install is refused without it; softcode and application packages
+/// ignore it.
 /// </param>
 public sealed record ApplyRequest(
 	string Remote,
@@ -68,7 +67,7 @@ public sealed record ApplyRequest(
 	Dictionary<string, string>? ConfigureAnswers,
 	List<PackageConflictDecision>? Decisions,
 	int KeepRevisions = 10,
-	bool AllowManagedCode = false);
+	bool AllowPluginCode = false);
 
 /// <summary>A configure prompt for the review screen.</summary>
 public sealed record ConfigurePromptDto(string Key, string Label, string Type, string? Default, bool Answered);
@@ -93,6 +92,8 @@ public sealed record AttributeRenderDto(
 /// <param name="Configure">Configure prompts with answered-state.</param>
 /// <param name="Renders">Per-attribute highlighted Base/Live/New panes + danger flags.</param>
 /// <param name="ManifestWarnings">Non-blocking manifest parse warnings.</param>
+/// <param name="Kind">The package's kind; a plugin package's review asks the administrator to trust its author.</param>
+/// <param name="Binary">The files a plugin package carries and their SHA-256s, or null.</param>
 public sealed record PlanResponse(
 	string PackageId,
 	string Version,
@@ -100,7 +101,9 @@ public sealed record PlanResponse(
 	PackageChangeset Changeset,
 	IReadOnlyList<ConfigurePromptDto> Configure,
 	IReadOnlyList<AttributeRenderDto> Renders,
-	IReadOnlyList<string> ManifestWarnings);
+	IReadOnlyList<string> ManifestWarnings,
+	PackageKind Kind = PackageKind.Softcode,
+	PackageBinarySpec? Binary = null);
 
 /// <summary>Result of a successful apply, for the UI.</summary>
 public sealed record ApplyResponse(

@@ -16,7 +16,7 @@ cover the two runtime layers plus the portal:
 |---|---|---|---|
 | [`plugin-softcode/`](plugin-softcode/) | `sharpmush-softcode` | `kind: softcode` | A YAML package of objects + attributes + a global `@function`. Game **policy**, no C#, no recompile. |
 | [`plugin-application/`](plugin-application/) | `sharpmush-application` | `kind: application` (+ softcode routes) | A Dynamic Application (Area 21): softcode schema/submit routes plus a portal page registration. |
-| [`plugin-dll/`](plugin-dll/) | `sharpmush-plugin` | C# DLL (`kind: managed`) | A compiled `net11.0` plugin: `[SharpPlugin] : PluginBase` with a command + function, distributed as a managed package. |
+| [`plugin-dll/`](plugin-dll/) | `sharpmush-plugin` | C# DLL (`kind: plugin`) | A compiled `net11.0` plugin: `[SharpPlugin] : PluginBase` with a command + function, distributed as a plugin package. |
 
 Authoring background:
 
@@ -67,8 +67,8 @@ dotnet new sharpmush-plugin -n MyPlugin \
 `-n` sets the directory name and the primary identifier (the **package id** for
 softcode, the **application slug** for application, the **assembly/DLL name** for the
 DLL plugin). For the DLL plugin, also pass `--PluginNamespace` (the C# namespace,
-usually the same as `-n`), `--PluginId` (the lowercase-hyphen plugin id / `plugins/`
-directory), and the sample `--PluginCmd` / `--PluginFn` names. Run
+usually the same as `-n`), `--PluginId` (the lowercase-hyphen plugin id, which is also the package id
+and the plugin's folder name), and the sample `--PluginCmd` / `--PluginFn` names. Run
 `dotnet new <short-name> --help` to see every parameter and its default.
 
 To uninstall a template: `dotnet new uninstall ./templates/plugin-softcode`.
@@ -107,6 +107,6 @@ route is a manual find-and-replace of the same tokens.
   (versioned 1.1.0). Until they publish to a public feed,
   build against an in-repo SharpMUSH checkout via the commented `ProjectReference`
   block in the `.csproj`. The `build-and-release.yml` CI does a deterministic build,
-  computes the SHA-256 hashes, rewrites the managed `package.yaml`, and cuts a release.
+  computes the SHA-256 hashes, rewrites the plugin package's `package.yaml`, and cuts a release.
 
 Each template's own README has the full per-kind walkthrough.

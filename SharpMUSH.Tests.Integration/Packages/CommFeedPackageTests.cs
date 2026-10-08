@@ -700,9 +700,72 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		await Assert.That(gagRow["gagged"]!.GetValue<bool>()).IsTrue();
 
 		var left = await watch.SentWhile(() => Run(joiner, $"@channel/off {channel}"), Run, joiner);
-		var after = Frames(left[joiner.Handle], "comm.channels").Single();
-		await Assert.That(after["channels"]!.AsArray().OfType<JsonObject>()
-			.Any(c => c["name"]!.GetValue<string>() == channel)).IsFalse();
+		var after = Frames(left[joiner.Handle], "comm.channels").Single()["channels"]!.AsArray()
+			.OfType<JsonObject>().Single(c => c["name"]!.GetValue<string>() == channel);
+		await Assert.That(after["joined"]!.GetValue<bool>()).IsFalse()
+			.Because("a channel left is still one the player may see, for the channel browser");
+		await Assert.That(after.ContainsKey("gagged")).IsFalse();
+	}
+
+	/// <summary>
+	/// The list is every channel the player may see, as their own <c>@channel/list</c> shows them: each says
+	/// whether they are on it, how many are, and its description. A channel they may not see is not in it,
+	/// though the wizard handler that builds the list sees it.
+	/// </summary>
+	[Test]
+	public async Task TheChannelList_IsEveryChannelThePlayerMaySee()
+	{
+		var player = await ViewerAsync("CommListPlayer");
+		var other = await ViewerAsync("CommListOther");
+		var open = await ChannelAsync("CommListOpen", other);
+		await God($"@channel/describe {open}=Ask anything\\, any time.");
+		var hidden = await ChannelAsync("CommListWizard", "player wizard");
+		var mine = await ChannelAsync("CommListMine");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(player, $"@channel/on {mine}"), Run, player);
+
+		var rows = Frames(sent[player.Handle], "comm.channels").Single()["channels"]!.AsArray()
+			.OfType<JsonObject>().ToDictionary(c => c["name"]!.GetValue<string>());
+		await Assert.That(rows[open]["joined"]!.GetValue<bool>()).IsFalse();
+		await Assert.That(rows[open]["members"]!.GetValue<int>()).IsEqualTo(2).Because("God made it and is on it, and so is the other player");
+		await Assert.That(rows[open]["description"]!.GetValue<string>()).IsEqualTo("Ask anything, any time.");
+		await Assert.That(rows[mine]["joined"]!.GetValue<bool>()).IsTrue();
+		await Assert.That(rows[mine]["description"]!.GetValue<string>()).IsEqualTo(string.Empty);
+		await Assert.That(rows.ContainsKey(hidden)).IsFalse();
+	}
+
+	/// <summary>
+	/// A channel deleted or renamed after <c>channels()</c> listed it, by someone else while the list is
+	/// being built, has no row: one missing count would otherwise make the whole payload invalid JSON,
+	/// and <c>oob()</c> would send nothing.
+	/// </summary>
+	[Test]
+	public async Task AChannelGoneSinceItWasListed_HasNoRow()
+	{
+		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
+		var gone = UniqueChannel("CommGone");
+		var row = (await factory.FunctionParser.FunctionParse(
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message!.ToPlainText();
+
+		await Assert.That(row).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>
+	/// A listed name that is gone but abbreviates another channel (renamed from <c>Public</c> to
+	/// <c>Public Chat</c>, say) still has no row: the lookup would take the other channel's figures under
+	/// the stale name.
+	/// </summary>
+	[Test]
+	public async Task AChannelGoneThatAbbreviatesAnother_HasNoRow()
+	{
+		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
+		var longer = await ChannelAsync("CommAbbrev");
+		var gone = longer[..^2];
+		var row = (await factory.FunctionParser.FunctionParse(
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message!.ToPlainText();
+
+		await Assert.That(row).IsEqualTo(string.Empty);
 	}
 
 	/// <summary>

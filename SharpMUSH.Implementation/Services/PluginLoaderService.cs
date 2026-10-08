@@ -7,12 +7,13 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 
 namespace SharpMUSH.Implementation.Services;
 
 /// <summary>
-/// Shared, single-pass plugin loader. Scans <c>plugins/</c> under <see cref="AppContext.BaseDirectory"/>,
+/// Shared, single-pass plugin loader. Scans the shipped and installed plugin directories (<see cref="PluginDirectories"/>),
 /// reads each <c>plugin.json</c> manifest, topologically sorts by declared dependencies (tie-break by
 /// priority then id), then loads each plugin <b>once</b> through a McMaster <see cref="PluginLoader"/> with
 /// the host-declared <see cref="SharedContractTypes"/> and instantiates its <c>[SharpPlugin] IPlugin</c>.
@@ -83,13 +84,26 @@ public static class PluginLoaderService
 	/// </summary>
 	private static readonly ConditionalWeakTable<IPlugin, PluginHandle> Handles = new();
 
-	/// <summary>A plugin DLL found on disk together with its (manifest-or-fallback) ordering metadata.</summary>
+	/// <summary>
+	/// A plugin found on disk together with its (manifest-or-fallback) ordering metadata. <see cref="Problem"/> is set
+	/// when the plugin cannot be loaded as found (its entry assembly is ambiguous or missing, or it needs a newer
+	/// contract than this server provides); such a candidate is reported, never loaded.
+	/// </summary>
 	public sealed record PluginCandidate(
 		string DllPath,
 		string Id,
 		IReadOnlyList<string> Dependencies,
 		int Priority,
-		IReadOnlyList<string>? SharedAssemblies = null);
+		IReadOnlyList<string>? SharedAssemblies = null,
+		PluginOrigin Origin = PluginOrigin.Installed,
+		string? Name = null,
+		string? Version = null,
+		string? Description = null,
+		PluginBootStatus? Problem = null,
+		string? Reason = null);
+
+	/// <summary>What one boot's load pass did: the plugins it loaded and what became of every plugin it found.</summary>
+	public sealed record LoadReport(IReadOnlyList<LoadedPlugin> Loaded, IReadOnlyList<PluginBootEntry> Entries);
 
 	/// <summary>An instantiated plugin together with the DLL it was loaded from.</summary>
 	public sealed record LoadedPlugin(IPlugin Plugin, string DllPath)
@@ -120,72 +134,195 @@ public static class PluginLoaderService
 		Handles.TryGetValue(plugin, out var handle) ? handle : null;
 
 	/// <summary>
-	/// Discover, order, and load every plugin under <c>plugins/</c> exactly once. Returns the
-	/// instantiated <see cref="IPlugin"/> entries in load order (dependencies first). The returned
-	/// instances are not yet <c>Initialize</c>d and their contributions are not yet applied — that is the
-	/// caller's job (the catalog applies DI, the manager registers commands/functions, etc.).
+	/// Discover, order, and load every plugin in <paramref name="directories"/> exactly once: the shipped ones first,
+	/// then the installed ones. Returns the instantiated <see cref="IPlugin"/> entries in load order (dependencies
+	/// first) and an entry for every plugin found, loaded or not. The returned instances are not yet
+	/// <c>Initialize</c>d and their contributions are not yet applied — that is the caller's job (the catalog
+	/// applies DI, the manager registers commands/functions, etc.).
 	/// </summary>
-	public static IReadOnlyList<LoadedPlugin> LoadAll(ILogger logger)
+	/// <param name="directories">Where to look.</param>
+	/// <param name="state">Which plugins an administrator turned off; found, reported, not loaded.</param>
+	/// <param name="logger">Where problems go.</param>
+	public static LoadReport LoadAll(PluginDirectories directories, PluginState state, ILogger logger)
 	{
-		var pluginsRoot = Path.Combine(AppContext.BaseDirectory, "plugins");
-		if (!Directory.Exists(pluginsRoot))
+		var found = Discover(directories.BuiltIn, logger, PluginOrigin.BuiltIn)
+			.Concat(Discover(directories.Installed, logger, PluginOrigin.Installed))
+			.ToList();
+		if (found.Count == 0)
 		{
-			logger.LogDebug("No plugins directory at {PluginsRoot}; nothing to load.", pluginsRoot);
-			return [];
+			logger.LogDebug("No plugins under {BuiltIn} or {Installed}; nothing to load.", directories.BuiltIn, directories.Installed);
+			return new LoadReport([], []);
 		}
 
-		var discovered = Discover(pluginsRoot, logger).ToList();
-		if (discovered.Count == 0)
+		var entries = new List<PluginBootEntry>();
+		var loadable = new List<PluginCandidate>();
+		var claimed = new Dictionary<string, PluginCandidate>(StringComparer.OrdinalIgnoreCase);
+		foreach (var candidate in found)
 		{
-			logger.LogDebug("No plugin DLLs discovered under {PluginsRoot}.", pluginsRoot);
-			return [];
-		}
-
-		var ordered = TopologicalSort(discovered, logger);
-
-		var loaded = new List<LoadedPlugin>();
-		foreach (var candidate in ordered)
-		{
-			var result = LoadOne(candidate.DllPath, logger, candidate.SharedAssemblies);
-			if (result is not null)
+			if (claimed.TryGetValue(candidate.Id, out var first))
 			{
-				loaded.Add(result);
+				// A shipped plugin is found first, so an installed one can never stand in for it.
+				logger.LogWarning("Plugin id '{Id}' at {DllPath} is already used by {First}; ignoring it.",
+					candidate.Id, candidate.DllPath, first.DllPath);
+				entries.Add(Entry(candidate, PluginBootStatus.Duplicate,
+					first.Origin == PluginOrigin.BuiltIn
+						? "A plugin that ships with the server already uses this id."
+						: $"Another plugin already uses this id ({Path.GetDirectoryName(first.DllPath)})."));
+				continue;
 			}
-		}
 
-		return loaded;
-	}
-
-	/// <summary>
-	/// Find every <c>*.dll</c> at the top of the plugins directory and one level down
-	/// (<c>plugins/&lt;id&gt;/*.dll</c>). For each, read a sibling <c>plugin.json</c> for ordering metadata,
-	/// falling back to a default candidate keyed by the file name when no manifest is present.
-	/// </summary>
-	public static IEnumerable<PluginCandidate> Discover(string pluginsRoot, ILogger logger)
-	{
-		var dllPaths = Directory.EnumerateFiles(pluginsRoot, "*.dll", SearchOption.TopDirectoryOnly)
-			.Concat(Directory.EnumerateDirectories(pluginsRoot)
-				.SelectMany(dir => Directory.EnumerateFiles(dir, "*.dll", SearchOption.TopDirectoryOnly)));
-
-		foreach (var dll in dllPaths)
-		{
-			var manifest = TryReadManifest(dll, logger);
-			if (manifest is not null)
+			claimed[candidate.Id] = candidate;
+			if (candidate.Problem is { } problem)
 			{
-				yield return new PluginCandidate(dll, manifest.Id, manifest.Dependencies, manifest.Priority,
-					manifest.SharedAssemblies);
+				logger.LogError("Plugin '{Id}' at {DllPath} is not loaded: {Reason}", candidate.Id, candidate.DllPath, candidate.Reason);
+				entries.Add(Entry(candidate, problem, candidate.Reason));
+			}
+			else if (state.IsDisabled(candidate.Id))
+			{
+				logger.LogInformation("Plugin '{Id}' is turned off; not loading it.", candidate.Id);
+				entries.Add(Entry(candidate, PluginBootStatus.Disabled, null));
 			}
 			else
 			{
-				// No manifest: still loadable, keyed by file name; ordering metadata defaults.
-				yield return new PluginCandidate(dll, Path.GetFileNameWithoutExtension(dll), [], 0);
+				loadable.Add(candidate);
+			}
+		}
+
+		var loaded = new List<LoadedPlugin>();
+		var ordered = TopologicalSort(loadable, logger);
+		foreach (var candidate in loadable.Where(c => !ordered.Contains(c)))
+		{
+			entries.Add(Entry(candidate, PluginBootStatus.Failed, "Its dependencies form a cycle."));
+		}
+
+		foreach (var candidate in ordered)
+		{
+			if (LoadOne(candidate.DllPath, logger, candidate.SharedAssemblies) is not { } result)
+			{
+				entries.Add(Entry(candidate, PluginBootStatus.Failed, "It threw while loading; the server log has the error."));
+				continue;
+			}
+
+			if (!string.Equals(result.Plugin.Id, candidate.Id, StringComparison.OrdinalIgnoreCase))
+			{
+				// Unload, enable and disable all go by the plugin.json id; a plugin that answers to another is unmanageable.
+				logger.LogError("Plugin at {DllPath} calls itself '{PluginId}' but plugin.json says '{Id}'; not loading it.",
+					candidate.DllPath, result.Plugin.Id, candidate.Id);
+				result.Loader.Dispose();
+				entries.Add(Entry(candidate, PluginBootStatus.Failed,
+					$"The plugin calls itself '{result.Plugin.Id}', but plugin.json says '{candidate.Id}'."));
+				continue;
+			}
+
+			loaded.Add(result);
+			entries.Add(Entry(candidate with { Version = candidate.Version ?? result.Plugin.Version }, PluginBootStatus.Loaded, null));
+		}
+
+		return new LoadReport(loaded, entries);
+	}
+
+	private static PluginBootEntry Entry(PluginCandidate candidate, PluginBootStatus status, string? reason) =>
+		new(candidate.Id, candidate.Name, candidate.Version, candidate.Description, candidate.Origin,
+			Path.GetDirectoryName(candidate.DllPath)!, status, reason);
+
+	/// <summary>
+	/// Find every plugin in <paramref name="pluginsRoot"/>: a DLL at the top level (a hand-dropped plugin, keyed by
+	/// its file name) or a folder one level down (<c>plugins/&lt;id&gt;/</c>). A folder's <c>plugin.json</c> gives its
+	/// id and ordering metadata and, when the folder carries more than one DLL, names the entry assembly. Folders
+	/// whose name starts with a dot (upload staging) are not plugins.
+	/// </summary>
+	public static IEnumerable<PluginCandidate> Discover(string pluginsRoot, ILogger logger,
+		PluginOrigin origin = PluginOrigin.Installed)
+	{
+		if (!Directory.Exists(pluginsRoot))
+		{
+			yield break;
+		}
+
+		foreach (var dll in Directory.EnumerateFiles(pluginsRoot, "*.dll", SearchOption.TopDirectoryOnly).Order(StringComparer.Ordinal))
+		{
+			yield return new PluginCandidate(dll, Path.GetFileNameWithoutExtension(dll), [], 0, Origin: origin);
+		}
+
+		foreach (var folder in Directory.EnumerateDirectories(pluginsRoot).Order(StringComparer.Ordinal))
+		{
+			if (Path.GetFileName(folder).StartsWith('.'))
+			{
+				continue;
+			}
+
+			if (FromFolder(folder, logger, origin) is { } candidate)
+			{
+				yield return candidate;
 			}
 		}
 	}
 
-	private static PluginManifest? TryReadManifest(string dllPath, ILogger logger)
+	/// <summary>The plugin in <paramref name="folder"/>, or null when the folder holds no DLL at all.</summary>
+	private static PluginCandidate? FromFolder(string folder, ILogger logger, PluginOrigin origin)
 	{
-		var manifestPath = Path.Combine(Path.GetDirectoryName(dllPath)!, "plugin.json");
+		var dlls = Directory.EnumerateFiles(folder, "*.dll", SearchOption.TopDirectoryOnly).Order(StringComparer.Ordinal).ToList();
+		var manifest = TryReadManifest(Path.Combine(folder, PluginManifest.FileName), logger);
+		if (dlls.Count == 0 && manifest is null)
+		{
+			return null;
+		}
+
+		var id = manifest?.Id ?? Path.GetFileName(folder);
+		var candidate = new PluginCandidate(dlls.FirstOrDefault() ?? Path.Combine(folder, id + ".dll"), id,
+			manifest?.Dependencies ?? [], manifest?.Priority ?? 0, manifest?.SharedAssemblies, origin,
+			manifest?.Name, manifest?.Version, manifest?.Description);
+
+		string? entry;
+		if (manifest?.Entry is { Length: > 0 } named)
+		{
+			entry = dlls.FirstOrDefault(d => string.Equals(Path.GetFileName(d), named, StringComparison.OrdinalIgnoreCase));
+			if (entry is null)
+			{
+				return candidate with { Problem = PluginBootStatus.Failed, Reason = $"plugin.json names {named} as its entry, and the folder has no such file." };
+			}
+		}
+		else if (dlls.Count == 1)
+		{
+			entry = dlls[0];
+		}
+		else
+		{
+			return candidate with
+			{
+				Problem = PluginBootStatus.Failed,
+				Reason = dlls.Count == 0
+					? "The folder has no DLL."
+					: $"The folder has {dlls.Count} DLLs and plugin.json does not say which one is the plugin (\"entry\")."
+			};
+		}
+
+		candidate = candidate with { DllPath = entry };
+		if (manifest?.MinServerVersion is { Length: > 0 } minimum)
+		{
+			if (!VersionConstraint.TryParse(minimum, out var constraint))
+			{
+				return candidate with { Problem = PluginBootStatus.Incompatible, Reason = $"plugin.json's minServerVersion '{minimum}' is not a version constraint." };
+			}
+
+			if (!PluginContractVersion.Satisfies(constraint))
+			{
+				return candidate with
+				{
+					Problem = PluginBootStatus.Incompatible,
+					Reason = $"It needs plugin contract {minimum}; this server provides {PluginContractVersion.Current}."
+				};
+			}
+		}
+
+		return candidate;
+	}
+
+	/// <summary>The <c>plugin.json</c> at <paramref name="manifestPath"/>, or null when there is none or it does not parse.</summary>
+	public static PluginManifest? ReadManifest(string manifestPath, ILogger logger) => TryReadManifest(manifestPath, logger);
+
+	private static PluginManifest? TryReadManifest(string manifestPath, ILogger logger)
+	{
 		if (!File.Exists(manifestPath))
 		{
 			return null;

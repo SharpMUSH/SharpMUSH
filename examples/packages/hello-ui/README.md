@@ -1,11 +1,11 @@
 # hello-ui
 
-A worked **UI plugin shipped end-to-end as a managed DLL package** (Phase 4). It ties together three
+A worked **UI plugin shipped end-to-end as a plugin package** (Phase 4). It ties together three
 seams of the plugin system in a single assembly, then distributes that assembly through the package
 manager with SHA-256-verified install.
 
 The plugin source lives at [`examples/plugins/hello-ui/`](../../plugins/hello-ui/); this directory is the
-**managed-package manifest** that carries its compiled DLL.
+**plugin-package manifest** that carries its compiled DLL.
 
 ## The three seams
 
@@ -13,7 +13,7 @@ The plugin source lives at [`examples/plugins/hello-ui/`](../../plugins/hello-ui
 |------|-------|---------------------------|
 | `IServiceRegistrar` | 9 | `services.AddControllers().AddApplicationPart(thisAssembly)` — exposes `HelloUiController` to the host's MVC pipeline so its attribute routes (`api/hello-ui/*`) are served across the plugin's AssemblyLoadContext. |
 | `IApplicationSource` | 11 | Returns one full-page Area-21 `RegisteredApplication` (`Slug: "hello-ui"`, `Kind: Page`, `NavPlacement: "Examples"`) whose `SchemaUrl`/`DataUrl` point back at its own controller. The registry overlay (`PluginApplicationRegistryDecorator`) unions it into `/api/applications` while the plugin is loaded. |
-| `kind: managed` package | 4 | This `package.yaml` carries the `.dll` + `.deps.json` + `plugin.json` with their SHA-256 hashes. `ManagedPackageInstaller` verifies each byte, then deposits them into `plugins/hello-ui/` on a trusted, opted-in install. |
+| `kind: plugin` package | 4 | This `package.yaml` carries the `.dll` + `.deps.json` + `plugin.json` with their SHA-256 hashes. `PluginPackageInstaller` verifies each byte, checks that `plugin.json`'s id is `hello-ui`, then deposits them into `hello-ui/` in the installed-plugins folder once the administrator confirms the install. |
 
 Because the plugin registers services and contributes UI, it is **load-once**: it is picked up at server
 boot, and a clean uninstall takes effect on the next restart. The browser loads **no** plugin code — the
@@ -24,9 +24,9 @@ WASM client renders the page generically from the schema JSON the controller ret
 ```
 build  examples/plugins/hello-ui  ──►  HelloUiPlugin.dll (+ .deps.json, plugin.json)
    │
-package  this package.yaml signs each file's SHA-256  (kind: managed)
+package  this package.yaml signs each file's SHA-256  (kind: plugin)
    │
-install  operator opts in (allow_managed_code + server allow-list) ─► verify hashes ─► deposit into plugins/hello-ui/
+install  administrator confirms (allow_plugin_code) ─► verify hashes ─► deposit into <world>.plugins/hello-ui/
    │
 boot     PluginLoaderService loads the DLL; PluginCatalog collects its IServiceRegistrar + IApplicationSource
    │
@@ -48,14 +48,16 @@ dotnet build examples/plugins/hello-ui/HelloUiPlugin.csproj -c Release
 cd examples/plugins/hello-ui/bin/Release/net11.0
 sha256sum HelloUiPlugin.dll HelloUiPlugin.deps.json plugin.json
 
-# 3. Install through the package manager with the two-part managed-code trust opt-in:
-#      - server-side: add "hello-ui" to ManagedPackages:AllowList (or set AllowAll), and
-#      - per-apply:   allow_managed_code = true on the install request.
-#    The installer refuses to write a single byte until both gates pass and every SHA-256 matches.
+# 3. Install through the package manager: from a package remote, or zip this package.yaml with the three
+#    files (all at the top level) and use "Upload plugin" on the portal's Plugins tab. On the review page,
+#    tick "I trust this author" (allow_plugin_code = true on the apply request). The installer writes
+#    nothing until that is confirmed and every SHA-256 matches. SHARPMUSH_PLUGIN_INSTALL=false on the
+#    server refuses plugin packages altogether.
 ```
 
-After a restart, "Hello UI" appears in the NavBar under **Examples** and the page renders at
-`/apps/hello-ui`. Uninstalling removes `plugins/hello-ui/` (and unloads the plugin if it is loaded +
+After a restart (the Plugins tab's Restart button, or `@shutdown/reboot`), "Hello UI" appears in the NavBar
+under **Examples** and the page renders at `/apps/hello-ui`. Uninstalling removes `hello-ui/` from the
+installed-plugins folder (and unloads the plugin if it is loaded +
 unloadable); the app vanishes from the NavBar — no orphaned rows, because plugin apps are an in-memory
 overlay that is never persisted.
 
@@ -100,7 +102,7 @@ table's rows are a JSON array under the key the table element's `rows_field` nam
       "value": [
         { "seam": "IServiceRegistrar",     "purpose": "AddControllers().AddApplicationPart(thisAssembly)" },
         { "seam": "IApplicationSource",    "purpose": "Contributes the /apps/hello-ui page + NavBar entry" },
-        { "seam": "kind: managed package", "purpose": "Distributes the DLL with a SHA-256-verified install" }
+        { "seam": "kind: plugin package", "purpose": "Distributes the DLL with a SHA-256-verified install" }
       ],
       "visible": true
     }
@@ -110,8 +112,8 @@ table's rows are a JSON array under the key the table element's `rows_field` nam
 
 ## Note on trust
 
-A managed package distributes arbitrary compiled C# that, once loaded, runs in **full server trust** —
-there is no sandbox, exactly as for a plugin dropped into `plugins/` by hand. SHA-256 verification guards
-**integrity** (the bytes are what this manifest committed to), not trust. The default
-`ManagedPackageTrustOptions` is **deny**: a server installs no managed packages until the operator
-configures the allow-list **and** confirms each install with `allow_managed_code`.
+A plugin package distributes arbitrary compiled C# that, once loaded, runs in **full server trust** —
+there is no sandbox, exactly as for a plugin dropped into a plugins folder by hand. SHA-256 verification
+guards **integrity** (the bytes are what this manifest committed to), not trust. Whoever runs the server and
+installs the DLL takes responsibility for it: each install needs the administrator's `allow_plugin_code`
+confirmation, and `SHARPMUSH_PLUGIN_INSTALL=false` turns plugin installs off for the whole server.

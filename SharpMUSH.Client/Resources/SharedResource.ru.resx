@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Личные</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Сцены</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>В этой комнате сейчас нет сцены.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Вы ещё не вступили ни в один канал.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Обзор каналов</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Закончить обзор каналов</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Нет каналов, которые вы можете видеть.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# участник} few {# участника} many {# участников} other {# участника}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Вступить в #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Заглушить #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Заглушён: вы остаётесь в канале, но ничего не слышите. Выберите, чтобы снова слышать его.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Заглушить: остаться в канале, ничего не слыша.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Игра не внесла это изменение.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Личных сообщений пока нет. Введите `page &lt;имя&gt;=&lt;сообщение&gt;`, чтобы написать кому-то лично.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# здесь}}</value>
   </data>

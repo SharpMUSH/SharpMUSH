@@ -172,7 +172,9 @@ public class PlusHelpIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
 			installer,
 			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
-			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>());
+			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>());
 
 		// Asked through lattr() rather than get(): the librarian's SOURCE LIST is what the feature
 		// reads, and it is the key an install invalidates. A per-attribute get() of a leaf that did

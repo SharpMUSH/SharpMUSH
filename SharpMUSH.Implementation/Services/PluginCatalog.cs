@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 
 namespace SharpMUSH.Implementation.Services;
@@ -34,7 +35,18 @@ public sealed class PluginCatalog
 	private readonly List<IConnectionHook> _connectionHooks = [];
 	private readonly List<IObjectLifecycleHook> _objectLifecycleHooks = [];
 
-	private PluginCatalog() { }
+	private readonly List<PluginBootEntry> _entries = [];
+
+	private PluginCatalog(PluginDirectories? directories = null)
+	{
+		Directories = directories;
+	}
+
+	/// <summary>Where this start looked for plugins; null for a catalog built without a disk scan.</summary>
+	public PluginDirectories? Directories { get; }
+
+	/// <summary>Every plugin this start found, loaded or not, and what became of it.</summary>
+	public IReadOnlyList<PluginBootEntry> Entries => _entries;
 
 	/// <summary>Every loaded plugin instance, in load order (dependencies first).</summary>
 	public IReadOnlyList<IPlugin> Plugins => _plugins;
@@ -76,12 +88,13 @@ public sealed class PluginCatalog
 	/// and collect the migration/flag/bridge contributions. Call this once, pre-build, from
 	/// <c>Startup.ConfigureServices</c>. Per-plugin failures are isolated and logged.
 	/// </summary>
-	public static PluginCatalog Build(IServiceCollection services, ILogger logger)
+	public static PluginCatalog Build(IServiceCollection services, PluginDirectories directories, ILogger logger)
 	{
-		var catalog = new PluginCatalog();
+		var catalog = new PluginCatalog(directories);
 
-		var loaded = PluginLoaderService.LoadAll(logger);
-		foreach (var (plugin, dllPath) in loaded)
+		var report = PluginLoaderService.LoadAll(directories, PluginState.Read(directories.StateFile), logger);
+		catalog._entries.AddRange(report.Entries);
+		foreach (var (plugin, dllPath) in report.Loaded)
 		{
 			try
 			{
@@ -166,6 +179,8 @@ public sealed class PluginCatalog
 		foreach (var plugin in plugins)
 		{
 			catalog._plugins.Add(plugin);
+			catalog._entries.Add(new PluginBootEntry(plugin.Id, null, plugin.Version, null, PluginOrigin.BuiltIn,
+				string.Empty, PluginBootStatus.Loaded, null));
 			if (plugin is IFlagSource flagSource) catalog._flagSources.Add(flagSource);
 			if (plugin is IMigrationSource migrationSource) catalog._migrationSources.Add(migrationSource);
 			if (plugin is IBridgeSubscriptionSource bridgeSource) catalog._bridgeSources.Add(bridgeSource);

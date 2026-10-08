@@ -2501,16 +2501,10 @@
     <value>PANIC SHUTDOWN initiated by God.</value>
   </data>
   <data name="ShutdownRebootInitiated" xml:space="preserve">
-    <value>REBOOT initiated. In SharpMUSH's web-based architecture:</value>
+    <value>Restarting the game engine. Connections stay open, and the server's supervisor starts it again.</value>
   </data>
-  <data name="ShutdownRebootDocker" xml:space="preserve">
-    <value>- For Docker/Kubernetes: Update deployment to trigger rolling restart</value>
-  </data>
-  <data name="ShutdownRebootStandalone" xml:space="preserve">
-    <value>- For standalone: Restart the web application</value>
-  </data>
-  <data name="ShutdownRebootRedis" xml:space="preserve">
-    <value>- Player connections will be preserved via Redis state store</value>
+  <data name="ShutdownRebootPending" xml:space="preserve">
+    <value>A restart is already under way.</value>
   </data>
   <data name="ShutdownParanoidInitiated" xml:space="preserve">
     <value>PARANOID SHUTDOWN initiated.</value>

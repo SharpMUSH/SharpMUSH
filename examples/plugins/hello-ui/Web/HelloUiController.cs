@@ -112,7 +112,7 @@ public sealed class HelloUiController : ControllerBase
 				{
 					new { seam = "IServiceRegistrar", purpose = "AddControllers().AddApplicationPart(thisAssembly)" },
 					new { seam = "IApplicationSource", purpose = "Contributes the /apps/hello-ui page + NavBar entry" },
-					new { seam = "kind: managed package", purpose = "Distributes the DLL with a SHA-256-verified install" }
+					new { seam = "kind: plugin package", purpose = "Distributes the DLL with a SHA-256-verified install" }
 				},
 				visible = true
 			}

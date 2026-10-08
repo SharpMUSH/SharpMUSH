@@ -4,6 +4,9 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Services;
+using SharpMUSH.Tests.Plugins;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SharpMUSH.Tests.Server.Controllers;
 
@@ -31,7 +34,10 @@ public class PackagesControllerInstalledTests
 		]);
 		var controller = new PackagesController(registry, Substitute.For<IPackageSourceService>(),
 			Substitute.For<IPackageManifestService>(), Substitute.For<IPackageInstallService>(),
-			Substitute.For<IPackageAuthoringService>(), Substitute.For<IPackageOperationRunner>());
+			Substitute.For<IPackageAuthoringService>(), Substitute.For<IPackageOperationRunner>(),
+			new PluginUploadStore(PluginPackageFixture.ScratchDirectories(), Substitute.For<IPackageManifestService>(),
+				NullLogger<PluginUploadStore>.Instance),
+			Substitute.For<IAuditLog>());
 
 		var result = (IReadOnlyList<InstalledPackageDto>)((OkObjectResult)(await controller.GetInstalled()).Result!).Value!;
 
