@@ -113,4 +113,27 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 			return ApiFailure.Transport(ex);
 		}
 	}
+
+	/// <summary>Every plugin the server found, and whether this server installs plugin packages.</summary>
+	public Task<ApiResult<PluginsResponse>> GetPluginsAsync() =>
+		Client.GetApiAsync<PluginsResponse>("api/packages/plugins", "The server returned no plugin list.");
+
+	/// <summary>Turns plugin <paramref name="id"/> on or off; turning it off uninstalls the packages that need it.</summary>
+	public Task<ApiResult<PluginChangeResponse>> SetPluginEnabledAsync(string id, bool enabled) =>
+		Changing(Client.PostApiAsync<object?, PluginChangeResponse>(
+			$"api/packages/plugins/{Uri.EscapeDataString(id)}/{(enabled ? "enable" : "disable")}", null,
+			"The server changed the plugin but described nothing."));
+
+	/// <summary>Stages an uploaded plugin package (a .zip) for review; nothing is installed yet.</summary>
+	public async Task<ApiResult<PluginUploadResponse>> UploadPluginAsync(Stream archive, string fileName)
+	{
+		using var content = new MultipartFormDataContent();
+		content.Add(new StreamContent(archive), "file", fileName);
+		return await Client.PostContentApiAsync<PluginUploadResponse>(
+			"api/packages/plugins/upload", content, "The server staged nothing.");
+	}
+
+	/// <summary>Restarts the game engine; connections stay open.</summary>
+	public Task<ApiResult<Success>> RestartServerAsync() =>
+		Client.PostApiAsync("api/server/restart");
 }

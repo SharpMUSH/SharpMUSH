@@ -146,20 +146,29 @@ Every payload carries `"v": 2`, lists are sent whole, identity is the objid
 
 ### `comm.channels`
 
-The channels the viewer is **on**, and who the list was built for:
+Every channel the viewer may see, on it or not, and who the list was built for:
 
 ```json
 {"v":2,"viewer":{"name":"Ilsa Varn","objid":"#19:1790780895139"},
- "channels":[{"name":"Public","joined":true},{"name":"Builders","joined":true,"gagged":true}]}
+ "channels":[{"name":"Public","joined":true,"members":12,"description":"Chatter about anything."},
+             {"name":"Builders","joined":true,"members":4,"description":"","gagged":true},
+             {"name":"Newbie","joined":false,"members":7,"description":"Ask anything."}]}
 ```
 
-- `joined` is `true` on every row the package sends. The key is there for a
-  game that redefines ``FN`COMM`CHANNELS`` to list channels the viewer could
-  join as well, with `"joined": false` — which would then also need a push
-  when a channel is created or its see lock changes, and the engine raises no
-  event for either.
+- The channels are `channels()` asked as the viewer
+  (``objeval(%0,channels())``): the handler is a wizard and would see every
+  channel, so the list is what the viewer's own `@channel/list` shows.
+- `joined` says whether the viewer is on the channel. The portal's Play
+  drawer lists the joined ones and offers the rest in its channel browser,
+  which joins, leaves and gags through `@channel/on`, `/off` and `/gag`.
+- `members` is `cusers()`, everyone on the channel, connected or not;
+  `description` is `cdesc()`, empty when the channel has none.
 - `gagged: true` marks a channel the viewer is still on but hears nothing
   from; absent otherwise.
+- The list is sent again only when the viewer's own channels change (and on
+  connect and resume), so a channel created, described or relocked since, or
+  another member's join, shows on the viewer's next push. The engine raises
+  no event for those.
 - There is **no `unread`**. The engine has no notion of what a player has
   read — the terminal shows every line — so the portal counts for itself
   (below): from the character's read markers where it has one for the channel,
@@ -226,7 +235,8 @@ A page (here a group pose-page):
 of a missing `v` and of any malformed member):
 
 - `Channels` is the latest `comm.channels`, each with the feed's own unread
-  count.
+  count. Only the joined ones are pulled, counted and kept below; the rest are
+  there for the channel browser.
 - A `comm.message` is filed under its channel, or under its conversation: a
   page's key is every participant — pager and recipients, the viewer
   included — by objid where there is one, sorted, prefixed `page `, so every
@@ -237,8 +247,8 @@ of a missing `v` and of any malformed member):
 - A line from someone else arriving for a key that is not `Viewing` is
   unread until `MarkRead`, unless the key's read marker is already past it
   (markers below). A count a `comm.channels` row carries, 0 included,
-  replaces the feed's own; a channel a new list no longer carries is
-  forgotten, history and count.
+  replaces the feed's own; a channel a new list no longer carries as joined
+  is forgotten, history and count.
 - A new connection or a character switch clears it all, `Viewing` included,
   as it clears the room.
 - Once a `comm.channels` says whose feed it is, the feed reads that
@@ -330,6 +340,8 @@ endpoints, as mortals and as a wizard who still reads only their own;
   markers on the server instead (`api/comm/markers`) and counts from those.
 - **`to` is empty on a channel line** rather than naming the channel, which is
   in `channel`.
+- **Channels the viewer is not on** are listed too, with `joined: false`, for
+  the channel browser; a row also carries `members` and `description`.
 - **Added keys:** `viewer` on `comm.channels`, `gagged` on a row, and
   `style` and `toObjids` on `comm.message` — the first so the client knows
   whose list and lines these are, the last so a conversation is keyed by

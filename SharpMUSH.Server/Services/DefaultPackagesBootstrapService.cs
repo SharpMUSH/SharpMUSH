@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
@@ -30,6 +31,7 @@ public class DefaultPackagesBootstrapService(
 	IPackageInstallService installer,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IExpandedObjectDataService serverData,
+	PluginCatalog plugins,
 	ILogger<DefaultPackagesBootstrapService> logger) : IHostedService, IBundledPackageBootstrap
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
@@ -51,6 +53,15 @@ public class DefaultPackagesBootstrapService(
 		{
 			if (!HasHandler(package))
 			{
+				continue;
+			}
+
+			// A package over a plugin that is turned off or failed to load would install commands that call into nothing.
+			if (GameFeatureService.All.FirstOrDefault(a => a.PackageId == package.PackageId)?.RequiredPlugin is { } plugin
+					&& !plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase)))
+			{
+				logger.LogInformation("Bundled {PackageId} needs the {Plugin} plugin, which is not running; not installing it.",
+					package.PackageId, plugin);
 				continue;
 			}
 

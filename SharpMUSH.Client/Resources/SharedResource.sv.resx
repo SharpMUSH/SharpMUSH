@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Meddelanden</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scener</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>Ingen scen pågår i det här rummet.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Du är inte med i några kanaler än.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Bläddra bland kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Klar med att bläddra bland kanaler</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Bläddra</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Klar</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Det finns inga kanaler du kan se.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# medlem} other {# medlemmar}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Gå med i #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Tysta #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Tystad: du är kvar i kanalen men hör ingenting. Välj för att höra den igen.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Tysta: stanna i kanalen men hör ingenting.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Spelet gjorde inte den ändringen.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Inga meddelanden än. Skriv `page &lt;namn&gt;=&lt;meddelande&gt;` för att skicka ett privat meddelande.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# här}}</value>
   </data>

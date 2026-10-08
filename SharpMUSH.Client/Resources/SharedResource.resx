@@ -1400,10 +1400,10 @@
     <value>Packages</value>
   </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
-    <value>Softcode Packages</value>
+    <value>Packages</value>
   </data>
   <data name="PkgInstalledDescription" xml:space="preserve">
-    <value>Installed softcode packages. Upgrades always go through a reviewed plan — nothing applies automatically.</value>
+    <value>Installed packages: softcode, applications and plugins. Upgrades always go through a reviewed plan; nothing applies automatically.</value>
   </data>
   <data name="PkgInstalled" xml:space="preserve">
     <value>Installed</value>
@@ -4544,6 +4544,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Pages</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>No scene is running in this room.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>You haven't joined any channels yet.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Browse channels</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Done browsing channels</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>There are no channels you can see.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# member} other {# members}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Join #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Gag #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Gagged: you stay on the channel but hear nothing. Select to hear it again.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Gag: stay on the channel but hear nothing.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>The game didn't make that change.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>No pages yet. Type `page &lt;name&gt;=&lt;message&gt;` to send someone a private message.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# here}}</value>
   </data>
@@ -7264,5 +7309,128 @@
   </data>
   <data name="AdmThemesLeaveComplexBody" xml:space="preserve">
     <value>Some parts no longer match a Simple choice. Going back to Simple puts every part back to what its Simple menu brings.</value>
+  </data>
+  <data name="PkgUploadPlugin" xml:space="preserve">
+    <value>Upload plugin</value>
+  </data>
+  <data name="PkgPlugins" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
+  <data name="PkgPluginDisableTitle" xml:space="preserve">
+    <value>Turn off {0}?</value>
+  </data>
+  <data name="PkgPluginDisableDependents" xml:space="preserve">
+    <value>These packages need it and are uninstalled first, after a backup: {0}.</value>
+  </data>
+  <data name="PkgPluginStopsNow" xml:space="preserve">
+    <value>{0} stops now.</value>
+  </data>
+  <data name="PkgPluginStopsAtRestart" xml:space="preserve">
+    <value>{0} stops when the server restarts.</value>
+  </data>
+  <data name="PkgPluginTurnOff" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+  <data name="PkgRestartTitle" xml:space="preserve">
+    <value>Restart the server?</value>
+  </data>
+  <data name="PkgRestartBody" xml:space="preserve">
+    <value>Everyone connected is told, then the game engine restarts. Connections stay open, and the portal reconnects when it is back.</value>
+  </data>
+  <data name="PkgRestart" xml:space="preserve">
+    <value>Restart</value>
+  </data>
+  <data name="PkgPluginsUnavailable" xml:space="preserve">
+    <value>The plugin list could not be read.</value>
+  </data>
+  <data name="PkgRestarting" xml:space="preserve">
+    <value>The server is restarting. Reload this page once it is back.</value>
+  </data>
+  <data name="PkgRestartPending" xml:space="preserve">
+    <value>Some plugin changes take effect when the server restarts.</value>
+  </data>
+  <data name="PkgNoPlugins" xml:space="preserve">
+    <value>No plugins found.</value>
+  </data>
+  <data name="PkgPluginStartsAtRestart" xml:space="preserve">
+    <value>Starts at restart</value>
+  </data>
+  <data name="PkgPluginStopsAtRestartShort" xml:space="preserve">
+    <value>Stops at restart</value>
+  </data>
+  <data name="PkgPluginAdds" xml:space="preserve">
+    <value>Adds {0} commands, {1} functions</value>
+  </data>
+  <data name="PkgPluginTurnOn" xml:space="preserve">
+    <value>Turn on</value>
+  </data>
+  <data name="PkgPluginTurnOnNamed" xml:space="preserve">
+    <value>Turn {0} on</value>
+  </data>
+  <data name="PkgPluginTurnOffNamed" xml:space="preserve">
+    <value>Turn {0} off</value>
+  </data>
+  <data name="PkgPluginTurnedOn" xml:space="preserve">
+    <value>{0} is on.</value>
+  </data>
+  <data name="PkgPluginTurnedOff" xml:space="preserve">
+    <value>{0} is off.</value>
+  </data>
+  <data name="PkgKindSoftcode" xml:space="preserve">
+    <value>Softcode package</value>
+  </data>
+  <data name="PkgKindApplication" xml:space="preserve">
+    <value>Application package</value>
+  </data>
+  <data name="PkgKindPlugin" xml:space="preserve">
+    <value>Plugin package</value>
+  </data>
+  <data name="PkgPluginShipped" xml:space="preserve">
+    <value>Shipped with the server</value>
+  </data>
+  <data name="PkgPluginFromPackage" xml:space="preserve">
+    <value>Package {0}</value>
+  </data>
+  <data name="PkgPluginFromFolder" xml:space="preserve">
+    <value>Plugins folder</value>
+  </data>
+  <data name="PkgPluginRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="PkgPluginOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="PkgPluginFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="PkgPluginIncompatible" xml:space="preserve">
+    <value>Incompatible</value>
+  </data>
+  <data name="PkgPluginDuplicate" xml:space="preserve">
+    <value>Duplicate</value>
+  </data>
+  <data name="PkgPluginNotStarted" xml:space="preserve">
+    <value>Not started</value>
+  </data>
+  <data name="PkgPluginCode" xml:space="preserve">
+    <value>Plugin code</value>
+  </data>
+  <data name="PkgPluginCodeSub" xml:space="preserve">
+    <value>Compiled C# this package installs. It runs with full access to the server; there is no sandbox.</value>
+  </data>
+  <data name="PkgPluginFile" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="PkgPluginSha" xml:space="preserve">
+    <value>SHA-256</value>
+  </data>
+  <data name="PkgPluginMinServer" xml:space="preserve">
+    <value>Needs plugin contract {0}</value>
+  </data>
+  <data name="PkgPluginTrust" xml:space="preserve">
+    <value>I trust the author of {0} with full access to this server</value>
+  </data>
+  <data name="PkgPlanUploaded" xml:space="preserve">
+    <value>Uploaded package {0}</value>
   </data>
 </root>

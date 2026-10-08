@@ -73,12 +73,12 @@ To take a permission away from one object, use an override (`@permission/deny`).
 | 20 | royalty | `players.view`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.admin` |
 | 15 | builder | `diagnostics.profile`, `game.builder` |
 | 12 | helper | `players.view`, `queue.inspect` |
-| 11 | approved | nothing; [isapproved()] reads it |
-| 10 | player | `wiki.create`, `wiki.edit`, `media.upload`, `softcode.use`, `snapshots.capture`, `snapshots.restore`, `jobs.manage.own`, `queue.inspect.own`, `queue.control.own` |
+| 11 | approved | `wiki.create`, `wiki.edit`, `game.send_image`; [isapproved()] reads it |
+| 10 | player | `media.upload`, `softcode.use`, `snapshots.capture`, `snapshots.restore`, `jobs.manage.own`, `queue.inspect.own`, `queue.control.own` |
 | 0 | guest | `game.guest` |
 | 0 | everyone | `wiki.read` |
 
-`approved` marks a character that has met the game's own bar for full participation. Nothing in the engine assigns it; a game assigns it when its own bar is met (a finished chargen, a staff review), with `@role/assign <player>=approved`.
+`approved` marks a character that has met the game's own bar for full participation. Nothing in the engine assigns it; a game assigns it when its own bar is met (a finished chargen, a staff review), with `@role/assign <player>=approved`. Writing and editing the wiki comes with it: by default a player who is not approved reads the wiki but cannot change any page, their own character's biography and gallery included, unless another role or an override (see [@permission]) allows it. Staff get the same through `wiki.admin` (royalty, moderator) or every permission (wizard).
 
 `helper` and `moderator` are ordinary roles: assign them with `@role/assign`, and edit or delete them as you like. They are created only in a new game.
 

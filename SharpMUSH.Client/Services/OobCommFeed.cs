@@ -289,11 +289,16 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		if (changed) Changed?.Invoke();
 	}
 
+	/// <summary>The channels the viewer is on: the ones whose history the feed pulls and counts.</summary>
+	private IEnumerable<string> JoinedNames => _channels.Where(channel => channel.Joined).Select(channel => channel.Name);
+
 	private bool ReplaceChannels(string json)
 	{
 		if (CommPayloadParser.ParseChannels(json) is not { } list) return false;
 
-		var listed = list.Channels.Select(channel => channel.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		// Only a channel the viewer is on has lines to keep; the others are listed for the channel browser.
+		var listed = list.Channels.Where(channel => channel.Joined).Select(channel => channel.Name)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 		// A channel left is forgotten whole — pulled and marker too — so joining it again pulls it again.
 		foreach (var key in _history.Keys.Concat(_unread.Keys).Concat(_pulled).Concat(_markers.Keys)
 			.Where(key => !IsConversationKey(key) && !listed.Contains(key))
@@ -344,12 +349,12 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 				// pull that fails now is tried again on the next list.
 				_pulled.Clear();
 				_conversationsListed = false;
-				_sync = RefreshAsync(_server, viewer, _generation, _channels.Select(channel => channel.Name).ToArray(),
+				_sync = RefreshAsync(_server, viewer, _generation, JoinedNames.ToArray(),
 					_drops);
 				return;
 			}
 
-			var unpulled = _channels.Select(channel => channel.Name).Where(name => !_pulled.Contains(name)).ToArray();
+			var unpulled = JoinedNames.Where(name => !_pulled.Contains(name)).ToArray();
 			if (unpulled.Length > 0 || !_conversationsListed) _sync = RefreshAsync(_server, viewer, _generation, unpulled);
 			return;
 		}
@@ -376,7 +381,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		_syncedFor = viewer;
 		ApplyMarkers(markers, viewer);
-		await PullAsync(_channels.Select(channel => channel.Name).ToArray());
+		await PullAsync(JoinedNames.ToArray());
 		await RebuildConversationsAsync(server, viewer, generation);
 		Changed?.Invoke();
 	}

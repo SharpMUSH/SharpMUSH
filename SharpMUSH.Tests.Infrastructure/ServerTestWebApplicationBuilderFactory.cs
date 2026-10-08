@@ -69,6 +69,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		builder.ConfigureTestServices(services => services.PostConfigureAll<FusionCacheOptions>(
 			options => options.EnableBestPracticesAdvisor = false));
 		builder.ConfigureTestServices(TestHostServices.RemoveRecurringJobRunner);
+		builder.ConfigureTestServices(TestHostServices.RecordServerRestarts);
 
 		if (worldPath is not null)
 		{

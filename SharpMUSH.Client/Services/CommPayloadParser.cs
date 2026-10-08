@@ -134,7 +134,9 @@ public static class CommPayloadParser
 		if (row.ValueKind != JsonValueKind.Object || Text(row, "name") is not { } name) return null;
 
 		var joined = !(row.TryGetProperty("joined", out var value) && value.ValueKind == JsonValueKind.False);
-		return new CommChannel(name, Count(row, "unread") ?? 0, joined);
+		var gagged = row.TryGetProperty("gagged", out var gag) && gag.ValueKind == JsonValueKind.True;
+		return new CommChannel(name, Count(row, "unread") ?? 0, joined, gagged, Count(row, "members"),
+			Text(row, "description") ?? string.Empty);
 	}
 
 	/// <summary>

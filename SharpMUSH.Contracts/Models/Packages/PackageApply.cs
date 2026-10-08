@@ -38,8 +38,8 @@ public sealed record PackageApplySource(string Repo, string? Path, string Commit
 /// <param name="ConfigureAnswers">Configure key → value (objid for dbref-typed params).</param>
 /// <param name="ConflictDecisions">One decision per conflict in the changeset.</param>
 /// <param name="KeepRevisions">Revision retention after this apply (decision 20.13; default 10).</param>
-/// <param name="AllowManagedCode">
-/// The Phase-4 trust gate for <see cref="PackageKind.Managed"/> packages: the
+/// <param name="AllowPluginCode">
+/// The Phase-4 trust gate for <see cref="PackageKind.Plugin"/> packages: the
 /// operator's explicit, per-apply opt-in to deposit and load arbitrary compiled
 /// C# (which runs in <b>full server trust</b>, exactly like a manually-dropped
 /// plugin — see docs/design/custom-widgets.md's trust model). A managed apply is
@@ -51,7 +51,7 @@ public sealed record PackageApplyRequest(
 	IReadOnlyDictionary<string, string> ConfigureAnswers,
 	IReadOnlyList<PackageConflictDecision> ConflictDecisions,
 	int KeepRevisions = 10,
-	bool AllowManagedCode = false);
+	bool AllowPluginCode = false);
 
 /// <summary>Result of a successful apply.</summary>
 /// <param name="Revision">The revision number this apply recorded.</param>

@@ -61,13 +61,14 @@ public class BuiltInRoleSeedTests
 	}
 
 	[Test]
-	public async Task ApprovedIsASystemRoleJustAbovePlayerThatAllowsPictures()
+	public async Task ApprovedIsASystemRoleJustAbovePlayerThatAllowsPicturesAndWikiWriting()
 	{
 		var approved = BuiltInRoles.All.Single(r => r.Slug == BuiltInRoles.ApprovedSlug);
 		await Assert.That(approved.IsSystem).IsTrue();
 		await Assert.That(approved.Category).IsEqualTo(Categories.System);
-		await Assert.That(approved.Permissions.Keys).IsEquivalentTo([PortalPermission.GamePower("Send_Image")])
-			.Because("an approved character may show pictures in a pose, and nothing else comes with approval");
+		await Assert.That(approved.Permissions.Keys)
+			.IsEquivalentTo([PortalPermission.GamePower("Send_Image"), PortalPermission.WikiCreate, PortalPermission.WikiEdit])
+			.Because("an approved character may show pictures in a pose and write the wiki, and nothing else comes with approval");
 		await Assert.That(approved.Priority).IsBetween((int)PortalRole.Player + 1, BuiltInRoles.Starters.Min(r => r.Priority) - 1);
 		await Assert.That(BuiltInRoles.IsImplicit(approved.Slug)).IsFalse();
 	}
@@ -102,12 +103,24 @@ public class BuiltInRoleSeedTests
 
 		var guest = Holding(BuiltInRoles.GuestSlug);
 		var player = Holding(BuiltInRoles.PlayerSlug);
+		var approved = Holding(BuiltInRoles.PlayerSlug, BuiltInRoles.ApprovedSlug);
+		var moderator = resolver.Resolve(new PermissionContext(
+			[.. BuiltInRoles.Starters.Where(r => r.Slug == "moderator"), BuiltInRoles.All.Single(r => r.Slug == BuiltInRoles.EveryoneSlug)],
+			new Dictionary<string, PermissionState>(), false));
 		var builder = Holding(BuiltInRoles.PlayerSlug, BuiltInRoles.BuilderSlug);
 		var royalty = Holding(BuiltInRoles.PlayerSlug, BuiltInRoles.RoyaltySlug);
 		var wizard = Holding(BuiltInRoles.PlayerSlug, BuiltInRoles.WizardSlug);
 
 		await Assert.That(guest).IsEquivalentTo([PortalPermission.WikiRead, PortalPermission.GamePower("Guest")]);
-		await Assert.That(player).Contains(PortalPermission.WikiEdit);
+		await Assert.That(player).Contains(PortalPermission.WikiRead);
+		await Assert.That(player).DoesNotContain(PortalPermission.WikiCreate)
+			.Because("a player who is not approved reads the wiki and writes nothing on it");
+		await Assert.That(player).DoesNotContain(PortalPermission.WikiEdit);
+		await Assert.That(approved).Contains(PortalPermission.WikiCreate);
+		await Assert.That(approved).Contains(PortalPermission.WikiEdit);
+		await Assert.That(moderator).Contains(PortalPermission.WikiEdit);
+		await Assert.That(royalty).Contains(PortalPermission.WikiEdit);
+		await Assert.That(wizard).Contains(PortalPermission.WikiEdit);
 		await Assert.That(player).Contains(PortalPermission.SnapshotRestore);
 		await Assert.That(player).DoesNotContain(PortalPermission.WikiDelete);
 		await Assert.That(player.Where(PortalPermission.IsGameScope)).IsEmpty();

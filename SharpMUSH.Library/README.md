@@ -35,9 +35,10 @@ Phase 2b engine-extension hooks
 
 ## Contract-version alignment
 
-The package `Version` is aligned to `PluginContractVersion.Current` (currently **1.1.0**). A managed
-package's `binaries.min_server_version` is checked against this value at load time, so a plugin built
-against a newer contract is refused by an older server rather than failing obscurely. **When the plugin
+The package `Version` is aligned to `PluginContractVersion.Current` (currently **1.1.0**). A plugin
+package's `binaries.min_server_version` is checked against this value at install time, and a plugin's
+`plugin.json` `minServerVersion` at load time, so a plugin built against a newer contract is refused by
+an older server rather than failing obscurely. **When the plugin
 contract surface changes, bump both `PluginContractVersion.Current` and the package `<Version>`
 together.**
 

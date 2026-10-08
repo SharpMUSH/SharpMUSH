@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
@@ -23,15 +24,16 @@ namespace SharpMUSH.Server.Controllers;
 /// JSON attribute on the character — backend-agnostic, no extra DB schema. Every write also mirrors the
 /// icon, the banner and the icon's caption into the standard <c>IMAGE</c>, <c>IMAGE`BANNER</c> and
 /// <c>IMAGE`ALT</c> attributes (spec §2), so softcode and OOB payloads read the same picture. Edits
-/// require the requester's account to own the character, whichever of its characters is acting, or the
-/// acting character to control it (staff), enforced by <see cref="IPermissionService"/>.
+/// require <c>wiki.edit</c>, as the biography beside the gallery does, and then the requester's account to
+/// own the character, whichever of its characters is acting, or the acting character to control it
+/// (staff), enforced by <see cref="IPermissionService"/>.
 ///
 /// Routes:
 ///   GET    /api/profile/{name}/gallery          — list gallery entries (anonymous)
-///   POST   /api/profile/{name}/gallery          — upload an image (owner/staff); <c>?use=banner</c> or
+///   POST   /api/profile/{name}/gallery          — upload an image (wiki.edit; owner/staff); <c>?use=banner</c> or
 ///                                                 <c>?use=avatar</c> makes it the banner or the avatar
-///   PUT    /api/profile/{name}/gallery          — replace order/captions/icon/banner (owner/staff)
-///   DELETE /api/profile/{name}/gallery/{assetId} — remove an image (owner/staff)
+///   PUT    /api/profile/{name}/gallery          — replace order/captions/icon/banner (wiki.edit; owner/staff)
+///   DELETE /api/profile/{name}/gallery/{assetId} — remove an image (wiki.edit; owner/staff)
 /// </summary>
 [ApiController]
 [Route("api/profile/{name}/gallery")]
@@ -66,7 +68,7 @@ public class GalleryController(
 	}
 
 	[HttpPost]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	[RequestSizeLimit(10_485_760)]
 	public async Task<IActionResult> Upload(string name, IFormFile file, [FromQuery] string? use, CancellationToken ct)
 	{
@@ -144,7 +146,7 @@ public class GalleryController(
 	}
 
 	[HttpPut]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> Replace(string name, [FromBody] List<GalleryEntry> entries, CancellationToken ct)
 	{
 		var (character, allowed) = await ResolveAndAuthorizeAsync(name, ct);
@@ -172,7 +174,7 @@ public class GalleryController(
 	}
 
 	[HttpDelete("{assetId}")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> Delete(string name, string assetId, CancellationToken ct)
 	{
 		var (character, allowed) = await ResolveAndAuthorizeAsync(name, ct);
@@ -208,7 +210,8 @@ public class GalleryController(
 		var character = await ResolveCharacterAsync(name, ct);
 		if (character is null) return (null, false);
 
-		// A character on the caller's own account is theirs to edit, whichever character they are playing.
+		// A character on the caller's own account is theirs to edit, whichever character they are playing;
+		// the wiki.edit policy on every write has already been met.
 		if (AccountSessionAuthenticationHandler.TryGetAccount(User, out var accountId, out _)
 				&& await accounts.GetAccountForCharacterAsync(character.Object().DBRef, ct) is { Id: { Length: > 0 } owner }
 				&& string.Equals(owner, accountId, StringComparison.Ordinal))

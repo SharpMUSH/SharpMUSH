@@ -154,7 +154,7 @@ public class PackageDeclarationManifestTests
 		var result = _service.ParseManifest("""
 			package: plugin
 			version: "1.0"
-			kind: managed
+			kind: plugin
 			binaries:
 			  min_server_version: ">=1.0"
 			  files:

@@ -79,9 +79,9 @@ public static class BuildNavCatalog
 	public static IReadOnlyList<Entry> All { get; } =
 	[
 		new("/softcode", Icons.Material.Filled.Code, "SoftcodeEditor", "AdmCardSoftcode", Group.Build, ["softcode.use"]),
-		new("/admin/snapshots", Icons.Material.Filled.History, "SnapshotsTitle", "AdmCardSnapshots", Group.Build, [], ["snapshots.capture", "snapshots.restore"]),
-		new("/admin/jobs", Icons.Material.Filled.Schedule, "JobsTitle", "AdmCardJobs", Group.Build, ["jobs.manage.own", "jobs.manage"]),
-		new("/admin/diagnostics", Icons.Material.Filled.QueryStats, "DiagTitle", "AdmCardDiagnostics", Group.Build, ["queue.inspect", "queue.inspect.own"]),
+		new("/admin/snapshots", Icons.Material.Filled.History, "SnapshotsTitle", "AdmCardSnapshots", Group.Build, [], Roles: ["Wizard", "God"]),
+		new("/admin/jobs", Icons.Material.Filled.Schedule, "JobsTitle", "AdmCardJobs", Group.Build, ["jobs.manage"]),
+		new("/admin/diagnostics", Icons.Material.Filled.QueryStats, "DiagTitle", "AdmCardDiagnostics", Group.Build, ["queue.inspect"]),
 
 		new("/admin/accounts", Icons.Material.Filled.ManageAccounts, "AdmAccountsTitle", "AdmCardAccounts", Group.People, [], Roles: ["Wizard", "God"]),
 		new("/admin/characters", Icons.Material.Filled.Person, "Characters", "AdmCardCharacters", Group.People, ["players.view"]),

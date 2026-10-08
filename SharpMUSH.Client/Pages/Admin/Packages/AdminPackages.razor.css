@@ -141,3 +141,16 @@
     .pkg-search input { width: 100%; }
     .pkg-row { flex-wrap: wrap; }
 }
+
+/* A package's kind shows in its icon: softcode the accent, an application --info, a plugin --special. */
+.pkg-row ::deep .pkg-row-icon.pkg-kind-application { color: var(--info); }
+.pkg-row ::deep .pkg-row-icon.pkg-kind-plugin { color: var(--special); }
+
+.pkg-row-reason { color: var(--danger); }
+
+.pkg-restart-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}

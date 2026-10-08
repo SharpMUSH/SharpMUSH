@@ -211,10 +211,8 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 			PortalPermission.SnapshotCapture,
 			PortalPermission.SnapshotRestore,
 			PortalPermission.SoftcodeUse,
-			PortalPermission.WikiCreate,
-			PortalPermission.WikiEdit,
 			PortalPermission.WikiRead,
-		});
+		}).Because("writing the wiki comes with the approved role, not with having a character");
 	}
 
 	/// <summary>
@@ -246,13 +244,16 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 	/// Both defects at once, in the shape the player actually met them: under the registration
 	/// session, <c>POST /api/wiki</c> answered <c>401 Missing character identity.</c> (N-02) behind a
 	/// <c>wiki.create</c> gate the account did not yet hold (N-03). Neither this test nor the player
-	/// re-authenticates anywhere.
+	/// re-authenticates anywhere. wiki.create comes with the approved role, so the account is approved
+	/// (an account's roles reach its characters) before its first character exists.
 	/// </summary>
 	[Test]
 	public async Task RegistrationSession_CanCreateAWikiPage_WithoutReAuthenticating()
 	{
 		using var scope = factory.Services.CreateScope();
 		var (http, account) = await RegisterAsync(CreateClient());
+		await scope.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IRoleRegistryService>()
+			.AssignRoleToAccountAsync(account.AccountId, BuiltInRoles.ApprovedSlug);
 		await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Scribe"));
 
 		var principal = await AuthenticateAsync(account.AccountSessionToken);

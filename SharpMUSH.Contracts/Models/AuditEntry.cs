@@ -51,6 +51,8 @@ public static class AuditTargetKinds
 	public const string Name = "name";
 	public const string Command = "command";
 	public const string Function = "function";
+	public const string Plugin = "plugin";
+	public const string Server = "server";
 }
 
 /// <summary>
@@ -145,6 +147,11 @@ public static class AuditActions
 	public const string ConfigImport = "config.import";
 	public const string RestrictionSet = "restriction.set";
 	public const string RestrictionClear = "restriction.clear";
+	public const string PluginEnable = "plugin.enable";
+	public const string PluginDisable = "plugin.disable";
+	public const string PluginUpload = "plugin.upload";
+	public const string PluginInstall = "plugin.install";
+	public const string ServerRestart = "server.restart";
 
 	/// <summary>Every action, for the viewer's filter.</summary>
 	public static readonly IReadOnlyList<string> All =
@@ -153,6 +160,7 @@ public static class AuditActions
 		PlayerWarn, BanAdd, BanLift, BanExpired,
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
-		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear
+		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
+		PluginEnable, PluginDisable, PluginUpload, PluginInstall, ServerRestart
 	];
 }

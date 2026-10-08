@@ -49,7 +49,7 @@ A permission names one thing an object may do, such as `wiki.edit` or `game.see_
 
 ## Overrides
 
-An override sets one permission on one holder, and beats every role that holder has. `@permission/deny Twink=wiki.edit` takes wiki editing away from that character even though the `player` role allows it, and `@permission/allow Ariel=wiki.delete` grants it without a role. Add `/account` to set it on the player's account instead, so it applies to all their characters. `@permission/clear` removes an override.
+An override sets one permission on one holder, and beats every role that holder has. `@permission/deny Twink=wiki.edit` takes wiki editing away from that character even though the `approved` role allows it, and `@permission/allow Ariel=wiki.delete` grants it without a role. Add `/account` to set it on the player's account instead, so it applies to all their characters. `@permission/clear` removes an override.
 
 When both are set, the object's override beats the account's. `@power <object>=See_All` is an Allow override on `game.see_all`, and `@power <object>=!See_All` clears it.
 

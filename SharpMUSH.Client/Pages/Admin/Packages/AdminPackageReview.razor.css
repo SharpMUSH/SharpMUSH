@@ -44,3 +44,5 @@
     .pkg-review ::deep .mud-input-control { max-width: 100%; }
 
 }
+
+.pkg-review-body .pkg-sha { word-break: break-all; }

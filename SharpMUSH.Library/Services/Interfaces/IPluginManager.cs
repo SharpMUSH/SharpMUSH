@@ -16,6 +16,9 @@ public interface IPluginManager
 	/// </summary>
 	Task LoadAllAsync(CancellationToken cancellationToken);
 
+	/// <summary>The running plugin <paramref name="pluginId"/>: what it registered, or null when it is not running.</summary>
+	PluginRegistration? Registration(string pluginId);
+
 	/// <summary>
 	/// Unload an <i>unloadable</i> plugin at runtime: remove the command/function entries it registered from
 	/// the live libraries, then dispose its collectible plugin loader so its
@@ -32,3 +35,9 @@ public interface IPluginManager
 	/// </summary>
 	Task<Result<Success>> ReloadAsync(string pluginId);
 }
+
+/// <summary>A running plugin as the manager tracks it.</summary>
+/// <param name="Unloadable">Whether it can be unloaded without a restart.</param>
+/// <param name="Commands">How many commands it added.</param>
+/// <param name="Functions">How many functions it added.</param>
+public sealed record PluginRegistration(bool Unloadable, int Commands, int Functions);

@@ -413,6 +413,20 @@ public class MarkupTagFunctionTests
 			.Because("Send_Image allows pictures, not the rest of Send_OOB");
 	}
 
+	/// <summary>A wizard other than God shows pictures, as it sends any other out-of-band markup.</summary>
+	[Test]
+	public async Task AWizardsFigureIsAPicture()
+	{
+		var wizard = await MortalAsync("FigureWizard");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+
+		var figure = await ThinkAs(wizard, "figure(https://example.com/cat.png,A cat)");
+		var boxed = await ThinkAs(wizard, "box(figure(https://example.com/cat.png,A cat))");
+
+		await Assert.That(figure.Render(MarkupFormat.Html)).Contains("src=\"https://example.com/cat.png\"");
+		await Assert.That(boxed.Render(MarkupFormat.Html)).Contains("src=\"https://example.com/cat.png\"");
+	}
+
 	/// <summary>Without Send_Image or Send_OOB a figure is its art or description, never a picture.</summary>
 	[Test]
 	public async Task AMortalsFigureIsItsDescription()

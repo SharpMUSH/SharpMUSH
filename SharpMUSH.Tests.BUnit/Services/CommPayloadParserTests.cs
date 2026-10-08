@@ -119,7 +119,20 @@ public class CommPayloadParserTests
 		await Assert.That(list.Viewer).IsEqualTo(new CommParticipant("Ilsa", "#5:1"));
 		await Assert.That(list.Channels).IsEquivalentTo(new[]
 		{
-			new CommChannel("Public", 0), new CommChannel("Builders", 0), new CommChannel("Staff", 3, Joined: false)
+			new CommChannel("Public", 0), new CommChannel("Builders", 0, Gagged: true), new CommChannel("Staff", 3, Joined: false)
+		});
+	}
+
+	[Test]
+	public async Task A_channel_row_carries_its_member_count_and_description()
+	{
+		var list = CommPayloadParser.ParseChannels(
+			"""{"v":2,"channels":[{"name":"Newbie","joined":false,"members":7,"description":"Ask anything."},{"name":"OOC","joined":true,"members":"many","description":""}]}""")!;
+
+		await Assert.That(list.Channels).IsEquivalentTo(new[]
+		{
+			new CommChannel("Newbie", 0, Joined: false, Members: 7, Description: "Ask anything."),
+			new CommChannel("OOC", 0),
 		});
 	}
 

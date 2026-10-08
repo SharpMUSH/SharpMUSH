@@ -120,6 +120,20 @@ public class RoleManagementServiceTests
 		await Accepted(world.Service.AssignAsync(A("owner"), "owner", "helper"));
 	}
 
+	/// <summary>A wizard changes its own account's roles below its highest one, but not wizard itself or god.</summary>
+	[Test]
+	public async Task AWizardChangesItsOwnRolesBelowItsHighest()
+	{
+		var world = Build();
+		await Accepted(world.Service.AssignAsync(A("wiz"), "wiz", BuiltInRoles.ApprovedSlug));
+		await Assert.That(world.Registry.AssignedTo("wiz")).Contains(BuiltInRoles.ApprovedSlug);
+		await Accepted(world.Service.UnassignAsync(A("wiz"), "wiz", BuiltInRoles.ApprovedSlug));
+		await Assert.That(world.Registry.AssignedTo("wiz")).DoesNotContain(BuiltInRoles.ApprovedSlug);
+		await Refused(world.Service.AssignAsync(A("wiz"), "wiz", BuiltInRoles.WizardSlug), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.AssignAsync(A("wiz"), "wiz", BuiltInRoles.GodSlug), RoleRefusalKind.Invalid);
+		await Refused(world.Service.SetOverridesAsync(A("wiz"), "wiz", [PortalPermission.WikiEdit], PermissionState.Deny), RoleRefusalKind.Forbidden);
+	}
+
 	[Test]
 	public async Task RolesArePlacedAndEditedOnlyBelowTheManager()
 	{

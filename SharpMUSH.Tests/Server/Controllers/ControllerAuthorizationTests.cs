@@ -45,4 +45,37 @@ public class ControllerAuthorizationTests
 		var attr = (AuthorizeAttribute?)Attribute.GetCustomAttribute(boot, typeof(AuthorizeAttribute));
 		await Assert.That(attr?.Policy).IsEqualTo(PortalPermission.PlayersModerate);
 	}
+
+	/// <summary>
+	/// Every package operation takes packages.admin. The actions carried only a bare [Authorize], so any signed-in
+	/// account could add a remote and apply from it, and a softcode package can create WIZARD objects.
+	/// </summary>
+	[Test]
+	public async Task PackagesController_IsGatedOnPackagesAdmin()
+	{
+		await Assert.That(ClassAuthorize<PackagesController>()?.Policy).IsEqualTo(PortalPermission.PackagesAdmin);
+
+		var anonymous = typeof(PackagesController).GetMethods()
+			.Where(method => Attribute.IsDefined(method, typeof(AllowAnonymousAttribute)))
+			.Select(method => method.Name)
+			.ToList();
+		await Assert.That(anonymous).IsEmpty();
+	}
+
+	[Test]
+	public async Task PackagePluginsController_IsGatedOnPackagesAdmin()
+	{
+		await Assert.That(ClassAuthorize<PackagePluginsController>()?.Policy).IsEqualTo(PortalPermission.PackagesAdmin);
+		await Assert.That(typeof(PackagePluginsController).GetMethods()
+			.Any(method => Attribute.IsDefined(method, typeof(AllowAnonymousAttribute)))).IsFalse();
+	}
+
+	/// <summary>The portal's restart needs what <c>@shutdown/reboot</c> needs.</summary>
+	[Test]
+	public async Task ServerRestartController_IsGatedOnServerOperate()
+	{
+		await Assert.That(ClassAuthorize<ServerRestartController>()?.Policy).IsEqualTo(PortalPermission.ServerOperate);
+		await Assert.That(typeof(ServerRestartController).GetMethods()
+			.Any(method => Attribute.IsDefined(method, typeof(AllowAnonymousAttribute)))).IsFalse();
+	}
 }

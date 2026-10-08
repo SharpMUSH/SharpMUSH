@@ -86,6 +86,28 @@ If you move it, put the new path in the backup service's `RESTIC_BACKUP_SOURCES`
 Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
 that is safe to read, have the server make one: see [Backups](#backups-restic).
 
+### Plugins
+
+Plugins the image ships (the Scene System) live inside the image, in `/app/plugins/`. Plugins an
+administrator installs from a plugin package, from a remote or by upload on the portal's Plugins tab,
+live beside the world on the `app-data` volume, at `/app/data/lightning.plugins/<id>/`, so an image
+update keeps them. The same folder holds `plugins.state.json` (which plugins are turned off) and
+`.uploads/` (uploads waiting to be applied).
+
+| Variable on `sharpmush-server` | Default | What it does |
+|---|---|---|
+| `SHARPMUSH_PLUGINS_PATH` | `<world>.plugins` | Where installed plugins live. Keep it on the volume. |
+| `SHARPMUSH_PLUGIN_INSTALL` | on | `false` stops the server installing plugin packages at all. Each install still needs the administrator to confirm they trust the author. |
+
+A plugin runs compiled C# with full access to the server; there is no sandbox. The restic service
+snapshots this folder (`/data/lightning.plugins` is in `RESTIC_BACKUP_SOURCES`); if you move it, put
+the new path there too.
+
+A newly installed plugin, and most plugins turned on or off, take effect at the next restart. The
+Plugins tab's Restart button and `@shutdown/reboot` stop the server process and rely on the
+compose file's `restart: unless-stopped` to start it again; client connections stay open, because
+the connection server holds them.
+
 ### Pointing the in-browser terminal at the right place
 
 The portal's web terminal connects to a **WebSocket** endpoint, `/ws`, which is served by the
@@ -350,7 +372,7 @@ A wizard can take one at any time in-game with `@backup`, and list what is on di
 The portal takes one into `pre-package/<timestamp>` before every package apply, rollback or
 uninstall, and refuses the operation if that copy fails. It is the restore point for a crash part
 way through the operation (`docs/design/world-transactions.md` §0). It copies the world only:
-a managed package's `plugins/<id>/` directory is not in it.
+an installed plugin's folder (see [Plugins](#plugins)) is not in it.
 
 Each copy is LMDB's own `mdb_env_copy` of the environment, a point-in-time snapshot by
 construction.

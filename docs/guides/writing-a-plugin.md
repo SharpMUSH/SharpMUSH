@@ -111,13 +111,23 @@ Place a `plugin.json` next to the built DLL. It drives discovery order and compa
   "version": "1.0.0",
   "dependencies": [],
   "priority": 0,
-  "minServerVersion": null
+  "minServerVersion": null,
+  "name": "Sample",
+  "description": "Adds +PING and pluginadd().",
+  "entry": "SamplePlugin.dll"
 }
 ```
 
+- `id` — must equal your plugin's runtime `Id`; a plugin whose `Id` differs is not loaded.
+- `minServerVersion` — the plugin contract version range you need. The loader checks it at start and reports
+  the plugin as Incompatible when the server does not fit.
 - `dependencies` — ids of plugins that must load **before** this one (topologically ordered; cycles are
   detected and skipped).
 - `priority` — tie-break among plugins with no dependency relationship (lower loads first).
+- `name`, `description` — optional; the display name and one line on what the plugin adds, shown by the
+  portal's Plugins tab and `@plugin`.
+- `entry` — optional; your plugin's own DLL file name. Required when the plugin's folder carries more than one
+  DLL; with exactly one, that one is the entry.
 
 ## 5. Build and deploy
 
@@ -125,9 +135,11 @@ Place a `plugin.json` next to the built DLL. It drives discovery order and compa
 dotnet build YourPlugin.csproj
 ```
 
-Drop the built `YourPlugin.dll` and its `plugin.json` into the server's `plugins/` directory — either at the
-top level (`plugins/YourPlugin.dll`) or in a per-plugin subfolder (`plugins/your-id/YourPlugin.dll`, with the
-`plugin.json` beside it). On boot, `PluginBootstrapService` discovers, orders, loads, and registers it. A
+Drop the built `YourPlugin.dll` and its `plugin.json` into the server's installed-plugins folder
+(`<world path>.plugins/`, e.g. `/app/data/lightning.plugins`, or `SHARPMUSH_PLUGINS_PATH`) — either at the
+top level or in a per-plugin subfolder (`your-id/YourPlugin.dll`, with the `plugin.json` beside it). That folder
+is on the data volume, so an image update keeps it. The `plugins/` folder beside the server binary holds the
+plugins the image ships; a plugin with the same id as a shipped one is reported Duplicate and not loaded. On boot, `PluginBootstrapService` discovers, orders, loads, and registers it. A
 failing plugin is logged and skipped; it never aborts server boot.
 
 > The server host must carry its full dependency closure beside its binary for the plugin loader to resolve
@@ -354,24 +366,25 @@ show up in the NavBar — under `World` here, or as their own section if `NavPla
 the plugin and they vanish. Access is filtered by `MinimumRole`. Custom compiled Blazor components are not
 supported (declarative/schema-driven only). See `docs/design/plugin-system.md` (Phase 11).
 
-## 9. Publishing a managed package (Phase 4 — package-manager DLL distribution)
+## 9. Publishing a plugin package (Phase 4 — package-manager DLL distribution)
 
-Instead of asking operators to hand-copy your DLL into `plugins/`, you can ship it through the **package
-manager** as a `kind: managed` package. Installing it verifies your binaries against SHA-256 hashes you publish
-and, once the operator opts in, deposits them into `plugins/<id>/` for the loader to pick up on the next boot.
+Instead of asking administrators to hand-copy your DLL, you can ship it through the **package manager** as a
+`kind: plugin` package. Installing it verifies your binaries against SHA-256 hashes you publish and, once the
+administrator confirms, deposits them into `<installed plugins>/<id>/` for the loader to pick up at the next
+start.
 
 ### Author the `package.yaml`
 
-A managed package is a package directory in a git repo (exactly like a softcode package) whose `package.yaml`
-declares `kind: managed` and a `binaries:` block. It carries **no** softcode `objects:` and **no**
-`application:` block — only the compiled DLL(s):
+A plugin package is a package directory in a git repo (exactly like a softcode package) whose `package.yaml`
+declares `kind: plugin` and a `binaries:` block. It carries **no** softcode `objects:` and **no**
+`application:` block — only the compiled DLL(s) and their `plugin.json`:
 
 ```yaml
-package: my-plugin            # also the plugins/<id>/ directory name
+package: my-plugin            # also the plugin folder name; must equal plugin.json's id
 version: "1.0.0"
 authors: [You]
 description: "What it does"
-kind: managed
+kind: plugin
 binaries:
   min_server_version: ">=1.1"   # the plugin/server contract version your DLL was built against
   files:
@@ -379,37 +392,46 @@ binaries:
       sha256: <64-hex SHA-256 of MyPlugin.dll>
     - file: MyPlugin.deps.json   # ship the .deps.json so the loader resolves your private deps
       sha256: <64-hex SHA-256>
-    - file: plugin.json          # your ordering metadata (id/version/dependencies/priority)
+    - file: plugin.json          # required; its id must equal the package id
       sha256: <64-hex SHA-256>
 ```
 
-`file:` entries are **flat names** (no path separators) — they deposit directly into `plugins/<id>/`. Compute
-each hash from the built bytes, e.g. `sha256sum MyPlugin.dll`. Commit `package.yaml` **and** the listed files
-together in the package directory; release versions are tagged exactly like softcode packages
+`file:` entries are **flat names** (no path separators) — they deposit directly into `<installed plugins>/<id>/`.
+The package must list its `plugin.json`, whose `id` equals the package id; if you ship more than one DLL, name
+your own in `plugin.json`'s `entry`. A package may not take the id of a plugin the server ships (such as
+`scene`). Compute each hash from the built bytes, e.g. `sha256sum MyPlugin.dll`. Commit `package.yaml` **and**
+the listed files together in the package directory; release versions are tagged exactly like softcode packages
 (`<package-dir>/v<semver>`), and the installer reads the bytes from that commit, so a moved tag cannot smuggle
 different bytes than the hash you signed.
 
-### How an operator installs it
+### How an administrator installs it
 
-Managed installs are gated more strictly than softcode, because **a managed package runs arbitrary compiled C#
-in full server trust — there is no sandbox** (same posture as a hand-dropped plugin). The operator must:
+A plugin package runs **arbitrary compiled C# in full server trust — there is no sandbox** (same posture as a
+hand-dropped plugin). Whoever runs the server and installs it takes that responsibility. An administrator with
+`packages.admin` installs it in one of two ways:
 
-1. Add your package id to the server's `ManagedPackages:AllowList` (or set `ManagedPackages:AllowAll` on a
-   single-operator/dev box), and
-2. confirm the install with the explicit managed-code opt-in (`allow_managed_code` on the apply).
+- **From a remote.** Add the git repo as a package remote and pick the package in the portal's Packages area
+  (`/admin/packages`).
+- **By upload.** On the Plugins tab, **Upload plugin** takes a `.zip` (at most 20 MB, unpacking to at most
+  64 MB) of the package folder: `package.yaml` plus the files its `binaries` block lists, all at the top level
+  of the zip (no folders, no links).
 
-Then the package manager verifies every file's hash, refuses anything built for a newer `min_server_version`
-than the server provides, and deposits the verified bytes into `plugins/<id>/`. **Your plugin loads on the next
-server boot** — a freshly-installed managed package is not hot-loaded into the running engine.
+Either way the review page opens, and the apply needs the "I trust this author" box ticked
+(`allow_plugin_code`). The server's `SHARPMUSH_PLUGIN_INSTALL` switch (on unless set to `false`) decides whether
+it installs plugin packages at all. The package manager then verifies every file's hash, refuses anything built
+for a newer `min_server_version` than the server provides, and deposits the verified bytes. **Your plugin loads
+at the next start**; the Restart button on the Plugins tab (or `@shutdown/reboot`) restarts the engine without
+dropping client connections.
 
-Uninstalling removes `plugins/<id>/` and, if your plugin is command/function/hook-only (unloadable, see §7),
-unloads it from the live engine first.
+Uninstalling removes `<installed plugins>/<id>/` and, if your plugin is command/function/hook-only (unloadable,
+see §7), unloads it from the live engine first. An administrator can also turn a plugin off on the Plugins tab
+or with `@plugin/disable <id>`; see `docs/design/plugin-system.md` (Plugin administration).
 
-> Authoring shape is unchanged from §1–§8 — a managed package is just the distribution wrapper around the same
+> Authoring shape is unchanged from §1–§8 — a plugin package is just the distribution wrapper around the same
 > `EnableDynamicLoading` plugin DLL. The carried `MyPlugin.deps.json` and `plugin.json` are the same files you
 > would otherwise hand-copy.
 
 ## Later phases (not yet available)
 
-Live hot-load of a newly-installed managed package (loading it into the running engine without a reboot) is a
-possible future nicety. This guide will grow as those seams ship.
+Loading a newly-installed plugin package into the running engine without a restart is a possible future
+nicety. This guide will grow as those seams ship.

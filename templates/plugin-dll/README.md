@@ -16,8 +16,8 @@ and the [extensibility overview](https://github.com/SharpMUSH/SharpMUSH/blob/mai
 PLUGIN_ID/
 ├── PLUGIN_NAME.csproj           # net11.0, EnableDynamicLoading, abstractions + generator refs
 ├── Plugin.cs                    # [SharpPlugin] : PluginBase with a sample command + function
-├── plugin.json                  # loader ordering metadata (id/version/dependencies/priority)
-├── package.yaml                 # kind: managed — distributes the DLL via the package manager
+├── plugin.json                  # loader metadata (id/name/description/entry/version/dependencies/priority)
+├── package.yaml                 # kind: plugin — distributes the DLL via the package manager
 ├── README.md
 ├── LICENSE
 └── .github/workflows/
@@ -69,7 +69,9 @@ load-once.
 ## Deploying by hand
 
 Drop the built `PLUGIN_NAME.dll`, `PLUGIN_NAME.deps.json`, and `plugin.json` into
-the server's `plugins/PLUGIN_ID/` directory. On boot the loader discovers, orders,
+`PLUGIN_ID/` under the server's installed-plugins folder (`<world path>.plugins/`
+on the data volume, e.g. `/app/data/lightning.plugins`, or `SHARPMUSH_PLUGINS_PATH`).
+On boot the loader discovers, orders,
 loads, and registers it. A failing plugin is logged and skipped — it never aborts
 boot.
 
@@ -77,19 +79,27 @@ boot.
 > loader to resolve shared types (this is why `SharpMUSH.Server` references
 > `FSharp.Core` explicitly). If you self-host the engine to load plugins, do the same.
 
-## Distributing as a managed package
+## Distributing as a plugin package
 
-`package.yaml` (`kind: managed`) distributes this DLL through the package manager
-instead of a hand-copy. Installing it verifies each file's SHA-256, then — after the
-operator's **two-part trust opt-in** (the package id on the server's
-`ManagedPackages` allow-list **and** the per-apply `allow_managed_code`) — deposits
-the verified bytes into `plugins/PLUGIN_ID/`. The plugin **loads on the next server
-boot** (a freshly-installed managed package is not hot-loaded into the running
-engine). Uninstalling removes the directory (unloading first if the plugin is
-unloadable).
+`package.yaml` (`kind: plugin`) distributes this DLL through the package manager
+instead of a hand-copy. It must list `plugin.json` in `binaries.files`, and
+`plugin.json`'s `id` must equal the package id (`PLUGIN_ID`). `entry` names the
+plugin's own DLL, which the loader needs when the folder holds more than one.
 
-A managed package runs **arbitrary compiled C# in full server trust — there is no
-sandbox**. SHA-256 guards integrity, not trust; trust is the operator's opt-in.
+An administrator with `packages.admin` installs it from a package remote, or
+uploads a `.zip` of the package folder (`package.yaml` plus the listed files, all
+at the top level) with **Upload plugin** on the portal's Plugins tab. Installing it
+verifies each file's SHA-256, then, once the administrator ticks "I trust this
+author" (`allow_plugin_code`), deposits the verified bytes into `PLUGIN_ID/` in the
+installed-plugins folder. The server's `SHARPMUSH_PLUGIN_INSTALL` switch (on unless
+set to `false`) decides whether it installs plugin packages at all. The plugin
+**loads at the next start**; the Plugins tab's Restart button or `@shutdown/reboot`
+restarts the engine without dropping client connections. Uninstalling removes the
+folder (unloading first if the plugin is unloadable).
+
+A plugin runs **arbitrary compiled C# in full server trust — there is no
+sandbox**. SHA-256 guards integrity, not trust; whoever installs it takes
+responsibility for it.
 
 ### The hashes are CI-filled
 

@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Mensajes</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Escenas</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>No hay ninguna escena en curso en esta sala.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Aún no te has unido a ningún canal.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Explorar canales</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Terminar de explorar canales</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Explorar</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Listo</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>No hay canales que puedas ver.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# miembro} other {# miembros}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Unirse a #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Silenciar #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Silenciado: sigues en el canal pero no oyes nada. Selecciona para volver a oírlo.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Silenciar: seguir en el canal sin oír nada.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>El juego no hizo ese cambio.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Aún no hay mensajes privados. Escribe `page &lt;nombre&gt;=&lt;mensaje&gt;` para escribir a alguien en privado.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# aquí}}</value>
   </data>

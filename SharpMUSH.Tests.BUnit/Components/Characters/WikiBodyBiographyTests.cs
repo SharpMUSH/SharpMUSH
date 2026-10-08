@@ -149,21 +149,22 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// An account writes its own character's biography by owning the character, with no wiki permission;
-	/// a visitor who neither owns it nor holds wiki.create is not offered the button.
+	/// Writing a biography needs wiki.create, the character's own included: a viewer without it is not
+	/// offered the button, whoever owns the character.
 	/// </summary>
 	[Test]
 	[Arguments(true)]
 	[Arguments(false)]
-	public async Task AMissingBiography_IsOfferedToItsOwner_WithoutWikiCreate(bool owned)
+	public async Task AMissingBiography_IsOfferedOnlyWithWikiCreate(bool mayCreate)
 	{
 		Auth.SetAuthorized("Pell Marsh");
+		if (mayCreate) Auth.SetPolicies("wiki.create");
 		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
-			.Add(x => x.Context, new ProfilePageContext("Pell Marsh", false, Owned: owned)));
+			.Add(x => x.Context, new ProfilePageContext("Pell Marsh", false)));
 		cut.WaitForAssertion(() => cut.Find(".wiki-article--no-bio"), TimeSpan.FromSeconds(5));
 
 		var offered = cut.FindAll(".wiki-article--no-bio button").Any(b => b.TextContent.Contains("Write a biography"));
-		await Assert.That(offered).IsEqualTo(owned);
+		await Assert.That(offered).IsEqualTo(mayCreate);
 	}
 
 	private IRenderedComponent<CascadingWrapper> RenderProfile(string character = "Tomas Reyes")

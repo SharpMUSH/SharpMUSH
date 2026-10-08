@@ -149,10 +149,8 @@ public static partial class ErrorMessages
 
 		public const string ShutdownOnlyGodPanic = "Only God can perform a panic shutdown.";
 		public const string ShutdownPanicInitiated = "PANIC SHUTDOWN initiated by God.";
-		public const string ShutdownRebootInitiated = "REBOOT initiated. In SharpMUSH's web-based architecture:";
-		public const string ShutdownRebootDocker = "- For Docker/Kubernetes: Update deployment to trigger rolling restart";
-		public const string ShutdownRebootStandalone = "- For standalone: Restart the web application";
-		public const string ShutdownRebootRedis = "- Player connections will be preserved via Redis state store";
+		public const string ShutdownRebootInitiated = "Restarting the game engine. Connections stay open, and the server's supervisor starts it again.";
+		public const string ShutdownRebootPending = "A restart is already under way.";
 		public const string ShutdownParanoidInitiated = "PARANOID SHUTDOWN initiated.";
 		public const string ShutdownParanoidDatabase = "Database state is continuously persisted.";
 		public const string ShutdownInitiated = "SHUTDOWN initiated.";

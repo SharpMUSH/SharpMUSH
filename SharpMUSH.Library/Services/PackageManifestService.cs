@@ -155,7 +155,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 		// A softcode package requires objects and forbids an application/binaries
 		// block; an application package is the mirror — it registers a portal app
-		// and carries no objects of its own; a managed package carries a compiled
+		// and carries no objects of its own; a plugin package carries a compiled
 		// DLL and no softcode at all. Read each block so every issue is reported,
 		// but gate the requirement/forbidden checks on the declared kind.
 		var objects = kind == PackageKind.Softcode
@@ -782,12 +782,12 @@ public partial class PackageManifestService : IPackageManifestService
 			return kind;
 		}
 
-		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application, managed)."));
+		issues.Add(PackageManifestIssue.Error("kind", $"'{node}' is not a valid package kind (softcode, application, plugin)."));
 		return PackageKind.Softcode;
 	}
 
 	/// <summary>
-	/// Application and managed packages own no game objects; an <c>objects:</c>
+	/// Application and plugin packages own no game objects; an <c>objects:</c>
 	/// key is therefore an error for them. Returns an empty object list.
 	/// </summary>
 	private static IReadOnlyList<PackageObjectSpec> ReadNoObjects(
@@ -797,15 +797,15 @@ public partial class PackageManifestService : IPackageManifestService
 		{
 			issues.Add(PackageManifestIssue.Error("objects", kind == PackageKind.Application
 				? "An application package owns no objects — declare the routes in a softcode package and 'depends' on it. Remove 'objects'."
-				: "A managed package carries only a compiled DLL — it owns no game objects. Remove 'objects'."));
+				: "A plugin package carries only a compiled DLL — it owns no game objects. Remove 'objects'."));
 		}
 
 		return [];
 	}
 
 	/// <summary>
-	/// Reads the <c>binaries:</c> block (Phase 4 managed packages). Required for a
-	/// managed package, forbidden otherwise. The block carries a
+	/// Reads the <c>binaries:</c> block (plugin packages). Required for a
+	/// plugin package, forbidden otherwise. The block carries a
 	/// <c>min_server_version</c> constraint and a list of <c>{file, sha256}</c>
 	/// entries; file names must be flat (no path separators) and hashes must be
 	/// 64 hex chars. The bytes themselves live alongside package.yaml in the
@@ -816,12 +816,12 @@ public partial class PackageManifestService : IPackageManifestService
 	{
 		var present = doc.TryGetValue("binaries", out var node) && node is not null;
 
-		if (kind != PackageKind.Managed)
+		if (kind != PackageKind.Plugin)
 		{
 			if (present)
 			{
 				issues.Add(PackageManifestIssue.Error("binaries",
-					"'binaries' is only valid when 'kind: managed'."));
+					"'binaries' is only valid when 'kind: plugin'."));
 			}
 
 			return null;
@@ -829,7 +829,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 		if (!present)
 		{
-			issues.Add(PackageManifestIssue.Error("binaries", "A managed package requires a 'binaries' block."));
+			issues.Add(PackageManifestIssue.Error("binaries", "A plugin package requires a 'binaries' block."));
 			return null;
 		}
 
@@ -849,7 +849,7 @@ public partial class PackageManifestService : IPackageManifestService
 		if (minServer is null && !bin.ContainsKey("min_server_version"))
 		{
 			issues.Add(PackageManifestIssue.Error("binaries.min_server_version",
-				"A managed package requires a 'min_server_version' constraint (e.g. \">=1.0\")."));
+				"A plugin package requires a 'min_server_version' constraint (e.g. \">=1.0\")."));
 		}
 
 		var files = new List<PackageBinaryFile>();
@@ -911,7 +911,7 @@ public partial class PackageManifestService : IPackageManifestService
 			}
 		}
 
-		// A DLL is the point of a managed package: require at least one.
+		// A DLL is the point of a plugin package: require at least one.
 		if (files.Count > 0 && files.All(f => !f.FileName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
 		{
 			issues.Add(PackageManifestIssue.Warning("binaries.files",

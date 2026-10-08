@@ -11,7 +11,7 @@ using YamlDotNet.Serialization;
 // Each <path> is a package directory (containing package.yaml) or a package.yaml
 // file directly. The manifest is parsed and validated with the same engine the
 // server uses (PackageManifestService.ParseManifest) — no server, DB, or network
-// required. For a `kind: managed` manifest, each declared binary file is also
+// required. For a `kind: plugin` manifest, each declared binary file is also
 // verified to exist in the package directory and to match its declared SHA-256.
 //
 // Exit codes:
@@ -127,7 +127,7 @@ internal static class PackageToolApp
 	private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder().Build();
 
 	/// <summary>
-	/// Verifies every declared binary of a <c>kind: managed</c> package exists in
+	/// Verifies every declared binary of a <c>kind: plugin</c> package exists in
 	/// the package directory and matches its manifest SHA-256. Softcode and
 	/// application packages declare no <c>binaries:</c> block and pass trivially.
 	///
@@ -279,7 +279,7 @@ internal static class PackageToolApp
 
 			BEHAVIOUR:
 			  Parses and validates each manifest with the same engine the server uses.
-			  For a 'kind: managed' manifest, also checks that every declared binary file
+			  For a 'kind: plugin' manifest, also checks that every declared binary file
 			  exists in the package directory and matches its declared SHA-256.
 
 			EXIT CODES:

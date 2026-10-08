@@ -80,12 +80,12 @@ public class RoleCommandTests : ServerTestBase
 	[Test]
 	public async Task ObjectOverrideBeatsTheirRoles()
 	{
-		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("1");
-		await Assert.That(await As(_wizard, $"@permission/deny {_mortal.Name}=wiki.edit")).Contains("denies wiki.edit");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("0");
-		await Assert.That(await As(_wizard, $"@role/player {_mortal.Name}")).Contains("deny wiki.edit");
-		await As(_wizard, $"@permission/clear {_mortal.Name}=wiki.edit");
-		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.edit)")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},media.upload)")).IsEqualTo("1");
+		await Assert.That(await As(_wizard, $"@permission/deny {_mortal.Name}=media.upload")).Contains("denies media.upload");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},media.upload)")).IsEqualTo("0");
+		await Assert.That(await As(_wizard, $"@role/player {_mortal.Name}")).Contains("deny media.upload");
+		await As(_wizard, $"@permission/clear {_mortal.Name}=media.upload");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},media.upload)")).IsEqualTo("1");
 	}
 
 	[Test]

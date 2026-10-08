@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Съобщения</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Сцени</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>В тази стая не тече сцена.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Още не сте се присъединили към канали.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Разгледай каналите</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Приключи с разглеждането на каналите</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Разгледай</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Няма канали, които можете да видите.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# член} other {# членове}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Присъедини се към #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Заглуши #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Заглушен: оставате в канала, но не чувате нищо. Изберете, за да го чувате отново.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Заглуши: остани в канала, без да чуваш нищо.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Играта не направи тази промяна.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Още няма лични съобщения. Напишете `page &lt;име&gt;=&lt;съобщение&gt;`, за да пишете някому насаме.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# тук}}</value>
   </data>
