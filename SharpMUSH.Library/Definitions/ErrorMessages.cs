@@ -945,6 +945,21 @@ public static partial class ErrorMessages
 		public const string ThemeSet = "Theme set.";
 		public const string ThemeCleared = "Theme cleared.";
 		public const string ThemeUnreadableFormat = "Your @theme does not read ({0}), so layouts use the game's theme. @theme me=<theme> sets another; @theme me= clears it.";
+		public const string ThemeUsage = "Usage: @theme[/light|/dark] <object>=[<theme>], @theme/refresh [<player>], @theme/list.";
+		public const string ThemeAdminUsage = "Usage: @theme/add <name>=<theme>, @theme/remove <name>, @theme/disable <name>, @theme/enable <name>.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ThemeInUseFormat = "Theme in use: {0}";
+		public const string ThemeNoneInUse = "No theme is set, so layouts use the game's theme.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ThemeAddedFormat = "Theme {0} saved.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ThemeRemovedFormat = "Theme {0} removed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ThemeDisabledFormat = "Theme {0} disabled.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ThemeEnabledFormat = "Theme {0} enabled.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ThemeNotFoundFormat = "No theme named {0}. @theme/list shows them.";
 		public const string DigWhat = "Dig what?";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RoomCreatedWithNumberFormat = "{0} created with room number {1}.";

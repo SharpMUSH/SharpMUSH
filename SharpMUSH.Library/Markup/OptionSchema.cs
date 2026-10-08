@@ -354,11 +354,11 @@ public static class LayoutOptionGroups
 	};
 
 	/// <summary>
-	/// <c>theme:</c> a theme by name, or one written out as a JSON object (<see cref="LayoutThemes.Read"/>),
-	/// for the layout and everything inside it.
+	/// <c>theme:</c> a theme by name, or one written out as a JSON object, read by <paramref name="read"/> (the game's
+	/// themes, <c>ILayoutThemeService.Read</c>), for the layout and everything inside it.
 	/// </summary>
-	public static OptionSchema<T> Theme<T>(this OptionSchema<T> schema, Func<T, LayoutTheme, T> set) where T : class =>
-		schema.Json("theme", (settings, value) => LayoutThemes.Read(value.ToPlainText()) switch
+	public static OptionSchema<T> Theme<T>(this OptionSchema<T> schema, Func<T, Func<string, Result<ThemePalette>>> read, Func<T, LayoutTheme, T> set) where T : class =>
+		schema.Json("theme", (settings, value) => read(settings)(value.ToPlainText()) switch
 		{
 			ThemePalette palette => set(settings, palette.ToLayoutTheme()),
 			Error<string> error => error,

@@ -17,10 +17,10 @@ namespace SharpMUSH.Implementation.Functions;
 /// </summary>
 public partial class Functions
 {
-	/// <summary><c>themes()</c> — the names of the built-in themes, space separated.</summary>
+	/// <summary><c>themes()</c> — the names of the themes the game offers, space separated: the built-in ones staff have not disabled, then the ones they added.</summary>
 	[SharpFunction(Name = "themes", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> Themes(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult(new CallState(string.Join(' ', LayoutThemes.Names)));
+		ValueTask.FromResult(new CallState(string.Join(' ', LayoutThemeService.Names)));
 
 	/// <summary>
 	/// <c>theme(&lt;theme&gt;)</c> — the theme a name or a JSON description makes, written out in full as
@@ -28,7 +28,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "theme", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["theme"])]
 	public ValueTask<CallState> Theme(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult(LayoutThemes.Read(Arg(parser.CurrentState.ArgumentsOrdered, 0).ToPlainText()) switch
+		ValueTask.FromResult(LayoutThemeService.Read(Arg(parser.CurrentState.ArgumentsOrdered, 0).ToPlainText()) switch
 		{
 			ThemePalette palette => new CallState(palette.ToJson()),
 			Error<string> error => new CallState(error.Value),
@@ -44,7 +44,7 @@ public partial class Functions
 	public ValueTask<CallState> Swatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		return ValueTask.FromResult(LayoutThemes.Read(Arg(args, 0).ToPlainText()) switch
+		return ValueTask.FromResult(LayoutThemeService.Read(Arg(args, 0).ToPlainText()) switch
 		{
 			ThemePalette palette => Finish(parser, SwatchTable(palette), Arg(args, 1), theme: palette.ToLayoutTheme()),
 			Error<string> error => new CallState(error.Value),

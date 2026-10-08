@@ -34,6 +34,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private IAccountService AccountService { get; }
 	private IAccountSessionStore AccountSessionStore { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
+	private ILayoutThemeService LayoutThemeService { get; }
 	private IObjectNameService ObjectNameService { get; }
 	private IFlagAndPowerService FlagAndPowerService { get; }
 	private IObjectRelationshipService ObjectRelationshipService { get; }
@@ -123,6 +124,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IAccountService accountService,
 		IAccountSessionStore accountSessionStore,
 		IExpandedObjectDataService objectDataService,
+		ILayoutThemeService layoutThemeService,
 		IObjectNameService objectNameService,
 		IFlagAndPowerService flagAndPowerService,
 		IObjectRelationshipService objectRelationshipService,
@@ -174,6 +176,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		AccountService = accountService;
 		AccountSessionStore = accountSessionStore;
 		ObjectDataService = objectDataService;
+		LayoutThemeService = layoutThemeService;
 		HttpClientFactory = httpClientFactory;
 		ObjectNameService = objectNameService;
 		FlagAndPowerService = flagAndPowerService;

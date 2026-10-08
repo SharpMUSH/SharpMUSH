@@ -864,6 +864,33 @@
   <data name="ThemeUnreadableFormat" xml:space="preserve">
     <value>Your @theme does not read ({0}), so layouts use the game's theme. @theme me=&lt;theme&gt; sets another; @theme me= clears it.</value>
   </data>
+  <data name="ThemeUsage" xml:space="preserve">
+    <value>Usage: @theme[/light|/dark] &lt;object&gt;=[&lt;theme&gt;], @theme/refresh [&lt;player&gt;], @theme/list.</value>
+  </data>
+  <data name="ThemeAdminUsage" xml:space="preserve">
+    <value>Usage: @theme/add &lt;name&gt;=&lt;theme&gt;, @theme/remove &lt;name&gt;, @theme/disable &lt;name&gt;, @theme/enable &lt;name&gt;.</value>
+  </data>
+  <data name="ThemeInUseFormat" xml:space="preserve">
+    <value>Theme in use: {0}</value>
+  </data>
+  <data name="ThemeNoneInUse" xml:space="preserve">
+    <value>No theme is set, so layouts use the game's theme.</value>
+  </data>
+  <data name="ThemeAddedFormat" xml:space="preserve">
+    <value>Theme {0} saved.</value>
+  </data>
+  <data name="ThemeRemovedFormat" xml:space="preserve">
+    <value>Theme {0} removed.</value>
+  </data>
+  <data name="ThemeDisabledFormat" xml:space="preserve">
+    <value>Theme {0} disabled.</value>
+  </data>
+  <data name="ThemeEnabledFormat" xml:space="preserve">
+    <value>Theme {0} enabled.</value>
+  </data>
+  <data name="ThemeNotFoundFormat" xml:space="preserve">
+    <value>No theme named {0}. @theme/list shows them.</value>
+  </data>
   <data name="DigWhat" xml:space="preserve">
     <value>Dig what?</value>
   </data>
