@@ -8,6 +8,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using static SharpMUSHParser;
@@ -33,12 +34,28 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
-		return await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument) switch
+
+		// The command's clock runs from here, so the work of dispatching it (hooks, switch and lock
+		// checks) is its own and not charged to a command that runs it in place, like @switch.
+		// Evaluating its arguments is not.
+		var clock = InvocationClock.Start();
+		try
 		{
-			CommandArguments argumentResults => await DispatchInternalCommand(visitor, prs, src, rootCommand, switches,
-				libraryCommandDefinition, singleArgument, argumentResults),
-			Error<string> splitError => await services.Arguments.RefuseAsync(prs, splitError.Value),
-		};
+			Result<CommandArguments> split;
+			using (clock.Pause())
+				split = await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
+
+			return split switch
+			{
+				CommandArguments argumentResults => await DispatchInternalCommand(visitor, prs, src, rootCommand, switches,
+					libraryCommandDefinition, singleArgument, argumentResults, clock),
+				Error<string> splitError => await services.Arguments.RefuseAsync(prs, splitError.Value),
+			};
+		}
+		finally
+		{
+			clock.Stop();
+		}
 	}
 
 	/// <summary>
@@ -47,7 +64,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// </summary>
 	private async ValueTask<Option<CallState>> DispatchInternalCommand(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs, MString src,
 		string rootCommand, string[] switches, CommandDefinition libraryCommandDefinition, bool singleArgument,
-		CommandArguments argumentResults)
+		CommandArguments argumentResults, InvocationClock clock)
 	{
 		var arguments = argumentResults.Values;
 
@@ -303,19 +320,17 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				// 5. Execute the built-in command
 				var commandSuccess = true;
 				Option<CallState> commandResult;
-
-				if (executor is AnySharpObject verboseExecutor && await verboseExecutor.HasFlag("VERBOSE"))
-				{
-					var verboseOutput = $"#{verboseExecutor.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
-					await services.Diagnostics.SendDebugOrVerboseOutput(visitor.Parser, verboseExecutor, verboseOutput);
-				}
-
 				var commandText = newParser.CurrentState.CommandText;
 				var outputVersion = commandText?.OutputVersion;
 				var outputBefore = commandText?.Output;
-				var clock = InvocationClock.Start();
 				try
 				{
+					if (executor is AnySharpObject verboseExecutor && await verboseExecutor.HasFlag("VERBOSE"))
+					{
+						var verboseOutput = $"#{verboseExecutor.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+						await services.Diagnostics.SendDebugOrVerboseOutput(visitor.Parser, verboseExecutor, verboseOutput);
+					}
+
 					// Track command history for @retry support (shared mutable reference, persists across With() copies).
 					// A rerun records its output as this run does, so @retry leaves the last rerun's %>.
 					newParser.CurrentState.CommandHistory?.Push((Recorded(libraryCommandDefinition),
@@ -329,7 +344,6 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				}
 				finally
 				{
-					clock.Stop();
 					// The registered name, not the abbreviation or case typed, so @pe and @PEMIT are one series.
 					services.Telemetry?.RecordCommandInvocation(libraryCommandDefinition.Attribute.Name.ToUpperInvariant(),
 						clock.OwnMilliseconds, clock.InclusiveMilliseconds, commandSuccess);

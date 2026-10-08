@@ -1,4 +1,4 @@
-using SharpMUSH.Implementation.Visitors;
+using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -36,6 +36,18 @@ public class InvocationClockTests
 
 		await Assert.That(clock.InclusiveMilliseconds).IsGreaterThanOrEqualTo(Work.TotalMilliseconds * 1.8);
 		await Assert.That(clock.OwnMilliseconds).IsLessThan(Work.TotalMilliseconds / 2);
+	}
+
+	[Test]
+	public async Task ADeferredArgumentPausesTheCallRunningIt()
+	{
+		var command = InvocationClock.Start();
+		using (InvocationClock.PauseRunning())
+			await Task.Delay(Work);
+		command.Stop();
+
+		await Assert.That(command.OwnMilliseconds).IsLessThan(Work.TotalMilliseconds / 2);
+		using (InvocationClock.PauseRunning()) { }
 	}
 
 	[Test]
