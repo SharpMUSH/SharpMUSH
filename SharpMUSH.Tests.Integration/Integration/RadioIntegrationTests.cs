@@ -197,7 +197,13 @@ public class RadioIntegrationTests
 			await InstallAsync();
 			var early = await Player("RadEarly");
 			await Assert.That(await As(early, "+radio/log")).Contains("+radio has no /log switch");
+			await Assert.That(await As(early, "+help radio")).Contains("Subtopics: admins · moderators");
 			await InstallAsync("radio-scene");
+			// Its topics join the radio's and the scene package's own help, as subtopics of each.
+			await Assert.That(await As(early, "+help radio")).Contains("Subtopics: admins · log · moderators");
+			await Assert.That(await As(early, "+help radio log")).Contains("+radio/stoplog <frequency>");
+			await Assert.That(await As(early, "+help scene")).Contains("privacy · radio · schedule");
+			await Assert.That(await As(early, "+help scene radio")).Contains("+help radio log");
 			var admin = await Player("RadA", "radio-admin");
 			var logger = await Player("RadLog", "approved");
 			var ann = await Player("RadAnn");

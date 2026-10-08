@@ -23,12 +23,6 @@ depends:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
       branch: main
-  - package: plus-help
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
 
 objects:
   # The logger: a tap on the radio feed kind, and the /log and /stoplog switches of +radio. WIZARD because
@@ -76,27 +70,28 @@ objects:
       EXT`STOPLOG: |-
         {{radiolog}}
 
-  # The +help topic. A plain thing, not the WIZARD logger: the librarian cannot u() a privileged object's
-  # attributes. Bodies are evaluated, so brackets, parentheses and percent signs are escaped.
-  - ref: radio_scene_help
-    type: thing
-    name: Radio Scene Help
-    location: "{{radiolog}}"
+  # The +help topics go into the radio's and the scene package's own help, so +help radio and +help scene
+  # list them as subtopics. Attached, so uninstalling this package takes them away again. Bodies are
+  # evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: radio_help_log
+    target: "{{radio/radio_help}}"
     attributes:
-      HELP: |-
-        Radio in scenes: logging what you hear on a frequency into your scene.
-      SEE`RADIO`SCENES: |-
-        radio|scene
-      HELP`RADIO`SCENES: |-
-        What you hear on the radio can go into the scene you are in, so the log shows the calls that came in while you played.
+      SEE`RADIO`LOG: |-
+        scene radio
+      HELP`RADIO`LOG: |-
+        What you hear on a frequency can go into the scene you are in, so the log shows the calls that came in while you played.
 
         - `+radio/log <frequency>` puts everything you hear on that frequency into your scene, until `+radio/stoplog <frequency>`.
         - `+radio/log` lists the frequencies you log.
 
         You must be tuned in to the frequency and in a scene. A line goes into a scene once, however many people in it are logging, and it reads the way the first of them heard it. Logging lasts until you stop it: when you move to another scene, what you hear goes there instead.
 
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
+  - ref: scene_help_radio
+    target: "{{scene/scene_help}}"
     attributes:
-      SRC`RADIOSCENE: |-
-        {{radio_scene_help}}
+      SEE`SCENE`RADIO: |-
+        radio log|radio
+      HELP`SCENE`RADIO: |-
+        A frequency you are tuned in to can be logged into your scene: `+radio/log <frequency>` starts, `+radio/stoplog <frequency>` stops, and `+radio/log` lists what you log.
+
+        Each line goes into the scene once, under the name of the first person in it who logs that frequency, drawn the way they heard it. See `+help radio log` for the rest.
