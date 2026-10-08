@@ -200,6 +200,7 @@ public class TerminalFeatureRenderingTests
 		var lines = text.Split("\r\n");
 		await Assert.That(lines.Length).IsEqualTo(2).Because("the picture is two cells tall");
 		await Assert.That(lines[0]).Contains("<IMAGE cat.png");
+		await Assert.That(lines[0]).Contains("W=8c H=2c").Because("the client draws the picture over the cells kept for it");
 		await Assert.That(lines.Count(line => line.Contains("<IMAGE"))).IsEqualTo(1);
 		await Assert.That(handler.Requests).IsEqualTo(1);
 	}
