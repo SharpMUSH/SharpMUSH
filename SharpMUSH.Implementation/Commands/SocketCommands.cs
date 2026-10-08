@@ -689,7 +689,10 @@ public partial class Commands
 
 		await ConnectionAnnounceService.AnnounceConnectAsync(
 			new AnySharpObject(player), connectionCount, ConnectionService.Get(handle)?.IsHidden ?? false);
-		await CheckLastAsync(handle, player, isGuest);
+		using (LoginOutput.To(playerRef, handle))
+		{
+			await CheckLastAsync(handle, player, isGuest);
+		}
 
 		// The player's own channel list, which a fresh connection has not been sent yet.
 		await EventService.TriggerEventAsync(SharpEvents.PlayerChannels,
@@ -705,7 +708,10 @@ public partial class Commands
 			connectRoomContainer.Object().DBRef.ToString(),
 			"connect");
 
-		await LookAfterLoginAsync(parser, handle, player);
+		using (LoginOutput.To(playerRef, handle))
+		{
+			await LookAfterLoginAsync(parser, handle, player);
+		}
 	}
 
 	/// <summary>
@@ -736,8 +742,8 @@ public partial class Commands
 
 	/// <summary>
 	/// PennMUSH <c>check_last</c> (<c>src/player.c:651-692</c>), run right after announce_connect: tells a
-	/// non-guest (on every connection, as Penn's notify_format does) where and when they last connected, and
-	/// where their last failed connect came from, then
+	/// non-guest where and when they last connected, and where their last failed connect came from (on the
+	/// connection that logged in, where Penn's notify_format reaches every one; see <see cref="LoginOutput"/>), then
 	/// records this connect in <c>LAST</c>, <c>LASTSITE</c> and <c>LASTIP</c> and clears <c>LASTFAILED</c>.
 	/// The writes are God's, as Penn's <c>atr_add(..., GOD, 0)</c> are: the attributes are wizard-flagged.
 	/// The paycheck Penn gives on the first connect of a day is not ported.

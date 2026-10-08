@@ -29,5 +29,5 @@ section is left out while the option behind it (`player_creation`, `guests`) is 
 `FUN`LIST` and `FUN`COMMAND` build it.
 
 The other messages greet the player by name (`MOTD`), or use `notice()` (`WIZMOTD`, `GUEST`, `REGISTER`, `DOWN`).
-`connect guest`, `WHO`, `QUIT` and `help` are command links. The object holds the `Send_OOB` power for the links
-and the picture.
+The screens shown before login (`CONNECT`, `REGISTER`) carry no command links; after login, `help` and `WHO` in
+`MOTD` and `GUEST` are. The object holds the `Send_OOB` power for the links and the picture.

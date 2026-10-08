@@ -45,7 +45,7 @@ The package's messages are built with the layout functions (see [LAYOUT FUNCTION
 - `CONNECT` is a [FLEX()] of two items: the logo as a [FIGURE()] and the ways in beside it, each section under a [RULE()] with its commands lined up by [FIELDS()]. The web portal shows the logo as a picture, the game's own `/assets/logo.png`, and a terminal that cannot show it the text art in `LOGO`, in the logo's green. On a screen too narrow for both, the ways in go under the logo. A section is left out while the option behind it (`player_creation`, `guests`) is off.
 - `MOTD` greets the player by name and says how many players are connected.
 - `WIZMOTD`, `GUEST`, `REGISTER` and `DOWN` are a [NOTICE()].
-- `connect guest`, `WHO`, `QUIT` and `help` are command links ([CMDLINK()]). The object holds the Send_OOB @power for the links and the picture.
+- The screens shown before login, `CONNECT` and `REGISTER`, carry no command links. After login, `help` and `WHO` in `MOTD` and `GUEST` are command links ([CMDLINK()]). The object holds the Send_OOB @power for the links and the picture.
 
 The stored texts SharpMUSH ships follow the same layout, as an ASCII client 78 columns wide sees it, less what only softcode can know, such as the player's name. They list every way in, whatever the options say.
 
