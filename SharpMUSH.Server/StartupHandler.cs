@@ -67,7 +67,7 @@ public class StartupHandler(
 	}
 
 	/// <summary>
-	/// Seeds the default Home, Markdown Guide, and Application Schema Guide wiki pages (idempotent — no-op
+	/// Seeds the default Home and Markdown Guide wiki pages (idempotent — no-op
 	/// if present). The pages are English, so they are stamped with an explicit <c>SourceLocale</c>: that
 	/// records a fact about their content rather than deferring to whatever a game configures as its
 	/// default, which is why <c>"en"</c> is literal here.
@@ -111,26 +111,6 @@ public class StartupHandler(
 				break;
 			case Error<string> err:
 				LogSeedSkip("Markdown Guide", err.Value);
-				break;
-		}
-
-		// Seed the Dynamic Applications (Area 21) schema guide in the Help namespace, alongside
-		// the Markdown Guide. Same idempotent CreateAsync contract: duplicate slugs are a no-op on
-		// restart and admin edits to the page survive.
-		var appSchemaResult = await wikiService.CreateAsync(
-			title: "Application Schema Guide",
-			markdown: SeededWikiPages.ApplicationSchemaGuide,
-			authorDbref: "#1",
-			ns: WikiNamespace.Help,
-			sourceLocale: "en",
-			categories: ["Help"]);
-		switch (appSchemaResult)
-		{
-			case WikiPage page:
-				logger.LogInformation("Application Schema Guide wiki page seeded (id={Id}).", page.Id);
-				break;
-			case Error<string> err:
-				LogSeedSkip("Application Schema Guide", err.Value);
 				break;
 		}
 	}

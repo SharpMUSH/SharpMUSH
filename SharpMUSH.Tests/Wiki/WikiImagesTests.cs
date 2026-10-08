@@ -96,7 +96,7 @@ public class WikiImagesTests
 		await Assert.That(lead.Alt).IsEqualTo("A quay & harbour");
 	}
 
-	/// <summary>The Application Schema Guide's mock-up sits halfway down; it illustrates the text it follows.</summary>
+	/// <summary>A picture halfway down a page illustrates the text it follows, so it is not the banner.</summary>
 	[Test]
 	[Arguments("<p>Intro.</p><p><img src=\"/one.jpg\"></p>")]
 	[Arguments("<h2>Heading</h2><p><img src=\"/one.jpg\"></p>")]

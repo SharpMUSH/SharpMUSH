@@ -7,7 +7,7 @@ namespace SharpMUSH.Server.Resources;
 /// editable, diffable and renderable as what it is.
 /// </summary>
 /// <remarks>
-/// Both pages are seeded once and are freely editable in-game afterwards, so these are the initial
+/// The pages are seeded once and are freely editable in-game afterwards, so these are the initial
 /// bodies, not the live ones. Read eagerly at first use and cached — a missing resource is a
 /// packaging fault, and failing at startup beats seeding an empty help page.
 /// </remarks>
@@ -24,14 +24,6 @@ public static class SeededWikiPages
 	/// pipeline supports. Lives at <c>/wiki/help/markdown_guide</c>.
 	/// </summary>
 	public static string MarkdownGuide { get; } = Read("markdown-guide.md");
-
-	/// <summary>
-	/// <c>Help:Application Schema Guide</c> — the Portal Schema Document, its field and display
-	/// elements, the application registry and a worked example. Lives at
-	/// <c>/wiki/help/application_schema_guide</c>, and is kept in sync with
-	/// <c>docs/design/dynamic-applications.md</c> and the chargen example package.
-	/// </summary>
-	public static string ApplicationSchemaGuide { get; } = Read("application-schema-guide.md");
 
 	private static string Read(string name)
 	{

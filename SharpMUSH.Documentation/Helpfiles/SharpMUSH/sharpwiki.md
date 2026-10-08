@@ -75,7 +75,7 @@ Set them with `@wiki/category <page>=<name>, <name>`.
 
 ```sharp
 > think wikicategory(Help)
-help:markdown_guide help:application_schema_guide
+help:markdown_guide
 > think wiki(help:markdown_guide, categories)
 help
 ```
