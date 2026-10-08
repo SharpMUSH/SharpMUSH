@@ -249,6 +249,20 @@
     font-style: normal;
     font-display: swap;
 }
+@font-face {
+    font-family: "Oxanium";
+    src: url("/fonts/oxanium-latin.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Russo One";
+    src: url("/fonts/russo-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
 
 :root {
 	/* ── Phosphor Refined design tokens ── */

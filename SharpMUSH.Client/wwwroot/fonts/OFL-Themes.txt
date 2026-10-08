@@ -19,8 +19,10 @@ Copyright (c) 2011 Juan Montoreano (juan@remolacha.biz), with Reserved Font Name
 Copyright 2011 The Michroma Project Authors (https://github.com/googlefonts/Michroma-font)
 Copyright 2020 The MochiyPop Project Authors (https://github.com/fontdasu/Mochiypop)
 Copyright (c) 2011 by vernon adams. All rights reserved.
+Copyright 2019 The Oxanium Project Authors (https://github.com/sevmeyer/oxanium)
 Copyright (c) 2012 Patrick Wagesreiter (mail@patrickwagesreiter.at)
 Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans)
+Copyright (c) 2011-2012, Jovanny Lemonad (jovanny.ru), with Reserved Font Name "Russo"
 Copyright 2019 The Saira Stencil Project Authors (https://github.com/Omnibus-Type/Saira)
 Copyright (c) 2011 Rodrigo Fuenzalida (hello@rfuenzalida.com), with Reserved Font Name "Titan One"
 Copyright 2021 The Yuji Project Authors (https://github.com/Kinutafontfactory/Yuji)

@@ -51,6 +51,8 @@ public static class ThemeStyles
 		["monoton"] = new("'Monoton', system-ui, sans-serif", 400),
 		["michroma"] = new("'Michroma', system-ui, sans-serif", 400),
 		["antonio"] = new("'Antonio', 'Arial Narrow', sans-serif", 700),
+		["oxanium"] = new("'Oxanium', 'Arial Black', system-ui, sans-serif", 800),
+		["russo"] = new("'Russo One', 'Arial Black', Impact, sans-serif", 400),
 	};
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -72,18 +74,24 @@ public static class ThemeStyles
 			"speedlines", "court", "hazard", "sigil",
 			"sumi", "benday", "filmgrain", "starburst",
 			"rain", "outrun", "galaxy", "readout",
+			"armor-panels",
+			"sunburst-rays",
 		],
 		[Ornament] = ["none", "rule", "diamond", "fleuron", "star", "brackets", "cross", "heart", "lotus", "deco", "double", "block",
 			"twinkle", "blossom", "encore", "doodle",
 			"exclaim", "varsity", "warning", "cursor",
 			"hanko", "pow", "vaudeville", "bolt",
 			"slash", "sunset", "insignia", "segments",
+			"tricolor",
+			"battlecry",
 		],
 		[Frame] = ["plain", "double", "corners", "glow", "inset", "filigree", "engraved", "drip", "tape", "bar", "deco", "halo", "scallop",
 			"ribbon", "bloom", "stage", "washi",
 			"panel", "jersey", "chamfer", "status",
 			"shoji", "inked", "titlecard", "chunky",
 			"glitch", "neon", "hull", "elbow",
+			"plating",
+			"chrome-armor",
 		],
 		[Titles] = ["normal", "caps", "italic", "slant", "wide"],
 		[Effect] = ["none", "glow", "gilt", "emboss", "ember", "bleed",
@@ -91,12 +99,16 @@ public static class ThemeStyles
 			"inked", "varsity", "stencil", "pixel",
 			"lantern", "inkpop", "cartoon", "toybox",
 			"rgbsplit", "retro", "console",
+			"decal",
+			"blazing",
 		],
 		[Imagery] = ["natural", "tint", "sepia", "mono", "noir",
 			"pastel", "airy", "spotlit", "sunny",
 			"ink", "floodlit", "steel", "vivid",
 			"indigo", "print", "film", "cel",
 			"neon", "dusk", "warm",
+			"hangar",
+			"hotblooded",
 		],
 	};
 
@@ -166,6 +178,9 @@ public static class ThemeStyles
 			"insignia" => ("\"\\2501\\25C6\"", "\"\\25C6\\2501\"", Fade(accent)),
 			"segments" => (Glyph("25AC"), "none", $"linear-gradient(90deg, {accent.Hex} 0 46%, {Rgba(accent, 0)} 46% 49%, {ConsoleLavender.Hex} 49% 70%, "
 				+ $"{Rgba(accent, 0)} 70% 73%, {ConsolePeach.Hex} 73% 86%, {Rgba(accent, 0)} 86% 89%, {ConsolePeriwinkle.Hex} 89%)"),
+			"tricolor" => (Glyph("25E5"), "none", $"linear-gradient(90deg, {accent.Hex} 0 58%, {Rgba(accent, 0)} 58% 61%, {RealRobotRed.Hex} 61% 76%, "
+				+ $"{Rgba(accent, 0)} 76% 79%, {RealRobotYellow.Hex} 79% 90%, {Rgba(accent, 0)} 90%)"),
+			"battlecry" => (Glyph("BB"), Glyph("AB"), $"linear-gradient(90deg, {SuperRobotGold.Hex} 0 34%, {SuperRobotOrange.Hex} 34% 62%, {SuperRobotCrimson.Hex} 62% 86%, {Rgba(SuperRobotCrimson, 0)})"),
 			_ => ("none", "none", "none"),
 		};
 		css["ornament-before"] = before;
@@ -225,6 +240,9 @@ public static class ThemeStyles
 			"hull" => (HullPlate(accent), "solid", "1px",
 				"inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -2px 0 rgba(0,0,0,0.45), 0 8px 20px rgba(0,0,0,0.55)"),
 			"elbow" => (ElbowFrame(accent), "none", "0px", "none"),
+			"plating" => (RealRobotPlating(accent, border, text), "solid", "0px", "none"),
+			"chrome-armor" => (SuperRobotArmor(accent), "outset", "3px",
+				$"inset 0 2px 0 rgba(255,255,255,0.22), inset 0 -3px 0 rgba(0,0,0,0.5), 0 5px 0 #050102, 0 14px 30px rgba(0,0,0,0.7), 0 0 22px {Rgba(SuperRobotCrimson, 0.18)}"),
 			_ => ((string?)null, "solid", "1px", "none"),
 		};
 		// A card's background: the frame's marks, then the page's grain where the page has one, then the surface.
@@ -270,6 +288,8 @@ public static class ThemeStyles
 			"rgbsplit" => ("var(--text)", $"-2px 0 0 {Rgba(NeonCyan, 0.8)}, 2px 0 0 {Rgba(accent, 0.8)}, 0 0 16px {Rgba(accent, 0.35)}"),
 			"retro" => ("var(--text)", $"0 0 2px {Rgba(accent, 0.9)}, 0 2px 0 {accent.Hex}, 0 3px 0 {Rgba(SunOrange, 0.7)}, 0 0 14px {Rgba(accent, 0.7)}, 0 0 30px {Rgba(SunOrange, 0.35)}"),
 			"console" => (accent.Hex, "none"),
+			"decal" => (accent.Hex, $"0.05em 0.05em 0 {Rgba(RealRobotRed, 0.85)}"),
+			"blazing" => (accent.Hex, $"2px 2px 0 {SuperRobotEmber.Hex}, 3px 3px 0 {SuperRobotEmber.Hex}, 4px 4px 0 #000, 0 0 10px {Rgba(SuperRobotOrange, 0.7)}, 0 0 26px {Rgba(SuperRobotCrimson, 0.6)}"),
 			_ => ("var(--text)", "none"),
 		};
 
@@ -294,6 +314,8 @@ public static class ThemeStyles
 			"neon" => "saturate(1.8) contrast(1.15) brightness(0.9) hue-rotate(-25deg)",
 			"dusk" => "grayscale(1) sepia(1) hue-rotate(255deg) saturate(2.6) contrast(1.05)",
 			"warm" => "sepia(0.25) saturate(1.3) contrast(1.1) brightness(0.95)",
+			"hangar" => "saturate(1.15) contrast(1.12) brightness(1.05) hue-rotate(-6deg)",
+			"hotblooded" => "sepia(0.18) saturate(1.5) contrast(1.18) hue-rotate(-8deg)",
 			_ => "none",
 		};
 
@@ -543,6 +565,12 @@ public static class ThemeStyles
 				"100% 100%, 100% 100%, 200px 200px, 320px 320px, 530px 530px"),
 			// A console's quiet readout: coloured segments stacked down the page's right edge.
 			"readout" => (Readout(accent), "100% 100%"),
+			// Armour panels: a mobile suit's pale plating, engraved panel lines with a lit edge, hatches, and small maintenance decals.
+			"armor-panels" => ($"linear-gradient(170deg, rgba(255,255,255,{(dark ? "0.03" : "0.55")}), rgba(255,255,255,0) 45%), {RealRobotPanels(ink, accent, dark)}",
+				"100% 100%, 560px 420px"),
+			// A super robot's finishing-move backdrop: red, orange and gold rays bursting from below the page, a crimson blaze, and drifting embers.
+			"sunburst-rays" => ($"{SuperRobotRays()}, radial-gradient(110% 70% at 50% 108%, {Rgba(SuperRobotCrimson, 0.38)}, {Rgba(SuperRobotCrimson, 0)} 70%), {SuperRobotEmbers()}",
+				"100% 100%, 100% 100%, 340px 340px"),
 			_ => ("none", "auto"),
 		};
 	}
@@ -1048,5 +1076,145 @@ public static class ThemeStyles
 			$"{Bar(ConsolePeach)} right 0 top 0 / 56px 8px no-repeat",
 			$"{Bar(accent)} left 0 top 60px / 8px max(0px, calc(100% - 94px)) no-repeat",
 			$"{Bar(ConsolePeriwinkle)} left 0 bottom 0 / 8px 30px no-repeat");
+	}
+	/// <summary>The signal red and yellow a real-robot mobile suit carries beside its blue.</summary>
+	private static readonly ThemeColor RealRobotRed = new(214, 32, 42);
+
+	private static readonly ThemeColor RealRobotYellow = new(247, 196, 0);
+
+	/// <summary>A mobile suit's plating: panel lines engraved with a lit lower edge, a hatch, a no-step box, caution triangles and part-number ticks.</summary>
+	private static string RealRobotPanels(ThemeColor ink, ThemeColor accent, bool dark)
+	{
+		const string seams = "M0 120H200L230 150H400L430 120H560M0 330H90L110 350H330L350 330H560"
+			+ "M120 0V120M120 350V420M300 150V350M480 0V120M480 330V420"
+			+ "M392 200H480V268L468 280H380V212Z";
+		string Ticks(double x, double y, double alpha)
+		{
+			int[] widths = [3, 1, 1, 2, 1, 3, 1, 2, 1, 1, 3];
+			var starts = widths.Select((w, i) => widths.Take(i).Sum(v => v + 1.2));
+			var rects = string.Concat(widths.Zip(starts, (w, start) => $"<rect x='{F(x + start)}' y='{F(y)}' width='{w}' height='5'/>"));
+			return $"<g fill='{ink.Hex}' fill-opacity='{F(alpha)}'>{rects}</g>";
+		}
+
+		string Caution(double x, double y) =>
+			$"<path d='M{F(x)} {F(y + 11)}L{F(x + 6.5)} {F(y)}L{F(x + 13)} {F(y + 11)}Z' fill='{RealRobotYellow.Hex}' fill-opacity='0.8' stroke='{ink.Hex}' stroke-opacity='0.45' stroke-width='0.7'/>"
+			+ $"<rect x='{F(x + 6)}' y='{F(y + 3.6)}' width='1' height='4' fill='{ink.Hex}' fill-opacity='0.7'/><rect x='{F(x + 6)}' y='{F(y + 8.4)}' width='1' height='1' fill='{ink.Hex}' fill-opacity='0.7'/>";
+
+		var line = dark ? 0.24 : 0.2;
+		var lit = dark ? 0.05 : 0.85;
+		return Svg($"<g fill='none' stroke-width='1'><path d='{seams}' stroke='white' stroke-opacity='{F(lit)}' transform='translate(1 1)'/>"
+			+ $"<path d='{seams}' stroke='{ink.Hex}' stroke-opacity='{F(line)}'/>"
+			+ $"<circle cx='190' cy='250' r='13' stroke='{ink.Hex}' stroke-opacity='{F(line)}'/><circle cx='190' cy='250' r='9' stroke='{ink.Hex}' stroke-opacity='{F(line * 0.8)}' stroke-dasharray='2 2.7'/>"
+			+ $"<rect x='150.5' y='40.5' width='110' height='50' stroke='{ink.Hex}' stroke-opacity='{F(line * 0.75)}' stroke-dasharray='5 3'/>"
+			+ $"<circle cx='520' cy='190' r='5' stroke='{ink.Hex}' stroke-opacity='0.3'/></g>"
+			+ $"<path d='M520 186.5L522.5 190H517.5Z' fill='{ink.Hex}' fill-opacity='0.35'/>"
+			+ $"<g fill='{ink.Hex}' fill-opacity='0.22'><rect x='40' y='196' width='32' height='3' rx='1.5'/><rect x='40' y='204' width='32' height='3' rx='1.5'/><rect x='40' y='212' width='32' height='3' rx='1.5'/></g>"
+			+ Caution(316, 160) + Caution(48, 360)
+			+ Ticks(14, 128, 0.3) + Ticks(438, 340, 0.28) + Ticks(158, 98, 0.22)
+			+ $"<rect x='400' y='286' width='16' height='3' fill='{RealRobotRed.Hex}' fill-opacity='0.6'/>"
+			+ $"<rect x='308' y='300' width='3' height='3' fill='{accent.Hex}' fill-opacity='0.6'/><rect x='313' y='300' width='3' height='3' fill='{accent.Hex}' fill-opacity='0.6'/>"
+			+ $"<path d='M236 360L242 352H248L242 360ZM244 360L250 352H256L250 360Z' fill='{RealRobotYellow.Hex}' fill-opacity='0.75'/>", 560, 420);
+	}
+
+	/// <summary>An armour-plate card: corners cut on the bevel, an engraved panel line inside the edge, a blue tab, a red chin plate and yellow vents.</summary>
+	private static string RealRobotPlating(ThemeColor accent, ThemeColor border, ThemeColor text)
+	{
+		var edge = $"linear-gradient({border.Hex}, {border.Hex})";
+		var panel = $"linear-gradient({Rgba(border, 0.75)}, {Rgba(border, 0.75)})";
+		var bevel = Svg($"<path d='M6 0L24 18' stroke='{border.Hex}' stroke-width='1.4'/><path d='M3.9 5L19 20.1' stroke='{Rgba(border, 0.75)}' stroke-width='1'/>", 24, 24);
+		var bevelTurned = Svg($"<g transform='rotate(180 12 12)'><path d='M6 0L24 18' stroke='{border.Hex}' stroke-width='1.4'/><path d='M3.9 5L19 20.1' stroke='{Rgba(border, 0.75)}' stroke-width='1'/></g>", 24, 24);
+		var tab = Svg($"<path d='M0 0H50L44 6H0Z' fill='{accent.Hex}'/><path d='M54 0H66L60 6H48Z' fill='{RealRobotRed.Hex}'/>", 66, 6);
+		var chin = Svg($"<path d='M0 5L4 0H30L34 5Z' fill='{RealRobotRed.Hex}'/>", 34, 5);
+		var vents = Svg(string.Concat(Enumerable.Range(0, 3).Select(i =>
+			$"<path d='M{F(i * 7 + 0.5)} 8.5L{F(i * 7 + 4.5)} 0.5H{F(i * 7 + 8)}L{F(i * 7 + 4)} 8.5Z' fill='{RealRobotYellow.Hex}' stroke='{Rgba(text, 0.55)}' stroke-width='0.6'/>")), 24, 9);
+		var ticks = Svg(string.Concat(new[] { 0, 4, 6, 8, 12, 14, 18, 20, 22 }.Select((x, i) =>
+			$"<rect x='{x}' y='0' width='{(i % 3 == 0 ? 3 : 1)}' height='5' fill='{text.Hex}' fill-opacity='0.3'/>")), 26, 5);
+		return string.Join(", ",
+			$"{tab} left 14px top 0 / 66px 6px no-repeat",
+			$"{chin} center bottom / 34px 5px no-repeat",
+			$"{vents} right 14px bottom 10px / 24px 9px no-repeat",
+			$"{ticks} right 46px bottom 12px / 26px 5px no-repeat",
+			$"{bevel} right top / 24px 24px no-repeat", $"{bevelTurned} left bottom / 24px 24px no-repeat",
+			"linear-gradient(225deg, var(--bg) 0 50%, rgba(0,0,0,0) 50%) right top / 18px 18px no-repeat",
+			"linear-gradient(45deg, var(--bg) 0 50%, rgba(0,0,0,0) 50%) left bottom / 18px 18px no-repeat",
+			$"{edge} left top / calc(100% - 18px) 1px no-repeat", $"{edge} right bottom / 1px calc(100% - 18px) no-repeat",
+			$"{edge} right bottom / calc(100% - 18px) 2px no-repeat", $"{edge} left top / 1px calc(100% - 18px) no-repeat",
+			$"{panel} left 5px top 5px / calc(100% - 25px) 1px no-repeat", $"{panel} left 5px top 5px / 1px calc(100% - 25px) no-repeat",
+			$"{panel} right 5px bottom 6px / calc(100% - 25px) 1px no-repeat", $"{panel} right 5px bottom 6px / 1px calc(100% - 26px) no-repeat",
+			$"linear-gradient(180deg, {Rgba(border, 0)} 55%, {Rgba(border, 0.2)}) 0 0 / 100% 100% no-repeat");
+	}
+	// A super robot's colours beside the theme's accent: armour red, flame orange, gold, and a scorched red for hard shadows.
+	private static readonly ThemeColor SuperRobotCrimson = new(0xd7, 0x22, 0x1c);
+	private static readonly ThemeColor SuperRobotOrange = new(0xff, 0x7a, 0x1a);
+	private static readonly ThemeColor SuperRobotGold = new(0xff, 0xc8, 0x2a);
+	private static readonly ThemeColor SuperRobotEmber = new(0x7a, 0x0c, 0x08);
+
+	/// <summary>A sunburst of red, orange and gold rays bursting up from below the foot of the page, fading as they rise.</summary>
+	private static string SuperRobotRays()
+	{
+		const int cx = 600, cy = 900, reach = 1500;
+		ThemeColor[] colors = [SuperRobotCrimson, SuperRobotOrange, SuperRobotGold, SuperRobotOrange];
+		var rays = new System.Text.StringBuilder();
+		const int count = 26;
+		for (var i = 0; i < count; i++)
+		{
+			var from = 180 + i * 180.0 / count;
+			var to = from + 180.0 / count * 0.55;
+			var (x1, y1) = Polar(reach, from);
+			var (x2, y2) = Polar(reach, to);
+			rays.Append($"<path d='M{cx} {cy}L{F(cx + x1)} {F(cy + y1)}L{F(cx + x2)} {F(cy + y2)}Z' fill='{colors[i % colors.Length].Hex}'/>");
+		}
+		var body = "<defs>"
+			+ $"<radialGradient id='r' gradientUnits='userSpaceOnUse' cx='{cx}' cy='{cy}' r='{reach}'><stop offset='0' stop-color='white'/>"
+			+ "<stop offset='0.3' stop-color='white' stop-opacity='0.7'/><stop offset='0.62' stop-color='white' stop-opacity='0'/></radialGradient>"
+			+ $"<mask id='m'><rect width='1200' height='900' fill='url(#r)'/></mask>"
+			+ $"<radialGradient id='c' gradientUnits='userSpaceOnUse' cx='{cx}' cy='{cy}' r='420'><stop offset='0' stop-color='{SuperRobotGold.Hex}' stop-opacity='0.55'/>"
+			+ $"<stop offset='0.45' stop-color='{SuperRobotOrange.Hex}' stop-opacity='0.22'/><stop offset='1' stop-color='{SuperRobotCrimson.Hex}' stop-opacity='0'/></radialGradient></defs>"
+			+ $"<g mask='url(#m)' fill-opacity='0.2'>{rays}</g>"
+			+ $"<circle cx='{cx}' cy='{cy}' r='420' fill='url(#c)'/>";
+		return Svg(body, 1200, 800, "0 0 1200 800", "xMidYMax slice");
+	}
+
+	/// <summary>Embers and sparks drifting over one tile, in gold and orange.</summary>
+	private static string SuperRobotEmbers()
+	{
+		var next = Scatter(19);
+		var body = new System.Text.StringBuilder();
+		for (var i = 0; i < 16; i++)
+		{
+			var (x, y) = (next() * 340, next() * 340);
+			var color = i % 3 == 0 ? SuperRobotGold : SuperRobotOrange;
+			var alpha = 0.18 + next() * 0.32;
+			if (i % 5 == 0)
+			{
+				// A spark: a short streak flying up and out.
+				body.Append($"<path d='M{F(x)} {F(y)}l{F(4 + next() * 5)} {F(-8 - next() * 8)}' stroke='{color.Hex}' stroke-opacity='{F(alpha)}' stroke-width='1.4' stroke-linecap='round'/>");
+			}
+			else
+			{
+				body.Append($"<circle cx='{F(x)}' cy='{F(y)}' r='{F(0.7 + next() * 1.3)}' fill='{color.Hex}' fill-opacity='{F(alpha)}'/>");
+			}
+		}
+		return Svg(body.ToString(), 340, 340);
+	}
+
+	/// <summary>
+	/// A super robot's armour card: a chrome trim along the top over a red band, red side plates, gold rivets in the
+	/// corners, a red chest-plate chevron hanging from the band, and a sheen falling off into shadow.
+	/// </summary>
+	private static string SuperRobotArmor(ThemeColor accent)
+	{
+		var rivet = $"<circle cx='8' cy='8' r='3' fill='{SuperRobotGold.Hex}' stroke='#000' stroke-opacity='0.6' stroke-width='0.8'/>"
+			+ "<circle cx='7.1' cy='7.1' r='1.1' fill='#fff6d0' fill-opacity='0.9'/>";
+		var chevron = Svg($"<path d='M2 0H16L33 13L50 0H64L33 22Z' fill='{SuperRobotCrimson.Hex}' stroke='{accent.Hex}' stroke-width='1.6' stroke-linejoin='miter'/>", 66, 24);
+		var chrome = "linear-gradient(180deg, #ffffff, #c3c8d3 30%, #5c616d 55%, #d9dee7 80%, #8a909c)";
+		return string.Join(", ",
+			Corners4(rivet, 16, 3),
+			$"{chevron} right 24px top 10px / 46px 17px no-repeat",
+			$"{chrome} left top / 100% 6px no-repeat",
+			$"linear-gradient({SuperRobotCrimson.Hex}, {SuperRobotEmber.Hex}) left 0 top 6px / 100% 4px no-repeat",
+			$"linear-gradient(90deg, {SuperRobotEmber.Hex}, {SuperRobotCrimson.Hex}) left top / 5px 100% no-repeat",
+			$"linear-gradient(270deg, {SuperRobotEmber.Hex}, {SuperRobotCrimson.Hex}) right top / 5px 100% no-repeat",
+			"linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 30%, rgba(0,0,0,0.28)) 0 0 / 100% 100% no-repeat");
 	}
 }

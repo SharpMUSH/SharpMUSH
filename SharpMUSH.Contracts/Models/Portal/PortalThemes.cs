@@ -237,8 +237,8 @@ public static class BuiltInThemes
 		["#0a1428", "#101d36", "#162644", "#0c172e", "#060d1c", "#eef3fb", "#a9b6cc", "#8d9bb4", "#25395f", "#1a2b4b", "#ff8c2e", "#ffd166", "#ff8a8a"],
 		display: "graduate", body: "ui", corners: "soft", texture: "court", ornament: "varsity", frame: "jersey", titles: "caps", effect: "varsity", imagery: "floodlit");
 
-	/// <summary>Mecha: a hangar of riveted gunmetal plates, hazard stripes, stencilled capitals in warning yellow, cut-corner armour cards.</summary>
-	public static readonly PortalTheme Mecha = Genre("mecha", "Mecha", dark: true,
+	/// <summary>Mechwarrior: a battle mech's hangar of riveted gunmetal plates, hazard stripes, stencilled capitals in warning yellow, cut-corner armour cards.</summary>
+	public static readonly PortalTheme Mechwarrior = Genre("mechwarrior", "Mechwarrior", dark: true,
 		["#16181b", "#1f2226", "#272b30", "#1a1c20", "#101113", "#e7e9eb", "#aab0b6", "#8f969d", "#3c434b", "#2b3036", "#ff6b1f", "#ffc62a", "#ff8a7a"],
 		display: "saira-stencil", body: "ui", corners: "razor", texture: "hazard", ornament: "warning", frame: "chamfer", titles: "caps", effect: "stencil", imagery: "steel");
 
@@ -285,13 +285,25 @@ public static class BuiltInThemes
 		["#000000", "#0b0a0f", "#16141c", "#060509", "#000000", "#f5e9da", "#cbbba8", "#a99a8b", "#2b2732", "#1a1820", "#ff9933", "#ffcc66", "#ff8a7a"],
 		display: "antonio", body: "ui", corners: "pill", texture: "readout", ornament: "segments", frame: "elbow", titles: "caps", effect: "console", imagery: "natural");
 
+	/// <summary>Real robot: a military mobile suit's white armour plating with panel lines and decals, blue with signal red and yellow, beveled plate cards.</summary>
+	public static readonly PortalTheme RealRobot = Genre("real-robot", "Real Robot", dark: false,
+		["#e4e8ee", "#fcfdfe", "#f0f3f7", "#e9edf2", "#1b3478", "#121a28", "#3b4658", "#4f5a6b", "#a3aebd", "#d3dae3", "#1a49b5", "#8a5a00", "#b8141e"],
+		display: "oxanium", body: "ui", corners: "sharp", texture: "armor-panels", ornament: "tricolor", frame: "plating", titles: "caps", effect: "decal", imagery: "hangar");
+
+	/// <summary>Super robot: a 1970s giant robot's finishing move, gold capitals blazing over a red and gold sunburst, cards of chrome-trimmed red armour.</summary>
+	public static readonly PortalTheme SuperRobot = Genre("super-robot", "Super Robot", dark: true,
+		["#160609", "#210c10", "#2c1116", "#19080b", "#080a1c", "#fff3e3", "#e0bfb0", "#c09a8e", "#8a8f9d", "#3a1a1e", "#ffc82a", "#ff9a3c", "#ff8f80"],
+		display: "russo", body: "ui", corners: "sharp", texture: "sunburst-rays", ornament: "battlecry", frame: "chrome-armor", titles: "slant", effect: "blazing", imagery: "hotblooded");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
 		Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
 		MagicalGirl, Shojo, Idol, SliceOfLife,
-		Shonen, Sports, Mecha, Isekai,
+		Shonen, Sports, Mechwarrior, Isekai,
 		Yokai, ComicBook, RubberHose, EightiesCartoon,
 		Cyberpunk, Synthwave, SpaceOpera, StarshipConsole,
+		RealRobot,
+		SuperRobot,
 	];
 
 	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
