@@ -2689,20 +2689,23 @@ In its first form, display the number of objects in the game broken down by obje
 
 Wizard-only. Reports where the world's disk goes, and what the version histories inside it hold. This is a SharpMUSH command; PennMUSH keeps its database in memory and has no file to report on.
 
-`@storage` alone reports four figures that are easy to confuse:
+`@storage` alone draws a panel. Its bars show:
 
-- the **map limit**, the most the world's file may ever grow to. It is a ceiling, not an allocation: it costs neither disk nor memory until it is used.
-- the **file length**, how far the file has grown.
-- what is **allocated on disk** for it, which can be less than its length.
-- the **live data** inside it, and the **free space** inside it that later writes will reuse.
+- **Map**: how far the world's file has grown against the map limit, the most it may ever grow to. The limit is a ceiling, not an allocation: it costs neither disk nor memory until it is used.
+- **File**: the live data inside the file. The rest is free space that later writes reuse.
+- **Feeds**: what feed lines, channel recall among them, take of the live data. A table below gives each feed kind's feeds, lines and size.
+- **Next run**: the free space the next `@backup` checks for, against what the backup disk has.
 
-Deleting things frees space inside the file for reuse. It never shrinks the file. The file only gets smaller when it is replaced with a compacted copy; `deploy/README.md` describes how to do that safely. The report then says what the next `@backup` needs: the copies kept, the size of the next copy, the free space a run checks for before it starts, and the most the backup directory holds during a run. It also gives the lines every feed holds and what they take on disk (`@feed/list` breaks that down by kind), and lists earlier worlds still on disk, such as the `.previous` world a promoted import replaced. Those are kept until you delete them. If a process that had the world open died while reading it, the report says how many of those readers the server has cleaned up since startup.
+Beside them are what the disk has allocated for the file (which can be less than its length), the free disk beside the world, the backup copies kept, and the size of the next copy and of the backup directory at the height of a run. Earlier worlds still on disk, such as the `.previous` world a promoted import replaced, are listed until you delete them. Notes at the bottom say when the next backup will not fit, when backups share the world's disk, and how many readers a dead process left behind have been cleaned up since startup.
 
-`@storage/history` counts the history the world keeps and gives each kind's retention policy:
+Deleting things frees space inside the file for reuse. It never shrinks the file. The file only gets smaller when it is replaced with a compacted copy; `deploy/README.md` describes how to do that safely.
+
+`@storage/history` draws a table of the history the world keeps: each kind's records, their size, how many streams hold them, and the kind's retention policy. The kinds are:
 
 - **wiki**: every revision of every wiki page and translation.
 - **scene.edits**: every version of every scene pose.
 - **scene.deleted**: poses deleted from a scene but still stored. Deleting a pose only hides it.
+- **audit**: the log of staff actions.
 
 A *stream* is one page's text in one language, or one pose.
 
