@@ -203,7 +203,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`INDEX:
         value: |-
-          [@@(no arguments — each namespace, clickable to its listing, with what it holds and how many pages)][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r1)),[ansi(h,Namespace)]%r[iter(u(%!/FUN`GET`NAMESPACES),cmdlink(%i0,+wiki/list %i0,Pages in %i0),%b,%r)],[ansi(h,Holds)]%r[iter(u(%!/FUN`GET`NAMESPACES),u(%!/FUN`GET`NSDESC,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,%r)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category <name>%b·%b+wiki/recent %[<n>%],Wiki,,u(%!/FUN`GET`FRAME))]
+          [@@(no arguments — each namespace, clickable to its listing, with what it holds and how many pages. What it holds is left out first on a narrow screen)][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r2%r1),grow,json(string,%r1)),[ansi(h,Namespace)]%r[iter(u(%!/FUN`GET`NAMESPACES),cmdlink(%i0,+wiki/list %i0,Pages in %i0),%b,%r)],[ansi(h,Holds)]%r[iter(u(%!/FUN`GET`NAMESPACES),u(%!/FUN`GET`NSDESC,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,%r)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category <name>%b·%b+wiki/recent %[<n>%],Wiki,,u(%!/FUN`GET`FRAME))]
         flags: [funsyntax]
 
       INC`DO`LISTING:
