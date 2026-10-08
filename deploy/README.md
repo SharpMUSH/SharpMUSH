@@ -16,6 +16,7 @@ Two entry points, pick one based on how you terminate TLS:
 | `docker-compose.prod.yml` | The stack: nats, connectionserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
 | `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports, hidden origin IP). See the Cloudflare section below. |
 | `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
+| `grafana/sharpmush-invocations.json` | Optional Grafana dashboard for function and command timings (see [Function and command timings](#function-and-command-timings)) |
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
 | `.gitignore` | Keeps your real `.env` out of git |
@@ -147,6 +148,42 @@ publish `4202` or add an equivalent `/ws` proxy route, in addition to publishing
 
 If you want to front the app with **Cloudflare** instead of Caddy, don't edit this file —
 use `docker-compose.cloudflare.yml` and follow the section below.
+
+## Function and command timings
+
+The server times every built-in function and command it runs and exports the times on `/metrics`
+(port 9092) as two histograms:
+
+| Metric | Labels |
+|--------|--------|
+| `sharpmush_function_invocation_duration_milliseconds` | `function_name`, `success` |
+| `sharpmush_command_invocation_duration_milliseconds` | `command_name`, `success` |
+
+A label holds the function's or command's registered name in capitals, whatever the caller typed:
+`exp()` is counted as `E` and `@pe` as `@PEMIT`. A call to a function that does not exist is
+counted as `(unknown)`, so players cannot add series by typing names. `@function` globals and
+`@command/add` commands appear under their own names. Softcode `$-commands` are not timed on their
+own; their time shows in the built-ins they run. A call's time includes every call nested inside it.
+
+For a function, `success` is `false` when the call errored, was refused, or hit a limit. A command is
+timed only once it starts running: one refused first (a bad switch, permission denied) is not
+counted at all, and `success` is `false` only when the command throws, not when it reports an error.
+
+The buckets run from 0.01 ms to 5 s in 1-2.5-5 steps. Each name that has been called adds 20
+series per `success` value.
+
+Useful queries:
+
+```
+# Slowest functions, 95th percentile
+topk(10, histogram_quantile(0.95, sum by (le, function_name) (rate(sharpmush_function_invocation_duration_milliseconds_bucket[5m]))))
+# Where the time goes: milliseconds spent per second, by command
+topk(10, sum by (command_name) (rate(sharpmush_command_invocation_duration_milliseconds_sum[5m])))
+```
+
+`grafana/sharpmush-invocations.json` is a dashboard with these and the call and failure rates for
+both. Import it in Grafana (Dashboards, New, Import) and pick the Prometheus data source that
+scrapes the server.
 
 ## Fronting with Cloudflare (`docker-compose.cloudflare.yml`)
 

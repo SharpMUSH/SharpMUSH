@@ -43,6 +43,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
+		// The registered name, never the name as typed: a typed name is free text, and every distinct
+		// label value is a series of its own in Prometheus. Null for prose, which is not a call.
+		string? measuredName = null;
 		var didPushFunction = false;
 		LimitExceededFlag? limitExceeded = null;
 		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
@@ -60,13 +63,17 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				if (userFunction is null)
 				{
 					if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+					{
+						measuredName = TelemetryService.UnknownFunction;
 						throw new RestrictedExpressionException();
+					}
 					if (!SharpMUSHParserVisitor.IsUnknownFunctionAnError(context))
 					{
 						// Not a function and not required to be one: the text is prose, not a call.
 						return await visitor.LiteralFunctionCall(context);
 					}
 
+					measuredName = TelemetryService.UnknownFunction;
 					success = false;
 					return new CallState(EvaluationDiagnostics.UnknownFunction(name, parser.FunctionLibrary), context.Depth());
 				}
@@ -75,6 +82,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			}
 
 			var definition = libraryMatch.LibraryInformation;
+			measuredName = definition.Attribute.Name.ToUpperInvariant();
 			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 			if ((EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
 				&& args.Length > EvaluationRestrictions.MaximumArguments)
@@ -326,7 +334,8 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			// A limit hit (invocation, recursion/call, or output size) aborts the invocation, so it is
 			// not a successful call even though it returned a value rather than throwing.
 			var limitHit = limitExceeded is { IsExceeded: true };
-			services.Telemetry?.RecordFunctionInvocation(name, elapsedMs, success && !limitHit);
+			if (measuredName is not null)
+				services.Telemetry?.RecordFunctionInvocation(measuredName, elapsedMs, success && !limitHit);
 		}
 	}
 

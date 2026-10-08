@@ -330,7 +330,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				finally
 				{
 					var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-					services.Telemetry?.RecordCommandInvocation(rootCommand, elapsedMs, commandSuccess);
+					// The registered name, not the abbreviation or case typed, so @pe and @PEMIT are one series.
+					services.Telemetry?.RecordCommandInvocation(libraryCommandDefinition.Attribute.Name.ToUpperInvariant(), elapsedMs, commandSuccess);
 				}
 
 				// %> is recorded before the after hook runs, so the hook reads the command's own output.
