@@ -605,7 +605,7 @@ public static class ThemeStyles
 	{
 		var petals = string.Concat(Enumerable.Range(0, 4).Select(i =>
 		{
-			var (px, py) = Polar(r * 0.42, i * 90);
+			var (px, py) = Polar(r * 0.42, i * 90.0);
 			return $"<circle cx='{F(px)}' cy='{F(py)}' r='{F(r * 0.36)}'/>";
 		}));
 		return Flower(x, y, turn, color, alpha, $"{petals}<circle r='{F(r * 0.1)}' fill-opacity='{F(alpha)}'/>");
@@ -741,22 +741,22 @@ public static class ThemeStyles
 		var g = new System.Text.StringBuilder("<circle r='350'/><circle r='318'/><circle r='306'/><circle r='160'/><circle r='146'/><circle r='40'/>");
 		for (var i = 0; i < 72; i++)
 		{
-			var (x0, y0) = Polar(322, i * 5);
-			var (x1, y1) = Polar(i % 3 == 0 ? 346 : 334, i * 5);
+			var (x0, y0) = Polar(322, i * 5.0);
+			var (x1, y1) = Polar(i % 3 == 0 ? 346 : 334, i * 5.0);
 			g.Append($"<path d='M{F(x0)} {F(y0)}L{F(x1)} {F(y1)}'/>");
 		}
 		for (var t = 0; t < 2; t++)
 		{
-			var p = Enumerable.Range(0, 3).Select(k => Polar(306, t * 60 - 90 + k * 120)).ToList();
+			var p = Enumerable.Range(0, 3).Select(k => Polar(306, t * 60.0 - 90 + k * 120.0)).ToList();
 			g.Append($"<path d='M{F(p[0].X)} {F(p[0].Y)}L{F(p[1].X)} {F(p[1].Y)}L{F(p[2].X)} {F(p[2].Y)}Z'/>");
 		}
 		for (var i = 0; i < 12; i++)
 		{
-			var (x0, y0) = Polar(40, i * 30);
-			var (x1, y1) = Polar(146, i * 30);
+			var (x0, y0) = Polar(40, i * 30.0);
+			var (x1, y1) = Polar(146, i * 30.0);
 			g.Append($"<path d='M{F(x0)} {F(y0)}L{F(x1)} {F(y1)}'/>");
 		}
-		var seals = string.Concat(Enumerable.Range(0, 6).Select(i => Polar(306, i * 60 - 90)).Select(p => $"<circle cx='{F(p.X)}' cy='{F(p.Y)}' r='18'/>"));
+		var seals = string.Concat(Enumerable.Range(0, 6).Select(i => Polar(306, i * 60.0 - 90)).Select(p => $"<circle cx='{F(p.X)}' cy='{F(p.Y)}' r='18'/>"));
 		var body = $"<g transform='translate(760 440)' fill='none' stroke-width='1.5'><g stroke='{ink.Hex}' stroke-opacity='0.11'>{g}</g>"
 			+ $"<g stroke='{accent.Hex}' stroke-opacity='0.22'>{seals}</g></g>";
 		return Svg(body, 1280, 800, "0 0 1280 800", "xMidYMid slice");
