@@ -84,11 +84,19 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 
 	/// <summary>
 	/// Where this render finds pictures: for a terminal that draws them, the shared store and what this
-	/// connection's terminal already holds; otherwise none, and every picture is its text art.
+	/// connection's terminal already holds; for an MXP client that draws <c>&lt;IMAGE&gt;</c>, the store alone,
+	/// for the size of each picture, so a figure keeps cells of the picture's shape for the client to draw it
+	/// in; otherwise none, and every picture is its text art.
 	/// </summary>
 	private RenderPictureSource? PicturesFor(RenderContext connection)
 	{
-		if (pictureStore is null || connectionPictures is null || connection.Capabilities.Format != OutputFormat.Ansi
+		if (pictureStore is null) return null;
+
+		// The MXP client fetches the picture itself; nothing is transmitted, so nothing is remembered as held.
+		if (connection.Capabilities.Format == OutputFormat.Mxp && MxpDrawsImages(connection.Capabilities.MxpSupported))
+			return new RenderPictureSource(pictureStore, new ConnectionPictures.Sent());
+
+		if (connectionPictures is null || connection.Capabilities.Format != OutputFormat.Ansi
 			|| (connection.Capabilities.Features & TerminalFeatures.Pictures) == 0)
 			return null;
 
@@ -96,6 +104,13 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 			connectionPictures.For($"{connection.Handle}:{connection.SessionId}",
 				connection.Capabilities.Features.HasFlag(TerminalFeatures.MovingPictures)));
 	}
+
+	/// <summary>
+	/// Whether an MXP client renders <c>&lt;IMAGE&gt;</c>: it said so, or has not been asked yet, which the MXP
+	/// render already treats as every element (<see cref="MxpWireFor"/>).
+	/// </summary>
+	private static bool MxpDrawsImages(string? supported) =>
+		supported is null || supported.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("IMAGE", StringComparer.OrdinalIgnoreCase);
 
 	private static RenderedOutput Render(string markup, RenderContext connection, bool prompt, RenderPictureSource? pictures)
 	{
