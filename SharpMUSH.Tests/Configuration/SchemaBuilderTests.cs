@@ -29,6 +29,30 @@ public class SchemaBuilderTests
 		await Assert.That(playerFlags.Component).IsEqualTo("stringlist");
 	}
 
+	/// <summary>A picture option is edited with the picture field, which shows it and offers the media library.</summary>
+	[Test]
+	[Arguments("Cosmetic.PortalLogo")]
+	[Arguments("Cosmetic.PortalFavicon")]
+	public async Task PictureProperty_UsesImageComponent(string path)
+	{
+		var property = BuildSchema().Properties[path];
+
+		await Assert.That(property.Type).IsEqualTo("string");
+		await Assert.That(property.Component).IsEqualTo("image");
+		await Assert.That(property.DefaultValue).IsEqualTo(string.Empty).Because("empty is the SharpMUSH logo");
+	}
+
+	[Test]
+	[Arguments("", true)]
+	[Arguments("/api/wiki-assets/abc/crest.png", true)]
+	[Arguments("https://example.com/crest.png", true)]
+	[Arguments("//example.com/crest.png", false)]
+	[Arguments("javascript:alert(1)", false)]
+	[Arguments("crest.png", false)]
+	[Arguments("/api/wiki-assets/abc/my crest.png", false)]
+	public async Task PicturePattern_TakesAServerPathOrAWebAddress(string value, bool valid)
+		=> await Assert.That(System.Text.RegularExpressions.Regex.IsMatch(value, PortalPicture.Pattern)).IsEqualTo(valid);
+
 	[Test]
 	public async Task StringArrayDictionaryProperty_UsesDictionaryComponent()
 	{

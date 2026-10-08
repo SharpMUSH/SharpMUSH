@@ -23,8 +23,9 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 	/// <param name="BuildId">The portal build this server serves (<see cref="PortalBuild"/>).</param>
 	/// <param name="ImageHosts">The <c>image_hosts</c> option, which the portal holds layout pictures to.</param>
 	/// <param name="ImageHostList">The <c>image_host_list</c> option.</param>
+	/// <param name="Logo">The <c>portal_logo</c> option; empty for the SharpMUSH logo.</param>
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string> Features, string BuildId,
-		string ImageHosts, string ImageHostList);
+		string ImageHosts, string ImageHostList, string Logo);
 
 	// Not rate-limited: every portal page load asks for this before it renders, and it reads options values,
 	// the installed-package registry and the (cached) guest roster. A limiter here only ever delayed the portal's boot.
@@ -32,5 +33,17 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 	public async Task<IActionResult> Get(CancellationToken ct = default)
 		=> Ok(new ServerInfoResponse(await guests.CanLogInAsync(ct), options.CurrentValue.Net.MudName,
 			await features.EnabledAsync(), build.Id,
-			options.CurrentValue.Cosmetic.ImageHosts ?? "any", options.CurrentValue.Cosmetic.ImageHostList ?? string.Empty));
+			options.CurrentValue.Cosmetic.ImageHosts ?? "any", options.CurrentValue.Cosmetic.ImageHostList ?? string.Empty,
+			options.CurrentValue.Cosmetic.PortalLogo?.Trim() ?? string.Empty));
+
+	/// <summary>
+	/// The portal's tab icon (<c>portal_favicon</c>, else <c>portal_logo</c>, else the SharpMUSH logo), as a
+	/// redirect. <c>index.html</c> and the startup page link here, so the icon is the game's before the portal boots.
+	/// </summary>
+	[HttpGet("favicon")]
+	public IActionResult Favicon()
+	{
+		Response.Headers.CacheControl = "no-cache";
+		return Redirect(PortalPicture.Favicon(options.CurrentValue.Cosmetic));
+	}
 }

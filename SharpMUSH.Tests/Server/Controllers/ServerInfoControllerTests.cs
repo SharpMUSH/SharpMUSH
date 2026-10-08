@@ -25,10 +25,14 @@ public class ServerInfoControllerTests
 		=> new OptionsService(Substitute.For<ISharpDatabase>(), []).Create(string.Empty);
 
 	private static ServerInfoController MakeController(bool guestsEnabled, string mudName = "SharpMUSH",
-		IReadOnlyList<string>? features = null)
+		IReadOnlyList<string>? features = null, string logo = "", string favicon = "")
 	{
 		var options = DefaultOptions();
-		options = options with { Net = options.Net with { Guests = guestsEnabled, MudName = mudName } };
+		options = options with
+		{
+			Net = options.Net with { Guests = guestsEnabled, MudName = mudName },
+			Cosmetic = options.Cosmetic with { PortalLogo = logo, PortalFavicon = favicon }
+		};
 
 		var wrapper = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		wrapper.CurrentValue.Returns(options);
@@ -89,5 +93,28 @@ public class ServerInfoControllerTests
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
 		await Assert.That(response.BuildId).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task Get_ReportsTheConfiguredLogo()
+	{
+		var result = await MakeController(guestsEnabled: true, logo: "/api/wiki-assets/a/logo.png").Get();
+
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.Logo).IsEqualTo("/api/wiki-assets/a/logo.png");
+	}
+
+	[Test]
+	[Arguments("", "", "/assets/Logo.svg")]
+	[Arguments("/api/wiki-assets/a/logo.png", "", "/api/wiki-assets/a/logo.png")]
+	[Arguments("/api/wiki-assets/a/logo.png", "https://example.com/icon.png", "https://example.com/icon.png")]
+	public async Task Favicon_RedirectsToTheFaviconThenTheLogoThenTheSharpMUSHLogo(string logo, string favicon, string expected)
+	{
+		var controller = MakeController(guestsEnabled: true, logo: logo, favicon: favicon);
+		controller.ControllerContext = new ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
+
+		var result = (RedirectResult)controller.Favicon();
+
+		await Assert.That(result.Url).IsEqualTo(expected);
 	}
 }

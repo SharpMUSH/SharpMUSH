@@ -1,0 +1,196 @@
+@using SharpMUSH.Client.Models.Configuration
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.DiscriminatedUnions
+@using Microsoft.AspNetCore.Components.Forms
+@using SharpMUSH.Library.Authorization
+@inject WikiAssetService AssetService
+@inject IAuthorizationService Authorization
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A picture option (SharpConfig Image): the picture it names, its address, and a gallery of the media
+   uploads to choose one from (media.admin) or add one to (media.upload). Empty previews what the portal
+   shows instead: portal_favicon falls back to portal_logo, and both to the SharpMUSH logo. *@
+<div class="cfg-image">
+    <div class="cfg-image-row">
+        <span class="cfg-image-preview" aria-hidden="true">
+            <img src="@ApiUrl.Resolve(Preview)" alt="" />
+        </span>
+        <input class="cfg-text" type="text" aria-label="@Label" aria-describedby="@DescribedBy"
+               placeholder="@Loc["AdmCfgImageDefault"]"
+               value="@Value"
+               readonly="@Property.ReadOnly"
+               @onchange="@(e => SetAsync(e.Value?.ToString()))" />
+        @if (_canList || _canUpload)
+        {
+            <button type="button" class="cfg-icon-btn" aria-expanded="@(_open ? "true" : "false")"
+                    aria-label="@Loc["AdmCfgImageChoose"]" title="@Loc["AdmCfgImageChoose"]"
+                    disabled="@Property.ReadOnly" @onclick="ToggleAsync">
+                <MudIcon Icon="@Icons.Material.Outlined.PhotoLibrary" Size="Size.Small" />
+            </button>
+        }
+        @if (!string.IsNullOrWhiteSpace(Value))
+        {
+            <button type="button" class="cfg-icon-btn" aria-label="@Loc["AdmCfgImageReset"]" title="@Loc["AdmCfgImageReset"]"
+                    disabled="@Property.ReadOnly" @onclick="@(() => SetAsync(string.Empty))">
+                <MudIcon Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" />
+            </button>
+        }
+    </div>
+
+    @if (_open)
+    {
+        <div class="cfg-image-gallery" role="group" aria-label="@Loc["AdmCfgImageChoose"]">
+            @if (_canUpload)
+            {
+                <div class="cfg-image-upload">
+                    <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                                   FilesChanged="@UploadAsync" MaximumFileCount="1" MaxFileSize="@MaxUploadBytes"
+                                   Disabled="_uploading" />
+                    @if (_uploading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    }
+                    @if (_error is not null)
+                    {
+                        <span class="cfg-row-error" role="alert">@_error</span>
+                    }
+                </div>
+            }
+            @if (_canList)
+            {
+                @if (_assets is null)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_assets.Count == 0)
+                {
+                    <span class="cfg-empty">@Loc["AdmCfgImageNone"]</span>
+                }
+                else
+                {
+                    <div class="cfg-image-grid">
+                        @foreach (var asset in _assets)
+                        {
+                            var picked = string.Equals(asset.Url, Value?.Trim(), StringComparison.Ordinal);
+                            <button type="button" class="cfg-image-tile @(picked ? "cfg-image-tile--on" : null)"
+                                    aria-pressed="@(picked ? "true" : "false")" title="@asset.FileName"
+                                    @onclick="@(() => PickAsync(asset.Url))">
+                                <img src="@ApiUrl.Resolve(asset.Url)" alt="" />
+                                <span>@asset.FileName</span>
+                            </button>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The server's upload limit (WikiAssetController).</summary>
+    private const long MaxUploadBytes = 10_485_760;
+
+    [Parameter, EditorRequired]
+    public PropertyMetadata Property { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ConfigDraft Draft { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? DescribedBy { get; set; }
+
+    /// <summary>Raised after an edit lands in <see cref="Draft"/>.</summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    /// <summary>The option portal_favicon falls back to when empty.</summary>
+    private const string LogoPath = "Cosmetic.PortalLogo";
+
+    private string? Value => Draft.String(Property);
+
+    /// <summary>The picture the portal shows for the draft value, following the empty fallbacks.</summary>
+    private string Preview
+    {
+        get
+        {
+            var shown = !string.IsNullOrWhiteSpace(Value) ? Value
+                : Property.Path == "Cosmetic.PortalFavicon" && Draft.Values.GetValueOrDefault(LogoPath) is string logo
+                    && !string.IsNullOrWhiteSpace(logo) ? logo
+                : null;
+            return shown ?? "assets/Logo.svg";
+        }
+    }
+
+    // The gallery lists through media.admin and uploads through media.upload; config.admin grants neither.
+    private bool _canList;
+    private bool _canUpload;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is null) return;
+        var user = (await AuthState).User;
+        _canList = (await Authorization.AuthorizeAsync(user, PortalPermission.MediaAdmin)).Succeeded;
+        _canUpload = (await Authorization.AuthorizeAsync(user, PortalPermission.MediaUpload)).Succeeded;
+    }
+
+    private bool _open;
+    private bool _uploading;
+    private string? _error;
+    private List<WikiAssetInfo>? _assets;
+
+    private async Task ToggleAsync()
+    {
+        _open = !_open;
+        if (_open && _canList && _assets is null)
+            _assets = [.. (await AssetService.ListAsync(take: 200)).Where(a => a.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))];
+    }
+
+    private async Task PickAsync(string url)
+    {
+        await SetAsync(url);
+        _open = false;
+    }
+
+    private Task SetAsync(string? value)
+    {
+        Draft.Set(Property, value?.Trim() ?? string.Empty);
+        return OnChanged.InvokeAsync();
+    }
+
+    private async Task UploadAsync(IBrowserFile? file)
+    {
+        if (file is null) return;
+        _uploading = true;
+        _error = null;
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxUploadBytes);
+            switch (await AssetService.UploadAsync(stream, file.Name, file.ContentType))
+            {
+                case UploadedAssetInfo info:
+                    _assets?.Insert(0, new WikiAssetInfo(info.Id, info.FileName, info.Url, info.ContentType, info.SizeBytes,
+                        string.Empty, string.Empty, DateTimeOffset.UtcNow));
+                    await PickAsync(info.Url);
+                    break;
+                case ApiFailure failure:
+                    _error = Loc["WkUploadFailed", failure.Message];
+                    break;
+            }
+        }
+        catch (IOException ex)
+        {
+            _error = Loc["WkUploadError", ex.Message];
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+}

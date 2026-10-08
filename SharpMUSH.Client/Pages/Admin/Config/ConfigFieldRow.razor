@@ -144,6 +144,10 @@
                 </button>
             </div>
         }
+        else if (Property.Component == "image")
+        {
+            <ConfigImageField Property="Property" Draft="Draft" Label="@DisplayName" DescribedBy="@DescribedBy" OnChanged="OnChanged" />
+        }
         else
         {
             var single = ConfigNaming.IsSingleChar(Property);
@@ -171,7 +175,7 @@
 
     private bool IsChanged => Draft.IsChanged(Property.Path);
 
-    private bool Stacked => Property.Component is "stringlist" or "dictionary";
+    private bool Stacked => Property.Component is "stringlist" or "dictionary" or "image";
 
     private string? HelpId =>
         string.IsNullOrEmpty(Property.Description) ? null : "cfg-help-" + ConfigNaming.Slug(Property.Path);

@@ -95,7 +95,7 @@ public static partial class SchemaBuilder
 				Group = attr.Group,
 				Order = attr.Order,
 				Type = GetPropertyTypeName(type),
-				Component = InferComponentType(type),
+				Component = attr.Image ? "image" : InferComponentType(type),
 				DefaultValue = ConfigAccessor.GetValue(defaults, propertyName),
 				Min = attr.Min,
 				Max = attr.Max,

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
 using SharpMUSH.Server;
@@ -140,6 +141,18 @@ public class PortalStartupPageTests
 
 		await Assert.That(html).DoesNotContain("<script>alert(1)</script>");
 		await Assert.That(html).Contains("&lt;script&gt;alert(1)&lt;/script&gt;");
+	}
+
+	[Test]
+	public async Task TheGamesPictures_ReplaceTheSharpMUSHLogo()
+	{
+		var cosmetic = SharpMUSHOptions.Default().Cosmetic with { PortalLogo = "/api/wiki-assets/a/logo.png", PortalFavicon = "" };
+		var html = PortalStartupPage.Render("Game", cosmetic);
+
+		await Assert.That(html).Contains("<img src=\"/api/wiki-assets/a/logo.png\"");
+		await Assert.That(html).Contains("<link rel=\"icon\" href=\"/api/wiki-assets/a/logo.png\"")
+			.Because("an empty portal_favicon falls back to portal_logo");
+		await Assert.That(PortalStartupPage.Render("Game")).Contains("<img src=\"/assets/Logo.svg\"");
 	}
 }
 

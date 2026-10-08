@@ -56,6 +56,13 @@ public class SharpConfigAttribute : Attribute
 	public bool Flag { get; set; }
 
 	/// <summary>
+	/// The option holds a picture's address: a path on this server (a media upload,
+	/// <c>/api/wiki-assets/...</c>) or an <c>http(s)</c> URL. The configuration page shows the picture
+	/// and lets staff choose one from the media gallery or upload one.
+	/// </summary>
+	public bool Image { get; set; }
+
+	/// <summary>
 	/// SharpMUSH reads the option from <c>mush.cnf</c> and acts on nothing it says; set when that is so,
 	/// to the sentence naming what decides it instead (a deployment setting, or a fixed value). The
 	/// configuration page marks the field with it.

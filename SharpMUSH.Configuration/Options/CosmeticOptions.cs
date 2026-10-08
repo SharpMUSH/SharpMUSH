@@ -184,5 +184,46 @@ public record CosmeticOptions(
 		Group = "Layout",
 		Order = 4,
 		Tooltip = "For example: i.imgur.com *.example.com. A *. entry covers every subdomain.")]
-	string ImageHostList
+	string ImageHostList,
+
+	[property: SharpConfig(
+		Name = "portal_logo",
+		Category = "Cosmetic",
+		Description = "Picture at the top left of the web portal; empty for the SharpMUSH logo",
+		ValidationPattern = PortalPicture.Pattern,
+		Image = true,
+		Group = "Portal",
+		Order = 1,
+		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown square, at 26 pixels. "
+			+ "The SharpMUSH logo takes the theme's accent colour; a picture of your own is shown as it is.")]
+	string PortalLogo,
+
+	[property: SharpConfig(
+		Name = "portal_favicon",
+		Category = "Cosmetic",
+		Description = "Browser tab icon for the web portal; empty to use portal_logo",
+		ValidationPattern = PortalPicture.Pattern,
+		Image = true,
+		Group = "Portal",
+		Order = 2,
+		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. When both this and portal_logo "
+			+ "are empty, the tab shows the SharpMUSH logo. Browsers keep a tab icon for a while, so a change "
+			+ "can take a reload to show.")]
+	string PortalFavicon
 );
+
+/// <summary>What <c>portal_logo</c> and <c>portal_favicon</c> hold, and what the portal shows when they are empty.</summary>
+public static class PortalPicture
+{
+	/// <summary>Empty, a path on this server, or an http(s) address, with no spaces.</summary>
+	public const string Pattern = @"^(|/[^/\s]\S*|https?://\S+)$";
+
+	/// <summary>The SharpMUSH logo, which the portal serves itself.</summary>
+	public const string DefaultLogo = "/assets/Logo.svg";
+
+	/// <summary>The tab icon for the configured pictures: the favicon, else the logo, else the SharpMUSH logo.</summary>
+	public static string Favicon(CosmeticOptions cosmetic) =>
+		NonEmpty(cosmetic.PortalFavicon) ?? NonEmpty(cosmetic.PortalLogo) ?? DefaultLogo;
+
+	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
