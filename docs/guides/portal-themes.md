@@ -134,7 +134,7 @@ the sign to double it.
 | Group | Properties |
 |---|---|
 | Surfaces | `--bg`, `--surface`, `--surface-2`, `--surface-3`, `--rail-bg`, `--card-bg` (may be a gradient or layered images), `--code-bg` |
-| Text | `--text`, `--text-dim`, `--text-faint`, `--title-color`, `--code-text` |
+| Text | `--text`, `--text-dim`, `--text-faint`, `--rail-ink` (rail icons, derived from `--text-dim` so they read on the rail), `--title-color`, `--code-text` |
 | Lines | `--border`, `--border-soft` |
 | Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill) |
 | Status | `--warn`, `--link-missing`, `--danger`, `--success`, `--info`, `--special` |

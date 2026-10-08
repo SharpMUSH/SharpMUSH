@@ -569,6 +569,7 @@ public static class ThemeResolver
 		var surface3 = Get(ThemeTokens.Surface3);
 		var rail = Get(ThemeTokens.Rail);
 		var warn = Get(ThemeTokens.Warn);
+		var textDim = Get(ThemeTokens.TextDim);
 
 		tokens["accent-dim"] = accent.Mix(ThemeColor.Black, 0.22).Hex;
 		tokens["accent-on"] = OnAccent(accent).Hex;
@@ -576,6 +577,9 @@ public static class ThemeResolver
 		tokens["warn-tint"] = $"rgba({warn.Triple}, 0.14)";
 		tokens["unread-alert"] = tokens[ThemeTokens.LinkMissing];
 		tokens["mud-palette-background-gradient"] = $"radial-gradient(120% 100% at 80% -10%, {surface.Mix(bg, 0.1).Hex} 0%, {bg.Hex} 55%)";
+		// The rail's icons: secondary text where it reads on the rail, else moved toward whichever of white or black the rail
+		// sets off better. A light theme may have a dark or coloured rail, where its dark secondary text would vanish.
+		tokens["rail-ink"] = ReadableAgainst(textDim, ThemeColor.Contrast(ThemeColor.White, rail) > ThemeColor.Contrast(ThemeColor.Black, rail), ThemeTokens.TextContrast, rail).Hex;
 		tokens["mud-palette-navbar-gradient"] = $"linear-gradient(90deg, {surface3.Hex} 0%, {surface3.Mix(rail, 0.5).Hex} 100%)";
 
 		if (dark)

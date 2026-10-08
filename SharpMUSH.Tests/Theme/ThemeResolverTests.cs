@@ -97,6 +97,17 @@ public class ThemeResolverTests
 	}
 
 	[Test]
+	public async Task RailIconsReadOnEveryBuiltInThemesRail()
+	{
+		foreach (var builtIn in BuiltInThemes.All)
+		{
+			var theme = ThemeResolver.Resolve(builtIn);
+			await Assert.That(ThemeColor.Contrast(ThemeColor.Parse(theme.Token("rail-ink")), ThemeColor.Parse(theme.Token(ThemeTokens.Rail))))
+				.IsGreaterThanOrEqualTo(ThemeTokens.TextContrast).Because(builtIn.Name);
+		}
+	}
+
+	[Test]
 	public async Task AMalformedAccentLeavesTheThemesOwn()
 	{
 		var theme = ThemeResolver.Resolve(BuiltInThemes.Daylight, "not a colour");

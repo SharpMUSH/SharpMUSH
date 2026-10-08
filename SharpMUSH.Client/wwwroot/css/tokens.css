@@ -332,6 +332,7 @@
 
 	/* ── surfaces ── */
 	--rail-bg: #0a0b0c;             /* icon rail, darker than --surface-3 (page sidebar) */
+	--rail-ink: #9aa3ab;            /* rail icons: --text-dim, moved until it reads 4.5:1 on --rail-bg */
 
 	/* ── text roles ── */
 	--text-over-image: #e9edf0;     /* primary lines and glass controls over banner images; not themed, as the scrim under them is always dark */

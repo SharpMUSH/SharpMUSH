@@ -71,6 +71,7 @@ public static partial class ThemeStylesheet
 			(ThemeTokens.Text, "Body text."),
 			(ThemeTokens.TextDim, "Secondary text."),
 			(ThemeTokens.TextFaint, "Hints and timestamps."),
+			("rail-ink", "Icons on the icon rail; derived from secondary text so it reads on the rail."),
 			("title-color", "Page and card titles."),
 			("code-text", "Text in code blocks."),
 		]),
