@@ -327,7 +327,7 @@ public class FeedCommandTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task Rename_MovesLinesAndMembers_AndMergesIntoAFeedAlreadyThere()
+	public async Task Rename_MovesLinesAndMembers_AndMergesIntoAFeedAlreadyThereOnlyWithOverride()
 	{
 		await Heard(_system, $"@feed/join {_kind}/old={Ref(_ann)}");
 		await Heard(_system, $"@feed/send {_kind}/old=one");
@@ -342,7 +342,10 @@ public class FeedCommandTests : ServerTestBase
 
 		await Heard(_system, $"@feed/join {_kind}/other={Ref(_bo)}");
 		await Heard(_system, $"@feed/send {_kind}/other=three");
-		await Heard(_system, $"@feed/rename {_kind}/other=new");
+		await Assert.That(await Heard(_system, $"@feed/rename {_kind}/other=new")).Contains("@feed/rename/override merges");
+		await Assert.That(await EvalAs(_system.DbRef, $"words(feedrecall({_kind}/new,0))")).IsEqualTo("2");
+		await Assert.That(await Heard(_system, $"@feed/join/override {_kind}/new={Ref(_bo)}")).Contains("/override goes with @feed/rename");
+		await Heard(_system, $"@feed/rename/override {_kind}/other=new");
 		await Assert.That(await EvalAs(_system.DbRef, $"iter(feedrecall({_kind}/new,0),feedmsg(##,text))")).IsEqualTo("one two three");
 		await Assert.That(await EvalAs(_system.DbRef, $"words(feedwho({_kind}/new))")).IsEqualTo("2");
 
