@@ -78,7 +78,7 @@ To take a permission away from one object, use an override (`@permission/deny`).
 | 0 | guest | `game.guest` |
 | 0 | everyone | `wiki.read` |
 
-`approved` marks a character that has met the game's own bar for full participation. Nothing in the engine assigns it; a game assigns it when its own bar is met (a finished chargen, a staff review), with `@role/assign <player>=approved`. Writing and editing the wiki comes with it: a player who is not approved reads the wiki but cannot change any page, their own character's biography and gallery included. Staff get the same through `wiki.admin` (royalty, moderator) or every permission (wizard).
+`approved` marks a character that has met the game's own bar for full participation. Nothing in the engine assigns it; a game assigns it when its own bar is met (a finished chargen, a staff review), with `@role/assign <player>=approved`. Writing and editing the wiki comes with it: by default a player who is not approved reads the wiki but cannot change any page, their own character's biography and gallery included, unless another role or an override (see [@permission]) allows it. Staff get the same through `wiki.admin` (royalty, moderator) or every permission (wizard).
 
 `helper` and `moderator` are ordinary roles: assign them with `@role/assign`, and edit or delete them as you like. They are created only in a new game.
 

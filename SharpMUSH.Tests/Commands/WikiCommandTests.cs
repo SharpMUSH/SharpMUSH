@@ -92,9 +92,9 @@ public class WikiCommandTests
 			MarkupText.Plain($"@wiki/create Character:{player.Name}=# {player.Name}"));
 		await ExpectNotify(player.DbRef, "needs wiki.create");
 
-		var bio = $"Unapproved Bio {Guid.NewGuid():N}";
-		await WebAppFactoryArg.Services.GetRequiredService<IWikiService>().CreateAsync(bio, "body", "#1", WikiNamespace.Character);
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/edit Character:{bio}=changed"));
+		// Staff wrote the biography; its own character still may not edit it.
+		await WebAppFactoryArg.Services.GetRequiredService<IWikiService>().CreateAsync(player.Name, "body", "#1", WikiNamespace.Character);
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/edit Character:{player.Name}=changed"));
 		await ExpectNotify(player.DbRef, "needs wiki.edit");
 	}
 
