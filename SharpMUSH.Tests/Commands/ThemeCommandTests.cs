@@ -120,6 +120,50 @@ public class ThemeCommandTests
 	}
 
 	[Test]
+	public async Task Theme_WorkingOutToNothing_IsTheGamesTheme()
+	{
+		var (player, parent) = await PlayerWithParent();
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Run(player, $"@theme {parent}=[switch(get(%#/FACTION),Rebel,horror)]");
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+		var unaligned = await InUse(player);
+		await Run(player, "&FACTION me=Rebel");
+
+		await Assert.That(told).Contains("Theme set.");
+		await Assert.That(unaligned).IsEqualTo(ErrorMessages.Notifications.ThemeNoneInUse);
+		await Assert.That(await InUse(player)).IsEqualTo("Theme in use: horror");
+	}
+
+	[Test]
+	public async Task Theme_InAModeWorkingOutToNothing_IsRefused()
+	{
+		var (player, _) = await PlayerWithParent();
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Run(player, "@theme/light me=[switch(get(%#/FACTION),Rebel,horror)]");
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(told).Contains(ErrorMessages.Notifications.ThemeModeNeedsTheme);
+		await Assert.That(await InUse(player)).IsEqualTo(ErrorMessages.Notifications.ThemeNoneInUse);
+	}
+
+	[Test]
+	public async Task Theme_SetBeforeTheParent_IsInherited()
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ThemeRoom"), god));
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "Themer", home);
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>();
+		var room = (await Mediator.Send(new GetObjectNodeQuery(home))).Expect<SharpRoom>();
+		var parent = await Mediator.Send(new CreateThingCommand(TestIsolationHelpers.GenerateUniqueName("Faction"), room, owner, room));
+		await Run(player, $"@theme {parent}=nord");
+		var unparented = await InUse(player);
+		await Run(player, $"@parent me={parent}");
+
+		await Assert.That(unparented).IsEqualTo(ErrorMessages.Notifications.ThemeNoneInUse);
+		await Assert.That(await InUse(player)).IsEqualTo("Theme in use: nord");
+	}
+
+	[Test]
 	public async Task Theme_WithNoneSet_SaysSo()
 	{
 		var (player, _) = await PlayerWithParent();
