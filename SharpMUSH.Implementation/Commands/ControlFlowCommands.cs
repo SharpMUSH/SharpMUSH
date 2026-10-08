@@ -684,23 +684,22 @@ public partial class Commands
 
 				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Truthy(parser):
-				// The action is a command list, run as it was written: evaluating it here as well evaluated it
-				// twice, so @assert 0=@pemit me=\[X\] said X, and a notice()'s [SOURCE] badge lost its brackets.
-				// RSBrace keeps the outer braces of {action}; they come off here, as @wait does.
+				// The action list runs as commands, which evaluate it as they go (PennMUSH do_break). Evaluating it
+				// here first made a second pass, so text a player typed (%0) ran as code with the object's powers.
 				var command = HelperFunctions.StripOuterBraces(args["1"].Message!);
 
 				if (useQueue)
 				{
 					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
 					await Mediator.Send(new AdmitCommandListRequest(
-						command!,
+						command,
 						parser.CurrentState,
 						new DbRefAttribute(executor, ["BREAK"]),
 						-1), ExecutionBudget.CurrentToken);
 				}
 				else
 				{
-					var commandList = parser.CommandListParseVisitor(command!);
+					var commandList = parser.CommandListParseVisitor(command);
 					hadErrors |= (await commandList())?.HadErrors == true;
 				}
 
@@ -741,23 +740,22 @@ public partial class Commands
 
 				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Falsy(parser):
-				// The action is a command list, run as it was written: evaluating it here as well evaluated it
-				// twice, so @assert 0=@pemit me=\[X\] said X, and a notice()'s [SOURCE] badge lost its brackets.
-				// RSBrace keeps the outer braces of {action}; they come off here, as @wait does.
+				// The action list runs as commands, which evaluate it as they go (PennMUSH do_break). Evaluating it
+				// here first made a second pass, so text a player typed (%0) ran as code with the object's powers.
 				var command = HelperFunctions.StripOuterBraces(args["1"].Message!);
 
 				if (useQueue)
 				{
 					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
 					await Mediator.Send(new AdmitCommandListRequest(
-						command!,
+						command,
 						parser.CurrentState,
 						new DbRefAttribute(executor, ["ASSERT"]),
 						-1), ExecutionBudget.CurrentToken);
 				}
 				else
 				{
-					var commandList = parser.CommandListParseVisitor(command!);
+					var commandList = parser.CommandListParseVisitor(command);
 					hadErrors |= (await commandList())?.HadErrors == true;
 				}
 
