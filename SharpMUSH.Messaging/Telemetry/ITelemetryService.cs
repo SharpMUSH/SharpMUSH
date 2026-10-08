@@ -11,17 +11,21 @@ public interface ITelemetryService
 	/// Records the time taken to invoke a function.
 	/// </summary>
 	/// <param name="functionName">Name of the function invoked.</param>
-	/// <param name="durationMs">Duration in milliseconds.</param>
+	/// <param name="ownMs">The function's own time in milliseconds: its arguments and the calls nested
+	/// inside it are left out. This is what the duration histogram records.</param>
+	/// <param name="inclusiveMs">Wall time in milliseconds, everything nested included.</param>
 	/// <param name="success">Whether the function invocation was successful.</param>
-	void RecordFunctionInvocation(string functionName, double durationMs, bool success);
+	void RecordFunctionInvocation(string functionName, double ownMs, double inclusiveMs, bool success);
 
 	/// <summary>
 	/// Records the time taken to invoke a command.
 	/// </summary>
 	/// <param name="commandName">Name of the command invoked.</param>
-	/// <param name="durationMs">Duration in milliseconds.</param>
+	/// <param name="ownMs">The command's own time in milliseconds: its arguments and the calls nested
+	/// inside it are left out. This is what the duration histogram records.</param>
+	/// <param name="inclusiveMs">Wall time in milliseconds, everything nested included.</param>
 	/// <param name="success">Whether the command invocation was successful.</param>
-	void RecordCommandInvocation(string commandName, double durationMs, bool success);
+	void RecordCommandInvocation(string commandName, double ownMs, double inclusiveMs, bool success);
 
 	/// <summary>
 	/// Records the time taken to send a notification.

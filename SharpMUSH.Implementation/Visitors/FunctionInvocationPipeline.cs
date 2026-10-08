@@ -41,7 +41,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		var parser = visitor.Parser;
 		var configuration = visitor.Configuration;
 		ExecutionBudget.Current?.ThrowIfExceeded();
-		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
+		var clock = InvocationClock.Start();
 		var success = true;
 		// The registered name, never the name as typed: a typed name is free text, and every distinct
 		// label value is a series of its own in Prometheus. Null for prose, which is not a call.
@@ -69,7 +69,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 					}
 					if (!SharpMUSHParserVisitor.IsUnknownFunctionAnError(context))
 					{
-						// Not a function and not required to be one: the text is prose, not a call.
+						// Not a function and not required to be one: the text is prose, not a call, and
+						// its time is its caller's.
+						clock.Stop();
 						return await visitor.LiteralFunctionCall(context);
 					}
 
@@ -216,7 +218,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 						continue;
 					}
 
-					var evaluated = await visitor.VisitChildren(x) ?? CallState.Empty;
+					CallState evaluated;
+					using (clock.Pause())
+						evaluated = await visitor.VisitChildren(x) ?? CallState.Empty;
 					var msg = evaluated.Message ?? MarkupText.Empty;
 					retainedArguments?.Add(msg.Length);
 					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
@@ -242,7 +246,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 					var text = visitor.GetContextText(x);
 					var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
-					var evaluate = SharpMUSHParserVisitor.CreateDeferredEvaluation(x, visitor, stripAnsi);
+					var evaluate = Unclocked(clock, SharpMUSHParserVisitor.CreateDeferredEvaluation(x, visitor, stripAnsi));
 					refinedArguments.Add(new CallState(evalText, x.Depth(), null, async () => (await evaluate())?.Message)
 					{ ParsedResult = evaluate });
 				}
@@ -330,14 +334,26 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				// Only user-defined attributes track recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 			}
 
-			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+			clock.Stop();
 			// A limit hit (invocation, recursion/call, or output size) aborts the invocation, so it is
 			// not a successful call even though it returned a value rather than throwing.
 			var limitHit = limitExceeded is { IsExceeded: true };
 			if (measuredName is not null)
-				services.Telemetry?.RecordFunctionInvocation(measuredName, elapsedMs, success && !limitHit);
+				services.Telemetry?.RecordFunctionInvocation(measuredName, clock.OwnMilliseconds,
+					clock.InclusiveMilliseconds, success && !limitHit);
 		}
 	}
+
+	/// <summary>
+	/// A no-parse argument, evaluated when the function asks for it, with the function's clock paused:
+	/// the argument's work is its own, not the function's.
+	/// </summary>
+	private static Func<ValueTask<CallState?>> Unclocked(InvocationClock clock, Func<ValueTask<CallState?>> evaluate)
+		=> async () =>
+		{
+			using (clock.Pause())
+				return await evaluate();
+		};
 
 	/// <summary>Whether a function restriction says <c>nobody</c>, PennMUSH's <c>FN_DISABLED</c> (<c>src/function.c</c>).</summary>
 	private static bool Disables(string? restriction)

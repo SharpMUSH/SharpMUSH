@@ -106,7 +106,7 @@
       "id": 1,
       "type": "timeseries",
       "title": "Functions: p95 duration",
-      "description": "95th percentile per call. Includes the time of every call nested inside it.",
+      "description": "95th percentile per call, own work only: arguments and nested calls are counted where they ran.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -153,7 +153,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Functions: time spent per second",
-      "description": "Milliseconds spent in each, per second of wall time: where the engine's time goes. A nested call is counted in its caller too.",
+      "description": "Milliseconds spent in each, per second of wall time: where the engine's time goes. Each millisecond is counted once, in the call that spent it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -294,7 +294,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Commands: p95 duration",
-      "description": "95th percentile per call. Includes the time of every call nested inside it.",
+      "description": "95th percentile per call, own work only: arguments and nested calls are counted where they ran.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -341,7 +341,7 @@
       "id": 6,
       "type": "timeseries",
       "title": "Commands: time spent per second",
-      "description": "Milliseconds spent in each, per second of wall time: where the engine's time goes. A nested call is counted in its caller too.",
+      "description": "Milliseconds spent in each, per second of wall time: where the engine's time goes. Each millisecond is counted once, in the call that spent it.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"

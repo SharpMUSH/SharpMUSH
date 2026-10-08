@@ -50,13 +50,13 @@ public class TelemetryService : ITelemetryService, IDisposable
 		_functionInvocationDuration = _meter.CreateHistogram<double>(
 			"sharpmush.function.invocation.duration",
 			unit: "ms",
-			description: "Time taken to invoke a function",
+			description: "A function's own time: its arguments and the calls nested inside it are left out",
 			advice: DurationAdvice);
 
 		_commandInvocationDuration = _meter.CreateHistogram<double>(
 			"sharpmush.command.invocation.duration",
 			unit: "ms",
-			description: "Time taken to invoke a command",
+			description: "A command's own time: its arguments and the calls nested inside it are left out",
 			advice: DurationAdvice);
 
 		_notificationSpeed = _meter.CreateHistogram<double>(
@@ -89,20 +89,20 @@ public class TelemetryService : ITelemetryService, IDisposable
 			description: "Health state of the ConnectionServer (1 = healthy, 0 = unhealthy)");
 	}
 
-	public void RecordFunctionInvocation(string functionName, double durationMs, bool success)
+	public void RecordFunctionInvocation(string functionName, double ownMs, double inclusiveMs, bool success)
 	{
-		_functionInvocationDuration.Record(durationMs,
+		_functionInvocationDuration.Record(ownMs,
 			new KeyValuePair<string, object?>("function.name", functionName),
 			new KeyValuePair<string, object?>("success", success));
-		Observe(new(TelemetryInvocationKind.Function, functionName, durationMs, success));
+		Observe(new(TelemetryInvocationKind.Function, functionName, inclusiveMs, success));
 	}
 
-	public void RecordCommandInvocation(string commandName, double durationMs, bool success)
+	public void RecordCommandInvocation(string commandName, double ownMs, double inclusiveMs, bool success)
 	{
-		_commandInvocationDuration.Record(durationMs,
+		_commandInvocationDuration.Record(ownMs,
 			new KeyValuePair<string, object?>("command.name", commandName),
 			new KeyValuePair<string, object?>("success", success));
-		Observe(new(TelemetryInvocationKind.Command, commandName, durationMs, success));
+		Observe(new(TelemetryInvocationKind.Command, commandName, inclusiveMs, success));
 	}
 
 	private void Observe(TelemetryInvocation invocation)
