@@ -3,33 +3,32 @@
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.DiscriminatedUnions
 @using Microsoft.AspNetCore.Components.Forms
+@using SharpMUSH.Library.Authorization
 @inject WikiAssetService AssetService
+@inject IAuthorizationService Authorization
 @inject IStringLocalizer<SharedResource> Loc
 
 @* A picture option (SharpConfig Image): the picture it names, its address, and a gallery of the media
-   uploads to choose one from or add one to. Empty shows the SharpMUSH logo it stands for. *@
+   uploads to choose one from (media.admin) or add one to (media.upload). Empty previews what the portal
+   shows instead: portal_favicon falls back to portal_logo, and both to the SharpMUSH logo. *@
 <div class="cfg-image">
     <div class="cfg-image-row">
         <span class="cfg-image-preview" aria-hidden="true">
-            @if (string.IsNullOrWhiteSpace(Value))
-            {
-                <img src="assets/Logo.svg" alt="" />
-            }
-            else
-            {
-                <img src="@ApiUrl.Resolve(Value)" alt="" />
-            }
+            <img src="@Preview" alt="" />
         </span>
         <input class="cfg-text" type="text" aria-label="@Label" aria-describedby="@DescribedBy"
                placeholder="@Loc["AdmCfgImageDefault"]"
                value="@Value"
                readonly="@Property.ReadOnly"
                @onchange="@(e => SetAsync(e.Value?.ToString()))" />
-        <button type="button" class="cfg-icon-btn" aria-expanded="@(_open ? "true" : "false")"
-                aria-label="@Loc["AdmCfgImageChoose"]" title="@Loc["AdmCfgImageChoose"]"
-                disabled="@Property.ReadOnly" @onclick="ToggleAsync">
-            <MudIcon Icon="@Icons.Material.Outlined.PhotoLibrary" Size="Size.Small" />
-        </button>
+        @if (_canList || _canUpload)
+        {
+            <button type="button" class="cfg-icon-btn" aria-expanded="@(_open ? "true" : "false")"
+                    aria-label="@Loc["AdmCfgImageChoose"]" title="@Loc["AdmCfgImageChoose"]"
+                    disabled="@Property.ReadOnly" @onclick="ToggleAsync">
+                <MudIcon Icon="@Icons.Material.Outlined.PhotoLibrary" Size="Size.Small" />
+            </button>
+        }
         @if (!string.IsNullOrWhiteSpace(Value))
         {
             <button type="button" class="cfg-icon-btn" aria-label="@Loc["AdmCfgImageReset"]" title="@Loc["AdmCfgImageReset"]"
@@ -42,41 +41,47 @@
     @if (_open)
     {
         <div class="cfg-image-gallery" role="group" aria-label="@Loc["AdmCfgImageChoose"]">
-            <div class="cfg-image-upload">
-                <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
-                               FilesChanged="@UploadAsync" MaximumFileCount="1" MaxFileSize="@MaxUploadBytes"
-                               Disabled="_uploading" />
-                @if (_uploading)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                }
-                @if (_error is not null)
-                {
-                    <span class="cfg-row-error" role="alert">@_error</span>
-                }
-            </div>
-            @if (_assets is null)
+            @if (_canUpload)
             {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else if (_assets.Count == 0)
-            {
-                <span class="cfg-empty">@Loc["AdmCfgImageNone"]</span>
-            }
-            else
-            {
-                <div class="cfg-image-grid">
-                    @foreach (var asset in _assets)
+                <div class="cfg-image-upload">
+                    <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                                   FilesChanged="@UploadAsync" MaximumFileCount="1" MaxFileSize="@MaxUploadBytes"
+                                   Disabled="_uploading" />
+                    @if (_uploading)
                     {
-                        var picked = string.Equals(asset.Url, Value?.Trim(), StringComparison.Ordinal);
-                        <button type="button" class="cfg-image-tile @(picked ? "cfg-image-tile--on" : null)"
-                                aria-pressed="@(picked ? "true" : "false")" title="@asset.FileName"
-                                @onclick="@(() => PickAsync(asset.Url))">
-                            <img src="@ApiUrl.Resolve(asset.Url)" alt="" />
-                            <span>@asset.FileName</span>
-                        </button>
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    }
+                    @if (_error is not null)
+                    {
+                        <span class="cfg-row-error" role="alert">@_error</span>
                     }
                 </div>
+            }
+            @if (_canList)
+            {
+                @if (_assets is null)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_assets.Count == 0)
+                {
+                    <span class="cfg-empty">@Loc["AdmCfgImageNone"]</span>
+                }
+                else
+                {
+                    <div class="cfg-image-grid">
+                        @foreach (var asset in _assets)
+                        {
+                            var picked = string.Equals(asset.Url, Value?.Trim(), StringComparison.Ordinal);
+                            <button type="button" class="cfg-image-tile @(picked ? "cfg-image-tile--on" : null)"
+                                    aria-pressed="@(picked ? "true" : "false")" title="@asset.FileName"
+                                    @onclick="@(() => PickAsync(asset.Url))">
+                                <img src="@ApiUrl.Resolve(asset.Url)" alt="" />
+                                <span>@asset.FileName</span>
+                            </button>
+                        }
+                    </div>
+                }
             }
         </div>
     }
@@ -102,7 +107,38 @@
     [Parameter]
     public EventCallback OnChanged { get; set; }
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    /// <summary>The option portal_favicon falls back to when empty.</summary>
+    private const string LogoPath = "Cosmetic.PortalLogo";
+
     private string? Value => Draft.String(Property);
+
+    /// <summary>The picture the portal shows for the draft value, following the empty fallbacks.</summary>
+    private string Preview
+    {
+        get
+        {
+            var shown = !string.IsNullOrWhiteSpace(Value) ? Value
+                : Property.Path == "Cosmetic.PortalFavicon" && Draft.Values.GetValueOrDefault(LogoPath) is string logo
+                    && !string.IsNullOrWhiteSpace(logo) ? logo
+                : null;
+            return shown is null ? "assets/Logo.svg" : ApiUrl.Resolve(shown);
+        }
+    }
+
+    // The gallery lists through media.admin and uploads through media.upload; config.admin grants neither.
+    private bool _canList;
+    private bool _canUpload;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is null) return;
+        var user = (await AuthState).User;
+        _canList = (await Authorization.AuthorizeAsync(user, PortalPermission.MediaAdmin)).Succeeded;
+        _canUpload = (await Authorization.AuthorizeAsync(user, PortalPermission.MediaUpload)).Succeeded;
+    }
 
     private bool _open;
     private bool _uploading;
@@ -112,7 +148,7 @@
     private async Task ToggleAsync()
     {
         _open = !_open;
-        if (_open && _assets is null)
+        if (_open && _canList && _assets is null)
             _assets = [.. (await AssetService.ListAsync(take: 200)).Where(a => a.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))];
     }
 

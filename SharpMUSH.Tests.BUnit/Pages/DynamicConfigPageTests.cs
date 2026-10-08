@@ -42,6 +42,8 @@ public class DynamicConfigPageTests : TrackingBunitContext
 
 	private readonly Served _served = new();
 
+	private readonly BunitAuthorizationContext _auth;
+
 	public DynamicConfigPageTests()
 	{
 		var client = Track(new HttpClient(new RouteHandler((method, path) =>
@@ -66,6 +68,9 @@ public class DynamicConfigPageTests : TrackingBunitContext
 			.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true))
 			.AddLocalization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
+		_auth = AddAuthorization();
+		_auth.SetAuthorized("staff");
+		_auth.SetPolicies("config.admin", "media.admin", "media.upload");
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat");
 	}
 
@@ -335,5 +340,45 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		await Assert.That(Row().QuerySelector("input.cfg-text")!.GetAttribute("value")).IsEqualTo(url);
 		await Assert.That(Row().QuerySelector(".cfg-row-changed")).IsNotNull();
 		await Assert.That(Row().QuerySelector(".cfg-image-gallery")).IsNull();
+	}
+
+	private IRenderedComponent<DynamicConfig> RenderCosmetic()
+	{
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/cosmetic");
+		var cut = Render<DynamicConfig>(p => p.Add(x => x.Category, "cosmetic"));
+		cut.WaitForAssertion(() => cut.Find(".cfg-image"), TimeSpan.FromSeconds(5));
+		return cut;
+	}
+
+	private static AngleSharp.Dom.IElement Row(IRenderedComponent<DynamicConfig> cut, string key) =>
+		cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == key);
+
+	/// <summary>An empty favicon previews what the tab shows: the portal logo being drafted, else the SharpMUSH logo.</summary>
+	[Test]
+	public async Task EmptyFavicon_PreviewsThePortalLogo()
+	{
+		var cut = RenderCosmetic();
+		AngleSharp.Dom.IElement Favicon() => Row(cut, "Cosmetic.PortalFavicon").QuerySelector(".cfg-image-preview img")!;
+		await Assert.That(Favicon().GetAttribute("src")).IsEqualTo("assets/Logo.svg");
+
+		await Row(cut, "Cosmetic.PortalLogo").QuerySelector("input.cfg-text")!.ChangeAsync(
+			new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "/api/wiki-assets/abc/crest.png" });
+
+		await Assert.That(Favicon().GetAttribute("src")).IsEqualTo("/api/wiki-assets/abc/crest.png");
+	}
+
+	/// <summary>
+	/// config.admin does not grant the media library: without media.admin or media.upload the field takes an
+	/// address only, rather than offering a gallery that would come back empty.
+	/// </summary>
+	[Test]
+	public async Task WithoutMediaPermissions_TheGalleryIsNotOffered()
+	{
+		_auth.SetPolicies("config.admin");
+
+		var cut = RenderCosmetic();
+
+		await Assert.That(Row(cut, "Cosmetic.PortalLogo").QuerySelector("button[aria-expanded]")).IsNull();
+		await Assert.That(Row(cut, "Cosmetic.PortalLogo").QuerySelector("input.cfg-text")).IsNotNull();
 	}
 }

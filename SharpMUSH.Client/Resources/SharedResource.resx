@@ -2572,7 +2572,7 @@
     <value>Clear, back to the default</value>
   </data>
   <data name="AdmCfgImageNone" xml:space="preserve">
-    <value>No pictures to show. Upload one above.</value>
+    <value>No pictures in the media library yet.</value>
   </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Search username or email…</value>
