@@ -9,6 +9,16 @@
 	overflow: hidden;
 }
 
+/* The opened room banner, as the card's top: the card's edge and corners are its own, and a rule parts it from the header. */
+.scene-card-banner {
+	flex-shrink: 0;
+}
+
+.scene-card-banner ::deep .kit-banner {
+	border-width: 0 0 1px;
+	border-radius: 0;
+}
+
 .scene-card-head {
 	/* A container of its own, so what sits in it can answer to the header's width (Play's avatar). */
 	container-type: inline-size;
