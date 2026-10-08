@@ -1,6 +1,6 @@
 format: 1
 package: plus-help
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -218,7 +218,7 @@ objects:
         value: |-
           [@@(%0 records · %1 the query as typed — the records it finds, and %q<how> set to name, command or near)][setq(q,u(%!/FUN`GET`QUERY,%1),how,name)][if(words(setr(m,u(%!/FUN`GET`FOUND,%0,%q<q>))),%q<m>,if(regmatch(%q<q>,\[*?/\]),,if(words(setr(m,u(%!/FUN`GET`DOCUMENTING,%0,u(%!/FUN`GET`COMMAND,%1)))),[setq(how,command)]%q<m>,[setq(how,near)][u(%!/FUN`GET`NEAR,%0,%q<q>)])))]
         flags: [funsyntax]
-      # A page number is a whole number from 1; =0, =-1 and =abc are mistakes, not page 1.
+      # A page number is a whole number from 1; /0 is a mistake, not page 1.
       FUN`IS`PAGE:
         value: |-
           [@@(%0 a page number as typed)][cand(isint(%0),gt(%0,0))]
@@ -285,7 +285,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(%0 title · %1 records · %2 page · %3 paging stem — reads %q<pages>. The summaries are cut to what is left of the reader's width beside the widest topic name, less the gap)][setq(sl,u(%!/FUN`GET`SLICE,%1,%2))][setq(cw,max(20,sub(width(%#,78),add(2,lmath(max,iter(%q<sl>,strlen(u(%!/FUN`GET`RNAME,%i0))))))))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[ansi(h,Topic)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[ansi(h,Summary)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`SUMMARY,%i0,%q<cw>),%b,%r)])],%0,,u(%!/FUN`GET`FRAME))]%r[words(%1)] [if(eq(words(%1),1),topic,topics)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%3=[add(%2,1)])]
+          [@@(%0 title · %1 records · %2 page · %3 the command and its switches · %4 what follows them — reads %q<pages>. The next page is %3/<n> %4. The summaries are cut to what is left of the reader's width beside the widest topic name, less the gap)][setq(sl,u(%!/FUN`GET`SLICE,%1,%2))][setq(cw,max(20,sub(width(%#,78),add(2,lmath(max,iter(%q<sl>,strlen(u(%!/FUN`GET`RNAME,%i0))))))))][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1),min,json(string,%r20),grow,json(string,%r1)),[ansi(h,Topic)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[ansi(h,Summary)]%r[iter(%q<sl>,u(%!/FUN`DISPLAY`SUMMARY,%i0,%q<cw>),%b,%r)])],%0,,u(%!/FUN`GET`FRAME))]%r[words(%1)] [if(eq(words(%1),1),topic,topics)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%3/[add(%2,1)][if(strlen(%4),%b%4)])]
         flags: [funsyntax]
       # One subtopic, named as it is known under its parent, running the full +help for it.
       FUN`DISPLAY`CHILD:
@@ -390,7 +390,7 @@ objects:
       # A usage line names the switch as typed in full, so a reader who wrote /lis sees /list.
       INC`DISPLAY`USAGE:
         value: |-
-          @@ no arguments — the usage of switch %q<sw>; @pemit %#=[notice(HELP,Usage: [trim(+help/%q<sw> [u(%!/FUN`GET`USAGE,%q<sw>)])],warn)]
+          @@ no arguments — the usage of switch %q<sw>; @pemit %#=[notice(HELP,Usage: +help/[u(%!/FUN`GET`USAGE,%q<sw>)],warn)]
         flags: [cmdsyntax]
       # A switch that names none, or several, says which it could be and what there is.
       INC`DISPLAY`BADSWITCH:
@@ -419,13 +419,13 @@ objects:
       # carries what the reader typed.
       INC`DO`LISTING:
         value: |-
-          @@ no arguments — lists %q<list> under the title %q<title>, page %q<page>, paging with %q<stem>=<n>; @assert words(%q<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%q<list>))]; @assert lte(%q<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%q<title>,%q<list>,%q<page>,%q<stem>)]
+          @@ no arguments — lists %q<list> under the title %q<title>, page %q<page>, the next page being %q<head>/<n> %q<tail>; @assert words(%q<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%q<list>))]; @assert lte(%q<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%q<title>,%q<list>,%q<page>,%q<head>,%q<tail>)]
         flags: [cmdsyntax]
       # One topic renders; none reports the miss; several list the qualified candidates as +help/list
       # does, titled with how they were found.
       INC`DO`SHOW:
         value: |-
-          @@ %q<query> the query as typed · %q<page> the page, for several matches; @assert strlen(trim(%q<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))][setq(m,u(%!/FUN`GET`LOOKUP,%q<recs>,%q<query>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<m>),1)={think [setq(list,%q<m>,title,switch(%q<how>,command,Topics about [u(%!/FUN`GET`COMMAND,%q<query>)],near,Topics with '%q<q>' in their names,Topics matching '%q<q>'),stem,+help [trim(%q<query>)])]; @include %!/INC`DO`LISTING}; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
+          @@ %q<query> the query as typed · %q<page> the page, for several matches; @assert strlen(trim(%q<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think [setq(recs,u(%!/FUN`GET`RECORDS))][setq(m,u(%!/FUN`GET`LOOKUP,%q<recs>,%q<query>))]; @assert words(%q<m>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<m>),1)={think [setq(list,%q<m>,title,switch(%q<how>,command,Topics about [u(%!/FUN`GET`COMMAND,%q<query>)],near,Topics with '%q<q>' in their names,Topics matching '%q<q>'),head,+help,tail,trim(%q<query>))]; @include %!/INC`DO`LISTING}; @assert lte(%q<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`TOPIC,%q<recs>,%q<m>)]
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────
@@ -434,17 +434,18 @@ objects:
         value: |-
           $^\+help\s*$:@pemit %#=[u(%!/FUN`DISPLAY`INDEX,u(%!/FUN`GET`RECORDS))]
         flags: [regexp, cmdsyntax]
-      # A page of several matches is asked for as +help <topic>=<n>.
+      # A page of several matches is asked for as +help/<n> <topic>, through CMD`SWITCH.
       CMD`TOPIC:
         value: |-
-          $(?s)^\+help\s+(?<q>[^=]*?)\s*(?\:=(?<page>.*))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; @assert u(%!/FUN`IS`PAGE,%q<page>)=@pemit %#=[notice(HELP,Usage: +help <topic>[chr(91)]=<page>[chr(93)],warn)]; @include %!/INC`DO`SHOW
+          $(?s)^\+help\s+(?<q>.*?)\s*$:think [setq(query,r(q,args),page,1)]; @include %!/INC`DO`SHOW
         flags: [regexp, cmdsyntax]
       # Every switch comes through here, named in full or by any beginning only it has (/l is /list),
       # and runs its INC`SW leaf with %q<rest>, whatever followed the switch. Matching every switch in
-      # one pattern is what lets a mistyped one answer rather than fall through to Huh?.
+      # one pattern is what lets a mistyped one answer rather than fall through to Huh?. A page is a
+      # last switch of digits: +help/list/2, and +help/2 <topic> for a topic several match.
       CMD`SWITCH:
         value: |-
-          $(?s)^\+help/(?<sw>[^\s=]*)(?<rest>.*)$:think [setq(typed,lcstr(r(sw,args)),rest,r(rest,args))][setq(sw,u(%!/FUN`GET`SWITCH,%q<typed>))]; @assert strlen(%q<sw>)=@include %!/INC`DISPLAY`BADSWITCH; @include %!/INC`SW`[ucstr(%q<sw>)]
+          $(?s)^\+help/(?<sw>[^\s=]*)(?<rest>.*)$:think [setq(typed,lcstr(r(sw,args)),rest,r(rest,args))][setq(page,u(%!/FUN`GET`PAGE,%q<typed>))][if(strlen(%q<page>),setq(typed,if(strmatch(%q<typed>,*/*),before(%q<typed>,/))))][setq(sw,u(%!/FUN`GET`SWITCH,%q<typed>))]; @break cand(strlen(%q<page>),not(strlen(%q<typed>)))={@assert u(%!/FUN`IS`PAGE,%q<page>)=@pemit %#=[notice(HELP,Usage: +help[chr(91)]/<page>[chr(93)] <topic>,warn)]; think [setq(query,%q<rest>)]; @include %!/INC`DO`SHOW}; @assert strlen(%q<sw>)=@include %!/INC`DISPLAY`BADSWITCH; @assert cor(not(strlen(%q<page>)),u(%!/FUN`IS`PAGED,%q<sw>))=@include %!/INC`DISPLAY`WARN=+help/%q<sw> takes no page number.; @assert u(%!/FUN`IS`PAGE,setr(page,strfirstof(%q<page>,1)))=@include %!/INC`DISPLAY`USAGE; @include %!/INC`SW`[ucstr(%q<sw>)]
         flags: [regexp, cmdsyntax]
       # The order a reader is shown them in; the staff verbs only to staff.
       FUN`GET`SWITCHES:
@@ -457,22 +458,24 @@ objects:
         flags: [funsyntax]
       FUN`GET`USAGE:
         value: |-
-          [@@(%0 a switch — what follows it)][switch(%0,list,\[<source>\]\[=<page>\],search,<text>\[=<page>\],sources,,write,<topic>=<text>,delete,<topic>,source,<name>=<object>,unsource,<name>)]
+          [@@(%0 a switch — how it is typed, after +help/)][switch(%0,list,list\[/<page>\] \[<source>\],search,search\[/<page>\] <text>,sources,sources,write,write <topic>=<text>,delete,delete <topic>,source,source <name>=<object>,unsource,unsource <name>)]
         flags: [funsyntax]
-      # Splits what followed a switch into its argument and the page after an =. A listing's = always
-      # starts the page; a search's only when a number (or nothing) follows its last one, so a search
-      # for text holding an = is still a search.
-      FUN`GET`PAGED:
+      FUN`IS`PAGED:
         value: |-
-          [@@(%0 what followed a switch · %1 1 when every = starts the page — sets %q<arg> and %q<page>)][setq(p,if(%1,after(%0,=),last(%0,=)))][if(cand(strmatch(%0,*=*),cor(%1,isint(%q<p>),not(strlen(%q<p>)))),setq(arg,trim(left(%0,sub(strlen(%0),inc(strlen(%q<p>))))),page,%q<p>),setq(arg,trim(%0),page,1))]
+          [@@(%0 a switch — whether what it lists comes in pages)][t(member(list search,%0))]
+        flags: [funsyntax]
+      # The page is the last switch, and digits only: +help/list/2. Nothing when there is none.
+      FUN`GET`PAGE:
+        value: |-
+          [@@(%0 the switches as typed — the page they end with, or nothing)][if(cor(regmatch(%0,^\[0-9\]+$),regmatch(%0,^\[a-z\]+/\[0-9\]+$)),last(%0,/))]
         flags: [funsyntax]
       INC`SW`LIST:
         value: |-
-          @@ %q<rest> — \[<source>\]\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>,1)][setq(src,lcstr(%q<arg>))]; @assert cand(lte(words(%q<src>),1),u(%!/FUN`IS`PAGE,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(strlen(%q<src>)),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`WARN=No such help source: %q<src>. Try +help/sources.; think [setq(list,if(strlen(%q<src>),u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>),title,Topics[if(strlen(%q<src>),: %q<src>)],stem,trim(+help/list %q<src>))]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — \[<source>\] · %q<page> the page; think [setq(src,lcstr(trim(%q<rest>)))]; @assert lte(words(%q<src>),1)=@include %!/INC`DISPLAY`USAGE; think [setq(recs,u(%!/FUN`GET`RECORDS))]; @assert cor(not(strlen(%q<src>)),words(u(%!/FUN`GET`OF,%q<recs>,%q<src>)))=@include %!/INC`DISPLAY`WARN=No such help source: %q<src>. Try +help/sources.; think [setq(list,if(strlen(%q<src>),u(%!/FUN`GET`OF,%q<recs>,%q<src>),%q<recs>),title,Topics[if(strlen(%q<src>),: %q<src>)],head,+help/list,tail,%q<src>)]; @include %!/INC`DO`LISTING
         flags: [cmdsyntax]
       INC`SW`SEARCH:
         value: |-
-          @@ %q<rest> — <text>\[=<page>\]; think [u(%!/FUN`GET`PAGED,%q<rest>)][setq(q,lcstr(%q<arg>))]; @assert cand(strlen(%q<q>),u(%!/FUN`IS`PAGE,%q<page>))=@include %!/INC`DISPLAY`USAGE; think [setq(list,u(%!/FUN`GET`SEARCHED,u(%!/FUN`GET`RECORDS),%q<q>),title,Search: %q<q>,stem,+help/search %q<q>)]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — <text> · %q<page> the page; think [setq(q,lcstr(trim(%q<rest>)))]; @assert strlen(%q<q>)=@include %!/INC`DISPLAY`USAGE; think [setq(list,u(%!/FUN`GET`SEARCHED,u(%!/FUN`GET`RECORDS),%q<q>),title,Search: %q<q>,head,+help/search,tail,%q<q>)]; @include %!/INC`DO`LISTING
         flags: [cmdsyntax]
       INC`SW`SOURCES:
         value: |-
@@ -547,7 +550,10 @@ objects:
           A topic name can be several words: `+help scene join`. A command finds the topic that
           shows it, so `+help +scene/join`, `+help event` and `+help +events` all work. A word that
           is no topic's name finds the topics whose names start with it or hold it: `+help join`.
-          When several match, they are listed, and `+help <topic>=2` shows the next page.
+          When several match, they are listed, and `+help/2 <topic>` shows the next page.
+
+          A long listing comes in pages, and the page is a last switch: `+help/list/2`,
+          `+help/search/3 combat`. Without one, you get the first.
 
           A switch can be cut short to any beginning no other switch has: `+help/l` is `+help/list`.
       HELP`SEARCH:
@@ -556,7 +562,7 @@ objects:
           the search reads bodies without evaluating them, so it matches what an author typed rather
           than what a reader would see.
 
-          `<text>` may contain `*` and `?`. Long results page: `+help/search combat=2`.
+          `<text>` may contain `*` and `?`. Long results page: `+help/search/2 combat`.
 
           To narrow by source instead, use `+help/list <source>`.
       SEE:

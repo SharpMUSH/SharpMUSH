@@ -197,11 +197,13 @@ public class WikiReaderIntegrationTests
 
 			foreach (var (command, usage) in new[]
 			{
-				("+wiki/recent -1", "Usage: +wiki/recent [<n>][=<page>]"),
-				("+wiki/recent abc", "Usage: +wiki/recent [<n>][=<page>]"),
-				("+wiki/list main=abc", "Usage: +wiki/list [<namespace>][=<page>]"),
-				("+wiki/list main=0", "Usage: +wiki/list [<namespace>][=<page>]"),
-				("+wiki/search=2", "Usage: +wiki/search <text>[=<page>]"),
+				("+wiki/recent -1", "Usage: +wiki/recent[/<page>] [<n>]"),
+				("+wiki/recent abc", "Usage: +wiki/recent[/<page>] [<n>]"),
+				("+wiki/list/abc main", "+wiki has no /list/abc switch."),
+				("+wiki/list/0 main", "Usage: +wiki/list[/<page>] [<namespace>]"),
+				("+wiki/search/2", "Usage: +wiki/search[/<page>] <text>"),
+				("+wiki/list/999 main", "you asked for page 999."),
+				("+wiki/info/2 main", "+wiki/info takes no page number."),
 				("+wiki/bogus", "+wiki has no /bogus switch."),
 			})
 			{
@@ -212,6 +214,8 @@ public class WikiReaderIntegrationTests
 
 			await Assert.That(await RunAs(reader, "+wiki/lis main")).Contains("< Pages: main >")
 				.Because("a switch may be cut short");
+			await Assert.That(await RunAs(reader, "+wiki/l/1 main")).Contains("< Pages: main >")
+				.Because("the page is a last switch, after a shortened one too");
 		}
 		finally
 		{

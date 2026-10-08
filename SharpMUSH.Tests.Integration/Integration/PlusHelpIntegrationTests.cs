@@ -678,15 +678,18 @@ public class PlusHelpIntegrationTests
 		await Assert.That(said).Contains($"No local topic 'zq{Tag}'. Try help zq{Tag} or +help/search zq{Tag}.");
 	}
 
-	/// <summary>A page is a whole number from 1; anything else is answered with the usage line, not Huh?.</summary>
+	/// <summary>A page is a last switch, a whole number from 1; anything else is answered, not Huh?.</summary>
 	[Test]
-	[Arguments("+help/list=0", "Usage: +help/list [<source>][=<page>]")]
-	[Arguments("+help/list=-1", "Usage: +help/list [<source>][=<page>]")]
-	[Arguments("+help/list=abc", "Usage: +help/list [<source>][=<page>]")]
-	[Arguments("+help/search scene=0", "Usage: +help/search <text>[=<page>]")]
-	[Arguments("+help/search", "Usage: +help/search <text>[=<page>]")]
+	[Arguments("+help/list/0", "Usage: +help/list[/<page>] [<source>]")]
+	[Arguments("+help/list/abc", "+help has no /list/abc switch.")]
+	[Arguments("+help/search/0 scene", "Usage: +help/search[/<page>] <text>")]
+	[Arguments("+help/search", "Usage: +help/search[/<page>] <text>")]
 	[Arguments("+help/sources foo", "Usage: +help/sources")]
-	[Arguments("+help scene*=0", "Usage: +help <topic>[=<page>]")]
+	[Arguments("+help/sources/2", "+help/sources takes no page number.")]
+	[Arguments("+help/0 scene*", "Usage: +help[/<page>] <topic>")]
+	[Arguments("+help/list/999", "you asked for page 999.")]
+	[Arguments("+help/2 scene*", "There is one page — you asked for page 2.")]
+	[Arguments("+help/2 plus-help/write", "There is one page — you asked for page 2.")]
 	public async Task AMistypedArgument_IsAnsweredWithTheUsageLine(string command, string usage)
 	{
 		await PutLibrarianInMasterRoomAsync();
@@ -695,6 +698,48 @@ public class PlusHelpIntegrationTests
 		await Assert.That(said).Contains(usage);
 		await Assert.That(said).DoesNotContain("Huh?");
 		await Assert.That(said).DoesNotContain("page 0");
+	}
+
+	/// <summary>
+	/// The page is a last switch after any other: +help/list/2, +help/l/2, and +help/2 for a topic several
+	/// match. Each page ends with the command for the next, and the last with none.
+	/// </summary>
+	[Test]
+	public async Task APage_IsALastSwitch()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var staff = await StaffAsync();
+		var reader = await ReaderAsync();
+		var marker = $"pg{Tag}";
+		const int topics = 20;
+		for (var i = 1; i <= topics; i++)
+		{
+			await RunAs(staff, $"+help/write {marker} {i:D2}=Page test {marker}.");
+		}
+
+		try
+		{
+			var first = Joined(await RunAs(reader, $"+help/search {marker}"));
+			var pages = int.Parse(System.Text.RegularExpressions.Regex.Match(first, @"page 1 of (\d+)").Groups[1].Value);
+			await Assert.That(pages).IsGreaterThan(1).Because($"{topics} topics are more than one screen");
+			await Assert.That(first).Contains($"+help/search/2 {marker}");
+
+			var second = Joined(await RunAs(reader, $"+help/se/2 {marker}"));
+			await Assert.That(second).Contains($"page 2 of {pages}");
+			var last = Joined(await RunAs(reader, $"+help/search/{pages} {marker}"));
+			await Assert.That(last).Contains($"page {pages} of {pages}");
+			await Assert.That(last).DoesNotContain($"+help/search/{pages + 1}");
+
+			await Assert.That(Joined(await RunAs(reader, $"+help/2 {marker}*"))).Contains($"page 2 of {pages}")
+				.Because("+help/<n> <topic> pages a topic several match");
+		}
+		finally
+		{
+			for (var i = 1; i <= topics; i++)
+			{
+				await RunAs(staff, $"+help/delete {marker} {i:D2}");
+			}
+		}
 	}
 
 	/// <summary>A switch may be cut to any beginning no other switch has; one that names none or several says so.</summary>
