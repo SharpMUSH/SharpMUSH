@@ -8,8 +8,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Resolves the portal's theme: the acting character's chosen theme, or the game's default for the browser's light
-/// or dark preference, with the character's accent laid over it. The last theme applied is kept in localStorage,
+/// Resolves the portal's theme: the acting character's chosen theme, or the theme for its colour vision or the game's
+/// default for the browser's light or dark preference, with the character's accent laid over it. The last theme applied is kept in localStorage,
 /// where <c>index.html</c> reads it before the runtime loads, so a reload paints the right look from the first frame.
 /// </summary>
 public sealed class ThemeService : IThemeService, IDisposable
@@ -146,7 +146,7 @@ public sealed class ThemeService : IThemeService, IDisposable
 
 		var published = _themes.Where(t => t.Published).ToList();
 		ResolvedTheme For(bool light) => ThemeResolver.Resolve(
-			ThemeResolver.Pick(published, _defaults, light, character?.ThemeId), character?.Accent);
+			ThemeResolver.Pick(published, _defaults, light, character?.ThemeId, character?.Vision), character?.Accent, character?.Vision);
 
 		var dark = For(light: false);
 		var light = For(light: true);

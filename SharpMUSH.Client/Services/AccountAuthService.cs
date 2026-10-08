@@ -42,8 +42,9 @@ public class AccountAuthService(
 	/// character is bound to the session token, which is opaque here, so the roster carries it.</summary>
 	/// <param name="ThemeId">The character's chosen portal theme, or null for the game's default.</param>
 	/// <param name="Accent">The character's own accent colour, or null for the theme's.</param>
+	/// <param name="Vision">The player's colour vision (<see cref="SharpMUSH.Library.Models.Portal.ThemeVision"/>), or null for typical.</param>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false,
-		string? ThemeId = null, string? Accent = null);
+		string? ThemeId = null, string? Accent = null, string? Vision = null);
 
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);

@@ -126,6 +126,7 @@
 }
 
 .settings-theme-choice.is-on,
+.settings-theme-vision.is-on,
 .settings-theme-own.is-on,
 .settings-theme-custom.is-on {
 	border-color: var(--accent);
@@ -137,6 +138,7 @@
 }
 
 .settings-theme-choice:focus-visible,
+.settings-theme-vision:focus-visible,
 .settings-theme-own:focus-visible,
 .settings-theme-dot:focus-visible,
 .settings-theme-custom:focus-within {
@@ -158,4 +160,37 @@
 	.settings-theme-choices {
 		grid-template-columns: minmax(0, 1fr);
 	}
+}
+
+/* A colour vision: its name over what it means, so a player who does not know "deutan" still finds theirs. */
+.settings-theme-vision {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.settings-theme-vision-name {
+	font-weight: 600;
+}
+
+.settings-theme-vision-what {
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}
+
+.settings-theme-vision:disabled {
+	cursor: default;
+}
+
+.settings-theme-visions {
+	grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
 }

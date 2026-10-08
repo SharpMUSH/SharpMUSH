@@ -7,9 +7,11 @@
 @inject IThemeService Themes
 @inject ISnackbar Snackbar
 
-@* Each of the account's characters with its own theme and accent. The look is stored with the character, so
+@* Each of the account's characters with its own colour vision, theme and accent. The look is stored with the character, so
    it follows the player to every device, and the acting character's is the one the portal wears. An accent
-   that would be too faint on the chosen theme is shown moved toward white or black until it reads. *@
+   that would be too faint on the chosen theme is shown moved toward white or black until it reads. No browser reports
+   a reader's colour vision, so the player says it here; with no theme chosen it picks that vision's theme for the
+   browser's light or dark setting. *@
 
 <PageTitle>@Loc["NavTheme"] — @Loc["Settings"] — @Loc["AppTitle"]</PageTitle>
 
@@ -41,15 +43,35 @@
                     </div>
 
                     <div class="settings-theme-field">
+                        <span class="settings-theme-label" id="@($"vision-label-{character.DbrefNumber}")">@Loc["NavThemeVision"]</span>
+                        <div class="settings-theme-choices settings-theme-visions" role="radiogroup" aria-labelledby="@($"vision-label-{character.DbrefNumber}")"
+                             aria-describedby="@($"vision-note-{character.DbrefNumber}")">
+                            @foreach (var vision in ThemeVision.All)
+                            {
+                                var chosen = ThemeVision.Chosen(vision);
+                                var on = character.Vision == chosen;
+                                <button type="button" role="radio" class="settings-theme-vision @(on ? "is-on" : null)" aria-checked="@(on ? "true" : "false")"
+                                        data-vision="@vision" disabled="@busy" @onclick="() => SaveAsync(character, character.ThemeId, character.Accent, chosen)">
+                                    <span class="settings-theme-vision-name">@Loc[VisionKey(vision)]</span>
+                                    <span class="settings-theme-vision-what">@Loc[VisionKey(vision) + "What"]</span>
+                                </button>
+                            }
+                        </div>
+                        <span class="settings-theme-note" id="@($"vision-note-{character.DbrefNumber}")">
+                            @Loc[character.Vision is null ? "NavThemeVisionNote" : character.ThemeId is null ? "NavThemeVisionFollows" : "NavThemeVisionKept"]
+                        </span>
+                    </div>
+
+                    <div class="settings-theme-field">
                         <span class="settings-theme-label" id="@($"theme-label-{character.DbrefNumber}")">@Loc["NavThemeTheme"]</span>
                         <div class="settings-theme-choices" role="radiogroup" aria-labelledby="@($"theme-label-{character.DbrefNumber}")">
-                            @ThemeChoice(character, null, Loc["NavThemeGameDefault", DefaultName].Value, busy)
+                            @ThemeChoice(character, null, DefaultLabel(character), busy)
                             @foreach (var theme in Published)
                             {
                                 @ThemeChoice(character, theme.Id, theme.Name, busy)
                             }
                         </div>
-                        @if (character.ThemeId is null && Themes.Defaults.DarkThemeId != Themes.Defaults.LightThemeId)
+                        @if (character.ThemeId is null && character.Vision is null && Themes.Defaults.DarkThemeId != Themes.Defaults.LightThemeId)
                         {
                             <span class="settings-theme-note">@Loc["NavThemeFollowsDevice"]</span>
                         }
@@ -60,7 +82,7 @@
                         <div class="settings-theme-accents" role="radiogroup" aria-labelledby="@($"accent-label-{character.DbrefNumber}")">
                             <button type="button" role="radio" class="settings-theme-own @(character.Accent is null ? "is-on" : null)"
                                     aria-checked="@(character.Accent is null ? "true" : "false")" disabled="@busy"
-                                    @onclick="() => SaveAsync(character, character.ThemeId, null)">
+                                    @onclick="() => SaveAsync(character, character.ThemeId, null, character.Vision)">
                                 @Loc["NavThemeAccentThemeOwn"]
                             </button>
                             @foreach (var (name, hex) in BuiltInThemes.AccentSwatches)
@@ -68,11 +90,11 @@
                                 var on = string.Equals(character.Accent, hex, StringComparison.OrdinalIgnoreCase);
                                 <button type="button" role="radio" class="settings-theme-dot @(on ? "is-on" : null)" title="@name"
                                         aria-label="@name" aria-checked="@(on ? "true" : "false")" disabled="@busy"
-                                        style="@($"--dot:{hex}")" @onclick="() => SaveAsync(character, character.ThemeId, hex)"></button>
+                                        style="@($"--dot:{hex}")" @onclick="() => SaveAsync(character, character.ThemeId, hex, character.Vision)"></button>
                             }
                             <label class="settings-theme-custom @(IsCustom(character) ? "is-on" : null)" title="@Loc["NavThemeAccentCustom"]">
                                 <input type="color" value="@(character.Accent ?? look.Accent)" aria-label="@Loc["NavThemeAccentCustom"]" disabled="@busy"
-                                       @onchange="e => SaveAsync(character, character.ThemeId, e.Value?.ToString())" />
+                                       @onchange="e => SaveAsync(character, character.ThemeId, e.Value?.ToString(), character.Vision)" />
                                 <span>@Loc["NavThemeAccentCustom"]</span>
                             </label>
                         </div>
@@ -95,16 +117,23 @@
 
     private IEnumerable<PortalTheme> Published => Themes.Themes.Where(t => t.Published);
 
-    // "Phosphor / Daylight": the game default follows the browser's light or dark setting.
-    private string DefaultName
+    // "Phosphor / Daylight": the game default follows the browser's light or dark setting. With a colour vision chosen,
+    // the pair is that vision's: "Deutan Dark / Deutan Light".
+    private string DefaultLabel(AccountAuthService.CharacterSummary character)
     {
-        get
+        string Name(string id) => Themes.Themes.FirstOrDefault(t => t.Id == id)?.Name ?? id;
+        if (character.Vision is { } vision && ThemeVision.ThemeId(vision, false) is { } visionDark && ThemeVision.ThemeId(vision, true) is { } visionLight
+            && Published.Any(t => t.Id == visionDark) && Published.Any(t => t.Id == visionLight))
         {
-            string Name(string id) => Themes.Themes.FirstOrDefault(t => t.Id == id)?.Name ?? id;
-            var (dark, light) = (Themes.Defaults.DarkThemeId, Themes.Defaults.LightThemeId);
-            return dark == light ? Name(dark) : $"{Name(dark)} / {Name(light)}";
+            return Loc["NavThemeVisionDefault", $"{Name(visionDark)} / {Name(visionLight)}"].Value;
         }
+
+        var (dark, light) = (Themes.Defaults.DarkThemeId, Themes.Defaults.LightThemeId);
+        return Loc["NavThemeGameDefault", dark == light ? Name(dark) : $"{Name(dark)} / {Name(light)}"].Value;
     }
+
+    /// <summary>"deutan" is "NavThemeVisionDeutan".</summary>
+    private static string VisionKey(string vision) => "NavThemeVision" + char.ToUpperInvariant(vision[0]) + vision[1..];
 
     protected override void OnInitialized()
     {
@@ -115,7 +144,8 @@
     protected override async Task OnInitializedAsync() => await AccountAuth.GetCharactersAsync();
 
     private ResolvedTheme Resolve(AccountAuthService.CharacterSummary character) =>
-        ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, character.ThemeId), character.Accent);
+        ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, character.ThemeId, character.Vision),
+            character.Accent, character.Vision);
 
     private static bool IsCustom(AccountAuthService.CharacterSummary character) =>
         character.Accent is { } accent && !BuiltInThemes.AccentSwatches.Any(s => string.Equals(s.Hex, accent, StringComparison.OrdinalIgnoreCase));
@@ -123,20 +153,21 @@
     private RenderFragment ThemeChoice(AccountAuthService.CharacterSummary character, string? themeId, string label, bool busy) => __builder =>
     {
         var on = character.ThemeId == themeId;
-        var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, themeId), character.Accent);
+        var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, themeId, character.Vision),
+            character.Accent, character.Vision);
         <button type="button" role="radio" class="settings-theme-choice @(on ? "is-on" : null)" aria-checked="@(on ? "true" : "false")"
-                data-theme="@(themeId ?? "default")" disabled="@busy" @onclick="() => SaveAsync(character, themeId, character.Accent)">
+                data-theme="@(themeId ?? "default")" disabled="@busy" @onclick="() => SaveAsync(character, themeId, character.Accent, character.Vision)">
             <ThemeSwatch Theme="theme" Class="settings-theme-choice-swatch" />
             <span>@label</span>
         </button>
     };
 
-    private async Task SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent)
+    private async Task SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent, string? vision)
     {
         if (!_saving.Add(character.DbrefNumber)) return;
         try
         {
-            if (await AccountAuth.SetAppearanceAsync(character.DbrefNumber, new CharacterAppearance(themeId, accent)) is ApiFailure failure)
+            if (await AccountAuth.SetAppearanceAsync(character.DbrefNumber, new CharacterAppearance(themeId, accent, vision)) is ApiFailure failure)
             {
                 Snackbar.Add(Loc["NavThemeSaveFailed", failure.Message], Severity.Error);
             }

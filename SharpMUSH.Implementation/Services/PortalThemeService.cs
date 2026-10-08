@@ -39,6 +39,9 @@ public sealed class PortalAppearanceData
 {
 	public string? ThemeId { get; set; }
 	public string? Accent { get; set; }
+
+	/// <summary>The player's colour vision (<see cref="ThemeVision"/>); empty for typical.</summary>
+	public string? Vision { get; set; }
 }
 
 /// <inheritdoc cref="IPortalThemeService"/>
@@ -179,7 +182,7 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 	/// <inheritdoc />
 	public async ValueTask<CharacterAppearance> GetAppearanceAsync(SharpObject character)
 		=> await data.GetExpandedDataAsync<PortalAppearanceData>(character) is { } appearance
-			? new CharacterAppearance(NullIfEmpty(appearance.ThemeId), NullIfEmpty(appearance.Accent))
+			? new CharacterAppearance(NullIfEmpty(appearance.ThemeId), NullIfEmpty(appearance.Accent), ThemeVision.Chosen(appearance.Vision))
 			: new CharacterAppearance(null, null);
 
 	private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
@@ -198,6 +201,12 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 			accent = color.Hex;
 		}
 
+		if (!string.IsNullOrWhiteSpace(appearance.Vision) && !ThemeVision.All.Contains(appearance.Vision))
+		{
+			return new Error<string>($"Colour vision is one of {string.Join(", ", ThemeVision.All)}, not '{appearance.Vision}'.");
+		}
+
+		var vision = ThemeVision.Chosen(appearance.Vision);
 		var themeId = string.IsNullOrWhiteSpace(appearance.ThemeId) ? null : appearance.ThemeId;
 		if (themeId is not null && !Response(await LoadAsync(), includeUnpublished: false).Themes.Any(t => t.Id == themeId))
 		{
@@ -206,8 +215,8 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 
 		// Per-object data is merged over what is stored, and a null property keeps the stored value, so a cleared
 		// choice is written as an empty string.
-		await data.SetExpandedDataAsync(new PortalAppearanceData { ThemeId = themeId ?? "", Accent = accent ?? "" }, character);
-		return new CharacterAppearance(themeId, accent);
+		await data.SetExpandedDataAsync(new PortalAppearanceData { ThemeId = themeId ?? "", Accent = accent ?? "", Vision = vision ?? "" }, character);
+		return new CharacterAppearance(themeId, accent, vision);
 	}
 
 	private static bool BuiltIn(string id) => BuiltInThemes.All.Any(t => t.Id == id);

@@ -5841,6 +5841,51 @@
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>Spillets standard følger din enheds lyse eller mørke indstilling.</value>
   </data>
+  <data name="NavThemeVision" xml:space="preserve">
+    <value>Farvesyn</value>
+  </data>
+  <data name="NavThemeVisionTypical" xml:space="preserve">
+    <value>Typisk</value>
+  </data>
+  <data name="NavThemeVisionTypicalWhat" xml:space="preserve">
+    <value>De fleste mennesker</value>
+  </data>
+  <data name="NavThemeVisionProtan" xml:space="preserve">
+    <value>Protan</value>
+  </data>
+  <data name="NavThemeVisionProtanWhat" xml:space="preserve">
+    <value>Rødsvag eller rødblind</value>
+  </data>
+  <data name="NavThemeVisionDeutan" xml:space="preserve">
+    <value>Deutan</value>
+  </data>
+  <data name="NavThemeVisionDeutanWhat" xml:space="preserve">
+    <value>Grønsvag eller grønblind</value>
+  </data>
+  <data name="NavThemeVisionTritan" xml:space="preserve">
+    <value>Tritan</value>
+  </data>
+  <data name="NavThemeVisionTritanWhat" xml:space="preserve">
+    <value>Blåsvag eller blåblind</value>
+  </data>
+  <data name="NavThemeVisionMono" xml:space="preserve">
+    <value>Mono</value>
+  </data>
+  <data name="NavThemeVisionMonoWhat" xml:space="preserve">
+    <value>Ingen farver</value>
+  </data>
+  <data name="NavThemeVisionNote" xml:space="preserve">
+    <value>Browsere oplyser ikke farveblindhed, så vælg din her. Uden et valgt tema får du et passende tema, der følger din enheds lyse eller mørke indstilling.</value>
+  </data>
+  <data name="NavThemeVisionFollows" xml:space="preserve">
+    <value>Dit tema følger din enheds lyse eller mørke indstilling, i farver valgt til dette farvesyn.</value>
+  </data>
+  <data name="NavThemeVisionKept" xml:space="preserve">
+    <value>Dit valgte tema bliver, med status- og kodefarverne skiftet ud med farver, du kan skelne. Vælg det passende tema for resten.</value>
+  </data>
+  <data name="NavThemeVisionDefault" xml:space="preserve">
+    <value>Passer til dit farvesyn ({0})</value>
+  </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planlæg en scene</value>
   </data>

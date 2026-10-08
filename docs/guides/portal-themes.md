@@ -18,6 +18,13 @@ character on the Account page has a palette button that opens it at that charact
 **Game default** follows the browser's light or dark preference. An accent that would be too faint on the chosen
 theme is moved toward white or black until it reads at 4.5:1.
 
+**Colour vision** sits above the themes: Typical, Protan (red-weak), Deutan (green-weak), Tritan (blue-weak) or
+Mono (no colour). No browser reports colour blindness (there is no media query for it, and operating-system colour
+filters act after the page is drawn), so the player says which applies. With no theme chosen, the default becomes
+that vision's pair, dark or light by the browser's preference. With a theme chosen, the theme stays and only its
+derived status colours (`danger`, `success`, `info`, `special`) and code colours change to the vision's set. It is
+stored with the character (`CharacterAppearance.Vision`) like the theme and accent.
+
 ## Built-in themes
 
 `BuiltInThemes.All` (`SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`):
@@ -28,10 +35,27 @@ theme is moved toward white or black until it reads at 4.5:1.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
 - Cartoons and comics: `comic-book`, `rubber-hose`, `eighties-cartoon`.
 - Neon and space: `cyberpunk`, `synthwave`, `space-opera`, `starship-console`.
+- Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
+  `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
+  colour picked for that vision.
 
-The anime, cartoon and space themes are portal themes only; there is no layout theme of the same name. Every theme
-after Phosphor and Daylight has a texture, a card frame and a title face no other theme uses
-(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`).
+The anime, cartoon and space themes are portal themes only; there is no layout theme of the same name. Every genre
+theme has a texture, a card frame and a title face no other theme uses
+(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep the plain look.
+
+### How the colour vision sets were picked
+
+`ThemeVision` (`SharpMUSH.Contracts/Models/Portal/ThemeVision.cs`) holds each vision's status and code colours for
+dark and light themes. They were searched for by simulating the vision (Machado, Oliveira and Fernandes 2009, at
+full severity, so they also hold for the milder "-anomaly" forms) and keeping colours as far apart in OKLab as the
+4.5:1 floor allows. `ThemeVisionTests` checks the result the same way: on each vision theme, the accent, warning,
+missing-link and four status colours are at least 0.12 apart as that reader sees them (danger and missing-link may
+match, since both mean something is wrong), and the code colours at least 0.08. Mono sees lightness only, so it
+checks only the pairs read side by side (danger and success, accent and missing link, warning and danger, accent and
+warning, info and special) and keeps the typical code colours.
+
+A staff theme can name the vision it is made for under **Colour vision** in the editor; it then derives that
+vision's status and code colours.
 
 ## Making themes (staff)
 

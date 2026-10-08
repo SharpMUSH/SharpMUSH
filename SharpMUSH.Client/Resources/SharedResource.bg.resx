@@ -5841,6 +5841,51 @@
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>Темата по подразбиране следва светлата или тъмната настройка на устройството ви.</value>
   </data>
+  <data name="NavThemeVision" xml:space="preserve">
+    <value>Цветно зрение</value>
+  </data>
+  <data name="NavThemeVisionTypical" xml:space="preserve">
+    <value>Обичайно</value>
+  </data>
+  <data name="NavThemeVisionTypicalWhat" xml:space="preserve">
+    <value>Повечето хора</value>
+  </data>
+  <data name="NavThemeVisionProtan" xml:space="preserve">
+    <value>Протан</value>
+  </data>
+  <data name="NavThemeVisionProtanWhat" xml:space="preserve">
+    <value>Слабо или липсващо възприятие на червено</value>
+  </data>
+  <data name="NavThemeVisionDeutan" xml:space="preserve">
+    <value>Деутан</value>
+  </data>
+  <data name="NavThemeVisionDeutanWhat" xml:space="preserve">
+    <value>Слабо или липсващо възприятие на зелено</value>
+  </data>
+  <data name="NavThemeVisionTritan" xml:space="preserve">
+    <value>Тритан</value>
+  </data>
+  <data name="NavThemeVisionTritanWhat" xml:space="preserve">
+    <value>Слабо или липсващо възприятие на синьо</value>
+  </data>
+  <data name="NavThemeVisionMono" xml:space="preserve">
+    <value>Моно</value>
+  </data>
+  <data name="NavThemeVisionMonoWhat" xml:space="preserve">
+    <value>Без цветове</value>
+  </data>
+  <data name="NavThemeVisionNote" xml:space="preserve">
+    <value>Браузърите не съобщават за цветна слепота, затова изберете своята тук. Без избрана тема получавате подходяща, която следва светлата или тъмната настройка на устройството.</value>
+  </data>
+  <data name="NavThemeVisionFollows" xml:space="preserve">
+    <value>Темата ви следва светлата или тъмната настройка на устройството, в цветове, избрани за това зрение.</value>
+  </data>
+  <data name="NavThemeVisionKept" xml:space="preserve">
+    <value>Избраната тема остава, а цветовете ѝ за състояние и код се заменят с различими за вас. Изберете подходящата тема за останалото.</value>
+  </data>
+  <data name="NavThemeVisionDefault" xml:space="preserve">
+    <value>Според зрението ви ({0})</value>
+  </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Насрочи сцена</value>
   </data>

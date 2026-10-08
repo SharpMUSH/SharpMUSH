@@ -53,4 +53,9 @@ public sealed record DefaultThemeRequest(string ThemeId);
 /// </summary>
 /// <param name="ThemeId">A published theme, or null for the game's default, which follows the browser's light or dark preference.</param>
 /// <param name="Accent">A <c>#rrggbb</c> accent laid over the theme's, or null for the theme's own.</param>
-public sealed record CharacterAppearance(string? ThemeId, string? Accent);
+/// <param name="Vision">
+/// The player's colour vision (<see cref="SharpMUSH.Library.Models.Portal.ThemeVision"/>), or null for typical. With no
+/// <paramref name="ThemeId"/> it picks that vision's theme for the browser's light or dark preference; with any theme
+/// it swaps the status and code colours for ones that stay apart for that vision.
+/// </param>
+public sealed record CharacterAppearance(string? ThemeId, string? Accent, string? Vision = null);

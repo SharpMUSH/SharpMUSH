@@ -5841,6 +5841,51 @@
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>Тема игры по умолчанию следует светлой или тёмной настройке вашего устройства.</value>
   </data>
+  <data name="NavThemeVision" xml:space="preserve">
+    <value>Цветовое зрение</value>
+  </data>
+  <data name="NavThemeVisionTypical" xml:space="preserve">
+    <value>Обычное</value>
+  </data>
+  <data name="NavThemeVisionTypicalWhat" xml:space="preserve">
+    <value>Большинство людей</value>
+  </data>
+  <data name="NavThemeVisionProtan" xml:space="preserve">
+    <value>Протан</value>
+  </data>
+  <data name="NavThemeVisionProtanWhat" xml:space="preserve">
+    <value>Слабое восприятие или невосприятие красного</value>
+  </data>
+  <data name="NavThemeVisionDeutan" xml:space="preserve">
+    <value>Дейтан</value>
+  </data>
+  <data name="NavThemeVisionDeutanWhat" xml:space="preserve">
+    <value>Слабое восприятие или невосприятие зелёного</value>
+  </data>
+  <data name="NavThemeVisionTritan" xml:space="preserve">
+    <value>Тритан</value>
+  </data>
+  <data name="NavThemeVisionTritanWhat" xml:space="preserve">
+    <value>Слабое восприятие или невосприятие синего</value>
+  </data>
+  <data name="NavThemeVisionMono" xml:space="preserve">
+    <value>Моно</value>
+  </data>
+  <data name="NavThemeVisionMonoWhat" xml:space="preserve">
+    <value>Без цвета</value>
+  </data>
+  <data name="NavThemeVisionNote" xml:space="preserve">
+    <value>Браузеры не сообщают о дальтонизме, поэтому выберите свой вариант здесь. Без выбранной темы вы получите подходящую, которая следует светлой или тёмной настройке устройства.</value>
+  </data>
+  <data name="NavThemeVisionFollows" xml:space="preserve">
+    <value>Ваша тема следует светлой или тёмной настройке устройства, в цветах, подобранных для этого зрения.</value>
+  </data>
+  <data name="NavThemeVisionKept" xml:space="preserve">
+    <value>Выбранная тема остаётся, а её цвета статусов и кода заменены различимыми для вас. Выберите подходящую тему, чтобы изменить остальное.</value>
+  </data>
+  <data name="NavThemeVisionDefault" xml:space="preserve">
+    <value>По вашему зрению ({0})</value>
+  </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Запланировать сцену</value>
   </data>
