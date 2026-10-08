@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using AccountCharacter = SharpMUSH.Client.Services.AccountAuthService.CharacterSummary;
 
@@ -191,10 +192,23 @@ public class ProfileBannerTests : TrackingBunitContext
 		return cut.FindComponents<InputFile>().First(i => i.Find("input").Id == id);
 	}
 
-	private async Task SignInAsTomasAsync()
+	private async Task SignInAsTomasAsync(bool wikiEdit = true)
 	{
 		_auth.SetAuthorized("player");
+		if (wikiEdit) _auth.SetClaims(new System.Security.Claims.Claim(PortalPermission.ClaimType, PortalPermission.WikiEdit));
 		Services.AddSingleton(await CharactersApiFake.SignedInAsync(this, new AccountCharacter(312, 1, "Tomas Reyes", "PLAYER", IsActing: true)));
+	}
+
+	/// <summary>Owning the character is not enough: its images change only with wiki.edit.</summary>
+	[Test]
+	public async Task TheOwner_WithoutWikiEdit_IsNotOfferedTheImageControls()
+	{
+		await SignInAsTomasAsync(wikiEdit: false);
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-pill--dbref"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".char-profile-change-banner").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".char-profile-change-avatar").Count).IsEqualTo(0);
 	}
 
 	[Test]

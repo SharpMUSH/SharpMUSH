@@ -1,4 +1,3 @@
-using SharpMUSH.Library;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -61,7 +60,7 @@ internal static class WikiControllerTestHarness
 
 		// The real access service over a role registry seeded as a new world is, so an anonymous caller holds
 		// what the everyone role grants (wiki.read) and nothing more.
-		var access = new WikiAccessService(storage, InMemoryRoleRegistry.Seeded(), new PermissionResolver(), Substitute.For<IAccountStore>());
+		var access = new WikiAccessService(storage, InMemoryRoleRegistry.Seeded(), new PermissionResolver());
 
 		var endpoints = new WikiEndpoints(
 			new WikiController(storage, localization, access, cache, names, NullLogger<WikiController>.Instance),

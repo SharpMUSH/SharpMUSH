@@ -432,14 +432,15 @@ public class WikiControllerTranslationTests
 	}
 
 	[Test]
-	public async Task TranslationWriteEndpointsNeedASignedInCaller()
+	public async Task TranslationWriteEndpointsAreGatedOnWikiEdit()
 	{
 		// Every test above constructs the controller directly, which bypasses the authorization filter
 		// entirely — so a dropped [Authorize] would leave translation writes anonymously reachable with
-		// the whole suite still green. Reflection is the only thing that notices. wiki.edit itself is the
-		// page-level decision's (an account edits its own characters' biographies without it).
-		await Assert.That(ActionAuthorize(nameof(WikiTranslationsController.PutTranslation))).IsNotNull();
-		await Assert.That(ActionAuthorize(nameof(WikiTranslationsController.DeleteTranslation))).IsNotNull();
+		// the whole suite still green. Reflection is the only thing that notices.
+		await Assert.That(ActionAuthorize(nameof(WikiTranslationsController.PutTranslation))?.Policy)
+			.IsEqualTo(PortalPermission.WikiEdit);
+		await Assert.That(ActionAuthorize(nameof(WikiTranslationsController.DeleteTranslation))?.Policy)
+			.IsEqualTo(PortalPermission.WikiEdit);
 	}
 
 	[Test]

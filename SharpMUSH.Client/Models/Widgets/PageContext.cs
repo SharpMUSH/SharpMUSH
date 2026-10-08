@@ -11,23 +11,20 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// layout editor.
 /// </summary>
 /// <param name="CharacterName">The character whose profile is being viewed (from the route).</param>
-/// <param name="CanEdit">Whether the current viewer may edit this character's profile content: the
-/// account that owns the character, or staff.</param>
+/// <param name="CanEdit">Whether the current viewer may edit this character's profile content: a
+/// <c>wiki.edit</c> holder whose account owns the character, or who is staff.</param>
 /// <param name="Dbref">The character's dbref once the page has resolved it, so widgets need not ask
 /// the directory again; null until then.</param>
 /// <param name="Gallery">The gallery as the page's own last write left it (its banner and avatar
 /// controls), for a gallery widget to show; null until the page writes.</param>
 /// <param name="GalleryChanged">Tells the page a widget changed the gallery, so the banner and the
 /// avatar follow it.</param>
-/// <param name="Owned">The viewer's account owns the character, so may write its biography without any
-/// wiki permission.</param>
 public record ProfilePageContext(
 	string CharacterName,
 	bool CanEdit,
 	string? Dbref = null,
 	IReadOnlyList<GalleryEntry>? Gallery = null,
-	Action<IReadOnlyList<GalleryEntry>>? GalleryChanged = null,
-	bool Owned = false);
+	Action<IReadOnlyList<GalleryEntry>>? GalleryChanged = null);
 
 /// <summary>
 /// What the Play page offers the widgets in its <c>"play"</c> layout scope (README §7.4): opening a

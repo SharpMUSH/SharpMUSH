@@ -55,7 +55,7 @@ public class WikiTranslationsController(
 	/// translation is.
 	/// </summary>
 	[HttpPut("{slug}/translations/{locale}")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> PutTranslation(
 		string slug, string locale, [FromBody] UpsertTranslationRequest request,
 		[FromQuery] string? ns = null)
@@ -117,7 +117,7 @@ public class WikiTranslationsController(
 	/// untouched, and deleting the last translation is allowed. Gated as an edit, not a page deletion.
 	/// </summary>
 	[HttpDelete("{slug}/translations/{locale}")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> DeleteTranslation(
 		string slug, string locale, [FromQuery] string? ns = null)
 	{
