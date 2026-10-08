@@ -59,10 +59,23 @@ else
     private string? _found;
     private string? _foundFor;
 
+    // Every lookup takes the next number; only the latest one's answer is kept.
+    private int _lookup;
+
+    // A picture change told after the caller gave ImageUrl: the directory's answer is newer than it,
+    // until the caller gives a different ImageUrl.
+    private bool _directoryIsNewer;
+    private string? _givenImageUrl;
+
+    private bool HaveFound => _foundFor is not null && _foundFor == Character;
+
     private string? Picture =>
-        ImageUrlPolicy.IsRenderable(ImageUrl) ? ImageUrl
-        : _foundFor is not null && _foundFor == Character && ImageUrlPolicy.IsRenderable(_found) ? _found
+        _directoryIsNewer && HaveFound ? Renderable(_found)
+        : ImageUrlPolicy.IsRenderable(ImageUrl) ? ImageUrl
+        : HaveFound ? Renderable(_found)
         : null;
+
+    private static string? Renderable(string? url) => ImageUrlPolicy.IsRenderable(url) ? url : null;
 
     private string FallbackColours
     {
@@ -75,21 +88,33 @@ else
 
     protected override void OnInitialized() => Pictures.Changed += OnPicturesChanged;
 
-    protected override Task OnParametersSetAsync() => FindAsync();
+    protected override Task OnParametersSetAsync()
+    {
+        if (ImageUrl != _givenImageUrl)
+        {
+            _givenImageUrl = ImageUrl;
+            _directoryIsNewer = false;
+        }
+
+        return ImageUrlPolicy.IsRenderable(ImageUrl) ? Task.CompletedTask : FindAsync();
+    }
 
     private async Task FindAsync()
     {
-        if (ImageUrlPolicy.IsRenderable(ImageUrl) || Character is not { Length: > 0 } character) return;
+        if (Character is not { Length: > 0 } character) return;
 
+        var lookup = ++_lookup;
         var found = await Pictures.PictureOfAsync(character);
-        // A lookup that answers after the avatar moved to someone else is not theirs.
-        if (character != Character) return;
+        // A lookup overtaken by a later one (a picture change, another character) is not the answer.
+        if (lookup != _lookup) return;
         _found = found;
         _foundFor = character;
     }
 
     private void OnPicturesChanged() => _ = InvokeAsync(async () =>
     {
+        if (Character is not { Length: > 0 }) return;
+        _directoryIsNewer = true;
         await FindAsync();
         StateHasChanged();
     });

@@ -544,5 +544,5 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		};
 
 	private static WikiRevisionInfo ToRevision(WikiRevisionDto dto) =>
-		new(dto.RevisionNumber, dto.EditorDbref, dto.Timestamp, dto.EditSummary, dto.MarkdownSource);
+		new(dto.RevisionNumber, dto.EditorDbref, dto.Timestamp, dto.EditSummary, dto.MarkdownSource) { EditorName = dto.EditorName };
 }

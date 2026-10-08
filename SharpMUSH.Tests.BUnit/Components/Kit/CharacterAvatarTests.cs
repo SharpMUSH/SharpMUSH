@@ -14,9 +14,19 @@ public class CharacterAvatarTests : TrackingBunitContext
 		public List<string> Asked { get; } = [];
 		public event Action? Changed;
 
+		/// <summary>When set, each lookup waits on its own source, answered by the test.</summary>
+		public Queue<TaskCompletionSource<string?>>? Pending { get; set; }
+
 		public Task<string?> PictureOfAsync(string character, CancellationToken cancellationToken = default)
 		{
 			Asked.Add(character);
+			if (Pending is { } pending)
+			{
+				var answer = new TaskCompletionSource<string?>();
+				pending.Enqueue(answer);
+				return answer.Task;
+			}
+
 			return Task.FromResult(ByKey.GetValueOrDefault(character));
 		}
 
@@ -101,5 +111,39 @@ public class CharacterAvatarTests : TrackingBunitContext
 		cut.Render(p => p.Add(x => x.Name, "Dace Kellan").Add(x => x.Character, "#4"));
 		await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
 		await Assert.That(cut.Find("span").TextContent).IsEqualTo("DK");
+	}
+
+	[Test]
+	public async Task APictureChangedElsewhere_ReplacesTheOneTheCallerGave()
+	{
+		var cut = Render<CharacterAvatar>(p => p.Add(x => x.Name, "Ilsa Varn").Add(x => x.ImageUrl, "/old.jpg").Add(x => x.Character, "#3"));
+		await Assert.That(cut.Find("img").GetAttribute("src")).EndsWith("/old.jpg");
+
+		_pictures.ByKey["#3"] = "/new.jpg";
+		_pictures.Change();
+		cut.WaitForState(() => cut.Find("img").GetAttribute("src")?.EndsWith("/new.jpg") == true);
+
+		_pictures.ByKey.Remove("#3");
+		_pictures.Change();
+		cut.WaitForAssertion(() => cut.Find("span"));
+		await Assert.That(cut.Find("span").TextContent).IsEqualTo("IV").Because("a removed avatar is not drawn from the caller's stale copy");
+	}
+
+	[Test]
+	public async Task ALookupOvertakenByALaterOne_IsNotTheAnswer()
+	{
+		_pictures.Pending = new();
+		var cut = Render<CharacterAvatar>(p => p.Add(x => x.Name, "Ilsa Varn").Add(x => x.Character, "#3"));
+		var before = _pictures.Pending.Dequeue();
+
+		_pictures.Change();
+		cut.WaitForState(() => _pictures.Pending.Count == 1);
+		var after = _pictures.Pending.Dequeue();
+
+		await cut.InvokeAsync(() => after.SetResult("/new.jpg"));
+		await cut.InvokeAsync(() => before.SetResult("/old.jpg"));
+
+		cut.WaitForAssertion(() => cut.Find("img"));
+		await Assert.That(cut.Find("img").GetAttribute("src")).EndsWith("/new.jpg");
 	}
 }
