@@ -34,7 +34,7 @@ public partial class Commands
 	/// <c>/add</c>, <c>/remove</c>, <c>/disable</c> and <c>/enable</c> change them (<c>layout.admin</c>).
 	/// </summary>
 	[SharpCommand(Name = "@THEME", Switches = ["LIGHT", "DARK", "REFRESH", "LIST", "ADD", "REMOVE", "DISABLE", "ENABLE"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "theme"])]
+		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "theme"])]
 	public async ValueTask<Option<CallState>> Theme(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -76,8 +76,8 @@ public partial class Commands
 					return CallState.Empty;
 				}
 
-				// A mode is added to the theme the text works out to, which is then kept as it is.
-				var stored = mode is null ? spec : InMode(await WorkedOutAsync(parser, target, spec), mode);
+				// A mode is added to the theme the text works out to; braces keep the JSON whole when it is evaluated.
+				var stored = mode is null ? spec : $"{{{InMode(await WorkedOutAsync(parser, target, spec), mode)}}}";
 				if (ReadTheme(await WorkedOutAsync(parser, target, stored)) is Error<string> error)
 				{
 					await NotifyService.Notify(executor, error.Value, executor);
@@ -132,7 +132,8 @@ public partial class Commands
 
 		var outcome = change switch
 		{
-			"ADD" => await LayoutThemeService.AddAsync(name, definition) switch
+			// Worked out as the executor, as a THEME is: braces keep JSON whole, and code can make the theme.
+			"ADD" => await LayoutThemeService.AddAsync(name, await WorkedOutAsync(parser, executor, definition)) switch
 			{
 				LayoutThemeEntry added => (FoundResult<string>)added.Name,
 				Error<string> error => error,
@@ -224,14 +225,10 @@ public partial class Commands
 		return $"{{\"preset\":{value},\"mode\":\"{mode}\"}}";
 	}
 
-	/// <summary>
-	/// What THEME text <paramref name="text"/> works out to for <paramref name="player"/>: JSON (text starting with
-	/// <c>{</c>) as written, anything else evaluated with the player as <c>%#</c> and <c>%!</c>.
-	/// </summary>
+	/// <summary>What THEME text <paramref name="text"/> works out to, evaluated with <paramref name="player"/> as <c>%#</c> and <c>%!</c>.</summary>
 	private static async ValueTask<string> WorkedOutAsync(IMUSHCodeParser parser, AnySharpObject player, string text)
 	{
 		text = text.Trim();
-		if (text.StartsWith('{')) return text;
 		var dbref = player.Object().DBRef;
 		var result = await parser.With(state => state with { Executor = dbref, Enactor = dbref, Caller = dbref },
 			async evaluating => await evaluating.FunctionParse(MarkupText.Plain(text)));

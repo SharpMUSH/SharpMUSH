@@ -45,10 +45,10 @@ public class ThemeCommandTests
 	[Test]
 	public async Task Theme_TakesJsonAsWritten()
 	{
-		// The outer braces only keep the argument together, as they do for a layout function's options.
+		// Kept as typed; evaluating it takes the outer braces off, as for a layout function's options.
 		var (_, theme) = await AsPlayer("@theme me={{\"seed\":\"#7aa2f7\",\"harmony\":\"triadic\"}}");
 
-		await Assert.That(theme).IsEqualTo("{\"seed\":\"#7aa2f7\",\"harmony\":\"triadic\"}");
+		await Assert.That(theme).IsEqualTo("{{\"seed\":\"#7aa2f7\",\"harmony\":\"triadic\"}}");
 	}
 
 	[Test]
@@ -57,8 +57,8 @@ public class ThemeCommandTests
 		var (_, named) = await AsPlayer("@theme/light me=fantasy");
 		var (_, written) = await AsPlayer("@theme/light me={{\"seed\":\"#7aa2f7\"}}");
 
-		await Assert.That(named).IsEqualTo("{\"preset\":\"fantasy\",\"mode\":\"light\"}");
-		await Assert.That(written).IsEqualTo("{\"preset\":{\"seed\":\"#7aa2f7\"},\"mode\":\"light\"}");
+		await Assert.That(named).IsEqualTo("{{\"preset\":\"fantasy\",\"mode\":\"light\"}}");
+		await Assert.That(written).IsEqualTo("{{\"preset\":{\"seed\":\"#7aa2f7\"},\"mode\":\"light\"}}");
 	}
 
 	/// <summary>A new player in a room of their own, parented to a thing they own, which is returned too.</summary>
@@ -191,7 +191,7 @@ public class ThemeCommandTests
 		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ThemeRoom"), god));
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "Themer", home);
 		// Set by hand, so @theme never saw it.
-		await WebAppFactoryArg.CommandParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&THEME me={\"look\":{\"bullet\":5}}"));
+		await WebAppFactoryArg.CommandParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&THEME me={{\"look\":{\"bullet\":5}}}"));
 
 		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 		try

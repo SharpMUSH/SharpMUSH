@@ -489,13 +489,13 @@ The theme is kept in the `THEME` attribute, and a player without one of their ow
 
 ## Code in a theme
 
-A theme that starts with `{` is JSON and is used as written. Anything else is evaluated as the player, with `%#` and `%!` the player, and what it works out to is the theme. That lets one theme on an ancestor or parent choose by a value:
+`@theme` keeps what follows the `=` exactly as it is typed, braces and all. Whenever the theme is needed it is evaluated as the player, with `%#` and `%!` the player, and what it works out to is the theme. Evaluating takes off the outer pair of braces round JSON, which is why JSON is typed inside two, and runs anything in `[ ]`, so a list in JSON is typed `\[ \]`. That lets one theme on an ancestor or parent choose by a value:
 
 ```
 @theme #4=[if(strmatch(get(%#/FACTION),Rebel),horror,nord)]
 ```
 
-`@theme` keeps what follows the `=` as it is written, so the code needs no `\[`. The theme is worked out when the player connects, when `@theme` sets it, and when someone runs `@theme/refresh <player>`. Softcode that changes the value can run `@theme/refresh %#` after it. `/refresh` with no player refreshes your own, and says the theme in use. `@theme` works a theme out for *<object>* itself before it is kept, and refuses one that does not read.
+The theme is worked out when the player connects, when `@theme` sets it, and when someone runs `@theme/refresh <player>`. Softcode that changes the value can run `@theme/refresh %#` after it. `/refresh` with no player refreshes your own, and says the theme in use. `@theme` works a theme out for *<object>* itself before it is kept, and refuses one that does not read.
 
 ## Which theme wins
 
@@ -523,19 +523,19 @@ A theme made from one colour, with every colour made to stand out a little more 
 Theme set.
 ```
 
-A scheme copied from an editor theme, as sixteen base16 colours:
+A scheme copied from an editor theme, as sixteen base16 colours. A theme kept with [@THEME/LIST] saves typing them, and the `\[ \]`, in each `THEME`:
 
 ```sharp
-> @theme me={{"base16":["#1d1f21","#282a2e","#373b41","#969896","#b4b7b4","#c5c8c6","#e0e0e0","#ffffff","#cc6666","#de935f","#f0c674","#b5bd68","#8abeb7","#81a2be","#b294bb","#a3685a"]}}
+> @theme me={{"base16":\["#1d1f21","#282a2e","#373b41","#969896","#b4b7b4","#c5c8c6","#e0e0e0","#ffffff","#cc6666","#de935f","#f0c674","#b5bd68","#8abeb7","#81a2be","#b294bb","#a3685a"\]}}
 Theme set.
 ```
 
-Nord with red borders, and fantasy with plain bullets and round brackets about each title. `@theme` does not evaluate what it keeps, and JSON is not evaluated later either, so a list needs no `\[`:
+Nord with red borders, and fantasy with plain bullets and round brackets about each title, its list typed `\[ \]`:
 
 ```sharp
 > @theme me={{"preset":"nord","colors":{"primary":"#bf616a"}}}
 Theme set.
-> @theme me={{"preset":"fantasy","look":{"bullet":"-","title":["( "," )"]}}}
+> @theme me={{"preset":"fantasy","look":{"bullet":"-","title":\["( "," )"\]}}}
 Theme set.
 ```
 
@@ -583,7 +583,7 @@ The themes a game offers: the built-in ones, less those staff disabled, and thos
 
 `/list` shows every theme, built-in and added, and whether it is offered. Anyone may use it.
 
-`/add` adds a theme under *<name>*, or replaces the one added under that name. *<theme>* is JSON inside a second pair of braces, or the name of another theme. It can start from any theme with `"preset"`, a disabled one included. An added theme it starts from is copied into it, so it does not change when that one does. *<name>* is lower-case letters, digits and hyphens, up to 32 of them, and cannot be a built-in theme's name.
+`/add` adds a theme under *<name>*, or replaces the one added under that name. *<theme>* is evaluated once, as you, and what it works out to is kept: JSON inside a second pair of braces, or the name of another theme. It can start from any theme with `"preset"`, a disabled one included. An added theme it starts from is copied into it, so it does not change when that one does. *<name>* is lower-case letters, digits and hyphens, up to 32 of them, and cannot be a built-in theme's name.
 
 `/remove` removes an added theme. `/disable` takes a built-in theme off the list, and `/enable` puts it back.
 
