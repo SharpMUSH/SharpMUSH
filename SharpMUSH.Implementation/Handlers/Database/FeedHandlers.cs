@@ -37,6 +37,12 @@ public class DeleteFeedCommandHandler(IFeedStore store) : ICommandHandler<Delete
 		=> store.DeleteFeedAsync(command.Kind, command.Key, cancellationToken);
 }
 
+public class RenameFeedCommandHandler(IFeedStore store) : ICommandHandler<RenameFeedCommand, bool>
+{
+	public ValueTask<bool> Handle(RenameFeedCommand command, CancellationToken cancellationToken)
+		=> store.RenameFeedAsync(command.Kind, command.From, command.To, cancellationToken);
+}
+
 public class SetFeedMemberCommandHandler(IFeedStore store) : ICommandHandler<SetFeedMemberCommand>
 {
 	public async ValueTask<Unit> Handle(SetFeedMemberCommand command, CancellationToken cancellationToken)

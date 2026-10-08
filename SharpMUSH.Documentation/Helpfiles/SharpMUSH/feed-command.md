@@ -16,6 +16,11 @@
       "lookup": "@feed members"
     },
     {
+      "id": "feed-rename",
+      "heading": "Changing a feed's key",
+      "lookup": "@feed rename"
+    },
+    {
       "id": "feed-sending",
       "heading": "Sending a line",
       "lookup": "@feed sending"
@@ -57,6 +62,7 @@
 `@feed/untap <kind>=<object>/<attribute>`<br>
 `@feed/purge <kind>/<key>[=<age>]`<br>
 `@feed/delete <kind>/<key>`<br>
+`@feed/rename <kind>/<key>=<new key>`<br>
 `@feed/join <kind>/<key>=<object>`<br>
 `@feed/leave <kind>/<key>=<object>`<br>
 `@feed/gag <kind>/<key>=<object>` (and `/ungag`)<br>
@@ -90,6 +96,14 @@ A feed's members are who its lines go to. The engine keeps them so each system d
 - `/seen` moves a member's last-seen mark to a line id, or to the newest line. [feedunread()] counts the lines after it.
 
 `@feed/who <kind>/<key>` lists the members, their marks, the newest line id when they joined, and how far they have read. `@feed/delete <kind>/<key>` removes the feed with its members and lines.
+
+## Changing a feed's key
+
+A feed's lines and members are stored under its key. Sending to a new key starts a new, empty feed, and the old key keeps its lines (still counted by `@storage` and `@feed/list`) and its members until it is moved or deleted.
+
+`@feed/rename radio/101.5=102.1` moves a feed to a new key of the same kind. Every line keeps its id, so ids already handed out still work with [feedmsg()], and each member keeps how far they have read. If a feed is already at the new key, the two are merged: the lines go together in id order, a member of both keeps their place on the new key, and the new key keeps its own settings and locks.
+
+A key is best something that never changes, such as a number, with the name players see kept in the system's own attribute. Renaming then changes only that attribute, and nothing in the feed moves. Code that saved the old key (a list of feeds, a ROUTE attribute, a tap that files lines by key) must be changed by the system.
 
 ## Sending a line
 

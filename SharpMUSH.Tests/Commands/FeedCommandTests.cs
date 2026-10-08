@@ -325,4 +325,28 @@ public class FeedCommandTests : ServerTestBase
 		await Assert.That(await Cmd($"@feed/define channel={Ref(_system)}")).Contains("the engine's own kind");
 		await Assert.That(await Eval("feedinfo(channel,owner)")).IsEqualTo("#-1 NO SUCH FEED KIND");
 	}
+
+	[Test]
+	public async Task Rename_MovesLinesAndMembers_AndMergesIntoAFeedAlreadyThere()
+	{
+		await Heard(_system, $"@feed/join {_kind}/old={Ref(_ann)}");
+		await Heard(_system, $"@feed/send {_kind}/old=one");
+		await Heard(_system, $"@feed/send {_kind}/old=two");
+		var ids = await EvalAs(_system.DbRef, $"feedrecall({_kind}/old,0)");
+
+		await Assert.That(await Heard(_system, $"@feed/rename {_kind}/old=new")).Contains($"Moved {_kind}/old to {_kind}/new");
+		await Assert.That(await EvalAs(_system.DbRef, $"feeds({_kind})")).IsEqualTo($"{_kind}/new");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedrecall({_kind}/new,0)")).IsEqualTo(ids);
+		await Assert.That(await EvalAs(_system.DbRef, $"feedsof({Ref(_ann)},{_kind})")).IsEqualTo($"{_kind}/new");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedunread({_kind}/new,{Ref(_ann)})")).IsEqualTo("2");
+
+		await Heard(_system, $"@feed/join {_kind}/other={Ref(_bo)}");
+		await Heard(_system, $"@feed/send {_kind}/other=three");
+		await Heard(_system, $"@feed/rename {_kind}/other=new");
+		await Assert.That(await EvalAs(_system.DbRef, $"iter(feedrecall({_kind}/new,0),feedmsg(##,text))")).IsEqualTo("one two three");
+		await Assert.That(await EvalAs(_system.DbRef, $"words(feedwho({_kind}/new))")).IsEqualTo("2");
+
+		await Assert.That(await Heard(_system, $"@feed/rename {_kind}/new=a b")).Contains("is not a feed key");
+		await Assert.That(await Heard(_system, $"@feed/rename {_kind}/new=other{_kind}/x")).Contains("its own kind");
+	}
 }

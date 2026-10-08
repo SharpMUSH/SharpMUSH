@@ -18,6 +18,9 @@ public record SetFeedCommand(SharpFeed Feed) : ICommand;
 /// <summary>Deletes a feed with its members and lines. See <see cref="IFeedStore.DeleteFeedAsync"/>.</summary>
 public record DeleteFeedCommand(string Kind, string Key) : ICommand<bool>;
 
+/// <summary>Moves a feed's lines and members to another key of its kind. See <see cref="IFeedStore.RenameFeedAsync"/>.</summary>
+public record RenameFeedCommand(string Kind, string From, string To) : ICommand<bool>;
+
 /// <summary>Writes a membership. See <see cref="IFeedStore.SetFeedMemberAsync"/>.</summary>
 public record SetFeedMemberCommand(string Kind, string Key, SharpFeedMember Member) : ICommand;
 

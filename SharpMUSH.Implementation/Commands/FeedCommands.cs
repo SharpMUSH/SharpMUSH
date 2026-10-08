@@ -21,7 +21,7 @@ public partial class Commands
 	private static readonly string[] FeedOperations =
 	[
 		"LIST", "INFO", "DEFINE", "UNDEFINE", "DESCRIBE", "SET", "LOCK", "UNLOCK", "TAP", "UNTAP", "PURGE", "DELETE",
-		"JOIN", "LEAVE", "GAG", "UNGAG", "SEEN", "WHO", "SEND"
+		"RENAME", "JOIN", "LEAVE", "GAG", "UNGAG", "SEEN", "WHO", "SEND"
 	];
 
 	private static readonly string[] FeedStyleSwitches = ["SAY", "POSE", "SEMIPOSE", "EMIT", "ANNOUNCE"];
@@ -39,7 +39,7 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "@FEED",
 		Switches = ["LIST", "INFO", "DEFINE", "UNDEFINE", "DESCRIBE", "SET", "LOCK", "UNLOCK", "TAP", "UNTAP", "PURGE",
-			"DELETE", "JOIN", "LEAVE", "GAG", "UNGAG", "SEEN", "WHO", "SEND", "TO", "AS", "SAY",
+			"DELETE", "RENAME", "JOIN", "LEAVE", "GAG", "UNGAG", "SEEN", "WHO", "SEND", "TO", "AS", "SAY",
 			"POSE", "SEMIPOSE", "EMIT", "ANNOUNCE"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["feed", "value"])]
 	public async ValueTask<Option<CallState>> Feed(IMUSHCodeParser parser, SharpCommandAttribute _)
@@ -94,6 +94,11 @@ public partial class Commands
 				"DELETE" => MarkupText.Plain(await FeedTargetAsync(parser, executor, left) switch
 				{
 					FeedTarget target => await FeedDeleteAsync(target),
+					Error<string> error => error.Value
+				}),
+				"RENAME" => MarkupText.Plain(await FeedTargetAsync(parser, executor, left) switch
+				{
+					FeedTarget target => await FeedRenameAsync(target, right),
 					Error<string> error => error.Value
 				}),
 				"PURGE" => MarkupText.Plain(await FeedTargetAsync(parser, executor, left) switch
@@ -372,6 +377,28 @@ public partial class Commands
 		=> await Mediator.Send(new DeleteFeedCommand(target.Kind.Name, target.Feed.Key), ExecutionBudget.CurrentToken)
 			? $"Deleted feed {target.Feed.Name}, its members and lines."
 			: $"Feed {target.Feed.Name} has no members or lines.";
+
+	/// <summary>
+	/// <c>@feed/rename &lt;kind&gt;/&lt;key&gt;=&lt;new key&gt;</c>: the lines keep their ids and move with the
+	/// members to the new key, merging into a feed already there.
+	/// </summary>
+	private async ValueTask<string> FeedRenameAsync(FeedTarget target, string newKey)
+	{
+		if (newKey.Contains('/') && FeedNames.TryParse(newKey, out var kindName, out var key) && key is not null)
+		{
+			if (kindName != target.Kind.Name) return "A feed can only move to another key of its own kind.";
+			newKey = key;
+		}
+
+		if (!FeedNames.IsKey(newKey))
+			return $"'{newKey}' is not a feed key: up to {FeedNames.MaxKeyLength} characters, no / and no spaces.";
+		if (newKey == target.Feed.Key) return $"{target.Feed.Name} already has that key.";
+
+		var to = $"{target.Kind.Name}/{newKey}";
+		return await Mediator.Send(new RenameFeedCommand(target.Kind.Name, target.Feed.Key, newKey), ExecutionBudget.CurrentToken)
+			? $"Moved {target.Feed.Name} to {to}."
+			: $"Feed {target.Feed.Name} has no members or lines.";
+	}
 
 	/// <summary><c>/join</c>, <c>/leave</c>, the status switches and <c>/seen</c>: <c>@feed/&lt;op&gt; &lt;kind&gt;/&lt;key&gt;=&lt;player&gt;</c>.</summary>
 	private async ValueTask<string> FeedMemberChangeAsync(IMUSHCodeParser parser, AnySharpObject executor,
