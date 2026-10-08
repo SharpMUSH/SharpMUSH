@@ -21,7 +21,7 @@ public partial class Commands
 	private static readonly string[] FeedOperations =
 	[
 		"LIST", "INFO", "DEFINE", "UNDEFINE", "DESCRIBE", "SET", "LOCK", "UNLOCK", "TAP", "UNTAP", "PURGE", "DELETE",
-		"JOIN", "LEAVE", "GAG", "UNGAG", "MUTE", "UNMUTE", "HIDE", "UNHIDE", "SEEN", "WHO", "SEND"
+		"JOIN", "LEAVE", "GAG", "UNGAG", "SEEN", "WHO", "SEND"
 	];
 
 	private static readonly string[] FeedStyleSwitches = ["SAY", "POSE", "SEMIPOSE", "EMIT", "ANNOUNCE"];
@@ -39,7 +39,7 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "@FEED",
 		Switches = ["LIST", "INFO", "DEFINE", "UNDEFINE", "DESCRIBE", "SET", "LOCK", "UNLOCK", "TAP", "UNTAP", "PURGE",
-			"DELETE", "JOIN", "LEAVE", "GAG", "UNGAG", "MUTE", "UNMUTE", "HIDE", "UNHIDE", "SEEN", "WHO", "SEND", "TO", "AS", "SAY",
+			"DELETE", "JOIN", "LEAVE", "GAG", "UNGAG", "SEEN", "WHO", "SEND", "TO", "AS", "SAY",
 			"POSE", "SEMIPOSE", "EMIT", "ANNOUNCE"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["feed", "value"])]
 	public async ValueTask<Option<CallState>> Feed(IMUSHCodeParser parser, SharpCommandAttribute _)
@@ -85,7 +85,7 @@ public partial class Commands
 						styles.FirstOrDefault()?.ToLowerInvariant(), switches.Contains("TO"), switches.Contains("AS")),
 					Error<string> error => error.Value
 				}),
-				"JOIN" or "LEAVE" or "GAG" or "UNGAG" or "MUTE" or "UNMUTE" or "HIDE" or "UNHIDE" or "SEEN"
+				"JOIN" or "LEAVE" or "GAG" or "UNGAG" or "SEEN"
 					=> MarkupText.Plain(await FeedTargetAsync(parser, executor, left) switch
 					{
 						FeedTarget target => await FeedMemberChangeAsync(parser, executor, operation, target, right),
@@ -275,11 +275,10 @@ public partial class Commands
 		var rows = new List<string[]>();
 		foreach (var member in members)
 		{
-			string[] status = [.. member.Gag ? ["gag"] : Array.Empty<string>(), .. member.Mute ? ["mute"] : Array.Empty<string>(), .. member.Hide ? ["hide"] : Array.Empty<string>()];
 			rows.Add(
 			[
 				await DisplayAsync(member.Member),
-				status.Length == 0 ? "-" : string.Join(" ", status),
+				member.Gag ? "gag" : "-",
 				member.JoinedAt.ToString(CultureInfo.InvariantCulture),
 				member.LastSeen.ToString(CultureInfo.InvariantCulture)
 			]);
@@ -400,7 +399,7 @@ public partial class Commands
 			if (!await Feeds(parser).PassesAsync(kind, feed, FeedLocks.Read, who))
 				return $"{Display(who)} does not pass the read lock of {feed.Name}.";
 			await Mediator.Send(new SetFeedMemberCommand(kind.Name, feed.Key,
-				new SharpFeedMember(dbref, feed.LastId, false, false, false, feed.LastId)), ct);
+				new SharpFeedMember(dbref, feed.LastId, false, feed.LastId)), ct);
 			return $"Joined {Display(who)} to {feed.Name}.";
 		}
 
@@ -415,10 +414,6 @@ public partial class Commands
 		{
 			"GAG" => member with { Gag = true },
 			"UNGAG" => member with { Gag = false },
-			"MUTE" => member with { Mute = true },
-			"UNMUTE" => member with { Mute = false },
-			"HIDE" => member with { Hide = true },
-			"UNHIDE" => member with { Hide = false },
 			_ => member with { LastSeen = seenTo ?? feed.LastId }
 		};
 		await Mediator.Send(new SetFeedMemberCommand(kind.Name, feed.Key, changed), ct);
@@ -426,11 +421,7 @@ public partial class Commands
 		{
 			"SEEN" => $"{Display(who)} has seen {feed.Name} up to {changed.LastSeen.ToString(CultureInfo.InvariantCulture)}.",
 			"GAG" => $"{Display(who)} is now gagged on {feed.Name}.",
-			"UNGAG" => $"{Display(who)} is no longer gagged on {feed.Name}.",
-			"MUTE" => $"{Display(who)} is now muted on {feed.Name}.",
-			"UNMUTE" => $"{Display(who)} is no longer muted on {feed.Name}.",
-			"HIDE" => $"{Display(who)} is now hidden on {feed.Name}.",
-			_ => $"{Display(who)} is no longer hidden on {feed.Name}."
+			_ => $"{Display(who)} is no longer gagged on {feed.Name}."
 		};
 	}
 
@@ -528,7 +519,7 @@ public partial class Commands
 			};
 		}
 
-		if (!FeedLocks.IsName(option)) return $"'{option}' is not a lock name: a word in lower case, such as read, send or talk.";
+		if (!FeedLocks.IsName(option)) return $"A feed has two locks, read and send; '{option}' is not one.";
 		var lockString = operation == "LOCK" ? right : "";
 		if (lockString.Length > 0)
 		{

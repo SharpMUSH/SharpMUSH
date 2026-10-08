@@ -169,7 +169,6 @@ public partial class Functions
 				"owner" => new CallState(kind.Owner),
 				"description" => new CallState(kind.Description),
 				"read" or "send" => new CallState(kind.Lock(option)),
-				_ when option.StartsWith("lock:", StringComparison.Ordinal) => new CallState(kind.Lock(option[5..])),
 				_ => SettingValue(kind.Effective, option)
 			};
 
@@ -185,7 +184,6 @@ public partial class Functions
 			"last" => new CallState(feed.LastId),
 			"members" => new CallState((await Mediator.Send(new GetFeedMembersQuery(kind.Name, key), ExecutionBudget.CurrentToken)).Count),
 			"read" or "send" => new CallState(feed.Lock(option)),
-			_ when option.StartsWith("lock:", StringComparison.Ordinal) => new CallState(feed.Lock(option[5..])),
 			_ => SettingValue(feed.Settings.Over(kind.Effective), option)
 		};
 	}
@@ -203,7 +201,7 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>feedwho(&lt;feed&gt;[, &lt;status&gt;])</c>: the objids of a feed's members, or of those with a status:
-	/// <c>gag</c>, <c>mute</c>, <c>hide</c>, or <c>active</c> (not gagged).
+	/// <c>gag</c>, or <c>active</c> (not gagged).
 	/// </summary>
 	[SharpFunction(Name = "feedwho", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["feed", "status"])]
 	public async ValueTask<CallState> FeedWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -212,8 +210,6 @@ public partial class Functions
 		{
 			"" or "all" => _ => true,
 			"gag" => member => member.Gag,
-			"mute" => member => member.Mute,
-			"hide" => member => member.Hide,
 			"active" => member => !member.Gag,
 			_ => null
 		};
@@ -229,7 +225,7 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>feedmember(&lt;feed&gt;, &lt;object&gt;[, &lt;field&gt;])</c>: 1 when the object is a member, else 0; or one
-	/// field of its membership: <c>joined_at</c>, <c>last_seen</c>, <c>gag</c>, <c>mute</c>, <c>hide</c> (empty
+	/// field of its membership: <c>joined_at</c>, <c>last_seen</c> or <c>gag</c> (empty
 	/// for a non-member).
 	/// </summary>
 	[SharpFunction(Name = "feedmember", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["feed", "object", "field"])]
@@ -243,8 +239,6 @@ public partial class Functions
 				"joined_at" => new CallState(member.JoinedAt),
 				"last_seen" => new CallState(member.LastSeen),
 				"gag" => new CallState(member.Gag),
-				"mute" => new CallState(member.Mute),
-				"hide" => new CallState(member.Hide),
 				_ => new CallState("#-1 NO SUCH FEED FIELD")
 			}),
 			Error<string> error => new CallState(error.Value)
@@ -264,32 +258,6 @@ public partial class Functions
 					ExecutionBudget.CurrentToken)).Count)),
 			Error<string> error => new CallState(error.Value)
 		};
-
-	/// <summary>
-	/// <c>feedpass(&lt;feed&gt;, &lt;lock&gt;, &lt;object&gt;)</c>: 1 when the object passes the kind's and the feed's
-	/// lock of that name (an unset lock passes), else 0. An evaluation lock gets <c>%0</c> the feed key and
-	/// <c>%1</c> the kind.
-	/// </summary>
-	[SharpFunction(Name = "feedpass", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["feed", "lock", "object"])]
-	public async ValueTask<CallState> FeedPass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var lockName = FeedArg(parser, 1).ToLowerInvariant();
-		if (!FeedLocks.IsName(lockName)) return new CallState("#-1 INVALID LOCK NAME");
-		return await RunnableFeedAsync(parser, FeedArg(parser, 0)) switch
-		{
-			FeedArgument target => await WithFeedObjectAsync(parser, 2, async found =>
-				new CallState(await FeedRules(parser).PassesAsync(target.Kind, target.Feed, lockName, found))),
-			Error<string> error => new CallState(error.Value)
-		};
-	}
-
-	private async ValueTask<CallState> WithFeedObjectAsync(IMUSHCodeParser parser, int index,
-		Func<AnySharpObject, ValueTask<CallState>> answer)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			FeedArg(parser, index), LocateFlags.All, answer);
-	}
 
 	/// <summary><c>feedsof(&lt;object&gt;[, &lt;kind&gt;])</c>: the feeds the object is a member of, of the kinds the executor runs.</summary>
 	[SharpFunction(Name = "feedsof", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "kind"])]

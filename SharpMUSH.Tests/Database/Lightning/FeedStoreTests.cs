@@ -64,7 +64,7 @@ public class FeedStoreTests
 	{
 		var owner = await NewPlayer("RadioOwner");
 		var kind = new SharpFeedKind("radio", owner, "Short-wave", new FeedSettings(MaxMessages: 50, MaxAge: TimeSpan.FromDays(2)),
-			new Dictionary<string, string> { ["read"] = "role^police", ["talk"] = "LK`MEMBER/1" });
+			new Dictionary<string, string> { ["read"] = "role^police", ["send"] = "LK`MEMBER/1" });
 		await _db.SetFeedKindAsync(kind);
 
 		var read = (await _db.GetFeedKindAsync("radio")).Expect<SharpFeedKind>();
@@ -129,9 +129,9 @@ public class FeedStoreTests
 		var ann = await NewPlayer("Ann");
 		var bo = await NewPlayer("Bo");
 		await _db.SetFeedKindAsync(new SharpFeedKind("radio", owner, "", FeedSettings.None, FeedLocks.None));
-		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 0, false, false, false, 0));
-		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(bo, 0, true, false, false, 0));
-		await _db.SetFeedMemberAsync("radio", "99.1", new SharpFeedMember(ann, 3, false, true, false, 4));
+		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 0, false, 0));
+		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(bo, 0, true, 0));
+		await _db.SetFeedMemberAsync("radio", "99.1", new SharpFeedMember(ann, 3, false, 4));
 
 		var members = await _db.GetFeedMembersAsync("radio", "101.5");
 		await Assert.That(members.Select(m => m.Member)).IsEquivalentTo(new[] { ann, bo });
@@ -166,7 +166,7 @@ public class FeedStoreTests
 		var owner = await NewPlayer("RadioOwner");
 		var ann = await NewPlayer("Ann");
 		await _db.SetFeedKindAsync(new SharpFeedKind("radio", owner, "", FeedSettings.None, FeedLocks.None));
-		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 0, false, false, false, 0));
+		await _db.SetFeedMemberAsync("radio", "101.5", new SharpFeedMember(ann, 0, false, 0));
 		await _db.AppendFeedMessageAsync(Line(1, ann, "hello"), Keep());
 		await _db.AddFeedTapAsync(new SharpFeedTap("radio", owner, "LOG"));
 

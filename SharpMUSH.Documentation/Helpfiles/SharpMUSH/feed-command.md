@@ -51,15 +51,15 @@
 `@feed/undefine <kind>`<br>
 `@feed/describe <kind>=<description>`<br>
 `@feed/set <kind>[/<key>]/<option>=[<value>]`<br>
-`@feed/lock <kind>[/<key>]/<lock name>=<lock>`<br>
-`@feed/unlock <kind>[/<key>]/<lock name>`<br>
+`@feed/lock <kind>[/<key>]/<read or send>=<lock>`<br>
+`@feed/unlock <kind>[/<key>]/<read or send>`<br>
 `@feed/tap <kind>=<object>/<attribute>`<br>
 `@feed/untap <kind>=<object>/<attribute>`<br>
 `@feed/purge <kind>/<key>[=<age>]`<br>
 `@feed/delete <kind>/<key>`<br>
 `@feed/join <kind>/<key>=<object>`<br>
 `@feed/leave <kind>/<key>=<object>`<br>
-`@feed/gag <kind>/<key>=<object>` (and `/ungag`, `/mute`, `/unmute`, `/hide`, `/unhide`)<br>
+`@feed/gag <kind>/<key>=<object>` (and `/ungag`)<br>
 `@feed/seen <kind>/<key>=<object>[/<id>]`<br>
 `@feed/who <kind>/<key>`<br>
 `@feed/send[/<style>] <kind>/<key>=<message>`<br>
@@ -87,7 +87,6 @@ A feed's members are who its lines go to. The engine keeps them so each system d
 - `/join` adds a member. The object must pass the kind's and the feed's read locks. A member starts with nothing unread.
 - `/leave` removes one.
 - `/gag` keeps a member who receives nothing until `/ungag`.
-- `/mute` and `/hide` are marks a system can read with [feedmember()] and [feedwho()]: mute for a member who wants no join and leave lines, hide for one who should not be listed.
 - `/seen` moves a member's last-seen mark to a line id, or to the newest line. [feedunread()] counts the lines after it.
 
 `@feed/who <kind>/<key>` lists the members, their marks, the newest line id when they joined, and how far they have read. `@feed/delete <kind>/<key>` removes the feed with its members and lines.
@@ -139,14 +138,14 @@ For each line, after it is delivered, the tap's attribute is queued on its objec
 | `logged` | yes | `no` keeps no lines; they are still delivered and tapped |
 | `style` | say | the style a line has when the sender gives none |
 
-Locks are ordinary locks evaluated as if they were on the kind's owner (see [lock keys]; `role^` and `perm^` keys work, see [roles]). Each has a name, a lower-case word. The engine checks two:
+A feed has two locks, ordinary locks evaluated as if they were on the kind's owner (see [lock keys]; `role^` and `perm^` keys work, see [roles]):
 
 - `read` decides who may be joined, checked against the object being joined.
 - `send` decides who may speak, checked against the speaker.
 
-Any other name (`talk`, `moderate`) is the kind's own, for its code to check with [feedpass()]. `@feed/lock <kind>[/<key>]/<lock name>=<lock>` sets one, and `@feed/unlock` clears it. A lock on a kind needs `feed.admin`; a lock on one feed needs only control of the owner, and applies on top of the kind's lock of the same name. A lock that is not set passes everyone.
+`@feed/lock <kind>[/<key>]/read=<lock>` sets one, and `@feed/unlock` clears it. A lock on a kind needs `feed.admin`; a lock on one feed needs only control of the owner, and applies on top of the kind's lock. A lock that is not set passes everyone. Any other rule about who may do what, such as who moderates a radio frequency, belongs to the system: it keeps its own locks and checks them with [testlock()] before it runs @feed.
 
-An evaluation lock (`<attribute>/<value>`) gets `%0` the feed key and `%1` the kind, so one attribute on the owner can answer for every feed: with `@feed/lock radio/talk=LK`MEMBER/1`, `LK`MEMBER` can look `%0` up in the radio's own member lists.
+An evaluation lock (`<attribute>/<value>`) gets `%0` the feed key and `%1` the kind, so one attribute on the owner can answer for every feed: with `@feed/lock radio/send=LK`MEMBER/1`, `LK`MEMBER` can look `%0` up in the radio's own member lists.
 
 `@feed/purge <kind>/<key>` drops every stored line of a feed, and `@feed/purge <kind>/<key>=30d` the lines older than 30 days.
 

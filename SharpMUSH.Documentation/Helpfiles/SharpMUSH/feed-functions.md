@@ -48,12 +48,6 @@
       "aliases": []
     },
     {
-      "id": "feedpass",
-      "heading": "feedpass()",
-      "lookup": "feedpass()",
-      "aliases": []
-    },
-    {
       "id": "feedsof",
       "heading": "feedsof()",
       "lookup": "feedsof()",
@@ -93,31 +87,25 @@ These functions read feeds (see [@feed]); they change nothing. Like @feed, they 
 
 `feedinfo(<kind or feed>, <option>)`
 
-- **feedinfo()**: A setting as it applies: `max_messages`, `max_bytes`, `max_length`, `max_age` (in seconds), `logged` (1 or 0) or `style`; 0 is no limit. `read`, `send` and `lock:<name>` are the locks set on the kind or feed itself. A kind also has `owner` and `description`; a feed has `messages` and `bytes` (what it holds), `last` (the newest line id) and `members`.
+- **feedinfo()**: A setting as it applies: `max_messages`, `max_bytes`, `max_length`, `max_age` (in seconds), `logged` (1 or 0) or `style`; 0 is no limit. `read` and `send` are the locks set on the kind or feed itself. A kind also has `owner` and `description`; a feed has `messages` and `bytes` (what it holds), `last` (the newest line id) and `members`.
 
 ## feedwho()
 
 `feedwho(<feed>[, <status>])`
 
-- **feedwho()**: The objids of the feed's members, separated by spaces. *\<status\>* narrows them to those that are `gag`, `mute` or `hide`, or `active` (not gagged).
+- **feedwho()**: The objids of the feed's members, separated by spaces. *\<status\>* narrows them to those that are `gag` (gagged) or `active` (not gagged).
 
 ## feedmember()
 
 `feedmember(<feed>, <object>[, <field>])`
 
-- **feedmember()**: 1 if *\<object\>* is a member of the feed, else 0. With *\<field\>*, one part of its membership: `joined_at` (the newest line id when it joined), `last_seen` (the line id it has read up to), or `gag`, `mute` or `hide` (1 or 0). Empty for an object that is not a member.
+- **feedmember()**: 1 if *\<object\>* is a member of the feed, else 0. With *\<field\>*, one part of its membership: `joined_at` (the newest line id when it joined), `last_seen` (the line id it has read up to), or `gag` (1 or 0). Empty for an object that is not a member.
 
 ## feedunread()
 
 `feedunread(<feed>, <object>)`
 
 - **feedunread()**: How many stored lines of the feed are newer than the member's `last_seen` (see `@feed/seen`). Empty for an object that is not a member.
-
-## feedpass()
-
-`feedpass(<feed>, <lock name>, <object>)`
-
-- **feedpass()**: 1 if *\<object\>* passes both the kind's and the feed's lock of that name, else 0. A lock that is not set passes. This is how a system checks the locks of its own, such as `talk` or `moderate` (see [@feed settings]). `#-1 INVALID LOCK NAME` for a name that is not a lower-case word.
 
 ## feedsof()
 

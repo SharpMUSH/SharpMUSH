@@ -42,8 +42,6 @@ public sealed record FeedMemberRecord
 	public long CreationTime { get; init; }
 	public long JoinedAt { get; init; }
 	public bool Gag { get; init; }
-	public bool Mute { get; init; }
-	public bool Hide { get; init; }
 	public long LastSeen { get; init; }
 }
 

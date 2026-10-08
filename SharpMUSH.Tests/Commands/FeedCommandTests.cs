@@ -81,12 +81,12 @@ public class FeedCommandTests : ServerTestBase
 		await Heard(_system, $"@feed/join {_kind}/a={Ref(_ann)}");
 		await Heard(_system, $"@feed/join {_kind}/b={Ref(_ann)}");
 		await Heard(_system, $"@feed/join {_kind}/a={Ref(_bo)}");
-		await Heard(_system, $"@feed/hide {_kind}/a={Ref(_bo)}");
+		await Heard(_system, $"@feed/gag {_kind}/a={Ref(_bo)}");
 
 		await Assert.That(await EvalAs(_system.DbRef, $"feedsof({Ref(_ann)},{_kind})")).IsEqualTo($"{_kind}/a {_kind}/b");
 		await Assert.That(await EvalAs(_system.DbRef, $"feeds({_kind})")).IsEqualTo($"{_kind}/a {_kind}/b");
 		await Assert.That(await EvalAs(_system.DbRef, $"words(feedwho({_kind}/a))")).IsEqualTo("2");
-		await Assert.That(await EvalAs(_system.DbRef, $"feedwho({_kind}/a,hide)")).IsEqualTo(await Objid(_bo));
+		await Assert.That(await EvalAs(_system.DbRef, $"feedwho({_kind}/a,gag)")).IsEqualTo(await Objid(_bo));
 		await Assert.That(await EvalAs(_system.DbRef, $"feedmember({_kind}/b,{Ref(_bo)})")).IsEqualTo("0");
 
 		await Heard(_system, $"@feed/send {_kind}/a=one");
@@ -188,23 +188,25 @@ public class FeedCommandTests : ServerTestBase
 		await Assert.That(await Eval($"feedmsg({id},text)")).IsEqualTo("still here");
 	}
 
-	/// <summary>A lock of the kind's own, checked by its code with feedpass(); an evaluation lock learns the feed from %0.</summary>
+	/// <summary>An evaluation lock on the kind learns the feed from %0; a feed's own lock applies on top of it.</summary>
 	[Test]
-	public async Task NamedLocksAreCheckedWithFeedPass()
+	public async Task AnEvaluationLockLearnsTheFeedFromPercentZero()
 	{
-		await Cmd($"&LK`OPEN {Ref(_system)}=[strmatch(%0,open)]");
-		await Assert.That(await Cmd($"@feed/lock {_kind}/talk=LK`OPEN/1")).Contains("Locked talk");
+		await Cmd($"&LK`OPEN {Ref(_system)}=[strmatch(%0,open*)]");
+		await Assert.That(await Cmd($"@feed/lock {_kind}/read=LK`OPEN/1")).Contains("Locked read");
 
-		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/open,talk,{Ref(_ann)})")).IsEqualTo("1");
-		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/shut,talk,{Ref(_ann)})")).IsEqualTo("0");
-		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/shut,moderate,{Ref(_ann)})")).IsEqualTo("1");
+		await Assert.That(await Heard(_system, $"@feed/join {_kind}/open={Ref(_ann)}")).Contains($"Joined {_ann.Name}");
+		await Assert.That(await Heard(_system, $"@feed/join {_kind}/shut={Ref(_ann)}")).Contains("does not pass the read lock");
 
 		// The kind's owner may lock one feed, on top of the kind's lock, but not the kind itself.
-		await Assert.That(await Heard(_system, $"@feed/lock {_kind}/open/talk={Ref(_bo)}")).Contains("Locked talk");
-		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/open,talk,{Ref(_ann)})")).IsEqualTo("0");
-		await Assert.That(await EvalAs(_system.DbRef, $"feedpass({_kind}/open,talk,{Ref(_bo)})")).IsEqualTo("1");
-		await Assert.That(await EvalAs(_system.DbRef, $"feedinfo({_kind}/open,lock:talk)")).IsEqualTo(Ref(_bo));
-		await Assert.That(await Heard(_system, $"@feed/unlock {_kind}/talk")).Contains("needs the feed.admin permission");
+		await Assert.That(await Heard(_system, $"@feed/lock {_kind}/open2/read={Ref(_bo)}")).Contains("Locked read");
+		await Assert.That(await Heard(_system, $"@feed/join {_kind}/open2={Ref(_ann)}")).Contains("does not pass the read lock");
+		await Assert.That(await Heard(_system, $"@feed/join {_kind}/open2={Ref(_bo)}")).Contains($"Joined {_bo.Name}");
+		await Assert.That(await EvalAs(_system.DbRef, $"feedinfo({_kind}/open2,read)")).IsEqualTo(Ref(_bo));
+		await Assert.That(await Heard(_system, $"@feed/unlock {_kind}/read")).Contains("needs the feed.admin permission");
+
+		// Who may moderate, or talk, is the system's own business, not a feed lock.
+		await Assert.That(await Cmd($"@feed/lock {_kind}/moderate={Ref(_bo)}")).Contains("two locks, read and send");
 	}
 
 	[Test]

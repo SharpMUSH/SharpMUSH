@@ -44,8 +44,7 @@ public sealed record FeedSettings(
 /// <param name="Settings">The kind's limits and defaults; unset ones are <see cref="FeedSettings.Defaults"/>.</param>
 /// <param name="Locks">
 /// Its locks by name (<see cref="FeedLocks"/>): <c>read</c> decides who may be joined to its feeds and
-/// <c>send</c> who may speak on them; any other is the kind's own, checked by its code with <c>feedpass()</c>.
-/// A lock that is not set passes everyone.
+/// <c>send</c> who may speak on them. A lock that is not set passes everyone.
 /// </param>
 public sealed record SharpFeedKind(
 	string Name,
@@ -90,15 +89,11 @@ public sealed record SharpFeed(
 /// <param name="Member">The member, by objid.</param>
 /// <param name="JoinedAt">The newest line's id when they last joined, so recall can start after it.</param>
 /// <param name="Gag">Still a member, but receives nothing.</param>
-/// <param name="Mute">Receives lines but not presence lines.</param>
-/// <param name="Hide">Not listed by <c>feedwho()</c> to those who may not see hidden members.</param>
 /// <param name="LastSeen">The newest line they have read, for unread counts, or 0.</param>
 public sealed record SharpFeedMember(
 	DBRef Member,
 	long JoinedAt,
 	bool Gag,
-	bool Mute,
-	bool Hide,
 	long LastSeen);
 
 /// <summary>
@@ -142,8 +137,8 @@ public sealed record SharpFeedMessage(
 /// <param name="Attribute">The attribute's name, upper case.</param>
 public sealed record SharpFeedTap(string Kind, DBRef Object, string Attribute);
 
-/// <summary>The lock names the engine itself checks, and the lock-name rule.</summary>
-public static partial class FeedLocks
+/// <summary>A feed's two locks. Any other rule about who may do what belongs to the system that runs the kind.</summary>
+public static class FeedLocks
 {
 	/// <summary>Checked against an object being joined.</summary>
 	public const string Read = "read";
@@ -153,11 +148,7 @@ public static partial class FeedLocks
 
 	public static readonly IReadOnlyDictionary<string, string> None = new Dictionary<string, string>();
 
-	[System.Text.RegularExpressions.GeneratedRegex("^[a-z][a-z0-9_]{0,31}$")]
-	private static partial System.Text.RegularExpressions.Regex NamePattern();
-
-	/// <summary>A lock name: a lower-case word of up to 32 letters, digits and <c>_</c>.</summary>
-	public static bool IsName(string name) => NamePattern().IsMatch(name);
+	public static bool IsName(string name) => name is Read or Send;
 
 	/// <summary><paramref name="locks"/> with <paramref name="name"/> set, or removed when <paramref name="value"/> is empty.</summary>
 	public static IReadOnlyDictionary<string, string> With(IReadOnlyDictionary<string, string> locks, string name, string value)

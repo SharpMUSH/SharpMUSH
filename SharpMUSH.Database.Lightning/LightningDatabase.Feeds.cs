@@ -133,8 +133,6 @@ public partial class LightningDatabase
 				CreationTime = creation,
 				JoinedAt = member.JoinedAt,
 				Gag = member.Gag,
-				Mute = member.Mute,
-				Hide = member.Hide,
 				LastSeen = member.LastSeen
 			}));
 			tx.Put(Tables.FeedMemberOf, MemberOfKey(member.Member.Number, kind, key), []);
@@ -355,7 +353,7 @@ public partial class LightningDatabase
 		?? throw new ArgumentException($"A feed member is named by objid; {member} has no creation time.", nameof(member));
 
 	private static SharpFeedMember ToMember(long number, FeedMemberRecord record)
-		=> new(new DBRef((int)number, record.CreationTime), record.JoinedAt, record.Gag, record.Mute, record.Hide, record.LastSeen);
+		=> new(new DBRef((int)number, record.CreationTime), record.JoinedAt, record.Gag, record.LastSeen);
 
 	private static SharpFeedKind ToKind(FeedKindRecord record)
 		=> new(record.Name, DBRef.Parse(record.Owner), record.Description, ToSettings(record.Settings), record.Locks);
