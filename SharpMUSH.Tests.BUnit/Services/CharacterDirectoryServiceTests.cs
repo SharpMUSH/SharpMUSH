@@ -35,6 +35,36 @@ file sealed class RosterHandler : HttpMessageHandler
 			: new HttpResponseMessage(HttpStatusCode.NotFound));
 }
 
+/// <summary>Serves a roster where one character has a picture, counting the reads.</summary>
+file sealed class PictureRosterHandler : HttpMessageHandler
+{
+	private record Row(string Name, string Objid, long Created, string Category, string? Image);
+
+	public int Reads { get; private set; }
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		Reads++;
+		Row[] roster =
+		[
+			new("Castor", "#12:1200", 1200, "", "/api/wiki-assets/c/castor.jpg"),
+			new("Solitaire", "#11:1100", 1100, "", ""),
+		];
+		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(roster) });
+	}
+}
+
+/// <summary>A redefined handler's answer with a null row and a row missing its objid among real ones.</summary>
+file sealed class MalformedRowsHandler : HttpMessageHandler
+{
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = new StringContent("""[null, {"name":"Ghost"}, {"name":"Castor","objid":"#12:1200","created":1200,"image":"/c.jpg"}]""",
+				System.Text.Encoding.UTF8, "application/json")
+		});
+}
+
 /// <summary>Answers immediately with an empty list, for the caller-cancellation cases.</summary>
 file sealed class EmptyListHandler : HttpMessageHandler
 {
@@ -142,5 +172,52 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 		await cts.CancelAsync();
 
 		await Assert.That(async () => await service.ListOnlineAsync(cts.Token)).Throws<OperationCanceledException>();
+	}
+
+	[TUnit.Core.Test]
+	[Arguments("#12:1200")]
+	[Arguments("#12")]
+	[Arguments("castor")]
+	public async Task PictureOfAsync_FindsTheCharacter_ByObjidDbrefOrName(string character)
+	{
+		var service = Build(new PictureRosterHandler());
+		await Assert.That(await service.PictureOfAsync(character)).IsEqualTo("/api/wiki-assets/c/castor.jpg");
+	}
+
+	[TUnit.Core.Test]
+	[Arguments("Solitaire")]
+	[Arguments("#12:9999")]
+	[Arguments("Nobody")]
+	public async Task PictureOfAsync_IsNull_WithoutAPictureOrAMatch(string character)
+	{
+		var service = Build(new PictureRosterHandler());
+		await Assert.That(await service.PictureOfAsync(character)).IsNull();
+	}
+
+	[TUnit.Core.Test]
+	public async Task PicturesChanged_ReadsAgain_AndTellsTheAvatars()
+	{
+		var handler = new PictureRosterHandler();
+		var service = Build(handler);
+		var told = 0;
+		service.Changed += () => told++;
+
+		await service.PictureOfAsync("Castor");
+		await service.PictureOfAsync("Castor");
+		await Assert.That(handler.Reads).IsEqualTo(1);
+
+		service.PicturesChanged();
+		await service.PictureOfAsync("Castor");
+		await Assert.That(handler.Reads).IsEqualTo(2);
+		await Assert.That(told).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task RowsThatAreNotCharacters_AreLeftOut_NotThrown()
+	{
+		var service = Build(new MalformedRowsHandler());
+		var rows = (await service.ListAsync()).Expect<IReadOnlyList<CharacterDirectoryService.CharacterSummary>>();
+		await Assert.That(rows.Select(r => r.Name)).IsEquivalentTo(["Castor"]);
+		await Assert.That(await service.PictureOfAsync("Castor")).IsEqualTo("/c.jpg");
 	}
 }

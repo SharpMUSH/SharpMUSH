@@ -10,4 +10,8 @@ public record WikiRevisionInfo(
 	string EditorDbref,
 	DateTimeOffset Timestamp,
 	string? EditSummary,
-	string MarkdownSource);
+	string MarkdownSource)
+{
+	/// <summary>The editor's name, resolved from <see cref="EditorDbref"/>; null when the player is gone.</summary>
+	public string? EditorName { get; init; }
+}

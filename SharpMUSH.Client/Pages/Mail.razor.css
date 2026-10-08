@@ -81,7 +81,7 @@
 	transition: background var(--motion-pop);
 }
 
-.mail-row-avatar {
+::deep .mail-row-avatar {
 	grid-row: 1 / span 2;
 	width: 32px;
 	height: 32px;
@@ -165,7 +165,7 @@
 	flex-shrink: 0;
 }
 
-.mail-avatar {
+::deep .mail-avatar {
 	flex-shrink: 0;
 	display: grid;
 	place-items: center;
@@ -173,7 +173,7 @@
 	font-weight: 700;
 }
 
-.mail-reading-avatar {
+::deep .mail-reading-avatar {
 	width: 40px;
 	height: 40px;
 	font-size: 13px;

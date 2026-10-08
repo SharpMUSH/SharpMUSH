@@ -1,0 +1,13 @@
+/* What every avatar shares. :where() leaves these weaker than the size and shape the host gives it. */
+:where(.char-avatar) {
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+:where(.char-avatar--initials) {
+	display: inline-grid;
+	place-items: center;
+	font-weight: 700;
+	line-height: 1;
+	overflow: hidden;
+}

@@ -35,6 +35,10 @@ public abstract class TrackingBunitContext : BunitContext
 	/// has it. Unless a test registers its own, the game is a new one: guests allowed, the default name, and
 	/// the applications a first boot installs.
 	/// </para>
+	/// <para>
+	/// An avatar finds a character's picture in the <see cref="CharacterDirectoryService"/> a test registers;
+	/// without one, nobody has a picture.
+	/// </para>
 	/// </summary>
 	protected TrackingBunitContext()
 	{
@@ -42,6 +46,8 @@ public abstract class TrackingBunitContext : BunitContext
 			sp.GetService<AccountAuthService>() ?? Substitute.For<IAccountAuthState>());
 		Services.TryAddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
 		Services.TryAddSingleton<CommandHistory>();
+		Services.TryAddSingleton<ICharacterPictures>(sp =>
+			sp.GetService<CharacterDirectoryService>() ?? (ICharacterPictures)new NoCharacterPictures());
 	}
 
 	/// <summary>

@@ -3,7 +3,7 @@ using SharpMUSH.Client.Components.Kit;
 
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
 
-public class MentionTests : BunitContext
+public class MentionTests : TrackingBunitContext
 {
 	[Test]
 	public async Task Mention_DefaultsToTheProfileLink_AndSetsNameColour()

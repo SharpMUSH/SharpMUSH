@@ -1,0 +1,126 @@
+@using SharpMUSH.Client.Services
+@inject ICharacterPictures Pictures
+@implements IDisposable
+
+@* A character's avatar, wherever the portal draws one: its picture when it has one, else its initials on
+   the hue its name gives it. The place it is drawn in sizes and shapes it (Class), and may already know
+   the picture (ImageUrl); given only the character, the avatar finds the picture in the directory. *@
+@if (Picture is { } url)
+{
+    <img class="@Join("char-avatar", Class, ImageClass)" src="@ApiUrl.Resolve(url)" alt="@(Alt ?? string.Empty)"
+         style="@Style" loading="@(Lazy ? "lazy" : null)" @attributes="Attributes" />
+}
+else if (Fallback is not null)
+{
+    @Fallback
+}
+else
+{
+    <span class="@Join("char-avatar char-avatar--initials", Class, FallbackClass)" style="@($"{FallbackColours}{Style}")"
+          aria-hidden="true" @attributes="Attributes">@Initials.From(Name)</span>
+}
+
+@code {
+    /// <summary>The name shown: its initials and its hue when there is no picture.</summary>
+    [Parameter, EditorRequired] public string? Name { get; set; }
+
+    /// <summary>The picture, when the place it is drawn in already knows it (a room's contents, a directory row).</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>
+    /// The character to find the picture for when <see cref="ImageUrl"/> gives none: an objid, a dbref or a
+    /// name. Left out, an avatar without <see cref="ImageUrl"/> is initials: what it stands for may not be a
+    /// character.
+    /// </summary>
+    [Parameter] public string? Character { get; set; }
+
+    /// <summary>Classes on the avatar either way: its size and shape.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Classes on the picture only.</summary>
+    [Parameter] public string? ImageClass { get; set; }
+
+    /// <summary>Classes on the initials only.</summary>
+    [Parameter] public string? FallbackClass { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>Alt text for the picture. Left out, it is decorative: a name beside it already says who.</summary>
+    [Parameter] public string? Alt { get; set; }
+
+    /// <summary>The picture loads as it nears the screen: a long grid of people.</summary>
+    [Parameter] public bool Lazy { get; set; }
+
+    /// <summary>Drawn instead of the initials when there is no picture, where the place has a look of its own.</summary>
+    [Parameter] public RenderFragment? Fallback { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attributes { get; set; }
+
+    private string? _found;
+    private string? _foundFor;
+
+    // Every lookup takes the next number; only the latest one's answer is kept.
+    private int _lookup;
+
+    // A picture change told after the caller gave ImageUrl: the directory's answer is newer than it,
+    // until the caller gives a different ImageUrl.
+    private bool _directoryIsNewer;
+    private string? _givenImageUrl;
+
+    private bool HaveFound => _foundFor is not null && _foundFor == Character;
+
+    private string? Picture =>
+        _directoryIsNewer && HaveFound ? Renderable(_found)
+        : ImageUrlPolicy.IsRenderable(ImageUrl) ? ImageUrl
+        : HaveFound ? Renderable(_found)
+        : null;
+
+    private static string? Renderable(string? url) => ImageUrlPolicy.IsRenderable(url) ? url : null;
+
+    private string FallbackColours
+    {
+        get
+        {
+            var hue = NameHue.Of(Name);
+            return $"background:hsl({hue} 30% 24%);color:hsl({hue} 45% 82%);";
+        }
+    }
+
+    protected override void OnInitialized() => Pictures.Changed += OnPicturesChanged;
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (ImageUrl != _givenImageUrl)
+        {
+            _givenImageUrl = ImageUrl;
+            _directoryIsNewer = false;
+        }
+
+        return ImageUrlPolicy.IsRenderable(ImageUrl) ? Task.CompletedTask : FindAsync();
+    }
+
+    private async Task FindAsync()
+    {
+        if (Character is not { Length: > 0 } character) return;
+
+        var lookup = ++_lookup;
+        var found = await Pictures.PictureOfAsync(character);
+        // A lookup overtaken by a later one (a picture change, another character) is not the answer.
+        if (lookup != _lookup) return;
+        _found = found;
+        _foundFor = character;
+    }
+
+    private void OnPicturesChanged() => _ = InvokeAsync(async () =>
+    {
+        if (Character is not { Length: > 0 }) return;
+        _directoryIsNewer = true;
+        await FindAsync();
+        StateHasChanged();
+    });
+
+    private static string Join(params string?[] classes) =>
+        string.Join(' ', classes.Where(c => !string.IsNullOrWhiteSpace(c)));
+
+    public void Dispose() => Pictures.Changed -= OnPicturesChanged;
+}

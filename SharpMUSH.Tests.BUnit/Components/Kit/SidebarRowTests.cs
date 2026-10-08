@@ -4,7 +4,7 @@ using SharpMUSH.Client.Components.Kit;
 
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
 
-public class SidebarRowTests : BunitContext
+public class SidebarRowTests : TrackingBunitContext
 {
 	public SidebarRowTests()
 	{

@@ -11,7 +11,7 @@
 @if (IsOoc)
 {
     <div class="story-row story-row--ooc @(Pose.IsDeleted ? "story-row--deleted" : null) @(_flash ? "story-row--just-edited" : null)">
-        <OocBand Name="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
+        <OocBand Name="@Pose.DisplayName" ImageUrl="@ImageUrl" Character="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
             @if (_editing)
             {
                 @Editor
@@ -235,14 +235,7 @@ else
 
     private RenderFragment Portrait => __builder =>
     {
-        @if (ImageUrlPolicy.IsRenderable(ImageUrl))
-        {
-            <img class="story-portrait" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
-        }
-        else
-        {
-            var hue = NameHue.Of(Pose.DisplayName);
-            <span class="story-portrait story-portrait--initials" style="background:hsl(@hue 30% 24%);color:hsl(@hue 45% 82%);">@Initials.From(Pose.DisplayName)</span>
-        }
+        <CharacterAvatar Class="story-portrait" FallbackClass="story-portrait--initials" Name="@Pose.DisplayName"
+                         ImageUrl="@ImageUrl" Character="@Pose.DisplayName" />
     };
 }

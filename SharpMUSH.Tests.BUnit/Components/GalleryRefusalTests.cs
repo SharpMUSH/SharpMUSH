@@ -4,6 +4,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
@@ -55,7 +56,8 @@ public class GalleryRefusalTests : TrackingBunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
+			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<CharacterDirectoryService>()))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;

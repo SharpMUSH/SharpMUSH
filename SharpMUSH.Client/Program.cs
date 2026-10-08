@@ -37,6 +37,7 @@ builder.Services.AddSingleton<WikiMarkdigPipeline>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<WikiAssetService>();
 builder.Services.AddSingleton<CharacterDirectoryService>();
+builder.Services.AddSingleton<ICharacterPictures>(sp => sp.GetRequiredService<CharacterDirectoryService>());
 builder.Services.AddScoped<CharacterProfileService>();
 builder.Services.AddScoped<SidebarCollapseService>();
 builder.Services.AddSingleton<SchemaAppService>();

@@ -60,7 +60,7 @@ else
                             var m = msg;
                             <button type="button" class="mail-row @(_selected?.Number == m.Number ? "mail-row--selected" : null) @(m.Read ? null : "mail-row--unread")"
                                     aria-current="@(_selected?.Number == m.Number ? "true" : null)" @onclick="() => SelectMessageAsync(m)">
-                                <span class="mail-avatar mail-row-avatar" style="@AvatarStyle(m.From)" aria-hidden="true">@Initials.From(m.From)</span>
+                                <CharacterAvatar Class="mail-avatar mail-row-avatar" Name="@m.From" Character="@m.From" />
                                 <span class="mail-row-top">
                                     @if (!m.Read)
                                     {
@@ -88,7 +88,7 @@ else
                 else
                 {
                     <div class="mail-reading-head">
-                        <span class="mail-avatar mail-reading-avatar" style="@AvatarStyle(_selected.From)" aria-hidden="true">@Initials.From(_selected.From)</span>
+                        <CharacterAvatar Class="mail-avatar mail-reading-avatar" Name="@_selected.From" Character="@_selected.From" />
                         <div class="mail-reading-meta">
                             <div class="mail-reading-subject">@_selected.Subject</div>
                             <div class="mail-reading-from">@Loc["From"]: @_selected.From</div>
@@ -230,12 +230,6 @@ else
 
     private static string DetailHref(MailService.MailSummary message) =>
         $"/mail/{message.Number}?folder={Uri.EscapeDataString(message.Folder)}";
-
-    private static string AvatarStyle(string name)
-    {
-        var hue = NameHue.Of(name);
-        return $"background:hsl({hue} 30% 24%);color:hsl({hue} 45% 82%);";
-    }
 
     private void OnConnectionChanged(bool connected)
         => InvokeAsync(async () =>

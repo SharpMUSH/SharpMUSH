@@ -118,10 +118,8 @@
                     </div>
 
                     <div style="display:flex;align-items:center;gap:0.375rem;">
-                        <MudAvatar Size="Size.Small"
-                                   Style="@($"width:24px;height:24px;font-size:0.6875rem;background:hsl({NameHue.Of(rev.EditorDbref)},40%,30%);color:#fff;")">
-                            @(rev.EditorDbref.Length > 0 ? rev.EditorDbref[0].ToString().ToUpper() : "?")
-                        </MudAvatar>
+                        <CharacterAvatar Name="@(rev.EditorName ?? rev.EditorDbref)" Character="@rev.EditorDbref"
+                                         Style="width:24px;height:24px;border-radius:50%;font-size:0.6875rem;" />
                         <MudText Style="font-size:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@rev.EditorDbref">
                             @rev.EditorDbref
                         </MudText>

@@ -17,7 +17,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 /// README §7.4 / board 13: Play is a layout scope (zone RightSidebar) whose default aside is the Here and
 /// Exits widgets. The widgets read the play connection's room and act through the page's context.
 /// </summary>
-public class PlayScopeTests : BunitContext
+public class PlayScopeTests : TrackingBunitContext
 {
 	private readonly OobChannelStore _store = new();
 	private readonly IPlayTerminalService _play = Substitute.For<IPlayTerminalService>();

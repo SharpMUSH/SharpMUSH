@@ -21,8 +21,8 @@
 	border-radius: var(--radius-tile);
 }
 
-.kit-portrait-img,
-.kit-portrait-fallback {
+::deep .kit-portrait-img,
+::deep .kit-portrait-fallback {
 	width: 100%;
 	border-radius: var(--radius-tile);
 	object-fit: cover;
@@ -34,8 +34,8 @@
 	box-sizing: border-box;
 }
 
-.kit-portrait--highlight .kit-portrait-img,
-.kit-portrait--highlight .kit-portrait-fallback {
+.kit-portrait--highlight ::deep .kit-portrait-img,
+.kit-portrait--highlight ::deep .kit-portrait-fallback {
 	outline: 2px solid var(--accent);
 	outline-offset: -2px;
 }

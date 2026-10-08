@@ -14,6 +14,9 @@ else
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
     [Parameter] public string? ImageUrl { get; set; }
 
+    /// <summary>The character, to find their picture when <see cref="ImageUrl"/> gives none. Left out for anything else.</summary>
+    [Parameter] public string? Character { get; set; }
+
     /// <summary>Real alt text from softcode (IMAGE`ALT). Null leaves the image decorative: the label already names the person.</summary>
     [Parameter] public string? Alt { get; set; }
 
@@ -34,19 +37,11 @@ else
 
     private string RootClass => Highlight ? "kit-portrait kit-portrait--highlight" : "kit-portrait";
     private string Text => Status is null ? (Label ?? Name) : $"{Label ?? Name} · {Status}";
-    private int Hue => NameHue.Of(Name);
-    private string FallbackStyle => $"height:{Height}px;background:hsl({Hue} 30% 24%);color:hsl({Hue} 45% 82%);";
 
     private RenderFragment Inner => __builder =>
     {
-        @if (ImageUrlPolicy.IsRenderable(ImageUrl))
-        {
-            <img class="kit-portrait-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
-        }
-        else
-        {
-            <span class="kit-portrait-fallback" style="@FallbackStyle" aria-hidden="true">@Initials.From(Name)</span>
-        }
+        <CharacterAvatar ImageClass="kit-portrait-img" FallbackClass="kit-portrait-fallback" Name="@Name" ImageUrl="@ImageUrl"
+                         Character="@Character" Alt="@Alt" Style="@($"height:{Height}px;")" Lazy="true" />
         <span class="kit-portrait-label @(Status is not null ? "kit-portrait-label--dim" : null)">@Text</span>
     };
 }

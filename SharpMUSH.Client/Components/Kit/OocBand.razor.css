@@ -20,6 +20,27 @@
 	align-items: center;
 	justify-content: center;
 	gap: 1px;
+	position: relative;
+	overflow: hidden;
+}
+
+/* The author's picture fills the tile, and "OOC" sits across its foot. */
+.kit-ooc-tile ::deep .kit-ooc-picture {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.kit-ooc-tile:has(.kit-ooc-picture) .kit-ooc-tag {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 1px 0;
+	text-align: center;
+	background: rgba(var(--scrim-ink), 0.6);
+	color: var(--text-over-image);
 }
 
 .kit-ooc-initials {

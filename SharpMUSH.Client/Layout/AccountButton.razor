@@ -24,10 +24,7 @@
                     aria-expanded="@(_panelOpen ? "true" : "false")"
                     @onclick="TogglePanel">
                 <div class="phosphor-avatar-wrap">
-                    <div class="phosphor-avatar"
-                         style="@($"background:linear-gradient(140deg,hsl({AvatarHue} 38% 32%),hsl({AvatarHue} 32% 22%));color:hsl({AvatarHue} 45% 82%);")">
-                        @AvatarInitial
-                    </div>
+                    <CharacterAvatar Class="phosphor-avatar" Name="@DisplayName" Character="@ActiveObjid" />
                     <span class="phosphor-avatar-dot @(_characterActive ? "phosphor-avatar-dot--online" : "phosphor-avatar-dot--offline")"></span>
                 </div>
                 @if (!Compact)
@@ -75,29 +72,8 @@
     private bool _characterActive;
     private bool _panelOpen;
 
-    private static readonly int[] AvHues = [168, 28, 264, 210, 340, 130, 50];
-
-    private string AvatarInitial
-    {
-        get
-        {
-            var ch = AccountAuth.ActiveCharacter;
-            if (ch is not null && ch.Name.Length > 0)
-                return ch.Name[0].ToString().ToUpper();
-            var user = AccountAuth.Username;
-            return !string.IsNullOrEmpty(user) ? user[0].ToString().ToUpper() : "?";
-        }
-    }
-
-    private int AvatarHue
-    {
-        get
-        {
-            var name = DisplayName;
-            var code = name.Length > 0 ? name[0] : 'A';
-            return AvHues[code % AvHues.Length];
-        }
-    }
+    /// <summary>The acting character, whose picture the avatar shows; none while the account plays no one.</summary>
+    private string? ActiveObjid => AccountAuth.ActiveCharacter is { } ch ? $"#{ch.DbrefNumber}:{ch.CreationTime}" : null;
 
     private string DisplayName => AccountAuth.ActiveCharacter?.Name ?? AccountAuth.Username ?? "DebugAdmin";
 

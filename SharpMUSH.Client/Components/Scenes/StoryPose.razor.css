@@ -30,7 +30,7 @@
 	outline-offset: 2px;
 }
 
-.story-portrait {
+::deep .story-portrait {
 	width: 44px;
 	height: 44px;
 	border-radius: 12px;
@@ -38,7 +38,7 @@
 	display: block;
 }
 
-.story-portrait--initials {
+::deep .story-portrait--initials {
 	display: grid;
 	place-items: center;
 	font-size: 13px;

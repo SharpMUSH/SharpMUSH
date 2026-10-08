@@ -3,7 +3,7 @@ using SharpMUSH.Client.Components.Kit;
 
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
 
-public class TileTests : BunitContext
+public class TileTests : TrackingBunitContext
 {
 	[Test]
 	public async Task PortraitTile_WithImage_RendersImgWithAlt()

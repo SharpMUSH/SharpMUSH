@@ -18,14 +18,7 @@
                @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true">
             <MudFocusTrap DefaultFocus="DefaultFocus.None">
                 <div class="sheet-hero">
-                    @if (ImageUrlPolicy.IsRenderable(Portrait))
-                    {
-                        <img class="sheet-portrait" src="@ApiUrl.Resolve(Portrait!)" alt="@Name" />
-                    }
-                    else
-                    {
-                        <span class="sheet-portrait sheet-portrait--initials" style="@FallbackStyle" aria-hidden="true">@Initials.From(Name)</span>
-                    }
+                    <CharacterAvatar Class="sheet-portrait" FallbackClass="sheet-portrait--initials" Name="@Name" ImageUrl="@Portrait" Alt="@Name" />
                     <div class="sheet-hero-scrim" aria-hidden="true"></div>
                     <div class="sheet-hero-bar">
                         @if (ImageUrlPolicy.IsRenderable(Portrait))
@@ -144,7 +137,6 @@
 
     private string? NameStyle => NameColor.Safe(Occupant?.Color ?? _profile?.Color) is { } c ? $"color:{c};" : null;
 
-    private string FallbackStyle => $"background:hsl({NameHue.Of(Name)} 30% 24%);color:hsl({NameHue.Of(Name)} 45% 82%);";
 
     private string ProfileHref => "/character/" + Uri.EscapeDataString(Name ?? string.Empty);
 

@@ -1,10 +1,15 @@
 @* D1 §4.10 OOC band in the Play story: a tinted row pulled out 11px on both sides so its text stays
-   aligned with pose text, and a 44px tile of the author's initials over "OOC" where the portrait
-   would be. The name is in its colour; the text is 14px. Only the initials are decorative: the
-   "OOC" word stays readable so assistive tech can tell the band from a pose. *@
+   aligned with pose text, and a 44px tile where the portrait would be: the author's initials over
+   "OOC", or their picture with "OOC" across its foot. The name is in its colour; the text is 14px.
+   Only the initials and the picture are decorative: the "OOC" word stays readable so assistive tech
+   can tell the band from a pose. *@
 <div class="kit-ooc">
     <div class="kit-ooc-tile">
-        <span class="kit-ooc-initials" aria-hidden="true">@Initials.From(Name)</span>
+        <CharacterAvatar Class="kit-ooc-picture" Name="@Name" ImageUrl="@ImageUrl" Character="@Character">
+            <Fallback>
+                <span class="kit-ooc-initials" aria-hidden="true">@Initials.From(Name)</span>
+            </Fallback>
+        </CharacterAvatar>
         <span class="kit-ooc-tag">OOC</span>
     </div>
     <div class="kit-ooc-body">
@@ -21,6 +26,12 @@
 
 @code {
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    /// <summary>The author's picture, when known.</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>The author, to find their picture when <see cref="ImageUrl"/> gives none.</summary>
+    [Parameter] public string? Character { get; set; }
     /// <summary>The author's softcode name colour; only <c>#rrggbb</c> is written (<see cref="NameColor"/>).</summary>
     [Parameter] public string? Color { get; set; }
     [Parameter] public string? Time { get; set; }
