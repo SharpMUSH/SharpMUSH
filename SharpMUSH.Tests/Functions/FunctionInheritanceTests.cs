@@ -89,5 +89,26 @@ public class FunctionInheritanceTests : ServerTestBase
 		await Assert.That(childHour).IsNotEqualTo(plainHour);
 	}
 
+	/// <summary>
+	/// An inherited read made before the parent changed is not kept: <c>@parent</c> and <c>@unparent</c> change
+	/// what every attribute read through the chain answers.
+	/// </summary>
+	[Test]
+	public async Task AReadBeforeTheParentChanged_IsNotKept()
+	{
+		var parent = DBRef.Parse(TrailingDbref(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("LateP")}")));
+		var child = DBRef.Parse(TrailingDbref(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("LateC")}")));
+		await Cmd($"&LATE #{parent.Number}=from parent");
+		var before = await Eval($"get(#{child.Number}/LATE)");
+
+		await Cmd($"@parent #{child.Number}=#{parent.Number}");
+		var parented = await Eval($"get(#{child.Number}/LATE)");
+		await Cmd($"@parent #{child.Number}=none");
+
+		await Assert.That(before).IsEqualTo(string.Empty);
+		await Assert.That(parented).IsEqualTo("from parent");
+		await Assert.That(await Eval($"get(#{child.Number}/LATE)")).IsEqualTo(string.Empty);
+	}
+
 	private static string TrailingDbref(string created) => created.Trim().Split(' ')[^1].Trim().TrimEnd('.');
 }

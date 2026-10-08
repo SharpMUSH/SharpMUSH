@@ -864,6 +864,9 @@
   <data name="ThemeUnreadableFormat" xml:space="preserve">
     <value>Your @theme does not read ({0}), so layouts use the game's theme. @theme me=&lt;theme&gt; sets another; @theme me= clears it.</value>
   </data>
+  <data name="ThemeModeNeedsTheme" xml:space="preserve">
+    <value>That works out to nothing, so there is no theme for /light or /dark to keep.</value>
+  </data>
   <data name="ThemeUsage" xml:space="preserve">
     <value>Usage: @theme[/light|/dark] &lt;object&gt;=[&lt;theme&gt;], @theme/refresh [&lt;player&gt;], @theme/list.</value>
   </data>

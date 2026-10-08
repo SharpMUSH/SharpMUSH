@@ -7,8 +7,7 @@ namespace SharpMUSH.Library.Commands.Database;
 
 public record UnsetObjectParentCommand(AnySharpObject Target) : ICommand, ICacheInvalidating
 {
-	// Invalidate cache for the target object only
-	// The parent (if it exists) doesn't need invalidation since we're only modifying the child
+	// The parent is not modified, but every read through the target's chain, its children's included, now walks a shorter one.
 	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef)];
-	public string[] CacheTags => [];
+	public string[] CacheTags => [Definitions.CacheTags.InheritedAttributes];
 }
