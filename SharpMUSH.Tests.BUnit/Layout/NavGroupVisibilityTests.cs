@@ -214,14 +214,14 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(rule.Groups["body"].Value.Replace(" ", "")).Contains("display:none");
 	}
 	[Test]
-	[Arguments("queue.inspect")]
-	[Arguments("queue.inspect.own")]
-	public async Task DiagnosticsLinkIsAvailableForEitherInspectionScope(string policy)
+	[Arguments("queue.inspect", 1)]
+	[Arguments("queue.inspect.own", 0)]
+	public async Task DiagnosticsLinkIsForStaffInspection(string policy, int links)
 	{
 		Auth.SetAuthorized("inspector");
 		Auth.SetPolicies(policy);
 		var cut = RenderNav();
-		await Assert.That(cut.FindAll("a[href='/admin/diagnostics']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/admin/diagnostics']").Count).IsEqualTo(links);
 	}
 
 }

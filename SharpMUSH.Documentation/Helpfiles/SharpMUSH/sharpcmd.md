@@ -3712,7 +3712,8 @@ Profiling requires `diagnostics.profile` and queue inspection permission for an
 explicitly linked active character executing as itself. Owning an object does not
 give its callbacks your account permissions. Both the game commands and the portal
 at `/admin/diagnostics` use the same authorization service. The portal requires you
-to select the linked character whose authority will be used.
+to select the linked character whose authority will be used. The portal page is shown
+only to staff holding `queue.inspect`; anyone else profiles with the game commands.
 
 Rows contain source/attribute when known, invocation kind and name, count, failure
 count, total inclusive elapsed milliseconds, and longest invocation. Inclusive time
