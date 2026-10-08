@@ -56,7 +56,9 @@ public sealed record RoleDraft(
 /// have its roles or overrides changed.</item>
 /// <item>A role or override can allow only scopes the actor holds; a holder of
 /// <see cref="PortalPermission.GameWizard"/> may also allow any in-game scope.</item>
-/// <item>Nobody but the owner changes their own roles or overrides.</item>
+/// <item>Nobody but the owner changes their own roles or overrides, except that a holder of
+/// <see cref="PortalPermission.GameWizard"/> may give itself, or its own account, any role below its
+/// highest role and take one away, and set its own power overrides.</item>
 /// <item>System roles keep their slug and priority and cannot be deleted. The implicit ones
 /// (<c>everyone</c>, <c>player</c>, <c>god</c>) are never assigned.</item>
 /// <item>An object may give a role it holds to a non-player object it owns, and take it back, without
@@ -336,7 +338,7 @@ public sealed partial class RoleManagementService(
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
-			if (await TargetAsync(actor, me, accountId, ct) is not string target)
+			if ((await WizardsOwnAccountAsync(actor, me, accountId, ct) ?? await TargetAsync(actor, me, accountId, ct)) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
 			if (assign) await registry.AssignRoleToAccountAsync(target, role.Slug);
 			else await registry.RemoveRoleFromAccountAsync(target, role.Slug);
@@ -370,8 +372,7 @@ public sealed partial class RoleManagementService(
 			{
 				if (Unauthorized(me.Context) is { } refusal) return refusal;
 				if (!RoleHierarchy.Outranks(me.Context, role.Priority)) return NotBelow<Success>(role, me.Context);
-				var ownPower = GamePowers.ForRole(role.Slug) is not null && IsWizardActingOnItself(actor, me.Context, target);
-				if (!ownPower && await ObjectTargetRefusalAsync(actor, me.Context, target, ct) is { } targetRefusal) return targetRefusal;
+				if (!IsWizardActingOnItself(actor, me.Context, target) && await ObjectTargetRefusalAsync(actor, me.Context, target, ct) is { } targetRefusal) return targetRefusal;
 			}
 
 			var number = target.Object().Key;
@@ -435,11 +436,24 @@ public sealed partial class RoleManagementService(
 
 	/// <summary>
 	/// A <see cref="PortalPermission.GameWizard"/> holder changing itself. As in PennMUSH a wizard may
-	/// <c>@power</c> itself, so this lets it set its own power overrides and power roles (Builder, Guest).
+	/// <c>@power</c> itself, so this lets it set its own power overrides, and give itself or take away
+	/// any role below its highest one. Its own top role and the roles above it stay out of reach.
 	/// </summary>
 	private bool IsWizardActingOnItself(RoleActor actor, PermissionContext me, AnySharpObject target)
-		=> ActingObject(actor) is { } acting && acting.Number == target.Object().Key
-			&& resolver.Resolve(me).Contains(PortalPermission.GameWizard);
+		=> ActingObject(actor) is { } acting && acting.Number == target.Object().Key && IsWizard(me);
+
+	/// <summary>
+	/// The actor's own account's canonical id when the actor holds <see cref="PortalPermission.GameWizard"/>
+	/// and <paramref name="accountId"/> is that account, else null: a wizard may change its own account's
+	/// roles as it may its own (<see cref="IsWizardActingOnItself"/>).
+	/// </summary>
+	private async Task<string?> WizardsOwnAccountAsync(RoleActor actor, PermissionContext me, string accountId, CancellationToken ct)
+	{
+		if (!IsWizard(me) || await accounts.GetByIdAsync(accountId, ct) is not { Id: { } id }) return null;
+		return id == await ActorAccountIdAsync(actor, ct) ? id : null;
+	}
+
+	private bool IsWizard(PermissionContext me) => resolver.Resolve(me).Contains(PortalPermission.GameWizard);
 
 	/// <summary>Why the actor may not change <paramref name="target"/>'s roles or overrides, or null when it may.</summary>
 	private async Task<RoleOutcome<Success>?> ObjectTargetRefusalAsync(RoleActor actor, PermissionContext me, AnySharpObject target, CancellationToken ct)

@@ -134,7 +134,7 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task WizardPowersItselfButCannotRaiseItsOwnRoles()
+	public async Task WizardPowersItselfAndChangesItsOwnRolesBelowWizard()
 	{
 		var me = $"#{_wizard.DbRef.Number}";
 		await Assert.That(await As("@power me=No_Pay")).Contains("No_Pay granted");
@@ -143,9 +143,17 @@ public class RoleBackedPrivilegeTests : ServerTestBase
 		await Assert.That(await AsWizard("hasrole(me,builder)")).IsEqualTo("1");
 		await Assert.That(await As("@power me=!No_Pay")).Contains("No_Pay removed");
 		await Assert.That(await AsWizard("haspower(me,No_Pay)")).IsEqualTo("0");
-		// The exception is for powers only: a wizard still cannot hand itself a role or a portal permission.
-		await Assert.That(await As("@role/assign me=moderator")).DoesNotContain("assigned");
-		await Assert.That(await AsWizard("hasrole(me,moderator)")).IsEqualTo("0");
+		// A wizard gives itself, and takes away, any role below its own highest role.
+		await As("@role/assign me=approved");
+		await Assert.That(await AsWizard("hasrole(me,approved)")).IsEqualTo("1");
+		await As("@role/unassign me=approved");
+		await Assert.That(await AsWizard("hasrole(me,approved)")).IsEqualTo("0");
+		// Its own top role and the roles above it stay out of reach.
+		await As("@role/unassign me=wizard");
+		await Assert.That(await AsWizard("hasrole(me,wizard)")).IsEqualTo("1");
+		await As("@role/assign me=god");
+		await Assert.That(await AsWizard("hasrole(me,god)")).IsEqualTo("0");
+		// Overrides on itself are powers only: a portal permission is still refused.
 		await As("@permission/allow me=wiki.read");
 		await Assert.That(await As($"@role/player {me}")).DoesNotContain("allow wiki.read");
 	}
