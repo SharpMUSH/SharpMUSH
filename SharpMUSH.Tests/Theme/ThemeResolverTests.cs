@@ -158,8 +158,11 @@ public class ThemeResolverTests
 	[Test]
 	public async Task NoTwoBuiltInThemesLookAlike()
 	{
-		var looks = BuiltInThemes.All.Select(t => string.Join(",", ThemeStyles.Keys.Select(k => ThemeResolver.Complete(t.Tokens).Style[k]))).ToList();
-		var genreLooks = looks.Skip(2).ToList();
+		// Phosphor, Daylight and the colour vision themes share the plain look on purpose.
+		var genreLooks = BuiltInThemes.All.Skip(2)
+			.Where(t => ThemeVision.Of(t.Tokens) == ThemeVision.Typical)
+			.Select(t => string.Join(",", ThemeStyles.Keys.Select(k => ThemeResolver.Complete(t.Tokens).Style[k])))
+			.ToList();
 
 		await Assert.That(genreLooks.Distinct().Count()).IsEqualTo(genreLooks.Count);
 	}
@@ -182,7 +185,10 @@ public class ThemeResolverTests
 	[Test]
 	public async Task EachGenreHasATextureAndFrameOfItsOwn()
 	{
-		var genres = BuiltInThemes.All.Skip(2).Select(t => ThemeResolver.Complete(t.Tokens).Style).ToList();
+		var genres = BuiltInThemes.All.Skip(2)
+			.Where(t => ThemeVision.Of(t.Tokens) == ThemeVision.Typical)
+			.Select(t => ThemeResolver.Complete(t.Tokens).Style)
+			.ToList();
 
 		await Assert.That(genres.Select(s => s[ThemeStyles.Texture]).Distinct().Count()).IsEqualTo(genres.Count);
 		await Assert.That(genres.Select(s => s[ThemeStyles.Frame]).Distinct().Count()).IsEqualTo(genres.Count);

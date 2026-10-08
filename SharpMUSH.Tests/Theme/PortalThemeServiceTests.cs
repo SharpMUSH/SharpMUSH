@@ -190,7 +190,14 @@ public class PortalThemeServiceTests
 		await Assert.That((await themes.SetAppearanceAsync(player, new CharacterAppearance(null, "teal"))).Value).IsTypeOf<Error<string>>();
 		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(stored);
 
-		(await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null))).Expect<CharacterAppearance>();
+		var deutan = (await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null, ThemeVision.Deutan))).Expect<CharacterAppearance>();
+		await Assert.That(deutan).IsEqualTo(new CharacterAppearance(null, null, ThemeVision.Deutan));
+		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(deutan);
+		await Assert.That((await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null, "colourblind"))).Value).IsTypeOf<Error<string>>();
+		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(deutan);
+
+		// "typical" is the same as naming none.
+		(await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null, ThemeVision.Typical))).Expect<CharacterAppearance>();
 		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(new CharacterAppearance(null, null));
 	}
 

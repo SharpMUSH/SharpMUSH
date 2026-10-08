@@ -5135,6 +5135,51 @@
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>Le thème par défaut du jeu suit le réglage clair ou sombre de votre appareil.</value>
   </data>
+  <data name="NavThemeVision" xml:space="preserve">
+    <value>Vision des couleurs</value>
+  </data>
+  <data name="NavThemeVisionTypical" xml:space="preserve">
+    <value>Typique</value>
+  </data>
+  <data name="NavThemeVisionTypicalWhat" xml:space="preserve">
+    <value>La plupart des gens</value>
+  </data>
+  <data name="NavThemeVisionProtan" xml:space="preserve">
+    <value>Protan</value>
+  </data>
+  <data name="NavThemeVisionProtanWhat" xml:space="preserve">
+    <value>Faible au rouge ou aveugle au rouge</value>
+  </data>
+  <data name="NavThemeVisionDeutan" xml:space="preserve">
+    <value>Deutan</value>
+  </data>
+  <data name="NavThemeVisionDeutanWhat" xml:space="preserve">
+    <value>Faible au vert ou aveugle au vert</value>
+  </data>
+  <data name="NavThemeVisionTritan" xml:space="preserve">
+    <value>Tritan</value>
+  </data>
+  <data name="NavThemeVisionTritanWhat" xml:space="preserve">
+    <value>Faible au bleu ou aveugle au bleu</value>
+  </data>
+  <data name="NavThemeVisionMono" xml:space="preserve">
+    <value>Mono</value>
+  </data>
+  <data name="NavThemeVisionMonoWhat" xml:space="preserve">
+    <value>Aucune couleur</value>
+  </data>
+  <data name="NavThemeVisionNote" xml:space="preserve">
+    <value>Les navigateurs ne signalent pas le daltonisme : choisissez le vôtre ici. Sans thème choisi, vous obtenez un thème adapté qui suit le réglage clair ou sombre de votre appareil.</value>
+  </data>
+  <data name="NavThemeVisionFollows" xml:space="preserve">
+    <value>Votre thème suit le réglage clair ou sombre de votre appareil, avec des couleurs choisies pour cette vision.</value>
+  </data>
+  <data name="NavThemeVisionKept" xml:space="preserve">
+    <value>Votre thème choisi reste, avec ses couleurs d'état et de code remplacées par des couleurs que vous distinguez. Choisissez le thème adapté pour le reste.</value>
+  </data>
+  <data name="NavThemeVisionDefault" xml:space="preserve">
+    <value>Adapté à votre vision ({0})</value>
+  </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planifier une scène</value>
   </data>

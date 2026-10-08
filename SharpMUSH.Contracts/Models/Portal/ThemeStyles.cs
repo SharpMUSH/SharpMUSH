@@ -207,6 +207,7 @@ public static class ThemeStyles
 		[EffectColor] = TitleColors,
 		[EffectShadow] = [.. Effects.Values.Select(e => e.Shadow).Distinct()],
 		[Mode] = Modes,
+		[ThemeVision.Key] = ThemeVision.All,
 	};
 
 	/// <summary>The Simple settings in the order the editor lists them.</summary>

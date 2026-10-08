@@ -18,11 +18,11 @@ public static class CharacterSummaryMapper
 	/// <paramref name="IsActing"/> marks the character the caller's session is bound to. The roster is
 	/// how a reloaded tab learns who it is: the acting identity lives in the session token, which is
 	/// opaque to the client, so the server has to say. Defaults false for callers that don't resolve it.
-	/// <paramref name="ThemeId"/> and <paramref name="Accent"/> are the character's portal look
+	/// <paramref name="ThemeId"/>, <paramref name="Accent"/> and <paramref name="Vision"/> are the character's portal look
 	/// (<see cref="IPortalThemeService.GetAppearanceAsync"/>), so a tab themes itself from the roster it already reads.
 	/// </summary>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false,
-		string? ThemeId = null, string? Accent = null);
+		string? ThemeId = null, string? Accent = null, string? Vision = null);
 
 	/// <param name="themes">Reads each character's look; without it the summaries carry none.</param>
 	public static async Task<IReadOnlyList<CharacterSummary>> BuildSummariesAsync(
@@ -35,7 +35,7 @@ public static class CharacterSummaryMapper
 				return new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name,
 					string.Join(" ", (await c.Object.ReadFlagsAsync(innerCt)).Flags.Select(f => f.Name)),
 					c.Object.Key == actingKey && c.Object.CreationTime == actingCreationTime,
-					look?.ThemeId, look?.Accent);
+					look?.ThemeId, look?.Accent, look?.Vision);
 			})
 			.ToListAsync(ct);
 }

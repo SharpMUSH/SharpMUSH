@@ -21,8 +21,9 @@ public partial class ThemePartsCssTests
 	public async Task EveryChoiceHasARule()
 	{
 		var css = PartsCss();
-		// A Simple frame, ornament or effect is only a set of parts; the parts have the rules.
-		string[] bundles = [ThemeStyles.Frame, ThemeStyles.Ornament, ThemeStyles.Effect, ThemeStyles.Mode];
+		// A Simple frame, ornament or effect is only a set of parts; the parts have the rules. The mode and colour vision
+		// draw nothing.
+		string[] bundles = [ThemeStyles.Frame, ThemeStyles.Ornament, ThemeStyles.Effect, ThemeStyles.Mode, ThemeVision.Key];
 		var missing = ThemeStyles.Choices
 			.Where(c => !bundles.Contains(c.Key))
 			.SelectMany(c => c.Value.Select(choice => $"[data-{c.Key}=\"{choice}\"]"))

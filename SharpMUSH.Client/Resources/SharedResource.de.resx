@@ -5841,6 +5841,51 @@
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>Das Standarddesign folgt der hellen oder dunklen Einstellung deines Geräts.</value>
   </data>
+  <data name="NavThemeVision" xml:space="preserve">
+    <value>Farbsehen</value>
+  </data>
+  <data name="NavThemeVisionTypical" xml:space="preserve">
+    <value>Typisch</value>
+  </data>
+  <data name="NavThemeVisionTypicalWhat" xml:space="preserve">
+    <value>Die meisten Menschen</value>
+  </data>
+  <data name="NavThemeVisionProtan" xml:space="preserve">
+    <value>Protan</value>
+  </data>
+  <data name="NavThemeVisionProtanWhat" xml:space="preserve">
+    <value>Rotschwäche oder Rotblindheit</value>
+  </data>
+  <data name="NavThemeVisionDeutan" xml:space="preserve">
+    <value>Deutan</value>
+  </data>
+  <data name="NavThemeVisionDeutanWhat" xml:space="preserve">
+    <value>Grünschwäche oder Grünblindheit</value>
+  </data>
+  <data name="NavThemeVisionTritan" xml:space="preserve">
+    <value>Tritan</value>
+  </data>
+  <data name="NavThemeVisionTritanWhat" xml:space="preserve">
+    <value>Blauschwäche oder Blaublindheit</value>
+  </data>
+  <data name="NavThemeVisionMono" xml:space="preserve">
+    <value>Mono</value>
+  </data>
+  <data name="NavThemeVisionMonoWhat" xml:space="preserve">
+    <value>Keine Farben</value>
+  </data>
+  <data name="NavThemeVisionNote" xml:space="preserve">
+    <value>Browser melden keine Farbenblindheit, also wähle sie hier. Ohne gewähltes Design bekommst du ein passendes, das der hellen oder dunklen Einstellung deines Geräts folgt.</value>
+  </data>
+  <data name="NavThemeVisionFollows" xml:space="preserve">
+    <value>Dein Design folgt der hellen oder dunklen Einstellung deines Geräts, in Farben, die für dieses Farbsehen gewählt sind.</value>
+  </data>
+  <data name="NavThemeVisionKept" xml:space="preserve">
+    <value>Dein gewähltes Design bleibt; seine Status- und Codefarben werden durch unterscheidbare ersetzt. Wähle das passende Design für den Rest.</value>
+  </data>
+  <data name="NavThemeVisionDefault" xml:space="preserve">
+    <value>Passend zu deinem Farbsehen ({0})</value>
+  </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Szene planen</value>
   </data>

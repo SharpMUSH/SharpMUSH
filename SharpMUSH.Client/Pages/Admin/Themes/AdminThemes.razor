@@ -200,6 +200,21 @@
                             </section>
                         }
 
+                        <section class="adm-theme-group" id="theme-vision">
+                            <h3 class="adm-theme-group-title">@Loc["AdmThemesVision"]</h3>
+                            <p class="adm-theme-hint">@Loc["AdmThemesVisionHint"]</p>
+                            <div class="adm-theme-styles">
+                                <MudSelect T="string" Value="@ThemeVision.Of(_draft.Tokens)" ValueChanged="v => SetStyle(ThemeVision.Key, v)"
+                                           Label="@Loc["AdmThemesVision"]" Disabled="locked" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                                           id="theme-style-vision">
+                                    @foreach (var vision in ThemeVision.All)
+                                    {
+                                        <MudSelectItem T="string" Value="@vision">@Loc[VisionKey(vision)] · @Loc[VisionKey(vision) + "What"]</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </div>
+                        </section>
+
                         <section class="adm-theme-group" id="theme-style">
                             <h3 class="adm-theme-group-title">@Loc["AdmThemesGroupStyle"]</h3>
                             <div class="adm-theme-mode adm-theme-edit-mode" role="radiogroup" aria-label="@Loc["AdmThemesEditMode"]" id="theme-edit-mode">
@@ -441,6 +456,9 @@
         };
         return simple is not null && ThemeStyles.Choices[simple].Contains(choice) ? StyleKey(simple, choice) : StyleKey(key, choice);
     }
+
+    /// <summary>"deutan" is "NavThemeVisionDeutan", the name the player's own setting shows.</summary>
+    private static string VisionKey(string vision) => "NavThemeVision" + Pascal(vision);
 
     /// <summary>"complex" is "AdmThemesEditModeComplex".</summary>
     private static string ModeKey(string mode) => "AdmThemesEditMode" + Pascal(mode);

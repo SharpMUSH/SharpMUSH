@@ -5841,6 +5841,51 @@
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>El tema predeterminado del juego sigue el modo claro u oscuro de tu dispositivo.</value>
   </data>
+  <data name="NavThemeVision" xml:space="preserve">
+    <value>Visión del color</value>
+  </data>
+  <data name="NavThemeVisionTypical" xml:space="preserve">
+    <value>Típica</value>
+  </data>
+  <data name="NavThemeVisionTypicalWhat" xml:space="preserve">
+    <value>La mayoría de las personas</value>
+  </data>
+  <data name="NavThemeVisionProtan" xml:space="preserve">
+    <value>Protan</value>
+  </data>
+  <data name="NavThemeVisionProtanWhat" xml:space="preserve">
+    <value>Débil o ciego al rojo</value>
+  </data>
+  <data name="NavThemeVisionDeutan" xml:space="preserve">
+    <value>Deutan</value>
+  </data>
+  <data name="NavThemeVisionDeutanWhat" xml:space="preserve">
+    <value>Débil o ciego al verde</value>
+  </data>
+  <data name="NavThemeVisionTritan" xml:space="preserve">
+    <value>Tritan</value>
+  </data>
+  <data name="NavThemeVisionTritanWhat" xml:space="preserve">
+    <value>Débil o ciego al azul</value>
+  </data>
+  <data name="NavThemeVisionMono" xml:space="preserve">
+    <value>Mono</value>
+  </data>
+  <data name="NavThemeVisionMonoWhat" xml:space="preserve">
+    <value>Sin color</value>
+  </data>
+  <data name="NavThemeVisionNote" xml:space="preserve">
+    <value>Los navegadores no informan del daltonismo, así que elige el tuyo aquí. Sin un tema elegido, recibes uno adecuado que sigue el ajuste claro u oscuro de tu dispositivo.</value>
+  </data>
+  <data name="NavThemeVisionFollows" xml:space="preserve">
+    <value>Tu tema sigue el ajuste claro u oscuro de tu dispositivo, con colores elegidos para esta visión.</value>
+  </data>
+  <data name="NavThemeVisionKept" xml:space="preserve">
+    <value>Tu tema elegido se mantiene, con sus colores de estado y de código cambiados por otros que puedes distinguir. Elige el tema adecuado para el resto.</value>
+  </data>
+  <data name="NavThemeVisionDefault" xml:space="preserve">
+    <value>Adecuado a tu visión ({0})</value>
+  </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Programar una escena</value>
   </data>

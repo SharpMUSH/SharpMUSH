@@ -311,6 +311,34 @@ public static class BuiltInThemes
 		["#160609", "#210c10", "#2c1116", "#19080b", "#080a1c", "#fff3e3", "#e0bfb0", "#c09a8e", "#8a8f9d", "#3a1a1e", "#ffc82a", "#ff9a3c", "#ff8f80"],
 		display: "russo", body: "ui", corners: "sharp", texture: "sunburst-rays", ornament: "battlecry", frame: "chrome-armor", titles: "slant", effect: "blazing", imagery: "hotblooded", accent2: "#ff7a1a", accent3: "#d7221c");
 
+	// One pair per colour vision (ThemeVision), Phosphor's and Daylight's surfaces and text with an accent, warning and
+	// missing-link colour that stay apart for that vision. ThemeVision picks the pair for a player who names a vision
+	// and no theme, and swaps the status and code colours to match. Colours: accent, warn, link-missing.
+
+	/// <summary>Protan dark: for red-weak and red-blind readers; sky accent, yellow warnings, orange errors.</summary>
+	public static readonly PortalTheme ProtanDark = Vision(ThemeVision.Protan, "Protan Dark", dark: true, "#a8e8fa", "#f2ef0a", "#ec8c2d");
+
+	/// <summary>Protan light: for red-weak and red-blind readers; ocean accent, ochre warnings, brown errors.</summary>
+	public static readonly PortalTheme ProtanLight = Vision(ThemeVision.Protan, "Protan Light", dark: false, "#1b729b", "#907300", "#732104");
+
+	/// <summary>Deutan dark: for green-weak and green-blind readers; sky accent, yellow warnings, salmon errors.</summary>
+	public static readonly PortalTheme DeutanDark = Vision(ThemeVision.Deutan, "Deutan Dark", dark: true, "#b6edfa", "#fde30b", "#efa083");
+
+	/// <summary>Deutan light: for green-weak and green-blind readers; deep blue accent, ochre warnings, dark red errors.</summary>
+	public static readonly PortalTheme DeutanLight = Vision(ThemeVision.Deutan, "Deutan Light", dark: false, "#045781", "#897608", "#770b04");
+
+	/// <summary>Tritan dark: for blue-weak and blue-blind readers; pink accent, cream warnings, red errors.</summary>
+	public static readonly PortalTheme TritanDark = Vision(ThemeVision.Tritan, "Tritan Dark", dark: true, "#ff93c4", "#fce49e", "#fc1f0a");
+
+	/// <summary>Tritan light: for blue-weak and blue-blind readers; crimson accent, ochre warnings, dark red errors.</summary>
+	public static readonly PortalTheme TritanLight = Vision(ThemeVision.Tritan, "Tritan Light", dark: false, "#d10759", "#967102", "#6e0700");
+
+	/// <summary>Mono dark: for readers who see no colour; each meaningful colour a different lightness.</summary>
+	public static readonly PortalTheme MonoDark = Vision(ThemeVision.Mono, "Mono Dark", dark: true, "#318ec0", "#e4e2c8", "#ebccc6");
+
+	/// <summary>Mono light: for readers who see no colour; each meaningful colour a different lightness.</summary>
+	public static readonly PortalTheme MonoLight = Vision(ThemeVision.Mono, "Mono Light", dark: false, "#193055", "#7f7833", "#916862");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
 		Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
@@ -320,7 +348,21 @@ public static class BuiltInThemes
 		Cyberpunk, Synthwave, SpaceOpera, StarshipConsole,
 		RealRobot,
 		SuperRobot,
+		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
+
+	/// <summary>A colour vision theme: Phosphor or Daylight with its own accent, warning and missing-link colours.</summary>
+	private static PortalTheme Vision(string vision, string name, bool dark, string accent, string warn, string linkMissing)
+	{
+		var tokens = new Dictionary<string, string>((dark ? Phosphor : Daylight).Tokens)
+		{
+			[ThemeTokens.Accent] = accent,
+			[ThemeTokens.Warn] = warn,
+			[ThemeTokens.LinkMissing] = linkMissing,
+			[ThemeVision.Key] = vision,
+		};
+		return new PortalTheme($"{vision}-{(dark ? "dark" : "light")}", name, dark, Published: true, tokens, BuiltIn: true);
+	}
 
 	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
 		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery,
@@ -437,20 +479,32 @@ public sealed record ResolvedTheme(
 public static class ThemeResolver
 {
 	/// <summary>
-	/// The theme the character sees: its chosen theme if that is still offered, else the game's default for the
-	/// browser's light or dark preference, else Phosphor.
+	/// The theme the character sees: its chosen theme if that is still offered, else the built-in theme for its
+	/// colour vision (<see cref="ThemeVision"/>), else the game's default, each for the browser's light or dark
+	/// preference, else Phosphor.
 	/// </summary>
-	public static PortalTheme Pick(IReadOnlyList<PortalTheme> themes, PortalThemeDefaults defaults, bool prefersLight, string? chosenThemeId)
+	public static PortalTheme Pick(IReadOnlyList<PortalTheme> themes, PortalThemeDefaults defaults, bool prefersLight, string? chosenThemeId,
+		string? vision = null)
 		=> themes.FirstOrDefault(t => t.Id == chosenThemeId)
+			?? themes.FirstOrDefault(t => t.Id == ThemeVision.ThemeId(vision, prefersLight))
 			?? themes.FirstOrDefault(t => t.Id == defaults.For(prefersLight))
 			?? themes.FirstOrDefault(t => t.Id == defaults.DarkThemeId)
 			?? BuiltInThemes.Phosphor;
 
-	public static ResolvedTheme Resolve(PortalTheme theme, string? accent = null)
+	/// <param name="vision">
+	/// The reader's colour vision (<see cref="ThemeVision"/>), or null for the theme's own: the status and code colours
+	/// are the ones that stay apart for it.
+	/// </param>
+	public static ResolvedTheme Resolve(PortalTheme theme, string? accent = null, string? vision = null)
 	{
 		var mode = ThemeStyles.ModeOf(theme.Tokens, theme.Stylesheet);
 		var stylesheet = mode == ThemeStyles.Custom && !string.IsNullOrWhiteSpace(theme.Stylesheet) ? theme.Stylesheet : null;
 		var (tokens, style) = Complete(ThemeStylesheet.WithColorOverrides(theme.Tokens, stylesheet));
+		if (ThemeVision.Chosen(vision) is { } reader)
+		{
+			style[ThemeVision.Key] = reader;
+		}
+
 		var bg = ThemeColor.Parse(tokens[ThemeTokens.Background]);
 		var surface = ThemeColor.Parse(tokens[ThemeTokens.Surface]);
 		// A chosen accent is drawn on the page, cards, the current sidebar row and the sidebar itself.
@@ -462,7 +516,7 @@ public static class ThemeResolver
 			: ThemeColor.Parse(tokens[ThemeTokens.Accent]);
 		tokens[ThemeTokens.Accent] = accentColor.Hex;
 
-		Derive(tokens, theme.Dark, accentColor);
+		Derive(tokens, theme.Dark, accentColor, ThemeVision.Of(style));
 
 		return new ResolvedTheme(theme.Id, theme.Name, theme.Dark, accentColor.Hex, requested?.Hex,
 			requested is { } asked && asked != accentColor, tokens, style, ThemeStyles.Parts(style, mode, theme.Dark), stylesheet);
@@ -588,7 +642,10 @@ public static class ThemeResolver
 		return (colors, style);
 	}
 
-	/// <summary>The status and kind colours every theme derives, with Phosphor's values (<c>tokens.css</c>).</summary>
+	/// <summary>
+	/// The status and kind colours every theme derives, with Phosphor's values (<c>tokens.css</c>). A theme or reader
+	/// with another colour vision starts from <see cref="ThemeVision.StatusColors"/> instead.
+	/// </summary>
 	public static readonly IReadOnlyList<(string Name, string Hex)> StatusColors =
 	[
 		("danger", "#e57373"),
@@ -597,7 +654,10 @@ public static class ThemeResolver
 		("special", "#b39cff"),
 	];
 
-	/// <summary>The syntax colours every theme derives, with Phosphor's values (<c>tokens.css</c>).</summary>
+	/// <summary>
+	/// The syntax colours every theme derives, with Phosphor's values (<c>tokens.css</c>). A theme or reader with another
+	/// colour vision starts from <see cref="ThemeVision.SyntaxColors"/> instead.
+	/// </summary>
 	public static readonly IReadOnlyList<(string Name, string Hex)> SyntaxColors =
 	[
 		("syntax-command", "#c792ea"),
@@ -624,7 +684,7 @@ public static class ThemeResolver
 		return (int)Math.Round((h * 60 + 360) % 360);
 	}
 
-	private static void Derive(Dictionary<string, string> tokens, bool dark, ThemeColor accent)
+	private static void Derive(Dictionary<string, string> tokens, bool dark, ThemeColor accent, string vision)
 	{
 		ThemeColor Get(string name) => ThemeColor.Parse(tokens[name]);
 		var bg = Get(ThemeTokens.Background);
@@ -671,7 +731,7 @@ public static class ThemeResolver
 		// and syntax colours of help, the softcode console and highlighted softcode: each readable on the surfaces
 		// it is drawn on, starting from Phosphor's and moved toward white or black as the theme needs.
 		ThemeColor[] grounds = [bg, surface, surface3];
-		foreach (var (name, hex) in StatusColors)
+		foreach (var (name, hex) in ThemeVision.StatusColors(vision, dark))
 		{
 			tokens[name] = ReadableAgainst(ThemeColor.Parse(hex), dark, ThemeTokens.TextContrast, grounds).Hex;
 		}
@@ -679,7 +739,7 @@ public static class ThemeResolver
 		var codeBg = dark ? bg.Mix(ThemeColor.Black, 0.35) : surface3;
 		tokens["code-bg"] = codeBg.Hex;
 		tokens["code-text"] = ReadableAgainst(Get(ThemeTokens.Text), dark, ThemeTokens.TextContrast, codeBg).Hex;
-		foreach (var (name, hex) in SyntaxColors)
+		foreach (var (name, hex) in ThemeVision.SyntaxColors(vision, dark))
 		{
 			tokens[name] = ReadableAgainst(ThemeColor.Parse(hex), dark, ThemeTokens.TextContrast, codeBg, surface).Hex;
 		}

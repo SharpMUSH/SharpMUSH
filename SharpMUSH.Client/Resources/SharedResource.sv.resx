@@ -5841,6 +5841,51 @@
   <data name="NavThemeFollowsDevice" xml:space="preserve">
     <value>Spelets standard följer enhetens ljusa eller mörka inställning.</value>
   </data>
+  <data name="NavThemeVision" xml:space="preserve">
+    <value>Färgseende</value>
+  </data>
+  <data name="NavThemeVisionTypical" xml:space="preserve">
+    <value>Typiskt</value>
+  </data>
+  <data name="NavThemeVisionTypicalWhat" xml:space="preserve">
+    <value>De flesta</value>
+  </data>
+  <data name="NavThemeVisionProtan" xml:space="preserve">
+    <value>Protan</value>
+  </data>
+  <data name="NavThemeVisionProtanWhat" xml:space="preserve">
+    <value>Rödsvag eller rödblind</value>
+  </data>
+  <data name="NavThemeVisionDeutan" xml:space="preserve">
+    <value>Deutan</value>
+  </data>
+  <data name="NavThemeVisionDeutanWhat" xml:space="preserve">
+    <value>Grönsvag eller grönblind</value>
+  </data>
+  <data name="NavThemeVisionTritan" xml:space="preserve">
+    <value>Tritan</value>
+  </data>
+  <data name="NavThemeVisionTritanWhat" xml:space="preserve">
+    <value>Blåsvag eller blåblind</value>
+  </data>
+  <data name="NavThemeVisionMono" xml:space="preserve">
+    <value>Mono</value>
+  </data>
+  <data name="NavThemeVisionMonoWhat" xml:space="preserve">
+    <value>Inga färger</value>
+  </data>
+  <data name="NavThemeVisionNote" xml:space="preserve">
+    <value>Webbläsare uppger inte färgblindhet, så välj din här. Utan valt tema får du ett passande tema som följer enhetens ljusa eller mörka inställning.</value>
+  </data>
+  <data name="NavThemeVisionFollows" xml:space="preserve">
+    <value>Ditt tema följer enhetens ljusa eller mörka inställning, i färger valda för detta färgseende.</value>
+  </data>
+  <data name="NavThemeVisionKept" xml:space="preserve">
+    <value>Ditt valda tema står kvar, med status- och kodfärgerna utbytta mot färger du kan skilja åt. Välj det passande temat för resten.</value>
+  </data>
+  <data name="NavThemeVisionDefault" xml:space="preserve">
+    <value>Passar ditt färgseende ({0})</value>
+  </data>
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planera en scen</value>
   </data>
