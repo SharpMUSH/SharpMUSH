@@ -259,10 +259,13 @@ public partial class Commands
 	private static string Limit(long? value) => value is > 0 ? value.Value.ToString(CultureInfo.InvariantCulture) : "none";
 
 	private static string FormatAge(TimeSpan age)
-		=> age.TotalSeconds % 86400 == 0 ? $"{age.TotalDays:0}d"
-			: age.TotalSeconds % 3600 == 0 ? $"{age.TotalHours:0}h"
-			: age.TotalSeconds % 60 == 0 ? $"{age.TotalMinutes:0}m"
-			: $"{age.TotalSeconds:0}s";
+		=> (long)age.TotalSeconds switch
+		{
+			var seconds and > 0 when seconds % 86400 == 0 => $"{seconds / 86400}d",
+			var seconds and > 0 when seconds % 3600 == 0 => $"{seconds / 3600}h",
+			var seconds and > 0 when seconds % 60 == 0 => $"{seconds / 60}m",
+			var seconds => $"{seconds}s"
+		};
 
 	private async ValueTask<MString> FeedWhoAsync(FeedTarget target)
 	{

@@ -58,7 +58,8 @@ public class FeedCommandTests : ServerTestBase
 		await Assert.That(await Heard(_system, $"@feed/gag {_kind}/1={Ref(_bo)}")).Contains("now gagged");
 
 		var text = TestIsolationHelpers.GenerateUniqueName("FeedHello");
-		await Assert.That(await Heard(_system, $"@feed/send {_kind}/1={text}")).IsEqualTo("");
+		await Heard(_system, $"@feed/send {_kind}/1={text}");
+		await Assert.That(Lines(_system, text)).IsEmpty();
 
 		await Assert.That(Lines(_ann, text)).IsEquivalentTo(new[] { $"<{_kind}/1> {_system.Name} says, \"{text}\"" });
 		await Assert.That(Lines(_bo, text)).IsEmpty();
