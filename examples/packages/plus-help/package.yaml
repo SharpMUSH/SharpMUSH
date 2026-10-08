@@ -1,6 +1,6 @@
 format: 1
 package: plus-help
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -273,7 +273,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-
-          [@@(no arguments — the one line that tells a reader what else to type)]+help <topic>%b%b·%b%b+help/list \[<source>\]%b%b·%b%b+help/search <text>%b%b·%b%b+help/sources
+          [@@(no arguments — the one line that tells a reader what else to type, kept under 78 columns)]+help <topic>%b·%b+help/list \[<source>\]%b·%b+help/search <text>%b·%b+help/sources
         flags: [funsyntax]
       # The front page is a TOPIC, not a string in here: "index", resolved the ordinary way, so a
       # game overrides the shipped text by writing its own with +help/write and nothing new is

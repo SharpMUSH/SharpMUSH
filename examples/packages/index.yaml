@@ -54,7 +54,7 @@ packages:
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.4.0
+    version: 1.4.1
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: hello-ui/
     name: Hello UI
