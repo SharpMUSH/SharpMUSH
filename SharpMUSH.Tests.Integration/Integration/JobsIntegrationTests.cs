@@ -185,6 +185,117 @@ public class JobsIntegrationTests
 	}
 
 	[Test]
+	public async Task HelpersAreNamedAsTheTyperMeansThemAndCanBeRemoved()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var filer = await Player("JobsHlpF");
+			var friend = await Player("JobsHlpH");
+			var staff = await Player("JobsHlpS", "job-admin");
+			await As(filer, "+request Lost key=I lost my key.");
+
+			await Assert.That(await As(filer, "+job/addhelper 1=me")).Contains($"{filer.Name} can read and answer job 1 already.")
+				.Because("me is whoever typed it, not the jobs object");
+			await Assert.That(await God("think [job(1,helpers)]")).IsEqualTo(string.Empty);
+			await Assert.That(await As(filer, "+job/addhelper 1=")).Contains("+job/addhelper 1=<player>");
+			await Assert.That(await As(filer, "+job/remhelper 1")).Contains("+job/remhelper 1=<player>");
+
+			await Assert.That(await As(filer, $"+job/addhelper 1={friend.Name}")).Contains($"{friend.Name} can read and answer job 1 now.");
+			await Assert.That(await God("think [job(1,helpers)]")).IsEqualTo(await Objid(friend));
+
+			var told = await As(friend, "+job/reply 1=Any news?");
+			await Assert.That(told).Contains("You replied to job 1.");
+			var staffReply = Notifications.CountFor(friend.DbRef);
+			var filerBefore = Notifications.CountFor(filer.DbRef);
+			await As(staff, "+job/reply 1=Still looking.");
+			await Assert.That(string.Join("\n", Notifications.For(friend.DbRef).Skip(staffReply)))
+				.Contains($"{staff.Name} replied to job 1: Lost key.").And.DoesNotContain("your job")
+				.Because("a helper did not file the job");
+			await Assert.That(string.Join("\n", Notifications.For(filer.DbRef).Skip(filerBefore)))
+				.Contains($"{staff.Name} replied to your job 1: Lost key.");
+
+			await Assert.That(await As(filer, $"+job/remhelper 1={staff.Name}")).Contains($"{staff.Name} is not a helper on job 1.");
+			await Assert.That(await As(filer, $"+job/remhelper 1={friend.Name}")).Contains($"{friend.Name} is no longer a helper on job 1.");
+			await Assert.That(await God("think [job(1,helpers)]")).IsEqualTo(string.Empty)
+				.Because("clearing the helper attribute removes it whatever empty_attrs says");
+			await Assert.That(await As(friend, "+job/reply 1=Hello?")).Contains("There is no job 1.");
+
+			await As(filer, $"+job/addhelper 1={friend.Name}");
+			await Assert.That(await As(friend, "+job/remhelper 1=me")).Contains($"{friend.Name} is no longer a helper on job 1.")
+				.Because("a helper can step away from a job");
+
+			await As(staff, "+job/claim 1");
+			await As(staff, "+job/unclaim 1");
+			await Assert.That(await God("think [job(1,handlers)]")).IsEqualTo(string.Empty);
+			await Assert.That(await As(staff, "+job/unclaim 1")).Contains("You don't handle job 1.");
+			await Assert.That(await As(staff, "+job/unwatch 1")).Contains("You don't watch job 1.");
+			await As(staff, "+job/watch 1");
+			await Assert.That(await As(staff, "+job/unwatch 1")).Contains("You no longer watch job 1.");
+			await Assert.That(await God("think [job(1,watchers)]")).IsEqualTo(string.Empty);
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task MessagesSayWhatHappenedAndPlayersSeeOnlyTheirSide()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsMsgP");
+			var staff = await Player("JobsMsgS", "job-admin");
+			await As(player, "+request Room=A room, please.");
+
+			await Assert.That(await As(player, "+job 1")).Contains("New").And.DoesNotContain("With staff")
+				.Because("a new job reads New, as +help jobs says");
+
+			await As(staff, "+job/claim 1");
+			await As(staff, "+job/note 1=Staff eyes only.");
+			await As(staff, "+job/reply 1=Which floor?");
+			var read = await As(player, "+job 1");
+			await Assert.That(read).Contains("#1").And.Contains("#2").And.DoesNotContain("#3")
+				.Because("a player's messages are numbered without the hidden ones");
+			await Assert.That(await As(staff, "+job 1")).Contains("#3");
+
+			await Assert.That(await As(player, "+job/edit 1/1=nomatch/zzz"))
+				.Contains("Message 1 on job 1 has no \"nomatch\" in it. Nothing changed.");
+			await Assert.That(await As(player, "+job/edit 1=a/b")).Contains("+job/edit <#>/<message>=<old text>/<new text>");
+			await Assert.That(await As(player, "+job/edit 1/2=floor/x")).Contains("You can only edit your own messages.")
+				.Because("message 2 to the player is staff's reply, not the hidden note");
+			await Assert.That(await As(player, "+job/edit 1/1=room/suite")).Contains("Message 1 on job 1 is changed.");
+			await Assert.That(await As(player, "+job 1")).Contains("A suite, please.");
+
+			await Assert.That(await As(player, "+job/options")).Contains("Job mail is on. +job/options mail=off stops it.");
+			await As(player, "+job/options mail=off");
+			await Assert.That(await As(player, "+job/options")).Contains("Job mail is off. +job/options mail=on starts it.");
+
+			await Assert.That(await As(player, "+job/rep 1=Second floor.")).Contains("You replied to job 1.")
+				.Because("a unique prefix names its switch");
+			await Assert.That(await As(player, "+job/re 1")).Contains("+job/re could be");
+			await Assert.That(await As(player, "+job/reply/soft 1=[b]")).Contains("You replied to job 1.");
+			await Assert.That(await As(player, "+job/reply")).Contains("+job/reply <#>=<text>");
+
+			await As(player, "+job/cancel 1");
+			var closed = await As(player, "+job/cancel 1");
+			await Assert.That(closed).Contains("Job 1 is closed. +job/reply 1=<text> opens it again.").And.DoesNotContain("/reopen");
+
+			var bucket = await As(player, "+bucket Requests");
+			await Assert.That(bucket).Contains("Turnaround").And.DoesNotContain("Work lock").And.DoesNotContain("Permission")
+				.And.DoesNotContain("+bucket/set").And.Contains("+request Requests/<title>=<text>");
+			await Assert.That(await As(staff, "+bucket Requests")).Contains("Work lock").And.Contains("+bucket/set");
+			await Assert.That(await As(staff, "+bucket/dis Bugs")).Contains("Bugs takes no new jobs now.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task BucketsArePermissionsAndRoles()
 	{
 		try
