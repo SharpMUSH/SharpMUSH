@@ -61,6 +61,33 @@ public class OobCommFeedHistoryTests
 	}
 
 	/// <summary>
+	/// The list carries the channels the viewer may join as well, for the channel browser. Only the ones they
+	/// are on are pulled; leaving one keeps it listed and forgets its history, so joining again pulls it again.
+	/// </summary>
+	[Test]
+	public async Task Only_the_joined_channels_are_pulled_and_kept()
+	{
+		var (store, feed, history) = Create();
+		history.Markers = Markers();
+		history.Recall["Public"] = [Pulled(5, "one")];
+		const string bothListed = $$"""{"v":2,"viewer":{"name":"Ilsa","objid":"{{Viewer}}"},"channels":[{"name":"Public","joined":true},{"name":"Newbie","joined":false}]}""";
+		const string publicLeft = $$"""{"v":2,"viewer":{"name":"Ilsa","objid":"{{Viewer}}"},"channels":[{"name":"Public","joined":false},{"name":"Newbie","joined":false}]}""";
+
+		store.Set(CommPayloadParser.ChannelsPackage, bothListed);
+		await feed.Synced;
+
+		await Assert.That(history.Recalled).IsEquivalentTo(new[] { "Public" });
+		await Assert.That(feed.Channels.Select(c => (c.Name, c.Joined))).IsEquivalentTo(new[] { ("Public", true), ("Newbie", false) });
+		await Assert.That(feed.Messages("Public").Count).IsEqualTo(1);
+
+		store.Set(CommPayloadParser.ChannelsPackage, publicLeft);
+		await feed.Synced;
+
+		await Assert.That(feed.Messages("Public")).IsEmpty().Because("a channel left is forgotten, though still listed");
+		await Assert.That(history.Recalled).IsEquivalentTo(new[] { "Public" });
+	}
+
+	/// <summary>
 	/// On login a channel with a marker is pulled back to it, however far that is past the lines a channel
 	/// usually keeps, so the viewer sees everything they missed that the buffer still holds.
 	/// </summary>

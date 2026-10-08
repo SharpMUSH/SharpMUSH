@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Pages</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Szenen</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>In diesem Raum läuft keine Szene.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Du bist noch in keinem Kanal.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Kanäle durchsuchen</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Kanalsuche beenden</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Durchsuchen</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Es gibt keine Kanäle, die du sehen kannst.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# Mitglied} other {# Mitglieder}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>#{0} beitreten</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>#{0} stummschalten</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Stummgeschaltet: Du bleibst im Kanal, hörst aber nichts. Auswählen, um ihn wieder zu hören.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Stummschalten: im Kanal bleiben, aber nichts hören.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Das Spiel hat diese Änderung nicht vorgenommen.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Noch keine Pages. Gib `page &lt;Name&gt;=&lt;Nachricht&gt;` ein, um jemandem privat zu schreiben.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# hier}}</value>
   </data>

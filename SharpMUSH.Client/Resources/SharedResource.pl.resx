@@ -5122,6 +5122,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Wiadomości</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Sceny</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>W tym pokoju nie toczy się żadna scena.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>Nie dołączyłeś jeszcze do żadnego kanału.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Przeglądaj kanały</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Zakończ przeglądanie kanałów</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Przeglądaj</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Gotowe</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>Nie ma kanałów, które możesz zobaczyć.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# członek} few {# członków} many {# członków} other {# członka}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Dołącz do #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Wycisz #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Wyciszony: zostajesz na kanale, ale nic nie słyszysz. Wybierz, aby znów go słyszeć.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Wycisz: zostań na kanale, ale nic nie słysz.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>Gra nie wprowadziła tej zmiany.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>Brak wiadomości prywatnych. Wpisz `page &lt;imię&gt;=&lt;wiadomość&gt;`, aby napisać do kogoś prywatnie.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# tutaj}}</value>
   </data>

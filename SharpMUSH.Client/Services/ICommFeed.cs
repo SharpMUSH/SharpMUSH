@@ -1,7 +1,14 @@
 namespace SharpMUSH.Client.Services;
 
-/// <summary>A channel the viewer can read, with how many lines arrived since they last looked.</summary>
-public sealed record CommChannel(string Name, int Unread, bool Joined = true);
+/// <summary>
+/// A channel the viewer may see, with how many lines arrived since they last looked. One they are not on
+/// (<paramref name="Joined"/> false) is there for the channel browser alone.
+/// </summary>
+/// <param name="Gagged">They are on it with it gagged: still on, hearing nothing.</param>
+/// <param name="Members">Everyone on it, connected or not, when the game said.</param>
+/// <param name="Description">Its <c>@channel/describe</c> text, empty when it has none or the game did not say.</param>
+public sealed record CommChannel(string Name, int Unread, bool Joined = true, bool Gagged = false, int? Members = null,
+	string Description = "");
 
 /// <summary>One channel line or page, as the viewer received it.</summary>
 /// <param name="Id">The line's id where it has one: a channel line or a page, pulled from the server or

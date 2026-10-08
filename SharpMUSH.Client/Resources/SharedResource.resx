@@ -4544,6 +4544,51 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Pages</value>
   </data>
+  <data name="NavPlayScenes" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="NavPlayScenesEmpty" xml:space="preserve">
+    <value>No scene is running in this room.</value>
+  </data>
+  <data name="NavPlayChannelsEmpty" xml:space="preserve">
+    <value>You haven't joined any channels yet.</value>
+  </data>
+  <data name="NavPlayChannelsBrowse" xml:space="preserve">
+    <value>Browse channels</value>
+  </data>
+  <data name="NavPlayChannelsBrowseClose" xml:space="preserve">
+    <value>Done browsing channels</value>
+  </data>
+  <data name="NavPlayChannelsBrowseShort" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NavPlayChannelsDone" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="NavPlayChannelsNone" xml:space="preserve">
+    <value>There are no channels you can see.</value>
+  </data>
+  <data name="NavPlayChannelsMembers" xml:space="preserve">
+    <value>{count, plural, one {# member} other {# members}}</value>
+  </data>
+  <data name="NavPlayChannelsJoin" xml:space="preserve">
+    <value>Join #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGag" xml:space="preserve">
+    <value>Gag #{0}</value>
+  </data>
+  <data name="NavPlayChannelsGagged" xml:space="preserve">
+    <value>Gagged: you stay on the channel but hear nothing. Select to hear it again.</value>
+  </data>
+  <data name="NavPlayChannelsGagHint" xml:space="preserve">
+    <value>Gag: stay on the channel but hear nothing.</value>
+  </data>
+  <data name="NavPlayChannelsUnchanged" xml:space="preserve">
+    <value>The game didn't make that change.</value>
+  </data>
+  <data name="NavPlayPagesEmpty" xml:space="preserve">
+    <value>No pages yet. Type `page &lt;name&gt;=&lt;message&gt;` to send someone a private message.</value>
+  </data>
   <data name="NavPlayHereCount" xml:space="preserve">
     <value>{count, plural, other {# here}}</value>
   </data>
