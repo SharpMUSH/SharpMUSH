@@ -78,6 +78,9 @@ public static class BundledPackages
 		// Offered, not installed: a new game reads its messages from the stored text until the administrator
 		// chooses the Messages object (the setup wizard or the package page).
 		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +radio lands an object in the master room, and is the worked example of
+		// a system built on @feed.
+		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

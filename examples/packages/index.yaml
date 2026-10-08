@@ -81,3 +81,8 @@ packages:
     package: messages
     version: 1.1.1
     description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
+  - path: radio/
+    name: Radio
+    package: radio
+    version: 1.0.0
+    description: +radio — frequencies to tune in to, speak on, recall and log into a scene, with moderators, admins and locks; the worked example of a system built on @feed
