@@ -66,11 +66,10 @@ to tune that limit. This limit does not apply to raw Telnet sockets.
 
 The world is an LMDB environment at `/app/data/lightning` on the `app-data` volume: one
 `data.mdb` file plus a `lock.mdb` reader table, written by the server process itself. Nothing
-else to run, tune or connect to. Three settings on `sharpmush-server` matter:
+else to run, tune or connect to. Two settings on `sharpmush-server` matter:
 
 | Variable | Set to | Why |
 |---|---|---|
-| `SHARPMUSH_DATABASE_PROVIDER` | `lightning` | the only accepted value; anything else fails startup |
 | `SHARPMUSH_LIGHTNING_PATH` | `data/lightning` | relative to `/app`, so it lands on the volume |
 | `SHARPMUSH_LIGHTNING_SYNC` | `periodic` | sync to disk once a second rather than on every commit; a power loss costs at most that second and the file stays consistent. `full` syncs every commit at roughly 5 ms each. |
 
@@ -85,27 +84,6 @@ If you move it, put the new path in the backup service's `RESTIC_BACKUP_SOURCES`
 
 Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
 that is safe to read, have the server make one: see [Backups](#backups-restic).
-
-#### A box that ran SurrealDB
-
-SurrealDB is not supported. The server refuses to start with `SHARPMUSH_DATABASE_PROVIDER=surrealdb`
-(any value other than `lightning`, or none, fails startup). There is no in-place migration off the
-old store: the world starts fresh on Lightning — or is brought in from a PennMUSH flatfile import —
-and the first visitor to `/setup` claims the admin again. Wiki asset uploads live in the same volume
-and are kept. Once the world is running on Lightning, the old RocksDB directory at `/data/surreal`
-can be deleted:
-
-```bash
-cd deploy
-export COMPOSE_FILE=docker-compose.cloudflare.yml   # or docker-compose.prod.yml
-git pull                                           # brings in the compose change
-docker compose stop sharpmush-server
-docker run --rm -v deploy_app-data:/data alpine rm -rf /data/surreal   # the old RocksDB store
-docker compose up -d                               # recreates the server on lightning
-```
-
-`deploy_app-data` is the volume's name when the stack is started from this directory; check
-with `docker volume ls` if you started it from elsewhere.
 
 ### Pointing the in-browser terminal at the right place
 

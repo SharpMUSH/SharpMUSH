@@ -123,13 +123,11 @@ services:
       - com.centurylinklabs.watchtower.enable=true
     environment:
       # --- Object database: LMDB embedded through Lightning.NET (no separate DB server) ---
-      SHARPMUSH_DATABASE_PROVIDER: lightning
       # Relative path resolves under the /app WORKDIR -> /app/data/lightning, on the mounted volume.
       SHARPMUSH_LIGHTNING_PATH: data/lightning
-      # Durability. `periodic` syncs to disk once a second instead of on every commit — the guarantee
-      # the RocksDB engine gave before — so a power loss costs at most the last second of writes and
-      # the file stays consistent. `full` syncs every commit. Read by the server from #889 on; an
-      # older image ignores it and runs `full`.
+      # Durability. `periodic` syncs to disk once a second instead of on every commit, so a power
+      # loss costs at most the last second of writes and the file stays consistent. `full` syncs
+      # every commit.
       SHARPMUSH_LIGHTNING_SYNC: periodic
       # File-size ceiling for the LMDB map in bytes — NOT memory; the file is sparse. Default 64 GiB.
       # Raise it before a world grows past it: the server refuses writes with MDB_MAP_FULL rather
