@@ -14,7 +14,7 @@
 <div class="cfg-image">
     <div class="cfg-image-row">
         <span class="cfg-image-preview" aria-hidden="true">
-            <img src="@Preview" alt="" />
+            <img src="@ApiUrl.Resolve(Preview)" alt="" />
         </span>
         <input class="cfg-text" type="text" aria-label="@Label" aria-describedby="@DescribedBy"
                placeholder="@Loc["AdmCfgImageDefault"]"
@@ -124,7 +124,7 @@
                 : Property.Path == "Cosmetic.PortalFavicon" && Draft.Values.GetValueOrDefault(LogoPath) is string logo
                     && !string.IsNullOrWhiteSpace(logo) ? logo
                 : null;
-            return shown is null ? "assets/Logo.svg" : ApiUrl.Resolve(shown);
+            return shown ?? "assets/Logo.svg";
         }
     }
 
