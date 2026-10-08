@@ -113,6 +113,28 @@ public class NavRailTests : TrackingBunitContext
 		await Assert.That(logo.GetAttribute("aria-label")).Contains("Home");
 	}
 
+	/// <summary>The logo is the game's portal_logo when it has one, else the SharpMUSH mark in the theme's accent.</summary>
+	[Test]
+	[Arguments(null)]
+	[Arguments("/api/wiki-assets/abc/crest.png")]
+	public async Task TheLogo_IsTheGamesPicture_ElseTheSharpMUSHMark(string? configured)
+	{
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true, logo: configured));
+
+		var logo = RenderAt("/").Find("a.phosphor-rail-logo");
+
+		if (configured is null)
+		{
+			await Assert.That(logo.QuerySelector("svg g")!.GetAttribute("fill")).IsEqualTo("var(--accent)");
+			await Assert.That(logo.QuerySelector("img")).IsNull();
+		}
+		else
+		{
+			await Assert.That(logo.QuerySelector("img")!.GetAttribute("src")).IsEqualTo(configured);
+			await Assert.That(logo.QuerySelector("svg")).IsNull();
+		}
+	}
+
 	[Test]
 	public async Task TheRail_LinksEachDestinationOnce()
 	{

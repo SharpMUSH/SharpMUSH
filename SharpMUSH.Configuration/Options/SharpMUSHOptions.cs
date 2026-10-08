@@ -110,6 +110,8 @@ public record SharpMUSHOptions
 			LayoutTheme: "",
 			ImageHosts: "any",
 			ImageHostList: "",
+			PortalLogo: "",
+			PortalFavicon: "",
 			CommaExitList: true,
 			CountAll: false,
 			ExaminePublicAttributes: true,

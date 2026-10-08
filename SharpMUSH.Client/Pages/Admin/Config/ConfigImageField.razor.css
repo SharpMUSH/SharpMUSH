@@ -1,0 +1,151 @@
+/* A picture option. The field and buttons match ConfigFieldRow's; scoped CSS does not reach a child component. */
+.cfg-image {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+}
+
+.cfg-image-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.cfg-image-preview {
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	display: grid;
+	place-items: center;
+	border-radius: 14px;
+	border: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.cfg-image-preview img {
+	width: 26px;
+	height: 26px;
+	object-fit: contain;
+}
+
+.cfg-text {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	height: 36px;
+	padding: 0 12px;
+	background: var(--surface-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+	box-sizing: border-box;
+}
+
+.cfg-text:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+	border-color: var(--accent);
+}
+
+.cfg-text::placeholder {
+	color: var(--text-faint);
+}
+
+.cfg-text[readonly] {
+	opacity: 0.6;
+}
+
+.cfg-icon-btn {
+	width: 36px;
+	height: 36px;
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-row);
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+}
+
+.cfg-icon-btn:hover,
+.cfg-icon-btn:focus-visible,
+.cfg-icon-btn[aria-expanded="true"] {
+	color: var(--accent);
+	border-color: var(--accent);
+}
+
+.cfg-image-gallery {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px;
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+}
+
+.cfg-image-upload {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.cfg-image-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+	gap: 8px;
+	max-height: 320px;
+	overflow-y: auto;
+}
+
+.cfg-image-tile {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	padding: 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface);
+	color: var(--text-dim);
+	font: inherit;
+	font-size: 11px;
+	cursor: pointer;
+}
+
+.cfg-image-tile img {
+	width: 64px;
+	height: 64px;
+	object-fit: contain;
+}
+
+.cfg-image-tile span {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cfg-image-tile:hover,
+.cfg-image-tile:focus-visible,
+.cfg-image-tile--on {
+	border-color: var(--accent);
+	color: var(--text);
+}
+
+.cfg-empty {
+	font-size: 13px;
+	color: var(--text-faint);
+}
+
+.cfg-row-error {
+	font-size: 12px;
+	color: var(--link-missing);
+}

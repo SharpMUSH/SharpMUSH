@@ -50,7 +50,7 @@ public class PropertyMetadata
 	public string Type { get; set; } = "string";
 
 	/// <summary>
-	/// Suggested UI component (switch, numeric, text, select, slider)
+	/// Suggested UI component (switch, numeric, text, select, stringlist, dictionary, image)
 	/// </summary>
 	[JsonPropertyName("component")]
 	public string Component { get; set; } = "text";

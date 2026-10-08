@@ -143,6 +143,7 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 			+ $"ValidationPattern = {Emit.Quote(validationPattern) ?? "null"}, "
 			+ $"Dbref = {(Named(attr, "Dbref") is true ? "true" : "false")}, "
 			+ $"Flag = {(Named(attr, "Flag") is true ? "true" : "false")}, "
+			+ $"Image = {(Named(attr, "Image") is true ? "true" : "false")}, "
 			+ $"Unused = {Emit.Quote(unused) ?? "null"}"
 			+ " } }";
 	}

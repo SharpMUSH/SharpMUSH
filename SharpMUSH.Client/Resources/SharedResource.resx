@@ -2562,6 +2562,18 @@
   <data name="AdmCfgUnused" xml:space="preserve">
     <value>Not used</value>
   </data>
+  <data name="AdmCfgImageDefault" xml:space="preserve">
+    <value>Empty for the default</value>
+  </data>
+  <data name="AdmCfgImageChoose" xml:space="preserve">
+    <value>Choose or upload a picture</value>
+  </data>
+  <data name="AdmCfgImageReset" xml:space="preserve">
+    <value>Clear, back to the default</value>
+  </data>
+  <data name="AdmCfgImageNone" xml:space="preserve">
+    <value>No pictures to show. Upload one above.</value>
+  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Search username or email…</value>
   </data>

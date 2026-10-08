@@ -7,6 +7,7 @@
 @inject AdminConfigService AdminConfigService
 @inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
+@inject ServerInfoService ServerInfo
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
@@ -291,6 +292,8 @@
                 case ConfigurationResponse:
                     Snackbar.Add(Loc.Plural("ConfigSavedCount", "count", changes.Count), Severity.Success);
                     _draft.MarkSaved(changes.Keys);
+                    // The shell reads some options (the game name, portal_logo) from server-info: show them now.
+                    ServerInfo.Refresh();
                     break;
                 case ConfigSaveRefusal refusal:
                     _draft.SetErrors(refusal.Fields, Loc["ResInvalid"].Value);

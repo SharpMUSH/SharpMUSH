@@ -35,14 +35,19 @@ public class DynamicConfigPageTests : TrackingBunitContext
 
 		/// <summary>What a save (PATCH) answers; null answers it as a read, with <see cref="Json"/>.</summary>
 		public (HttpStatusCode Status, string Body)? Save { get; set; }
+
+		/// <summary>What the media library (<c>api/wiki-assets</c>) lists.</summary>
+		public WikiAssetInfo[] Assets { get; set; } = [];
 	}
 
 	private readonly Served _served = new();
 
 	public DynamicConfigPageTests()
 	{
-		var client = Track(new HttpClient(new RouteHandler((method, _) =>
-			method == HttpMethod.Patch && _served.Save is var (status, body)
+		var client = Track(new HttpClient(new RouteHandler((method, path) =>
+			path == "api/wiki-assets"
+				? new HttpResponseMessage(HttpStatusCode.OK) { Content = System.Net.Http.Json.JsonContent.Create(_served.Assets) }
+			: method == HttpMethod.Patch && _served.Save is var (status, body)
 				? new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") }
 				: new HttpResponseMessage(HttpStatusCode.OK)
 				{
@@ -57,6 +62,8 @@ public class DynamicConfigPageTests : TrackingBunitContext
 			.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
 			.AddSingleton<AdminConfigService>()
 			.AddSingleton<ConfigSchemaService>()
+			.AddSingleton<WikiAssetService>()
+			.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true))
 			.AddLocalization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat");
@@ -296,5 +303,37 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".cfg-row"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".cfg-group .kit-card").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".cfg-toc").Count).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// A picture option shows its picture and a gallery of the media uploads; choosing one puts its address in
+	/// the field as an unsaved change.
+	/// </summary>
+	[Test]
+	public async Task PictureOption_ChoosesFromTheMediaLibrary()
+	{
+		const string url = "/api/wiki-assets/abc/crest.png";
+		_served.Assets =
+		[
+			new("abc", "crest.png", url, "image/png", 10, "", "#1", DateTimeOffset.UtcNow),
+			new("def", "rules.pdf", "/api/wiki-assets/def/rules.pdf", "application/pdf", 10, "", "#1", DateTimeOffset.UtcNow)
+		];
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/cosmetic");
+		var cut = Render<DynamicConfig>(p => p.Add(x => x.Category, "cosmetic"));
+		cut.WaitForAssertion(() => cut.Find(".cfg-image"), TimeSpan.FromSeconds(5));
+		AngleSharp.Dom.IElement Row() =>
+			cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Cosmetic.PortalLogo");
+
+		await Assert.That(Row().QuerySelector(".cfg-image-preview img")!.GetAttribute("src")).IsEqualTo("assets/Logo.svg");
+
+		await Row().QuerySelector("button[aria-expanded]")!.ClickAsync();
+		cut.WaitForAssertion(() => _ = Row().QuerySelector(".cfg-image-tile") ?? throw new InvalidOperationException("no tiles yet"), TimeSpan.FromSeconds(5));
+		await Assert.That(Row().QuerySelectorAll(".cfg-image-tile").Length).IsEqualTo(1).Because("only pictures are offered");
+
+		await Row().QuerySelector(".cfg-image-tile")!.ClickAsync();
+
+		await Assert.That(Row().QuerySelector("input.cfg-text")!.GetAttribute("value")).IsEqualTo(url);
+		await Assert.That(Row().QuerySelector(".cfg-row-changed")).IsNotNull();
+		await Assert.That(Row().QuerySelector(".cfg-image-gallery")).IsNull();
 	}
 }

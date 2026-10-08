@@ -15,7 +15,7 @@ namespace SharpMUSH.Client.Services;
 public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
-		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null);
+		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null, string? Logo = null);
 
 	private const string DefaultMudName = "SharpMUSH";
 
@@ -51,6 +51,13 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	/// config default, <c>"SharpMUSH"</c>.
 	/// </summary>
 	public virtual async Task<string> GameNameAsync() => (await FetchAsync()).MudName;
+
+	/// <summary>
+	/// The game's <c>portal_logo</c>, or <c>null</c> when it has none and the portal draws the SharpMUSH logo. On
+	/// any fetch failure this degrades to <c>null</c>.
+	/// </summary>
+	public virtual async Task<string?> LogoAsync() =>
+		(await FetchAsync()).Logo is { Length: > 0 } logo && !string.IsNullOrWhiteSpace(logo) ? logo.Trim() : null;
 
 	/// <summary>
 	/// Whether the game has the optional application <paramref name="feature"/> (a <see cref="GameFeatures"/>
@@ -123,6 +130,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	private static bool Differs(ServerInfoResponse before, ServerInfoResponse now) =>
 		before.GuestsEnabled != now.GuestsEnabled
 		|| before.MudName != now.MudName
+		|| before.Logo != now.Logo
 		|| !(before.Features ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(now.Features ?? []);
 
 	private ServerInfoResponse Answered(ServerInfoResponse info)

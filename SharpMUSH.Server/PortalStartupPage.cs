@@ -63,12 +63,12 @@ public static class PortalStartupPage
 				return;
 			}
 
-			var gameName = context.RequestServices.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Net.MudName;
+			var current = context.RequestServices.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue;
 			context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
 			context.Response.Headers.RetryAfter = RetryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
 			context.Response.Headers.CacheControl = "no-store";
 			context.Response.ContentType = "text/html; charset=utf-8";
-			await context.Response.WriteAsync(Render(gameName));
+			await context.Response.WriteAsync(Render(current?.Net.MudName, current?.Cosmetic));
 		});
 
 	/// <summary>
@@ -88,10 +88,15 @@ public static class PortalStartupPage
 	/// <summary>Marks the endpoint that serves the SPA shell (see <see cref="PortalStaticFiles.MapPortal"/>).</summary>
 	public sealed class PortalShellEndpoint;
 
-	/// <summary>The startup page for <paramref name="gameName"/>, in English until its script picks the visitor's locale.</summary>
-	public static string Render(string? gameName)
+	/// <summary>
+	/// The startup page for <paramref name="gameName"/>, in English until its script picks the visitor's locale,
+	/// with the game's <c>portal_logo</c> and tab icon when <paramref name="cosmetic"/> names them.
+	/// </summary>
+	public static string Render(string? gameName, CosmeticOptions? cosmetic = null)
 	{
 		var name = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(gameName) ? "SharpMUSH" : gameName);
+		var logo = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(cosmetic?.PortalLogo) ? PortalPicture.DefaultLogo : cosmetic.PortalLogo.Trim());
+		var favicon = WebUtility.HtmlEncode(cosmetic is null ? PortalPicture.DefaultLogo : PortalPicture.Favicon(cosmetic));
 		var messages = JsonSerializer.Serialize(Messages.ToDictionary(m => m.Key, m => new[] { m.Value.Title, m.Value.Detail }));
 		var (title, detail) = Messages["en"];
 
@@ -105,7 +110,7 @@ public static class PortalStartupPage
 			<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 			<meta http-equiv="refresh" content="{{{RetryAfterSeconds * 5}}}" />
 			<title>{{{name}}}</title>
-			<link rel="icon" type="image/svg" href="/assets/Logo.svg" />
+			<link rel="icon" href="{{{favicon}}}" />
 			<style>
 			html,body{margin:0;height:100%;background:#0e0f11;color:#e9edf0;font-family:"Hanken Grotesk",system-ui,sans-serif}
 			main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;text-align:center;padding:1rem;box-sizing:border-box;background:radial-gradient(ellipse at center,rgba(0,245,183,.12),transparent 60%)}
@@ -119,7 +124,7 @@ public static class PortalStartupPage
 			</head>
 			<body>
 			<main role="status" aria-live="polite">
-			<img src="/assets/Logo.svg" alt="" />
+			<img src="{{{logo}}}" alt="" />
 			<h1>{{{name}}}</h1>
 			<div class="spin" aria-hidden="true"></div>
 			<p id="title">{{{title}}}</p>

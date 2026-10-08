@@ -1,0 +1,46 @@
+@using SharpMUSH.Client.Services
+@inject ServerInfoService ServerInfo
+@implements IDisposable
+
+@* The game's mark: its portal_logo when it has one, shown as it is, else the SharpMUSH logo in the
+   theme's accent. Decorative: the link around it carries the name. *@
+@if (_logo is not null)
+{
+    <img src="@ApiUrl.Resolve(_logo)" width="@Size" height="@Size" alt="" aria-hidden="true"
+         class="@($"game-logo {Class}".TrimEnd())" style="object-fit:contain;" />
+}
+else
+{
+    <svg width="@Size" height="@Size" viewBox="0 0 512 512" aria-hidden="true" class="@Class">
+        <g fill="var(--accent)">
+            <path d="m345.16-0.31-88.2 163.24-88.13-163.1-167.67 252.72 87.98 234.7-1.24-233.41 64.74-117.99 104.11 196.48 0.27-0.37 0.51 0.0 104.11-196.48 64.74 117.99-1.25 233.41 87.98-234.7z" />
+            <path d="m143.1 228.96 65.57 113.27v170.77l-65.99-166.48z" />
+            <path d="m370.64 227.45-65.57 113.27v170.77l65.99-166.48z" />
+        </g>
+    </svg>
+}
+
+@code {
+    /// <summary>Width and height in pixels.</summary>
+    [Parameter]
+    public int Size { get; set; } = 26;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string? _logo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ServerInfo.Changed += OnServerInfoChanged;
+        _logo = await ServerInfo.LogoAsync();
+    }
+
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        _logo = await ServerInfo.LogoAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => ServerInfo.Changed -= OnServerInfoChanged;
+}

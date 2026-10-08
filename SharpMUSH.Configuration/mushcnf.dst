@@ -934,6 +934,15 @@ image_hosts any
 # with *. covers every subdomain.
 # image_host_list i.imgur.com *.example.com
 
+# The picture at the top left of the web portal: a media upload
+# (/api/wiki-assets/...) or an http(s) address. Empty shows the SharpMUSH
+# logo in the theme's accent colour.
+# portal_logo /api/wiki-assets/<id>/logo.png
+
+# The browser tab icon for the web portal. Empty uses portal_logo, or the
+# SharpMUSH logo when that is empty too.
+# portal_favicon /api/wiki-assets/<id>/favicon.png
+
 # Should object names be restricted to just ascii characters, or can
 # non-ascii (Accented letters, for example) be used as well if the
 # mush'es locale permits? Not reccomended except for
