@@ -523,7 +523,7 @@ A theme made from one colour, with every colour made to stand out a little more 
 Theme set.
 ```
 
-A scheme copied from an editor theme, as sixteen base16 colours. A theme kept with [@THEME/LIST] saves typing them, and the `\[ \]`, in each `THEME`:
+A scheme copied from an editor theme, as sixteen base16 colours. A theme added with `@theme/add` (see [@THEME/LIST]) saves typing them, and the `\[ \]`, in each `THEME`:
 
 ```sharp
 > @theme me={{"base16":\["#1d1f21","#282a2e","#373b41","#969896","#b4b7b4","#c5c8c6","#e0e0e0","#ffffff","#cc6666","#de935f","#f0c674","#b5bd68","#8abeb7","#81a2be","#b294bb","#a3685a"\]}}
