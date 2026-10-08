@@ -251,10 +251,10 @@ public class AdminPagesD1Tests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/guests']"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".kit-page-head h1").TextContent.Trim()).IsEqualTo("AdmOverview");
-		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/diagnostics']").Count).IsEqualTo(1)
-			.Because("queue.inspect.own alone opens the diagnostics page, as in the section sidebar");
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/diagnostics']").Count).IsEqualTo(0)
+			.Because("queue.inspect.own is every player's; the diagnostics page is for queue.inspect");
 		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/characters']").Count).IsEqualTo(1);
-		foreach (var gated in new[] { "/admin/accounts", "/admin/audit", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
+		foreach (var gated in new[] { "/admin/snapshots", "/admin/jobs", "/admin/accounts", "/admin/audit", "/admin/config", "/admin/roles", "/admin/moderation", "/admin/profiles",
 			"/admin/suggestions", "/admin/messages", "/admin/wiki", "/admin/media", "/admin/applications", "/admin/packages", "/admin/layout",
 			"/admin/server", "/admin/import" })
 		{

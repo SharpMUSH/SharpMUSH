@@ -70,16 +70,12 @@ public abstract class WikiControllerBase(
 
 	/// <summary>
 	/// The caller as a wiki reader: the permission claims the request was authenticated with (rebuilt from
-	/// the account's roles on every request), the acting character's dbref, and the biographies of every
-	/// character on the account, which its owner edits whichever character is acting; an anonymous caller
-	/// holds what the <c>everyone</c> role grants. Read once per request.
+	/// the account's roles on every request) and the acting character's dbref; an anonymous caller holds
+	/// what the <c>everyone</c> role grants. Read once per request.
 	/// </summary>
 	protected async Task<WikiReader> ReaderAsync()
 		=> _reader ??= User.Identity?.IsAuthenticated == true
-			? WikiReader.From(User.FindAll(PortalPermission.ClaimType).Select(claim => claim.Value), CallerDbref,
-				AccountSessionAuthenticationHandler.TryGetAccount(User, out var accountId, out _)
-					? await Access.BiographiesAsync(accountId, HttpContext.RequestAborted)
-					: [])
+			? WikiReader.From(User.FindAll(PortalPermission.ClaimType).Select(claim => claim.Value), CallerDbref)
 			: await Access.AnonymousAsync(HttpContext.RequestAborted);
 
 	/// <summary>

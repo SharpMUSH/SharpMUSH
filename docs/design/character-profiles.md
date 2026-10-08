@@ -153,7 +153,8 @@ POST /http/profile?objid={objid}   (PLANNED — not yet implemented)
 
 All character profiles live in the wiki `Character:` namespace:
 - `Character:Gandalf` — Gandalf's profile page
-- The namespace is reserved — only the character owner (or staff) can edit
+- Editing follows the wiki's permissions: `wiki.edit` (and `wiki.create` to write a new one), held by
+  approved characters and staff in a new game; owning the character grants nothing by itself
 
 ### Compositing Renderer
 
@@ -208,8 +209,10 @@ The portal passes the viewer's identity (from their JWT) to the HTTP handler.
 The handler returns only the fields the viewer is allowed to see.
 
 The wiki freeform section follows wiki permissions:
-- Character owner can edit their own page
-- Staff can edit any character page
+- Writing it needs `wiki.create` and editing it `wiki.edit`, as for any page; a new game gives both to
+  the `approved` role and, through `wiki.admin`, to staff. Owning the character is not enough
+- The gallery (banner, avatar, images) needs `wiki.edit` too, plus owning the character on one's
+  account or controlling it
 - Viewing respects the character's "public" flag (if a character is marked
   private/unapproved, their wiki page may be hidden from non-staff)
 

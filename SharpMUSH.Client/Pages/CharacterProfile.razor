@@ -197,16 +197,15 @@ else
             ? own
             : [];
         var canEdit = ProfileEditRights.CanEdit(user, mine, Name);
-        var owned = ProfileEditRights.Owns(user, mine, Name);
 
         if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
         {
-            _context = NewContext(canEdit, owned);
+            _context = NewContext(canEdit);
             return;
         }
 
         _written = null;
-        _context = NewContext(canEdit, owned);
+        _context = NewContext(canEdit);
 
         _loadedFor = Name;
         var generation = ++_generation;
@@ -258,8 +257,8 @@ else
             scenes => _liveScene = scenes is IReadOnlyList<SceneSummary> list ? list.FirstOrDefault(s => s.IsLive) : null)
         : Task.CompletedTask;
 
-    private ProfilePageContext NewContext(bool canEdit, bool owned) =>
-        new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged, owned);
+    private ProfilePageContext NewContext(bool canEdit) =>
+        new(Name, canEdit, _profile?.Dbref, _written, OnGalleryChanged);
 
     /// <summary>
     /// A gallery widget changed the gallery: the banner and the avatar follow it, and so does every

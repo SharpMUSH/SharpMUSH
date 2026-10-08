@@ -61,8 +61,6 @@ public static class BuiltInRoles
 
 	private static readonly string[] PlayerScopes =
 	[
-		PortalPermission.WikiCreate,
-		PortalPermission.WikiEdit,
 		PortalPermission.MediaUpload,
 		PortalPermission.SoftcodeUse,
 		PortalPermission.SnapshotCapture,
@@ -107,8 +105,17 @@ public static class BuiltInRoles
 		PortalPermission.ProtectAdmin,
 	];
 
-	/// <summary>An approved character may show pictures in what it writes: a pose, a description, a page.</summary>
-	private static readonly string[] ApprovedScopes = [PortalPermission.GamePower("Send_Image")];
+	/// <summary>
+	/// An approved character may show pictures in what it writes (a pose, a description, a page) and may
+	/// write and edit the wiki, its own character's biography and gallery included. A player who is not
+	/// approved reads the wiki and changes nothing on it.
+	/// </summary>
+	private static readonly string[] ApprovedScopes =
+	[
+		PortalPermission.GamePower("Send_Image"),
+		PortalPermission.WikiCreate,
+		PortalPermission.WikiEdit,
+	];
 
 	private static readonly string[] HelperScopes = [PortalPermission.PlayersView, PortalPermission.QueueInspect];
 

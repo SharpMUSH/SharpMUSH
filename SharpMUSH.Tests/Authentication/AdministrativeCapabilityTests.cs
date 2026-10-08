@@ -50,12 +50,12 @@ public class AdministrativeCapabilityTests
 		var (service, accounts, registry, _) = Build();
 		var builder = Player(7);
 		await registry.AssignRoleToObjectAsync(7, BuiltInRoles.BuilderSlug);
-		await registry.SetObjectOverrideAsync(7, PortalPermission.WikiEdit, PermissionState.Deny);
+		await registry.SetObjectOverrideAsync(7, PortalPermission.MediaUpload, PermissionState.Deny);
 		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([builder]));
 		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.DiagnosticsProfile)).IsTrue();
 		// A character's override applies only while playing it.
-		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.WikiEdit)).IsTrue();
-		await Assert.That(await service.AuthorizeAsync(new("a", builder.Object.DBRef, builder.Object.DBRef), PortalPermission.WikiEdit)).IsFalse();
+		await Assert.That(await service.AuthorizeAsync(new("a"), PortalPermission.MediaUpload)).IsTrue();
+		await Assert.That(await service.AuthorizeAsync(new("a", builder.Object.DBRef, builder.Object.DBRef), PortalPermission.MediaUpload)).IsFalse();
 	}
 
 	[Test]
@@ -89,11 +89,11 @@ public class AdministrativeCapabilityTests
 		var player = Player(7);
 		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
 		await registry.AssignRoleToAccountAsync("a", "helper");
-		await registry.SetAccountOverrideAsync("a", PortalPermission.WikiEdit, PermissionState.Deny);
+		await registry.SetAccountOverrideAsync("a", PortalPermission.MediaUpload, PermissionState.Deny);
 		var actor = new CapabilityActor("a", player.Object.DBRef, player.Object.DBRef);
 		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.PlayersView)).IsTrue();
-		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.WikiEdit)).IsFalse();
-		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.WikiCreate)).IsTrue();
+		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.MediaUpload)).IsFalse();
+		await Assert.That(await service.AuthorizeAsync(actor, PortalPermission.SoftcodeUse)).IsTrue();
 	}
 
 	[Test]

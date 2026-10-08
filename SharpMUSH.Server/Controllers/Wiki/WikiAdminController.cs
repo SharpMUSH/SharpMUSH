@@ -81,7 +81,7 @@ public class WikiAdminController(
 	/// Does not create a content revision.
 	/// </summary>
 	[HttpPut("{slug}/metadata")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null)
 	{
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing)

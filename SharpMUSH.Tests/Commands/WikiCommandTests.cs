@@ -1,6 +1,7 @@
 using SharpMUSH.Tests.Wiki;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -34,6 +35,18 @@ public class WikiCommandTests
 			&& delivery.Type == INotifyService.NotificationType.Announce
 			&& delivery.Message.Contains(contains, StringComparison.Ordinal));
 
+	/// <summary>
+	/// A player holding the <c>approved</c> role, which is where a new game's <c>wiki.create</c> and
+	/// <c>wiki.edit</c> come from; a player without it only reads the wiki.
+	/// </summary>
+	private static async Task<TestIsolationHelpers.TestPlayer> ApprovedPlayerAsync(IServiceProvider services, IMediator mediator,
+		IConnectionService connectionService, string namePrefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(services, mediator, connectionService, namePrefix);
+		await services.GetRequiredService<IRoleRegistryService>().AssignRoleToObjectAsync(player.DbRef.Number, BuiltInRoles.ApprovedSlug);
+		return player;
+	}
+
 	private async Task ExpectNotify(SharpMUSH.Library.Models.DBRef player, string contains) =>
 		await Assert.That(SelfNotifications(player, contains)).IsEqualTo(1);
 
@@ -53,7 +66,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiCreate_ThenView_ShowsRenderedPage()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiCreator");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -65,10 +78,30 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, "Wiki: Cmd Test Page [main]");
 	}
 
+	/// <summary>
+	/// A player who is not approved holds neither wiki.create nor wiki.edit, and their own character's
+	/// biography is no exception: they may not write it or edit it.
+	/// </summary>
+	[Test]
+	public async ValueTask AnUnapprovedPlayer_CannotWriteOrEditTheWiki_TheirOwnBiographyIncluded()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiUnapproved");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@wiki/create Character:{player.Name}=# {player.Name}"));
+		await ExpectNotify(player.DbRef, "needs wiki.create");
+
+		// Staff wrote the biography; its own character still may not edit it.
+		await WebAppFactoryArg.Services.GetRequiredService<IWikiService>().CreateAsync(player.Name, "body", "#1", WikiNamespace.Character);
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/edit Character:{player.Name}=changed"));
+		await ExpectNotify(player.DbRef, "needs wiki.edit");
+	}
+
 	[Test]
 	public async ValueTask WikiView_UnknownPage_NotifiesNoSuchPage()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiViewer");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -79,7 +112,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiList_ShowsSeededHelpNamespacePage()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLister");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -95,7 +128,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiList_QualifiesMainNamespaceRowsToo()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMainLister");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -126,7 +159,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiList_PrintedIdentifierIsAcceptedBackByView()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRoundTrip");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -144,7 +177,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiSearch_FindsPageByContent()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSearcher");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -160,7 +193,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiAppend_AddsRevision_HistoryShowsIt()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiAppender");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -178,7 +211,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiProtect_NonWizard_IsDenied()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMortal");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -193,7 +226,7 @@ public class WikiCommandTests
 	public async ValueTask WikiProtect_AsGod_LocksPageAgainstMortals()
 	{
 		var god = WebAppFactoryArg.ExecutorDBRef;
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLocked");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -211,7 +244,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiPin_NonWizard_IsDenied()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiPinMortal");
 		var category = TestIsolationHelpers.GenerateUniqueName("pinmortal").ToLowerInvariant();
 
@@ -240,7 +273,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiCategory_OnABiography_KeepsCharacter()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiBioFiler");
 		var title = TestIsolationHelpers.GenerateUniqueName("Bio");
 		var page = (await WikiService.CreateAsync(title, "Bio.", player.DbRef.ToString(), WikiNamespace.Character, "en")).Expect<WikiPage>();
@@ -253,7 +286,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiRollback_RestoresEarlierRevision()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRoller");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -273,7 +306,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiRollback_UnknownRevision_Notifies()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRollMiss");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -287,7 +320,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask HelpAtWiki_LoadsSharpwikiHelpfile()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHelpReader");
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("help @wiki"));
@@ -298,7 +331,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask HelpWikiFunction_LoadsFunctionEntry()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiFnHelp");
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("help wiki()"));
@@ -309,7 +342,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiCategory_ListsPagesThatNameIt()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiCategorizer");
 
 		var gate = await SeedSourcePageAsync("Wyrmholt Gate", "A gate.");
@@ -351,7 +384,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiCategory_WithAnEmptyListClearsThePagesCategories()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiUncategorizer");
 		var title = TestIsolationHelpers.GenerateUniqueName("Uncat");
 		var page = (await WikiService.CreateAsync(title, "body", "#1", WikiNamespace.Main, "en", ["Lore", "Myth"])).Expect<WikiPage>();
@@ -397,7 +430,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_ServesTheExecutorsLocaleWhenATranslationExists()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiFrenchReader");
 		var slug = await SeedTranslatedPageAsync(
 			"Locale Dragons", "en dragon body", "Dragons Localises", "corps du dragon", published: true);
@@ -411,7 +444,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_WithSourceSwitchForcesTheSourceLocale()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSourceReader");
 		var slug = await SeedTranslatedPageAsync(
 			"Source Dragons", "en source body", "Dragons Sources", "corps source fr", published: true);
@@ -426,7 +459,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_SourceSwitchDoesNotCountAsASecondAction()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSwitchCounter");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -442,7 +475,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_FallsBackToTheSourceWhenTheLocaleHasNoTranslation()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiGermanReader");
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale de"));
@@ -459,7 +492,7 @@ public class WikiCommandTests
 	{
 		// The protected companion of WikiView_DraftTranslationDoesNotLeakToAMortalOnAnUnprotectedPage:
 		// protection is irrelevant to draft visibility, and both must hold.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftReader");
 		var slug = await SeedTranslatedPageAsync(
 			"Draft Locale Page", "en visible body", "Brouillon", "corps brouillon secret", published: false);
@@ -481,7 +514,7 @@ public class WikiCommandTests
 		// article exists publicly at all. Deriving visibility from the *served row* let a published
 		// translation speak for an unpublished page: a mortal whose locale matched was handed the draft's
 		// content in full, with no (draft) marker and without asking for /DRAFT.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftPageTrReader");
 
 		var slug = await SeedTranslatedPageAsync(
@@ -503,7 +536,7 @@ public class WikiCommandTests
 	public async ValueTask WikiHistory_APublishedTranslationDoesNotExposeADraftPagesLog()
 	{
 		// Same defect, second surface: edit summaries are author-written prose about unpublished work.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftPageTrHist");
 
 		var slug = await SeedTranslatedPageAsync(
@@ -523,7 +556,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiList_ShowsLocalizedTitles()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiFrenchLister");
 		await SeedTranslatedPageAsync(
 			"Listed Dragons", "en listed body", "Dragons Listes", "corps liste", published: true);
@@ -548,7 +581,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiCreate_StampsTheConfiguredSourceLocaleNotTheCreatorsLocale()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiStampCreator");
 		var localization = WebAppFactoryArg.Services.GetRequiredService<IWikiLocalizationService>();
 		await Assert.That(localization.DefaultLocale).IsNotEqualTo("de");
@@ -567,7 +600,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiHistory_ShowsTheTranslationsOwnStream()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHistoryFrench");
 		var slug = await SeedTranslatedPageAsync(
 			"History Dragons", "en history body", "Dragons Historiques", "corps historique", published: true);
@@ -586,7 +619,7 @@ public class WikiCommandTests
 		// Regression: resolving the *requested* locale rather than the *served* one asked the store for a
 		// "de" stream that does not exist and printed an empty history, for a page @wiki/view renders
 		// perfectly well in English. A read must not fail for locale reasons.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHistoryGerman");
 		var slug = await SeedTranslatedPageAsync(
 			"History Gap Dragons", "en gap body", "Dragons Ecart", "corps ecart", published: true);
@@ -600,7 +633,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiHistory_SourceSwitchShowsTheSourceStreamToATranslatedReader()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHistorySource");
 		var slug = await SeedTranslatedPageAsync(
 			"History Source Dragons", "en source-history body", "Dragons Source Hist", "corps source hist",
@@ -635,7 +668,7 @@ public class WikiCommandTests
 		// @wiki/view is gated, but search paged through GetAllPagesAsync — which documents that it returns
 		// unpublished pages and leaves filtering to the caller — and filtered on nothing at all, so a draft's
 		// title and reference reached any player who guessed a word from its body.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftSearcher");
 		var page = await SeedUnpublishedPageAsync(
 			"Mortal Draft Fodder", "The grue-marker phrase lives here.");
@@ -653,7 +686,7 @@ public class WikiCommandTests
 	{
 		// Without this, "hide every draft unconditionally" — or a search that returns nothing at all —
 		// would satisfy the test above. Unpublishing is wizard-only, so a wizard must still find the draft.
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftWizard");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync(
@@ -669,7 +702,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiSearch_FindsAPageByItsTranslationAndMarksTheLocale()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLocaleSearcher");
 		var slug = await SeedTranslatedPageAsync(
 			"Searchable Dragons", "en searchable body", "Dragons Cherchables",
@@ -688,7 +721,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiSearch_ReportsAPageMatchingInBothLocalesOnce()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDedupeSearcher");
 		await SeedTranslatedPageAsync(
 			"Dedupe Dragons", "en body with kadingir", "Dragons Dedupe",
@@ -707,7 +740,7 @@ public class WikiCommandTests
 	{
 		// Same double match as above, read by a French player. The source stream is scanned first, so
 		// without the tie-break the reader would be told [en] — the one locale they did not ask for.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTieBreakSearcher");
 		await SeedTranslatedPageAsync(
 			"Tiebreak Dragons", "en body with garabatos", "Dragons Egalite",
@@ -724,7 +757,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiSearch_SourceSwitchIgnoresTranslations()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSourceSearcher");
 		await SeedTranslatedPageAsync(
 			"Source Only Dragons", "en source-only body", "Dragons Source Seuls",
@@ -741,7 +774,7 @@ public class WikiCommandTests
 	{
 		// Step 1 stopped draft *pages* leaking; this is the same invariant one level down. The host page is
 		// published and findable in English — only the French draft's text must be unreachable.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftTrSearcher");
 		var slug = await SeedTranslatedPageAsync(
 			"Draft Translation Dragons", "en host body", "Dragons Brouillon",
@@ -757,7 +790,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiSearch_StillFindsUnpublishedTranslationsForAWizard()
 	{
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftTrWizard");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var slug = await SeedTranslatedPageAsync(
@@ -774,7 +807,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiList_DoesNotDiscloseUnpublishedPagesToAMortal()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftLister");
 		var page = await SeedUnpublishedPageAsync("Mortal Draft Listing", "listing body");
 
@@ -792,9 +825,9 @@ public class WikiCommandTests
 		// Both readers are exercised in one test because they share a store — a wizard-only assertion in a
 		// separate test would count whatever draft the mortal test had already left behind.
 		// The system namespace is used by nothing else, so both counts are exact rather than relative.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounter");
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounterWiz");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 
@@ -816,7 +849,7 @@ public class WikiCommandTests
 	public async ValueTask WikiRecent_DoesNotDiscloseUnpublishedPagesToAMortal()
 	{
 		// Freshly written, so it heads the UpdatedAt ordering: without the filter this is the first row.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftRecent");
 		var page = await SeedUnpublishedPageAsync("Mortal Draft Recent", "recent body");
 
@@ -829,7 +862,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiRecent_StillShowsUnpublishedPagesToAWizard()
 	{
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftRecentWiz");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync("Wizard Draft Recent", "wizard recent body");
@@ -845,7 +878,7 @@ public class WikiCommandTests
 	{
 		// The body-read half of the draft hole: /list, /search and /recent were filtered, but naming the
 		// page outright still rendered it in full to anybody who guessed the slug.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyMortal");
 		var page = await SeedUnpublishedPageAsync(
 			"Mortal Draft Body", "The zork-body-marker phrase lives here.");
@@ -863,7 +896,7 @@ public class WikiCommandTests
 	{
 		// The switch must not become an oracle: a reader who may not see drafts gets byte-identical
 		// output with and without it, so /DRAFT can never be used to probe for a draft's existence.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftSwitchMortal");
 		var page = await SeedUnpublishedPageAsync(
 			"Mortal Draft Switch Body", "The plugh-body-marker phrase lives here.");
@@ -881,7 +914,7 @@ public class WikiCommandTests
 	{
 		// "By default, it should not render unpublished bodies" applies to the wizard too — the switch is
 		// the opt-in, not the permission.
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyWizDefault");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync(
@@ -897,7 +930,7 @@ public class WikiCommandTests
 	public async ValueTask WikiView_DraftSwitchRendersTheBodyForAWizard()
 	{
 		// Without this, "never render an unpublished body" would satisfy every test above.
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyWizShown");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync(
@@ -914,7 +947,7 @@ public class WikiCommandTests
 	{
 		// /DRAFT opts into unpublished bodies; it is not a display mode, so a published page reads
 		// identically with it.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftSwitchPublished");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -932,7 +965,7 @@ public class WikiCommandTests
 		// The gate here used to be CanEdit, which every player passes on an unprotected page — so the
 		// draft translation of any unprotected page rendered in full to anyone whose LOCALE matched it.
 		// The published English body must still arrive: withholding it would lose a page they may read.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftTrUnprotected");
 		var slug = await SeedTranslatedPageAsync(
 			"Unprotected Draft Locale Page", "en unprotected visible body", "Brouillon Libre",
@@ -950,7 +983,7 @@ public class WikiCommandTests
 	{
 		// Edit summaries are author-written prose about unpublished content, so the revision log is
 		// gated on the same switch as the body rather than on a rule of its own.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftHistoryMortal");
 		var page = await SeedUnpublishedPageAsync("Mortal Draft History", "draft history body");
 
@@ -964,7 +997,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiHistory_DraftSwitchShowsADraftsRevisionsToAWizard()
 	{
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftHistoryWiz");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync("Wizard Draft History", "wizard draft history body");
@@ -985,7 +1018,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiTranslate_WritesTheNamedLocaleAndAReaderInItSeesIt()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslator");
 		var page = await SeedSourcePageAsync("Translatable Dragons", "en dragon body");
 
@@ -1011,7 +1044,7 @@ public class WikiCommandTests
 		// The rule this command exists to keep: reads may use LOCALE, writes never may. The executor is
 		// set to fr and then omits the tag — if the write silently borrowed LOCALE it would succeed and
 		// produce exactly the French row the explicit form produces, with nobody the wiser.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorNoLang");
 		var page = await SeedSourcePageAsync("Untagged Dragons", "en untagged body");
 
@@ -1034,7 +1067,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiTranslate_RejectsAnUnrecognisedLanguageTag()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorBadLang");
 		var page = await SeedSourcePageAsync("Bad Tag Dragons", "en bad-tag body");
 
@@ -1051,7 +1084,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiTranslate_RefusesTheSourceLocaleWithAnInstruction()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorSameLocale");
 		var page = await SeedSourcePageAsync("Shadowing Dragons", "en shadowing body");
 
@@ -1072,7 +1105,7 @@ public class WikiCommandTests
 	{
 		// The second write is the point: passing a null expectedRevisionNumber would make it an
 		// AlreadyExists conflict, i.e. a translation that can be created in-game and then never updated.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRetranslator");
 		var page = await SeedSourcePageAsync("Revised Dragons", "en revised body");
 
@@ -1092,7 +1125,7 @@ public class WikiCommandTests
 	public async ValueTask WikiTranslate_ObeysThePagesProtectionGate()
 	{
 		// A translation is an edit to the page and honours the page's own gate — no new permission.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorMortal");
 		var page = await SeedSourcePageAsync("Protected Dragons", "en protected body");
 		await WikiService.ProtectAsync(page.Id);
@@ -1110,7 +1143,7 @@ public class WikiCommandTests
 	public async ValueTask WikiTranslate_LetsAWizardTranslateAProtectedPage()
 	{
 		// Without this, "refuse every translation of a protected page" would satisfy the test above.
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var wizard = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorWiz");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedSourcePageAsync("Wizard Protected Dragons", "en wiz protected body");
@@ -1130,7 +1163,7 @@ public class WikiCommandTests
 	{
 		// The command supplies a body and nothing else. A web translator's in-progress draft must not be
 		// published, nor retitled to the source title, by somebody typing a body correction in-game.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorDraftKeeper");
 		var slug = await SeedTranslatedPageAsync(
 			"Draft Keeping Dragons", "en keeper body", "Dragons Conserves", "corps initial", published: false);
@@ -1150,7 +1183,7 @@ public class WikiCommandTests
 	{
 		// @wiki has no per-translation publish switch, so a draft created here would be unreachable
 		// in-game forever — including by the translator who wrote it.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorFresh");
 		var page = await SeedSourcePageAsync("Fresh Dragons", "en fresh body");
 
@@ -1167,7 +1200,7 @@ public class WikiCommandTests
 	{
 		// Two slashes have no unambiguous reading, and picking one occurrence would be a guess about
 		// where a player's page name ends — the one thing this syntax exists to avoid.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorTwoSlash");
 		var page = await SeedSourcePageAsync("Ambiguous Dragons", "en ambiguous body");
 
@@ -1198,7 +1231,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_WikiLinkInBody_IsAClickableCommandLink()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLinkReader");
 		// Seeded through the service rather than @wiki/create so the [[...]] brackets reach the page body
 		// verbatim, without the command's softcode evaluation having an opinion about them.
@@ -1230,7 +1263,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_Md_ShowsStoredMarkdownVerbatim()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdReader");
 		var page = await SeedSourcePageAsync("Raw Source Dragons", RawSourceBody);
 
@@ -1249,7 +1282,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_Md_DoesNotEvaluateTheSourceAsSoftcode()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdLiteral");
 		var page = await SeedSourcePageAsync("Literal Dragons", "Call [add(1,2)] with %0 and $foo.");
 
@@ -1268,7 +1301,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_SourceMd_ShowsTheSourceLocalesMarkdown()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdTranslator");
 		var slug = await SeedTranslatedPageAsync(
 			"Md Locale Dragons", "# English source", "Dragons Md", "# Source francaise", published: true);
@@ -1293,7 +1326,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiView_Md_StillWithholdsADraftWithoutTheDraftSwitch()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMdDraftReader");
 		var draft = await SeedUnpublishedPageAsync(
 			"Md Draft Dragons", "Contains the plugh-md-marker token.");
@@ -1330,7 +1363,7 @@ public class WikiCommandTests
 	public async ValueTask WikiRequire_CategoryRequirementClosesEditsToPlayersWithoutIt()
 	{
 		var god = WebAppFactoryArg.ExecutorDBRef;
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRequired");
 		var (title, slug, category) = await FiledPageAsync(player, "Gated");
 
@@ -1353,7 +1386,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiRequire_ReadRequirementHidesThePageAsIfMissing()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHidden");
 		var (_, slug, category) = await FiledPageAsync(player, "Hidden");
 
@@ -1368,7 +1401,7 @@ public class WikiCommandTests
 	[Test]
 	public async ValueTask WikiAccess_ADraftAnswersAsAMissingPage()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftAsker");
 		var title = TestIsolationHelpers.GenerateUniqueName("DraftAccess");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/create {title}=body"));
@@ -1383,7 +1416,7 @@ public class WikiCommandTests
 	public async ValueTask WikiRequire_NeedsWikiAdminAndAKnownPermission()
 	{
 		var god = WebAppFactoryArg.ExecutorDBRef;
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+		var player = await ApprovedPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRequirer");
 		var category = WikiHelpers.CategoryKey(TestIsolationHelpers.GenerateUniqueName("Req"));
 

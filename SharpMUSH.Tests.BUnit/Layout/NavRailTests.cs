@@ -178,6 +178,10 @@ public class NavRailTests : TrackingBunitContext
 		await Assert.That(player.FindAll(".phosphor-rail-build").Count).IsEqualTo(0);
 
 		_auth.SetPolicies("queue.inspect.own");
+		await Assert.That(RenderAt("/").FindAll(".phosphor-rail-build").Count).IsEqualTo(0)
+			.Because("a player's own queue is not a staff page");
+
+		_auth.SetPolicies("queue.inspect");
 		var staff = RenderAt("/admin/diagnostics");
 		var build = staff.Find("a.phosphor-rail-build");
 		await Assert.That(build.GetAttribute("href")).IsEqualTo("/admin/diagnostics").Because("its first visible destination");

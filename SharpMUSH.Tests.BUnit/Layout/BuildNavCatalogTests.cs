@@ -9,8 +9,7 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 
 /// <summary>
 /// The Build &amp; manage gates, declared once for the rail, the section sidebar, the mobile drawer and the
-/// overview: any-of policies (with the menu's fallback pairs), a <c>perm</c> claim for snapshots, a role
-/// for accounts; and the overview, offered only when there is a staff page to put on it.
+/// overview: any-of policies, a role for snapshots and accounts; and the overview, offered only when there is a staff page to put on it.
 /// </summary>
 public class BuildNavCatalogTests : BunitContext
 {
@@ -34,31 +33,43 @@ public class BuildNavCatalogTests : BunitContext
 	}
 
 	[Test]
-	[Arguments("queue.inspect")]
-	[Arguments("queue.inspect.own")]
-	public async Task EitherInspectionScope_ShowsDiagnostics(string policy)
+	public async Task StaffInspection_ShowsDiagnostics()
 	{
 		_auth.SetAuthorized("staff");
-		_auth.SetPolicies(policy);
+		_auth.SetPolicies("queue.inspect");
 		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin/diagnostics" });
 	}
 
 	[Test]
-	[Arguments("jobs.manage.own")]
-	[Arguments("jobs.manage")]
-	public async Task EitherJobsScope_ShowsJobs(string policy)
+	public async Task StaffJobs_ShowsJobs()
 	{
 		_auth.SetAuthorized("staff");
-		_auth.SetPolicies(policy);
+		_auth.SetPolicies("jobs.manage");
 		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin/jobs" });
 	}
 
 	[Test]
-	public async Task Snapshots_FollowTheirPermClaims()
+	public async Task Snapshots_AreForWizards()
 	{
-		_auth.SetAuthorized("builder");
-		_auth.SetClaims(new Claim("perm", "snapshots.restore"));
-		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin/snapshots" });
+		_auth.SetAuthorized("wizard");
+		_auth.SetRoles("Wizard");
+		await Assert.That(await VisibleHrefs()).Contains("/admin/snapshots");
+	}
+
+	/// <summary>
+	/// What every player holds for their own objects (snapshots, their own recurring jobs and queue) is not
+	/// a staff page: none of the three is offered to a player.
+	/// </summary>
+	[Test]
+	public async Task APlayersOwnScopes_ShowNoStaffPages()
+	{
+		_auth.SetAuthorized("player");
+		_auth.SetRoles("Player");
+		_auth.SetPolicies("jobs.manage.own", "queue.inspect.own", "queue.control.own", "snapshots.capture", "snapshots.restore");
+		_auth.SetClaims(
+			new Claim("perm", "jobs.manage.own"), new Claim("perm", "queue.inspect.own"),
+			new Claim("perm", "snapshots.capture"), new Claim("perm", "snapshots.restore"));
+		await Assert.That(await VisibleHrefs()).IsEmpty();
 	}
 
 	[Test]
@@ -75,7 +86,7 @@ public class BuildNavCatalogTests : BunitContext
 	public async Task BuildToolsAlone_GetNoOverview()
 	{
 		_auth.SetAuthorized("builder");
-		_auth.SetPolicies("softcode.use", "jobs.manage.own");
+		_auth.SetPolicies("softcode.use", "jobs.manage");
 		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/softcode", "/admin/jobs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -86,7 +97,7 @@ public class BuildNavCatalogTests : BunitContext
 	{
 		_auth.SetAuthorized("wizard");
 		_auth.SetRoles(role);
-		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/admin/accounts" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/admin/snapshots", "/admin/accounts" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	/// <summary>Every staff group has a heading in the resx, and the catalogue routes no two entries to one page.</summary>

@@ -1,5 +1,5 @@
 @page "/admin/diagnostics"
-@attribute [Authorize]
+@attribute [Authorize(Policy = "queue.inspect")]
 @using SharpMUSH.Library.Models.Diagnostics
 @inject IHttpClientFactory HttpFactory
 @inject AccountAuthService Account

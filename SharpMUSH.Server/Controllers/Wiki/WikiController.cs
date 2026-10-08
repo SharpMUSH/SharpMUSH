@@ -74,16 +74,14 @@ public class WikiController(
 	/// Creates a new wiki page. The slug is derived from the title.
 	/// </summary>
 	[HttpPost]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiCreate)]
 	public async Task<IActionResult> CreatePage([FromBody] CreatePageRequest request)
 	{
 		var authorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(authorDbref))
 			return Unauthorized("Missing character identity.");
 		var ns = ParseNamespace(request.Namespace);
-		// wiki.create is checked here, not by a policy: an account writes its own characters' biographies without it.
-		if (!(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(ns), request.Categories ?? [],
-				WikiHelpers.Slugify(request.Title))).Allowed)
+		if (!(await Access.DecideCreateAsync(await ReaderAsync(), WikiHelpers.NamespaceName(ns), request.Categories ?? [])).Allowed)
 			return Forbid();
 		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
 		// resolution only; it never reinterprets a page that already exists.
@@ -111,7 +109,7 @@ public class WikiController(
 	/// Using slug (not the internal DB ID) avoids encoded-slash routing issues with
 	/// </summary>
 	[HttpPut("{slug}")]
-	[Authorize]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> UpdatePage(string slug, [FromBody] UpdatePageRequest request, [FromQuery] string? ns = null)
 	{
 		var editorDbref = CallerDbref;

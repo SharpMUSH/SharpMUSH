@@ -1,4 +1,3 @@
-using SharpMUSH.Library;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -60,7 +59,7 @@ public class BotPrerenderAccessTests
 		services.AddSingleton<IWikiService>(wiki);
 		services.AddSingleton<IWikiLocalizationService>(new WikiLocalizationService(
 			wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance));
-		services.AddSingleton<IWikiAccessService>(new WikiAccessService(wiki, InMemoryRoleRegistry.Seeded(), new PermissionResolver(), Substitute.For<IAccountStore>()));
+		services.AddSingleton<IWikiAccessService>(new WikiAccessService(wiki, InMemoryRoleRegistry.Seeded(), new PermissionResolver()));
 		return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
 	}
 }
