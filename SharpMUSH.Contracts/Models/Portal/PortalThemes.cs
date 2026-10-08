@@ -237,8 +237,8 @@ public static class BuiltInThemes
 		["#0a1428", "#101d36", "#162644", "#0c172e", "#060d1c", "#eef3fb", "#a9b6cc", "#8d9bb4", "#25395f", "#1a2b4b", "#ff8c2e", "#ffd166", "#ff8a8a"],
 		display: "graduate", body: "ui", corners: "soft", texture: "court", ornament: "varsity", frame: "jersey", titles: "caps", effect: "varsity", imagery: "floodlit");
 
-	/// <summary>Mechwarrior: a battle mech's hangar of riveted gunmetal plates, hazard stripes, stencilled capitals in warning yellow, cut-corner armour cards.</summary>
-	public static readonly PortalTheme Mechwarrior = Genre("mechwarrior", "Mechwarrior", dark: true,
+	/// <summary>Mech machine: a battle mech's hangar of riveted gunmetal plates, hazard stripes, stencilled capitals in warning yellow, cut-corner armour cards.</summary>
+	public static readonly PortalTheme MechMachine = Genre("mechmachine", "Mech Machine", dark: true,
 		["#16181b", "#1f2226", "#272b30", "#1a1c20", "#101113", "#e7e9eb", "#aab0b6", "#8f969d", "#3c434b", "#2b3036", "#ff6b1f", "#ffc62a", "#ff8a7a"],
 		display: "saira-stencil", body: "ui", corners: "razor", texture: "hazard", ornament: "warning", frame: "chamfer", titles: "caps", effect: "stencil", imagery: "steel");
 
@@ -299,7 +299,7 @@ public static class BuiltInThemes
 	[
 		Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
 		MagicalGirl, Shojo, Idol, SliceOfLife,
-		Shonen, Sports, Mechwarrior, Isekai,
+		Shonen, Sports, MechMachine, Isekai,
 		Yokai, ComicBook, RubberHose, EightiesCartoon,
 		Cyberpunk, Synthwave, SpaceOpera, StarshipConsole,
 		RealRobot,

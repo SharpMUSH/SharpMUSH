@@ -25,7 +25,7 @@ theme is moved toward white or black until it reads at 4.5:1.
 - **Phosphor** (dark) and **Daylight** (light), the plain looks.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
-- Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechwarrior`, `real-robot`, `super-robot`, `isekai`, `yokai`.
+- Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
 - Cartoons and comics: `comic-book`, `rubber-hose`, `eighties-cartoon`.
 - Neon and space: `cyberpunk`, `synthwave`, `space-opera`, `starship-console`.
 
