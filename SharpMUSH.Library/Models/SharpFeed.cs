@@ -124,6 +124,10 @@ public sealed record SharpFeedMember(
 /// <param name="Style"><c>say</c>, <c>pose</c>, <c>semipose</c>, <c>emit</c> or <c>announce</c>.</param>
 /// <param name="Text">The message as written, markup kept.</param>
 /// <param name="DisplayName">The name the speaker chose to appear under for this line (a persona, a callsign), or empty.</param>
+/// <param name="Line">The whole line as it was delivered, when the system formatted it once for everyone (a channel
+/// line after its mogrifier) rather than for each reader; null otherwise.</param>
+/// <param name="Audience">Who the line was meant for when it was not every member, as the system names it (a
+/// channel's <c>seeall</c> line); empty for everyone. The feed keeps it; the system decides what it means.</param>
 public sealed record SharpFeedMessage(
 	long Id,
 	string Kind,
@@ -137,7 +141,9 @@ public sealed record SharpFeedMessage(
 	string LocationName,
 	string Style,
 	MString Text,
-	string DisplayName = "")
+	string DisplayName = "",
+	MString? Line = null,
+	string Audience = "")
 {
 	public string Feed => $"{Kind}/{Key}";
 }

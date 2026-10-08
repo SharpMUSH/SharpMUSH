@@ -74,7 +74,7 @@ Defining a kind, and its description, settings, locks and taps, need the `feed.a
 
 ## Kinds
 
-`@feed/define radio=Radio` makes the kind `radio`, owned by the object `Radio`. The owner's attributes are the kind's tie-ins (see [@feed tie-ins]), and code that controls the owner runs its feeds. Defining a kind that exists gives it a new owner.
+`@feed/define radio=Radio` makes the kind `radio`, owned by the object `Radio`. The owner's attributes are the kind's tie-ins (see [@feed tie-ins]), and code that controls the owner runs its feeds. Defining a kind that exists gives it a new owner. The name `channel` is taken: channel recall is kept as feed lines of the engine's own `channel` kind, which `@storage` counts but `@feed` and the feed functions cannot reach.
 
 `@feed/describe` sets the description `@feed/list` shows. `@feed/undefine` removes a kind with all of its feeds, their members and lines, and its taps.
 

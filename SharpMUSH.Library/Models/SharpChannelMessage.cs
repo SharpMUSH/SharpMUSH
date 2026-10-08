@@ -34,11 +34,6 @@ public class SharpChannelMessage
 	public required MString Message { get; set; }
 
 	/// <summary>
-	/// The message type (Say, Pose, Emit, etc.)
-	/// </summary>
-	public required string MessageType { get; set; }
-
-	/// <summary>
 	/// PennMUSH's <c>CBTYPE_SEEALL</c> buffer tag (src/extchat.c:3970): the line was delivered only to
 	/// See_All members, so recall must hide it from everyone else as well - otherwise
 	/// <c>@channel/recall</c> hands back the hidden-connect line that the live broadcast withheld.

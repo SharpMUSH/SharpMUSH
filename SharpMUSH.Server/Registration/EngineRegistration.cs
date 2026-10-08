@@ -226,7 +226,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IChannelMessageIdSource, ChannelMessageIdSource>();
 		services.AddSingleton<IPageLogService, PageLogService>();
 		services.AddSingleton<IAuditLog, AuditLog>();
-		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
+		services.AddSingleton<IChannelBufferService, FeedChannelBufferService>();
 		services.AddSingleton<IListenPatternMatcher, ListenPatternMatcher>();
 		services.AddSingleton<IListenerRoutingService, ListenerRoutingService>();
 		services.AddSingleton<PennMUSHDatabaseParser>();

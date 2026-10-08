@@ -109,8 +109,7 @@ public partial class Functions
 				ChannelId = channel.Id ?? string.Empty,
 				Timestamp = DateTimeOffset.UtcNow,
 				Sender = speaker.Object().DBRef,
-				Message = message,
-				MessageType = "Emit"
+				Message = message
 			}));
 
 			return CallState.Empty;

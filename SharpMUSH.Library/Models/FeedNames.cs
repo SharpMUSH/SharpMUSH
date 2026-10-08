@@ -12,6 +12,12 @@ public static partial class FeedNames
 	/// <summary>What a tap names to hear every kind.</summary>
 	public const string Every = "*";
 
+	/// <summary>
+	/// The engine's own kind for channel recall (<see cref="Services.FeedChannelBufferService"/>). It has no kind
+	/// row, so <c>@feed</c> and the feed functions never reach it, and no softcode kind may take the name.
+	/// </summary>
+	public const string Channel = "channel";
+
 	public const int MaxKindLength = 32;
 	public const int MaxKeyLength = 200;
 

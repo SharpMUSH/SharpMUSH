@@ -448,6 +448,29 @@ public class ChannelMatchRecallTests
 	}
 
 	/// <summary>
+	/// Recall is kept on disk, so it goes with its channel: a channel made later under the same name starts
+	/// with none.
+	/// </summary>
+	[Test]
+	public async Task ADeletedChannelsRecall_IsNotInheritedByANewOneOfTheSameName()
+	{
+		var name = UniqueChannel("BufferGone");
+		var channel = await CreateChannel(name, "Player", "Open");
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		await Mediator.Send(new AddUserToChannelCommand(channel, owner));
+		await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
+			.FunctionParse(MarkupText.Plain($"cbufferadd({name},an old line)"));
+
+		await Mediator.Send(new DeleteChannelCommand(channel));
+		var again = await CreateChannel(name, "Player", "Open");
+		await Mediator.Send(new AddUserToChannelCommand(again, owner));
+
+		var recall = (await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
+			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message!.ToPlainText();
+		await Assert.That(recall).DoesNotContain("an old line");
+	}
+
+	/// <summary>
 	/// The gate is <c>Chan_Can_Modify</c>, not membership (<c>src/extchat.c:2393</c>): a member who does
 	/// not control the channel must not be able to forge its history.
 	/// </summary>

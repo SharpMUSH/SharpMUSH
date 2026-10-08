@@ -318,4 +318,11 @@ public class FeedCommandTests : ServerTestBase
 		await Assert.That(await Eval($"feedinfo({_kind}/1,stored)")).IsEqualTo("0");
 		await Assert.That(await Eval($"feedinfo({_kind}/2,messages)")).IsEqualTo("1").Because("a feed with no max_age keeps its lines");
 	}
+
+	[Test]
+	public async Task TheChannelKind_IsTheEnginesOwn()
+	{
+		await Assert.That(await Cmd($"@feed/define channel={Ref(_system)}")).Contains("the engine's own kind");
+		await Assert.That(await Eval("feedinfo(channel,owner)")).IsEqualTo("#-1 NO SUCH FEED KIND");
+	}
 }

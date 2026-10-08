@@ -452,6 +452,8 @@ public partial class Commands
 					var kindName = left.ToLowerInvariant();
 					if (!FeedNames.IsKind(kindName))
 						return $"'{left}' is not a feed kind name: a word in lower case, starting with a letter.";
+					if (kindName == FeedNames.Channel)
+						return $"'{FeedNames.Channel}' is the engine's own kind, for channel recall. Choose another name.";
 					return await FeedObjectAsync(parser, executor, right) switch
 					{
 						AnySharpObject owner => await DefineKindAsync(kindName, owner),

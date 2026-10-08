@@ -108,6 +108,54 @@ public partial class LightningDatabase
 			return true;
 		}, cancellationToken);
 
+	public async ValueTask<bool> RenameFeedAsync(string kind, string from, string to,
+		CancellationToken cancellationToken = default)
+		=> await Store.WriteAsync(tx =>
+		{
+			if (string.Equals(from, to, StringComparison.Ordinal)
+				|| !tx.TryGet(Tables.Feed, FeedKey(kind, from), out var bytes))
+			{
+				return false;
+			}
+
+			var source = Codec.Deserialize<FeedRecord>(bytes);
+			var target = tx.TryGet(Tables.Feed, FeedKey(kind, to), out var targetBytes)
+				? Codec.Deserialize<FeedRecord>(targetBytes)
+				: source with { Key = to, Messages = 0, Bytes = 0, StoredBytes = 0, LastId = 0 };
+
+			// A line keeps its id, so the id index only points at its new key, and lines already under the new
+			// key stay in id order with the moved ones.
+			foreach (var (oldKey, value) in tx.Range(Tables.FeedMessage, FeedPrefix(kind, from)).ToList())
+			{
+				var id = Codec.Deserialize<FeedMessageRecord>(value).Id;
+				var newKey = MessageKey(kind, to, id);
+				tx.Delete(Tables.FeedMessage, oldKey);
+				tx.Put(Tables.FeedMessage, newKey, value);
+				tx.Put(Tables.FeedMessageId, Keys.Dbref(id), newKey);
+			}
+
+			// A member of both keeps the membership they had under the new key.
+			foreach (var (memberKey, value) in tx.Range(Tables.FeedMember, FeedPrefix(kind, from)).ToList())
+			{
+				var number = Keys.ReadDbref(memberKey.AsSpan(memberKey.Length - 8));
+				tx.Delete(Tables.FeedMember, memberKey);
+				tx.Delete(Tables.FeedMemberOf, MemberOfKey(number, kind, from));
+				if (tx.TryGet(Tables.FeedMember, MemberKey(kind, to, number), out _)) continue;
+				tx.Put(Tables.FeedMember, MemberKey(kind, to, number), value);
+				tx.Put(Tables.FeedMemberOf, MemberOfKey(number, kind, to), []);
+			}
+
+			tx.Delete(Tables.Feed, FeedKey(kind, from));
+			tx.Put(Tables.Feed, FeedKey(kind, to), Codec.Serialize(target with
+			{
+				Messages = target.Messages + source.Messages,
+				Bytes = target.Bytes + source.Bytes,
+				StoredBytes = target.StoredBytes + source.StoredBytes,
+				LastId = Math.Max(target.LastId, source.LastId)
+			}));
+			return true;
+		}, cancellationToken);
+
 	public ValueTask<IReadOnlyList<SharpFeedMember>> GetFeedMembersAsync(string kind, string key,
 		CancellationToken cancellationToken = default)
 	{
@@ -176,6 +224,8 @@ public partial class LightningDatabase
 			Style = message.Style,
 			Text = text,
 			DisplayName = message.DisplayName,
+			Line = message.Line is { } line ? MarkupTextSerializer.Serialize(line) : null,
+			Audience = message.Audience,
 			Bytes = Keys.Str(text).Length
 		};
 
@@ -389,7 +439,8 @@ public partial class LightningDatabase
 	private static SharpFeedMessage ToMessage(string kind, string key, FeedMessageRecord record)
 		=> new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), DBRef.Parse(record.Speaker),
 			record.SpeakerName, DBRef.Parse(record.Executor), record.ExecutorName,
-			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName, record.Style, MarkupTextSerializer.Deserialize(record.Text), record.DisplayName);
+			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName, record.Style, MarkupTextSerializer.Deserialize(record.Text), record.DisplayName,
+			record.Line is null ? null : MarkupTextSerializer.Deserialize(record.Line), record.Audience);
 
 	private static FeedSettings ToSettings(FeedSettingsRecord record)
 		=> new(record.MaxMessages, record.MaxBytes, record.MaxLength,

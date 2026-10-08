@@ -36,6 +36,13 @@ public interface IFeedStore
 	/// <summary>Deletes a feed with its members and lines. False when there was none.</summary>
 	ValueTask<bool> DeleteFeedAsync(string kind, string key, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Moves a feed to another key of its kind, with its lines (which keep their ids) and members. When a feed is
+	/// at <paramref name="to"/> already, the two are merged: its settings and locks stay, and a member of both keeps
+	/// that membership. False when there was nothing at <paramref name="from"/>.
+	/// </summary>
+	ValueTask<bool> RenameFeedAsync(string kind, string from, string to, CancellationToken cancellationToken = default);
+
 	/// <summary>A feed's members, in the order of their dbrefs.</summary>
 	ValueTask<IReadOnlyList<SharpFeedMember>> GetFeedMembersAsync(string kind, string key,
 		CancellationToken cancellationToken = default);

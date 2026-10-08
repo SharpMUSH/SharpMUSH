@@ -59,7 +59,8 @@ public class UpdateChannelCommandHandler(IChannelStore database, IChannelBufferS
 /// Announcing from inside the handler is safe here, unlike a rename: a cached channel list that still
 /// holds the deleted channel yields nothing for it, because membership is read from the store.
 /// </summary>
-public class DeleteChannelCommandHandler(IChannelStore database, IPublisher publisher) : ICommandHandler<DeleteChannelCommand>
+public class DeleteChannelCommandHandler(IChannelStore database, IChannelBufferService buffers, IPublisher publisher)
+	: ICommandHandler<DeleteChannelCommand>
 {
 	public async ValueTask<Unit> Handle(DeleteChannelCommand request, CancellationToken cancellationToken)
 	{
@@ -68,6 +69,8 @@ public class DeleteChannelCommandHandler(IChannelStore database, IPublisher publ
 			.ToListAsync(cancellationToken);
 
 		await database.DeleteChannelAsync(request.Channel, cancellationToken);
+		// Recall is kept on disk now, so a channel made later under the same name must not inherit it.
+		if (request.Channel.Id is { } id) await buffers.ClearBufferAsync(id);
 
 		foreach (var member in members)
 		{

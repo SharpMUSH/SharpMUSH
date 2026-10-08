@@ -61,6 +61,11 @@ public sealed record FeedMessageRecord
 	public string Text { get; init; } = "";
 	public string DisplayName { get; init; } = "";
 
+	/// <summary>The whole line as delivered, serialized markup, or null.</summary>
+	public string? Line { get; init; }
+
+	public string Audience { get; init; } = "";
+
 	/// <summary>What the line counts against the feed's byte limit.</summary>
 	public long Bytes { get; init; }
 
