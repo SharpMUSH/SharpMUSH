@@ -1,3 +1,5 @@
+![A blueprint survey charts a harbour city, lighthouse, bridge, and ships](/assets/presets/wiki/setting.webp)
+
 # Setting
 
 ## At a glance

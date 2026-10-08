@@ -67,6 +67,16 @@ public class StarterWikiPagesTests
 	}
 
 	[Test]
+	public async Task Setting_OpensWithSurveyArtwork()
+	{
+		var page = StarterWikiPages.All.Single(p => p is { Title: "Setting", Namespace: WikiNamespace.Main });
+		var html = new WikiMarkdigPipeline().RenderToHtml(page.Markdown);
+
+		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/assets/presets/wiki/setting.webp");
+		await Assert.That(html).Contains("alt=\"A blueprint survey charts a harbour city, lighthouse, bridge, and ships\"");
+	}
+
+	[Test]
 	public async Task Setting_ListsItsSubcategories()
 	{
 		var setting = StarterWikiPages.All.Single(p => p is { Title: "Setting", Namespace: WikiNamespace.Main });
