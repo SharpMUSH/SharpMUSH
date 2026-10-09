@@ -1,0 +1,16 @@
+@* One record in an admin master-detail list: a card button, marked on while it is the one shown. The page
+   names its classes with its Prefix (ra-card, ra-card--on) and styles them, under ::deep, itself. *@
+<button type="button" class="@($"{Prefix}-card {(Selected ? $"{Prefix}-card--on" : "")}")" @onclick="OnSelect">
+    @ChildContent
+</button>
+
+@code {
+    /// <summary>The page's class prefix, e.g. <c>ra</c>.</summary>
+    [Parameter, EditorRequired] public string Prefix { get; set; } = string.Empty;
+
+    [Parameter] public bool Selected { get; set; }
+
+    [Parameter] public EventCallback OnSelect { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

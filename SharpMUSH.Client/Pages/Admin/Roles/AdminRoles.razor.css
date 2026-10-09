@@ -1,12 +1,14 @@
-.ra-grow { flex: 1; min-width: 0; }
-.ra-titles { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
+/* The tabs, the role editor and their parts are child components of this page, so every rule reaches them
+   through the page root with ::deep. */
+.roleadmin ::deep .ra-grow { flex: 1; min-width: 0; }
+.roleadmin ::deep .ra-titles { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
 
-/* icon sizes (MudIcon renders an svg this page does not scope, hence ::deep) */
+/* icon sizes */
 .roleadmin ::deep .ra-ico { font-size: 0.875rem; }
 .roleadmin ::deep .ra-ico--faint { color: var(--text-faint); }
 .roleadmin ::deep .ra-ico--empty { font-size: 2.5rem; color: var(--text-faint); opacity: 0.4; }
 
-.ra-btn {
+.roleadmin ::deep .ra-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -22,42 +24,42 @@
     text-decoration: none;
     transition: all 0.12s;
 }
-.ra-btn:hover { border-color: rgba(var(--glow), 0.4); }
-.ra-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.ra-btn--primary {
+.roleadmin ::deep .ra-btn:hover { border-color: rgba(var(--glow), 0.4); }
+.roleadmin ::deep .ra-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.roleadmin ::deep .ra-btn--primary {
     background: var(--accent);
     color: var(--accent-on);
     border-color: transparent;
     font-weight: 600;
     box-shadow: 0 0 18px rgba(var(--glow), 0.25);
 }
-.ra-btn--primary:hover { filter: brightness(1.08); }
-.ra-btn--danger {
+.roleadmin ::deep .ra-btn--primary:hover { filter: brightness(1.08); }
+.roleadmin ::deep .ra-btn--danger {
     color: var(--danger);
     border-color: color-mix(in srgb, var(--danger) 40%, transparent);
     background: transparent;
 }
-.ra-btn--danger:hover { border-color: color-mix(in srgb, var(--danger) 70%, transparent); }
+.roleadmin ::deep .ra-btn--danger:hover { border-color: color-mix(in srgb, var(--danger) 70%, transparent); }
 
-.roleadmin-grid {
+.roleadmin ::deep .roleadmin-grid {
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
 /* README §3: list and detail stay side by side at the medium tier (the design size); only narrow stacks */
 @container page (max-width: 64rem) {
-    .roleadmin-grid { grid-template-columns: 280px minmax(0, 1fr); }
+    .roleadmin ::deep .roleadmin-grid { grid-template-columns: 280px minmax(0, 1fr); }
 }
 
 /* List */
-.roleadmin-list { display: flex; flex-direction: column; gap: 0.5rem; }
-.ra-category-row .ra-perm-label { display: flex; flex-direction: column; gap: 0.375rem; }
-.ra-list-group {
+.roleadmin ::deep .roleadmin-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.roleadmin ::deep .ra-category-row .ra-perm-label { display: flex; flex-direction: column; gap: 0.375rem; }
+.roleadmin ::deep .ra-list-group {
     font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--text-faint); padding: 0.5rem 0.25rem 0;
 }
-.ra-empty-list { padding: 1rem; color: var(--text-faint); font-size: 0.8125rem; text-align: center; }
-.ra-card {
+.roleadmin ::deep .ra-empty-list { padding: 1rem; color: var(--text-faint); font-size: 0.8125rem; text-align: center; }
+.roleadmin ::deep .ra-card {
     display: flex;
     align-items: center;
     gap: 0.6875rem;
@@ -69,30 +71,30 @@
     border: 1px solid var(--border);
     transition: border-color 0.12s, box-shadow 0.12s;
 }
-.ra-card:hover { border-color: rgba(var(--glow), 0.3); }
-.ra-card--on {
+.roleadmin ::deep .ra-card:hover { border-color: rgba(var(--glow), 0.3); }
+.roleadmin ::deep .ra-card--on {
     border-color: rgba(var(--glow), 0.45);
     box-shadow: 0 0 0 1px rgba(var(--glow), 0.25);
 }
-.ra-dot {
+.roleadmin ::deep .ra-dot {
     width: 12px; height: 12px; border-radius: 99px; flex-shrink: 0;
     box-shadow: var(--shadow);
 }
-.ra-dot--sm { width: 9px; height: 9px; }
-.ra-card-name {
+.roleadmin ::deep .ra-dot--sm { width: 9px; height: 9px; }
+.roleadmin ::deep .ra-card-name {
     font-family: var(--font-display); font-size: 0.875rem; font-weight: 600; color: var(--text);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ra-card-sub { font-family: var(--font-mono); font-size: 0.65625rem; color: var(--text-faint); }
-.ra-prio {
+.roleadmin ::deep .ra-card-sub { font-family: var(--font-mono); font-size: 0.65625rem; color: var(--text-faint); }
+.roleadmin ::deep .ra-prio {
     font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); flex-shrink: 0;
 }
-.ra-badge {
+.roleadmin ::deep .ra-badge {
     font-family: var(--font-mono); font-size: 0.5625rem; letter-spacing: 0.04em; text-transform: uppercase;
     padding: 0.125rem 0.4375rem; border-radius: 99px; flex-shrink: 0;
     color: var(--special); background: color-mix(in srgb, var(--special) 12%, transparent); border: 1px solid color-mix(in srgb, var(--special) 30%, transparent);
 }
-.ra-badge--danger {
+.roleadmin ::deep .ra-badge--danger {
     color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
@@ -102,34 +104,34 @@
     overflow: hidden;
     align-self: start;
 }
-.ra-empty-detail {
+.roleadmin ::deep .ra-empty-detail {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
     padding: 3.75rem 1.25rem; color: var(--text-faint); font-family: var(--font-ui); font-size: 0.875rem;
 }
-.ra-detail-head {
+.roleadmin ::deep .ra-detail-head {
     display: flex; align-items: flex-start; gap: 0.875rem; padding: 1.25rem 1.375rem;
     border-bottom: 1px solid var(--border-soft);
 }
-.ra-detail-dot {
+.roleadmin ::deep .ra-detail-dot {
     width: 28px; height: 28px; border-radius: 99px; flex-shrink: 0; margin-top: 0.125rem;
     box-shadow: var(--shadow);
 }
-.ra-detail-name {
+.roleadmin ::deep .ra-detail-name {
     margin: 0; font-family: var(--font-display); font-size: 1.1875rem; font-weight: 600; color: var(--text);
 }
-.ra-detail-slug { font-family: var(--font-mono); font-size: 0.71875rem; color: var(--accent); margin-top: 0.1875rem; }
+.roleadmin ::deep .ra-detail-slug { font-family: var(--font-mono); font-size: 0.71875rem; color: var(--accent); margin-top: 0.1875rem; }
 
-.ra-fields {
+.roleadmin ::deep .ra-fields {
     display: flex; gap: 1rem; flex-wrap: wrap;
     padding: 1.125rem 1.375rem; border-bottom: 1px solid var(--border-soft);
 }
-.ra-field { flex: 1; min-width: 160px; }
-.ra-field--narrow { flex: 0 0 130px; min-width: 110px; }
-.ra-field-label {
+.roleadmin ::deep .ra-field { flex: 1; min-width: 160px; }
+.roleadmin ::deep .ra-field--narrow { flex: 0 0 130px; min-width: 110px; }
+.roleadmin ::deep .ra-field-label {
     font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--text-faint); margin-bottom: 0.375rem;
 }
-.ra-input {
+.roleadmin ::deep .ra-input {
     width: 100%;
     padding: 0.5625rem 0.75rem;
     background: var(--surface-3);
@@ -141,44 +143,44 @@
     outline: none;
     transition: border-color 0.12s;
 }
-.ra-input:focus { border-color: var(--accent); }
+.roleadmin ::deep .ra-input:focus { border-color: var(--accent); }
 
-.ra-section { padding: 1.125rem 1.375rem; border-bottom: 1px solid var(--border-soft); }
-.ra-section:last-child { border-bottom: none; }
-.ra-section--actions { display: flex; gap: 0.625rem; flex-wrap: wrap; }
-.ra-section-label {
+.roleadmin ::deep .ra-section { padding: 1.125rem 1.375rem; border-bottom: 1px solid var(--border-soft); }
+.roleadmin ::deep .ra-section:last-child { border-bottom: none; }
+.roleadmin ::deep .ra-section--actions { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+.roleadmin ::deep .ra-section-label {
     font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--text-faint); margin-bottom: 0.625rem;
 }
 
 /* Permission matrix */
-.ra-perm-card {
+.roleadmin ::deep .ra-perm-card {
     background: var(--surface-3);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     overflow: hidden;
 }
-.ra-perm-row {
+.roleadmin ::deep .ra-perm-row {
     display: flex; align-items: center; gap: 1.5rem;
     padding: 0.875rem 1rem;
 }
-.ra-perm-row:not(:first-child) { border-top: 1px solid var(--border-soft); }
-.ra-perm-label { flex: 1; min-width: 0; }
-.ra-perm-name {
+.roleadmin ::deep .ra-perm-row:not(:first-child) { border-top: 1px solid var(--border-soft); }
+.roleadmin ::deep .ra-perm-label { flex: 1; min-width: 0; }
+.roleadmin ::deep .ra-perm-name {
     font-family: var(--font-ui); font-size: 0.875rem; font-weight: 600; color: var(--text); margin-bottom: 0.1875rem;
 }
-.ra-perm-desc { font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text-dim); }
-.ra-perm-scope {
+.roleadmin ::deep .ra-perm-desc { font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text-dim); }
+.roleadmin ::deep .ra-perm-scope {
     font-family: var(--font-mono); font-size: 0.6875rem; color: var(--text-faint); display: block; margin-top: 0.125rem;
 }
-.ra-perm-meta {
+.roleadmin ::deep .ra-perm-meta {
     display: flex; align-items: center; flex-wrap: wrap; gap: 0.375rem 0.75rem; margin-top: 0.375rem;
 }
-.ra-perm-meta:empty { display: none; }
-.ra-perm-meta .ra-perm-scope { margin-top: 0; }
+.roleadmin ::deep .ra-perm-meta:empty { display: none; }
+.roleadmin ::deep .ra-perm-meta .ra-perm-scope { margin-top: 0; }
 
 /* The viewer's own access to a scope: "You ✓ Storyteller" */
-.ra-access {
+.roleadmin ::deep .ra-access {
     display: inline-flex; align-items: center; gap: 0.375rem;
     padding: 0.125rem 0.5rem 0.125rem 0.4375rem;
     border-radius: 99px;
@@ -186,24 +188,24 @@
     border: 1px solid var(--border);
     background: var(--surface-2);
 }
-.ra-access-who {
+.roleadmin ::deep .ra-access-who {
     font-family: var(--font-mono); font-size: 0.5625rem; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--text-faint);
 }
-.ra-access-role { display: inline-flex; align-items: center; gap: 0.3125rem; color: var(--text); }
-.ra-access--allow { border-color: color-mix(in srgb, var(--success) 35%, transparent); }
-.ra-access--allow ::deep .ra-ico { color: var(--success); }
-.ra-access--deny { border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
-.ra-access--deny ::deep .ra-ico { color: var(--danger); }
+.roleadmin ::deep .ra-access-role { display: inline-flex; align-items: center; gap: 0.3125rem; color: var(--text); }
+.roleadmin ::deep .ra-access--allow { border-color: color-mix(in srgb, var(--success) 35%, transparent); }
+.roleadmin ::deep .ra-access--allow .ra-ico { color: var(--success); }
+.roleadmin ::deep .ra-access--deny { border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+.roleadmin ::deep .ra-access--deny .ra-ico { color: var(--danger); }
 
-.ra-sr {
+.roleadmin ::deep .ra-sr {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
     overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
 /* Help notes: an icon and a sentence or two, set apart from the controls */
-.ra-notes { display: flex; flex-direction: column; gap: 0.625rem; }
-.ra-note {
+.roleadmin ::deep .ra-notes { display: flex; flex-direction: column; gap: 0.625rem; }
+.roleadmin ::deep .ra-note {
     display: flex; align-items: flex-start; gap: 0.625rem;
     padding: 0.75rem 0.875rem;
     border-radius: var(--radius);
@@ -212,13 +214,13 @@
     font-family: var(--font-ui); font-size: 0.78125rem; line-height: 1.5; color: var(--text-dim);
 }
 .roleadmin ::deep .ra-note-ico { font-size: 1.125rem; color: var(--text-faint); flex-shrink: 0; margin-top: 0.0625rem; }
-.ra-note--access { color: var(--text); border-color: rgba(var(--glow), 0.3); }
+.roleadmin ::deep .ra-note--access { color: var(--text); border-color: rgba(var(--glow), 0.3); }
 .roleadmin ::deep .ra-note--access .ra-note-ico { color: var(--accent); }
 
-.ra-row-actions { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
+.roleadmin ::deep .ra-row-actions { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
 
 /* Tri-state */
-.ra-tristate {
+.roleadmin ::deep .ra-tristate {
     display: inline-flex;
     padding: 0.1875rem;
     gap: 0.125rem;
@@ -227,7 +229,7 @@
     background: var(--surface-2);
     flex-shrink: 0;
 }
-.ra-tri {
+.roleadmin ::deep .ra-tri {
     padding: 0.3125rem 0.6875rem;
     border: none;
     background: transparent;
@@ -239,21 +241,21 @@
     cursor: pointer;
     transition: all 0.12s;
 }
-.ra-tri:hover { color: var(--text); }
-.ra-tri--inherit.ra-tri--on {
+.roleadmin ::deep .ra-tri:hover { color: var(--text); }
+.roleadmin ::deep .ra-tri--inherit.ra-tri--on {
     background: var(--surface-3); color: var(--text); border: 1px solid var(--border);
 }
-.ra-tri--allow.ra-tri--on {
+.roleadmin ::deep .ra-tri--allow.ra-tri--on {
     background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 40%, transparent);
 }
-.ra-tri--deny.ra-tri--on {
+.roleadmin ::deep .ra-tri--deny.ra-tri--on {
     background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 40%, transparent);
 }
 
 /* Assignments */
-.ra-search {
+.roleadmin ::deep .ra-search {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -263,23 +265,23 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
 }
-.ra-search:focus-within { border-color: var(--accent); }
-.ra-search input {
+.roleadmin ::deep .ra-search:focus-within { border-color: var(--accent); }
+.roleadmin ::deep .ra-search input {
     flex: 1; min-width: 0; padding: 0.375rem 0; background: transparent; border: none; outline: none;
     color: var(--text); font-family: var(--font-ui); font-size: 0.8125rem;
 }
-.ra-search input::placeholder { color: var(--text-faint); }
+.roleadmin ::deep .ra-search input::placeholder { color: var(--text-faint); }
 
-.ra-account-card { }
-.ra-account-head {
+.roleadmin ::deep .ra-account-card { }
+.roleadmin ::deep .ra-account-head {
     display: flex; align-items: flex-start; gap: 0.875rem; padding: 0.25rem 1.375rem 1.125rem;
     border-bottom: 1px solid var(--border-soft);
 }
-.ra-account-email { font-family: var(--font-mono); font-size: 0.71875rem; color: var(--text-dim); margin-top: 0.1875rem; }
+.roleadmin ::deep .ra-account-email { font-family: var(--font-mono); font-size: 0.71875rem; color: var(--text-dim); margin-top: 0.1875rem; }
 
-.ra-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.ra-empty { font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text-faint); }
-.ra-chip {
+.roleadmin ::deep .ra-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.roleadmin ::deep .ra-empty { font-family: var(--font-ui); font-size: 0.78125rem; color: var(--text-faint); }
+.roleadmin ::deep .ra-chip {
     display: inline-flex; align-items: center; gap: 0.4375rem;
     font-family: var(--font-ui); font-size: 0.78125rem;
     padding: 0.3125rem 0.4375rem 0.3125rem 0.6875rem;
@@ -288,12 +290,12 @@
     color: var(--text);
     border: 1px solid var(--border);
 }
-.ra-chip-x {
+.roleadmin ::deep .ra-chip-x {
     border: none; background: transparent; color: var(--text-dim);
     cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0.125rem;
 }
-.ra-chip-x:hover { color: var(--danger); }
-.ra-add-chip {
+.roleadmin ::deep .ra-chip-x:hover { color: var(--danger); }
+.roleadmin ::deep .ra-add-chip {
     display: inline-flex; align-items: center; gap: 0.4375rem;
     font-family: var(--font-ui); font-size: 0.78125rem;
     padding: 0.3125rem 0.6875rem;
@@ -304,19 +306,19 @@
     cursor: pointer;
     transition: all 0.12s;
 }
-.ra-add-chip:hover { border-color: rgba(var(--glow), 0.4); color: var(--accent); }
+.roleadmin ::deep .ra-add-chip:hover {
 
 @container page (max-width: 48rem) {
-    .roleadmin-grid { grid-template-columns: minmax(0, 1fr); }
+    .roleadmin ::deep .roleadmin-grid { grid-template-columns: minmax(0, 1fr); }
 
     /* Permission rows: stack the label above a full-width tri-state for big touch targets. */
-    .ra-perm-row { flex-direction: column; align-items: stretch; gap: 0.625rem; }
-    .ra-tristate { width: 100%; justify-content: space-between; }
-    .ra-tri { flex: 1; text-align: center; padding: 0.625rem 0.5rem; }
-    .ra-field--narrow { flex: 1 1 140px; }
+    .roleadmin ::deep .ra-perm-row { flex-direction: column; align-items: stretch; gap: 0.625rem; }
+    .roleadmin ::deep .ra-tristate { width: 100%; justify-content: space-between; }
+    .roleadmin ::deep .ra-tri { flex: 1; text-align: center; padding: 0.625rem 0.5rem; }
+    .roleadmin ::deep .ra-field--narrow { flex: 1 1 140px; }
 }
 
-.ra-override-add {
+.roleadmin ::deep .ra-override-add {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -324,12 +326,12 @@
     margin-top: 8px;
 }
 
-.ra-override-add .ra-input {
+.roleadmin ::deep .ra-override-add .ra-input {
     flex: 1 1 200px;
     max-width: 320px;
 }
 
-.ra-field-help {
+.roleadmin ::deep .ra-field-help {
     margin-top: 6px;
     font-size: 0.85em;
     color: var(--text-faint);

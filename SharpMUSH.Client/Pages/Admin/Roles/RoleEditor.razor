@@ -1,0 +1,129 @@
+@using SharpMUSH.Client.Models.Roles
+@using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Roles tab's detail: the selected role's name, category, colour and priority, the viewer's own access
+   explained, a tri-state row per built-in and custom permission, and Save / Delete. *@
+<div class="ra-detail-head">
+    <span class="ra-detail-dot" style="@($"background:{RoleColor.Safe(Draft.Color)};")"></span>
+    <div class="ra-grow">
+        <div class="ra-titles">
+            <h2 class="ra-detail-name">@(Role.IsSystem ? Role.Name : (string.IsNullOrWhiteSpace(Draft.Name) ? Loc["RolUntitled"] : Draft.Name))</h2>
+            @if (Role.IsSystem)
+            {
+                <span class="ra-badge">@Loc["RolSystemBadge"]</span>
+            }
+        </div>
+        <div class="ra-detail-slug">@Role.Slug</div>
+    </div>
+</div>
+
+<div class="ra-fields">
+    <div class="ra-field">
+        <div class="ra-field-label">@Loc["RolNameLabel"]</div>
+        <input class="ra-input" type="text" value="@Draft.Name" aria-label="@Loc["RolNameLabel"]"
+               @oninput="@(e => Draft.Name = e.Value?.ToString() ?? string.Empty)" />
+    </div>
+    <div class="ra-field">
+        <div class="ra-field-label">@Loc["RolCategoryLabel"]</div>
+        <RoleCategorySelect Categories="Categories" Value="@Draft.Category" ValueChanged="@(value => Draft.Category = value)" />
+    </div>
+    <div class="ra-field ra-field--narrow">
+        <div class="ra-field-label">@Loc["RolColorLabel"]</div>
+        <input class="ra-input" type="text" value="@Draft.Color" aria-label="@Loc["RolColorLabel"]"
+               @oninput="@(e => Draft.Color = e.Value?.ToString() ?? string.Empty)" />
+    </div>
+    <div class="ra-field ra-field--narrow">
+        <div class="ra-field-label">@Loc["RolPriorityLabel"]</div>
+        <input class="ra-input" type="number" inputmode="numeric" value="@Draft.Priority" disabled="@Role.IsSystem" aria-label="@Loc["RolPriorityLabel"]"
+               title="@Loc["RolPriorityHelper"]"
+               @onchange="@(e => OnPriorityChange(e.Value?.ToString()))" />
+    </div>
+</div>
+
+<div class="ra-section ra-notes">
+    @if (EveryPermissionReason is { } reason)
+    {
+        <div class="ra-note ra-note--access">
+            <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Class="ra-ico ra-note-ico" />
+            <span>@Loc[reason == "owner" ? "RolAccessOwnerNote" : "RolAccessAdministratorNote"]</span>
+        </div>
+    }
+    <RoleNote Text="@Loc["RolResolutionExplanation"]" />
+</div>
+@foreach (var group in PortalPermission.All.GroupBy(d => d.GroupKey))
+{
+    <div class="ra-section">
+        <div class="ra-section-label">@Loc[group.Key]</div>
+        <div class="ra-perm-card">
+            @foreach (var def in group)
+            {
+                <RolePermissionRow Scope="@def.Scope" Label="@Loc[def.LabelKey]" Description="@Loc[def.DescriptionKey]" Effective="Effective" Roles="Roles"
+                                   State="@Draft.StateFor(def.Scope)" StateChanged="@(state => Draft.SetState(def.Scope, state))" />
+            }
+        </div>
+    </div>
+}
+@foreach (var category in CustomCategories)
+{
+    <div class="ra-section">
+        <div class="ra-section-label">@category.Key</div>
+        <div class="ra-perm-card">
+            @foreach (var permission in category)
+            {
+                <RolePermissionRow Scope="@permission.Scope" Label="@permission.Scope" Description="@permission.Description" Effective="Effective" Roles="Roles"
+                                   State="@Draft.StateFor(permission.Scope)" StateChanged="@(state => Draft.SetState(permission.Scope, state))" />
+            }
+        </div>
+    </div>
+}
+
+<div class="ra-section ra-section--actions">
+    <button type="button" class="ra-btn ra-btn--primary" @onclick="OnSave" disabled="@Saving">
+        <MudIcon Icon="@Icons.Material.Filled.Save" Class="ra-ico" /> @Loc["RolSaveRole"]
+    </button>
+    @if (!Role.IsSystem)
+    {
+        <button type="button" class="ra-btn ra-btn--danger" @onclick="OnDelete" disabled="@Saving">
+            <MudIcon Icon="@Icons.Material.Filled.Delete" Class="ra-ico" /> @Loc["Delete"]
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>The role as stored.</summary>
+    [Parameter, EditorRequired] public PortalRoleModel Role { get; set; } = null!;
+
+    /// <summary>The fields as edited.</summary>
+    [Parameter, EditorRequired] public RoleDraft Draft { get; set; } = null!;
+
+    /// <summary>The role categories the role may sit in.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<RoleCategory> Categories { get; set; } = [];
+
+    /// <summary>The custom permissions by category.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<IGrouping<string, CustomPermission>> CustomCategories { get; set; } = [];
+
+    /// <summary>The viewer's own access, by scope.</summary>
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, PermissionExplanation> Effective { get; set; } = new Dictionary<string, PermissionExplanation>();
+
+    /// <summary>The game's roles, to name the ones that decided the viewer's access.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<PortalRoleModel> Roles { get; set; } = [];
+
+    [Parameter] public bool Saving { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    /// <summary>The global resolution the viewer holds, when one decides every scope; null otherwise.</summary>
+    private string? EveryPermissionReason =>
+        Effective.Values.Select(d => d.Reason).FirstOrDefault(RoleAccessBadge.IsGlobalReason);
+
+    private void OnPriorityChange(string? raw)
+    {
+        if (int.TryParse(raw?.Trim(), out var v))
+        {
+            Draft.Priority = v;
+        }
+    }
+}
