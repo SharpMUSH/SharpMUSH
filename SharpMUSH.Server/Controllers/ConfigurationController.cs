@@ -8,6 +8,7 @@ using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -130,7 +131,7 @@ public class ConfigurationController(
 	/// e.g. "Net.Port" or "Limit.MaxLogins"; both halves match case-insensitively. A number outside the
 	/// option's declared range is clamped to the bound and added to <paramref name="corrections"/>, for the caller to log once stored (#1335).
 	/// </summary>
-	private SharpMUSHOptions ApplyUpdates(
+	private static SharpMUSHOptions ApplyUpdates(
 		SharpMUSHOptions current,
 		Dictionary<string, JsonElement> updates,
 		List<ConfigBoundCorrection> corrections,
@@ -141,114 +142,140 @@ public class ConfigurationController(
 
 		foreach (var (path, value) in updates)
 		{
-			var parts = path.Split('.', 2);
-			if (parts.Length != 2)
+			switch (ApplyUpdate(result, path, value, corrections))
 			{
-				errors[path] = $"Invalid property path: '{path}'. Expected format: 'Category.Property'";
-				continue;
-			}
-
-			var category = ConfigAccessor.ResolveCategoryName(parts[0]);
-			if (category is null)
-			{
-				errors[path] = $"Unknown category: '{parts[0]}'";
-				continue;
-			}
-
-			// A property name alone identifies the property — they are unique across categories — so the
-			// category half is checked rather than used, and a path naming a property that lives in another
-			// category is rejected instead of being dropped on the floor.
-			var property = ConfigAccessor.ResolvePropertyName(parts[1]);
-			if (property is null || ConfigAccessor.GetCategoryForProperty(property) != category)
-			{
-				errors[path] = $"Unknown property: '{parts[1]}' in category '{category}'";
-				continue;
-			}
-
-			try
-			{
-				var converted = ConvertJsonElement(value, ConfigAccessor.GetPropertyType(property)!);
-				result = ConfigAccessor.WithValue(result, property, converted, corrections.Add);
-			}
-			// Only what converting a JsonElement and assigning it can raise. Anything else — a null
-			// dereference, a missing switch arm in the generated setter — is a defect in this code, and
-			// reporting it to the caller as "Invalid value" would bury it in a 400.
-			catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException
-				or OverflowException or InvalidCastException or ArgumentException or NotSupportedException)
-			{
-				errors[path] = $"Invalid value: {ex.Message}";
+				case SharpMUSHOptions applied:
+					result = applied;
+					break;
+				case Error<string> error:
+					errors[path] = error.Value;
+					break;
 			}
 		}
 
 		return result;
 	}
 
+	private static Result<SharpMUSHOptions> ApplyUpdate(
+		SharpMUSHOptions current,
+		string path,
+		JsonElement value,
+		List<ConfigBoundCorrection> corrections) =>
+		ResolvePropertyPath(path) switch
+		{
+			string property => ApplyValue(current, property, value, corrections),
+			Error<string> error => error
+		};
 
-	private static object? ConvertJsonElement(JsonElement element, Type targetType)
+	private static Result<string> ResolvePropertyPath(string path)
 	{
-		var underlyingType = Nullable.GetUnderlyingType(targetType);
-		var isNullable = underlyingType != null;
-		var actualType = underlyingType ?? targetType;
-
-		if (element.ValueKind == JsonValueKind.Null)
+		var parts = path.Split('.', 2);
+		if (parts.Length != 2)
 		{
-			if (isNullable || !targetType.IsValueType)
-				return null;
-			throw new InvalidOperationException($"Cannot set non-nullable type {targetType.Name} to null");
+			return new Error<string>($"Invalid property path: '{path}'. Expected format: 'Category.Property'");
 		}
 
-		if (actualType == typeof(bool))
-			return element.GetBoolean();
-
-		if (actualType == typeof(int))
-			return element.GetInt32();
-
-		if (actualType == typeof(uint))
+		var category = ConfigAccessor.ResolveCategoryName(parts[0]);
+		if (category is null)
 		{
-			// Handle negative values sent as int
-			if (element.ValueKind == JsonValueKind.Number)
+			return new Error<string>($"Unknown category: '{parts[0]}'");
+		}
+
+		// A property name alone identifies the property — they are unique across categories — so the
+		// category half is checked rather than used, and a path naming a property that lives in another
+		// category is rejected instead of being dropped on the floor.
+		var property = ConfigAccessor.ResolvePropertyName(parts[1]);
+		return property is null || ConfigAccessor.GetCategoryForProperty(property) != category
+			? new Error<string>($"Unknown property: '{parts[1]}' in category '{category}'")
+			: property;
+	}
+
+	private static Result<SharpMUSHOptions> ApplyValue(
+		SharpMUSHOptions current,
+		string property,
+		JsonElement value,
+		List<ConfigBoundCorrection> corrections)
+	{
+		try
+		{
+			return ConvertJsonElement(value, ConfigAccessor.GetPropertyType(property)!) switch
 			{
-				if (element.TryGetUInt32(out var uval)) return uval;
-				if (element.TryGetInt32(out var ival) && ival >= 0) return (uint)ival;
-				throw new InvalidOperationException($"Value {element} is out of range for uint");
-			}
-			throw new InvalidOperationException($"Expected number, got {element.ValueKind}");
+				Error<string> error => new Error<string>($"Invalid value: {error.Value}"),
+				None => ConfigAccessor.WithValue(current, property, null, corrections.Add),
+				object converted => ConfigAccessor.WithValue(current, property, converted, corrections.Add)
+			};
 		}
-
-		if (actualType == typeof(long))
-			return element.GetInt64();
-
-		if (actualType == typeof(double))
-			return element.GetDouble();
-
-		if (actualType == typeof(float))
-			return element.GetSingle();
-
-		if (actualType == typeof(string))
-			return element.GetString();
-
-		if (actualType == typeof(char))
+		// Only what reading a JsonElement and assigning it can raise. Anything else — a null
+		// dereference, a missing switch arm in the generated setter — is a defect in this code, and
+		// reporting it to the caller as "Invalid value" would bury it in a 400.
+		catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException
+			or OverflowException or InvalidCastException or ArgumentException or NotSupportedException)
 		{
-			var str = element.GetString();
-			return str?.Length > 0 ? str[0] : throw new InvalidOperationException("Empty string for char");
+			return new Error<string>($"Invalid value: {ex.Message}");
 		}
+	}
 
-		if (actualType == typeof(string[]))
+	/// <summary>The value an option is set to: an object, null (<see cref="None"/>), or why the JSON cannot be one.</summary>
+	private union ConvertedValue(object, None, Error<string>);
+
+	private static ConvertedValue ConvertJsonElement(JsonElement element, Type targetType)
+	{
+		var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+		return actualType switch
 		{
-			return element.EnumerateArray().Select(e => e.GetString()!).ToArray();
-		}
+			_ when element.ValueKind == JsonValueKind.Null => NullFor(targetType),
+			_ when actualType == typeof(uint) => ReadUInt32(element),
+			_ when actualType == typeof(char) => ReadChar(element),
+			_ => ReadValue(element, actualType, targetType) is { } value ? value : new None()
+		};
+	}
 
-		if (actualType == typeof(Dictionary<string, string[]>))
+	private static ConvertedValue NullFor(Type targetType) =>
+		Nullable.GetUnderlyingType(targetType) is not null || !targetType.IsValueType
+			? new None()
+			: new Error<string>($"Cannot set non-nullable type {targetType.Name} to null");
+
+	// Handle negative values sent as int
+	private static ConvertedValue ReadUInt32(JsonElement element) => element.ValueKind switch
+	{
+		JsonValueKind.Number when element.TryGetUInt32(out var uval) => uval,
+		JsonValueKind.Number when element.TryGetInt32(out var ival) && ival >= 0 => (uint)ival,
+		JsonValueKind.Number => new Error<string>($"Value {element} is out of range for uint"),
+		_ => new Error<string>($"Expected number, got {element.ValueKind}")
+	};
+
+	private static ConvertedValue ReadChar(JsonElement element) =>
+		element.GetString() is { Length: > 0 } str
+			? str[0]
+			: new Error<string>("Empty string for char");
+
+	private static object? ReadValue(JsonElement element, Type actualType, Type targetType) => actualType switch
+	{
+		_ when actualType == typeof(bool) => element.GetBoolean(),
+		_ when actualType == typeof(int) => element.GetInt32(),
+		_ when actualType == typeof(long) => element.GetInt64(),
+		_ when actualType == typeof(double) => element.GetDouble(),
+		_ when actualType == typeof(float) => element.GetSingle(),
+		_ when actualType == typeof(string) => element.GetString(),
+		_ when actualType == typeof(string[]) => ReadStrings(element),
+		_ when actualType == typeof(Dictionary<string, string[]>) => ReadStringArrays(element),
+		_ => JsonSerializer.Deserialize(element.GetRawText(), targetType)
+	};
+
+	private static string[] ReadStrings(JsonElement element) =>
+		element.EnumerateArray().Select(e => e.GetString()!).ToArray();
+
+	// The indexer rather than ToDictionary: a key repeated in the JSON keeps its last value instead of
+	// failing the update.
+	private static Dictionary<string, string[]> ReadStringArrays(JsonElement element)
+	{
+		var dict = new Dictionary<string, string[]>();
+		foreach (var prop in element.EnumerateObject())
 		{
-			var dict = new Dictionary<string, string[]>();
-			foreach (var prop in element.EnumerateObject())
-			{
-				dict[prop.Name] = prop.Value.EnumerateArray().Select(e => e.GetString()!).ToArray();
-			}
-			return dict;
+			dict[prop.Name] = ReadStrings(prop.Value);
 		}
 
-		return JsonSerializer.Deserialize(element.GetRawText(), targetType);
+		return dict;
 	}
 
 	[HttpPost("import")]
