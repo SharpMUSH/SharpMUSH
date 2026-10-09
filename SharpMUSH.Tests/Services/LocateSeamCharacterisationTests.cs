@@ -67,7 +67,7 @@ public class LocateSeamCharacterisationTests
 		_mediator.CreateStream(
 				Arg.Is<GetContentsQuery>(q => Number(q) == number),
 				Arg.Any<CancellationToken>())
-			.Returns(_ => contents.Select(x => x.AsContent).ToAsyncEnumerable());
+			.Returns(_ => contents.Select(x => x.AsOptionalContent.Expect<AnySharpContent>()).ToAsyncEnumerable());
 
 	private static int Number(GetContentsQuery q) => (q.DBRef switch { DBRef d => d, AnySharpContainer c => c.Object().DBRef }).Number;
 

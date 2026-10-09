@@ -242,7 +242,7 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: false);
 
 		await communicationService.Received(1).SendToRoomAsync(
-			player, player.AsContainer,
+			player, player.AsOptionalContainer.Expect<AnySharpContainer>(),
 			Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 			INotifyService.NotificationType.Announce,
 			null, null);
@@ -298,7 +298,7 @@ public class ConnectionAnnounceServiceTests
 				Arg.Is<GetContentsQuery>(q =>
 					ContainerNumber(q.DBRef) == masterRoom.Object.Key),
 				Arg.Any<CancellationToken>())
-			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
+			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsOptionalContent.Expect<AnySharpContent>()));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
 
@@ -338,7 +338,7 @@ public class ConnectionAnnounceServiceTests
 		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 		mediator.CreateStream(Arg.Is<GetContentsQuery>(q => ContainerNumber(q.DBRef) == masterRoom.Object.Key), Arg.Any<CancellationToken>())
-			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
+			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsOptionalContent.Expect<AnySharpContent>()));
 
 		var order = new List<string>();
 		var queued = new List<(MString Body, ParserState State)>();
@@ -427,7 +427,7 @@ public class ConnectionAnnounceServiceTests
 				Arg.Is<GetContentsQuery>(q =>
 					ContainerNumber(q.DBRef) == masterRoom.Object.Key),
 				Arg.Any<CancellationToken>())
-			.Returns(_ => new[] { throwingHookTarget, laterHookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
+			.Returns(_ => new[] { throwingHookTarget, laterHookTarget }.ToAsyncEnumerable().Select(x => x.AsOptionalContent.Expect<AnySharpContent>()));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
 

@@ -103,7 +103,7 @@ public class OemitCompatibilityTests
 	{
 		var actor = await Player("ExitOmitActor");
 		var room = await Room(actor);
-		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsContainer,
+		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsOptionalContainer.Expect<AnySharpContainer>(),
 			(await Node(actor.DbRef)).Expect<SharpPlayer>()));
 		var message = $"exit_{Guid.NewGuid():N}";
 		var result = await Emit(actor, name, function, $"{exit}/{actor.DbRef}", message);
@@ -165,7 +165,7 @@ public class OemitCompatibilityTests
 		var omitted = await Player("OmitLimitMember");
 		var room = await Room(actor, omitted);
 		await Command($"@power {actor.DbRef}=Can_Spoof");
-		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsContainer,
+		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsOptionalContainer.Expect<AnySharpContainer>(),
 			(await Node(actor.DbRef)).Expect<SharpPlayer>()));
 		await Command($"@link {exit}={room}");
 		var exclusions = new[]
@@ -195,7 +195,7 @@ public class OemitCompatibilityTests
 		await Command($"@power {actor.DbRef}=Can_Spoof");
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "EmitContentsThing");
 		await Command($"@tel {thing}={room}");
-		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsContainer,
+		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsOptionalContainer.Expect<AnySharpContainer>(),
 			(await Node(actor.DbRef)).Expect<SharpPlayer>()));
 		var contents = await Mediator.CreateStream(new GetContentsQuery(room)).ToArrayAsync();
 		await Assert.That(contents.Any(item => item.Object().DBRef == exit)).IsTrue();

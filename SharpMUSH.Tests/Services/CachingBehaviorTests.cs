@@ -511,8 +511,8 @@ public class CachingBehaviorTests
 		var mover = await mediator.Send(TestIsolationHelpers.CreateTestPlayerCommand(
 			TestIsolationHelpers.GenerateUniqueName("TagDeclMover"), source, source, (int)options.CurrentValue.Limit.StartingQuota));
 
-		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>().AsContent;
-		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
+		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>().AsOptionalContent.Expect<AnySharpContent>();
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var command = new Library.Commands.Database.MoveObjectCommand(
 			moverContent, destinationContainer, OldContainer: source);
@@ -564,7 +564,7 @@ public class CachingBehaviorTests
 
 		var movers = (await Task.WhenAll(Enumerable.Range(0, 25).Select(_ => PopulateInto(source)))).ToList();
 
-		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 
 		using var readersRun = new CancellationTokenSource();
 		var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
@@ -579,7 +579,7 @@ public class CachingBehaviorTests
 		foreach (var mover in movers)
 		{
 			var moverObject = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>();
-			await moveService.MoveIt(Parser, moverObject.AsContent, destinationContainer, noMoveMsgs: true,
+			await moveService.MoveIt(Parser, moverObject.AsOptionalContent.Expect<AnySharpContent>(), destinationContainer, noMoveMsgs: true,
 				moverObject.Object().DBRef, "move");
 
 			var contents = await mediator.CreateStream(new GetContentsQuery(destination)).ToListAsync();

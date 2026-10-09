@@ -132,7 +132,7 @@ public class ObjectDestructionTests
 		await RunAsync($"@link {occupant}={home}");
 		await RunAsync($"@tel {occupant}={container}");
 
-		var beforeLocation = (await Mediator.Send(new GetObjectNodeQuery(occupant))).Expect<AnySharpObject>().AsContent;
+		var beforeLocation = (await Mediator.Send(new GetObjectNodeQuery(occupant))).Expect<AnySharpObject>().AsOptionalContent.Expect<AnySharpContent>();
 		await Assert.That((await beforeLocation.Location()).Object().DBRef.Number).IsEqualTo(container.Number);
 
 		await RunAsync($"@destroy {container}");
@@ -140,7 +140,7 @@ public class ObjectDestructionTests
 
 		var survivor = (await Mediator.Send(new GetObjectNodeQuery(occupant))).Expect<AnySharpObject>();
 
-		var location = await survivor.AsContent.Location();
+		var location = await survivor.AsOptionalContent.Expect<AnySharpContent>().Location();
 		await Assert.That(location.Object().DBRef.Number).IsEqualTo(home.Number);
 	}
 
@@ -213,7 +213,7 @@ public class ObjectDestructionTests
 		var survivor = (await Mediator.Send(new GetObjectNodeQuery(resident))).Expect<AnySharpObject>();
 
 		// Resolving Home at all is the assertion: a missing home edge throws.
-		var newHome = (await survivor.AsContent.Home()).Expect<AnySharpContainer>();
+		var newHome = (await survivor.AsOptionalContent.Expect<AnySharpContent>().Home()).Expect<AnySharpContainer>();
 		await Assert.That(newHome.Object().DBRef.Number).IsNotEqualTo(home.Number);
 	}
 
@@ -482,7 +482,7 @@ public class ObjectDestructionTests
 
 		// A refused free changes nothing, so what the player carries has not been evacuated either.
 		var stillCarried = (await Mediator.Send(new GetObjectNodeQuery(carried))).Expect<AnySharpObject>();
-		await Assert.That((await stillCarried.AsContent.Location()).Object().DBRef.Number).IsEqualTo(player.Number);
+		await Assert.That((await stillCarried.AsOptionalContent.Expect<AnySharpContent>().Location()).Object().DBRef.Number).IsEqualTo(player.Number);
 	}
 
 	private static IMoveService MoveServiceAnswering(

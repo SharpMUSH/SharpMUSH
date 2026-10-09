@@ -533,7 +533,7 @@ public class PackageInstallServiceTests
 		// from the shared http_handler. Mirrors how http-hooks attaches to #4.
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		// A pre-existing object the package will attach to (not created by it).
 		var hostDbref = await Database.CreateThingAsync("Attach Host", location, pm, location);

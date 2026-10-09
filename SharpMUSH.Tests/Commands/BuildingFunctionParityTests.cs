@@ -78,9 +78,7 @@ public class BuildingFunctionParityTests
 
 	/// <summary>
 	/// An exit cannot hold anything, so an executor that is one builds into the room it is in.
-	/// <c>AnySharpObject.AsContainer</c> throws for an exit, which made <c>@create</c> run by an
-	/// exit's code fault outright; <c>create()</c> had a <c>Where()</c> fallback until the two were
-	/// merged, and then it faulted too.
+	/// <c>@create</c> and <c>create()</c> both build into <c>Where()</c>, the exit's room.
 	/// </summary>
 	[Test]
 	[Arguments(true)]

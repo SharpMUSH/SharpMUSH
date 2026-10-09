@@ -29,7 +29,7 @@ public class StampedLockOperandTests
 		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message!.ToPlainText())))).Expect<AnySharpObject>();
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		if (prefix == "+")
-			await Mediator.Send(new MoveObjectCommand(target.MinusRoom(), god.AsContainer, (await target.Where()).Object().DBRef));
+			await Mediator.Send(new MoveObjectCommand(target.AsOptionalContent.Expect<AnySharpContent>(), god.AsOptionalContainer.Expect<AnySharpContainer>(), (await target.Where()).Object().DBRef));
 		var unlocker = prefix is "" or "=" ? target : god;
 		var identity = target.Object().DBRef;
 		await Assert.That(identity.CreationMilliseconds.HasValue).IsTrue();

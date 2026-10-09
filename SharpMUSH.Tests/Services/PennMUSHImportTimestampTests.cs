@@ -308,6 +308,6 @@ public class PennMUSHImportTimestampTests
 	{
 		var limbo = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>();
 		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
-		return (limbo.AsContainer, god);
+		return (limbo.AsOptionalContainer.Expect<AnySharpContainer>(), god);
 	}
 }

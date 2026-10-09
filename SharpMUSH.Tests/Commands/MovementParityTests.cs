@@ -372,7 +372,7 @@ public class MovementParityTests
 		var destination = await Node(to);
 
 		var seen = await MessagesWhile(mover.DbRef, async () =>
-			await MoveService.EnterRoom(GodParser, moverNode.AsContent, destination.AsContainer,
+			await MoveService.EnterRoom(GodParser, moverNode.AsOptionalContent.Expect<AnySharpContent>(), destination.AsOptionalContainer.Expect<AnySharpContainer>(),
 				noMoveMsgs: false, mover.DbRef, "test"));
 
 		await Assert.That(seen.Any(m => m.Contains("An unmistakable arrival room."))).IsTrue();
@@ -398,7 +398,7 @@ public class MovementParityTests
 		var destination = await Node(to);
 
 		var seen = await MessagesWhile(mover.DbRef, async () =>
-			await MoveService.EnterRoom(GodParser, moverNode.AsContent, destination.AsContainer,
+			await MoveService.EnterRoom(GodParser, moverNode.AsOptionalContent.Expect<AnySharpContent>(), destination.AsOptionalContainer.Expect<AnySharpContainer>(),
 				noMoveMsgs: true, mover.DbRef, "test"));
 
 		await Assert.That(seen.Any(m => m.Contains("Silently arrived."))).IsTrue();
@@ -432,7 +432,7 @@ public class MovementParityTests
 
 		var allowed = await MoveService.EnterRoom(
 			GodParser.Push(GodParser.CurrentState with { MoveDepth = atCap }),
-			moverNode.AsContent, destination.AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+			moverNode.AsOptionalContent.Expect<AnySharpContent>(), destination.AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		await Assert.That(allowed.Value).IsTypeOf<Success>();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(to));
@@ -446,7 +446,7 @@ public class MovementParityTests
 
 		var refused = await MoveService.EnterRoom(
 			GodParser.Push(GodParser.CurrentState with { MoveDepth = pastCap }),
-			(await Node(mover.DbRef)).AsContent, (await Node(from)).AsContainer,
+			(await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(), (await Node(from)).AsOptionalContainer.Expect<AnySharpContainer>(),
 			noMoveMsgs: true, mover.DbRef, "test");
 
 		await Assert.That(refused.Expect<Error<string>>().Value).IsEqualTo(ErrorMessages.Notifications.TooManyContainers);
@@ -486,8 +486,8 @@ public class MovementParityTests
 		// The control: a shallow parser shows the description, so the assertion below is about depth
 		// and not about the room being unreadable.
 		var shallow = await MessagesWhile(mover.DbRef, async () =>
-			await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsContent,
-				(await Node(shallowTo)).AsContainer, noMoveMsgs: true, mover.DbRef, "test"));
+			await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+				(await Node(shallowTo)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test"));
 
 		await Assert.That(shallow.Any(m => m.Contains("A description from depth."))).IsTrue();
 
@@ -498,8 +498,8 @@ public class MovementParityTests
 		var deepParser = GodParser.Push(GodParser.CurrentState with { FunctionRecursionDepths = spent });
 
 		var deep = await MessagesWhile(mover.DbRef, async () =>
-			await MoveService.EnterRoom(deepParser, (await Node(mover.DbRef)).AsContent,
-				(await Node(deepTo)).AsContainer, noMoveMsgs: true, mover.DbRef, "test"));
+			await MoveService.EnterRoom(deepParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+				(await Node(deepTo)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test"));
 
 		await Assert.That(deep.Any(m => m.Contains("A description from depth."))).IsFalse();
 		await Assert.That(deep.Any(m => m.Contains(ErrorMessages.Returns.Recursion))).IsTrue();
@@ -532,8 +532,8 @@ public class MovementParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropToMover");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
 
-		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(leavingFor)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(leavingFor)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		await Assert.That(await LocationOf(luggage.ToString())).IsEqualTo(BareDbref(dropTo));
 	}
@@ -559,8 +559,8 @@ public class MovementParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NoDropToMover");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
 
-		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(leavingFor)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(leavingFor)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		await Assert.That(await LocationOf(luggage.ToString())).IsEqualTo(BareDbref(room));
 	}
@@ -592,8 +592,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={start}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
 
-		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(elsewhere)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(elsewhere)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		await Assert.That(result.Value).IsTypeOf<Success>();
 		await Assert.That(await LocationOf(sticky.ToString())).IsEqualTo(BareDbref(home));
@@ -621,8 +621,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={start}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
 
-		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(elsewhere)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(elsewhere)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		// The control: luggage stays on the mover whenever the teleport does not happen at all, so
 		// the move has to be shown to have happened before its location says anything about safe_tel.
@@ -662,8 +662,8 @@ public class MovementParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "StickyLuggageMover");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
 
-		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(leavingFor)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(leavingFor)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		await Assert.That(await LocationOf(sticky.ToString())).IsEqualTo(BareDbref(itemHome));
 		await Assert.That(await LocationOf(plain.ToString())).IsEqualTo(BareDbref(dropTo));
@@ -695,8 +695,8 @@ public class MovementParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropperStaysMover");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
 
-		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(leavingFor)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(leavingFor)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		await Assert.That(await LocationOf(luggage.ToString())).IsEqualTo(BareDbref(room));
 		await Assert.That(await LocationOf(stayer.DbRef.ToString())).IsEqualTo(BareDbref(room));
@@ -730,8 +730,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={start}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
 
-		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(elsewhere)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(elsewhere)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
 
 		// The control: luggage stays on the mover whenever the teleport does not happen at all, so
 		// the move has to be shown to have happened before its location says anything about safe_tel.
@@ -775,8 +775,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&AMOVE {sticky}=&MOVED me=yes"));
 
-		await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
-			(await Node(elsewhere)).AsContainer, noMoveMsgs: false, mover.DbRef, "test");
+		await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(elsewhere)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: false, mover.DbRef, "test");
 		await Scheduler.SettleForTestsAsync();
 
 		await Assert.That(await LocationOf(sticky.ToString()))
@@ -787,8 +787,8 @@ public class MovementParityTests
 
 		// Positive control: an empty MOVED only means the skip fired if the AMOVE would otherwise
 		// have run. Move the item itself and the triad must set it.
-		await MoveService.EnterRoom(GodParser, (await Node(sticky.ToString())).AsContent,
-			(await Node(elsewhere)).AsContainer, noMoveMsgs: false, mover.DbRef, "test");
+		await MoveService.EnterRoom(GodParser, (await Node(sticky.ToString())).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(elsewhere)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: false, mover.DbRef, "test");
 		await Scheduler.SettleForTestsAsync();
 
 		var movedNow = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
@@ -878,8 +878,8 @@ public class MovementParityTests
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "TagThing");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={origin}"));
 
-		var mover = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>().AsContent;
-		var into = (await Mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
+		var mover = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>().AsOptionalContent.Expect<AnySharpContent>();
+		var into = (await Mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var move = new MoveObjectCommand(mover, into, origin);
 
@@ -1565,8 +1565,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@chown/preserve {destination}={owner.DbRef}"));
 
-		var result = await MoveService.SafeTel(GodParser, (await Node(exit)).AsContent,
-			(await Node(destination)).AsContainer, noMoveMsgs: true, new DBRef(1), "test");
+		var result = await MoveService.SafeTel(GodParser, (await Node(exit)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(destination)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, new DBRef(1), "test");
 
 		await Assert.That(result.Value).IsTypeOf<Error<string>>()
 			.Because("only a Mobile is moved by enter_room (move.c:243)");

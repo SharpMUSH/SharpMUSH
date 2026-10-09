@@ -57,7 +57,7 @@ public class NoSpoofEmitRealityTests
 			new AnyOptionalSharpObject(call.Arg<GetObjectNodeQuery>().DBRef.Equals(executor.Object().DBRef)
 				? executor : enactor));
 		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
-			.Returns(new[] { recipient.MinusRoom() }.ToAsyncEnumerable());
+			.Returns(new[] { recipient.AsOptionalContent.Expect<AnySharpContent>() }.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
 		var attributes = Substitute.For<IAttributeService>();
 		attributes.EvaluateAttributeFunctionAsync(Arg.Any<IMUSHCodeParser>(), executor, executor, "SPEECHMOD",

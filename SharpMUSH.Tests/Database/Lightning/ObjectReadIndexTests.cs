@@ -30,7 +30,7 @@ public class ObjectReadIndexTests : LightningDatabaseFixture
 	{
 		var a = await NewPlayer($"Owner{tag}A");
 		var b = await NewPlayer($"Owner{tag}B");
-		var room = (await Node(new DBRef(0))).AsContainer;
+		var room = (await Node(new DBRef(0))).AsOptionalContainer.Expect<AnySharpContainer>();
 		var zone = await Db.CreateThingAsync($"Zone{tag}", room, a, room);
 		var parent = await Db.CreateThingAsync($"Parent{tag}", room, a, room);
 		var things = new DBRef[10];
@@ -115,7 +115,7 @@ public class ObjectReadIndexTests : LightningDatabaseFixture
 	public async Task SeededSearchPagesAndSeesConcurrentMutation()
 	{
 		var owner = await NewPlayer("PagedOwner");
-		var room = (await Node(new DBRef(0))).AsContainer;
+		var room = (await Node(new DBRef(0))).AsOptionalContainer.Expect<AnySharpContainer>();
 		var things = new List<DBRef>();
 		for (var i = 0; i < 300; i++)
 		{
@@ -142,7 +142,7 @@ public class ObjectReadIndexTests : LightningDatabaseFixture
 	public async Task TypeIndexFollowsCreateAndDelete()
 	{
 		var player = await NewPlayer("TypedPlayer");
-		var room = (await Node(new DBRef(0))).AsContainer;
+		var room = (await Node(new DBRef(0))).AsOptionalContainer.Expect<AnySharpContainer>();
 		var thing = await Db.CreateThingAsync("TypedThing", room, player, room);
 		var newRoom = await Db.CreateRoomAsync("TypedRoom", player);
 		var exit = await Db.CreateExitAsync("TypedExit", [], room, player);

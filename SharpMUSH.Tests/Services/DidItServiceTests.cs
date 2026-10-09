@@ -167,7 +167,7 @@ public class DidItServiceTests
 			? dbref!.Value
 			: throw new InvalidOperationException($"@dig did not return a dbref: {roomRef}");
 
-		return (await Mediator.Send(new GetObjectNodeQuery(parsed))).Expect<AnySharpObject>().AsContainer;
+		return (await Mediator.Send(new GetObjectNodeQuery(parsed))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 	}
 
 	[Test]

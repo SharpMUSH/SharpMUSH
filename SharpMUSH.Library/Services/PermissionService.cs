@@ -295,12 +295,12 @@ public class PermissionService(
 			return true;
 		}
 
-		if (!what.IsPlayer || await what.HasFlag("UNFINDABLE"))
+		if (what is not SharpPlayer player || await what.HasFlag("UNFINDABLE"))
 		{
 			return false;
 		}
 
-		return !await IsUnfindable((await what.AsContent.Location()).WithExitOption());
+		return !await IsUnfindable((await player.Location.WithCancellation(CancellationToken.None)).WithExitOption());
 	}
 
 	/// <summary>
@@ -320,12 +320,12 @@ public class PermissionService(
 				return true;
 			}
 
-			if (current.IsRoom || !current.IsContent)
+			if (current.IsRoom || current.AsOptionalContent is not AnySharpContent content)
 			{
 				return false;
 			}
 
-			current = (await current.AsContent.Location()).WithExitOption();
+			current = (await content.Location()).WithExitOption();
 		}
 
 		// Fail closed. Reaching the cap means the walk never found a room or a terminating container,

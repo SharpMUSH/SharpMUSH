@@ -30,7 +30,7 @@ public class ChannelMemberProjectionTests
 	{
 		var ownerNode = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		var owner = ownerNode.Expect<SharpPlayer>();
-		var home = ownerNode.AsContainer;
+		var home = ownerNode.AsOptionalContainer.Expect<AnySharpContainer>();
 		var channelName = $"MemberProj{Guid.NewGuid():N}"[..20];
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open"], owner));
 

@@ -272,8 +272,8 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(imported.Object().Name).IsEqualTo("Scene Logger");
 		await Assert.That((await imported.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number)
 			.IsEqualTo(1);
-		await Assert.That((await imported.AsContent.Location()).Object().DBRef.Number).IsEqualTo(1);
-		await Assert.That((await imported.AsContent.Home()).Object()!.DBRef.Number).IsEqualTo(1);
+		await Assert.That((await imported.AsOptionalContent.Expect<AnySharpContent>().Location()).Object().DBRef.Number).IsEqualTo(1);
+		await Assert.That((await imported.AsOptionalContent.Expect<AnySharpContent>().Home()).Object()!.DBRef.Number).IsEqualTo(1);
 		await Assert.That(await SharpMUSH.Library.HelperFunctions.HasFlag(imported, "WIZARD")).IsTrue();
 		var attribute = (await world.Database.GetAttributeAsync(logger, ["CMD`SAY"]).ToListAsync()).Single();
 		await Assert.That((await attribute.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number)
