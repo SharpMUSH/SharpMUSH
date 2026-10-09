@@ -127,11 +127,15 @@ public class ScenePoseTypeIntegrationTests
 			await As(reader, $"+scene/hide {key}");
 			await Assert.That(await Eval($"get(#{reader.DbRef.Number}/SCENE`HIDE)")).IsEqualTo(key);
 			await Assert.That(await As(reader, "+scene/hide")).Contains($"Hidden from your recall and log: {key}.");
+
+			await Assert.That(await As(staff, $"+scene/type/remove {key}")).Contains($"Removed pose type {key}.");
+			await Assert.That(await Eval($"hasattr({logger},TYPE`{key})")).IsEqualTo("0")
+				.Because("an empty TYPE attribute left behind is listed by @scene/types as one it could not read");
 		}
 		finally
 		{
 			await God($"@wipe {logger}/TYPE`{key.ToUpperInvariant()}`**");
-			await God($"&TYPE`{key.ToUpperInvariant()} {logger}=");
+			await God($"&TYPE`{key.ToUpperInvariant()} {logger}");
 		}
 		await Assert.That(await Eval($"scenetype({key})")).IsEqualTo("#-1 NO SUCH POSE TYPE");
 		var removed = await As(reader, "+scene/recall 1");
