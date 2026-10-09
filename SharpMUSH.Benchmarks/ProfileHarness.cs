@@ -212,8 +212,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	/// </summary>
 	private async Task<(DBRef Mortal, DBRef Big, DBRef Kid)> SeedBigObjectsAsync()
 	{
-		var room = await _database!.GetObjectNodeAsync(new DBRef(0)) is AnySharpObject { IsContainer: true } start
-			? start.AsContainer
+		var room = await _database!.GetObjectNodeAsync(new DBRef(0)) is AnySharpObject { AsOptionalContainer: AnySharpContainer start }
+			? start
 			: throw new InvalidOperationException("Room #0 is not seeded.");
 		var mortalRef = await _database.CreatePlayerAsync("ProfileMortal", "unused", new DBRef(0), new DBRef(0), 100);
 		if (await _database.GetObjectNodeAsync(mortalRef) is not (AnySharpObject and SharpPlayer mortal))
@@ -238,7 +238,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		return (mortal.Object.DBRef, (await Node(big)).Object().DBRef, (await Node(kid)).Object().DBRef);
 
 		async ValueTask<AnySharpObject> Node(DBRef dbref)
-			=> await _database.GetObjectNodeAsync(dbref) is AnySharpObject node
+			=> await _database!.GetObjectNodeAsync(dbref) is AnySharpObject node
 				? node
 				: throw new InvalidOperationException($"#{dbref.Number} is missing.");
 	}
