@@ -973,10 +973,12 @@ chat_strip_quote yes
 layout_border mush
 
 # The colour theme layouts take when they name none: a name from themes(),
-# such as terminal or nord, or a theme written as JSON. Unset, layouts are
-# drawn without colour. See 'help layout themes'.
-# OPTIONAL
-# layout_theme terminal
+# such as terminal, nord or cyberpunk, or a theme written as JSON. Unset,
+# layouts are drawn in sharpmush, the portal's teal on black; none draws
+# them without colour. See 'help layout themes'.
+# The tests check layouts in their own colours, so they are drawn without
+# the game's theme here.
+layout_theme none
 
 # Which pictures image() and figure() may show. any: every host. allow:
 # only the hosts in image_host_list. block: every host but those. off: no

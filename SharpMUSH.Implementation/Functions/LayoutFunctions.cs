@@ -327,7 +327,8 @@ public partial class Functions
 	{
 		var cosmetic = Configuration.CurrentValue.Cosmetic;
 		// Keyed on what layout_theme resolves to, so a change to an added theme it names is seen.
-		var theme = string.IsNullOrWhiteSpace(cosmetic.LayoutTheme) ? null : LayoutThemeService.Resolve(cosmetic.LayoutTheme) switch
+		var unset = string.IsNullOrWhiteSpace(cosmetic.LayoutTheme) || cosmetic.LayoutTheme.Trim().Equals(LayoutThemes.None, StringComparison.OrdinalIgnoreCase);
+		var theme = unset ? null : LayoutThemeService.Resolve(cosmetic.LayoutTheme) switch
 		{
 			string resolved => resolved,
 			_ => string.Empty,
