@@ -32,13 +32,9 @@ public class AccountController(
 	IValidateService validateService,
 	PasskeyService passkeys,
 	IPortalThemeService themes,
+	BearerAccountResolver bearer,
 	ILogger<AccountController> logger) : ControllerBase
 {
-	/// <summary>
-	/// Resolves the account session bearer. Unless <paramref name="allowMustChangePassword"/>,
-	/// accounts flagged MustChangePassword are rejected with 403 — the flag is enforced
-	/// server-side, not advisory: a flagged session may only change its password or log out.
-	/// </summary>
 	/// <summary>
 	/// The session behind this request, or null when there is no usable bearer. Used to mark which
 	/// roster entry the caller is acting as — the session token is opaque to the client, so the roster
@@ -53,100 +49,73 @@ public class AccountController(
 		return await accountSessionStore.ValidateAsync(header["Bearer ".Length..].Trim());
 	}
 
-	private async Task<(string? AccountId, IActionResult? Failure)> GetAccountIdFromBearerAsync(bool allowMustChangePassword = false)
-	{
-		// The AccountSession handler already validated the session and the account on this request.
-		if (AccountSessionAuthenticationHandler.TryGetAccount(User, out var authenticated, out var mustChange))
+	/// <summary>Runs <paramref name="action"/> as the request's signed-in account, or answers why it is refused.</summary>
+	private async Task<IActionResult> AsAccountAsync(Func<string, Task<IActionResult>> action, bool allowMustChangePassword = false)
+		=> await bearer.ResolveAsync(this, allowMustChangePassword) switch
 		{
-			return !allowMustChangePassword && mustChange
-				? (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."))
-				: (authenticated, null);
-		}
-
-		// Another scheme (DebugAuth in Development) authenticated the request, or none did: validate the bearer.
-		var header = Request.Headers.Authorization.FirstOrDefault();
-		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-			return (null, Unauthorized("Invalid or expired account session."));
-
-		var token = header["Bearer ".Length..].Trim();
-		var session = await accountSessionStore.ValidateAsync(token);
-		if (session is null)
-			return (null, Unauthorized("Invalid or expired account session."));
-		var accountId = session.Value.AccountId;
-
-		var account = await accountService.GetByIdAsync(accountId);
-		if (account is null || !account.IsActive)
-			return (null, Unauthorized("Account not found or not active."));
-
-		if (!allowMustChangePassword && account.MustChangePassword)
-			return (null, StatusCode(StatusCodes.Status403Forbidden, "Password change required before this action."));
-
-		return (accountId, null);
-	}
+			SignedInAccount account => await action(account.Id),
+			ActionResult refused => refused
+		};
 
 	/// <summary>List all characters linked to the authenticated account.</summary>
 	[HttpGet("characters")]
-	public async Task<IActionResult> GetCharacters()
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		var characters = await accountService.GetCharactersAsync(accountId!);
-		// Resolved through the same rule the authentication handler applies, so the roster's
-		// isActing flag can never disagree with the identity a write actually runs as.
-		var acting = AccountSessionAuthenticationHandler.TryGetAccount(User, out _, out _)
-			? AccountSessionAuthenticationHandler.ActingCharacter(User) is { } claimed
-				? characters.FirstOrDefault(c => c.Object.DBRef == claimed)
-				: null
-			: ActingCharacterResolver.Resolve(await SessionAsync(), characters);
-		var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
-			actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime, themes: themes);
-		return Ok(summaries);
-	}
+	public Task<IActionResult> GetCharacters()
+		=> AsAccountAsync(async accountId =>
+		{
+			var characters = await accountService.GetCharactersAsync(accountId);
+			// Resolved through the same rule the authentication handler applies, so the roster's
+			// isActing flag can never disagree with the identity a write actually runs as.
+			var acting = AccountSessionAuthenticationHandler.TryGetAccount(User, out _, out _)
+				? AccountSessionAuthenticationHandler.ActingCharacter(User) is { } claimed
+					? characters.FirstOrDefault(c => c.Object.DBRef == claimed)
+					: null
+				: ActingCharacterResolver.Resolve(await SessionAsync(), characters);
+			var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
+				actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime, themes: themes);
+			return Ok(summaries);
+		});
 
 	public record CreateCharacterRequest(string Name, string Password);
 
 	/// <summary>Create a new character and link it to the authenticated account.</summary>
 	[HttpPost("characters")]
-	public async Task<IActionResult> CreateCharacter([FromBody] CreateCharacterRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		if (!options.CurrentValue.Net.PlayerCreation)
-			return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
-
-		if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
-			return BadRequest("Name and Password are required.");
-
-		// The connect screen's rule: ok_player_name(name, NOTHING, NOTHING), with bsd.c's refusals.
-		if (await mediator.CreateStream(new GetPlayerQuery(request.Name))
-				.AnyAsync(x => x.Object.Name.Equals(request.Name, StringComparison.InvariantCultureIgnoreCase)))
-			return Conflict("There is already a player with that name.");
-
-		if (!await validateService.ValidPlayerName(MarkupText.Plain(request.Name), new None(), new None()))
-			return BadRequest("That name is not allowed.");
-
-		try
+	public Task<IActionResult> CreateCharacter([FromBody] CreateCharacterRequest request)
+		=> AsAccountAsync(async accountId =>
 		{
-			var defaultHome = options.CurrentValue.Database.DefaultHome;
-			var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
-			var playerRef = await mediator.Send(new CreatePlayerCommand(
-				request.Name, request.Password,
-				new DBRef((int)defaultHome), new DBRef((int)defaultHome),
-				startingQuota));
+			if (!options.CurrentValue.Net.PlayerCreation)
+				return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
 
-			await accountService.LinkCharacterAsync(accountId!, playerRef);
+			if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
+				return BadRequest("Name and Password are required.");
 
-			logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
-			return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds, Flags = await CreatedFlagsAsync(playerRef) });
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Character creation failed for account {AccountId}", LogSanitizer.Sanitize(accountId));
-			return BadRequest(ex.Message);
-		}
-	}
+			// The connect screen's rule: ok_player_name(name, NOTHING, NOTHING), with bsd.c's refusals.
+			if (await mediator.CreateStream(new GetPlayerQuery(request.Name))
+					.AnyAsync(x => x.Object.Name.Equals(request.Name, StringComparison.InvariantCultureIgnoreCase)))
+				return Conflict("There is already a player with that name.");
+
+			if (!await validateService.ValidPlayerName(MarkupText.Plain(request.Name), new None(), new None()))
+				return BadRequest("That name is not allowed.");
+
+			try
+			{
+				var defaultHome = options.CurrentValue.Database.DefaultHome;
+				var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
+				var playerRef = await mediator.Send(new CreatePlayerCommand(
+					request.Name, request.Password,
+					new DBRef((int)defaultHome), new DBRef((int)defaultHome),
+					startingQuota));
+
+				await accountService.LinkCharacterAsync(accountId, playerRef);
+
+				logger.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via API", LogSanitizer.Sanitize(accountId), LogSanitizer.Sanitize(request.Name), playerRef.Number);
+				return Ok(new { DbrefNumber = playerRef.Number, CreationTime = playerRef.CreationMilliseconds, Flags = await CreatedFlagsAsync(playerRef) });
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "Character creation failed for account {AccountId}", LogSanitizer.Sanitize(accountId));
+				return BadRequest(ex.Message);
+			}
+		});
 
 	/// <summary>
 	/// A new character's flags, as the roster carries them: the portal adds the row to the account's list itself,
@@ -177,21 +146,19 @@ public class AccountController(
 	/// cannot be claimed; staff link those.
 	/// </summary>
 	[HttpPost("link-character")]
-	public async Task<IActionResult> LinkCharacter([FromBody] LinkCharacterRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		if (string.IsNullOrWhiteSpace(request.CharacterName))
-			return BadRequest("CharacterName is required.");
-
-		return await accountService.ClaimCharacterAsync(accountId!, request.CharacterName.Trim(), request.CharacterPassword ?? string.Empty) switch
+	public Task<IActionResult> LinkCharacter([FromBody] LinkCharacterRequest request)
+		=> AsAccountAsync(async accountId =>
 		{
-			SharpPlayer player => await ClaimedAsync(player),
-			LinkedElsewhere => Conflict("Character is already linked to another account."),
-			Library.DiscriminatedUnions.NotFound => ClaimRefused(),
-		};
-	}
+			if (string.IsNullOrWhiteSpace(request.CharacterName))
+				return BadRequest("CharacterName is required.");
+
+			return await accountService.ClaimCharacterAsync(accountId, request.CharacterName.Trim(), request.CharacterPassword ?? string.Empty) switch
+			{
+				SharpPlayer player => await ClaimedAsync(player),
+				LinkedElsewhere => Conflict("Character is already linked to another account."),
+				Library.DiscriminatedUnions.NotFound => ClaimRefused(),
+			};
+		});
 
 	private async Task<IActionResult> ClaimedAsync(SharpPlayer player)
 	{
@@ -213,90 +180,80 @@ public class AccountController(
 
 	/// <summary>Unlink a character from the authenticated account.</summary>
 	[HttpDelete("characters/{dbrefNumber:int}")]
-	public async Task<IActionResult> UnlinkCharacter(int dbrefNumber)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		if (await accountService.UnlinkCharacterAsync(accountId!, new DBRef(dbrefNumber)) is Error<string> refused)
-			return Conflict(refused.Value);
-		logger.LogInformation("Account {AccountId}: unlinked character #{Key}", LogSanitizer.Sanitize(accountId), dbrefNumber);
-		return NoContent();
-	}
+	public Task<IActionResult> UnlinkCharacter(int dbrefNumber)
+		=> AsAccountAsync(async accountId =>
+		{
+			if (await accountService.UnlinkCharacterAsync(accountId, new DBRef(dbrefNumber)) is Error<string> refused)
+				return Conflict(refused.Value);
+			logger.LogInformation("Account {AccountId}: unlinked character #{Key}", LogSanitizer.Sanitize(accountId), dbrefNumber);
+			return NoContent();
+		});
 
 	/// <summary>
 	/// Sets one of the account's characters' portal theme and accent. Any of them, not only the acting one: the
 	/// Theme settings page lists them all so a player can tell their tabs apart before opening them.
 	/// </summary>
 	[HttpPut("characters/{dbrefNumber:int}/appearance")]
-	public async Task<IActionResult> SetAppearance(int dbrefNumber, [FromBody] CharacterAppearance appearance)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		var characters = await accountService.GetCharactersAsync(accountId!);
-		if (characters.FirstOrDefault(c => c.Object.Key == dbrefNumber) is not { } character)
-			return NotFound();
-
-		return await themes.SetAppearanceAsync(character.Object, appearance) switch
+	public Task<IActionResult> SetAppearance(int dbrefNumber, [FromBody] CharacterAppearance appearance)
+		=> AsAccountAsync(async accountId =>
 		{
-			CharacterAppearance stored => Ok(stored),
-			Error<string> error => BadRequest(error.Value),
-		};
-	}
+			var characters = await accountService.GetCharactersAsync(accountId);
+			if (characters.FirstOrDefault(c => c.Object.Key == dbrefNumber) is not { } character)
+				return NotFound();
+
+			return await themes.SetAppearanceAsync(character.Object, appearance) switch
+			{
+				CharacterAppearance stored => Ok(stored),
+				Error<string> error => BadRequest(error.Value),
+			};
+		});
 
 	public record ChangePasswordRequest(string OldPassword, string NewPassword);
 
 	/// <summary>Change the account password.</summary>
 	[HttpPut("password")]
-	public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync(allowMustChangePassword: true);
-		if (failure is not null) return failure;
-
-		var result = await accountService.ChangePasswordAsync(accountId!, request.OldPassword, request.NewPassword);
-		return result switch
+	public Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+		=> AsAccountAsync(async accountId =>
 		{
-			Success => NoContent(),
-			Error<string> err => Unauthorized(err.Value)
-		};
-	}
+			var result = await accountService.ChangePasswordAsync(accountId, request.OldPassword, request.NewPassword);
+			return result switch
+			{
+				Success => NoContent(),
+				Error<string> err => Unauthorized(err.Value)
+			};
+		}, allowMustChangePassword: true);
 
 	public record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 
 	/// <summary>Add, change, or remove the account email. Send <c>null</c> for <c>NewEmail</c> to clear.</summary>
 	[HttpPut("email")]
-	public async Task<IActionResult> ChangeEmail([FromBody] ChangeEmailRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		var result = await accountService.ChangeEmailAsync(accountId!, request.NewEmail, request.CurrentPassword);
-		return result switch
+	public Task<IActionResult> ChangeEmail([FromBody] ChangeEmailRequest request)
+		=> AsAccountAsync(async accountId =>
 		{
-			Success => NoContent(),
-			Error<string> err when err.Value.Contains("already registered", StringComparison.OrdinalIgnoreCase)
-				=> Conflict(err.Value),
-			Error<string> err => Unauthorized(err.Value)
-		};
-	}
+			var result = await accountService.ChangeEmailAsync(accountId, request.NewEmail, request.CurrentPassword);
+			return result switch
+			{
+				Success => NoContent(),
+				Error<string> err when err.Value.Contains("already registered", StringComparison.OrdinalIgnoreCase)
+					=> Conflict(err.Value),
+				Error<string> err => Unauthorized(err.Value)
+			};
+		});
 
 	public record ChangeUsernameRequest(string NewUsername);
 
 	/// <summary>Change the account username.</summary>
 	[HttpPut("username")]
-	public async Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		var result = await accountService.ChangeUsernameAsync(accountId!, request.NewUsername);
-		return result switch
+	public Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
+		=> AsAccountAsync(async accountId =>
 		{
-			Success => NoContent(),
-			Error<string> err => Conflict(err.Value)
-		};
-	}
+			var result = await accountService.ChangeUsernameAsync(accountId, request.NewUsername);
+			return result switch
+			{
+				Success => NoContent(),
+				Error<string> err => Conflict(err.Value)
+			};
+		});
 
 	/// <summary>A passkey as the account's owner sees it. <paramref name="Id"/> is its credential id, base64url.</summary>
 	public record PasskeySummary(string Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt, bool IsSynced);
@@ -306,14 +263,12 @@ public class AccountController(
 
 	/// <summary>The account's passkeys, oldest first.</summary>
 	[HttpGet("passkeys")]
-	public async Task<IActionResult> GetPasskeys()
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		var held = await passkeys.ListAsync(accountId!);
-		return Ok(held.Select(Summarize).ToList());
-	}
+	public Task<IActionResult> GetPasskeys()
+		=> AsAccountAsync(async accountId =>
+		{
+			var held = await passkeys.ListAsync(accountId);
+			return Ok(held.Select(Summarize).ToList());
+		});
 
 	public record PasskeyOptionsRequest(string CurrentPassword);
 
@@ -323,76 +278,68 @@ public class AccountController(
 	/// </summary>
 	[HttpPost("passkeys/options")]
 	[EnableRateLimiting("public-api")]
-	public async Task<IActionResult> PasskeyOptions([FromBody] PasskeyOptionsRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		var account = await accountService.GetByIdAsync(accountId!);
-		if (account is null) return Unauthorized("Account not found or not active.");
-
-		if (await accountService.AuthenticateAsync(account.Username, request.CurrentPassword ?? string.Empty) is not SharpAccount confirmed
-			|| confirmed.Id != account.Id)
-			return Unauthorized("Current password is incorrect.");
-
-		return await passkeys.BeginRegistrationAsync(account, Request, HttpContext.RequestAborted) switch
+	public Task<IActionResult> PasskeyOptions([FromBody] PasskeyOptionsRequest request)
+		=> AsAccountAsync(async accountId =>
 		{
-			PasskeyService.Challenge challenge => Ok(challenge),
-			Error<string> error => BadRequest(error.Value),
-		};
-	}
+			var account = await accountService.GetByIdAsync(accountId);
+			if (account is null) return Unauthorized("Account not found or not active.");
+
+			if (await accountService.AuthenticateAsync(account.Username, request.CurrentPassword ?? string.Empty) is not SharpAccount confirmed
+				|| confirmed.Id != account.Id)
+				return Unauthorized("Current password is incorrect.");
+
+			return await passkeys.BeginRegistrationAsync(account, Request, HttpContext.RequestAborted) switch
+			{
+				PasskeyService.Challenge challenge => Ok(challenge),
+				Error<string> error => BadRequest(error.Value),
+			};
+		});
 
 	public record AddPasskeyRequest(string? CeremonyId, string? Name, JsonElement Credential);
 
 	/// <summary>Finishes adding a passkey with the browser's new credential.</summary>
 	[HttpPost("passkeys")]
-	public async Task<IActionResult> AddPasskey([FromBody] AddPasskeyRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
-
-		return await passkeys.CompleteRegistrationAsync(accountId!, request.CeremonyId, request.Name, request.Credential,
-				HttpContext.RequestAborted) switch
+	public Task<IActionResult> AddPasskey([FromBody] AddPasskeyRequest request)
+		=> AsAccountAsync(async accountId =>
 		{
-			AccountPasskey passkey => Ok(Summarize(passkey)),
-			Error<string> error => BadRequest(error.Value),
-		};
-	}
+			return await passkeys.CompleteRegistrationAsync(accountId, request.CeremonyId, request.Name, request.Credential,
+					HttpContext.RequestAborted) switch
+			{
+				AccountPasskey passkey => Ok(Summarize(passkey)),
+				Error<string> error => BadRequest(error.Value),
+			};
+		});
 
 	public record RenamePasskeyRequest(string Name);
 
 	/// <summary>Renames one of the account's passkeys.</summary>
 	[HttpPut("passkeys/{id}")]
-	public async Task<IActionResult> RenamePasskey(string id, [FromBody] RenamePasskeyRequest request)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
+	public Task<IActionResult> RenamePasskey(string id, [FromBody] RenamePasskeyRequest request)
+		=> AsAccountAsync(async accountId =>
+		{
+			var name = request.Name?.Trim();
+			if (string.IsNullOrEmpty(name))
+				return BadRequest("A passkey needs a name.");
+			if (name.Length > PasskeyService.MaxNameLength)
+				return BadRequest($"A passkey's name can be at most {PasskeyService.MaxNameLength} characters.");
 
-		var name = request.Name?.Trim();
-		if (string.IsNullOrEmpty(name))
-			return BadRequest("A passkey needs a name.");
-		if (name.Length > PasskeyService.MaxNameLength)
-			return BadRequest($"A passkey's name can be at most {PasskeyService.MaxNameLength} characters.");
-
-		return PasskeyService.CredentialIdOf(id) is { } credentialId
-			&& await passkeys.RenameAsync(accountId!, credentialId, name)
-				? NoContent()
-				: NotFound("No such passkey on this account.");
-	}
+			return PasskeyService.CredentialIdOf(id) is { } credentialId
+				&& await passkeys.RenameAsync(accountId, credentialId, name)
+					? NoContent()
+					: NotFound("No such passkey on this account.");
+		});
 
 	/// <summary>Removes one of the account's passkeys. It can no longer sign in.</summary>
 	[HttpDelete("passkeys/{id}")]
-	public async Task<IActionResult> RemovePasskey(string id)
-	{
-		var (accountId, failure) = await GetAccountIdFromBearerAsync();
-		if (failure is not null) return failure;
+	public Task<IActionResult> RemovePasskey(string id)
+		=> AsAccountAsync(async accountId =>
+		{
+			if (PasskeyService.CredentialIdOf(id) is not { } credentialId
+				|| !await passkeys.RemoveAsync(accountId, credentialId))
+				return NotFound("No such passkey on this account.");
 
-		if (PasskeyService.CredentialIdOf(id) is not { } credentialId
-			|| !await passkeys.RemoveAsync(accountId!, credentialId))
-			return NotFound("No such passkey on this account.");
-
-		return NoContent();
-	}
+			return NoContent();
+		});
 
 	/// <summary>
 	/// Invalidate the current account session token (logout), and the browser's remembered login so a
