@@ -15,8 +15,14 @@ public class MediatorObjectRelationLoader(IMediator mediator) : IObjectRelationL
 	public async Task<AnySharpContainer> LocationOf(string typedId, string objectId, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetCertainLocationQuery(typedId, objectId), cancellationToken);
 
+	/// <summary>Every object has a player for its owner; one that does not is a damaged world, and throws.</summary>
 	public async Task<SharpPlayer> OwnerOf(string objectId, int number, CancellationToken cancellationToken)
-		=> await mediator.Send(new GetOwnerOfQuery(objectId, number), cancellationToken);
+		=> await mediator.Send(new GetOwnerOfQuery(objectId, number), cancellationToken) switch
+		{
+			AnySharpObject and SharpPlayer owner => owner,
+			AnySharpObject => throw new InvalidOperationException($"The owner of #{number} is not a player"),
+			None => throw new InvalidOperationException($"No owner found for #{number}")
+		};
 
 	public async Task<AnyOptionalSharpObject> ParentOf(string objectId, int number, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetParentOfQuery(objectId, number), cancellationToken);

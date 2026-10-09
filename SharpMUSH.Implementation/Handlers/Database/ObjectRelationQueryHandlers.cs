@@ -10,16 +10,11 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 // object node cache, so a miss builds the related object once, by that cache, and the caching
 // behaviour's re-resolve of the stored ref is a hit (#1554).
 
-public class GetOwnerOfQueryHandler(INavigationStore database, IMediator mediator) : IQueryHandler<GetOwnerOfQuery, SharpPlayer>
+public class GetOwnerOfQueryHandler(INavigationStore database, IMediator mediator) : IQueryHandler<GetOwnerOfQuery, AnyOptionalSharpObject>
 {
-	public async ValueTask<SharpPlayer> Handle(GetOwnerOfQuery query, CancellationToken cancellationToken)
+	public async ValueTask<AnyOptionalSharpObject> Handle(GetOwnerOfQuery query, CancellationToken cancellationToken)
 		=> await ObjectRefs.NodeAsync(mediator,
-				await database.GetRelationRefAsync(ObjectRelationKind.Owner, new DBRef(query.Number), cancellationToken), cancellationToken) switch
-		{
-			AnySharpObject and SharpPlayer owner => owner,
-			AnySharpObject => throw new InvalidOperationException($"The owner of #{query.Number} is not a player"),
-			None => throw new InvalidOperationException($"No owner found for #{query.Number}")
-		};
+			await database.GetRelationRefAsync(ObjectRelationKind.Owner, new DBRef(query.Number), cancellationToken), cancellationToken);
 }
 
 public class GetParentOfQueryHandler(INavigationStore database, IMediator mediator) : IQueryHandler<GetParentOfQuery, AnyOptionalSharpObject>
