@@ -252,7 +252,8 @@ public class LayoutFunctionTests
 	public async Task TheHelpListsEveryOptionEachFunctionTakes()
 	{
 		var help = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"));
-		var borderPieces = OptionKeys(Topic(help, "Layout Borders").SkipWhile(line => !line.StartsWith("Any part of the style", StringComparison.Ordinal)).Skip(1));
+		var borders = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-borders.md"));
+		var borderPieces = OptionKeys(Topic(borders, "Layout Borders").SkipWhile(line => !line.StartsWith("Any part of the style", StringComparison.Ordinal)).Skip(1));
 
 		foreach (var (function, keys) in SharpMUSH.Implementation.Functions.Functions.LayoutOptionKeys)
 		{
@@ -275,10 +276,17 @@ public class LayoutFunctionTests
 		[.. lines.TakeWhile(line => line.StartsWith("- ", StringComparison.Ordinal))
 			.SelectMany(line => System.Text.RegularExpressions.Regex.Matches(line.Split(" - ")[0], "`\"?([a-z]+)[^`]*`").Select(match => match.Groups[1].Value))];
 
+	/// <summary>The layout help's files: the functions, and the topics on layouts, borders, themes and <c>@theme</c>.</summary>
+	private static readonly string[] LayoutHelpFiles =
+		["layout.md", "layout-functions.md", "layout-borders.md", "layout-themes.md", "theme-command.md"];
+
+	private static string[] LayoutHelp() =>
+		[.. LayoutHelpFiles.SelectMany(file => File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, file)))];
+
 	/// <summary>Every <c>&gt; think</c> example in the layout help, with the lines under it as its output.</summary>
 	public static IEnumerable<Func<(string Code, string Expected)>> HelpExamples()
 	{
-		var lines = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"));
+		var lines = LayoutHelp();
 		for (var i = 0; i < lines.Length; i++)
 		{
 			if (!lines[i].StartsWith("> think ", StringComparison.Ordinal)) continue;
@@ -303,7 +311,7 @@ public class LayoutFunctionTests
 	[Test]
 	public async Task TheLayoutHelpIsAscii()
 	{
-		var help = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"));
+		var help = LayoutHelp();
 		await Assert.That(help.Where(line => line.Any(c => c > '\u007f'))).IsEmpty();
 	}
 

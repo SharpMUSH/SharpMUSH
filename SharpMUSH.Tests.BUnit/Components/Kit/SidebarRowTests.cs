@@ -162,6 +162,8 @@ public class SidebarRowTests : TrackingBunitContext
 	public async Task Unread_PillCarriesAnAccessibleCount()
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Unread, 3));
-		await Assert.That(cut.Find(".kit-row-unread").GetAttribute("aria-label")).IsEqualTo("3 unread");
+		await Assert.That(cut.Find(".kit-row-unread").GetAttribute("aria-hidden")).IsEqualTo("true");
+		await Assert.That(cut.Find(".kit-row-unread + .visually-hidden").TextContent).IsEqualTo("3 unread")
+			.Because("aria-label on a plain span is not read, so the words are hidden text beside the number");
 	}
 }

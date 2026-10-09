@@ -5956,4 +5956,40 @@
   <data name="RolPoseTypeNotChanged" xml:space="preserve">
     <value>Не удалось изменить. Попробуй ещё раз чуть позже.</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Вывод игры</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Команда игры</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Сообщения в {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Участники, сейчас в сети: {0}</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Режим программы чтения с экрана</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Для игры с программой чтения с экрана в этом браузере: буквенные клавиши выходов отключены, ваши собственные команды не зачитываются, Alt и цифра повторно читает одну из последних строк (Alt+1 — самую новую), а игра об этом знает и может не показывать картинки, нарисованные символами.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Быстрые ссылки</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Имя нового атрибута</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Поиск объектов</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Последний вывод игры</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Пока нечего прочитать.</value>
+  </data>
 </root>

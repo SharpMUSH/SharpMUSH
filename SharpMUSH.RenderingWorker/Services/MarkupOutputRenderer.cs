@@ -136,7 +136,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		}
 		var reader = ReaderTheme(connection.Preferences?.Theme);
 		var deserialized = ToneMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), reader?.Palette);
-		var ms = Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ScreenReader),
+		var ms = Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),
 			connection.Capabilities, reader?.Look, cells);
 		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);
 		var text = connection.Capabilities.Format switch
@@ -176,11 +176,11 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	{
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
-		var context = !capabilities.SupportsUtf8 || capabilities.ScreenReader || look is not null || pictures is not null
+		var context = !capabilities.SupportsUtf8 || capabilities.ReadsAloud || look is not null || pictures is not null
 			? new LayoutContext
 			{
 				AsciiOnly = !capabilities.SupportsUtf8,
-				Linear = capabilities.ScreenReader,
+				Linear = capabilities.ReadsAloud,
 				Theme = look ?? LayoutTheme.Default,
 				Pictures = pictures
 			}
@@ -285,7 +285,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 				Xterm256: capabilities.SupportsXterm256,
 				Truecolor: capabilities.SupportsTruecolor,
 				Utf8: capabilities.SupportsUtf8,
-				ScreenReader: capabilities.ScreenReader),
+				ScreenReader: capabilities.ReadsAloud),
 			preferences is null
 				? null
 				: new PlayerColorFlags(preferences.AnsiEnabled, preferences.ColorEnabled,

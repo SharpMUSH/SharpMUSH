@@ -8,6 +8,7 @@
    character via a one-shot ?as=<dbref>-<creationTime> entry hint. *@
 
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 <div>
     @if (IsOpen)
@@ -27,34 +28,34 @@
                 <div class="account-panel-track @(_level == PanelLevel.Submenu ? "account-panel-track--submenu" : "")">
 
                     @* ── Root level ── *@
-                    <div class="account-panel-level account-panel-level--root">
+                    <div class="account-panel-level account-panel-level--root" inert="@(_level == PanelLevel.Submenu)">
                         @if (HasCharacters)
                         {
                             <button type="button" class="account-panel-item account-panel-switch-btn" @onclick="OpenSubmenu">
-                                <span class="account-panel-item-icon">&#8644;</span>
+                                <span class="account-panel-item-icon" aria-hidden="true">&#8644;</span>
                                 <span class="account-panel-item-label">@Loc["AuthSwitchCharacter"]</span>
                             </button>
                         }
                         else
                         {
                             <div class="account-panel-item account-panel-item--inert">
-                                <span class="account-panel-item-icon">&#8644;</span>
+                                <span class="account-panel-item-icon" aria-hidden="true">&#8644;</span>
                                 <span class="account-panel-item-label">@Loc["AuthNoCharacter"]</span>
                             </div>
                         }
-                        <a href="/account" class="account-panel-item" @onclick="ClosePanelAsync">
-                            <span class="account-panel-item-icon">&#9881;</span>
+                        <a href="/account" class="account-panel-item" @onclick="FollowLinkAsync">
+                            <span class="account-panel-item-icon" aria-hidden="true">&#9881;</span>
                             <span class="account-panel-item-label">@Loc["AuthAccountManagement"]</span>
                         </a>
                         @* The look of each character (theme and accent) is per character, so it sits beside
                            the character switch rather than only behind Account management's sidebar. *@
-                        <a href="/settings/theme" class="account-panel-item account-panel-theme" @onclick="ClosePanelAsync">
-                            <span class="account-panel-item-icon">&#9680;</span>
+                        <a href="/settings/theme" class="account-panel-item account-panel-theme" @onclick="FollowLinkAsync">
+                            <span class="account-panel-item-icon" aria-hidden="true">&#9680;</span>
                             <span class="account-panel-item-label">@Loc["NavTheme"]</span>
                         </a>
                         <div class="account-panel-divider"></div>
                         <button type="button" class="account-panel-item account-panel-item--danger" @onclick="HandleLogoutAsync">
-                            <span class="account-panel-item-icon">&#9211;</span>
+                            <span class="account-panel-item-icon" aria-hidden="true">&#9211;</span>
                             <span class="account-panel-item-label">@Loc["AuthLogout"]</span>
                         </button>
                     </div>
@@ -62,26 +63,29 @@
                     @* ── Character submenu — entirely absent when there is nothing to switch to. ── *@
                     @if (HasCharacters)
                     {
-                        <div class="account-panel-level account-panel-level--submenu">
+                        <div class="account-panel-level account-panel-level--submenu" inert="@(_level == PanelLevel.Root)">
                             <button type="button" class="account-panel-back" @onclick="BackToRoot">
-                                <span class="account-panel-item-icon">&#8249;</span>
+                                <span class="account-panel-item-icon" aria-hidden="true">&#8249;</span>
                                 <span>@Loc["AuthSwitchCharacter"]</span>
                             </button>
-                            <div class="account-panel-characters" role="menu">
+                            <div class="account-panel-characters">
                                 @foreach (var character in Characters)
                                 {
                                     var isActive = IsActive(character);
+                                    @* Two buttons side by side, never one inside the other: the row's own click is for the
+                                       mouse, over its padding, and the name button is what a keyboard and a reader use. *@
                                     <div class="account-panel-character @(isActive ? "account-panel-character--active" : "")"
-                                         role="menuitem"
-                                         tabindex="0"
-                                         @onclick="() => SelectCharacterAsync(character)"
-                                         @onkeydown="e => HandleCharacterKeyDownAsync(e, character)">
-                                        <span class="account-panel-character-check">@(isActive ? "✓" : "")</span>
-                                        <span class="account-panel-character-name">@character.Name</span>
-                                        <span class="account-panel-character-dbref">#@character.DbrefNumber</span>
+                                         @onclick="() => SelectCharacterAsync(character)">
+                                        <button type="button" class="account-panel-character-pick" aria-current="@(isActive ? "true" : null)"
+                                                @onclick="() => SelectCharacterAsync(character)" @onclick:stopPropagation="true">
+                                            <span class="account-panel-character-check" aria-hidden="true">@(isActive ? "✓" : "")</span>
+                                            <span class="account-panel-character-name">@character.Name</span>
+                                            <span class="account-panel-character-dbref">#@character.DbrefNumber</span>
+                                        </button>
                                         <button type="button"
                                                 class="account-panel-newtab"
                                                 title="@Loc["AuthOpenInNewTab", character.Name]"
+                                                aria-label="@Loc["AuthOpenInNewTab", character.Name]"
                                                 @onclick="() => OnOpenInNewTab.InvokeAsync(character)"
                                                 @onclick:stopPropagation="true">
                                             <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Style="font-size:0.8125rem;" />
@@ -100,6 +104,9 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>Raised before a close by a link in the panel: the page it opens takes focus, not the opener.</summary>
+    [Parameter] public EventCallback OnLinkFollowed { get; set; }
     [Parameter] public IReadOnlyList<AccountAuthService.CharacterSummary> Characters { get; set; } = [];
     [Parameter] public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
     [Parameter] public EventCallback<AccountAuthService.CharacterSummary> OnSwitchCharacter { get; set; }
@@ -153,12 +160,37 @@
             }
         }
 
+        if (IsOpen && (!_wasOpen || _levelChanged))
+        {
+            // Up and Down move between the panel's controls; a switch of level puts focus on the new level's
+            // first, since the control that was focused is now inert.
+            var levelChanged = _levelChanged;
+            _levelChanged = false;
+            try
+            {
+                await JS.InvokeVoidAsync("sharpmushLayout.arrowFocus", _panelRef);
+                if (levelChanged) await JS.InvokeVoidAsync("sharpmushLayout.focusFirst", _panelRef);
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException)
+            {
+                // No layout script: Tab still reaches every control.
+            }
+        }
+
         _wasOpen = IsOpen;
     }
 
-    private void OpenSubmenu() => _level = PanelLevel.Submenu;
+    private bool _levelChanged;
 
-    private void BackToRoot() => _level = PanelLevel.Root;
+    private void OpenSubmenu() => SetLevel(PanelLevel.Submenu);
+
+    private void BackToRoot() => SetLevel(PanelLevel.Root);
+
+    private void SetLevel(PanelLevel level)
+    {
+        _levelChanged = level != _level;
+        _level = level;
+    }
 
     private async Task ClosePanelAsync()
     {
@@ -166,21 +198,16 @@
         await IsOpenChanged.InvokeAsync(false);
     }
 
+    private async Task FollowLinkAsync()
+    {
+        await OnLinkFollowed.InvokeAsync();
+        await ClosePanelAsync();
+    }
+
     private async Task SelectCharacterAsync(AccountAuthService.CharacterSummary character)
     {
         await OnSwitchCharacter.InvokeAsync(character);
         await ClosePanelAsync();
-    }
-
-    // The row itself is a <div role="menuitem">, not a <button> — it can't be one, since it already
-    // hosts the sibling "open in a new tab" <button> and nesting interactive controls is invalid HTML.
-    // Enter/Space are what ARIA's menuitem pattern (and native buttons) treat as "activate".
-    private async Task HandleCharacterKeyDownAsync(KeyboardEventArgs e, AccountAuthService.CharacterSummary character)
-    {
-        if (e.Key is "Enter" or " ")
-        {
-            await SelectCharacterAsync(character);
-        }
     }
 
     private async Task HandleLogoutAsync()

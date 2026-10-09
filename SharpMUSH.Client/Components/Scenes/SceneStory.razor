@@ -16,6 +16,8 @@
    from the room's occupant rows, else the directory, and only for the name the pose shows. Each pose draws as
    its type says; the Show menu hides types, whose runs fold into one line that opens them here. *@
 <div class="story" @ref="_root">
+    @* A pose that arrives live is read out; the backlog is not, it is the page the reader came to. *@
+    <LiveAnnouncer @ref="_announcer" Label="@Loc["StoryNewPoses"]" />
     <PoseTypeMenu Class="story-types" />
     @if (_posesError is not null)
     {
@@ -207,8 +209,10 @@
                 // here and renders for the first time.
                 if (_poses.All(p => !string.Equals(p.Id, msg.PoseId, StringComparison.Ordinal)))
                 {
-                    _poses.Add(FromEvent(msg, existing: null));
+                    var added = FromEvent(msg, existing: null);
+                    _poses.Add(added);
                     Remember(msg);
+                    _announcer?.Announce(Spoken(added));
                     if (OnPoseAdded.HasDelegate) _ = InvokeAsync(() => OnPoseAdded.InvokeAsync());
                 }
                 break;
@@ -244,6 +248,22 @@
         RebuildMentions();
         _ = InvokeAsync(StateHasChanged);
     }
+
+    private LiveAnnouncer? _announcer;
+
+    /// <summary>
+    /// A pose as it is read out: its text, after the name it shows when the text does not start with that name as
+    /// a word of its own ("Ann waves", not "Announcement").
+    /// </summary>
+    private string Spoken(ScenePoseView pose) =>
+        StartsWithName(pose.Content.TrimStart(), pose.DisplayName)
+            ? pose.Content
+            : Loc["NavPlayLineSaid", pose.DisplayName, pose.Content];
+
+    private static bool StartsWithName(string text, string name) =>
+        name.Length > 0
+        && text.StartsWith(name, StringComparison.OrdinalIgnoreCase)
+        && (text.Length == name.Length || !char.IsLetterOrDigit(text[name.Length]));
 
     private void Remember(SceneEventMessage msg)
     {

@@ -358,6 +358,29 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// <c>SCREENREADER [on|off|auto]</c> — the MUD convention for telling the game a screen reader reads this
+	/// connection, for a client with no MTTS option to say so. Bare, it turns the mode on; <c>auto</c> goes back
+	/// to what the client said. A socket command, so it answers at the connect screen too, and the same
+	/// setting as <c>SOCKSET screenreader=...</c>.
+	/// </summary>
+	[SharpCommand(Name = "SCREENREADER", Switches = [], Behavior = CB.SOCKET | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["setting"])]
+	public async ValueTask<Option<CallState>> ScreenReader(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var connection = CurrentConnection(parser);
+		if (connection is null)
+		{
+			return new None();
+		}
+
+		var setting = SocketArgument(parser).Trim();
+		var result = SocketOptions.Set(connection, "SCREENREADER", setting.Length == 0 ? "on" : setting);
+		await NotifyService.NotifyLocalized(connection.Handle, result.Key, result.Arguments);
+		await PublishSocketPinsAsync(connection, result.Probe);
+
+		return new None();
+	}
+
+	/// <summary>
 	/// <c>@sockset [&lt;descriptor&gt;]=&lt;option&gt;,&lt;value&gt;[,&lt;option&gt;,&lt;value&gt;…]</c> —
 	/// PennMUSH <c>cmd_sockset</c> (src/cmds.c). The in-game face of the same option engine the
 	/// <c>SOCKSET</c> socket command drives, with a descriptor argument so a wizard can adjust someone
@@ -710,6 +733,8 @@ public static class SocketOptions
 			features.HasFlag(TerminalFeatures.Hyperlinks)));
 		Row("Command Links", PinnedOrAuto(TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.CommandLinksKey),
 			features.HasFlag(TerminalFeatures.CommandLinks)));
+		Row("Screen Reader", PinnedOrAuto(TerminalFeatureReader.PinOf(connection.Metadata, TerminalCapabilityReader.ScreenReaderKey),
+			TerminalCapabilityReader.Read(connection.Metadata).ScreenReader));
 		// Pictures are off until the player turns them on; "auto" says which method the terminal gets.
 		Row("Graphics", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey) switch
 		{
@@ -808,6 +833,10 @@ public static class SocketOptions
 			case "COMMANDLINKS":
 				return SetLinkPin(TerminalFeatureReader.CommandLinksKey, value,
 					nameof(ErrorMessages.Notifications.SocksetCommandLinksSetFormat));
+
+			case "SCREENREADER":
+				return SetLinkPin(TerminalCapabilityReader.ScreenReaderKey, value,
+					nameof(ErrorMessages.Notifications.SocksetScreenReaderSetFormat));
 
 			case "GRAPHICS":
 				return SetGraphics(value);

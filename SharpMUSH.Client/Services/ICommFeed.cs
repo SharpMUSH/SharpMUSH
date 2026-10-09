@@ -32,9 +32,10 @@ public interface ICommFeed
 
 	/// <summary>
 	/// Pulls a channel's recent lines, or a conversation's logged pages, from the server and files them with
-	/// what has been pushed, keeping one copy of a line known by its id.
+	/// what has been pushed, keeping one copy of a line known by its id. False when the feed cannot pull yet
+	/// (it has not caught up with the server since it connected); it pulls the key's lines itself once it has.
 	/// </summary>
-	Task LoadHistoryAsync(string key);
+	Task<bool> LoadHistoryAsync(string key);
 
 	/// <summary>
 	/// Whether the game keeps a page log (<c>page_log</c>), as the server last said; null until it has. With

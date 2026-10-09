@@ -25,12 +25,12 @@
             @if (_history.Count > 0)
             {
                 <MudTooltip Text="@Loc["TermHelpBack"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
+                    <MudIconButton aria-label="@Loc["TermHelpBack"]" Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
                                    Color="Color.Default" OnClick="GoBack" />
                 </MudTooltip>
             }
             <MudTooltip Text="@Loc["TermHelpClose"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                <MudIconButton aria-label="@Loc["TermHelpClose"]" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                                Color="Color.Default" OnClick="Close" />
             </MudTooltip>
         </div>

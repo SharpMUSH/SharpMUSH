@@ -15,7 +15,7 @@ function boot() {
         HTMLElement: class {}
     });
     vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
-    return { layout: context.window.sharpmushLayout, listeners };
+    return { layout: context.window.sharpmushLayout, listeners, document: context.document };
 }
 
 function key(target, init) {
@@ -346,4 +346,266 @@ test('the short-screen watch is the landscape half of the compact one, and is a 
     assert.equal(compact.listeners.size, 1);
     layout.unwatchCompactScreen();
     assert.equal(compact.listeners.size, 0);
+});
+
+test('nested modals hand focus back in turn: the inner to the outer, the outer to what opened it', () => {
+    const { layout, document } = boot();
+    const focused = [];
+    const control = name => ({ isConnected: true, focus() { focused.push(name); } });
+
+    document.activeElement = control('row');
+    layout.rememberFocus();
+    document.activeElement = control('sheet');
+    layout.rememberFocus();
+
+    layout.restoreFocus();
+    layout.restoreFocus();
+    assert.deepEqual(focused, ['sheet', 'row']);
+});
+
+test('a control gone from the page gets no focus back', () => {
+    const { layout, document } = boot();
+    let focused = false;
+    document.activeElement = { isConnected: false, focus() { focused = true; } };
+    layout.rememberFocus();
+    layout.restoreFocus();
+    assert.equal(focused, false);
+});
+
+// The account panel: Up, Down, Home and End move between its controls, skipping an inert level.
+function panel(document, names, inertNames = []) {
+    const listeners = {};
+    const items = names.map(name => ({
+        name,
+        focus() { document.activeElement = this; },
+        closest: selector => (selector === '[inert]' && inertNames.includes(name) ? {} : null)
+    }));
+    return {
+        items,
+        container: {
+            addEventListener: (type, handler) => { listeners[type] = handler; },
+            querySelectorAll: () => items
+        },
+        press(keyName) {
+            let prevented = false;
+            listeners.keydown({ key: keyName, preventDefault: () => { prevented = true; } });
+            return prevented;
+        }
+    };
+}
+
+test('arrow keys move through the panel and wrap, Home and End go to the ends', () => {
+    const { layout, document } = boot();
+    const p = panel(document, ['switch', 'account', 'theme', 'logout'], ['back']);
+    layout.arrowFocus(p.container);
+
+    assert.equal(p.press('ArrowDown'), true, 'the page must not scroll');
+    assert.equal(document.activeElement.name, 'switch', 'from the panel itself, the first control');
+    p.press('ArrowUp');
+    assert.equal(document.activeElement.name, 'logout', 'Up from the first wraps to the last');
+    p.press('ArrowDown');
+    assert.equal(document.activeElement.name, 'switch');
+    p.press('End');
+    assert.equal(document.activeElement.name, 'logout');
+    p.press('Home');
+    assert.equal(document.activeElement.name, 'switch');
+    assert.equal(p.press('Tab'), false, 'Tab is left to the browser');
+});
+
+test('an inert level is skipped, and focusFirst lands on the visible one', () => {
+    const { layout, document } = boot();
+    const p = panel(document, ['switch', 'logout', 'back', 'alpha'], ['switch', 'logout']);
+    layout.arrowFocus(p.container);
+    layout.arrowFocus(p.container);
+
+    layout.focusFirst(p.container);
+    assert.equal(document.activeElement.name, 'back');
+    p.press('ArrowDown');
+    assert.equal(document.activeElement.name, 'alpha');
+    p.press('ArrowDown');
+    assert.equal(document.activeElement.name, 'back');
+});
+
+// Touch chrome's drawer: focus in, the rest of the shell inert, Escape closes, focus back to the opener.
+function shellWith(document, touch) {
+    const focused = [];
+    const control = name => ({ name, isConnected: true, focus() { focused.push(name); document.activeElement = this; }, closest: () => null });
+    const first = control('first link');
+    const drawer = { querySelectorAll: () => [first], contains: node => node === drawer || node === first };
+    const heading = { name: 'h1', attributes: {}, hasAttribute(n) { return n in this.attributes; }, setAttribute(n, v) { this.attributes[n] = v; }, focus() { focused.push('h1'); document.activeElement = this; } };
+    const content = { inert: false, contains: () => false, classList: { contains: () => false } };
+    const backdrop = { inert: false, contains: () => false, classList: { contains: name => name === 'phosphor-nav-backdrop' } };
+    const drawerHost = { inert: false, contains: node => node === drawer, classList: { contains: () => false } };
+    const shell = { children: [backdrop, drawerHost, content] };
+    drawer.closest = selector => (selector === '.phosphor-shell' ? shell : null);
+    document.querySelector = selector => (selector.includes('h1') ? heading : drawer);
+    const keys = new Set();
+    document.addEventListener = (name, handler) => { if (name === 'keydown') keys.add(handler); };
+    document.removeEventListener = (name, handler) => { keys.delete(handler); };
+    return { focused, control, content, backdrop, drawerHost, keys, touch, heading };
+}
+
+function bootTouch(touch) {
+    const listeners = new Map();
+    const context = vm.createContext({
+        window: { matchMedia: () => ({ matches: touch }) },
+        document: { addEventListener: (name, handler) => listeners.set(name, handler) },
+        HTMLElement: class {}
+    });
+    vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
+    return { layout: context.window.sharpmushLayout, document: context.document };
+}
+
+test('an open drawer takes focus, makes the page inert, closes on Escape and hands focus back', () => {
+    const { layout, document } = bootTouch(true);
+    const s = shellWith(document, true);
+    const calls = [];
+    document.activeElement = s.control('menu button');
+
+    layout.openPanel('.phosphor-sidebar', { invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+    assert.deepEqual(s.focused, ['first link']);
+    assert.equal(s.content.inert, true);
+    assert.equal(s.backdrop.inert, false, 'tapping the backdrop still closes it');
+    assert.equal(s.drawerHost.inert, false);
+
+    let prevented = false;
+    [...s.keys][0]({ key: 'Escape', preventDefault: () => { prevented = true; } });
+    assert.deepEqual(calls, ['CloseMobilePanelsFromKey']);
+    assert.ok(prevented);
+
+    layout.closePanel(true);
+    assert.equal(s.content.inert, false);
+    assert.equal(s.keys.size, 0);
+    assert.deepEqual(s.focused, ['first link', 'menu button']);
+});
+
+test('a drawer whose layout goes away lets go of the page, and the next drawer still hands focus back', () => {
+    const { layout, document } = bootTouch(true);
+    const s = shellWith(document, true);
+    const ref = { invokeMethodAsync: () => Promise.resolve() };
+    document.activeElement = s.control('menu button');
+    layout.openPanel('.phosphor-sidebar', ref);
+
+    layout.dropPanel();
+    assert.equal(s.content.inert, false);
+    assert.equal(s.keys.size, 0, 'Escape is not swallowed on the next layout');
+    assert.deepEqual(s.focused, ['first link'], 'focus is left to the new page');
+
+    document.activeElement = s.control('menu button');
+    layout.openPanel('.phosphor-sidebar', ref);
+    layout.closePanel(true);
+    assert.deepEqual(s.focused, ['first link', 'first link', 'menu button']);
+});
+
+test('a drawer closed by a page change puts focus on the new page\'s heading, and a desktop is left alone', () => {
+    const touch = bootTouch(true);
+    const s = shellWith(touch.document, true);
+    touch.document.activeElement = s.control('menu button');
+    touch.layout.openPanel('.phosphor-sidebar', { invokeMethodAsync: () => Promise.resolve() });
+    touch.layout.closePanel(false);
+    assert.deepEqual(s.focused, ['first link', 'h1'], 'FocusOnNavigate could not reach the inert page, so the heading is focused here');
+    assert.equal(s.heading.attributes.tabindex, '-1');
+    assert.equal(touch.layout._focusReturns.length, 0, 'the opener is dropped, not left for the next modal');
+
+    const desktop = bootTouch(false);
+    const d = shellWith(desktop.document, false);
+    desktop.layout.openPanel('.phosphor-sidebar', { invokeMethodAsync: () => Promise.resolve() });
+    assert.deepEqual(d.focused, []);
+    assert.equal(d.content.inert, false);
+});
+
+// Screen reader mode's review keys: Alt and a number in the command box reads a recent line again.
+function reviewBox(on) {
+    const listeners = {};
+    return {
+        dataset: on ? { reviewKeys: 'on' } : {},
+        addEventListener: (type, handler) => { listeners[type] = handler; },
+        press(init) {
+            let prevented = false;
+            listeners.keydown({ altKey: false, ctrlKey: false, metaKey: false, repeat: false, code: '', preventDefault: () => { prevented = true; }, ...init });
+            return prevented;
+        }
+    };
+}
+
+test('Alt and a number reads that line back, 0 the tenth, and is not typed', () => {
+    const { layout } = boot();
+    const box = reviewBox(true);
+    const asked = [];
+    layout.reviewKeys(box, { invokeMethodAsync: (name, n) => { asked.push([name, n]); return Promise.resolve(); } });
+
+    assert.equal(box.press({ altKey: true, code: 'Digit1' }), true, 'macOS would otherwise type a symbol');
+    box.press({ altKey: true, code: 'Digit0' });
+    assert.deepEqual(asked, [['ReviewLine', 1], ['ReviewLine', 10]]);
+});
+
+test('review keys are left alone with the mode off, with Ctrl or Cmd, held down, or on other keys', () => {
+    const { layout } = boot();
+    const asked = [];
+    const ref = { invokeMethodAsync: name => { asked.push(name); return Promise.resolve(); } };
+
+    const off = reviewBox(false);
+    layout.reviewKeys(off, ref);
+    assert.equal(off.press({ altKey: true, code: 'Digit1' }), false);
+
+    const on = reviewBox(true);
+    layout.reviewKeys(on, ref);
+    for (const init of [{ altKey: true, ctrlKey: true, code: 'Digit1' }, { altKey: true, metaKey: true, code: 'Digit2' },
+        { altKey: true, repeat: true, code: 'Digit3' }, { altKey: true, code: 'KeyA' }, { code: 'Digit4' }]) {
+        assert.equal(on.press(init), false);
+    }
+    assert.deepEqual(asked, []);
+});
+
+// A small stand-in for the parsed markup spokenText walks: text nodes, and elements with attributes.
+const text = data => ({ nodeType: 3, data });
+function el(tagName, attributes, ...childNodes) {
+    return { nodeType: 1, tagName, childNodes, getAttribute: name => attributes[name] ?? null };
+}
+
+test('a line is heard as its words: a separator\'s title, a picture\'s description, nothing hidden', () => {
+    const { layout } = boot();
+    const said = node => layout.withoutDrawing(layout._spoken(node));
+
+    assert.equal(said(el('DIV', { role: 'separator', class: 'ms-rule' }, el('SPAN', {}, text('God posed')))), 'God posed.');
+    assert.equal(said(el('SPAN', {}, text('Look: '), el('IMG', { alt: 'The logo', src: '/assets/logo.png' }))), 'Look: The logo');
+    assert.equal(said(el('SPAN', {}, el('SPAN', { 'aria-hidden': 'true' }, text('*')), text('Mira'))), 'Mira');
+    assert.equal(said(el('SPAN', { role: 'img', 'aria-label': 'A map of the pier' }, text('/\\_/\\'))), 'A map of the pier');
+    assert.equal(said(el('SPAN', {}, text('one'), el('BR', {}), text('two'))), 'one two');
+    assert.equal(said(el('SPAN', {}, el('SPAN', {}, text('Health')), el('METER', { value: '3' }), el('SPAN', {}, text('30%')))), 'Health 30%');
+});
+
+test('a table is heard cell by cell, a full stop after each row, field and list item', () => {
+    const { layout } = boot();
+    const row = (...cells) => el('TR', {}, ...cells.map(c => el('TD', {}, text(c))));
+    const table = el('TABLE', {}, el('TBODY', {}, row('Name', 'Idle'), row('Mira', '3m'), row('Done!')));
+
+    assert.equal(layout.withoutDrawing(layout._spoken(table)), 'Name Idle. Mira 3m. Done!');
+
+    const box = el('FIELDSET', {}, el('LEGEND', {}, text('Kit')),
+        el('DL', {}, el('DIV', {}, el('DT', {}, text('Sex:')), el('DD', {}, text('Male')))),
+        el('UL', {}, el('LI', {}, text('Sword')), el('LI', {}, text('Shield'))));
+    assert.equal(layout.withoutDrawing(layout._spoken(box)), 'Kit. Sex: Male. Sword. Shield.');
+});
+
+test('drawing is dropped from plain words, punctuation in a sentence is not', () => {
+    const { layout } = boot();
+
+    assert.equal(layout.withoutDrawing('═╡ God posed ╞════════'), 'God posed');
+    assert.equal(layout.withoutDrawing('----------------------------------'), '');
+    assert.equal(layout.withoutDrawing('Mail: 3 new ===== read with @mail'), 'Mail: 3 new read with @mail');
+    assert.equal(layout.withoutDrawing('Wait... what?! -- no.'), 'Wait... what?! -- no.');
+});
+
+test('a tab list claims only the keys that move between its tabs', () => {
+    const { layout } = boot();
+    let handler;
+    const list = { addEventListener: (name, h) => { handler = h; } };
+    layout.tabKeys(list);
+    layout.tabKeys(list);
+    const press = key => { let prevented = false; handler({ key, preventDefault: () => { prevented = true; } }); return prevented; };
+
+    for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End']) assert.equal(press(key), true, key);
+    assert.equal(press('Tab'), false);
+    assert.equal(press('a'), false);
 });

@@ -5956,4 +5956,40 @@
   <data name="RolPoseTypeNotChanged" xml:space="preserve">
     <value>Nie udało się tego zmienić. Spróbuj ponownie za chwilę.</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Wyjście gry</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Polecenie gry</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Wiadomości w {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Członkowie, {0} teraz online</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Tryb czytnika ekranu</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Do gry z czytnikiem ekranu w tej przeglądarce: klawisze liter wyjść są wyłączone, Twoje własne polecenia nie są odczytywane ponownie, Alt i cyfra odczytuje ponownie jeden z ostatnich wierszy (Alt+1 najnowszy), a gra o tym wie, więc może pominąć obrazki rysowane znakami.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Szybkie linki</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Nazwa nowego atrybutu</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Szukaj obiektów</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Najnowsze wyjście gry</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Nie ma jeszcze wiersza do przeczytania.</value>
+  </data>
 </root>

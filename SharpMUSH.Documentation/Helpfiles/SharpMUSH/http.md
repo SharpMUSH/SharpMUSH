@@ -36,6 +36,11 @@
       "lookup": "http routing"
     },
     {
+      "id": "stock-routes",
+      "heading": "Stock routes",
+      "lookup": "http stock routes"
+    },
+    {
       "id": "examples",
       "heading": "Example handler setup",
       "lookup": "http examples"
@@ -219,7 +224,7 @@ think setq(fields,formq(after(%0,?)))
 @include me/GET`%q<attrpath>=%1
 ```
 
-### Stock routes
+## Stock routes
 
 SharpMUSH also seeds these routed sub-attributes, used by the web portal. Like the routers, they are seeded once and never overwritten, so edit them freely.
 

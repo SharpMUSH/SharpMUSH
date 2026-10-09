@@ -85,8 +85,18 @@ point directly to canonical lookups in their article, never to another redirect.
 ## Presentation and links
 
 Terminal overview = introduction before the first indexed section, plus a
-generated directory of `help ...`, `ahelp ...`, or `news ...` commands. A section
-lookup includes its local subsections and a parent command, excluding siblings.
+generated directory of `help ...`, `ahelp ...`, or `news ...` commands. An
+overview may list its sections itself, one `[<section lookup>]: what it holds`
+line each, which reads better as an index; the generated directory then leaves
+out every section the overview already links. A section lookup includes its
+local subsections and a parent command, excluding siblings.
+
+A command with many switches keeps its overview to what it is for, who may use
+it, and that index. Each section opens with the syntax of the switches it
+covers, and declares those switches (`@feed/send`) as its aliases, so
+`help @feed/send` answers with that section alone. Concept topics that grew
+past a screen or two (layout borders, layout themes) are articles of their own
+rather than H1 groups in an aggregate file, whose `##` headings are not lookups.
 No output depends on terminal hyperlink support. Related `[topic]` references
 render as usable `help topic` command labels as well as command links.
 

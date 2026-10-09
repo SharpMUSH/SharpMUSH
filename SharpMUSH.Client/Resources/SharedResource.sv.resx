@@ -5956,4 +5956,40 @@
   <data name="RolPoseTypeNotChanged" xml:space="preserve">
     <value>Det gick inte att ändra. Försök igen om en stund.</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Spelutdata</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Spelkommando</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Meddelanden i {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Medlemmar, {0} online nu</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Skärmläsarläge</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>För att spela med skärmläsare i den här webbläsaren: bokstavstangenterna för utgångar är avstängda, dina egna kommandon läses inte upp igen, Alt och en siffra läser en av de senaste raderna igen (Alt+1 den nyaste), och spelet får veta det så att det kan utelämna bilder ritade med tecken.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Snabblänkar</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Namn på nytt attribut</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Sök objekt</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Senaste spelutdata</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Ingen rad att läsa än.</value>
+  </data>
 </root>

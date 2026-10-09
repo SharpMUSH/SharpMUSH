@@ -5956,4 +5956,40 @@
   <data name="RolPoseTypeNotChanged" xml:space="preserve">
     <value>Dat kon niet worden gewijzigd. Probeer het zo opnieuw.</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Speluitvoer</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Spelopdracht</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Berichten in {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Leden, {0} nu online</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Schermlezermodus</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Om te spelen met een schermlezer in deze browser: de lettertoetsen voor uitgangen staan uit, je eigen opdrachten worden niet teruggelezen, Alt en een cijfer leest een recente regel opnieuw voor (Alt+1 de nieuwste), en het spel krijgt het te horen zodat het tekeningen van tekens kan weglaten.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Snelkoppelingen</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Naam van nieuw attribuut</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Objecten zoeken</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Nieuwste speluitvoer</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Nog geen regel om voor te lezen.</value>
+  </data>
 </root>

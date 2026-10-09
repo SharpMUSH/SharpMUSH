@@ -528,12 +528,14 @@ public class TelnetServer : ConnectionHandler
 		var reported = TerminalCapabilityReader.Read(terminalTypes);
 
 		// Only the fields this report speaks to: the record also carries the negotiated output format
-		// and any SOCKSET colorstyle pin, which have their own writers and must survive this one.
+		// and any SOCKSET colorstyle pin, which have their own writers and must survive this one. The colour
+		// claims are kept as reported: a screen reader is sent plain text by the colour style, which a
+		// SCREENREADER pin can turn back off.
 		var updated = _connectionService.UpdateCapabilities(handle, current => current with
 		{
-			SupportsAnsi = reported.Ansi && !reported.ScreenReader,
-			SupportsXterm256 = reported.Xterm256 && !reported.ScreenReader,
-			SupportsTruecolor = reported.Truecolor && !reported.ScreenReader,
+			SupportsAnsi = reported.Ansi,
+			SupportsXterm256 = reported.Xterm256,
+			SupportsTruecolor = reported.Truecolor,
 			SupportsUtf8 = reported.Utf8,
 			ScreenReader = reported.ScreenReader,
 			TerminalTypes = terminalTypes
@@ -542,9 +544,8 @@ public class TelnetServer : ConnectionHandler
 		if (updated)
 		{
 			_logger.LogDebug(
-				"Terminal capabilities for handle {Handle}: ansi={Ansi}, xterm256={Xterm256}, truecolor={Truecolor}, utf8={Utf8}",
-				handle, reported.Ansi && !reported.ScreenReader, reported.Xterm256 && !reported.ScreenReader,
-				reported.Truecolor && !reported.ScreenReader, reported.Utf8);
+				"Terminal capabilities for handle {Handle}: ansi={Ansi}, xterm256={Xterm256}, truecolor={Truecolor}, utf8={Utf8}, screenreader={ScreenReader}",
+				handle, reported.Ansi, reported.Xterm256, reported.Truecolor, reported.Utf8, reported.ScreenReader);
 		}
 	}
 

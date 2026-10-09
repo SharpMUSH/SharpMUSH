@@ -26,12 +26,14 @@ public class NavMenuTests : MudBlazorTestContext
 	}
 
 	[Test]
-	public async Task Collapsed_RendersCoreLinksWithoutText()
+	public async Task Collapsed_RendersCoreLinksWithHiddenText()
 	{
 		var cut = RenderCollapsed();
 
-		// Core links are present but render as icons only (no text label) when collapsed.
-		await Assert.That(cut.Find("a.phosphor-nav-link[href='/wiki']").TextContent.Trim()).IsEmpty();
+		// Collapsed links show only their icon; the label stays for screen readers, visually hidden.
+		var link = cut.Find("a.phosphor-nav-link[href='/wiki']");
+		await Assert.That(link.QuerySelectorAll(".phosphor-nav-text").Length).IsEqualTo(0);
+		await Assert.That(link.QuerySelector(".visually-hidden")?.TextContent.Trim()).IsEqualTo("Wiki");
 	}
 
 	[Test]

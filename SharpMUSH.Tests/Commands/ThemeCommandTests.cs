@@ -266,8 +266,8 @@ public class ThemeCommandTests
 	/// <summary>Every <c>&gt; @theme</c> example in the help, with the line under it as what the player is told.</summary>
 	public static IEnumerable<Func<(string Command, string Told)>> HelpExamples()
 	{
-		var lines = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "layout-functions.md"))
-			.SkipWhile(line => line != "# @theme").Skip(1).TakeWhile(line => !line.StartsWith("# ", StringComparison.Ordinal)).ToArray();
+		var lines = File.ReadAllLines(Path.Join(TestPaths.Helpfiles.FullName, "theme-command.md"))
+			.SkipWhile(line => line != "# @theme").Skip(1).TakeWhile(line => line != "## The game's themes").ToArray();
 		for (var i = 0; i < lines.Length - 1; i++)
 		{
 			if (!lines[i].StartsWith("> @theme", StringComparison.Ordinal)) continue;
