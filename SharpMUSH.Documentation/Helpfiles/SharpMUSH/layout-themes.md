@@ -48,7 +48,7 @@
 -->
 # Layout Themes
 
-A theme colours the parts of a layout: borders and gauge bars, titles, table headings, field labels, list bullets, tree guides, and the quiet lines between things. The text inside is left as it is written. A layout takes a theme from its `"theme"` option, and one that names none takes the game's `layout_theme` option. Unset, layouts have no colour. A layout's theme reaches every layout inside it, the way its `"border"` does.
+A theme colours the parts of a layout: borders and gauge bars, titles, table headings, field labels, list bullets, tree guides, and the quiet lines between things. The text inside is left as it is written. A layout takes a theme from its `"theme"` option, and one that names none takes the game's `layout_theme` option. Unset, that is `sharpmush`, the portal's teal on black; set to `none`, layouts have no colour. A layout's theme reaches every layout inside it, the way its `"border"` does.
 
 ```sharp
 > think box(Hi there,Sheet,30,{{"theme":"nord"}})
@@ -66,12 +66,19 @@ A theme is one of these:
 | Kind | Written |
 |---|---|
 | a name from [THEMES()] | `"theme":"nord"` |
+| one of the web portal's themes | `"theme":"cyberpunk"` |
 | a genre | `"theme":"fantasy"` |
 | a theme made from one colour | `"theme":{"seed":"#7aa2f7","harmony":"triadic"}` |
 | a base16 scheme | `"theme":{"base16":["#2e3440", ... sixteen colours]}` |
 | any of these with colours changed | `"theme":{"preset":"nord","colors":{"primary":"#bf616a"}}` |
 
 `terminal` uses only the sixteen standard colours, so each player sees it in the colours their own client is set to. Hundreds of base16 schemes exist for editors and terminals.
+
+### The portal's themes
+
+`sharpmush` is the game's own look: borders and headings in the portal's dim teal, titles, labels and bullets in its bright teal, on black. The web portal's themes have the same names here, with their colours: `phosphor`, `daylight`, `cyberpunk`, `idol`, `starship-console` and the rest [THEMES()] lists. So does each colour blindness theme, such as `deutan-dark`, whose warning, error and success colours stay apart for that reader. A theme the portal draws on a light page, such as `daylight` or `shonen`, is made for a client with a light background.
+
+The portal's genre themes share their names with the genres below, which keep their own colours and shapes.
 
 ### Genres
 

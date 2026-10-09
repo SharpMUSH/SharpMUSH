@@ -78,6 +78,24 @@ public class SoftcodeParseCacheTests
 		await Assert.That(cache.TryGet(KeyFor(body), out _)).IsTrue();
 	}
 
+	/// <summary>A command in an action list splits the same arguments each time the list runs.</summary>
+	[Test]
+	public async Task ActionListArguments_AreParsedOnce()
+	{
+		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
+		var arguments = $"me={TestIsolationHelpers.GenerateUniqueName("split")} [add(1,2)]";
+		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
+		var key = new SoftcodeParseCache.Key(arguments, "CommandEqSplitParse", true,
+			options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode);
+
+		await Factory.CommandParser.CommandListParse(MarkupText.Plain($"@pemit {arguments}"));
+		await Assert.That(cache.TryGet(key, out var entry)).IsTrue();
+
+		await Factory.CommandParser.CommandListParse(MarkupText.Plain($"@pemit {arguments}"));
+		await Assert.That(cache.TryGet(key, out var again)).IsTrue();
+		await Assert.That(again).IsSameReferenceAs(entry);
+	}
+
 	[Test]
 	public async Task LongText_IsNotKept()
 	{

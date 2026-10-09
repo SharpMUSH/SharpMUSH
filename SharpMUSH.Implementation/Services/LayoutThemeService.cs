@@ -83,7 +83,7 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 	{
 		name = name.Trim().ToLowerInvariant();
 		if (!ThemeName().IsMatch(name)) return new Error<string>(BadName);
-		if (ThemePalette.Preset(name) is not null) return new Error<string>(BuiltInName);
+		if (LayoutThemes.IsBuiltIn(name) || name == LayoutThemes.None) return new Error<string>(BuiltInName);
 
 		Result<LayoutThemeEntry> result = new Error<string>(LayoutThemes.Unknown);
 		await ChangeAsync(stored =>
@@ -123,7 +123,7 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 	public async ValueTask<FoundResult<Success>> SetDisabledAsync(string name, bool disabled)
 	{
 		name = name.Trim().ToLowerInvariant();
-		if (ThemePalette.Preset(name) is null)
+		if (!LayoutThemes.IsBuiltIn(name))
 		{
 			return _themes.Added.ContainsKey(name)
 				? new Error<string>("#-1 ONLY A BUILT-IN THEME IS DISABLED; REMOVE AN ADDED ONE")
@@ -139,7 +139,10 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 		return new Success();
 	}
 
-	/// <summary>What a name in a theme stands for: an added theme's JSON, an error for a disabled one, or nothing to change.</summary>
+	/// <summary>
+	/// What a name in a theme stands for: an added theme's or one of SharpMUSH's presets' JSON, an error for a disabled
+	/// one, or nothing to change.
+	/// </summary>
 	private union Naming(JsonNode, Error<string>, None);
 
 	/// <summary>
@@ -193,7 +196,8 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 		var key = name.Trim().ToLowerInvariant();
 		if (themes.Added.TryGetValue(key, out var definition)) return JsonNode.Parse(definition)!;
 		if (!allowDisabled && themes.Disabled.Contains(key)) return new Error<string>(LayoutThemes.Unknown);
-		return new None();
+		// SharpMUSH's own presets are written out too: a connection's renderer knows only MarkupString's.
+		return LayoutThemes.OwnPreset(key) is { } own ? JsonNode.Parse(own.ToJson())! : new None();
 	}
 
 	/// <summary>
