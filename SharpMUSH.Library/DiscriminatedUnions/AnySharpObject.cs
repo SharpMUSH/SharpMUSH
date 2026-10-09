@@ -51,6 +51,7 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 		SharpThing thing => thing.Aliases
 	} ?? [];
 
+	// New code asks AsOptionalContainer / AsOptionalContent with a pattern instead of these throwing members.
 	public AnySharpContainer MinusExit() => this switch
 	{
 		SharpPlayer player => player,
@@ -74,6 +75,29 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 
 	public bool IsContent => IsPlayer || IsExit || IsThing;
 
+	/// <summary>
+	/// This object as content, or none for a room: <c>obj.AsOptionalContent is AnySharpContent content</c>.
+	/// </summary>
+	public AnyOptionalSharpContent AsOptionalContent => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom => new None(),
+		SharpExit exit => exit,
+		SharpThing thing => thing
+	};
+
+	/// <summary>
+	/// This object as a container, or none for an exit: <c>obj.AsOptionalContainer is AnySharpContainer container</c>.
+	/// </summary>
+	public AnyOptionalSharpContainer AsOptionalContainer => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit => new None(),
+		SharpThing thing => thing
+	};
+
+	// New code asks AsOptionalContent with a pattern instead.
 	public AnySharpContent AsContent => this switch
 	{
 		SharpPlayer player => player,
@@ -82,6 +106,7 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 		SharpThing thing => thing
 	};
 
+	// New code asks AsOptionalContainer with a pattern instead.
 	public AnySharpContainer AsContainer => this switch
 	{
 		SharpPlayer player => player,

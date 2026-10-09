@@ -165,8 +165,8 @@ public class ListenerRoutingService(
 			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, isSelf ? "AMHEAR" : "AHEAR", arguments), ExecutionBudget.CurrentToken);
 			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, "AAHEAR", arguments), ExecutionBudget.CurrentToken);
 		}
-		if (context.Location == listener.Object().DBRef || !listener.IsContainer) return;
-		await using var contents = listener.AsContainer.Content(mediator)
+		if (context.Location == listener.Object().DBRef || listener.AsOptionalContainer is not AnySharpContainer container) return;
+		await using var contents = container.Content(mediator)
 			.Where(content => content.IsPlayer || content.IsThing).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
 		if (!await contents.MoveNextAsync()) return;
 		using (LockEvaluationArguments.Enter(new Dictionary<string, MString> { ["0"] = message }))

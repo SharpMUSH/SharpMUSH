@@ -101,8 +101,8 @@ public partial class Commands
 			string[] cells;
 			if (isWizard)
 			{
-				var location = known.IsContent
-					? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
+				var location = known.AsOptionalContent is AnySharpContent connected
+					? "#" + ((await connected.Location())?.Object().DBRef.Number.ToString() ?? "-1")
 					: "#-1";
 				// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH). A bare
 				// address (a website connection's) is never cut: an IPv6 one runs to 39 characters, and the

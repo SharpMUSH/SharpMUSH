@@ -606,10 +606,10 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			case CommandScope.Nearby:
 				return Found(NearbyObjects.ForAsync(services.Mediator, executor));
 
-			case CommandScope.LocationZone when executor.IsContent:
+			case CommandScope.LocationZone when executor.AsOptionalContent is AnySharpContent zoned:
 				{
 					// Step 10: Zone Exit Name and Aliases - handled in LocateService
-					var executorLocation = await executor.AsContent.Location();
+					var executorLocation = await zoned.Location();
 					var locationZone =
 						await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
 
@@ -625,9 +625,9 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 					return new NotFound();
 				}
 
-			case CommandScope.Location when executor.IsContent:
+			case CommandScope.Location when executor.AsOptionalContent is AnySharpContent located:
 				{
-					AnySharpObject[] item = [(await executor.AsContent.Location()).WithExitOption()];
+					AnySharpObject[] item = [(await located.Location()).WithExitOption()];
 					return Found(item.ToAsyncEnumerable());
 				}
 
@@ -650,10 +650,10 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 				{
 					var goConfig = configuration.CurrentValue.Database.MasterRoom;
 					// A master room that does not exist has no global commands to offer.
-					if (await services.Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig)))) is AnySharpObject globalObject)
+					if (await services.Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig)))) is AnySharpObject { AsOptionalContainer: AnySharpContainer masterRoom } globalObject)
 					{
 						AnySharpObject[] globalObjects = [globalObject];
-						var globalObjectContent = globalObject.AsContainer
+						var globalObjectContent = masterRoom
 							.Content(services.Mediator)
 							.Select(x => x.WithRoomOption());
 

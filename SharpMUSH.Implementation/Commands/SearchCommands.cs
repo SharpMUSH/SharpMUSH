@@ -112,7 +112,7 @@ public partial class Commands
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
 		var perceive = await ObserveRealityAsync(parser, executor);
-		var here = executor.IsContent ? await executor.AsContent.Location() : null;
+		var here = executor.AsOptionalContent is AnySharpContent scanner ? await scanner.Location() : null;
 
 		// Both zones are wanted by the ZONE branch and by the master room's already-scanned guard, and
 		// resolving one costs a fetch, so only pay for them when a branch that reads them will run.
@@ -176,10 +176,10 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor,
 			nameof(ErrorMessages.Notifications.ScanMatchesOnCarriedObjects), executor);
 
-		if (executor.IsContainer)
+		if (executor.AsOptionalContainer is AnySharpContainer carrier)
 		{
 			await ReportScanAsync(run, ScanEntry,
-				await FindScanMatchesAsync(run, executor.AsContainer.Content(Mediator).Select(x => x.WithRoomOption())));
+				await FindScanMatchesAsync(run, carrier.Content(Mediator).Select(x => x.WithRoomOption())));
 		}
 
 		// An executor standing in the room is in its contents too, so with the default switch set a
@@ -591,7 +591,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.Unfindable);
 		}
 
-		var targetLocation = await target.AsContent.Location();
+		var targetLocation = await targetPlayer.Location.WithCancellation(CancellationToken.None);
 		var locationName = targetLocation.Object().Name;
 
 		await NotifyService.Notify(target,
@@ -871,8 +871,7 @@ public partial class Commands
 		var targetName = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText() : null;
 		if (string.IsNullOrEmpty(targetName))
 		{
-			var location = await executor.AsContent.Location();
-			return await ReportEntrancesAsync(executor, location.WithExitOption(), args, switches);
+			return await ReportEntrancesAsync(executor, (await executor.Where()).WithExitOption(), args, switches);
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, targetName, LocateFlags.All) switch
@@ -1243,7 +1242,11 @@ public partial class Commands
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInInventory), executor);
-			await SweepContentsAsync(executor, executor.AsContainer, perceive, connectFlag);
+			// An exit carries nothing, so its inventory sweep lists nothing.
+			if (executor.AsOptionalContainer is AnySharpContainer carrier)
+			{
+				await SweepContentsAsync(executor, carrier, perceive, connectFlag);
+			}
 		}
 
 		return CallState.Empty;

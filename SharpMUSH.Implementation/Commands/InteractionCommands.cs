@@ -66,7 +66,8 @@ public partial class Commands
 
 		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
 
-		if (locateResult is not AnySharpObject objectToDrop || objectToDrop.IsRoom || objectToDrop.IsExit)
+		if (locateResult is not AnySharpObject objectToDrop
+				|| objectToDrop.AsOptionalContent is not AnySharpContent { IsExit: false } contentToDrop)
 		{
 			await NotifyService.Notify(executor, "You can't drop that.", executor);
 			return CallState.Empty;
@@ -113,7 +114,7 @@ public partial class Commands
 		}
 		else
 		{
-			await DropTo(parser, executor, objectToDrop, currentRoom, "drop");
+			await DropTo(parser, executor, contentToDrop, currentRoom, "drop");
 		}
 
 		// did_it(player, thing, "DROP", "You drop X.", "ODROP", "drops X.", "ADROP", NOTHING)
@@ -151,11 +152,11 @@ public partial class Commands
 	private async ValueTask DropTo(
 		IMUSHCodeParser parser,
 		AnySharpObject dropper,
-		AnySharpObject thing,
+		AnySharpContent content,
 		AnySharpContainer location,
 		string cause)
 	{
-		var content = thing.AsContent;
+		var thing = content.WithRoomOption();
 		AnySharpObject owner = await thing.Object().Owner.WithCancellation(CancellationToken.None);
 
 		// move.c:748-750. Fixed(x) is a flag on the OWNER (hdrs/dbdefs.h:84), not on the object.
@@ -218,6 +219,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (await RefusedNonHolder(executor) is not AnySharpContainer emptier) return CallState.Empty;
 		var args = parser.CurrentState.Arguments;
 		var objectName = args["0"].Message!.ToPlainText();
 
@@ -237,7 +239,7 @@ public partial class Commands
 		}
 
 		// move.c:809: TYPE_THING | TYPE_PLAYER only.
-		if (!objectToEmpty.IsThing && !objectToEmpty.IsPlayer)
+		if (objectToEmpty.AsOptionalContainer is not AnySharpContainer { IsRoom: false } emptied)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantEmptyThatFromHere), executor);
 			return CallState.Empty;
@@ -263,7 +265,7 @@ public partial class Commands
 		// emptier cannot see: a DARK item, or any unLIGHT item in a DARK container (OPAQUE, for a
 		// player), unless the emptier is See_All, is the container, or controls it or the item.
 		var containerIsDark = objectToEmpty.IsPlayer ? await objectToEmpty.IsOpaque() : await objectToEmpty.IsDark();
-		var contents = await objectToEmpty.AsContainer.Content(Mediator)
+		var contents = await emptied.Content(Mediator)
 			.Where(async (item, _) =>
 				await PermissionService.FirstVisible(executor, objectToEmpty, item.WithRoomOption(), containerIsDark))
 			.ToListAsync();
@@ -343,7 +345,7 @@ public partial class Commands
 				await NotifyService.Notify(itemObject,
 					string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
 
-				var takeMove = await MoveService.EnterRoom(parser, item, executor.AsContainer,
+				var takeMove = await MoveService.EnterRoom(parser, item, emptier,
 					noMoveMsgs: false, executor.Object().DBRef, "empty");
 
 				// A refused take leaves the item in the container, so it is not one of the objects the
@@ -381,7 +383,7 @@ public partial class Commands
 			// inventory, because its items have nowhere further to go.
 			if (!heldByEmptier)
 			{
-				await DropTo(parser, executor, itemObject, containerLocation, "empty");
+				await DropTo(parser, executor, item, containerLocation, "empty");
 
 				// did_it(player, item, "DROP", …, "ADROP", NOTHING) (move.c:901-902): `loc` NOTHING is
 				// the emptier's own room.
@@ -434,6 +436,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (await RefusedNonHolder(executor) is not AnySharpContainer) return CallState.Empty;
 		var what = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(what))
@@ -530,6 +533,21 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// GET and EMPTY are for a player or a thing (<c>CMD_T_PLAYER | CMD_T_THING</c>): an exit holds
+	/// nothing to take into, and is told so as PennMUSH tells a type-restricted command's user.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpContainer> RefusedNonHolder(AnySharpObject executor)
+	{
+		if (executor.AsOptionalContainer is AnySharpContainer holder)
+		{
+			return holder;
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+		return new None();
+	}
+
+	/// <summary>
 	/// Why ordinary GET will not take <paramref name="thing"/> at all, in Penn's order and before either
 	/// lock (<c>move.c:651-666</c>, <c>:690-695</c>); null when nothing stands in the way.
 	/// </summary>
@@ -561,7 +579,10 @@ public partial class Commands
 			// utils.c:513: a walk that runs out of depth answers 1, so too many containers holds.
 			{ IsRoom: true } => await MoveService.AbsoluteRoom(taker) is var walk
 				&& (walk.TooManyContainers || walk.Room is { } room && room.Object().DBRef.Equals(thing.Object().DBRef)),
-			_ => await MoveService.WouldCreateLoop(thing.AsContent, taker.AsContainer)
+			{ AsOptionalContent: AnySharpContent held } when taker.AsOptionalContainer is AnySharpContainer holder
+				=> await MoveService.WouldCreateLoop(held, holder),
+			// An exit holds nothing, so nothing can be a loop through it.
+			_ => false
 		};
 
 	/// <summary>
@@ -666,7 +687,14 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<bool> MovedToTaker(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject thing)
 	{
-		switch (await MoveService.EnterRoom(parser, thing.AsContent, executor.AsContainer, noMoveMsgs: false,
+		// GET has refused a taker that holds nothing, and GetRefusal a room or an exit, so both always bind.
+		if (thing.AsOptionalContent is not AnySharpContent taken
+				|| executor.AsOptionalContainer is not AnySharpContainer taker)
+		{
+			return false;
+		}
+
+		switch (await MoveService.EnterRoom(parser, taken, taker, noMoveMsgs: false,
 					executor.Object().DBRef, "get"))
 		{
 			case Error<string> refused:
@@ -782,7 +810,7 @@ public partial class Commands
 		// rob.c has no equivalent refusal — with MAT_NEAR_THINGS a room can still arrive by dbref, and
 		// Penn carries on to the ENTER_OK/controls gate. SharpMUSH stops here; that difference is older
 		// than this fix and no harness step reaches it.
-		if (recipient.IsRoom || recipient.IsExit)
+		if (recipient.AsOptionalContainer is not AnySharpContainer { IsRoom: false } recipientContainer)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
@@ -807,7 +835,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (objectResult is not AnySharpObject objectToGive || objectToGive.IsRoom || objectToGive.IsExit)
+		if (objectResult is not AnySharpObject objectToGive
+				|| objectToGive.AsOptionalContent is not AnySharpContent { IsExit: false } contentToGive)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontHaveThat), executor);
 			return CallState.Empty;
@@ -855,8 +884,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var recipientContainer = recipient.AsContainer;
-		if (await MoveService.WouldCreateLoop(objectToGive.AsContent, recipientContainer))
+		if (await MoveService.WouldCreateLoop(contentToGive, recipientContainer))
 		{
 			await NotifyService.Notify(executor, "You can't give that - it would create a containment loop.", executor);
 			return CallState.Empty;
@@ -864,7 +892,6 @@ public partial class Commands
 
 		// rob.c:346 hands the gift to moveto, and moveto IS enter_room (move.c:53-56): a gift changes
 		// hands through the same pipeline every other move uses, and fires the same move triads.
-		var contentToGive = objectToGive.AsContent;
 		var giveMove = await MoveService.EnterRoom(parser, contentToGive, recipientContainer,
 			noMoveMsgs: false, executor.Object().DBRef, "give");
 
@@ -922,13 +949,12 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!executor.IsPlayer && !executor.IsThing)
+		if (executor.AsOptionalContainer is not AnySharpContainer { IsRoom: false } container)
 		{
 			await NotifyService.Notify(executor, "You can't carry anything.", executor);
 			return CallState.Empty;
 		}
 
-		var container = executor.AsContainer;
 		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = container.Content(Mediator).Where((item, ct) => perceive(item.Object().DBRef, ct));
 
@@ -1193,8 +1219,9 @@ public partial class Commands
 		else
 		{
 			// /ROOM treats a room, or wherever the player stands, as a master room and tries its contents.
-			var isLocation = executor.IsContent && (await executor.AsContent.Location()).Object().DBRef.Number == targetRef;
-			if ((!target.IsRoom && !isLocation) || !target.IsContainer)
+			var isLocation = executor.AsOptionalContent is AnySharpContent located
+				&& (await located.Location()).Object().DBRef.Number == targetRef;
+			if ((!target.IsRoom && !isLocation) || target.AsOptionalContainer is not AnySharpContainer masterRoom)
 			{
 				await NotifyService.Notify(executor, "Make room! Make room!", executor);
 				return CallState.Empty;
@@ -1202,7 +1229,7 @@ public partial class Commands
 
 			// Exits live on their own chain in PennMUSH (Exits(x), hdrs/dbdefs.h:36), so Contents(x) never
 			// hands one to list_match. GetContentsQuery returns them, so the exclusion has to be ours.
-			candidates = target.AsContainer.Content(Mediator).Where(x => !x.IsExit).Select(x => x.WithRoomOption());
+			candidates = masterRoom.Content(Mediator).Where(x => !x.IsExit).Select(x => x.WithRoomOption());
 		}
 
 		// Only $-commands are tried, with the player as the matcher and QUEUE_DEFAULT: each match is a

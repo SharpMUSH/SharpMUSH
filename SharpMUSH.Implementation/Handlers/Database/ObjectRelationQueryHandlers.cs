@@ -36,7 +36,7 @@ public class GetHomeOfQueryHandler(INavigationStore database, IMediator mediator
 	public async ValueTask<AnySharpContainer> Handle(GetHomeOfQuery query, CancellationToken cancellationToken)
 		=> await HomeEdge.ReadAsync(database, mediator, query.Number, cancellationToken) switch
 		{
-			AnySharpObject home => home.AsContainer,
+			AnySharpObject home => ObjectRefs.EdgeContainer(home),
 			None => throw new InvalidOperationException($"No home found for #{query.Number}")
 		};
 }
@@ -64,10 +64,10 @@ internal static class HomeEdge
 		=> await ObjectRefs.NodeAsync(mediator,
 			await database.GetRelationRefAsync(ObjectRelationKind.Home, new DBRef(number), cancellationToken), cancellationToken);
 
-	/// <remarks><c>AsContainer</c> throws for an exit, which no edge may name as a container.</remarks>
+	/// <remarks><see cref="ObjectRefs.EdgeContainer"/> throws for an exit, which no edge may name as a container.</remarks>
 	public static AnyOptionalSharpContainer Optional(AnyOptionalSharpObject node) => node switch
 	{
-		AnySharpObject found => found.AsContainer.WithNoneOption(),
+		AnySharpObject found => ObjectRefs.EdgeContainer(found).WithNoneOption(),
 		None none => none
 	};
 }

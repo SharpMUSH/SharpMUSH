@@ -122,12 +122,11 @@ public static class MessageHelpers
 
 			if (isRemit)
 			{
-				if (!locateTarget.IsContainer)
+				if (locateTarget.AsOptionalContainer is not AnySharpContainer container)
 				{
 					continue;
 				}
 
-				var container = locateTarget.AsContainer;
 				var evaluatedMessage = await EvaluateMessageForRecipient(
 					parser, attributeService, executor, enactor,
 					locateTarget, objToEvaluate, attrToEvaluate,

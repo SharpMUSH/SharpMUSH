@@ -380,12 +380,12 @@ public class SharpMUSHBooleanExpressionVisitor(
 	{
 		if (await med.Send(new GetObjectNodeQuery(key), ExecutionBudget.CurrentToken) is not AnySharpObject found
 				|| !found.Object().DBRef.Matches(key)
-				|| found.IsRoom)
+				|| found.AsOptionalContent is not AnySharpContent content)
 		{
 			return false;
 		}
 
-		var location = await found.AsContent.Location();
+		var location = await content.Location();
 		return location.Object().Key == container.Object().Key;
 	}
 

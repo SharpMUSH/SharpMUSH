@@ -529,7 +529,7 @@ public class LookService(
 		return linkType switch
 		{
 			"variable" => new None(),
-			"home" => looker.IsContent ? await looker.AsContent.Home() : new None(),
+			"home" => looker.AsOptionalContent is AnySharpContent lookerContent ? await lookerContent.Home() : new None(),
 			_ => await exit.Home()
 		};
 	}

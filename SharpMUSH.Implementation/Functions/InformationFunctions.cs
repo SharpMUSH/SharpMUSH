@@ -1542,9 +1542,9 @@ public partial class Functions
 			}
 		}
 
-		if (checkInventory && looker.IsContainer)
+		if (checkInventory && looker.AsOptionalContainer is AnySharpContainer inventory)
 		{
-			await AddContents(looker.AsContainer);
+			await AddContents(inventory);
 		}
 
 		if (checkRoom)
@@ -1566,9 +1566,9 @@ public partial class Functions
 			{
 				objectsToScan.Add(masterRoom);
 
-				if (masterRoom.IsContainer)
+				if (masterRoom.AsOptionalContainer is AnySharpContainer masterContainer)
 				{
-					await AddContents(masterRoom.AsContainer);
+					await AddContents(masterContainer);
 				}
 			}
 		}

@@ -1332,7 +1332,7 @@ public partial class LightningDatabase
 			?? throw new InvalidOperationException($"No location found for #{dbref}");
 		var found = ReadObject(tx, destDbref)
 			?? throw new InvalidOperationException($"No object record found for #{destDbref}");
-		return Hydrate(found.Dbref, found.Record).AsContainer;
+		return RelatedContainer(Hydrate(found.Dbref, found.Record));
 	});
 
 	private AnyOptionalSharpContainer GetOptionalContainerRelation(TableDef forward, long dbref) => Store.Read<AnyOptionalSharpContainer>(tx =>
@@ -1346,8 +1346,15 @@ public partial class LightningDatabase
 		var found = ReadObject(tx, destDbref.Value);
 		return found is null
 			? new None()
-			: Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
+			: RelatedContainer(Hydrate(found.Value.Dbref, found.Value.Record)).WithNoneOption();
 	});
+
+	/// <summary>A location or home edge never points at an exit; one that does is a corrupt edge.</summary>
+	private static AnySharpContainer RelatedContainer(AnySharpObject related) => related.AsOptionalContainer switch
+	{
+		AnySharpContainer container => container,
+		None => throw new InvalidOperationException($"#{related.Object().DBRef.Number} is an exit, not a container")
+	};
 
 	private IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, CancellationToken ct)
 		=> Store.DupsMapAsync(Tables.Parent.Reverse, Keys.Dbref(dbref), ReadSharpObject, ct: ct);

@@ -1383,14 +1383,14 @@ public partial class Functions
 					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 
-				if (!container.IsContainer)
+				if (container.AsOptionalContainer is not AnySharpContainer searched)
 				{
 					return new CallState(ErrorMessages.Returns.InvalidObjectType);
 				}
 
 				var perceive = await ObserveProjectionRealityAsync(parser, executor.Object().DBRef);
 				var matches = new List<AnySharpContent>();
-				await foreach (var item in container.AsContainer.Content(Mediator))
+				await foreach (var item in searched.Content(Mediator))
 				{
 					if (!await perceive(item.Object().DBRef, ExecutionBudget.CurrentToken)) continue;
 					var name = item.Object().Name;

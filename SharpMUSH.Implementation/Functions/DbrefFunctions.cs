@@ -912,13 +912,13 @@ public partial class Functions
 				for (var i = 0; i < levels; i++)
 				{
 					// The climb stops at a room and answers it (src/fundb.c:1580).
-					if (!current.IsContent)
+					if (current.AsOptionalContent is not AnySharpContent content)
 					{
 						break;
 					}
 
 					// An exit's location is its source room.
-					var location = await current.AsContent.Location();
+					var location = await content.Location();
 					current = location.WithExitOption();
 				}
 

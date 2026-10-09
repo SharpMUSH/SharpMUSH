@@ -465,9 +465,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				changed = true;
 			}
 
-			if (survivor.IsContent)
+			if (survivor.AsOptionalContent is AnySharpContent content)
 			{
-				var content = survivor.AsContent;
 				if (seeds.Contains((await content.Location()).Object().Key))
 				{
 					await _mediator.Send(new SetObjectLocationCommand(content, god), cancellationToken);
@@ -2112,9 +2111,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			await _mediator.Send(new LinkRoomCommand(targetRoom, container.WithNoneOption()), cancellationToken);
 		}
-		else
+		else if (target.AsOptionalContent is AnySharpContent content)
 		{
-			await _mediator.Send(new SetObjectHomeCommand(target.AsContent, container), cancellationToken);
+			await _mediator.Send(new SetObjectHomeCommand(content, container), cancellationToken);
 		}
 	}
 

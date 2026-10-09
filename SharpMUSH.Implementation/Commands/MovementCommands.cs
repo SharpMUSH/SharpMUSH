@@ -238,12 +238,12 @@ public partial class Commands
 				continue;
 			}
 
-			if (!follower.IsContent)
+			if (follower.AsOptionalContent is not AnySharpContent followerContent)
 			{
 				continue;
 			}
 
-			var followerLocation = await follower.AsContent.Location();
+			var followerLocation = await followerContent.Location();
 
 			if (!followerLocation.Object().DBRef.Equals(from.Object().DBRef))
 			{
@@ -337,7 +337,7 @@ public partial class Commands
 
 		// enter_room only moves a Mobile (move.c:243). A room cannot be content, and asking it where
 		// it is would throw rather than refuse.
-		if (!executor.IsContent)
+		if (executor.AsOptionalContent is not AnySharpContent mover)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
 			return CallState.Empty;
@@ -380,7 +380,7 @@ public partial class Commands
 			return await FailBasicLock(parser, executor, exitObject);
 		}
 
-		if (await MoveService.WouldCreateLoop(executor.AsContent, destination))
+		if (await MoveService.WouldCreateLoop(mover, destination))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWayContainmentLoop), executor);
 			return CallState.Empty;
@@ -403,9 +403,9 @@ public partial class Commands
 
 		// A room destination goes through enter_room, anything else through safe_tel (move.c:486-508).
 		var result = destination.WithExitOption().IsRoom
-			? await MoveService.EnterRoom(parser, executor.AsContent, destination,
+			? await MoveService.EnterRoom(parser, mover, destination,
 				noMoveMsgs: false, executor.Object().DBRef, "move")
-			: await MoveService.SafeTel(parser, executor.AsContent, destination,
+			: await MoveService.SafeTel(parser, mover, destination,
 				noMoveMsgs: false, executor.Object().DBRef, "move");
 
 		if (result is Error<string> error)
@@ -475,7 +475,7 @@ public partial class Commands
 		// move.c:928: do_enter refuses a non-Mobile before it matches anything, silently. ENTER is
 		// CB.Default, so @force and @trigger can run it with a room or an exit as executor; a room has
 		// no location to read and neither can be moved by enter_room (move.c:243).
-		if (!executor.IsPlayer && !executor.IsThing)
+		if (executor.AsOptionalContent is not AnySharpContent { IsExit: false } mover)
 		{
 			return CallState.Empty;
 		}
@@ -505,7 +505,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (objectToEnter.IsExit)
+		if (objectToEnter.AsOptionalContainer is not AnySharpContainer containerToEnter)
 		{
 			await GoTo(parser, _2);
 			return CallState.Empty;
@@ -548,7 +548,7 @@ public partial class Commands
 
 		// move.c:962: do_enter teleports rather than plain enter_room, so a container owned by
 		// someone else strips the STICKY possessions the mover does not control.
-		var moveResult = await MoveService.SafeTel(parser, executor.AsContent, objectToEnter.AsContainer,
+		var moveResult = await MoveService.SafeTel(parser, mover, containerToEnter,
 			noMoveMsgs: false, executor.Object().DBRef, "enter");
 
 		if (moveResult is Error<string> error)
@@ -573,7 +573,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!executor.IsPlayer && !executor.IsThing)
+		if (executor.AsOptionalContent is not AnySharpContent { IsExit: false } leaver)
 		{
 			await NotifyService.Notify(executor, "Only players and things can leave.", executor);
 			return CallState.Empty;
@@ -601,7 +601,7 @@ public partial class Commands
 		}
 
 		// move.c:986. EnterRoom carries the automatic look, so the command adds none of its own.
-		var moveResult = await MoveService.EnterRoom(parser, executor.AsContent, destinationLocation,
+		var moveResult = await MoveService.EnterRoom(parser, leaver, destinationLocation,
 			noMoveMsgs: false, executor.Object().DBRef, "leave");
 
 		if (moveResult is Error<string> error)

@@ -58,10 +58,10 @@ public static class BuildingHelpers
 		}
 
 		// PennMUSH do_create hands the new object to the executor (src/create.c). An exit cannot
-		// hold anything — AnySharpObject.AsContainer throws for one — so code owned by an exit
-		// builds into the room the exit is in. @CREATE threw outright in that case; create() had
+		// hold anything — AnySharpObject.AsOptionalContainer is none for one — so code owned by an
+		// exit builds into the room the exit is in. @CREATE threw outright in that case; create() had
 		// the fallback and lost it when the two were merged.
-		var into = executor.IsContainer ? executor.AsContainer : await executor.Where();
+		var into = executor.AsOptionalContainer is AnySharpContainer holder ? holder : await executor.Where();
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
 		// do_create.c:561-565 — make_first_free_wrapper, which asks IsGarbage as well as the power,
@@ -475,14 +475,14 @@ public static class BuildingHelpers
 		}
 
 		// can_link_to. An exit is never a container in SharpMUSH, so it is refused here too.
-		if (!found.IsContainer || !await permissionService.CanLinkToAsync(executor, found))
+		if (found.AsOptionalContainer is not AnySharpContainer container || !await permissionService.CanLinkToAsync(executor, found))
 		{
 			await notifyService.NotifyLocalized(executor.Object().DBRef,
 				nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
 			return new AnyOptionalSharpContainer(new None());
 		}
 
-		return new AnyOptionalSharpContainer(found.AsContainer);
+		return new AnyOptionalSharpContainer(container);
 	}
 
 	/// <summary>PennMUSH's <c>HOME</c> (<c>hdrs/dbdefs.h</c>), as <c>do_real_open</c> prints it.</summary>
@@ -842,7 +842,7 @@ public static class BuildingHelpers
 		// expression serves both. @create's rule — hand it to the executor whenever the executor can hold
 		// something — is the wrong one here: it is true of every player, so a player's clone landed in
 		// their own inventory instead of beside the original.
-		var into = executor.IsRoom ? executor.AsContainer : await executor.Where();
+		var into = await executor.Where();
 
 		// "We give the clone the same modification time that its other clone has, but update the
 		// creation time" (create.c:653-655). A null creation time is now; the modification time is the
@@ -1430,8 +1430,8 @@ public static class BuildingHelpers
 		}
 
 		var configured = new DBRef((int)configuration.CurrentValue.Database.DefaultHome);
-		return await mediator.Send(new GetObjectNodeQuery(configured)) is AnySharpObject { IsContainer: true } fallback
-			? new AnyOptionalSharpContainer(fallback.AsContainer)
+		return await mediator.Send(new GetObjectNodeQuery(configured)) is AnySharpObject { AsOptionalContainer: AnySharpContainer fallback }
+			? new AnyOptionalSharpContainer(fallback)
 			: new AnyOptionalSharpContainer(new None());
 	}
 

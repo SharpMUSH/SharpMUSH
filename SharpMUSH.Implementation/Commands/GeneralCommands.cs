@@ -80,7 +80,7 @@ public partial class Commands
 		{
 			// PennMUSH do_look_at (look.c:611): looking outside shows the location OF your location, so
 			// there is nothing to see when you are standing in a room or inside an opaque container.
-			var container = executor.IsContent ? await executor.AsContent.Location() : null;
+			var container = executor.AsOptionalContent is AnySharpContent looker ? await looker.Location() : null;
 
 			if (container is null || container.IsRoom || await container.WithExitOption().IsOpaque())
 			{
@@ -218,10 +218,10 @@ public partial class Commands
 		// The exits list below is a plain DOLIST (look.c:916) and has no such filter.
 		var canSeeContent = await ObserveContentsAsync(parser, executor, viewingKnown, ConnectionService);
 
-		var contents = !showContents
+		var contents = !showContents || viewingKnown.AsOptionalContainer is not AnySharpContainer viewedContainer
 			? []
 			// GetContentsQuery also yields exits; Penn's Contents(thing) never does, and exits get their own list.
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+			: await Mediator.CreateStream(new GetContentsQuery(viewedContainer), ExecutionBudget.CurrentToken)
 				.Where(item => !item.IsExit)
 				.Where((AnySharpContent item, CancellationToken ct) => canSeeContent(item, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
@@ -377,9 +377,9 @@ public partial class Commands
 			return new CallState(obj.DBRef.ToString());
 		}
 
-		if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
+		if (!switches.Contains("OPAQUE") && viewingKnown.AsOptionalContainer is AnySharpContainer exitSource)
 		{
-			var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+			var exits = await Mediator.CreateStream(new GetExitsQuery(exitSource), ExecutionBudget.CurrentToken)
 				.Where((exit, ct) => perceive(exit.Object.DBRef, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
@@ -395,10 +395,10 @@ public partial class Commands
 			}
 		}
 
-		if (!viewingKnown.IsRoom)
+		if (viewingKnown.AsOptionalContent is AnySharpContent viewedContent)
 		{
-			var homeContainer = await viewingKnown.MinusRoom().Home();
-			var locationContainer = await viewingKnown.AsContent.Location();
+			var homeContainer = await viewedContent.Home();
+			var locationContainer = await viewedContent.Location();
 
 			var locationLine = await MessageFormatting.FormatObjectWithDbrefMString(locationContainer.Object(), flagView);
 
