@@ -5,7 +5,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>A layout theme as <c>@theme/list</c> shows it.</summary>
 /// <param name="Name">Its name, lower case.</param>
-/// <param name="BuiltIn">Whether it ships with MarkupString rather than being added by the game.</param>
+/// <param name="BuiltIn">Whether it ships with SharpMUSH or MarkupString rather than being added by the game.</param>
 /// <param name="Disabled">Whether staff turned it off (built-in themes only).</param>
 /// <param name="Definition">An added theme's JSON; null for a built-in one.</param>
 public sealed record LayoutThemeEntry(string Name, bool BuiltIn, bool Disabled, string? Definition);

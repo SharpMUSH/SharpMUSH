@@ -301,11 +301,12 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
 | [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [R()]              |
 | [RAND()]           | [RESTRICTEDEXPR()] | [S()]              | [SCAN()]           |
-| [SET()]            | [SETQ()]           | [SETR()]           | [SLEV()]           |
-| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
-| [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        | [TEL()]            |
-| [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         |
-| [UPTIME()]         | [VALID()]          | [WIPE()]           |                    |
+| [SET()]            | [SETQ()]           | [SETQM()]          | [SETR()]           |
+| [SETRM()]          | [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     |
+| [SPEAK()]          | [STEXT()]          | [SUGGEST()]        | [TAG()]            |
+| [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
+| [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
+| [WIPE()]           |                    |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.

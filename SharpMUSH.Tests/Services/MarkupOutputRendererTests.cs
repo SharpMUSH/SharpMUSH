@@ -701,6 +701,19 @@ public partial class MarkupOutputRendererTests
 			.IsEqualTo(Render(MarkupText.Wrap(AnsiTheme.Paint(ThemeColor.Standard(14)), "Calls"), new ProtocolCapabilities(SupportsAnsi: true), AllColour));
 	}
 
+	/// <summary>A box laid out again under a reader's theme is drawn from its own copy of the text, tone and all.</summary>
+	[Test]
+	public async Task AToneInsideALayout_IsDrawnInTheReadersTheme()
+	{
+		var tone = ToneMarkup.Build(ThemeRole.Error, MarkupText.Plain("Failed"), ThemeColor.Standard(9));
+		var box = BlockLayout.Build(new TextBlock(tone).Bordered().ThemedUnder(new LayoutTheme { Border = BorderStyle.Mush }), 20);
+		if (!ThemePalette.TryParse("nord", out var nord, out _)) throw new InvalidOperationException("nord does not read");
+		var red = Render(MarkupText.Wrap(AnsiTheme.Paint(nord![ThemeRole.Error]!.Value), "Failed"), new ProtocolCapabilities(SupportsAnsi: true), AllColour);
+
+		await Assert.That(Render(box, new ProtocolCapabilities(SupportsAnsi: true), AllColour with { Theme = "nord" }))
+			.Contains(red.TrimEnd('\r', '\n'));
+	}
+
 	[Test]
 	[Arguments(OutputFormat.Ansi)]
 	[Arguments(OutputFormat.Pueblo)]

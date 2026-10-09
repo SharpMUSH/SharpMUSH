@@ -39,7 +39,13 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
   colour picked for that vision.
 
-The anime, cartoon and space themes are portal themes only; there is no layout theme of the same name. Every genre
+Every built-in theme but the genres also has a layout theme of the same id for the game's terminal output
+(`LayoutThemes.Own`, `SharpMUSH.Library/Markup/LayoutThemes.cs`), its colours copied by hand: background `bg`,
+surface `surface-2`, foreground `text`, primary `accent`, secondary `accent-2` (else `text`), tertiary `accent-3`
+(else `warn`), muted `text-faint`, and the status colours the resolver derives, each moved toward white or black
+until it reaches 3:1 (primary, muted) or 4.5:1 (the rest) against `bg`. A new built-in portal theme needs one too:
+`PortedLayoutThemeTests` fails until it has it. The genres keep MarkupString's genre layout themes. `sharpmush`,
+Phosphor's teal on black, is the game's default `layout_theme`. Every genre
 theme has a texture, a card frame and a title face no other theme uses
 (`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep the plain look.
 

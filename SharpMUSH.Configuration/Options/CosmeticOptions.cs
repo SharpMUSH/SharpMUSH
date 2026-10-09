@@ -161,8 +161,9 @@ public record CosmeticOptions(
 		Description = "Colour theme for layouts that name none: a theme name, or a theme as JSON",
 		Group = "Layout",
 		Order = 2,
-		Tooltip = "Empty for no colour. A name from themes(), such as terminal or nord, or JSON such as "
-			+ "{\"seed\":\"#7aa2f7\",\"harmony\":\"triadic\"}. See help LAYOUT THEMES.")]
+		Tooltip = "sharpmush, the portal's teal on black, unless set. none for no colour. A name from themes(), such "
+			+ "as terminal, nord or cyberpunk, or JSON such as {\"seed\":\"#7aa2f7\",\"harmony\":\"triadic\"}. "
+			+ "See help LAYOUT THEMES.")]
 	string LayoutTheme,
 
 	[property: SharpConfig(

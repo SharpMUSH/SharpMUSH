@@ -4,12 +4,12 @@
 
 The names of the themes the game offers, for the `"theme"` layout option, [@THEME] and the `layout_theme` game option: the built-in ones staff have not disabled, then those staff added (see [@THEME/LIST]).
 
-The built-in ones are `terminal`, which uses the sixteen standard colours each client draws in its own palette; one for each genre a game can name in its MSSP settings, each with its own border, title ornaments, bullet and gauge as well as colours (see [LAYOUT THEMES]): `fantasy historical horror modern mystery romance science-fiction spiritual`; and well-known colour schemes: `catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night`.
+The built-in ones are `sharpmush`, the portal's teal on black, which a game is drawn in unless its `layout_theme` says otherwise; the web portal's themes, under the names the portal gives them: `phosphor daylight magical-girl shojo idol slice-of-life shonen sports mechmachine isekai yokai comic-book rubber-hose eighties-cartoon cyberpunk synthwave space-opera starship-console real-robot super-robot`, and one dark and one light for each kind of colour blindness: `protan-dark protan-light deutan-dark deutan-light tritan-dark tritan-light mono-dark mono-light`; `terminal`, which uses the sixteen standard colours each client draws in its own palette; one for each genre a game can name in its MSSP settings, each with its own border, title ornaments, bullet and gauge as well as colours (see [LAYOUT THEMES]): `fantasy historical horror modern mystery romance science-fiction spiritual`; and well-known colour schemes: `catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night`.
 
 ### Example
 ```sharp
 > think first(themes())
-terminal
+sharpmush
 ```
 
 ::: seealso

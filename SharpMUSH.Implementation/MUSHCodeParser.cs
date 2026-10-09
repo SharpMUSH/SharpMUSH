@@ -271,15 +271,16 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var plainText = text.ToPlainText();
 
 		// The same text under the same settings parses to the same tree, and code run once per item
-		// (u(), filter(), iter()) is the same text every time. Only evaluated code and queued action
-		// lists are kept, and never text taken from a typed line: a typed line is rarely repeated, and
-		// some carry a password (CONNECT, @password) that must not outlive the command. Attribute text
-		// a typed command runs (look's formats, u()) is not part of the line, so it is still kept.
-		// A tracing parse is never shared.
+		// (u(), filter(), iter()) is the same text every time, as is each command's argument split when
+		// its action list runs again. Nothing taken from a typed line is kept: a typed line is rarely
+		// repeated, and some carry a password (CONNECT, @password) that must not outlive the command.
+		// Attribute text a typed command runs (look's formats, u()) is not part of the line, so it is
+		// still kept. A tracing parse is never shared.
 		var options = Configuration.CurrentValue;
 		var typedLine = parser.State.IsEmpty ? null : parser.CurrentState.TypedLine;
 		var cache = options.Debug.DebugSharpParser || plainText.Length > SoftcodeParseCache.MaxTextLength
-			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse))
+			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse) or nameof(CommandCommaArgsParse)
+				or nameof(CommandSingleArgParse) or nameof(CommandEqSplitArgsParse) or nameof(CommandEqSplitParse))
 			|| typedLine?.Contains(plainText, StringComparison.Ordinal) == true
 			? null
 			: Services.ParseCache;
