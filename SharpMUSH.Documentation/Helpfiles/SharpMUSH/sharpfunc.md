@@ -5846,7 +5846,7 @@ SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 # JSON Functions
   JSON functions are used to create and modify JSON objects.
 
-`isjson()    json()     json_array()     json_group_by()     json_map()     json_query()     json_mod()`
+`isjson()    json()     json_array()     json_fill()     json_group_by()     json_map()     json_query()     json_mod()`
 
   This function sends a JSON object to GMCP and WebSocket connections.
 

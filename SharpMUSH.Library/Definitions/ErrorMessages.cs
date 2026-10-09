@@ -402,6 +402,14 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string JsonRemoveFailedFormat = "#-1 REMOVE FAILED: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string JsonPathNotFoundFormat = "#-1 PATH NOT FOUND: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string JsonFillNumberFormat = "#-1 VALUE FOR {0} MUST BE A NUMBER";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string JsonFillBooleanFormat = "#-1 VALUE FOR {0} MUST BE A BOOLEAN";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string JsonFillJsonFormat = "#-1 VALUE FOR {0} MUST BE JSON";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DuplicateKeysFormat = "#-1 DUPLICATE KEYS: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MarkdownRenderErrorFormat = "#-1 ERROR RENDERING MARKDOWN: {0}";

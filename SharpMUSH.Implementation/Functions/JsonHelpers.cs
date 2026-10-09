@@ -4,7 +4,10 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Immutable;
 using System.Text.Encodings.Web;
+using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -267,6 +270,137 @@ public static class JsonHelpers
 		catch
 		{
 			return null;
+		}
+	}
+
+	/// <summary>
+	/// json_fill()'s work: <paramref name="json"/> with each JSON Pointer in <paramref name="fills"/>
+	/// given its value, typed by the value already there (see <see cref="FillValue"/>), or the error for
+	/// the first fill that cannot be made.
+	/// </summary>
+	public static Result<string> Fill(string json, IEnumerable<(string Pointer, string Value)> fills)
+	{
+		JsonNode? root;
+		try
+		{
+			root = JsonNode.Parse(json);
+		}
+		catch (JsonException)
+		{
+			return new Error<string>(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_fill"));
+		}
+
+		foreach (var (pointer, value) in fills)
+		{
+			if (pointer.Length == 0)
+			{
+				// RFC 6901: the empty pointer names the whole document, so its fill replaces the root.
+				switch (FillValue(root, pointer, value))
+				{
+					case JsonFill fill:
+						root = fill.Node;
+						continue;
+					case Error<string> rootError:
+						return rootError;
+				}
+			}
+			if (FillOne(root, pointer, value) is Error<string> error) return error;
+		}
+		return root?.ToJsonString(RelaxedJsonOptions) ?? "null";
+	}
+
+	private static Result<Success> FillOne(JsonNode? root, string pointer, string value)
+		=> FindSlot(root, pointer) switch
+		{
+			JsonSlot slot => FillValue(slot.Current, pointer, value) switch
+			{
+				JsonFill fill => slot.Set(fill.Node),
+				Error<string> error => error
+			},
+			Error<string> error => error
+		};
+
+	/// <summary>
+	/// The member or element an RFC 6901 JSON Pointer names. It must already exist: json_fill fills a
+	/// template, so a pointer that names nothing is a mistake in the pointer, not a request to add.
+	/// </summary>
+	private static Result<JsonSlot> FindSlot(JsonNode? root, string pointer)
+	{
+		var notFound = new Error<string>(string.Format(ErrorMessages.Returns.JsonPathNotFoundFormat, pointer));
+		if (!pointer.StartsWith('/')) return notFound;
+
+		var segments = pointer[1..].Split('/').Select(segment => segment.Replace("~1", "/").Replace("~0", "~")).ToArray();
+		var container = root;
+		foreach (var segment in segments[..^1])
+		{
+			if (Child(container, segment) is not JsonFill { Node: { } child }) return notFound;
+			container = child;
+		}
+
+		return container is not null && Child(container, segments[^1]) is JsonFill last
+			? new JsonSlot(container, segments[^1], last.Node)
+			: notFound;
+	}
+
+	/// <summary>The member or element <paramref name="segment"/> names, or null when there is none.</summary>
+	private static JsonFill? Child(JsonNode? container, string segment) => container switch
+	{
+		JsonObject obj when obj.TryGetPropertyValue(segment, out var member) => new JsonFill(member),
+		JsonArray array when ArrayIndex(array, segment) is { } index => new JsonFill(array[index]),
+		_ => null
+	};
+
+	private static int? ArrayIndex(JsonArray array, string segment)
+		=> int.TryParse(segment, NumberStyles.None, CultureInfo.InvariantCulture, out var index) && index < array.Count
+			? index
+			: null;
+
+	/// <summary>
+	/// <paramref name="value"/> as the JSON that replaces <paramref name="current"/>: a string where the
+	/// template holds a string, a number where it holds a number, <c>true</c>/<c>false</c> (or 1/0) where it
+	/// holds a boolean, and the value read as JSON where it holds an object, an array or null.
+	/// </summary>
+	private static Result<JsonFill> FillValue(JsonNode? current, string pointer, string value)
+		=> current?.GetValueKind() switch
+		{
+			JsonValueKind.String => new JsonFill(JsonValue.Create(value)),
+			JsonValueKind.Number => decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)
+				? new JsonFill(JsonValue.Create(number))
+				: new Error<string>(string.Format(ErrorMessages.Returns.JsonFillNumberFormat, pointer)),
+			JsonValueKind.True or JsonValueKind.False => value switch
+			{
+				"1" or "true" => new JsonFill(JsonValue.Create(true)),
+				"0" or "false" => new JsonFill(JsonValue.Create(false)),
+				_ => new Error<string>(string.Format(ErrorMessages.Returns.JsonFillBooleanFormat, pointer))
+			},
+			_ => ParseFill(pointer, value)
+		};
+
+	private static Result<JsonFill> ParseFill(string pointer, string value)
+	{
+		try
+		{
+			return new JsonFill(JsonNode.Parse(value));
+		}
+		catch (JsonException)
+		{
+			return new Error<string>(string.Format(ErrorMessages.Returns.JsonFillJsonFormat, pointer));
+		}
+	}
+
+	/// <summary>A JSON value to write, where null is JSON's <c>null</c>.</summary>
+	private readonly record struct JsonFill(JsonNode? Node);
+
+	/// <summary>Where json_fill writes one value: the object or array holding it, and its key or index.</summary>
+	private readonly record struct JsonSlot(JsonNode Container, string Key, JsonNode? Current)
+	{
+		public Success Set(JsonNode? value)
+		{
+			if (Container is JsonArray array)
+				array[int.Parse(Key, CultureInfo.InvariantCulture)] = value;
+			else
+				Container[Key] = value;
+			return new Success();
 		}
 	}
 }

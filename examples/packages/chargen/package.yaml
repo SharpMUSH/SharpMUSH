@@ -1,6 +1,6 @@
 format: 1
 package: chargen
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Example Dynamic Application (Area 21) — a character-application form served as a Portal Schema Document over the HTTP verb routers."
 license: MIT
@@ -22,10 +22,12 @@ objects:
     target: "{{$http_handler}}"
     attributes:
       # ── Routes (children of http-handler's GET/POST verbs) ───────────────
-      # GET /http/chargen/schema — the form schema the portal renders. Pure literal json()
-      # so it is self-contained (no helper attributes) and validates standalone.
+      # GET /http/chargen/schema — the form schema the portal renders, read from DATA`CHARGEN`SCHEMA.
       GET`CHARGEN`SCHEMA: |-
-        @respond/type application/json; think json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,Character Application),pages,json(array,json(object,key,json(string,main),title,json(string,Application),order,json(number,1),sections,json(array,json(object,name,json(string,About),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,charname),label,json(string,Character Name),type,json(string,text),validation,json(object,required,json(boolean,true),max_length,json(number,60))),json(object,kind,json(string,field),key,json(string,concept),label,json(string,Concept),type,json(string,text)),json(object,kind,json(string,field),key,json(string,class),label,json(string,Class),type,json(string,select),options,json(array,json(object,value,json(string,fighter),label,json(string,Fighter)),json(object,value,json(string,wizard),label,json(string,Wizard)),json(object,value,json(string,rogue),label,json(string,Rogue)))),json(object,kind,json(string,field),key,json(string,background),label,json(string,Background),type,json(string,mstring))))))),actions,json(object,submit,json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/chargen/submit),payload,json(string,fields),on_success,json(object,toast,json(string,Application submitted!)),on_error,json(object,bind_field_errors,json(boolean,true)))))
+        @respond/type application/json; think v(DATA`CHARGEN`SCHEMA)
+      # The form, as JSON: v() returns it without evaluating it, so the whole schema is one function call.
+      DATA`CHARGEN`SCHEMA: |-
+        {"kind":"form","schema_version":1,"title":"Character Application","pages":[{"key":"main","title":"Application","order":1,"sections":[{"name":"About","order":1,"elements":[{"kind":"field","key":"charname","label":"Character Name","type":"text","validation":{"required":true,"max_length":60}},{"kind":"field","key":"concept","label":"Concept","type":"text"},{"kind":"field","key":"class","label":"Class","type":"select","options":[{"value":"fighter","label":"Fighter"},{"value":"wizard","label":"Wizard"},{"value":"rogue","label":"Rogue"}]},{"kind":"field","key":"background","label":"Background","type":"mstring"}]}]}],"actions":{"submit":{"transport":"http","method":"POST","route":"/http/chargen/submit","payload":"fields","on_success":{"toast":"Application submitted!"},"on_error":{"bind_field_errors":true}}}}
 
       # POST /http/chargen/submit — validate and acknowledge. %1 = posted field JSON.
       # Demonstration: requires a non-empty character name, returns the structured envelope.

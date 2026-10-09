@@ -37,10 +37,13 @@ object          zero or more pairs of arguments, the first a plain string (NOT a
 
 When `<type>` is "array" or "object", it's recommended that subsequent JSON arguments are created with nested calls to JSON().
 
+A large structure that is mostly the same each time, such as a portal form, is faster stored as JSON in an attribute and completed with json_fill().
+
 ::: seealso
 - [OOB()]
 - [ISJSON()]
 - [json_array()]
+- [json_fill()]
 - [json_query()]
 - [json_map()]
 - [RENDER()]

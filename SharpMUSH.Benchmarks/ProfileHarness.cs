@@ -53,6 +53,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("not", "[not(0)]", false),
 		new("strmatch", "[strmatch(#1,#1)]", false),
 		new("json", "[json(string,Hello)]", false),
+		new("json-doc", "[json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,New request),pages,json(array,json(object,key,json(string,main),title,json(string,New request),order,json(number,1),sections,json_array(json(object,name,json(string,S),order,json(number,1))))),actions,[chr(123)][chr(125)])]", false),
+		new("json-fill", "[json_fill(v(PROFILE_DOC),/kind,form,/title,New request,/pages/0/title,New request,/pages/0/sections,json_array(json(object,name,json(string,S),order,json(number,1))),/actions,[chr(123)][chr(125)])]", false),
 		new("json-obj", "[json(object,a,json(string,x),b,json(number,1))]", false),
 		new("json-mod", "[json_mod(json(object,a,json(number,1)),patch,json(object,b,json(number,2)))]", false),
 		new("setq", "[setq(w1,x)]", false),
@@ -158,6 +160,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOVIS"], MarkupText.Plain("cand(not(hastype(%0,exit)),cor(not(hastype(%0,player)),hasflag(%0,CONNECTED)),cor(not(hasflag(%0,DARK)),strmatch(num(%0),num(%1)),orflags(%1,Wr),haspower(%1,See_All)))"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOBASE"], MarkupText.Plain("json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,status,if(hastype(%0,player),json(string,idle(%0)),null),profile,if(hastype(%0,player),true,null)))"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_DOC"], MarkupText.Plain("{\"kind\":\"\",\"schema_version\":1,\"title\":\"\",\"pages\":[{\"key\":\"main\",\"title\":\"\",\"order\":1,\"sections\":[]}],\"actions\":{}}"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_NOOP"], MarkupText.Plain("think"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_ACTIONS"], MarkupText.Plain("@pemit me=Got %0 [add(%0,1)];think [mul(%0,2)];@switch %0=5,{@pemit me=five},{@pemit me=other}"), god);
 		for (var i = 0; i < 50; i++)

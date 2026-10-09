@@ -1,6 +1,6 @@
 format: 1
 package: profile-handler
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
@@ -134,12 +134,17 @@ objects:
       # character, including its own owner, a profile of blank labels. Those fields are a game's
       # choice, not the engine's: opt back into them below.
       GET`PROFILE`SCHEMA: |-
-        @respond/type application/json; think json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,profile),order,json(number,1),sections,json(array,json(object,name,json(string,Identity),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,created),label,json(string,Created),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,objid),label,json(string,Object ID),type,json(string,text),visible_to,json(string,public))))))))
+        @respond/type application/json; think v(DATA`PROFILE`SCHEMA)
+      # The schema itself, as JSON: v() returns it without evaluating it, so a schema of any size costs
+      # one function call. A route that fills in per-request values reads a template like this one with
+      # json_fill().
+      DATA`PROFILE`SCHEMA: |-
+        {"kind":"view","schema_version":1,"pages":[{"key":"profile","order":1,"sections":[{"name":"Identity","order":1,"elements":[{"kind":"field","key":"created","label":"Created","type":"text","visible_to":"public"},{"kind":"field","key":"objid","label":"Object ID","type":"text","visible_to":"public"}]}]}]}
 
       # ── Opt-in: the richer demographic schema ────────────────────────────
       # Demonstrating the schema system is the point of this package, so the fuller example is kept
       # here rather than deleted. To adopt it on your game, add the fields to the data route and the
-      # matching elements to the schema — both, or the portal renders labels with nothing behind
+      # matching elements to the schema (DATA`PROFILE`SCHEMA) — both, or the portal renders labels with nothing behind
       # them, which is the defect the shipped schema above exists to avoid.
       #
       # Players fill these in with `&PROFILE`FULLNAME me=Gandalf the Grey` (etc.); FN`FIELD reads
@@ -149,5 +154,5 @@ objects:
       #   GET`PROFILE: |-
       #     @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FN`VALUE,ctime(%q<form.objid>)),objid,u(FN`VALUE,objid(%q<form.objid>)),image,u(FN`VALUE,u(FN`PICTURE,%q<form.objid>,IMAGE)),banner,u(FN`VALUE,u(FN`PICTURE,%q<form.objid>,IMAGE`BANNER)),color,u(FN`VALUE,u(FN`COLOR,%q<form.objid>)),fullname,u(FN`FIELD,%q<form.objid>,fullname),alias,u(FN`FIELD,%q<form.objid>,alias),age,u(FN`FIELD,%q<form.objid>,age),concept,u(FN`FIELD,%q<form.objid>,concept),faction,u(FN`FIELD,%q<form.objid>,faction),description,u(FN`FIELD,%q<form.objid>,description)))
       #
-      #   GET`PROFILE`SCHEMA: |-
-      #     @respond/type application/json; think json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,profile),order,json(number,1),sections,json(array,json(object,name,json(string,Demographics),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,fullname),label,json(string,Full Name),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,alias),label,json(string,Alias),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,age),label,json(string,Age),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,concept),label,json(string,Concept),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Status),order,json(number,2),elements,json(array,json(object,kind,json(string,field),key,json(string,faction),label,json(string,Faction),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Description),order,json(number,3),elements,json(array,json(object,kind,json(string,field),key,json(string,description),label,json(string,Description),type,json(string,mstring),visible_to,json(string,public))))))))
+      #   DATA`PROFILE`SCHEMA: |-
+      #     {"kind":"view","schema_version":1,"pages":[{"key":"profile","order":1,"sections":[{"name":"Demographics","order":1,"elements":[{"kind":"field","key":"fullname","label":"Full Name","type":"text","visible_to":"public"},{"kind":"field","key":"alias","label":"Alias","type":"text","visible_to":"public"},{"kind":"field","key":"age","label":"Age","type":"text","visible_to":"public"},{"kind":"field","key":"concept","label":"Concept","type":"text","visible_to":"public"}]},{"name":"Status","order":2,"elements":[{"kind":"field","key":"faction","label":"Faction","type":"text","visible_to":"public"}]},{"name":"Description","order":3,"elements":[{"kind":"field","key":"description","label":"Description","type":"mstring","visible_to":"public"}]}]}]}
