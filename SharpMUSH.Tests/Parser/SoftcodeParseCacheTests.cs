@@ -25,13 +25,13 @@ public class SoftcodeParseCacheTests
 		var text = $"{TestIsolationHelpers.GenerateUniqueName("parsed")}[add(1,2)]";
 
 		await Assert.That(cache.TryGet(KeyFor(text), out _)).IsFalse();
-		var first = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(text));
+		var first = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(text));
 		await Assert.That(cache.TryGet(KeyFor(text), out var entry)).IsTrue();
 
 		var second = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(text));
 		await Assert.That(cache.TryGet(KeyFor(text), out var again)).IsTrue();
 		await Assert.That(again).IsSameReferenceAs(entry);
-		await Assert.That(second!.Message.ToPlainText()).IsEqualTo(first!.Message.ToPlainText());
+		await Assert.That(second!.Message.ToPlainText()).IsEqualTo(first.ToPlainText());
 		await Assert.That(second.Message.ToPlainText()).EndsWith("3");
 	}
 

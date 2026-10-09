@@ -37,8 +37,8 @@ public class AttributeTreeParentTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {parentDbRef}=wibble"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {parentDbRef}=gleep"));
 
-		var fooResult = (await Parser.FunctionParse(MarkupText.Plain($"get({childDbRef}/FOO)")))!.Message;
-		var barResult = (await Parser.FunctionParse(MarkupText.Plain($"get({childDbRef}/FOO`BAR)")))!.Message;
+		var fooResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({childDbRef}/FOO)"));
+		var barResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({childDbRef}/FOO`BAR)"));
 
 		await Assert.That(fooResult.ToPlainText()).IsEqualTo("wibble")
 			.Because("child should inherit FOO from parent");
@@ -65,8 +65,8 @@ public class AttributeTreeParentTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR`BAZ {childDbRef}=boom"));
 
-		var fooResult = (await Parser.FunctionParse(MarkupText.Plain($"get({childDbRef}/FOO)")))!.Message;
-		var barResult = (await Parser.FunctionParse(MarkupText.Plain($"get({childDbRef}/FOO`BAR)")))!.Message;
+		var fooResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({childDbRef}/FOO)"));
+		var barResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({childDbRef}/FOO`BAR)"));
 
 		await Assert.That(fooResult.ToPlainText()).IsEqualTo("")
 			.Because("child owning a subtree should shadow parent's branch value");
@@ -91,14 +91,14 @@ public class AttributeTreeParentTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {parentDbRef}=wibble"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {parentDbRef}=gleep"));
 
-		var beforeResult = (await Parser.FunctionParse(MarkupText.Plain($"get({childDbRef}/FOO`BAR)")))!.Message;
+		var beforeResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({childDbRef}/FOO`BAR)"));
 		await Assert.That(beforeResult.ToPlainText()).IsEqualTo("gleep")
 			.Because("should inherit before no_inherit is set");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentDbRef}/FOO`BAR=no_inherit"));
 
-		var fooResult = (await Parser.FunctionParse(MarkupText.Plain($"get({childDbRef}/FOO)")))!.Message;
-		var barResult = (await Parser.FunctionParse(MarkupText.Plain($"get({childDbRef}/FOO`BAR)")))!.Message;
+		var fooResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({childDbRef}/FOO)"));
+		var barResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({childDbRef}/FOO`BAR)"));
 
 		await Assert.That(fooResult.ToPlainText()).IsEqualTo("wibble")
 			.Because("FOO should still be inherited");

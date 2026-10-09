@@ -38,7 +38,7 @@ public class SceneVerbSurfaceIntegrationTests
 	/// the subject of the assertion rather than noise around it.
 	/// </summary>
 	private async Task<string> EvalRaw(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -321,7 +321,7 @@ public class SceneVerbSurfaceIntegrationTests
 		var logger = await LoggerAsync();
 		const string url = "https://example.test/scenes/7";
 
-		var text = (await FunctionParser.FunctionParse(MarkupText.Plain($"u({logger}/FUN`URL_TEXT,{url})")))!.Message;
+		var text = await FunctionParser.EvaluateAsync(MarkupText.Plain($"u({logger}/FUN`URL_TEXT,{url})"));
 
 		await Assert.That(text.ToPlainText()).IsEqualTo(url)
 			.Because("a client that cannot render an anchor reads the address alone");

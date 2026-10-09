@@ -66,7 +66,7 @@ public class PackageUninstallRegistrationTests
 		};
 
 	private async Task<string> EvaluateAsync(string expression)
-		=> (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		=> (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	[Test]
 	public async Task Uninstall_ForgetsTheHooksFunctionsAndAddedCommandsItsObjectsRegistered()

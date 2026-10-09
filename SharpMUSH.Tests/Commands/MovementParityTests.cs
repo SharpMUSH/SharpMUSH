@@ -222,8 +222,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}"));
 		await Scheduler.SettleForTestsAsync();
 
-		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MOVED)]"));
-		await Assert.That(moved!.Message.ToPlainText().Trim()).IsEqualTo("yes");
+		var moved = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({thing}/MOVED)]"));
+		await Assert.That(moved.ToPlainText().Trim()).IsEqualTo("yes");
 	}
 
 	[Test]
@@ -280,8 +280,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {mover.DbRef}={destination}"));
 		await Scheduler.SettleForTestsAsync();
 
-		var seen = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ENTERENV)]"));
-		var parts = seen!.Message.ToPlainText().Trim().Split('/');
+		var seen = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({destination}/ENTERENV)]"));
+		var parts = seen.ToPlainText().Trim().Split('/');
 
 		await Assert.That(BareDbref(parts[0])).IsEqualTo(BareDbref(origin));
 		await Assert.That(parts[1]).IsEqualTo(string.Empty);
@@ -306,8 +306,8 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}"));
 		await Scheduler.SettleForTestsAsync();
 
-		var seen = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MOVEENV)]"));
-		var parts = seen!.Message.ToPlainText().Trim().Split('/');
+		var seen = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({thing}/MOVEENV)]"));
+		var parts = seen.ToPlainText().Trim().Split('/');
 
 		await Assert.That(BareDbref(parts[0])).IsEqualTo(BareDbref(destination));
 		await Assert.That(BareDbref(parts[1])).IsEqualTo(BareDbref(origin));
@@ -782,8 +782,8 @@ public class MovementParityTests
 		await Assert.That(await LocationOf(sticky.ToString()))
 			.IsEqualTo(BareDbref(mover.DbRef.ToString()));
 
-		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
-		await Assert.That(moved!.Message.ToPlainText().Trim()).IsEqualTo(string.Empty);
+		var moved = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({sticky}/MOVED)]"));
+		await Assert.That(moved.ToPlainText().Trim()).IsEqualTo(string.Empty);
 
 		// Positive control: an empty MOVED only means the skip fired if the AMOVE would otherwise
 		// have run. Move the item itself and the triad must set it.
@@ -791,8 +791,8 @@ public class MovementParityTests
 			(await Node(elsewhere)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: false, mover.DbRef, "test");
 		await Scheduler.SettleForTestsAsync();
 
-		var movedNow = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
-		await Assert.That(movedNow!.Message.ToPlainText().Trim()).IsEqualTo("yes");
+		var movedNow = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({sticky}/MOVED)]"));
+		await Assert.That(movedNow.ToPlainText().Trim()).IsEqualTo("yes");
 	}
 
 	/// <summary>
@@ -1022,10 +1022,10 @@ public class MovementParityTests
 		await Scheduler.SettleForTestsAsync();
 
 		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({mover.DbRef}/MOVED)]"));
-		var entered = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ENTERED)]"));
+		var entered = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({destination}/ENTERED)]"));
 
 		await Assert.That(moved!.Message.ToPlainText().Trim()).IsEmpty();
-		await Assert.That(entered!.Message.ToPlainText().Trim()).IsEqualTo("yes");
+		await Assert.That(entered.ToPlainText().Trim()).IsEqualTo("yes");
 	}
 
 	/// <summary>
@@ -1794,8 +1794,8 @@ public class MovementParityTests
 		});
 
 		await Assert.That(room).StartsWith("#");
-		var roomName = await GodParser.FunctionParse(MarkupText.Plain($"[name({room})]"));
-		await Assert.That(roomName!.Message.ToPlainText()).IsEqualTo(name)
+		var roomName = await GodParser.EvaluateAsync(MarkupText.Plain($"[name({room})]"));
+		await Assert.That(roomName.ToPlainText()).IsEqualTo(name)
 			.Because("the dig happens before the teleport and is not undone by its refusal");
 		await Assert.That(builderSaw.Any(m => m == ErrorMessages.Notifications.TeleportsNotAllowed)).IsTrue();
 		await Assert.That(await LocationOf(builder.DbRef.ToString())).IsEqualTo(BareDbref(start));

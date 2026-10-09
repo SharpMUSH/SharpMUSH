@@ -16,7 +16,7 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Lsearch_TypeFilter_ReturnsMatchingObjects()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,type,PLAYER)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,type,PLAYER)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).IsNotNull();
@@ -34,7 +34,7 @@ public class SearchFunctionUnitTests
 		await Assert.That(dbrefMatch.Success).IsTrue().Because($"Create command should return a dbref. Output: {createOutput}");
 		var createdDbref = dbrefMatch.Value;
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"lsearch(all,name,{uniqueName})")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"lsearch(all,name,{uniqueName})"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains(createdDbref);
@@ -43,7 +43,7 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Lsearch_CombinedFilters_ReturnsMatchingObjects()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,type,ROOM,mindbref,0)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,type,ROOM,mindbref,0)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).IsNotNull();
@@ -158,7 +158,7 @@ public class SearchFunctionUnitTests
 		await CommandAsync($"@chown {hiddenThing}={owner}");
 
 		var mortalParser = WebAppFactoryArg.FunctionParserFor(mortal);
-		var result = (await mortalParser.FunctionParse(MarkupText.Plain($"lsearch(#{owner.Number},type,thing)")))!.Message;
+		var result = await mortalParser.EvaluateAsync(MarkupText.Plain($"lsearch(#{owner.Number},type,thing)"));
 		var dbrefs = ReturnedDbRefs(result.ToPlainText());
 
 		await Assert.That(dbrefs).Contains(visibleThing.Number);
@@ -197,7 +197,7 @@ public class SearchFunctionUnitTests
 		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	private async Task<string> SearchAsync(string expression) =>
-		(await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		(await Parser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	/// <summary>
 	/// The dbref numbers lsearch actually returned, parsed rather than substring-matched.
@@ -230,7 +230,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearchr_ReturnsObjectsInReverseOrder()
 	{
 		// lsearchr returns results in reverse dbref order (highest to lowest)
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearchr(all,type,ROOM,maxdbref,5)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearchr(all,type,ROOM,maxdbref,5)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#0");
@@ -239,7 +239,7 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Nlsearch_ReturnsCount()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("nlsearch(all,type,PLAYER)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("nlsearch(all,type,PLAYER)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).IsNotNull();
@@ -265,7 +265,7 @@ public class SearchFunctionUnitTests
 		{
 			// scan() searches for $-commands that would match the given command.
 			// The attribute is on room #0, God's location, which the "all" switch includes.
-			var result = (await Parser.FunctionParse(MarkupText.Plain($"scan({commandWord} test argument)")))!.Message;
+			var result = await Parser.EvaluateAsync(MarkupText.Plain($"scan({commandWord} test argument)"));
 			var resultText = result.ToPlainText();
 
 			await Assert.That(resultText).Contains("#0").Because(
@@ -286,7 +286,7 @@ public class SearchFunctionUnitTests
 	{
 		// The elock class evaluates a lock string against objects
 		// Example from PennMUSH docs: lsearch(all, elock, FLAG^WIZARD)
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,elock,FLAG^WIZARD)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,elock,FLAG^WIZARD)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#1");
@@ -296,7 +296,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_EvalFilter_ReturnsMatchingObjects()
 	{
 		// EVAL evaluates a function/expression for each object, replacing ## with the object's dbref number
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,eval,1,maxdbref,2)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,eval,1,maxdbref,2)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#0");
@@ -307,7 +307,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_EplayerFilter_ReturnsMatchingPlayers()
 	{
 		// EPLAYER is like EVAL but restricted to players only
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,eplayer,1)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,eplayer,1)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#1");
@@ -317,7 +317,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_EroomFilter_ReturnsMatchingRooms()
 	{
 		// EROOM is like EVAL but restricted to rooms only
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,eroom,1)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,eroom,1)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#0");
@@ -327,7 +327,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_CombinedEvalAndTypeFilters_ReturnsMatchingObjects()
 	{
 		// Applies both a database-level type filter and an application-level eval filter
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,type,PLAYER,eval,1)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,type,PLAYER,eval,1)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#1");
@@ -342,7 +342,7 @@ public class SearchFunctionUnitTests
 		// 1. Once as an argument to lsearch()
 		// 2. Again for each object with ## replaced by the dbref
 		// Correct syntax uses commas, not equals: lsearch(all,eval,\[...\])
-		var result = (await Parser.FunctionParse(MarkupText.Plain(@"lsearch(all,eval,\[strmatch\(##\,*1\)\],maxdb,9)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(@"lsearch(all,eval,\[strmatch\(##\,*1\)\],maxdb,9)"));
 		var resultText = result.ToPlainText();
 
 		if (!string.IsNullOrEmpty(resultText))
@@ -356,7 +356,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_RoomsFilter_ReturnsMatchingRooms()
 	{
 		// ROOMS class combines TYPE=ROOM and NAME=<pattern>
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,type,ROOM,maxdbref,2)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,type,ROOM,maxdbref,2)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#0");
@@ -366,7 +366,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_PlayersFilter_ReturnsMatchingPlayers()
 	{
 		// PLAYERS class combines TYPE=PLAYER and NAME=<pattern>
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,type,PLAYER)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,type,PLAYER)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#1");
@@ -376,7 +376,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_MindbMaxdb_ReturnsMatchingRange()
 	{
 		// PennMUSH uses both MINDB and MINDBREF; MINDB/MAXDB are shorter aliases
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,mindb,0,maxdb,2)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,mindb,0,maxdb,2)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#0");
@@ -387,7 +387,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_StartFilter_SkipsResults()
 	{
 		// START is 1-based, as in PennMUSH (init_search_spec, src/wiz.c:2270): start 2 skips object #0
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,2,maxdb,2)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,start,2,maxdb,2)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).DoesNotContain("#0");
@@ -397,7 +397,7 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Lsearch_StartOfOneIsTheFirstResult()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,1,count,1,maxdb,2)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,start,1,count,1,maxdb,2)"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("#0");
 	}
@@ -416,7 +416,7 @@ public class SearchFunctionUnitTests
 		var searcher = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator,
 			TestIsolationHelpers.GenerateUniqueName("LSearchStart"));
 
-		var result = (await WebAppFactoryArg.FunctionParserFor(searcher).FunctionParse(MarkupText.Plain(expression)))!.Message;
+		var result = await WebAppFactoryArg.FunctionParserFor(searcher).EvaluateAsync(MarkupText.Plain(expression));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
 		await Assert.That(WebAppFactoryArg.Notifications.For(searcher)).Contains(notification);
@@ -426,7 +426,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_CountFilter_LimitsResults()
 	{
 		// COUNT is pagination: limit the number of results
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,count,1)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,count,1)"));
 		var resultText = result.ToPlainText();
 
 		var results = resultText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -438,7 +438,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_StartAndCount_PaginatesResults()
 	{
 		// Start at the 2nd result (skip #0), count 2 (return #1 and #2)
-		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearch(all,start,2,count,2,maxdb,2)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lsearch(all,start,2,count,2,maxdb,2)"));
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).DoesNotContain("#0");
@@ -458,107 +458,107 @@ public class SearchFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&THIRD {objDbRef}=third"));
 
 		// grep.1: grep(obj,*,d) → substring match on 'd' → SECOND THIRD
-		var g1 = (await Parser.FunctionParse(MarkupText.Plain($"grep({objDbRef},*,d)")))!.Message;
+		var g1 = await Parser.EvaluateAsync(MarkupText.Plain($"grep({objDbRef},*,d)"));
 		await Assert.That(g1.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.2: grep(obj,S*,d) → attr name matches S*, value has 'd' → SECOND
-		var g2 = (await Parser.FunctionParse(MarkupText.Plain($"grep({objDbRef},S*,d)")))!.Message;
+		var g2 = await Parser.EvaluateAsync(MarkupText.Plain($"grep({objDbRef},S*,d)"));
 		await Assert.That(g2.ToPlainText()).IsEqualTo("SECOND");
 
 		// grep.3: grep(obj,*,*d*) — *d* is a glob, but grep uses substring match, so *d* is literal '*d*' → no match
-		var g3 = (await Parser.FunctionParse(MarkupText.Plain($"grep({objDbRef},*,*d*)")))!.Message;
+		var g3 = await Parser.EvaluateAsync(MarkupText.Plain($"grep({objDbRef},*,*d*)"));
 		await Assert.That(g3.ToPlainText()).IsNotEqualTo("SECOND THIRD");
 
 		// grep.4: grep(obj,*,D) — case-sensitive, 'D' doesn't appear → no match
-		var g4 = (await Parser.FunctionParse(MarkupText.Plain($"grep({objDbRef},*,D)")))!.Message;
+		var g4 = await Parser.EvaluateAsync(MarkupText.Plain($"grep({objDbRef},*,D)"));
 		await Assert.That(g4.ToPlainText()).IsNotEqualTo("SECOND THIRD");
 
 		// grep.5: wildgrep(obj,*,*d*) → wildcard match with glob → SECOND THIRD
-		var g5 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrep({objDbRef},*,*d*)")))!.Message;
+		var g5 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrep({objDbRef},*,*d*)"));
 		await Assert.That(g5.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.6: wildgrep(obj,*,d) → glob 'd' only matches exact 'd' → no match
-		var g6 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrep({objDbRef},*,d)")))!.Message;
+		var g6 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrep({objDbRef},*,d)"));
 		await Assert.That(g6.ToPlainText()).IsNotEqualTo("SECOND THIRD");
 
 		// grep.7: wildgrep(obj,*,first) → exact value match → FIRST
-		var g7 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrep({objDbRef},*,first)")))!.Message;
+		var g7 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrep({objDbRef},*,first)"));
 		await Assert.That(g7.ToPlainText()).IsEqualTo("FIRST");
 
 		// grep.8: wildgrep(obj,*,FIRST) → case-sensitive, 'FIRST' != 'first' → no match
-		var g8 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrep({objDbRef},*,FIRST)")))!.Message;
+		var g8 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrep({objDbRef},*,FIRST)"));
 		await Assert.That(g8.ToPlainText()).IsNotEqualTo("FIRST");
 
 		// grep.9: regrep(obj,*,*d*) → invalid regex '*d*' → error
-		var g9 = (await Parser.FunctionParse(MarkupText.Plain($"regrep({objDbRef},*,*d*)")))!.Message;
+		var g9 = await Parser.EvaluateAsync(MarkupText.Plain($"regrep({objDbRef},*,*d*)"));
 		await Assert.That(g9.ToPlainText()).StartsWith("#-1 REGEXP ERROR");
 
 		// grep.10: regrep(obj,*,d) → regex 'd' matches values with 'd' → SECOND THIRD
-		var g10 = (await Parser.FunctionParse(MarkupText.Plain($"regrep({objDbRef},*,d)")))!.Message;
+		var g10 = await Parser.EvaluateAsync(MarkupText.Plain($"regrep({objDbRef},*,d)"));
 		await Assert.That(g10.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.11: regrep(obj,*,d$) → regex 'd$' matches values ending in 'd' → SECOND THIRD
-		var g11 = (await Parser.FunctionParse(MarkupText.Plain($"regrep({objDbRef},*,d$)")))!.Message;
+		var g11 = await Parser.EvaluateAsync(MarkupText.Plain($"regrep({objDbRef},*,d$)"));
 		await Assert.That(g11.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.12: regrep(obj,*,first) → regex 'first' matches 'first' → FIRST
-		var g12 = (await Parser.FunctionParse(MarkupText.Plain($"regrep({objDbRef},*,first)")))!.Message;
+		var g12 = await Parser.EvaluateAsync(MarkupText.Plain($"regrep({objDbRef},*,first)"));
 		await Assert.That(g12.ToPlainText()).IsEqualTo("FIRST");
 
 		// grep.13: regrep(obj,*,FIRST) → case-sensitive, 'FIRST' doesn't match 'first' → no match
-		var g13 = (await Parser.FunctionParse(MarkupText.Plain($"regrep({objDbRef},*,FIRST)")))!.Message;
+		var g13 = await Parser.EvaluateAsync(MarkupText.Plain($"regrep({objDbRef},*,FIRST)"));
 		await Assert.That(g13.ToPlainText()).IsNotEqualTo("FIRST");
 
 		// grep.14: grepi(obj,*,d) → case-insensitive substring, 'd' → SECOND THIRD
-		var g14 = (await Parser.FunctionParse(MarkupText.Plain($"grepi({objDbRef},*,d)")))!.Message;
+		var g14 = await Parser.EvaluateAsync(MarkupText.Plain($"grepi({objDbRef},*,d)"));
 		await Assert.That(g14.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.15: grepi(obj,S*,d) → attr matches S*, case-insensitive value 'd' → SECOND
-		var g15 = (await Parser.FunctionParse(MarkupText.Plain($"grepi({objDbRef},S*,d)")))!.Message;
+		var g15 = await Parser.EvaluateAsync(MarkupText.Plain($"grepi({objDbRef},S*,d)"));
 		await Assert.That(g15.ToPlainText()).IsEqualTo("SECOND");
 
 		// grep.16: grepi(obj,*,*d*) → case-insensitive but still substring (not glob) → no match
-		var g16 = (await Parser.FunctionParse(MarkupText.Plain($"grepi({objDbRef},*,*d*)")))!.Message;
+		var g16 = await Parser.EvaluateAsync(MarkupText.Plain($"grepi({objDbRef},*,*d*)"));
 		await Assert.That(g16.ToPlainText()).IsNotEqualTo("SECOND THIRD");
 
 		// grep.17: grepi(obj,*,D) → case-insensitive, 'D' matches 'd' → SECOND THIRD
-		var g17 = (await Parser.FunctionParse(MarkupText.Plain($"grepi({objDbRef},*,D)")))!.Message;
+		var g17 = await Parser.EvaluateAsync(MarkupText.Plain($"grepi({objDbRef},*,D)"));
 		await Assert.That(g17.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.18: wildgrepi(obj,*,*d*) → case-insensitive glob → SECOND THIRD
-		var g18 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrepi({objDbRef},*,*d*)")))!.Message;
+		var g18 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrepi({objDbRef},*,*d*)"));
 		await Assert.That(g18.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.19: wildgrepi(obj,*,d) → case-insensitive exact 'd' → no match
-		var g19 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrepi({objDbRef},*,d)")))!.Message;
+		var g19 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrepi({objDbRef},*,d)"));
 		await Assert.That(g19.ToPlainText()).IsNotEqualTo("SECOND THIRD");
 
 		// grep.20: wildgrepi(obj,*,first) → case-insensitive glob 'first' matches 'first' → FIRST
-		var g20 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrepi({objDbRef},*,first)")))!.Message;
+		var g20 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrepi({objDbRef},*,first)"));
 		await Assert.That(g20.ToPlainText()).IsEqualTo("FIRST");
 
 		// grep.21: wildgrepi(obj,*,FIRST) → case-insensitive, 'FIRST' matches 'first' → FIRST
-		var g21 = (await Parser.FunctionParse(MarkupText.Plain($"wildgrepi({objDbRef},*,FIRST)")))!.Message;
+		var g21 = await Parser.EvaluateAsync(MarkupText.Plain($"wildgrepi({objDbRef},*,FIRST)"));
 		await Assert.That(g21.ToPlainText()).IsEqualTo("FIRST");
 
 		// grep.22: regrepi(obj,*,*d*) → invalid regex → error
-		var g22 = (await Parser.FunctionParse(MarkupText.Plain($"regrepi({objDbRef},*,*d*)")))!.Message;
+		var g22 = await Parser.EvaluateAsync(MarkupText.Plain($"regrepi({objDbRef},*,*d*)"));
 		await Assert.That(g22.ToPlainText()).StartsWith("#-1 REGEXP ERROR");
 
 		// grep.23: regrepi(obj,*,d) → case-insensitive regex → SECOND THIRD
-		var g23 = (await Parser.FunctionParse(MarkupText.Plain($"regrepi({objDbRef},*,d)")))!.Message;
+		var g23 = await Parser.EvaluateAsync(MarkupText.Plain($"regrepi({objDbRef},*,d)"));
 		await Assert.That(g23.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.24: regrepi(obj,*,d$) → case-insensitive regex → SECOND THIRD
-		var g24 = (await Parser.FunctionParse(MarkupText.Plain($"regrepi({objDbRef},*,d$)")))!.Message;
+		var g24 = await Parser.EvaluateAsync(MarkupText.Plain($"regrepi({objDbRef},*,d$)"));
 		await Assert.That(g24.ToPlainText()).IsEqualTo("SECOND THIRD");
 
 		// grep.25: regrepi(obj,*,first) → case-insensitive → FIRST
-		var g25 = (await Parser.FunctionParse(MarkupText.Plain($"regrepi({objDbRef},*,first)")))!.Message;
+		var g25 = await Parser.EvaluateAsync(MarkupText.Plain($"regrepi({objDbRef},*,first)"));
 		await Assert.That(g25.ToPlainText()).IsEqualTo("FIRST");
 
 		// grep.26: regrepi(obj,*,FIRST) → case-insensitive, 'FIRST' matches 'first' → FIRST
-		var g26 = (await Parser.FunctionParse(MarkupText.Plain($"regrepi({objDbRef},*,FIRST)")))!.Message;
+		var g26 = await Parser.EvaluateAsync(MarkupText.Plain($"regrepi({objDbRef},*,FIRST)"));
 		await Assert.That(g26.ToPlainText()).IsEqualTo("FIRST");
 	}
 }

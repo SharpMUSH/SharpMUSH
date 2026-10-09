@@ -106,8 +106,8 @@ public class SearchCommandListenClassTests
 		await CommandAsync($"@set {hidden}/HEAR=mortal_dark");
 
 		var mortalParser = WebAppFactoryArg.FunctionParserFor(mortal);
-		var found = ReturnedDbRefs((await mortalParser.FunctionParse(
-			MarkupText.Plain($"lsearch(all,type,thing,command,+{token}frob,listen,oh {token} hi)")))!.Message.ToPlainText());
+		var found = ReturnedDbRefs((await mortalParser.EvaluateAsync(
+			MarkupText.Plain($"lsearch(all,type,thing,command,+{token}frob,listen,oh {token} hi)"))).ToPlainText());
 
 		await Assert.That(found).Contains(readable.Number);
 		await Assert.That(found).Contains(hidden.Number);
@@ -126,7 +126,7 @@ public class SearchCommandListenClassTests
 		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	private async Task<string> SearchAsync(string expression) =>
-		(await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		(await Parser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	private static int[] ReturnedDbRefs(string searchResult) =>
 		[.. searchResult

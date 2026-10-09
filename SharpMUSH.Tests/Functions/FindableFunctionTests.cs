@@ -48,7 +48,7 @@ public class FindableFunctionTests
 	/// </summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer who, string expression)
 		=> (await WebAppFactoryArg.CommandParserFor(who.DbRef, who.Handle)
-			.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
+			.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	/// <summary>A room of its own, so nothing another test leaves lying around is nearby.</summary>
 	private async Task<string> Room(string prefix, params object[] occupants)

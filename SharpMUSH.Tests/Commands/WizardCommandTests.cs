@@ -53,7 +53,7 @@ public class WizardCommandTests
 		Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		(await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	/// <summary>A thing of <paramref name="owner"/>'s, not HALTed, and its unique name.</summary>
 	private async Task<(DBRef Thing, string Name)> OwnedThingAsync(TestIsolationHelpers.TestPlayer owner, string prefix)

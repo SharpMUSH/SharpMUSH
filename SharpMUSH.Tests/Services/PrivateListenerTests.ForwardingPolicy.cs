@@ -83,7 +83,7 @@ public partial class PrivateListenerTests
 		await SetRaw(recipient.DbRef, "AHEAR", "&HEARD me=%0");
 		var pipeline = await Build(speaker, recipient.DbRef);
 		RemoveOutputFraming(pipeline);
-		var body = (await pipeline.Parser.FunctionParse(MarkupText.Plain("ansi(r,body)")))!.Message;
+		var body = await pipeline.Parser.EvaluateAsync(MarkupText.Plain("ansi(r,body)"));
 		await pipeline.Notify.Notify(listener, body, await Node(speaker.DbRef), noSpoofVariant
 			? INotifyService.NotificationType.NSPrivateEmit : INotifyService.NotificationType.PrivateEmit);
 		var output = pipeline.Bus.ReceivedCalls().SelectMany(call => call.GetArguments().OfType<SharpMUSH.Messaging.Messages.MarkupOutputMessage>()).Single();

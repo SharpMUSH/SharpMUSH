@@ -113,7 +113,7 @@ public class ObjectPredicateFlagTests
 	public async Task ADarkObjectIsNotLocatableByAMortalSharingItsRoom()
 	{
 		var room = DBRef.Parse((await CommandParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("DarkLocateRoom")}")))!.Message.ToPlainText());
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("DarkLocateRoom")}"))).Message.ToPlainText());
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DarkLocate", room);
 		var mortalLoc = (await EvalAs(mortal.DbRef, "loc(%#)")).Split(':')[0];
@@ -121,9 +121,9 @@ public class ObjectPredicateFlagTests
 		var darkName = TestIsolationHelpers.GenerateUniqueName("DarkLocateHidden");
 		var plainName = TestIsolationHelpers.GenerateUniqueName("DarkLocateVisible");
 		var dark = DBRef.Parse((await CommandParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {darkName}")))!.Message.ToPlainText());
+			MarkupText.Plain($"@create {darkName}"))).Message.ToPlainText());
 		var plain = DBRef.Parse((await CommandParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {plainName}")))!.Message.ToPlainText());
+			MarkupText.Plain($"@create {plainName}"))).Message.ToPlainText());
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{dark.Number}=DARK"));
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{dark.Number}={mortalLoc}"));

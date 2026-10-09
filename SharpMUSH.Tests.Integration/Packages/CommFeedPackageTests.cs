@@ -69,7 +69,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		factory.CommandParser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Objid(Viewer who) =>
-		(await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid({who.Number})")))!.Message.ToPlainText();
+		(await factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"objid({who.Number})"))).ToPlainText();
 
 	private static string UniqueChannel(string prefix) =>
 		TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
@@ -745,8 +745,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	{
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
 		var gone = UniqueChannel("CommGone");
-		var row = (await factory.FunctionParser.FunctionParse(
-			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message.ToPlainText();
+		var row = (await factory.FunctionParser.EvaluateAsync(
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]"))).ToPlainText();
 
 		await Assert.That(row).IsEqualTo(string.Empty);
 	}
@@ -762,8 +762,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
 		var longer = await ChannelAsync("CommAbbrev");
 		var gone = longer[..^2];
-		var row = (await factory.FunctionParser.FunctionParse(
-			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message.ToPlainText();
+		var row = (await factory.FunctionParser.EvaluateAsync(
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]"))).ToPlainText();
 
 		await Assert.That(row).IsEqualTo(string.Empty);
 	}

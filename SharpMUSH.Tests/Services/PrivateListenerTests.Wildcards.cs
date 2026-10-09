@@ -62,7 +62,7 @@ public partial class PrivateListenerTests
 	[Arguments("strmatch(cat%r,cat)", "0")]
 	public async Task WildcardFunctionsUseEscapesAndWholeInput(string expression, string expected)
 	{
-		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
+		var result = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

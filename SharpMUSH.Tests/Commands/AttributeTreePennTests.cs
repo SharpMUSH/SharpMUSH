@@ -119,7 +119,7 @@ public class AttributeTreePennTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"hasattr({objDbRef},FOO)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"hasattr({objDbRef},FOO)"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("1")
 			.Because("setting foo`bar should auto-create the FOO branch attribute");

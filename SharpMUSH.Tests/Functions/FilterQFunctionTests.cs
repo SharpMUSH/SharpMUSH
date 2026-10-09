@@ -30,7 +30,7 @@ public class FilterQFunctionTests
 
 	private async Task Check(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 

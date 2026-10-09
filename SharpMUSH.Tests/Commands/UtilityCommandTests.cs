@@ -297,9 +297,9 @@ public class UtilityCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VersionAgree");
 		var command = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@version"));
-		var function = await Parser.FunctionParse(MarkupText.Plain("version()"));
+		var function = await Parser.EvaluateAsync(MarkupText.Plain("version()"));
 
-		var banner = function!.Message.ToPlainText();
+		var banner = function.ToPlainText();
 		var lines = command.Message.ToPlainText().Split('\n');
 
 		await Assert.That(banner).IsNotEmpty();

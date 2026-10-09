@@ -29,7 +29,7 @@ public class ThemeCommandTests
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await WebAppFactoryArg.CommandParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 		var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
-		var theme = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({player.DbRef}/THEME)")))!.Message.ToPlainText();
+		var theme = (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({player.DbRef}/THEME)"))).ToPlainText();
 		return (heard, theme);
 	}
 
@@ -187,14 +187,14 @@ public class ThemeCommandTests
 		await WebAppFactoryArg.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@theme/add {name}={{{{\"preset\":\"nord\",\"colors\":{{\"primary\":\"#bf616a\"}}}}}}"));
 		try
 		{
-			await Assert.That((await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain("themes()")))!.Message.ToPlainText()).EndsWith(name);
+			await Assert.That((await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain("themes()"))).ToPlainText()).EndsWith(name);
 			var (player, _) = await PlayerWithParent();
 			await Run(player, $"@theme me={name}");
 			var inUse = await InUse(player);
 
 			await Assert.That(inUse).StartsWith("Theme in use: {");
 			await Assert.That(inUse).Contains($"\"name\":\"{name}\"");
-			await Assert.That((await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"json_query(theme({name}),get,colors,primary,rgb)")))!.Message.ToPlainText())
+			await Assert.That((await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"json_query(theme({name}),get,colors,primary,rgb)"))).ToPlainText())
 				.IsEqualTo("\"#bf616a\"");
 		}
 		finally
@@ -202,7 +202,7 @@ public class ThemeCommandTests
 			await WebAppFactoryArg.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@theme/remove {name}"));
 		}
 
-		await Assert.That((await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"theme({name})")))!.Message.ToPlainText())
+		await Assert.That((await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"theme({name})"))).ToPlainText())
 			.IsEqualTo("#-1 UNKNOWN THEME");
 	}
 
@@ -225,7 +225,7 @@ public class ThemeCommandTests
 		await WebAppFactoryArg.CommandParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@theme me="));
 
 		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef)).Contains("Theme cleared.");
-		await Assert.That((await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({player.DbRef}/THEME)")))!.Message.ToPlainText()).IsEmpty();
+		await Assert.That((await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({player.DbRef}/THEME)"))).ToPlainText()).IsEmpty();
 	}
 
 	[Test]

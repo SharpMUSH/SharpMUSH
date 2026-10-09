@@ -64,7 +64,7 @@ public class AttributeTreeWriteGateTests
 	/// never created reads as the empty string.
 	/// </summary>
 	private async Task<string> GodGet(DBRef who, string attribute)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"[get(#{who.Number}/{attribute})]")))!.Message.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain($"[get(#{who.Number}/{attribute})]"))).ToPlainText();
 
 	/// <summary>
 	/// Penn's <c>Cannot_Write_This_Attr</c> applies to EVERY ancestor node

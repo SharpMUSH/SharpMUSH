@@ -12,7 +12,7 @@ public class LayoutThemeFunctionTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<MString> Eval(string code) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(code)))!.Message;
+		await FunctionParser.EvaluateAsync(MarkupText.Plain(code));
 
 	/// <summary>Nord's primary, #81a1c1, as a truecolour foreground.</summary>
 	private const string NordBlue = "38;2;129;161;193m";

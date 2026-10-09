@@ -52,7 +52,7 @@ public class ForwardListValidationTests
 
 	/// <summary>Reads as God, so the assertion never depends on the mortal's own read permission.</summary>
 	private async Task<string> Get(DBRef who, string attribute)
-		=> (await GodParser.FunctionParse(MarkupText.Plain($"[get(#{who.Number}/{attribute})]")))!.Message.ToPlainText();
+		=> (await GodParser.EvaluateAsync(MarkupText.Plain($"[get(#{who.Number}/{attribute})]"))).ToPlainText();
 
 	/// <summary>
 	/// <c>is_objid(curr)</c> is the first test of each word (<c>src/attrib.c:2331</c>). Captured:

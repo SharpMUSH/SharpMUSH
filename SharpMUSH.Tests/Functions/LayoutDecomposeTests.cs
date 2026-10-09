@@ -14,7 +14,7 @@ public class LayoutDecomposeTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<MString> Eval(string code) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(code)))!.Message;
+		await FunctionParser.EvaluateAsync(MarkupText.Plain(code));
 
 	[Test]
 	[Arguments("box(Hello there.)", "[box(Hello there.)]")]

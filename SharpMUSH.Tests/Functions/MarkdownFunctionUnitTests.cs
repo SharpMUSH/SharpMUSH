@@ -492,7 +492,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdownCustom_ContainerTemplate_GetsTheSeeAlsoTopics()
 	{
-		var testDbref = (await Parser.FunctionParse(MarkupText.Plain("create(SeeAlsoTemplateObj)")))!.Message.ToString().Trim();
+		var testDbref = (await Parser.EvaluateAsync(MarkupText.Plain("create(SeeAlsoTemplateObj)"))).ToString().Trim();
 		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`CONTAINER {testDbref}=%0 -> %2"));
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdowncustom(::: seealso%r- \\[newbie\\]%r- \\[ZONES\\]%r:::,{testDbref})")))?.Message;

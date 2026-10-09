@@ -81,7 +81,7 @@ public class ZoneFunctionTests
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new UnsetObjectZoneCommand(obj));
 
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef})"));
 		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
@@ -96,7 +96,7 @@ public class ZoneFunctionTests
 
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
 
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef})"));
 		await Assert.That(DBRef.TryParse(result.ToPlainText(), out var resultDbRef)).IsTrue()
 			.Because($"zone({objDbRef}) should return {zoneDbRef}; received '{result.ToPlainText()}'; " +
 				$"actor notifications: {string.Join(" | ", WebAppFactoryArg.Notifications.For(Actor.DbRef))}");
@@ -117,12 +117,12 @@ public class ZoneFunctionTests
 		await Mediator.Send(new UnsetObjectZoneCommand(obj));
 
 		// Set the zone via function (requires side effects enabled)
-		var setResult = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef},{zoneDbRef})")))!.Message;
+		var setResult = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef},{zoneDbRef})"));
 
 		// zone() with 2 args returns empty string on success
 		await Assert.That(setResult.ToPlainText()).IsEqualTo("");
 
-		var getResult = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))!.Message;
+		var getResult = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef})"));
 		var resultDbRef = DBRef.Parse(getResult.ToPlainText()!);
 
 		await Assert.That(resultDbRef.Number).IsEqualTo(zoneDbRef.Number);
@@ -140,17 +140,17 @@ public class ZoneFunctionTests
 		await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef},{zoneDbRef})"));
 
 		// Clear the zone using "none"
-		var clearResult = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef},none)")))!.Message;
+		var clearResult = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef},none)"));
 		await Assert.That(clearResult.ToPlainText()).IsEqualTo("");
 
-		var getResult = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))!.Message;
+		var getResult = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef})"));
 		await Assert.That(getResult.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
 	[Test]
 	public async Task ZoneInvalidObject()
 	{
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(#99999)")))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain("zone(#99999)"));
 
 		await Assert.That(result.ToPlainText()).Matches("^#-1");
 	}
@@ -167,7 +167,7 @@ public class ZoneFunctionTests
 		await Mediator.Send(new UnsetObjectZoneCommand(obj));
 
 		// Player can examine their own objects, so this should work
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef})"));
 
 		// No zone, and not a refusal: the two used to be the same bare #-1.
 		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
@@ -176,7 +176,7 @@ public class ZoneFunctionTests
 	[Test]
 	public async Task ZoneOnPlayer()
 	{
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(%#)")))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain("zone(%#)"));
 
 		// The private fixture has no zone.
 		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
@@ -185,7 +185,7 @@ public class ZoneFunctionTests
 	[Test]
 	public async Task ZoneOnRoom()
 	{
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(%l)")))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain("zone(%l)"));
 
 		// The private fixture has no zone.
 		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
@@ -209,12 +209,12 @@ public class ZoneFunctionTests
 
 		await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef},{zoneDbRef})"));
 
-		var objZone = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))!.Message;
+		var objZone = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({objDbRef})"));
 		var objZoneDbRef = DBRef.Parse(objZone.ToPlainText()!);
 		await Assert.That(objZoneDbRef.Number).IsEqualTo(zoneDbRef.Number);
 
 		// The zone master itself has no zone.
-		var zoneOfZone = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({zoneDbRef})")))!.Message;
+		var zoneOfZone = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zone({zoneDbRef})"));
 		await Assert.That(zoneOfZone.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
@@ -240,7 +240,7 @@ public class ZoneFunctionTests
 		await Mediator.Send(new UnsetObjectZoneCommand(obj2));
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {obj2DbRef}={zoneDbRef}"));
 
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zfind({zoneDbRef})")))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain($"zfind({zoneDbRef})"));
 		var resultText = result.ToPlainText()!;
 
 		await Assert.That(resultText).IsNotEmpty();
@@ -306,7 +306,7 @@ public class ZoneFunctionTests
 		var zoneAttribute = await Mediator.CreateStream(new GetAttributeQuery(zoneDbRef, ["TEST_ZONE_ATTR"])).SingleAsync();
 		await Assert.That(zoneAttribute.Value.ToPlainText()).IsEqualTo("Zone Master Value");
 
-		var hasAttr = (await FunctionParser.FunctionParse(MarkupText.Plain($"hasattrp({objDbRef},TEST_ZONE_ATTR)")))!.Message;
+		var hasAttr = await FunctionParser.EvaluateAsync(MarkupText.Plain($"hasattrp({objDbRef},TEST_ZONE_ATTR)"));
 		await Assert.That(hasAttr.ToPlainText()).IsEqualTo("0");
 
 		var executor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<AnySharpObject>();
@@ -357,7 +357,7 @@ public class ZoneFunctionTests
 
 		// get_eval reads through the parent chain; the zone is never consulted
 		// so the parent's value is the one found
-		var childAttrValue = (await FunctionParser.FunctionParse(MarkupText.Plain($"get_eval({childDbRef}/ZONE_PREC_TEST)")))!.Message;
+		var childAttrValue = await FunctionParser.EvaluateAsync(MarkupText.Plain($"get_eval({childDbRef}/ZONE_PREC_TEST)"));
 		await Assert.That(childAttrValue.ToPlainText()).IsEqualTo("From Parent");
 	}
 

@@ -33,9 +33,9 @@ public class NameListCallbackTests
 	{
 		var obj = await CallbackObject("setq(namelist_callback,strcat(%0,|,%1))");
 		var missing = $"Missing_{Guid.NewGuid():N}";
-		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(
+		var result = await WebAppFactoryArg.FunctionParser.EvaluateAsync(
 			MarkupText.Plain($"[namelist({missing},{obj}/CALLBACK)]|[r(namelist_callback)]"));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo($"#-1|{missing}|#-1");
+		await Assert.That(result.ToPlainText()).IsEqualTo($"#-1|{missing}|#-1");
 	}
 
 	[Test]
@@ -44,9 +44,9 @@ public class NameListCallbackTests
 		var obj = await CallbackObject("&COMMAND_EXECUTED $OBJECT=yes");
 		await WebAppFactoryArg.FunctionParser.FunctionParse(
 			MarkupText.Plain($"namelist(Missing_{Guid.NewGuid():N},{obj}/CALLBACK)"));
-		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(
+		var result = await WebAppFactoryArg.FunctionParser.EvaluateAsync(
 			MarkupText.Plain($"hasattr({obj},COMMAND_EXECUTED)"));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("0");
+		await Assert.That(result.ToPlainText()).IsEqualTo("0");
 	}
 
 	[Test]
@@ -54,8 +54,8 @@ public class NameListCallbackTests
 	{
 		// A bare dbref names a live object; a number nothing holds, or an objid whose creation time is
 		// not the live object's, does not.
-		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(
+		var result = await WebAppFactoryArg.FunctionParser.EvaluateAsync(
 			MarkupText.Plain("namelist(#1 #99999999 #1:1)"));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#1 #-1 #-1");
+		await Assert.That(result.ToPlainText()).IsEqualTo("#1 #-1 #-1");
 	}
 }

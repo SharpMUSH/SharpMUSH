@@ -34,8 +34,8 @@ public class AttributeFunctionUnitTests
 			expression = expression.Replace("%!", holder.ToString());
 		}
 
-		var result = await Parser.FunctionParse(MarkupText.Plain(expression));
-		return result!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expression));
+		return result;
 	}
 
 	[Test]
@@ -98,8 +98,8 @@ public class AttributeFunctionUnitTests
 		if (gender is not null)
 			await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&GENDER {player}={gender}"));
 
-		var result = await WebAppFactoryArg.FunctionParserFor(player).FunctionParse(MarkupText.Plain(input));
-		return result!.Message.ToString();
+		var result = await WebAppFactoryArg.FunctionParserFor(player).EvaluateAsync(MarkupText.Plain(input));
+		return result.ToString();
 	}
 
 
@@ -639,8 +639,8 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/Test_V_AttrName2,hello world)][v(Test_V_AttrName2)]", "hello world")]
 	public async Task Test_V_AttributeName(string str, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(str));
-		await Assert.That(result!.Message.ToString()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -658,23 +658,23 @@ public class AttributeFunctionUnitTests
 	{
 		var uid = TestIsolationHelpers.GenerateUniqueName("OWN");
 
-		var createResult = await Parser.FunctionParse(MarkupText.Plain($"create(OwnerTarget_{uid})"));
-		var otherObj = createResult!.Message.ToPlainText();
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain($"create(OwnerTarget_{uid})"));
+		var otherObj = createResult.ToPlainText();
 
 		await Parser.FunctionParse(MarkupText.Plain($"[attrib_set({otherObj}/OW{uid},val_{uid})]"));
 
 		// Positive controls: the attribute genuinely exists on the OTHER object, and NOT on the
 		// executor (self) - otherwise a buggy owner() that reads off the executor instead of the
 		// located object could coincidentally still appear to pass.
-		var hasAttrOther = await Parser.FunctionParse(MarkupText.Plain($"hasattr({otherObj},OW{uid})"));
-		await Assert.That(hasAttrOther!.Message.ToPlainText()).IsEqualTo("1")
+		var hasAttrOther = await Parser.EvaluateAsync(MarkupText.Plain($"hasattr({otherObj},OW{uid})"));
+		await Assert.That(hasAttrOther.ToPlainText()).IsEqualTo("1")
 			.Because("the attribute must actually exist on the OTHER object for this test to mean anything");
-		var hasAttrSelf = await Parser.FunctionParse(MarkupText.Plain($"hasattr(%!,OW{uid})"));
-		await Assert.That(hasAttrSelf!.Message.ToPlainText()).IsEqualTo("0")
+		var hasAttrSelf = await Parser.EvaluateAsync(MarkupText.Plain($"hasattr(%!,OW{uid})"));
+		await Assert.That(hasAttrSelf.ToPlainText()).IsEqualTo("0")
 			.Because("the executor must NOT carry this attribute name, so a buggy owner() reading off the executor would report NO SUCH ATTRIBUTE rather than coincidentally succeeding");
 
-		var ownerResult = await Parser.FunctionParse(MarkupText.Plain($"owner({otherObj}/OW{uid})"));
-		await Assert.That(ownerResult!.Message.ToPlainText())
+		var ownerResult = await Parser.EvaluateAsync(MarkupText.Plain($"owner({otherObj}/OW{uid})"));
+		await Assert.That(ownerResult.ToPlainText())
 			.IsEqualTo($"#{WebAppFactoryArg.ExecutorDBRef.Number}")
 			.Because("owner(obj/attr) must resolve the attribute on the LOCATED object (obj), not the calling executor - red before the fix, since the located object argument was discarded in favour of executor");
 	}
@@ -693,10 +693,10 @@ public class AttributeFunctionUnitTests
 	[Arguments("hasattrpval", "1")]
 	public async Task HasattrTakesTheObjectAndAttributeInOneArgument(string function, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
 			$"[attrib_set(me/HASATTRONEARG,value)][{function}(me/HASATTRONEARG)]"));
 
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -706,9 +706,9 @@ public class AttributeFunctionUnitTests
 	[Arguments("hasattrpval")]
 	public async Task HasattrWithoutASlashIsABadArgumentFormat(string function)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain($"{function}(me)"));
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"{function}(me)"));
 
-		await Assert.That(result!.Message.ToPlainText())
+		await Assert.That(result.ToPlainText())
 			.IsEqualTo($"#-1 BAD ARGUMENT FORMAT TO {function.ToUpperInvariant()}");
 	}
 
@@ -767,11 +767,11 @@ public class AttributeFunctionUnitTests
 		var mortal = WebAppFactoryArg.FunctionParserFor(await MintMortalAsync("HasAttrM"));
 
 		var oneArgument = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god}/HASATTRUNREADABLE)"));
-		var twoArguments = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god},HASATTRUNREADABLE)"));
+		var twoArguments = await mortal.EvaluateAsync(MarkupText.Plain($"{function}(#{god},HASATTRUNREADABLE)"));
 
 		await Assert.That(oneArgument!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("an attribute that exists but cannot be read is a refusal, not an absence");
-		await Assert.That(twoArguments!.Message.ToPlainText()).IsEqualTo(oneArgument.Message.ToPlainText())
+		await Assert.That(twoArguments.ToPlainText()).IsEqualTo(oneArgument.Message.ToPlainText())
 			.Because("obj/attr in one argument and obj,attr in two are the same call");
 	}
 
@@ -795,9 +795,9 @@ public class AttributeFunctionUnitTests
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attribute} {parent}=inherited"));
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {child}={parent}"));
 
-		var result = await Parser.FunctionParse(MarkupText.Plain($"{function}({child}/{attribute})"));
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"{function}({child}/{attribute})"));
 
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -817,9 +817,9 @@ public class AttributeFunctionUnitTests
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attribute} {parent}=fromparent"));
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {child}={parent}"));
 
-		var result = await Parser.FunctionParse(MarkupText.Plain(string.Format(call, child, attribute)));
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(string.Format(call, child, attribute)));
 
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("fromparent");
+		await Assert.That(result.ToPlainText()).IsEqualTo("fromparent");
 	}
 
 	/// <summary>
@@ -866,9 +866,9 @@ public class AttributeFunctionUnitTests
 	public async Task GetReadsAStandardAttributeThroughItsAlias(string alias, string realName)
 	{
 		var thing = $"AliasRead_{Guid.NewGuid():N}"[..20];
-		var result = await Parser.FunctionParse(MarkupText.Plain(
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
 			$"[setq(0,create({thing}))][attrib_set(%q0/{realName},Read via {alias}.)][get(%q0/{alias})]|[u(%q0/{alias})]|[hasattr(%q0/{alias}`SUB)]"));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo($"Read via {alias}.|Read via {alias}.|0");
+		await Assert.That(result.ToPlainText()).IsEqualTo($"Read via {alias}.|Read via {alias}.|0");
 	}
 
 	/// <summary>
@@ -896,9 +896,9 @@ public class AttributeFunctionUnitTests
 	public async Task EveryByNameReadSeesTheAlias(string call, string expected)
 	{
 		var thing = $"AliasAll_{Guid.NewGuid():N}"[..20];
-		var result = await Parser.FunctionParse(MarkupText.Plain(
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
 			$"[setq(0,create({thing}))][attrib_set(%q0/DESCRIBE,x\\%0)][{call}]"));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	/// <summary>An attribute that really is named like an alias wins over the aliased one, as in atr_get_noparent.</summary>
@@ -906,9 +906,9 @@ public class AttributeFunctionUnitTests
 	public async Task AnAttributeNamedLikeAnAliasIsReadFirst()
 	{
 		var thing = $"AliasOwn_{Guid.NewGuid():N}"[..20];
-		var result = await Parser.FunctionParse(MarkupText.Plain(
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
 			$"[setq(0,create({thing}))][attrib_set(%q0/DESCRIBE,long)][attrib_set(%q0/DESC,short)][get(%q0/DESC)]"));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("short");
+		await Assert.That(result.ToPlainText()).IsEqualTo("short");
 	}
 
 	private async Task<DBRef> MintMortalAsync(string prefix)

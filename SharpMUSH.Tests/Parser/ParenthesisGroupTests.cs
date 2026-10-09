@@ -24,7 +24,7 @@ public class ParenthesisGroupTests
 		{
 			Compatibility = options.Compatibility with { ParenGroups = parenGroups }
 		});
-		return (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
+		return (await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 	}
 
 	/// <summary>

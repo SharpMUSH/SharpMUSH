@@ -29,8 +29,8 @@ public class LockFunctionUnitTests
 		try
 		{
 			attribute.CommandLock = "#FALSE";
-			var result = await Parser.FunctionParse(MarkupText.Plain(expression));
-			await Assert.That(result?.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+			var result = await Parser.EvaluateAsync(MarkupText.Plain(expression));
+			await Assert.That(result.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
 		}
 		finally
 		{
@@ -52,10 +52,10 @@ public class LockFunctionUnitTests
 		await puppet.FunctionParse(MarkupText.Plain("lock(me,#TRUE)"));
 		var connections = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		await WebAppFactoryArg.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@set {ownerRef}=GAGGED"));
-		var result = await puppet.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
-		await Assert.That((await puppet.FunctionParse(MarkupText.Plain("lock(me)")))!.Message.ToPlainText()).IsEqualTo("#TRUE");
-		await Assert.That((await puppet.FunctionParse(MarkupText.Plain("lockflags(me)")))!.Message.ToPlainText()).IsEqualTo("i");
+		var result = await puppet.EvaluateAsync(MarkupText.Plain(expression));
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That((await puppet.EvaluateAsync(MarkupText.Plain("lock(me)"))).ToPlainText()).IsEqualTo("#TRUE");
+		await Assert.That((await puppet.EvaluateAsync(MarkupText.Plain("lockflags(me)"))).ToPlainText()).IsEqualTo("i");
 	}
 
 	[Test]
@@ -64,15 +64,15 @@ public class LockFunctionUnitTests
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var player = await mediator.Send(new CreatePlayerCommand($"LockRead{Guid.NewGuid():N}"[..20], "password", new DBRef(0), new DBRef(0), 100));
 		var mortal = Parser.Push(Parser.CurrentState with { Executor = player, Caller = player, Enactor = player });
-		var created = await Parser.FunctionParse(MarkupText.Plain("create(PrivateLock_" + Guid.NewGuid().ToString("N") + ")"));
-		var target = created!.Message.ToPlainText();
-		var absent = await mortal.FunctionParse(MarkupText.Plain($"lock({target})"));
-		await Assert.That(absent?.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		var created = await Parser.EvaluateAsync(MarkupText.Plain("create(PrivateLock_" + Guid.NewGuid().ToString("N") + ")"));
+		var target = created.ToPlainText();
+		var absent = await mortal.EvaluateAsync(MarkupText.Plain($"lock({target})"));
+		await Assert.That(absent.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Parser.FunctionParse(MarkupText.Plain($"lock({target},#TRUE)"));
-		var creator = await mortal.FunctionParse(MarkupText.Plain($"lockowner({target})"));
-		var flags = await mortal.FunctionParse(MarkupText.Plain($"llockflags({target})"));
-		await Assert.That(creator?.Message.ToPlainText()).IsEqualTo("#-1 NO SUCH LOCK");
-		await Assert.That(flags?.Message.ToPlainText()).IsEqualTo("#-1 NO SUCH LOCK");
+		var creator = await mortal.EvaluateAsync(MarkupText.Plain($"lockowner({target})"));
+		var flags = await mortal.EvaluateAsync(MarkupText.Plain($"llockflags({target})"));
+		await Assert.That(creator.ToPlainText()).IsEqualTo("#-1 NO SUCH LOCK");
+		await Assert.That(flags.ToPlainText()).IsEqualTo("#-1 NO SUCH LOCK");
 	}
 
 	/// <summary>
@@ -93,17 +93,17 @@ public class LockFunctionUnitTests
 		var mortal = Parser.Push(Parser.CurrentState with { Executor = player, Caller = player, Enactor = player });
 
 		await mortal.FunctionParse(MarkupText.Plain("attrib_set(me/MORTALATRLOCK,value)"));
-		await Assert.That((await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK)")))!.Message.ToPlainText())
+		await Assert.That((await mortal.EvaluateAsync(MarkupText.Plain("atrlock(me/MORTALATRLOCK)"))).ToPlainText())
 			.IsEqualTo("0").Because("a freshly set attribute is not locked");
 
 		var locked = await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK,on)"));
 		await Assert.That(locked!.Message.ToPlainText()).IsEqualTo("")
 			.Because("the side-effect form answers nothing on success");
-		await Assert.That((await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK)")))!.Message.ToPlainText())
+		await Assert.That((await mortal.EvaluateAsync(MarkupText.Plain("atrlock(me/MORTALATRLOCK)"))).ToPlainText())
 			.IsEqualTo("1").Because("a mortal may lock an attribute they can set");
 
 		await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK,off)"));
-		await Assert.That((await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK)")))!.Message.ToPlainText())
+		await Assert.That((await mortal.EvaluateAsync(MarkupText.Plain("atrlock(me/MORTALATRLOCK)"))).ToPlainText())
 			.IsEqualTo("0").Because("and may take the lock back off again");
 	}
 
@@ -114,16 +114,16 @@ public class LockFunctionUnitTests
 		var player = await mediator.Send(new CreatePlayerCommand($"LockFlag{Guid.NewGuid():N}"[..20], "password", new DBRef(0), new DBRef(0), 100));
 		var mortal = Parser.Push(Parser.CurrentState with { Executor = player, Caller = player, Enactor = player });
 		await mortal.FunctionParse(MarkupText.Plain("lock(me,#TRUE)"));
-		var missingName = await mortal.FunctionParse(MarkupText.Plain("lset(me,visual)"));
-		await Assert.That(missingName?.Message.ToPlainText()).IsEqualTo("");
-		var unchanged = await mortal.FunctionParse(MarkupText.Plain("lockflags(me)"));
-		await Assert.That(unchanged?.Message.ToPlainText()).IsEqualTo("i");
+		var missingName = await mortal.EvaluateAsync(MarkupText.Plain("lset(me,visual)"));
+		await Assert.That(missingName.ToPlainText()).IsEqualTo("");
+		var unchanged = await mortal.EvaluateAsync(MarkupText.Plain("lockflags(me)"));
+		await Assert.That(unchanged.ToPlainText()).IsEqualTo("i");
 		await mortal.FunctionParse(MarkupText.Plain("lset(me/Basic,visual)"));
 		await mortal.FunctionParse(MarkupText.Plain("lset(me/Basic,wizard)"));
-		var flags = await mortal.FunctionParse(MarkupText.Plain("lockflags(me)"));
-		var creator = await mortal.FunctionParse(MarkupText.Plain("lockowner(me)"));
-		await Assert.That(flags?.Message.ToPlainText()).IsEqualTo("vi");
-		await Assert.That(creator?.Message.ToPlainText()).IsEqualTo($"#{player.Number}");
+		var flags = await mortal.EvaluateAsync(MarkupText.Plain("lockflags(me)"));
+		var creator = await mortal.EvaluateAsync(MarkupText.Plain("lockowner(me)"));
+		await Assert.That(flags.ToPlainText()).IsEqualTo("vi");
+		await Assert.That(creator.ToPlainText()).IsEqualTo($"#{player.Number}");
 	}
 
 	[Test]
@@ -137,51 +137,51 @@ public class LockFunctionUnitTests
 	[Arguments("lockfilter(#TRUE,#0|#1,|)", "#0|#1")]
 	public async Task PennLockFunctionReadbacks(string expression, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result?.Message.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expression));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task LockSetterAndLsetShareStoredMetadata()
 	{
-		var created = await Parser.FunctionParse(MarkupText.Plain("create(LockMetadata_" + Guid.NewGuid().ToString("N") + ")"));
-		var target = created!.Message.ToPlainText();
-		var set = await Parser.FunctionParse(MarkupText.Plain($"lock({target},=me)"));
-		await Assert.That(set?.Message.ToPlainText()).IsEqualTo("=#1");
+		var created = await Parser.EvaluateAsync(MarkupText.Plain("create(LockMetadata_" + Guid.NewGuid().ToString("N") + ")"));
+		var target = created.ToPlainText();
+		var set = await Parser.EvaluateAsync(MarkupText.Plain($"lock({target},=me)"));
+		await Assert.That(set.ToPlainText()).IsEqualTo("=#1");
 		await Parser.FunctionParse(MarkupText.Plain($"lset({target}/Basic,visual)"));
 		await Parser.FunctionParse(MarkupText.Plain($"lset({target}/Basic,!no_inherit)"));
-		var flags = await Parser.FunctionParse(MarkupText.Plain($"lockflags({target}/Basic)"));
-		var names = await Parser.FunctionParse(MarkupText.Plain($"llockflags({target}/Basic)"));
-		var creator = await Parser.FunctionParse(MarkupText.Plain($"lockowner({target}/Basic)"));
-		await Assert.That(flags?.Message.ToPlainText()).IsEqualTo("v");
-		await Assert.That(names?.Message.ToPlainText()).IsEqualTo("visual");
-		await Assert.That(creator?.Message.ToPlainText()).IsEqualTo("#1");
+		var flags = await Parser.EvaluateAsync(MarkupText.Plain($"lockflags({target}/Basic)"));
+		var names = await Parser.EvaluateAsync(MarkupText.Plain($"llockflags({target}/Basic)"));
+		var creator = await Parser.EvaluateAsync(MarkupText.Plain($"lockowner({target}/Basic)"));
+		await Assert.That(flags.ToPlainText()).IsEqualTo("v");
+		await Assert.That(names.ToPlainText()).IsEqualTo("visual");
+		await Assert.That(creator.ToPlainText()).IsEqualTo("#1");
 	}
 
 	[Test]
 	public async Task ListsBuiltinAndCustomLocks()
 	{
-		var builtins = await Parser.FunctionParse(MarkupText.Plain("locks()"));
-		await Assert.That(builtins?.Message.ToPlainText().Split(' ')).Contains("Basic");
-		var created = await Parser.FunctionParse(MarkupText.Plain("create(CustomLock_" + Guid.NewGuid().ToString("N") + ")"));
-		var target = created!.Message.ToPlainText();
+		var builtins = await Parser.EvaluateAsync(MarkupText.Plain("locks()"));
+		await Assert.That(builtins.ToPlainText().Split(' ')).Contains("Basic");
+		var created = await Parser.EvaluateAsync(MarkupText.Plain("create(CustomLock_" + Guid.NewGuid().ToString("N") + ")"));
+		var target = created.ToPlainText();
 		await Parser.FunctionParse(MarkupText.Plain($"lock({target}/user:example,#TRUE)"));
-		var listed = await Parser.FunctionParse(MarkupText.Plain($"locks({target})"));
-		await Assert.That(listed?.Message.ToPlainText()).IsEqualTo("USER:EXAMPLE");
+		var listed = await Parser.EvaluateAsync(MarkupText.Plain($"locks({target})"));
+		await Assert.That(listed.ToPlainText()).IsEqualTo("USER:EXAMPLE");
 	}
 
 	[Test]
 	public async Task LsetRejectsListReplacementArguments()
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain("lset(a b c,2,x)"));
-		await Assert.That(result?.Message.ToPlainText()).StartsWith("#-1");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("lset(a b c,2,x)"));
+		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
 	[Test]
 	[Arguments("lockowner(%#)", "")]
 	public async Task Lockowner(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -189,7 +189,7 @@ public class LockFunctionUnitTests
 	[Arguments("lockfilter(#0,basic)", "")]
 	public async Task Lockfilter(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -197,7 +197,7 @@ public class LockFunctionUnitTests
 	[Arguments("llockflags(%#/basic)", "")]
 	public async Task Llockflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -266,10 +266,10 @@ public class LockFunctionUnitTests
 	public async Task LockReturnsUnlocked()
 	{
 		// Create a dedicated object to avoid parallel test interference
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockFunc_UnlockedTest)")))!.Message;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockFunc_UnlockedTest)"));
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"lock({dbref})")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"lock({dbref})"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("*UNLOCKED*");
 	}
 
@@ -277,10 +277,10 @@ public class LockFunctionUnitTests
 	public async Task ElockNoLockPasses()
 	{
 		// Create a dedicated object to avoid parallel test interference
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockFunc_ElockTest)")))!.Message;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockFunc_ElockTest)"));
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"elock({dbref}/Basic,%#)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"elock({dbref}/Basic,%#)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 }
