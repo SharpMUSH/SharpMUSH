@@ -271,9 +271,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var plainText = text.ToPlainText();
 
 		// The same text under the same settings parses to the same tree, and code run once per item
-		// (u(), filter(), iter()) is the same text every time. A tracing parse is never shared.
+		// (u(), filter(), iter()) is the same text every time. Only evaluated code and queued action
+		// lists are kept: a typed command line is rarely repeated, and some carry a password (CONNECT,
+		// @password) that must not outlive the command. A tracing parse is never shared.
 		var options = Configuration.CurrentValue;
 		var cache = options.Debug.DebugSharpParser || plainText.Length > SoftcodeParseCache.MaxTextLength
+			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse))
 			? null
 			: Services.ParseCache;
 		var key = new SoftcodeParseCache.Key(plainText, methodName, lenient,
