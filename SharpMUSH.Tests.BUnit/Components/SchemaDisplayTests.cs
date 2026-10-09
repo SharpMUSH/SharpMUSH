@@ -263,6 +263,15 @@ public class SchemaDisplayTests : BunitContext
 	}
 
 	[Test]
+	[Arguments("<b>plain</b> text", "&lt;b&gt;plain&lt;/b&gt; text")]
+	[Arguments("[1,2]", "[1,2]")]
+	[Arguments("\"<i>\"", "&quot;&lt;i&gt;&quot;")]
+	public async Task Markup_that_is_not_a_serialized_MString_is_shown_as_encoded_text(string value, string html)
+	{
+		await Assert.That(SchemaRendering.MarkupToHtml(value)).IsEqualTo(html);
+	}
+
+	[Test]
 	public async Task Rows_sharing_a_group_draw_as_one_conversation_with_its_replies_indented()
 	{
 		var cut = RenderDisplay(new SchemaElement(Kind: "timeline", RowsField: "entries"), Rows("entries", """

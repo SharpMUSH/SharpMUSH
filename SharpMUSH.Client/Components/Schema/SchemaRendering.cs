@@ -292,7 +292,8 @@ public static partial class SchemaRendering
 		{
 			return MarkupTextSerializer.Deserialize(value).Render(MarkupFormat.Html);
 		}
-		catch (Exception)
+		// Not JSON (JsonException), or JSON that is not an object (InvalidOperationException).
+		catch (Exception ex) when (ex is JsonException or InvalidOperationException)
 		{
 			return System.Net.WebUtility.HtmlEncode(value);
 		}
