@@ -1,4 +1,5 @@
 using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services;
@@ -21,13 +22,20 @@ public partial class Commands
 	/// <c>@ascii</c>: the <c>ascii_translations</c> table, what a client without Unicode is sent for a character.
 	/// With no argument it lists the table; <c>&lt;character&gt;=&lt;text&gt;</c> sets one entry, replacing any the
 	/// character had; <c>/remove &lt;character&gt;</c> takes one out. The same table the portal's ASCII
-	/// Translations page edits.
+	/// Translations page edits. Guarded the way <c>@config/set</c> is, in the command itself, so a
+	/// <c>@command/restrict</c> or a clone of it never opens the table to anyone without <c>config.admin</c>.
 	/// </summary>
 	[SharpCommand(Name = "@ASCII", Switches = ["LIST", "REMOVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
 		CommandLock = "PERM^config.admin", MinArgs = 0, MaxArgs = 2, ParameterNames = ["character", "text"])]
 	public async ValueTask<Option<CallState>> AsciiTranslation(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCantRemakeWorld), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var character = (args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "").Trim();

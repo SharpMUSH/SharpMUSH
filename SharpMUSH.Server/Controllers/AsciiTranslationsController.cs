@@ -32,7 +32,7 @@ public class AsciiTranslationsController(
 	[HttpPost]
 	public async Task<ActionResult> Set([FromBody] AsciiTranslationRequest request)
 	{
-		var character = request.Character?.Trim() ?? string.Empty;
+		var character = request.Character ?? string.Empty;
 		var text = request.Text ?? string.Empty;
 		if (AsciiTranslations.Problem(character, text) is { } problem)
 		{
@@ -52,8 +52,9 @@ public class AsciiTranslationsController(
 		return Ok();
 	}
 
-	[HttpDelete("{character}")]
-	public async Task<ActionResult> Delete(string character)
+	/// <remarks>The character comes in the query string: a route segment can't carry <c>/</c>, nor keep a lone combining mark intact.</remarks>
+	[HttpDelete]
+	public async Task<ActionResult> Delete([FromQuery] string character)
 	{
 		var removed = false;
 		await config.UpdateAsync(current =>

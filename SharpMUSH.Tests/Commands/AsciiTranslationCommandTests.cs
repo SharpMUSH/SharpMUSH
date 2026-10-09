@@ -1,7 +1,12 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -24,6 +29,7 @@ public class AsciiTranslationCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IOptionsMonitor<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IConfigOptionWriter ConfigWriter => WebAppFactoryArg.Services.GetRequiredService<IConfigOptionWriter>();
 
 	private IReadOnlyDictionary<string, string> Table => Configuration.CurrentValue.AsciiTranslations.Translations;
@@ -86,6 +92,35 @@ public class AsciiTranslationCommandTests
 		finally
 		{
 			await CleanupAsync("x", "⌘");
+		}
+	}
+
+	/// <summary>
+	/// Like <c>@config/set</c>, the command checks <c>config.admin</c> itself: a clone restricted to every player
+	/// still refuses a player without it, and the table stays as it was.
+	/// </summary>
+	[Test]
+	public async ValueTask ACloneOpenedToPlayers_StillRefusesOneWithoutConfigAdmin()
+	{
+		var clone = $"ZA{Guid.NewGuid():N}"[..12].ToUpperInvariant();
+		var god = (await Mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("AsciiRoom"), god));
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "AsciiMortal", home);
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@command/clone @ascii={clone}"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@command/restrict {clone}=player"));
+
+			var before = WebAppFactoryArg.Notifications.CountFor(mortal.DbRef);
+			await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"{clone} ⍟=*"));
+
+			await Assert.That(WebAppFactoryArg.Notifications.For(mortal.DbRef).Skip(before))
+				.Contains("You can't remake the world in your image.");
+			await Assert.That(Table.ContainsKey("⍟")).IsFalse();
+		}
+		finally
+		{
+			await CleanupAsync("⍟");
 		}
 	}
 }

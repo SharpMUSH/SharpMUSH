@@ -22,7 +22,7 @@ public class AsciiOutputTests
 	{
 		var context = new RenderContext("telnet", capabilities, null, AsciiTranslations: translations);
 		var rendered = new MarkupOutputRenderer().Render(MarkupTextSerializer.Serialize(text), context);
-		var bytes = rendered.ApplyOutputTransform ? OutputTransformService.Transform(rendered.Data, capabilities) : rendered.Data;
+		var bytes = rendered.ApplyOutputTransform ? OutputTransformService.Transform(rendered.Data, capabilities, translations) : rendered.Data;
 		// What the client reads, in the character set it reads.
 		return (capabilities.OutputCharset == TerminalCharsets.Latin1 ? Encoding.Latin1 : Encoding.UTF8)
 			.GetString(bytes).Replace("\r\n", "\n").TrimEnd('\n');

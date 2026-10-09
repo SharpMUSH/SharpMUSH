@@ -15,5 +15,5 @@ public class AsciiTranslationsService(IHttpClientFactory httpClientFactory)
 		Client.PostApiAsync("api/asciitranslations", new AsciiTranslationRequest(character, text));
 
 	public Task<ApiResult<Success>> DeleteAsync(string character) =>
-		Client.DeleteApiAsync($"api/asciitranslations/{Uri.EscapeDataString(character)}");
+		Client.DeleteApiAsync($"api/asciitranslations?character={Uri.EscapeDataString(character)}");
 }
