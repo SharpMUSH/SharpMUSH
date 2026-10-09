@@ -125,12 +125,11 @@ public partial class Commands
 					IAttributeService.AttributePatternMode.Wildcard);
 				if (visible is SharpAttribute[] visibleAttributes)
 				{
-					foreach (var attr in visibleAttributes)
+					var unveiled = visibleAttributes
+						.Where(attr => !attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)));
+					foreach (var attr in unveiled)
 					{
-						if (!attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)))
-						{
-							names.Add(attr.LongName);
-						}
+						names.Add(attr.LongName);
 					}
 				}
 			}
@@ -292,13 +291,8 @@ public partial class Commands
 		foreach (var obj in scanResult.Objects)
 		{
 			var visible = visibleByObjid[obj.Objid];
-			foreach (var (attrName, value) in obj.Attributes)
+			foreach (var (attrName, value) in obj.Attributes.Where(attribute => visible.Contains(attribute.Key)))
 			{
-				if (!visible.Contains(attrName))
-				{
-					continue;
-				}
-
 				foreach (Match match in PackageDbrefRegex().Matches(value))
 				{
 					var number = int.Parse(match.Groups["number"].Value);

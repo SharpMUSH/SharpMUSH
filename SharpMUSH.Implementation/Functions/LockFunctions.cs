@@ -244,9 +244,10 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		if (delimiter.Length != 1) return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		var results = new List<string>();
-		foreach (var reference in args["1"].Message!.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries))
+		var references = args["1"].Message!.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries)
+			.Where(reference => DBRef.TryParse(reference.Trim(), out _));
+		foreach (var reference in references)
 		{
-			if (!DBRef.TryParse(reference.Trim(), out _)) continue;
 			if (await LocateService.Locate(parser, executor, executor, reference.Trim(), LocateFlags.All) is not AnySharpObject victim || !await PermissionService.CanLocate(executor, victim)) continue;
 			if (await LockService.Evaluate(expression, executor, victim)) results.Add($"#{victim.Object().DBRef.Number}");
 		}

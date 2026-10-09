@@ -244,13 +244,11 @@ public static class PluginLoaderService
 			yield return new PluginCandidate(dll, Path.GetFileNameWithoutExtension(dll), [], 0, Origin: origin);
 		}
 
-		foreach (var folder in Directory.EnumerateDirectories(pluginsRoot).Order(StringComparer.Ordinal))
+		var folders = Directory.EnumerateDirectories(pluginsRoot)
+			.Where(folder => !Path.GetFileName(folder).StartsWith('.'))
+			.Order(StringComparer.Ordinal);
+		foreach (var folder in folders)
 		{
-			if (Path.GetFileName(folder).StartsWith('.'))
-			{
-				continue;
-			}
-
 			if (FromFolder(folder, logger, origin) is { } candidate)
 			{
 				yield return candidate;

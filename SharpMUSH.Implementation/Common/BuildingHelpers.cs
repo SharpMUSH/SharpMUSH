@@ -891,9 +891,10 @@ public static class BuildingHelpers
 
 		await CopyAttributesAsync(mediator, attributeService, logger, executor, target, clonedObj, owner);
 
-		foreach (var (lockName, data) in target.Object().Locks)
+		var clonedLocks = target.Object().Locks
+			.Where(entry => !entry.Value.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone));
+		foreach (var (lockName, _) in clonedLocks)
 		{
-			if (data.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone)) continue;
 			var copied = await mediator.Send(new CopyLockCommand(target.Object(), clonedObj.Object(), lockName, executor));
 			if (copied is Error<string> failure)
 			{

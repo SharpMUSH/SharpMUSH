@@ -712,13 +712,10 @@ public partial class Commands
 			// Penn queues each STARTUP and tells each player in the same pass, so every player hears
 			// of the restart before any STARTUP has run. These run in place, so the notices go first.
 			var executorName = executor.Object().Name;
-			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()).Where(obj => obj.IsPlayer))
 			{
-				if (obj.IsPlayer)
-				{
-					await NotifyService.NotifyLocalized(obj, nameof(ErrorMessages.Notifications.GloballyRestartedByFormat),
-						executor, executorName);
-				}
+				await NotifyService.NotifyLocalized(obj, nameof(ErrorMessages.Notifications.GloballyRestartedByFormat),
+					executor, executorName);
 			}
 
 			// Then run @STARTUP on every object — the same pass used at boot, so global

@@ -98,10 +98,9 @@ public static class MailAliases
 		}
 
 		var bare = name[1..];
-		await foreach (var alias in AllAsync(services))
+		await foreach (var alias in AllAsync(services).Where(alias => alias.Name.Equals(bare, StringComparison.OrdinalIgnoreCase)))
 		{
-			if (alias.Name.Equals(bare, StringComparison.OrdinalIgnoreCase)
-					&& (who is null || await MayUseAsync(alias, who)))
+			if (who is null || await MayUseAsync(alias, who))
 			{
 				return alias;
 			}
@@ -222,13 +221,10 @@ public static class MailAliases
 	private static async ValueTask ListAsync(Services services, AnySharpObject executor)
 	{
 		var rows = new List<string[]>();
-		await foreach (var alias in AllAsync(services))
+		await foreach (var alias in AllAsync(services).Where((alias, _) => IsListedForAsync(alias, executor)))
 		{
-			if (await IsListedForAsync(alias, executor))
-			{
-				rows.Add([$"{Token}{alias.Name}", alias.Description, PrivilegeColumn(alias.UsePrivileges), PrivilegeColumn(alias.SeePrivileges),
-					await OwnerNameAsync(services, alias.Owner)]);
-			}
+			rows.Add([$"{Token}{alias.Name}", alias.Description, PrivilegeColumn(alias.UsePrivileges), PrivilegeColumn(alias.SeePrivileges),
+				await OwnerNameAsync(services, alias.Owner)]);
 		}
 
 		await TellSectionAsync(services, executor, rows,
@@ -682,14 +678,10 @@ public static class MailAliases
 			if (args[0].Length == 1) separator = args[0];
 		}
 
-		var names = new List<string>();
-		await foreach (var alias in AllAsync(services))
-		{
-			if (await IsListedForAsync(alias, executor))
-			{
-				names.Add($"{Token}{alias.Name}");
-			}
-		}
+		var names = await AllAsync(services)
+			.Where((alias, _) => IsListedForAsync(alias, executor))
+			.Select(alias => $"{Token}{alias.Name}")
+			.ToListAsync();
 
 		return string.Join(separator, names);
 	}

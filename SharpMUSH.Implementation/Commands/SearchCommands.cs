@@ -708,12 +708,8 @@ public partial class Commands
 			_ => $"@create {run.ObjectRef}"
 		});
 
-		await foreach (var flag in obj.Flags.Value)
+		await foreach (var flag in obj.Flags.Value.Where(flag => !run.SkipDefaults || !IsDefaultFlag(obj.Type, flag.Name)))
 		{
-			if (run.SkipDefaults && IsDefaultFlag(obj.Type, flag.Name))
-			{
-				continue;
-			}
 			run.Add($"@set {run.ObjectRef}={flag.Name}");
 		}
 
@@ -1342,13 +1338,11 @@ public partial class Commands
 		if (!await location.WithExitOption().IsAudible()) return;
 
 		var exits = location.Content(Mediator).Where(x => x.IsExit)
-			.Where((item, ct) => perceive(item.Object().DBRef, ct));
+			.Where((item, ct) => perceive(item.Object().DBRef, ct))
+			.Where((exit, _) => exit.WithRoomOption().IsAudible());
 		await foreach (var exit in exits.WithCancellation(ExecutionBudget.CurrentToken))
 		{
-			if (await exit.WithRoomOption().IsAudible())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object().Name);
-			}
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object().Name);
 		}
 	}
 

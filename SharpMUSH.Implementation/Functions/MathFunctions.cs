@@ -1389,17 +1389,11 @@ public partial class Functions
 				}
 
 				var perceive = await ObserveProjectionRealityAsync(parser, executor.Object().DBRef);
-				var matches = new List<AnySharpContent>();
-				await foreach (var item in searched.Content(Mediator))
-				{
-					if (!await perceive(item.Object().DBRef, ExecutionBudget.CurrentToken)) continue;
-					var name = item.Object().Name;
-					if (name.Equals(objectArg, StringComparison.OrdinalIgnoreCase) ||
-						name.StartsWith(objectArg, StringComparison.OrdinalIgnoreCase))
-					{
-						matches.Add(item);
-					}
-				}
+				var matches = await searched.Content(Mediator)
+					.Where((item, _) => perceive(item.Object().DBRef, ExecutionBudget.CurrentToken))
+					.Where(item => item.Object().Name.Equals(objectArg, StringComparison.OrdinalIgnoreCase) ||
+						item.Object().Name.StartsWith(objectArg, StringComparison.OrdinalIgnoreCase))
+					.ToListAsync();
 
 				if (matches.Count == 0)
 				{

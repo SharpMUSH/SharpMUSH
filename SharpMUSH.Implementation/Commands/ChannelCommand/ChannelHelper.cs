@@ -517,17 +517,9 @@ public static class ChannelHelper
 	public static async ValueTask<SharpChannel[]> VisibleChannels(IChannelPermissionService permissionService,
 		IMediator mediator, AnySharpObject viewer, IAsyncEnumerable<SharpChannel> channels)
 	{
-		var visible = new List<SharpChannel>();
-
-		await foreach (var channel in channels)
-		{
-			if (await CanSeeChannel(permissionService, mediator, viewer, channel))
-			{
-				visible.Add(channel);
-			}
-		}
-
-		return [.. visible];
+		return await channels
+			.Where((channel, _) => CanSeeChannel(permissionService, mediator, viewer, channel))
+			.ToArrayAsync();
 	}
 
 	/// <summary>

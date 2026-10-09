@@ -469,19 +469,12 @@ public partial class Commands
 			// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
 			int? width = null;
 
-			foreach (var (attr, readFrom) in atrs)
+			const string VeiledFlagName = "VEILED";
+			var listed = atrs
+				.Where(entry => !skipDescribe || !entry.Attribute.LongName.Equals("DESCRIBE", StringComparison.OrdinalIgnoreCase))
+				.Where(entry => showAll || !entry.Attribute.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)));
+			foreach (var (attr, readFrom) in listed)
 			{
-				if (skipDescribe && attr.LongName.Equals("DESCRIBE", StringComparison.OrdinalIgnoreCase))
-				{
-					continue;
-				}
-
-				const string VeiledFlagName = "VEILED";
-				if (!showAll && attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
-				{
-					continue;
-				}
-
 				var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 				var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 

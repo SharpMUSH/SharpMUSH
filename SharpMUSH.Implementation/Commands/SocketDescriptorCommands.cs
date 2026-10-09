@@ -631,12 +631,11 @@ public partial class Commands
 			await AttributeService.ClearAttributeAsync(executor, executor, "LOCALE",
 				IAttributeService.AttributePatternMode.Exact);
 
-			await foreach (var conn in ConnectionService.Get(executor.Object().DBRef))
+			var clearing = ConnectionService.Get(executor.Object().DBRef)
+				.Where(conn => conn.State == IConnectionService.ConnectionState.LoggedIn);
+			await foreach (var conn in clearing)
 			{
-				if (conn.State == IConnectionService.ConnectionState.LoggedIn)
-				{
-					ConnectionService.Update(conn.Handle, "Locale", string.Empty);
-				}
+				ConnectionService.Update(conn.Handle, "Locale", string.Empty);
 			}
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCleared), executor);
@@ -659,12 +658,11 @@ public partial class Commands
 		// Persist to the player's LOCALE attribute so it survives reconnects.
 		await AttributeService.SetAttributeAsync(executor, executor, "LOCALE", MarkupText.Plain(canonicalLocale));
 
-		await foreach (var conn in ConnectionService.Get(executor.Object().DBRef))
+		var loggedIn = ConnectionService.Get(executor.Object().DBRef)
+			.Where(conn => conn.State == IConnectionService.ConnectionState.LoggedIn);
+		await foreach (var conn in loggedIn)
 		{
-			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
-			{
-				ConnectionService.Update(conn.Handle, "Locale", canonicalLocale);
-			}
+			ConnectionService.Update(conn.Handle, "Locale", canonicalLocale);
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleSetFormat), executor, canonicalLocale);

@@ -659,15 +659,11 @@ public partial class Commands
 
 		if (overheard)
 		{
-			var contents = executorLocation.Content(Mediator);
-			await foreach (var obj in contents)
+			var bystanders = executorLocation.Content(Mediator)
+				.Where(obj => !obj.Object().DBRef.Equals(executor.Object().DBRef)
+					&& !successfulTargets.Any(t => t.Object().DBRef.Equals(obj.Object().DBRef)));
+			await foreach (var obj in bystanders)
 			{
-				if (obj.Object().DBRef.Equals(executor.Object().DBRef) ||
-						successfulTargets.Any(t => t.Object().DBRef.Equals(obj.Object().DBRef)))
-				{
-					continue;
-				}
-
 				await NotifyService.Notify(obj.WithRoomOption(),
 					$"{executor.Object().Name} whispers to {targetList}.", executor);
 			}
