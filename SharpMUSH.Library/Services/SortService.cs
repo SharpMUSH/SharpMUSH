@@ -275,7 +275,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		}
 
 		public int GetHashCode(string obj) =>
-			DbRefNumber(obj) is >= 0 and var number ? number.GetHashCode() : MudnameComparerInstance.GetHashCode(obj);
+			DbRefNumber(obj) is >= 0 and var number ? number : MudnameComparerInstance.GetHashCode(obj);
 	}
 
 	/// <summary>
