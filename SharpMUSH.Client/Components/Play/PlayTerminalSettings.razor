@@ -1,0 +1,68 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Play's terminal settings menu: the width in columns, screen reader mode, Clear, and focus mode. The page
+   keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
+<PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+             Open="Open" OpenChanged="OpenChanged">
+    <Activator>
+        <button type="button" class="play-settings-btn" @onclick="() => OpenChanged.InvokeAsync(!Open)" @onkeydown="CloseOnEscape"
+                title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]" aria-expanded="@(Open ? "true" : "false")">
+            <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
+        </button>
+    </Activator>
+    <ChildContent>
+        <div class="play-cfg" role="group" aria-label="@Loc["NavTerminalSettings"]" @onclick:stopPropagation="true">
+            <div class="play-cfg-kicker">@Loc["Terminal"]</div>
+            <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
+                <span>@Loc["NavTerminalWidthCols"]</span>
+                <input class="play-cols-input" type="number" min="78" max="240" step="1"
+                       value="@Columns" @onchange="e => ColumnsChanged.InvokeAsync(e.Value?.ToString())" />
+            </label>
+            @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
+            <label class="play-cfg-row">
+                <span>@Loc["NavScreenReaderMode"]</span>
+                <input class="play-cfg-check" type="checkbox" checked="@ScreenReaderOn"
+                       aria-describedby="@ReaderWhat" @onchange="e => ScreenReaderChanged.InvokeAsync(e.Value is true)" />
+            </label>
+            <div class="play-cfg-note" id="@ReaderWhat">@Loc["NavScreenReaderModeTooltip"]</div>
+            <button type="button" class="play-cfg-item" @onclick="OnClear">
+                <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
+                <span>@Loc["TermClearTerminal"]</span>
+            </button>
+            @* The header's focus button, for a phone where Play.razor.css folds it into this menu. *@
+            <button type="button" class="play-cfg-item play-cfg-focus" @onclick="() => FocusChanged.InvokeAsync(!Focus)">
+                <MudIcon Icon="@(Focus ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1rem;" />
+                <span>@(Focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])</span>
+            </button>
+        </div>
+    </ChildContent>
+</PopoverMenu>
+
+@code {
+    /// <summary>Where this menu is offered; it keeps the ids of each one on the page apart.</summary>
+    [Parameter, EditorRequired] public PlaySettingsMenu Menu { get; set; }
+
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    /// <summary>Escape on the menu's button closes whichever menu is open.</summary>
+    [Parameter] public EventCallback OnEscape { get; set; }
+
+    /// <summary>The terminal's width in columns.</summary>
+    [Parameter] public int Columns { get; set; }
+
+    /// <summary>The width as typed, for the page to clamp and keep.</summary>
+    [Parameter] public EventCallback<string?> ColumnsChanged { get; set; }
+
+    [Parameter] public bool ScreenReaderOn { get; set; }
+    [Parameter] public EventCallback<bool> ScreenReaderChanged { get; set; }
+
+    [Parameter] public EventCallback OnClear { get; set; }
+
+    [Parameter] public bool Focus { get; set; }
+    [Parameter] public EventCallback<bool> FocusChanged { get; set; }
+
+    private string ReaderWhat => $"play-cfg-reader-what-{Menu}";
+
+    private Task CloseOnEscape(KeyboardEventArgs e) => e.Key == "Escape" ? OnEscape.InvokeAsync() : Task.CompletedTask;
+}

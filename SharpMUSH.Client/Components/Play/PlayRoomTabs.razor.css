@@ -1,0 +1,31 @@
+.play-sheet-tabs {
+    display: flex;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    background: var(--surface-3);
+}
+
+.play-sheet-tab {
+    flex: 1;
+    height: 38px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.play-sheet-tab--on {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.play-sheet-tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}

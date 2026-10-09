@@ -1,0 +1,92 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Widgets
+@inject IStringLocalizer<SharedResource> Loc
+@inject ApplicationCatalog Catalog
+@inject IJSRuntime JS
+
+@* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the scope
+   panels, each rendered as the aside renders it but in sheet mode. *@
+@* The tabs pattern: one tab stop, the arrows, Home and End move between them (selection follows focus). *@
+<div class="play-sheet-tabs" role="tablist" aria-label="@Label" @onkeydown="OnTabKeyAsync" @ref="_tabList">
+    @foreach (var entry in Entries)
+    {
+        var e = entry;
+        var on = e.Name == Selected;
+        <button type="button" role="tab" id="@($"play-tab-{e.Name}")" aria-controls="play-panel-room" aria-selected="@(on ? "true" : "false")"
+                tabindex="@(on ? 0 : -1)" @ref="_tabs[e.Name]"
+                class="play-sheet-tab @(on ? "play-sheet-tab--on" : null)" @onclick="() => SelectedChanged.InvokeAsync(e.Name)">
+            @TabLabel(e)
+        </button>
+    }
+</div>
+<div class="play-sheet-body" role="tabpanel" id="play-panel-room" aria-labelledby="@($"play-tab-{Selected}")">
+    <CascadingValue Value="Context" IsFixed="true">
+        @if (Entries.FirstOrDefault(e => e.Name == Selected) is { } shown)
+        {
+            <DynamicComponent Type="@shown.Widget.ComponentType" Parameters="@ParametersFor(shown)" />
+        }
+    </CascadingValue>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PlayAsideEntry> Entries { get; set; } = [];
+
+    /// <summary>The current tab's entry name.</summary>
+    [Parameter] public string? Selected { get; set; }
+    [Parameter] public EventCallback<string> SelectedChanged { get; set; }
+
+    /// <summary>The tab list's accessible name.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>The room, for the Here and Exits counts on their tabs.</summary>
+    [Parameter, EditorRequired] public RoomState Room { get; set; } = RoomState.Empty;
+
+    /// <summary>The sheet's page context: sheet mode, and a send that closes the sheet.</summary>
+    [Parameter, EditorRequired] public PlayPageContext Context { get; set; } = null!;
+
+    /// <summary>The parameters the aside passes the entry's widget.</summary>
+    [Parameter, EditorRequired] public Func<PlayAsideEntry, Dictionary<string, object>> ParametersFor { get; set; } = null!;
+
+    private readonly Dictionary<string, ElementReference> _tabs = new(StringComparer.Ordinal);
+    private ElementReference _tabList;
+    private string? _tabKeys;
+
+    private string TabLabel(PlayAsideEntry entry) => entry.Name switch
+    {
+        "Here" => $"{Loc["TermBrowserHere"]} · {Room.Occupants.Count(o => !o.You)}",
+        "Exits" => $"{Loc["NavExits"]} · {Room.Exits.Count}",
+        _ => Catalog.Get(entry.Name)?.DisplayName ?? Loc[entry.Widget.DisplayName],
+    };
+
+    private async Task OnTabKeyAsync(KeyboardEventArgs e)
+    {
+        if (Entries.Count == 0) return;
+        var at = Math.Max(0, Entries.ToList().FindIndex(entry => entry.Name == Selected));
+        int? next = e.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => (at + 1) % Entries.Count,
+            "ArrowLeft" or "ArrowUp" => (at - 1 + Entries.Count) % Entries.Count,
+            "Home" => 0,
+            "End" => Entries.Count - 1,
+            _ => null,
+        };
+        if (next is not { } index) return;
+        var name = Entries[index].Name;
+        await SelectedChanged.InvokeAsync(name);
+        if (_tabs.TryGetValue(name, out var tab))
+        {
+            // A tab not rendered yet has no element to focus; the key then just selects it.
+            try { await tab.FocusAsync(); }
+            catch (InvalidOperationException) { return; }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The sheet scrolls, so the keys the tabs move with must not scroll it as well (layout.js tabKeys).
+        if (_tabList.Id is not { } tabs || tabs == _tabKeys) return;
+        _tabKeys = tabs;
+        try { await JS.InvokeVoidAsync("sharpmushLayout.tabKeys", _tabList); }
+        catch (JSException) { }
+    }
+}

@@ -1,0 +1,66 @@
+/* The Room panel's button, only while the aside is not on screen (below; and focus mode). Qualified by
+   .play-conn, whose display: grid comes later in this file. */
+.play-conn.play-room-btn {
+    display: none;
+}
+
+.play--focus .play-conn.play-room-btn {
+    display: grid;
+}
+
+.play-conn {
+    display: grid;
+    place-items: center;
+    min-width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.play-conn:hover {
+    background: var(--surface-2);
+    color: var(--warn);
+}
+
+.play-conn--connect {
+    padding: 0 14px;
+    background: var(--accent);
+    color: var(--accent-on);
+}
+
+.play-conn--connect:hover {
+    background: var(--accent);
+    color: var(--accent-on);
+    filter: brightness(1.08);
+}
+
+.play-conn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* On the room's picture (the banner's controls row): 44px glass buttons, a full touch target. */
+.play-banner-more .play-conn {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(var(--scrim-ink), 0.55);
+    color: var(--text-on-image);
+    backdrop-filter: blur(6px);
+}
+
+/* Narrow (board 11): no aside, so the Room panel's button shows. */
+@container page (max-width: 48rem) {
+    .play-conn.play-room-btn {
+        display: grid;
+    }
+}

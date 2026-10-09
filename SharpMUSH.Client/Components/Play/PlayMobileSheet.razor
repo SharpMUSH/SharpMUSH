@@ -1,0 +1,38 @@
+@* A phone's sheet over Play, as a chat app's panels: on MudOverlay's fixed layer, a modal dialog that traps
+   focus and closes on the scrim or Escape. Which side it comes from is the sheet's (PlaySheet). *@
+<MudOverlay Visible="true" LockScroll="true" OnClick="OnClose" Style="@OverlayStyle">
+    <div class="play-sheet @SheetClass" role="dialog" aria-modal="true"
+         aria-label="@Label" tabindex="-1" @onclick:stopPropagation="true" @onkeydown="OnKey">
+        <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+            @ChildContent
+        </MudFocusTrap>
+    </div>
+</MudOverlay>
+
+@code {
+    [Parameter, EditorRequired] public PlaySheet Sheet { get; set; }
+
+    /// <summary>The dialog's accessible name.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string OverlayStyle => Sheet switch
+    {
+        PlaySheet.Details => "background: rgba(var(--scrim-ink), 0.55); align-items: flex-start; justify-content: stretch;",
+        PlaySheet.Room => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-end;",
+        _ => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-start;",
+    };
+
+    private string SheetClass => Sheet switch
+    {
+        PlaySheet.Details => "play-sheet--details",
+        PlaySheet.Room => "play-sheet--room",
+        _ => "play-sheet--side",
+    };
+
+    // No preventDefault: it is decided at render time and would swallow the next key.
+    private Task OnKey(KeyboardEventArgs e) => e.Key == "Escape" ? OnClose.InvokeAsync() : Task.CompletedTask;
+}
