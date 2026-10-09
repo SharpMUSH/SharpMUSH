@@ -64,12 +64,14 @@ internal sealed class RememberedLoginHandler : HttpMessageHandler
 /// </summary>
 public class RememberedLoginTests : TrackingBunitContext
 {
-	private AccountAuthService Create(RememberedLoginHandler handler, string? storedToken, bool loggedOut = false)
+	private AccountAuthService Create(RememberedLoginHandler handler, string? storedToken, bool loggedOut = false,
+		string? storedCharacter = null)
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(loggedOut ? bool.TrueString : null);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(storedToken);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult(storedToken is null ? null : "headwiz");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.character").SetResult(storedCharacter);
 
 		var http = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -105,6 +107,35 @@ public class RememberedLoginTests : TrackingBunitContext
 
 		await Assert.That(service.AccountSessionToken).IsEqualTo("resumed-token");
 		await Assert.That(service.Role).IsEqualTo("Player");
+	}
+
+	/// <summary>
+	/// A tab reloaded after its session ran out (a deploy, or a tab left idle) comes back as the character it
+	/// was on, not the account's primary one: each tab of an account may be playing a different character.
+	/// </summary>
+	[Test]
+	public async Task AReloadedTabWhoseSessionRanOut_ResumesAsItsOwnCharacter()
+	{
+		var handler = new RememberedLoginHandler();
+		var service = Create(handler, storedToken: "expired-token", storedCharacter: "9:90");
+
+		await service.InitAsync();
+
+		await Assert.That(handler.LastResumeBody!).Contains("\"characterKey\":9");
+		await Assert.That(handler.LastResumeBody!).Contains("\"characterCreationTime\":90");
+	}
+
+	/// <summary>The resumed session's character is kept with its token, so the next reload asks for it too.</summary>
+	[Test]
+	public async Task AResumedSession_KeepsItsCharacterWithItsToken()
+	{
+		var handler = new RememberedLoginHandler();
+		var service = Create(handler, storedToken: null);
+
+		await service.InitAsync();
+
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "sessionStorage.setItem"
+			&& i.Arguments.SequenceEqual(new object?[] { "sharpmush.account.character", "7:70" }))).IsTrue();
 	}
 
 	[Test]
