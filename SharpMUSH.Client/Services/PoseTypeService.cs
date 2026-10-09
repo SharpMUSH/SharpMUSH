@@ -185,5 +185,7 @@ public class PoseTypeService
 		_loaded = false;
 		_hidden = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		Changed?.Invoke();
+		// A story stays mounted across the switch, so the new character's hidden set is read here, not on mount.
+		_ = LoadAsync();
 	}
 }

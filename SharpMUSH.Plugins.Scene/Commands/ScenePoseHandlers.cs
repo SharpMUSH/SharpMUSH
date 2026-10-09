@@ -83,7 +83,7 @@ public static class ScenePoseHandlers
 		}
 
 		var result = await sceneService.SetPoseMetaAsync(poseId, key!, value.ToPlainText());
-		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} {key} set.");
+		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} {key} set.", parser, "pose-meta");
 	}
 
 	public static async ValueTask<MString> EditPose(

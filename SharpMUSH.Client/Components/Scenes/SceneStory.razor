@@ -218,6 +218,16 @@
                 Remember(msg);
                 break;
 
+            case "pose-meta":
+                // A field set after the pose went out (radio-scene sets the frequency right after recording):
+                // not an edit, so the edited badge stays as it was.
+                ReplacePose(msg.PoseId, existing => existing with
+                {
+                    Meta = msg.Meta ?? existing.Meta,
+                    Type = string.IsNullOrWhiteSpace(msg.Type) ? existing.Type : msg.Type,
+                });
+                break;
+
             case "delete":
                 ReplacePose(msg.PoseId, existing => existing with { IsDeleted = true });
                 break;
@@ -289,7 +299,7 @@
         OriginName: existing?.OriginName ?? msg.Location,
         Source: msg.Source,
         Tags: msg.Tags ?? [],
-        Meta: existing?.Meta ?? new Dictionary<string, string>(),
+        Meta: msg.Meta ?? existing?.Meta ?? new Dictionary<string, string>(),
         CreatedAt: existing?.CreatedAt ?? msg.Timestamp,
         IsDeleted: false,
         Content: msg.Content,

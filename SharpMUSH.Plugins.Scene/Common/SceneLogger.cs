@@ -75,7 +75,10 @@ public static class SceneLogger
 		var character = reader is { } who && await mediator.Send(new GetObjectNodeQuery(who)) is AnySharpObject found ? found : null;
 		var hide = character is null ? [] : await WordsAsync(services, character, "SCENE`HIDE");
 		var show = character is null ? [] : await WordsAsync(services, character, "SCENE`SHOW");
-		return [.. hide.Union(catalogue.Types.Where(t => t.Hidden && !show.Contains(t.Key)).Select(t => t.Key)).Distinct()];
+		// A hidden key whose type was removed is left out, as FUN`HIDDEN leaves it out of recall: those poses draw
+		// as in character, and no Show menu lists the type to reveal them.
+		var listed = catalogue.Types.Select(t => t.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		return [.. hide.Where(listed.Contains).Union(catalogue.Types.Where(t => t.Hidden && !show.Contains(t.Key)).Select(t => t.Key)).Distinct()];
 	}
 
 	private static async ValueTask<string[]> WordsAsync(IServiceProvider services, AnySharpObject character, string attribute) =>

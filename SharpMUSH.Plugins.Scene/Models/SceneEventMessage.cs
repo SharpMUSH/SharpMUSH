@@ -8,7 +8,7 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <see cref="Content"/> + raw <see cref="Markup"/> (rendered client-side).
 /// </summary>
 /// <param name="SceneId">The scene the event belongs to (the SignalR group key).</param>
-/// <param name="EventType">Opaque event kind: "pose" | "edit" | "delete" | "move" | "meta".</param>
+/// <param name="EventType">Opaque event kind: "pose" | "edit" | "pose-meta" | "delete" | "move" | "meta".</param>
 /// <param name="ActorName">Display name for the actor — the pose's ShowAsName (falling back to AuthorName).</param>
 /// <param name="PoseId">The affected pose id (empty for scene-level "meta" events).</param>
 /// <param name="Content">Plain text (ANSI-stripped) of the affected pose's current edit.</param>
@@ -23,6 +23,7 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// not the original author. Null for an event with no pose, or when nothing holds that dbref. Appended
 /// last: the wire is positional in both copies of this record.
 /// </param>
+/// <param name="Meta">The pose's metadata fields (a radio line's <c>frequency</c>, ...); null for an event with no pose.</param>
 /// <param name="Type">The pose's type key (<see cref="PoseTypes"/>); <c>ic</c> for an event with no pose.</param>
 public record SceneEventMessage(
 	string SceneId,
@@ -36,4 +37,5 @@ public record SceneEventMessage(
 	string Location,
 	long Timestamp,
 	string? ActorObjId,
-	string Type = PoseTypes.InCharacter);
+	string Type = PoseTypes.InCharacter,
+	IReadOnlyDictionary<string, string>? Meta = null);

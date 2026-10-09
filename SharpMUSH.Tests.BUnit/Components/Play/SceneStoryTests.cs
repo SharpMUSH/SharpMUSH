@@ -159,6 +159,22 @@ public class SceneStoryTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".story-row")[3].QuerySelector("img")).IsNull();
 	}
 
+	/// <summary>A field set after the pose went out (radio-scene's frequency, a type) reaches the row without marking it edited.</summary>
+	[Test]
+	public async Task APoseMetaEvent_UpdatesTheRow_WithoutTheEditedBadge()
+	{
+		var cut = RenderStory();
+		WaitForRows(cut, 3);
+		await cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage("42", "pose", "Wren Halloway", "P9", "back", "back", [], "ooc",
+			"Lower Docks", 1790000000000, null)));
+		WaitForRows(cut, 4);
+		await cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage("42", "pose-meta", "Wren Halloway", "P9", "back", "back", [], "ooc",
+			"Lower Docks", 1790000000001, null, "ooc", new Dictionary<string, string> { ["frequency"] = "Harbour Watch" })));
+		cut.WaitForAssertion(() => cut.Find(".story-row[data-pose-type='ooc'] .kit-ooc"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".story-row")[3].GetAttribute("data-pose-type")).IsEqualTo("ooc");
+		await Assert.That(cut.FindAll(".story-row")[3].QuerySelector(".story-edited")).IsNull();
+	}
+
 	[Test]
 	public async Task EventsForAnotherScene_AreIgnored()
 	{

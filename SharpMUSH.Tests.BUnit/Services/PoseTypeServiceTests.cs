@@ -99,6 +99,25 @@ public class PoseTypeServiceTests : TrackingTestContext
 		await Assert.That(service.IsHidden("ooc")).IsFalse();
 	}
 
+	/// <summary>A story stays mounted across a character switch, so the service reads the new character's set itself.</summary>
+	[Test]
+	public async Task SwitchingCharacter_ReadsTheNewCharactersHiddenSet()
+	{
+		var client = Track(new HttpClient(_api) { BaseAddress = new Uri("https://localhost:8081/") });
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient(Arg.Any<string>()).Returns(client);
+		var auth = Substitute.For<IAccountAuthState>();
+		auth.ActiveCharacter.Returns(new AccountAuthService.CharacterSummary(12, 1, "Wren", ""));
+		var service = new PoseTypeService(factory, new GameCommandService(factory), auth);
+		await service.LoadAsync();
+
+		auth.ActiveCharacter.Returns(new AccountAuthService.CharacterSummary(13, 1, "Tomas", ""));
+		auth.ActiveCharacterChanged += Raise.Event<Action>();
+
+		await Assert.That(() => _api.TypeReads).Eventually(reads => reads.IsEqualTo(2), TimeSpan.FromSeconds(5));
+		await Assert.That(service.IsHidden("narration")).IsTrue();
+	}
+
 	/// <summary>Serves api/scenes/types and the hide/show commands, keeping the hidden set the way the scene package does.</summary>
 	private sealed class TypesApi : HttpMessageHandler
 	{
