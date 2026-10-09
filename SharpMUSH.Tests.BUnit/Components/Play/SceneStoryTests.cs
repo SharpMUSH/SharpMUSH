@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -124,10 +125,11 @@ public class SceneStoryTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task AnOocPose_IsTheBand()
+	public async Task AnOocPose_IsTheBand_ByItsType()
 	{
 		var cut = RenderStory();
 		WaitForRows(cut, 3);
+		cut.WaitForAssertion(() => cut.Find(".story-row[data-pose-type='ooc'] .kit-ooc"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll(".story-row")[2].QuerySelector(".kit-ooc")).IsNotNull();
 	}
 
@@ -226,6 +228,53 @@ public class SceneStoryTests : TrackingBunitContext
 		await Assert.That(ilsa).IsNotNull();
 	}
 
+	/// <summary>
+	/// The Show menu lists the types; unticking one folds its poses into a line saying how many, which opens them in
+	/// this view. With nobody acting, the choice is the page's.
+	/// </summary>
+	[Test]
+	public async Task HidingATypeInTheShowMenu_FoldsItsPoses_AndTheFoldOpensThem()
+	{
+		using var culture = CultureScope.For("en");
+		var cut = RenderStory();
+		WaitForRows(cut, 3);
+		cut.WaitForAssertion(() => cut.Find(".story-show-toggle"), TimeSpan.FromSeconds(5));
+		await cut.Find(".story-show-toggle").ClickAsync();
+		var boxes = cut.FindAll(".story-show-item");
+		await Assert.That(boxes.Select(b => b.TextContent.Trim())).IsEquivalentTo(new[] { "In character", "OOC" });
+		await Assert.That(cut.Find(".story-show-item[data-pose-type='ooc'] input").HasAttribute("checked")).IsTrue();
+
+		await cut.Find(".story-show-item[data-pose-type='ooc'] input").ChangeAsync(new ChangeEventArgs { Value = false });
+		WaitForRows(cut, 2);
+		await Assert.That(cut.Find(".story-fold").TextContent.Trim()).IsEqualTo("1 OOC line hidden");
+		await Assert.That(cut.Find(".story-fold").GetAttribute("data-pose-type")).IsEqualTo("ooc");
+		await Assert.That(Services.GetRequiredService<PoseTypeService>().IsHidden("ooc")).IsTrue();
+
+		await cut.Find(".story-fold").ClickAsync();
+		WaitForRows(cut, 3);
+		await Assert.That(cut.FindAll(".story-fold").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".story-row")[2].QuerySelector(".kit-ooc")).IsNotNull();
+	}
+
+	/// <summary>Hidden poses in a row fold together, counted; a live one of the same type joins the fold.</summary>
+	[Test]
+	public async Task HiddenPosesInARow_FoldTogether_AndCount()
+	{
+		using var culture = CultureScope.For("en");
+		var cut = RenderStory();
+		WaitForRows(cut, 3);
+		cut.WaitForAssertion(() => cut.Find(".story-show-toggle"), TimeSpan.FromSeconds(5));
+		await cut.InvokeAsync(() => Services.GetRequiredService<PoseTypeService>().HideAsync("ooc"));
+		await cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage("42", "pose", "Wren Halloway", "P9", "back", "back", [], "ooc",
+			"Lower Docks", 1790000000000, "#314:1", "ooc")));
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".story-fold").Count != 1 || !cut.Find(".story-fold").TextContent.Contains("2 OOC lines hidden"))
+				throw new InvalidOperationException("not folded yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".story-row").Count).IsEqualTo(2);
+	}
+
 	private sealed class StoryApi : HttpMessageHandler
 	{
 		private const string Poses = """
@@ -239,10 +288,17 @@ public class SceneStoryTests : TrackingBunitContext
 		   "createdAt":1790000060000,"isDeleted":false,"content":"watches","markup":"watches",
 		   "editCount":1,"lastEditedAt":null,"lastEditorDbref":null,"lastEditorName":null},
 		  {"id":"P3","sceneId":"42","authorDbref":"#314","authorName":"Wren Halloway","showAsName":"",
-		   "originDbref":"#1201","originName":"Lower Docks","source":"ooc","tags":["ooc"],"meta":{},
+		   "originDbref":"#1201","originName":"Lower Docks","source":"ooc","tags":[],"meta":{},
 		   "createdAt":1790000120000,"isDeleted":false,"content":"brb","markup":"brb",
-		   "editCount":1,"lastEditedAt":null,"lastEditorDbref":null,"lastEditorName":null}
+		   "editCount":1,"lastEditedAt":null,"lastEditorDbref":null,"lastEditorName":null,"type":"ooc"}
 		]
+		""";
+
+		/// <summary>The scene package's types: in character as prose, OOC as the band.</summary>
+		private const string Types = """
+		{"types":[{"key":"ic","label":"In character","presentation":"prose","tone":"","icon":"","hidden":false,"order":10},
+		          {"key":"ooc","label":"OOC","presentation":"band","tone":"muted","icon":"","hidden":false,"order":20}],
+		 "problems":[],"hidden":[]}
 		""";
 
 		private const string Characters = """
@@ -269,6 +325,7 @@ public class SceneStoryTests : TrackingBunitContext
 			{
 				"/api/scenes/42/poses" => Poses,
 				"/api/scenes/43/poses" => "[]",
+				"/api/scenes/types" => Types,
 				"/http/characters" => Characters,
 				_ => null,
 			};

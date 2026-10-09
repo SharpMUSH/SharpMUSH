@@ -7490,4 +7490,117 @@
   <data name="PkgPlanUploaded" xml:space="preserve">
     <value>Uploaded package {0}</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Pose types to show</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# {label} line hidden} other {# {label} lines hidden}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} on {1}</value>
+    <comment>A message pose's header: {0} is who sent it, {1} the radio frequency.</comment>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>That could not be changed. Try again in a moment.</value>
+  </data>
+  <data name="AdmGroupScenes" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="AdmPoseTypesTitle" xml:space="preserve">
+    <value>Pose types</value>
+  </data>
+  <data name="AdmCardPoseTypes" xml:space="preserve">
+    <value>How each kind of scene line (in character, OOC, radio, ...) reads in the portal</value>
+  </data>
+  <data name="AdmPoseTypesDescription" xml:space="preserve">
+    <value>The kinds of line a scene records: how the portal draws each, the colour it takes from the theme, and whether readers start with it hidden. How a type reads on telnet is its FORMAT softcode, set in the game.</value>
+  </data>
+  <data name="AdmPoseTypesProblems" xml:space="preserve">
+    <value>Not read</value>
+  </data>
+  <data name="AdmPoseTypesProblemsSub" xml:space="preserve">
+    <value>TYPE` attributes on the Scene Logger that are not a pose type, and why. Poses of these types read as in character.</value>
+  </data>
+  <data name="AdmPoseTypesAdd" xml:space="preserve">
+    <value>Add a pose type</value>
+  </data>
+  <data name="AdmPoseTypesAddSub" xml:space="preserve">
+    <value>A key for poses to record and a name for people; it starts as prose until you change it.</value>
+  </data>
+  <data name="AdmPoseTypesAddButton" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="AdmPoseTypesKey" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="AdmPoseTypesKeyHint" xml:space="preserve">
+    <value>1 to 32 lower-case letters, digits, - and _</value>
+  </data>
+  <data name="AdmPoseTypesLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="AdmPoseTypesNone" xml:space="preserve">
+    <value>The scene package defines no pose types, so every pose reads as in character.</value>
+  </data>
+  <data name="AdmPoseTypesSample" xml:space="preserve">
+    <value>Sample</value>
+  </data>
+  <data name="AdmPoseTypesSampleName" xml:space="preserve">
+    <value>Wren</value>
+  </data>
+  <data name="AdmPoseTypesSampleText" xml:space="preserve">
+    <value>leans on the rail and watches the harbour lights.</value>
+  </data>
+  <data name="AdmPoseTypesPresentation" xml:space="preserve">
+    <value>Presentation</value>
+  </data>
+  <data name="AdmPoseTypesPresentationProse" xml:space="preserve">
+    <value>Prose: portrait, name and text</value>
+  </data>
+  <data name="AdmPoseTypesPresentationBand" xml:space="preserve">
+    <value>Band, like OOC</value>
+  </data>
+  <data name="AdmPoseTypesPresentationMessage" xml:space="preserve">
+    <value>Message bubble</value>
+  </data>
+  <data name="AdmPoseTypesPresentationAside" xml:space="preserve">
+    <value>Aside: centred and italic</value>
+  </data>
+  <data name="AdmPoseTypesPresentationNotice" xml:space="preserve">
+    <value>Notice: one dim line</value>
+  </data>
+  <data name="AdmPoseTypesTone" xml:space="preserve">
+    <value>Tone</value>
+  </data>
+  <data name="AdmPoseTypesToneNone" xml:space="preserve">
+    <value>None (the theme's text)</value>
+  </data>
+  <data name="AdmPoseTypesIcon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="AdmPoseTypesIconNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmPoseTypesOrder" xml:space="preserve">
+    <value>Order</value>
+  </data>
+  <data name="AdmPoseTypesHidden" xml:space="preserve">
+    <value>Hidden until a reader shows it</value>
+  </data>
+  <data name="AdmPoseTypesRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="AdmPoseTypesRemoveAsk" xml:space="preserve">
+    <value>Remove {0}? Its poses will read as in character.</value>
+  </data>
+  <data name="AdmPoseTypesRevert" xml:space="preserve">
+    <value>Revert</value>
+  </data>
+  <data name="AdmPoseTypesNotChanged" xml:space="preserve">
+    <value>The game did not make that change.</value>
+  </data>
 </root>

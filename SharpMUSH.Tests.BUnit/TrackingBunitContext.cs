@@ -48,6 +48,30 @@ public abstract class TrackingBunitContext : BunitContext
 		Services.TryAddSingleton<CommandHistory>();
 		Services.TryAddSingleton<ICharacterPictures>(sp =>
 			sp.GetService<CharacterDirectoryService>() ?? (ICharacterPictures)new NoCharacterPictures());
+		Services.TryAddSingleton(sp =>
+		{
+			var factory = sp.GetService<IHttpClientFactory>() ?? NoServer();
+			return new PoseTypeService(factory, sp.GetService<GameCommandService>() ?? new GameCommandService(factory),
+				sp.GetRequiredService<IAccountAuthState>());
+		});
+	}
+
+	/// <summary>
+	/// Every story reads the pose types. A test that fakes no server gets a game whose scene package defines none
+	/// (every request answered 404), so each pose draws in character.
+	/// </summary>
+	private IHttpClientFactory NoServer()
+	{
+		var client = Track(new HttpClient(new NotFoundHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient(Arg.Any<string>()).Returns(client);
+		return factory;
+	}
+
+	private sealed class NotFoundHandler : HttpMessageHandler
+	{
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+			Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
 	}
 
 	/// <summary>

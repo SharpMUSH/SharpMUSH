@@ -5234,4 +5234,20 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Texte de la page (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Afficher</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Types de pose affichés</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# ligne {label} masquée} other {# lignes {label} masquées}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} sur {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>Impossible de modifier cela. Réessaie dans un instant.</value>
+  </data>
 </root>

@@ -5940,4 +5940,20 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Oldal szövege (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Megjelenítés</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Megjelenített póztípusok</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# {label} sor elrejtve} other {# {label} sor elrejtve}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} – {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>Ezt nem sikerült módosítani. Próbáld újra egy kicsit később.</value>
+  </data>
 </root>

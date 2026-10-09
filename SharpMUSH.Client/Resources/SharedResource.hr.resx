@@ -5940,4 +5940,20 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Tekst stranice (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Prikaži</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Vrste poza za prikaz</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# skriven redak {label}} few {# skrivena retka {label}} other {# skrivenih redaka {label}}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} na {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>To se nije moglo promijeniti. Pokušaj ponovno za trenutak.</value>
+  </data>
 </root>

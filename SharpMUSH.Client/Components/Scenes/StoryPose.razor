@@ -3,70 +3,136 @@
 @using SharpMUSH.Library.Markup
 @inject IStringLocalizer<SharedResource> Loc
 
-@* D1 §5.4 one pose in the Story view: a 44px portrait (radius 12), the name in its colour (700) and the
-   time (12px dim), then the pose at 15px/1.6 with the other participants' names as mentions. A pose
-   tagged "ooc" is the OOC band (§4.10), which names the speaker, so its text drops the "Name: " in front.
+@* D1 §5.4 one pose in the Story view, drawn as its type's presentation says (PoseTypeInfo):
+   prose   - a 44px portrait (radius 12), the name in its colour (700) and the time (12px dim), then the pose
+             at 15px/1.6 with the other participants' names as mentions;
+   band    - the OOC band (§4.10), the type's label on the tile ("OOC" for ooc), which names the speaker, so
+             its text drops the "Name: " in front;
+   message - a bubble headed by the name (and "on <frequency>" when the pose has one), the reader's own on
+             the right;
+   aside   - no portrait, centred and italic, the name small beneath;
+   notice  - one dim line.
+   Every row carries data-pose-type and its tone as --pose-tone, so a staff stylesheet can restyle one type.
    The portrait and the name open the character: the sheet in Play (OnCharacter), the profile page
    elsewhere. *@
-@if (IsOoc)
+@switch (Type.Layout)
 {
-    <div class="story-row story-row--ooc @(Pose.IsDeleted ? "story-row--deleted" : null) @(_flash ? "story-row--just-edited" : null)">
-        <OocBand Name="@Pose.DisplayName" ImageUrl="@ImageUrl" Character="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
-            @if (_editing)
-            {
-                @Editor
-            }
-            else
-            {
-                <span class="story-body">@Body</span>
-                @EditedBadge
-                @EditButton
-            }
-        </OocBand>
-    </div>
-}
-else
-{
-    <div class="story-row @(Pose.IsDeleted ? "story-row--deleted" : null) @(_flash ? "story-row--just-edited" : null)">
-        @if (OnCharacter.HasDelegate)
-        {
-            <button type="button" class="story-portrait-btn" aria-label="@Pose.DisplayName" @onclick="Open">@Portrait</button>
-        }
-        else
-        {
-            <a class="story-portrait-btn" href="@ProfileHref" tabindex="-1" aria-hidden="true">@Portrait</a>
-        }
-        <div class="story-main">
-            <div class="story-head">
-                @if (OnCharacter.HasDelegate)
+    case PoseTypeInfo.Band:
+        <div class="@RowClass("story-row--band", IsOoc ? "story-row--ooc" : null)" data-pose-type="@Type.Key" style="@ToneStyle">
+            <OocBand Name="@Pose.DisplayName" Tag="@BandTag" ImageUrl="@ImageUrl" Character="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
+                @if (_editing)
                 {
-                    <button type="button" class="story-name" style="@NameStyle" @onclick="Open">@Pose.DisplayName</button>
+                    @Editor
                 }
                 else
                 {
-                    <a class="story-name" style="@NameStyle" href="@ProfileHref">@Pose.DisplayName</a>
-                }
-                <span class="story-time">@Time</span>
-                @EditedBadge
-                @if (!_editing)
-                {
+                    <span class="story-body">@Body</span>
+                    @EditedBadge
                     @EditButton
                 }
+            </OocBand>
+        </div>
+        break;
+
+    case PoseTypeInfo.Message:
+        <div class="@RowClass("story-row--message", Mine ? "story-row--mine" : null)" data-pose-type="@Type.Key" style="@ToneStyle">
+            <div class="story-bubble">
+                <div class="story-head">
+                    @TypeIcon
+                    <span class="story-bubble-from" style="@NameStyle">@From</span>
+                    <span class="story-time">@Time</span>
+                    @EditedBadge
+                    @if (!_editing)
+                    {
+                        @EditButton
+                    }
+                </div>
+                @BodyOrEditor
             </div>
+        </div>
+        break;
+
+    case PoseTypeInfo.Aside:
+        <div class="@RowClass("story-row--aside")" data-pose-type="@Type.Key" style="@ToneStyle">
+            <div class="story-aside">
+                @BodyOrEditor
+                <div class="story-aside-meta">
+                    @TypeIcon
+                    <span class="story-aside-name" style="@NameStyle">@Pose.DisplayName</span>
+                    <span class="story-time">@Time</span>
+                    @EditedBadge
+                    @if (!_editing)
+                    {
+                        @EditButton
+                    }
+                </div>
+            </div>
+        </div>
+        break;
+
+    case PoseTypeInfo.Notice:
+        <div class="@RowClass("story-row--notice")" data-pose-type="@Type.Key" style="@ToneStyle">
+            @TypeIcon
             @if (_editing)
             {
                 @Editor
             }
             else
             {
-                <div class="story-body">@Body</div>
+                <span class="story-notice-name">@Pose.DisplayName</span>
+                <span class="story-body">@Body</span>
+                <span class="story-time">@Time</span>
+                @EditedBadge
+                @EditButton
             }
         </div>
-    </div>
+        break;
+
+    default:
+        <div class="@RowClass("story-row--prose")" data-pose-type="@Type.Key" style="@ToneStyle">
+            @if (OnCharacter.HasDelegate)
+            {
+                <button type="button" class="story-portrait-btn" aria-label="@Pose.DisplayName" @onclick="Open">@Portrait</button>
+            }
+            else
+            {
+                <a class="story-portrait-btn" href="@ProfileHref" tabindex="-1" aria-hidden="true">@Portrait</a>
+            }
+            <div class="story-main">
+                <div class="story-head">
+                    @if (OnCharacter.HasDelegate)
+                    {
+                        <button type="button" class="story-name" style="@NameStyle" @onclick="Open">@Pose.DisplayName</button>
+                    }
+                    else
+                    {
+                        <a class="story-name" style="@NameStyle" href="@ProfileHref">@Pose.DisplayName</a>
+                    }
+                    @TypeIcon
+                    <span class="story-time">@Time</span>
+                    @EditedBadge
+                    @if (!_editing)
+                    {
+                        @EditButton
+                    }
+                </div>
+                @BodyOrEditor
+            </div>
+        </div>
+        break;
 }
 
 @code {
     [Parameter, EditorRequired] public ScenePoseView Pose { get; set; } = null!;
+
+    /// <summary>
+    /// The pose's type from the catalogue (<see cref="PoseTypeService.For"/>). Without one the pose draws as a type
+    /// the catalogue does not list: in character, so an <c>ooc</c> pose on a game with no <c>ooc</c> type is prose.
+    /// </summary>
+    [Parameter] public PoseTypeInfo? PoseType { get; set; }
+
+    /// <summary>The reader wrote this pose: a message bubble sits on the right.</summary>
+    [Parameter] public bool Mine { get; set; }
 
     /// <summary>The author's picture, raw; rendered only when <see cref="ImageUrlPolicy"/> allows it.</summary>
     [Parameter] public string? ImageUrl { get; set; }
@@ -147,10 +213,31 @@ else
         if (text != _seed) await OnEdit.InvokeAsync((Pose.Id, text));
     }
 
-    /// <summary>The tag the Scene plugin's <c>ooc</c> command puts on its poses (README §7.2).</summary>
-    public const string OocTag = "ooc";
+    private PoseTypeInfo Type => PoseType ?? PoseTypeInfo.Unlisted(Pose.Type);
 
-    private bool IsOoc => Pose.Tags.Any(t => string.Equals(t, OocTag, StringComparison.OrdinalIgnoreCase));
+    private bool IsOoc => string.Equals(Type.Key, PoseTypeInfo.OutOfCharacter, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The word on the band's tile: OOC for the ooc band, as it always read, else the type's label.</summary>
+    private string BandTag => IsOoc ? "OOC" : Type.Label;
+
+    private string? ToneStyle => PoseTypeStyle.Style(Type);
+
+    /// <summary>The <c>Meta</c> key a radio line records its frequency under.</summary>
+    public const string FrequencyMeta = "frequency";
+
+    /// <summary>A message's header: the name, and the frequency it went out on when the pose recorded one.</summary>
+    private string From => Pose.Meta.TryGetValue(FrequencyMeta, out var frequency) && !string.IsNullOrWhiteSpace(frequency)
+        ? Loc["RolPoseOnFrequency", Pose.DisplayName, frequency.Trim()]
+        : Pose.DisplayName;
+
+    private string RowClass(string presentation, string? extra = null) => string.Join(' ', new[]
+    {
+        "story-row",
+        presentation,
+        extra,
+        Pose.IsDeleted ? "story-row--deleted" : null,
+        _flash ? "story-row--just-edited" : null,
+    }.Where(c => c is not null));
 
     private string? SafeColor => NameColor.Safe(Color);
 
@@ -163,6 +250,7 @@ else
     private MarkupString Body { get; set; }
     private string? _bodyMarkup;
     private IReadOnlyList<StoryMentions.Target>? _bodyMentions;
+    private bool? _bodyBand;
 
     /// <summary>
     /// Renders and marks the body only when the pose or the participants changed: every room push re-renders
@@ -170,13 +258,15 @@ else
     /// </summary>
     protected override void OnParametersSet()
     {
-        if (ReferenceEquals(_bodyMentions, Mentions) && string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal)) return;
+        var band = Type.Layout == PoseTypeInfo.Band;
+        if (ReferenceEquals(_bodyMentions, Mentions) && string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal) && _bodyBand == band) return;
         // The text changed under a pose already on screen: an edit. Say so for a moment, so a reader who has
         // already read it notices.
         if (_bodyMarkup is not null && !string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal)) _ = FlashAsync();
         _bodyMarkup = Pose.Markup;
         _bodyMentions = Mentions;
-        var html = IsOoc
+        _bodyBand = band;
+        var html = band
             ? SceneMarkupRenderer.OocToHtml(Pose.Markup, Pose.Content, Pose.DisplayName, Pose.AuthorName)
             : SceneMarkupRenderer.ToHtml(Pose.Markup);
         Body = (MarkupString)StoryMentions.Mark(html,
@@ -231,6 +321,26 @@ else
                 <button type="button" class="story-editor-save" disabled="@_draft.IsEmpty" @onclick="SaveEdit">@Loc["Save"]</button>
             </div>
         </div>
+    };
+
+    private RenderFragment BodyOrEditor => __builder =>
+    {
+        @if (_editing)
+        {
+            @Editor
+        }
+        else
+        {
+            <div class="story-body">@Body</div>
+        }
+    };
+
+    private RenderFragment TypeIcon => __builder =>
+    {
+        @if (PoseTypeStyle.Icon(Type.Icon) is { } icon)
+        {
+            <MudIcon Class="story-type-icon" Icon="@icon" Style="font-size:14px;" aria-hidden="true" />
+        }
     };
 
     private RenderFragment Portrait => __builder =>
