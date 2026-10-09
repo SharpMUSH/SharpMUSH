@@ -150,27 +150,32 @@ public static class MailAliases
 	public static async ValueTask<MString> Handle(Services services, AnySharpObject executor, string[] switches,
 		string left, string right)
 	{
-		bool Has(string name) => switches.Contains(name, StringComparer.OrdinalIgnoreCase);
-
-		if (Has("LIST")) await ListAsync(services, executor);
-		else if (Has("ALL")) await AllListAsync(services, executor);
-		else if (Has("MEMBERS") || Has("WHO")) await MembersAsync(services, executor, left);
-		else if (Has("CREATE")) await CreateAsync(services, executor, left, right);
-		else if (Has("SET")) await SetAsync(services, executor, left, right);
-		else if (Has("DESTROY")) await DestroyAsync(services, executor, left);
-		else if (Has("ADD")) await AddAsync(services, executor, left, right);
-		else if (Has("REMOVE")) await RemoveAsync(services, executor, left, right);
-		else if (Has("DESCRIBE") || Has("DESC")) await DescribeAsync(services, executor, left, right);
-		else if (Has("RENAME")) await RenameAsync(services, executor, left, right);
-		else if (Has("STATS") || Has("STAT")) await StatsAsync(services, executor);
-		else if (Has("CHOWN")) await ChownAsync(services, executor, left, right);
-		else if (Has("USEFLAG") || Has("USE")) await PrivilegesAsync(services, executor, left, right, members: false);
-		else if (Has("SEEFLAG") || Has("SEE")) await PrivilegesAsync(services, executor, left, right, members: true);
-		else if (Has("NUKE")) await NukeAsync(services, executor);
-		else await DefaultAsync(services, executor, left, right);
+		var action = Actions.FirstOrDefault(entry => entry.Switches.Any(name => switches.Contains(name, StringComparer.OrdinalIgnoreCase))).Run
+			?? DefaultAsync;
+		await action(services, executor, left, right);
 
 		return MarkupText.Empty;
 	}
+
+	/// <summary>The switches cmd_malias tests, in the order it tests them, each with the action it runs.</summary>
+	private static readonly (string[] Switches, Func<Services, AnySharpObject, string, string, ValueTask> Run)[] Actions =
+	[
+		(["LIST"], (services, executor, _, _) => ListAsync(services, executor)),
+		(["ALL"], (services, executor, _, _) => AllListAsync(services, executor)),
+		(["MEMBERS", "WHO"], (services, executor, left, _) => MembersAsync(services, executor, left)),
+		(["CREATE"], CreateAsync),
+		(["SET"], SetAsync),
+		(["DESTROY"], (services, executor, left, _) => DestroyAsync(services, executor, left)),
+		(["ADD"], AddAsync),
+		(["REMOVE"], RemoveAsync),
+		(["DESCRIBE", "DESC"], DescribeAsync),
+		(["RENAME"], RenameAsync),
+		(["STATS", "STAT"], (services, executor, _, _) => StatsAsync(services, executor)),
+		(["CHOWN"], ChownAsync),
+		(["USEFLAG", "USE"], (services, executor, left, right) => PrivilegesAsync(services, executor, left, right, members: false)),
+		(["SEEFLAG", "SEE"], (services, executor, left, right) => PrivilegesAsync(services, executor, left, right, members: true)),
+		(["NUKE"], (services, executor, _, _) => NukeAsync(services, executor)),
+	];
 
 	private static ValueTask Tell(Services services, AnySharpObject executor, string message)
 		=> services.Notify.Notify(executor, message, executor);

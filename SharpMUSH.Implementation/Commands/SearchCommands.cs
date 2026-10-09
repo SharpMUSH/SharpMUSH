@@ -112,207 +112,216 @@ public partial class Commands
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
 		var perceive = await ObserveRealityAsync(parser, executor);
-		List<string> runningOutput = [];
-
-		async Task<bool> CanScan(AnySharpObject obj)
-		{
-			var controls = await PermissionService.Controls(executor, obj);
-			if (controls) return true;
-
-			var isVisual = await obj.HasFlag("VISUAL");
-			return isVisual;
-		}
-
-		// do_scan reports one line per OBJECT, not per attribute: atr_comm_match returns how many of
-		// that object's attributes matched and appends each as " #<dbref>/<ATTR>" to one buffer, which
-		// the caller prints as "<object>  [<count>:<attrs>]" (src/game.c:1895, src/attrib.c:1990-2000).
-		// Grouping here is what makes an object with two matching $-commands one line and not two.
-		async ValueTask<List<(AnySharpObject Obj, List<string> Attributes)>> FindMatches(
-			IAsyncEnumerable<AnySharpObject> candidates)
-		{
-			// The list keeps Penn's report order; the index keeps the grouping off O(n^2), which a
-			// default scan of a well-populated master room would otherwise pay.
-			List<(AnySharpObject Obj, List<string> Attributes)> grouped = [];
-			Dictionary<DBRef, List<string>> byObject = [];
-
-			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser,
-				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0, executor);
-			if (!matched.TryGetValue(out var matches))
-			{
-				return grouped;
-			}
-
-			foreach (var (obj, attr, _) in matches)
-			{
-				if (!await CanScan(obj))
-				{
-					continue;
-				}
-
-				var dbref = obj.Object().DBRef;
-				runningOutput.Add($"#{dbref.Number}/{attr.LongName}");
-
-				if (byObject.TryGetValue(dbref, out var attributes))
-				{
-					attributes.Add(attr.LongName);
-					continue;
-				}
-
-				attributes = [attr.LongName];
-				byObject[dbref] = attributes;
-				grouped.Add((obj, attributes));
-			}
-
-			return grouped;
-		}
-
-		// Prints the grouped matches under the wording `key` names - the bare entry under a section
-		// heading, or one of do_scan's four "Matched <where>:" one-liners.
-		async ValueTask Report(string key, List<(AnySharpObject Obj, List<string> Attributes)> matches)
-		{
-			var flagView = await FlagView.ForAsync(executor, ConnectionService);
-			foreach (var (obj, attributes) in matches)
-			{
-				var dbref = obj.Object().DBRef.Number;
-				// The attribute list carries its own leading space, because Penn's buffer does
-				// (safe_chr(' ') per match, src/attrib.c:1990) and the "[%d:%s]" format supplies none.
-				var attributeList = string.Concat(attributes.Select(attribute => $" #{dbref}/{attribute}"));
-
-				await NotifyService.NotifyLocalizedMarkup(executor, key, executor,
-					await MessageFormatting.FormatObjectWithDbrefMString(obj.Object(), flagView),
-					MarkupText.Plain(attributes.Count.ToString()),
-					MarkupText.Plain(attributeList));
-			}
-		}
-
-		static IAsyncEnumerable<AnySharpObject> Just(AnySharpObject obj) => new[] { obj }.ToAsyncEnumerable();
-
 		var here = executor.IsContent ? await executor.AsContent.Location() : null;
 
 		// Both zones are wanted by the ZONE branch and by the master room's already-scanned guard, and
 		// resolving one costs a fetch, so only pay for them when a branch that reads them will run.
 		var needsZones = switches.Contains("ZONE") || switches.Contains("GLOBALS");
-		var hereZone = !needsZones || here is null
-			? null
-			: await here.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject locationZone
-				? locationZone
-				: null;
-		var personalZone = !needsZones
-			? null
-			: await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject ownZone
-				? ownZone
-				: null;
+		var hereZone = !needsZones || here is null ? null : await ZoneOfAsync(here.Object());
+		var personalZone = !needsZones ? null : await ZoneOfAsync(executor.Object());
 
-		const string Entry = nameof(ErrorMessages.Notifications.ScanMatchEntryFormat);
+		var run = new ScanRun(parser, executor, arg0, perceive, here, hereZone, personalZone);
 
-		if (here is not null && switches.Contains("ROOM"))
-		{
-			// Penn splits this into two flags and @scan with no switches sets both: CHECK_NEIGHBORS for
-			// the contents of the location, CHECK_HERE for the location object itself
-			// (src/game.c:1890-1909). The heading belongs to CHECK_NEIGHBORS and prints whether or not
-			// anything matched; CHECK_HERE has no heading and prints only on a match.
-			await NotifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.ScanMatchesOnRoomContents), executor);
-			await Report(Entry, await FindMatches(here.Content(Mediator).Select(x => x.WithRoomOption())));
-
-			await Report(nameof(ErrorMessages.Notifications.ScanMatchedHereFormat),
-				await FindMatches(Just(here.WithExitOption())));
-		}
-
-		if (switches.Contains("SELF"))
-		{
-			// CHECK_INVENTORY, then CHECK_SELF (src/game.c:1911-1929). The self check is not gated on
-			// being a container: Penn scans the executor whether or not it can hold anything.
-			await NotifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.ScanMatchesOnCarriedObjects), executor);
-
-			if (executor.IsContainer)
-			{
-				await Report(Entry,
-					await FindMatches(executor.AsContainer.Content(Mediator).Select(x => x.WithRoomOption())));
-			}
-
-			// An executor standing in the room is in its contents too, so with the default switch set a
-			// $-command on the executor is reported twice - once under "Matches on contents of this room:"
-			// and again as "Matched self:". do_scan makes no attempt to suppress that (unlike scan_list,
-			// src/game.c:1763-1764, which has no headings to separate the two), and a live 1.8.8 prints
-			// both lines, so neither does this.
-			await Report(nameof(ErrorMessages.Notifications.ScanMatchedSelfFormat),
-				await FindMatches(Just(executor)));
-		}
-
-		if (switches.Contains("ZONE"))
-		{
-			// A zone that is a room is a Zone Master Room and its CONTENTS carry the commands, under a
-			// heading; a zone that is anything else carries them itself and gets a one-line report with
-			// no heading (src/game.c:1931-1981).
-			if (hereZone is not null)
-			{
-				await ScanZone(hereZone,
-					nameof(ErrorMessages.Notifications.ScanMatchesOnZoneMasterRoomOfLocation),
-					nameof(ErrorMessages.Notifications.ScanMatchedZoneOfLocationFormat));
-			}
-
-			if (personalZone is not null
-					&& (hereZone is null || personalZone.Object().DBRef != hereZone.Object().DBRef))
-			{
-				await ScanZone(personalZone,
-					nameof(ErrorMessages.Notifications.ScanMatchesOnPersonalZoneMasterRoom),
-					nameof(ErrorMessages.Notifications.ScanMatchedPersonalZoneFormat));
-			}
-		}
-
-		if (switches.Contains("GLOBALS"))
-		{
-			var masterRoom = new DBRef(Convert.ToInt32(Configuration.CurrentValue.Database.MasterRoom));
-
-			// Penn's own guard, verbatim: skip when the executor stands in the master room, or the master
-			// room is either zone (src/game.c:1984-1986). Note it tests only those three dbrefs - it does
-			// NOT ask whether the ROOM or ZONE branch actually ran, so `@scan/globals` from inside the
-			// master room reports nothing in PennMUSH either, not even the heading.
-			var alreadyScanned = here?.Object().DBRef == masterRoom
-				|| hereZone?.Object().DBRef == masterRoom
-				|| personalZone?.Object().DBRef == masterRoom;
-
-			if (!alreadyScanned)
-			{
-				await NotifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.ScanMatchesOnMasterRoomObjects), executor);
-				await Report(Entry, await FindMatches(Mediator.CreateStream(new GetContentsQuery(masterRoom))
-					?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>()));
-			}
-		}
+		if (here is not null && switches.Contains("ROOM")) await ScanRoomAsync(run, here);
+		if (switches.Contains("SELF")) await ScanSelfAsync(run);
+		if (switches.Contains("ZONE")) await ScanZonesAsync(run);
+		if (switches.Contains("GLOBALS")) await ScanGlobalsAsync(run);
 
 		// The return value is the scan_list shape - a flat list of obj/attr pairs (src/game.c:1729) -
 		// not the printed report, and scan_list never repeats an object: it drops CHECK_SELF once
 		// CHECK_NEIGHBORS has run (src/game.c:1763-1764). Deduplicate to match, so the executor's own
 		// $-command appears once here even though it is printed under two headings above.
-		return new CallState(string.Join(" ", runningOutput.Distinct()));
+		return new CallState(string.Join(" ", run.Matched.Distinct()));
+	}
 
-		async ValueTask ScanZone(AnySharpObject zone, string headerKey, string matchedKey)
+	/// <summary>One @scan: who scans for what, where they stand, and every obj/attr pair matched so far.</summary>
+	private sealed record ScanRun(IMUSHCodeParser Parser, AnySharpObject Executor, MString Command,
+		Func<DBRef, CancellationToken, ValueTask<bool>> Perceive, AnySharpContainer? Here, AnySharpObject? HereZone,
+		AnySharpObject? PersonalZone)
+	{
+		public List<string> Matched { get; } = [];
+	}
+
+	private const string ScanEntry = nameof(ErrorMessages.Notifications.ScanMatchEntryFormat);
+
+	private static async ValueTask<AnySharpObject?> ZoneOfAsync(SharpObject obj)
+		=> await obj.Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone ? zone : null;
+
+	private static IAsyncEnumerable<AnySharpObject> Just(AnySharpObject obj) => new[] { obj }.ToAsyncEnumerable();
+
+	private IAsyncEnumerable<AnySharpObject> ContentsOf(DBRef container)
+		=> Mediator.CreateStream(new GetContentsQuery(container))?.Select(x => x.WithRoomOption())
+			?? AsyncEnumerable.Empty<AnySharpObject>();
+
+	private async ValueTask ScanRoomAsync(ScanRun run, AnySharpContainer here)
+	{
+		// Penn splits this into two flags and @scan with no switches sets both: CHECK_NEIGHBORS for
+		// the contents of the location, CHECK_HERE for the location object itself
+		// (src/game.c:1890-1909). The heading belongs to CHECK_NEIGHBORS and prints whether or not
+		// anything matched; CHECK_HERE has no heading and prints only on a match.
+		await NotifyService.NotifyLocalized(run.Executor,
+			nameof(ErrorMessages.Notifications.ScanMatchesOnRoomContents), run.Executor);
+		await ReportScanAsync(run, ScanEntry, await FindScanMatchesAsync(run, here.Content(Mediator).Select(x => x.WithRoomOption())));
+
+		await ReportScanAsync(run, nameof(ErrorMessages.Notifications.ScanMatchedHereFormat),
+			await FindScanMatchesAsync(run, Just(here.WithExitOption())));
+	}
+
+	private async ValueTask ScanSelfAsync(ScanRun run)
+	{
+		var executor = run.Executor;
+
+		// CHECK_INVENTORY, then CHECK_SELF (src/game.c:1911-1929). The self check is not gated on
+		// being a container: Penn scans the executor whether or not it can hold anything.
+		await NotifyService.NotifyLocalized(executor,
+			nameof(ErrorMessages.Notifications.ScanMatchesOnCarriedObjects), executor);
+
+		if (executor.IsContainer)
 		{
-			if (zone.IsRoom)
+			await ReportScanAsync(run, ScanEntry,
+				await FindScanMatchesAsync(run, executor.AsContainer.Content(Mediator).Select(x => x.WithRoomOption())));
+		}
+
+		// An executor standing in the room is in its contents too, so with the default switch set a
+		// $-command on the executor is reported twice - once under "Matches on contents of this room:"
+		// and again as "Matched self:". do_scan makes no attempt to suppress that (unlike scan_list,
+		// src/game.c:1763-1764, which has no headings to separate the two), and a live 1.8.8 prints
+		// both lines, so neither does this.
+		await ReportScanAsync(run, nameof(ErrorMessages.Notifications.ScanMatchedSelfFormat),
+			await FindScanMatchesAsync(run, Just(executor)));
+	}
+
+	private async ValueTask ScanZonesAsync(ScanRun run)
+	{
+		// A zone that is a room is a Zone Master Room and its CONTENTS carry the commands, under a
+		// heading; a zone that is anything else carries them itself and gets a one-line report with
+		// no heading (src/game.c:1931-1981).
+		if (run.HereZone is { } hereZone)
+		{
+			await ScanZoneAsync(run, hereZone,
+				nameof(ErrorMessages.Notifications.ScanMatchesOnZoneMasterRoomOfLocation),
+				nameof(ErrorMessages.Notifications.ScanMatchedZoneOfLocationFormat));
+		}
+
+		if (run.PersonalZone is { } personalZone
+				&& (run.HereZone is null || personalZone.Object().DBRef != run.HereZone.Object().DBRef))
+		{
+			await ScanZoneAsync(run, personalZone,
+				nameof(ErrorMessages.Notifications.ScanMatchesOnPersonalZoneMasterRoom),
+				nameof(ErrorMessages.Notifications.ScanMatchedPersonalZoneFormat));
+		}
+	}
+
+	private async ValueTask ScanZoneAsync(ScanRun run, AnySharpObject zone, string headerKey, string matchedKey)
+	{
+		if (!zone.IsRoom)
+		{
+			await ReportScanAsync(run, matchedKey, await FindScanMatchesAsync(run, Just(zone)));
+			return;
+		}
+
+		// Penn guards both zone blocks with the same expression - Location(player) != Zone(player)
+		// (src/game.c:1936, 1963) - which compares the location to the PERSONAL zone even while
+		// scanning the location's zone. Reads like a slip, but it is what Penn does, and it is
+		// materially different from comparing against the zone being scanned: with no personal
+		// zone set, Zone(player) is NOTHING and the location's Zone Master Room is always scanned.
+		// The heading sits inside that guard, so a suppressed block prints nothing at all.
+		if (run.Here is not null && run.PersonalZone is not null
+				&& run.Here.Object().DBRef == run.PersonalZone.Object().DBRef)
+		{
+			return;
+		}
+
+		await NotifyService.NotifyLocalized(run.Executor, headerKey, run.Executor);
+		await ReportScanAsync(run, ScanEntry, await FindScanMatchesAsync(run, ContentsOf(zone.Object().DBRef)));
+	}
+
+	private async ValueTask ScanGlobalsAsync(ScanRun run)
+	{
+		var masterRoom = new DBRef(Convert.ToInt32(Configuration.CurrentValue.Database.MasterRoom));
+
+		// Penn's own guard, verbatim: skip when the executor stands in the master room, or the master
+		// room is either zone (src/game.c:1984-1986). Note it tests only those three dbrefs - it does
+		// NOT ask whether the ROOM or ZONE branch actually ran, so `@scan/globals` from inside the
+		// master room reports nothing in PennMUSH either, not even the heading.
+		var alreadyScanned = run.Here?.Object().DBRef == masterRoom
+			|| run.HereZone?.Object().DBRef == masterRoom
+			|| run.PersonalZone?.Object().DBRef == masterRoom;
+
+		if (alreadyScanned) return;
+
+		await NotifyService.NotifyLocalized(run.Executor,
+			nameof(ErrorMessages.Notifications.ScanMatchesOnMasterRoomObjects), run.Executor);
+		await ReportScanAsync(run, ScanEntry, await FindScanMatchesAsync(run, ContentsOf(masterRoom)));
+	}
+
+	/// <summary>
+	/// do_scan reports one line per OBJECT, not per attribute: atr_comm_match returns how many of
+	/// that object's attributes matched and appends each as " #&lt;dbref&gt;/&lt;ATTR&gt;" to one buffer, which
+	/// the caller prints as "&lt;object&gt;  [&lt;count&gt;:&lt;attrs&gt;]" (src/game.c:1895, src/attrib.c:1990-2000).
+	/// Grouping here is what makes an object with two matching $-commands one line and not two.
+	/// </summary>
+	private async ValueTask<List<(AnySharpObject Obj, List<string> Attributes)>> FindScanMatchesAsync(
+		ScanRun run, IAsyncEnumerable<AnySharpObject> candidates)
+	{
+		// The list keeps Penn's report order; the index keeps the grouping off O(n^2), which a
+		// default scan of a well-populated master room would otherwise pay.
+		List<(AnySharpObject Obj, List<string> Attributes)> grouped = [];
+		Dictionary<DBRef, List<string>> byObject = [];
+
+		var matched = await CommandDiscoveryService.MatchUserDefinedCommand(run.Parser,
+			candidates.Where((item, ct) => run.Perceive(item.Object().DBRef, ct)), run.Command, run.Executor);
+		if (!matched.TryGetValue(out var matches))
+		{
+			return grouped;
+		}
+
+		foreach (var (obj, attr, _) in matches)
+		{
+			if (!await CanScanAsync(run.Executor, obj))
 			{
-				// Penn guards both zone blocks with the same expression - Location(player) != Zone(player)
-				// (src/game.c:1936, 1963) - which compares the location to the PERSONAL zone even while
-				// scanning the location's zone. Reads like a slip, but it is what Penn does, and it is
-				// materially different from comparing against the zone being scanned: with no personal
-				// zone set, Zone(player) is NOTHING and the location's Zone Master Room is always scanned.
-				// The heading sits inside that guard, so a suppressed block prints nothing at all.
-				if (here is not null && personalZone is not null
-						&& here.Object().DBRef == personalZone.Object().DBRef)
-				{
-					return;
-				}
-
-				await NotifyService.NotifyLocalized(executor, headerKey, executor);
-				await Report(Entry, await FindMatches(Mediator.CreateStream(new GetContentsQuery(zone.Object().DBRef))
-					?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>()));
-
-				return;
+				continue;
 			}
 
-			await Report(matchedKey, await FindMatches(Just(zone)));
+			var dbref = obj.Object().DBRef;
+			run.Matched.Add($"#{dbref.Number}/{attr.LongName}");
+
+			if (byObject.TryGetValue(dbref, out var attributes))
+			{
+				attributes.Add(attr.LongName);
+				continue;
+			}
+
+			attributes = [attr.LongName];
+			byObject[dbref] = attributes;
+			grouped.Add((obj, attributes));
+		}
+
+		return grouped;
+	}
+
+	private async ValueTask<bool> CanScanAsync(AnySharpObject executor, AnySharpObject obj)
+		=> await PermissionService.Controls(executor, obj) || await obj.HasFlag("VISUAL");
+
+	/// <summary>
+	/// Prints the grouped matches under the wording <paramref name="key"/> names - the bare entry under a
+	/// section heading, or one of do_scan's four "Matched &lt;where&gt;:" one-liners.
+	/// </summary>
+	private async ValueTask ReportScanAsync(ScanRun run, string key, List<(AnySharpObject Obj, List<string> Attributes)> matches)
+	{
+		var executor = run.Executor;
+		var flagView = await FlagView.ForAsync(executor, ConnectionService);
+		foreach (var (obj, attributes) in matches)
+		{
+			var dbref = obj.Object().DBRef.Number;
+			// The attribute list carries its own leading space, because Penn's buffer does
+			// (safe_chr(' ') per match, src/attrib.c:1990) and the "[%d:%s]" format supplies none.
+			var attributeList = string.Concat(attributes.Select(attribute => $" #{dbref}/{attribute}"));
+
+			await NotifyService.NotifyLocalizedMarkup(executor, key, executor,
+				await MessageFormatting.FormatObjectWithDbrefMString(obj.Object(), flagView),
+				MarkupText.Plain(attributes.Count.ToString()),
+				MarkupText.Plain(attributeList));
 		}
 	}
 
@@ -487,80 +496,53 @@ public partial class Commands
 	{
 		var lhs = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText() ?? "" : "";
 
-		var rhsChunks = new List<string>();
-		for (var i = 1; args.TryGetValue(i.ToString(), out var chunk); i++)
-		{
-			rhsChunks.Add(chunk.Message?.ToPlainText() ?? "");
-		}
+		var rhsChunks = Enumerable.Range(1, args.Count)
+			.Select(i => i.ToString())
+			.TakeWhile(args.ContainsKey)
+			.Select(key => args[key].Message?.ToPlainText() ?? "")
+			.ToList();
 
-		string? player;
-		string? leadingClass = null;
+		var (player, leadingClass) = SplitSearchOwnerAndClass(lhs, hasRestriction: rhsChunks.Count > 0);
 
-		if (lhs.Length == 0)
-		{
-			player = null;
-		}
-		else if (lhs[0] == '"')
-		{
-			var closeIndex = lhs.IndexOf('"', 1);
-			if (closeIndex >= 0)
-			{
-				player = lhs[1..closeIndex];
-				var remainder = lhs[(closeIndex + 1)..].TrimStart();
-				leadingClass = remainder.Length > 0 ? remainder : null;
-			}
-			else
-			{
-				player = lhs.TrimStart('"');
-			}
-		}
-		else
-		{
-			var spaceIndex = lhs.IndexOf(' ');
-			if (spaceIndex < 0)
-			{
-				// A single bare token: it's the leading class if there's a restriction waiting for it
-				// on the right of the '=' (e.g. "type=room"); otherwise it's a plain player/owner filter
-				// (e.g. "@search SomePlayer").
-				if (rhsChunks.Count > 0)
-				{
-					leadingClass = lhs;
-					player = null;
-				}
-				else
-				{
-					player = lhs;
-				}
-			}
-			else
-			{
-				player = lhs[..spaceIndex];
-				var remainder = lhs[(spaceIndex + 1)..].TrimStart();
-				leadingClass = remainder.Length > 0 ? remainder : null;
-			}
-		}
+		List<SearchSpecEngine.SearchPair> leadingPair = leadingClass != null && rhsChunks.Count > 0
+			? [new SearchSpecEngine.SearchPair(leadingClass, rhsChunks[0])]
+			: [];
 
-		var pairs = new List<SearchSpecEngine.SearchPair>();
-		var chunkIndex = 0;
+		var embeddedPairs = rhsChunks
+			.Skip(leadingPair.Count)
+			.Select(chunk => (Chunk: chunk, EqIndex: chunk.IndexOf('=')))
+			.Where(split => split.EqIndex > 0)
+			.Select(split => new SearchSpecEngine.SearchPair(split.Chunk[..split.EqIndex], split.Chunk[(split.EqIndex + 1)..]));
 
-		if (leadingClass != null && chunkIndex < rhsChunks.Count)
-		{
-			pairs.Add(new SearchSpecEngine.SearchPair(leadingClass, rhsChunks[chunkIndex]));
-			chunkIndex++;
-		}
-
-		for (; chunkIndex < rhsChunks.Count; chunkIndex++)
-		{
-			var chunk = rhsChunks[chunkIndex];
-			var eqIndex = chunk.IndexOf('=');
-			if (eqIndex > 0)
-			{
-				pairs.Add(new SearchSpecEngine.SearchPair(chunk[..eqIndex], chunk[(eqIndex + 1)..]));
-			}
-		}
-
-		return (player, pairs);
+		return (player, [.. leadingPair, .. embeddedPairs]);
 	}
+
+	/// <summary>
+	/// Splits @search's left-hand chunk into its player and the class of its first restriction: a quoted
+	/// player name, or the first word, with whatever follows it as the class.
+	/// </summary>
+	private static (string? Player, string? LeadingClass) SplitSearchOwnerAndClass(string lhs, bool hasRestriction)
+		=> lhs switch
+		{
+			"" => (null, null),
+			['"', ..] => SplitQuotedSearchOwner(lhs),
+			_ when lhs.IndexOf(' ') is var space and >= 0 => (lhs[..space], NonEmptyOrNull(lhs[(space + 1)..].TrimStart())),
+			// A single bare token: it's the leading class if there's a restriction waiting for it
+			// on the right of the '=' (e.g. "type=room"); otherwise it's a plain player/owner filter
+			// (e.g. "@search SomePlayer").
+			_ when hasRestriction => (null, lhs),
+			_ => (lhs, null)
+		};
+
+	private static (string? Player, string? LeadingClass) SplitQuotedSearchOwner(string lhs)
+	{
+		var closeIndex = lhs.IndexOf('"', 1);
+		return closeIndex < 0
+			? (lhs.TrimStart('"'), null)
+			: (lhs[1..closeIndex], NonEmptyOrNull(lhs[(closeIndex + 1)..].TrimStart()));
+	}
+
+	private static string? NonEmptyOrNull(string text) => text.Length > 0 ? text : null;
 
 	[SharpCommand(Name = "@WHEREIS", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["name"])]
 	public async ValueTask<Option<CallState>> WhereIs(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -630,220 +612,216 @@ public partial class Commands
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (args.Count == 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouMustSpecifyObjectToDecompile), executor);
-			return new CallState(ErrorMessages.Returns.NoObjectSpecified);
-		}
-
-		var objectSpec = args["0"].Message?.ToPlainText();
+		var objectSpec = args.Count == 0 ? null : args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(objectSpec))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouMustSpecifyObjectToDecompile), executor);
 			return new CallState(ErrorMessages.Returns.NoObjectSpecified);
 		}
 
-		var prefix = args.Count >= 2 ? args["1"].Message?.ToPlainText() ?? "" : "";
+		var isTf = switches.Contains("TF");
+		var prefix = await DecompilePrefixAsync(executor, args, isTf);
 
-		if (switches.Contains("TF"))
-		{
-			var tfPrefixAttr = await AttributeService.GetAttributeAsync(executor, executor, "TFPREFIX",
-				IAttributeService.AttributeMode.Read, false);
+		var (objectName, attributePattern) = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec) is { Object: var name, Attribute: var pattern }
+			? (name, pattern)
+			: (objectSpec, null);
 
-			prefix = tfPrefixAttr is SharpAttribute[] attr
-				? attr.Last().Value.ToPlainText()
-				: "FugueEdit > ";
-		}
-
-		string? attributePattern = null;
-		AnyOptionalSharpObject target;
-
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec) is { Object: var objectName, Attribute: var maybeAttributePattern })
-		{
-			attributePattern = maybeAttributePattern;
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				objectName,
-				LocateFlags.All);
-
-			if (locate is not AnySharpObject located)
-			{
-				return new None();
-			}
-
-			target = located;
-		}
-		else
-		{
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				objectSpec,
-				LocateFlags.All);
-
-			if (locate is not AnySharpObject located)
-			{
-				return new None();
-			}
-
-			target = located;
-		}
-
-		if (target is not AnySharpObject targetKnown)
+		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All)
+				is not AnySharpObject target)
 		{
 			return new None();
 		}
 
-		var canExamine = await PermissionService.CanExamine(executor, targetKnown);
-		if (!canExamine)
+		if (!await PermissionService.CanExamine(executor, target))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var obj = targetKnown.Object();
+		var obj = target.Object();
+		var hasPattern = !string.IsNullOrEmpty(attributePattern);
+		// NAME is the default: the lines name the object unless /DB asks for its dbref.
 		var useDbRef = switches.Contains("DB");
-		var useName = switches.Contains("NAME") || !useDbRef; // NAME is default
-		var showFlags = switches.Contains("FLAGS") || (!switches.Contains("ATTRIBS") && string.IsNullOrEmpty(attributePattern));
-		var showAttribs = switches.Contains("ATTRIBS") || (!switches.Contains("FLAGS") && string.IsNullOrEmpty(attributePattern)) || !string.IsNullOrEmpty(attributePattern);
-		var skipDefaults = switches.Contains("SKIPDEFAULTS");
-		var isTf = switches.Contains("TF");
-
-		if (!string.IsNullOrEmpty(attributePattern))
-		{
-			showFlags = false;
-			showAttribs = true;
-		}
-
-		var objectRef = useDbRef ? $"#{obj.DBRef.Number}" : obj.Name;
-		var outputs = new List<string>();
+		// A pattern decompiles only the attributes it matches.
+		var showFlags = !hasPattern && (switches.Contains("FLAGS") || !switches.Contains("ATTRIBS"));
+		var showAttribs = hasPattern || switches.Contains("ATTRIBS") || !switches.Contains("FLAGS");
+		var decompile = new DecompileRun(executor, obj, useDbRef ? $"#{obj.DBRef.Number}" : obj.Name, prefix,
+			switches.Contains("SKIPDEFAULTS"), isTf);
 
 		if (showFlags)
 		{
-			var createCmd = obj.Type.ToUpperInvariant() switch
-			{
-				"ROOM" => $"@dig {objectRef}",
-				"EXIT" => $"@open {objectRef}",
-				"THING" => $"@create {objectRef}",
-				"PLAYER" => $"@pcreate {objectRef}",
-				_ => $"@create {objectRef}"
-			};
-			outputs.Add($"{prefix}{createCmd}");
-
-			await foreach (var flag in obj.Flags.Value)
-			{
-				if (skipDefaults && IsDefaultFlag(obj.Type, flag.Name))
-				{
-					continue;
-				}
-				outputs.Add($"{prefix}@set {objectRef}={flag.Name}");
-			}
-
-			// What is set on the object itself, not what reaches it through an account: WIZARD and
-			// ROYALTY and the Guest and Builder powers are its roles, the other powers its overrides.
-			var grants = await obj.Grants.WithCancellation(ExecutionBudget.CurrentToken);
-			var ownRoles = grants.Roles.Where(held => held.Source == RoleSource.Object).Select(held => held.Role.Slug).ToArray();
-			foreach (var slug in ownRoles)
-			{
-				outputs.Add(RoleFlags.ForRole(slug) is { } roleFlag ? $"{prefix}@set {objectRef}={roleFlag.Name}"
-					: GamePowers.ForRole(slug) is { } rolePower ? $"{prefix}@power {objectRef}={rolePower.Name}"
-					: $"{prefix}@role/assign {objectRef}={slug}");
-			}
-
-			foreach (var (scope, state) in grants.Context.ObjectOverrides.OrderBy(o => o.Key, StringComparer.Ordinal))
-			{
-				outputs.Add(state == PermissionState.Allow && GamePowers.ForScope(scope) is { } power
-					? $"{prefix}@power {objectRef}={power.Name}"
-					: $"{prefix}@role/{(state == PermissionState.Allow ? "allow" : "deny")} {objectRef}={scope}");
-			}
-
-			await foreach (var power in obj.Powers.Value)
-			{
-				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
-			}
-
-			foreach (var (lockName, lockData) in obj.Locks.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
-			{
-				if (!BooleanExpressionParser.IsBound(lockData.LockString))
-				{
-					outputs.Add($"{prefix}@@ Invalid {lockName} lock omitted; replace it explicitly before decompiling.");
-					continue;
-				}
-				var expression = await BooleanExpressionParser.RenderAsync(lockData.LockString, executor, LockRenderMode.Decompile, ExecutionBudget.CurrentToken);
-				var standard = LockService.SystemLocks.TryGetValue(lockName, out var defaults);
-				var switchName = standard ? LockNames.Display(lockName) : $"user:{lockName}";
-				outputs.Add($"{prefix}@lock/{switchName} {objectRef}={expression}");
-				foreach (var (flagName, (_, flag)) in LockService.LockPrivileges)
-				{
-					var set = lockData.Flags.HasFlag(flag);
-					if (set && (!skipDefaults || !defaults.HasFlag(flag))) outputs.Add($"{prefix}@lset {objectRef}/{lockName}={flagName}");
-					else if (!set && defaults.HasFlag(flag)) outputs.Add($"{prefix}@lset {objectRef}/{lockName}=!{flagName}");
-				}
-			}
-
-			if (await obj.Parent.WithCancellation(CancellationToken.None) is AnySharpObject parent)
-			{
-				var parentObj = parent.Object();
-				outputs.Add($"{prefix}@parent {objectRef}={parentObj.DBRef}");
-			}
+			await DecompileObjectAsync(decompile);
 		}
 
 		if (showAttribs)
 		{
-			// Penn's do_decompile reads "**" when no pattern is given: the whole tree, not only its roots.
-			var atrs = await AttributeService.GetAttributePatternAsync(
-				executor,
-				targetKnown,
-				string.IsNullOrEmpty(attributePattern) ? "**" : attributePattern,
-				false, // don't check parents for decompile
-				IAttributeService.AttributePatternMode.Wildcard);
-
-			if (atrs is SharpAttribute[] decompiledAttributes)
-			{
-				foreach (var attr in decompiledAttributes)
-				{
-					const string VeiledFlagName = "VEILED";
-					if (attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
-					{
-						continue;
-					}
-
-					// Penn's AL_NAME: the full tree path, so FUN`FOOTER`DISPLAY and not DISPLAY.
-					var attrName = attr.LongName;
-					if (attr.Value.Runs.Length > 0)
-					{
-						// Markup only survives as the softcode that makes it, which @set evaluates.
-						outputs.Add($"{prefix}@set {objectRef}={attrName}:{SoftcodeDecomposer.Decompose(attr.Value)}");
-					}
-					else
-					{
-						var plainValue = attr.Value.ToPlainText();
-						outputs.Add($"{prefix}&{attrName} {objectRef}={plainValue}");
-					}
-
-					// Branch is Penn's AF_ROOT: structure the tree rebuilds itself, never decompiled.
-					// The rest go on one @set line, as privs_to_string writes them.
-					var attrFlags = attr.Flags.Where(flag => !flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase)).ToArray();
-					if (!isTf && attrFlags.Length > 0
-						&& (!skipDefaults || !await AreDefaultAttrFlagsAsync(attrName, attrFlags)))
-					{
-						outputs.Add($"{prefix}@set {objectRef}/{attrName}={string.Join(" ", attrFlags.Select(flag => flag.Name))}");
-					}
-				}
-			}
+			await DecompileAttributesAsync(decompile, target, attributePattern);
 		}
 
-		foreach (var output in outputs)
+		foreach (var output in decompile.Outputs)
 		{
 			await NotifyService.Notify(executor, output, executor);
 		}
 
 		// The commands are what it shows; its output is the object, as for look and examine.
 		return new CallState(obj.DBRef.ToString());
+	}
+
+	/// <summary>
+	/// One @decompile: the object, how its lines name it and what they start with, and the lines written
+	/// so far.
+	/// </summary>
+	private sealed record DecompileRun(AnySharpObject Executor, SharpObject Object, string ObjectRef, string Prefix,
+		bool SkipDefaults, bool IsTf)
+	{
+		public List<string> Outputs { get; } = [];
+
+		public void Add(string command) => Outputs.Add($"{Prefix}{command}");
+	}
+
+	/// <summary>The text each line starts with: /TF reads the executor's TFPREFIX, otherwise the second argument.</summary>
+	private async ValueTask<string> DecompilePrefixAsync(AnySharpObject executor, IReadOnlyDictionary<string, CallState> args, bool isTf)
+	{
+		if (!isTf)
+		{
+			return args.Count >= 2 ? args["1"].Message?.ToPlainText() ?? "" : "";
+		}
+
+		var tfPrefixAttr = await AttributeService.GetAttributeAsync(executor, executor, "TFPREFIX",
+			IAttributeService.AttributeMode.Read, false);
+
+		return tfPrefixAttr is SharpAttribute[] attr
+			? attr.Last().Value.ToPlainText()
+			: "FugueEdit > ";
+	}
+
+	/// <summary>The object itself: how to create it, its flags, roles and powers, locks, and parent.</summary>
+	private async ValueTask DecompileObjectAsync(DecompileRun run)
+	{
+		var obj = run.Object;
+		run.Add(obj.Type.ToUpperInvariant() switch
+		{
+			"ROOM" => $"@dig {run.ObjectRef}",
+			"EXIT" => $"@open {run.ObjectRef}",
+			"THING" => $"@create {run.ObjectRef}",
+			"PLAYER" => $"@pcreate {run.ObjectRef}",
+			_ => $"@create {run.ObjectRef}"
+		});
+
+		await foreach (var flag in obj.Flags.Value)
+		{
+			if (run.SkipDefaults && IsDefaultFlag(obj.Type, flag.Name))
+			{
+				continue;
+			}
+			run.Add($"@set {run.ObjectRef}={flag.Name}");
+		}
+
+		await DecompileGrantsAsync(run);
+
+		await foreach (var power in obj.Powers.Value)
+		{
+			run.Add($"@power {run.ObjectRef}={power.Name}");
+		}
+
+		foreach (var (lockName, lockData) in obj.Locks.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+		{
+			await DecompileLockAsync(run, lockName, lockData);
+		}
+
+		if (await obj.Parent.WithCancellation(CancellationToken.None) is AnySharpObject parent)
+		{
+			var parentObj = parent.Object();
+			run.Add($"@parent {run.ObjectRef}={parentObj.DBRef}");
+		}
+	}
+
+	/// <summary>
+	/// What is set on the object itself, not what reaches it through an account: WIZARD and
+	/// ROYALTY and the Guest and Builder powers are its roles, the other powers its overrides.
+	/// </summary>
+	private static async ValueTask DecompileGrantsAsync(DecompileRun run)
+	{
+		var objectRef = run.ObjectRef;
+		var grants = await run.Object.Grants.WithCancellation(ExecutionBudget.CurrentToken);
+		var ownRoles = grants.Roles.Where(held => held.Source == RoleSource.Object).Select(held => held.Role.Slug).ToArray();
+		foreach (var slug in ownRoles)
+		{
+			run.Add(RoleFlags.ForRole(slug) is { } roleFlag ? $"@set {objectRef}={roleFlag.Name}"
+				: GamePowers.ForRole(slug) is { } rolePower ? $"@power {objectRef}={rolePower.Name}"
+				: $"@role/assign {objectRef}={slug}");
+		}
+
+		foreach (var (scope, state) in grants.Context.ObjectOverrides.OrderBy(o => o.Key, StringComparer.Ordinal))
+		{
+			run.Add(state == PermissionState.Allow && GamePowers.ForScope(scope) is { } power
+				? $"@power {objectRef}={power.Name}"
+				: $"@role/{(state == PermissionState.Allow ? "allow" : "deny")} {objectRef}={scope}");
+		}
+	}
+
+	/// <summary>One lock as the @lock that sets it, then an @lset for each privilege that differs from the lock's defaults.</summary>
+	private async ValueTask DecompileLockAsync(DecompileRun run, string lockName, SharpLockData lockData)
+	{
+		var objectRef = run.ObjectRef;
+		if (!BooleanExpressionParser.IsBound(lockData.LockString))
+		{
+			run.Add($"@@ Invalid {lockName} lock omitted; replace it explicitly before decompiling.");
+			return;
+		}
+		var expression = await BooleanExpressionParser.RenderAsync(lockData.LockString, run.Executor, LockRenderMode.Decompile, ExecutionBudget.CurrentToken);
+		var standard = LockService.SystemLocks.TryGetValue(lockName, out var defaults);
+		var switchName = standard ? LockNames.Display(lockName) : $"user:{lockName}";
+		run.Add($"@lock/{switchName} {objectRef}={expression}");
+		foreach (var (flagName, (_, flag)) in LockService.LockPrivileges)
+		{
+			var set = lockData.Flags.HasFlag(flag);
+			if (set && (!run.SkipDefaults || !defaults.HasFlag(flag))) run.Add($"@lset {objectRef}/{lockName}={flagName}");
+			else if (!set && defaults.HasFlag(flag)) run.Add($"@lset {objectRef}/{lockName}=!{flagName}");
+		}
+	}
+
+	private async ValueTask DecompileAttributesAsync(DecompileRun run, AnySharpObject target, string? attributePattern)
+	{
+		// Penn's do_decompile reads "**" when no pattern is given: the whole tree, not only its roots.
+		var atrs = await AttributeService.GetAttributePatternAsync(
+			run.Executor,
+			target,
+			string.IsNullOrEmpty(attributePattern) ? "**" : attributePattern,
+			false, // don't check parents for decompile
+			IAttributeService.AttributePatternMode.Wildcard);
+
+		if (atrs is not SharpAttribute[] decompiledAttributes)
+		{
+			return;
+		}
+
+		const string VeiledFlagName = "VEILED";
+		foreach (var attr in decompiledAttributes.Where(attr => !attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase))))
+		{
+			await DecompileAttributeAsync(run, attr);
+		}
+	}
+
+	private async ValueTask DecompileAttributeAsync(DecompileRun run, SharpAttribute attr)
+	{
+		var objectRef = run.ObjectRef;
+
+		// Penn's AL_NAME: the full tree path, so FUN`FOOTER`DISPLAY and not DISPLAY.
+		var attrName = attr.LongName;
+		run.Add(attr.Value.Runs.Length > 0
+			// Markup only survives as the softcode that makes it, which @set evaluates.
+			? $"@set {objectRef}={attrName}:{SoftcodeDecomposer.Decompose(attr.Value)}"
+			: $"&{attrName} {objectRef}={attr.Value.ToPlainText()}");
+
+		// Branch is Penn's AF_ROOT: structure the tree rebuilds itself, never decompiled.
+		// The rest go on one @set line, as privs_to_string writes them.
+		var attrFlags = attr.Flags.Where(flag => !flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase)).ToArray();
+		if (!run.IsTf && attrFlags.Length > 0
+			&& (!run.SkipDefaults || !await AreDefaultAttrFlagsAsync(attrName, attrFlags)))
+		{
+			run.Add($"@set {objectRef}/{attrName}={string.Join(" ", attrFlags.Select(flag => flag.Name))}");
+		}
 	}
 
 	/// <summary>
@@ -890,69 +868,44 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		AnySharpObject targetObject;
-
-		if (args.Count > 0 && args.ContainsKey("0"))
-		{
-			var targetName = args["0"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(targetName))
-			{
-				if (await LocateService.LocateAndNotifyIfInvalid(
-						parser, executor, executor, targetName, LocateFlags.All) is not AnySharpObject located)
-				{
-					return new CallState(ErrorMessages.Returns.NotFound);
-				}
-
-				targetObject = located;
-			}
-			else
-			{
-				var location = await executor.AsContent.Location();
-				targetObject = location.WithExitOption();
-			}
-		}
-		else
+		var targetName = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText() : null;
+		if (string.IsNullOrEmpty(targetName))
 		{
 			var location = await executor.AsContent.Location();
-			targetObject = location.WithExitOption();
+			return await ReportEntrancesAsync(executor, location.WithExitOption(), args, switches);
 		}
 
-		int? beginDbref = null;
-		int? endDbref = null;
-
-		if (args.Count > 1 && args.ContainsKey("1"))
+		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, targetName, LocateFlags.All) switch
 		{
-			var beginStr = args["1"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(beginStr) && int.TryParse(beginStr, out var begin))
-			{
-				beginDbref = begin;
-			}
-		}
+			AnySharpObject located => await ReportEntrancesAsync(executor, located, args, switches),
+			_ => new CallState(ErrorMessages.Returns.NotFound)
+		};
+	}
 
-		if (args.Count > 2 && args.ContainsKey("2"))
-		{
-			var endStr = args["2"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
-			{
-				endDbref = end;
-			}
-		}
+	private static readonly (string Switch, string Label)[] EntranceTypeSwitches =
+		[("EXITS", "exits"), ("THINGS", "things"), ("PLAYERS", "players"), ("ROOMS", "rooms")];
+
+	private static int? EntrancesBound(IReadOnlyDictionary<string, CallState> args, string key)
+		=> args.TryGetValue(key, out var arg) && int.TryParse(arg.Message?.ToPlainText(), out var bound) ? bound : null;
+
+	private async ValueTask<CallState> ReportEntrancesAsync(AnySharpObject executor, AnySharpObject targetObject,
+		IReadOnlyDictionary<string, CallState> args, IEnumerable<string> switches)
+	{
+		var beginDbref = EntrancesBound(args, "1");
+		var endDbref = EntrancesBound(args, "2");
+		var hasRange = beginDbref.HasValue || endDbref.HasValue;
 
 		var targetObj = targetObject.Object();
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesToFormat), executor, targetObj.Name);
 
-		var filterTypes = new List<string>();
-		if (switches.Contains("EXITS")) filterTypes.Add("exits");
-		if (switches.Contains("THINGS")) filterTypes.Add("things");
-		if (switches.Contains("PLAYERS")) filterTypes.Add("players");
-		if (switches.Contains("ROOMS")) filterTypes.Add("rooms");
+		var filterTypes = EntranceTypeSwitches.Where(type => switches.Contains(type.Switch)).Select(type => type.Label).ToList();
 
 		if (filterTypes.Count > 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesFilteringForFormat), executor, string.Join(", ", filterTypes));
 		}
 
-		if (beginDbref.HasValue || endDbref.HasValue)
+		if (hasRange)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EntrancesRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
 		}
@@ -962,7 +915,7 @@ public partial class Commands
 			? []
 			: await Mediator.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
 
-		if (beginDbref.HasValue || endDbref.HasValue)
+		if (hasRange)
 		{
 			entrances = entrances.Where(e =>
 			{
@@ -1053,6 +1006,29 @@ public partial class Commands
 		return new CallState($"#-1 {error}");
 	}
 
+	/// <summary>How @grep tests a value: as plain text, as a wildcard, or as a regular expression.</summary>
+	private enum GrepMode { Substring, Wildcard, Regexp }
+
+	/// <summary>What the @grep switches ask for: the test, its case, and whether matches are printed with their values.</summary>
+	private readonly record struct GrepOptions(GrepMode Mode, bool NoCase, bool Print, string Pattern)
+	{
+		public StringComparison Comparison => NoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+		/// <summary>Only a plain-text match is highlighted in a printed value.</summary>
+		public bool Highlights => Mode == GrepMode.Substring;
+
+		public static GrepOptions From(IEnumerable<string> switches, string pattern) => new(
+			switches.Contains("REGEXP") ? GrepMode.Regexp
+				: switches.Contains("WILD") ? GrepMode.Wildcard
+				: GrepMode.Substring,
+			switches.Contains("NOCASE") || switches.Contains("ILIST") || switches.Contains("IPRINT"),
+			switches.Contains("PRINT") || switches.Contains("IPRINT"),
+			pattern);
+	}
+
+	/// <summary>A pattern that could not be tested: the notification that says so and the value @grep returns.</summary>
+	internal readonly record struct GrepFailure(string Notification, string Returns);
+
 	/// <summary>
 	/// Reports the attributes whose value matches <paramref name="pattern"/>, the way the switches ask.
 	/// The attributes arrive with their values unread, already past the read gate; each body is read for
@@ -1062,11 +1038,7 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> GrepAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IAsyncEnumerable<LazySharpAttribute> attributes, IEnumerable<string> switches, string pattern)
 	{
-		var isWild = switches.Contains("WILD");
-		var isRegexp = switches.Contains("REGEXP");
-		var isNoCase = switches.Contains("NOCASE") || switches.Contains("ILIST") || switches.Contains("IPRINT");
-		var isPrint = switches.Contains("PRINT") || switches.Contains("IPRINT");
-
+		var options = GrepOptions.From(switches, pattern);
 		var matchingAttributes = new List<(LazySharpAttribute Attribute, MString Value)>();
 		var token = ExecutionBudget.CurrentToken;
 
@@ -1074,56 +1046,15 @@ public partial class Commands
 		{
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var value = await attr.ReadValueOnceAsync(token);
-			var attrValue = value.ToPlainText();
-			bool matches = false;
 
-			if (isRegexp)
+			switch (TestGrepValue(options, value.ToPlainText()))
 			{
-				try
-				{
-					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
-					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, pattern, regexOptions, TimeSpan.FromSeconds(1));
-				}
-				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepRegexpTimedOutFormat), executor, pattern);
-					return new CallState(ErrorMessages.Returns.RegexpTimeout);
-				}
-				catch
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidRegexpFormat), executor, pattern);
-					return new CallState(ErrorMessages.Returns.InvalidRegexp);
-				}
-			}
-			else if (isWild)
-			{
-				try
-				{
-					// grep_util passes cs = ((flags & GREP_NOCASE) == 0), so the wildcard grep is
-					// case-SENSITIVE unless this is the "i" variant — unlike every other wildcard in
-					// the game, which goes through quick_wild and its cs = 0.
-					matches = SoftcodeRegex.Wildcard(pattern, caseSensitive: !isNoCase).IsMatch(attrValue);
-				}
-				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepWildcardTimedOutFormat), executor, pattern);
-					return new CallState(ErrorMessages.Returns.PatternTimeout);
-				}
-				catch
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepInvalidWildcardFormat), executor, pattern);
-					return new CallState(ErrorMessages.Returns.InvalidPattern);
-				}
-			}
-			else
-			{
-				var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-				matches = attrValue.Contains(pattern, comparison);
-			}
-
-			if (matches)
-			{
-				matchingAttributes.Add((attr, value));
+				case GrepFailure failure:
+					await NotifyService.NotifyLocalized(executor, failure.Notification, executor, pattern);
+					return new CallState(failure.Returns);
+				case true:
+					matchingAttributes.Add((attr, value));
+					break;
 			}
 		}
 
@@ -1133,113 +1064,9 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		if (isPrint)
+		if (options.Print)
 		{
-			// Lazily computed: only a flagged attribute needs it, and most @grep/PRINT calls have none.
-			int? width = null;
-
-			foreach (var (attr, value) in matchingAttributes)
-			{
-				var parseType = attr.SyntaxParseType();
-
-				MString displayValue;
-
-				if (parseType is null)
-				{
-					// Byte-identical to the pre-formatting behavior: nothing below this branch may
-					// change when SyntaxParseType() is null, since that is the regression contract
-					// covering all existing traffic.
-					if (isRegexp || isWild)
-					{
-						displayValue = value;
-					}
-					else
-					{
-						// Highlight the matching parts using Span to avoid allocations
-						var plainValue = value.ToPlainText();
-						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-						var index = plainValue.IndexOf(pattern, comparison);
-
-						if (index >= 0)
-						{
-							var valueSpan = plainValue.AsSpan();
-							var before = valueSpan.Slice(0, index).ToString();
-							var match = valueSpan.Slice(index, pattern.Length).ToString();
-							var after = valueSpan.Slice(index + pattern.Length).ToString();
-
-							displayValue = MarkupText.Concat(MarkupText.Concat(MarkupText.Plain(before), MarkupText.Plain(match).Hilight()), MarkupText.Plain(after));
-						}
-						else
-						{
-							displayValue = value;
-						}
-					}
-				}
-				else
-				{
-					// The attribute carries a syntax flag: render the formatted, wrapped block instead
-					// of the raw value. Empty values are left alone (mirrors @examine) rather than run
-					// through the formatter, since an empty funsyntax/cmdsyntax body is itself a parse
-					// error and would otherwise surface a stray parser-failure summary in place of blank.
-					MString formatted;
-
-					// Plain-text length of the code portion of `formatted` — everything but the error
-					// summary the formatter appends beneath it.
-					int codeLength;
-
-					if (value.Length == 0)
-					{
-						formatted = value;
-						codeLength = 0;
-					}
-					else
-					{
-						width ??= await ExecutorFormatWidthAsync(executor);
-
-						var source = value;
-						var tokens = parser.Tokenize(source);
-						var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
-						var errors = SoftcodeSource.Validate(parser, source, parseType.Value);
-						formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser,
-							parseType.Value, out codeLength);
-					}
-
-					if (isRegexp || isWild)
-					{
-						displayValue = formatted;
-					}
-					else
-					{
-						// Same highlight as the unflagged path, but sliced from the formatted block via
-						// MarkupText.Substring (rather than rebuilt from plain-text spans) so the formatter's
-						// own syntax colouring survives around the highlighted match.
-						//
-						// Bounded by codeLength: the attribute matched on its *value*, so the match is in the
-						// code. Searching the whole block would let a pattern that occurs only in the appended
-						// "#-1 PARSER FAILURE ..." summary highlight as though it were the match that put this
-						// attribute in the result set.
-						var plainFormatted = formatted.ToPlainText();
-						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-						var index = plainFormatted.IndexOf(pattern, 0, codeLength, comparison);
-
-						if (index >= 0)
-						{
-							var before = formatted.Substring(0, index);
-							var match = formatted.Substring(index, pattern.Length).Hilight();
-							var after = formatted.Substring(index + pattern.Length, plainFormatted.Length - index - pattern.Length);
-
-							displayValue = MarkupText.Concat(MarkupText.Concat(before, match), after);
-						}
-						else
-						{
-							displayValue = formatted;
-						}
-					}
-				}
-
-				await NotifyService.Notify(executor,
-					MarkupText.Concat(MarkupText.Plain($"{attr.LongName}: ").Hilight(), displayValue), executor);
-			}
+			await PrintGrepMatchesAsync(parser, executor, matchingAttributes, options);
 		}
 		else
 		{
@@ -1249,6 +1076,141 @@ public partial class Commands
 
 		// The attribute list grep() gives, whichever way the matches were shown.
 		return new CallState(string.Join(" ", matchingAttributes.Select(a => a.Attribute.LongName)));
+	}
+
+	private static readonly (GrepFailure TimedOut, GrepFailure Invalid) GrepRegexpFailures = (
+		new GrepFailure(nameof(ErrorMessages.Notifications.GrepRegexpTimedOutFormat), ErrorMessages.Returns.RegexpTimeout),
+		new GrepFailure(nameof(ErrorMessages.Notifications.GrepInvalidRegexpFormat), ErrorMessages.Returns.InvalidRegexp));
+
+	private static readonly (GrepFailure TimedOut, GrepFailure Invalid) GrepWildcardFailures = (
+		new GrepFailure(nameof(ErrorMessages.Notifications.GrepWildcardTimedOutFormat), ErrorMessages.Returns.PatternTimeout),
+		new GrepFailure(nameof(ErrorMessages.Notifications.GrepInvalidWildcardFormat), ErrorMessages.Returns.InvalidPattern));
+
+	/// <summary>Whether <paramref name="value"/> matches, or why the pattern could not be tested against it.</summary>
+	private static GrepTest TestGrepValue(GrepOptions options, string value) => options.Mode switch
+	{
+		GrepMode.Regexp => TestGrepPattern(GrepRegexpFailures,
+			() => Regex.IsMatch(value, options.Pattern, options.NoCase ? RegexOptions.IgnoreCase : RegexOptions.None, TimeSpan.FromSeconds(1))),
+		// grep_util passes cs = ((flags & GREP_NOCASE) == 0), so the wildcard grep is
+		// case-SENSITIVE unless this is the "i" variant — unlike every other wildcard in
+		// the game, which goes through quick_wild and its cs = 0.
+		GrepMode.Wildcard => TestGrepPattern(GrepWildcardFailures,
+			() => SoftcodeRegex.Wildcard(options.Pattern, caseSensitive: !options.NoCase).IsMatch(value)),
+		_ => value.Contains(options.Pattern, options.Comparison)
+	};
+
+	private static GrepTest TestGrepPattern((GrepFailure TimedOut, GrepFailure Invalid) failures, Func<bool> test)
+	{
+		try
+		{
+			return test();
+		}
+		catch (RegexMatchTimeoutException)
+		{
+			return failures.TimedOut;
+		}
+		catch
+		{
+			return failures.Invalid;
+		}
+	}
+
+	private async ValueTask PrintGrepMatchesAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		List<(LazySharpAttribute Attribute, MString Value)> matchingAttributes, GrepOptions options)
+	{
+		// Lazily computed: only a flagged attribute needs it, and most @grep/PRINT calls have none.
+		int? width = null;
+		async ValueTask<int> Width() => width ??= await ExecutorFormatWidthAsync(executor);
+
+		foreach (var (attr, value) in matchingAttributes)
+		{
+			var displayValue = attr.SyntaxParseType() switch
+			{
+				// Byte-identical to the pre-formatting behavior: nothing in this branch may
+				// change when SyntaxParseType() is null, since that is the regression contract
+				// covering all existing traffic.
+				null => options.Highlights ? HighlightGrepMatch(value, options) : value,
+				{ } parseType => await FormattedGrepValueAsync(parser, value, parseType, options, Width)
+			};
+
+			await NotifyService.Notify(executor,
+				MarkupText.Concat(MarkupText.Plain($"{attr.LongName}: ").Hilight(), displayValue), executor);
+		}
+	}
+
+	/// <summary>Highlights the first match in an unflagged value, rebuilt from plain-text spans.</summary>
+	private static MString HighlightGrepMatch(MString value, GrepOptions options)
+	{
+		// Highlight the matching parts using Span to avoid allocations
+		var plainValue = value.ToPlainText();
+		var pattern = options.Pattern;
+		var index = plainValue.IndexOf(pattern, options.Comparison);
+
+		if (index < 0)
+		{
+			return value;
+		}
+
+		var valueSpan = plainValue.AsSpan();
+		var before = valueSpan.Slice(0, index).ToString();
+		var match = valueSpan.Slice(index, pattern.Length).ToString();
+		var after = valueSpan.Slice(index + pattern.Length).ToString();
+
+		return MarkupText.Concat(MarkupText.Concat(MarkupText.Plain(before), MarkupText.Plain(match).Hilight()), MarkupText.Plain(after));
+	}
+
+	/// <summary>
+	/// The attribute carries a syntax flag: render the formatted, wrapped block instead
+	/// of the raw value. Empty values are left alone (mirrors @examine) rather than run
+	/// through the formatter, since an empty funsyntax/cmdsyntax body is itself a parse
+	/// error and would otherwise surface a stray parser-failure summary in place of blank.
+	/// </summary>
+	private static async ValueTask<MString> FormattedGrepValueAsync(IMUSHCodeParser parser, MString value, ParseType parseType,
+		GrepOptions options, Func<ValueTask<int>> width)
+	{
+		if (value.Length == 0)
+		{
+			return options.Highlights ? HighlightFormattedGrepMatch(value, 0, options) : value;
+		}
+
+		var tokens = parser.Tokenize(value);
+		var semanticTokens = parser.GetSemanticTokens(value, parseType);
+		var errors = SoftcodeSource.Validate(parser, value, parseType);
+		// codeLength is the plain-text length of the code portion of `formatted` — everything but the
+		// error summary the formatter appends beneath it.
+		var formatted = SoftcodeFormatter.Format(value, tokens, semanticTokens, errors, await width(), parser,
+			parseType, out var codeLength);
+
+		return options.Highlights ? HighlightFormattedGrepMatch(formatted, codeLength, options) : formatted;
+	}
+
+	/// <summary>
+	/// Same highlight as the unflagged path, but sliced from the formatted block via
+	/// MarkupText.Substring (rather than rebuilt from plain-text spans) so the formatter's
+	/// own syntax colouring survives around the highlighted match.
+	/// </summary>
+	/// <remarks>
+	/// Bounded by <paramref name="codeLength"/>: the attribute matched on its *value*, so the match is in the
+	/// code. Searching the whole block would let a pattern that occurs only in the appended
+	/// "#-1 PARSER FAILURE ..." summary highlight as though it were the match that put this
+	/// attribute in the result set.
+	/// </remarks>
+	private static MString HighlightFormattedGrepMatch(MString formatted, int codeLength, GrepOptions options)
+	{
+		var pattern = options.Pattern;
+		var plainFormatted = formatted.ToPlainText();
+		var index = plainFormatted.IndexOf(pattern, 0, codeLength, options.Comparison);
+
+		if (index < 0)
+		{
+			return formatted;
+		}
+
+		var before = formatted.Substring(0, index);
+		var match = formatted.Substring(index, pattern.Length).Hilight();
+		var after = formatted.Substring(index + pattern.Length, plainFormatted.Length - index - pattern.Length);
+
+		return MarkupText.Concat(MarkupText.Concat(before, match), after);
 	}
 
 	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS"], Behavior = CB.Default,
@@ -1264,146 +1226,136 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var perceive = await ObserveRealityAsync(parser, executor);
 		var location = await executor.Where();
-		var locationObj = location.Object();
-		var locationAnyObject = location.WithExitOption();
-		var locationOwner = await locationObj.Owner.WithCancellation(CancellationToken.None);
+		var locationOwner = await location.Object().Owner.WithCancellation(CancellationToken.None);
 
 		if (!inventoryFlag && !exitsFlag)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInRoom), executor);
-
-			if (connectFlag)
-			{
-				if (await IsConnectedOrPuppetConnected(locationAnyObject))
-				{
-					if (location.IsPlayer)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, locationObj.Name);
-					}
-					else
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, locationObj.Name, locationOwner.Object.Name);
-					}
-				}
-			}
-			else
-			{
-				if (await locationAnyObject.IsHearer(ConnectionService, AttributeService) ||
-						await locationAnyObject.IsListener())
-				{
-					if (await ConnectionService.IsConnected(locationAnyObject))
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomSpeechConnectedFormat), executor, locationObj.Name);
-					else
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomSpeechFormat), executor, locationObj.Name);
-				}
-
-				if (await locationAnyObject.HasActiveCommands())
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomCommandsFormat), executor, locationObj.Name);
-				if (await locationAnyObject.IsAudible())
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
-			}
-
-			var contents = location.Content(Mediator)
-				.Where((item, ct) => perceive(item.Object().DBRef, ct));
-			await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
-			{
-				var fullObj = obj.WithRoomOption();
-				if (connectFlag)
-				{
-					if (await IsConnectedOrPuppetConnected(fullObj))
-					{
-						if (obj.IsPlayer)
-						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object().Name);
-						}
-						else
-						{
-							// The owner is read only for the line that names it.
-							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
-						}
-					}
-				}
-				else
-				{
-					if (await fullObj.IsHearer(ConnectionService, AttributeService) || await fullObj.IsListener())
-					{
-						if (await ConnectionService.IsConnected(fullObj))
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object().Name);
-						else
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
-					}
-
-					if (await fullObj.HasActiveCommands())
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
-				}
-			}
+			await SweepLocationAsync(executor, location, locationOwner, connectFlag);
+			await SweepContentsAsync(executor, location, perceive, connectFlag);
 		}
 
 		if (!connectFlag && !inventoryFlag && location.IsRoom && exitsFlag)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningExits), executor);
-			if (await locationAnyObject.IsAudible())
-			{
-				var exits = location.Content(Mediator).Where(x => x.IsExit)
-					.Where((item, ct) => perceive(item.Object().DBRef, ct));
-				await foreach (var exit in exits.WithCancellation(ExecutionBudget.CurrentToken))
-				{
-					if (await exit.WithRoomOption().IsAudible())
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object().Name);
-					}
-				}
-			}
+			await SweepExitsAsync(executor, location, perceive);
 		}
 
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInInventory), executor);
-			await foreach (var obj in executor.AsContainer.Content(Mediator)
-				.Where((item, ct) => perceive(item.Object().DBRef, ct)).WithCancellation(ExecutionBudget.CurrentToken))
-			{
-				var fullObj = obj.WithRoomOption();
-				if (connectFlag)
-				{
-					if (await IsConnectedOrPuppetConnected(fullObj))
-					{
-						if (obj.IsPlayer)
-						{
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, obj.Object().Name);
-						}
-						else
-						{
-							// The owner is read only for the line that names it.
-							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, obj.Object().Name, objOwner.Object.Name);
-						}
-					}
-				}
-				else
-				{
-					if (await fullObj.IsHearer(ConnectionService, AttributeService) || await fullObj.IsListener())
-					{
-						if (await ConnectionService.IsConnected(fullObj))
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), executor, obj.Object().Name);
-						else
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat), executor, obj.Object().Name);
-					}
-
-					if (await fullObj.HasActiveCommands())
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, obj.Object().Name);
-				}
-			}
+			await SweepContentsAsync(executor, executor.AsContainer, perceive, connectFlag);
 		}
 
 		return CallState.Empty;
+	}
 
-		async Task<bool> IsConnectedOrPuppetConnected(AnySharpObject obj)
+	/// <summary>@sweep's line for the executor's location: who is connected there, or what it hears, runs and broadcasts.</summary>
+	private async ValueTask SweepLocationAsync(AnySharpObject executor, AnySharpContainer location, SharpPlayer locationOwner,
+		bool connectFlag)
+	{
+		var locationObj = location.Object();
+		var locationAnyObject = location.WithExitOption();
+
+		if (connectFlag)
 		{
-			if (await ConnectionService.IsConnected(obj)) return true;
+			if (!await IsConnectedOrPuppetConnectedAsync(locationAnyObject)) return;
 
-			return await obj.IsPuppet()
-						 && await ConnectionService.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+			if (location.IsPlayer)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, locationObj.Name);
+			}
+			else
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, locationObj.Name, locationOwner.Object.Name);
+			}
+
+			return;
+		}
+
+		await SweepSpeechAsync(executor, locationAnyObject,
+			nameof(ErrorMessages.Notifications.SweepRoomSpeechConnectedFormat), nameof(ErrorMessages.Notifications.SweepRoomSpeechFormat));
+
+		if (await locationAnyObject.HasActiveCommands())
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomCommandsFormat), executor, locationObj.Name);
+		if (await locationAnyObject.IsAudible())
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
+	}
+
+	/// <summary>@sweep's lines for what <paramref name="container"/> holds that the executor perceives.</summary>
+	private async ValueTask SweepContentsAsync(AnySharpObject executor, AnySharpContainer container,
+		Func<DBRef, CancellationToken, ValueTask<bool>> perceive, bool connectFlag)
+	{
+		var contents = container.Content(Mediator)
+			.Where((item, ct) => perceive(item.Object().DBRef, ct));
+		await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
+		{
+			await SweepObjectAsync(executor, obj.WithRoomOption(), connectFlag);
 		}
 	}
+
+	private async ValueTask SweepObjectAsync(AnySharpObject executor, AnySharpObject obj, bool connectFlag)
+	{
+		var name = obj.Object().Name;
+
+		if (connectFlag)
+		{
+			if (!await IsConnectedOrPuppetConnectedAsync(obj)) return;
+
+			if (obj.IsPlayer)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectIsListeningFormat), executor, name);
+			}
+			else
+			{
+				// The owner is read only for the line that names it.
+				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectOwnerIsListeningFormat), executor, name, objOwner.Object.Name);
+			}
+
+			return;
+		}
+
+		await SweepSpeechAsync(executor, obj,
+			nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat));
+
+		if (await obj.HasActiveCommands())
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, name);
+	}
+
+	/// <summary>The line for an object that hears speech, worded by whether it is connected.</summary>
+	private async ValueTask SweepSpeechAsync(AnySharpObject executor, AnySharpObject obj, string connectedKey, string key)
+	{
+		if (!await obj.IsHearer(ConnectionService, AttributeService) && !await obj.IsListener()) return;
+
+		var wording = await ConnectionService.IsConnected(obj) ? connectedKey : key;
+		await NotifyService.NotifyLocalized(executor, wording, executor, obj.Object().Name);
+	}
+
+	private async ValueTask SweepExitsAsync(AnySharpObject executor, AnySharpContainer location,
+		Func<DBRef, CancellationToken, ValueTask<bool>> perceive)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningExits), executor);
+		if (!await location.WithExitOption().IsAudible()) return;
+
+		var exits = location.Content(Mediator).Where(x => x.IsExit)
+			.Where((item, ct) => perceive(item.Object().DBRef, ct));
+		await foreach (var exit in exits.WithCancellation(ExecutionBudget.CurrentToken))
+		{
+			if (await exit.WithRoomOption().IsAudible())
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object().Name);
+			}
+		}
+	}
+
+	private async ValueTask<bool> IsConnectedOrPuppetConnectedAsync(AnySharpObject obj)
+	{
+		if (await ConnectionService.IsConnected(obj)) return true;
+
+		return await obj.IsPuppet()
+					 && await ConnectionService.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+	}
 }
+
+/// <summary>An @grep test's outcome: whether the value matched, or why the pattern could not be tested.</summary>
+internal union GrepTest(bool, Commands.GrepFailure);
