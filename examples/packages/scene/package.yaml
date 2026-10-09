@@ -1,6 +1,6 @@
 format: 1.2
 package: scene
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -225,7 +225,7 @@ objects:
         flags: [REGEXP]
       CMD`TYPE`REMOVE:
         value: |-
-          $(?is)^\+scene/type/remove +(.+)$: @assert permission(%#,layout.admin)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_TYPES)],error)]; think [setq(T,lcstr(trim(%1)))]; @assert hasattr(%!,TYPE`%q<T>)=@pemit %#=[notice(SCENE,No pose type called %q<T>.,warn)]; @wipe %!/TYPE`%q<T>`**; &TYPE`%q<T> %!=; @pemit %#=[notice(SCENE,Removed pose type %q<T>. Poses of that type now read as in character.,ok)]
+          $(?is)^\+scene/type/remove +(.+)$: @assert permission(%#,layout.admin)=@pemit %#=[notice(SCENE,[get(%!/DATA`DENY_TYPES)],error)]; think [setq(T,lcstr(trim(%1)))]; @assert hasattr(%!,TYPE`%q<T>)=@pemit %#=[notice(SCENE,No pose type called %q<T>.,warn)]; @wipe %!/TYPE`%q<T>`**; &TYPE`%q<T> %!; @pemit %#=[notice(SCENE,Removed pose type %q<T>. Poses of that type now read as in character.,ok)]
         flags: [REGEXP]
       # +scene/hide <type> and +scene/show <type>: which types this reader's recall and log leave out. Kept on
       # the reader, as SCENE`HIDE and SCENE`SHOW, so the portal's Show menu reads the same choice.
