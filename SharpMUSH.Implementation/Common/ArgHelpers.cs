@@ -315,6 +315,19 @@ public static partial class ArgHelpers
 		return new ValueTask<CallState>(result != negate ? "1" : "0");
 	}
 
+	/// <summary>
+	/// The numbered arguments from <paramref name="first"/> on, each moved down one place (argument
+	/// <c>i</c> becomes register <c>i - 1</c>): how a command or function hands its trailing arguments
+	/// on as <c>%0</c>-<c>%9</c>. With <paramref name="requireMessage"/>, an argument with no message is
+	/// left out.
+	/// </summary>
+	public static Dictionary<string, CallState> ShiftedArguments(IReadOnlyDictionary<string, CallState> args,
+		int first, bool requireMessage = false)
+		=> Enumerable.Range(first, Math.Max(0, args.Count - first))
+			.Select(index => (index, found: args.TryGetValue(index.ToString(), out var value), value))
+			.Where(arg => arg.found && (!requireMessage || arg.value!.Message != null))
+			.ToDictionary(arg => (arg.index - 1).ToString(), arg => arg.value!);
+
 	public static IEnumerable<DbRefOrName> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value) is DBRef dbref

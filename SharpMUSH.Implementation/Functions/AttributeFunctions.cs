@@ -1201,30 +1201,29 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
-			async foundObj =>
-			{
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, victim,
-					LocateFlags.All,
-					async foundVictim =>
-					{
-						if (attr is null)
-						{
-							return await PermissionService.CanSee(foundObj, foundVictim);
-						}
+			async foundObj => await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+				victim, LocateFlags.All,
+				async foundVictim => await IsVisibleToAsync(foundObj, foundVictim, attr)));
+	}
 
-						// fun_visible (fundb.c:981): atr_get, then Can_Read_Attr for the looker.
-						var realAttr = await AttributeService.GetAttributeAsync(foundObj, foundVictim, attr,
-							IAttributeService.AttributeMode.Read, true);
+	/// <summary>Whether <paramref name="looker"/> can see <paramref name="victim"/>, or its attribute when one is named.</summary>
+	private async ValueTask<CallState> IsVisibleToAsync(AnySharpObject looker, AnySharpObject victim, string? attr)
+	{
+		if (attr is null)
+		{
+			return await PermissionService.CanSee(looker, victim);
+		}
 
-						if (realAttr is not SharpAttribute[] chain)
-						{
-							return false;
-						}
+		// fun_visible (fundb.c:981): atr_get, then Can_Read_Attr for the looker.
+		var realAttr = await AttributeService.GetAttributeAsync(looker, victim, attr,
+			IAttributeService.AttributeMode.Read, true);
 
-						return await PermissionService.CanViewAttribute(foundObj, foundVictim, chain);
-					});
-			}
-		);
+		if (realAttr is not SharpAttribute[] chain)
+		{
+			return false;
+		}
+
+		return await PermissionService.CanViewAttribute(looker, victim, chain);
 	}
 
 	[SharpFunction(Name = "xattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "start", "count", "delimiter"])]

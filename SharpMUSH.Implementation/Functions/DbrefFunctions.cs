@@ -644,118 +644,97 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var namelist = ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
-		var hasErrorCallback = parser.CurrentState.Arguments.Count > 1
-			&& !string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["1"].Message?.ToPlainText());
-
-		AnySharpObject? callbackObject = null;
-		string[]? callbackAttribute = null;
-
-		if (hasErrorCallback)
-		{
-			var callbackSpec = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			var slashIndex = callbackSpec.LastIndexOf('/');
-
-			if (slashIndex > 0)
-			{
-				// Format: object/attribute - Use Span to avoid substring allocations
-				var specSpan = callbackSpec.AsSpan();
-				var objPart = specSpan.Slice(0, slashIndex).ToString();
-				var attrPart = specSpan.Slice(slashIndex + 1).ToString();
-
-				var objResult = await LocateService.Locate(parser, executor, executor, objPart, LocateFlags.All);
-				if (objResult is AnySharpObject callbackFound)
-				{
-					callbackObject = callbackFound;
-					callbackAttribute = attrPart.Split('`');
-				}
-			}
-			else
-			{
-				// Format: just attribute (use executor as object)
-				callbackObject = executor;
-				callbackAttribute = callbackSpec.Split('`');
-			}
-		}
+		var callback = await NameListCallbackAsync(parser, executor);
 
 		var resultList = new List<string>();
 		var hadErrors = false;
 
 		foreach (var item in namelist)
 		{
-			DBRef? resolvedDbref = null;
-			int errorCode = 0; // 0 = success, -1 = not found, -2 = ambiguous
-			string originalName = string.Empty;
-
-			switch (item)
+			switch (await NameListMatchAsync(parser, executor, item))
 			{
-				case DBRef dbref:
-					var exists = await Mediator.Send(new GetObjectNodeQuery(dbref));
-
-					if (!exists.IsNone)
-					{
-						resolvedDbref = dbref;
-					}
-					else
-					{
-						errorCode = -1;
-						originalName = $"#{dbref.Number}";
-					}
+				case DBRef resolved:
+					resultList.Add($"#{resolved.Number}");
 					break;
-				case string name:
-					originalName = name;
-
-					var locateResult = await LocateService.Locate(parser, executor, executor, name, LocateFlags.All);
-
-					if (locateResult is AnySharpObject located)
-					{
-						resolvedDbref = located.Object().DBRef;
-					}
-					else if (locateResult is None)
-					{
-						errorCode = -1;
-					}
-					else if (locateResult is Error<string> error)
-					{
-						if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
-								error.Value.Contains("#-2"))
-						{
-							errorCode = -2;
-						}
-						else
-						{
-							errorCode = -1;
-						}
-					}
-					else
-					{
-						errorCode = -1;
-					}
+				case NameListMiss miss:
+					resultList.Add($"#{miss.Code}");
+					hadErrors |= callback is NameListCallback onMiss
+						&& await NameListCallbackHadErrorsAsync(parser, executor, onMiss, miss);
 					break;
-			}
-
-			if (resolvedDbref.HasValue)
-			{
-				resultList.Add($"#{resolvedDbref.Value.Number}");
-			}
-			else
-			{
-				resultList.Add($"#{errorCode}");
-
-				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
-				{
-					var callbackResult = await AttributeService.EvaluateAttributeFunctionResultAsync(
-						parser, executor, callbackObject, string.Join("`", callbackAttribute),
-						new Dictionary<string, CallState>
-						{
-							["0"] = new(MarkupText.Plain(originalName)),
-							["1"] = new(MarkupText.Plain($"#{errorCode}"))
-						});
-					hadErrors |= callbackResult.HadErrors;
-				}
 			}
 		}
 
 		return new CallState(string.Join(" ", resultList)) { HadErrors = hadErrors };
+	}
+
+	/// <summary>A namelist() entry that matched nothing: its error code (-1 not found, -2 ambiguous) and how it was written.</summary>
+	private sealed record NameListMiss(int Code, string Name);
+
+	/// <summary>The attribute namelist() calls for each entry that matched nothing.</summary>
+	private sealed record NameListCallback(AnySharpObject Object, string Attribute);
+
+	/// <summary>A namelist() entry's dbref, or why it has none.</summary>
+	private union NameListMatch(DBRef, NameListMiss);
+
+	/// <summary>
+	/// namelist()'s second argument: <c>object/attribute</c>, or just an attribute on the executor. An
+	/// object that cannot be found means no callback at all.
+	/// </summary>
+	private async ValueTask<Found<NameListCallback>> NameListCallbackAsync(IMUSHCodeParser parser, AnySharpObject executor)
+	{
+		var arguments = parser.CurrentState.Arguments;
+		if (arguments.Count <= 1 || string.IsNullOrWhiteSpace(arguments["1"].Message?.ToPlainText()))
+		{
+			return new NotFound();
+		}
+
+		var callbackSpec = arguments["1"].Message!.ToPlainText();
+		var slashIndex = callbackSpec.LastIndexOf('/');
+
+		if (slashIndex <= 0)
+		{
+			// Format: just attribute (use executor as object)
+			return new NameListCallback(executor, callbackSpec);
+		}
+
+		// Format: object/attribute - Use Span to avoid substring allocations
+		var specSpan = callbackSpec.AsSpan();
+		var objPart = specSpan.Slice(0, slashIndex).ToString();
+		var attrPart = specSpan.Slice(slashIndex + 1).ToString();
+
+		return await LocateService.Locate(parser, executor, executor, objPart, LocateFlags.All) is AnySharpObject callbackFound
+			? new NameListCallback(callbackFound, attrPart)
+			: new NotFound();
+	}
+
+	private async ValueTask<NameListMatch> NameListMatchAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		DbRefOrName item)
+		=> item switch
+		{
+			DBRef dbref => (await Mediator.Send(new GetObjectNodeQuery(dbref))).IsNone
+				? new NameListMiss(-1, $"#{dbref.Number}")
+				: dbref,
+			string name => await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) switch
+			{
+				AnySharpObject located => located.Object().DBRef,
+				Error<string> error when error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase)
+					|| error.Value.Contains("#-2") => new NameListMiss(-2, name),
+				_ => new NameListMiss(-1, name)
+			}
+		};
+
+	/// <summary>Calls namelist()'s callback with the entry as written (%0) and its error code (%1).</summary>
+	private async ValueTask<bool> NameListCallbackHadErrorsAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		NameListCallback callback, NameListMiss miss)
+	{
+		var callbackResult = await AttributeService.EvaluateAttributeFunctionResultAsync(
+			parser, executor, callback.Object, callback.Attribute,
+			new Dictionary<string, CallState>
+			{
+				["0"] = new(MarkupText.Plain(miss.Name)),
+				["1"] = new(MarkupText.Plain($"#{miss.Code}"))
+			});
+		return callbackResult.HadErrors;
 	}
 
 	[SharpFunction(Name = "nchildren", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1011,62 +990,69 @@ public partial class Functions
 					return ErrorMessages.Returns.PermissionDenied;
 				}
 
-				if (hasArg1)
-				{
-
-					var arg1Str = arg1Value!.Message!.ToPlainText();
-
-					if (arg1Str.Equals("none", StringComparison.OrdinalIgnoreCase))
-					{
-						if (!await PermissionService.Controls(executor, target))
-						{
-							return ErrorMessages.Returns.PermissionDenied;
-						}
-
-						await Mediator.Send(new UnsetObjectZoneCommand(target));
-						return string.Empty;
-					}
-
-					var maybeZone = await LocateService.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
-					if (maybeZone is not AnySharpObject zone)
-					{
-						return ErrorMessages.Returns.InvalidZone;
-					}
-
-					// Check permissions - must control both object and zone, or pass ChZone lock
-					if (!await PermissionService.Controls(executor, target))
-					{
-						return ErrorMessages.Returns.PermissionDenied;
-					}
-
-					bool canZone = await PermissionService.Controls(executor, zone);
-					if (!canZone && !await LockService.Evaluate(LockType.ChZone, zone, executor))
-					{
-						return ErrorMessages.Returns.PermissionDenied;
-					}
-
-					if (await RelationshipCycles.SafeToAddZoneAsync(target, zone) is not RelationshipSafety.Safe)
-					{
-						return ErrorMessages.Returns.ZoneLoop;
-					}
-
-					// do_chzone's reset with no /preserve, which zone() cannot ask for (src/set.c:467-481).
-					if (!target.IsPlayer)
-					{
-						await PrivilegeHelpers.StripPrivilegeAsync(Mediator, FlagAndPowerService, executor, target);
-					}
-
-					await Mediator.Send(new SetObjectZoneCommand(target, zone));
-					return string.Empty;
-				}
-
-				// query fresh from database
-				var freshTarget = await Mediator.Send(new GetObjectNodeQuery(target.Object().DBRef));
-				return freshTarget is AnySharpObject fresh
-							&& await fresh.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zoneObj
-					? zoneObj.Object().DBRef.ToString()
-					: ErrorMessages.Returns.NoZoneSet;
+				return hasArg1
+					? await ChangeZoneAsync(parser, executor, target, arg1Value!.Message!.ToPlainText())
+					: await CurrentZoneAsync(target);
 			});
+	}
+
+	/// <summary>zone() with one argument: the object's zone, queried fresh from the database.</summary>
+	private async ValueTask<CallState> CurrentZoneAsync(AnySharpObject target)
+	{
+		// query fresh from database
+		var freshTarget = await Mediator.Send(new GetObjectNodeQuery(target.Object().DBRef));
+		return freshTarget is AnySharpObject fresh
+					&& await fresh.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zoneObj
+			? zoneObj.Object().DBRef.ToString()
+			: ErrorMessages.Returns.NoZoneSet;
+	}
+
+	/// <summary>zone() with two arguments: <c>none</c> clears the object's zone, anything else is the new zone.</summary>
+	private async ValueTask<CallState> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject target, string newZone)
+	{
+		if (newZone.Equals("none", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!await PermissionService.Controls(executor, target))
+			{
+				return ErrorMessages.Returns.PermissionDenied;
+			}
+
+			await Mediator.Send(new UnsetObjectZoneCommand(target));
+			return string.Empty;
+		}
+
+		var maybeZone = await LocateService.Locate(parser, executor, executor, newZone, LocateFlags.All);
+		if (maybeZone is not AnySharpObject zone)
+		{
+			return ErrorMessages.Returns.InvalidZone;
+		}
+
+		// Check permissions - must control both object and zone, or pass ChZone lock
+		if (!await PermissionService.Controls(executor, target))
+		{
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		bool canZone = await PermissionService.Controls(executor, zone);
+		if (!canZone && !await LockService.Evaluate(LockType.ChZone, zone, executor))
+		{
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		if (await RelationshipCycles.SafeToAddZoneAsync(target, zone) is not RelationshipSafety.Safe)
+		{
+			return ErrorMessages.Returns.ZoneLoop;
+		}
+
+		// do_chzone's reset with no /preserve, which zone() cannot ask for (src/set.c:467-481).
+		if (!target.IsPlayer)
+		{
+			await PrivilegeHelpers.StripPrivilegeAsync(Mediator, FlagAndPowerService, executor, target);
+		}
+
+		await Mediator.Send(new SetObjectZoneCommand(target, zone));
+		return string.Empty;
 	}
 
 	[SharpFunction(Name = "xthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

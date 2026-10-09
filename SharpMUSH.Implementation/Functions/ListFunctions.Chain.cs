@@ -34,14 +34,7 @@ public partial class Functions
 		// Fixed side-arguments: chain(<list>, <base>, <arg0>, <arg1>, ...) exposes <arg0> as %1, <arg1> as
 		// %2, ... to EVERY attribute in the chain, carried down each step. PennMUSH has no chain(), so the
 		// count is bounded by nothing but the caller.
-		var sideArgs = new Dictionary<string, CallState>();
-		for (var i = 2; i < parser.CurrentState.Arguments.Count; i++)
-		{
-			if (parser.CurrentState.Arguments.TryGetValue(i.ToString(), out var sideArg))
-			{
-				sideArgs[(i - 1).ToString()] = sideArg;
-			}
-		}
+		var sideArgs = ArgHelpers.ShiftedArguments(parser.CurrentState.Arguments, 2);
 
 		// Push an iteration context so a step can short-circuit the pipeline with ibreak(), exactly as it
 		// would inside iter()/map(). itext(0)/inum(0) inside a step then see the running value and step.

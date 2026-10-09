@@ -1305,14 +1305,7 @@ public partial class Commands
 		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
 		// RSArgs that become %0, %1, %2, … inside the triggered attribute.
 		// These go into EnvironmentRegisters (the positional %0-%9 args), NOT the q-register stack.
-		var envRegisters = new Dictionary<string, CallState>();
-		for (var i = 1; i < args.Count; i++)
-		{
-			if (args.TryGetValue(i.ToString(), out var argValue) && argValue.Message != null)
-			{
-				envRegisters[(i - 1).ToString()] = argValue;
-			}
-		}
+		var envRegisters = ArgHelpers.ShiftedArguments(args, 1, requireMessage: true);
 
 		// Q-registers from the calling context are copied into the triggered attribute unless
 		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger

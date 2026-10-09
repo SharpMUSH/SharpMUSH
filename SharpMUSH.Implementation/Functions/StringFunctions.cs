@@ -92,17 +92,59 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var speaker = args["0"].Message!; // & for direct name!
 		var speakString = args["1"].Message!;
-		var sayString = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "says, ");
 		var transformObjAttr = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "");
 		var isNullObjAttr = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, "");
-		var open = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\"");
-		var close = ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\"");
 
-		var plainSpeak = speakString.ToPlainText();
-		var messageType = MessageHelpers.DetermineMessageType(plainSpeak);
+		var speech = new SpeechInput(
+			SpeakerArgument: args["0"],
+			Text: StripSpeechPrefix(speakString),
+			Type: MessageHelpers.DetermineMessageType(speakString.ToPlainText()),
+			SayString: ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "says, "),
+			Open: ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\""),
+			Close: ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\""));
 
-		// Strip the prefix (including quotes)
-		speakString = plainSpeak switch
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		return await SpeakerAsync(parser, executor, speaker) switch
+		{
+			CallState refusal => refusal,
+			SpeechSpeaker resolved => await SpeechTransformAsync(parser, executor, transformObjAttr, isNullObjAttr) switch
+			{
+				CallState refusal => refusal,
+				None => new CallState(SpeechClosed(speech, MarkupText.Concat(SpeechPrefix(speech, resolved.Name), speech.Text))),
+				SpeechTransform transform => await TransformedSpeechAsync(parser, executor, speech, resolved, transform)
+			}
+		};
+	}
+
+	/// <summary>The arguments speak() formats, with the speech's leading token (or quote) taken off.</summary>
+	private sealed record SpeechInput(
+		CallState SpeakerArgument,
+		MString Text,
+		INotifyService.NotificationType Type,
+		MString SayString,
+		MString Open,
+		MString Close);
+
+	/// <summary>Who speak() speaks as: the object, and the name its speech carries.</summary>
+	private sealed record SpeechSpeaker(AnySharpObject Object, MString Name);
+
+	/// <summary>speak()'s transformation attribute, and the optional attribute that skips a fragment.</summary>
+	private sealed record SpeechTransform(
+		AnySharpObject Object,
+		string Attribute,
+		AnySharpObject? NullObject = null,
+		string? NullAttribute = null);
+
+	/// <summary>The speaker, or the error speak() returns because it could not be found.</summary>
+	private union SpeakerOrRefusal(SpeechSpeaker, CallState);
+
+	/// <summary>The transformation to apply, none at all, or the error speak() returns instead.</summary>
+	private union SpeechTransformOrRefusal(SpeechTransform, None, CallState);
+
+	/// <summary>Strip the prefix (including quotes)</summary>
+	private static MString StripSpeechPrefix(MString speakString)
+		=> speakString.ToPlainText() switch
 		{
 			[':', .. _]
 				or [';', .. _]
@@ -111,190 +153,153 @@ public partial class Functions
 			_ => speakString
 		};
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var speakerIsLiteral = speaker.ToPlainText().StartsWith('&');
+	/// <summary>
+	/// A <c>&amp;name</c> speaker is that name, spoken by the executor. Any other speaker is located;
+	/// one the executor does not control leaves the executor speaking under its own name.
+	/// </summary>
+	private async ValueTask<SpeakerOrRefusal> SpeakerAsync(IMUSHCodeParser parser, AnySharpObject executor, MString speaker)
+	{
+		if (speaker.ToPlainText().StartsWith('&'))
+		{
+			return new SpeechSpeaker(executor, speaker.Substring(1, speaker.Length - 1));
+		}
+
+		var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+			speaker.ToPlainText(), LocateFlags.All);
+
+		switch (maybeFound)
+		{
+			case Error<CallState> error:
+				return error.Value;
+			case AnySharpObject found when await PermissionService.Controls(executor, found):
+				return new SpeechSpeaker(found, MarkupText.Plain(found.Object().Name));
+			default:
+				return new SpeechSpeaker(executor, MarkupText.Plain(executor.Object().Name));
+		}
+	}
+
+	/// <summary>
+	/// If not Emit, use Speakername. Build the prefix using ConcatMany to avoid O(N²) sequential concat.
+	/// </summary>
+	private static MString SpeechPrefix(SpeechInput speech, MString speakerName)
+		=> speech.Type switch
+		{
+			INotifyService.NotificationType.Emit => MarkupText.Empty,
+			INotifyService.NotificationType.Pose => MarkupText.Concat([speakerName, MarkupText.Space]),
+			INotifyService.NotificationType.Say =>
+				MarkupText.Concat([speakerName, MarkupText.Space, speech.SayString, speech.Open]),
+			_ => MarkupText.Concat([speakerName])
+		};
+
+	/// <summary>Said speech ends with the close quote.</summary>
+	private static MString SpeechClosed(SpeechInput speech, MString composed)
+		=> speech.Type is INotifyService.NotificationType.Say ? MarkupText.Concat(composed, speech.Close) : composed;
+
+	/*
+	  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
+	  the speech portions of <string> are passed through the transformation function.
+
+		Speech is delimited by double-quotes (i.e., "text"), or by the specified <open> and <close> strings.
+		For instance, if you wanted <<text>> to denote text to be transformed,
+		you would specify <open> as << and close as >> in the function call.
+		Only the portions of the string between those delimiters are transformed. If <close> is not specified,
+		it defaults to <open>.
+
+		The transformation function receives the speech text as %0, the dbref of <speaker> as %1,
+		and the speech fragment number as %2.
+		For non-say input strings (i.e., for an original <string> beginning with the :, ;, or | tokens),
+		fragments are numbered starting with 1; otherwise,
+		fragments are numbered starting with 0.
+		(A fragment is a chunk of speech text within the overall original input string.)
+	 */
+	private async ValueTask<SpeechTransformOrRefusal> SpeechTransformAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, MString transformObjAttr, MString isNullObjAttr)
+	{
+		if (string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText()))
+		{
+			return new None();
+		}
+
+		if (HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText()) is not { } splitTransform)
+		{
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+				splitTransform.Object, LocateFlags.All) switch
+		{
+			Error<CallState> error => error.Value,
+			AnySharpObject found => await WithSpeechNullCheckAsync(parser, executor,
+				new SpeechTransform(found, splitTransform.Attribute), isNullObjAttr)
+		};
+	}
+
+	private async ValueTask<SpeechTransformOrRefusal> WithSpeechNullCheckAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, SpeechTransform transform, MString isNullObjAttr)
+	{
+		if (string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText()))
+		{
+			return transform;
+		}
+
+		if (HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText()) is not { } splitNull)
+		{
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+				splitNull.Object, LocateFlags.All) switch
+		{
+			Error<CallState> error => error.Value,
+			AnySharpObject found => transform with { NullObject = found, NullAttribute = splitNull.Attribute }
+		};
+	}
+
+	/// <summary>
+	/// Runs the transformation over each delimited fragment. As before, a transformed string contributes
+	/// only its evaluations' errors to the answer, not its text.
+	/// </summary>
+	private async ValueTask<CallState> TransformedSpeechAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		SpeechInput speech, SpeechSpeaker speaker, SpeechTransform transform)
+	{
 		var hadErrors = false;
-		var hasTransform = !string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText());
-		var hasNull = !string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText());
-		var speakerObject = executor;
-		MString speakerName;
+		var speakString = speech.Text;
+		var safeOpen = Regex.Escape(speech.Open.ToPlainText());
+		var safeClose = Regex.Escape(speech.Close.ToPlainText());
+		var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
+			static key => SoftcodeRegex.Create($"{key.Open}(?<Content>[^{key.Close}]){key.Close}", RegexOptions.None)
+		);
 
-		if (!speakerIsLiteral)
+		var markupContents = pattern.Matches(speakString.ToPlainText())
+			.Select(x => x.Groups["Content"]);
+
+		foreach (var markupContent in markupContents)
 		{
-			var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
-				speaker.ToPlainText(), LocateFlags.All);
-			switch (maybeFound)
+			var content = speakString.Substring(markupContent.Index, markupContent.Length);
+			Dictionary<string, CallState> FragmentArgs() => new()
 			{
-				case Error<CallState> error:
-					return error.Value;
-				case AnySharpObject found when await PermissionService.Controls(executor, found):
-					speakerObject = found;
-					break;
+				{ "0", speech.SpeakerArgument },
+				{ "1", new CallState(MarkupText.Plain(speaker.Object.Object().DBRef.ToString())) },
+				{ "2", new CallState(content) }
+			};
+
+			if (transform is { NullObject: { } nullObject, NullAttribute: { } nullAttribute })
+			{
+				var nullEvaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
+					parser, executor, nullObject, nullAttribute, FragmentArgs());
+
+				hadErrors |= nullEvaluated.HadErrors;
+				if (nullEvaluated.Message.Truthy(parser)) continue;
 			}
 
-			speakerName = MarkupText.Plain(speakerObject.Object().Name);
-		}
-		else
-		{
-			speakerName = speaker.Substring(1, speaker.Length - 1);
-		}
+			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
+				parser, executor, transform.Object, transform.Attribute, FragmentArgs());
 
-		// If not Emit, use Speakername.
-		// Build the prefix using ConcatMany to avoid O(N²) sequential concat.
-		// List is allocated lazily to avoid an allocation for the Emit case (no prefix).
-		List<MString>? parts = null;
-
-		if (messageType is not INotifyService.NotificationType.Emit)
-		{
-			parts ??= new List<MString>(4);
-			parts.Add(speakerName);
+			hadErrors |= evaluated.HadErrors;
+			speakString = speakString.Replace(markupContent.Index, markupContent.Length, evaluated.Message ?? MarkupText.Empty);
 		}
 
-		if (messageType is INotifyService.NotificationType.Pose or INotifyService.NotificationType.Say)
-		{
-			parts ??= new List<MString>(4);
-			parts.Add(MarkupText.Space);
-		}
-
-		if (messageType is INotifyService.NotificationType.Say)
-		{
-			parts ??= new List<MString>(4);
-			parts.Add(sayString);
-			parts.Add(open);
-		}
-
-		var concat = parts is { Count: > 0 } ? MarkupText.Concat(parts) : MarkupText.Empty;
-
-		/*
-		  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
-		  the speech portions of <string> are passed through the transformation function.
-
-			Speech is delimited by double-quotes (i.e., "text"), or by the specified <open> and <close> strings.
-			For instance, if you wanted <<text>> to denote text to be transformed,
-			you would specify <open> as << and close as >> in the function call.
-			Only the portions of the string between those delimiters are transformed. If <close> is not specified,
-			it defaults to <open>.
-
-			The transformation function receives the speech text as %0, the dbref of <speaker> as %1,
-			and the speech fragment number as %2.
-			For non-say input strings (i.e., for an original <string> beginning with the :, ;, or | tokens),
-			fragments are numbered starting with 1; otherwise,
-			fragments are numbered starting with 0.
-			(A fragment is a chunk of speech text within the overall original input string.)
-		 */
-
-		string? actualTransformAttribute = null;
-		string? actualNullAttribute = null;
-		AnySharpObject? actualTransformationObject = null;
-		AnySharpObject? actualNullObject = null;
-
-		if (hasTransform)
-		{
-			if (HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText()) is not { } splitTransform)
-			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
-			}
-
-			var transformationObject = await
-				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor,
-					executor,
-					splitTransform.Object,
-					LocateFlags.All);
-
-			switch (transformationObject)
-			{
-				case Error<CallState> error:
-					return error.Value;
-				case AnySharpObject found:
-					actualTransformationObject = found;
-					break;
-			}
-
-			actualTransformAttribute = splitTransform.Attribute;
-		}
-
-		if (hasTransform && hasNull)
-		{
-			if (HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText()) is not { } splitNull)
-			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
-			}
-
-			actualNullAttribute = splitNull.Attribute;
-
-			var nullObject = await
-				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor,
-					executor,
-					splitNull.Object,
-					LocateFlags.All);
-
-			switch (nullObject)
-			{
-				case Error<CallState> error:
-					return error.Value;
-				case AnySharpObject found:
-					actualNullObject = found;
-					break;
-			}
-		}
-
-		if (hasTransform)
-		{
-			var safeOpen = Regex.Escape(open.ToPlainText());
-			var safeClose = Regex.Escape(close.ToPlainText());
-			var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
-				static key => SoftcodeRegex.Create($"{key.Open}(?<Content>[^{key.Close}]){key.Close}", RegexOptions.None)
-			);
-
-			var contents = pattern.Matches(speakString.ToPlainText());
-			var markupContents = contents
-				.Select(x => x.Groups["Content"]);
-
-			foreach (var markupContent in markupContents)
-			{
-				var content = speakString.Substring(markupContent.Index, markupContent.Length);
-
-				if (actualNullAttribute is not null)
-				{
-					var nullEvaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-						parser, executor, actualNullObject!, actualNullAttribute,
-						new Dictionary<string, CallState>
-						{
-							{ "0", args["0"] },
-							{ "1", new CallState(MarkupText.Plain(speakerObject.Object().DBRef.ToString())) },
-							{ "2", new CallState(content) }
-						});
-
-					hadErrors |= nullEvaluated.HadErrors;
-					if (nullEvaluated.Message.Truthy(parser)) continue;
-				}
-
-				var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
-					new Dictionary<string, CallState>
-					{
-						{ "0", args["0"] },
-						{ "1", new CallState(MarkupText.Plain(speakerObject.Object().DBRef.ToString())) },
-						{ "2", new CallState(content) }
-					});
-
-				hadErrors |= evaluated.HadErrors;
-				speakString = speakString.Replace(markupContent.Index, markupContent.Length, evaluated.Message ?? MarkupText.Empty);
-			}
-		}
-		else
-		{
-			concat = MarkupText.Concat(concat, speakString);
-		}
-
-		if (messageType is INotifyService.NotificationType.Say)
-		{
-			concat = MarkupText.Concat(concat, close);
-		}
-
-		return new CallState(concat) { HadErrors = hadErrors };
+		return new CallState(SpeechClosed(speech, SpeechPrefix(speech, speaker.Name))) { HadErrors = hadErrors };
 	}
 
 	/// <summary>

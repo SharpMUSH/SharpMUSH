@@ -1165,38 +1165,17 @@ public partial class Functions
 		var brightness = (r + g + b) / 3;
 		var highlight = brightness > 128 ? "h" : "";
 
-		if (r > g && r > b)
+		return (r, g, b) switch
 		{
-			return highlight + "r";
-		}
-		else if (g > r && g > b)
-		{
-			return highlight + "g";
-		}
-		else if (b > r && b > g)
-		{
-			return highlight + "b";
-		}
-		else if (r > b && g > b)
-		{
-			return highlight + "y";
-		}
-		else if (r > g && b > g)
-		{
-			return highlight + "m";
-		}
-		else if (g > r && b > r)
-		{
-			return highlight + "c";
-		}
-		else if (brightness < 64)
-		{
-			return "x";
-		}
-		else
-		{
-			return highlight + "w";
-		}
+			_ when r > g && r > b => highlight + "r",
+			_ when g > r && g > b => highlight + "g",
+			_ when b > r && b > g => highlight + "b",
+			_ when r > b && g > b => highlight + "y",
+			_ when r > g && b > g => highlight + "m",
+			_ when g > r && b > r => highlight + "c",
+			_ when brightness < 64 => "x",
+			_ => highlight + "w"
+		};
 	}
 
 	private List<string> ConvertColorToNames(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)

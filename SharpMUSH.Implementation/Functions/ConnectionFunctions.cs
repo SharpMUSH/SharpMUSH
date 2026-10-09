@@ -15,6 +15,7 @@ using SharpMUSH.Library.Utilities;
 using TerminalFeatures = MarkupString.Ansi.TerminalFeatures;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -88,8 +89,9 @@ public partial class Functions
 				}
 			}
 		}
-		catch
+		catch (Exception ex) when (IsGlobCutShort(ex))
 		{
+			// The scan ends with what it gathered before the pattern gave out.
 		}
 
 		return new CallState(isCount ? uniqueAddresses.Count.ToString() : string.Join(osep, results));
@@ -190,78 +192,14 @@ public partial class Functions
 
 		try
 		{
-			await foreach (var log in logs)
+			await foreach (var log in logs.Where(log => ConnectionLogMatches(log, filter, specs)))
 			{
-				var matches = true;
-
-				switch (filter)
-				{
-					case "logged in" when log.Properties.GetValueOrDefault("NewState") != "LoggedIn":
-					case "not logged in" when log.Properties.GetValueOrDefault("NewState") == "LoggedIn":
-						matches = false;
-						break;
-					default:
-						{
-							if (filter.StartsWith("#") && log.Properties.GetValueOrDefault("DBRef") != filter)
-							{
-								matches = false;
-							}
-
-							break;
-						}
-				}
-
-				foreach (var (type, value) in specs.Where(s => s.type != "count"))
-				{
-					switch (type)
-					{
-						case "after" when ArgHelpers.TryStrictInteger(value, out int afterTime):
-							{
-								if (log.Timestamp <= DateTimeOffset.FromUnixTimeSeconds(afterTime).DateTime)
-								{
-									matches = false;
-								}
-
-								break;
-							}
-						case "before" when ArgHelpers.TryStrictInteger(value, out int beforeTime):
-							{
-								if (log.Timestamp >= DateTimeOffset.FromUnixTimeSeconds(beforeTime).DateTime)
-								{
-									matches = false;
-								}
-
-								break;
-							}
-						case "ip":
-							{
-								if (!MushText.IsWildcardMatch(MarkupText.Plain(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")), value))
-								{
-									matches = false;
-								}
-
-								break;
-							}
-						case "hostname" when
-							!MushText.IsWildcardMatch(MarkupText.Plain(log.Properties.GetValueOrDefault("HostName", "")), value):
-							matches = false;
-							break;
-					}
-				}
-
-				switch (matches)
-				{
-					case true when !isCount:
-						results.Add($"{log.Properties.GetValueOrDefault("DBRef", "null")} {log.Key}");
-						break;
-					case true:
-						results.Add(log.Key);
-						break;
-				}
+				results.Add(isCount ? log.Key : $"{log.Properties.GetValueOrDefault("DBRef", "null")} {log.Key}");
 			}
 		}
-		catch
+		catch (Exception ex) when (IsGlobCutShort(ex))
 		{
+			// The scan ends with what it gathered before the pattern gave out.
 		}
 
 		return new CallState(isCount ? results.Count.ToString() : string.Join(osep, results));
@@ -284,39 +222,62 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.InvalidConnectionId);
 		}
 
-		var logs = Mediator.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
+		// GetConnectionLogsQuery's handler already ends the stream quietly when the provider faults.
+		var record = await Mediator.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000))
+			.FirstOrDefaultAsync(log => log.Key == connectionId);
 
-		try
-		{
-			await foreach (var log in logs)
-			{
-				if (log.Key != connectionId)
-				{
-					continue;
-				}
-
-				var fields = new List<string>
-				{
-					log.Properties.GetValueOrDefault("DBRef", "#-1"),
-					"Unknown",
-					log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN"),
-					log.Properties.GetValueOrDefault("HostName", "UNKNOWN"),
-					log.Timestamp.ToUnixTimeSeconds().ToString(),
-					log.Properties.GetValueOrDefault("DisconnectTime", "0"),
-					log.Properties.GetValueOrDefault("DisconnectReason", ""),
-					log.Properties.GetValueOrDefault("SSL", "0"),
-					log.Properties.GetValueOrDefault("WebSocket", "0")
-				};
-
-				return new CallState(string.Join(osep, fields));
-			}
-		}
-		catch
-		{
-		}
-
-		return new CallState(ErrorMessages.Returns.ConnectionNotFound);
+		return record is null
+			? new CallState(ErrorMessages.Returns.ConnectionNotFound)
+			: new CallState(string.Join(osep, ConnectionRecordFields(record)));
 	}
+
+	private static IEnumerable<string> ConnectionRecordFields(LogEventEntity log) =>
+	[
+		log.Properties.GetValueOrDefault("DBRef", "#-1"),
+		"Unknown",
+		log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN"),
+		log.Properties.GetValueOrDefault("HostName", "UNKNOWN"),
+		log.Timestamp.ToUnixTimeSeconds().ToString(),
+		log.Properties.GetValueOrDefault("DisconnectTime", "0"),
+		log.Properties.GetValueOrDefault("DisconnectReason", ""),
+		log.Properties.GetValueOrDefault("SSL", "0"),
+		log.Properties.GetValueOrDefault("WebSocket", "0")
+	];
+
+	/// <summary>
+	/// Whether a connection-log scan stopped because a glob gave out: it ran past the regex match
+	/// timeout, or the evaluation ran out of its execution budget while one was being built.
+	/// </summary>
+	private static bool IsGlobCutShort(Exception ex)
+		=> ex is RegexMatchTimeoutException or OperationCanceledException;
+
+	/// <summary>Whether a connection-log entry passes connlog()'s filter and every one of its specs.</summary>
+	private static bool ConnectionLogMatches(LogEventEntity log, string filter, List<(string type, string value)> specs)
+		// & rather than All(): every spec is tested, as a glob that times out does so whatever came before it.
+		=> specs.Where(spec => spec.type != "count")
+			.Aggregate(ConnectionLogFilterMatches(log, filter), (matches, spec) => ConnectionLogSpecMatches(log, spec) & matches);
+
+	private static bool ConnectionLogFilterMatches(LogEventEntity log, string filter)
+		=> filter switch
+		{
+			"logged in" => log.Properties.GetValueOrDefault("NewState") == "LoggedIn",
+			"not logged in" => log.Properties.GetValueOrDefault("NewState") != "LoggedIn",
+			_ => !filter.StartsWith("#") || log.Properties.GetValueOrDefault("DBRef") == filter
+		};
+
+	private static bool ConnectionLogSpecMatches(LogEventEntity log, (string type, string value) spec)
+		=> spec switch
+		{
+			("after", var value) when ArgHelpers.TryStrictInteger(value, out int afterTime)
+				=> log.Timestamp > DateTimeOffset.FromUnixTimeSeconds(afterTime).DateTime,
+			("before", var value) when ArgHelpers.TryStrictInteger(value, out int beforeTime)
+				=> log.Timestamp < DateTimeOffset.FromUnixTimeSeconds(beforeTime).DateTime,
+			("ip", var value)
+				=> MushText.IsWildcardMatch(MarkupText.Plain(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")), value),
+			("hostname", var value)
+				=> MushText.IsWildcardMatch(MarkupText.Plain(log.Properties.GetValueOrDefault("HostName", "")), value),
+			_ => true
+		};
 
 	[SharpFunction(Name = "doing", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Doing(IMUSHCodeParser parser, SharpFunctionAttribute _2)

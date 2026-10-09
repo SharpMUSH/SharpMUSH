@@ -725,24 +725,19 @@ public partial class Functions
 	/// </summary>
 	private static List<MString> MungeRearrange(MString[] list1, MString[] list2, MString[] transformedList1)
 	{
-		// Create mapping from original list1 to list2
+		// Create mapping from original list1 to list2; a repeated list1 element maps to its last partner
 		var mapping = new Dictionary<string, MString>();
-		for (var i = 0; i < Math.Min(list1.Length, list2.Length); i++)
+		foreach (var (original, partner) in list1.Zip(list2))
 		{
-			mapping[list1[i].ToPlainText()] = list2[i];
+			mapping[original.ToPlainText()] = partner;
 		}
 
 		// Rearrange list2 based on transformed list1
-		var result = new List<MString>();
-		foreach (var item in transformedList1)
-		{
-			if (mapping.TryGetValue(item.ToPlainText(), out var mappedValue))
-			{
-				result.Add(mappedValue);
-			}
-		}
-
-		return result;
+		return transformedList1
+			.Select(item => item.ToPlainText())
+			.Where(mapping.ContainsKey)
+			.Select(key => mapping[key])
+			.ToList();
 	}
 
 	/// <summary>One entry of a namegrab() list: the dbref as the caller spelled it, and the object's name.</summary>
