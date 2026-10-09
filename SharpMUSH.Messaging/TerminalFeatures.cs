@@ -22,12 +22,16 @@ public sealed record TerminalProbeResult(bool? KittyGraphics, bool Sixel, string
 /// <param name="Graphics">A <c>SOCKSET graphics</c> setting (<see cref="TerminalGraphics"/>), or null for off.</param>
 /// <param name="Animation">Whether <c>SOCKSET animation</c> is on.</param>
 /// <param name="Terminal">The terminal the player named with <c>SOCKSET terminal</c> (a <see cref="TerminalProfile.Id"/>), or null.</param>
+/// <param name="ScreenReader">
+/// A <c>SCREENREADER</c> (or <c>SOCKSET screenreader</c>) pin, or null for whatever the client said through MTTS.
+/// </param>
 public sealed record TerminalPins(
 	bool? Hyperlinks = null,
 	bool? CommandLinks = null,
 	string? Graphics = null,
 	bool Animation = false,
-	string? Terminal = null)
+	string? Terminal = null,
+	bool? ScreenReader = null)
 {
 	/// <summary>Nothing set: links worked out from the terminal, no pictures.</summary>
 	public static TerminalPins None { get; } = new();
@@ -41,7 +45,8 @@ public sealed record TerminalPins(
 			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.CommandLinksKey),
 			metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey),
 			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.AnimationKey) == true,
-			metadata.GetValueOrDefault(TerminalFeatureReader.TerminalKey));
+			metadata.GetValueOrDefault(TerminalFeatureReader.TerminalKey),
+			TerminalFeatureReader.PinOf(metadata, TerminalCapabilityReader.ScreenReaderKey));
 	}
 }
 

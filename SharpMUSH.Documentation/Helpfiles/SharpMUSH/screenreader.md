@@ -42,15 +42,22 @@ Builders and staff: see [screenreader support] for making a game read well.
 
 ## In a MU* client
 
-Your client tells the game it is a screen reader through MTTS, the standard way MU\* clients describe themselves. Look in your client's accessibility settings for an option to tell games you use a screen reader, turn it on, and connect again.
+Your client can tell the game it is a screen reader through MTTS, the standard way MU\* clients describe themselves. Look in your client's accessibility settings for an option to tell games you use a screen reader, turn it on, and connect again.
+
+If your client has no such option, tell the game yourself, at the connect screen or after you connect:
+
+```sharp
+> SCREENREADER
+Screen reader set to 'on'
+```
+
+It lasts until you disconnect, so put it in your client's list of commands to send on connect. `SCREENREADER off` turns it off, even when your client said it is a screen reader, and `SCREENREADER auto` goes back to what your client said. `SOCKSET screenreader=on` is the same setting.
 
 With it on, the game sends your connection plain text, with the layout in reading order. Command links are left out too. To have them back, if your client can follow them:
 
 ```sharp
 > SOCKSET commandlinks=on
 ```
-
-If your client has no such option, `SOCKSET colorstyle=plain` still turns the colour codes off (see [colorstyle]), but boxes and tables are drawn as they are for everyone else.
 
 ## In the web portal
 

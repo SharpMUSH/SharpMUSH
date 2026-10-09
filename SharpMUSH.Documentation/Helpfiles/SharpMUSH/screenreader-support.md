@@ -89,7 +89,7 @@ A [GAUGE()] writes its figures after the bar, so a reader hears the number. Give
 
 ## Checking for a screen reader
 
-[TERMINFO()] lists `screenreader` for a connection that a screen reader reads, whether its MU\* client said so through MTTS or its player turned on Screen reader mode in the web portal. Anyone's softcode may see it, as it can see `pueblo`. Use it for what the functions above cannot cover, such as a map:
+[TERMINFO()] lists `screenreader` for a connection that a screen reader reads, whether its MU\* client said so through MTTS, its player typed `SCREENREADER`, or its player turned on Screen reader mode in the web portal. Anyone's softcode may see it, as it can see `pueblo`. Use it for what the functions above cannot cover, such as a map:
 
 ```sharp
 > &MAP here=%b%b%b%b%bPier%r%b%b%b%b%b%b|%rGate --- You

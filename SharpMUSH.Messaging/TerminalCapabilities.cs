@@ -117,15 +117,25 @@ public static class TerminalCapabilityReader
 	public const string ColorStyleKey = "COLORSTYLE";
 
 	/// <summary>
-	/// What a connection's recorded terminal types claim. A connection that reported none — never
-	/// asked, or refused — is <see cref="TerminalCapabilities.Unknown"/>.
+	/// The connection metadata key holding a <c>SCREENREADER</c> pin: <c>1</c> or <c>0</c>, absent for
+	/// whatever the client said through MTTS. For a client with no MTTS option to say it.
+	/// </summary>
+	public const string ScreenReaderKey = "SCREENREADER";
+
+	/// <summary>
+	/// What a connection's recorded terminal types claim, with a <c>SCREENREADER</c> pin in place of what
+	/// they say about a screen reader. A connection that reported none — never asked, or refused — is
+	/// <see cref="TerminalCapabilities.Unknown"/>.
 	/// </summary>
 	public static TerminalCapabilities Read(IReadOnlyDictionary<string, string> metadata)
 	{
 		ArgumentNullException.ThrowIfNull(metadata);
 
-		return Read(metadata.GetValueOrDefault(TerminalTypesKey, "")
+		var reported = Read(metadata.GetValueOrDefault(TerminalTypesKey, "")
 			.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+		return TerminalFeatureReader.PinOf(metadata, ScreenReaderKey) is { } pinned
+			? reported with { ScreenReader = pinned }
+			: reported;
 	}
 
 	/// <summary>

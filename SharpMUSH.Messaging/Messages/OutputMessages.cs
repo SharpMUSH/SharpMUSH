@@ -116,8 +116,8 @@ public record UpdateColorStyleMessage(long Handle, string? Style) : IHandleMessa
 public record UpdateThemeMessage(long Handle, string? Theme) : IHandleMessage;
 
 /// <summary>
-/// Carries the <c>SOCKSET hyperlinks</c>, <c>commandlinks</c>, <c>graphics</c>, <c>animation</c> and
-/// <c>terminal</c> settings to the socket owner.
+/// Carries the <c>SOCKSET hyperlinks</c>, <c>commandlinks</c>, <c>graphics</c>, <c>animation</c>,
+/// <c>terminal</c> and <c>screenreader</c> settings to the socket owner.
 /// </summary>
 public record UpdateTerminalFeaturesMessage(long Handle, SharpMUSH.Library.Utilities.TerminalPins Pins)
 	: IHandleMessage;
