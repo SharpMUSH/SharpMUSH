@@ -66,9 +66,12 @@ public static class FunctionDispatcher
 		EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 		var attribute = definition.Attribute;
 		var flags = attribute.Flags;
-		var name = attribute.Name.ToUpperInvariant();
-		var restrictedEntry = EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
-			parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message.ToPlainText()), parser.FunctionLibrary);
+		var name = attribute.UpperName;
+		// Only an fn()/restrictedexpr() entry reads its arguments here; every other call leaves the
+		// ordered view to the function that wants it.
+		var restrictedEntry = definition.RestrictedOperation is not null
+			&& EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
+				parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message.ToPlainText()), parser.FunctionLibrary);
 		// #apply receives values after caller evaluation; it cannot establish a raw-input boundary.
 		if (restrictedEntry && !deferredArguments) return new CallState(EvaluationRestrictions.Error);
 		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null || restrictedEntry;
@@ -92,8 +95,9 @@ public static class FunctionDispatcher
 			return new CallState(arityError);
 		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs && !sideEffects)
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);
-		var error = ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser);
-		if (error is not null) return new CallState(error);
+		if ((flags & NumericFlags) != 0
+			&& ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser) is { } error)
+			return new CallState(error);
 
 		var suppressDiagnostics = isolated;
 		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.Deprecated))
@@ -178,11 +182,12 @@ public static class FunctionDispatcher
 	/// The numeric flags' check on already-evaluated arguments. Public so lmath() can hold its
 	/// list to the same rule the scalar function it runs would apply.
 	/// </summary>
+	private const FunctionFlags NumericFlags = FunctionFlags.IntegersOnly | FunctionFlags.PositiveIntegersOnly
+		| FunctionFlags.DecimalsOnly | FunctionFlags.NumbersOnly;
+
 	public static string? ValidateNumericArguments(SharpFunctionAttribute attribute, IEnumerable<CallState> arguments, IMUSHCodeParser parser)
 	{
-		const FunctionFlags numeric = FunctionFlags.IntegersOnly | FunctionFlags.PositiveIntegersOnly
-			| FunctionFlags.DecimalsOnly | FunctionFlags.NumbersOnly;
-		if ((attribute.Flags & numeric) == 0) return null;
+		if ((attribute.Flags & NumericFlags) == 0) return null;
 		var numbers = NumericEvaluation.For(parser);
 
 		foreach (var argument in arguments)

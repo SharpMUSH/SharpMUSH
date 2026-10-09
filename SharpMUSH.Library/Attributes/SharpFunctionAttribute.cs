@@ -9,7 +9,21 @@ namespace SharpMUSH.Library.Attributes;
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 public class SharpFunctionAttribute : Attribute
 {
-	public required string Name { get; set; }
+	public required string Name
+	{
+		get;
+		set
+		{
+			field = value;
+			UpperName = value.ToUpperInvariant();
+		}
+	}
+
+	/// <summary>
+	/// <see cref="Name"/> upper-cased, the way telemetry labels and error messages spell it. Kept here so
+	/// a call does not allocate it again every time.
+	/// </summary>
+	public string UpperName { get; private set; } = string.Empty;
 	public int MinArgs { get; set; } = 0;
 
 	/// <summary>

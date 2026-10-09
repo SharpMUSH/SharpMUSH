@@ -13,7 +13,21 @@ public readonly struct DBRef : IEquatable<DBRef>
 	}
 
 	public int Number { get; init; }
-	public long? CreationMilliseconds { get; init; }
+
+	public long? CreationMilliseconds
+	{
+		get => _hasCreation ? _creation : null;
+		init
+		{
+			_hasCreation = value.HasValue;
+			_creation = value.GetValueOrDefault();
+		}
+	}
+
+	// A long? after the int would pad the struct to 24 bytes; the flag fits in the int's padding, so a
+	// DBRef is 16. Every parser state carries three of them.
+	private readonly bool _hasCreation;
+	private readonly long _creation;
 
 	/// <summary>
 	/// Whether this is a full objid (<c>#N:creation</c>) rather than a bare dbref (<c>#N</c>).
@@ -30,7 +44,7 @@ public readonly struct DBRef : IEquatable<DBRef>
 	public override bool Equals(object? obj) => obj is DBRef @ref && Equals(@ref);
 
 	public bool Equals(DBRef other)
-		=> Number == other.Number && CreationMilliseconds == other.CreationMilliseconds;
+		=> Number == other.Number && _hasCreation == other._hasCreation && _creation == other._creation;
 
 	/// <summary>
 	/// Checks whether this DBRef matches a search DBRef.

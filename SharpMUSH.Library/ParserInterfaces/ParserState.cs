@@ -530,28 +530,16 @@ public partial record ParserState(
 	private AnyOptionalSharpObject? _callerObject;
 
 	/// <summary>
-	/// Validates that a cached object matches the expected DBRef and clears it if not.
+	/// Validates that a cached object is the one the expected DBRef names (a bare dbref names it by number) and clears it if not.
 	/// This handles the case where ParserState is copied with a new DBRef but the cached object is stale.
 	/// </summary>
 	private static void ValidateAndClearCacheIfNeeded(
 		ref AnyOptionalSharpObject? cachedObject,
 		DBRef? expectedDBRef)
 	{
-		if (cachedObject is AnySharpObject cached && expectedDBRef is not null)
+		if (cachedObject is AnySharpObject cached && (expectedDBRef is not { } expected || !cached.Object().DBRef.Matches(expected)))
 		{
-			try
-			{
-				var cachedDBRef = cached.Object().DBRef;
-				if (!cachedDBRef.Equals(expectedDBRef.Value))
-				{
-					cachedObject = null;
-				}
-			}
-			catch
-			{
-				// If we can't extract the DBRef (shouldn't happen), clear the cache
-				cachedObject = null;
-			}
+			cachedObject = null;
 		}
 	}
 
@@ -705,7 +693,12 @@ public partial record ParserState(
 		CommandText = CommandText,
 		QueuedOutput = QueuedOutput,
 		QueuedPrinted = QueuedPrinted,
-		OutputLimit = OutputLimit
+		OutputLimit = OutputLimit,
+		// Same actors, so the same objects: a function body that asks for its executor reuses the
+		// caller's rather than fetching it again.
+		_executorObject = _executorObject,
+		_enactorObject = _enactorObject,
+		_callerObject = _callerObject
 	};
 
 	/// <summary>
@@ -783,16 +776,45 @@ public partial record ParserState(
 				return _argumentsOrdered;
 
 			_argumentsOrderedSource = Arguments;
-			// Key by the numeric comparer so the sorted dictionary keeps %0,%1,%2,…,%10,%11 in
-			// numeric order. A plain ToImmutableSortedDictionary() would order keys lexicographically
-			// ("10" before "2"), scrambling argument order for any function with ten or more args
-			// (e.g. json(object,…) with ≥10 pairs).
-			_argumentsOrdered = Arguments
-				.Where(x => int.TryParse(x.Key, out _))
-				.ToImmutableSortedDictionary(x => x.Key, x => x.Value, NumericKeyComparer.Instance);
+			_argumentsOrdered = OrderArguments(Arguments);
 			return _argumentsOrdered;
 		}
 	}
+
+	/// <summary>
+	/// The numbered entries of <paramref name="arguments"/>, keyed by the numeric comparer so the sorted
+	/// dictionary keeps %0,%1,%2,…,%10,%11 in numeric order. A plain ToImmutableSortedDictionary() would
+	/// order keys lexicographically ("10" before "2"), scrambling argument order for any function with
+	/// ten or more args (e.g. json(object,…) with ≥10 pairs).
+	/// </summary>
+	/// <remarks>
+	/// Nearly every call binds exactly <c>"0"</c>…<c>"n-1"</c> and nothing else, already in order, so those
+	/// are added to a builder one by one. Sorting through LINQ allocated an intermediate sorted
+	/// dictionary, its tree and four iterators for every function call.
+	/// </remarks>
+	private static ImmutableSortedDictionary<string, CallState> OrderArguments(Dictionary<string, CallState> arguments)
+	{
+		var ordered = ImmutableSortedDictionary.CreateBuilder<string, CallState>(NumericKeyComparer.Instance);
+		for (var position = 0; position < arguments.Count; position++)
+		{
+			if (!arguments.TryGetValue(ArgumentKey(position), out var value))
+				return arguments
+					.Where(x => int.TryParse(x.Key, out _))
+					.ToImmutableSortedDictionary(x => x.Key, x => x.Value, NumericKeyComparer.Instance);
+			ordered.Add(ArgumentKey(position), value);
+		}
+
+		return ordered.ToImmutable();
+	}
+
+	private static readonly string[] ArgumentKeys = [.. Enumerable.Range(0, 64).Select(position => position.ToString())];
+
+	/// <summary>
+	/// The key <c>%<paramref name="position"/></c> is bound under in <see cref="Arguments"/>; the first 64
+	/// are shared strings, so binding a call's arguments allocates no key.
+	/// </summary>
+	public static string ArgumentKey(int position)
+		=> (uint)position < (uint)ArgumentKeys.Length ? ArgumentKeys[position] : position.ToString();
 
 	private ImmutableSortedDictionary<string, CallState>? _argumentsOrdered;
 	private Dictionary<string, CallState>? _argumentsOrderedSource;

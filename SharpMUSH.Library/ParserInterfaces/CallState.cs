@@ -8,6 +8,32 @@ namespace SharpMUSH.Library.ParserInterfaces;
 public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<ValueTask<MString?>> ParsedMessage, bool PreserveSpaces = false)
 {
 	/// <summary>
+	/// Evaluates the text this state stands for. A state built from text that is already evaluated —
+	/// nearly every one — is given <see cref="OwnMessage"/>, and its delegate is made only when something
+	/// asks for it rather than for every node of every evaluation.
+	/// </summary>
+	public Func<ValueTask<MString?>> ParsedMessage
+	{
+		get => ReferenceEquals(_parsedMessage, OwnMessage) ? () => ValueTask.FromResult(_builtWith) : _parsedMessage;
+		init => _parsedMessage = value;
+	}
+
+	private readonly Func<ValueTask<MString?>> _parsedMessage = ParsedMessage;
+
+	/// <summary>
+	/// The text this state was built with, which <see cref="OwnMessage"/> evaluates to. A copy keeps it,
+	/// so a <c>with</c> that changes <see cref="Message"/> (compressing spaces, say) still evaluates to the
+	/// text as it was, as the delegate this replaces did.
+	/// </summary>
+	private readonly MString? _builtWith = Message;
+
+	/// <summary>
+	/// The <see cref="ParsedMessage"/> to build a state with when its text is already evaluated: the state
+	/// then evaluates to the message it was built with. Never invoked itself.
+	/// </summary>
+	public static readonly Func<ValueTask<MString?>> OwnMessage = () => ValueTask.FromResult<MString?>(null);
+
+	/// <summary>
 	/// The text this state carries; never null — a state built without one (the command argument-split
 	/// carriers, whose payload is <see cref="Arguments"/>) carries <see cref="MarkupText.Empty"/>.
 	/// </summary>
@@ -25,10 +51,10 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	public static implicit operator CallState(Error<string> m) => new(m.Value);
 
 	public CallState(MString? Message, int Depth)
-		: this(Message, Depth, null, () => ValueTask.FromResult(Message)) { }
+		: this(Message, Depth, null, OwnMessage) { }
 
 	public CallState(MString? Message)
-		: this(Message, 0, null, () => ValueTask.FromResult(Message)) { }
+		: this(Message, 0, null, OwnMessage) { }
 
 	public CallState(int Message) : this(Message.ToString()) { }
 
@@ -43,38 +69,22 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	public CallState(decimal Message) : this(MushNumber.Unparse(Message)) { }
 
 	public CallState(string Message)
-		: this(
-			!string.IsNullOrEmpty(Message)
-				? MarkupText.Plain(Message)
-				: MarkupText.Empty,
-			0, null,
-			!string.IsNullOrEmpty(Message)
-				? () => ValueTask.FromResult(MarkupText.Plain(Message))!
-				: () => ValueTask.FromResult(MarkupText.Empty)!)
+		: this(!string.IsNullOrEmpty(Message) ? MarkupText.Plain(Message) : MarkupText.Empty, 0, null, OwnMessage)
 	{
 	}
 
 	public CallState(bool result, string errorIfFalse = "0") :
-		this(MarkupText.Plain(result ? "1" : errorIfFalse), 0, null,
-			() => ValueTask.FromResult(MarkupText.Plain(result ? "1" : errorIfFalse))!)
+		this(MarkupText.Plain(result ? "1" : errorIfFalse), 0, null, OwnMessage)
 	{
 	}
 
 	public CallState(string Message, int Depth)
-		: this(!string.IsNullOrEmpty(Message)
-				? MarkupText.Plain(Message)
-				: MarkupText.Empty, Depth, null,
-			!string.IsNullOrEmpty(Message)
-				? () => ValueTask.FromResult(MarkupText.Plain(Message))!
-				: () => ValueTask.FromResult(MarkupText.Empty)!)
+		: this(!string.IsNullOrEmpty(Message) ? MarkupText.Plain(Message) : MarkupText.Empty, Depth, null, OwnMessage)
 	{
 	}
 
-	private static readonly MString _emptyMString = MarkupText.Empty;
-	private static readonly Func<ValueTask<MString?>> _emptyParsedMessage = () => ValueTask.FromResult<MString?>(_emptyMString);
-
-	public static readonly CallState EmptyArgument = new(_emptyMString, 0, [], _emptyParsedMessage);
-	public static readonly CallState Empty = new(_emptyMString, 0, null, _emptyParsedMessage);
+	public static readonly CallState EmptyArgument = new(MarkupText.Empty, 0, [], OwnMessage);
+	public static readonly CallState Empty = new(MarkupText.Empty, 0, null, OwnMessage);
 
 	/// <summary>
 	/// Parallel to <see cref="Arguments"/>: the retained NoParse-pass parse-tree node for each
@@ -117,6 +127,18 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	/// <c>#-1 PARSER FAILURE</c> saying why. A line a player types that ends this way is answered with it.
 	/// </summary>
 	public bool IsParseFailure { get; init; }
+
+	/// <summary>
+	/// <paramref name="message"/> at <paramref name="depth"/> as a plain evaluated value carrying only this
+	/// state's <see cref="HadErrors"/>. This state itself when it already is exactly that, which an
+	/// evaluated argument nearly always is, so binding it to a call copies nothing.
+	/// </summary>
+	public CallState AsValue(MString message, int depth)
+		=> ReferenceEquals(message, Message) && Depth == depth && Arguments is null
+			&& ReferenceEquals(_parsedMessage, OwnMessage) && ReferenceEquals(_builtWith, message)
+			&& !PreserveSpaces && ArgumentContexts is null && !IsParseFailure && ParsedResult is null
+				? this
+				: new CallState(message, depth) { HadErrors = HadErrors };
 
 	/// <summary>Optional full-result counterpart to the published text-only deferred delegate.</summary>
 	public Func<ValueTask<CallState?>>? ParsedResult { get; init; }

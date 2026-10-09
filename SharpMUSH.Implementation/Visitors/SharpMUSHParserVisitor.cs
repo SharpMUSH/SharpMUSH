@@ -383,9 +383,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			messages[i] = results[i].Message;
 		}
 
-		var combined = MarkupText.Concat(messages);
-		return new CallState(combined, results[0].Depth, null,
-			() => ValueTask.FromResult<MString?>(combined))
+		return new CallState(MarkupText.Concat(messages), results[0].Depth, null, CallState.OwnMessage)
 		{
 			PreserveSpaces = preserveSpaces,
 			HadErrors = hadErrors
@@ -516,9 +514,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	internal static Dictionary<string, CallState> NumberedArguments(List<CallState> values)
 	{
 		var arguments = new Dictionary<string, CallState>(values.Count);
-		foreach (var (i, value) in values.Index())
+		for (var position = 0; position < values.Count; position++)
 		{
-			arguments[i.ToString()] = value;
+			arguments[ParserState.ArgumentKey(position)] = values[position];
 		}
 
 		return arguments;
