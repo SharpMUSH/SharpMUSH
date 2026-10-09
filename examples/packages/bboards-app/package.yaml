@@ -15,7 +15,7 @@ requires_server: ">=0.1"
 # viewing it, through the same locks the commands use.
 depends:
   - package: bboards
-    version: ">=1.0 <2.0"
+    version: ">=1.1 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: bboards/

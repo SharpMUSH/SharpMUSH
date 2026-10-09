@@ -60,8 +60,9 @@ public static partial class TerminalScrollback
 	[GeneratedRegex(@"<(audio|video)\b[^>]*>.*?</\1\s*>|<(audio|video|link)\b[^>]*/?>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex MediaOrLink();
 
-	// The markup renderer's points with nothing to show: ms-sound-stop, ms-clear, ms-expire and the like.
-	[GeneratedRegex(@"<(\w+)\b[^>]*\bclass=""ms-[^""]*""[^>]*>\s*</\1\s*>", RegexOptions.IgnoreCase)]
+	// The markup renderer's points with nothing to show: a sound, its stop, a bell, a clear screen, an expiry.
+	// Only these: an empty table cell or text block (ms-nowrap, ms-text) holds its place in a layout.
+	[GeneratedRegex(@"<(\w+)\b[^>]*\bclass=""ms-(?:sound|sound-stop|bell|clear|expire)(?:\s[^""]*)?""[^>]*>\s*</\1\s*>", RegexOptions.IgnoreCase)]
 	private static partial Regex EmptyActionElement();
 
 	private sealed record StoredLine(
