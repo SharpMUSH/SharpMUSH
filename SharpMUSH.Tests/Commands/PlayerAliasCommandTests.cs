@@ -39,7 +39,7 @@ public class PlayerAliasCommandTests
 
 	private async Task<string> EvaluateAsync(TestIsolationHelpers.TestPlayer player, string expression)
 		=> (await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
-			.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	private async Task<int[]> PlayersCalled(string name)
 		=> [.. (await Mediator.CreateStream(new GetPlayerQuery(name)).ToArrayAsync()).Select(player => player.Object.DBRef.Number)];

@@ -37,80 +37,72 @@
                                Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-audit-narrow" />
             </div>
 
-            @if (_error is not null)
-            {
-                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
-            }
-
-            @if (_loading && _entries.Count == 0)
-            {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else if (_entries.Count == 0)
-            {
-                <EmptyBox>@Loc["AdmAuditEmpty"]</EmptyBox>
-            }
-            else
-            {
-                <MudTable Items="_entries" Dense="true" Hover="true" Elevation="0" Class="adm-audit-table">
-                    <HeaderContent>
-                        <MudTh>@Loc["AdmAuditWhen"]</MudTh>
-                        <MudTh>@Loc["AdmAuditActor"]</MudTh>
-                        <MudTh>@Loc["AdmAuditAction"]</MudTh>
-                        <MudTh>@Loc["AdmAuditTarget"]</MudTh>
-                        <MudTh>@Loc["AdmAuditDetails"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd data-label="@Loc["AdmAuditWhen"]" Class="adm-audit-when">
-                            @context.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
-                        </MudTd>
-                        <MudTd data-label="@Loc["AdmAuditActor"]">
-                            <span class="adm-audit-actor">@context.Actor.Display</span>
-                            @if (context.Actor.AccountName is not null && context.Actor.Name is not null)
-                            {
-                                <span class="adm-audit-dim">@context.Actor.Name</span>
-                            }
-                            <MudChip T="string" Size="Size.Small" Class="adm-audit-source"
-                                     Color="@(context.Source == AuditSource.Portal ? Color.Info : Color.Default)">
-                                @(context.Source switch
+            <LoadState Value="_entries" Loading="@(_loading && _entries.Count == 0)" Error="@_error"
+                       IsEmpty="entries => entries.Count == 0" Context="entries">
+                <Empty>
+                    <EmptyBox>@Loc["AdmAuditEmpty"]</EmptyBox>
+                </Empty>
+                <ChildContent>
+                    <MudTable Items="entries" Dense="true" Hover="true" Elevation="0" Class="adm-audit-table">
+                        <HeaderContent>
+                            <MudTh>@Loc["AdmAuditWhen"]</MudTh>
+                            <MudTh>@Loc["AdmAuditActor"]</MudTh>
+                            <MudTh>@Loc["AdmAuditAction"]</MudTh>
+                            <MudTh>@Loc["AdmAuditTarget"]</MudTh>
+                            <MudTh>@Loc["AdmAuditDetails"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd data-label="@Loc["AdmAuditWhen"]" Class="adm-audit-when">
+                                @context.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+                            </MudTd>
+                            <MudTd data-label="@Loc["AdmAuditActor"]">
+                                <span class="adm-audit-actor">@context.Actor.Display</span>
+                                @if (context.Actor.AccountName is not null && context.Actor.Name is not null)
                                 {
-                                    AuditSource.Portal => Loc["AdmAuditSourcePortal"],
-                                    AuditSource.System => Loc["AdmAuditSourceSystem"],
-                                    _ => Loc["AdmAuditSourceGame"]
-                                })
-                            </MudChip>
-                        </MudTd>
-                        <MudTd data-label="@Loc["AdmAuditAction"]" Class="adm-audit-mono">@context.Action</MudTd>
-                        <MudTd data-label="@Loc["AdmAuditTarget"]">
-                            @if (context.Target is { } target)
-                            {
-                                @if (TargetHref(target) is { } href)
+                                    <span class="adm-audit-dim">@context.Actor.Name</span>
+                                }
+                                <MudChip T="string" Size="Size.Small" Class="adm-audit-source"
+                                         Color="@(context.Source == AuditSource.Portal ? Color.Info : Color.Default)">
+                                    @(context.Source switch
+                                    {
+                                        AuditSource.Portal => Loc["AdmAuditSourcePortal"],
+                                        AuditSource.System => Loc["AdmAuditSourceSystem"],
+                                        _ => Loc["AdmAuditSourceGame"]
+                                    })
+                                </MudChip>
+                            </MudTd>
+                            <MudTd data-label="@Loc["AdmAuditAction"]" Class="adm-audit-mono">@context.Action</MudTd>
+                            <MudTd data-label="@Loc["AdmAuditTarget"]">
+                                @if (context.Target is { } target)
                                 {
-                                    <a class="adm-audit-link" href="@href">@target.Name</a>
+                                    @if (TargetHref(target) is { } href)
+                                    {
+                                        <a class="adm-audit-link" href="@href">@target.Name</a>
+                                    }
+                                    else
+                                    {
+                                        <span>@target.Name</span>
+                                    }
+                                    @if (target.Id != target.Name)
+                                    {
+                                        <span class="adm-audit-dim adm-audit-mono">@target.Id</span>
+                                    }
                                 }
                                 else
                                 {
-                                    <span>@target.Name</span>
+                                    <span>—</span>
                                 }
-                                @if (target.Id != target.Name)
-                                {
-                                    <span class="adm-audit-dim adm-audit-mono">@target.Id</span>
-                                }
-                            }
-                            else
-                            {
-                                <span>—</span>
-                            }
-                        </MudTd>
-                        <MudTd data-label="@Loc["AdmAuditDetails"]" Class="adm-audit-details">@(context.Details ?? "—")</MudTd>
-                    </RowTemplate>
-                </MudTable>
+                            </MudTd>
+                            <MudTd data-label="@Loc["AdmAuditDetails"]" Class="adm-audit-details">@(context.Details ?? "—")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
 
-                @if (_next is not null)
-                {
-                    <CapsuleButton Class="adm-audit-more" Disabled="_loading" OnClick="LoadMoreAsync">@Loc["AdmAuditLoadMore"]</CapsuleButton>
-                }
-            }
+                    @if (_next is not null)
+                    {
+                        <CapsuleButton Class="adm-audit-more" Disabled="_loading" OnClick="LoadMoreAsync">@Loc["AdmAuditLoadMore"]</CapsuleButton>
+                    }
+                </ChildContent>
+            </LoadState>
         </div>
     </KitCard>
 </div>

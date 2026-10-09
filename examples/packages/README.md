@@ -30,6 +30,8 @@ which games can add as a remote in the admin panel.
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
 | [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
 | [`radio-scene/`](radio-scene/) | A package that joins two others: a tap on the radio feed kind logs what a listener hears into their scene, and it adds `+radio/log` by attaching ``EXT`LOG`` to the radio (requires radio and scene) |
+| [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
+| [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
 
 ## The manifest: `package.yaml`
 
@@ -89,7 +91,7 @@ objects:                        # required — at least one object
         value: |-
           $+bbread *:@pemit %#=[u({{bbs_parent}}/FN_READ,%0)]
         flags: []
-      FN_HEADER: "[repeat(=,78)]"   # shorthand: quoted one-liners only
+      FN_HEADER: "[rule(Board)]"    # shorthand: quoted one-liners only
 
   - ref: bbs_parent
     type: thing
@@ -120,9 +122,8 @@ The escaping rules are the language's, not the package format's — see the
 
 Two places it bites a manifest in particular:
 
-- A bare `(` inside `header(...)` / `footer(...)` / `line(...)` closes the call
-  early, so the title truncates at the paren and the `)` leaks out after the
-  rule.
+- A bare `(` inside a `rule(...)` or `box(...)` title closes the call
+  early, so the title truncates at the paren and the `)` leaks out after it.
 - A `+help` topic body is evaluated before it is rendered, so
   `+help/list [<source>]` documents a syntax with no brackets in it. Write
   `%[<source>%]` or `\[<source>\]`.
@@ -488,7 +489,7 @@ network, no configured remote. Two different decisions live there:
   catalogue at any time.
 - **Installed at first boot**: a new game gets it without being asked.
   `http-handler`, `profile-handler`, `room-contents`, `comm-feed`,
-  `common-functions`, `plus-help` and `scene` are; `wiki-reader` ships
+  `plus-help` and `scene` are; `wiki-reader` ships
   available and unenabled, because it puts a `+wiki` object in the master room.
 
 Both are declared in `SharpMUSH.Server/Services/BundledPackages.cs`, and adding

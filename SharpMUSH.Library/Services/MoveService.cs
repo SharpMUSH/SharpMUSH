@@ -41,20 +41,9 @@ public class MoveService(
 
 		// The walk starts at an exit's home — its destination — and at everything else's location
 		// (utils.c:802). Only the seed uses home; the walk out of the containers uses location.
-		AnySharpContainer current;
-
-		if (obj is SharpExit exit)
+		if (await AbsoluteRoomSeedAsync(obj) is not AnySharpContainer current)
 		{
-			if (await exit.Home.WithCancellation(CancellationToken.None) is not AnySharpContainer home)
-			{
-				return new AbsoluteRoomResult(null);
-			}
-
-			current = home;
-		}
-		else
-		{
-			current = await obj.AsContent.Location();
+			return new AbsoluteRoomResult(null);
 		}
 
 		// PennMUSH caps this walk at a hard 20 (utils.c:801); SharpMUSH uses the configured
@@ -81,6 +70,12 @@ public class MoveService(
 		// utils.c:813: out of depth is AMBIGUOUS, not NOTHING.
 		return new AbsoluteRoomResult(null, TooManyContainers: true);
 	}
+
+	private static async ValueTask<AnyOptionalSharpContainer> AbsoluteRoomSeedAsync(AnySharpObject obj) => obj switch
+	{
+		SharpExit exit => await exit.Home.WithCancellation(CancellationToken.None),
+		_ => (await obj.Where()).WithNoneOption()
+	};
 
 	/// <summary>
 	/// Checks if moving an object to a destination would create a containment loop.
@@ -456,14 +451,14 @@ public class MoveService(
 		// admits an exit as content) and `tel(<exit>,<thing>)`. An exit is not a container and has
 		// nothing to strip, so the stripping pass is skipped; EnterRoom below then refuses the move
 		// itself, because only a Mobile is moved by enter_room (move.c:243).
-		if (what.IsExit)
+		if (mover.AsOptionalContainer is not AnySharpContainer moverContainer)
 		{
 			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
 		}
 
 		// The list is materialised before anything moves, because each EnterRoom below rewrites the
 		// contents it is being read from.
-		var carried = await mover.AsContainer.Content(mediator).ToListAsync();
+		var carried = await moverContainer.Content(mediator).ToListAsync();
 
 		foreach (var item in carried)
 		{
@@ -619,7 +614,7 @@ public class MoveService(
 			if (homeDbRef.Number >= 0)
 			{
 				await mediator.Send(new MoveObjectCommand(
-					player.AsContent,
+					character,
 					home,
 					oldContainer,
 					Enactor: null,
@@ -641,7 +636,7 @@ public class MoveService(
 			{
 				var fallbackContainer = await fallbackObj.Where();
 				await mediator.Send(new MoveObjectCommand(
-					player.AsContent,
+					character,
 					fallbackContainer,
 					oldContainer,
 					Enactor: null,

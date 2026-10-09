@@ -87,16 +87,7 @@ public class ConnectionService(
 			.ToAsyncEnumerable();
 
 	public async ValueTask<bool> IsPlayerHiddenAsync(DBRef playerRef)
-	{
-		await foreach (var conn in Get(playerRef))
-		{
-			if (conn.IsHidden)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
+		=> await Get(playerRef).AnyAsync(conn => conn.IsHidden);
 
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		ImmutableInterlocked.Update(ref _handlers, handlers => handlers.Add(handler));

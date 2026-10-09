@@ -18,8 +18,8 @@ public partial class NavigationTests
 	{
 		var god = await God();
 		var original = await MasterRoom();
-		var next = (await Node(await _db.CreateRoomAsync("New source", god))).AsContainer;
-		var destination = (await Node(await _db.CreateRoomAsync("Destination", god))).AsContainer;
+		var next = (await Node(await _db.CreateRoomAsync("New source", god))).AsOptionalContainer.Expect<AnySharpContainer>();
+		var destination = (await Node(await _db.CreateRoomAsync("Destination", god))).AsOptionalContainer.Expect<AnySharpContainer>();
 		var reference = await _db.CreateExitAsync("Moving exit", [], original, god);
 		var exit = (await _db.GetObjectNodeAsync(reference)).Expect<SharpExit>();
 		if (linked) await _db.LinkExitAsync(exit, destination);

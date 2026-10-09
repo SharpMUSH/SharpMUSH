@@ -27,7 +27,7 @@ public class MarkupTagFunctionTests
 	private Mediator.IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
 
 	private async Task<MString> Eval(string code) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(code)))!.Message!;
+		await FunctionParser.EvaluateAsync(MarkupText.Plain(code));
 
 	/// <summary>
 	/// The output of <paramref name="who"/>'s own <c>think</c>, in the form it was sent in.

@@ -43,7 +43,7 @@ public partial class PrivateListenerTests
 		await Admin($"&TREE`ACTION {parent}=^hello *:&CAPTURE me=%0|%!|%#|%@");
 		await Admin($"@lock/{lockName} {child}=#FALSE");
 		var pipeline = await Build(actor, actor.DbRef);
-		var styled = (await pipeline.Parser.FunctionParse(MarkupText.Plain("ansi(r,hello world)")))!.Message!;
+		var styled = await pipeline.Parser.EvaluateAsync(MarkupText.Plain("ansi(r,hello world)"));
 		await pipeline.Notify.Notify(child, styled, await Node(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		await Assert.That(pipeline.Queue).IsEmpty();
 		await Admin($"@lock/{lockName} {child}=#TRUE");
@@ -55,7 +55,7 @@ public partial class PrivateListenerTests
 		await Assert.That(queued.State.Executor).IsEqualTo(child);
 		await Assert.That(queued.State.Enactor).IsEqualTo(actor.DbRef);
 		await Assert.That(queued.State.Caller).IsEqualTo(actor.DbRef);
-		await Assert.That(queued.State.EnvironmentRegisters["0"].Message!.Render(MarkupFormat.Ansi)).Contains("\u001b[");
+		await Assert.That(queued.State.EnvironmentRegisters["0"].Message.Render(MarkupFormat.Ansi)).Contains("\u001b[");
 		await Admin($"&TREE`ACTION {parent}=changed");
 		await pipeline.Parser.FromState(queued.State).CommandListParse(queued.Command);
 		var captured = await Factory.Services.GetRequiredService<IAttributeService>().GetAttributeAsync(await Node(child), await Node(child),
@@ -240,7 +240,7 @@ public partial class PrivateListenerTests
 		var actor = await Player();
 		var parent = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "ListenParent");
 		var child = type == "player" ? (await Player()).DbRef
-			: type == "room" ? SharpMUSH.Library.Models.DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText().Trim())
+			: type == "room" ? SharpMUSH.Library.Models.DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message.ToPlainText().Trim())
 			: await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "ListenChild");
 		await Admin($"@parent {child}={parent}");
 		await Admin($"@set {child}=MONITOR LISTEN_PARENT");
@@ -252,7 +252,7 @@ public partial class PrivateListenerTests
 		await Assert.That(pipeline.Queue.Count).IsEqualTo(1);
 		await Assert.That(pipeline.Queue[0].State.Executor).IsEqualTo(child);
 		await Assert.That(pipeline.Queue[0].State.CurrentEvaluation!.Name).IsEqualTo("INHERITED");
-		await Assert.That(pipeline.Queue[0].State.EnvironmentRegisters["0"].Message!.ToPlainText()).IsEqualTo("world");
+		await Assert.That(pipeline.Queue[0].State.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo("world");
 	}
 
 	[Test]

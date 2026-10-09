@@ -15,7 +15,7 @@ public class AttributeTreeNameTests
 	private IConnectionService Connections => Factory.Services.GetRequiredService<IConnectionService>();
 
 	private async Task<string> Read(string expression)
-		=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		=> (await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	/// <summary>What #1 was told while <paramref name="command"/> ran; callers pick their lines by a prefix only they use.</summary>
 	private async Task<string[]> Output(string command)

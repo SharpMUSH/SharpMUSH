@@ -25,9 +25,9 @@ public partial class Commands
 		var registry = parser.ServiceProvider.GetRequiredService<IUserDefinedFunctionService>();
 		var owner = (await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 		var args = parser.CurrentState.Arguments;
-		var name = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
+		var name = args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
 		var operation = switches.FirstOrDefault(s => s != "LOCAL");
-		var aliasTarget = args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "";
+		var aliasTarget = args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "";
 		async ValueTask<Option<CallState>> Report(string message)
 		{
 			await NotifyService.NotifyLocalized(executor, "LocalFunctionMessage", executor, message);
@@ -80,12 +80,12 @@ public partial class Commands
 		}
 		if (IsReservedLocalFunctionName(name))
 			return await Report(ErrorMessages.Returns.PermissionDenied);
-		var objectSpec = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-		var attribute = args.GetValueOrDefault("2")?.Message?.ToPlainText();
+		var objectSpec = args.GetValueOrDefault("1")?.Message.ToPlainText();
+		var attribute = args.GetValueOrDefault("2")?.Message.ToPlainText();
 		if (string.IsNullOrWhiteSpace(objectSpec) || string.IsNullOrWhiteSpace(attribute)) return await Report(ErrorMessages.Returns.InvalidArgument);
 		var min = 0; var max = 32;
-		if ((args.Count > 3 && !int.TryParse(args["3"].Message?.ToPlainText(), out min)) ||
-			(args.Count > 4 && !int.TryParse(args["4"].Message?.ToPlainText(), out max)) || min < 0 || max < min || max > 32)
+		if ((args.Count > 3 && !int.TryParse(args["3"].Message.ToPlainText(), out min)) ||
+			(args.Count > 4 && !int.TryParse(args["4"].Message.ToPlainText(), out max)) || min < 0 || max < min || max > 32)
 			return await Report(ErrorMessages.Returns.InvalidArgument);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectSpec, LocateFlags.All) switch
 		{

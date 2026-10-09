@@ -37,7 +37,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// do_atrlock reads the on/off word before it looks at anything else (src/attrib.c:2474-2485).
-		var action = args.TryGetValue("1", out var actionArg) ? actionArg.Message!.ToPlainText() : null;
+		var action = args.TryGetValue("1", out var actionArg) ? actionArg.Message.ToPlainText() : null;
 		if (string.IsNullOrEmpty(action)) action = null;
 
 		bool? shouldLock = null;
@@ -56,7 +56,7 @@ public partial class Functions
 			}
 		}
 
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText())
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message.ToPlainText())
 			is not { Object: var dbref, Attribute: { } attributeName })
 		{
 			return new CallState(ErrorMessages.Returns.ArgumentMustBeObjectAttribute);
@@ -100,8 +100,8 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// PennMUSH: testlock(<lock key>, <victim>) - test a lock expression against a victim
-		var lockString = args["0"].Message!.ToPlainText();
-		var victimName = args["1"].Message!.ToPlainText();
+		var lockString = args["0"].Message.ToPlainText();
+		var victimName = args["1"].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, victimName, LocateFlags.All,
@@ -132,9 +132,9 @@ public partial class Functions
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 			if (!await CanInvokeLockCommandAsync(parser, executor, "@LOCK")) return new CallState(ErrorMessages.Returns.PermissionDenied);
-			var parts = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Split('/', 2);
+			var parts = parser.CurrentState.Arguments["0"].Message.ToPlainText().Split('/', 2);
 			await LockHelpers.LockAsync(parser, LocateService, NotifyService, PermissionService, LockService, executor,
-				parts[0], expression.Message!.ToPlainText(), parts.Length > 1 ? parts[1] : null);
+				parts[0], expression.Message.ToPlainText(), parts.Length > 1 ? parts[1] : null);
 		}
 		return await ReadLockAsync(parser, ErrorMessages.Returns.PermissionDenied, async (executor, _, resolved) => new CallState(resolved is null
 			? "*UNLOCKED*" : await BooleanExpressionParser.RenderAsync(resolved.Data.LockString, executor, LockRenderMode.Readback)));
@@ -144,7 +144,7 @@ public partial class Functions
 	public ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ReadLockAsync(parser, ErrorMessages.Returns.PermissionDenied, async (executor, target, resolved) =>
 		{
-			var victimName = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			var victimName = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 			return await LocateService.Locate(parser, executor, executor, victimName, LocateFlags.All) switch
 			{
 				AnySharpObject victim => new CallState(resolved is null || await LockService.Evaluate(resolved.Data.LockString, target, victim) ? "1" : "0"),
@@ -161,7 +161,7 @@ public partial class Functions
 		// A refusal do_lset words is told to the caller, not answered; an object that does not match
 		// answers with the matcher's error, as SharpMUSH's side-effect functions do.
 		return await LockHelpers.SetFlagsAsync(parser, LocateService, NotifyService, LockService, executor,
-				parser.CurrentState.Arguments["0"].Message!.ToPlainText(), parser.CurrentState.Arguments["1"].Message!.ToPlainText()) switch
+				parser.CurrentState.Arguments["0"].Message.ToPlainText(), parser.CurrentState.Arguments["1"].Message.ToPlainText()) switch
 		{
 			Error<string> { Value: var unmatched } when unmatched.StartsWith("#-", StringComparison.Ordinal) => new CallState(unmatched),
 			_ => CallState.Empty
@@ -181,7 +181,7 @@ public partial class Functions
 		Func<AnySharpObject, AnySharpObject, ResolvedLock?, ValueTask<CallState>> read)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var parts = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Split('/', 2);
+		var parts = parser.CurrentState.Arguments["0"].Message.ToPlainText().Split('/', 2);
 		var name = parts.Length > 1 && parts[1].Length > 0 ? parts[1] : "Basic";
 		if (name.StartsWith("user:", StringComparison.OrdinalIgnoreCase)) name = name[5..];
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, parts[0], LocateFlags.All,
@@ -209,7 +209,7 @@ public partial class Functions
 			? string.Join(" ", LockService.LockPrivileges.Where(x => flags.HasFlag(x.Value.Item2)).Select(x => x.Key))
 			: LockService.FormatLockFlags(flags);
 		if (parser.CurrentState.Arguments.Count == 0 ||
-			parser.CurrentState.Arguments.Count == 1 && string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message?.ToPlainText()))
+			parser.CurrentState.Arguments.Count == 1 && string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message.ToPlainText()))
 			return ValueTask.FromResult(new CallState(fullNames ? string.Join(" ", LockService.LockPrivileges.Keys) : string.Concat(LockService.LockPrivileges.Values.Select(x => x.Item1))));
 		return ReadLockAsync(parser, ErrorMessages.Returns.NoSuchLock, (_, _, resolved) =>
 			ValueTask.FromResult(new CallState(resolved is null ? ErrorMessages.Returns.NoSuchLock : Format(resolved.Data.Flags))));
@@ -226,9 +226,9 @@ public partial class Functions
 	private async ValueTask<CallState> ListLocksAsync(IMUSHCodeParser parser)
 	{
 		if (parser.CurrentState.Arguments.Count == 0 ||
-			parser.CurrentState.Arguments.Count == 1 && string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message?.ToPlainText())) return new CallState(string.Join(" ", LockService.SystemLocks.Keys.Select(LockNames.Display)));
+			parser.CurrentState.Arguments.Count == 1 && string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message.ToPlainText())) return new CallState(string.Join(" ", LockService.SystemLocks.Keys.Select(LockNames.Display)));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var objectName = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, objectName, LocateFlags.All,
 			target => ValueTask.FromResult(new CallState(string.Join(" ", target.Object().Locks.Keys.Order(StringComparer.Ordinal)
 				.Select(name => LockService.SystemLocks.ContainsKey(name) ? LockNames.Display(name) : "USER:" + name)))));
@@ -239,14 +239,15 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		if (await BooleanExpressionParser.BindAsync(args["0"].Message!.ToPlainText(), executor) is not string expression)
+		if (await BooleanExpressionParser.BindAsync(args["0"].Message.ToPlainText(), executor) is not string expression)
 			return new CallState(ErrorMessages.Returns.InvalidBoolexp);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		if (delimiter.Length != 1) return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		var results = new List<string>();
-		foreach (var reference in args["1"].Message!.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries))
+		var references = args["1"].Message.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries)
+			.Where(reference => DBRef.TryParse(reference.Trim(), out _));
+		foreach (var reference in references)
 		{
-			if (!DBRef.TryParse(reference.Trim(), out _)) continue;
 			if (await LocateService.Locate(parser, executor, executor, reference.Trim(), LocateFlags.All) is not AnySharpObject victim || !await PermissionService.CanLocate(executor, victim)) continue;
 			if (await LockService.Evaluate(expression, executor, victim)) results.Add($"#{victim.Object().DBRef.Number}");
 		}

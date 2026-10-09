@@ -116,13 +116,13 @@ public partial class Functions
 		for (var i = 0; i < arguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				arguments[i.ToString()].Message!.ToPlainText().ToUpper(),
-				arguments[(i + 1).ToString()].Message!);
+				arguments[i.ToString()].Message.ToPlainText().ToUpper(),
+				arguments[(i + 1).ToString()].Message);
 		}
 
 		if (!everythingIsOkay) return new CallState(ErrorMessages.Returns.BadRegName);
 
-		return echoFirstValue ? new CallState(arguments["1"].Message!) : new CallState(string.Empty);
+		return echoFirstValue ? new CallState(arguments["1"].Message) : new CallState(string.Empty);
 	}
 
 	/// <remarks>
@@ -138,6 +138,74 @@ public partial class Functions
 	public ValueTask<CallState> setr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: true));
 
+	/// <summary>
+	/// The one body behind <c>setqm</c> and <c>setrm</c>, RhostMUSH's in-order setq()/setr()
+	/// (<c>fun_setqm</c>/<c>fun_setrm</c>, <c>Server/src/functions.c</c>). Each pair's name and value are
+	/// evaluated only after the pair before it is set, so a value can read the registers set to its left.
+	/// </summary>
+	/// <returns>
+	/// The values set, in order, whether every name was valid, and whether evaluating any argument hit
+	/// an error, which the caller carries on its result as an eager function's dispatcher would.
+	/// </returns>
+	private static async ValueTask<OrderedRegisters> SetRegistersInOrder(IMUSHCodeParser parser, int pairArguments)
+	{
+		var arguments = parser.CurrentState.ArgumentsOrdered;
+		var values = new List<MString>(pairArguments / 2);
+		var everythingIsOkay = true;
+		var hadErrors = false;
+
+		for (var i = 0; i < pairArguments; i += 2)
+		{
+			var name = await arguments[i.ToString()].GetParsedResultAsync();
+			var value = await arguments[(i + 1).ToString()].GetParsedResultAsync();
+			hadErrors |= name.HadErrors || value.HadErrors;
+			var valueText = value.Message ?? MarkupText.Empty;
+			everythingIsOkay &= parser.CurrentState.AddRegister((name.Message ?? MarkupText.Empty).ToPlainText().ToUpper(), valueText);
+			values.Add(valueText);
+		}
+
+		return new OrderedRegisters(values, everythingIsOkay, hadErrors);
+	}
+
+	private sealed record OrderedRegisters(List<MString> Values, bool NamesValid, bool HadErrors);
+
+	[SharpFunction(Name = "setqm", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.EvenArgsOnly)]
+	public async ValueTask<CallState> SetQM(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var set = await SetRegistersInOrder(parser, parser.CurrentState.ArgumentsOrdered.Count);
+		var result = set.NamesValid ? CallState.Empty : new CallState(ErrorMessages.Returns.BadRegName);
+		return result with { HadErrors = set.HadErrors };
+	}
+
+	/// <remarks>
+	/// RhostMUSH's <c>setrm</c> returns every value it set, joined by an optional trailing
+	/// <c>&lt;delimiter&gt;</c> (a space by default), which an odd argument count marks. Three
+	/// arguments are one pair and a delimiter with nothing to separate, which Rhost refuses.
+	/// </remarks>
+	[SharpFunction(Name = "setrm", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public async ValueTask<CallState> SetRM(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var arguments = parser.CurrentState.ArgumentsOrdered;
+		if (arguments.Count == 3)
+			return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, "SETRM"));
+
+		var hasDelimiter = arguments.Count % 2 == 1;
+		var delimiter = hasDelimiter
+			? await arguments[(arguments.Count - 1).ToString()].GetParsedResultAsync()
+			: new CallState(MarkupText.Space);
+
+		var set = await SetRegistersInOrder(parser, hasDelimiter ? arguments.Count - 1 : arguments.Count);
+		var result = set.NamesValid
+			? JoinWithinOutputLimit(parser, set.Values, delimiter.Message ?? MarkupText.Empty)
+			: new CallState(ErrorMessages.Returns.BadRegName);
+		return result with { HadErrors = set.HadErrors || delimiter.HadErrors };
+	}
+
+	private static CallState JoinWithinOutputLimit(IMUSHCodeParser parser, List<MString> values, MString delimiter)
+		=> FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, values, delimiter.Length)
+			? FunctionLimits.RejectOutput(parser.CurrentState)
+			: new CallState(MarkupText.Join(delimiter, values));
+
 	// r(<register>[, <type>]) — read a register. <type> (default "qregisters") selects the store, per
 	// `help r`: qregisters (setq/setr), args (the %0-%9 stack + named regexp $-command captures), iter
 	// (itext context), switch (stext context), regexp (re*() capture names, %$0 and named). Note: the
@@ -146,8 +214,8 @@ public partial class Functions
 	public ValueTask<CallState> R(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var registerName = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
-		var typeArgStr = args.TryGetValue("1", out var typeArg) && typeArg.Message is not null
+		var registerName = args["0"].Message.ToPlainText();
+		var typeArgStr = args.TryGetValue("1", out var typeArg)
 			? typeArg.Message.ToPlainText().Trim()
 			: string.Empty;
 
@@ -173,7 +241,7 @@ public partial class Functions
 			case "args":
 				return ValueTask.FromResult(
 					parser.CurrentState.EnvironmentRegisters.TryGetValue(registerName, out var aval)
-						? new CallState(aval.Message!)
+						? new CallState(aval.Message)
 						: CallState.Empty);
 
 			// $0-$9 and named captures from switch(), reswitch() and regedit(). PennMUSH's fun_r has no
@@ -235,7 +303,7 @@ public partial class Functions
 		// all register writes pass up to the caller, nothing is saved/restored).
 		if (npairs == 0)
 		{
-			return (await parser.FunctionParse(numberedArguments.Last().Value.Message!))!;
+			return (await parser.FunctionParse(numberedArguments.Last().Value.Message))!;
 		}
 
 		// Note: MarkupString should be immutable - verify this if register behavior issues occur
@@ -246,13 +314,13 @@ public partial class Functions
 		for (var i = 0; i < numberedArguments.Count - 1; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				numberedArguments[i.ToString()].Message!.ToPlainText().ToUpper(),
-				numberedArguments[(i + 1).ToString()].Message!);
+				numberedArguments[i.ToString()].Message.ToPlainText().ToUpper(),
+				numberedArguments[(i + 1).ToString()].Message);
 		}
 
 		if (everythingIsOkay)
 		{
-			var parsed = await parser.FunctionParse(numberedArguments.Last().Value.Message!);
+			var parsed = await parser.FunctionParse(numberedArguments.Last().Value.Message);
 			_ = parser.CurrentState.Registers.TryPop(out _);
 			return parsed!;
 		}
@@ -264,7 +332,7 @@ public partial class Functions
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var pattern = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var pattern = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText();
 		return ValueTask.FromResult(new CallState(
 			string.Join(" ", VisibleRegisterNames(parser.CurrentState, RegisterKinds.QRegisters, pattern))));
 	}
@@ -273,12 +341,12 @@ public partial class Functions
 	public ValueTask<CallState> Registers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText();
-		var kinds = ParseRegisterKinds(args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? string.Empty);
+		var pattern = args.GetValueOrDefault("0")?.Message.ToPlainText();
+		var kinds = ParseRegisterKinds(args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty);
 		if (kinds == RegisterKinds.None)
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
 
-		var separator = args.GetValueOrDefault("2")?.Message?.ToPlainText() ?? " ";
+		var separator = args.GetValueOrDefault("2")?.Message.ToPlainText() ?? " ";
 		return ValueTask.FromResult(new CallState(
 			string.Join(separator, VisibleRegisterNames(parser.CurrentState, kinds, pattern))));
 	}
@@ -286,7 +354,7 @@ public partial class Functions
 	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> UnSetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var patterns = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText()
+		var patterns = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText()
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
 		if (parser.CurrentState.Registers.TryPeek(out var registers))
 		{
@@ -309,7 +377,7 @@ public partial class Functions
 	public ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var levelArg = args["0"].Message!.ToPlainText();
+		var levelArg = args["0"].Message.ToPlainText();
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
 
 		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
@@ -350,9 +418,9 @@ public partial class Functions
 		int depth = 0;
 
 		// Validate arguments first, before checking stack count
-		if (args.TryGetValue("0", out var depthArg) && depthArg.Message != null)
+		if (args.TryGetValue("0", out var depthArg))
 		{
-			var depthStr = depthArg.Message!.ToPlainText().Trim();
+			var depthStr = depthArg.Message.ToPlainText().Trim();
 
 			// Skip processing if the argument is empty (defaults to 0)
 			if (!string.IsNullOrEmpty(depthStr))
@@ -417,7 +485,7 @@ public partial class Functions
 	public ValueTask<CallState> IterationNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var levelArg = args["0"].Message!.ToPlainText();
+		var levelArg = args["0"].Message.ToPlainText();
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
 
 		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))

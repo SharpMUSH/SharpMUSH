@@ -142,6 +142,7 @@ internal static class EngineRegistration
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
 		// AdminAccountsController's Wizard gate need it even when JWT auth isn't configured.
 		services.AddSingleton<AccountClaimsService>();
+		services.AddSingleton<BearerAccountResolver>();
 		// Kept separate from AccountClaimsService so AccountService — which computes nothing but
 		// must invalidate whenever it links or unlinks a character — can depend on it without
 		// closing a cycle back through IAccountService. Library stays off Server.
@@ -308,6 +309,7 @@ internal static class EngineRegistration
 			sp.GetRequiredService<ConfigurationReloadService>());
 		services.AddSingleton<ObjectVersions>();
 		services.AddSingleton<SharpMUSH.Implementation.Visitors.ExecutorDebugFlags>();
+		services.AddSingleton<SharpMUSH.Implementation.Parsing.SoftcodeParseCache>();
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));

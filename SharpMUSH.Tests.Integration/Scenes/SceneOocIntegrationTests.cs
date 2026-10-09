@@ -16,7 +16,7 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 /// <para><c>ooc</c> speaks out of character to the room as <c>&lt;OOC&gt; Name: text</c> (or
 /// <c>&lt;OOC&gt; Name waves</c> after a <c>:</c>, <c>&lt;OOC&gt; Name's</c> after a <c>;</c>). When the
 /// speaker is focused on the active scene in the room they are standing in — the rule the capture hooks
-/// use for a pose — it is also recorded there, tagged <c>ooc</c>, which is what the portal's OOC band
+/// use for a pose — it is also recorded there as the <c>ooc</c> type, which is what the portal's OOC band
 /// keys off. Anywhere else it is only said.</para>
 ///
 /// <para>Every test digs its own room: a room holds one active scene, and a player's OOC must never be
@@ -36,7 +36,7 @@ public class SceneOocIntegrationTests
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -63,7 +63,7 @@ public class SceneOocIntegrationTests
 		// Player names stop at 15 characters, which GenerateUniqueName's suffix alone would overrun.
 		var name = $"{prefix}{Guid.NewGuid():N}"[..15];
 		await God1($"@pcreate {name}=pw-{name}");
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -75,7 +75,7 @@ public class SceneOocIntegrationTests
 
 	private async Task<string> DigAsync(string prefix)
 	{
-		var dug = (await God1($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}")).Message?.ToPlainText()?.Trim()
+		var dug = (await God1($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}")).Message.ToPlainText()?.Trim()
 			?? string.Empty;
 		return dug.Split(' ').First(t => t.StartsWith('#'));
 	}
@@ -114,7 +114,7 @@ public class SceneOocIntegrationTests
 		await Eval($"scenepose({sceneId},[last(sceneposes({sceneId}))],{field})");
 
 	[Test]
-	public async Task Ooc_in_a_scene_is_recorded_with_the_ooc_tag_and_heard_as_the_band()
+	public async Task Ooc_in_a_scene_is_recorded_as_the_ooc_type_and_heard_as_the_band()
 	{
 		var (sceneId, poser, witness) = await SceneRoomAsync("Rec");
 		var before = int.Parse(await PoseCountAsync(sceneId));
@@ -124,8 +124,9 @@ public class SceneOocIntegrationTests
 
 		await Assert.That(await PoseCountAsync(sceneId)).IsEqualTo((before + 1).ToString());
 		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo($"{poser.Name}: brb, phone");
-		await Assert.That(await LastPoseAsync(sceneId, "tags")).IsEqualTo("ooc");
+		await Assert.That(await LastPoseAsync(sceneId, "type")).IsEqualTo("ooc");
 		await Assert.That(await LastPoseAsync(sceneId, "source")).IsEqualTo("ooc");
+		await Assert.That(await LastPoseAsync(sceneId, "tags")).IsEqualTo("");
 		await Assert.That(Num(await LastPoseAsync(sceneId, "author"))).IsEqualTo(Num(poser.Dbref));
 		await Assert.That(HeardBy(witness, witnessBefore))
 			.Contains($"<OOC> {poser.Name}: brb, phone");
@@ -324,7 +325,7 @@ public class SceneOocIntegrationTests
 		var room = await DigAsync("OocDisRoom");
 		await God1($"@tel {speaker.Dbref}={room}");
 		var marker = Guid.NewGuid().ToString("N")[..10];
-		var created = (await God1($"@create OocSoftcode{marker}")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var created = (await God1($"@create OocSoftcode{marker}")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		var softcode = created.Split(' ').First(t => t.StartsWith('#'));
 		await God1($"&CMD`OOC {softcode}=$ooc *:@pemit %#=GAMEOOC{marker} %0");
 		await God1($"@set {softcode}=!NO_COMMAND");
@@ -387,6 +388,6 @@ public class SceneOocIntegrationTests
 		}
 
 		await Assert.That(sceneEvent.GetProperty("ActorObjId").GetString()).IsEqualTo(objid);
-		await Assert.That(sceneEvent.GetProperty("Tags")[0].GetString()).IsEqualTo("ooc");
+		await Assert.That(sceneEvent.GetProperty("Type").GetString()).IsEqualTo("ooc");
 	}
 }

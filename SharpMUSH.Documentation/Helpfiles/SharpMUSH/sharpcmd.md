@@ -822,10 +822,12 @@ Show just the object names (with no ansi) in a table:
 # @input/start
 # @input/prompt
 # @input/cancel
+# @input/rescue
 
 `@input/start <object>/<attribute>=<prompt>[,<timeout-seconds>]`<br>
 `@input/prompt <prompt>`<br>
-`@input/cancel`
+`@input/cancel`<br>
+`@input/rescue <player>`
 
   Starts a guided input session on the current Telnet or WebSocket connection. The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. The initiating executor must control the callback object and have both read and execute access to its directly stored attribute. Omitting `/start` also starts a session.
 
@@ -837,17 +839,25 @@ Show just the object names (with no ansi) in a table:
 
   Timeout defaults to 60 seconds and may be 1-3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends; the callback receives empty `%0` and `timeout` in `%1`. Sending the cancel escape after expiry does not suppress an already pending timeout callback. Starting another session is refused while the expired generation still owes its timeout callback; the timeout callback itself may start the next session. The callback is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without invoking a callback. A halted executor, unhandled callback failure, or an exhausted execution budget also ends capture.
 
+  `@input/rescue <player>` is for staff with the `players.moderate` permission. It ends every open session on that player's connections as if its time had run out: capture stops at once, the player is told a staff member ended it, and each callback runs with empty `%0` and `timeout` in `%1`, within about a second. Use it when a player is stuck in a session whose code has no way out. The command returns how many sessions it ended.
+
   Every delivery rechecks the connection incarnation, full character and callback identities, ownership, control, and attribute access. These checks share the callback execution budget. Prompts are bound to the original connection and are discarded if that connection is replaced before delivery. Changed ownership, deleted/recycled objects, or revoked permission end the session safely. Two connections playing the same character have independent sessions and cannot consume one another's input. There may be at most 1024 sessions globally, 64 per initiating owner, and one per connection. An input message may contain at most 65,536 UTF-16 code units; longer input is rejected while capture remains active.
 
-  This example stores one answer as data and explicitly closes its session:
+  **Warning:** while a session is open, every line the player sends goes to your callback, and nothing they type runs as a command. That is the point of `@input`: a player can write plain text without setting off other commands. It also means your callback must recognise one line as "I am done" (such as `.done`) and end the session itself with `@input/cancel`. Every other line is saved or appended, so without that line the player has no ordinary way out. Name the line in the first prompt and in every later one. Do not rely on the timeout to end a session. It is a safety net for a player who walked away: it fires a fixed time after the start, whether or not the player is still typing, and until then the player is stuck unless staff end it with `@input/rescue`. The built-in `@input/cancel` escape is not a substitute either; it ends the session without running the callback, so whatever the callback saves on the finish line is never saved.
+
+  This example is a notepad with a `+note` command that takes a note of any number of lines. Each line is appended to a draft; a line of just `.done` saves the draft and ends the session:
 
 ```sharp
-&INPUT`SAVE me=@assert strmatch(%1,input)=@pemit %#=Input timed out.; &DATA`ANSWER me=%0; @pemit %#=Saved your answer.; @input/cancel
-@set me/INPUT`SAVE=cmdsyntax
-@input/start me/INPUT`SAVE=Describe your character:,120
+@create Notepad
+@set Notepad=!no_command
+&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start me/INPUT`NOTE=Type your note. Send .done on a line by itself to save it.,1800
+&INPUT`NOTE Notepad=@assert strmatch(%1,input)=@pemit %#=Time ran out before .done, so the note was not saved.; @break strmatch(trim(%0),.done)={&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=Note saved.; @input/cancel}; &DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, or .done to save:
+@set Notepad/INPUT`NOTE=cmdsyntax
 ```
 
-  Read the answer later with `` get(me/DATA`ANSWER) ``. Evaluating player-supplied text is an explicit application choice; ordinary storage and substitution preserve it as data.
+  Output: a player carrying the notepad types `+note`, then `Hello [there]`, `look` and `.done`. `` get(Notepad/DATA`NOTE) `` returns the two lines `Hello [there]` and `look`; neither was evaluated or run. The player sees `Note saved.` and is back at ordinary commands.
+
+  Evaluating player-supplied text is an explicit application choice; ordinary storage and substitution preserve it as data.
 
 ::: seealso
 - [@prompt]
@@ -2387,6 +2397,7 @@ Options:
 - graphics: See [GRAPHICS]
 - animation: See [ANIMATION]
 - terminal: See [TERMINAL]
+- charset: See [CHARSET]
 - screenreader: on, off or auto. Same as SCREENREADER; see [screenreader client]
 - outputprefix: Same as OUTPUTPREFIX
 - outputsuffix: Same as OUTPUTSUFFIX
@@ -2396,7 +2407,7 @@ Options:
 - height: Set your height(), same as SCREENHEIGHT
 - terminaltype: Your terminal type, used by terminfo()
 - prompt_newlines: Set whether a newline is shown after prompts from @prompt, same as PROMPT_NEWLINES
-- stripaccents: Strip accents for this connection. Like the NOACCENTS flag, but connection-specific. Set by default on connections which negotiate charset as [US-]ASCII
+- stripaccents: Send this connection plain ASCII, each other character replaced as [CHARSET] describes. Like the NOACCENTS flag, but connection-specific.
 - noquota: Input command quota is set to max every refresh. Can only be set by a logged-in Wizard.
 
 Note that changing 'telnet' or 'pueblo' may stop your client from parsing or displaying output correctly; only use if you know what you're doing!
@@ -2410,6 +2421,7 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 - [HYPERLINKS]
 - [GRAPHICS]
 - [TERMINAL]
+- [CHARSET]
 - [@prompt]
 :::
 # colorstyle
@@ -2541,6 +2553,41 @@ Terminal set to 'windows-terminal'
 - [ANIMATION]
 - [HYPERLINKS]
 - [@SOCKSET]
+:::
+# charset
+`SOCKSET charset=<utf-8|latin-1|ascii|auto>`<br>
+`@SOCKSET [me|<descriptor>]=charset,<utf-8|latin-1|ascii|auto>`
+
+SharpMUSH writes to your connection in UTF-8 when your client agrees to it during telnet negotiation, says it can in the terminal type it reports, or is a terminal SharpMUSH knows (see [TERMINAL]). A client that agrees to Latin-1 is written in Latin-1, and one that says neither is sent plain ASCII.
+
+A client that is not sent UTF-8 gets each character it cannot show as the nearest one it can, so output still reads:
+
+- a middle dot or a bullet as `*`
+- a dash as `-`
+- curly quotes as straight ones
+- an accented letter as the plain letter, such as `e` for an e with an acute accent
+- a line or corner of a box as `-`, `=`, `|` or `+` (see [LAYOUT BORDERS ASCII])
+- any other character as `?`, twice for a wide one
+
+Each of these takes as many columns as the character it replaces, so columns stay lined up. A Latin-1 client keeps the characters Latin-1 has, such as the middle dot and accented letters.
+
+'SOCKSET charset' names the character set yourself, for a client SharpMUSH guesses wrong. 'auto' goes back to what your client negotiated or reported. 'SOCKSET stripaccents=yes' sends ASCII whatever this is set to.
+
+A game can choose its own stand-ins, which come before the ones above; see [@ASCII].
+
+Example:
+```
+> SOCKSET charset=ascii
+Charset set to 'ascii'
+```
+
+
+::: seealso
+- [@SOCKSET]
+- [TERMINFO()]
+- [LAYOUT BORDERS]
+- [STRIPACCENTS()]
+- [@ASCII]
 :::
 # @speechmod
 `@speechmod <object>[=<modifier>]`

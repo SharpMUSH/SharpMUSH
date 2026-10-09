@@ -34,7 +34,7 @@ public class QueueControlCommandTests
 			await queue.PausePending(RequirePid(job), "hold");
 			var before = queue.GetQueueEntry(RequirePid(job))!.RemainingDelay!.Value;
 			var result = await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@wait/pid {job.Pid}=+30"));
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(RequirePid(job).ToString());
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(RequirePid(job).ToString());
 			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.RemainingDelay).IsEqualTo(before + TimeSpan.FromSeconds(30));
 			await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@wait/pid {job.Pid}=-20"));
 			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.RemainingDelay).IsEqualTo(before + TimeSpan.FromSeconds(10));
@@ -64,14 +64,14 @@ public class QueueControlCommandTests
 			var timestamp = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
 			var result = await Factory.CommandParser.CommandParse(1, connections,
 				MarkupText.Plain($"@wait/pid/until {job.Pid}={timestamp}"));
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(RequirePid(job).ToString());
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(RequirePid(job).ToString());
 			var remaining = queue.GetQueueEntry(RequirePid(job))!.RemainingDelay!.Value;
 			await Assert.That(remaining.TotalSeconds).IsGreaterThan(290);
 			await Assert.That(remaining.TotalSeconds).IsLessThanOrEqualTo(300);
 			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.State).IsEqualTo(QueueEntryState.Paused);
 			var invalid = await Factory.CommandParser.CommandParse(1, connections,
 				MarkupText.Plain($"@wait/pid {job.Pid}=9223372036854775807"));
-			await Assert.That(invalid.Message!.ToPlainText()).IsEqualTo("#-1 INVALID TIME");
+			await Assert.That(invalid.Message.ToPlainText()).IsEqualTo("#-1 INVALID TIME");
 			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.RemainingDelay).IsEqualTo(remaining);
 		}
 		finally { if (job.Pid is { } pid) await queue.HaltByPid(pid); }

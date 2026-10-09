@@ -17,6 +17,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	private static readonly NaturalSortComparer NaturalSortComparerInstance =
 		new(StringComparison.OrdinalIgnoreCase);
 	private static readonly MudnameEqualityComparer MudnameComparerInstance = new();
+	private static readonly DbRefEqualityComparer DbRefComparerInstance = new();
 	private static readonly NumericEqualityComparer IntegerComparerInstance = new(useFloat: false);
 	private static readonly NumericEqualityComparer FloatComparerInstance = new(useFloat: true);
 
@@ -117,9 +118,13 @@ public class SortService(ILocateService locateService, IConnectionService connec
 					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.OrdinalIgnoreCase,
 						direction),
 
+			// By dbref number, as PennMUSH does: #99 before #105, and an objid sorts as its dbref.
+			// Anything that is not a dbref counts as #-1.
 			ISortService.SortType.DbRef
 				=> source
-					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal, direction),
+					.Select(mString => (n: DbRefNumber(mString.ToPlainText()), mString))
+					.OrderByAwait((val, ct) => ValueTask.FromResult(val.n), Comparer<int>.Default, direction)
+					.Select(val => val.mString),
 
 			ISortService.SortType.IntegerSort
 				=> source
@@ -233,9 +238,18 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	/// for set membership testing. This ensures setunion/setinter/setdiff/setsymdiff
 	/// use the same comparison logic as sorting when determining duplicates.
 	/// </summary>
+	/// <summary>The number of dbref or objid <paramref name="text"/> (<c>#105</c>, <c>#105:1</c>); -1 when it is neither.</summary>
+	private static int DbRefNumber(string text)
+	{
+		var colon = text.IndexOf(':');
+		var number = colon < 0 ? text : text[..colon];
+		return number.StartsWith('#') && int.TryParse(number.AsSpan(1), out var value) && value >= 0 ? value : -1;
+	}
+
 	public IEqualityComparer<string> GetEqualityComparer(ISortService.SortInformation sortData) =>
 		sortData.Type switch
 		{
+			ISortService.SortType.DbRef => DbRefComparerInstance,
 			ISortService.SortType.IntegerSort => IntegerComparerInstance,
 			ISortService.SortType.DecimalSort => FloatComparerInstance,
 			ISortService.SortType.CasedLexicographically => StringComparer.Ordinal,
@@ -244,6 +258,25 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			ISortService.SortType.NaturalSort => MudnameComparerInstance,
 			_ => MudnameComparerInstance
 		};
+
+	/// <summary>
+	/// Set membership under the <c>d</c> sort, as PennMUSH compares dbrefs: two dbrefs or objids are the same
+	/// member when their numbers match (<c>#105</c>, <c>#105:1</c>), the same key they sort by. Anything that
+	/// is not a dbref compares as mudname equality does, so non-dbrefs do not all collapse into one.
+	/// </summary>
+	private sealed class DbRefEqualityComparer : IEqualityComparer<string>
+	{
+		public bool Equals(string? x, string? y)
+		{
+			if (ReferenceEquals(x, y)) return true;
+			if (x is null || y is null) return false;
+			var (nx, ny) = (DbRefNumber(x), DbRefNumber(y));
+			return nx >= 0 || ny >= 0 ? nx == ny : MudnameComparerInstance.Equals(x, y);
+		}
+
+		public int GetHashCode(string obj) =>
+			DbRefNumber(obj) is >= 0 and var number ? number : MudnameComparerInstance.GetHashCode(obj);
+	}
 
 	/// <summary>
 	/// PennMUSH mudname equality: if both values parse as numbers, compare numerically;

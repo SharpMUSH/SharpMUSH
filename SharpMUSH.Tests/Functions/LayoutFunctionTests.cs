@@ -17,7 +17,7 @@ public class LayoutFunctionTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<MString> Eval(string code) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(code)))!.Message!;
+		await FunctionParser.EvaluateAsync(MarkupText.Plain(code));
 
 	private static string Lines(params string[] lines) => string.Join("\n", lines);
 
@@ -67,6 +67,35 @@ public class LayoutFunctionTests
 	public async Task Rule_SetsItsTitleIntoTheLine()
 		=> await Assert.That((await Eval("rule(Factions,40)")).ToPlainText())
 			.IsEqualTo("==============< Factions >==============");
+
+	[Test]
+	public async Task Rule_TakesTitlesOnBothSides()
+		=> await Assert.That((await Eval("rule(Wren [chr(183)] pose 17,40,{{\"title\":\"left\",\"titles\":\\[{\"text\":\"Scene 5\",\"side\":\"right\"}]}})")).ToPlainText())
+			.IsEqualTo("=< Wren · pose 17 >=========< Scene 5 >=");
+
+	[Test]
+	public async Task Rule_LeavesOutTheHighestPriorityTitleWhenNarrow()
+	{
+		const string titles = "\\[{\"text\":\"A\",\"side\":\"left\",\"priority\":2},\"B\",{\"text\":\"C\",\"side\":\"right\",\"priority\":1}]";
+		await Assert.That((await Eval($"rule(,30,{{{{\"titles\":{titles}}}}})")).ToPlainText()).IsEqualTo("=< A >=======< B >======< C >=");
+		await Assert.That((await Eval($"rule(,18,{{{{\"titles\":{titles}}}}})")).ToPlainText()).IsEqualTo("=< A >======< C >=")
+			.Because("the middle B takes its side's priority, 3, the highest");
+		await Assert.That((await Eval($"rule(,12,{{{{\"titles\":{titles}}}}})")).ToPlainText()).IsEqualTo("======< C >=")
+			.Because("A's own priority, 2, goes before C's 1, though a left title would otherwise stay longest");
+	}
+
+	[Test]
+	public async Task Rule_KeepsATitlesColour()
+	{
+		var rule = await Eval("rule(,30,{{\"titles\":\\[{\"text\":\"[ansi(r,Red)]\",\"side\":\"right\"}]}})");
+		await Assert.That(rule.ToPlainText()).IsEqualTo("======================< Red >=");
+		await Assert.That(rule.Render(MarkupFormat.Ansi)).Contains("\u001b[31mRed");
+	}
+
+	[Test]
+	public async Task Box_PutsTitlesInItsBottomEdge()
+		=> await Assert.That((await Eval("box(x,,16,{{\"bottomtitles\":\\[{\"text\":\"1/3\",\"side\":\"right\"}]}})")).ToPlainText().Split('\n')[^1])
+			.IsEqualTo("+======< 1/3 >=+");
 
 	[Test]
 	public async Task Flex_PutsItemsSideBySide()
@@ -305,6 +334,28 @@ public class LayoutFunctionTests
 	}
 
 	/// <summary>
+	/// tone() names a theme colour rather than a colour: the portal colours the span from its theme, and a
+	/// telnet reader's own @theme decides the colour when their output is rendered.
+	/// </summary>
+	[Test]
+	public async Task AToneIsColouredByTheReadersThemeWhenItIsRendered()
+	{
+		var tone = await Eval("tone(info,Calls [ansi(u,in)].)");
+		await Assert.That(tone.ToPlainText()).IsEqualTo("Calls in.");
+		await Assert.That((await Eval("tone(muted,<OOC> Back in five.)")).ToPlainText()).IsEqualTo("<OOC> Back in five.");
+		await Assert.That(tone.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-info\"");
+
+		if (!ThemePalette.TryParse("fantasy", out var fantasy, out _)) throw new InvalidOperationException("fantasy does not read");
+		var themed = ToneMarkup.ForTelnet(tone, fantasy).Render(MarkupFormat.Ansi);
+		var colour = MarkupText.Wrap(AnsiTheme.Paint(fantasy![ThemeRole.Info]!.Value), "x").Render(MarkupFormat.Ansi);
+		await Assert.That(themed).StartsWith(colour[..colour.IndexOf('x')] + "Calls ")
+			.Because("the theme's info colour paints the text, and the text's own underline stays");
+		await Assert.That(themed).DoesNotContain("span");
+		await Assert.That(ToneMarkup.ForTelnet(await Eval("tone(foreground,plain)"), null).Render(MarkupFormat.Ansi))
+			.IsEqualTo("plain").Because("the text colour has no standard colour to fall back on");
+	}
+
+	/// <summary>
 	/// The options are one JSON object, written inside a second pair of braces or built with
 	/// <c>json()</c>; a string keeps its colour and an escaped quote is a quote.
 	/// </summary>
@@ -381,6 +432,10 @@ public class LayoutFunctionTests
 	[Arguments("box(x,,0)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("box(x,,1001)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("rule(x,abc)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("rule(x,20,{{\"titles\":\"Scene 5\"}})", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"side\":\"up\"}]}})", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"priority\":0}]}})", ErrorMessages.Returns.ArgRange)]
+	[Arguments("rule(x,20,{{\"bottomtitles\":\\[\"a\"]}})", "#-1 UNKNOWN LAYOUT OPTION BOTTOMTITLES")]
 	[Arguments("flex({{\"gap\":99}},a,b)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("flex({{\"vertical\":\"maybe\"}},a,b)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("item(x,wide)", ErrorMessages.Returns.InvalidArgument)]
@@ -401,6 +456,8 @@ public class LayoutFunctionTests
 	[Arguments("datatable({{\"min\":\"x\"}},A|B,1|2)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("notice(JOBS,x,purple)", "#-1 UNKNOWN BADGE KIND")]
+	[Arguments("tone(background,x)", "#-1 UNKNOWN TONE")]
+	[Arguments("tone(purple,x)", "#-1 UNKNOWN TONE")]
 	[Arguments("gradient(x,h|r)", "#-1 UNKNOWN COLOR")]
 	[Arguments("gradient(x,r|g,{{\"rgb\":\"\"}})", "#-1 UNKNOWN LAYOUT OPTION RGB")]
 	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]

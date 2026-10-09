@@ -177,7 +177,7 @@ public class UtilityCommandTests
 		// Dig a room with exits; the new room gets the return exit → examine should show Exits:
 		var digResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain("@dig ExitTestSource=North;N,South;S"));
-		var digMessage = digResult?.Message?.ToPlainText();
+		var digMessage = digResult?.Message.ToPlainText();
 		await Assert.That(digMessage).IsNotNull();
 		var roomDbRef = DBRef.Parse(digMessage!);
 
@@ -203,7 +203,7 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamAnsiMarkup");
 		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain("@create AnsiExamineTestObj"));
-		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
@@ -231,7 +231,7 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamBriefHeader");
 		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain("@create BriefExamineTestObj"));
-		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"@desc {objDbRef}=BriefShouldNotSeeThis"));
 
@@ -260,7 +260,7 @@ public class UtilityCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamPattern");
 		var created = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create ExamPatternObj"));
-		var thing = DBRef.Parse(created.Message!.ToPlainText());
+		var thing = DBRef.Parse(created.Message.ToPlainText());
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"&examinewithattributepattern {thing}=jim"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"examine {thing}/exa*"));
 
@@ -297,16 +297,16 @@ public class UtilityCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VersionAgree");
 		var command = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@version"));
-		var function = await Parser.FunctionParse(MarkupText.Plain("version()"));
+		var function = await Parser.EvaluateAsync(MarkupText.Plain("version()"));
 
-		var banner = function!.Message!.ToPlainText();
-		var lines = command.Message!.ToPlainText().Split('\n');
+		var banner = function.ToPlainText();
+		var lines = command.Message.ToPlainText().Split('\n');
 
 		await Assert.That(banner).IsNotEmpty();
 		await Assert.That(lines).Contains(banner);
 		// The placeholders the two answers used to disagree over are gone for good.
-		await Assert.That(command.Message!.ToPlainText()).DoesNotContain("SharpMUSH version 0");
-		await Assert.That(command.Message!.ToPlainText()).DoesNotContain("Address: Unknown");
+		await Assert.That(command.Message.ToPlainText()).DoesNotContain("SharpMUSH version 0");
+		await Assert.That(command.Message.ToPlainText()).DoesNotContain("Address: Unknown");
 	}
 
 	[Test]
@@ -319,7 +319,7 @@ public class UtilityCommandTests
 		var commandWord = $"scantestword{uniqueSuffix.ToLowerInvariant()}";
 
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objectName}"));
-		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
+		var createdDbref = createResult.Message.ToPlainText();
 		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
 
 		// Things are created NO_COMMAND, so nothing on them is scanned until the flag comes off.
@@ -330,7 +330,7 @@ public class UtilityCommandTests
 
 		var scanResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@scan {commandWord} test"));
-		var scanPlainText = scanResult.Message?.ToPlainText() ?? string.Empty;
+		var scanPlainText = scanResult.Message.ToPlainText();
 
 		// The return value is a space-joined list of "#{dbref.Number}/{attrName}" entries.
 		// DBRef.Number is always the plain integer, even on backends that use "#{n}:{timestamp}" notation.
@@ -355,7 +355,7 @@ public class UtilityCommandTests
 
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create ScanColonObj_{uniqueSuffix}"));
-		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
+		var createdDbref = createResult.Message.ToPlainText();
 		await Assert.That(createdDbref).StartsWith("#")
 			.Because($"@create should return a dbref; got: '{createdDbref}'");
 
@@ -370,7 +370,7 @@ public class UtilityCommandTests
 			MarkupText.Plain($"@scan {commandWord}:go north"));
 
 		var dbrefNum = DBRef.Parse(createdDbref).Number;
-		await Assert.That(scanResult.Message?.ToPlainText() ?? string.Empty)
+		await Assert.That(scanResult.Message.ToPlainText())
 			.Contains($"#{dbrefNum}/{attrName}")
 			.Because(@"the stored \: is a literal colon in the pattern, so ""<word>:go north"" matches");
 
@@ -379,7 +379,7 @@ public class UtilityCommandTests
 		// evaluated before it is matched, so \\: on the way in collapses to the same : as above.)
 		var nearMiss = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@scan {commandWord} go north"));
-		await Assert.That(nearMiss.Message?.ToPlainText() ?? string.Empty).DoesNotContain(attrName);
+		await Assert.That(nearMiss.Message.ToPlainText()).DoesNotContain(attrName);
 	}
 
 	[Test]

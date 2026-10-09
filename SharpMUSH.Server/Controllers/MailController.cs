@@ -154,7 +154,7 @@ public class MailController(
 		string[] switches = request.Urgent ? ["NOEVAL", "URGENT", "SEND"] : ["NOEVAL", "SEND"];
 
 		var result = await commandInvoker.InvokeAsync("@MAIL", character, arguments, switches);
-		var message = result?.Message?.ToPlainText() ?? string.Empty;
+		var message = result?.Message.ToPlainText() ?? string.Empty;
 
 		// A recipient who refuses your mail exists, so that is a 403, not the 404 a bad name gets.
 		if (message == ErrorMessages.Returns.NoSuchPlayer)

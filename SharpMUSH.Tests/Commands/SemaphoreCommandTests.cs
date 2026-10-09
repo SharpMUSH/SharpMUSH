@@ -289,7 +289,7 @@ public class SemaphoreCommandTests
 			var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 				typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(drain ? "Drain" : "Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
 			var result = (drain ? await commands.Drain(parser, metadata) : await commands.Notify(parser, metadata)).Expect<CallState>();
-			await Assert.That(result.Message!.ToPlainText()).Contains("Semaphore attribute must have a numeric or empty value");
+			await Assert.That(result.Message.ToPlainText()).Contains("Semaphore attribute must have a numeric or empty value");
 			await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(usage);
 			await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).LastAsync()).Value.ToPlainText()).IsEqualTo(value);
 			using var lease = await Scheduler.EnterSemaphoreMutationAsync();
@@ -478,7 +478,7 @@ public class SemaphoreCommandTests
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CountedDrain");
 		var attribute = $"SEM_{Guid.NewGuid():N}";
 		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/{attribute})"))).ToPlainText();
 		await Command($"@wait {target}/{attribute}=think first");
 		await Command($"@wait {target}/{attribute}=think second");
 		await Assert.That(await Count()).IsEqualTo("2");
@@ -512,7 +512,7 @@ public class SemaphoreCommandTests
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/{attribute})"))).ToPlainText();
 		await Scheduler.AdmitWork(async () => { blocked.SetResult(); await release.Task; return null; }, "drain-block", "test");
 		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
@@ -557,7 +557,7 @@ public class SemaphoreCommandTests
 		}
 		finally { release.SetResult(); }
 		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		var result = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		var result = (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/{attribute})"))).ToPlainText();
 		await Assert.That(result).IsEqualTo("-1");
 	}
 
@@ -570,7 +570,7 @@ public class SemaphoreCommandTests
 			ConnectionService, "SemaphoreOutsider");
 		var attribute = $"SEM_{Guid.NewGuid():N}";
 		async ValueTask Command(long handle, string command) => await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
-		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({player.DbRef}/{attribute})")))!.Message!.ToPlainText();
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({player.DbRef}/{attribute})"))).ToPlainText();
 		await Command(player.Handle, $"@notify me/{attribute}=2");
 		await Assert.That(await Count()).IsEqualTo("-2");
 		var created = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, [attribute])).LastAsync();
@@ -686,7 +686,7 @@ public class SemaphoreCommandTests
 	/// unconditionally. In <c>ArgumentSplit</c> (SharpMUSHParserVisitor), NoParse commands place
 	/// their RHS into a <see cref="CallState"/> whose <c>Message</c> is the raw unevaluated
 	/// string; the deferred <c>ParsedMessage</c> lambda is never consumed by
-	/// <c>SetAttribute</c>, which reads <c>args["2"].Message!</c> directly.
+	/// <c>SetAttribute</c>, which reads <c>args["2"].Message</c> directly.
 	///
 	/// The correct fix must evaluate the RHS when <c>&amp;</c> runs from a command queue context
 	/// (equivalent to PennMUSH's non-QUEUE_NOLIST path) without evaluating it during direct
@@ -857,7 +857,7 @@ public class SemaphoreCommandTests
 			&& delivery.Sender == sender && (type is null || delivery.Type == type));
 
 	private async Task<string> SemaphoreCountAsync(object semObj, string attr)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"get({semObj}/{attr})")))?.Message?.ToPlainText() ?? string.Empty;
+		=> (await Parser.FunctionParse(MarkupText.Plain($"get({semObj}/{attr})")))?.Message.ToPlainText() ?? string.Empty;
 
 	/// <summary>
 	/// PennMUSH's semaphore attribute holds the number of tasks waiting on it. A parking @wait is
@@ -962,5 +962,5 @@ public class SemaphoreCommandTests
 	}
 
 	private async Task<string> MortalSemaphoreCountAsync(TestIsolationHelpers.TestPlayer who, string attr)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"get({who.DbRef}/{attr})")))?.Message?.ToPlainText() ?? string.Empty;
+		=> (await Parser.FunctionParse(MarkupText.Plain($"get({who.DbRef}/{attr})")))?.Message.ToPlainText() ?? string.Empty;
 }

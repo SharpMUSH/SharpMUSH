@@ -26,7 +26,7 @@ public class HttpHandlerQueueTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Evaluate(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	[Test]
 	public async Task AHandlerRequestWaitsForTheQueueEntryAlreadyRunningAndSeesItsWrites()

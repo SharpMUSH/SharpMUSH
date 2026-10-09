@@ -39,11 +39,11 @@ public class AttributeReadWalkParityTests
 
 	/// <summary>Evaluated as God.</summary>
 	private async Task<string> Eval(string expression)
-		=> (await Parser.FunctionParse(MarkupText.Plain(expression)))?.Message?.ToPlainText() ?? string.Empty;
+		=> (await Parser.FunctionParse(MarkupText.Plain(expression)))?.Message.ToPlainText() ?? string.Empty;
 
 	/// <summary>Evaluated as the player behind <paramref name="handle"/>.</summary>
 	private async Task<string> EvalAs(long handle, string expression)
-		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}")))?.Message?.ToPlainText()
+		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}")))?.Message.ToPlainText()
 			?? string.Empty;
 
 	private Task<DBRef> Thing(string prefix) => TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, prefix);

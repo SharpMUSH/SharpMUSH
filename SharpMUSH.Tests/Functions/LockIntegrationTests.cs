@@ -21,7 +21,7 @@ public class LockIntegrationTests
 
 	private async Task<string> Eval(string expr)
 	{
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain(expr)))?.Message!;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain(expr));
 		return result.ToPlainText();
 	}
 
@@ -33,7 +33,7 @@ public class LockIntegrationTests
 	private async Task<DBRef> CreateObject(string name)
 	{
 		var result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, name);
-		return DBRef.Parse(result.Message!.ToPlainText()!);
+		return DBRef.Parse(result.Message.ToPlainText()!);
 	}
 
 	// Oracle: lock(obj/Basic), lock(obj/basic), lock(obj/BASIC) all return same result
@@ -227,7 +227,7 @@ public class LockIntegrationTests
 		var obj = await CreateObject("LockUseEndToEnd");
 
 		var lockUseResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/use #{obj.Number}=#FALSE"));
-		await Assert.That(lockUseResult.Message?.ToPlainText() ?? string.Empty).DoesNotContain("#-1 INVALID SWITCH");
+		await Assert.That(lockUseResult.Message.ToPlainText()).DoesNotContain("#-1 INVALID SWITCH");
 
 		var elockResult = await Eval($"elock(#{obj.Number}/Use,%#)");
 		await Assert.That(elockResult).IsEqualTo("0");

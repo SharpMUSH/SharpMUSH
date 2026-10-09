@@ -74,6 +74,9 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetUnknownTerminalFormat = "Unknown terminal '{0}'. Known terminals: {1}, or 'auto'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetCharsetSetFormat = "Charset set to '{0}'";
+		public const string SocksetUnknownCharset = "Unknown charset. Valid settings: 'utf-8', 'latin-1', 'ascii', 'auto'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetInvalidOptionFormat = "@sockset option '{0}' is not a valid option.";
 		public const string SocksetInvalidDescriptor = "Invalid descriptor.";
 
@@ -204,6 +207,18 @@ public static partial class ErrorMessages
 		public const string SitelockHostMatchesFormat = "Host '{0}' matches pattern '{1}' with options: {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockHostNoMatchFormat = "Host '{0}' does not match any sitelock rules (default access allowed).";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AsciiTranslationSetFormat = "{0} is sent to clients without Unicode as '{1}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AsciiTranslationDroppedFormat = "{0} is left out for clients without Unicode.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AsciiTranslationRemovedFormat = "{0} is sent as its built-in stand-in again.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AsciiTranslationNotFoundFormat = "{0} has no translation.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AsciiTranslationBadCharacterFormat = "'{0}' is not one character outside ASCII.";
+		public const string AsciiTranslationBadText = "The text must be plain ASCII. Write a space as %b.";
+		public const string AsciiTranslationUsage = "Usage: @ascii[/remove] <character>[=<text>]";
 		public const string SitelockNameListHeader = "Any name matching these wildcard patterns is banned:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockNameLockedFormat = "Name {0} locked.";

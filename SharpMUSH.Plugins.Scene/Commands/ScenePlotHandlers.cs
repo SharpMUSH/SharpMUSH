@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -34,12 +35,12 @@ public static class ScenePlotHandlers
 					if (string.IsNullOrEmpty(ownerDbref) || string.IsNullOrEmpty(title))
 					{
 						await notifyService.Notify(executor,
-							"SCENE: /plot/create needs <ownerDbref>,<title>[,<description>].");
+							SceneCommandHelper.Notice("/plot/create needs <ownerDbref>,<title>[,<description>].", NoticeKind.Warn));
 						return MarkupText.Plain(SceneCommandHelper.BadArguments);
 					}
 
 					var plot = await sceneService.UpsertPlotAsync(null, title, description, ownerDbref);
-					await notifyService.Notify(executor, $"SCENE: Created plot #{plot.Id} '{plot.Title}'.");
+					await notifyService.Notify(executor, SceneCommandHelper.Notice($"Created plot #{plot.Id} '{plot.Title}'.", NoticeKind.Ok));
 					return MarkupText.Plain(plot.Id);
 				}
 
@@ -49,11 +50,11 @@ public static class ScenePlotHandlers
 					var plotId = SceneCommandHelper.Plain(plotArg);
 					if (await sceneService.LinkSceneToPlotAsync(plotId, sceneId) is NotFound)
 					{
-						await notifyService.Notify(executor, "SCENE: No such plot or scene.");
+						await notifyService.Notify(executor, SceneCommandHelper.Notice("No such plot or scene.", NoticeKind.Warn));
 						return MarkupText.Plain(SceneCommandHelper.NotFound);
 					}
 
-					await notifyService.Notify(executor, $"SCENE: Linked scene #{sceneId} into plot #{plotId}.");
+					await notifyService.Notify(executor, SceneCommandHelper.Notice($"Linked scene #{sceneId} into plot #{plotId}.", NoticeKind.Ok));
 					return MarkupText.Plain(plotId);
 				}
 
@@ -63,11 +64,11 @@ public static class ScenePlotHandlers
 					var plotId = SceneCommandHelper.Plain(plotArg);
 					if (await sceneService.UnlinkSceneFromPlotAsync(plotId, sceneId) is NotFound)
 					{
-						await notifyService.Notify(executor, "SCENE: No such plot or scene.");
+						await notifyService.Notify(executor, SceneCommandHelper.Notice("No such plot or scene.", NoticeKind.Warn));
 						return MarkupText.Plain(SceneCommandHelper.NotFound);
 					}
 
-					await notifyService.Notify(executor, $"SCENE: Unlinked scene #{sceneId} from plot #{plotId}.");
+					await notifyService.Notify(executor, SceneCommandHelper.Notice($"Unlinked scene #{sceneId} from plot #{plotId}.", NoticeKind.Ok));
 					return MarkupText.Plain(plotId);
 				}
 
@@ -77,12 +78,12 @@ public static class ScenePlotHandlers
 					var plotId = SceneCommandHelper.Plain(plotArg);
 					if (await sceneService.GetPlotAsync(plotId) is not ScenePlot plot)
 					{
-						await notifyService.Notify(executor, $"SCENE: No plot '{plotId}'.");
+						await notifyService.Notify(executor, SceneCommandHelper.Notice($"No plot '{plotId}'.", NoticeKind.Warn));
 						return MarkupText.Plain(SceneCommandHelper.NotFound);
 					}
 
 					await notifyService.Notify(executor,
-						$"SCENE: Plot #{plot.Id} '{plot.Title}' — owner {plot.OwnerName}. {plot.Description}");
+						SceneCommandHelper.Notice($"Plot #{plot.Id} '{plot.Title}' — owner {plot.OwnerName}. {plot.Description}"));
 					return MarkupText.Plain(plot.Id);
 				}
 		}

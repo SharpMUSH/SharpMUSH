@@ -23,7 +23,7 @@ public partial class Functions
 	public ValueTask<CallState> And(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments.Count > 0
 			&& parser.CurrentState.Arguments
-				.Select(x => x.Value.Message!)
+				.Select(x => x.Value.Message)
 				.All(value => value.Truthy(parser))
 			? "1"
 			: "0");
@@ -42,7 +42,7 @@ public partial class Functions
 		var hadErrors = false;
 		async ValueTask<bool> Test(CallState argument, CancellationToken _)
 		{
-			var parsed = await parser.FunctionParse(argument.Message!) ?? CallState.Empty;
+			var parsed = await parser.FunctionParse(argument.Message) ?? CallState.Empty;
 			hadErrors |= parsed.HadErrors;
 			return truthy ? parsed.Message.Truthy(parser) : parsed.Message.Falsy(parser);
 		}
@@ -78,7 +78,7 @@ public partial class Functions
 	[SharpFunction(Name = "nand", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> NegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.ArgumentsOrdered
-			.Select(x => x.Value.Message!)
+			.Select(x => x.Value.Message)
 			.Any(value => value.Falsy(parser))
 			? "1"
 			: "0");
@@ -98,7 +98,7 @@ public partial class Functions
 	[SharpFunction(Name = "nor", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Nor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
-			.Select(x => x.Value.Message!)
+			.Select(x => x.Value.Message)
 			.All(value => value.Falsy(parser))
 			? "1"
 			: "0");
@@ -116,7 +116,7 @@ public partial class Functions
 	[SharpFunction(Name = "or", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Or(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
-			.Select(x => x.Value.Message!)
+			.Select(x => x.Value.Message)
 			.Any(value => value.Truthy(parser))
 			? "1"
 			: "0");
@@ -131,7 +131,7 @@ public partial class Functions
 	[SharpFunction(Name = "xor", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Xor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
-			.Select(x => x.Value.Message!)
+			.Select(x => x.Value.Message)
 			.Count(value => value.Truthy(parser)) == 1
 			? "1"
 			: "0");
@@ -139,7 +139,7 @@ public partial class Functions
 	[SharpFunction(Name = "isdbref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (HelperFunctions.ParseDbRef((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not DBRef dbref) return new("0");
+		if (HelperFunctions.ParseDbRef(parser.CurrentState.Arguments["0"].Message.ToPlainText()) is not DBRef dbref) return new("0");
 		return new CallState(await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject);
 	}
 
@@ -150,11 +150,11 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(ArgHelpers.TryStrictInteger(parser.CurrentState.Arguments["0"].Message!.ToString(), out long _) ? "1" : "0"));
+		ValueTask.FromResult<CallState>(new(ArgHelpers.TryStrictInteger(parser.CurrentState.Arguments["0"].Message.ToString(), out long _) ? "1" : "0"));
 
 	[SharpFunction(Name = "isnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult<CallState>(new(decimal.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
+		ValueTask.FromResult<CallState>(new(decimal.TryParse(parser.CurrentState.Arguments["0"].Message.ToString(), out var _) ? "1" : "0"));
 
 	/// <summary>
 	/// <c>fun_isobjid</c> is <c>real_parse_objid(args[0], 1) != NOTHING</c> (<c>src/fundb.c</c>,
@@ -165,7 +165,7 @@ public partial class Functions
 	[SharpFunction(Name = "isobjid", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> IsObjId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var arg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var colon = arg.IndexOf(':');
 		// is_strict_integer is strtol-based, so a leading sign or whitespace is accepted.
 		if (colon < 0
@@ -182,7 +182,7 @@ public partial class Functions
 	[SharpFunction(Name = "isregexp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> isregexp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(arg)) return ValueTask.FromResult<CallState>(new("0"));
 
@@ -214,7 +214,7 @@ public partial class Functions
 	[SharpFunction(Name = "isword", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		return ValueTask.FromResult(new CallState(IsWordRegex().IsMatch(str)));
 	}
 

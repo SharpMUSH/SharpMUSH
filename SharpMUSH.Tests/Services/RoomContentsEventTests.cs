@@ -32,7 +32,7 @@ public class RoomContentsEventTests
 	private async Task<string> Eval(string expression)
 	{
 		await WebAppFactoryArg.QueueBarrierAsync();
-		return (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		return (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 	}
 
 	[Test]
@@ -77,11 +77,11 @@ public class RoomContentsEventTests
 
 		// @dig returns the room dbref.
 		var digResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbref = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbref = digResult.Message.ToPlainText()!.Trim();
 
 		// @create returns the thing dbref.
 		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
-		var thingDbref = createResult.Message!.ToPlainText()!.Trim();
+		var thingDbref = createResult.Message.ToPlainText()!.Trim();
 
 		// Sanity: both must look like dbrefs.
 		await Assert.That(roomDbref).StartsWith("#");
@@ -121,10 +121,10 @@ public class RoomContentsEventTests
 		var thingName = $"EncThing_{token}";
 
 		var digResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbref = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbref = digResult.Message.ToPlainText()!.Trim();
 
 		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
-		var thingDbref = createResult.Message!.ToPlainText()!.Trim();
+		var thingDbref = createResult.Message.ToPlainText()!.Trim();
 
 		await Assert.That(roomDbref).StartsWith("#");
 		await Assert.That(thingDbref).StartsWith("#");

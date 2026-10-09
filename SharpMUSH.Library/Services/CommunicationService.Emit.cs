@@ -27,7 +27,7 @@ public partial class CommunicationService
 			return new SpeechOutcome(false, CallState.Empty, MString.Empty, MString.Empty);
 		var transformed = speechService is null ? new CallState(message) : await speechService.Value.TransformAsync(parser, executor, message, token);
 		if (transformed.HadErrors) return new SpeechOutcome(false, transformed, MString.Empty, MString.Empty);
-		message = transformed.Message!;
+		message = transformed.Message;
 		var name = speechService is null ? MString.Plain(executor.Object().Name) : await speechService.Value.Names.FormatAsync(executor, NameContext.Speech);
 		var type = token == "\"" ? INotifyService.NotificationType.Say : token == ":" ? INotifyService.NotificationType.Pose : INotifyService.NotificationType.SemiPose;
 		HashSet<DBRef>? omitted = null;
@@ -91,7 +91,7 @@ public partial class CommunicationService
 					var transformed = request.Scope == EmitScope.Immediate && speechService is not null
 						? await speechService.Value.TransformAsync(parser, executor, request.Message, "|") : new CallState(request.Message);
 					if (transformed.HadErrors) return new EmitOutcome(false, transformed);
-					await EmitLocationAsync(executor, speaker, location, transformed.Message!, type);
+					await EmitLocationAsync(executor, speaker, location, transformed.Message, type);
 					if (request.Scope == EmitScope.Outermost && !request.Silent && (await executor.Where()).Object().DBRef != location.Object().DBRef)
 						await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouLemitFormat), executor, request.Message);
 					break;
@@ -100,14 +100,14 @@ public partial class CommunicationService
 				foreach (var name in request.Targets)
 				{
 					if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject target) continue;
-					if (!target.IsContainer)
+					if (target.AsOptionalContainer is not AnySharpContainer targetRoom)
 					{
 						await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
 						continue;
 					}
-					if (!await MayPemitAsync(parser, speaker, target) || !await MayEmitInAsync(parser, executor, speaker, target.AsContainer)) continue;
+					if (!await MayPemitAsync(parser, speaker, target) || !await MayEmitInAsync(parser, executor, speaker, targetRoom)) continue;
 					admitted = true;
-					await EmitLocationAsync(executor, speaker, target.AsContainer, request.Message, type);
+					await EmitLocationAsync(executor, speaker, targetRoom, request.Message, type);
 					if (!request.Silent && (await executor.Where()).Object().DBRef != target.Object().DBRef)
 						await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor,
 							request.Message, MString.Plain($"{target.Object().Name}(#{target.Object().DBRef.Number})"));
@@ -128,10 +128,10 @@ public partial class CommunicationService
 					var here = (await executor.Where()).Object().DBRef;
 					await foreach (var item in mediator.CreateStream(new GetObjectsByZoneQuery(zone), ExecutionBudget.CurrentToken))
 					{
-						if (item.Type != "ROOM" || await mediator.Send(new GetObjectNodeQuery(item.DBRef), ExecutionBudget.CurrentToken) is not AnySharpObject room) continue;
-						if (!await MayEmitInAsync(parser, executor, speaker, room.AsContainer, reportFailure: false)) continue;
+						if (item.Type != "ROOM" || await mediator.Send(new GetObjectNodeQuery(item.DBRef), ExecutionBudget.CurrentToken) is not AnySharpObject { AsOptionalContainer: AnySharpContainer room }) continue;
+						if (!await MayEmitInAsync(parser, executor, speaker, room, reportFailure: false)) continue;
 						admitted = true;
-						heardHere |= await EmitLocationAsync(executor, speaker, room.AsContainer, request.Message, type, observe: here);
+						heardHere |= await EmitLocationAsync(executor, speaker, room, request.Message, type, observe: here);
 					}
 					if (!request.Silent && !heardHere)
 						await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouZemitInZoneFormat), executor,
@@ -201,14 +201,14 @@ public partial class CommunicationService
 		{
 			if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, locationName, LocateFlags.All) is not AnySharpObject target)
 				return new EmitOutcome(false, CallState.Empty) { TargetFailure = new CallState(ErrorMessages.Returns.InvalidRoom) };
-			if (!target.IsContainer)
+			if (target.AsOptionalContainer is not AnySharpContainer targetRoom)
 			{
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
 				return new EmitOutcome(false, new CallState(ErrorMessages.Returns.InvalidRoom) { HadErrors = true });
 			}
-			if (!await MayEmitInAsync(parser, executor, speaker, target.AsContainer)) return new EmitOutcome(false, CallState.Empty);
+			if (!await MayEmitInAsync(parser, executor, speaker, targetRoom)) return new EmitOutcome(false, CallState.Empty);
 			looker = target;
-			locations[target.Object().DBRef] = target.AsContainer;
+			locations[target.Object().DBRef] = targetRoom;
 		}
 		var matched = 0;
 		foreach (var name in request.Targets)
@@ -253,9 +253,8 @@ public partial class CommunicationService
 		var notified = new List<AnySharpObject>();
 		var portsNotified = 0;
 		long lastPort = 0;
-		foreach (var name in request.Targets)
+		foreach (var name in request.Targets.Where(name => !string.IsNullOrWhiteSpace(name)))
 		{
-			if (string.IsNullOrWhiteSpace(name)) continue;
 			if (request.Scope == EmitScope.Private && request.PortTargets)
 			{
 				if (!await executor.IsPriv())

@@ -24,7 +24,7 @@ public class StringFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 
 		var markup = AnsiMarkup.Create(foreground: new AnsiColor.Standard(paletteIndex, bright));
 		var markedUpString = MarkupText.Wrap(markup, MarkupText.Plain(expectedText));
@@ -39,7 +39,7 @@ public class StringFunctionUnitTests
 	[Arguments("digest(md5,rawr)", "6f10ae4af2b1216275234f1b4f4040ef")]
 	public async Task Digest(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -55,7 +55,7 @@ public class StringFunctionUnitTests
 	[Arguments("table(one two three,5,20)")]
 	public async Task AlignedOutputIsPreformatted(string code)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(code)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(code));
 
 		await Assert.That(result.Render(MarkupFormat.Pueblo)).StartsWith("<xch_mudtext>");
 		await Assert.That(result.Render(MarkupFormat.Pueblo)).EndsWith("</xch_mudtext>");
@@ -68,7 +68,7 @@ public class StringFunctionUnitTests
 	[Test]
 	public async Task AlignedOutputIsUnchangedForATerminal()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("align(5 5,a1%ra2,b1)")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("align(5 5,a1%ra2,b1)"));
 
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("a1    b1   \na2         ");
 		await Assert.That(result.ToPlainText()).IsEqualTo("a1    b1   \na2         ");
@@ -97,7 +97,7 @@ public class StringFunctionUnitTests
 		"123\n1 1\n1 1")]
 	public async Task Align(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -112,7 +112,7 @@ public class StringFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 
 		var markup = AnsiMarkup.Create(background: new AnsiColor.Standard(paletteIndex, false), bold: bold);
 		var markedUpString = MarkupText.Wrap(markup, MarkupText.Plain(expectedText));
@@ -132,7 +132,7 @@ public class StringFunctionUnitTests
 	[Arguments("after(abcdef,abc)", "def")] // delimiter at the start
 	public async Task After(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -143,7 +143,7 @@ public class StringFunctionUnitTests
 	[Arguments("before(abc,XY)", "abc")] // delimiter absent -> whole string
 	public async Task Before(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -152,7 +152,7 @@ public class StringFunctionUnitTests
 	[Arguments("strlen(a b c)", "5")]
 	public async Task Strlen(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -161,7 +161,7 @@ public class StringFunctionUnitTests
 	[Arguments("left(abc,10)", "abc")]
 	public async Task Left(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -170,7 +170,7 @@ public class StringFunctionUnitTests
 	[Arguments("right(abc,10)", "abc")]
 	public async Task Right(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -185,7 +185,7 @@ public class StringFunctionUnitTests
 	[Arguments("mid(abcde,5,1)", "")]
 	public async Task Mid(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -194,7 +194,7 @@ public class StringFunctionUnitTests
 	[Arguments("ucstr(HeLLo WoRLd)", "HELLO WORLD")]
 	public async Task Ucstr(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -203,7 +203,7 @@ public class StringFunctionUnitTests
 	[Arguments("lcstr(HeLLo WoRLd)", "hello world")]
 	public async Task Lcstr(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -215,7 +215,7 @@ public class StringFunctionUnitTests
 	[Arguments("capstr(élan)", "Élan")]
 	public async Task Capstr(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -224,7 +224,7 @@ public class StringFunctionUnitTests
 	[Arguments("repeat(ab,3)", "ababab")]
 	public async Task Repeat(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -233,7 +233,7 @@ public class StringFunctionUnitTests
 	[Arguments("space(0)", "")]
 	public async Task Space(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -258,7 +258,7 @@ public class StringFunctionUnitTests
 	[Arguments("chr(abc)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Chr(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -267,7 +267,7 @@ public class StringFunctionUnitTests
 	[Arguments("ord(a)", "97")]
 	public async Task Ord(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -276,7 +276,7 @@ public class StringFunctionUnitTests
 	[Arguments("flip(abc)", "cba")]
 	public async Task Flip(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -286,7 +286,7 @@ public class StringFunctionUnitTests
 	[Arguments("edit(hello,$,%bworld)", "hello world")]
 	public async Task Edit(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -297,8 +297,8 @@ public class StringFunctionUnitTests
 	[Arguments("edit(ansi(r,ab),,-)", "-[ansi(r,a)]-[ansi(r,b)]-")]
 	public async Task Edit_KeepsMarkup(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		var markedUp = (await Parser.FunctionParse(MarkupText.Plain(expected)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		var markedUp = await Parser.EvaluateAsync(MarkupText.Plain(expected));
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(markedUp.Render(MarkupFormat.Ansi));
 	}
 
@@ -315,7 +315,7 @@ public class StringFunctionUnitTests
 	[Arguments("tr(test STRING,te,et)", "etse STRING")]
 	public async Task Tr(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -324,7 +324,7 @@ public class StringFunctionUnitTests
 	[Arguments("alphamin(cherry,apple,banana)", "apple")]
 	public async Task AlphaMaxMin(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -336,7 +336,7 @@ public class StringFunctionUnitTests
 	[Arguments("escape()", "")]
 	public async Task Escape(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -347,7 +347,7 @@ public class StringFunctionUnitTests
 	[Arguments("secure(plain text)", "plain text")]
 	public async Task Secure(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -358,7 +358,7 @@ public class StringFunctionUnitTests
 	[Arguments("secure(ansi(hr,a$b))", "a b")]
 	public async Task EscapeAndSecureKeepMarkup(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		var styled = MarkupText.Wrap(
 			AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, true)), MarkupText.Plain("x"))
 			.Render(MarkupFormat.Ansi);
@@ -379,7 +379,7 @@ public class StringFunctionUnitTests
 	[Arguments("squish(a b)", "a b")]
 	public async Task Squish(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -387,7 +387,7 @@ public class StringFunctionUnitTests
 	[Arguments("merge(a|b|c,1|2|3,|)", "a1 b2 c3")]
 	public async Task Merge(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -403,7 +403,7 @@ public class StringFunctionUnitTests
 	[Arguments("comp(#1:12345,#1:99999,D)", "0")]
 	public async Task Comp(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -427,7 +427,7 @@ public class StringFunctionUnitTests
 	[Arguments("decompose(ansi(/#ff0000,x))", "[ansi(!#ff0000,x)]")]
 	public async Task Decompose(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -445,7 +445,7 @@ public class StringFunctionUnitTests
 		var coloredX = MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Xterm(200)), "x");
 		var source = MarkupText.Concat(MarkupText.Plain("decompose("), MarkupText.Concat(coloredX, MarkupText.Plain(")")));
 
-		var result = (await Parser.FunctionParse(source))?.Message!;
+		var result = await Parser.EvaluateAsync(source);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("[ansi(+xterm200,x)]");
 	}
@@ -456,7 +456,7 @@ public class StringFunctionUnitTests
 		var coloredX = MarkupText.Wrap(AnsiMarkup.Create(background: new AnsiColor.Xterm(200)), "x");
 		var source = MarkupText.Concat(MarkupText.Plain("decompose("), MarkupText.Concat(coloredX, MarkupText.Plain(")")));
 
-		var result = (await Parser.FunctionParse(source))?.Message!;
+		var result = await Parser.EvaluateAsync(source);
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("[ansi(!+xterm200,x)]");
 	}
@@ -467,7 +467,7 @@ public class StringFunctionUnitTests
 	[Arguments("decomposeweb(a<b>&c)", "a&lt;b&gt;&amp;c")]
 	public async Task DecomposeWeb(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -476,7 +476,7 @@ public class StringFunctionUnitTests
 	[Arguments("cond(0,yes,no)", "no")]
 	public async Task Cond(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -489,7 +489,7 @@ public class StringFunctionUnitTests
 	[Arguments("strinsert(000,-1,1)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Strinsert(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -505,7 +505,7 @@ public class StringFunctionUnitTests
 	[Arguments("strreplace(0010,-1,4,woot)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Strreplace(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -523,7 +523,7 @@ public class StringFunctionUnitTests
 	[Arguments("strmatch(ABC,abc)", "1")]
 	public async Task Strmatch(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -541,7 +541,7 @@ public class StringFunctionUnitTests
 	[Arguments("accent(abc,`)", "#-1 ARGUMENT OUT OF RANGE")]
 	public async Task Accent(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -549,7 +549,7 @@ public class StringFunctionUnitTests
 	[Arguments("brackets(\\[test\\])", "1 1 0 0 0 0")]
 	public async Task Brackets(string str, string expectedText)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
@@ -558,7 +558,7 @@ public class StringFunctionUnitTests
 	[Arguments("lpos(test,s)", "2")]
 	public async Task Lpos(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -567,7 +567,7 @@ public class StringFunctionUnitTests
 	[Arguments("strcat(hello,%b,world)", "hello world")]
 	public async Task Strcat(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -575,7 +575,7 @@ public class StringFunctionUnitTests
 	[Arguments("stripansi(ansi(r,red))", "red")]
 	public async Task Stripansi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -585,7 +585,7 @@ public class StringFunctionUnitTests
 	[Arguments("align(-10 -10,left,right)", "   left      right   ")]
 	public async Task AlignJustification(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -594,7 +594,7 @@ public class StringFunctionUnitTests
 	[Arguments("align(10x 10x,hello%rworld,test%rfoo)", "hello      test      \nworld      foo       ")]
 	public async Task AlignTruncate(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -603,7 +603,7 @@ public class StringFunctionUnitTests
 	[Arguments("align(10# 10,test,more)", "test      more      ")]
 	public async Task AlignNoColSep(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -612,7 +612,7 @@ public class StringFunctionUnitTests
 	[Arguments("align(10 10,text,data,.,=,|)", "text......=data......")]
 	public async Task AlignCustomSeparators(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -621,7 +621,7 @@ public class StringFunctionUnitTests
 	[Arguments("align(10,word wrap test here)", "word wrap \ntest here ")]
 	public async Task AlignWrapping(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -630,7 +630,7 @@ public class StringFunctionUnitTests
 	[Arguments("lalign(>10 >10,left|right,|)", "      left      right")]
 	public async Task LAlign(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -640,7 +640,7 @@ public class StringFunctionUnitTests
 	[Arguments("lalign(5 5,x|y,|,.,|)", "x....|y....")]
 	public async Task LAlignCustomDelimitersAndSeparators(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -649,7 +649,7 @@ public class StringFunctionUnitTests
 	[Arguments("lalign(5 5 5 5,one|two|three|four,|)", "one   two   three four ")]
 	public async Task LAlignMultipleColumns(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -658,7 +658,7 @@ public class StringFunctionUnitTests
 	[Arguments("lalign(5. 5,a|b,|)", "a     b    ")]
 	public async Task LAlignOptions(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -670,7 +670,7 @@ public class StringFunctionUnitTests
 	[Arguments("trimpenn(XXXfooXXX,Y,l)", "XXXfooXXX")]
 	public async Task Trimpenn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -682,7 +682,7 @@ public class StringFunctionUnitTests
 	[Arguments("trimtiny(XXXfooXXX,l,Y)", "XXXfooXXX")]
 	public async Task Trimtiny(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -692,7 +692,7 @@ public class StringFunctionUnitTests
 	[Arguments("trim(%b%bfoo%b%b)", "foo")]
 	public async Task Trim(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

@@ -17,7 +17,7 @@ namespace SharpMUSH.Server.Services;
 /// configured handler object —
 /// the HTTP verb routers / profile API on <c>http_handler</c>, the room.contents OOB pushes on
 /// <c>event_handler</c> — and are skipped when that handler is not configured; create-mode
-/// packages (e.g. <c>common-functions</c>, <c>scene</c>) always install.
+/// packages (e.g. <c>plus-help</c>, <c>scene</c>) always install.
 ///
 /// Idempotent per package: an already-installed package is left to the package manager (so admins
 /// can upgrade/customize/uninstall independently) unless it came from the bundled source and this build
@@ -49,13 +49,8 @@ public class DefaultPackagesBootstrapService(
 
 		var declined = (await serverData.GetExpandedServerDataAsync<DeclinedBundledPackages>())?.PackageIds ?? [];
 
-		foreach (var package in BundledPackages.All)
+		foreach (var package in BundledPackages.All.Where(HasHandler))
 		{
-			if (!HasHandler(package))
-			{
-				continue;
-			}
-
 			// A package over a plugin that is turned off or failed to load would install commands that call into nothing.
 			if (GameFeatureService.All.FirstOrDefault(a => a.PackageId == package.PackageId)?.RequiredPlugin is { } plugin
 					&& !plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase)))

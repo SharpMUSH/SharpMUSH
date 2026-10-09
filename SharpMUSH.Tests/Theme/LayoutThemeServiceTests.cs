@@ -26,7 +26,7 @@ public class LayoutThemeServiceTests
 		await Assert.That(added.Name).IsEqualTo("myfantasy");
 		await Assert.That(service.Read("myfantasy").Expect<ThemePalette>().Name).IsEqualTo("myfantasy");
 		await Assert.That(service.Names.Last()).IsEqualTo("myfantasy");
-		await Assert.That(service.Names.First()).IsEqualTo("terminal");
+		await Assert.That(service.Names.First()).IsEqualTo(LayoutThemes.Default);
 	}
 
 	[Test]
@@ -63,6 +63,35 @@ public class LayoutThemeServiceTests
 	}
 
 	[Test]
+	public async Task SharpMUSHsOwnThemes_AreWrittenOutWhereTheyAreNamed()
+	{
+		var service = new LayoutThemeService(new InMemoryData());
+
+		var named = service.Resolve("cyberpunk").Expect<string>();
+		var moded = service.Resolve("{\"preset\":\"sharpmush\",\"colors\":{\"primary\":\"#ff0000\"}}").Expect<string>();
+
+		// A connection's renderer knows only MarkupString's presets, so it is sent the colours.
+		await Assert.That(ThemePalette.TryParse(named, out var cyberpunk, out _)).IsTrue();
+		await Assert.That(cyberpunk!.Name).IsEqualTo("cyberpunk");
+		await Assert.That(cyberpunk[ThemeRole.Primary]!.Value.Rgb!.Value.ToHex()).IsEqualTo("#ff2bd6");
+		await Assert.That(ThemePalette.TryParse(moded, out var sharpmush, out _)).IsTrue();
+		await Assert.That(sharpmush![ThemeRole.Primary]!.Value.Rgb!.Value.ToHex()).IsEqualTo("#ff0000");
+		await Assert.That(sharpmush[ThemeRole.Secondary]!.Value.Rgb!.Value.ToHex()).IsEqualTo("#00f5b7");
+	}
+
+	[Test]
+	public async Task SharpMUSHsOwnThemes_AreDisabledLikeTheOtherBuiltInOnes()
+	{
+		var service = new LayoutThemeService(new InMemoryData());
+
+		await Assert.That((await service.SetDisabledAsync("idol", true)).Value is Success).IsTrue();
+
+		await Assert.That(service.Read("idol").Expect<Error<string>>().Value).IsEqualTo(LayoutThemes.Unknown);
+		await Assert.That(service.Names).DoesNotContain("idol");
+		await Assert.That(service.List().Single(theme => theme.Name == "idol") is { BuiltIn: true, Disabled: true }).IsTrue();
+	}
+
+	[Test]
 	public async Task AThemeBuiltOnAnAddedOne_KeepsItsCopy()
 	{
 		var service = new LayoutThemeService(new InMemoryData());
@@ -77,6 +106,8 @@ public class LayoutThemeServiceTests
 
 	[Test]
 	[Arguments("fantasy", RedFantasy, LayoutThemeService.BuiltInName)]
+	[Arguments("cyberpunk", RedFantasy, LayoutThemeService.BuiltInName)]
+	[Arguments("none", RedFantasy, LayoutThemeService.BuiltInName)]
 	[Arguments("my theme", RedFantasy, LayoutThemeService.BadName)]
 	[Arguments("mine", "nowhere", LayoutThemes.Unknown)]
 	[Arguments("mine", "{\"seed\":\"blue\"}", "#-1 INVALID THEME: seed is a colour like #7aa2f7")]

@@ -41,7 +41,7 @@ public class CloneAttributeTreeTests
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expr}"));
-		return result?.Message?.ToPlainText() ?? "";
+		return result?.Message.ToPlainText() ?? "";
 	}
 
 	/// <summary>
@@ -55,7 +55,7 @@ public class CloneAttributeTreeTests
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(cmd));
-		var message = result?.Message?.ToPlainText() ?? "";
+		var message = result?.Message.ToPlainText() ?? "";
 		if (cmd.StartsWith("@clone ", StringComparison.OrdinalIgnoreCase))
 			await Assert.That(SharpMUSH.Library.Models.DBRef.TryParse(message, out _)).IsTrue()
 				.Because($"clone must return its new object identity, received: {message}");

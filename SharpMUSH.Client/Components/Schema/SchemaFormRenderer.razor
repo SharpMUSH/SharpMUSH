@@ -40,6 +40,11 @@ else
     <MudForm @ref="_form" Class="mt-2">
         @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
         {
+            @* A section of hidden fields only carries values; it draws nothing, so it gets no card. *@
+            @if (SchemaRendering.IsHiddenOnly(section))
+            {
+                continue;
+            }
             <MudPaper Outlined="true" Class="pa-4 mb-4">
                 @if (!string.IsNullOrWhiteSpace(section.Name))
                 {
@@ -48,19 +53,19 @@ else
                 @if (section.Columns > 1)
                 {
                     <MudGrid Spacing="3">
-                        @foreach (var element in section.Elements ?? [])
+                        @foreach (var group in SchemaRendering.GroupButtons(section.Elements ?? []))
                         {
-                            <MudItem xs="12" md="@SchemaFormModel.ColumnWidth(section.Columns, element.Span)">
-                                @RenderElement(element)
+                            <MudItem xs="12" md="@(SchemaRendering.IsButton(group[0]) ? 12 : SchemaFormModel.ColumnWidth(section.Columns, group[0].Span))">
+                                @RenderGroup(group)
                             </MudItem>
                         }
                     </MudGrid>
                 }
                 else
                 {
-                    @foreach (var element in section.Elements ?? [])
+                    @foreach (var group in SchemaRendering.GroupButtons(section.Elements ?? []))
                     {
-                        @RenderElement(element)
+                        @RenderGroup(group)
                     }
                 }
             </MudPaper>
@@ -229,6 +234,23 @@ else
     }
     private string? Error(string key) => _model.Error(key);
     private bool HasAction(string name) => _model.HasAction(name);
+
+    // A run of buttons is one row that wraps; anything else is drawn on its own.
+    private RenderFragment RenderGroup(IReadOnlyList<SchemaElement> group) => __builder =>
+    {
+        if (group.Count == 1 && !SchemaRendering.IsButton(group[0]))
+        {
+            @RenderElement(group[0])
+            return;
+        }
+
+        <div class="d-flex flex-wrap gap-2 schema-button-row">
+            @foreach (var element in group)
+            {
+                <SchemaDisplay Element="element" Data="_data" Actions="_model.Document?.Actions" Busy="_busy" OnAction="Dispatch" />
+            }
+        </div>
+    };
 
     private RenderFragment RenderElement(SchemaElement element) => __builder =>
     {

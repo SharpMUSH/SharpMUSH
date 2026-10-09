@@ -38,7 +38,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoQuerySpecified);
 		}
 
-		var rawInput = queryArg.Message?.ToPlainText() ?? string.Empty;
+		var rawInput = queryArg.Message.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(rawInput))
 		{
@@ -128,8 +128,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
-		var rawQueryInput = queryArg.Message?.ToPlainText() ?? string.Empty;
+		var objAttrStr = objAttrArg.Message.ToPlainText();
+		var rawQueryInput = queryArg.Message.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(rawQueryInput))
 		{

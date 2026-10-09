@@ -35,8 +35,8 @@ public class PennMUSHStringFunctionTests
 	[Arguments("lnum(1.5,4.5,%b,.5)", "1.5 2 2.5 3 3.5 4 4.5")]
 	public async Task Lnum(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -47,8 +47,8 @@ public class PennMUSHStringFunctionTests
 	[Arguments("lnum(,5)")]
 	public async Task LnumErrors(string expr)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).StartsWith("#-1");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
 	// === ljust/rjust edge cases from testjust.t not already covered ===
@@ -57,7 +57,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("rjust(foo bar baz,5,=,1)", "foo b")]
 	public async Task JustTruncate(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

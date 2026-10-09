@@ -51,6 +51,7 @@ Boxes, titled rules, columns, labelled fields, trees and pictures, described onc
 | [DATATABLE()] and [DATACOLUMNS()] | a table that gives way on a narrow screen, given by rows or by columns |
 | [GRADIENT()] | text shaded through colours |
 | [BADGE()] | a coloured status tag |
+| [TONE()] | text in a theme colour, which each reader sees in their own theme |
 | [NOTICE()] | a message led by the badge of the system it comes from |
 | [THEMES()], [THEME()] and [SWATCH()] | colour themes for layouts; see [LAYOUT THEMES] |
 

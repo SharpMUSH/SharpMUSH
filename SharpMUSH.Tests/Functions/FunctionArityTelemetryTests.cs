@@ -39,9 +39,9 @@ public class FunctionArityTelemetryTests
 		});
 		listener.Start();
 
-		var result = await WebAppFactoryArg.CommandParser.FunctionParse(MarkupText.Plain("abs(1,2)"));
+		var result = await WebAppFactoryArg.CommandParser.EvaluateAsync(MarkupText.Plain("abs(1,2)"));
 
-		await Assert.That(result!.Message!.ToPlainText()).StartsWith("#-1");
+		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 		await Assert.That(outcomes).Contains(false);
 	}
 }

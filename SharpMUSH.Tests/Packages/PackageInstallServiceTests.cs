@@ -94,8 +94,8 @@ public class PackageInstallServiceTests
 
 	private async Task<string> EvaluateAttributeAsync(string objid, string attribute)
 	{
-		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/{attribute})]"));
-		return result!.Message!.ToPlainText();
+		var result = await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"[u({objid}/{attribute})]"));
+		return result.ToPlainText();
 	}
 
 	private async Task<IReadOnlyList<string>> ReadAttributeFlagsAsync(string objid, string attribute)
@@ -149,16 +149,16 @@ public class PackageInstallServiceTests
 		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(DBRef.Parse(objid),
 			["PM", "REFS", "PACKAGE_MANAGER"], MarkupText.Empty, pm);
-		var beforeRepair = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
-		await Assert.That(beforeRepair!.Message!.ToPlainText()).IsEqualTo("");
+		var beforeRepair = await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"[u({objid}/FN_PM)]"));
+		await Assert.That(beforeRepair.ToPlainText()).IsEqualTo("");
 		var repair = await Installer.PlanAsync(upgraded, answers);
 		await Assert.That(repair.Attributes.Single(a => a.Attribute == "PM`REFS`PACKAGE_MANAGER").Action)
 			.IsEqualTo(PackageAttributeAction.AutoUpgrade);
 		await Assert.That((await ApplyAsync(upgraded, answers, "commit-3")).Value).IsTypeOf<PackageApplyResult>();
 		var expectedPm = await ObjidAsync(7);
 		await Assert.That(await ReadAttributeAsync(objid, "PM`REFS`PACKAGE_MANAGER")).IsEqualTo(expectedPm);
-		var evaluated = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
-		await Assert.That(evaluated!.Message!.ToPlainText()).IsEqualTo(expectedPm);
+		var evaluated = await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"[u({objid}/FN_PM)]"));
+		await Assert.That(evaluated.ToPlainText()).IsEqualTo(expectedPm);
 		await Assert.That((await Installer.UninstallAsync(manifest.Name)).Value).IsTypeOf<Success>();
 	}
 
@@ -246,8 +246,8 @@ public class PackageInstallServiceTests
 			[new PackageConflictDecision("registration", isolated, PackageConflictResolution.KeepMine)]))).Value).IsTypeOf<PackageApplyResult>();
 		await Assert.That(await ReadAttributeAsync(host, isolated)).IsEqualTo(custom);
 		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`GOD")).IsEqualTo(custom);
-		var evaluated = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({host}/LEGACY_SRC)]"));
-		await Assert.That(evaluated!.Message!.ToPlainText()).IsEqualTo(custom);
+		var evaluated = await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"[u({host}/LEGACY_SRC)]"));
+		await Assert.That(evaluated.ToPlainText()).IsEqualTo(custom);
 		await Assert.That((await Installer.PlanAsync(manifest, answers)).HasConflicts).IsFalse();
 		await Assert.That((await Installer.UninstallAsync(manifest.Name)).Value).IsTypeOf<Success>();
 		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`GOD")).IsEqualTo(custom);
@@ -533,7 +533,7 @@ public class PackageInstallServiceTests
 		// from the shared http_handler. Mirrors how http-hooks attaches to #4.
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		// A pre-existing object the package will attach to (not created by it).
 		var hostDbref = await Database.CreateThingAsync("Attach Host", location, pm, location);

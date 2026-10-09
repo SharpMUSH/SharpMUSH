@@ -50,11 +50,14 @@ public partial class Functions
 		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border }, Border = border })
 		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
 		.Int("pad", 0, 10, (laid, pad) => laid with { Block = laid.Block with { Padding = pad } })
+		.Titles("titles", (laid, titles) => laid with { Block = laid.Block with { Titles = titles } })
+		.Titles("bottomtitles", (laid, titles) => laid with { Block = laid.Block with { BottomTitles = titles } })
 		.Theme(laid => laid.ReadTheme, (laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Rule>> RuleSchema { get; } = OptionSchema<Laid<Rule>>.Empty
 		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border } })
 		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
+		.Titles("titles", (laid, titles) => laid with { Block = laid.Block with { Titles = titles } })
 		.Theme(laid => laid.ReadTheme, (laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Flex>> FlexSchema { get; } = InnerBorder(OptionSchema<Laid<Flex>>.Empty)
@@ -324,7 +327,8 @@ public partial class Functions
 	{
 		var cosmetic = Configuration.CurrentValue.Cosmetic;
 		// Keyed on what layout_theme resolves to, so a change to an added theme it names is seen.
-		var theme = string.IsNullOrWhiteSpace(cosmetic.LayoutTheme) ? null : LayoutThemeService.Resolve(cosmetic.LayoutTheme) switch
+		var unset = string.IsNullOrWhiteSpace(cosmetic.LayoutTheme) || cosmetic.LayoutTheme.Trim().Equals(LayoutThemes.None, StringComparison.OrdinalIgnoreCase);
+		var theme = unset ? null : LayoutThemeService.Resolve(cosmetic.LayoutTheme) switch
 		{
 			string resolved => resolved,
 			_ => string.Empty,
@@ -348,7 +352,7 @@ public partial class Functions
 
 	/// <summary>The arguments from <paramref name="first"/> on, in order.</summary>
 	private static IEnumerable<MString> Rest(IReadOnlyDictionary<string, CallState> args, int first) =>
-		args.Keys.Select(int.Parse).Where(i => i >= first).Order().Select(i => args[i.ToString()].Message ?? MarkupText.Empty);
+		args.Keys.Select(int.Parse).Where(i => i >= first).Order().Select(i => args[i.ToString()].Message);
 
 	/// <summary>An argument as tree items: the items a <c>node()</c> or <c>tree()</c> made, or the content as a leaf.</summary>
 	private IEnumerable<TreeItem> TreeItemsOf(MString content) =>
@@ -415,5 +419,5 @@ public partial class Functions
 	}
 
 	private static MString Arg(IReadOnlyDictionary<string, CallState> args, int index) =>
-		args.TryGetValue(index.ToString(), out var arg) && arg.Message is { } message ? message : MarkupText.Empty;
+		args.TryGetValue(index.ToString(), out var arg) ? arg.Message : MarkupText.Empty;
 }

@@ -50,7 +50,7 @@ public class ChannelMatchRecallTests
 		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
 		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@teleport/silent {player.DbRef}={digResult.Message!.ToPlainText().Trim()}"));
+			MarkupText.Plain($"@teleport/silent {player.DbRef}={digResult.Message.ToPlainText().Trim()}"));
 
 		return player;
 	}
@@ -337,7 +337,7 @@ public class ChannelMatchRecallTests
 		await Run(mortal, $"@chat {name}=omega");
 
 		var parser = WebAppFactoryArg.FunctionParserFor(mortal.DbRef);
-		var result = (await parser.FunctionParse(MarkupText.Plain($"crecall({name},10,,|)")))!.Message!.ToPlainText();
+		var result = (await parser.EvaluateAsync(MarkupText.Plain($"crecall({name},10,,|)"))).ToPlainText();
 
 		await Assert.That(result.IndexOf("alpha", StringComparison.Ordinal))
 			.IsLessThan(result.IndexOf("omega", StringComparison.Ordinal));
@@ -394,7 +394,7 @@ public class ChannelMatchRecallTests
 		await Assert.That(seen).DoesNotContain(hiderName);
 
 		var funResult = (await WebAppFactoryArg.FunctionParserFor(watcher.DbRef)
-			.FunctionParse(MarkupText.Plain($"cwho({name})")))!.Message!.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"cwho({name})"))).ToPlainText();
 		await Assert.That(funResult).DoesNotContain($"#{hider.DbRef.Number}");
 	}
 
@@ -442,7 +442,7 @@ public class ChannelMatchRecallTests
 			.FunctionParse(MarkupText.Plain($"cbufferadd({name},a reconstructed line)"));
 
 		var recall = (await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
-			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message!.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"crecall({name})"))).ToPlainText();
 
 		await Assert.That(recall).Contains("a reconstructed line");
 	}
@@ -466,7 +466,7 @@ public class ChannelMatchRecallTests
 		await Mediator.Send(new AddUserToChannelCommand(again, owner));
 
 		var recall = (await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
-			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message!.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"crecall({name})"))).ToPlainText();
 		await Assert.That(recall).DoesNotContain("an old line");
 	}
 
@@ -484,7 +484,7 @@ public class ChannelMatchRecallTests
 			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		var result = (await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
-			.FunctionParse(MarkupText.Plain($"cbufferadd({name},forged)")))!.Message!.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"cbufferadd({name},forged)"))).ToPlainText();
 
 		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 	}
@@ -506,11 +506,11 @@ public class ChannelMatchRecallTests
 		var parser = WebAppFactoryArg.FunctionParserFor(new DBRef(1));
 
 		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"clock({name}/speak)")))!
-			.Message!.ToPlainText()).IsNotEmpty();
+			.Message.ToPlainText()).IsNotEmpty();
 		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"clock({name}/join)")))!
-			.Message!.ToPlainText()).IsEmpty();
+			.Message.ToPlainText()).IsEmpty();
 		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"clock({name}/nonsense)")))!
-			.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchLockType);
+			.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchLockType);
 	}
 
 	// --- do_chan_title ----------------------------------------------------------------------------
@@ -581,7 +581,7 @@ public class ChannelMatchRecallTests
 
 		var result = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@channel/decompile {name}"));
-		var decompiled = result.Message!.ToPlainText();
+		var decompiled = result.Message.ToPlainText();
 
 		await Assert.That(decompiled).Contains($"@channel/add {name} = Player Open");
 		await Assert.That(decompiled).Contains($"@channel/chown {name} = ");
@@ -756,7 +756,7 @@ public class ChannelMatchRecallTests
 		var commandOutput = string.Join("\n",
 			await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/recall {name}")));
 		var functionOutput = (await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
-			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message!.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"crecall({name})"))).ToPlainText();
 
 		await Assert.That(commandOutput).DoesNotContain("wizard business");
 		await Assert.That(functionOutput).DoesNotContain("wizard business");
@@ -806,7 +806,7 @@ public class ChannelMatchRecallTests
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("ChanThing").Replace("_", string.Empty);
 		var created = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
-		var thingRef = DBRef.TryParse(created.Message!.ToPlainText().Trim(), out var parsed)
+		var thingRef = DBRef.TryParse(created.Message.ToPlainText().Trim(), out var parsed)
 			? parsed!.Value
 			: throw new InvalidOperationException($"@create did not return a dbref: {created.Message}");
 		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingRef))).Expect<AnySharpObject>();
@@ -826,7 +826,7 @@ public class ChannelMatchRecallTests
 		await Assert.That(hidden).DoesNotContain(thingName);
 
 		var funResult = (await WebAppFactoryArg.FunctionParserFor(watcher.DbRef)
-			.FunctionParse(MarkupText.Plain($"cwho({name})")))!.Message!.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"cwho({name})"))).ToPlainText();
 		await Assert.That(funResult).DoesNotContain($"#{thingRef.Number}");
 	}
 

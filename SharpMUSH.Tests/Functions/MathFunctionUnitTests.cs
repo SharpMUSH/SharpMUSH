@@ -20,8 +20,8 @@ public class MathFunctionUnitTests
 	[Arguments("abs(-99999999999)", "99999999999")]
 	public async Task Abs(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -30,8 +30,8 @@ public class MathFunctionUnitTests
 	[Arguments("cos(pi())", "-1")]
 	public async Task Cos(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -40,8 +40,8 @@ public class MathFunctionUnitTests
 	[Arguments("acos(cos(1,r),r)", "1")]
 	public async Task Acos(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -50,16 +50,16 @@ public class MathFunctionUnitTests
 	[Arguments("sin(pi())", "0")]
 	public async Task Sin(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	[Arguments("asin(sin(90,d),d)", "90")]
 	public async Task Asin(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -67,8 +67,8 @@ public class MathFunctionUnitTests
 	[Arguments("tan(90, d)", "#-1 OUT OF RANGE")]
 	public async Task Tan(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -77,8 +77,8 @@ public class MathFunctionUnitTests
 	[Arguments("atan(tan(1,r),r)", "1")]
 	public async Task Atan(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -88,8 +88,8 @@ public class MathFunctionUnitTests
 	[Arguments("atan2(0.0001, 0)", "1.570796")]
 	public async Task Atan2(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -99,8 +99,8 @@ public class MathFunctionUnitTests
 	[Arguments("ctu(pi(),r,d)", "180.00002")]
 	public async Task Ctu(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -108,8 +108,8 @@ public class MathFunctionUnitTests
 	[Arguments("sqrt(-1)", "#-1 IMAGINARY NUMBER")]
 	public async Task Sqrt(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -120,8 +120,8 @@ public class MathFunctionUnitTests
 	[Arguments("root(125, 5)", "2.626528")]
 	public async Task Root(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -136,8 +136,8 @@ public class MathFunctionUnitTests
 	[Arguments("round(1.2345, 2, 1)", "1.23")]
 	public async Task Round(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -147,8 +147,8 @@ public class MathFunctionUnitTests
 	[Arguments("div(-13,-4)", "3")]
 	public async Task Div(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -158,8 +158,8 @@ public class MathFunctionUnitTests
 	[Arguments("floordiv(-13,-4)", "3")]
 	public async Task FloorDiv(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -169,8 +169,8 @@ public class MathFunctionUnitTests
 	[Arguments("modulo(-13,-4)", "-1")]
 	public async Task Modulo(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -180,8 +180,8 @@ public class MathFunctionUnitTests
 	[Arguments("remainder(-13,-4)", "-1")]
 	public async Task Remainder(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -190,16 +190,16 @@ public class MathFunctionUnitTests
 	[Arguments("sign(0)", "0")]
 	public async Task Sign(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	[Arguments("mean(1,2,3,4,5)", "3")]
 	public async Task Mean(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -207,8 +207,8 @@ public class MathFunctionUnitTests
 	[Arguments("median(1,2,3,4)", "2.5")]
 	public async Task Median(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -220,8 +220,8 @@ public class MathFunctionUnitTests
 	[Arguments("median(abc)", "#-1 ARGUMENTS MUST BE NUMBERS")]
 	public async Task Stddev(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -235,16 +235,16 @@ public class MathFunctionUnitTests
 	[Arguments("log(-5)", "#-1 OUT OF RANGE")]
 	public async Task Log(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	[Arguments("ln(10)", "2.302585")]
 	public async Task Ln(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -253,8 +253,8 @@ public class MathFunctionUnitTests
 	[Arguments("fraction(pi())", "3141593/1000000")]
 	public async Task Fraction(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -265,8 +265,8 @@ public class MathFunctionUnitTests
 	[Arguments("inc(foo)", "#-1 ARGUMENT MUST END IN AN INTEGER")]
 	public async Task Inc(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -277,8 +277,8 @@ public class MathFunctionUnitTests
 	[Arguments("dec(foo)", "#-1 ARGUMENT MUST END IN AN INTEGER")]
 	public async Task Dec(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -298,8 +298,8 @@ public class MathFunctionUnitTests
 	[Arguments("baseconv(4031,10,64)", "-_")]
 	public async Task BaseConv(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -316,7 +316,7 @@ public class MathFunctionUnitTests
 	[Arguments("remainder(-7,-2)", "-1")]
 	public async Task IntegerMathIs64Bit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -331,7 +331,7 @@ public class MathFunctionUnitTests
 	[Arguments("remainder(7.5,2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
 	public async Task IntegerMathRejectsBadArguments(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -345,7 +345,7 @@ public class MathFunctionUnitTests
 	[Arguments("floordiv(-9223372036854775808,-1)", "#-1 DOMAIN ERROR")]
 	public async Task IntegerDivisionOverflowIsADomainError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -360,7 +360,7 @@ public class MathFunctionUnitTests
 	[Arguments("trunc(-9999999999)", "-9999999999")]
 	public async Task IncDecTruncAre64Bit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -372,7 +372,7 @@ public class MathFunctionUnitTests
 	[Arguments("fmod(1,0)", "#-1 DIVISION BY ZERO")]
 	public async Task FloatingDivisionByZeroIsAnError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -382,7 +382,7 @@ public class MathFunctionUnitTests
 	[Arguments("lmath(div,1 0)", "#-1 DIVISION BY ZERO")]
 	public async Task LMathIntegerOperationsRejectBadArguments(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -423,7 +423,7 @@ public class MathFunctionUnitTests
 	[Arguments("lmath(stddev, abc)", "0")]
 	public async Task LMathRunsTheScalarRoutine(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -437,7 +437,7 @@ public class MathFunctionUnitTests
 	[Arguments("remainder(5,9223372036854775807)", "5")]
 	public async Task FloorModDoesNotOverflowOnLargeDivisors(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -450,7 +450,7 @@ public class MathFunctionUnitTests
 	[Arguments("lmath(div,-9223372036854775808 2 -1)", "4611686018427387904")]
 	public async Task DivisionOverflowIsCheckedPairwise(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -468,7 +468,7 @@ public class MathFunctionUnitTests
 	[Arguments("trunc(-100000000000000000000)", "-9223372036854775808")]
 	public async Task ConversionsOutsideInt64Saturate(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -524,7 +524,7 @@ public class MathFunctionUnitTests
 	[Arguments("fraction(100000000000000000000.5,1)", "100000000000000000000 1/2")]
 	public async Task FractionIsExact(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -550,7 +550,7 @@ public class MathFunctionUnitTests
 	{
 		foreach (var call in new[] { $"fraction({number})", $"fraction({number},1)" })
 		{
-			var answered = (await Parser.FunctionParse(MarkupText.Plain($"[{call}]")))!.Message!.ToPlainText();
+			var answered = (await Parser.EvaluateAsync(MarkupText.Plain($"[{call}]"))).ToPlainText();
 
 			await Assert.That(Cross(AsRational(answered), AsDecimal(number))).IsTrue()
 				.Because($"{call} answered {answered}");
@@ -595,7 +595,7 @@ public class MathFunctionUnitTests
 	[Arguments("modulo(-9223372036854775808,-1)", "0")]
 	public async Task FloorModIsExactAtTheSignedMinimum(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -609,7 +609,7 @@ public class MathFunctionUnitTests
 	[Arguments("lmath(bxor,12884901888 4294967296)", "8589934592")]
 	public async Task LMathIntegerOperationsAre64Bit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

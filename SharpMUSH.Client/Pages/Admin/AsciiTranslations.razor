@@ -1,0 +1,39 @@
+@page "/admin/config/asciitranslations"
+@layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Components.Admin
+@using SharpMUSH.Client.Services
+@inject AsciiTranslationsService AsciiTranslationsService
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AsciiTranslations"] - @Loc["Configuration"]</PageTitle>
+
+<div class="config-section-page">
+    <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AsciiTranslations"]" Description="@Loc["AsciiTranslationsDescription"]" />
+
+    <AdminKeyValueList Text="@Text"
+                       Load="@(() => AsciiTranslationsService.GetAsync().AsEntriesAsync())"
+                       Add="@((character, values) => AsciiTranslationsService.SetAsync(character, values.FirstOrDefault() ?? string.Empty))"
+                       Delete="@AsciiTranslationsService.DeleteAsync" />
+</div>
+
+@code {
+    private AdminKeyValueListText Text => new(
+        AddTitle: Loc["AddAsciiTranslation"],
+        KeyLabel: Loc["AsciiTranslationCharacter"],
+        KeyPlaceholder: null,
+        AddButton: Loc["Add"],
+        ListTitle: Loc["AsciiTranslationsList"],
+        Empty: Loc["NoAsciiTranslations"],
+        Added: character => string.Format(Loc["AsciiTranslationSaved"], character),
+        Removed: character => string.Format(Loc["AsciiTranslationRemoved"], character),
+        LoadFailed: failure => string.Format(Loc["ErrorLoadingAsciiTranslations"], failure.Message),
+        AddFailed: (character, failure) => string.Format(Loc["ErrorSavingAsciiTranslation"], character, failure.Message),
+        RemoveFailed: (character, failure) => string.Format(Loc["ErrorRemovingAsciiTranslation"], character, failure.Message))
+    {
+        ValuesLabel = Loc["AsciiTranslationText"],
+        ValuesPlaceholder = Loc["AsciiTranslationTextHelper"],
+        SingleValue = true,
+        EmptyValue = Loc["AsciiTranslationLeftOut"],
+    };
+}

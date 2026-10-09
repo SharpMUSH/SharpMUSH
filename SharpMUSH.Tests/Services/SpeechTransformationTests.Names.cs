@@ -14,13 +14,29 @@ public partial class SpeechTransformationTests
 	public async Task MonikerRetainsPositionalStylesWithoutSplittingGraphemes(string name)
 	{
 		var parser = Factory.CommandParser;
-		var template = (await parser.FunctionParse(MarkupText.Plain("[ansi(r,x)][ansi(g,y)]")))!.Message!;
+		var template = await parser.EvaluateAsync(MarkupText.Plain("[ansi(r,x)][ansi(g,y)]"));
 		var result = NameFormatter.ApplyMoniker(name, template);
 		var first = System.Globalization.StringInfo.GetNextTextElement(name);
 		var expected = MarkupText.Concat(MarkupText.Wrap(template.Runs[0].Markups, first),
 			MarkupText.Wrap(template.Runs[1].Markups, name[first.Length..]));
 		await Assert.That(result.ToPlainText()).IsEqualTo(name);
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(expected.Render(MarkupFormat.Ansi));
+	}
+
+	/// <summary><c>accname()</c> is the name with its @nameaccent applied (PennMUSH <c>accented_name</c>).</summary>
+	[Test]
+	public async Task AccnameAppliesTheNameAccent()
+	{
+		var actor = await Player();
+		var suffix = Guid.NewGuid().ToString("N")[..12];
+		await Admin($"@name {actor.DbRef}=A{suffix}");
+		var parser = Factory.CommandParser;
+		await Assert.That((await parser.EvaluateAsync(MarkupText.Plain($"accname({actor.DbRef})"))).ToPlainText())
+			.IsEqualTo("A" + suffix);
+
+		await Admin($"@nameaccent {actor.DbRef}='{new string('-', suffix.Length)}");
+		await Assert.That((await parser.EvaluateAsync(MarkupText.Plain($"accname({actor.DbRef})"))).ToPlainText())
+			.IsEqualTo("Á" + suffix);
 	}
 
 	[Test]

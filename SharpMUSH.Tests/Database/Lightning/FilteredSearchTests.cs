@@ -55,7 +55,7 @@ public class FilteredSearchTests
 	[Test]
 	public async Task MinAndMaxDbRefBoundTheScanInclusively()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var first = await _db.CreateThingAsync("RangeBoundsA", room, god, room);
@@ -89,7 +89,7 @@ public class FilteredSearchTests
 	[Test]
 	public async Task SkipAndLimitPageThroughMatchesInAscendingDbRefOrder()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var created = new List<DBRef>();
@@ -127,7 +127,7 @@ public class FilteredSearchTests
 	[Test]
 	public async Task FlagAndPowerPredicatesFindWhatTheScanFinds()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var flag = (await _db.CreateObjectFlagAsync("SEEDED_FLAG", ["SEEDALIAS"], "s", false, [], [], ["THING"]))!;
 		var power = (await _db.CreatePowerAsync("SEEDED_POWER", ["SEEDPOWALIAS"], "", false, [], [], ["THING"]))!;

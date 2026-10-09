@@ -39,7 +39,7 @@ public class ShapedQueryHydrationTests
 
 	private async Task<DBRef> Thing(string name, DBRef room)
 	{
-		var container = (await Node(room)).AsContainer;
+		var container = (await Node(room)).AsOptionalContainer.Expect<AnySharpContainer>();
 		return await Database.CreateThingAsync(TestIsolationHelpers.GenerateUniqueName(name), container, await God(), container);
 	}
 

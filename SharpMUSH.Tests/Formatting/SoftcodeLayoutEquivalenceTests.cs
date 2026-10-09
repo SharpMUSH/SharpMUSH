@@ -307,14 +307,14 @@ public class SoftcodeLayoutEquivalenceTests
 	{
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
-		return (await Parser.FunctionParse(MarkupText.Plain(code)))?.Message?.ToString();
+		return (await Parser.FunctionParse(MarkupText.Plain(code)))?.Message.ToString();
 	}
 
 	private async Task<string?> EvalCommandList(string code)
 	{
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
-		return (await Parser.CommandListParse(MarkupText.Plain(code)))?.Message?.ToString();
+		return (await Parser.CommandListParse(MarkupText.Plain(code)))?.Message.ToString();
 	}
 
 	private static bool IsParseFailure(string? result) =>

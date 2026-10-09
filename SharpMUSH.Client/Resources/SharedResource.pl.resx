@@ -5940,6 +5940,22 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Tekst strony (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Pokaż</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Pokazywane rodzaje póz</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# ukryty wiersz {label}} few {# ukryte wiersze {label}} many {# ukrytych wierszy {label}} other {# ukrytego wiersza {label}}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} na {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>Nie udało się tego zmienić. Spróbuj ponownie za chwilę.</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>Wyjście gry</value>
   </data>
@@ -5975,5 +5991,25 @@
   </data>
   <data name="TermReviewNone" xml:space="preserve">
     <value>Nie ma jeszcze wiersza do przeczytania.</value>
+  </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>nowe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {jeszcze # odpowiedź} few {jeszcze # odpowiedzi} many {jeszcze # odpowiedzi} other {jeszcze # odpowiedzi}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Przenieś w górę</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Przenieś w dół</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Zmień kolejność</value>
+    <comment>MT</comment>
   </data>
 </root>

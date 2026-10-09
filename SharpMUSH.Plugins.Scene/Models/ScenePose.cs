@@ -28,6 +28,8 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <param name="LastEditedAt">UTC Unix-millis of the most recent edit, or null if never edited after creation.</param>
 /// <param name="LastEditorDbref">Live dbref of the most recent editor, or null if the object is gone / never edited.</param>
 /// <param name="LastEditorName">Snapshot name of the most recent editor, or null if never edited.</param>
+/// <param name="Type">What kind of line it is, a key of the pose type catalogue (<see cref="PoseTypes"/>): <c>ic</c>,
+/// <c>ooc</c>, a game's own. Each type is drawn its own way on every surface.</param>
 public record ScenePose(
 	string Id,
 	string SceneId,
@@ -46,4 +48,5 @@ public record ScenePose(
 	int EditCount,
 	long? LastEditedAt,
 	string? LastEditorDbref,
-	string? LastEditorName);
+	string? LastEditorName,
+	string Type = PoseTypes.InCharacter);

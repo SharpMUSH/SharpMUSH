@@ -21,6 +21,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes?filter=active|recent|scheduled[&amp;count=] — list scene DTOs
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
 ///   ...&amp;offset=N&amp;state=live|upcoming|finished&amp;search=text — narrow and page any list
+///   GET /api/scenes/types                 — the pose types, the ones that did not read, and the caller's hidden ones
 ///   GET /api/scenes/partners?participant=#N[&amp;count=] — who shares the most of those scenes with them
 ///   GET /api/scenes/{id}                  — one scene DTO (404 if missing / not visible)
 ///   GET /api/scenes/{id}/poses[?count=]   — ordered pose DTOs; the whole log is streamed in pages
@@ -77,7 +78,8 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 		int EditCount,
 		long? LastEditedAt,
 		string? LastEditorDbref,
-		string? LastEditorName);
+		string? LastEditorName,
+		string Type);
 
 	/// <summary>Someone who shares scenes with a character: how many of the caller-visible ones.</summary>
 	public record ScenePartnerDto(string Dbref, string Name, int Scenes);
@@ -99,7 +101,7 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	private static ScenePoseDto ToDto(ScenePose p) => new(
 		p.Id, p.SceneId, p.AuthorDbref, p.AuthorName, p.ShowAsName, p.OriginDbref, p.OriginName,
 		p.Source, p.Tags, p.Meta, p.CreatedAt, p.IsDeleted, p.Content, p.Markup, p.EditCount,
-		p.LastEditedAt, p.LastEditorDbref, p.LastEditorName);
+		p.LastEditedAt, p.LastEditorDbref, p.LastEditorName, p.Type);
 
 	private static SceneMemberDto ToDto(SceneMember m) => new(
 		m.SceneId, m.MemberDbref, m.MemberName, m.Role, m.ShowAs, m.IsCurrent, m.GrantedAt);
@@ -179,6 +181,21 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 			|| (scene.Meta.TryGetValue("summary", out var pitch) && Holds(pitch));
 
 		bool Holds(string? value) => value?.Contains(text, StringComparison.OrdinalIgnoreCase) == true;
+	}
+
+	/// <summary>The pose types, the <c>TYPE`</c> attributes that did not read as one, and the types the caller hides.</summary>
+	public record PoseTypesDto(IReadOnlyList<PoseType> Types, IReadOnlyList<PoseTypeProblem> Problems, IReadOnlyList<string> Hidden);
+
+	/// <summary>
+	/// The pose types the Scene Logger defines, in order, the <c>TYPE`</c> attributes that did not read as one,
+	/// and the types the caller's character hides (<c>+scene/hide</c>), or the ones that start hidden for a caller
+	/// with none. Empty lists when the scene package is not installed; the portal then draws every pose in character.
+	/// </summary>
+	[HttpGet("types")]
+	public async Task<IActionResult> GetTypes([FromServices] IServiceProvider services)
+	{
+		var catalogue = await SceneLogger.CatalogueAsync(services);
+		return Ok(new PoseTypesDto(catalogue.Types, catalogue.Problems, await SceneLogger.HiddenForAsync(services, catalogue, CallerRef)));
 	}
 
 	/// <summary>

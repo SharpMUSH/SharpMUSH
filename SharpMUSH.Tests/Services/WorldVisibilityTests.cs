@@ -26,7 +26,7 @@ public class WorldVisibilityTests
 		var objects = new TestObjectFactory();
 		var room = objects.CreateRoom(10, "Room");
 		var viewer = objects.CreatePlayer(11, "Viewer", room);
-		var item = objects.CreateThing(12, "Thing", room).AsContent;
+		var item = objects.CreateThing(12, "Thing", room).AsOptionalContent.Expect<AnySharpContent>();
 		var reality = Substitute.For<IRealityPolicy>();
 		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
 		using var cancellation = new CancellationTokenSource();
@@ -73,7 +73,7 @@ public class WorldVisibilityTests
 		var objects = new TestObjectFactory();
 		var room = objects.CreateRoom(10, "Room");
 		var viewer = objects.CreatePlayer(11, "Viewer", room);
-		var item = exit ? objects.CreateExit(12, "Exit", [], room).AsContent : objects.CreateThing(12, "Thing", room).AsContent;
+		var item = exit ? objects.CreateExit(12, "Exit", [], room).AsOptionalContent.Expect<AnySharpContent>() : objects.CreateThing(12, "Thing", room).AsOptionalContent.Expect<AnySharpContent>();
 		Flags(room.Object, roomLight ? ["LIGHT"] : roomDark ? ["DARK"] : []);
 		Flags(item.Object(), itemDark ? ["DARK"] : itemLight ? ["LIGHT"] : []);
 		var reality = Substitute.For<IRealityPolicy>();
@@ -102,18 +102,18 @@ public class WorldVisibilityTests
 		var policy = new RealityPolicy(store, objects);
 		var connections = Substitute.For<IConnectionService>();
 		var scan = await WorldVisibility.CreateScanAsync(viewer, room, policy, connections);
-		await Assert.That(await scan(viewer.AsContent, default)).IsFalse(); // Offline players remain omitted.
-		await Assert.That(await scan(first.AsContent, default)).IsTrue();
-		await Assert.That(await scan(second.AsContent, default)).IsTrue();
+		await Assert.That(await scan(viewer.AsOptionalContent.Expect<AnySharpContent>(), default)).IsFalse(); // Offline players remain omitted.
+		await Assert.That(await scan(first.AsOptionalContent.Expect<AnySharpContent>(), default)).IsTrue();
+		await Assert.That(await scan(second.AsOptionalContent.Expect<AnySharpContent>(), default)).IsTrue();
 		await store.Received(1).GetExpandedObjectData<ObjectReality>(viewer.Object().Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>());
 		await store.Received(1).GetExpandedObjectData<ObjectReality>(room.Object.Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>());
 		store.GetExpandedObjectData<ObjectReality>(second.Object().Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>())
 			.Returns(ObjectReality.Default(second.Object().DBRef) with { Transmit = ["ghost"] });
-		await Assert.That(await scan(second.AsContent, default)).IsFalse();
+		await Assert.That(await scan(second.AsOptionalContent.Expect<AnySharpContent>(), default)).IsFalse();
 		store.GetExpandedObjectData<ObjectReality>(viewer.Object().Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>())
 			.Returns(ObjectReality.Default(viewer.Object().DBRef) with { Receive = ["ghost"] });
 		var next = await WorldVisibility.CreateScanAsync(viewer, room, policy, Substitute.For<IConnectionService>());
-		await Assert.That(await next(first.AsContent, default)).IsFalse();
+		await Assert.That(await next(first.AsOptionalContent.Expect<AnySharpContent>(), default)).IsFalse();
 	}
 
 	[Test]
@@ -122,7 +122,7 @@ public class WorldVisibilityTests
 		var objects = new TestObjectFactory();
 		var room = objects.CreateRoom(10, "Room");
 		var viewer = objects.CreatePlayer(1, "God", room);
-		var item = objects.CreateThing(12, "Hidden", room).AsContent;
+		var item = objects.CreateThing(12, "Hidden", room).AsOptionalContent.Expect<AnySharpContent>();
 		Flags(room.Object, "LIGHT");
 		var reality = Substitute.For<IRealityPolicy>();
 		reality.CanPerceiveAsync(viewer.Object().DBRef, room.Object.DBRef, Arg.Any<CancellationToken>()).Returns(true);

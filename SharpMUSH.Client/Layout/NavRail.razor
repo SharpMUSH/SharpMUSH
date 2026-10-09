@@ -45,9 +45,8 @@
         @Item("/mail", Icons.Material.Outlined.MailOutline, Loc["Mail"], IsUnder("/mail"))
     }
     @Item("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"], IsUnder("/help"))
-    @foreach (var section in _novelSections)
+    @foreach (var s in _novelSections)
     {
-        var s = section;
         @Item($"/apps/{s.First.Slug}", AppIcons.Outline(s.First.Icon, Icons.Material.Outlined.Apps), s.Name,
             s.Apps.Any(a => IsUnder($"/apps/{a.Slug}")))
     }

@@ -57,7 +57,21 @@
                             <li class="kvl-row">
                                 <div class="kvl-row-text">
                                     <code class="config-list-name">@entry.Key</code>
-                                    @if (entry.Values.Count > 0)
+                                    @if (Text.SingleValue)
+                                    {
+                                        var value = entry.Values.Count > 0 ? entry.Values[0] : string.Empty;
+                                        <span class="config-list-sub">
+                                            @if (value.Length == 0)
+                                            {
+                                                @Text.EmptyValue
+                                            }
+                                            else
+                                            {
+                                                <code style="white-space: pre">"@value"</code>
+                                            }
+                                        </span>
+                                    }
+                                    else if (entry.Values.Count > 0)
                                     {
                                         <span class="config-list-sub">@string.Join(", ", entry.Values)</span>
                                     }
@@ -101,7 +115,7 @@
     private bool HasValues => Text.ValuesLabel is not null;
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_newKey)
-        && (!HasValues || !string.IsNullOrWhiteSpace(_newValues));
+        && (!HasValues || Text.SingleValue || !string.IsNullOrWhiteSpace(_newValues));
 
     private bool _loading = true;
     private IReadOnlyList<AdminKeyValueEntry> _entries = [];
@@ -139,11 +153,11 @@
         if (!CanAdd) return;
 
         var key = _newKey.Trim();
-        var values = HasValues
-            ? _newValues.Split(',').Select(v => v.Trim()).Where(v => v.Length > 0).ToArray()
-            : [];
+        string[] values = !HasValues ? []
+            : Text.SingleValue ? [_newValues]
+            : _newValues.Split(',').Select(v => v.Trim()).Where(v => v.Length > 0).ToArray();
 
-        if (HasValues && values.Length == 0)
+        if (HasValues && !Text.SingleValue && values.Length == 0)
         {
             Snackbar.Add(Text.ValuesRequired ?? Loc["AtLeastOneAccessRule"].Value, Severity.Warning);
             return;

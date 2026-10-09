@@ -37,8 +37,8 @@ public class RegexHelpExamplesTests
 	public async Task PublishedExampleMatchesTheEngineAndParser(string expression, string expected)
 	{
 		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(new DBRef(1)));
-		var result = await parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await parser.EvaluateAsync(MarkupText.Plain(expression));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -46,8 +46,8 @@ public class RegexHelpExamplesTests
 	{
 		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(new DBRef(1)));
 		await parser.FunctionParse(MarkupText.Plain("attrib_set(me/REGEX_HELP_UPPER,lit(ucstr(%0)))"));
-		var result = await parser.FunctionParse(MarkupText.Plain("foreach(REGEX_HELP_UPPER,quiet quiet >shout< quiet,>,<)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("quiet quiet SHOUT quiet");
+		var result = await parser.EvaluateAsync(MarkupText.Plain("foreach(REGEX_HELP_UPPER,quiet quiet >shout< quiet,>,<)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("quiet quiet SHOUT quiet");
 	}
 
 }

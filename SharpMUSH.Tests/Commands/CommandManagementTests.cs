@@ -1051,7 +1051,7 @@ public class CommandManagementTests
 		var messages = WebAppFactoryArg.Notifications.For(wizard.DbRef).Skip(before).ToList();
 
 		await Assert.That(messages).Contains("GOTO is run by the game itself and cannot be disabled.");
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("the refusal is the command's result, not just a message");
 		await Assert.That(await As(wizard, "@command GOTO")).Contains("Name       : GOTO (Enabled)");
 	}

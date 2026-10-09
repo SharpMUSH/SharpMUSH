@@ -31,7 +31,7 @@ public class ForcePlayerParityTests
 	{
 		var wizard = await Player($"{prefix}Wiz");
 		var target = await Player($"{prefix}Tgt");
-		var room = (await Parser.CommandParse(1, Connections, MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"))).Message!.ToPlainText();
+		var room = (await Parser.CommandParse(1, Connections, MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"))).Message.ToPlainText();
 		await Run(1, $"@set {wizard.DbRef}=WIZARD");
 		await Run(1, $"@teleport {wizard.DbRef}={room}");
 		await Run(1, $"@teleport {target.DbRef}={room}");

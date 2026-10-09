@@ -28,13 +28,13 @@ public class ExplicitFailureReturnTests
 
 	private async Task<string> EvalAs(DBRef executor, string expr)
 		=> (await Factory.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expr)))
-			?.Message!.ToPlainText() ?? "<null>";
+			?.Message.ToPlainText() ?? "<null>";
 
 	private Task<string> EvalAsGod(string expr) => EvalAs(new DBRef(1), expr);
 
 	private async Task<string> God(string command)
 		=> (await Factory.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))
-			?.Message?.ToPlainText() ?? string.Empty;
+			?.Message.ToPlainText() ?? string.Empty;
 
 	private Task<TestIsolationHelpers.TestPlayer> Mortal(string label)
 		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, ConnectionService, label);

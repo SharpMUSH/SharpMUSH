@@ -4,7 +4,9 @@
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow), 0 0 0 1px rgba(var(--glow), 0.06);
-    overflow: hidden;
+    /* clip, not hidden: a hidden box still scrolls when focus moves into the submenu while the track
+       is mid-slide, which pushes both levels out of view and leaves the panel empty. */
+    overflow: clip;
     outline: none;
     font-family: var(--font-ui);
     /* Reduced motion arrives as a value: globals.css zeroes --motion-*. A rule here could not do

@@ -142,7 +142,7 @@ public class ChannelPermissionTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
 		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var room = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var room = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
@@ -556,9 +556,9 @@ public class ChannelPermissionTests
 		var invisibleResult = await parser.FunctionParse(MarkupText.Plain($"cwho({invisible})"));
 		var missingResult = await parser.FunctionParse(MarkupText.Plain($"cwho({missing})"));
 
-		await Assert.That(invisibleResult?.Message?.ToPlainText())
-			.IsEqualTo(missingResult?.Message?.ToPlainText());
-		await Assert.That(invisibleResult?.Message?.ToPlainText())
+		await Assert.That(invisibleResult?.Message.ToPlainText())
+			.IsEqualTo(missingResult?.Message.ToPlainText());
+		await Assert.That(invisibleResult?.Message.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 
 		// And the same for the notification the command surface emits.
@@ -587,12 +587,12 @@ public class ChannelPermissionTests
 		var mortal = await CreateMortal("ChanPermCwho");
 
 		var mortalResult = await FunctionParserFor(mortal.DbRef).FunctionParse(MarkupText.Plain($"cwho({name})"));
-		await Assert.That(mortalResult?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
-		await Assert.That(mortalResult?.Message?.ToPlainText()).DoesNotContain($"#{wizard.DbRef.Number}");
+		await Assert.That(mortalResult?.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+		await Assert.That(mortalResult?.Message.ToPlainText()).DoesNotContain($"#{wizard.DbRef.Number}");
 
 		// The wizard, who may see it, still gets the member list.
 		var wizardResult = await FunctionParserFor(wizard.DbRef).FunctionParse(MarkupText.Plain($"cwho({name})"));
-		await Assert.That(wizardResult?.Message?.ToPlainText()).Contains($"#{wizard.DbRef.Number}");
+		await Assert.That(wizardResult?.Message.ToPlainText()).Contains($"#{wizard.DbRef.Number}");
 	}
 
 	/// <summary>
@@ -615,12 +615,12 @@ public class ChannelPermissionTests
 		foreach (var call in new[] { $"cowner({name})", $"cmogrifier({name})", $"cwho({name})" })
 		{
 			var result = await parser.FunctionParse(MarkupText.Plain(call));
-			await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+			await Assert.That(result?.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 
 			// The gate is what refuses the mortal, not the function being broken: a viewer who passes
 			// Chan_Can_See gets an answer from the same call.
 			var allowed = await wizardParser.FunctionParse(MarkupText.Plain(call));
-			await Assert.That(allowed?.Message?.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.NoSuchChannel);
+			await Assert.That(allowed?.Message.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.NoSuchChannel);
 		}
 	}
 
@@ -655,21 +655,21 @@ public class ChannelPermissionTests
 
 		// Naming the wizard reads back the channel they share and not the wizard-only one.
 		var named = await parser.FunctionParse(MarkupText.Plain($"channels(#{wizard.DbRef.Number})"));
-		await Assert.That(named?.Message?.ToPlainText()).DoesNotContain(name);
-		await Assert.That(named?.Message?.ToPlainText()).Contains(sharedName);
+		await Assert.That(named?.Message.ToPlainText()).DoesNotContain(name);
+		await Assert.That(named?.Message.ToPlainText()).Contains(sharedName);
 
 		// `off` listed every channel in the game; it must still list the ones the mortal really is off.
 		var off = await parser.FunctionParse(MarkupText.Plain("channels(me,off)"));
-		await Assert.That(off?.Message?.ToPlainText()).DoesNotContain(name);
-		await Assert.That(off?.Message?.ToPlainText()).DoesNotContain(sharedName);
+		await Assert.That(off?.Message.ToPlainText()).DoesNotContain(name);
+		await Assert.That(off?.Message.ToPlainText()).DoesNotContain(sharedName);
 
 		var on = await parser.FunctionParse(MarkupText.Plain("channels(me,on)"));
-		await Assert.That(on?.Message?.ToPlainText()).DoesNotContain(name);
-		await Assert.That(on?.Message?.ToPlainText()).Contains(sharedName);
+		await Assert.That(on?.Message.ToPlainText()).DoesNotContain(name);
+		await Assert.That(on?.Message.ToPlainText()).Contains(sharedName);
 
 		var all = await parser.FunctionParse(MarkupText.Plain("channels()"));
-		await Assert.That(all?.Message?.ToPlainText()).DoesNotContain(name);
-		await Assert.That(all?.Message?.ToPlainText()).Contains(sharedName);
+		await Assert.That(all?.Message.ToPlainText()).DoesNotContain(name);
+		await Assert.That(all?.Message.ToPlainText()).Contains(sharedName);
 	}
 
 	/// <summary>
@@ -804,16 +804,16 @@ public class ChannelPermissionTests
 		var hiddenResult = await parser.FunctionParse(MarkupText.Plain($"clock({hidden})"));
 		var missingResult = await parser.FunctionParse(MarkupText.Plain($"clock({missing})"));
 
-		await Assert.That(hiddenResult?.Message?.ToPlainText())
-			.IsEqualTo(missingResult?.Message?.ToPlainText());
-		await Assert.That(hiddenResult?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
+		await Assert.That(hiddenResult?.Message.ToPlainText())
+			.IsEqualTo(missingResult?.Message.ToPlainText());
+		await Assert.That(hiddenResult?.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 		// And the lock key itself never appears.
-		await Assert.That(hiddenResult?.Message?.ToPlainText()).DoesNotContain("#1");
+		await Assert.That(hiddenResult?.Message.ToPlainText()).DoesNotContain("#1");
 
 		// God set that lock and can see the channel, so the key IS readable by someone — the mortal's
 		// refusal is the Chan_Can_Decomp gate rather than clock() failing to read a lock at all.
 		var ownerResult = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"clock({hidden})"));
-		await Assert.That(ownerResult?.Message?.ToPlainText()).Contains("#1");
+		await Assert.That(ownerResult?.Message.ToPlainText()).Contains("#1");
 	}
 
 	/// <summary>

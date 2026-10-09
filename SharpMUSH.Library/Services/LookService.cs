@@ -44,7 +44,50 @@ public class LookService(
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var viewingObject = realViewing.Object();
+		var look = await BeginLookAsync(parser, looker, realViewing, key, lookOutside);
+
+		var description = await ResolveDescriptionAsync(look);
+		var formattedName = await FormatNameAsync(look);
+		var formattedDesc = await FormatDescriptionAsync(look, description);
+
+		await ShowNameAndDescriptionAsync(look, formattedName, formattedDesc);
+		await RunDescribeTriadAsync(look, description);
+		await RunRoomLockTriadAsync(look);
+		await ShowContentsAndExitsAsync(look);
+		await LookThroughExitAsync(look);
+
+		return new CallState(look.ViewingObject.DBRef.ToString());
+	}
+
+	/// <summary>Everything one look decides up front about what it will show.</summary>
+	private sealed record Look(
+		IMUSHCodeParser Parser,
+		AnySharpObject Looker,
+		AnySharpObject Viewing,
+		SharpObject ViewingObject,
+		LookKey Key,
+		AnySharpObject God,
+		bool LookThroughExit,
+		bool Terse,
+		bool ShowDescription,
+		bool ViewingFromInside,
+		bool TryIdesc);
+
+	/// <summary>
+	/// The description a look shows before any format attribute: its text, the attribute it came from
+	/// (none for the "nothing special" fallback), whether that was @idescribe, and whether it was the
+	/// reality layer's own attribute.
+	/// </summary>
+	private readonly record struct Description(MString Base, string? AttributeName, bool UsedIdesc, bool Custom);
+
+	private async ValueTask<Look> BeginLookAsync(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject viewing,
+		LookKey key,
+		bool lookOutside)
+	{
+		var viewingObject = viewing.Object();
 
 		// LOOK_CLOUDYTRANS (externs.h:248) is the mask of both transparent-exit bits, and look.c:458
 		// derives "am I looking through an exit" from either of them being set.
@@ -57,355 +100,418 @@ public class LookService(
 
 		// look.c:492 for a container viewed from inside, look.c:503-504 for a room: LOOK_TRANS puts
 		// the description back even when the look is coming through an exit.
-		var showDescription = realViewing.IsRoom
+		var showDescription = viewing.IsRoom
 			? (!lookThroughExit && !terse) || key.HasFlag(LookKey.Trans)
 			: !terse;
 
-		var lookerLocation = looker.IsContent
-			? await looker.AsContent.Location()
-			: null;
+		var lookerLocation = looker is SharpRoom ? null : await looker.Where();
 		var viewingFromInside = lookerLocation != null
 			&& lookerLocation.Object().DBRef == viewingObject.DBRef;
 
-		var baseDesc = MarkupText.Empty;
-		string? descriptionAttributeName = null;
 		var god = await HelperFunctions.GetGod(mediator);
-		var lookerEnactor = looker.Object().DBRef;
 
 		// @idescribe is only used for players and things; rooms and exits always use @describe
 		// (help @idescribe). Inside formats are discovered independently of @idescribe, however:
 		// a present @idescformat formats the fallback @describe too.
 		var tryIdesc = viewingFromInside && !lookOutside
-			&& (realViewing.IsPlayer || realViewing.IsThing);
-		var usedIdesc = false;
+			&& (viewing.IsPlayer || viewing.IsThing);
 
-		// Deviation from PennMUSH: a reality layer may name its own description attribute, which
-		// takes precedence over @idescribe and @describe alike. Unlike those it is read as the
-		// looker, so the attribute's own permissions still apply.
-		var customDescription = false;
-		var layerDescription = await reality.DescriptionAttributeAsync(looker.Object().DBRef, viewingObject.DBRef);
-		if (layerDescription is not null)
+		return new Look(parser, looker, viewing, viewingObject, key, god,
+			lookThroughExit, terse, showDescription, viewingFromInside, tryIdesc);
+	}
+
+	private async ValueTask<Description> ResolveDescriptionAsync(Look look)
+	{
+		var layerDescription = await LayerDescriptionAttributeAsync(look);
+		var custom = layerDescription is not null;
+
+		if (!look.ShowDescription)
 		{
-			var layerAttribute = await attributeService.GetAttributeAsync(looker, realViewing, layerDescription,
-				IAttributeService.AttributeMode.Read, true);
-			if (layerAttribute is SharpAttribute[] layerChain
-					&& await permissionService.CanExecuteAttribute(looker, realViewing, layerChain))
-			{
-				customDescription = true;
-				descriptionAttributeName = layerDescription;
-			}
+			return new Description(MarkupText.Empty, layerDescription, UsedIdesc: false, custom);
 		}
 
-		if (showDescription)
+		var description = custom
+			? new Description(MarkupText.Empty, layerDescription, UsedIdesc: false, Custom: true)
+			: await StoredDescriptionAsync(look);
+
+		if (description.AttributeName is not { } attributeName)
 		{
-			if (tryIdesc && !customDescription)
-			{
-				var idescResult = await attributeService.GetAttributeAsync(god, realViewing, "IDESCRIBE",
-					IAttributeService.AttributeMode.Read, true);
-				if (idescResult is SharpAttribute[] idescChain)
-				{
-					// A blank @idescribe is meaningful (help @idescribe suggests it to trigger
-					// @aidescribe without text), so an empty value stays empty here.
-					usedIdesc = true;
-					descriptionAttributeName = "IDESCRIBE";
-					baseDesc = idescChain.Last().Value;
-				}
-			}
-
-			if (!usedIdesc && !customDescription)
-			{
-				var descResult = await attributeService.GetAttributeAsync(god, realViewing, "DESCRIBE",
-					IAttributeService.AttributeMode.Read, true);
-				if (descResult is SharpAttribute[] descChain)
-				{
-					descriptionAttributeName = "DESCRIBE";
-					baseDesc = descChain.Last().Value;
-				}
-				else
-				{
-					baseDesc = MarkupText.Plain("You see nothing special.");
-				}
-			}
-
-			if (descriptionAttributeName is not null)
-			{
-				baseDesc = await parser.With(
-					state => state with { Enactor = lookerEnactor },
-					lookParser => attributeService.EvaluateAttributeFunctionAsync(
-						lookParser, looker, realViewing, descriptionAttributeName,
-						new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: !customDescription));
-			}
+			return description;
 		}
 
-		var formattedName = MarkupText.Empty;
+		var evaluated = await look.Parser.With(
+			state => state with { Enactor = look.Looker.Object().DBRef },
+			lookParser => attributeService.EvaluateAttributeFunctionAsync(
+				lookParser, look.Looker, look.Viewing, attributeName,
+				new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: !custom));
 
+		return description with { Base = evaluated };
+	}
+
+	/// <summary>
+	/// Deviation from PennMUSH: a reality layer may name its own description attribute, which
+	/// takes precedence over @idescribe and @describe alike. Unlike those it is read as the
+	/// looker, so the attribute's own permissions still apply.
+	/// </summary>
+	private async ValueTask<string?> LayerDescriptionAttributeAsync(Look look)
+	{
+		var layerDescription = await reality.DescriptionAttributeAsync(look.Looker.Object().DBRef, look.ViewingObject.DBRef);
+		if (layerDescription is null)
+		{
+			return null;
+		}
+
+		var layerAttribute = await attributeService.GetAttributeAsync(look.Looker, look.Viewing, layerDescription,
+			IAttributeService.AttributeMode.Read, true);
+
+		return layerAttribute is SharpAttribute[] layerChain
+			&& await permissionService.CanExecuteAttribute(look.Looker, look.Viewing, layerChain)
+				? layerDescription
+				: null;
+	}
+
+	/// <summary>@idescribe from inside a player or thing when it has one, else @describe, else the fallback text.</summary>
+	private async ValueTask<Description> StoredDescriptionAsync(Look look)
+	{
+		if (look.TryIdesc
+				&& await attributeService.GetAttributeAsync(look.God, look.Viewing, "IDESCRIBE",
+					IAttributeService.AttributeMode.Read, true) is SharpAttribute[] idescChain)
+		{
+			// A blank @idescribe is meaningful (help @idescribe suggests it to trigger
+			// @aidescribe without text), so an empty value stays empty here.
+			return new Description(idescChain.Last().Value, "IDESCRIBE", UsedIdesc: true, Custom: false);
+		}
+
+		return await attributeService.GetAttributeAsync(look.God, look.Viewing, "DESCRIBE",
+				IAttributeService.AttributeMode.Read, true) is SharpAttribute[] descChain
+			? new Description(descChain.Last().Value, "DESCRIBE", UsedIdesc: false, Custom: false)
+			: new Description(MarkupText.Plain("You see nothing special."), null, UsedIdesc: false, Custom: false);
+	}
+
+	private async ValueTask<MString> FormatNameAsync(Look look)
+	{
 		// look.c:469-489: unparse_room, and so @nameformat with it, is skipped entirely when the look
 		// arrives through a transparent exit.
-		if (!lookThroughExit)
+		if (look.LookThroughExit)
 		{
-			var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(viewingObject,
-				await FlagView.ForAsync(looker, connectionService));
-
-			formattedName = defaultFormattedName;
-			if (realViewing.IsRoom && viewingFromInside)
-			{
-				var nameFormatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(viewingObject.DBRef.ToString()),
-					["1"] = new CallState(defaultFormattedName)
-				};
-
-				formattedName = await AttributeHelpers.EvaluateFormatAttribute(
-					attributeService, parser, looker, realViewing, "NAMEFORMAT",
-					nameFormatArgs, defaultFormattedName);
-			}
+			return MarkupText.Empty;
 		}
 
-		var formattedDesc = baseDesc;
+		var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(look.ViewingObject,
+			await FlagView.ForAsync(look.Looker, connectionService));
 
-		if (showDescription)
+		if (!look.Viewing.IsRoom || !look.ViewingFromInside)
 		{
-			var formatAttrName = tryIdesc ? "IDESCFORMAT" : "DESCFORMAT";
-			var formatAttribute = await attributeService.GetAttributeAsync(
-				god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
-
-			if (tryIdesc && !usedIdesc && formatAttribute.IsNone)
-			{
-				formatAttrName = "DESCFORMAT";
-				formatAttribute = await attributeService.GetAttributeAsync(
-					god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
-			}
-
-			if (formatAttribute.IsAttribute)
-			{
-				var descFormatArgs = new Dictionary<string, CallState>();
-				if (descriptionAttributeName is not null)
-				{
-					descFormatArgs["0"] = new CallState(baseDesc);
-				}
-
-				formattedDesc = await parser.With(
-					state => state with { Enactor = lookerEnactor },
-					lookParser => attributeService.EvaluateAttributeFunctionAsync(
-						lookParser, looker, realViewing, formatAttrName,
-						descFormatArgs, evalParent: true, ignorePermissions: true));
-			}
+			return defaultFormattedName;
 		}
 
-		if (!lookThroughExit)
+		var nameFormatArgs = new Dictionary<string, CallState>
 		{
-			await notifyService.Notify(looker, formattedName, looker);
+			["0"] = new CallState(look.ViewingObject.DBRef.ToString()),
+			["1"] = new CallState(defaultFormattedName)
+		};
+
+		return await AttributeHelpers.EvaluateFormatAttribute(
+			attributeService, look.Parser, look.Looker, look.Viewing, "NAMEFORMAT",
+			nameFormatArgs, defaultFormattedName);
+	}
+
+	private async ValueTask<MString> FormatDescriptionAsync(Look look, Description description)
+	{
+		if (!look.ShowDescription)
+		{
+			return description.Base;
 		}
 
-		if (showDescription && formattedDesc.Length > 0)
+		var formatAttrName = look.TryIdesc ? "IDESCFORMAT" : "DESCFORMAT";
+		var formatAttribute = await attributeService.GetAttributeAsync(
+			look.God, look.Viewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
+
+		if (look.TryIdesc && !description.UsedIdesc && formatAttribute.IsNone)
 		{
-			await notifyService.Notify(looker, formattedDesc, looker);
+			formatAttrName = "DESCFORMAT";
+			formatAttribute = await attributeService.GetAttributeAsync(
+				look.God, look.Viewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
 		}
 
+		if (!formatAttribute.IsAttribute)
+		{
+			return description.Base;
+		}
+
+		var descFormatArgs = new Dictionary<string, CallState>();
+		if (description.AttributeName is not null)
+		{
+			descFormatArgs["0"] = new CallState(description.Base);
+		}
+
+		return await look.Parser.With(
+			state => state with { Enactor = look.Looker.Object().DBRef },
+			lookParser => attributeService.EvaluateAttributeFunctionAsync(
+				lookParser, look.Looker, look.Viewing, formatAttrName,
+				descFormatArgs, evalParent: true, ignorePermissions: true));
+	}
+
+	private async ValueTask ShowNameAndDescriptionAsync(Look look, MString formattedName, MString formattedDesc)
+	{
+		if (!look.LookThroughExit)
+		{
+			await notifyService.Notify(look.Looker, formattedName, look.Looker);
+		}
+
+		if (look.ShowDescription && formattedDesc.Length > 0)
+		{
+			await notifyService.Notify(look.Looker, formattedDesc, look.Looker);
+		}
+	}
+
+	private async ValueTask RunDescribeTriadAsync(Look look, Description description)
+	{
 		// look.c:496 and look.c:507: the describe triad carries an o-message and an action, never a
 		// message back to the looker — look_description has already shown that. The @idescformat and
 		// @descformat fallbacks of the inside view run no triad at all.
-		var oDescribeAttribute = tryIdesc ? usedIdesc ? "OIDESCRIBE" : null : "ODESCRIBE";
-		var aDescribeAttribute = tryIdesc ? usedIdesc ? "AIDESCRIBE" : null : "ADESCRIBE";
+		var oDescribeAttribute = look.TryIdesc ? description.UsedIdesc ? "OIDESCRIBE" : null : "ODESCRIBE";
+		var aDescribeAttribute = look.TryIdesc ? description.UsedIdesc ? "AIDESCRIBE" : null : "ADESCRIBE";
 
-		if (showDescription && oDescribeAttribute is not null)
+		if (look.ShowDescription && oDescribeAttribute is not null)
 		{
-			await didItService.DidIt(parser, new DidItRequest(
-				Player: looker,
-				Thing: realViewing,
+			await didItService.DidIt(look.Parser, new DidItRequest(
+				Player: look.Looker,
+				Thing: look.Viewing,
 				OWhat: oDescribeAttribute,
 				AWhat: aDescribeAttribute));
+		}
+	}
+
+	private async ValueTask RunRoomLockTriadAsync(Look look)
+	{
+		if (!look.Viewing.IsRoom || look.LookThroughExit)
+		{
+			return;
 		}
 
 		// look.c:510-526: a terse automatic look gets only the o-message and the action of whichever
 		// side of the basic lock it landed on; anyone else gets the whole triad, or fail_lock.
-		if (realViewing.IsRoom && !lookThroughExit)
+		var passes = await permissionService.PassesLock(look.Looker, look.Viewing, LockType.Basic);
+
+		if (look.Terse)
 		{
-			var passes = await permissionService.PassesLock(looker, realViewing, LockType.Basic);
-
-			if (terse)
-			{
-				await didItService.DidIt(parser, new DidItRequest(
-					Player: looker,
-					Thing: realViewing,
-					OWhat: passes ? "OSUCCESS" : "OFAILURE",
-					AWhat: passes ? "ASUCCESS" : "AFAILURE"));
-			}
-			else if (passes)
-			{
-				await didItService.DidIt(parser, new DidItRequest(
-					Player: looker,
-					Thing: realViewing,
-					What: "SUCCESS",
-					OWhat: "OSUCCESS",
-					AWhat: "ASUCCESS"));
-			}
-			else
-			{
-				await didItService.FailLock(parser, looker, realViewing, LockType.Basic);
-			}
+			await didItService.DidIt(look.Parser, new DidItRequest(
+				Player: look.Looker,
+				Thing: look.Viewing,
+				OWhat: passes ? "OSUCCESS" : "OFAILURE",
+				AWhat: passes ? "ASUCCESS" : "AFAILURE"));
 		}
+		else if (passes)
+		{
+			await didItService.DidIt(look.Parser, new DidItRequest(
+				Player: look.Looker,
+				Thing: look.Viewing,
+				What: "SUCCESS",
+				OWhat: "OSUCCESS",
+				AWhat: "ASUCCESS"));
+		}
+		else
+		{
+			await didItService.FailLock(look.Parser, look.Looker, look.Viewing, LockType.Basic);
+		}
+	}
 
+	private async ValueTask ShowContentsAndExitsAsync(Look look)
+	{
 		// look.c:528-530: LOOK_NOCONTENTS drops the contents, and so does a look through an exit that
 		// is both cloudy and transparent.
-		var showContents = !key.HasFlag(LookKey.NoContents)
-			&& !(key.HasFlag(LookKey.Trans) && key.HasFlag(LookKey.Cloudy));
+		var showContents = !look.Key.HasFlag(LookKey.NoContents)
+			&& !(look.Key.HasFlag(LookKey.Trans) && look.Key.HasFlag(LookKey.Cloudy));
+
+		AnySharpContainer? container = look.Viewing switch
+		{
+			SharpPlayer player => player,
+			SharpRoom room => room,
+			SharpThing thing => thing,
+			_ => null
+		};
 
 		// An opaque container shows no contents from outside.
 		var showInventory = showContents
-			&& realViewing.IsContainer
-			&& !(await realViewing.IsOpaque());
+			&& container is not null
+			&& !(await look.Viewing.IsOpaque());
 
 		// look.c:531-533: look_exits is called independently of look_contents, gated only on the look
 		// not arriving through an exit. LOOK_NOCONTENTS and an opaque container do not silence it.
-		var showExits = realViewing.IsRoom && !lookThroughExit;
+		var showExits = look.Viewing.IsRoom && !look.LookThroughExit;
 
-		if (realViewing.IsContainer && (showInventory || showExits))
+		if (container is null || !(showInventory || showExits))
 		{
-			var allContents = mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer), ExecutionBudget.CurrentToken);
-
-			var visibleContents = new List<AnySharpContent>();
-			var visibleExits = new List<AnySharpContent>();
-
-			var canSeeContent = await WorldVisibility.CreateScanAsync(
-				looker, realViewing, reality, connectionService, ExecutionBudget.CurrentToken);
-			var lookerRef = looker.Object().DBRef;
-			await foreach (var item in allContents.WithCancellation(ExecutionBudget.CurrentToken))
-			{
-				// predicat.c:338-344 (can_see): "your own body isn't listed in a 'look'".
-				if (item.Object().DBRef == lookerRef) continue;
-				if (!await canSeeContent(item, ExecutionBudget.CurrentToken)) continue;
-				if (item.IsExit) visibleExits.Add(item);
-				else visibleContents.Add(item);
-			}
-
-			if (showInventory && visibleContents.Count > 0)
-			{
-				var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Object().DBRef.Number}"));
-				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
-				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
-
-				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
-				// The flag view is needed only for the Name(#dbrefFlags) form.
-				var flagView = await looker.IsSee_All() ? await FlagView.ForAsync(looker, connectionService) : null;
-				var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
-				{
-					if (flagView is not null)
-					{
-						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object(), flagView);
-					}
-					return MarkupText.Plain(item.Object().Name);
-				}));
-				var defaultContents = MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
-
-				var conFormatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(contentDbrefs),
-					["1"] = new CallState(contentNames)
-				};
-
-				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
-					attributeService, parser, looker, realViewing, "CONFORMAT",
-					conFormatArgs, defaultContents);
-
-				await notifyService.Notify(looker, formattedContents, looker);
-			}
-
-			if (showExits && visibleExits.Count > 0)
-			{
-				var exitDbrefs = string.Join(" ", visibleExits.Select(x => $"#{x.Object().DBRef.Number}"));
-				var exitFormatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(exitDbrefs)
-				};
-
-				var isTransparent = await realViewing.IsTransparent();
-				string? lookerLocale = null;
-				var firstConnection = await connectionService.Get(looker.Object().DBRef).FirstOrDefaultAsync();
-				firstConnection?.Metadata.TryGetValue("Locale", out lookerLocale);
-
-				MString defaultExits;
-				if (isTransparent)
-				{
-					var exitParts = new List<MString>();
-					foreach (var exit in visibleExits)
-					{
-						var exitObj = exit.WithRoomOption().Object();
-						var destName = await DestinationNameAsync(exit);
-
-						var exitMString = ExitLink(exitObj.Name);
-
-						if (await exit.WithRoomOption().IsOpaque())
-						{
-							exitParts.Add(exitMString);
-						}
-						else
-						{
-							exitParts.Add(FormatExitNameToDestination(exitMString, destName, lookerLocale));
-						}
-					}
-					defaultExits = MarkupText.Join(MarkupText.NewLine, exitParts);
-				}
-				else
-				{
-					var exitMStrings = visibleExits.Select(x => ExitLink(x.Object().Name)).ToList();
-					defaultExits = MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"), MessageFormatting.FormatMStringsWithOxfordComma(exitMStrings));
-				}
-
-				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
-					attributeService, parser, looker, realViewing, "EXITFORMAT",
-					exitFormatArgs, defaultExits);
-
-				if (formattedExits == defaultExits && isTransparent)
-				{
-					foreach (var exit in visibleExits)
-					{
-						var exitObj = exit.WithRoomOption().Object();
-						var destName = await DestinationNameAsync(exit);
-
-						var exitMString = ExitLink(exitObj.Name);
-
-						if (await exit.WithRoomOption().IsOpaque())
-						{
-							await notifyService.Notify(looker, exitMString, looker);
-						}
-						else
-						{
-							await notifyService.NotifyLocalizedMarkup(
-								looker,
-								nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
-								looker,
-								exitMString,
-								MarkupText.Plain(destName));
-						}
-					}
-				}
-				else
-				{
-					await notifyService.Notify(looker, formattedExits, looker);
-				}
-			}
+			return;
 		}
 
-		// look_simple (look.c:430-440): an exit set TRANSPARENT or CLOUDY is looked through, after its
-		// own name and description, at the room it leads to. CLOUDY alone under LOOK_NOCONTENTS would
-		// show nothing there, so it is not looked at all.
-		if (realViewing.IsExit)
-		{
-			var throughKey = key;
-			if (await realViewing.IsTransparent()) throughKey |= LookKey.Trans;
-			if (await realViewing.IsCloudy()) throughKey |= LookKey.Cloudy;
-			var through = throughKey & (LookKey.Trans | LookKey.Cloudy);
+		var (visibleContents, visibleExits) = await VisibleContentsAsync(look, container);
 
-			if (through != 0
-					&& (!throughKey.HasFlag(LookKey.NoContents) || through != LookKey.Cloudy)
-					&& await ExitLookDestinationAsync(god, looker, realViewing.AsContent) is AnySharpContainer beyond)
-			{
-				await LookRoom(parser, looker, beyond.WithExitOption().WithNoneOption(), throughKey);
-			}
+		if (showInventory && visibleContents.Count > 0)
+		{
+			await ShowContentsAsync(look, visibleContents);
 		}
 
-		return new CallState(viewingObject.DBRef.ToString());
+		if (showExits && visibleExits.Count > 0)
+		{
+			await ShowExitsAsync(look, visibleExits);
+		}
+	}
+
+	/// <summary>What the looker can see in the container, split into exits and everything else.</summary>
+	private async ValueTask<(List<AnySharpContent> Contents, List<AnySharpContent> Exits)> VisibleContentsAsync(
+		Look look, AnySharpContainer container)
+	{
+		var allContents = mediator.CreateStream(new GetContentsQuery(container), ExecutionBudget.CurrentToken);
+
+		var visibleContents = new List<AnySharpContent>();
+		var visibleExits = new List<AnySharpContent>();
+
+		var canSeeContent = await WorldVisibility.CreateScanAsync(
+			look.Looker, look.Viewing, reality, connectionService, ExecutionBudget.CurrentToken);
+		var lookerRef = look.Looker.Object().DBRef;
+		// predicat.c:338-344 (can_see): "your own body isn't listed in a 'look'".
+		var visible = allContents
+			.Where(item => item.Object().DBRef != lookerRef)
+			.Where((item, _) => canSeeContent(item, ExecutionBudget.CurrentToken));
+		await foreach (var item in visible.WithCancellation(ExecutionBudget.CurrentToken))
+		{
+			if (item.IsExit) visibleExits.Add(item);
+			else visibleContents.Add(item);
+		}
+
+		return (visibleContents, visibleExits);
+	}
+
+	private async ValueTask ShowContentsAsync(Look look, List<AnySharpContent> visibleContents)
+	{
+		var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Object().DBRef.Number}"));
+		var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+		var contentsLabel = look.Viewing.IsRoom ? "Contents:" : "Carrying:";
+
+		// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
+		// The flag view is needed only for the Name(#dbrefFlags) form.
+		var flagView = await look.Looker.IsSee_All() ? await FlagView.ForAsync(look.Looker, connectionService) : null;
+		var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
+		{
+			if (flagView is not null)
+			{
+				return await MessageFormatting.FormatObjectWithDbrefMString(item.Object(), flagView);
+			}
+			return MarkupText.Plain(item.Object().Name);
+		}));
+		var defaultContents = MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
+
+		var conFormatArgs = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(contentDbrefs),
+			["1"] = new CallState(contentNames)
+		};
+
+		var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
+			attributeService, look.Parser, look.Looker, look.Viewing, "CONFORMAT",
+			conFormatArgs, defaultContents);
+
+		await notifyService.Notify(look.Looker, formattedContents, look.Looker);
+	}
+
+	private async ValueTask ShowExitsAsync(Look look, List<AnySharpContent> visibleExits)
+	{
+		var exitDbrefs = string.Join(" ", visibleExits.Select(x => $"#{x.Object().DBRef.Number}"));
+		var exitFormatArgs = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(exitDbrefs)
+		};
+
+		var isTransparent = await look.Viewing.IsTransparent();
+		var defaultExits = isTransparent
+			? await TransparentExitListAsync(look.Looker, visibleExits)
+			: MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"),
+				MessageFormatting.FormatMStringsWithOxfordComma(visibleExits.Select(x => ExitLink(x.Object().Name)).ToList()));
+
+		var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
+			attributeService, look.Parser, look.Looker, look.Viewing, "EXITFORMAT",
+			exitFormatArgs, defaultExits);
+
+		if (formattedExits == defaultExits && isTransparent)
+		{
+			await NotifyTransparentExitsAsync(look.Looker, visibleExits);
+		}
+		else
+		{
+			await notifyService.Notify(look.Looker, formattedExits, look.Looker);
+		}
+	}
+
+	/// <summary>A transparent room's exits, one per line, each with where it leads unless it is opaque.</summary>
+	private async ValueTask<MString> TransparentExitListAsync(AnySharpObject looker, List<AnySharpContent> visibleExits)
+	{
+		string? lookerLocale = null;
+		var firstConnection = await connectionService.Get(looker.Object().DBRef).FirstOrDefaultAsync();
+		firstConnection?.Metadata.TryGetValue("Locale", out lookerLocale);
+
+		var exitParts = new List<MString>();
+		foreach (var exit in visibleExits)
+		{
+			var destName = await DestinationNameAsync(exit);
+			var exitMString = ExitLink(exit.Object().Name);
+
+			exitParts.Add(await exit.WithRoomOption().IsOpaque()
+				? exitMString
+				: FormatExitNameToDestination(exitMString, destName, lookerLocale));
+		}
+
+		return MarkupText.Join(MarkupText.NewLine, exitParts);
+	}
+
+	/// <summary>Sends a transparent room's exits one line at a time, in the looker's own locale.</summary>
+	private async ValueTask NotifyTransparentExitsAsync(AnySharpObject looker, List<AnySharpContent> visibleExits)
+	{
+		foreach (var exit in visibleExits)
+		{
+			var destName = await DestinationNameAsync(exit);
+			var exitMString = ExitLink(exit.Object().Name);
+
+			if (await exit.WithRoomOption().IsOpaque())
+			{
+				await notifyService.Notify(looker, exitMString, looker);
+			}
+			else
+			{
+				await notifyService.NotifyLocalizedMarkup(
+					looker,
+					nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
+					looker,
+					exitMString,
+					MarkupText.Plain(destName));
+			}
+		}
+	}
+
+	/// <summary>
+	/// look_simple (look.c:430-440): an exit set TRANSPARENT or CLOUDY is looked through, after its
+	/// own name and description, at the room it leads to. CLOUDY alone under LOOK_NOCONTENTS would
+	/// show nothing there, so it is not looked at all.
+	/// </summary>
+	private async ValueTask LookThroughExitAsync(Look look)
+	{
+		if (look.Viewing is not SharpExit exit)
+		{
+			return;
+		}
+
+		var throughKey = look.Key;
+		if (await look.Viewing.IsTransparent()) throughKey |= LookKey.Trans;
+		if (await look.Viewing.IsCloudy()) throughKey |= LookKey.Cloudy;
+		var through = throughKey & (LookKey.Trans | LookKey.Cloudy);
+
+		if (through != 0
+				&& (!throughKey.HasFlag(LookKey.NoContents) || through != LookKey.Cloudy)
+				&& await ExitLookDestinationAsync(look.God, look.Looker, exit) is AnySharpContainer beyond)
+		{
+			await LookRoom(look.Parser, look.Looker, beyond.WithExitOption().WithNoneOption(), throughKey);
+		}
 	}
 
 	/// <summary>
@@ -424,7 +530,7 @@ public class LookService(
 		return linkType switch
 		{
 			"variable" => new None(),
-			"home" => looker.IsContent ? await looker.AsContent.Home() : new None(),
+			"home" => looker.AsOptionalContent is AnySharpContent lookerContent ? await lookerContent.Home() : new None(),
 			_ => await exit.Home()
 		};
 	}

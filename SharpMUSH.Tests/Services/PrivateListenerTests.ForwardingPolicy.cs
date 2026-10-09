@@ -83,7 +83,7 @@ public partial class PrivateListenerTests
 		await SetRaw(recipient.DbRef, "AHEAR", "&HEARD me=%0");
 		var pipeline = await Build(speaker, recipient.DbRef);
 		RemoveOutputFraming(pipeline);
-		var body = (await pipeline.Parser.FunctionParse(MarkupText.Plain("ansi(r,body)")))!.Message!;
+		var body = await pipeline.Parser.EvaluateAsync(MarkupText.Plain("ansi(r,body)"));
 		await pipeline.Notify.Notify(listener, body, await Node(speaker.DbRef), noSpoofVariant
 			? INotifyService.NotificationType.NSPrivateEmit : INotifyService.NotificationType.PrivateEmit);
 		var output = pipeline.Bus.ReceivedCalls().SelectMany(call => call.GetArguments().OfType<SharpMUSH.Messaging.Messages.MarkupOutputMessage>()).Single();
@@ -91,7 +91,7 @@ public partial class PrivateListenerTests
 		await Assert.That(delivered.ToPlainText()).EndsWith("prefix body");
 		await Assert.That(delivered.ToPlainText().Count(character => character == '[')).IsEqualTo(noSpoofVariant ? 0 : 1);
 		await Assert.That(delivered.Runs.Count).IsGreaterThanOrEqualTo(2);
-		var captured = pipeline.Queue.Single().State.EnvironmentRegisters["0"].Message!;
+		var captured = pipeline.Queue.Single().State.EnvironmentRegisters["0"].Message;
 		await Assert.That(captured.ToPlainText()).IsEqualTo("prefix body");
 		await Assert.That(captured.Runs.Count).IsGreaterThanOrEqualTo(2);
 	}
@@ -104,7 +104,7 @@ public partial class PrivateListenerTests
 	{
 		var owner = await Player();
 		var puppet = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "TerminalPuppet");
-		var room = DBRef.Parse((await Admin("@dig " + Guid.NewGuid().ToString("N"))).Message!.ToPlainText().Trim());
+		var room = DBRef.Parse((await Admin("@dig " + Guid.NewGuid().ToString("N"))).Message.ToPlainText().Trim());
 		await Admin($"@tel {puppet}={room}");
 		if (privateMessage) await Admin($"@tel {owner.DbRef}={room}");
 		await Admin($"@chown {puppet}={owner.DbRef}");
@@ -169,7 +169,7 @@ public partial class PrivateListenerTests
 	{
 		var speaker = await Player();
 		var recipient = await Player();
-		var room = DBRef.Parse((await Admin("@dig " + Guid.NewGuid().ToString("N"))).Message!.ToPlainText().Trim());
+		var room = DBRef.Parse((await Admin("@dig " + Guid.NewGuid().ToString("N"))).Message.ToPlainText().Trim());
 		var listener = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "RoomForwarder");
 		await Admin($"@chown {room}={speaker.DbRef}");
 		await Admin($"@tel {speaker.DbRef}={room}");

@@ -37,14 +37,14 @@ public class ObjectTriadParityTests
 
 	private async Task<string> Read(string holder, string attribute)
 	{
-		var value = await GodParser.FunctionParse(MarkupText.Plain($"[get({holder}/{attribute})]"));
-		return value!.Message!.ToPlainText().Trim();
+		var value = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({holder}/{attribute})]"));
+		return value.ToPlainText().Trim();
 	}
 
 	private async Task<string> Location(DBRef what)
 	{
 		var value = await GodParser.FunctionParse(MarkupText.Plain($"[loc({what})]"));
-		return value!.Message!.ToPlainText().Trim();
+		return value!.Message.ToPlainText().Trim();
 	}
 
 	/// <summary>Digs a fresh room and silently gathers every named object into it.</summary>
@@ -52,7 +52,7 @@ public class ObjectTriadParityTests
 	{
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		var room = dig.Message!.ToPlainText().Trim();
+		var room = dig.Message.ToPlainText().Trim();
 
 		foreach (var occupant in occupants)
 		{
@@ -72,7 +72,7 @@ public class ObjectTriadParityTests
 	{
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix + "Room")}"));
-		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(dig.Message.ToPlainText().Trim());
 
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
@@ -292,8 +292,8 @@ public class ObjectTriadParityTests
 		await Assert.That(await Read(item, "DROPPED")).IsEqualTo($"#{dropper.DbRef.Number}")
 			.Because("do_drop falls through the drop-in branch to its unconditional DROP triad");
 
-		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
-		await Assert.That(BareDbrefs(location!.Message!.ToPlainText().Trim()))
+		var location = await GodParser.EvaluateAsync(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(location.ToPlainText().Trim()))
 			.IsEqualTo($"#{dropper.DbRef.Number}")
 			.Because("the refused drop moves the object nowhere");
 	}
@@ -348,8 +348,8 @@ public class ObjectTriadParityTests
 		await Assert.That(await Read(room, "BOUNCED")).IsEmpty()
 			.Because("the lock names the dropper, and the dropper is who it is evaluated against");
 
-		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
-		await Assert.That(BareDbrefs(location!.Message!.ToPlainText().Trim()))
+		var location = await GodParser.EvaluateAsync(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(location.ToPlainText().Trim()))
 			.IsEqualTo(BareDbrefs(room))
 			.Because("the drop-in lock passed, so the item reached the room");
 	}
@@ -381,8 +381,8 @@ public class ObjectTriadParityTests
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain("empty me"));
 		await Settle();
 
-		var refused = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
-		await Assert.That(BareDbrefs(refused!.Message!.ToPlainText().Trim()))
+		var refused = await GodParser.EvaluateAsync(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(refused.ToPlainText().Trim()))
 			.IsEqualTo(BareDbrefs(emptier.DbRef.ToString()))
 			.Because("the drop-in lock is evaluated against the emptier, and the emptier fails it");
 
@@ -393,7 +393,7 @@ public class ObjectTriadParityTests
 		await Settle();
 
 		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
-		await Assert.That(BareDbrefs(location!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
+		await Assert.That(BareDbrefs(location!.Message.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
 			.Because("the drop-in lock names the emptier, who is who it is evaluated against");
 	}
 
@@ -430,8 +430,8 @@ public class ObjectTriadParityTests
 
 		// move.c:865-903 runs both halves: the get puts the item in the emptier's hands, and the
 		// drop that follows (thing_loc != player) puts it down where the container stands.
-		var landed = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
-		await Assert.That(BareDbrefs(landed!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
+		var landed = await GodParser.EvaluateAsync(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(landed.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
 			.Because("the drop half leaves the item where the container stands, not in the emptier's hands");
 
 		await Assert.That(BareDbrefs(await Read(item, "TOOK"))).IsEqualTo(BareDbrefs(room))
@@ -466,8 +466,8 @@ public class ObjectTriadParityTests
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
 		await Settle();
 
-		var stayed = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
-		await Assert.That(BareDbrefs(stayed!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
+		var stayed = await GodParser.EvaluateAsync(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(stayed.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
 			.Because("the item's basic lock refuses, so it does not leave the container");
 
 		await Assert.That(await Read(box, "REFUSED")).IsEqualTo("yes")
@@ -498,12 +498,12 @@ public class ObjectTriadParityTests
 		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
 		await Settle();
 
-		var hiddenAt = await GodParser.FunctionParse(MarkupText.Plain($"[loc({hidden})]"));
-		await Assert.That(BareDbrefs(hiddenAt!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
+		var hiddenAt = await GodParser.EvaluateAsync(MarkupText.Plain($"[loc({hidden})]"));
+		await Assert.That(BareDbrefs(hiddenAt.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
 			.Because("first_visible skips a DARK item the emptier does not control");
 
-		var shownAt = await GodParser.FunctionParse(MarkupText.Plain($"[loc({shown})]"));
-		await Assert.That(BareDbrefs(shownAt!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
+		var shownAt = await GodParser.EvaluateAsync(MarkupText.Plain($"[loc({shown})]"));
+		await Assert.That(BareDbrefs(shownAt.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
 			.Because("the visible item beside it is still emptied");
 	}
 
@@ -812,7 +812,7 @@ public class ObjectTriadParityTests
 		await Room("NameTriadRoom", renamer.DbRef, watcher.DbRef, sign);
 
 		var oldName = (await GodParser.FunctionParse(MarkupText.Plain($"[name({sign})]")))!
-			.Message!.ToPlainText().Trim();
+			.Message.ToPlainText().Trim();
 		var newName = TestIsolationHelpers.GenerateUniqueName("NameTriadNew");
 
 		// The renamer has to control the sign for @name to run at all; WIZARD is the smallest way

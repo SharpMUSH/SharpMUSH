@@ -53,11 +53,12 @@ public partial class Commands
 		ParameterNames = ["objects", "package", "version", "description"])]
 	public async ValueTask<Option<CallState>> Package(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var objectList = args["0"].Message?.ToPlainText() ?? string.Empty;
+		var objectList = args["0"].Message.ToPlainText();
 		var tokens = objectList.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		if (tokens.Length == 0)
 		{
@@ -124,12 +125,11 @@ public partial class Commands
 					IAttributeService.AttributePatternMode.Wildcard);
 				if (visible is SharpAttribute[] visibleAttributes)
 				{
-					foreach (var attr in visibleAttributes)
+					var unveiled = visibleAttributes
+						.Where(attr => !attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)));
+					foreach (var attr in unveiled)
 					{
-						if (!attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)))
-						{
-							names.Add(attr.LongName);
-						}
+						names.Add(attr.LongName);
 					}
 				}
 			}
@@ -177,7 +177,7 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		if (!args.TryGetValue("1", out var idArg) || string.IsNullOrWhiteSpace(idArg.Message?.ToPlainText()))
+		if (!args.TryGetValue("1", out var idArg) || string.IsNullOrWhiteSpace(idArg.Message.ToPlainText()))
 		{
 			await NotifyService.Notify(executor,
 				"PACKAGE: Usage: @package <objects>=<package-id>[,<version>[,<description>]]  (or @package/scan <objects>)",
@@ -185,7 +185,7 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var packageId = idArg.Message!.ToPlainText().Trim();
+		var packageId = idArg.Message.ToPlainText().Trim();
 		if (!PackageIdRegex().IsMatch(packageId))
 		{
 			await NotifyService.Notify(executor,
@@ -195,7 +195,7 @@ public partial class Commands
 		}
 
 		var version = args.TryGetValue("2", out var versionArg)
-			? versionArg.Message?.ToPlainText().Trim() ?? string.Empty
+			? versionArg.Message.ToPlainText().Trim() ?? string.Empty
 			: string.Empty;
 		if (string.IsNullOrEmpty(version))
 		{
@@ -203,7 +203,7 @@ public partial class Commands
 		}
 
 		var description = args.TryGetValue("3", out var descriptionArg)
-			? descriptionArg.Message?.ToPlainText().Trim() ?? string.Empty
+			? descriptionArg.Message.ToPlainText().Trim() ?? string.Empty
 			: string.Empty;
 		if (string.IsNullOrEmpty(description))
 		{
@@ -291,13 +291,8 @@ public partial class Commands
 		foreach (var obj in scanResult.Objects)
 		{
 			var visible = visibleByObjid[obj.Objid];
-			foreach (var (attrName, value) in obj.Attributes)
+			foreach (var (attrName, value) in obj.Attributes.Where(attribute => visible.Contains(attribute.Key)))
 			{
-				if (!visible.Contains(attrName))
-				{
-					continue;
-				}
-
 				foreach (Match match in PackageDbrefRegex().Matches(value))
 				{
 					var number = int.Parse(match.Groups["number"].Value);

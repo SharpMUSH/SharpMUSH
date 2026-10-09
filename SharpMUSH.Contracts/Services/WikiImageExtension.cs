@@ -152,13 +152,5 @@ internal sealed partial class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkIn
 	/// Extracts plain-text alt text from the inline content of an image node.
 	/// </summary>
 	private static string ExtractPlainText(LinkInline link)
-	{
-		var sb = new System.Text.StringBuilder();
-		foreach (var inline in link)
-		{
-			if (inline is LiteralInline literal)
-				sb.Append(literal.Content.ToString());
-		}
-		return sb.ToString();
-	}
+		=> string.Concat(link.OfType<LiteralInline>().Select(literal => literal.Content.ToString()));
 }

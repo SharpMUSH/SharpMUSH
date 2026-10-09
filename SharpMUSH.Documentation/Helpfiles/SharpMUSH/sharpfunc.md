@@ -301,11 +301,12 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [LOCALIZE()]       | [LSET()]           | [NULL()]           | [NUMVERSION()]     |
 | [OBJEVAL()]        | [OPEN()]           | [PCREATE()]        | [R()]              |
 | [RAND()]           | [RESTRICTEDEXPR()] | [S()]              | [SCAN()]           |
-| [SET()]            | [SETQ()]           | [SETR()]           | [SLEV()]           |
-| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
-| [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        | [TEL()]            |
-| [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       | [UNSETQ()]         |
-| [UPTIME()]         | [VALID()]          | [WIPE()]           |                    |
+| [SET()]            | [SETQ()]           | [SETQM()]          | [SETR()]           |
+| [SETRM()]          | [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     |
+| [SPEAK()]          | [STEXT()]          | [SUGGEST()]        | [TAG()]            |
+| [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
+| [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
+| [WIPE()]           |                    |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
@@ -5845,7 +5846,7 @@ SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 # JSON Functions
   JSON functions are used to create and modify JSON objects.
 
-`isjson()    json()     json_array()     json_group_by()     json_map()     json_query()     json_mod()`
+`isjson()    json()     json_array()     json_fill()     json_group_by()     json_map()     json_query()     json_mod()`
 
   This function sends a JSON object to GMCP and WebSocket connections.
 

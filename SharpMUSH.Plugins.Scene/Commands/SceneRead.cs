@@ -1,6 +1,7 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -24,11 +25,11 @@ public static class SceneRead
 
 		if (scenes.Count == 0)
 		{
-			await notifyService.Notify(executor, "SCENE: No scenes match.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("No scenes match."));
 			return MarkupText.Empty;
 		}
 
-		await notifyService.Notify(executor, $"SCENE: {scenes.Count} scene(s).");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice($"{scenes.Count} scene(s)."));
 		foreach (var scene in scenes)
 		{
 			await notifyService.Notify(executor, FormatSummary(scene));
@@ -48,7 +49,7 @@ public static class SceneRead
 		var (sceneId, key) = SceneCommandHelper.SplitIdKey(refArg);
 		if (await sceneService.GetSceneAsync(sceneId) is not Contracts.Scene scene)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
@@ -59,7 +60,7 @@ public static class SceneRead
 		}
 
 		var value = ReadKey(scene, key!);
-		await notifyService.Notify(executor, $"SCENE: {scene.Id}/{key} = {value}");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice($"{scene.Id}/{key} = {value}"));
 		return MarkupText.Plain(value);
 	}
 
@@ -73,7 +74,7 @@ public static class SceneRead
 		var sceneId = SceneCommandHelper.Plain(sceneIdArg);
 		if (await sceneService.GetSceneAsync(sceneId) is not Contracts.Scene scene)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 

@@ -1,4 +1,5 @@
 using MarkupString;
+using MarkupString.Ansi;
 using MarkupString.Html;
 
 namespace SharpMUSH.Library.Markup;
@@ -25,18 +26,45 @@ public static class NoticeMarkup
 
 	/// <summary>
 	/// The lead for <paramref name="source"/> (none when empty) and <paramref name="word"/> (none when
-	/// null), coloured <paramref name="colour"/>.
+	/// null), coloured <paramref name="colour"/> (left as it is when null).
 	/// </summary>
-	public static MarkupText Build(MarkupText source, string? word, IMarkup colour)
+	public static MarkupText Build(MarkupText source, string? word, IMarkup? colour)
 	{
 		var parts = new List<MarkupText>();
 		if (source.ToPlainText().Trim().Length > 0)
 			parts.Add(MarkupText.Concat([MarkupText.Wrap(Hidden, "["), source, MarkupText.Wrap(Hidden, "]")]));
 		if (word is not null) parts.Add(MarkupText.Plain(word + ":"));
-		return parts.Count == 0
-			? MarkupText.Empty
-			: MarkupText.Wrap(colour, MarkupText.Wrap(Lead, MarkupText.Join(MarkupText.Space, parts)));
+		if (parts.Count == 0) return MarkupText.Empty;
+
+		var lead = MarkupText.Wrap(Lead, MarkupText.Join(MarkupText.Space, parts));
+		return colour is null ? lead : MarkupText.Wrap(colour, lead);
 	}
+
+	/// <summary>
+	/// A whole notice written in C#, as softcode's <c>notice()</c> writes it: the lead for <paramref name="source"/>
+	/// and <paramref name="kind"/>, then <paramref name="text"/>. The lead is coloured by the theme colour the kind
+	/// names (<see cref="ToneMarkup"/>), so each reader sees it in their own theme, and is bold for every kind but
+	/// <see cref="NoticeKind.Muted"/>.
+	/// </summary>
+	public static MarkupText Message(string source, MarkupText text, NoticeKind kind = NoticeKind.Info)
+	{
+		var (role, word) = kind switch
+		{
+			NoticeKind.Ok => (ThemeRole.Success, "Done"),
+			NoticeKind.Warn => (ThemeRole.Warning, "Warning"),
+			NoticeKind.Error => (ThemeRole.Error, "Error"),
+			NoticeKind.Muted => (ThemeRole.Muted, (string?)null),
+			_ => (ThemeRole.Info, (string?)null),
+		};
+		var lead = ToneMarkup.Build(role, Build(MarkupText.Plain(source), word, kind == NoticeKind.Muted ? null : Bold), ToneMarkup.Standard(role));
+		return MarkupText.Concat([lead, MarkupText.Space, text]);
+	}
+
+	/// <inheritdoc cref="Message(string, MarkupText, NoticeKind)"/>
+	public static MarkupText Message(string source, string text, NoticeKind kind = NoticeKind.Info) =>
+		Message(source, MarkupText.Plain(text), kind);
+
+	private static readonly AnsiMarkup Bold = AnsiMarkup.Create(bold: true);
 
 	/// <summary>
 	/// <paramref name="text"/> for a telnet client: each lead as a screen reader reads it when
@@ -88,4 +116,19 @@ public static class NoticeMarkup
 		var kept = markups.Where(markup => !markup.Equals(Lead) && !markup.Equals(Hidden)).ToList();
 		return kept.Count == 0 ? MarkupText.Plain(text) : MarkupText.Wrap(MarkupSet.Of(kept), text);
 	}
+}
+
+/// <summary>What a notice says about its message, as <c>notice()</c>'s kind does: its colour, and its word.</summary>
+public enum NoticeKind
+{
+	/// <summary>News: the system's badge alone, in the info colour.</summary>
+	Info,
+	/// <summary>Something done: <c>Done:</c>, in the success colour.</summary>
+	Ok,
+	/// <summary>A typing mistake or a thing not found: <c>Warning:</c>, in the warning colour.</summary>
+	Warn,
+	/// <summary>A refusal or a real failure: <c>Error:</c>, in the error colour.</summary>
+	Error,
+	/// <summary>An aside: the badge alone, in the muted colour and not bold.</summary>
+	Muted,
 }

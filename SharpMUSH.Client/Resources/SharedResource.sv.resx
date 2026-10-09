@@ -5940,6 +5940,22 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Sidtext (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Visa</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Posetyper som visas</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# {label}-rad dold} other {# {label}-rader dolda}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} på {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>Det gick inte att ändra. Försök igen om en stund.</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>Spelutdata</value>
   </data>
@@ -5975,5 +5991,25 @@
   </data>
   <data name="TermReviewNone" xml:space="preserve">
     <value>Ingen rad att läsa än.</value>
+  </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>ny</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {# svar till} other {# svar till}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Flytta upp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Flytta ned</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Ordna om</value>
+    <comment>MT</comment>
   </data>
 </root>

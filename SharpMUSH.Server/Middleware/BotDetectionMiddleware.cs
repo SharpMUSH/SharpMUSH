@@ -43,15 +43,12 @@ public sealed class BotDetectionMiddleware(RequestDelegate next)
 		if (isBot)
 		{
 			var path = context.Request.Path.Value ?? "/";
-			foreach (var prefix in AuthenticatedPrefixes)
+			if (AuthenticatedPrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 			{
-				if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-				{
-					// Bots must not see authenticated content – even a live scene detail or settings page.
-					context.Response.StatusCode = StatusCodes.Status403Forbidden;
-					await context.Response.WriteAsync("Forbidden");
-					return;
-				}
+				// Bots must not see authenticated content – even a live scene detail or settings page.
+				context.Response.StatusCode = StatusCodes.Status403Forbidden;
+				await context.Response.WriteAsync("Forbidden");
+				return;
 			}
 		}
 
@@ -69,12 +66,6 @@ public sealed class BotDetectionMiddleware(RequestDelegate next)
 		if (string.IsNullOrEmpty(userAgent))
 			return false;
 
-		foreach (var sub in BotSubstrings)
-		{
-			if (userAgent.Contains(sub, StringComparison.OrdinalIgnoreCase))
-				return true;
-		}
-
-		return false;
+		return BotSubstrings.Any(sub => userAgent.Contains(sub, StringComparison.OrdinalIgnoreCase));
 	}
 }

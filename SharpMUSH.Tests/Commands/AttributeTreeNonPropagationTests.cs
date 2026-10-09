@@ -86,8 +86,8 @@ public class AttributeTreeNonPropagationTests
 		// failed to apply.
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&WR{uid}`LEAF me=changed_{uid}"));
-		var writeCheck = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/WR{uid}`LEAF)"));
-		await Assert.That(writeCheck!.Message!.ToPlainText()).IsEqualTo($"leafvalue_{uid}")
+		var writeCheck = await Parser.EvaluateAsync(MarkupText.Plain($"get({mortalDbRef}/WR{uid}`LEAF)"));
+		await Assert.That(writeCheck.ToPlainText()).IsEqualTo($"leafvalue_{uid}")
 			.Because("wizard on the branch must still block the mortal owner's write to its leaf - proves the flag was actually set and is live");
 
 		// The actual claim: reading that same leaf must not be blocked. Uses "think" through
@@ -96,7 +96,7 @@ public class AttributeTreeNonPropagationTests
 		// that makes the read trivially succeed regardless of the flag under test.
 		var readResult = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think get(me/WR{uid}`LEAF)"));
-		await Assert.That(readResult.Message!.ToPlainText()).IsEqualTo($"leafvalue_{uid}")
+		await Assert.That(readResult.Message.ToPlainText()).IsEqualTo($"leafvalue_{uid}")
 			.Because("AF_WIZARD gates writes only, per Penn's can_read_attr_internal - it must not block reading the leaf");
 	}
 

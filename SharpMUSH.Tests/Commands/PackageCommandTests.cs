@@ -148,8 +148,25 @@ public class PackageCommandTests
 		var nonWizParser = Parser.Push(Parser.CurrentState with { Executor = nonWizardDbRef });
 
 		var result = await nonWizParser.CommandParse(MarkupText.Plain("@package #1"));
-		var resultText = result.Message?.ToPlainText() ?? "";
+		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
+	}
+
+	/// <summary>
+	/// A bare <c>@package</c> or <c>@package/scan</c> names no objects at all. It answers with the arity
+	/// error <c>@dig</c> gives rather than throwing on the missing first argument (#1754).
+	/// </summary>
+	[Test]
+	[Arguments("@package")]
+	[Arguments("@package/scan")]
+	public async ValueTask Package_WithNoArguments_ReportsArityInsteadOfThrowing(string command)
+	{
+		await AsWizard(command);
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(_wizard.DbRef))
+			.DoesNotContain(message => message.StartsWith("#-1 EXCEPTION: ", StringComparison.Ordinal));
+		await ExpectNotify(message =>
+			message == "#-1 COMMAND (@PACKAGE) EXPECTS AT LEAST 1 ARGUMENTS BUT GOT 0");
 	}
 }

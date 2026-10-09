@@ -30,7 +30,7 @@ public partial class SpeechTransformationTests
 		=> await Factory.CommandParserFor(actor.DbRef, actor.Handle).CommandParse(actor.Handle, Connections, MarkupText.Plain(command));
 	private async Task<DBRef> Room(params TestIsolationHelpers.TestPlayer[] players)
 	{
-		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText().Trim());
+		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message.ToPlainText().Trim());
 		foreach (var player in players) await Admin($"@tel {player.DbRef}={room}");
 		return room;
 	}
@@ -84,11 +84,11 @@ public partial class SpeechTransformationTests
 		await Admin($"@moniker {actor.DbRef}=[ansi(r,xx)]");
 		var parser = Factory.CommandParserFor(actor.DbRef, actor.Handle);
 		var accented = (await parser.FunctionParse(MarkupText.Plain("%~")))!;
-		await Assert.That(accented.Message!.ToPlainText()).IsEqualTo("Jóe" + suffix);
+		await Assert.That(accented.Message.ToPlainText()).IsEqualTo("Jóe" + suffix);
 		var moniker = (await parser.FunctionParse(MarkupText.Plain("%k")))!;
-		await Assert.That(moniker.Message!.ToPlainText()).IsEqualTo(name);
+		await Assert.That(moniker.Message.ToPlainText()).IsEqualTo(name);
 		await Assert.That(moniker.Message.Render(global::MarkupString.MarkupFormat.Ansi)).IsNotEqualTo(name);
 		var function = (await parser.FunctionParse(MarkupText.Plain($"[moniker({actor.DbRef})]")))!;
-		await Assert.That(function.Message!.ToPlainText()).IsEqualTo("Jóe" + suffix);
+		await Assert.That(function.Message.ToPlainText()).IsEqualTo("Jóe" + suffix);
 	}
 }

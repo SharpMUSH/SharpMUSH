@@ -20,6 +20,11 @@ public class FunctionResultPropagationTests
 	[Arguments("reswitch(1,2,ok,{0})", true)]
 	[Arguments("reswitch({0},.*,ok)", true)]
 	[Arguments("reswitch(1,{0},ok,fallback)", true)]
+	[Arguments("setqm(prop_a,{0})", true)]
+	[Arguments("setqm(prop_a,1,prop_b,{0})", true)]
+	[Arguments("setrm(prop_a,1,prop_b,{0})", true)]
+	[Arguments("setrm(prop_a,1,prop_b,2,{0})", true)]
+	[Arguments("setqm(prop_a,1,prop_b,2)", false)]
 	[Arguments("cand(0,{0})", false)]
 	[Arguments("cor(1,{0})", false)]
 	[Arguments("cnand(0,{0})", false)]
@@ -43,6 +48,6 @@ public class FunctionResultPropagationTests
 	{
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"{function}(#-1 EXCEPTION: ordinary text,1)"));
 		await Assert.That(result!.HadErrors).IsFalse();
-		await Assert.That(result.Message!.Text).IsEqualTo(expected);
+		await Assert.That(result.Message.Text).IsEqualTo(expected);
 	}
 }

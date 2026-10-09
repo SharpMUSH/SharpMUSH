@@ -21,7 +21,7 @@ public class CommunicationFunctionUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"pemit(#1,{uniqueMessage})")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"pemit(#1,{uniqueMessage})"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 
@@ -37,7 +37,7 @@ public class CommunicationFunctionUnitTests
 	{
 		const string uniqueMessage = "PemitPort_test_unique_message_for_verification";
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"pemit(1234,{uniqueMessage})")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"pemit(1234,{uniqueMessage})"));
 
 		// Note: Port 1234 may not have a valid connection in the test environment,
 		// but the function should still return successfully
@@ -52,7 +52,7 @@ public class CommunicationFunctionUnitTests
 	[Arguments("oemit(#1,test message)", "")]
 	public async Task Oemit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -60,7 +60,7 @@ public class CommunicationFunctionUnitTests
 	[Arguments("remit(#0,test message)", "")]
 	public async Task Remit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -69,7 +69,7 @@ public class CommunicationFunctionUnitTests
 	public async Task Nsoemit(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -79,7 +79,7 @@ public class CommunicationFunctionUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"nspemit(#1,{uniqueMessage})")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"nspemit(#1,{uniqueMessage})"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 
@@ -96,7 +96,7 @@ public class CommunicationFunctionUnitTests
 	public async Task Nsprompt(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -105,7 +105,7 @@ public class CommunicationFunctionUnitTests
 	public async Task Nsremit(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -114,7 +114,7 @@ public class CommunicationFunctionUnitTests
 	public async Task Nszemit(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 }

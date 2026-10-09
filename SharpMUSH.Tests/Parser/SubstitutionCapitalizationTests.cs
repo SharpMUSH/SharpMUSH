@@ -17,7 +17,7 @@ public class SubstitutionCapitalizationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string expression) =>
-		(await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await Parser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	[Test]
 	[Arguments("[setq(0,foo)]%q0", "foo")]

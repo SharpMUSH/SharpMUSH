@@ -94,8 +94,10 @@ public static class LinkHelpers
 			SharpExit exit => await LinkedExitAsync(parser, mediator, notifyService, locateService, permissionService,
 				lockService, attributeService, flagAndPowerService, connectionService, executor, target, exit,
 				destinationName, preserve),
-			SharpThing or SharpPlayer => await HomedAsync(parser, mediator, notifyService, locateService,
-				permissionService, executor, target, destinationName),
+			SharpThing thing => await HomedAsync(parser, mediator, notifyService, locateService,
+				permissionService, executor, target, thing, destinationName),
+			SharpPlayer player => await HomedAsync(parser, mediator, notifyService, locateService,
+				permissionService, executor, target, player, destinationName),
 			SharpRoom room => await DroppedToAsync(parser, mediator, notifyService, locateService, permissionService,
 				executor, target, room, destinationName),
 			_ => await RefusedAsync(notifyService, executor, ErrorMessages.Returns.InvalidObjectType,
@@ -281,7 +283,7 @@ public static class LinkHelpers
 	{
 		// An exit may lead to any container — room, player or thing (PennMUSH can_link_to). Only
 		// another exit is not a place you can end up.
-		if (!destination.IsContainer)
+		if (destination.AsOptionalContainer is not AnySharpContainer exitDestination)
 		{
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.InvalidDestination,
 				ErrorMessages.Notifications.InvalidDestinationExit);
@@ -301,7 +303,7 @@ public static class LinkHelpers
 		}
 
 		await attributeService.SetAttributeAsync(executor, target, TeleportHelpers.AttrLinkType, MarkupText.Empty);
-		await mediator.Send(new LinkExitCommand(exit, destination.AsContainer));
+		await mediator.Send(new LinkExitCommand(exit, exitDestination));
 
 		// create.c:385-386.
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToObject), executor,
@@ -428,12 +430,13 @@ public static class LinkHelpers
 		IPermissionService permissionService,
 		AnySharpObject executor,
 		AnySharpObject target,
+		AnySharpContent homed,
 		string destinationName)
 	{
 		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
 			AnySharpObject destination => await HomedToAsync(mediator, notifyService, permissionService, executor,
-				target, destination),
+				target, homed, destination),
 			Error<string> unmatched => unmatched
 		};
 	}
@@ -445,12 +448,13 @@ public static class LinkHelpers
 		IPermissionService permissionService,
 		AnySharpObject executor,
 		AnySharpObject target,
+		AnySharpContent homed,
 		AnySharpObject destination)
 	{
 		// create.c:395: a home is any object that is not an exit — a room, a player or a thing.
 		// safe_tel's "homed to the mover" case (move.c:311) is only reachable because a player can
 		// be a home.
-		if (!destination.IsContainer)
+		if (destination.AsOptionalContainer is not AnySharpContainer home)
 		{
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.InvalidDestination,
 				ErrorMessages.Notifications.HomeIsAnExit);
@@ -480,7 +484,7 @@ public static class LinkHelpers
 				ErrorMessages.Notifications.PermissionDenied);
 		}
 
-		await mediator.Send(new SetObjectHomeCommand(target.AsContent, destination.AsContainer));
+		await mediator.Send(new SetObjectHomeCommand(homed, home));
 		// create.c:419: `if (!Quiet(player) && !(Quiet(thing) && (Owner(thing) == player)))`, which is
 		// AreQuiet(player, thing). "Dropto set." below has no such test (create.c:439).
 		if (!await target.Object().AreQuietAsync(executor))
@@ -553,7 +557,7 @@ public static class LinkHelpers
 			LocateFlags.All) switch
 		{
 			AnySharpObject found => found,
-			Error<CallState> reported => new Error<string>(reported.Value.Message?.ToPlainText()
+			Error<CallState> reported => new Error<string>(reported.Value.Message.ToPlainText()
 				?? ErrorMessages.Returns.NoSuchObject)
 		};
 

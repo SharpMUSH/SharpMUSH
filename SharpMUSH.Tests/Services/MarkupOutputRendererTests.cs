@@ -685,6 +685,48 @@ public partial class MarkupOutputRendererTests
 		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "{\"look\":{\"bullet\":\"\\ud800\"}}" })))
 			.StartsWith("+=");
 
+	/// <summary>
+	/// A tone() reaches the worker as a span naming a theme colour. Each reader gets it in their own theme's
+	/// colour; one without a theme gets the colour written with it; no client is sent the span.
+	/// </summary>
+	[Test]
+	public async Task ATone_IsDrawnInTheReadersThemeOrTheColourWrittenWithIt()
+	{
+		var tone = ToneMarkup.Build(ThemeRole.Info, MarkupText.Plain("Calls"), ThemeColor.Standard(14));
+		if (!ThemePalette.TryParse("fantasy", out var fantasy, out _)) throw new InvalidOperationException("fantasy does not read");
+
+		await Assert.That(Render(tone, new ProtocolCapabilities(SupportsAnsi: true), AllColour with { Theme = "fantasy" }))
+			.IsEqualTo(Render(MarkupText.Wrap(AnsiTheme.Paint(fantasy![ThemeRole.Info]!.Value), "Calls"), new ProtocolCapabilities(SupportsAnsi: true), AllColour));
+		await Assert.That(Render(tone, new ProtocolCapabilities(SupportsAnsi: true), AllColour))
+			.IsEqualTo(Render(MarkupText.Wrap(AnsiTheme.Paint(ThemeColor.Standard(14)), "Calls"), new ProtocolCapabilities(SupportsAnsi: true), AllColour));
+	}
+
+	/// <summary>A box laid out again under a reader's theme is drawn from its own copy of the text, tone and all.</summary>
+	[Test]
+	public async Task AToneInsideALayout_IsDrawnInTheReadersTheme()
+	{
+		var tone = ToneMarkup.Build(ThemeRole.Error, MarkupText.Plain("Failed"), ThemeColor.Standard(9));
+		var box = BlockLayout.Build(new TextBlock(tone).Bordered().ThemedUnder(new LayoutTheme { Border = BorderStyle.Mush }), 20);
+		if (!ThemePalette.TryParse("nord", out var nord, out _)) throw new InvalidOperationException("nord does not read");
+		var red = Render(MarkupText.Wrap(AnsiTheme.Paint(nord![ThemeRole.Error]!.Value), "Failed"), new ProtocolCapabilities(SupportsAnsi: true), AllColour);
+
+		await Assert.That(Render(box, new ProtocolCapabilities(SupportsAnsi: true), AllColour with { Theme = "nord" }))
+			.Contains(red.TrimEnd('\r', '\n'));
+	}
+
+	[Test]
+	[Arguments(OutputFormat.Ansi)]
+	[Arguments(OutputFormat.Pueblo)]
+	[Arguments(OutputFormat.Mxp)]
+	public async Task ATone_SendsNoTag(OutputFormat format)
+	{
+		var rendered = Render(ToneMarkup.Build(ThemeRole.Muted, MarkupText.Plain("<OOC> brb"), ThemeColor.Standard(8)),
+			new ProtocolCapabilities(SupportsAnsi: true, Format: format), AllColour);
+
+		await Assert.That(rendered).DoesNotContain("span").And.DoesNotContain("tone-");
+		await Assert.That(StripAnsi(rendered)).Contains("brb");
+	}
+
 	/// <summary>A notice() as it reaches the renderer: its lead, then the message.</summary>
 	private static MarkupText Notice(string? word, string message) =>
 		MarkupText.Concat([NoticeMarkup.Build(MarkupText.Plain("JOBS"), word, BoldRed), MarkupText.Space, MarkupText.Plain(message)]);
@@ -711,6 +753,25 @@ public partial class MarkupOutputRendererTests
 	public async Task ANotice_KeepsItsColourForAScreenReaderThatAsksForIt()
 		=> await Assert.That(Render(Notice("Error", "x"), new ProtocolCapabilities(ScreenReader: true, ColorStylePin: ColorStyles.SixteenColor), null))
 			.StartsWith("\u001b[");
+
+	/// <summary>
+	/// A notice written in C# (the scene plugin's) reads as notice()'s does, and its lead is a tone, so each
+	/// reader gets it in their own theme's warning colour.
+	/// </summary>
+	[Test]
+	public async Task ANoticeWrittenInCSharp_ReadsLikeNoticeAndTakesTheReadersTheme()
+	{
+		var notice = NoticeMarkup.Message("SCENE", "No scene '9'.", NoticeKind.Warn);
+		var plain = Render(notice, new ProtocolCapabilities(SupportsAnsi: true), AllColour);
+		var themed = Render(notice, new ProtocolCapabilities(SupportsAnsi: true), AllColour with { Theme = "fantasy" });
+
+		await Assert.That(StripAnsi(plain)).IsEqualTo("[SCENE] Warning: No scene '9'.");
+		await Assert.That(StripAnsi(themed)).IsEqualTo("[SCENE] Warning: No scene '9'.");
+		await Assert.That(themed).IsNotEqualTo(plain);
+		await Assert.That(plain).DoesNotContain("span");
+		await Assert.That(StripAnsi(Render(notice, new ProtocolCapabilities(ScreenReader: true), null)))
+			.IsEqualTo("SCENE warning: No scene '9'.");
+	}
 
 	[Test]
 	public async Task ThePortal_KeepsANoticesBracketsFromItsScreenReader()

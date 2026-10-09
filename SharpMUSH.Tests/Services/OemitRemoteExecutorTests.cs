@@ -45,7 +45,7 @@ public class OemitRemoteExecutorTests
 	private async Task<DBRef> Room(params TestIsolationHelpers.TestPlayer[] players)
 	{
 		var result = await God($"@dig {Guid.NewGuid():N}");
-		var room = DBRef.Parse(result.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(result.Message.ToPlainText().Trim());
 		foreach (var player in players) await God($"@tel {player.DbRef}={room}");
 		return room;
 	}

@@ -72,21 +72,25 @@ public class InvocationMetricsTests
 		await Assert.That(commands).DoesNotContain("think");
 	}
 
-	// The own-time tests below compare wall times, and a continuation waiting for a busy thread pool is
-	// charged to whichever clock is running, so they are unkeyed NotInParallel: a keyed one would still
-	// run alongside the rest of the suite. A GC pause lands the same way, so each takes the best of a few
-	// runs: that noise only adds time, and charging a call with work that is not its own fails every run.
+	// The own-time tests below time calls by counting clock readings instead of wall time: every reading
+	// is one tick, so a call is charged a tick for each nested call that starts or ends while its clock
+	// runs, and nothing for the ones that run while it is paused. Fifty calls inside an argument charge
+	// the call they feed about fifty ticks when that argument is not paused, and none when it is.
 
-	private const int Runs = 3;
-
-	/// <summary>The smallest of up to <see cref="Runs"/> ratios, stopping at the first under 1.</summary>
-	private static async Task<double> BestRatio(Func<Task<double>> ratio)
+	/// <summary>Time that moves one millisecond each time it is read.</summary>
+	private sealed class CountedTime : TimeProvider
 	{
-		var best = double.MaxValue;
-		for (var run = 0; run < Runs && best >= 1; run++)
-			best = Math.Min(best, await ratio());
-		return best;
+		private long _now;
+		public override long TimestampFrequency => 1000;
+		public override long GetTimestamp() => Interlocked.Increment(ref _now);
 	}
+
+	private const int Calls = 50;
+
+	/// <summary>The bound a call's own time stays under when the calls in its arguments are left out.</summary>
+	private const double LeftOut = Calls / 5;
+
+	private static string Repeated(string call) => string.Concat(Enumerable.Repeat(call, Calls));
 
 	/// <summary>Measurements taken in this test's own flow, so parallel tests' calls stay out.</summary>
 	private static MeterListener ListenHere(AsyncLocal<bool> here, ConcurrentQueue<(string Name, double Ms)> measured)
@@ -112,91 +116,67 @@ public class InvocationMetricsTests
 		return listener;
 	}
 
-	/// <summary>Runs <paramref name="run"/> and returns each measured call's own time, and the wall time.</summary>
-	private static async Task<(List<(string Name, double Ms)> Measured, double WallMs)> Measure(Func<Task> run)
+	/// <summary>Runs <paramref name="run"/> on counted time and returns each measured call's own time.</summary>
+	private static async Task<List<(string Name, double Ms)>> Measure(Func<Task> run)
 	{
 		var here = new AsyncLocal<bool>();
 		var measured = new ConcurrentQueue<(string Name, double Ms)>();
 		using var listener = ListenHere(here, measured);
+		using var time = InvocationClock.UseTime(new CountedTime());
 
 		here.Value = true;
-		var started = System.Diagnostics.Stopwatch.GetTimestamp();
 		await run();
-		var wallMs = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 		here.Value = false;
-		return (measured.ToList(), wallMs);
+		return measured.ToList();
 	}
 
-	private Task<(List<(string Name, double Ms)> Measured, double WallMs)> MeasureCommand(string command) =>
+	private Task<List<(string Name, double Ms)>> MeasureFunction(string text) =>
+		Measure(() => WebAppFactoryArg.CommandParser.FunctionParse(MarkupText.Plain(text)).AsTask());
+
+	private Task<List<(string Name, double Ms)>> MeasureCommand(string command) =>
 		Measure(() => WebAppFactoryArg.CommandParser.CommandParse(1,
 			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask());
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task AFunctionsTimeLeavesOutItsArguments()
 	{
-		var ratio = await BestRatio(async () =>
-		{
-			var (measured, _) = await Measure(async () =>
-				await WebAppFactoryArg.CommandParser.FunctionParse(MarkupText.Plain("[null(iter(lnum(3000),add(##,1)))]")));
+		var measured = await MeasureFunction($"[null({Repeated("[add(1,1)]")})]");
 
-			await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(3000);
-			var nullMs = measured.Single(m => m.Name == "NULL").Ms;
-			var nestedMs = measured.Where(m => m.Name != "NULL").Sum(m => m.Ms);
-			return nullMs / (nestedMs / 4);
-		});
-
-		await Assert.That(ratio).IsLessThan(1);
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == "NULL").Ms).IsLessThan(LeftOut);
 	}
 
-	[Test, NotInParallel]
+	[Test]
+	public async Task AFunctionsTimeLeavesOutTheArgumentsItEvaluatesItself()
+	{
+		// ITER evaluates its second argument once per item, pausing for each: a tick an item is its own.
+		var measured = await MeasureFunction($"[iter(1 2,{Repeated("[add(1,1)]")})]");
+
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls * 2);
+		await Assert.That(measured.Single(m => m.Name == "ITER").Ms).IsLessThan(LeftOut);
+	}
+
+	[Test]
 	public async Task ACommandsTimeLeavesOutWhatItRuns()
 	{
-		var ratio = await BestRatio(async () =>
-		{
-			var (measured, _) = await MeasureCommand(
-				$"@ifelse 1={{think {TestIsolationHelpers.GenerateUniqueName("metrics")}[null(iter(lnum(10000),add(##,1)))]}}");
+		var measured = await MeasureCommand(
+			$"@ifelse 1={{think {TestIsolationHelpers.GenerateUniqueName("metrics")}{Repeated("[add(1,1)]")}}}");
 
-			// @IFELSE runs THINK in place, and THINK evaluates the functions.
-			await Assert.That(measured.Count(m => m.Name == "THINK")).IsEqualTo(1);
-			await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(10000);
-			var ifElseMs = measured.Single(m => m.Name == "@IFELSE").Ms;
-			var nestedMs = measured.Where(m => m.Name != "@IFELSE").Sum(m => m.Ms);
-			return ifElseMs / (nestedMs / 4);
-		});
-
-		await Assert.That(ratio).IsLessThan(1);
+		await Assert.That(measured.Count(m => m.Name == "THINK")).IsEqualTo(1);
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == "@IFELSE").Ms).IsLessThan(LeftOut);
+		await Assert.That(measured.Single(m => m.Name == "THINK").Ms).IsLessThan(LeftOut);
 	}
 
-	/// <summary>Substitution work with no call in it: an empty register, many times over.</summary>
-	private static readonly string Substitutions = string.Concat(Enumerable.Repeat("%qz", 20000));
-
-	[Test, NotInParallel]
+	[Test]
 	public async Task ACommandsTimeLeavesOutTheArgumentsItEvaluatesItself()
 	{
 		// @SWITCH's patterns are no-parse: the command evaluates each one as it compares it, and that
 		// work is the pattern's.
-		var ratio = await BestRatio(async () =>
-		{
-			var (measured, wallMs) = await MeasureCommand($"@switch 1={Substitutions}1,think");
-			return measured.Single(m => m.Name == "@SWITCH").Ms / (wallMs / 10);
-		});
+		var measured = await MeasureCommand($"@switch 1={Repeated("[null(1)]")}1,think");
 
-		await Assert.That(ratio).IsLessThan(1);
-	}
-
-	[Test, NotInParallel]
-	public async Task ACommandsTimeLeavesOutTheArgumentsOfWhatItRuns()
-	{
-		// THINK's argument is evaluated before THINK's clock starts, while @IFELSE's is running. Parsing
-		// the action is @IFELSE's own work, and each substitution is a token of it: about a sixth of the
-		// wall time here, against about two thirds when the argument was charged to @IFELSE as well.
-		var ratio = await BestRatio(async () =>
-		{
-			var (measured, wallMs) = await MeasureCommand($"@ifelse 1={{think {Substitutions}}}");
-			return measured.Single(m => m.Name == "@IFELSE").Ms / (wallMs / 3);
-		});
-
-		await Assert.That(ratio).IsLessThan(1);
+		await Assert.That(measured.Count(m => m.Name == "NULL")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == "@SWITCH").Ms).IsLessThan(LeftOut);
 	}
 
 	[Test]

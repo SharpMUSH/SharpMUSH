@@ -6,7 +6,6 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
-@using System.Globalization
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
 @inject AccountAuthService AccountAuth
@@ -34,33 +33,9 @@
    A roster request that FAILED is the fourth state and deliberately not folded into the third:
    "you have no character, create one" is an assertion about the account, and a page that never got
    an answer must not make it. *@
-@if (!_rosterResolved)
+@if (Gate is { } gate)
 {
-    <div class="play-gate full-height">
-        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-    </div>
-}
-else if (_rosterFailed)
-{
-    <div class="play-gate full-height">
-        <EmptyState Class="play-gate-card">
-            <MudText>@Loc["NavPlayRosterUnavailable"]</MudText>
-            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryRosterAsync" Class="mt-2">
-                @Loc["NavTryAgain"]
-            </MudButton>
-        </EmptyState>
-    </div>
-}
-else if (_needsCharacter)
-{
-    <div class="play-gate full-height">
-        <EmptyState Class="play-gate-card">
-            <MudText>@Loc["NavPlayNeedsCharacter"]</MudText>
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters/new" Class="mt-2">
-                @Loc["NavCreateCharacter"]
-            </MudButton>
-        </EmptyState>
-    </div>
+    <PlayGate State="gate" OnRetry="RetryRosterAsync" />
 }
 else
 {
@@ -83,7 +58,11 @@ else
                 @if (_commKey is { } commKey)
                 {
                     <div class="play-comm">
-                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" Lead="@(_touchChrome ? MenuButton : null)" />
+                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm">
+                            <Lead>
+                                <PlayHeaderLead Menu="@_touchChrome" Unread="@UnreadComms" OnMenu="OpenSideSheetAsync" />
+                            </Lead>
+                        </CommView>
                     </div>
                 }
                 @* Hidden, not removed, under the channel view: the terminal keeps its connection and output. *@
@@ -97,23 +76,29 @@ else
                             @if (BannerShown)
                             {
                                 <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                            Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" BottomActions="@BannerControls(SettingsMenu.Banner)" />
+                                            Minimised="false" MinimisedChanged="OnBannerMinimisedAsync" BottomActions="@BannerControls(PlaySettingsMenu.Banner)" />
                             }
                         </Banner>
-                        <Lead>@ViewerAvatar</Lead>
+                        <Lead>
+                            <PlayHeaderLead Menu="@_touchChrome" Picture="true" Unread="@UnreadComms" OnMenu="OpenSideSheetAsync"
+                                            Name="@ViewerName" ImageUrl="@ViewerImage?.Url" Character="@ViewerCharacter" Connected="@PlayTerminal.IsConnected" />
+                        </Lead>
                         <Controls>
                             @* On a phone these step back into the banner's controls row (Play.razor.css). *@
                             <span class="play-head-more">
                                 @if (View == PlayView.Terminal)
                                 {
-                                    @TerminalSettings(SettingsMenu.Header)
+                                    @TerminalSettings(PlaySettingsMenu.Header)
                                 }
                                 else if (SceneHere is { Focus: true })
                                 {
                                     @LeaveSceneControl
                                 }
                             </span>
-                            @RoomControl
+                            @* The Room panel (Here, Exits, the scope panels) from the right, like a chat app's member list.
+                               Play.razor.css shows it only while the aside is not on screen: below the narrow tier, or in focus mode. *@
+                            <PlayControl Class="play-room-btn" Label="@Loc["NavPlayTabRoom"]" Icon="@Icons.Material.Outlined.Group" PopsUp="true"
+                                         OnClick="() => OpenMobileSheetAsync(PlaySheet.Room)" />
                             @if (PlayTerminal.IsConnected)
                             {
                                 <span class="play-head-more">@ConnectionControl</span>
@@ -149,7 +134,7 @@ else
                                 <div class="play-view play-terminal @(View == PlayView.Terminal ? null : "play-view--off")" inert="@(View != PlayView.Terminal)">
                                     @if (SceneHere is { } running && _hintHiddenFor != running.Id)
                                     {
-                                        @SceneHint(running)
+                                        <PlaySceneHint Scene="running" OnOpen="OpenScene" OnHide="() => _hintHiddenFor = running.Id" />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
                                                     TargetColumns="_targetCols" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" />
@@ -184,61 +169,34 @@ else
 
     @if (_mobileSheet is { } sheet)
     {
-        <MudOverlay Visible="true" LockScroll="true" OnClick="CloseMobileSheet"
-                    Style="@SheetOverlayStyle(sheet)">
-            <div class="play-sheet @SheetClass(sheet)" role="dialog" aria-modal="true"
-                 aria-label="@SheetLabel(sheet)" tabindex="-1" @onclick:stopPropagation="true" @onkeydown="OnMobileSheetKey">
-                <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
-                    @if (sheet == MobileSheet.Details)
+        <PlayMobileSheet Sheet="sheet" Label="@SheetLabel(sheet)" OnClose="CloseMobileSheet">
+            @switch (sheet)
+            {
+                case PlaySheet.Details:
+                    @* The room's details, dropped over the page from the header the way a chat app opens a channel's:
+                       the banner, with the header's less frequent buttons on it. Its minimise closes it. *@
+                    <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
+                                Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls(PlaySettingsMenu.Sheet)" />
+                    break;
+                case PlaySheet.Room:
+                    <PlayRoomTabs Entries="_asideEntries" @bind-Selected="_sheetEntry" Label="@SheetLabel(sheet)" Room="Room"
+                                  Context="_sheetContext" ParametersFor="EntryParameters" />
+                    break;
+                default:
+                    @* Play's sidebar (the scene, channels, pages), with the site's own menu at its top. *@
+                    @if (Shell is not null)
                     {
-                        @* The room's details, dropped over the page from the header the way a chat app opens a channel's:
-                           the banner, with the header's less frequent buttons on it. Its minimise closes it. *@
-                        <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
-                                    Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls(SettingsMenu.Sheet)" />
+                        <button type="button" class="play-sheet-site" @onclick="OpenSiteMenu">
+                            <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" /><span>@Loc["NavMenuLabel"]</span>
+                        </button>
                     }
-                    else if (sheet == MobileSheet.Room)
-                    {
-                        @* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the
-                           scope panels, each rendered as the aside renders it but in sheet mode. *@
-                        @* The tabs pattern: one tab stop, the arrows, Home and End move between them (selection follows focus). *@
-                        <div class="play-sheet-tabs" role="tablist" aria-label="@SheetLabel(sheet)" @onkeydown="OnSheetTabKeyAsync" @ref="_sheetTabList">
-                            @foreach (var entry in _asideEntries)
-                            {
-                                var e = entry;
-                                var on = e.Name == _sheetEntry;
-                                <button type="button" role="tab" id="@($"play-tab-{e.Name}")" aria-controls="play-panel-room" aria-selected="@(on ? "true" : "false")"
-                                        tabindex="@(on ? 0 : -1)" @ref="_sheetTabs[e.Name]"
-                                        class="play-sheet-tab @(on ? "play-sheet-tab--on" : null)" @onclick="() => _sheetEntry = e.Name">
-                                    @TabLabel(e)
-                                </button>
-                            }
-                        </div>
-                        <div class="play-sheet-body" role="tabpanel" id="play-panel-room" aria-labelledby="@($"play-tab-{_sheetEntry}")">
-                            <CascadingValue Value="_sheetContext" IsFixed="true">
-                                @if (_asideEntries.FirstOrDefault(e => e.Name == _sheetEntry) is { } shown)
-                                {
-                                    <DynamicComponent Type="@shown.Widget.ComponentType" Parameters="@EntryParameters(shown)" />
-                                }
-                            </CascadingValue>
-                        </div>
-                    }
-                    else
-                    {
-                        @* Play's sidebar (the scene, channels, pages), with the site's own menu at its top. *@
-                        @if (Shell is not null)
-                        {
-                            <button type="button" class="play-sheet-site" @onclick="OpenSiteMenu">
-                                <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" /><span>@Loc["NavMenuLabel"]</span>
-                            </button>
-                        }
-                        <div class="play-sheet-body">
-                            <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@SidebarRoom"
-                                         Current="@SidebarCurrent" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" />
-                        </div>
-                    }
-                </MudFocusTrap>
-            </div>
-        </MudOverlay>
+                    <div class="play-sheet-body">
+                        <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@SidebarRoom"
+                                     Current="@SidebarCurrent" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" />
+                    </div>
+                    break;
+            }
+        </PlayMobileSheet>
     }
 
     <CharacterSheet Name="@_sheetName" Occupant="@_sheetOccupant" SceneId="@SceneHere?.Id" OnClose="CloseSheet"
@@ -246,411 +204,37 @@ else
 }
 
 @code {
-    private GlobalTerminal? _playTerm;
-    private PlayComposer? _composer;
-    private RoomState Room = RoomState.Empty;
-
-    /// <summary>The player's choice of view in a scene; null until they choose (the terminal, by default).</summary>
-    private PlayView? _chosenView;
-
-    /// <summary>The scene <see cref="_chosenView"/> was chosen in: a scene that starts later opens in the terminal again.</summary>
-    private string? _chosenFor;
-
-    private bool _focus;
-
-    /// <summary>A phone, either way up (layout.js compactScreenQuery).</summary>
-    private bool _compactScreen;
-
-    /// <summary>
-    /// A phone held sideways (layout.js shortScreenQuery): wider than the narrow tier, so the tablet layout,
-    /// but short of height for it. Play.razor.css tightens that layout under play--short (#1506).
-    /// </summary>
-    private bool _shortScreen;
-
-    /// <summary>The player opened the full banner on a larger screen; remembered (play.banner = open).</summary>
-    private bool _bannerOpen;
-
-    /// <summary>
-    /// The room banner is folded into the card header on every screen: one bar over the game. The header carries
-    /// the room's picture and name, and its name and sub-line open the full banner, whose minimise folds it again.
-    /// On a larger screen it opens above the card and the choice is remembered. On a phone it drops over the page
-    /// as a sheet (MobileSheet.Details) and is never pinned open, so the header stays the only bar.
-    /// </summary>
-    private bool BannerOpen => !_compactScreen && _bannerOpen;
-
-    private bool BannerFolded => !BannerOpen && !_focus;
-
-    private bool BannerShown => BannerOpen && !_focus;
-
-    private Task OpenFoldedBanner() => _compactScreen ? OpenMobileSheetAsync(MobileSheet.Details) : SetBannerOpenAsync(true);
-
-    private async Task SetBannerOpenAsync(bool open)
-    {
-        _bannerOpen = open;
-        await JS.SetItemAsync(BrowserStore.Local, BannerKey, open ? "open" : "folded");
-    }
-
-    private DotNetObjectReference<Play>? _self;
-    private string? _sheetName;
-    private RoomOccupant? _sheetOccupant;
-
-    /// <summary>A phone's sheets: the Room panel from the right, Play's sidebar from the left, the room's details from the top.</summary>
-    private enum MobileSheet { Room, Side, Details }
-
-    private static string SheetOverlayStyle(MobileSheet sheet) => sheet switch
-    {
-        MobileSheet.Details => "background: rgba(var(--scrim-ink), 0.55); align-items: flex-start; justify-content: stretch;",
-        MobileSheet.Room => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-end;",
-        _ => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-start;",
-    };
-
-    private static string SheetClass(MobileSheet sheet) => sheet switch
-    {
-        MobileSheet.Details => "play-sheet--details",
-        MobileSheet.Room => "play-sheet--room",
-        _ => "play-sheet--side",
-    };
-
-    private MobileSheet? _mobileSheet;
-    /// <summary>One aside entry: a layout placement or a scope panel, by widget name.</summary>
-    /// <param name="Placed">From the play layout; otherwise a scope panel the page appends.</param>
-    private sealed record AsideEntry(string Name, IPortalWidget Widget, System.Text.Json.JsonElement? Config, bool Placed);
-
-    /// <summary>The play layout's aside, then the scope panels it does not place, as the Room sheet's tabs.</summary>
-    private IReadOnlyList<AsideEntry> _asideEntries = [];
-
-    /// <summary>The minimum-role gate for the aside and the Room sheet, the one every zone applies.</summary>
-    private ApplicationWidgetGate? _asideGate;
-
-    private ApplicationWidgetGate AsideGate => _asideGate ??= new ApplicationWidgetGate(Widgets, ServiceProvider);
-
-    /// <summary>The Room sheet's current tab: Exits when there is one (board 11), else the first.</summary>
-    private string? _sheetEntry;
-
-    private readonly Dictionary<string, ElementReference> _sheetTabs = new(StringComparer.Ordinal);
-
-    private ElementReference _sheetTabList;
-    private string? _sheetTabKeys;
-
-    private async Task OnSheetTabKeyAsync(KeyboardEventArgs e)
-    {
-        if (_asideEntries.Count == 0) return;
-        var at = Math.Max(0, _asideEntries.ToList().FindIndex(entry => entry.Name == _sheetEntry));
-        int? next = e.Key switch
-        {
-            "ArrowRight" or "ArrowDown" => (at + 1) % _asideEntries.Count,
-            "ArrowLeft" or "ArrowUp" => (at - 1 + _asideEntries.Count) % _asideEntries.Count,
-            "Home" => 0,
-            "End" => _asideEntries.Count - 1,
-            _ => null,
-        };
-        if (next is not { } index) return;
-        _sheetEntry = _asideEntries[index].Name;
-        if (_sheetTabs.TryGetValue(_sheetEntry, out var tab))
-        {
-            // A tab not rendered yet has no element to focus; the key then just selects it.
-            try { await tab.FocusAsync(); }
-            catch (InvalidOperationException) { return; }
-        }
-    }
-
-    /// <summary>The sheet's variant of the page context: sheet mode, and a send that closes the sheet.</summary>
-    private PlayPageContext _sheetContext = null!;
-
-    /// <summary>
-    /// The room's scene, while the game has the Scene System: a game that turned it off has no story view and
-    /// no In scene row, whatever the room's last push said.
-    /// </summary>
-    private RoomScene? SceneHere => _scenesOn ? Room.Info?.Scene : null;
-
-    /// <summary>The room as every sidebar shows it: without its scene when the game has no scene system.</summary>
-    private RoomInfo? SidebarRoom => Room.Info is { } info ? info with { Scene = SceneHere } : null;
-
-    private bool _scenesOn = true;
-
-    private bool InScene => SceneHere is not null;
-
-    /// <summary>What the play-scope widgets may do on this page: open the sheet, send a command.</summary>
-    private PlayPageContext _pageContext = null!;
-
-    /// <summary>Widget apps registered for the Play scope that the play layout does not place itself.</summary>
-    private IReadOnlyList<PortalApplication> _scopePanels = [];
-
-    /// <summary>The scene whose live subscription the hub refused, as SceneStory reported it.</summary>
-    private string? _liveRefusedFor;
-
-    /// <summary>An edit to the viewer's own pose: the scene package's whole-text edit. The text is softcode (decompose()'s, as the Edit box seeds it), which the package evaluates once.</summary>
-    private Task EditPoseAsync((string PoseId, string Text) edit) =>
-        SendAsync($"+scene/rewrite {edit.PoseId}={MushComposeEncoder.Encode(edit.Text)}");
-
-    /// <summary>The composer's draft, kept per character so an alt in another tab keeps its own.</summary>
-    private string? DraftKey =>
-        (PlayTerminal.ConnectedPlayerName ?? SelfRow?.Name ?? AccountAuth.ActiveCharacter?.Name) is { Length: > 0 } name
-            ? $"play.draft.{name}"
-            : null;
-
-        /// <summary>Live poses are not arriving because the scene connection is down; the story retries and catches up.</summary>
-    private bool _storyLiveDown;
-
-    /// <summary>
-    /// This client cannot receive the room scene's poses (a guest, or a character that cannot see it):
-    /// the Story says so and its composer does not send, as on the live scene page — a pose sent from
-    /// here would be posted and never appear. The terminal view still takes commands.
-    /// </summary>
-    private bool StoryLiveUnavailable => SceneHere?.Id is { } id && id == _liveRefusedFor;
-
-    private void OnLiveUnavailable(string sceneId, bool unavailable)
-    {
-        if (unavailable) _liveRefusedFor = sceneId;
-        else if (_liveRefusedFor == sceneId) _liveRefusedFor = null;
-    }
-
-    /// <summary>
-    /// The terminal unless the player opened the room's scene's Story: walking into a room with a scene only
-    /// marks it (<see cref="SceneHint"/>). Outside a scene there is only the terminal.
-    /// </summary>
-    private PlayView View => SceneHere is { } scene && _chosenFor == scene.Id
-        ? _chosenView ?? PlayView.Terminal
-        : PlayView.Terminal;
-
-    /// <summary>The scene whose marker the player hid; a scene that starts later is marked again.</summary>
-    private string? _hintHiddenFor;
-
-    /// <summary>
-    /// Above the terminal while the room has a scene: says a scene is running here and opens its Story when
-    /// pressed. The room's scene is always a running one (room.info leaves out paused and finished scenes).
-    /// </summary>
-    private RenderFragment SceneHint(RoomScene scene) => __builder =>
-    {
-        <div class="play-scene-hint" role="status">
-            <button type="button" class="play-scene-hint-open" title="@Loc["NavPlaySceneHereOpen"]" @onclick="OpenScene">
-                <MudIcon Icon="@Icons.Material.Outlined.AutoStories" Size="Size.Small" />
-                <span class="play-scene-hint-text">
-                    <span class="play-scene-hint-label">@Loc["NavPlaySceneHere"]</span>
-                    @if (scene.Title is { Length: > 0 } title)
-                    {
-                        <span class="play-scene-hint-title">@title</span>
-                    }
-                </span>
-                <span class="play-scene-hint-action">@Loc["NavPlaySceneHereOpen"]</span>
-            </button>
-            <button type="button" class="play-scene-hint-hide" aria-label="@Loc["NavPlaySceneHereHide"]" title="@Loc["NavPlaySceneHereHide"]"
-                    @onclick="() => _hintHiddenFor = scene.Id">
-                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
-            </button>
-        </div>
-    };
-
-    /// <summary>The sidebar's current row: the In scene row only while the Story is shown.</summary>
-    private string? SidebarCurrent => _commKey ?? (View == PlayView.Story ? null : string.Empty);
-
-    /// <summary>The channel or conversation main is showing (board 06), or null for the scene card.</summary>
-    private string? _commKey;
-
-    /// <summary>
-    /// The card is headed by who the player is playing, the way the terminal's connection row named them:
-    /// the connected character, else the account's active one. The room's name is the banner's job.
-    /// </summary>
-    private string ViewerName =>
-        PlayTerminal.ConnectedPlayerName is { Length: > 0 } connected ? connected
-        : SelfRow?.Name is { Length: > 0 } self ? self
-        : AccountAuth.ActiveCharacter?.Name is { Length: > 0 } active ? active
-        : Loc["TermNotLoggedIn"];
-
-    /// <summary>
-    /// The viewer's row in the room's contents while connected. It names a guest, whose character the
-    /// server chooses, so nothing on the client knows it otherwise.
-    /// </summary>
-    private RoomOccupant? SelfRow => PlayTerminal.IsConnected ? Room.Occupants.FirstOrDefault(o => o.You) : null;
-
-    /// <summary>The scene's title in a scene; outside one, the room's name only while no banner shows it.</summary>
-    private string? CardSubtitle =>
-        SceneHere?.Title is { Length: > 0 } scene ? scene
-        : BannerShown ? null
-        : Room.Info?.Name;
-
-    /// <summary>The room's picture behind the card header, while no banner shows it.</summary>
-    private string? CardImage =>
-        !BannerShown && Room.Info?.Image?.Url is { } url && ImageUrlPolicy.IsRenderable(url) ? url : null;
-
-    /// <summary>The viewer's own picture from the room's contents (the row marked as them).</summary>
-    private ImageRef? ViewerImage => SelfRow?.Image;
-
-    /// <summary>A small avatar with a connection dot: the picture, else the initials on the name's hue.</summary>
-    /// <summary>MainLayout's drawer; null outside the shell (tests).</summary>
-    [CascadingParameter] private ShellNavigation? Shell { get; set; }
-
-    /// <summary>The shell is in touch chrome (layout.js isTouchChrome): its header is merged into the card header.</summary>
-    private bool _touchChrome;
-
-    /// <summary>
-    /// The card header is the only bar on Play: shell.css hides the shell's touch header while the card is
-    /// mounted. Like a chat app's, it leads with a menu button that opens Play's sidebar from the left (the site
-    /// menu sits at its top), carrying a dot while channels or pages are unread. A desktop has the rail and the
-    /// sidebar beside the card, so there is no menu button.
-    /// </summary>
-    private RenderFragment ViewerAvatar => __builder =>
-    {
-        if (_touchChrome)
-        {
-            <span class="play-lead">
-                @MenuButton
-                @ViewerPicture
-            </span>
-        }
-        else
-        {
-            @ViewerPicture
-        }
-    };
-
-    /// <summary>Touch chrome's menu button, leading the card header and, while a channel or conversation
-    /// hides the card, the channel view's header, so the one bar never loses its way to the sidebar.</summary>
-    private RenderFragment MenuButton => __builder =>
-    {
-        var unread = UnreadComms;
-        <button type="button" class="play-menu-btn" aria-label="@Loc["NavPlayTabs"]" title="@Loc["NavPlayTabs"]"
-                aria-haspopup="dialog" @onclick="() => OpenMobileSheetAsync(MobileSheet.Side)">
-            <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" />
-            @if (unread > 0)
-            {
-                <span class="play-menu-dot" aria-hidden="true"></span>
-                <span class="play-me-status">@Loc.Plural("NavUnreadCount", "count", unread)</span>
-            }
-        </button>
-    };
-
-    private RenderFragment ViewerPicture => __builder =>
-    {
-        var connected = PlayTerminal.IsConnected;
-        <span class="play-me @(connected ? "play-me--on" : null)">
-            <CharacterAvatar Name="@ViewerName" ImageUrl="@ViewerImage?.Url" Character="@ViewerCharacter"
-                             ImageClass="play-me-img" FallbackClass="play-me-initial" />
-            <span class="play-me-dot" title="@(connected ? Loc["Connected"] : Loc["Disconnected"])"></span>
-            <span class="play-me-status">@(connected ? Loc["Connected"] : Loc["Disconnected"])</span>
-        </span>
-    };
-
-    /// <summary>Who the viewer plays, to find their picture while the room has not listed them yet.</summary>
-    private string? ViewerCharacter =>
-        SelfRow?.ObjId is { Length: > 0 } objid ? objid
-        : PlayTerminal.ConnectedPlayerName is { Length: > 0 } connected ? connected
-        : AccountAuth.ActiveCharacter is { } active ? $"#{active.DbrefNumber}:{active.CreationTime}"
-        : null;
-
-    /// <summary>
-    /// The Room panel (Here, Exits, the scope panels) from the right, like a chat app's member list. Play.razor.css
-    /// shows it only while the aside is not on screen: below the narrow tier, or in focus mode.
-    /// </summary>
-    private RenderFragment RoomControl => __builder =>
-    {
-        <button type="button" class="play-conn play-room-btn" aria-label="@Loc["NavPlayTabRoom"]" title="@Loc["NavPlayTabRoom"]"
-                aria-haspopup="dialog" @onclick="() => OpenMobileSheetAsync(MobileSheet.Room)">
-            <MudIcon Icon="@Icons.Material.Outlined.Group" Size="Size.Small" />
-        </button>
-    };
-
     /// <summary>The connection row's buttons, in the card header: Disconnect, Connect, or Login for a visitor.</summary>
     private RenderFragment ConnectionControl => __builder =>
     {
         if (PlayTerminal.IsConnected)
         {
-            <button type="button" class="play-conn" aria-label="@Loc["Disconnect"]" title="@Loc["Disconnect"]" @onclick="DisconnectAsync">
-                <MudIcon Icon="@Icons.Material.Filled.PowerSettingsNew" Size="Size.Small" />
-            </button>
+            <PlayControl Label="@Loc["Disconnect"]" Icon="@Icons.Material.Filled.PowerSettingsNew" OnClick="DisconnectAsync" />
         }
         else if (AccountAuth.IsLoggedIn)
         {
-            <button type="button" class="play-conn play-conn--connect" @onclick="ConnectAsync">@Loc["Connect"]</button>
+            <PlayControl Class="play-conn--connect" OnClick="ConnectAsync">@Loc["Connect"]</PlayControl>
         }
         else
         {
-            <a class="play-conn play-conn--connect" href="/login">@Loc["Login"]</a>
-        }
-    };
-
-    /// <summary>
-    /// The card's footer in the Story view. The Terminal view has no footer at all, rather than an empty one:
-    /// the card's footer pads itself, and a sideways phone has no 12px to give away under the terminal's input.
-    /// </summary>
-    private RenderFragment StoryComposer => __builder =>
-    {
-        if (SceneHere is { Outside: true } scene)
-        {
-            @* Not focused on the room's scene: a pose sent from here would reach the room and never the story,
-               so the footer offers to join instead. Joining focuses the viewer, and the room.info that follows
-               brings the composer back. *@
-            <div class="play-join" role="status">
-                <span class="play-join-text">
-                    @(scene.Elsewhere ? Loc["NavPlaySceneFocusedElsewhere"] : Loc["NavPlaySceneNotJoined"])
-                    @if (_joinRefusal is { } refusal && refusal.SceneId == scene.Id)
-                    {
-                        <span class="play-join-refusal" role="alert">@refusal.Text</span>
-                    }
-                </span>
-                <button type="button" class="play-join-btn" disabled="@(!PlayTerminal.IsConnected || _joining)" @onclick="() => JoinSceneAsync(scene)">
-                    @Loc["NavPlaySceneJoin"]
-                </button>
-            </div>
-        }
-        else
-        {
-            <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
-                          DraftKey="@DraftKey" />
+            <PlayControl Class="play-conn--connect" Href="/login">@Loc["Login"]</PlayControl>
         }
     };
 
     /// <summary>Leaves the room's scene (unfocuses it); the room.info that follows shows the join bar again.</summary>
     private RenderFragment LeaveSceneControl => __builder =>
     {
-        <button type="button" class="play-conn" aria-label="@Loc["NavPlaySceneLeave"]" title="@Loc["NavPlaySceneLeave"]"
-                disabled="@(!PlayTerminal.IsConnected)" @onclick="LeaveSceneAsync">
-            <MudIcon Icon="@Icons.Material.Outlined.Logout" Size="Size.Small" />
-        </button>
+        <PlayControl Label="@Loc["NavPlaySceneLeave"]" Icon="@Icons.Material.Outlined.Logout" Disabled="@(!PlayTerminal.IsConnected)"
+                     OnClick="LeaveSceneAsync" />
     };
 
-    // A join the game refused, kept for the scene it was asked of: the refusal goes to the terminal, which
-    // the Story view does not show, so the join bar repeats it.
-    private (string SceneId, string Text)? _joinRefusal;
-    private bool _joining;
-
-    /// <summary>
-    /// Joins the room's scene, then asks the same connection what the character is focused on. The query
-    /// runs after the join, so a focus that is not this scene means the join was refused, and what the game
-    /// printed in between is why. A join that took needs nothing here: the room.info that follows brings
-    /// the composer back.
-    /// </summary>
-    private async Task JoinSceneAsync(RoomScene scene)
+    private RenderFragment TerminalSettings(PlaySettingsMenu menu) => __builder =>
     {
-        _joining = true;
-        _joinRefusal = null;
-        var said = new List<string>();
-        void Heard(TerminalLine line)
-        {
-            if (line.Source == TerminalLineSource.Server && !string.IsNullOrWhiteSpace(line.Text))
-                lock (said) said.Add(line.Text.Trim());
-        }
-
-        PlayTerminal.LineReceived += Heard;
-        try
-        {
-            await PlayTerminal.SendAsync($"+scene/join {scene.Id}");
-            var focus = await PlayTerminal.SendCommandAsync("scenefocus(me)");
-            if (focus.FirstOrDefault()?.Trim() != scene.Id)
-            {
-                string text;
-                lock (said) text = said.Count > 0 ? string.Join(" ", said) : Loc["NavPlaySceneJoinFailed"];
-                _joinRefusal = (scene.Id, text);
-            }
-        }
-        finally
-        {
-            PlayTerminal.LineReceived -= Heard;
-            _joining = false;
-        }
-    }
-
-    private Task LeaveSceneAsync() => SendAsync("+scene/leave");
+        <PlayTerminalSettings Menu="menu" Open="@(_settingsOpen == menu)" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))"
+                              OnEscape="CloseSettings" Columns="_targetCols" ColumnsChanged="OnColsChanged"
+                              ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync" OnClear="ClearTerminal"
+                              Focus="_focus" FocusChanged="OnFocusChanged" />
+    };
 
     /// <summary>
     /// The banner's controls row, where the header's less frequent buttons go on a phone (Play.razor.css): the
@@ -658,13 +242,10 @@ else
     /// name does. Focus mode, the terminal settings (or Leave, in a scene's Story) and Disconnect; Connect and Login
     /// stay in the header.
     /// </summary>
-    private RenderFragment BannerControls(SettingsMenu menu) => __builder =>
+    private RenderFragment BannerControls(PlaySettingsMenu menu) => __builder =>
     {
         <div class="play-banner-more">
-            <button type="button" class="play-conn play-banner-focus" aria-label="@Loc["NavFocusMode"]" title="@Loc["NavFocusMode"]"
-                    @onclick="EnterFocusAsync">
-                <MudIcon Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small" />
-            </button>
+            <PlayControl Class="play-banner-focus" Label="@Loc["NavFocusMode"]" Icon="@Icons.Material.Filled.Fullscreen" OnClick="EnterFocusAsync" />
             @if (View == PlayView.Terminal)
             {
                 @TerminalSettings(menu)
@@ -680,16 +261,25 @@ else
         </div>
     };
 
-    /// <summary>Focus from the banner's row: the details sheet it sits in closes first, so focus mode is not under it.</summary>
-    private async Task EnterFocusAsync()
+    /// <summary>
+    /// The card's footer in the Story view. The Terminal view has no footer at all, rather than an empty one:
+    /// the card's footer pads itself, and a sideways phone has no 12px to give away under the terminal's input.
+    /// </summary>
+    private RenderFragment StoryComposer => __builder =>
     {
-        if (_mobileSheet == MobileSheet.Details) await CloseMobileSheet();
-        OnFocusChanged(true);
-    }
-
-    private Task ConnectAsync() => _playTerm?.ConnectAsync() ?? Task.CompletedTask;
-
-    private Task DisconnectAsync() => _playTerm?.DisconnectAsync() ?? Task.CompletedTask;
+        if (SceneHere is { Outside: true } scene)
+        {
+            @* Not focused on the room's scene: joining focuses the viewer, and the room.info that follows brings
+               the composer back. *@
+            <PlaySceneJoinBar Scene="scene" Refusal="@(_joinRefusal is { } refusal && refusal.SceneId == scene.Id ? refusal.Text : null)"
+                              Disabled="@(!PlayTerminal.IsConnected || _joining)" OnJoin="() => JoinSceneAsync(scene)" />
+        }
+        else
+        {
+            <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync"
+                          DraftKey="@DraftKey" />
+        }
+    };
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"
@@ -699,466 +289,4 @@ else
         @<CascadingValue Value="@(new ProfilePageContext(name, false))">
             <SchemaWidget WidgetName="character-header" />
         </CascadingValue>;
-
-    /// <summary>Unread messages in joined channels and in conversations: the menu button's dot.</summary>
-    private int UnreadComms => Comms.Channels.Where(c => c.Joined).Sum(c => c.Unread) + Comms.Conversations.Sum(c => c.Unread);
-
-    private string SheetLabel(MobileSheet sheet) => sheet switch
-    {
-        MobileSheet.Room => Loc["NavPlayTabRoom"],
-        MobileSheet.Details => Room.Info?.Name ?? Loc["NavPlayTabRoom"],
-        _ => Loc["NavPlayTabs"],
-    };
-
-    private async Task OpenSiteMenu()
-    {
-        await CloseMobileSheet();
-        Shell?.Open();
-    }
-
-    private RenderFragment TerminalSettings(SettingsMenu menu) => __builder =>
-    {
-        var open = _settingsOpen == menu;
-        var readerWhat = $"play-cfg-reader-what-{menu}";
-        <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                     Open="open" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))">
-            <Activator>
-                <button type="button" class="play-settings-btn" @onclick="() => OnSettingsOpenChanged(menu, !open)" @onkeydown="CloseSettingsOnEscape"
-                        title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]" aria-expanded="@(open ? "true" : "false")">
-                    <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
-                </button>
-            </Activator>
-            <ChildContent>
-                <div class="play-cfg" role="group" aria-label="@Loc["NavTerminalSettings"]" @onclick:stopPropagation="true">
-                    <div class="play-cfg-kicker">@Loc["Terminal"]</div>
-                    <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
-                        <span>@Loc["NavTerminalWidthCols"]</span>
-                        <input class="play-cols-input" type="number" min="78" max="240" step="1"
-                               value="@_targetCols" @onchange="OnColsChanged" />
-                    </label>
-                    @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
-                    <label class="play-cfg-row">
-                        <span>@Loc["NavScreenReaderMode"]</span>
-                        <input class="play-cfg-check" type="checkbox" checked="@ScreenReader.On"
-                               aria-describedby="@readerWhat" @onchange="OnScreenReaderModeChanged" />
-                    </label>
-                    <div class="play-cfg-note" id="@readerWhat">@Loc["NavScreenReaderModeTooltip"]</div>
-                    <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
-                        <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
-                        <span>@Loc["TermClearTerminal"]</span>
-                    </button>
-                    @* The header's focus button, for a phone where Play.razor.css folds it into this menu. *@
-                    <button type="button" class="play-cfg-item play-cfg-focus" @onclick="() => OnFocusChanged(!_focus)">
-                        <MudIcon Icon="@(_focus ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:1rem;" />
-                        <span>@(_focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])</span>
-                    </button>
-                </div>
-            </ChildContent>
-        </PopoverMenu>
-    };
-
-    /// <summary>
-    /// Where the terminal settings are offered: the card's header, the banner's controls row, and the banner on
-    /// the phone's details sheet. Several can be on the page at once, so each menu opens on its own.
-    /// </summary>
-    private enum SettingsMenu { Header, Banner, Sheet }
-
-    private SettingsMenu? _settingsOpen;
-
-    private void OnSettingsOpenChanged(SettingsMenu menu, bool open)
-    {
-        if (open) _settingsOpen = menu;
-        else if (_settingsOpen == menu) _settingsOpen = null;
-    }
-
-    private void CloseSettingsOnEscape(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape") _settingsOpen = null;
-    }
-
-    private void ClearTerminal() => _playTerm?.ClearOutput();
-
-    private Task OnScreenReaderModeChanged(ChangeEventArgs e) => ScreenReader.SetAsync(e.Value is true);
-
-    // The player's preferred terminal width in columns (min 78). The terminal autoscales its
-    // font to fill this many columns; the value is also what the client reports over NAWS.
-    // Persisted per-browser in localStorage, with whether the room banner is open (larger screens).
-    private const int MinCols = 78;
-    private const int MaxCols = 240;
-    private const string BannerKey = "play.banner";
-    private int _targetCols = MinCols;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // The sheet scrolls, so the keys the tabs move with must not scroll it as well (layout.js tabKeys).
-        if (_sheetTabList.Id is { } tabs && tabs != _sheetTabKeys)
-        {
-            _sheetTabKeys = tabs;
-            try { await JS.InvokeVoidAsync("sharpmushLayout.tabKeys", _sheetTabList); }
-            catch (JSException) { return; }
-        }
-        if (!firstRender) return;
-        var changed = false;
-        var stored = await JS.GetItemAsync(BrowserStore.Local, "play.cols");
-        if (int.TryParse(stored, out var n))
-        {
-            var clamped = Math.Clamp(n, MinCols, MaxCols);
-            changed |= clamped != _targetCols;
-            _targetCols = clamped;
-        }
-        // Folded unless the player opened it; the old "min" (the strip) folds too.
-        if (await JS.GetItemAsync(BrowserStore.Local, BannerKey) == "open")
-        {
-            changed |= !_bannerOpen;
-            _bannerOpen = true;
-        }
-        _self = DotNetObjectReference.Create(this);
-        try
-        {
-            var compactScreen = await JS.InvokeAsync<bool>("sharpmushLayout.watchCompactScreen", _self);
-            changed |= compactScreen != _compactScreen;
-            _compactScreen = compactScreen;
-        }
-        catch (JSException)
-        {
-            // No layout script (prerender, tests): the banner follows the stored choice.
-        }
-        try
-        {
-            var shortScreen = await JS.InvokeAsync<bool>("sharpmushLayout.watchShortScreen", _self);
-            changed |= shortScreen != _shortScreen;
-            _shortScreen = shortScreen;
-        }
-        catch (JSException)
-        {
-            // No layout script: the tablet layout as it is.
-        }
-        var touchChrome = await IsTouchChromeAsync();
-        changed |= touchChrome != _touchChrome;
-        _touchChrome = touchChrome;
-        if (changed) StateHasChanged();
-    }
-
-    /// <summary>The screen turned into or out of the short tier (layout.js watchCompactScreen).</summary>
-    [JSInvokable]
-    public Task OnCompactScreenChanged(bool compactScreen) => InvokeAsync(async () =>
-    {
-        _compactScreen = compactScreen;
-        // The sheets are a phone's: a larger screen has the banner above the card and the aside beside it.
-        if (_mobileSheet is not null) await CloseMobileSheet();
-        // A window that narrows to a phone's width changes chrome as well.
-        _touchChrome = await IsTouchChromeAsync();
-        StateHasChanged();
-    });
-
-    /// <summary>The screen turned into or out of the short tier (layout.js watchShortScreen).</summary>
-    [JSInvokable]
-    public Task OnShortScreenChanged(bool shortScreen) => InvokeAsync(() =>
-    {
-        _shortScreen = shortScreen;
-        StateHasChanged();
-    });
-
-    private async Task<bool> IsTouchChromeAsync()
-    {
-        try
-        {
-            return await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
-        }
-        catch (JSException)
-        {
-            return false;
-        }
-    }
-
-    private async Task OnColsChanged(ChangeEventArgs e)
-    {
-        _targetCols = int.TryParse(e.Value?.ToString(), out var n)
-            ? Math.Clamp(n, MinCols, MaxCols)
-            : MinCols;
-        await JS.SetItemAsync(BrowserStore.Local, "play.cols", _targetCols.ToString(CultureInfo.InvariantCulture));
-    }
-
-    /// <summary>The open banner's minimise folds it back into the card header.</summary>
-    private Task OnBannerMinimisedAsync(bool minimised) => SetBannerOpenAsync(!minimised);
-
-    private void OnViewChanged(PlayView view) => ChooseView(view);
-
-    /// <summary>Choosing a view in a scene: the player knows of the scene now, so its marker stays hidden.</summary>
-    private void ChooseView(PlayView view)
-    {
-        _chosenView = view;
-        _chosenFor = SceneHere?.Id;
-        if (view == PlayView.Terminal && _chosenFor is { } scene) _hintHiddenFor = scene;
-    }
-
-    private void OnFocusChanged(bool focus) => _focus = focus;
-
-    // Whether the account-vs-roster question has been answered yet, and its answer. All three start
-    // "unknown"/false so the terminal is not mounted — and no dead Connect button rendered — until
-    // we know which state this visitor is in.
-    private bool _rosterResolved;
-    private bool _needsCharacter;
-    private bool _rosterFailed;
-
-    protected override void OnInitialized()
-    {
-        PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
-        PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
-        Comms.Changed += OnCommsChanged;
-        Room = PlayTerminal.OobChannels.Room;
-        _pageContext = new PlayPageContext(
-            occupant => InvokeAsync(() => { OpenSheet(occupant); StateHasChanged(); }),
-            SendAsync);
-        _sheetContext = new PlayPageContext(
-            occupant => InvokeAsync(() => { OpenSheetFromRoom(occupant); StateHasChanged(); }),
-            command => InvokeAsync(async () => { await SendFromSheetAsync(command); StateHasChanged(); }),
-            InSheet: true);
-        Layouts.OnLayoutChanged += OnLayoutChanged;
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await ScreenReader.LoadAsync();
-        _scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
-        await ResolveRosterAsync();
-        await LoadAsideAsync();
-    }
-
-    /// <summary>
-    /// The aside's entries from the play layout, then the widget apps registered for the Play scope that the
-    /// layout does not place, that allow the right sidebar, and that the viewer's role allows. An application
-    /// the layout places keeps its minimum role too: placing it is not granting it. The placed entries go
-    /// through the same <see cref="ApplicationWidgetGate"/> as every zone, so one the catalog has not delivered
-    /// yet joins only once its application is found and admits this viewer. Re-read when an admin changes the
-    /// layout.
-    /// </summary>
-    private async Task LoadAsideAsync()
-    {
-        var layout = await Layouts.GetLayoutAsync(LayoutScopes.Play);
-        var role = AuthState is null ? SharpMUSH.Library.Authorization.PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
-        var placements = (layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var list) ? list : [])
-            .OrderBy(p => p.Order)
-            .ToList();
-
-        BuildAside(placements, role);
-        if (await AsideGate.ResolveAsync(placements.Select(p => p.WidgetName)))
-        {
-            BuildAside(placements, role);
-            StateHasChanged();
-        }
-    }
-
-    private void BuildAside(List<WidgetPlacement> placements, SharpMUSH.Library.Authorization.PortalRole role)
-    {
-        var placed = placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _scopePanels = Catalog.ForScope(LayoutScopes.Play)
-            .Where(a => role >= a.MinimumRoleEnum)
-            .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Widget && !placed.Contains(a.Slug))
-            .Where(a => a.ZoneEnums.Contains(WidgetZone.RightSidebar))
-            .ToList();
-
-        var entries = new List<AsideEntry>();
-        foreach (var placement in placements.Where(p => AsideGate.Admits(p.WidgetName, role)))
-        {
-            if (Widgets.GetWidget(placement.WidgetName) is { } widget) entries.Add(new AsideEntry(placement.WidgetName, widget, placement.Config, Placed: true));
-        }
-        foreach (var app in _scopePanels)
-        {
-            if (Widgets.GetWidget(app.Slug) is { } widget) entries.Add(new AsideEntry(app.Slug, widget, null, Placed: false));
-        }
-        _asideEntries = entries;
-        if (_sheetEntry is null || entries.All(e => e.Name != _sheetEntry))
-        {
-            _sheetEntry = entries.FirstOrDefault(e => e.Name == "Exits")?.Name ?? entries.FirstOrDefault()?.Name;
-        }
-    }
-
-    private void OnLayoutChanged(string scope)
-    {
-        if (!string.Equals(scope, LayoutScopes.Play, StringComparison.OrdinalIgnoreCase)) return;
-        _ = InvokeAsync(async () =>
-        {
-            await LoadAsideAsync();
-            StateHasChanged();
-        });
-    }
-
-    private string TabLabel(AsideEntry entry) => entry.Name switch
-    {
-        "Here" => $"{Loc["TermBrowserHere"]} · {Room.Occupants.Count(o => !o.You)}",
-        "Exits" => $"{Loc["NavExits"]} · {Room.Exits.Count}",
-        _ => Catalog.Get(entry.Name)?.DisplayName ?? Loc[entry.Widget.DisplayName],
-    };
-
-    /// <summary>The parameters ZoneRenderer passes a widget, built by the same gate.</summary>
-    private Dictionary<string, object> EntryParameters(AsideEntry entry) =>
-        AsideGate.Parameters(entry.Name, entry.Widget, entry.Config, nameof(WidgetZone.RightSidebar));
-
-    private async Task ResolveRosterAsync()
-    {
-        _needsCharacter = false;
-        _rosterFailed = false;
-
-        // InitAsync is cached per tab, so this costs a task await once the session has hydrated.
-        // It restores the session token but NOT the roster (see AccountAuthService.InitCoreAsync),
-        // so a reloaded tab always has to ask the server who this account owns — exactly what
-        // GlobalTerminal does before deciding whether it can connect.
-        await AccountAuth.InitAsync();
-
-        if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
-        {
-            if (await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> characters)
-                _needsCharacter = characters.Count == 0;
-            else
-                _rosterFailed = true;
-        }
-
-        _rosterResolved = true;
-    }
-
-    /// <summary>Re-asks the server for the roster, back through the loading state so the failed
-    /// card cannot sit there looking answered while the retry is in flight.</summary>
-    private async Task RetryRosterAsync()
-    {
-        _rosterResolved = false;
-        await ResolveRosterAsync();
-    }
-
-    private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
-
-    private void OnCommsChanged() => InvokeAsync(StateHasChanged);
-
-    // The store keeps the room typed and replaces each list whole on every push, so this reads one
-    // snapshot rather than parsing the payloads again.
-    private void OnRoomChanged()
-    {
-        Room = PlayTerminal.OobChannels.Room;
-        InvokeAsync(StateHasChanged);
-    }
-
-    private async Task SendAsync(string command)
-    {
-        if (!string.IsNullOrWhiteSpace(command))
-            await PlayTerminal.SendAsync(command);
-    }
-
-    private async Task SendFromSheetAsync(string command)
-    {
-        _mobileSheet = null;
-        await SendAsync(command);
-    }
-
-    private void OpenSheet(RoomOccupant occupant)
-    {
-        _sheetOccupant = occupant;
-        _sheetName = occupant.Name;
-    }
-
-    private void OpenSheetFromRoom(RoomOccupant occupant)
-    {
-        _mobileSheet = null;
-        OpenSheet(occupant);
-    }
-
-    /// <summary>A name from the story: their room row when they are here, else just the name.</summary>
-    private void OpenSheetByName(string name)
-    {
-        _sheetOccupant = Room.Occupants.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase));
-        _sheetName = name;
-    }
-
-    private void CloseSheet()
-    {
-        _sheetName = null;
-        _sheetOccupant = null;
-    }
-
-    /// <summary>
-    /// The sheet's Page: the composer in Story, the terminal's own line otherwise. The room row's Page action
-    /// (<c>page #312=</c>) is used when it has one: a dbref survives a rename and a name with spaces.
-    /// </summary>
-    private async Task StartPageAsync(string name)
-    {
-        var action = _sheetOccupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
-        CloseSheet();
-        if (View == PlayView.Story && _composer is not null)
-        {
-            await _composer.StartPageAsync(name, action);
-        }
-        else if (_playTerm is not null)
-        {
-            await _playTerm.SetInputAsync(action ?? $"page {name}=");
-        }
-    }
-
-    private void OpenScene()
-    {
-        _commKey = null;
-        ChooseView(PlayView.Story);
-    }
-
-    /// <summary>A channel or conversation opens the channel view in main (README §5.1, board 06).</summary>
-    private void OpenComm(string key) => _commKey = key;
-
-    private void CloseComm() => _commKey = null;
-
-    private void OpenSceneFromSheet()
-    {
-        _mobileSheet = null;
-        OpenScene();
-    }
-
-    private void OpenCommFromSheet(string key)
-    {
-        _mobileSheet = null;
-        OpenComm(key);
-    }
-
-    /// <summary>Opens a phone sheet, remembering what opened it so closing can hand focus back.</summary>
-    private async Task OpenMobileSheetAsync(MobileSheet sheet)
-    {
-        await RunFocusAsync("sharpmushLayout.rememberFocus");
-        _mobileSheet = sheet;
-    }
-
-    private async Task CloseMobileSheet()
-    {
-        _mobileSheet = null;
-        await RunFocusAsync("sharpmushLayout.restoreFocus");
-    }
-
-    // No preventDefault: it is decided at render time and would swallow the next key.
-    private async Task OnMobileSheetKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape") await CloseMobileSheet();
-    }
-
-    private async Task RunFocusAsync(string identifier)
-    {
-        try { await JS.InvokeVoidAsync(identifier); }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
-    }
-
-    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
-
-    public async ValueTask DisposeAsync()
-    {
-        Layouts.OnLayoutChanged -= OnLayoutChanged;
-        PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
-        PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
-        Comms.Changed -= OnCommsChanged;
-        if (_self is null) return;
-        try
-        {
-            await JS.InvokeVoidAsync("sharpmushLayout.unwatchCompactScreen");
-            await JS.InvokeVoidAsync("sharpmushLayout.unwatchShortScreen");
-        }
-        catch (Exception e) when (e is JSException or JSDisconnectedException)
-        {
-            // The page is going away; so is the listener's reason to call it.
-        }
-        _self.Dispose();
-    }
 }

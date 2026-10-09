@@ -91,8 +91,8 @@ public sealed class SamplePlugin   // (same class; methods can live anywhere in 
     public static ValueTask<CallState> PluginAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
     {
         var args = parser.CurrentState.Arguments;
-        var a = decimal.Parse(args["0"].Message!.ToPlainText());
-        var b = decimal.Parse(args["1"].Message!.ToPlainText());
+        var a = decimal.Parse(args["0"].Message.ToPlainText());
+        var b = decimal.Parse(args["1"].Message.ToPlainText());
         return ValueTask.FromResult(new CallState((a + b).ToString(System.Globalization.CultureInfo.InvariantCulture)));
     }
 }

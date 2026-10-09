@@ -25,14 +25,14 @@ public class FunctionFamilyConformanceTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private async Task<MString> Parse(string code)
-		=> (await FunctionParser.FunctionParse(MarkupText.Plain(code)))!.Message!;
+		=> await FunctionParser.EvaluateAsync(MarkupText.Plain(code));
 
 	private async Task<string> Eval(string code)
 		=> (await Parse(code)).ToPlainText();
 
 	private async Task<string> Eval(long handle, string expression)
 		=> (await CommandParser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}")))
-			?.Message?.ToPlainText() ?? string.Empty;
+			?.Message.ToPlainText() ?? string.Empty;
 
 	private static string Uid() => Guid.NewGuid().ToString("N")[..8].ToUpper();
 

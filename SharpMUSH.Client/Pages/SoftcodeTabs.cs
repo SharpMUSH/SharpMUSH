@@ -41,6 +41,16 @@ public sealed class SoftcodeTab(MushObject obj, MushAttribute attr)
 	/// <summary>This tab's console: its scrollback and the arguments its runs pass.</summary>
 	public SoftcodeConsole Repl { get; } = new();
 
+	/// <summary>The branch part of the attribute's name, backtick included: <c>FOO`</c> for <c>FOO`BAR</c>.</summary>
+	public string Branch
+	{
+		get
+		{
+			var cut = Attr.Name.LastIndexOf(SoftcodeAttributeTree.Separator);
+			return cut < 0 ? string.Empty : Attr.Name[..(cut + 1)];
+		}
+	}
+
 	public bool Is(int dbref, string attributeName) =>
 		Obj.Dbref == dbref && string.Equals(Attr.Name, attributeName, StringComparison.OrdinalIgnoreCase);
 }

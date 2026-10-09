@@ -57,7 +57,7 @@ public class SceneRoleplayIntegrationTests
 
 	/// <summary>Evaluates a softcode expression as God and returns its plain text.</summary>
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	/// <summary>Runs a command as God (#1, handle 1).</summary>
 	private async Task<CallState> God1(string command) =>
@@ -187,7 +187,7 @@ public class SceneRoleplayIntegrationTests
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name, string password)
 	{
 		await God1($"@pcreate {name}={password}");
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (string.IsNullOrEmpty(dbref) || dbref.StartsWith("#-") || !DBRef.TryParse(dbref, out var parsed))
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -238,7 +238,7 @@ public class SceneRoleplayIntegrationTests
 		//     an optional softcode extension. So we use a normal dug room here, as the task
 		//     permits, and assert capture against that room's active scene.)
 		var roomName = $"SceneStage_{Tag}";
-		var digOut = (await God1($"@dig {roomName}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig {roomName}")).Message.ToPlainText().Trim();
 		await Assert.That(digOut).DoesNotStartWith("#-1").Because("the scene room should have been dug");
 		var roomDbref = Num(digOut); // short "#N" form for comparisons
 		Log($"[SETUP] Scene room: {roomName} = {digOut}");
@@ -527,7 +527,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig PotRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig PotRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (pat, patHandle) = await CreatePlayerAsync($"Pat_{Tag}", "pw_pat_123");
 		var (quinn, quinnHandle) = await CreatePlayerAsync($"Quinn_{Tag}", "pw_quinn_123");
 		foreach (var p in new[] { pat, quinn }) await God1($"@tel {p}={digOut}");
@@ -572,7 +572,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig ListRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig ListRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (rob, robHandle) = await CreatePlayerAsync($"Rob_{Tag}", "pw_rob_123");
 		await God1($"@tel {rob}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
@@ -655,7 +655,7 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 		await God1($"@teleport {loggerDbref}=#2");
 
-		var room = (await God1($"@dig PauseRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var room = (await God1($"@dig PauseRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (una, unaHandle) = await CreatePlayerAsync($"Una_{Tag}", "pw_una_123");
 		await God1($"@tel {una}={room}");
 
@@ -717,7 +717,7 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 		await God1($"@teleport {loggerDbref}=#2");
 
-		var room = (await God1($"@dig AliasRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var room = (await God1($"@dig AliasRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (vic, vicHandle) = await CreatePlayerAsync($"Vic_{Tag}", "pw_vic_123");
 		var (wes, wesHandle) = await CreatePlayerAsync($"Wes_{Tag}", "pw_wes_123");
 		await God1($"@tel {vic}={room}");
@@ -869,7 +869,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig PartRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig PartRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (tom, tomHandle) = await CreatePlayerAsync($"Tom_{Tag}", "pw_tom_123");
 		await God1($"@tel {tom}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
@@ -926,7 +926,7 @@ public class SceneRoleplayIntegrationTests
 			.Because("the Scene Logger must be in the master room (#2) for +scene/* to match globally");
 
 		// A player in a SEPARATE dug room — the logger is NOT co-located with them.
-		var digOut = (await God1($"@dig CapRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig CapRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (zed, zedHandle) = await CreatePlayerAsync($"Zed_{Tag}", "pw_zed_123");
 		await God1($"@tel {zed}={digOut}");
 
@@ -959,7 +959,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig FormRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig FormRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (ada, adaHandle) = await CreatePlayerAsync($"Ada_{Tag}", "pw_ada_123");
 		await God1($"@tel {ada}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");   // co-located, to isolate FORM matching from #4
@@ -998,7 +998,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig SenderRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig SenderRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (eve, eveHandle) = await CreatePlayerAsync($"Eve_{Tag}", "pw_eve_123");
 		await God1($"@tel {eve}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
@@ -1044,7 +1044,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig SplitRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig SplitRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (fred, fredHandle) = await CreatePlayerAsync($"Fred_{Tag}", "pw_fred_123");
 		var (gwen, gwenHandle) = await CreatePlayerAsync($"Gwen_{Tag}", "pw_gwen_123");
 		foreach (var p in new[] { fred, gwen }) await God1($"@tel {p}={digOut}");
@@ -1083,7 +1083,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig YouSayRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig YouSayRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (jane, janeHandle) = await CreatePlayerAsync($"Jane_{Tag}", "pw_jane_123");
 		var (kurt, kurtHandle) = await CreatePlayerAsync($"Kurt_{Tag}", "pw_kurt_123");
 		foreach (var p in new[] { jane, kurt }) await God1($"@tel {p}={digOut}");
@@ -1096,8 +1096,9 @@ public class SceneRoleplayIntegrationTests
 		foreach (var (command, text) in new[] { ("say hello there", "hello there"), ("\"quoted shortcut", "quoted shortcut") })
 		{
 			var notes = await RunAndCollectNotificationsAs(janeHandle, command);
-			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message).ToList();
-			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message).ToList();
+			// Each hearer gets the pose's rule and the line in one message; the line is its last.
+			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[^1]).ToList();
+			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[^1]).ToList();
 
 			await Assert.That(speakerLines).IsEquivalentTo(new[] { $"You say, \"{text}\"" })
 				.Because($"PennMUSH do_say sends the speaker the first-person line only ({command})");
@@ -1122,7 +1123,7 @@ public class SceneRoleplayIntegrationTests
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
-		var digOut = (await God1($"@dig FmtRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig FmtRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (hugo, hugoHandle) = await CreatePlayerAsync($"Hugo_{Tag}", "pw_hugo_123");
 		var (iris, irisHandle) = await CreatePlayerAsync($"Iris_{Tag}", "pw_iris_123");
 		foreach (var p in new[] { hugo, iris }) await God1($"@tel {p}={digOut}");
@@ -1166,7 +1167,7 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 		await God1($"@teleport {loggerDbref}=#2");
 
-		var digOut = (await God1($"@dig SeqRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig SeqRoom_{Tag}")).Message.ToPlainText().Trim();
 		var (bea, beaHandle) = await CreatePlayerAsync($"Bea_{Tag}", "pw_bea_123");
 		await God1($"@tel {bea}={digOut}");
 

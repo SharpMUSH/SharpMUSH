@@ -76,7 +76,7 @@ Output: none.
 
 ## Light and dark
 
-`/light` makes the theme for a client with a light background, and `/dark` for a dark one. A theme made from one colour, which includes the genre themes, is made again for that background; a well-known scheme such as `nord` stays as it is. Code given with `/light` or `/dark` is worked out first, and the theme it gives is kept, not the code. Code that works out to nothing is refused with them, since there is no theme to keep.
+`/light` makes the theme for a client with a light background, and `/dark` for a dark one. A theme made from one colour, which includes the genre themes, is made again for that background; a well-known scheme such as `nord`, or one of the portal's themes such as `cyberpunk`, stays as it is. The portal's themes come made for one background already: `daylight` is `phosphor` for a light one, and `deutan-light` is `deutan-dark`'s. Code given with `/light` or `/dark` is worked out first, and the theme it gives is kept, not the code. Code that works out to nothing is refused with them, since there is no theme to keep.
 
 ## Parents and the player ancestor
 
@@ -94,7 +94,9 @@ The theme is worked out when the player connects, when `@theme` sets it, and whe
 
 ## Which theme wins
 
-A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it; the web portal has themes of its own. You must control *<object>*.
+A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it. The web portal, its play terminal included, draws layouts in the portal theme chosen there. Each portal theme has a theme of the same name here, in the same colours but for the genre themes, so `@theme me=cyberpunk` matches a portal set to Cyberpunk. You must control *<object>*.
+
+Text written with [TONE()] names a theme colour, so it is drawn in the reader's theme too: their `muted` for `tone(muted,...)`, their `info` for `tone(info,...)`.
 
 ## Themes that do not read
 

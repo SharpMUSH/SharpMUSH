@@ -79,7 +79,7 @@ public static class TestIsolationHelpers
 	/// As <see cref="CreateTestPlayerAsync"/>, but takes the finished name rather than a prefix, so a
 	/// caller that needs to know the player's name does not have to read it back out of the database.
 	/// </summary>
-	private static async Task<DBRef> CreateNamedTestPlayerAsync(
+	public static async Task<DBRef> CreateNamedTestPlayerAsync(
 		IServiceProvider services,
 		IMediator mediator,
 		string name,
@@ -221,8 +221,8 @@ public static class TestIsolationHelpers
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
 		var result = await parser.CommandParse(handle, connectionService, MarkupText.Plain($"@create {name}"));
-		if (!DBRef.TryParse(result.Message?.ToPlainText() ?? "", out _))
-			throw new InvalidOperationException($"Fixture @create {name} failed: {result.Message?.ToPlainText()}");
+		if (!DBRef.TryParse(result.Message.ToPlainText(), out _))
+			throw new InvalidOperationException($"Fixture @create {name} failed: {result.Message.ToPlainText()}");
 		return result;
 	}
 

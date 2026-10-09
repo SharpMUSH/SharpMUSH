@@ -121,7 +121,9 @@ public static class SceneBroadcast
 			Source: pose.Source,
 			Location: pose.OriginName,
 			Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-			ActorObjId: actorObjId);
+			ActorObjId: actorObjId,
+			Type: pose.Type,
+			Meta: pose.Meta);
 	}
 
 	private static async ValueTask<NatsConnection> GetConnectionAsync(string url)

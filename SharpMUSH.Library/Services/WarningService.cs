@@ -21,6 +21,9 @@ public class WarningService(
 	ILockService lockService,
 	IMediator mediator) : IWarningService
 {
+	/// <summary>One problem a check found: the warning's name, as <c>@warnings</c> spells it, and what is wrong.</summary>
+	private readonly record struct Warning(string Name, string Message);
+
 	/// <summary>
 	/// Check warnings on a specific object
 	/// </summary>
@@ -28,53 +31,31 @@ public class WarningService(
 	{
 		var targetObj = target.Object();
 
-		if (await targetObj.IsGoingAsync())
+		if (await targetObj.IsGoingAsync() || await targetObj.HasNoWarnFlagAsync())
 		{
 			return false;
 		}
 
-		if (await targetObj.HasNoWarnFlagAsync())
-		{
-			return false;
-		}
-
-		SharpPlayer owner;
-		try
-		{
-			owner = await targetObj.Owner.WithCancellation(CancellationToken.None);
-		}
-		catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
-		{
-			// Object has no owner edge in the database - skip it
-			return false;
-		}
-
-		if (await owner.Object.HasNoWarnFlagAsync())
+		// An object with no owner edge is skipped rather than reported.
+		if (await OwnerOfAsync(targetObj) is not SharpPlayer owner || await owner.Object.HasNoWarnFlagAsync())
 		{
 			return false;
 		}
 
 		var warnings = await GetWarningsForCheck(checker, targetObj, owner.Object);
-
 		if (warnings == WarningType.None)
 		{
 			return false;
 		}
 
-		var hasWarnings = false;
-
-		hasWarnings |= await CheckGenericWarnings(checker, target, warnings);
-
-		hasWarnings |= targetObj.Type switch
+		var found = false;
+		await foreach (var warning in FindWarnings(checker, target, warnings))
 		{
-			"ROOM" => await CheckRoomWarnings(checker, target, warnings),
-			"EXIT" => await CheckExitWarnings(checker, target, warnings),
-			"THING" => await CheckThingWarnings(checker, target, warnings),
-			"PLAYER" => await CheckPlayerWarnings(checker, target, warnings),
-			_ => false
-		};
+			await Complain(checker, target, warning);
+			found = true;
+		}
 
-		return hasWarnings;
+		return found;
 	}
 
 	/// <summary>
@@ -82,43 +63,17 @@ public class WarningService(
 	/// </summary>
 	public async Task<int> CheckOwnedObjectsAsync(AnySharpObject owner)
 	{
-		var warningCount = 0;
-		var ownerObj = owner.Object();
+		var ownerRef = owner.Object().DBRef;
 
 		// The owner index names the owner's objects, in ascending dbref order, so only those are typed
 		// and checked; the world is not scanned. Checking writes nothing, so the stream is read as it goes.
-		var owned = mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = ownerObj.DBRef }));
-
-		await foreach (var found in owned)
-		{
-			if (await mediator.Send(new GetObjectNodeQuery(found.DBRef)) is not AnySharpObject obj)
-			{
-				continue;
-			}
-
-			SharpPlayer objectOwner;
-			try
-			{
-				objectOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-			}
-			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
-			{
-				// Object has no owner edge in the database - skip it
-				continue;
-			}
-
-			if (!objectOwner.Object.DBRef.Equals(ownerObj.DBRef))
-			{
-				continue;
-			}
-
-			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-			var hadWarnings = await CheckObjectAsync(owner, obj);
-			if (hadWarnings)
-			{
-				warningCount++;
-			}
-		}
+		var warningCount = await mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = ownerRef }))
+			.Select(async (found, ct) => await mediator.Send(new GetObjectNodeQuery(found.DBRef), ct))
+			.OfType<AnySharpObject>()
+			.Where(async (obj, _) => await OwnerOfAsync(obj.Object()) is SharpPlayer objectOwner
+				&& objectOwner.Object.DBRef.Equals(ownerRef))
+			.Where(async (obj, _) => await CheckObjectAsync(owner, obj))
+			.CountAsync();
 
 		await notifyService.Notify(owner, $"@wcheck complete. Found {warningCount} warnings on your objects.");
 		return warningCount;
@@ -136,37 +91,22 @@ public class WarningService(
 		// Use GetAllTypedObjectsQuery to get fully-typed objects directly, avoiding two secondary
 		// per-object GetObjectNodeQuery calls inside the loop (which route through FusionCache
 		// per-key locks and contend with — or even deadlock against — active player commands).
-		var allObjects = mediator.CreateStream(new GetAllTypedObjectsQuery());
-
-		await foreach (var obj in allObjects)
+		await foreach (var obj in mediator.CreateStream(new GetAllTypedObjectsQuery()))
 		{
 			checkedCount++;
 
-			SharpPlayer owner;
-			try
+			if (await OwnerOfAsync(obj.Object()) is not SharpPlayer owner)
 			{
-				owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-			}
-			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
-			{
-				// Object has no owner edge in the database - skip it
 				continue;
 			}
 
-			var ownerDbRef = owner.Object.DBRef;
-
-			// obj is already AnySharpObject, and owner is already a SharpPlayer —
-			// no secondary GetObjectNodeQuery calls needed.
 			var ownerAny = new AnySharpObject(owner);
-
-			if (!warningsByOwner.TryGetValue(ownerDbRef, out var entry))
+			if (!warningsByOwner.TryGetValue(owner.Object.DBRef, out var entry))
 			{
-				warningsByOwner[ownerDbRef] = entry = (ownerAny, []);
+				warningsByOwner[owner.Object.DBRef] = entry = (ownerAny, []);
 			}
 
-			var hadWarnings = await CheckObjectAsync(ownerAny, obj);
-
-			if (hadWarnings)
+			if (await CheckObjectAsync(ownerAny, obj))
 			{
 				var objBase = obj.Object();
 				entry.Warnings.Add($"{objBase.Name}(#{objBase.Key})");
@@ -187,343 +127,213 @@ public class WarningService(
 	}
 
 	/// <summary>
+	/// The owner of <paramref name="obj"/>, or <see cref="NotFound"/> when its owner edge is missing or does not
+	/// name a player. <c>SharpObject.Owner</c> throws for that; the checks here walk objects that may be damaged.
+	/// </summary>
+	private async ValueTask<Found<SharpPlayer>> OwnerOfAsync(SharpObject obj)
+		=> await mediator.Send(new GetOwnerOfQuery(obj.Key.ToString(), obj.Key)) switch
+		{
+			AnySharpObject and SharpPlayer owner => owner,
+			_ => new NotFound()
+		};
+
+	/// <summary>
 	/// Determine which warnings to use for a check
 	/// </summary>
-	private static async Task<WarningType> GetWarningsForCheck(AnySharpObject checker, SharpObject target, SharpObject owner)
+	private async Task<WarningType> GetWarningsForCheck(AnySharpObject checker, SharpObject target, SharpObject owner)
 	{
 		var checkerObj = checker.Object();
 
-		SharpPlayer checkerOwner;
-		try
-		{
-			checkerOwner = await checkerObj.Owner.WithCancellation(CancellationToken.None);
-		}
-		catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
+		return await OwnerOfAsync(checkerObj) switch
 		{
 			// Checker has no owner edge - fall back to checker's own warnings or None
-			return checkerObj.Warnings;
-		}
-
-		// If the checker's owner is the target's owner, use target warnings (fallback to owner)
-		if (checkerOwner.Object.DBRef.Equals(owner.DBRef))
-		{
-			return target.Warnings != WarningType.None ? target.Warnings : owner.Warnings;
-		}
-
-		// Otherwise (admin checking), use checker's warnings
-		return checkerObj.Warnings != WarningType.None ? checkerObj.Warnings : checkerOwner.Object.Warnings;
+			NotFound => checkerObj.Warnings,
+			// The checker's owner owns the target: the target's warnings, falling back to its owner's
+			SharpPlayer checkerOwner when checkerOwner.Object.DBRef.Equals(owner.DBRef)
+				=> target.Warnings != WarningType.None ? target.Warnings : owner.Warnings,
+			// Otherwise (admin checking), the checker's warnings, falling back to its owner's
+			SharpPlayer checkerOwner
+				=> checkerObj.Warnings != WarningType.None ? checkerObj.Warnings : checkerOwner.Object.Warnings
+		};
 	}
 
 	/// <summary>
-	/// Check generic warnings that apply to all objects
+	/// Every warning <paramref name="target"/> earns under <paramref name="warnings"/>: the lock checks every
+	/// object gets, then the checks for its type.
 	/// </summary>
-	private async Task<bool> CheckGenericWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
-	{
-		var hasWarnings = false;
-
-		if (warnings.HasFlag(WarningType.LockProbs))
+	private IAsyncEnumerable<Warning> FindWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+		=> LockWarnings(target, warnings).Concat(target switch
 		{
-			var targetObj = target.Object();
-			var locks = targetObj.Locks;
-
-			foreach (var (lockName, lockData) in locks)
-			{
-				var lockString = lockData.LockString;
-				if (string.IsNullOrWhiteSpace(lockString))
-				{
-					continue;
-				}
-
-				try
-				{
-					// Validate the lock - this checks for:
-					// - Invalid syntax
-					// - Invalid object references (non-existent dbrefs)
-					// - References to GOING/garbage objects
-					// - Missing attributes in eval locks
-					// - Indirect locks that aren't present
-					var isValid = lockService.Validate(lockString, target);
-
-					if (!isValid)
-					{
-						await Complain(checker, target, "lock-checks",
-							$"Lock '{lockName}' has problems: invalid syntax or references.");
-						hasWarnings = true;
-					}
-				}
-				catch (ArgumentException ex)
-				{
-					// Argument exceptions indicate invalid lock syntax or format
-					await Complain(checker, target, "lock-checks",
-						$"Lock '{lockName}' has problems: {ex.Message}");
-					hasWarnings = true;
-				}
-				catch (Exception ex)
-				{
-					// Any other exception during validation indicates a problem with the lock
-					await Complain(checker, target, "lock-checks",
-						$"Lock '{lockName}' has problems: unable to parse or validate ({ex.GetType().Name}).");
-					hasWarnings = true;
-				}
-			}
-		}
-
-		return hasWarnings;
-	}
+			SharpRoom => RoomWarnings(checker, target, warnings),
+			SharpExit exit => ExitWarnings(checker, target, exit, warnings),
+			SharpThing thing => ThingWarnings(checker, target, thing, warnings),
+			SharpPlayer => PlayerWarnings(checker, target, warnings)
+		});
 
 	/// <summary>
-	/// Check room-specific warnings
+	/// Each lock that does not validate: invalid syntax, references to objects that do not exist or are GOING,
+	/// eval locks naming missing attributes, indirect locks that are not there.
 	/// </summary>
-	private async Task<bool> CheckRoomWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+	private IAsyncEnumerable<Warning> LockWarnings(AnySharpObject target, WarningType warnings)
+		=> warnings.HasFlag(WarningType.LockProbs)
+			? target.Object().Locks
+				.Where(entry => !string.IsNullOrWhiteSpace(entry.Value.LockString))
+				.Where(entry => !lockService.Validate(entry.Value.LockString, target))
+				.Select(entry => new Warning("lock-checks", $"Lock '{entry.Key}' has problems: invalid syntax or references."))
+				.ToAsyncEnumerable()
+			: AsyncEnumerable.Empty<Warning>();
+
+	private async IAsyncEnumerable<Warning> RoomWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
 	{
-		var hasWarnings = false;
-
-		if (warnings.HasFlag(WarningType.RoomDesc))
+		if (warnings.HasFlag(WarningType.RoomDesc) && await LacksAnyAsync(checker, target, "DESCRIBE"))
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
-			if (desc.IsNone)
-			{
-				await Complain(checker, target, "room-desc", "Room has no description.");
-				hasWarnings = true;
-			}
+			yield return new Warning("room-desc", "Room has no description.");
 		}
-
-		return hasWarnings;
 	}
 
-	/// <summary>
-	/// Check exit-specific warnings
-	/// </summary>
-	private async Task<bool> CheckExitWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+	private async IAsyncEnumerable<Warning> ExitWarnings(AnySharpObject checker, AnySharpObject target, SharpExit exit,
+		WarningType warnings)
 	{
-		var hasWarnings = false;
+		// One read of the destination edge serves the link and topology checks.
+		var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
 		if (warnings.HasFlag(WarningType.ExitUnlinked))
 		{
-			if (target is SharpExit linkedExit)
+			await foreach (var warning in ExitLinkWarnings(checker, target, destination))
 			{
-				// One read of the destination edge serves both checks below.
-				int? destinationNumber = null;
-				var destinationReadable = true;
-				try
-				{
-					destinationNumber = await linkedExit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
-						? destination.Object().DBRef.Number
-						: null;
-				}
-				catch
-				{
-					// If we can't get the location, consider it unlinked
-					destinationReadable = false;
-					await Complain(checker, target, "exit-unlinked",
-						"Exit is unlinked (no valid destination). This exit can be stolen.");
-					hasWarnings = true;
-				}
-
-				if (destinationReadable)
-				{
-					// An @open'd or @unlink'd exit has no destination edge at all; a linked one may still
-					// point at NOTHING. #0 is the master room, a real destination, so only negative
-					// dbrefs are invalid.
-					if (destinationNumber is null or < 0)
-					{
-						await Complain(checker, target, "exit-unlinked",
-							"Exit is unlinked (no destination set). This exit can be stolen.");
-						hasWarnings = true;
-					}
-
-					// Check for variable exits without DESTINATION or EXITTO attribute
-					// Variable exits are exits with a destination of HOME (#-1) that use
-					// DESTINATION or EXITTO attributes to dynamically determine the target
-					if (destinationNumber == -1)
-					{
-						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, parent: true);
-						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, parent: true);
-
-						if (destAttr.IsNone && exitToAttr.IsNone)
-						{
-							await Complain(checker, target, "exit-unlinked",
-								"Variable exit lacks DESTINATION or EXITTO attribute.");
-							hasWarnings = true;
-						}
-					}
-				}
+				yield return warning;
 			}
 		}
 
-		if (warnings.HasFlag(WarningType.ExitDesc))
+		if (warnings.HasFlag(WarningType.ExitDesc) && await LacksAnyAsync(checker, target, "DESCRIBE"))
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
-			if (desc.IsNone)
-			{
-				await Complain(checker, target, "exit-desc", "Exit has no description.");
-				hasWarnings = true;
-			}
+			yield return new Warning("exit-desc", "Exit has no description.");
 		}
 
 		if (warnings.HasFlag(WarningType.ExitMsgs))
 		{
-			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, parent: true);
-			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, parent: true);
-			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, parent: true);
-
-			if (success.IsNone || osuccess.IsNone || odrop.IsNone)
+			if (await LacksAnyAsync(checker, target, "SUCCESS", "OSUCCESS", "ODROP"))
 			{
-				await Complain(checker, target, "exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
-				hasWarnings = true;
+				yield return new Warning("exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
 			}
 
-			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, parent: true);
-			if (failure.IsNone)
+			if (await LacksAnyAsync(checker, target, "FAILURE"))
 			{
-				await Complain(checker, target, "exit-msgs", "Exit is missing FAILURE message.");
-				hasWarnings = true;
+				yield return new Warning("exit-msgs", "Exit is missing FAILURE message.");
 			}
 		}
 
-		// These require topology analysis
-		if (target is SharpExit exit && (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple)))
+		if (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple))
 		{
-			try
+			await foreach (var warning in ExitTopologyWarnings(exit, destination, warnings))
 			{
-				var maybeDestination = await exit.Home.WithCancellation(CancellationToken.None);
-				var source = await exit.Location.WithCancellation(CancellationToken.None);
-
-				// An unlinked exit has no topology to analyse: it is neither one-way nor duplicated.
-				if (maybeDestination is AnySharpContainer destination)
-				{
-					var destObj = destination.Object();
-					var sourceObj = source.Object();
-
-					if (destObj.DBRef.Number >= 0 && sourceObj.DBRef.Number >= 0)
-					{
-						var returnExitsQuery = mediator.CreateStream(new GetExitsQuery(destination));
-						var returnExitCount = 0;
-
-						await foreach (var returnExit in returnExitsQuery)
-						{
-							try
-							{
-								if (await returnExit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer returnDest
-										&& returnDest.Object().DBRef.Equals(sourceObj.DBRef))
-								{
-									returnExitCount++;
-								}
-							}
-							catch
-							{
-								// Ignore exits we can't check
-							}
-						}
-
-						if (warnings.HasFlag(WarningType.ExitOneway) && returnExitCount == 0)
-						{
-							await Complain(checker, target, "exit-oneway",
-								"Exit has no return path from destination back to source.");
-							hasWarnings = true;
-						}
-
-						if (warnings.HasFlag(WarningType.ExitMultiple) && returnExitCount > 1)
-						{
-							await Complain(checker, target, "exit-multiple",
-								$"Exit has {returnExitCount} return paths from destination back to source.");
-							hasWarnings = true;
-						}
-					}
-				}
-			}
-			catch
-			{
-				// If we can't check topology, skip this check silently
+				yield return warning;
 			}
 		}
-
-		return hasWarnings;
 	}
 
 	/// <summary>
-	/// Check thing-specific warnings
+	/// An @open'd or @unlink'd exit has no destination edge at all; a linked one may still point at NOTHING.
+	/// #0 is the master room, a real destination, so only negative dbrefs are invalid. A variable exit (one
+	/// linked to HOME, #-1) needs a DESTINATION or EXITTO attribute to say where it leads.
 	/// </summary>
-	private async Task<bool> CheckThingWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+	private async IAsyncEnumerable<Warning> ExitLinkWarnings(AnySharpObject checker, AnySharpObject target,
+		AnyOptionalSharpContainer destination)
 	{
-		var hasWarnings = false;
+		int? destinationNumber = destination is AnySharpContainer linked ? linked.Object().DBRef.Number : null;
 
-		if (warnings.HasFlag(WarningType.ThingDesc))
+		if (destinationNumber is null or < 0)
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
-			if (desc.IsNone)
-			{
-				// Skip things in player inventory as per PennMUSH behavior
-				if (target is SharpThing thing)
-				{
-					var location = await thing.Location.WithCancellation(CancellationToken.None);
-					var isInInventory = location.IsPlayer;
+			yield return new Warning("exit-unlinked", "Exit is unlinked (no destination set). This exit can be stolen.");
+		}
 
-					if (!isInInventory)
-					{
-						await Complain(checker, target, "thing-desc", "Thing has no description.");
-						hasWarnings = true;
-					}
-				}
-				else
-				{
-					await Complain(checker, target, "thing-desc", "Thing has no description.");
-					hasWarnings = true;
-				}
-			}
+		if (destinationNumber == -1 && await LacksAllAsync(checker, target, "DESTINATION", "EXITTO"))
+		{
+			yield return new Warning("exit-unlinked", "Variable exit lacks DESTINATION or EXITTO attribute.");
+		}
+	}
+
+	/// <summary>
+	/// How many exits lead back from the destination to the exit's source. An unlinked exit, or one between
+	/// negative dbrefs, has no topology to analyse: it is neither one-way nor duplicated.
+	/// </summary>
+	private async IAsyncEnumerable<Warning> ExitTopologyWarnings(SharpExit exit, AnyOptionalSharpContainer maybeDestination,
+		WarningType warnings)
+	{
+		var source = (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef;
+		if (maybeDestination is not AnySharpContainer destination
+				|| destination.Object().DBRef.Number < 0
+				|| source.Number < 0)
+		{
+			yield break;
+		}
+
+		var returnExitCount = await mediator.CreateStream(new GetExitsQuery(destination))
+			.CountAsync(async (returnExit, ct) => await returnExit.Home.WithCancellation(ct) is AnySharpContainer returnDestination
+				&& returnDestination.Object().DBRef.Equals(source));
+
+		if (warnings.HasFlag(WarningType.ExitOneway) && returnExitCount == 0)
+		{
+			yield return new Warning("exit-oneway", "Exit has no return path from destination back to source.");
+		}
+
+		if (warnings.HasFlag(WarningType.ExitMultiple) && returnExitCount > 1)
+		{
+			yield return new Warning("exit-multiple", $"Exit has {returnExitCount} return paths from destination back to source.");
+		}
+	}
+
+	private async IAsyncEnumerable<Warning> ThingWarnings(AnySharpObject checker, AnySharpObject target, SharpThing thing,
+		WarningType warnings)
+	{
+		// A thing in a player's inventory needs no description, as in PennMUSH.
+		if (warnings.HasFlag(WarningType.ThingDesc)
+				&& await LacksAnyAsync(checker, target, "DESCRIBE")
+				&& !(await thing.Location.WithCancellation(CancellationToken.None)).IsPlayer)
+		{
+			yield return new Warning("thing-desc", "Thing has no description.");
 		}
 
 		if (warnings.HasFlag(WarningType.ThingMsgs))
 		{
-			var success = await attributeService.GetAttributeAsync(checker, target, "SUCCESS", IAttributeService.AttributeMode.Read, parent: true);
-			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, parent: true);
-			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, parent: true);
-			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, parent: true);
-
-			if (success.IsNone || osuccess.IsNone || drop.IsNone || odrop.IsNone)
+			if (await LacksAnyAsync(checker, target, "SUCCESS", "OSUCCESS", "DROP", "ODROP"))
 			{
-				await Complain(checker, target, "thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
-				hasWarnings = true;
+				yield return new Warning("thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
 			}
 
-			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, parent: true);
-			if (failure.IsNone)
+			if (await LacksAnyAsync(checker, target, "FAILURE"))
 			{
-				await Complain(checker, target, "thing-msgs", "Thing is missing FAILURE message.");
-				hasWarnings = true;
+				yield return new Warning("thing-msgs", "Thing is missing FAILURE message.");
 			}
 		}
-
-		return hasWarnings;
 	}
 
-	/// <summary>
-	/// Check player-specific warnings
-	/// </summary>
-	private async Task<bool> CheckPlayerWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
+	private async IAsyncEnumerable<Warning> PlayerWarnings(AnySharpObject checker, AnySharpObject target, WarningType warnings)
 	{
-		var hasWarnings = false;
-
-		if (warnings.HasFlag(WarningType.PlayerDesc))
+		if (warnings.HasFlag(WarningType.PlayerDesc) && await LacksAnyAsync(checker, target, "DESCRIBE"))
 		{
-			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true);
-			if (desc.IsNone)
-			{
-				await Complain(checker, target, "my-desc", "Player is missing description.");
-				hasWarnings = true;
-			}
+			yield return new Warning("my-desc", "Player is missing description.");
 		}
-
-		return hasWarnings;
 	}
+
+	/// <summary>Whether any of <paramref name="names"/> is unset on <paramref name="target"/>, parents included.</summary>
+	private async ValueTask<bool> LacksAnyAsync(AnySharpObject checker, AnySharpObject target, params string[] names)
+		=> await names.ToAsyncEnumerable().AnyAsync(async (name, _) => await LacksAsync(checker, target, name));
+
+	/// <summary>Whether every one of <paramref name="names"/> is unset on <paramref name="target"/>, parents included.</summary>
+	private async ValueTask<bool> LacksAllAsync(AnySharpObject checker, AnySharpObject target, params string[] names)
+		=> await names.ToAsyncEnumerable().AllAsync(async (name, _) => await LacksAsync(checker, target, name));
+
+	private async ValueTask<bool> LacksAsync(AnySharpObject checker, AnySharpObject target, string name)
+		=> (await attributeService.GetAttributeAsync(checker, target, name, IAttributeService.AttributeMode.Read, parent: true)).IsNone;
 
 	/// <summary>
 	/// Send a warning message to the checker
 	/// </summary>
-	private async Task Complain(AnySharpObject checker, AnySharpObject target, string warningName, string message)
+	private async Task Complain(AnySharpObject checker, AnySharpObject target, Warning warning)
 	{
 		var targetObj = target.Object();
-		await notifyService.Notify(checker, $"Warning '{warningName}' for {targetObj.Name}(#{targetObj.Key}):");
-		await notifyService.Notify(checker, message);
+		await notifyService.Notify(checker, $"Warning '{warning.Name}' for {targetObj.Name}(#{targetObj.Key}):");
+		await notifyService.Notify(checker, warning.Message);
 	}
 }

@@ -80,7 +80,7 @@ public partial class Commands
 		{
 			// PennMUSH do_look_at (look.c:611): looking outside shows the location OF your location, so
 			// there is nothing to see when you are standing in a room or inside an opaque container.
-			var container = executor.IsContent ? await executor.AsContent.Location() : null;
+			var container = executor.AsOptionalContent is AnySharpContent looker ? await looker.Location() : null;
 
 			if (container is null || container.IsRoom || await container.WithExitOption().IsOpaque())
 			{
@@ -97,7 +97,7 @@ public partial class Commands
 				parser,
 				executor,
 				executor,
-				args["0"].Message!.ToPlainText(),
+				args["0"].Message.ToPlainText(),
 				LocateFlags.All);
 
 			if (locate is AnySharpObject located)
@@ -143,7 +143,7 @@ public partial class Commands
 
 		if (args.Count == 1)
 		{
-			var argText = args["0"].Message!.ToPlainText();
+			var argText = args["0"].Message.ToPlainText();
 			var objectName = argText;
 
 			if (HelperFunctions.SplitDbRefAndOptionalAttr(argText) is { Object: var splitObject, Attribute: var maybeAttributePattern })
@@ -218,10 +218,10 @@ public partial class Commands
 		// The exits list below is a plain DOLIST (look.c:916) and has no such filter.
 		var canSeeContent = await ObserveContentsAsync(parser, executor, viewingKnown, ConnectionService);
 
-		var contents = !showContents
+		var contents = !showContents || viewingKnown.AsOptionalContainer is not AnySharpContainer viewedContainer
 			? []
 			// GetContentsQuery also yields exits; Penn's Contents(thing) never does, and exits get their own list.
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+			: await Mediator.CreateStream(new GetContentsQuery(viewedContainer), ExecutionBudget.CurrentToken)
 				.Where(item => !item.IsExit)
 				.Where((AnySharpContent item, CancellationToken ct) => canSeeContent(item, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
@@ -377,9 +377,9 @@ public partial class Commands
 			return new CallState(obj.DBRef.ToString());
 		}
 
-		if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
+		if (!switches.Contains("OPAQUE") && viewingKnown.AsOptionalContainer is AnySharpContainer exitSource)
 		{
-			var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+			var exits = await Mediator.CreateStream(new GetExitsQuery(exitSource), ExecutionBudget.CurrentToken)
 				.Where((exit, ct) => perceive(exit.Object.DBRef, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
@@ -395,10 +395,10 @@ public partial class Commands
 			}
 		}
 
-		if (!viewingKnown.IsRoom)
+		if (viewingKnown.AsOptionalContent is AnySharpContent viewedContent)
 		{
-			var homeContainer = await viewingKnown.MinusRoom().Home();
-			var locationContainer = await viewingKnown.AsContent.Location();
+			var homeContainer = await viewedContent.Home();
+			var locationContainer = await viewedContent.Location();
 
 			var locationLine = await MessageFormatting.FormatObjectWithDbrefMString(locationContainer.Object(), flagView);
 
@@ -468,24 +468,18 @@ public partial class Commands
 
 			// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
 			int? width = null;
+			var viewMemo = new AttributeViewMemo();
 
-			foreach (var (attr, readFrom) in atrs)
+			const string VeiledFlagName = "VEILED";
+			var listed = atrs
+				.Where(entry => !skipDescribe || !entry.Attribute.LongName.Equals("DESCRIBE", StringComparison.OrdinalIgnoreCase))
+				.Where(entry => showAll || !entry.Attribute.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)));
+			foreach (var (attr, readFrom) in listed)
 			{
-				if (skipDescribe && attr.LongName.Equals("DESCRIBE", StringComparison.OrdinalIgnoreCase))
-				{
-					continue;
-				}
-
-				const string VeiledFlagName = "VEILED";
-				if (!showAll && attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
-				{
-					continue;
-				}
-
 				var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 				var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 
-				if (!await PermissionService.CanViewAttribute(executor, viewing, attr))
+				if (!await PermissionService.CanViewAttribute(executor, viewing, viewMemo, attr))
 				{
 					continue;
 				}

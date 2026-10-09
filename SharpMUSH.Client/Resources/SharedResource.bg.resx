@@ -5940,6 +5940,22 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Текст на страницата (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Покажи</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Типове пози за показване</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# скрит ред „{label}“} other {# скрити реда „{label}“}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} на {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>Това не можа да бъде променено. Опитай отново след малко.</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>Изход на играта</value>
   </data>
@@ -5975,5 +5991,25 @@
   </data>
   <data name="TermReviewNone" xml:space="preserve">
     <value>Все още няма ред за четене.</value>
+  </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>ново</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {още # отговор} other {още # отговора}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Премести нагоре</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Премести надолу</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Подреждане</value>
+    <comment>MT</comment>
   </data>
 </root>

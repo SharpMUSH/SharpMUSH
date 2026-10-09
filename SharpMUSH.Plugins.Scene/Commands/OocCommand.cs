@@ -25,8 +25,8 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 ///
 /// <para>When the speaker is focused on the active scene in the room they are standing in — the same
 /// test the capture hooks apply to a pose — the line is also recorded there through the ordinary pose
-/// path, with source <c>ooc</c> and tag <c>ooc</c>, and broadcast like any other pose. The recorded text
-/// is exactly the line the room heard, less the <c>&lt;OOC&gt;</c> marker (the tag carries it): the speech
+/// path, with type and source <c>ooc</c>, and broadcast like any other pose. The recorded text
+/// is exactly the line the room heard, less the <c>&lt;OOC&gt;</c> marker (the type carries it): the speech
 /// name, not the scene persona, since out of character is the player speaking. Anywhere else nothing is
 /// recorded. The speaker must also be approved when they speak, re-checked on every line as the scene
 /// package's capture hooks do, because focus and membership survive a revoked approved role. The rule is
@@ -35,12 +35,12 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 /// <c>isapproved()</c>.</para>
 ///
 /// <para>This is the "game's OOC command" the portal's OOC band assumes (design handoff §7.2): the band
-/// keys off the <c>ooc</c> tag.</para>
+/// draws a pose by its type.</para>
 /// </summary>
 public static class OocCommand
 {
-	/// <summary>The pose tag and source an OOC line is recorded with.</summary>
-	public const string Tag = "ooc";
+	/// <summary>The pose type and source an OOC line is recorded with.</summary>
+	public const string Tag = PoseTypes.OutOfCharacter;
 
 	private const string Marker = "<OOC> ";
 
@@ -107,7 +107,7 @@ public static class OocCommand
 		if (!parser.CurrentState.Arguments.TryGetValue("0", out var argument)) return MarkupText.Empty;
 
 		return parser.CurrentState.Switches.Contains("NOEVAL")
-			? argument.Message ?? MarkupText.Empty
+			? argument.Message
 			: await argument.ParsedMessage() ?? MarkupText.Empty;
 	}
 
@@ -124,7 +124,7 @@ public static class OocCommand
 			|| !await IsApprovedAsync(parser, executor))
 			return;
 
-		var recorded = await sceneService.AddPoseAsync(here.Id, speaker, showAs: string.Empty, room, Tag, [Tag],
+		var recorded = await sceneService.AddPoseAsync(here.Id, speaker, showAs: string.Empty, room, type: Tag, source: Tag, tags: [],
 			MarkupTextSerializer.Serialize(line));
 		if (recorded is Contracts.ScenePose pose)
 			await SceneBroadcast.PublishSceneEventAsync(parser, here.Id, "pose", pose);
@@ -139,7 +139,7 @@ public static class OocCommand
 	/// </summary>
 	private static async ValueTask<bool> IsApprovedAsync(IMUSHCodeParser parser, AnySharpObject speaker)
 	{
-		if (await SceneLoggerAsync(parser) is AnySharpObject logger)
+		if (await SceneLogger.FindAsync(parser.ServiceProvider) is AnySharpObject logger)
 		{
 			var attributes = parser.ServiceProvider.GetRequiredService<IAttributeService>();
 			if (await attributes.GetAttributeAsync(logger, logger, ApprovalRule, IAttributeService.AttributeMode.Read)
@@ -153,18 +153,6 @@ public static class OocCommand
 		}
 
 		return speaker.IsPlayer && await speaker.IsApproved();
-	}
-
-	/// <summary>The scene package's Scene Logger, or null when the package is not installed.</summary>
-	private static async ValueTask<AnySharpObject?> SceneLoggerAsync(IMUSHCodeParser parser)
-	{
-		if (parser.ServiceProvider.GetService<IPackageRegistryService>() is not { } registry
-			|| (await registry.GetPackageObjectsAsync("scene")).FirstOrDefault(o => o.Ref == "logger") is not { } record
-			|| !DBRef.TryParse(record.Objid, out var parsed) || parsed is not { } reference)
-			return null;
-
-		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
-		return await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject logger ? logger : null;
 	}
 
 	/// <summary>MUSH truth: empty, a number equal to zero, and an error (<c>#-…</c>) are false.</summary>

@@ -48,21 +48,44 @@ public partial class Commands
 		string output;
 		try
 		{
-			var actor = await parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>()
-				.GetGameActorAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken)
-				?? throw new UnauthorizedAccessException("A linked active player is required.");
-			var switches = parser.CurrentState.Switches;
-			if (switches.Count() > 1) throw new ArgumentException("Choose one reality operation.");
-			var operation = switches.FirstOrDefault() ?? "LIST";
-			var target = parser.CurrentState.Arguments.TryGetValue("0", out var left) ? left.Message?.ToPlainText() ?? "" : "";
-			var value = parser.CurrentState.Arguments.TryGetValue("1", out var right) ? right.Message?.ToPlainText() ?? "" : "";
-			output = await parser.ServiceProvider.GetRequiredService<RealityAdministration>().ExecuteAsync(actor, operation, target, value, ExecutionBudget.CurrentToken);
+			output = await RunRealityOperationAsync(parser, executor) switch
+			{
+				string message => message,
+				Error<string> error => "#-1 " + error.Value
+			};
 		}
-		catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException or InvalidDataException)
+		catch (InvalidDataException ex)
 		{
+			// The stored reality configuration or profile is damaged.
 			output = "#-1 " + ex.Message;
 		}
+
 		await NotifyService.Notify(executor, output);
 		return new CallState(output);
 	}
+
+	private static async Task<Result<string>> RunRealityOperationAsync(IMUSHCodeParser parser, AnySharpObject executor)
+	{
+		var actor = await parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>()
+			.GetGameActorAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken);
+		if (actor is null)
+		{
+			return new Error<string>("A linked active player is required.");
+		}
+
+		var switches = parser.CurrentState.Switches.ToArray();
+		if (switches.Length > 1)
+		{
+			return new Error<string>("Choose one reality operation.");
+		}
+
+		var operation = switches.FirstOrDefault() ?? "LIST";
+		var target = PlainArgument(parser, "0");
+		var value = PlainArgument(parser, "1");
+		return await parser.ServiceProvider.GetRequiredService<RealityAdministration>()
+			.ExecuteAsync(actor, operation, target, value, ExecutionBudget.CurrentToken);
+	}
+
+	private static string PlainArgument(IMUSHCodeParser parser, string key)
+		=> parser.CurrentState.Arguments.TryGetValue(key, out var argument) ? argument.Message.ToPlainText() : "";
 }

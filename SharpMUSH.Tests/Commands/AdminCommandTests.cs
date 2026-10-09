@@ -33,7 +33,7 @@ public class AdminCommandTests
 		var name = $"Pcr{Guid.NewGuid():N}"[..12];
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=passwordPcreate"));
 
-		var created = result.Message!.ToPlainText();
+		var created = result.Message.ToPlainText();
 		var dbrefNumber = created.TrimStart('#').Split(':')[0];
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
@@ -57,7 +57,7 @@ public class AdminCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var name = $"Npw{Guid.NewGuid():N}"[..12];
 		var created = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=passwordNewpw")))
-			.Message!.ToPlainText();
+			.Message.ToPlainText();
 		var objid = created.TrimStart('#').Split(':');
 		var victim = new DBRef(int.Parse(objid[0]), long.Parse(objid[1]));
 

@@ -19,10 +19,10 @@ public class LockWriteParityTests
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
 	private async Task<string> Create()
-		=> (await Parser.CommandParse(1, Connections, MarkupText.Plain($"@create LockParity{Guid.NewGuid():N}"))).Message!.ToPlainText();
+		=> (await Parser.CommandParse(1, Connections, MarkupText.Plain($"@create LockParity{Guid.NewGuid():N}"))).Message.ToPlainText();
 
 	private async Task<string> Read(string expression)
-		=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		=> (await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	[Test]
 	public async Task InvalidReplacementPreservesPreviousLock()
@@ -59,7 +59,7 @@ public class LockWriteParityTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "LockMortal");
 		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create MortalLock{Guid.NewGuid():N}"));
-		var target = created.Message!.ToPlainText();
+		var target = created.Message.ToPlainText();
 		await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@lock {target}=me"));
 		await Assert.That(await Read($"lock({target})")).IsEqualTo($"#{player.DbRef.Number}");
 		await Assert.That(await Read($"lockowner({target})")).IsEqualTo($"#{player.DbRef.Number}");
@@ -76,7 +76,7 @@ public class LockWriteParityTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "LockOwner");
 		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create WizardLock{Guid.NewGuid():N}"));
-		var target = created.Message!.ToPlainText();
+		var target = created.Message.ToPlainText();
 		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lock {target}==me"));
 		await Assert.That(await Read($"lock({target})")).IsEqualTo("=#1");
 		await Assert.That(await Read($"lockowner({target})")).IsEqualTo("#1");
@@ -120,7 +120,7 @@ public class LockWriteParityTests
 		await Factory.Services.GetRequiredService<ISharpDatabase>().SetLockAsync(source.Object(), "Basic", new SharpLockData(expression));
 		source.Object().WithLock("Basic", new SharpLockData(expression));
 		var clone = await Parser.CommandParse(1, Connections, MarkupText.Plain($"@clone {target}=CloneLock{Guid.NewGuid():N}"));
-		var cloned = (await Factory.Services.GetRequiredService<ISharpDatabase>().GetObjectNodeAsync(DBRef.Parse(clone.Message!.ToPlainText()))).Expect<AnySharpObject>();
+		var cloned = (await Factory.Services.GetRequiredService<ISharpDatabase>().GetObjectNodeAsync(DBRef.Parse(clone.Message.ToPlainText()))).Expect<AnySharpObject>();
 		await Assert.That(cloned.Object().Locks["Basic"].LockString).IsEqualTo(expression);
 		await Assert.That(await Factory.Services.GetRequiredService<ILockService>().Evaluate(LockType.Basic, cloned, source)).IsFalse();
 	}
@@ -160,7 +160,7 @@ public class LockWriteParityTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "LsetLocale");
 		var name = $"LsetLocale{Guid.NewGuid():N}";
 		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create {name}"));
-		var target = created.Message!.ToPlainText();
+		var target = created.Message.ToPlainText();
 
 		await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@lock {target}=#TRUE"));
 		await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@lset {target}/Basic={flags}"));
@@ -178,7 +178,7 @@ public class LockWriteParityTests
 		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create LsetNoName{Guid.NewGuid():N}"));
 
 		await Parser.CommandParse(player.Handle, Connections,
-			MarkupText.Plain($"@lset {created.Message!.ToPlainText()}=visual"));
+			MarkupText.Plain($"@lset {created.Message.ToPlainText()}=visual"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			Factory.Services.GetRequiredService<INotifyService>(),
@@ -193,7 +193,7 @@ public class LockWriteParityTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "UnlockNever");
 		var name = $"UnlockNever{Guid.NewGuid():N}";
 		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create {name}"));
-		var target = created.Message!.ToPlainText();
+		var target = created.Message.ToPlainText();
 
 		await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@unlock {target}"));
 
@@ -209,7 +209,7 @@ public class LockWriteParityTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, prefix);
 		var name = $"{prefix}{Guid.NewGuid():N}";
 		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create {name}"));
-		return (player, name, created.Message!.ToPlainText());
+		return (player, name, created.Message.ToPlainText());
 	}
 
 	private Task<CallState> As(TestIsolationHelpers.TestPlayer player, string command)
@@ -226,7 +226,7 @@ public class LockWriteParityTests
 
 		var answer = await As(player, $"think lock({target}/Enter,#TRUE)");
 
-		await Assert.That(answer.Message!.ToPlainText()).IsEqualTo("#TRUE");
+		await Assert.That(answer.Message.ToPlainText()).IsEqualTo("#TRUE");
 		await Factory.Notifications.WaitForAsync(player.DbRef, $"{name}(#{DBRef.Parse(target).Number}) - Enter locked.");
 	}
 
@@ -346,7 +346,7 @@ public class LockWriteParityTests
 	public async Task UnlockingAnInheritedLockReportsUnlocked()
 	{
 		var (player, name, target) = await MortalWithThingAsync("UnlockInherited");
-		var parent = (await As(player, $"@create UnlockParent{Guid.NewGuid():N}")).Message!.ToPlainText();
+		var parent = (await As(player, $"@create UnlockParent{Guid.NewGuid():N}")).Message.ToPlainText();
 		await As(player, $"@lock {parent}=#FALSE");
 		// Every standard lock starts no_inherit; a child only sees one its parent lets go of.
 		await As(player, $"@lset {parent}/Basic=!no_inherit");

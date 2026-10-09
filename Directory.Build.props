@@ -8,7 +8,7 @@
     MarkupString.Pueblo are the same family, carried only by what renders those dialects.
   -->
   <PropertyGroup>
-    <MarkupStringVersion>2.15.5</MarkupStringVersion>
+    <MarkupStringVersion>2.17.0</MarkupStringVersion>
   </PropertyGroup>
 
   <!--

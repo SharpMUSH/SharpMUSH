@@ -156,6 +156,7 @@ public class ChannelBroadcastServiceTests
 	private static SharpChannel Channel(AnySharpObject member, bool gagged) => new()
 	{
 		Name = MarkupText.Plain("Public"),
+		OwnerDBRef = new DBRef(-1),
 		Owner = new(async _ => { await Task.CompletedTask; return null!; }),
 		Members = new(() => new[] { new SharpChannel.MemberAndStatus(member, new SharpChannelStatus(null, gagged, null, null, null)) }
 			.ToAsyncEnumerable()),

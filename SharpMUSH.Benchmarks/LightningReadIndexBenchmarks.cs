@@ -61,7 +61,7 @@ public class LightningFilteredSearchBenchmarks : LightningStoreBenchmark
 	{
 		await OpenAsync();
 		var god = await Db.GetObjectNodeAsync(new DBRef(1)) is AnySharpObject and SharpPlayer g ? g : throw new InvalidOperationException();
-		var room = await Db.GetObjectNodeAsync(new DBRef(0)) is AnySharpObject { IsContainer: true } r ? r.AsContainer : throw new InvalidOperationException();
+		var room = await Db.GetObjectNodeAsync(new DBRef(0)) is AnySharpObject { AsOptionalContainer: AnySharpContainer r } ? r : throw new InvalidOperationException();
 		_owner = await Db.CreatePlayerAsync("BenchOwner", "pw", new DBRef(0), new DBRef(0), 0);
 		var owner = await Db.GetObjectNodeAsync(_owner) is AnySharpObject and SharpPlayer o ? o : throw new InvalidOperationException();
 		for (var i = 0; i < 20; i++) await Db.CreateThingAsync($"Owned{i}", room, owner, room);

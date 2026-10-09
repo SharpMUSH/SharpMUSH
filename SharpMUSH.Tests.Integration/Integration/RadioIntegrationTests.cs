@@ -32,7 +32,7 @@ public class RadioIntegrationTests
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
 	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
@@ -146,6 +146,41 @@ public class RadioIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// A frequency's colour is a theme colour, which tone() paints in each listener's own theme, or ansi()
+	/// codes; the default is the info theme colour.
+	/// </summary>
+	[Test]
+	public async Task AFrequencysColourIsAThemeColourOrAnsiCodes()
+	{
+		try
+		{
+			await InstallAsync();
+			var radio = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("radio"))
+				.Single(o => o.Ref == "radio").Objid;
+			async Task<string> Paint(string colour) =>
+				(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"u({radio}/FUN`PAINT,{colour},Police)")))!
+					.Message.Render(MarkupFormat.Html);
+
+			await Assert.That(await Paint("success")).Contains("tone-success").And.Contains("Police");
+			await Assert.That(await Paint("hg")).DoesNotContain("tone-").And.Contains("Police");
+			await Assert.That(await Paint("")).IsEqualTo("Police");
+			await Assert.That(await God($"think [get({radio}/DATA`COLOR)]")).IsEqualTo("info");
+
+			var admin = await Player("RadColA", "radio-admin");
+			var ann = await Player("RadColAnn");
+			await Assert.That(await As(admin, "+radio/create Tower")).Contains("Created Tower.");
+			await As(ann, "+radio/join Tower");
+			await Assert.That(await As(ann, "+radio/color Tower=success")).Contains("You see Tower like this now.");
+			await Assert.That(await As(ann, "+radio/color Tower=hg")).Contains("You see Tower like this now.");
+			await Assert.That(await As(ann, "+radio/color Tower=")).Contains("You see Tower like this now.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	[Test]
 	public async Task ModeratorsRestrictAndLocksAndListsDecideWhoMayTuneIn()
 	{
@@ -229,7 +264,18 @@ public class RadioIntegrationTests
 			}
 
 			await Assert.That(logged).IsEquivalentTo(new[] { $"<Ship> {ann.Name} says, \"{said}\"" });
-			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},tags)]")).Contains("radio");
+			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},type)]")).IsEqualTo("radio");
+			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},frequency)]")).IsEqualTo("Ship");
+			await Assert.That(await God("think [scenetype(radio,presentation)]")).IsEqualTo("message")
+				.Because("radio-scene adds the radio type to the Scene Logger");
+			await Assert.That(await As(logger, "+scene/types")).Contains("Radio");
+			await Assert.That(await As(logger, "+scene/hide radio")).Contains("Radio lines are hidden from your recall and log.");
+			var recalled = await As(logger, "+scene/recall 1");
+			await Assert.That(recalled).DoesNotContain(said);
+			await Assert.That(recalled).Contains("1 line of radio hidden.");
+			await Assert.That(await As(logger, "+scene/show radio")).Contains("Radio lines show in your recall and log.");
+			await Assert.That(await As(logger, "+scene/recall 1")).IsEqualTo($"<RADIO · {scene}> <Ship> {ann.Name} says, \"{said}\"")
+				.Because("a radio line is one line tagged with its scene, with no rule over it");
 
 			await As(logger, "+radio/stoplog Ship");
 			var unlogged = TestIsolationHelpers.GenerateUniqueName("RadUnlogged");

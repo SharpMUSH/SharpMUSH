@@ -35,7 +35,7 @@ public class FloatPrecisionTests
 		using var configuration = TestOptionsOverride.Scope(options => precision is { } places
 			? options with { Cosmetic = options.Cosmetic with { FloatPrecision = places } }
 			: options);
-		return (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		return (await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 	}
 
 	[Test]
@@ -125,7 +125,7 @@ public class FloatPrecisionTests
 			ParserState.RootFor(new DBRef(1)));
 
 		await Assert.That(await Evaluate("[fdiv(1,3)]")).IsEqualTo("0.333333");
-		await Assert.That((await otherParser.FunctionParse(MarkupText.Plain("[fdiv(1,3)]")))!.Message!.ToPlainText())
+		await Assert.That((await otherParser.EvaluateAsync(MarkupText.Plain("[fdiv(1,3)]"))).ToPlainText())
 			.IsEqualTo("0.33");
 	}
 
@@ -141,7 +141,7 @@ public class FloatPrecisionTests
 		threePlaces.CurrentValue.Returns(configured with { Cosmetic = configured.Cosmetic with { FloatPrecision = 3 } });
 		var copy = (MUSHCodeParser)Parser with { Configuration = threePlaces };
 
-		await Assert.That((await copy.FunctionParse(MarkupText.Plain("[fdiv(1,3)]")))!.Message!.ToPlainText())
+		await Assert.That((await copy.EvaluateAsync(MarkupText.Plain("[fdiv(1,3)]"))).ToPlainText())
 			.IsEqualTo("0.333");
 		await Assert.That(await Evaluate("[fdiv(1,3)]")).IsEqualTo("0.333333");
 	}

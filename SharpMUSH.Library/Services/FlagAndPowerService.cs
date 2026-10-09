@@ -526,10 +526,10 @@ public class FlagAndPowerService(
 			return false;
 
 		var hasPrincipal = false;
-		foreach (var permission in permissions)
+		var principals = permissions
+			.Where(permission => permission.ToLowerInvariant() is not ("dark" or "mdark" or "odark" or "log" or "event"));
+		foreach (var permission in principals)
 		{
-			if (permission.ToLowerInvariant() is "dark" or "mdark" or "odark" or "log" or "event")
-				continue;
 			hasPrincipal = true;
 			if (await HasFlagPermission(executor, obj, permission))
 				return true;

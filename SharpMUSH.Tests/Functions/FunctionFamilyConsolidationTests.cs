@@ -15,7 +15,7 @@ public class FunctionFamilyConsolidationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	/// <summary>
 	/// <c>SETQ</c> and <c>SETR</c> are both <c>fun_setq</c>, which rejects an odd argument count

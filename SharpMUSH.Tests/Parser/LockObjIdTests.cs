@@ -24,7 +24,7 @@ public class LockObjIdTests
 	[Test]
 	public async Task ExactObjectLock_BareDbRef_MatchesAnyObjectWithSameNumber()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObj1)")))?.Message!;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestObj1)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
@@ -43,7 +43,7 @@ public class LockObjIdTests
 	[Test]
 	public async Task ExactObjectLock_ObjId_MatchesOnlyObjectWithSameNumberAndCreationTime()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObjId1)")))?.Message!;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestObjId1)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
@@ -64,7 +64,7 @@ public class LockObjIdTests
 	[Test]
 	public async Task ExactObjectLock_ObjId_DoesNotMatchObjectWithDifferentCreationTime()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObjId2)")))?.Message!;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestObjId2)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
@@ -86,12 +86,12 @@ public class LockObjIdTests
 	[Test]
 	public async Task DbRefListLock_BareDbRef_MatchesAnyObjectWithSameNumber()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestListObj1)")))?.Message!;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestListObj1)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
 
-		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolder1)")))?.Message!;
+		var lockHolderResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockHolder1)"));
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).Expect<DBRef>();
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Expect<AnySharpObject>();
@@ -111,14 +111,14 @@ public class LockObjIdTests
 	[Test]
 	public async Task DbRefListLock_ObjId_MatchesOnlyObjectWithSameNumberAndCreationTime()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestListObjId1)")))?.Message!;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestListObjId1)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
-		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolderObjId1)")))?.Message!;
+		var lockHolderResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockHolderObjId1)"));
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).Expect<DBRef>();
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Expect<AnySharpObject>();
@@ -138,14 +138,14 @@ public class LockObjIdTests
 	[Test]
 	public async Task DbRefListLock_ObjId_DoesNotMatchObjectWithDifferentCreationTime()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestListObjId2)")))?.Message!;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestListObjId2)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
-		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolderObjId2)")))?.Message!;
+		var lockHolderResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockHolderObjId2)"));
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).Expect<DBRef>();
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Expect<AnySharpObject>();
@@ -166,20 +166,20 @@ public class LockObjIdTests
 	[Test]
 	public async Task DbRefListLock_MultipleObjIds_MatchesCorrectObject()
 	{
-		var createResult1 = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestMulti1)")))?.Message!;
+		var createResult1 = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestMulti1)"));
 		var testObjDbRefStr1 = createResult1.ToPlainText();
 		var testObjDbRef1 = HelperFunctions.ParseDbRef(testObjDbRefStr1).Expect<DBRef>();
 		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Expect<AnySharpObject>();
 		// Get creation times from database objects (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef1 = testObj1.Object().DBRef;
 
-		var createResult2 = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestMulti2)")))?.Message!;
+		var createResult2 = await Parser.EvaluateAsync(MarkupText.Plain("create(LockTestMulti2)"));
 		var testObjDbRefStr2 = createResult2.ToPlainText();
 		var testObjDbRef2 = HelperFunctions.ParseDbRef(testObjDbRefStr2).Expect<DBRef>();
 		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Expect<AnySharpObject>();
 		var testObjFullDbRef2 = testObj2.Object().DBRef;
 
-		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolderMulti)")))?.Message!;
+		var lockHolderResult = await Parser.EvaluateAsync(MarkupText.Plain("create(LockHolderMulti)"));
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).Expect<DBRef>();
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Expect<AnySharpObject>();

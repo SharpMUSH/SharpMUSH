@@ -24,7 +24,7 @@ public class ConnectionFunctionParityTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> EvaluateAsync(string code) =>
-		(await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		(await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	/// <summary>
 	/// A name that matches no player at all. PennMUSH's <c>lookup_desc</c> returns NULL and each
@@ -142,7 +142,7 @@ public class ConnectionFunctionParityTests
 		{
 			var asMortal = WebAppFactoryArg.FunctionParserFor(onlookerRef);
 			var result = (await asMortal.FunctionParse(MarkupText.Plain($"{function}(#{targetRef.Number})")))!
-				.Message!.ToPlainText();
+				.Message.ToPlainText();
 
 			await Assert.That(result).IsEqualTo(expected);
 		}
@@ -269,7 +269,7 @@ public class ConnectionFunctionParityTests
 
 	private async Task<string> EvaluateAsAsync(DBRef executor, string code) =>
 		(await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(code)))!
-			.Message!.ToPlainText();
+			.Message.ToPlainText();
 
 	private async Task<(DBRef Target, DBRef Onlooker)> TargetAndOnlookerAsync(string label)
 	{

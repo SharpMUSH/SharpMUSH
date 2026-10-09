@@ -103,6 +103,87 @@
 .schema-timeline-actions {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	gap: 4px;
 	margin-top: 2px;
+}
+
+/* A link beside the action buttons, the size of their text. */
+.schema-timeline-link {
+	padding: 0 8px;
+	font-size: 13px;
+}
+
+/* A conversation: rows sharing a group read as one thread, the first at the margin and its replies
+   indented once behind a thread line; a new conversation starts below a rule. */
+.schema-timeline-entry--grouped {
+	border-left: 0;
+	padding-left: 0;
+}
+
+.schema-timeline-entry--reply {
+	margin-left: 22px;
+	padding-left: 12px;
+	border-left: 2px solid var(--border);
+}
+
+.schema-timeline-entry--starts {
+	border-top: 1px solid var(--border);
+	padding-top: 12px;
+}
+
+.schema-timeline-entry--unread.schema-timeline-entry--reply,
+.schema-timeline-entry--unread:not(.schema-timeline-entry--grouped) {
+	border-left-color: var(--accent);
+}
+
+.schema-timeline-replyto {
+	font-size: 11px;
+	color: var(--text-dim);
+	background: var(--surface-2);
+	border-radius: 4px;
+	padding: 1px 6px;
+}
+
+.schema-timeline-new {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--accent-on);
+	background: var(--accent);
+	border-radius: 8px;
+	padding: 0 7px;
+}
+
+.schema-timeline-more {
+	display: inline-block;
+	margin-top: 4px;
+	font-size: 13px;
+}
+
+.schema-markup {
+	font-family: var(--font-mono);
+	white-space: pre-wrap;
+}
+
+/* a table's row groups (Pinned, Newest) and the rows staff may put in order */
+.schema-table-group th {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	text-align: left;
+}
+
+.schema-table-row--reorder {
+	cursor: grab;
+}
+
+.schema-table-row--dragging {
+	opacity: 0.5;
+}
+
+.schema-table-move {
+	white-space: nowrap;
+	width: 1%;
 }

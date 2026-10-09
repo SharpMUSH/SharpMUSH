@@ -133,8 +133,8 @@ public class AttributeResultCoverageTests
 		await Assert.That(result!.HadErrors).IsEqualTo(mode == "syntax");
 		if (mode != "syntax")
 		{
-			if (selector && mode == "literal") await Assert.That(result.Message!.ToPlainText()).StartsWith("#-1");
-			else await Assert.That(result.Message!.ToPlainText()).IsEqualTo(selector || kind.EndsWith("-argument", StringComparison.Ordinal) ? "selected" : kind == "regedit-pattern" ? "x" : value);
+			if (selector && mode == "literal") await Assert.That(result.Message.ToPlainText()).StartsWith("#-1");
+			else await Assert.That(result.Message.ToPlainText()).IsEqualTo(selector || kind.EndsWith("-argument", StringComparison.Ordinal) ? "selected" : kind == "regedit-pattern" ? "x" : value);
 		}
 	}
 
@@ -176,6 +176,6 @@ public class AttributeResultCoverageTests
 		var parser = (original with { FunctionLibrary = functions.Get() }).FromState(ParserState.RootFor(id));
 		var result = await parser.FunctionParse(MarkupText.Plain($"{function}(me)"));
 		await Assert.That(result!.HadErrors).IsEqualTo(mode == "syntax");
-		if (mode != "syntax") await Assert.That(result.Message!.ToPlainText()).IsEqualTo(value);
+		if (mode != "syntax") await Assert.That(result.Message.ToPlainText()).IsEqualTo(value);
 	}
 }

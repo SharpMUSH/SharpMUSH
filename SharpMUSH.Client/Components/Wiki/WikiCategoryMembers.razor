@@ -32,9 +32,8 @@
         {
             <SectionLabel>@Loc.Plural("NavWikiCategoryPages", "count", _pages.Count)</SectionLabel>
             <div class="wiki-cat-grid">
-                @foreach (var page in _pages)
+                @foreach (var p in _pages)
                 {
-                    var p = page;
                     <ImageTile Label="@p.Title" ImageUrl="@p.Image" Height="76" Href="@WikiRoutes.PathFor(p.Namespace, p.Slug)"
                                Sub="@(p.LastEditedBy is null ? Loc.Format(p.UpdatedAt) : string.Format(Loc["NavWikiEditedBy"], p.LastEditedBy, Loc.Format(p.UpdatedAt)))">
                         <Overlay>

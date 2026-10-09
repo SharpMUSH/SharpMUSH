@@ -35,6 +35,6 @@ public class SourcePortSubstitutionTests
 		var result = await Parser.FunctionParse(MarkupText.Plain("%d"));
 
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(string.Empty);
 	}
 }

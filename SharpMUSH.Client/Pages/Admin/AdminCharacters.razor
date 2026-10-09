@@ -29,52 +29,44 @@
                               Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterDebouncedAsync" />
             </div>
 
-            @if (_error is not null)
-            {
-                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
-            }
+            <LoadState TValue="AdminCharacterPage" Value="_page" Loading="@(_loading && _page is null)" Error="@_error"
+                       IsEmpty="page => page.Characters.Count == 0" Context="page">
+                <Empty>
+                    <EmptyBox>@Loc["AdmCharactersEmpty"]</EmptyBox>
+                </Empty>
+                <ChildContent>
+                    <div class="adm-chars-total">@Loc["AdmCharactersTotal", page.Total]</div>
+                    <MudTable Items="page.Characters" Dense="true" Hover="true" Elevation="0" Class="adm-chars-table" Loading="_loading">
+                        <HeaderContent>
+                            <MudTh>@Loc["AdmCharactersName"]</MudTh>
+                            <MudTh>@Loc["AdmCharactersAccount"]</MudTh>
+                            <MudTh>@Loc["AdmCharactersConnection"]</MudTh>
+                            <MudTh>@Loc["AdmCharactersFlags"]</MudTh>
+                            <MudTh>@Loc["AdmCharactersLastConnect"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd data-label="@Loc["AdmCharactersName"]">
+                                <a class="adm-chars-link" href="/admin/characters/@context.DbrefNumber">@context.Name</a>
+                                <span class="adm-chars-dbref">#@context.DbrefNumber</span>
+                            </MudTd>
+                            <MudTd data-label="@Loc["AdmCharactersAccount"]">@(context.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</MudTd>
+                            <MudTd data-label="@Loc["AdmCharactersConnection"]">
+                                <MudChip T="string" Size="Size.Small" Color="@(context.Online ? Color.Success : Color.Default)">
+                                    @(context.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])
+                                </MudChip>
+                            </MudTd>
+                            <MudTd data-label="@Loc["AdmCharactersFlags"]" Class="adm-chars-flags">@context.Flags</MudTd>
+                            <MudTd data-label="@Loc["AdmCharactersLastConnect"]">@(context.LastConnect ?? Loc["AdmCharactersNever"].Value)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
 
-            @if (_loading && _page is null)
-            {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else if (_page is null || _page.Characters.Count == 0)
-            {
-                <EmptyBox>@Loc["AdmCharactersEmpty"]</EmptyBox>
-            }
-            else
-            {
-                <div class="adm-chars-total">@Loc["AdmCharactersTotal", _page.Total]</div>
-                <MudTable Items="_page.Characters" Dense="true" Hover="true" Elevation="0" Class="adm-chars-table" Loading="_loading">
-                    <HeaderContent>
-                        <MudTh>@Loc["AdmCharactersName"]</MudTh>
-                        <MudTh>@Loc["AdmCharactersAccount"]</MudTh>
-                        <MudTh>@Loc["AdmCharactersConnection"]</MudTh>
-                        <MudTh>@Loc["AdmCharactersFlags"]</MudTh>
-                        <MudTh>@Loc["AdmCharactersLastConnect"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd data-label="@Loc["AdmCharactersName"]">
-                            <a class="adm-chars-link" href="/admin/characters/@context.DbrefNumber">@context.Name</a>
-                            <span class="adm-chars-dbref">#@context.DbrefNumber</span>
-                        </MudTd>
-                        <MudTd data-label="@Loc["AdmCharactersAccount"]">@(context.AccountName ?? Loc["AdmCharactersNoAccount"].Value)</MudTd>
-                        <MudTd data-label="@Loc["AdmCharactersConnection"]">
-                            <MudChip T="string" Size="Size.Small" Color="@(context.Online ? Color.Success : Color.Default)">
-                                @(context.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])
-                            </MudChip>
-                        </MudTd>
-                        <MudTd data-label="@Loc["AdmCharactersFlags"]" Class="adm-chars-flags">@context.Flags</MudTd>
-                        <MudTd data-label="@Loc["AdmCharactersLastConnect"]">@(context.LastConnect ?? Loc["AdmCharactersNever"].Value)</MudTd>
-                    </RowTemplate>
-                </MudTable>
-
-                @if (PageCount > 1)
-                {
-                    <MudPagination Count="PageCount" Selected="_pageNumber" SelectedChanged="OnPageChangedAsync"
-                                   Size="Size.Small" Class="adm-chars-pages" />
-                }
-            }
+                    @if (PageCount > 1)
+                    {
+                        <MudPagination Count="PageCount" Selected="_pageNumber" SelectedChanged="OnPageChangedAsync"
+                                       Size="Size.Small" Class="adm-chars-pages" />
+                    }
+                </ChildContent>
+            </LoadState>
         </div>
     </KitCard>
 </div>

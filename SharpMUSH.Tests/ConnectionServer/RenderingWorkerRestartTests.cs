@@ -29,7 +29,7 @@ public class RenderingWorkerRestartTests
 			// An ASCII client: the worker transcodes, so its answer is distinguishable from the input.
 			var capabilities = new ProtocolCapabilities(Charset: "ASCII");
 			var first = await renderer.TransformAsync(Encoding.UTF8.GetBytes("first café"), capabilities);
-			await Assert.That(Encoding.ASCII.GetString(first)).IsEqualTo("first caf?");
+			await Assert.That(Encoding.ASCII.GetString(first)).IsEqualTo("first cafe");
 			await worker.StopAsync(stopping.Token);
 			await worker.DisposeAsync();
 
@@ -40,7 +40,7 @@ public class RenderingWorkerRestartTests
 			worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 			await worker.StartAsync(stopping.Token);
 			var second = await pending.WaitAsync(stopping.Token);
-			await Assert.That(Encoding.ASCII.GetString(second)).IsEqualTo("second caf?");
+			await Assert.That(Encoding.ASCII.GetString(second)).IsEqualTo("second cafe");
 		}
 		finally
 		{

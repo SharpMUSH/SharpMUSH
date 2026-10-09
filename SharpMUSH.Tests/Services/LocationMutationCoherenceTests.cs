@@ -21,7 +21,7 @@ public class LocationMutationCoherenceTests
 	{
 		var store = Substitute.For<IObjectStore>();
 		var factory = new TestObjectFactory();
-		var target = factory.CreateThing(20, "Target").AsContent;
+		var target = factory.CreateThing(20, "Target").AsOptionalContent.Expect<AnySharpContent>();
 		var destination = new AnySharpContainer(factory.CreateRoom(21, "Room"));
 		var token = new CancellationToken(true);
 		store.SetContentLocation(target, destination, token).Returns(_ => ValueTask.FromCanceled(token));
@@ -38,7 +38,7 @@ public class LocationMutationCoherenceTests
 		var store = Factory.Services.GetRequiredService<IObjectStore>();
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		async Task<AnySharpContainer> Room(string name) => (await mediator.Send(new GetObjectNodeQuery(
-			await store.CreateRoomAsync(name + Guid.NewGuid().ToString("N"), god)))).Expect<AnySharpObject>().AsContainer;
+			await store.CreateRoomAsync(name + Guid.NewGuid().ToString("N"), god)))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var original = await Room("Old source");
 		var destination = await Room("New source");
 		var reference = await store.CreateExitAsync("Exit", [], original, god);

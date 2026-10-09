@@ -61,7 +61,7 @@ public class ConfigDbrefOptionTests
 	[Arguments("max_dbref", "#0")]
 	public async Task DbrefOptionCarriesItsHash(string option, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"config({option})")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"config({option})"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
@@ -70,8 +70,8 @@ public class ConfigDbrefOptionTests
 	[Test]
 	public async Task DbrefOptionFeedsDbrefFunctions()
 	{
-		var isDbref = (await Parser.FunctionParse(MarkupText.Plain("isdbref(config(master_room))")))?.Message!;
-		var name = (await Parser.FunctionParse(MarkupText.Plain("name(config(master_room))")))?.Message!;
+		var isDbref = await Parser.EvaluateAsync(MarkupText.Plain("isdbref(config(master_room))"));
+		var name = await Parser.EvaluateAsync(MarkupText.Plain("name(config(master_room))"));
 
 		await Assert.That(isDbref.ToPlainText()).IsEqualTo("1");
 		await Assert.That(name.ToPlainText()).IsNotEmpty();

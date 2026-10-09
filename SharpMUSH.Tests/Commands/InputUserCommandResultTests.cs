@@ -63,7 +63,7 @@ public class InputUserCommandResultTests
 		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command zone", god)))).Expect<AnySharpObject>();
 		if (scope == "zone") await mediator.Send(new SetObjectZoneCommand(room, zone));
 		if (scope == "personal") await mediator.Send(new SetObjectZoneCommand(actor, zone));
-		AnySharpContainer container = scope is "zone" or "personal" ? zone.AsContainer : scope == "global-contents" ? master.AsContainer : room;
+		AnySharpContainer container = scope is "zone" or "personal" ? zone.AsOptionalContainer.Expect<AnySharpContainer>() : scope == "global-contents" ? master.AsOptionalContainer.Expect<AnySharpContainer>() : room;
 		AnySharpObject host = scope == "location" ? room : scope == "global-room" ? master
 				: (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("input command host", container, actor, room)))).Expect<AnySharpObject>();
 		var suffix = Guid.NewGuid().ToString("N");

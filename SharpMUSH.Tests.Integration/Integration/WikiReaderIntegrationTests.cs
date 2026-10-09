@@ -60,7 +60,7 @@ public class WikiReaderIntegrationTests
 	private async Task<long> CreatePlayerAsync(string name)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 		{
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");

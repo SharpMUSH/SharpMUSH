@@ -2812,6 +2812,12 @@
   <data name="SocksetUnknownAnimationSetting" xml:space="preserve">
     <value>Unknown setting. Valid settings: 'on', 'off'.</value>
   </data>
+  <data name="SocksetCharsetSetFormat" xml:space="preserve">
+    <value>Charset set to '{0}'</value>
+  </data>
+  <data name="SocksetUnknownCharset" xml:space="preserve">
+    <value>Unknown charset. Valid settings: 'utf-8', 'latin-1', 'ascii', 'auto'.</value>
+  </data>
   <data name="SocksetTerminalSetFormat" xml:space="preserve">
     <value>Terminal set to '{0}'</value>
   </data>
@@ -2839,6 +2845,18 @@
   </data>
   <data name="InputSessionTimeoutRejected" xml:space="preserve">
     <value>Input session expired. Its timeout callback could not be queued.</value>
+  </data>
+  <data name="InputSessionRescued" xml:space="preserve">
+    <value>A staff member ended your input session.</value>
+  </data>
+  <data name="InputRescueUsage" xml:space="preserve">
+    <value>Usage: @input/rescue &lt;player&gt;</value>
+  </data>
+  <data name="InputRescueNoneFormat" xml:space="preserve">
+    <value>{0} has no open input session.</value>
+  </data>
+  <data name="InputRescuedFormat" xml:space="preserve">
+    <value>Ended {0}'s input session. Its timeout callback runs now.</value>
   </data>
   <data name="QueueControlSyntax" xml:space="preserve"><value>Use @queue/list [pid], @queue/pause pid=reason, or @queue/resume pid; add /owner or /object for a target batch.</value></data>
   <data name="QueueControlBadReason" xml:space="preserve"><value>Pause reasons must contain at most 160 characters and no control characters.</value></data>
@@ -2978,5 +2996,26 @@ PLAYERS:</value>
   </data>
   <data name="OwnerChanged" xml:space="preserve">
     <value>Owner changed.</value>
+  </data>
+  <data name="AsciiTranslationSetFormat" xml:space="preserve">
+    <value>{0} is sent to clients without Unicode as '{1}'.</value>
+  </data>
+  <data name="AsciiTranslationDroppedFormat" xml:space="preserve">
+    <value>{0} is left out for clients without Unicode.</value>
+  </data>
+  <data name="AsciiTranslationRemovedFormat" xml:space="preserve">
+    <value>{0} is sent as its built-in stand-in again.</value>
+  </data>
+  <data name="AsciiTranslationNotFoundFormat" xml:space="preserve">
+    <value>{0} has no translation.</value>
+  </data>
+  <data name="AsciiTranslationBadCharacterFormat" xml:space="preserve">
+    <value>'{0}' is not one character outside ASCII.</value>
+  </data>
+  <data name="AsciiTranslationBadText" xml:space="preserve">
+    <value>The text must be plain ASCII. Write a space as %b.</value>
+  </data>
+  <data name="AsciiTranslationUsage" xml:space="preserve">
+    <value>Usage: @ascii[/remove] &lt;character&gt;[=&lt;text&gt;]</value>
   </data>
 </root>

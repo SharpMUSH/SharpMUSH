@@ -1,0 +1,11 @@
+.sc-kind-badge {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 700;
+}

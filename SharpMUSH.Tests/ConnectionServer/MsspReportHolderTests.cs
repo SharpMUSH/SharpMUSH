@@ -43,6 +43,7 @@ public class MsspReportHolderTests
 	public async Task TheReportIsAskedForAgainUntilOneArrives()
 	{
 		var holder = new MsspReportHolder();
+		var settings = new OutputSettingsHolder();
 		var bus = Substitute.For<IMessageBus>();
 		var asked = 0;
 		bus.Publish(Arg.Any<MSSPReportRequestMessage>(), Arg.Any<CancellationToken>())
@@ -51,11 +52,12 @@ public class MsspReportHolderTests
 				if (Interlocked.Increment(ref asked) == 2)
 				{
 					holder.Replace([new MSSPVariable("NAME", ["Test Game"])]);
+					settings.Replace(new OutputSettingsMessage(new Dictionary<string, string> { ["·"] = "-" }));
 				}
 
 				return Task.CompletedTask;
 			});
-		using var service = new MsspReportRequestService(bus, holder, NullLogger<MsspReportRequestService>.Instance);
+		using var service = new MsspReportRequestService(bus, holder, settings, NullLogger<MsspReportRequestService>.Instance);
 
 		await service.StartAsync(CancellationToken.None);
 		await holder.Received.WaitAsync(TimeSpan.FromSeconds(10));
@@ -64,5 +66,34 @@ public class MsspReportHolderTests
 
 		await Assert.That(asked).IsEqualTo(2);
 		await Assert.That(holder.Current.Variables["NAME"]).IsEquivalentTo(new[] { "Test Game" });
+	}
+
+	/// <summary>
+	/// The settings and the report reach this server through consumers of their own, so the report arriving
+	/// first does not stop the asking while the settings are still missed.
+	/// </summary>
+	[Test]
+	public async Task TheSettingsAreAskedForUntilTheyArriveToo()
+	{
+		var holder = new MsspReportHolder();
+		var settings = new OutputSettingsHolder();
+		var bus = Substitute.For<IMessageBus>();
+		var asked = 0;
+		bus.Publish(Arg.Any<MSSPReportRequestMessage>(), Arg.Any<CancellationToken>())
+			.Returns(_ =>
+			{
+				var count = Interlocked.Increment(ref asked);
+				if (count == 1) holder.Replace([new MSSPVariable("NAME", ["Test Game"])]);
+				if (count == 2) settings.Replace(new OutputSettingsMessage(new Dictionary<string, string> { ["·"] = "-" }));
+				return Task.CompletedTask;
+			});
+		using var service = new MsspReportRequestService(bus, holder, settings, NullLogger<MsspReportRequestService>.Instance);
+
+		await service.StartAsync(CancellationToken.None);
+		await service.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(10));
+		await service.StopAsync(CancellationToken.None);
+
+		await Assert.That(asked).IsEqualTo(2);
+		await Assert.That(settings.AsciiTranslations["·"]).IsEqualTo("-");
 	}
 }

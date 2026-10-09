@@ -19,7 +19,7 @@ public class CallStateTests
 		var first = new CallState(MarkupText.Plain("Boo! "));
 		var second = new CallState(MarkupText.Plain("a"));
 
-		var concatenated = MarkupText.Concat(first.Message!, second.Message!);
+		var concatenated = MarkupText.Concat(first.Message, second.Message);
 
 		// The correct approach: new CallState keeps ParsedMessage consistent with Message.
 		var correct = new CallState(concatenated, first.Depth);
@@ -43,7 +43,7 @@ public class CallStateTests
 		var msg = MarkupText.Plain("hello world");
 		var state = new CallState(msg);
 
-		await Assert.That(state.Message?.ToPlainText()).IsEqualTo("hello world");
+		await Assert.That(state.Message.ToPlainText()).IsEqualTo("hello world");
 		var parsed = await state.ParsedMessage();
 		await Assert.That(parsed?.ToPlainText()).IsEqualTo("hello world");
 	}

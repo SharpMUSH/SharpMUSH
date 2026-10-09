@@ -51,7 +51,7 @@ public static class Program
 				? await renderer.RenderAsync(request.Markup, request.Context, request.Prompt, ct)
 				: new RenderedOutput(request.Data!, true);
 			var bytes = rendered.ApplyOutputTransform
-				? OutputTransformService.Transform(rendered.Data, request.Context.Capabilities)
+				? OutputTransformService.Transform(rendered.Data, request.Context.Capabilities, request.Context.AsciiTranslations)
 				: rendered.Data;
 			return Results.Bytes(bytes, "application/octet-stream");
 		});

@@ -160,7 +160,7 @@ public class GameCommandTests
 	{
 		var dug = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		return DBRef.Parse(dug.Message!.ToPlainText().Trim());
+		return DBRef.Parse(dug.Message.ToPlainText().Trim());
 	}
 
 	private async Task CommandAsAsync(TeachPlayer player, string command)

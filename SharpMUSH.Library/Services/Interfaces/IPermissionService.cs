@@ -61,6 +61,16 @@ public interface IPermissionService
 
 	ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);
 
+	/// <summary>
+	/// <see cref="CanViewAttribute(AnySharpObject, AnySharpObject, SharpAttribute[])"/> for one attribute of a
+	/// listing: what depends only on the viewer and the object is answered once per object through
+	/// <paramref name="memo"/>, which the listing creates and keeps for its own length.
+	/// </summary>
+	ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo, params SharpAttribute[] attribute);
+
+	/// <inheritdoc cref="CanViewAttribute(AnySharpObject, AnySharpObject, AttributeViewMemo, SharpAttribute[])"/>
+	ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo, params LazySharpAttribute[] attribute);
+
 	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params SharpAttribute[] attribute);
 
 	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);

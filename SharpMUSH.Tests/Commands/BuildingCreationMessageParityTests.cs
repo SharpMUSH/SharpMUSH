@@ -58,7 +58,7 @@ public class BuildingCreationMessageParityTests
 	{
 		var pre = WebAppFactoryArg.Notifications.CountFor(_builder.DbRef);
 		var result = await Parser.CommandParse(_builder.Handle, ConnectionService, MarkupText.Plain(command));
-		return (result?.Message?.ToPlainText() ?? string.Empty,
+		return (result?.Message.ToPlainText() ?? string.Empty,
 			[.. WebAppFactoryArg.Notifications.For(_builder.DbRef).Skip(pre)]);
 	}
 

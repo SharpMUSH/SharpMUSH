@@ -100,11 +100,11 @@ public class ChannelWhoEventHandler(
 		var cameOn = new List<string>();
 		var wentOff = new List<string>();
 
-		await foreach (var (viewer, _) in channel.Members.Value)
+		var playerMembers = channel.Members.Value.Where(entry => entry.Member.IsPlayer
+			&& !(excludeSubject && entry.Member.Object().DBRef.Number == subjectNumber));
+		await foreach (var (viewer, _) in playerMembers)
 		{
-			if (!viewer.IsPlayer
-				|| (excludeSubject && viewer.Object().DBRef.Number == subjectNumber)
-				|| !await connectionService.Get(viewer.Object().DBRef).AnyAsync())
+			if (!await connectionService.Get(viewer.Object().DBRef).AnyAsync())
 			{
 				continue;
 			}
@@ -123,13 +123,9 @@ public class ChannelWhoEventHandler(
 		var subjectObjid = subject.Object().DBRef.ToString();
 		var subjectName = subject.Object().Name;
 
-		foreach (var (viewers, state) in new[] { (cameOn, "on"), (wentOff, "off") })
+		var changes = new[] { (Viewers: cameOn, State: "on"), (Viewers: wentOff, State: "off") };
+		foreach (var (viewers, state) in changes.Where(change => change.Viewers.Count > 0))
 		{
-			if (viewers.Count == 0)
-			{
-				continue;
-			}
-
 			await eventService.TriggerEventAsync(SharpEvents.ChannelWho,
 				subject.Object().DBRef,
 				channelName,

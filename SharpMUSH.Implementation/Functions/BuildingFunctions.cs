@@ -37,7 +37,7 @@ public partial class Functions
 		if (result is DBRef player)
 		{
 			await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
-				args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(), player);
+				args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText(), player);
 		}
 
 		return result switch
@@ -61,8 +61,8 @@ public partial class Functions
 		}));
 
 		var trueLocation = location.Object()?.Key ?? -1;
-		var name = args["0"].Message!.ToPlainText();
-		var password = args["1"].Message!.ToPlainText();
+		var name = args["0"].Message.ToPlainText();
+		var password = args["1"].Message.ToPlainText();
 
 		if (await Mediator.CreateStream(new GetPlayerQuery(name))
 				.AnyAsync(x => x.Object.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
@@ -101,7 +101,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, RelationshipCycles, Configuration, ValidateService,
-			NotifyService, EventService, PermissionService, executor, args["0"].Message!,
+			NotifyService, EventService, PermissionService, executor, args["0"].Message,
 			args.TryGetValue("2", out var requestedDbref) ? requestedDbref.Message : null) switch
 		{
 			// PennMUSH fun_create hands do_create's dbref to safe_dbref, which writes #n and not an
@@ -123,7 +123,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await BuildingHelpers.DigAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService, EventService,
-			PermissionService, LockService, AttributeService, executor, args["0"].Message!,
+			PermissionService, LockService, AttributeService, executor, args["0"].Message,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
 			BuildingHelpers.Argument(args, "5")) switch
@@ -179,7 +179,7 @@ public partial class Functions
 	private async ValueTask<Result<DBRef>> OpenedExitAsync(AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? requestedDbref)
 		=> await BuildingHelpers.OpenExitAsync(Mediator, RelationshipCycles, Configuration, NotifyService,
-			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, requestedDbref) switch
+			PermissionService, LockService, executor, args["0"].Message, sourceRoom, requestedDbref) switch
 		{
 			DBRef exitDbRef => await LinkOpenedExitAsync(executor, args, exitDbRef),
 			Error<string> refused => refused
@@ -213,9 +213,9 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectName = args["0"].Message!.ToPlainText();
-		var destName = args["1"].Message!.ToPlainText();
-		var preserve = args.TryGetValue("2", out var preserveArg) && preserveArg.Message!.Truthy(parser);
+		var objectName = args["0"].Message.ToPlainText();
+		var destName = args["1"].Message.ToPlainText();
+		var preserve = args.TryGetValue("2", out var preserveArg) && preserveArg.Message.Truthy(parser);
 
 		return await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
 			LockService, AttributeService, FlagAndPowerService, ConnectionService, executor, objectName,
@@ -237,10 +237,10 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var preserve = args.TryGetValue("3", out var preserveArg) &&
-			preserveArg.Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
+			preserveArg.Message.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
+			executor, executor, args["0"].Message.ToPlainText(), LocateFlags.All,
 			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService,
 				PermissionService, LockService, AttributeService, FlagAndPowerService, DidItService,
 				EventService, Logger, executor, obj,
@@ -258,7 +258,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objAttr = args["0"].Message!.ToPlainText();
+		var objAttr = args["0"].Message.ToPlainText();
 
 		// wipe(<object>[/<attribute pattern>]) - the same argument @wipe takes, because
 		// PennMUSH's fun_wipe hands it straight to do_wipe (src/set.c). The pattern half is not
@@ -332,11 +332,11 @@ public partial class Functions
 
 		// fundb.c:2320-2323: argument 3 is TEL_SILENT and argument 4 is TEL_INSIDE, the /SILENT and
 		// /INSIDE switches under other names.
-		var silent = args.TryGetValue("2", out var silentArg) && silentArg.Message!.Truthy(parser);
-		var inside = args.TryGetValue("3", out var insideArg) && insideArg.Message!.Truthy(parser);
+		var silent = args.TryGetValue("2", out var silentArg) && silentArg.Message.Truthy(parser);
+		var inside = args.TryGetValue("3", out var insideArg) && insideArg.Message.Truthy(parser);
 
 		await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor,
-			args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(),
+			args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText(),
 			new TeleportOptions(List: false, Inside: inside, Silent: silent));
 
 		// fun_tel writes nothing to the buffer: every refusal is reported to the executor by

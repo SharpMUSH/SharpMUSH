@@ -48,7 +48,7 @@ public class JsonFunctionUnitTests
 	[Arguments("""json(object, foo, 1, bar, "baz", boing, true)""", """{"foo":1,"bar":"baz","boing":true}""")]
 	public async Task Json(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -79,8 +79,21 @@ public class JsonFunctionUnitTests
 	[Arguments("""json_array(iter(,json(string,%i0)))""", "[]")]
 	public async Task JsonArray(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task JsonMarkupString_KeepsTheMarkupThatJsonStringDrops()
+	{
+		var styled = (await Parser.FunctionParse(MarkupText.Plain("json(markupstring,ansi(hr,red) plain)")))?.Message.ToPlainText();
+		var plain = (await Parser.FunctionParse(MarkupText.Plain("json(string,ansi(hr,red) plain)")))?.Message.ToPlainText();
+
+		await Assert.That(plain).IsEqualTo("\"red plain\"");
+		using var document = System.Text.Json.JsonDocument.Parse(styled!);
+		var text = MarkupTextSerializer.Deserialize(document.RootElement.GetString()!);
+		await Assert.That(text.ToPlainText()).IsEqualTo("red plain");
+		await Assert.That(text.Render(MarkupFormat.Html)).Contains("<span").Because("the colour survives the round trip");
 	}
 
 	[Test]
@@ -88,7 +101,7 @@ public class JsonFunctionUnitTests
 	[Arguments("json(object,key,json(string,ansi(hr,foo)))")]
 	public async Task JsonNotABadArgument(string function)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
 		await Assert.That(result.ToString()).IsNotEqualTo("#-1 BAD ARGUMENT FORMAT TO json");
 	}
 
@@ -99,22 +112,19 @@ public class JsonFunctionUnitTests
 	{
 		const string expr = "json(array,json(number,1),json(number,2),json(number,3),json(number,4),"
 			+ "json(number,5),json(number,6),json(number,7),json(number,8),json(number,9),json(number,10))";
-		var result = (await Parser.FunctionParse(MarkupText.Plain(expr)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(expr)))?.Message.ToString();
 		await Assert.That(result).IsEqualTo("[1,2,3,4,5,6,7,8,9,10]");
 	}
 
-	// Regression: the seeded GET`PROFILE`SCHEMA softcode's json() payload must evaluate to valid
-	// JSON. (Field objects carry many args, exercising the ≥10-arg ordering path.) The seeded
-	// attribute is a command list — "@respond/type …; think json(…)" — so this evaluates the
-	// think payload as a function expression.
+	// The seeded GET`PROFILE`SCHEMA route answers with DATA`PROFILE`SCHEMA, the schema stored as JSON,
+	// so the stored value must be a valid Portal Schema Document.
 	[Test]
-	public async Task SeededProfileSchema_EvaluatesToValidJson()
+	public async Task SeededProfileSchema_IsValidJson()
 	{
-		var code = SharpMUSH.Server.Services.BundledHttpHooks.Attribute("GET`PROFILE`SCHEMA");
-		var jsonExpression = code[(code.IndexOf("think ", StringComparison.Ordinal) + "think ".Length)..];
-		var result = (await Parser.FunctionParse(MarkupText.Plain(jsonExpression)))?.Message?.ToString() ?? string.Empty;
+		await Assert.That(SharpMUSH.Server.Services.BundledHttpHooks.Attribute("GET`PROFILE`SCHEMA"))
+			.EndsWith("think v(DATA`PROFILE`SCHEMA)");
+		var result = SharpMUSH.Server.Services.BundledHttpHooks.Attribute("DATA`PROFILE`SCHEMA");
 
-		await Assert.That(result).DoesNotContain("#-1");
 		using var doc = System.Text.Json.JsonDocument.Parse(result);
 		// Area 21: the profile schema is a kind:"view" Portal Schema Document.
 		await Assert.That(doc.RootElement.GetProperty("kind").GetString()).IsEqualTo("view");
@@ -142,7 +152,7 @@ public class JsonFunctionUnitTests
 	[Arguments("""isjson(json(string,{bad json}))""", "1")]
 	public async Task Test_IsJson_ValidatesJsonCorrectly(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -150,7 +160,7 @@ public class JsonFunctionUnitTests
 	[Arguments(@"json_map(#lambda/ucstr\(%%2\):%%1,json(object,a,1,b,2))", "A:1 B:2")]
 	public async Task JsonMap(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -166,7 +176,7 @@ public class JsonFunctionUnitTests
 	[Arguments("json_query(foo, type)", "#-1 BAD ARGUMENT FORMAT TO json_query")]
 	public async Task JsonQueryType(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -181,7 +191,7 @@ public class JsonFunctionUnitTests
 	[Arguments("json_query(json(array, 1, 2), size)", "2")]
 	public async Task JsonQuerySize(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -194,7 +204,7 @@ public class JsonFunctionUnitTests
 	[Arguments("""json_mod(json(object,a,json(object,x,1,y,2),b,3), patch, json(object,a,json(object,y,9),c,8))""", """{"a":{"x":1,"y":9},"b":3,"c":8}""")]
 	public async Task JsonModPatch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -206,7 +216,7 @@ public class JsonFunctionUnitTests
 	[Arguments("""json_mod(json(array, "e","m","a","z"), sort, $)""", """["a","e","m","z"]""")]
 	public async Task JsonModSort(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -215,7 +225,7 @@ public class JsonFunctionUnitTests
 	[Arguments(@"json_query(\{\}, size)", "0")]
 	public async Task JsonQuerySizeObject(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -225,7 +235,7 @@ public class JsonFunctionUnitTests
 	[Arguments("""json(object, foo, 1, bar, "baz", boing, json(array, "nested", "test", 1))""", """{"foo":1,"bar":"baz","boing":["nested","test",1]}""")]
 	public async Task JsonNested(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -234,7 +244,7 @@ public class JsonFunctionUnitTests
 	[Arguments(@"json(string, foo\\bar\\baz)", @"""foo\\bar\\baz""")]
 	public async Task JsonStringBackslash(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -244,59 +254,59 @@ public class JsonFunctionUnitTests
 	public async Task JsonQueryWithJsonObject()
 	{
 		// json.type.7: object type
-		var typeResult = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), type)")))?.Message!;
+		var typeResult = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), type)"));
 		await Assert.That(typeResult.ToPlainText()).IsEqualTo("object");
 
 		// json.size.9: 3 keys
-		var sizeResult = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), size)")))?.Message!;
+		var sizeResult = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), size)"));
 		await Assert.That(sizeResult.ToPlainText()).IsEqualTo("3");
 
 		// json.exists.1: key 'a' exists → 1
-		var exists1 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, a)")))?.Message!;
+		var exists1 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, a)"));
 		await Assert.That(exists1.ToPlainText()).IsEqualTo("1");
 
 		// json.exists.2: key 'd' not found → 0
-		var exists2 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, d)")))?.Message!;
+		var exists2 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, d)"));
 		await Assert.That(exists2.ToPlainText()).IsEqualTo("0");
 
 		// json.exists.3: c[1] exists → 1
-		var exists3 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, c, 1)")))?.Message!;
+		var exists3 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, c, 1)"));
 		await Assert.That(exists3.ToPlainText()).IsEqualTo("1");
 
 		// json.exists.4: c[3] out-of-bounds → 0
-		var exists4 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, c, 3)")))?.Message!;
+		var exists4 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), exists, c, 3)"));
 		await Assert.That(exists4.ToPlainText()).IsEqualTo("0");
 
 		// json.get.1: get 'a' → 1
-		var get1 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, a)")))?.Message!;
+		var get1 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, a)"));
 		await Assert.That(get1.ToPlainText()).IsEqualTo("1");
 
 		// json.get.2: get 'd' (missing) → empty
-		var get2 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, d)")))?.Message!;
+		var get2 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, d)"));
 		await Assert.That(get2.ToPlainText()).IsEqualTo(string.Empty);
 
 		// json.get.3: get c[1] → 2
-		var get3 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, c, 1)")))?.Message!;
+		var get3 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, c, 1)"));
 		await Assert.That(get3.ToPlainText()).IsEqualTo("2");
 
 		// json.get.4: get c[3] (out-of-bounds) → empty
-		var get4 = (await Parser.FunctionParse(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, c, 3)")))?.Message!;
+		var get4 = await Parser.EvaluateAsync(MarkupText.Plain("json_query(json(object,a,1,b,2,c,json(array,1,2,3)), get, c, 3)"));
 		await Assert.That(get4.ToPlainText()).IsEqualTo(string.Empty);
 
 		// json.extract.1: $.a → 1
-		var ext1 = (await Parser.FunctionParse(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.a)")))?.Message!;
+		var ext1 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.a)"));
 		await Assert.That(ext1.ToPlainText()).IsEqualTo("1");
 
 		// json.extract.2: $.d (missing) → empty
-		var ext2 = (await Parser.FunctionParse(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.d)")))?.Message!;
+		var ext2 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.d)"));
 		await Assert.That(ext2.ToPlainText()).IsEqualTo(string.Empty);
 
 		// json.extract.3: $.c[1] → 2 (must escape brackets in MUSH)
-		var ext3 = (await Parser.FunctionParse(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.c\[1\])")))?.Message!;
+		var ext3 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.c\[1\])"));
 		await Assert.That(ext3.ToPlainText()).IsEqualTo("2");
 
 		// json.extract.4: $.c[3] (out-of-bounds) → empty
-		var ext4 = (await Parser.FunctionParse(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.c\[3\])")))?.Message!;
+		var ext4 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_query(json(object,a,1,b,2,c,json(array,1,2,3)), extract, $.c\[3\])"));
 		await Assert.That(ext4.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
@@ -309,7 +319,7 @@ public class JsonFunctionUnitTests
 	[Arguments("json_query(foo, extract, $.a)", "#-1 BAD ARGUMENT FORMAT TO json_query")]
 	public async Task JsonQueryScalarErrors(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -318,7 +328,7 @@ public class JsonFunctionUnitTests
 	[Arguments("""json_query("foo", extract, $)""", "foo")]
 	public async Task JsonExtractRoot(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -328,35 +338,35 @@ public class JsonFunctionUnitTests
 	public async Task JsonModOperations()
 	{
 		// json.set.1: set $.c to 3 (replaces existing) → result contains "c":3
-		var set1 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), set, $.c, 3)")))?.Message!;
+		var set1 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), set, $.c, 3)"));
 		await Assert.That(set1.ToPlainText()).Contains("\"c\":3");
 
 		// json.set.2: set $.d to 3 (new key) → result contains "d":3
-		var set2 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), set, $.d, 3)")))?.Message!;
+		var set2 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), set, $.d, 3)"));
 		await Assert.That(set2.ToPlainText()).Contains("\"d\":3");
 
 		// json.insert.1: insert $.b = 3 (key exists, unchanged) → result contains "b":2
-		var ins1 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), insert, $.b, 3)")))?.Message!;
+		var ins1 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), insert, $.b, 3)"));
 		await Assert.That(ins1.ToPlainText()).Contains("\"b\":2");
 
 		// json.insert.2: insert $.d = 3 (new key) → result contains "d":3
-		var ins2 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), insert, $.d, 3)")))?.Message!;
+		var ins2 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), insert, $.d, 3)"));
 		await Assert.That(ins2.ToPlainText()).Contains("\"d\":3");
 
 		// json.replace.1: replace $.b = 3 (key exists) → result contains "b":3
-		var rep1 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), replace, $.b, 3)")))?.Message!;
+		var rep1 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), replace, $.b, 3)"));
 		await Assert.That(rep1.ToPlainText()).Contains("\"b\":3");
 
 		// json.replace.2: replace $.d = 3 (key absent) → "d":3 should NOT appear
-		var rep2 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), replace, $.d, 3)")))?.Message!;
+		var rep2 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), replace, $.d, 3)"));
 		await Assert.That(rep2.ToPlainText()).DoesNotContain("\"d\":3");
 
 		// json.remove.1: remove $.c → result is {"a":1,"b":2}
-		var rem1 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), remove, $.c)")))?.Message!;
+		var rem1 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), remove, $.c)"));
 		await Assert.That(rem1.ToPlainText()).IsEqualTo(@"{""a"":1,""b"":2}");
 
 		// json.remove.2: remove $.d (absent) → result unchanged {"a":1,"b":2,"c":[1,2,3]}
-		var rem2 = (await Parser.FunctionParse(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), remove, $.d)")))?.Message!;
+		var rem2 = await Parser.EvaluateAsync(MarkupText.Plain(@"json_mod(json(object,a,1,b,2,c,json(array,1,2,3)), remove, $.d)"));
 		await Assert.That(rem2.ToPlainText()).IsEqualTo(@"{""a"":1,""b"":2,""c"":[1,2,3]}");
 	}
 
@@ -367,7 +377,7 @@ public class JsonFunctionUnitTests
 		var attrName = $"JSONMAP_{Guid.NewGuid():N}";
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attrName} {objDbRef}=%0:%1"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"json_map({objDbRef}/{attrName},lit(\"test_json_map_string\"))")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"json_map({objDbRef}/{attrName},lit(\"test_json_map_string\"))"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("string:\"test_json_map_string\"");
 	}
 
@@ -378,7 +388,7 @@ public class JsonFunctionUnitTests
 		var attrName = $"JSONMAP_{Guid.NewGuid():N}";
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attrName} {objDbRef}=%0:%1:%2"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($@"json_map({objDbRef}/{attrName},\[1\,2\,3\])")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($@"json_map({objDbRef}/{attrName},\[1\,2\,3\])"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("number:1:0 number:2:1 number:3:2");
 	}
 
@@ -400,9 +410,55 @@ public class JsonFunctionUnitTests
 		// For scalars (a=1, b=2): json_map(obj/json4_fn, 1, @) → json4_fn gets type=number, value=1 → "1"
 		// For array (c=[1,2,3]): json_map(obj/json4_fn, [1,2,3], @) → maps each element → "1@2@3"
 		// Overall with # separator: "1#2#1@2@3"
-		var result = (await Parser.FunctionParse(MarkupText.Plain(
-			$@"json_map({objDbRef}/{attr3}, json(object,a,1,b,2,c,json(array,1,2,3)), #)")))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			$@"json_map({objDbRef}/{attr3}, json(object,a,1,b,2,c,json(array,1,2,3)), #)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("1#2#1@2@3");
+	}
+
+	[Test]
+	[Arguments("json_fill(json(object,title,json(string,)),/title,Zoë <3)", """{"title":"Zoë <3"}""")]
+	[Arguments("json_fill(json(object,pages,json(array,json(object,title,json(string,x)))),/pages/0/title,Hello)", """{"pages":[{"title":"Hello"}]}""")]
+	[Arguments("json_fill(json(object,a,json(string,),b,json(string,)),/a,one,/b,two)", """{"a":"one","b":"two"}""")]
+	[Arguments(@"json_fill(json(object,t,json(string,)),/t,Hello\, there)", """{"t":"Hello, there"}""")]
+	[Arguments("json_fill(json(object,t,json(string,)),/t,ansi(hr,red))", """{"t":"red"}""")]
+	[Arguments("json_fill(json(object,a/b,json(string,)),/a~1b,x)", """{"a/b":"x"}""")]
+	[Arguments("json_fill(json(object,n,json(number,0)),/n,42)", """{"n":42}""")]
+	[Arguments("json_fill(json(object,n,json(number,0)),/n,abc)", "#-1 VALUE FOR /n MUST BE A NUMBER")]
+	[Arguments("json_fill(json(object,b,json(boolean,false)),/b,1)", """{"b":true}""")]
+	[Arguments("json_fill(json(object,b,json(boolean,true)),/b,yes)", "#-1 VALUE FOR /b MUST BE A BOOLEAN")]
+	[Arguments("json_fill(json(object,o,json(null)),/o,json(array,1,2))", """{"o":[1,2]}""")]
+	[Arguments("json_fill(json(object,o,json_array()),/o,plain words)", "#-1 VALUE FOR /o MUST BE JSON")]
+	[Arguments("json_fill(json(object,a,1),/nope,x)", "#-1 PATH NOT FOUND: /nope")]
+	[Arguments("json_fill(json(object,a,1),a,x)", "#-1 PATH NOT FOUND: a")]
+	[Arguments("json_fill(json(array,1,2),/5,3)", "#-1 PATH NOT FOUND: /5")]
+	[Arguments("json_fill(json(string,old),,new)", "\"new\"")]
+	[Arguments("json_fill(json(object,a,1),,json(array,1))", "[1]")]
+	[Arguments("json_fill(json(object,a,1),,json(array,1),/0,2)", "[2]")]
+	[Arguments("json_fill(not json,/a,x)", "#-1 BAD ARGUMENT FORMAT TO json_fill")]
+	[Arguments("""json_fill(lit({"a":"","b":[0]}),/a,x,/b/0,7)""", """{"a":"x","b":[7]}""")]
+	public async Task JsonFill(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task JsonFillFillsAStoredTemplate()
+	{
+		var attribute = TestIsolationHelpers.GenerateUniqueName("SCHEMA").ToUpperInvariant();
+		await WebAppFactoryArg.CommandParser.CommandParse(MarkupText.Plain(
+			$$"""&{{attribute}} me={"title":"","pages":[{"title":"","order":0}],"open":false}"""));
+
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			$"json_fill(v({attribute}),/title,Hello %n,/pages/0/title,First,/pages/0/order,1,/open,1)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("""{"title":"Hello God","pages":[{"title":"First","order":1}],"open":true}""");
+	}
+
+	[Test]
+	public async Task JsonFillTakesPointerValuePairs()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("json_fill(json(object,a,1),/a,2,/a)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo(string.Format(ErrorMessages.Returns.GotEvenArgs, "JSON_FILL"));
 	}
 
 	[Test]
@@ -415,7 +471,7 @@ public class JsonFunctionUnitTests
 		// This test requires proper GMCP connection setup
 		// TODO: Implement connection mocking in test infrastructure
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 }

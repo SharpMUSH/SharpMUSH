@@ -62,7 +62,6 @@ public static class BundledPackages
 		new("room-contents", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		// The Play sidebar's Channels and Pages, as room-contents is its Here and Exits.
 		new("comm-feed", BundledPackageHandler.Event, InstallAtFirstBoot: true),
-		new("common-functions", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// +help before its contributors: scene and wiki-reader attach their SRC registration to the
 		// librarian, so it has to exist first. The stock helpfiles already promise players a +help,
 		// which is why this installs at first boot rather than shipping available-and-unenabled.
@@ -83,6 +82,11 @@ public static class BundledPackages
 		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins radio and scene, so +radio/log puts a frequency into a scene.
 		new("radio-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
+		// game that already runs its own board code should not find them taken after an upgrade. Its
+		// portal page is a separate application package, as jobs-app is for jobs.
+		new("bboards", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

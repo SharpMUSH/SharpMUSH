@@ -52,7 +52,7 @@ public class ExamineSyntaxFormattingTests
 	{
 		var result = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService,
 			TestIsolationHelpers.GenerateUniqueName(prefix), _player.Handle);
-		return DBRef.Parse(result.Message!.ToPlainText());
+		return DBRef.Parse(result.Message.ToPlainText());
 	}
 
 	private int _notificationOffset;

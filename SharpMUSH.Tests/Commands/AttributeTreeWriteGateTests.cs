@@ -55,7 +55,7 @@ public class AttributeTreeWriteGateTests
 	private async Task<string> Eval(long handle, string expression)
 	{
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return result?.Message?.ToPlainText() ?? string.Empty;
+		return result?.Message.ToPlainText() ?? string.Empty;
 	}
 
 	/// <summary>
@@ -64,7 +64,7 @@ public class AttributeTreeWriteGateTests
 	/// never created reads as the empty string.
 	/// </summary>
 	private async Task<string> GodGet(DBRef who, string attribute)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"[get(#{who.Number}/{attribute})]")))!.Message!.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain($"[get(#{who.Number}/{attribute})]"))).ToPlainText();
 
 	/// <summary>
 	/// Penn's <c>Cannot_Write_This_Attr</c> applies to EVERY ancestor node
@@ -103,7 +103,7 @@ public class AttributeTreeWriteGateTests
 
 		var attempt = await Parser.CommandParse(owner.Handle, ConnectionService,
 			MarkupText.Plain($"@set me=WSB{uid}`LEAF:changed"));
-		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
+		await Assert.That(attempt.Message.ToPlainText()).Contains("NO PERMISSION")
 			.Because("AF_SAFE on the branch must block writes to its leaf, even for the wizard owner");
 	}
 
@@ -137,7 +137,7 @@ public class AttributeTreeWriteGateTests
 
 		var attempt = await Parser.CommandParse(owner.Handle, ConnectionService,
 			MarkupText.Plain($"@set me=WSA{uid}:changed"));
-		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
+		await Assert.That(attempt.Message.ToPlainText()).Contains("NO PERMISSION")
 			.Because("AF_SAFE blocks writes for everyone but God - a wizard owner must not be able to overwrite it");
 	}
 
@@ -173,7 +173,7 @@ public class AttributeTreeWriteGateTests
 
 		var wizardAttempt = await Parser.CommandParse(owner.Handle, ConnectionService,
 			MarkupText.Plain($"@set me=WND{uid}`LEAF:leafvalue"));
-		await Assert.That(wizardAttempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
+		await Assert.That(wizardAttempt.Message.ToPlainText()).Contains("NO PERMISSION")
 			.Because("only God may create a leaf under a nodump branch - a wizard owner must be denied");
 
 		// God (dbref #1 in the seeded database) creating the same leaf must succeed.

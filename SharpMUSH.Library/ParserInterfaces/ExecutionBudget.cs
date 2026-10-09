@@ -47,6 +47,15 @@ public sealed class ExecutionBudget : IDisposable
 		if (IsExpired) throw new OperationCanceledException(Error, Token);
 		Token.ThrowIfCancellationRequested();
 	}
+	/// <summary><see cref="ThrowIfExceeded"/>, answering what is left of the budget: one clock read for
+	/// both, for a loop that checks every row.</summary>
+	public TimeSpan RemainingOrThrow()
+	{
+		var remaining = Remaining;
+		if (_deadline.IsCancellationRequested || remaining == TimeSpan.Zero) throw new OperationCanceledException(Error, Token);
+		Token.ThrowIfCancellationRequested();
+		return remaining;
+	}
 	public IDisposable Enter()
 	{
 		var previous = Ambient.Value;

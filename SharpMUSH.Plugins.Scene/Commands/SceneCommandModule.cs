@@ -33,7 +33,7 @@ public static class SceneCommandModule
 		[
 			"LIST", "GET", "CREATE", "SET", "ADDPOSE", "SETPOSE", "EDITPOSE", "UNDO", "REDO",
 			"MOVE", "DELETE", "MEMBER", "UNMEMBER", "FOCUS", "SHOWAS", "PLOT", "LINK", "UNLINK",
-			"NOEVAL"
+			"TYPES", "NOEVAL"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["target", "content"])]
@@ -79,7 +79,7 @@ public static class SceneCommandModule
 		var action = actions.FirstOrDefault(s =>
 			s is "LIST" or "GET" or "SET" or "ADDPOSE" or "SETPOSE" or "EDITPOSE"
 				or "UNDO" or "REDO" or "MOVE" or "DELETE" or "MEMBER" or "UNMEMBER"
-				or "FOCUS" or "SHOWAS" or "PLOT"
+				or "FOCUS" or "SHOWAS" or "PLOT" or "TYPES"
 				|| (s == "CREATE" && !isPlot));
 
 		var hasArg0 = (arg0?.Length ?? 0) != 0;
@@ -120,6 +120,7 @@ public static class SceneCommandModule
 				=> await SceneMemberHandlers.ShowAs(parser, sceneService, notifyService, executor, arg0!, arg1 ?? MarkupText.Empty),
 			"PLOT" when hasArg0
 				=> await ScenePlotHandlers.Plot(parser, sceneService, notifyService, executor, plotSub, arg0!, arg1),
+			"TYPES" => await SceneTypesRead.Types(parser, notifyService, executor),
 			null when hasArg0
 				=> await SceneRead.Display(parser, sceneService, notifyService, executor, arg0!),
 			_ => MarkupText.Plain(SceneCommandHelper.BadArguments),

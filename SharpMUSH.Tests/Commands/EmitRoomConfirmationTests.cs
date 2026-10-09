@@ -50,7 +50,7 @@ public class EmitRoomConfirmationTests
 	{
 		var actor = await Player();
 		var witness = await Player();
-		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText().Trim());
+		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message.ToPlainText().Trim());
 		var container = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "RoomEchoContainer");
 		await Admin($"@tel {container}={room}");
 		await Admin($"@tel {actor.DbRef}={container}");
@@ -66,7 +66,7 @@ public class EmitRoomConfirmationTests
 		var body = $"room_echo_{Guid.NewGuid():N}";
 		var result = await parser.CommandParse(actor.Handle, Connections, MarkupText.Plain($"@{command}/room{modifier} {body}"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(body);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(body);
 		await Assert.That(result.HadErrors).IsFalse();
 		await notifications.Received().Notify(TestHelpers.MatchingObject(witness.DbRef), TestHelpers.MatchingMessage(body),
 			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.Emit);

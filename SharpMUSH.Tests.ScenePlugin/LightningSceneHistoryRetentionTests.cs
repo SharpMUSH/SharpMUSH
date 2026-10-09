@@ -76,7 +76,7 @@ public class LightningSceneHistoryRetentionTests
 	private async Task<(string Scene, string Pose)> PoseWithVersionsAsync(int versions, string? sceneId = null)
 	{
 		sceneId ??= (await _scenes.CreateSceneAsync("", "#1", "History")).Id;
-		var pose = Expect<ScenePose>(await _scenes.AddPoseAsync(sceneId, "#1", "", "", "pose", [], "v1"));
+		var pose = Expect<ScenePose>(await _scenes.AddPoseAsync(sceneId, "#1", "", "", "ic", "pose", [], "v1"));
 		for (var n = 2; n <= versions; n++)
 		{
 			Expect<ScenePose>(await _scenes.EditPoseAsync(pose.Id, "#1", $"v{n}"));

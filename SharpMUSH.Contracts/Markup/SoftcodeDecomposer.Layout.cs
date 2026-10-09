@@ -102,6 +102,8 @@ public static partial class SoftcodeDecomposer
 		if (border is not null) options.Border(border);
 		if (frame.TitleAlignment != Alignment.Center) options.Text("title", Name(frame.TitleAlignment));
 		if (frame.Padding != 1) options.Number("pad", frame.Padding);
+		options.Titles("titles", frame.Titles);
+		options.Titles("bottomtitles", frame.BottomTitles);
 		options.Theme(theme);
 		return Call("box", Child(frame.Body), Text(frame.Title), Width(width), options.Write());
 	}
@@ -112,6 +114,7 @@ public static partial class SoftcodeDecomposer
 		var border = rule.Border ?? ThemeBorder(theme);
 		if (border is not null) options.Border(border);
 		if (rule.TitleAlignment != Alignment.Center) options.Text("title", Name(rule.TitleAlignment));
+		options.Titles("titles", rule.Titles);
 		options.Theme(theme);
 		return Call("rule", Text(rule.Title), Width(width), options.Write());
 	}
@@ -419,6 +422,21 @@ public static partial class SoftcodeDecomposer
 		public void Number(string key, int value) => _members.Add((key, MarkupText.Plain(value.ToString(CultureInfo.InvariantCulture))));
 
 		public void Flag(string key) => _members.Add((key, MarkupText.Plain("true")));
+
+		/// <summary>An array of titles, each its text, side and priority as far as they differ from a middle title's; nothing when there are none.</summary>
+		public void Titles(string key, ImmutableArray<EdgeTitle> titles)
+		{
+			if (titles.IsDefaultOrEmpty) return;
+			var items = titles.Select(title =>
+			{
+				var parts = new List<MarkupText> { MarkupText.Plain("{\"text\":"), JsonString(title.Text) };
+				if (title.Side is Alignment.Left or Alignment.Right) parts.Add(MarkupText.Plain($",\"side\":\"{Name(title.Side)}\""));
+				if (title.Priority is { } priority) parts.Add(MarkupText.Plain($",\"priority\":{priority.ToString(CultureInfo.InvariantCulture)}"));
+				parts.Add(MarkupText.Plain("}"));
+				return MarkupText.Concat(parts);
+			});
+			_members.Add((key, MarkupText.Concat([MarkupText.Plain("["), MarkupText.Join(MarkupText.Plain(","), items), MarkupText.Plain("]")])));
+		}
 
 		/// <summary><c>border</c>, a preset, and each piece that differs from it.</summary>
 		public void Border(BorderStyle border)

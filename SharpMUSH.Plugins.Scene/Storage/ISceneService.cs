@@ -72,7 +72,7 @@ public interface ISceneService
 	/// <c>NotFound</c> if the scene is missing; <c>Error</c> on invalid input.
 	/// </summary>
 	Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref,
-		string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content);
+		string showAs, string originDbref, string type, string source, IReadOnlyList<string> tags, string content);
 
 	/// <summary>Returns a pose by its (globally-unique) id, or <c>NotFound</c>.</summary>
 	Task<Found<ScenePose>> GetPoseAsync(string poseId);

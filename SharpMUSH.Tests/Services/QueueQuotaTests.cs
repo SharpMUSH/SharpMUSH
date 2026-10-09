@@ -74,8 +74,8 @@ public class QueueQuotaTests
 
 		// Assert the clear took. Without this, hasflag(runaway,HALT) at the end of the test has two
 		// possible authors — the quota and @chown — and the test passes on either.
-		var startsUnhalted = await GodParser.FunctionParse(MarkupText.Plain($"[hasflag({thing},HALT)]"));
-		await Assert.That(startsUnhalted!.Message!.ToPlainText().Trim()).IsEqualTo("0")
+		var startsUnhalted = await GodParser.EvaluateAsync(MarkupText.Plain($"[hasflag({thing},HALT)]"));
+		await Assert.That(startsUnhalted.ToPlainText().Trim()).IsEqualTo("0")
 			.Because("the runaway has to start able to run, or the HALT the test asserts on is @chown's");
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ADESCRIBE {thing}=look me;look me"));
@@ -132,7 +132,7 @@ public class QueueQuotaTests
 
 		var halted = await GodParser.FunctionParse(MarkupText.Plain($"[hasflag({runaway},HALT)]"));
 
-		await Assert.That(halted!.Message!.ToPlainText().Trim()).IsEqualTo("1")
+		await Assert.That(halted!.Message.ToPlainText().Trim()).IsEqualTo("1")
 			.Because("an object that outruns its owner's queue quota is halted, as pay_queue does");
 	}
 
@@ -151,9 +151,9 @@ public class QueueQuotaTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"look {witness}"));
 		await Scheduler.DrainImmediateQueueForTests(DrainTimeout);
 
-		var mark = await GodParser.FunctionParse(MarkupText.Plain($"[get({witness}/MARK)]"));
+		var mark = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({witness}/MARK)]"));
 
-		await Assert.That(mark!.Message!.ToPlainText().Trim()).IsEqualTo("set");
+		await Assert.That(mark.ToPlainText().Trim()).IsEqualTo("set");
 	}
 
 	/// <summary>
@@ -220,11 +220,11 @@ public class QueueQuotaTests
 		await Scheduler.DrainImmediateQueueForTests(DrainTimeout);
 
 		var halted = await GodParser.FunctionParse(MarkupText.Plain($"[hasflag({player.DbRef},HALT)]"));
-		await Assert.That(halted!.Message!.ToPlainText().Trim()).IsEqualTo("0")
+		await Assert.That(halted!.Message.ToPlainText().Trim()).IsEqualTo("0")
 			.Because("a player is never the runaway, and the flag would leave them unable to act");
 
 		var ran = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/TYPED)]"));
-		await Assert.That(ran!.Message!.ToPlainText().Trim()).IsEqualTo("ran")
+		await Assert.That(ran!.Message.ToPlainText().Trim()).IsEqualTo("ran")
 			.Because("direct input is admitted whatever the owner's pending count is");
 	}
 
@@ -287,8 +287,8 @@ public class QueueQuotaTests
 
 		await Scheduler.DrainImmediateQueueForTests(DrainTimeout);
 
-		var woke = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/WOKE)]"));
-		await Assert.That(woke!.Message!.ToPlainText().Trim()).IsEqualTo("yes")
+		var woke = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({thing}/WOKE)]"));
+		await Assert.That(woke.ToPlainText().Trim()).IsEqualTo("yes")
 			.Because("charging the work must not stop it running");
 	}
 

@@ -27,9 +27,9 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var input = args["0"].Message!.ToPlainText();
-		var fromBaseStr = args["1"].Message!.ToPlainText();
-		var toBaseStr = args["2"].Message!.ToPlainText();
+		var input = args["0"].Message.ToPlainText();
+		var fromBaseStr = args["1"].Message.ToPlainText();
+		var toBaseStr = args["2"].Message.ToPlainText();
 
 		if (!numbers.TryInt32(fromBaseStr, out var fromBase))
 		{

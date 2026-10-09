@@ -222,8 +222,10 @@ public class LocateService(
 		var playerAmbiguous = false;
 
 		// match.c: loc = where for a room, Source(where) for an exit — the room it sits in, not where it
-		// leads — and Location(where) otherwise. FriendlyWhereIs is all three.
-		var location = await FriendlyWhereIs(looker);
+		// leads — and Location(where) otherwise. FriendlyWhereIs is all three. Read only when a scope
+		// needs it: a "#dbref" or "me" match, the common case in softcode, answers without it.
+		AnySharpContainer? location = null;
+		async ValueTask<AnySharpContainer> Location() => location ??= await FriendlyWhereIs(looker);
 
 		// MATCH_CONTENTS: under MAT_CONTENTS a candidate has to be in the looker's own contents.
 		async ValueTask<bool> InLookerContents(AnySharpObject candidate)
@@ -252,13 +254,14 @@ public class LocateService(
 				&& flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
 				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
 				&& name.Equals("here", StringComparison.OrdinalIgnoreCase)
-				&& TypeAllows(preferred, flags, TypeOf(location.WithExitOption()))
-				&& await permissionService.CanInteract(executor, location.WithExitOption(), MatchInteraction(flags)))
+				&& await Location() is var here
+				&& TypeAllows(preferred, flags, TypeOf(here.WithExitOption()))
+				&& await permissionService.CanInteract(executor, here.WithExitOption(), MatchInteraction(flags)))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(executor, location.WithExitOption()))
+					|| await permissionService.Controls(executor, here.WithExitOption()))
 			{
-				return (location.WithExitOption().WithNoneOption().WithErrorOption(), noControl);
+				return (here.WithExitOption().WithNoneOption().WithErrorOption(), noControl);
 			}
 
 			noControl = true;
@@ -338,7 +341,7 @@ public class LocateService(
 		}
 
 		var state = new MatchState(flags, absolute, final) { NoControl = noControl };
-		await MatchList(state, Candidates(looker, location, state), executor, name);
+		await MatchList(state, Candidates(looker, await Location(), state), executor, name);
 
 		// match.c: a `final` search that never reached the Nth item leaves bestmatch NOTHING, and
 		// ambiguity is only ever considered for a non-ordinal search that matched more than once.
@@ -501,9 +504,10 @@ public class LocateService(
 		var walksExits = TypeAllows(state.Preferred, flags, SharpObjectTypes.Exit);
 
 		// MAT_POSSESSION — the looker's own contents.
-		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && looker.IsContainer)
+		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
+				&& looker.AsOptionalContainer is AnySharpContainer carrier)
 		{
-			foreach (var candidate in ContentsOf(await reader.Of(looker.AsContainer))) yield return candidate;
+			foreach (var candidate in ContentsOf(await reader.Of(carrier))) yield return candidate;
 		}
 
 		// MAT_NEIGHBOR — what is in the room with the looker.
@@ -549,9 +553,10 @@ public class LocateService(
 		if (walksExits
 				&& flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
 				&& looker.IsRoom
+				&& looker.AsOptionalContainer is AnySharpContainer lookerRoom
 				&& (!sameSpot || !flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)))
 		{
-			foreach (var candidate in ExitsIn(await reader.Of(looker.AsContainer))) yield return candidate;
+			foreach (var candidate in ExitsIn(await reader.Of(lookerRoom))) yield return candidate;
 		}
 	}
 

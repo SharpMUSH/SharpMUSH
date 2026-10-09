@@ -63,8 +63,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var channelName = arg0CallState!.Message!;
-		var message = arg1CallState!.Message!;
+		var channelName = arg0CallState!.Message;
+		var message = arg1CallState!.Message;
 
 		return await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator,
 			NotifyService, executor, channelName, true) switch
@@ -140,8 +140,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.UsageAddcom);
 		}
 
-		var alias = arg0CallState!.Message!.ToPlainText().Trim();
-		var channelName = arg1CallState!.Message!;
+		var alias = arg0CallState!.Message.ToPlainText().Trim();
+		var channelName = arg1CallState!.Message;
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
@@ -209,7 +209,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.UsageDelcom);
 		}
 
-		var alias = arg0CallState!.Message!.ToPlainText().Trim();
+		var alias = arg0CallState!.Message.ToPlainText().Trim();
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
@@ -298,8 +298,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.UsageComtitle);
 		}
 
-		var alias = arg0CallState!.Message!.ToPlainText().Trim();
-		var title = arg1CallState!.Message!;
+		var alias = arg0CallState!.Message.ToPlainText().Trim();
+		var title = arg1CallState!.Message;
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
@@ -345,7 +345,7 @@ public partial class Commands
 		var result = await ChannelTitle.Handle(parser, LocateService, ChannelPermissions, Mediator, NotifyService,
 			Configuration, channelName, title);
 
-		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
+		if (!result.Message.ToPlainText().StartsWith("#-1"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), executor, title.ToPlainText(), alias, channel.Name.ToPlainText());
 		}
@@ -511,8 +511,8 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		var channelName = args["0"].Message!;
-		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message!.ToPlainText() : string.Empty;
+		var channelName = args["0"].Message;
+		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message.ToPlainText() : string.Empty;
 
 		var lockType = switches.FirstOrDefault() ?? "JOIN";
 		lockType = lockType.ToUpper();

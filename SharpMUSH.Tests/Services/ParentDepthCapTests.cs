@@ -40,7 +40,7 @@ public class ParentDepthCapTests
 		using var scope = budget.Enter();
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		await Assert.That(result.Message).IsNotNull();
-		var message = result.Message!.ToPlainText();
+		var message = result.Message.ToPlainText();
 
 		// This test builds ancestor chains of up to ~23 objects and has been implicated in
 		// parallel-load flakiness; a bare DBRef.Parse on unexpected output (an error message,
@@ -85,7 +85,7 @@ public class ParentDepthCapTests
 		var result = await RelationshipService.SetParent(child, child, prospectiveParent, false);
 
 		await Assert.That(result.Message).IsNotNull();
-		var message = result.Message!.ToPlainText()!;
+		var message = result.Message.ToPlainText()!;
 		await Assert.That(message).IsNotEqualTo(ErrorMessages.Returns.TooManyAncestors);
 		await Assert.That(message).IsNotEqualTo(ErrorMessages.Returns.ParentLoop);
 
@@ -107,7 +107,7 @@ public class ParentDepthCapTests
 		var result = await RelationshipService.SetParent(child, child, prospectiveParent, false);
 
 		await Assert.That(result.Message).IsNotNull();
-		var message = result.Message!.ToPlainText()!;
+		var message = result.Message.ToPlainText()!;
 		await Assert.That(message).IsEqualTo(ErrorMessages.Returns.TooManyAncestors);
 		await Assert.That(message).Contains("ANCESTORS");
 

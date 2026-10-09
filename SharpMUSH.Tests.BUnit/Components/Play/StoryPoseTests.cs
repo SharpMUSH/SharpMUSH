@@ -5,12 +5,14 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components.Scenes;
 using SharpMUSH.Client.Models;
+using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
 /// README §5.4 story row (boards 01, 05): a 44px portrait, the name in its colour and the time, then
-/// the pose; an OOC pose is the band (§4.10); names of the others are mentions.
+/// the pose; an OOC pose is the band (§4.10); names of the others are mentions. Each pose draws as its type's
+/// presentation says, and carries the type for a staff stylesheet.
 /// </summary>
 public class StoryPoseTests : TrackingBunitContext
 {
@@ -22,9 +24,21 @@ public class StoryPoseTests : TrackingBunitContext
 	}
 
 	private static ScenePoseView Pose(string author = "Tomas Reyes", string showAs = "", IReadOnlyList<string>? tags = null,
-		string markup = "leans on a stack of crates", bool deleted = false, int edits = 1) =>
-		new("P1", "42", "#312", author, showAs, "#1201", "Lower Docks", "pose", tags ?? [], new Dictionary<string, string>(),
-			new DateTimeOffset(2026, 9, 30, 17, 2, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(), deleted, markup, markup, edits, null, null, null);
+		string markup = "leans on a stack of crates", bool deleted = false, int edits = 1, string type = "ic",
+		IReadOnlyDictionary<string, string>? meta = null) =>
+		new("P1", "42", "#312", author, showAs, "#1201", "Lower Docks", "pose", tags ?? [], meta ?? new Dictionary<string, string>(),
+			new DateTimeOffset(2026, 9, 30, 17, 2, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(), deleted, markup, markup, edits, null, null, null,
+			type);
+
+	/// <summary>The scene package's ooc type: a band in the muted tone.</summary>
+	private static readonly PoseTypeInfo Ooc = new("ooc", "OOC", "band", "muted", "", false, 20);
+
+	private IRenderedComponent<StoryPose> RenderOoc(ScenePoseView pose, Action<ComponentParameterCollectionBuilder<StoryPose>>? more = null) =>
+		Render<StoryPose>(p =>
+		{
+			p.Add(x => x.Pose, pose).Add(x => x.PoseType, Ooc);
+			more?.Invoke(p);
+		});
 
 	[Test]
 	public async Task APose_HasItsPortrait_TheNameInItsColour_TheTime_AndTheText()
@@ -49,10 +63,10 @@ public class StoryPoseTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task AnOocPose_IsTheBand_WithThePictureUnderTheOocTag()
+	public async Task AnOocPose_IsTheBand_WithThePictureUnderTheOocWord()
 	{
-		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", tags: ["ooc"], markup: "brb, making tea"))
-			.Add(x => x.ImageUrl, "/w.jpg").Add(x => x.Color, "#6aa7ff"));
+		var cut = RenderOoc(Pose(author: "Wren Halloway", type: "ooc", markup: "brb, making tea"),
+			p => p.Add(x => x.ImageUrl, "/w.jpg").Add(x => x.Color, "#6aa7ff"));
 		await Assert.That(cut.Find(".kit-ooc-tile img.kit-ooc-picture").GetAttribute("src")).EndsWith("/w.jpg");
 		await Assert.That(cut.Find(".kit-ooc-tag").TextContent).IsEqualTo("OOC");
 		await Assert.That(cut.Find(".kit-ooc-name").TextContent).IsEqualTo("Wren Halloway");
@@ -63,7 +77,7 @@ public class StoryPoseTests : TrackingBunitContext
 	[Test]
 	public async Task AnOocPose_WithoutAPicture_HasInitialsInPlaceOfThePortrait()
 	{
-		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", tags: ["ooc"], markup: "brb, making tea")));
+		var cut = RenderOoc(Pose(author: "Wren Halloway", type: "ooc", markup: "brb, making tea"));
 		await Assert.That(cut.Find(".kit-ooc .kit-ooc-initials").TextContent).IsEqualTo("WH");
 		await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
 	}
@@ -78,7 +92,7 @@ public class StoryPoseTests : TrackingBunitContext
 	[Arguments("Tomas: hi", "Tomas: hi")]
 	public async Task AnOocBand_DropsTheSpeakersNameFromWhatWasSaid(string recorded, string shown)
 	{
-		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", tags: ["ooc"], markup: recorded)));
+		var cut = RenderOoc(Pose(author: "Wren Halloway", type: "ooc", markup: recorded));
 		await Assert.That(cut.Find(".kit-ooc-text").TextContent).IsEqualTo(shown);
 	}
 
@@ -120,7 +134,7 @@ public class StoryPoseTests : TrackingBunitContext
 	public async Task YourOwnOocPose_HasEditToo()
 	{
 		(string PoseId, string Text)? saved = null;
-		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(tags: ["ooc"], markup: "brb, making tea")).Add(x => x.CanEdit, true)
+		var cut = RenderOoc(Pose(type: "ooc", markup: "brb, making tea"), p => p.Add(x => x.CanEdit, true)
 			.Add(x => x.OnEdit, e => saved = e));
 		await Assert.That(cut.FindAll(".story-row--ooc").Count).IsEqualTo(1);
 		await cut.Find("button.story-edit-btn").ClickAsync();
@@ -134,7 +148,7 @@ public class StoryPoseTests : TrackingBunitContext
 	[Test]
 	public async Task AnEditedOocPose_IsMarked_LikeAnyOther()
 	{
-		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(tags: ["ooc"], markup: "brb, making tea", edits: 2)));
+		var cut = RenderOoc(Pose(type: "ooc", markup: "brb, making tea", edits: 2));
 		await Assert.That(cut.FindAll(".story-row--ooc .story-edited").Count).IsEqualTo(1);
 	}
 
@@ -240,5 +254,115 @@ public class StoryPoseTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".fi-overlay").Count).IsEqualTo(0).Because("a softcode box has no styled layer");
 		await cut.Find("button.story-editor-save").ClickAsync();
 		await Assert.That(saved).IsEqualTo(("P1", "[ansi(r,Tomas)] waves."));
+	}
+
+	/// <summary>
+	/// The layout is the type's presentation, not a tag: each draws its own shape, and every row names its type so a
+	/// staff stylesheet can restyle one.
+	/// </summary>
+	[Test]
+	[Arguments("prose", "story-row--prose", ".story-portrait-btn")]
+	[Arguments("band", "story-row--band", ".kit-ooc")]
+	[Arguments("message", "story-row--message", ".story-bubble")]
+	[Arguments("aside", "story-row--aside", ".story-aside")]
+	[Arguments("notice", "story-row--notice", ".story-notice-name")]
+	public async Task EachPresentation_DrawsItsOwnLayout_AndCarriesTheType(string presentation, string rowClass, string part)
+	{
+		var type = new PoseTypeInfo("telepathy", "Telepathy", presentation, "", "", false, 30);
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "telepathy")).Add(x => x.PoseType, type));
+		var row = cut.Find(".story-row");
+		await Assert.That(row.GetAttribute("data-pose-type")).IsEqualTo("telepathy");
+		await Assert.That(row.ClassList).Contains(rowClass);
+		await Assert.That(cut.FindAll(part).Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".story-body").TextContent).IsEqualTo("leans on a stack of crates");
+	}
+
+	[Test]
+	[Arguments("aside")]
+	[Arguments("notice")]
+	[Arguments("message")]
+	public async Task AsidesNoticesAndMessages_HaveNoPortrait(string presentation)
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "x"))
+			.Add(x => x.PoseType, new PoseTypeInfo("x", "X", presentation, "", "", false, 30)).Add(x => x.ImageUrl, "/t.jpg"));
+		await Assert.That(cut.FindAll(".story-portrait-btn").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
+	}
+
+	/// <summary>The tone is a theme token on the row, the one tone() uses for that name; no tone writes none.</summary>
+	[Test]
+	[Arguments("muted", "--pose-tone: var(--text-dim);")]
+	[Arguments("primary", "--pose-tone: var(--accent);")]
+	[Arguments("warning", "--pose-tone: var(--warn);")]
+	public async Task TheTone_IsACustomPropertyOnTheRow(string tone, string style)
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "radio"))
+			.Add(x => x.PoseType, new PoseTypeInfo("radio", "Radio", "message", tone, "radio", false, 30)));
+		await Assert.That(cut.Find(".story-row").GetAttribute("style")).IsEqualTo(style);
+		await Assert.That(cut.FindAll(".story-type-icon").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AnUntonedType_LeavesTheThemesColours()
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.PoseType, new PoseTypeInfo("ic", "In character", "prose", "", "", false, 0)));
+		await Assert.That(cut.Find(".story-row").GetAttribute("style")).IsNull();
+	}
+
+	/// <summary>A pose of a type the catalogue does not list, ooc included, is prose: no tag makes a band any more.</summary>
+	[Test]
+	public async Task AnOocPose_OnAGameWithNoOocType_IsProse()
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "ooc", tags: ["ooc"], markup: "Tomas Reyes: brb")));
+		await Assert.That(cut.FindAll(".kit-ooc").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".story-row").ClassList).Contains("story-row--prose");
+		await Assert.That(cut.Find(".story-row").GetAttribute("data-pose-type")).IsEqualTo("ooc");
+		await Assert.That(cut.Find(".story-body").TextContent).IsEqualTo("Tomas Reyes: brb").Because("only a band drops the name");
+	}
+
+	/// <summary>Another type drawn as a band names itself on the tile, and drops the speaker's name as the OOC band does.</summary>
+	[Test]
+	public async Task ABandOfAnotherType_NamesItsTypeOnTheTile()
+	{
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", type: "meta", markup: "Wren Halloway: next week?"))
+			.Add(x => x.PoseType, new PoseTypeInfo("meta", "Meta", "band", "info", "", false, 30)));
+		await Assert.That(cut.Find(".kit-ooc-tag").TextContent).IsEqualTo("Meta");
+		await Assert.That(cut.Find(".story-row").ClassList).DoesNotContain("story-row--ooc");
+		await Assert.That(cut.Find(".kit-ooc-text").TextContent).IsEqualTo("next week?");
+	}
+
+	[Test]
+	public async Task AMessage_IsHeadedByTheNameAndFrequency_AndTheReadersOwnSitsRight()
+	{
+		using var culture = CultureScope.For("en");
+		var radio = new PoseTypeInfo("radio", "Radio", "message", "info", "radio", false, 30);
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", type: "radio", markup: "Copy that.",
+				meta: new Dictionary<string, string> { ["frequency"] = "104.5" }))
+			.Add(x => x.PoseType, radio).Add(x => x.Mine, true));
+		await Assert.That(cut.Find(".story-bubble-from").TextContent).IsEqualTo("Wren Halloway on 104.5");
+		await Assert.That(cut.Find(".story-row").ClassList).Contains("story-row--mine");
+
+		var other = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Tomas Reyes", type: "radio", markup: "Go ahead.")).Add(x => x.PoseType, radio));
+		await Assert.That(other.Find(".story-bubble-from").TextContent).IsEqualTo("Tomas Reyes").Because("no frequency recorded, just the name");
+		await Assert.That(other.Find(".story-row").ClassList).DoesNotContain("story-row--mine");
+	}
+
+	/// <summary>Editing works in every layout: the Edit opens the box in the text's place and saves the whole text.</summary>
+	[Test]
+	[Arguments("band")]
+	[Arguments("message")]
+	[Arguments("aside")]
+	[Arguments("notice")]
+	public async Task YourOwnPose_HasEdit_InEveryPresentation(string presentation)
+	{
+		(string PoseId, string Text)? saved = null;
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "x", markup: "waves")).Add(x => x.CanEdit, true)
+			.Add(x => x.PoseType, new PoseTypeInfo("x", "X", presentation, "", "", false, 30)).Add(x => x.OnEdit, e => saved = e));
+		await cut.Find("button.story-edit-btn").ClickAsync();
+		await Assert.That(cut.FindAll(".story-body").Count).IsEqualTo(0);
+		await cut.Find("textarea.story-editor-input").InputAsync("waves again");
+		await cut.Find("button.story-editor-save").ClickAsync();
+		await Assert.That(saved).IsEqualTo(("P1", "waves again"));
+		await Assert.That(cut.Find(".story-row").GetAttribute("data-pose-type")).IsEqualTo("x");
 	}
 }

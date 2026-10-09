@@ -25,7 +25,7 @@ public class LocalFunctionTests
 	private Task Cmd(string command) => Factory.CommandParser.CommandParse(1,
 		Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask();
 	private async Task<string> Eval(string expression) =>
-		(await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	private sealed class RegistryOverride(IServiceProvider services, IUserDefinedFunctionService registry) : IServiceProvider
 	{
@@ -43,7 +43,7 @@ public class LocalFunctionTests
 		try
 		{
 			var result = await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@function/local/alias {alias}={name}"));
-			await Assert.That(result.Message?.ToPlainText()).Contains("NOT FOUND");
+			await Assert.That(result.Message.ToPlainText()).Contains("NOT FOUND");
 			var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 			var owner = (await god.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 			await Assert.That(Factory.Services.GetRequiredService<IUserDefinedFunctionService>().Get(alias, owner)).IsNull();
@@ -66,7 +66,7 @@ public class LocalFunctionTests
 		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();
 		var parser = (MUSHCodeParser)Factory.CommandParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
 		var result = await parser.CommandParse(1, Connections, MarkupText.Plain(command));
-		await Assert.That(result.Message?.ToPlainText()).Contains("NOT FOUND");
+		await Assert.That(result.Message.ToPlainText()).Contains("NOT FOUND");
 		await Assert.That((int)registry.GetType().GetField("DefinitionCalls")!.GetValue(registry)!).IsEqualTo(0);
 	}
 
@@ -77,8 +77,8 @@ public class LocalFunctionTests
 	{
 		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry(supportsScopedGet);
 		var parser = (MUSHCodeParser)Factory.FunctionParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
-		var result = await parser.FunctionParse(MarkupText.Plain("localfun(unavailable)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(string.Format(ErrorMessages.Returns.NoSuchFunction, "UNAVAILABLE"));
+		var result = await parser.EvaluateAsync(MarkupText.Plain("localfun(unavailable)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo(string.Format(ErrorMessages.Returns.NoSuchFunction, "UNAVAILABLE"));
 	}
 
 	[Test]
@@ -89,7 +89,7 @@ public class LocalFunctionTests
 		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();
 		var parser = (MUSHCodeParser)Factory.CommandParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
 		var result = await parser.CommandParse(1, Connections, MarkupText.Plain($"@function/local {name}=me,{name}"));
-		await Assert.That(result.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That((int)registry.GetType().GetField("DefinitionCalls")!.GetValue(registry)!).IsEqualTo(0);
 	}
 
@@ -144,7 +144,7 @@ public class LocalFunctionTests
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 	private IConnectionService Connections => Factory.Services.GetRequiredService<IConnectionService>();
 	private async Task<string> EvalAs(DBRef executor, string expression) =>
-		(await Factory.FunctionParser.FromState(ParserState.RootFor(executor)).FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await Factory.FunctionParser.FromState(ParserState.RootFor(executor)).EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	[Test]
 	public async Task OwnersAndReownedExecutorsResolveOnlyTheirOwnDefinitions()
@@ -226,7 +226,7 @@ public class LocalFunctionTests
 		await Assert.That(registry.Get(name, owner)).IsNull();
 		await StartupAttributeRunner.RunObjectAttributeAsync(parser, provider.GetRequiredService<IAttributeService>(), (await Mediator.Send(new GetObjectNodeQuery(startupObject))).Expect<AnySharpObject>(), "STARTUP", god);
 		await Assert.That(registry.Get(name, owner)).IsNotNull();
-		var local = (await parser.FunctionParse(MarkupText.Plain($"strcat(setq(A,before),localfun({name}),r(A))")))!.Message!.ToPlainText();
+		var local = (await parser.EvaluateAsync(MarkupText.Plain($"strcat(setq(A,before),localfun({name}),r(A))"))).ToPlainText();
 		var ordinary = await Eval($"strcat(setq(A,before),u({startupObject}/{name}),r(A))");
 		await Assert.That(local).IsEqualTo(ordinary);
 	}

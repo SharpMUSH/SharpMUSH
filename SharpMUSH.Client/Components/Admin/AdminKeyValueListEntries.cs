@@ -30,6 +30,16 @@ public static class AdminKeyValueListEntries
 			ApiFailure failure => failure
 		};
 
+	/// <summary>A key-to-text map, one value per key, as the ASCII translations are.</summary>
+	public static async Task<ApiResult<IReadOnlyList<AdminKeyValueEntry>>> AsEntriesAsync(
+		this Task<ApiResult<Dictionary<string, string>>> call) =>
+		await call switch
+		{
+			Dictionary<string, string> map =>
+				(IReadOnlyList<AdminKeyValueEntry>)[.. map.Select(pair => new AdminKeyValueEntry(pair.Key, [pair.Value]))],
+			ApiFailure failure => failure
+		};
+
 	/// <summary>A bare list of keys — a banned name has nothing to show beside it.</summary>
 	public static async Task<ApiResult<IReadOnlyList<AdminKeyValueEntry>>> AsEntriesAsync(
 		this Task<ApiResult<string[]>> call) =>

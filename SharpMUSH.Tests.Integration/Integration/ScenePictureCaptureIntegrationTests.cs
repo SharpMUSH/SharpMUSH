@@ -25,7 +25,7 @@ public class ScenePictureCaptureIntegrationTests
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	private async Task God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -36,7 +36,7 @@ public class ScenePictureCaptureIntegrationTests
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var logger = DBRef.Parse((await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger").Objid).ToString();
 
-		var room = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {name}Room"))).Message!.ToPlainText().Trim();
+		var room = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {name}Room"))).Message.ToPlainText().Trim();
 		await God1($"@pcreate {name}=pw-{Tag}-1");
 		var player = await Eval($"pmatch({name})");
 		await God1($"@role/assign {player}=approved");

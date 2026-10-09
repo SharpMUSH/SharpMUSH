@@ -88,6 +88,6 @@ public class DispatchCoverageGapTests : ServerTestBase
 		var result = await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
 			.FunctionParse(MString.Plain("locale()"));
 
-		await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result?.Message.ToPlainText()).IsEqualTo(expected);
 	}
 }

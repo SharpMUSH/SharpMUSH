@@ -15,7 +15,7 @@ public partial class Functions
 	public ValueTask<CallState> StringDistanceFunction(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
 		var arguments = parser.CurrentState.Arguments;
-		return StringDistance.TryCalculate(arguments["0"].Message!, arguments["1"].Message!, out var distance)
+		return StringDistance.TryCalculate(arguments["0"].Message, arguments["1"].Message, out var distance)
 			? ValueTask.FromResult<CallState>(distance)
 			: ValueTask.FromResult<CallState>(StringDistance.WorkLimitExceeded);
 	}
@@ -23,7 +23,7 @@ public partial class Functions
 	[SharpFunction(Name = "soundex", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg1 switch
@@ -38,8 +38,8 @@ public partial class Functions
 	[SharpFunction(Name = "soundslike", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> SoundLike(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var arg2 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg2 switch
@@ -202,8 +202,8 @@ public partial class Functions
 	public async ValueTask<CallState> Suggest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var category = args["0"].Message!.ToPlainText();
-		var word = args["1"].Message!.ToPlainText();
+		var category = args["0"].Message.ToPlainText();
+		var word = args["1"].Message.ToPlainText();
 		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		var limit = 20;
 
@@ -211,7 +211,7 @@ public partial class Functions
 		{
 			// fun_suggest reads its limit with is_integer and refuses anything else with e_int
 			// (src/help.c:1843-1847).
-			if (!ArgHelpers.TryInteger(parser, args["3"].Message!.ToPlainText(), out limit))
+			if (!ArgHelpers.TryInteger(parser, args["3"].Message.ToPlainText(), out limit))
 			{
 				return new CallState(ErrorMessages.Returns.Integer);
 			}

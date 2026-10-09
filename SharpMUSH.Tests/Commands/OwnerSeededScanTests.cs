@@ -30,12 +30,12 @@ public class OwnerSeededScanTests
 	/// <summary>Evaluates <paramref name="expression"/> as <paramref name="executor"/> and parses the dbref it returns.</summary>
 	private async Task<DBRef> Make(DBRef executor, string expression)
 	{
-		var result = await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expression));
-		return DBRef.Parse(result!.Message!.ToPlainText());
+		var result = await WebAppFactoryArg.FunctionParserFor(executor).EvaluateAsync(MarkupText.Plain(expression));
+		return DBRef.Parse(result.ToPlainText());
 	}
 
 	private async Task<string> Eval(string expression)
-		=> (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		=> (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	private async Task<AnySharpObject> Node(DBRef dbref)
 		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();

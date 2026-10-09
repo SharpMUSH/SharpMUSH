@@ -34,7 +34,7 @@ public class BuildingQuotaTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private async Task<string> Run(long handle, string command)
-		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText()
+		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText()
 			?? string.Empty;
 
 	private Task<string> AsGod(string command) => Run(1, command);

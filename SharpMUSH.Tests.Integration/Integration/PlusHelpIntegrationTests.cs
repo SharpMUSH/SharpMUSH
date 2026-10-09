@@ -76,7 +76,7 @@ public class PlusHelpIntegrationTests
 	private async Task<long> CreatePlayerAsync(string name, bool wizard = false)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 		{
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
@@ -124,7 +124,7 @@ public class PlusHelpIntegrationTests
 		await Assert.That(installed.Value).IsTypeOf<InstalledPackageRecord>().Because("plus-help installs at first boot");
 
 		var librarian = await LibrarianAsync();
-		var powers = (await God1($"think [powers({librarian})]")).Message?.ToPlainText() ?? string.Empty;
+		var powers = (await God1($"think [powers({librarian})]")).Message.ToPlainText();
 		await Assert.That(powers).Contains("See_All")
 			.Because("the librarian reads HELP trees on other packages' objects, scene's WIZARD one included");
 	}
@@ -146,7 +146,7 @@ public class PlusHelpIntegrationTests
 
 		// Installed softcode never holds a raw dbref: a {{ref}} becomes [v(PM`REFS`NAME)], recalled
 		// against the object it lives on. So the leaf is EVALUATED to get the object out of it.
-		var registered = (await God1($"think [u({librarian}/SRC`SCENE)]")).Message?.ToPlainText()?.Trim() ?? "";
+		var registered = (await God1($"think [u({librarian}/SRC`SCENE)]")).Message.ToPlainText()?.Trim() ?? "";
 		await Assert.That(registered).StartsWith("#")
 			.Because("the leaf resolves to the object carrying scene's HELP tree");
 	}
@@ -180,7 +180,7 @@ public class PlusHelpIntegrationTests
 		// reads, and it is the key an install invalidates. A per-attribute get() of a leaf that did
 		// not exist yet keeps answering empty after the install that creates it.
 		async Task<string> SourcesAsync() =>
-			(await God1($"think [lattr({librarian}/SRC`*)]")).Message?.ToPlainText() ?? "";
+			(await God1($"think [lattr({librarian}/SRC`*)]")).Message.ToPlainText();
 
 		await Assert.That(await SourcesAsync()).DoesNotContain("WIKI-READER")
 			.Because("wiki-reader ships uninstalled, so it contributes nothing yet");
@@ -215,7 +215,7 @@ public class PlusHelpIntegrationTests
 	{
 		var librarian = await LibrarianAsync();
 
-		var sources = (await God1($"think [lattr({librarian}/SRC`*)]")).Message!.ToPlainText()
+		var sources = (await God1($"think [lattr({librarian}/SRC`*)]")).Message.ToPlainText()
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(sources.Length).IsGreaterThan(1).Because("there are several contributors to collide");
 
@@ -223,7 +223,7 @@ public class PlusHelpIntegrationTests
 		var seen = 0;
 		foreach (var leaf in sources)
 		{
-			var obj = (await God1($"think [u({librarian}/{leaf})]")).Message!.ToPlainText().Trim();
+			var obj = (await God1($"think [u({librarian}/{leaf})]")).Message.ToPlainText().Trim();
 
 			// A leaf whose object is gone contributes nothing and is not an error — that is the
 			// documented degradation for a force-removed contributor, and another suite installs and
@@ -351,7 +351,7 @@ public class PlusHelpIntegrationTests
 		var report = (await God1(
 			$"think [iter(u({librarian}/FUN`GET`RECORDS),"
 			+ $"[u({librarian}/FUN`GET`RNAME,%i0)]=[if(strmatch(u([extract(%i0,2,1,:)]/[extract(%i0,3,1,:)]),#-1*),BROKEN,ok)]"
-			+ ",%b,%b)]")).Message!.ToPlainText();
+			+ ",%b,%b)]")).Message.ToPlainText();
 
 		var entries = report.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(entries.Length).IsGreaterThan(5).Because("there are topics to check");
@@ -526,7 +526,7 @@ public class PlusHelpIntegrationTests
 
 		await Assert.That(said).Contains("Staff only");
 
-		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`POLICY)]")).Message?.ToPlainText()?.Trim() ?? "";
+		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`POLICY)]")).Message.ToPlainText()?.Trim() ?? "";
 		await Assert.That(stored).IsEmpty().Because("the refusal must not have written anything");
 	}
 
@@ -545,7 +545,7 @@ public class PlusHelpIntegrationTests
 		var wrote = Joined(await RunAs(await StaffAsync(), @"+help/write applying=Ask for \[name(%%#)\] at the gate."));
 		await Assert.That(wrote).Contains("Wrote game/applying");
 
-		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`APPLYING)]")).Message?.ToPlainText() ?? string.Empty;
+		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`APPLYING)]")).Message.ToPlainText();
 		await Assert.That(stored).Contains("[name(%#)]")
 			.Because("the escaped code must reach the attribute unresolved; resolving it at write time would freeze the writer's name into the topic");
 
@@ -565,7 +565,7 @@ public class PlusHelpIntegrationTests
 
 		await Assert.That(wrote).Contains("Wrote game/0");
 
-		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`0)]")).Message?.ToPlainText()?.Trim() ?? "";
+		var stored = (await God1($"think [get({await ObjectAsync("game_help")}/HELP`0)]")).Message.ToPlainText()?.Trim() ?? "";
 		await Assert.That(stored).IsEqualTo("0");
 
 		await RunAs(await StaffAsync(), "+help/delete 0");
@@ -613,7 +613,7 @@ public class PlusHelpIntegrationTests
 		await PutLibrarianInMasterRoomAsync();
 
 		// A second source claiming a name plus-help already uses.
-		var rival = (await God1($"@create Rival Help {Tag}")).Message?.ToPlainText()?.Trim();
+		var rival = (await God1($"@create Rival Help {Tag}")).Message.ToPlainText()?.Trim();
 		await God1($"&HELP {rival}=A rival source.");
 		await God1($"&HELP`SOURCES {rival}=The rival's own take on sources.");
 		await RunAs(await StaffAsync(), $"+help/source rival={rival}");
@@ -782,7 +782,7 @@ public class PlusHelpIntegrationTests
 		await PutLibrarianInMasterRoomAsync();
 		var said = Joined(await RunAs(await ReaderAsync(), "+help write"));
 
-		await Assert.That(said).Contains("[ansi(hc,...)] and [name(%#)] both work");
+		await Assert.That(said).Contains("[tone(info,...)] and [name(%#)] both work");
 		await Assert.That(said).Contains("%% shows a %.");
 		await Assert.That(said).Contains(@"stores").And.Contains(@"\[write\]");
 	}

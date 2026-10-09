@@ -23,7 +23,7 @@ public class InplaceDepthLimitTests
 		=> Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	private async ValueTask<string> Get(DBRef obj, string attribute)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"[get({obj}/{attribute})]")))!.Message!.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain($"[get({obj}/{attribute})]"))).ToPlainText();
 
 	[Test]
 	public async ValueTask ASelfIncludeRunsFiftyLevelsAndEveryLevelFinishesItsList()

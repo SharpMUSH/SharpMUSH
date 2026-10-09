@@ -272,8 +272,8 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(imported.Object().Name).IsEqualTo("Scene Logger");
 		await Assert.That((await imported.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number)
 			.IsEqualTo(1);
-		await Assert.That((await imported.AsContent.Location()).Object().DBRef.Number).IsEqualTo(1);
-		await Assert.That((await imported.AsContent.Home()).Object()!.DBRef.Number).IsEqualTo(1);
+		await Assert.That((await imported.AsOptionalContent.Expect<AnySharpContent>().Location()).Object().DBRef.Number).IsEqualTo(1);
+		await Assert.That((await imported.AsOptionalContent.Expect<AnySharpContent>().Home()).Object()!.DBRef.Number).IsEqualTo(1);
 		await Assert.That(await SharpMUSH.Library.HelperFunctions.HasFlag(imported, "WIZARD")).IsTrue();
 		var attribute = (await world.Database.GetAttributeAsync(logger, ["CMD`SAY"]).ToListAsync()).Single();
 		await Assert.That((await attribute.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number)
@@ -291,7 +291,7 @@ public class PennMUSHDbrefPreservationTests
 	[Test]
 	public async Task TheBundledPackagesMakeWayForTheSourceAndComeBackPastIt()
 	{
-		string[] bundled = ["common-functions", "plus-help", "scene"];
+		string[] bundled = ["plus-help", "scene"];
 		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
@@ -360,7 +360,7 @@ public class PennMUSHDbrefPreservationTests
 	[Test]
 	public async Task TheNewPackageManagerLeavesAnImportedPlayersNameAlone()
 	{
-		string[] bundled = ["common-functions"];
+		string[] bundled = ["plus-help"];
 		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
@@ -387,7 +387,7 @@ public class PennMUSHDbrefPreservationTests
 	[Test]
 	public async Task AnImportThatStopsPartWayStillPutsThePackagesBack()
 	{
-		string[] bundled = ["common-functions", "plus-help", "scene"];
+		string[] bundled = ["plus-help", "scene"];
 		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
 		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
 		var registry = world.Services.GetRequiredService<IPackageRegistryService>();

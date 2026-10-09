@@ -1,0 +1,24 @@
+@* One colour of a theme being edited: a colour picker and the same colour as hex, either of which sets it. *@
+<label class="adm-theme-token" data-token="@Token">
+    <input type="color" class="adm-theme-color" value="@Value" disabled="@Disabled"
+           aria-label="@Label" @onchange="e => OnChange.InvokeAsync(e.Value?.ToString())" />
+    <span class="adm-theme-token-text">
+        <span class="adm-theme-token-name">@Label</span>
+        <input type="text" class="adm-theme-hex" value="@Value" disabled="@Disabled" spellcheck="false" maxlength="7" id="@HexId"
+               aria-label="@($"{Label} (hex)")" @onchange="e => OnChange.InvokeAsync(e.Value?.ToString())" />
+    </span>
+</label>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The theme token this sets, written as <c>data-token</c>; none for a colour that is not a token.</summary>
+    [Parameter] public string? Token { get; set; }
+
+    [Parameter] public string? HexId { get; set; }
+
+    /// <summary>Called with the colour the picker or the hex field was changed to.</summary>
+    [Parameter] public EventCallback<string?> OnChange { get; set; }
+}

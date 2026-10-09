@@ -5940,6 +5940,22 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Tekst stranice (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Prikaži</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Vrste poza za prikaz</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# skriven redak {label}} few {# skrivena retka {label}} other {# skrivenih redaka {label}}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} na {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>To se nije moglo promijeniti. Pokušaj ponovno za trenutak.</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>Izlaz igre</value>
   </data>
@@ -5975,5 +5991,25 @@
   </data>
   <data name="TermReviewNone" xml:space="preserve">
     <value>Još nema retka za čitanje.</value>
+  </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>novo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {još # odgovor} few {još # odgovora} other {još # odgovora}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Pomakni gore</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Pomakni dolje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Preuredi</value>
+    <comment>MT</comment>
   </data>
 </root>

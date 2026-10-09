@@ -1,19 +1,11 @@
-using SharpMUSH.Library.ParserInterfaces;
-
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>
-/// Validates that the example <c>chargen</c> package's GET`CHARGEN`SCHEMA softcode evaluates to a
-/// valid Portal Schema Document (Area 21). Mirrors the profile-schema regression: the schema's
-/// json() payload is field-heavy and exercises the ≥10-argument ordering path.
+/// Validates that the example <c>chargen</c> package's GET`CHARGEN`SCHEMA route answers with
+/// DATA`CHARGEN`SCHEMA, and that the stored schema is a valid Portal Schema Document (Area 21).
 /// </summary>
 public class ChargenSchemaTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-
 	private static string ExamplesRoot()
 	{
 		var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -47,16 +39,12 @@ public class ChargenSchemaTests
 	}
 
 	[Test]
-	public async Task ChargenSchema_EvaluatesToValidJson()
+	public async Task ChargenSchema_IsValidJson()
 	{
 		var yaml = await File.ReadAllTextAsync(Path.Combine(ExamplesRoot(), "chargen", "package.yaml"));
-		var body = AttributeBody(yaml, "GET`CHARGEN`SCHEMA");
-		var jsonExpression = body[(body.IndexOf("think ", StringComparison.Ordinal) + "think ".Length)..];
+		await Assert.That(AttributeBody(yaml, "GET`CHARGEN`SCHEMA")).EndsWith("think v(DATA`CHARGEN`SCHEMA)");
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(jsonExpression)))?.Message?.ToString() ?? string.Empty;
-
-		await Assert.That(result).DoesNotContain("#-1");
-		using var doc = System.Text.Json.JsonDocument.Parse(result);
+		using var doc = System.Text.Json.JsonDocument.Parse(AttributeBody(yaml, "DATA`CHARGEN`SCHEMA"));
 		await Assert.That(doc.RootElement.GetProperty("kind").GetString()).IsEqualTo("form");
 		await Assert.That(doc.RootElement.TryGetProperty("pages", out var pages)).IsTrue();
 		await Assert.That(pages.GetArrayLength()).IsEqualTo(1);

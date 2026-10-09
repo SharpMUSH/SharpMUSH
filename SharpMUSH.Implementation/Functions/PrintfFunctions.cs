@@ -12,8 +12,8 @@ public partial class Functions
 	public ValueTask<CallState> Printf(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
-		if (PrintfFormatter.TryFormat(arguments["0"].Message!,
-			arguments.Skip(1).Select(argument => argument.Value.Message!).ToArray(), out var result, out var error,
+		if (PrintfFormatter.TryFormat(arguments["0"].Message,
+			arguments.Skip(1).Select(argument => argument.Value.Message).ToArray(), out var result, out var error,
 			parser.CurrentState.OutputLimit))
 			return ValueTask.FromResult<CallState>(result);
 		return ValueTask.FromResult(error == ErrorMessages.Returns.OutputTooLarge

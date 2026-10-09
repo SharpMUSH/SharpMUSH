@@ -34,7 +34,7 @@ public partial class PrivateListenerTests
 			var discovery = Factory.Services.GetRequiredService<ICommandDiscoveryService>();
 			var matches = (await discovery.MatchUserDefinedCommand(pipeline.Parser, new[] { node }.ToAsyncEnumerable(), input, await Node(actor.DbRef)))
 				.Expect<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>();
-			var capture = matches.Single().Arguments["0"].Message!;
+			var capture = matches.Single().Arguments["0"].Message;
 			await Assert.That(capture.ToPlainText()).IsEqualTo("one\ntwo");
 			await Assert.That(capture.Runs.Single().Markups.Single()).IsEqualTo(red);
 			var rejected = await discovery.MatchUserDefinedCommand(pipeline.Parser, new[] { node }.ToAsyncEnumerable(), MarkupText.Concat(input, MarkupText.Plain("\n")), await Node(actor.DbRef));
@@ -44,8 +44,8 @@ public partial class PrivateListenerTests
 		{
 			await pipeline.Notify.Notify(listener, input, await Node(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 			var queued = pipeline.Queue.Single();
-			await Assert.That(queued.State.EnvironmentRegisters["0"].Message!.ToPlainText()).IsEqualTo("one\ntwo");
-			await Assert.That(queued.State.EnvironmentRegisters["0"].Message!.Runs.Single().Markups.Single()).IsEqualTo(red);
+			await Assert.That(queued.State.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo("one\ntwo");
+			await Assert.That(queued.State.EnvironmentRegisters["0"].Message.Runs.Single().Markups.Single()).IsEqualTo(red);
 			await pipeline.Parser.FromState(queued.State).CommandListParse(queued.Command);
 			var result = (await attributes.GetAttributeAsync(node, node, "RESULT", IAttributeService.AttributeMode.Read, false))
 				.Expect<SharpAttribute[]>().Last().Value;
@@ -62,7 +62,7 @@ public partial class PrivateListenerTests
 	[Arguments("strmatch(cat%r,cat)", "0")]
 	public async Task WildcardFunctionsUseEscapesAndWholeInput(string expression, string expected)
 	{
-		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		var result = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

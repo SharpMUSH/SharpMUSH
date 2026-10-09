@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -18,22 +19,23 @@ public static class ScenePoseHandlers
 		MString sceneIdArg,
 		MString rest)
 	{
-		// @scene/addpose <sceneId>=<authorDbref>,<showAs>,<originDbref>,<source>,<tags>,<content>
+		// @scene/addpose <sceneId>=<authorDbref>,<showAs>,<originDbref>,<type>,<source>,<tags>,<content>
 		var sceneId = SceneCommandHelper.Plain(sceneIdArg);
 		// The content field keeps its markup: storage takes it as a serialised MString and derives the
 		// plain column from that. Everything before it is a dbref or a keyword, compared as text.
-		var (fields, contentMarkup) = SceneCommandHelper.SplitFieldsKeepingMarkup(rest, 6);
+		var (fields, contentMarkup) = SceneCommandHelper.SplitFieldsKeepingMarkup(rest, 7);
 		// author/origin resolve through the engine LocateService (here/me/name -> dbref).
 		var authorDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
 		var showAs = fields[1];
 		var originDbref = await SceneLocate.ObjectOrSelf(parser, fields[2]);
-		var source = fields[3];
-		var tagsRaw = fields[4];
+		var type = fields[3];
+		var source = fields[4];
+		var tagsRaw = fields[5];
 		var content = MarkupTextSerializer.Serialize(contentMarkup);
 
 		if (string.IsNullOrEmpty(authorDbref))
 		{
-			await notifyService.Notify(executor, "SCENE: /addpose needs an author dbref.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/addpose needs an author dbref.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
@@ -41,20 +43,20 @@ public static class ScenePoseHandlers
 			? Array.Empty<string>()
 			: tagsRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-		var result = await sceneService.AddPoseAsync(sceneId, authorDbref, showAs, originDbref, source, tags, content);
+		var result = await sceneService.AddPoseAsync(sceneId, authorDbref, showAs, originDbref, type, source, tags, content);
 		if (result is Error<string> err)
 		{
-			await notifyService.Notify(executor, $"SCENE: {err.Value}");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(err.Value, NoticeKind.Warn));
 			return MarkupText.Plain($"#-1 {err.Value}");
 		}
 
 		if (result is not Contracts.ScenePose pose)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
-		await notifyService.Notify(executor, $"SCENE: Added pose #{pose.Id} to scene #{sceneId}.");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice($"Added pose #{pose.Id} to scene #{sceneId}.", NoticeKind.Ok));
 		await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
 		return MarkupText.Plain(pose.Id);
 	}
@@ -71,12 +73,18 @@ public static class ScenePoseHandlers
 		var (poseId, key) = SceneCommandHelper.SplitIdKey(lhs);
 		if (string.IsNullOrEmpty(key))
 		{
-			await notifyService.Notify(executor, "SCENE: /setpose needs <poseId>/<key>=<value>.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/setpose needs <poseId>/<key>=<value>.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
+		if (key!.Trim().Equals("type", StringComparison.OrdinalIgnoreCase) && PoseTypes.Normalize(value.ToPlainText()) is Error<string> invalid)
+		{
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(invalid.Value, NoticeKind.Warn));
+			return MarkupText.Plain($"#-1 {invalid.Value}");
+		}
+
 		var result = await sceneService.SetPoseMetaAsync(poseId, key!, value.ToPlainText());
-		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} {key} set.");
+		return await PoseResult(notifyService, executor, poseId, result, $"#{poseId} {key} set.", parser, "pose-meta");
 	}
 
 	public static async ValueTask<MString> EditPose(
@@ -95,7 +103,7 @@ public static class ScenePoseHandlers
 
 		if (string.IsNullOrEmpty(editorDbref))
 		{
-			await notifyService.Notify(executor, "SCENE: /editpose needs an editor dbref.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/editpose needs an editor dbref.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
@@ -171,11 +179,11 @@ public static class ScenePoseHandlers
 	{
 		if (result is not Contracts.ScenePose pose)
 		{
-			await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No pose '{poseId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
-		await notifyService.Notify(executor, $"SCENE: {successMessage}");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice(successMessage, NoticeKind.Ok));
 		if (parser is not null && eventType is not null)
 			await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
 		return MarkupText.Plain(pose.Id);
@@ -192,17 +200,17 @@ public static class ScenePoseHandlers
 	{
 		if (result is Error<string> err)
 		{
-			await notifyService.Notify(executor, $"SCENE: {err.Value}");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(err.Value, NoticeKind.Warn));
 			return MarkupText.Plain($"#-1 {err.Value}");
 		}
 
 		if (result is not Contracts.ScenePose pose)
 		{
-			await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No pose '{poseId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
-		await notifyService.Notify(executor, $"SCENE: {successMessage}");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice(successMessage, NoticeKind.Ok));
 		if (parser is not null && eventType is not null)
 			await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
 		return MarkupText.Plain(pose.Id);

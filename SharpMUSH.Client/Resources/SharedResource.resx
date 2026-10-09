@@ -4952,12 +4952,6 @@
   <data name="AdmSetupPkgCommFeedDesc" xml:space="preserve">
     <value>Gives the Play page's sidebar a player's channels, and each channel line and page to exactly the players who received it.</value>
   </data>
-  <data name="AdmSetupPkgCommonFunctionsTitle" xml:space="preserve">
-    <value>Common functions</value>
-  </data>
-  <data name="AdmSetupPkgCommonFunctionsDesc" xml:space="preserve">
-    <value>header(), footer() and line(): the rules and titles the other packages draw their output with.</value>
-  </data>
   <data name="AdmSetupPkgPlusHelpTitle" xml:space="preserve">
     <value>+help</value>
   </data>
@@ -4975,6 +4969,18 @@
   </data>
   <data name="AdmSetupPkgJobsAppDesc" xml:space="preserve">
     <value>A Jobs page in the portal where players file and follow requests and staff answer, claim and close them.</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsTitle" xml:space="preserve">
+    <value>Bulletin boards</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsDesc" xml:space="preserve">
+    <value>Boards that nest, with posts, comments and replies, read with +bbread and written with +bbpost, as Myrddin's boards are.</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsAppTitle" xml:space="preserve">
+    <value>Boards in the portal</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsAppDesc" xml:space="preserve">
+    <value>A Boards page in the portal where players read boards, follow conversations, and post, comment and reply.</value>
   </data>
   <data name="AdmImportConfigRecommended" xml:space="preserve">
     <value>Configuration (mush.cnf, recommended)</value>
@@ -7490,6 +7496,119 @@
   <data name="PkgPlanUploaded" xml:space="preserve">
     <value>Uploaded package {0}</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Pose types to show</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# {label} line hidden} other {# {label} lines hidden}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} on {1}</value>
+    <comment>A message pose's header: {0} is who sent it, {1} the radio frequency.</comment>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>That could not be changed. Try again in a moment.</value>
+  </data>
+  <data name="AdmGroupScenes" xml:space="preserve">
+    <value>Scenes</value>
+  </data>
+  <data name="AdmPoseTypesTitle" xml:space="preserve">
+    <value>Pose types</value>
+  </data>
+  <data name="AdmCardPoseTypes" xml:space="preserve">
+    <value>How each kind of scene line (in character, OOC, radio, ...) reads in the portal</value>
+  </data>
+  <data name="AdmPoseTypesDescription" xml:space="preserve">
+    <value>The kinds of line a scene records: how the portal draws each, the colour it takes from the theme, and whether readers start with it hidden. How a type reads on telnet is its FORMAT softcode, set in the game.</value>
+  </data>
+  <data name="AdmPoseTypesProblems" xml:space="preserve">
+    <value>Not read</value>
+  </data>
+  <data name="AdmPoseTypesProblemsSub" xml:space="preserve">
+    <value>TYPE` attributes on the Scene Logger that are not a pose type, and why. Poses of these types read as in character.</value>
+  </data>
+  <data name="AdmPoseTypesAdd" xml:space="preserve">
+    <value>Add a pose type</value>
+  </data>
+  <data name="AdmPoseTypesAddSub" xml:space="preserve">
+    <value>A key for poses to record and a name for people; it starts as prose until you change it.</value>
+  </data>
+  <data name="AdmPoseTypesAddButton" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="AdmPoseTypesKey" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="AdmPoseTypesKeyHint" xml:space="preserve">
+    <value>1 to 32 lower-case letters, digits, - and _</value>
+  </data>
+  <data name="AdmPoseTypesLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="AdmPoseTypesNone" xml:space="preserve">
+    <value>The scene package defines no pose types, so every pose reads as in character.</value>
+  </data>
+  <data name="AdmPoseTypesSample" xml:space="preserve">
+    <value>Sample</value>
+  </data>
+  <data name="AdmPoseTypesSampleName" xml:space="preserve">
+    <value>Wren</value>
+  </data>
+  <data name="AdmPoseTypesSampleText" xml:space="preserve">
+    <value>leans on the rail and watches the harbour lights.</value>
+  </data>
+  <data name="AdmPoseTypesPresentation" xml:space="preserve">
+    <value>Presentation</value>
+  </data>
+  <data name="AdmPoseTypesPresentationProse" xml:space="preserve">
+    <value>Prose: portrait, name and text</value>
+  </data>
+  <data name="AdmPoseTypesPresentationBand" xml:space="preserve">
+    <value>Band, like OOC</value>
+  </data>
+  <data name="AdmPoseTypesPresentationMessage" xml:space="preserve">
+    <value>Message bubble</value>
+  </data>
+  <data name="AdmPoseTypesPresentationAside" xml:space="preserve">
+    <value>Aside: centred and italic</value>
+  </data>
+  <data name="AdmPoseTypesPresentationNotice" xml:space="preserve">
+    <value>Notice: one dim line</value>
+  </data>
+  <data name="AdmPoseTypesTone" xml:space="preserve">
+    <value>Tone</value>
+  </data>
+  <data name="AdmPoseTypesToneNone" xml:space="preserve">
+    <value>None (the theme's text)</value>
+  </data>
+  <data name="AdmPoseTypesIcon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="AdmPoseTypesIconNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmPoseTypesOrder" xml:space="preserve">
+    <value>Order</value>
+  </data>
+  <data name="AdmPoseTypesHidden" xml:space="preserve">
+    <value>Hidden until a reader shows it</value>
+  </data>
+  <data name="AdmPoseTypesRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="AdmPoseTypesRemoveAsk" xml:space="preserve">
+    <value>Remove {0}? Its poses will read as in character.</value>
+  </data>
+  <data name="AdmPoseTypesRevert" xml:space="preserve">
+    <value>Revert</value>
+  </data>
+  <data name="AdmPoseTypesNotChanged" xml:space="preserve">
+    <value>The game did not make that change.</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>Game output</value>
   </data>
@@ -7543,5 +7662,62 @@
   </data>
   <data name="TermReviewNone" xml:space="preserve">
     <value>No line to read yet.</value>
+  </data>
+  <data name="AsciiTranslations" xml:space="preserve">
+    <value>ASCII Translations</value>
+  </data>
+  <data name="AsciiTranslationsDescription" xml:space="preserve">
+    <value>What a client without Unicode is sent for a character it cannot show. Each character is in the table once; adding it again replaces its text. Characters not listed get the built-in stand-ins: a middle dot becomes *, a dash -, an accented letter the plain one, anything else ?.</value>
+  </data>
+  <data name="AddAsciiTranslation" xml:space="preserve">
+    <value>Add a translation</value>
+  </data>
+  <data name="AsciiTranslationCharacter" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="AsciiTranslationText" xml:space="preserve">
+    <value>Sent as</value>
+  </data>
+  <data name="AsciiTranslationTextHelper" xml:space="preserve">
+    <value>Plain ASCII, spaces kept; empty leaves the character out</value>
+  </data>
+  <data name="AsciiTranslationsList" xml:space="preserve">
+    <value>Translations</value>
+  </data>
+  <data name="NoAsciiTranslations" xml:space="preserve">
+    <value>No translations: clients without Unicode get the built-in stand-ins.</value>
+  </data>
+  <data name="AsciiTranslationLeftOut" xml:space="preserve">
+    <value>(left out)</value>
+  </data>
+  <data name="AsciiTranslationSaved" xml:space="preserve">
+    <value>Saved the translation for {0}</value>
+  </data>
+  <data name="AsciiTranslationRemoved" xml:space="preserve">
+    <value>Removed the translation for {0}</value>
+  </data>
+  <data name="ErrorLoadingAsciiTranslations" xml:space="preserve">
+    <value>Could not load the ASCII translations: {0}</value>
+  </data>
+  <data name="ErrorSavingAsciiTranslation" xml:space="preserve">
+    <value>Could not save the translation for {0}: {1}</value>
+  </data>
+  <data name="ErrorRemovingAsciiTranslation" xml:space="preserve">
+    <value>Could not remove the translation for {0}: {1}</value>
+  </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>new</value>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {# more reply} other {# more replies}}</value>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Reorder</value>
   </data>
 </root>

@@ -72,7 +72,7 @@ public class ExamineHeaderParityTests
 	{
 		var result = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService,
 			TestIsolationHelpers.GenerateUniqueName(prefix), _player.Handle);
-		var dbref = DBRef.Parse(result.Message!.ToPlainText());
+		var dbref = DBRef.Parse(result.Message.ToPlainText());
 		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>().Object();
 	}
 

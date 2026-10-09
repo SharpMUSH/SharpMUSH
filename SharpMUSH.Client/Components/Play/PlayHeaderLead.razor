@@ -1,0 +1,71 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* What leads Play's card header: the viewer's small avatar with a connection dot, after touch chrome's menu
+   button. The card header is the only bar on Play (shell.css hides the shell's touch header while the card is
+   mounted), so like a chat app's it leads with a menu button that opens Play's sidebar from the left, carrying
+   a dot while channels or pages are unread. A channel view that hides the card leads with the menu button
+   alone, so the one bar never loses its way to the sidebar. *@
+@if (Menu && Picture)
+{
+    <span class="play-lead">
+        @MenuButton
+        @ViewerPicture
+    </span>
+}
+else if (Menu)
+{
+    @MenuButton
+}
+else if (Picture)
+{
+    @ViewerPicture
+}
+
+@code {
+    /// <summary>Touch chrome's menu button; a desktop has the rail and the sidebar beside the card instead.</summary>
+    [Parameter] public bool Menu { get; set; }
+
+    /// <summary>The viewer's avatar.</summary>
+    [Parameter] public bool Picture { get; set; }
+
+    /// <summary>Unread messages in joined channels and conversations: the menu button's dot.</summary>
+    [Parameter] public int Unread { get; set; }
+
+    /// <summary>Opens Play's sidebar.</summary>
+    [Parameter] public EventCallback OnMenu { get; set; }
+
+    /// <summary>Who the viewer plays, as the card header names them.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>The viewer's picture from the room's contents.</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>Who the viewer plays, to find their picture while the room has not listed them yet.</summary>
+    [Parameter] public string? Character { get; set; }
+
+    [Parameter] public bool Connected { get; set; }
+
+    private RenderFragment MenuButton => __builder =>
+    {
+        <button type="button" class="play-menu-btn" aria-label="@Loc["NavPlayTabs"]" title="@Loc["NavPlayTabs"]"
+                aria-haspopup="dialog" @onclick="OnMenu">
+            <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" />
+            @if (Unread > 0)
+            {
+                <span class="play-menu-dot" aria-hidden="true"></span>
+                <span class="play-me-status">@Loc.Plural("NavUnreadCount", "count", Unread)</span>
+            }
+        </button>
+    };
+
+    /// <summary>A small avatar with a connection dot: the picture, else the initials on the name's hue.</summary>
+    private RenderFragment ViewerPicture => __builder =>
+    {
+        <span class="play-me @(Connected ? "play-me--on" : null)">
+            <CharacterAvatar Name="@Name" ImageUrl="@ImageUrl" Character="@Character"
+                             ImageClass="play-me-img" FallbackClass="play-me-initial" />
+            <span class="play-me-dot" title="@(Connected ? Loc["Connected"] : Loc["Disconnected"])"></span>
+            <span class="play-me-status">@(Connected ? Loc["Connected"] : Loc["Disconnected"])</span>
+        </span>
+    };
+}

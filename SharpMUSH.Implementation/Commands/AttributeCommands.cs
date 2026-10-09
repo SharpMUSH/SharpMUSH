@@ -42,7 +42,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var sourceText = sourceArg.Message!.ToPlainText();
+		var sourceText = sourceArg.Message.ToPlainText();
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(sourceText) is not { Object: var sourceDbref, Attribute: { } sourceAttr })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
@@ -78,7 +78,7 @@ public partial class Commands
 		var destinations = args
 			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
 			.OrderBy(kvp => int.Parse(kvp.Key))
-			.Select(kvp => kvp.Value.Message!.ToPlainText().Trim())
+			.Select(kvp => kvp.Value.Message.ToPlainText().Trim())
 			.Where(d => !string.IsNullOrEmpty(d));
 
 		int copiedCount = 0;
@@ -178,7 +178,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrText = objAttrArg.Message!.ToPlainText();
+		var objAttrText = objAttrArg.Message.ToPlainText();
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrName })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
@@ -205,7 +205,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var newOwnerText = ownerArg.Message!.ToPlainText();
+		var newOwnerText = ownerArg.Message.ToPlainText();
 
 		// A thing, room or exit named as the new owner stands for its own owner.
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -285,7 +285,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
-		var objAttr = args["0"].Message!.ToPlainText();
+		var objAttr = args["0"].Message.ToPlainText();
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttr) is not { Object: var dbref, Attribute: var maybeAttribute })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
@@ -343,7 +343,7 @@ public partial class Commands
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		var objAttrArg = args.ElementAtOrDefault(0).Value;
-		if (objAttrArg == null || objAttrArg.Message == null)
+		if (objAttrArg == null)
 		{
 			// src/set.c:971
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
@@ -388,7 +388,7 @@ public partial class Commands
 		}
 
 		var search = searchArg.Message.ToPlainText();
-		var replace = replaceArg?.Message != null ? replaceArg.Message.ToPlainText() : string.Empty;
+		var replace = replaceArg?.Message.ToPlainText() ?? string.Empty;
 
 		// src/set.c do_edit_regexp: the pattern is compiled before any attribute is read, so a bad one is
 		// reported once instead of leaving every attribute "Unchanged".
@@ -531,7 +531,7 @@ public partial class Commands
 				{
 					var replacement = await EvaluateRegexReplacement(parser, captures, regex, matches[i], replaceTemplate, text);
 					hadErrors |= replacement.HadErrors;
-					replacements[i] = replacement.Message!.ToPlainText();
+					replacements[i] = replacement.Message.ToPlainText();
 					firstEvaluated = i;
 				}
 
@@ -547,7 +547,7 @@ public partial class Commands
 
 				var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
 				hadErrors |= replacement.HadErrors;
-				return (AttributeEdit.Spliced(text, [match], [replacement.Message!.ToPlainText()], 0), hadErrors);
+				return (AttributeEdit.Spliced(text, [match], [replacement.Message.ToPlainText()], 0), hadErrors);
 			}
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
@@ -574,7 +574,7 @@ public partial class Commands
 		captures.Fill(regex, match, MarkupText.Plain(text));
 
 		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(template));
-		return new CallState(evaluatedReplacement?.Message?.ToPlainText() ?? string.Empty)
+		return new CallState(evaluatedReplacement?.Message.ToPlainText() ?? string.Empty)
 		{ HadErrors = evaluatedReplacement?.HadErrors == true };
 	}
 

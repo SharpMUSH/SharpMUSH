@@ -103,11 +103,11 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task UpdateCheck_ForAPackageInstalledAtFirstBoot_AnswersFromTheImage()
 	{
-		if (await Registry.GetInstalledPackageAsync("common-functions") is not InstalledPackageRecord installed)
-			throw new InvalidOperationException("common-functions installs at first boot, but is not installed.");
+		if (await Registry.GetInstalledPackageAsync("plus-help") is not InstalledPackageRecord installed)
+			throw new InvalidOperationException("plus-help installs at first boot, but is not installed.");
 		await Assert.That(BundledPackages.IsCatalogueSource(installed.SourceRepo)).IsTrue();
 
-		var info = Value(await Controller().CheckForUpdate("common-functions", CancellationToken.None));
+		var info = Value(await Controller().CheckForUpdate("plus-help", CancellationToken.None));
 
 		await Assert.That(info.InstalledVersion).IsEqualTo(installed.Version);
 		await Assert.That(info.LatestVersion).IsEqualTo(installed.Version);
@@ -164,7 +164,7 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 
 			// AINSTALL registered wikilink(), the command link an article's [[Page]] becomes; it has to
 			// be a link in each client's own dialect.
-			var link = (await factory.FunctionParser.FunctionParse(MarkupText.Plain("wikilink(Main,main)")))!.Message!;
+			var link = await factory.FunctionParser.EvaluateAsync(MarkupText.Plain("wikilink(Main,main)"));
 			await Assert.That(link.Render(MarkupFormat.Pueblo)).Contains("<A XCH_CMD=\"+wiki main\"");
 			await Assert.That(link.Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"+wiki main\"");
 		}

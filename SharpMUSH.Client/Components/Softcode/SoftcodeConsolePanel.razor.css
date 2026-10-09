@@ -1,0 +1,174 @@
+/* ── Console: arguments, scrollback and an input line under the editor ── */
+.sc-console {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    /* Room for a few runs without taking the editor's height; the scrollback scrolls. */
+    max-height: 40%;
+    min-height: 140px;
+    border-top: 1px solid var(--border-soft);
+    background: var(--code-bg);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+}
+.sc-console-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.125rem 0.375rem 0.125rem 0.875rem;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--surface-3);
+}
+.sc-console-title {
+    flex-shrink: 0;
+    font-family: var(--font-ui);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+.sc-console-hint {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-ui);
+    font-size: 0.6875rem;
+    color: var(--text-faint);
+}
+.sc-console-args {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    padding: 0.3125rem 0.875rem;
+    border-bottom: 1px solid var(--border-soft);
+}
+.sc-console-arg {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.sc-console-arg-name {
+    color: var(--accent);
+}
+.sc-console-arg-input {
+    width: 7rem;
+    padding: 0.125rem 0.375rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    outline: none;
+}
+.sc-console-arg-input:focus {
+    border-color: var(--accent);
+}
+.sc-console-argbtn {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+.sc-console-argbtn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+}
+.sc-console-log {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.25rem 0.875rem;
+}
+.sc-console-entry {
+    padding: 0.3125rem 0;
+    border-bottom: 1px dashed var(--border-soft);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.sc-console-entry:last-child {
+    border-bottom: none;
+}
+.sc-console-src {
+    display: flex;
+    gap: 0.375rem;
+    align-items: baseline;
+    color: var(--text);
+}
+.sc-console-sigil {
+    flex-shrink: 0;
+    color: var(--accent);
+}
+.sc-console-code {
+    min-width: 0;
+}
+.sc-console-unsaved {
+    flex-shrink: 0;
+    font-family: var(--font-ui);
+    font-size: 0.625rem;
+    color: var(--warn);
+}
+.sc-console-argline {
+    color: var(--text-faint);
+}
+.sc-console-out {
+    color: var(--text-dim);
+}
+.sc-console-result {
+    color: var(--success);
+}
+.sc-console-error {
+    color: var(--mud-palette-error);
+}
+.sc-console-none {
+    color: var(--text-faint);
+    font-style: italic;
+}
+.sc-console-input {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem 0.25rem 0.875rem;
+    border-top: 1px solid var(--border-soft);
+}
+.sc-console-prompt {
+    color: var(--accent);
+}
+.sc-console-line {
+    flex: 1;
+    min-width: 0;
+    padding: 0.3125rem 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    outline: none;
+}
+.sc-console-line::placeholder {
+    color: var(--text-faint);
+}
+.sc-console-send {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+.sc-console-send:hover:not(:disabled) {
+    color: var(--accent);
+}
+.sc-console-send:disabled {
+    opacity: 0.4;
+    cursor: default;
+}

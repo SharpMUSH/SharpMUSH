@@ -1,0 +1,61 @@
+@using SharpMUSH.Library.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Permissions tab: the form that defines a custom permission, then the game's custom permissions by
+   category, each with a delete action. *@
+<KitCard Class="roleadmin-assign">
+    <div class="ra-section">
+        <RoleNote Text="@Loc["RolCustomHelp"]" />
+        <div class="ra-override-add">
+            <input class="ra-input" type="text" placeholder="scene.close" aria-label="@Loc["RolCustomScopeLabel"]" value="@Draft.Scope"
+                   @oninput="@(e => Draft.Scope = e.Value?.ToString() ?? string.Empty)" />
+            <RoleCategorySelect Categories="Categories" Value="@Draft.Category" ValueChanged="@(value => Draft.Category = value)" />
+            <input class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@Draft.Description"
+                   @oninput="@(e => Draft.Description = e.Value?.ToString() ?? string.Empty)" />
+            <button type="button" class="ra-btn ra-btn--primary" @onclick="OnDefine" disabled="@Saving">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCustomAdd"]
+            </button>
+        </div>
+    </div>
+    @if (CustomCategories.Count == 0)
+    {
+        <div class="ra-section">
+            <div class="ra-empty">@Loc["RolCustomEmpty"]</div>
+        </div>
+    }
+    @foreach (var category in CustomCategories)
+    {
+        <div class="ra-section">
+            <div class="ra-section-label">@category.Key</div>
+            <div class="ra-perm-card">
+                @foreach (var p in category)
+                {
+                    <div class="ra-perm-row">
+                        <div class="ra-perm-label">
+                            <code class="ra-perm-scope">@p.Scope</code>
+                            <div class="ra-perm-desc">@p.Description</div>
+                        </div>
+                        <RoleIconAction Icon="@Icons.Material.Filled.Delete" Label="@Loc["Delete"]" Danger="true" Disabled="Saving"
+                                        OnClick="@(() => OnRemove.InvokeAsync(p))" />
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</KitCard>
+
+@code {
+    /// <summary>The custom permissions by category.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<IGrouping<string, CustomPermission>> CustomCategories { get; set; } = [];
+
+    /// <summary>The permission categories a new permission may sit in.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<RoleCategory> Categories { get; set; } = [];
+
+    /// <summary>What is typed into the define form.</summary>
+    [Parameter, EditorRequired] public CustomPermissionDraft Draft { get; set; } = null!;
+
+    [Parameter] public bool Saving { get; set; }
+
+    [Parameter] public EventCallback OnDefine { get; set; }
+    [Parameter] public EventCallback<CustomPermission> OnRemove { get; set; }
+}

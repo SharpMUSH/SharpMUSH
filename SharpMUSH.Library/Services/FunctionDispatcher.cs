@@ -68,7 +68,7 @@ public static class FunctionDispatcher
 		var flags = attribute.Flags;
 		var name = attribute.Name.ToUpperInvariant();
 		var restrictedEntry = EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
-			parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message?.ToPlainText() ?? ""), parser.FunctionLibrary);
+			parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message.ToPlainText()), parser.FunctionLibrary);
 		// #apply receives values after caller evaluation; it cannot establish a raw-input boundary.
 		if (restrictedEntry && !deferredArguments) return new CallState(EvaluationRestrictions.Error);
 		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null || restrictedEntry;
@@ -103,7 +103,7 @@ public static class FunctionDispatcher
 		}
 		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogArgs))
 			logger.LogInformation("Function {Function}({Arguments}) executed by {Executor}", name,
-				string.Join(",", parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message?.ToPlainText())), executor!.Object().DBRef);
+				string.Join(",", parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message.ToPlainText())), executor!.Object().DBRef);
 		else if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogName))
 			logger.LogInformation("Function {Function} executed by {Executor}", name, executor!.Object().DBRef);
 
@@ -125,9 +125,9 @@ public static class FunctionDispatcher
 						// The argument's work is its own, not the function's that asked for it.
 						CallState result;
 						using (InvocationClock.PauseRunning())
-							result = await localized.FunctionParse(pair.Value.Message ?? MarkupText.Empty) ?? CallState.Empty;
+							result = await localized.FunctionParse(pair.Value.Message) ?? CallState.Empty;
 						return flags.HasFlag(FunctionFlags.StripAnsi)
-							? result with { Message = MarkupText.Plain(result.Message?.ToPlainText() ?? "") } : result;
+							? result with { Message = MarkupText.Plain(result.Message.ToPlainText()) } : result;
 					}
 					return pair.Value with
 					{
@@ -187,7 +187,7 @@ public static class FunctionDispatcher
 
 		foreach (var argument in arguments)
 		{
-			var text = argument.Message?.ToPlainText();
+			var text = argument.Message.ToPlainText();
 			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && !numbers.TryInt64(text, out _))
 				return attribute.MaxArgs == 1 ? ErrorMessages.Returns.Integer : ErrorMessages.Returns.Integers;
 			if (attribute.Flags.HasFlag(FunctionFlags.PositiveIntegersOnly) && !numbers.TryUInt64(text, out _))

@@ -12,7 +12,7 @@ public class LayoutThemeFunctionTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<MString> Eval(string code) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(code)))!.Message!;
+		await FunctionParser.EvaluateAsync(MarkupText.Plain(code));
 
 	/// <summary>Nord's primary, #81a1c1, as a truecolour foreground.</summary>
 	private const string NordBlue = "38;2;129;161;193m";
@@ -67,7 +67,7 @@ public class LayoutThemeFunctionTests
 	public async Task Themes_ListsThePresets()
 		// Added themes follow the built-in ones; another test may add one meanwhile.
 		=> await Assert.That((await Eval("themes()")).ToPlainText())
-			.StartsWith("terminal fantasy historical horror modern mystery romance science-fiction spiritual catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night");
+			.StartsWith("sharpmush phosphor daylight magical-girl shojo idol slice-of-life shonen sports mechmachine isekai yokai comic-book rubber-hose eighties-cartoon cyberpunk synthwave space-opera starship-console real-robot super-robot protan-dark protan-light deutan-dark deutan-light tritan-dark tritan-light mono-dark mono-light terminal fantasy historical horror modern mystery romance science-fiction spiritual catppuccin-mocha catppuccin-latte dracula gruvbox-dark nord solarized-dark solarized-light tokyo-night");
 
 	[Test]
 	public async Task Theme_WritesTheWholePaletteOut()

@@ -36,9 +36,9 @@ public partial class Functions
 	private async ValueTask<CallState> GrepInternal(IMUSHCodeParser parser, bool caseInsensitive, bool checkParents)
 	{
 		var args = parser.CurrentState.Arguments;
-		var objectStr = args["0"].Message!.ToPlainText();
-		var attrsPattern = args["1"].Message!.ToPlainText();
-		var substring = args["2"].Message!.ToPlainText();
+		var objectStr = args["0"].Message.ToPlainText();
+		var attrsPattern = args["1"].Message.ToPlainText();
+		var substring = args["2"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -81,9 +81,9 @@ public partial class Functions
 	private async ValueTask<CallState> RegGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
 		var args = parser.CurrentState.Arguments;
-		var objectStr = args["0"].Message!.ToPlainText();
-		var attrsPattern = args["1"].Message!.ToPlainText();
-		var regexpPattern = args["2"].Message!.ToPlainText();
+		var objectStr = args["0"].Message.ToPlainText();
+		var attrsPattern = args["1"].Message.ToPlainText();
+		var regexpPattern = args["2"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		try
@@ -147,9 +147,9 @@ public partial class Functions
 	private async ValueTask<CallState> WildGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
 		var args = parser.CurrentState.Arguments;
-		var objectStr = args["0"].Message!.ToPlainText();
-		var attrsPattern = args["1"].Message!.ToPlainText();
-		var valuePattern = args["2"].Message!.ToPlainText();
+		var objectStr = args["0"].Message.ToPlainText();
+		var attrsPattern = args["1"].Message.ToPlainText();
+		var valuePattern = args["2"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// Compiled once for every attribute it is held against; grep_util asks for a case-sensitive

@@ -19,7 +19,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var messageIndex = scope is EmitScope.Immediate or EmitScope.Outermost ? 0 : 1;
 		return CommunicationService.EmitAsync(parser, EmitHelpers.Create(scope,
-			messageIndex == 0 ? "" : args["0"].Message!.ToPlainText(), args[messageIndex.ToString()].Message!,
+			messageIndex == 0 ? "" : args["0"].Message.ToPlainText(), args[messageIndex.ToString()].Message,
 			list: scope != EmitScope.Zone, silent: scope is EmitScope.Private or EmitScope.Room, noSpoof, inferPorts: true));
 	}
 
@@ -58,7 +58,7 @@ public partial class Functions
 		var result = await MessageHelpers.ProcessMessageAsync(
 			parser, Mediator, LocateService, AttributeService, NotifyService,
 			PermissionService, CommunicationService, executor,
-			recipients.Message!, defmsg.Message!, objectAndAttribute.Message!.ToPlainText(),
+			recipients.Message, defmsg.Message, objectAndAttribute.Message.ToPlainText(),
 			inBetweenArgs, isRemit, isOemit, isNospoof, isSpoof, isSilent: true);
 
 		return CallState.Empty with { HadErrors = result.HadErrors };
@@ -126,7 +126,7 @@ public partial class Functions
 		// is e_range, rather than either quietly becoming a single bell. beep() is no argument at all
 		// (src/parse.c:2974-2978).
 		var count = 1;
-		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg) && arg.Message!.ToPlainText() is { Length: > 0 } text)
+		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg) && arg.Message.ToPlainText() is { Length: > 0 } text)
 		{
 			if (!ArgHelpers.TryInteger(parser, text, out count))
 			{

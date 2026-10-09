@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Bunit;
+using MarkupString;
+using MarkupString.Ansi;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
@@ -258,5 +260,198 @@ public class SchemaDisplayTests : BunitContext
 		await Assert.That(SchemaRendering.IsSafeUrl("jobs/1?x=a:b")).IsTrue();
 		await Assert.That(SchemaRendering.IsSafeUrl("java\tscript:alert(1)")).IsFalse();
 		await Assert.That(SchemaRendering.IsSafeUrl("data:text/html,x")).IsFalse();
+	}
+
+	[Test]
+	[Arguments("<b>plain</b> text", "&lt;b&gt;plain&lt;/b&gt; text")]
+	[Arguments("[1,2]", "[1,2]")]
+	[Arguments("\"<i>\"", "&quot;&lt;i&gt;&quot;")]
+	public async Task Markup_that_is_not_a_serialized_MString_is_shown_as_encoded_text(string value, string html)
+	{
+		await Assert.That(SchemaRendering.MarkupToHtml(value)).IsEqualTo(html);
+	}
+
+	[Test]
+	public async Task Rows_sharing_a_group_draw_as_one_conversation_with_its_replies_indented()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "timeline", RowsField: "entries"), Rows("entries", """
+			[{"author":"Raya","body":"Route?","group":"1","anchor":"c1"},
+			 {"author":"Grave","body":"Harbor.","group":"1","anchor":"c2","reply_to":"re [1] Raya"},
+			 {"author":"Tomas","body":"Stairs closed.","group":"1","anchor":"c6","reply_to":"re [2] Grave","unread":true},
+			 {"author":"Ann","body":"A stall.","group":"3","anchor":"c3"}]
+			"""));
+
+		var entries = cut.FindAll("li.schema-timeline-entry");
+		await Assert.That(entries.Count).IsEqualTo(4);
+		await Assert.That(entries[0].ClassList).DoesNotContain("schema-timeline-entry--reply");
+		await Assert.That(entries[1].ClassList).Contains("schema-timeline-entry--reply");
+		await Assert.That(entries[2].ClassList).Contains("schema-timeline-entry--reply");
+		await Assert.That(entries[3].ClassList).Contains("schema-timeline-entry--starts")
+			.Because("a new group starts a new conversation");
+		await Assert.That(entries[3].ClassList).DoesNotContain("schema-timeline-entry--reply");
+
+		await Assert.That(entries[2].Id).IsEqualTo("c6");
+		await Assert.That(entries[2].QuerySelector(".schema-timeline-replyto")!.TextContent).IsEqualTo("re [2] Grave");
+		await Assert.That(entries[2].ClassList).Contains("schema-timeline-entry--unread");
+		await Assert.That(entries[2].QuerySelector(".schema-timeline-new")!.TextContent).IsEqualTo("WidTimelineNew");
+		await Assert.That(cut.FindAll(".schema-timeline-new").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task A_timeline_without_groups_draws_as_before()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "timeline", RowsField: "entries"), Rows("entries", """
+			[{"author":"Ada","body":"one"},{"author":"Bo","body":"two"}]
+			"""));
+
+		foreach (var entry in cut.FindAll("li.schema-timeline-entry"))
+		{
+			await Assert.That(entry.ClassName).IsEqualTo("schema-timeline-entry");
+			await Assert.That(entry.HasAttribute("id")).IsFalse();
+		}
+	}
+
+	[Test]
+	public async Task An_mstring_timeline_body_draws_its_markup_and_a_plain_one_is_encoded()
+	{
+		var styled = MarkupTextSerializer.Serialize(MarkupText.Concat(MarkupText.Plain("Ann's "),
+			MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)), "Teas")));
+		var rows = JsonSerializer.Serialize(new object[]
+		{
+			new { author = "Ann", body = styled, format = "mstring" },
+			new { author = "Bo", body = "<b>not a tag</b>", format = "mstring" },
+		});
+		var cut = RenderDisplay(new SchemaElement(Kind: "timeline", RowsField: "entries"), Rows("entries", rows));
+
+		var bodies = cut.FindAll(".schema-timeline-body.schema-markup");
+		await Assert.That(bodies.Count).IsEqualTo(2);
+		await Assert.That(bodies[0].TextContent).IsEqualTo("Ann's Teas");
+		await Assert.That(bodies[0].InnerHtml).Contains("<span").Because("the colour is kept");
+		await Assert.That(bodies[1].InnerHtml).Contains("&lt;b&gt;").And.DoesNotContain("<b>");
+	}
+
+	[Test]
+	public async Task Hidden_replies_get_a_more_link_that_stays_in_the_portal()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "timeline", RowsField: "entries"), Rows("entries", """
+			[{"author":"Ada","body":"deep","children_hidden":4,"more":"/apps/boards/5/3/5/2"},
+			 {"author":"Bo","body":"evil","children_hidden":2,"more":"javascript:alert(1)"},
+			 {"author":"Cy","body":"none hidden","more":"/apps/boards/5/3/5/9"}]
+			"""));
+
+		var more = cut.FindAll("a.schema-timeline-more");
+		await Assert.That(more.Count).IsEqualTo(1);
+		await Assert.That(more[0].GetAttribute("href")).IsEqualTo("/apps/boards/5/3/5/2");
+	}
+
+	[Test]
+	public async Task An_entrys_links_are_followed_and_an_unsafe_one_is_dropped()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "timeline", RowsField: "entries"), Rows("entries", """
+			[{"author":"Ada","body":"a","links":[{"label":"Reply","href":"/apps/boards/5/3/2"},
+			  {"label":"Bad","href":"javascript:alert(1)"},{"label":"","href":"/apps/boards/1"}]},
+			 {"author":"Bo","body":"b"}]
+			"""));
+
+		var links = cut.FindAll("a.schema-timeline-link");
+		await Assert.That(links.Count).IsEqualTo(1);
+		await Assert.That(links[0].TextContent).IsEqualTo("Reply");
+		await Assert.That(links[0].GetAttribute("href")).IsEqualTo("/apps/boards/5/3/2");
+		await Assert.That(cut.FindAll(".schema-timeline-actions").Count).IsEqualTo(1)
+			.Because("an entry with neither links nor actions gets no action row");
+	}
+
+	[Test]
+	public async Task A_fragment_naming_an_entry_scrolls_to_it_once()
+	{
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/apps/boards/5/3/5#c2");
+		var element = new SchemaElement(Kind: "timeline", RowsField: "entries");
+		var data = Rows("entries", """[{"author":"Ada","body":"a","anchor":"c1"},{"author":"Bo","body":"b","anchor":"c2"}]""");
+		var cut = RenderDisplay(element, data);
+		cut.Render();
+
+		var calls = JSInterop.Invocations.Where(i => i.Identifier == "SharpMUSH.scrollToId").ToList();
+		await Assert.That(calls.Count).IsEqualTo(1).Because("a redraw does not pull the page back");
+		await Assert.That(calls[0].Arguments[0]).IsEqualTo("c2");
+	}
+
+	[Test]
+	public async Task An_mstring_markdown_element_draws_markup_not_markdown()
+	{
+		var styled = MarkupTextSerializer.Serialize(MarkupText.Plain("**plain** text"));
+		var cut = RenderDisplay(new SchemaElement(Kind: "markdown", Value: styled, Format: "mstring"), null);
+
+		var body = cut.Find(".schema-markup");
+		await Assert.That(body.TextContent).IsEqualTo("**plain** text");
+		await Assert.That(cut.FindAll("strong").Count).IsEqualTo(0);
+	}
+
+	private static SchemaElement PostsTable(SchemaReorder? reorder = null) => new(
+		Kind: "table", RowsField: "posts", Reorder: reorder,
+		Columns: [new SchemaColumn("num", "#"), new SchemaColumn("title", "Title")]);
+
+	private const string GroupedPosts = """
+		[{"num":"1","key":"p7","title":"Rules","group":"Pinned"},
+		 {"num":"2","key":"p9","title":"Events","group":"Pinned"},
+		 {"num":"3","key":"p3","title":"Hello","group":"Newest"},
+		 {"num":"4","key":"p2","title":"Older","group":"Newest"}]
+		""";
+
+	[Test]
+	public async Task A_table_draws_a_heading_row_where_its_row_group_changes()
+	{
+		var cut = RenderDisplay(PostsTable(), Rows("posts", GroupedPosts));
+
+		var headings = cut.FindAll("tr.schema-table-group th");
+		await Assert.That(headings.Select(h => h.TextContent).ToList()).IsEquivalentTo(new[] { "Pinned", "Newest" });
+		await Assert.That(headings[0].GetAttribute("colspan")).IsEqualTo("2");
+		await Assert.That(cut.FindAll("tbody tr").Count).IsEqualTo(6);
+		await Assert.That(cut.FindAll(".schema-table-move").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Moving_a_row_in_the_reorderable_group_posts_its_key_and_new_place()
+	{
+		var requests = new List<SchemaActionRequest>();
+		var reorder = new SchemaReorder("Pinned", "comment", "key",
+			new Dictionary<string, JsonElement> { ["op"] = JsonSerializer.SerializeToElement("pin") });
+		var cut = RenderDisplay(PostsTable(reorder), Rows("posts", GroupedPosts), requests.Add);
+
+		var cells = cut.FindAll(".schema-table-move");
+		await Assert.That(cells.Count).IsEqualTo(2).Because("only the Pinned rows can be moved");
+		var firstButtons = cells[0].QuerySelectorAll("button");
+		await Assert.That(firstButtons[0].HasAttribute("disabled")).IsTrue().Because("the first pin cannot go up");
+
+		await cut.FindAll(".schema-table-move")[0].QuerySelectorAll("button")[1].ClickAsync();
+
+		await Assert.That(requests.Count).IsEqualTo(1);
+		await Assert.That(requests[0].Action).IsEqualTo("comment");
+		await Assert.That(requests[0].Values!["op"].GetString()).IsEqualTo("pin");
+		await Assert.That(requests[0].Values!["item"].GetString()).IsEqualTo("p7");
+		await Assert.That(requests[0].Values!["position"].GetInt32()).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task Dropping_a_dragged_row_on_another_in_its_group_moves_it_there()
+	{
+		var requests = new List<SchemaActionRequest>();
+		var cut = RenderDisplay(PostsTable(new SchemaReorder("Pinned", "comment", "key")), Rows("posts", GroupedPosts), requests.Add);
+
+		var rows = cut.FindAll("tr.schema-table-row--reorder");
+		await rows[1].TriggerEventAsync("ondragstart", new Microsoft.AspNetCore.Components.Web.DragEventArgs());
+		await cut.FindAll("tr.schema-table-row--reorder")[0].TriggerEventAsync("ondrop", new Microsoft.AspNetCore.Components.Web.DragEventArgs());
+
+		await Assert.That(requests.Count).IsEqualTo(1);
+		await Assert.That(requests[0].Values!["item"].GetString()).IsEqualTo("p9");
+		await Assert.That(requests[0].Values!["position"].GetInt32()).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task A_reorder_naming_an_action_the_document_lacks_offers_no_moves()
+	{
+		var cut = RenderDisplay(PostsTable(new SchemaReorder("Pinned", "nowhere", "key")), Rows("posts", GroupedPosts));
+
+		await Assert.That(cut.FindAll(".schema-table-move").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("tr[draggable]").Count).IsEqualTo(0);
 	}
 }
