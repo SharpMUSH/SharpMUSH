@@ -37,7 +37,6 @@ public class ScenePoseTypeIntegrationTests
 		var god = DBRef.Parse(await Eval("objid(#1)"));
 		var before = Notifications.CountFor(god);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		await WebAppFactoryArg.QueueBarrierAsync();
 		return string.Join("\n", Notifications.For(god).Skip(before));
 	}
 
@@ -46,7 +45,6 @@ public class ScenePoseTypeIntegrationTests
 	{
 		var before = Notifications.CountFor(player.DbRef);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
-		await WebAppFactoryArg.QueueBarrierAsync();
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 

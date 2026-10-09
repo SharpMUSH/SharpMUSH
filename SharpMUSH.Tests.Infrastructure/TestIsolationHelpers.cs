@@ -79,7 +79,7 @@ public static class TestIsolationHelpers
 	/// As <see cref="CreateTestPlayerAsync"/>, but takes the finished name rather than a prefix, so a
 	/// caller that needs to know the player's name does not have to read it back out of the database.
 	/// </summary>
-	private static async Task<DBRef> CreateNamedTestPlayerAsync(
+	public static async Task<DBRef> CreateNamedTestPlayerAsync(
 		IServiceProvider services,
 		IMediator mediator,
 		string name,

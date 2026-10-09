@@ -44,9 +44,19 @@ public class SceneVerbRulesIntegrationTests
 		return string.Join("\n", Notifications.For(actor).Skip(before));
 	}
 
+	/// <summary>
+	/// The room this test's players stand in. DefaultHome holds every player the session made, and each scene
+	/// change in a room refreshes it for everyone connected there, on the queue every test waits behind.
+	/// </summary>
+	private DBRef? _room;
+
+	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+
 	private async Task<(DBRef Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
-		await God1($"@pcreate {name}=pw-{Tag}-1");
+		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
