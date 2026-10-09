@@ -3,7 +3,7 @@
 @inject SidebarCollapseService CollapseMemory
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 @* D1 §3 page sidebar. A section's layout wraps its pages in this: the sidebar goes into the shell's
    page-sidebar slot (MainLayout's SectionOutlet), which the shell shows only while one is mounted;
@@ -53,24 +53,44 @@
 
     private bool _collapsed;
 
-    /// <summary>On touch chrome the sidebar is an off-canvas panel with no room for a strip.</summary>
+    /// <summary>
+    /// On touch chrome the sidebar is an off-canvas panel with no room for a strip. Followed live: a window
+    /// first drawn narrow and then widened has the desktop sidebar and its collapse button again.
+    /// </summary>
     private bool _touch;
 
     private bool Collapsed => _collapsed && !_touch;
 
+    private DotNetObjectReference<SectionShell>? _self;
+    private IJSObjectReference? _touchWatch;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        bool touch;
         try
         {
-            _touch = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
+            _touchWatch = await JS.InvokeAsync<IJSObjectReference>("sharpmushLayout.watchTouchChrome", _self);
+            touch = await _touchWatch.InvokeAsync<bool>("matches");
         }
         catch (JSException)
         {
             return;
         }
-        if (_touch && _collapsed) StateHasChanged();
+        if (touch == _touch) return;
+        _touch = touch;
+        if (_collapsed) StateHasChanged();
     }
+
+    /// <summary>The window crossed the touch-chrome width (layout.js watchTouchChrome).</summary>
+    [JSInvokable]
+    public Task OnTouchChromeChanged(bool touch) => InvokeAsync(() =>
+    {
+        if (touch == _touch) return;
+        _touch = touch;
+        if (_collapsed) StateHasChanged();
+    });
 
     protected override async Task OnParametersSetAsync()
     {
@@ -91,5 +111,21 @@
         });
     }
 
-    public void Dispose() => CollapseMemory.Changed -= OnChanged;
+    public async ValueTask DisposeAsync()
+    {
+        CollapseMemory.Changed -= OnChanged;
+        if (_touchWatch is not null)
+        {
+            try
+            {
+                await _touchWatch.InvokeVoidAsync("dispose");
+                await _touchWatch.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The page is going away; so is the listener.
+            }
+        }
+        _self?.Dispose();
+    }
 }

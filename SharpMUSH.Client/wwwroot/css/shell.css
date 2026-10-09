@@ -1250,7 +1250,7 @@ pre.ms-preformatted {
    any touch device (pointer: coarse) OR any narrow window — so phones, tablets, and
    landscape phones all get the touch-friendly chrome instead of the desktop sidebar,
    while a mouse/trackpad desktop (pointer: fine + wide) keeps the sidebar. Keep this
-   media condition in sync with sharpmushLayout.isTouchChrome() in layout.js. ══ */
+   media condition in sync with sharpmushLayout.touchChromeQuery in layout.js. ══ */
 @media (max-width: 760px), (pointer: coarse) {
 	/* The rail is desktop chrome; touch chrome has the drawer, the header and the bottom tab bar.
 	   Anything that is not touch chrome (a fine pointer, or none at all) gets the rail alone. */
