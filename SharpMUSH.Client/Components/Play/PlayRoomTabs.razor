@@ -8,9 +8,8 @@
    panels, each rendered as the aside renders it but in sheet mode. *@
 @* The tabs pattern: one tab stop, the arrows, Home and End move between them (selection follows focus). *@
 <div class="play-sheet-tabs" role="tablist" aria-label="@Label" @onkeydown="OnTabKeyAsync" @ref="_tabList">
-    @foreach (var entry in Entries)
+    @foreach (var e in Entries)
     {
-        var e = entry;
         var on = e.Name == Selected;
         <button type="button" role="tab" id="@($"play-tab-{e.Name}")" aria-controls="play-panel-room" aria-selected="@(on ? "true" : "false")"
                 tabindex="@(on ? 0 : -1)" @ref="_tabs[e.Name]"

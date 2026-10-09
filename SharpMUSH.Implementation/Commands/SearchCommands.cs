@@ -1108,7 +1108,8 @@ public partial class Commands
 		{
 			return failures.TimedOut;
 		}
-		catch
+		// An invalid pattern: the Regex constructor's RegexParseException is an ArgumentException.
+		catch (ArgumentException)
 		{
 			return failures.Invalid;
 		}

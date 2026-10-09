@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
@@ -461,21 +462,22 @@ public partial class Play
 			.Where(a => a.ZoneEnums.Contains(WidgetZone.RightSidebar))
 			.ToList();
 
-		var entries = new List<PlayAsideEntry>();
-		foreach (var placement in placements.Where(p => AsideGate.Admits(p.WidgetName, role)))
-		{
-			if (Widgets.GetWidget(placement.WidgetName) is { } widget) entries.Add(new PlayAsideEntry(placement.WidgetName, widget, placement.Config, Placed: true));
-		}
-		foreach (var app in _scopePanels)
-		{
-			if (Widgets.GetWidget(app.Slug) is { } widget) entries.Add(new PlayAsideEntry(app.Slug, widget, null, Placed: false));
-		}
+		var entries = placements
+			.Where(p => AsideGate.Admits(p.WidgetName, role))
+			.Select(p => AsideEntry(p.WidgetName, p.Config, placed: true))
+			.Concat(_scopePanels.Select(app => AsideEntry(app.Slug, null, placed: false)))
+			.OfType<PlayAsideEntry>()
+			.ToList();
 		_asideEntries = entries;
 		if (_sheetEntry is null || entries.All(e => e.Name != _sheetEntry))
 		{
 			_sheetEntry = entries.FirstOrDefault(e => e.Name == "Exits")?.Name ?? entries.FirstOrDefault()?.Name;
 		}
 	}
+
+	/// <summary>The aside entry for a registered widget; none for a name no widget answers to.</summary>
+	private PlayAsideEntry? AsideEntry(string name, JsonElement? config, bool placed)
+		=> Widgets.GetWidget(name) is { } widget ? new PlayAsideEntry(name, widget, config, placed) : null;
 
 	private void OnLayoutChanged(string scope)
 	{

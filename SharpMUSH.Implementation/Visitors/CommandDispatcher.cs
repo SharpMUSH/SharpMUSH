@@ -180,7 +180,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	/// </summary>
 	private static string? CommandName(IEvaluationStringContext? firstCommandMatch)
 	{
-		if (firstCommandMatch?.SourceInterval.Length is null or 0)
+		if (firstCommandMatch is not { SourceInterval.Length: > 0 })
 			return null;
 
 		var command = firstCommandMatch.GetText().TrimStart();

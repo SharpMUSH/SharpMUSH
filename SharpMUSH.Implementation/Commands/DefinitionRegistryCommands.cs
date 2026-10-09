@@ -216,13 +216,15 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		var hooks = await HookService.GetAllHooksAsync(commandName);
-		foreach (var hookType in (string[])["BEFORE", "AFTER", "IGNORE", "OVERRIDE", "EXTEND"])
+		foreach (var hookType in HookTypes.Where(hooks.ContainsKey))
 		{
-			if (!hooks.TryGetValue(hookType, out var hook)) continue;
+			var hook = hooks[hookType];
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoHookFormat), executor,
 				HookDisplayName(hookType, hook), hook.TargetObject.Number, hook.AttributeName);
 		}
 	}
+
+	private static readonly string[] HookTypes = ["BEFORE", "AFTER", "IGNORE", "OVERRIDE", "EXTEND"];
 
 	/// <summary>The hook's type in lower case, with an inline override or extend's own switches after it.</summary>
 	private static string HookDisplayName(string hookType, CommandHook hook)

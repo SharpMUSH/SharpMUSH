@@ -101,7 +101,7 @@
                     <span>@Loc["Attributes"]</span>
                     @if (_selectedObject is not null)
                     {
-                        <span class="sc-attrs-dbref">· #@(_selectedObject?.Dbref)</span>
+                        <span class="sc-attrs-dbref">· #@(_selectedObject.Dbref)</span>
                     }
                 </MudText>
                 <button type="button" class="sc-add-btn" @onclick="ShowCreateAttr"
