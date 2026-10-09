@@ -109,7 +109,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 	{
 		SeedAccount(loggedIn: true, characters: []);
 
-		// Play hosts a MudMenu (terminal settings), which requires a MudPopoverProvider in the
+		// Play hosts a MudPopover (terminal settings), which requires a MudPopoverProvider in the
 		// render tree — MudHarness supplies one and contributes nothing else to the markup.
 		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
 		cut.WaitForAssertion(() =>
@@ -127,7 +127,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 	{
 		SeedAccount(loggedIn: true, characters: []);
 
-		// Play hosts a MudMenu (terminal settings), which requires a MudPopoverProvider in the
+		// Play hosts a MudPopover (terminal settings), which requires a MudPopoverProvider in the
 		// render tree — MudHarness supplies one and contributes nothing else to the markup.
 		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
 		cut.WaitForAssertion(() =>
@@ -147,7 +147,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 	{
 		SeedAccount(loggedIn: true, characters: [new CharacterSummary(1, 1L, "Alpha", "")]);
 
-		// Play hosts a MudMenu (terminal settings), which requires a MudPopoverProvider in the
+		// Play hosts a MudPopover (terminal settings), which requires a MudPopoverProvider in the
 		// render tree — MudHarness supplies one and contributes nothing else to the markup.
 		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
 		cut.WaitForAssertion(() =>
@@ -167,7 +167,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		// tells the visitor there are none) — the gate must not swallow it.
 		SeedAccount(loggedIn: false, characters: []);
 
-		// Play hosts a MudMenu (terminal settings), which requires a MudPopoverProvider in the
+		// Play hosts a MudPopover (terminal settings), which requires a MudPopoverProvider in the
 		// render tree — MudHarness supplies one and contributes nothing else to the markup.
 		var cut = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Play>());
 		cut.WaitForAssertion(() =>

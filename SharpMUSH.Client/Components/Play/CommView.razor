@@ -25,12 +25,15 @@
         </div>
         @if (!IsConversation)
         {
+            @* Pressed while the list is flipped from where the layout starts it: shown on a narrow screen,
+               hidden on a wide one. The count is in the name, so it is read with it. *@
             <button type="button" class="comm-members-toggle" aria-controls="comm-members" title="@Loc["NavPlayMembers"]"
-                    aria-label="@Loc["NavPlayMembers"]" @onclick="() => _membersToggled = !_membersToggled">
+                    aria-label="@(Members is { } named ? Loc["NavPlayMembersCount", named.Count] : Loc["NavPlayMembers"])"
+                    aria-pressed="@(_membersToggled ? "true" : "false")" @onclick="() => _membersToggled = !_membersToggled">
                 <MudIcon Icon="@Icons.Material.Outlined.People" Size="Size.Small" />
                 @if (Members is { } shown)
                 {
-                    <span class="comm-members-count">@shown.Count</span>
+                    <span class="comm-members-count" aria-hidden="true">@shown.Count</span>
                 }
             </button>
         }
@@ -39,7 +42,8 @@
         </button>
     </header>
     <div class="comm-main">
-        <div class="comm-scroll" data-input-region>
+        <div class="comm-scroll" data-input-region tabindex="0" role="region" aria-label="@Loc["NavPlayLinesOf", Target]">
+            <LiveAnnouncer @ref="_announcer" Label="@Loc["NavPlayLinesOf", Target]" />
             <div class="comm-lines">
                 @if (IsConversation && Feed.PageLogging == false)
                 {
@@ -171,6 +175,7 @@
         if (_openedKey is not null) Who.Unwatch(_openedKey);
         _openedKey = Key;
         _arrived = false;
+        _historyRead = false;
         _text = string.Empty;
         _lines = Feed.Messages(Key);
         var unread = Conversation?.Unread ?? Feed.Channels.FirstOrDefault(c => c.Name == Key)?.Unread ?? 0;
@@ -180,7 +185,7 @@
         Feed.Viewing = Key;
         Feed.MarkRead(Key);
         // The channel's recent lines from the server; they arrive through Changed, filed with the live ones.
-        _ = Feed.LoadHistoryAsync(Key);
+        _ = ReadHistoryAsync(Key);
         if (!IsConversation) _ = Who.WatchAsync(Key);
     }
 
@@ -211,13 +216,57 @@
         return -1;
     }
 
+    private LiveAnnouncer? _announcer;
+
+    /// <summary>
+    /// The channel's history has been read in: until then a line that turns up is history the view shows, not
+    /// news to read out.
+    /// </summary>
+    private bool _historyRead;
+
     private void OnFeedChanged()
     {
         // A reconnect clears the feed, and with it Viewing; this view is still open.
         if (_openedKey is not null && Feed.Viewing is null) Feed.Viewing = _openedKey;
+        var before = _lines;
         _lines = Feed.Messages(Key);
+        AnnounceArrivals(before, _lines);
+        // Opened before the feed caught up with the server: its history comes with this change or a later one.
+        if (!_historyRead && !_historyReading && _openedKey is { } key) _ = ReadHistoryAsync(key);
         _newAt = FirstUnreadIndex();
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Reads out each line that arrived after the history was read in, with who said it: a line not held before
+    /// and newer than every line that was.
+    /// </summary>
+    private void AnnounceArrivals(IReadOnlyList<CommMessage> before, IReadOnlyList<CommMessage> now)
+    {
+        if (_announcer is null || !_historyRead) return;
+        var held = before.ToHashSet();
+        var newest = before.Count == 0 ? DateTimeOffset.MinValue : before.Max(l => l.Timestamp);
+        foreach (var line in now.Where(l => l.Timestamp >= newest && !held.Contains(l)))
+        {
+            _announcer.Announce(Loc["NavPlayLineSaid", line.From, line.Text]);
+        }
+    }
+
+    private bool _historyReading;
+
+    private async Task ReadHistoryAsync(string key)
+    {
+        _historyReading = true;
+        var read = false;
+        try
+        {
+            read = await Feed.LoadHistoryAsync(key);
+        }
+        finally
+        {
+            _historyReading = false;
+            if (read && string.Equals(_openedKey, key, StringComparison.Ordinal)) _historyRead = true;
+        }
     }
 
     private void OnWhoChanged() => _ = InvokeAsync(StateHasChanged);

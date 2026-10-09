@@ -3,11 +3,11 @@
    away or idle, and the word comes from softcode. *@
 @if (Href is not null)
 {
-    <a class="@RootClass" href="@Href" aria-label="@AriaLabel">@Inner</a>
+    <a class="@RootClass" href="@Href" aria-label="@AccessibleName">@Inner</a>
 }
 else
 {
-    <button type="button" class="@RootClass" aria-label="@AriaLabel" @onclick="OnClick">@Inner</button>
+    <button type="button" class="@RootClass" aria-label="@AccessibleName" @onclick="OnClick">@Inner</button>
 }
 
 @code {
@@ -34,6 +34,9 @@ else
 
     /// <summary>The accessible name when the label is shortened (a first name in Play's Here).</summary>
     [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>The full name in place of a shortened label, still with its status: "idle 14m" is not only for the eye.</summary>
+    private string? AccessibleName => AriaLabel is null || Status is null ? AriaLabel : $"{AriaLabel} · {Status}";
 
     private string RootClass => Highlight ? "kit-portrait kit-portrait--highlight" : "kit-portrait";
     private string Text => Status is null ? (Label ?? Name) : $"{Label ?? Name} · {Status}";

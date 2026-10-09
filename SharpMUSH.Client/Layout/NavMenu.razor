@@ -25,7 +25,7 @@
         }
     </NavLink>
 
-    <nav class="phosphor-nav">
+    <nav class="phosphor-nav" aria-label="@Loc["NavMenuLabel"]">
 
         <div class="nav-group">
             <div class="nav-group-label">@Loc["Play"]</div>
@@ -34,14 +34,13 @@
             {
                 <NavLink class="phosphor-nav-link" href="/play" Match="NavLinkMatch.Prefix">
                     <MudIcon Icon="@Icons.Material.Filled.SportsEsports" Class="phosphor-nav-icon" />
-                    @if (!IsCollapsed)
-                    {
-                        <span class="phosphor-nav-text">@Loc["Play"]</span>
-                    }
+                    @* Collapsed to its icon, the link still says where it goes. *@
+                    <span class="@(IsCollapsed ? "visually-hidden" : "phosphor-nav-text")">@Loc["Play"]</span>
                     @if (_playActive)
                     {
-                        <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")"
+                        <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")" aria-hidden="true"
                               title="@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])"></span>
+                        <span class="visually-hidden">@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])</span>
                     }
                 </NavLink>
             }
@@ -178,10 +177,7 @@
     private RenderFragment NavItem(string href, string icon, string label, NavLinkMatch match = NavLinkMatch.Prefix) =>
         @<NavLink class="phosphor-nav-link" href="@href" Match="match">
             <MudIcon Icon="@icon" Class="phosphor-nav-icon" />
-            @if (!IsCollapsed)
-            {
-                <span class="phosphor-nav-text">@label</span>
-            }
+            <span class="@(IsCollapsed ? "visually-hidden" : "phosphor-nav-text")">@label</span>
         </NavLink>;
 
     protected override void OnInitialized()

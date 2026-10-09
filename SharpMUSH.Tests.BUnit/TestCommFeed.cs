@@ -23,10 +23,10 @@ public sealed class TestCommFeed : ICommFeed
 
 	public void MarkRead(string key) => MarkedRead.Add(key);
 
-	public Task LoadHistoryAsync(string key)
+	public Task<bool> LoadHistoryAsync(string key)
 	{
 		Loaded.Add(key);
-		return Task.CompletedTask;
+		return Task.FromResult(true);
 	}
 
 	public void Raise() => _changed?.Invoke();

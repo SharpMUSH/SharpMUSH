@@ -21,6 +21,7 @@
 @using SharpMUSH.Library.Models.Portal.Widgets
 @inject IJSRuntime JS
 @inject ServerInfoService ServerInfo
+@inject ScreenReaderMode ScreenReader
 @implements IAsyncDisposable
 
 <PageTitle>@Loc["Play"] — @Loc["AppTitle"]</PageTitle>
@@ -73,6 +74,12 @@ else
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
         <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
             <div class="play-main">
+                @* The open banner's room name is the page's h1; otherwise this one, for the reader alone, so the page
+                   has a heading to land on (FocusOnNavigate) and to jump back to. *@
+                @if (!BannerShown)
+                {
+                    <h1 class="visually-hidden">@(Room.Info?.Name is { Length: > 0 } here ? $"{Loc["Play"]}: {here}" : Loc["Play"])</h1>
+                }
                 @if (_commKey is { } commKey)
                 {
                     <div class="play-comm">
@@ -193,12 +200,14 @@ else
                     {
                         @* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the
                            scope panels, each rendered as the aside renders it but in sheet mode. *@
-                        <div class="play-sheet-tabs" role="tablist">
+                        @* The tabs pattern: one tab stop, the arrows, Home and End move between them (selection follows focus). *@
+                        <div class="play-sheet-tabs" role="tablist" aria-label="@SheetLabel(sheet)" @onkeydown="OnSheetTabKeyAsync" @ref="_sheetTabList">
                             @foreach (var entry in _asideEntries)
                             {
                                 var e = entry;
                                 var on = e.Name == _sheetEntry;
                                 <button type="button" role="tab" id="@($"play-tab-{e.Name}")" aria-controls="play-panel-room" aria-selected="@(on ? "true" : "false")"
+                                        tabindex="@(on ? 0 : -1)" @ref="_sheetTabs[e.Name]"
                                         class="play-sheet-tab @(on ? "play-sheet-tab--on" : null)" @onclick="() => _sheetEntry = e.Name">
                                     @TabLabel(e)
                                 </button>
@@ -317,6 +326,33 @@ else
 
     /// <summary>The Room sheet's current tab: Exits when there is one (board 11), else the first.</summary>
     private string? _sheetEntry;
+
+    private readonly Dictionary<string, ElementReference> _sheetTabs = new(StringComparer.Ordinal);
+
+    private ElementReference _sheetTabList;
+    private string? _sheetTabKeys;
+
+    private async Task OnSheetTabKeyAsync(KeyboardEventArgs e)
+    {
+        if (_asideEntries.Count == 0) return;
+        var at = Math.Max(0, _asideEntries.ToList().FindIndex(entry => entry.Name == _sheetEntry));
+        int? next = e.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => (at + 1) % _asideEntries.Count,
+            "ArrowLeft" or "ArrowUp" => (at - 1 + _asideEntries.Count) % _asideEntries.Count,
+            "Home" => 0,
+            "End" => _asideEntries.Count - 1,
+            _ => null,
+        };
+        if (next is not { } index) return;
+        _sheetEntry = _asideEntries[index].Name;
+        if (_sheetTabs.TryGetValue(_sheetEntry, out var tab))
+        {
+            // A tab not rendered yet has no element to focus; the key then just selects it.
+            try { await tab.FocusAsync(); }
+            catch (InvalidOperationException) { return; }
+        }
+    }
 
     /// <summary>The sheet's variant of the page context: sheet mode, and a send that closes the sheet.</summary>
     private PlayPageContext _sheetContext = null!;
@@ -682,23 +718,31 @@ else
 
     private RenderFragment TerminalSettings(SettingsMenu menu) => __builder =>
     {
-        @* Escape closes it, from the button or from inside: MudMenu does not. *@
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true"
-                 Open="@(_settingsOpen == menu)" OpenChanged="@((bool open) => OnSettingsOpenChanged(menu, open))">
-            <ActivatorContent>
-                <button type="button" class="play-settings-btn" @onclick="@context.ToggleAsync" @onkeydown="CloseSettingsOnEscape"
-                        title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]">
+        var open = _settingsOpen == menu;
+        var readerWhat = $"play-cfg-reader-what-{menu}";
+        <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                     Open="open" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))">
+            <Activator>
+                <button type="button" class="play-settings-btn" @onclick="() => OnSettingsOpenChanged(menu, !open)" @onkeydown="CloseSettingsOnEscape"
+                        title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]" aria-expanded="@(open ? "true" : "false")">
                     <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
                 </button>
-            </ActivatorContent>
+            </Activator>
             <ChildContent>
-                <div class="play-cfg" @onclick:stopPropagation="true" @onkeydown="CloseSettingsOnEscape">
+                <div class="play-cfg" role="group" aria-label="@Loc["NavTerminalSettings"]" @onclick:stopPropagation="true">
                     <div class="play-cfg-kicker">@Loc["Terminal"]</div>
                     <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
                         <span>@Loc["NavTerminalWidthCols"]</span>
                         <input class="play-cols-input" type="number" min="78" max="240" step="1"
                                value="@_targetCols" @onchange="OnColsChanged" />
                     </label>
+                    @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
+                    <label class="play-cfg-row">
+                        <span>@Loc["NavScreenReaderMode"]</span>
+                        <input class="play-cfg-check" type="checkbox" checked="@ScreenReader.On"
+                               aria-describedby="@readerWhat" @onchange="OnScreenReaderModeChanged" />
+                    </label>
+                    <div class="play-cfg-note" id="@readerWhat">@Loc["NavScreenReaderModeTooltip"]</div>
                     <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
                         <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
                         <span>@Loc["TermClearTerminal"]</span>
@@ -710,7 +754,7 @@ else
                     </button>
                 </div>
             </ChildContent>
-        </MudMenu>
+        </PopoverMenu>
     };
 
     /// <summary>
@@ -734,6 +778,8 @@ else
 
     private void ClearTerminal() => _playTerm?.ClearOutput();
 
+    private Task OnScreenReaderModeChanged(ChangeEventArgs e) => ScreenReader.SetAsync(e.Value is true);
+
     // The player's preferred terminal width in columns (min 78). The terminal autoscales its
     // font to fill this many columns; the value is also what the client reports over NAWS.
     // Persisted per-browser in localStorage, with whether the room banner is open (larger screens).
@@ -744,6 +790,13 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The sheet scrolls, so the keys the tabs move with must not scroll it as well (layout.js tabKeys).
+        if (_sheetTabList.Id is { } tabs && tabs != _sheetTabKeys)
+        {
+            _sheetTabKeys = tabs;
+            try { await JS.InvokeVoidAsync("sharpmushLayout.tabKeys", _sheetTabList); }
+            catch (JSException) { return; }
+        }
         if (!firstRender) return;
         var changed = false;
         var stored = await JS.GetItemAsync(BrowserStore.Local, "play.cols");
@@ -866,6 +919,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await ScreenReader.LoadAsync();
         _scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
         await ResolveRosterAsync();
         await LoadAsideAsync();

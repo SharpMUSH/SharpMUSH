@@ -457,6 +457,12 @@
 	0%, 100% { opacity: 1; }
 	50% { opacity: 0.5; }
 }
+/* A pulse that never stops is motion the visitor asked not to have (WCAG 2.2.2); the glow still says unread. */
+@media (prefers-reduced-motion: reduce) {
+	.phosphor-nav-dot--unread {
+		animation: none;
+	}
+}
 
 .phosphor-nav-link:hover {
 	background: var(--surface-2);
@@ -1478,4 +1484,16 @@ pre.ms-preformatted {
 /* The skip link's target is focused only to move the reading point; it is not a control. */
 .phosphor-main:focus {
 	outline: none;
+}
+
+/* The main text boxes draw no outline of their own (their row is the box), so the row shows where focus is:
+   WCAG 2.4.7. Unscoped, because the field and its row come from different components. */
+.kit-bottom-bar:has(.composer-input:focus-visible, .comm-input:focus-visible) {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 1px var(--accent);
+}
+
+.sharp-terminal-input:has(.term-input:focus-visible),
+.kit-palette-field:has(input:focus-visible) {
+	box-shadow: inset 0 0 0 2px var(--accent);
 }

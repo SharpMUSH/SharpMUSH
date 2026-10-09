@@ -10,22 +10,29 @@
 @inject ServerInfoService ServerInfo
 @inject IStringLocalizer<SharedResource> Loc
 @inject CommandHistory History
+@inject ScreenReaderMode ScreenReader
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
 
-    @* With an input line, a plain click in the output focuses it, as a terminal does (input-focus.js). *@
+    @* With an input line, a plain click in the output focuses it, as a terminal does (input-focus.js).
+       A log: a screen reader reads each new line as it arrives on the terminal the player types into, and
+       the background terminal in the drawer stays quiet. It takes focus so the keyboard can scroll it. In
+       Screen reader mode the announcer below reads instead, leaving out the player's own commands. *@
     <div id="@_outputId"
          class="sharp-terminal-output" data-input-region="@Interactive"
+         role="log" aria-live="@(Interactive && !ScreenReader.On ? "polite" : "off")" aria-label="@Loc["TermOutputLabel"]" tabindex="0"
          style="flex:1;min-height:0;overflow:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
            floor width of that many characters. On a narrow screen the output scrolls
            horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
            and the measured NAWS is floored to match (see OnTerminalResize). *@
         <div class="sharp-terminal-track" style="@(TargetColumns > 0 ? $"min-width:{TargetColumns}ch;" : "")">
+            @* Keyed, so a full scrollback drops its oldest line instead of rewriting every line in place, which
+               the log would read out again from the top. *@
             @foreach (var line in _transcript.Lines)
             {
-                <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
+                <div @key="line" class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
             }
             <div id="@_bottomId"></div>
         </div>
@@ -75,22 +82,25 @@
 
     @if (Interactive)
     {
+        <LiveAnnouncer @ref="_announcer" Label="@Loc["TermLatestLines"]" />
         <div class="sharp-terminal-input">
-            <span class="term-prompt">›</span>
+            <span class="term-prompt" aria-hidden="true">›</span>
             @* The page's main text box (input-focus.js): focused once the connection is up, and where typing on the
                page goes. Enter sends, so a touch keyboard labels it Send. *@
+            @* data-review-keys: Alt and a number reads a recent line again (layout.js reviewKeys). *@
             <input class="term-input" @ref="_inputRef" data-primary-input="end" enterkeyhint="send"
+                   data-review-keys="@(ScreenReader.On ? "on" : null)"
                    value="@_input"
                    @oninput="OnInput"
                    @onkeydown="OnInputKeyDown"
-                   disabled="@(!_connected)"
+                   disabled="@(!_connected)" aria-label="@Loc["TermInputLabel"]"
                    placeholder="@Loc["TermInputPlaceholder"]" />
-            <button type="button" class="term-send" @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]">
+            <button type="button" class="term-send" @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]" aria-label="@Loc["Send"]">
                 <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:0.875rem;" />
             </button>
             @if (ShowClearButton)
             {
-                <button type="button" class="term-clear" @onclick="ClearAsync" title="@Loc["TermClearTerminal"]">
+                <button type="button" class="term-clear" @onclick="ClearAsync" title="@Loc["TermClearTerminal"]" aria-label="@Loc["TermClearTerminal"]">
                     <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:0.9375rem;" />
                 </button>
             }
@@ -227,6 +237,7 @@
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
+        ScreenReader.Changed += OnScreenReaderChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
         if (Terminal is TerminalServiceHost host) host.Recreated += OnRecreated;
 
@@ -328,6 +339,13 @@
             await ScrollToBottomAsync();
 
         // The input line is enabled once the connection is up: that is when the page is ready to type in.
+        if (Interactive && !_reviewKeys)
+        {
+            _reviewKeys = true;
+            try { await JsRuntime.InvokeVoidAsync("sharpmushLayout.reviewKeys", _inputRef, _selfRef); }
+            catch (JSException) { /* no layout script: the output can still be read with the reader's own keys */ }
+        }
+
         if (Interactive && _connected && !_arrived)
         {
             _arrived = true;
@@ -506,10 +524,54 @@
         }
     }
 
-    private void OnLineReceived(TerminalLine line)
+    // A reconnect's receive loop runs off the renderer's dispatcher; the transcript and the announcer are the
+    // renderer's.
+    private void OnLineReceived(TerminalLine line) => _ = InvokeAsync(() =>
     {
         _transcript.Add(line);
-        InvokeAsync(StateHasChanged);
+        // The player's own command is not read back: they have just typed it.
+        if (ScreenReader.On && line.Source != TerminalLineSource.Client && Spoken(line) is { Length: > 0 } said)
+            _announcer?.Announce(said);
+        StateHasChanged();
+    });
+
+    private LiveAnnouncer? _announcer;
+    private bool _reviewKeys;
+
+    /// <summary>
+    /// Alt and a number in the command box, in Screen reader mode (layout.js): reads the <paramref name="back"/>th
+    /// newest line again, 1 the newest and 10 (Alt+0) the tenth. The player's own commands are not counted.
+    /// </summary>
+    [JSInvokable]
+    public Task ReviewLine(int back) => InvokeAsync(() =>
+    {
+        var said = _transcript.Lines
+            .Where(l => l.Source != TerminalLineSource.Client)
+            .Reverse()
+            .Select(Spoken)
+            .Where(s => s.Length > 0)
+            .Skip(back - 1)
+            .FirstOrDefault();
+        _announcer?.Announce(said ?? Loc["TermReviewNone"]);
+    });
+
+    /// <summary>
+    /// What a screen reader hears for <paramref name="line"/>: its markup read as a page is (a picture's
+    /// description, a separator's title, no drawn rules), by layout.js spokenText. The plain text when that is
+    /// not to hand.
+    /// </summary>
+    private string Spoken(TerminalLine line)
+    {
+        if (JsRuntime is IJSInProcessRuntime js)
+        {
+            try
+            {
+                if (js.Invoke<string?>("sharpmushLayout.spokenText", line.Html) is { } said) return said;
+            }
+            // layout.js not loaded yet: the plain text is read instead.
+            catch (JSException) { return line.Text.Trim(); }
+        }
+        return line.Text.Trim();
     }
 
     private void OnConnectionChanged(bool connected)
@@ -518,8 +580,27 @@
         if (!connected) SetPlayerName(null);
         // Report the grid for this connection now that it's up — covers the case where the initial
         // measurement happened before connect and the user never resizes afterward.
-        else if (_hasMeasured) _ = SendNawsAsync(_lastCols, _lastRows);
+        else
+        {
+            if (_hasMeasured) _ = SendNawsAsync(_lastCols, _lastRows);
+            _ = SendTerminalTypesAsync();
+        }
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Says what this terminal is, whether a screen reader reads it included (TerminalInput.TerminalTypesFrame).</summary>
+    private async Task SendTerminalTypesAsync()
+    {
+        await ScreenReader.LoadAsync();
+        if (Terminal.IsConnected) await Terminal.SendControlAsync(TerminalInput.TerminalTypesFrame(ScreenReader.On));
+    }
+
+    /// <summary>Screen reader mode turned on or off in Settings: the game is told at once.</summary>
+    private void OnScreenReaderChanged()
+    {
+        _ = SendTerminalTypesAsync();
+        // Who reads the output, the log or the announcer, and whether the review keys answer.
+        _ = InvokeAsync(StateHasChanged);
     }
 
     // GlobalTerminal is a sibling of MainLayout's own AccountAuth reads, not a child of anything
@@ -578,6 +659,7 @@
         _disposed = true;
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        ScreenReader.Changed -= OnScreenReaderChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
         if (Terminal is TerminalServiceHost host) host.Recreated -= OnRecreated;
 

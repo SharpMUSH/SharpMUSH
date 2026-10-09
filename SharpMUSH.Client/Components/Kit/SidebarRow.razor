@@ -129,7 +129,9 @@ else
             }
             @if (Unread > 0)
             {
-                <span class="kit-row-unread" aria-label="@UnreadText">@Unread</span>
+                @* aria-label on a plain span is not read, so the words are hidden text beside the number. *@
+                <span class="kit-row-unread" aria-hidden="true">@Unread</span>
+                <span class="visually-hidden">@UnreadText</span>
             }
             else if (Count is not null)
             {

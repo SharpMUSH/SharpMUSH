@@ -147,6 +147,91 @@ public class ConnectionTerminfoTests
 	}
 
 	/// <summary>
+	/// A client that names MTTS SCREEN_READER (the portal's Screen reader mode sends it) is reported as
+	/// "screenreader", to any caller, so softcode can leave out what only draws.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsScreenReader()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "ReaderTermClient");
+		var handle = await ConnectAsAsync(playerRef, "websocket", terminalType: "SHARPMUSH-PORTAL");
+		connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "SHARPMUSH-PORTAL\tUTF8");
+		try
+		{
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).DoesNotContain("screenreader");
+
+			connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "SHARPMUSH-PORTAL\tUTF8\tSCREEN_READER");
+			var tokens = (await TerminfoAsync(playerRef)).Split(' ');
+			await Assert.That(tokens).Contains("screenreader");
+			await Assert.That(tokens).DoesNotContain(ColorStyles.Plain)
+				.Because("the browser draws a WebSocket connection's markup itself, colour included");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>
+	/// A telnet screen reader is sent no colour and no links, since a reader would speak their escapes, and
+	/// terminfo() says so.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsATelnetScreenReader_AsPlain()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "TelnetReaderClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet", terminalType: "MUDLET", telnetNegotiated: true);
+		connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "MUDLET\tANSI\tMSLP\tSCREEN_READER");
+		try
+		{
+			var tokens = (await TerminfoAsync(playerRef)).Split(' ');
+			await Assert.That(tokens).Contains("screenreader");
+			await Assert.That(tokens).Contains(ColorStyles.Plain);
+			await Assert.That(tokens).DoesNotContain("commandlinks");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>
+	/// A client with no MTTS option says it with the SCREENREADER command, and terminfo() reports it the same.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsAPinnedScreenReader()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "PinnedReaderClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet", terminalType: "MUDLET", telnetNegotiated: true);
+		connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "MUDLET\tANSI");
+		try
+		{
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).DoesNotContain("screenreader");
+
+			connectionService.Update(handle, TerminalCapabilityReader.ScreenReaderKey, "1");
+			var tokens = (await TerminfoAsync(playerRef)).Split(' ');
+			await Assert.That(tokens).Contains("screenreader");
+			await Assert.That(tokens).Contains(ColorStyles.Plain);
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>
 	/// A colour flag can raise the depth above what the terminal negotiated — that is what setting
 	/// XTERM256 on a character is for — so the reported style has to account for it. Reading the style
 	/// out of terminal metadata alone told a "dumb"-terminal player with XTERM256 that they were on

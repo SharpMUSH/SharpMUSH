@@ -143,6 +143,7 @@ builder.Services.AddSingleton<IGameHubConnectionFactory>(sp =>
 		new Uri(apiBaseAddress, "hubs/scene").ToString()));
 // The commands this browser has sent, for Up and Down in the terminal and the composer.
 builder.Services.AddSingleton<CommandHistory>();
+builder.Services.AddSingleton<ScreenReaderMode>();
 builder.Services.AddSingleton<ConnectionStateService>();
 builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
 // Same singleton, exposed for scene group join/leave (client-only control surface).

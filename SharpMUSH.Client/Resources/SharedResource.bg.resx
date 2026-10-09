@@ -5940,4 +5940,40 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Текст на страницата (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Изход на играта</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Команда за играта</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Съобщения в {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Членове, {0} на линия сега</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Режим за екранен четец</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>За игра с екранен четец в този браузър: буквените клавиши за изходи са изключени, собствените ви команди не се четат отново, Alt и цифра прочита отново един от последните редове (Alt+1 най-новия), а играта е уведомена, за да може да пропуска картинки, нарисувани със символи.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Бързи връзки</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Име на нов атрибут</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Търсене на обекти</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Най-новият изход на играта</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Все още няма ред за четене.</value>
+  </data>
 </root>

@@ -25,6 +25,7 @@ public class GlobalTerminalInteractiveTests : BunitContext
 	{
 		Services.AddMudServices();
 		Services.AddSingleton<CommandHistory>();
+		Services.AddSingleton<ScreenReaderMode>();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 

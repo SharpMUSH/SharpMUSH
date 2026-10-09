@@ -46,7 +46,7 @@
                 <div class="aa-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Class="aa-ico aa-ico--faint" />
                     <input value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
-                           placeholder="@Loc["LayAppsSearchPlaceholder"]" />
+                           placeholder="@Loc["LayAppsSearchPlaceholder"]" aria-label="@Loc["LayAppsSearchPlaceholder"]" />
                 </div>
 
                 @if (Filtered.Count == 0)

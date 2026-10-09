@@ -2387,6 +2387,7 @@ Options:
 - graphics: See [GRAPHICS]
 - animation: See [ANIMATION]
 - terminal: See [TERMINAL]
+- screenreader: on, off or auto. Same as SCREENREADER; see [screenreader client]
 - outputprefix: Same as OUTPUTPREFIX
 - outputsuffix: Same as OUTPUTSUFFIX
 - pueblo: Sets Pueblo-related options. If value has md5=...", then it will set the pueblo checksum. If empty, Pueblo mode is turned off.
@@ -3625,6 +3626,7 @@ These commands can only be entered through a client, on the connection they are 
 - OUTPUTSUFFIX
 - PROMPT_NEWLINES
 - QUIT
+- SCREENREADER
 - SCREENWIDTH
 - SCREENHEIGHT
 - SOCKSET

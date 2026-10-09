@@ -8,17 +8,218 @@ window.sharpmushLayout = {
 	},
 
 	// A modal (the image viewer) remembers what opened it and hands focus back when it closes, so a
-	// keyboard user is not dropped on <body>.
+	// keyboard user is not dropped on <body>. A stack: a modal opened from another (a picture from the
+	// character sheet) hands focus back to the sheet, and the sheet then to what opened it.
+	_focusReturns: [],
+
 	rememberFocus: function () {
-		this._focusReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		const active = document.activeElement;
+		this._focusReturns.push(active && typeof active.focus === 'function' && active !== document.body ? active : null);
+		// A modal closed some other way than restoreFocus leaves its entry behind; nesting is never this deep.
+		if (this._focusReturns.length > 8) this._focusReturns.shift();
 	},
 
 	restoreFocus: function () {
-		const target = this._focusReturn;
-		this._focusReturn = null;
+		const target = this._focusReturns.pop();
 		if (target && target.isConnected) {
 			target.focus();
 		}
+	},
+
+	// Touch chrome's off-canvas panels (the menu drawer, a section's panel) behave as a dialog while open:
+	// focus moves to the panel's first control, the rest of the shell is inert, and Escape closes it through
+	// dotnetRef's CloseMobilePanelsFromKey. Closing hands focus back to what opened it, unless the page changed
+	// (the new page takes focus for its heading). Nothing happens on a desktop, where the panels are columns.
+	openPanel: function (selector, dotnetRef) {
+		const panel = document.querySelector(selector);
+		const shell = panel && panel.closest('.phosphor-shell');
+		if (!shell || !this.isTouchChrome()) return;
+		// One panel replacing another (the drawer opening a section's panel) keeps the first one's opener.
+		if (this._panelOpen) this._releasePanel();
+		else this.rememberFocus();
+		this._panelInert = Array.from(shell.children)
+			.filter(child => !child.contains(panel) && !child.classList.contains('phosphor-nav-backdrop') && !child.inert);
+		this._panelInert.forEach(child => { child.inert = true; });
+		this._panelKey = event => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			dotnetRef.invokeMethodAsync('CloseMobilePanelsFromKey').catch(() => { });
+		};
+		document.addEventListener('keydown', this._panelKey);
+		this._panelOpen = true;
+		this._panelEl = panel;
+		this.focusFirst(panel);
+	},
+
+	closePanel: function (restore) {
+		if (!this._panelOpen) return;
+		this._releasePanel();
+		this._panelOpen = false;
+		const panel = this._panelEl;
+		this._panelEl = null;
+		if (restore) {
+			this.restoreFocus();
+			return;
+		}
+		this._focusReturns.pop();
+		// A page change: Blazor's FocusOnNavigate tried the new page's h1 while the page was still inert, and
+		// could not focus it, so focus is still on the link in the panel, which is about to be hidden.
+		const active = document.activeElement;
+		if (!active || active === document.body || !active.isConnected || (panel && panel.contains(active))) {
+			const heading = document.querySelector('#main-content h1') || document.querySelector('h1');
+			if (heading) {
+				if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+				heading.focus();
+			}
+		}
+	},
+
+	// The layout that opened a panel is going away with it still open (a page with a layout of its own): let
+	// go of the shell, the Escape key and the opener's focus slot, and move focus nowhere, since the new
+	// layout's page takes it.
+	dropPanel: function () {
+		if (!this._panelOpen) return;
+		this._releasePanel();
+		this._panelOpen = false;
+		this._panelEl = null;
+		this._focusReturns.pop();
+	},
+
+	_releasePanel: function () {
+		(this._panelInert || []).forEach(child => { child.inert = false; });
+		this._panelInert = null;
+		document.removeEventListener('keydown', this._panelKey);
+		this._panelKey = null;
+	},
+
+	// PopoverMenu: the panel is drawn at the page's root, so it is not next in the tab order. Opened with
+	// focus on its button (the keyboard, or a click that focused the button), focus moves to the panel's
+	// first control; a click that kept focus in a text field (the format menu's mousedown is prevented)
+	// leaves it there. Closed with focus in the panel, or lost to the page, focus goes back to the button.
+	popoverOpened: function (wrap, panel) {
+		if (!wrap || !panel || !wrap.contains(document.activeElement)) return;
+		const first = panel.querySelector('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+		if (first) first.focus();
+	},
+
+	popoverClosed: function (wrap, panel) {
+		if (!wrap) return;
+		const active = document.activeElement;
+		const lost = !active || active === document.body || (panel && panel.contains(active));
+		if (!lost) return;
+		const button = wrap.querySelector('button');
+		if (button) button.focus();
+	},
+
+	// What a screen reader should hear for a line of game output: its markup read the way a page is read, not its
+	// plain text. A picture is its description, a separator its title, a table cell by cell with a stop after
+	// each row (and after each field, list item and title), and anything aria-hidden nothing. Whatever drawing is
+	// left in the words (a rule of dashes, box characters) goes. Parsed in a template, so nothing in it loads or
+	// runs.
+	spokenText: function (html) {
+		if (typeof html !== 'string') return null;
+		const template = document.createElement('template');
+		template.innerHTML = html;
+		return this.withoutDrawing(this._spoken(template.content));
+	},
+
+	_spoken: function (node) {
+		if (node.nodeType === 3) return node.data;
+		if (node.nodeType !== 1 && node.nodeType !== 11) return '';
+		if (node.nodeType === 1) {
+			if (node.getAttribute('aria-hidden') === 'true') return '';
+			const tag = node.tagName;
+			if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEMPLATE') return '';
+			if (tag === 'BR' || tag === 'METER') return ' ';
+			if (tag === 'IMG') return ' ' + (node.getAttribute('alt') || '') + ' ';
+			const label = node.getAttribute('aria-label');
+			if (label && node.getAttribute('role') === 'img') return ' ' + label + ' ';
+		}
+		let said = '';
+		for (const child of node.childNodes) said += this._spoken(child);
+		if (node.nodeType === 1) {
+			const tag = node.tagName;
+			// A row, a field's value, a list item, a title or a separator is a phrase of its own: it ends with a
+			// stop, so the reader pauses there instead of running it into the next.
+			if (tag === 'TR' || tag === 'DD' || tag === 'LI' || tag === 'LEGEND' || tag === 'CAPTION'
+				|| node.getAttribute('role') === 'separator') {
+				const phrase = this.withoutDrawing(said);
+				return phrase === '' || /[.!?:;,]$/.test(phrase) ? ' ' + phrase + ' ' : ' ' + phrase + '. ';
+			}
+			if (tag === 'TD' || tag === 'TH' || tag === 'DIV' || tag === 'P') return ' ' + said + ' ';
+		}
+		return said;
+	},
+
+	// Drawing in plain words: box and block characters, and a run of four or more of the same mark ("-----",
+	// "====", "****"), are dropped; the spaces left are collapsed. Letters, digits and ordinary punctuation stay.
+	withoutDrawing: function (text) {
+		if (typeof text !== 'string') return '';
+		return text
+			.replace(/[\u2500-\u259F]+/g, ' ')
+			.replace(/([^\p{L}\p{N}\s])\1{3,}/gu, ' ')
+			.replace(/\s+/g, ' ')
+			.trim();
+	},
+
+	// Screen reader mode's review keys, in the command box: Alt and a number reads a recent line again (1 the
+	// newest, 0 the tenth), the way MUD clients for screen readers do, without leaving the box. Only while the
+	// box says data-review-keys="on"; otherwise the key is the browser's and the keyboard layout's. Installed
+	// once per box.
+	reviewKeys: function (input, dotnetRef) {
+		if (!input || input._reviewKeys) return;
+		input._reviewKeys = true;
+		input.addEventListener('keydown', event => {
+			if (input.dataset.reviewKeys !== 'on') return;
+			if (!event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+			const match = /^Digit([0-9])$/.exec(event.code || '');
+			if (!match) return;
+			event.preventDefault();
+			const back = match[1] === '0' ? 10 : Number(match[1]);
+			dotnetRef.invokeMethodAsync('ReviewLine', back).catch(() => { });
+		});
+	},
+
+	// A tab list that moves with the arrows, Home and End: those keys do not also scroll what it sits in. Every
+	// other key, Tab included, is left alone. Installed once per element.
+	tabKeys: function (list) {
+		if (!list || list._tabKeys) return;
+		list._tabKeys = true;
+		list.addEventListener('keydown', event => {
+			if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) event.preventDefault();
+		});
+	},
+
+	// A popover of actions (the account panel): Up and Down move between its controls, Home and End go to
+	// the first and last, wrapping round. Only controls outside an inert part count, so a hidden level is
+	// skipped. Installed once per element.
+	arrowFocus: function (container) {
+		if (!container || container._arrowFocus) return;
+		container._arrowFocus = true;
+		container.addEventListener('keydown', event => {
+			if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+			const items = this._arrowItems(container);
+			if (items.length === 0) return;
+			event.preventDefault();
+			const at = items.indexOf(document.activeElement);
+			const next = event.key === 'Home' ? 0
+				: event.key === 'End' ? items.length - 1
+					: event.key === 'ArrowDown' ? (at + 1) % items.length
+						: (at <= 0 ? items.length : at) - 1;
+			items[next].focus();
+		});
+	},
+
+	// Moves focus to the first control of a popover, as when it switches to another level.
+	focusFirst: function (container) {
+		const items = this._arrowItems(container);
+		if (items.length > 0) items[0].focus();
+	},
+
+	_arrowItems: function (container) {
+		if (!container) return [];
+		return Array.from(container.querySelectorAll('button:not([disabled]), a[href]'))
+			.filter(item => !item.closest('[inert]'));
 	},
 
 	// ⌘K / Ctrl+K opens the command palette (README §10 Q1) from anywhere except a place the reader is

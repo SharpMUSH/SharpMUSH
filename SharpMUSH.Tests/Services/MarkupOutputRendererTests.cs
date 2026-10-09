@@ -472,6 +472,22 @@ public partial class MarkupOutputRendererTests
 	}
 
 	/// <summary>
+	/// A SCREENREADER pin is what the output goes by: on for a client MTTS said nothing about, off for one it
+	/// called a screen reader.
+	/// </summary>
+	[Test]
+	public async Task Colour_FollowsTheScreenReaderPin()
+	{
+		var pinnedOn = Render(MarkupText.Wrap(Red, "Red text"),
+			new ProtocolCapabilities(Pins: new TerminalPins(ScreenReader: true)), null);
+		var pinnedOff = Render(MarkupText.Wrap(Red, "Red text"),
+			new ProtocolCapabilities(ScreenReader: true, Pins: new TerminalPins(ScreenReader: false)), null);
+
+		await Assert.That(pinnedOn).IsEqualTo("Red text");
+		await Assert.That(pinnedOff).IsEqualTo("\x1b[31mRed text\x1b[0m");
+	}
+
+	/// <summary>
 	/// sharpflag.md's split, honoured: ANSI is "this client can highlight", COLOR is "this client can colour".
 	/// A player with only the first, on a terminal claiming nothing, gets the attributes; so does a terminal
 	/// that named no colour before anyone logged in.

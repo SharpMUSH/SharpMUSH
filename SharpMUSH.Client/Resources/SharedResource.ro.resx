@@ -5940,4 +5940,40 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Textul paginii (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Ieșirea jocului</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Comandă de joc</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Mesaje în {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Membri, {0} conectați acum</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Mod cititor de ecran</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Pentru a juca cu un cititor de ecran în acest browser: tastele cu litere pentru ieșiri sunt oprite, propriile comenzi nu sunt citite înapoi, Alt și o cifră citește din nou un rând recent (Alt+1 cel mai nou), iar jocul află, ca să poată omite desenele făcute din caractere.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Linkuri rapide</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Numele noului atribut</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Caută obiecte</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Cea mai recentă ieșire a jocului</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Încă nu există niciun rând de citit.</value>
+  </data>
 </root>

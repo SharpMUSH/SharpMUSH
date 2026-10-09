@@ -1,6 +1,7 @@
 @using SharpMUSH.Client.Models
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
+@inject ScreenReaderMode ScreenReader
 @implements IAsyncDisposable
 
 @* D1 §5.6 Exits (boards 01, 10, 11), from room.exits: one tile per exit in the state the payload
@@ -50,7 +51,7 @@ else
                 var key = KeyOf(e);
                 <div class="exit exit--@StateName(e)">
                     <button type="button" class="exit-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)"
-                            aria-keyshortcuts="@(IsSingleKey(key) ? key : null)" title="@(IsSingleKey(key) ? Loc["NavPlayExitKey", key!].Value : null)"
+                            aria-keyshortcuts="@(KeysOn && IsSingleKey(key) ? key : null)" title="@(KeysOn && IsSingleKey(key) ? Loc["NavPlayExitKey", key!].Value : null)"
                             @onclick="() => TakeAsync(e)">
                         <span class="exit-media">
                             @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
@@ -131,6 +132,21 @@ else
     /// <summary>Whether this list answers the page's exit keys. Only one list on a page may.</summary>
     [Parameter] public bool AliasKeys { get; set; } = true;
 
+    /// <summary>
+    /// Whether the exit letters are live: not with a screen reader, where a letter meant for the reader (or typed
+    /// on a button in its focus mode) would walk the character out of the room. The keycaps still show the alias
+    /// to type.
+    /// </summary>
+    private bool KeysOn => AliasKeys && !ScreenReader.On;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ScreenReader.Changed += OnScreenReaderChanged;
+        await ScreenReader.LoadAsync();
+    }
+
+    private void OnScreenReaderChanged() => _ = InvokeAsync(StateHasChanged);
+
     private RoomExit? _confirming;
     private ElementReference _confirmGo;
     private bool _focusConfirm;
@@ -150,6 +166,8 @@ else
         if (string.IsNullOrWhiteSpace(exit.Cmd)) return;
         if (!string.IsNullOrWhiteSpace(exit.Confirm))
         {
+            // Cancel hands focus back to the exit that asked.
+            await RunFocusAsync("sharpmushLayout.rememberFocus");
             _confirming = exit;
             _focusConfirm = true;
             await InvokeAsync(StateHasChanged);
@@ -162,15 +180,25 @@ else
     {
         if (_confirming is not { } exit) return;
         _confirming = null;
+        await RunFocusAsync("sharpmushLayout.restoreFocus");
         await OnCommand.InvokeAsync(exit.Cmd!);
     }
 
-    private void Cancel() => _confirming = null;
+    private async Task Cancel()
+    {
+        _confirming = null;
+        await RunFocusAsync("sharpmushLayout.restoreFocus");
+    }
 
     // No preventDefault: it is decided at render time and would swallow the key after this one.
-    private void OnConfirmKey(KeyboardEventArgs e)
+    private Task OnConfirmKey(KeyboardEventArgs e) => e.Key == "Escape" ? Cancel() : Task.CompletedTask;
+
+    private async Task RunFocusAsync(string identifier)
     {
-        if (e.Key == "Escape") Cancel();
+        // Moving focus is a courtesy: before the script loads, or while prerendering, there is nothing to move.
+        try { await JS.InvokeVoidAsync(identifier); }
+        catch (JSException) { return; }
+        catch (InvalidOperationException) { return; }
     }
 
     /// <summary>A new room.exits (a move) drops a confirmation for an exit this room no longer has.</summary>
@@ -199,7 +227,7 @@ else
         }
 
         if (!AliasKeys) return;
-        var keys = Exits.Select(KeyOf).Where(IsSingleKey).Select(k => k!.ToLowerInvariant()).Distinct().ToArray();
+        var keys = KeysOn ? Exits.Select(KeyOf).Where(IsSingleKey).Select(k => k!.ToLowerInvariant()).Distinct().ToArray() : [];
         var signature = string.Join('\u0001', keys);
         if (signature == _registered && !firstRender) return;
         _registered = signature;
@@ -262,6 +290,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        ScreenReader.Changed -= OnScreenReaderChanged;
         if (AliasKeys && _self is not null)
         {
             try
