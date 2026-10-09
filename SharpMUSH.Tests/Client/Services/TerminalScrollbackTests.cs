@@ -1,6 +1,7 @@
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Tests.Client.Services;
 
@@ -62,6 +63,23 @@ public class TerminalScrollbackTests
 		await Assert.That(restored.Html).Contains("A bell rings.");
 		await Assert.That(restored.Html).Contains("quay.png").Because("a picture is shown, not run");
 		await Assert.That(restored.Html).Contains("Done.");
+	}
+
+	/// <summary>
+	/// An empty cell keeps its place: dropping it moved every later cell of its row one column left, so a
+	/// restored +bbread put each board's time under New and squeezed the post titles.
+	/// </summary>
+	[Test]
+	public async Task A_tables_empty_cells_are_kept()
+	{
+		var table = new MarkupString.Layout.Table(
+			[new MarkupString.Layout.TableColumn(MarkupText.Empty) { Wrap = false }, new MarkupString.Layout.TableColumn(MarkupText.Plain("Title"))],
+			[[MarkupText.Empty, MarkupText.Plain("The First One")]]);
+		var line = Server(ServerLayout.Build(table, 78));
+
+		var restored = TerminalScrollback.Parse($"[{TerminalScrollback.Serialize(line).Expect<string>()}]").Single();
+
+		await Assert.That(restored.Html).IsEqualTo(line.Html);
 	}
 
 	[Test]
