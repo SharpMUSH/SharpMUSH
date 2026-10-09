@@ -275,6 +275,29 @@ public sealed class InputSessionService : IInputSessionService
 				callback.Cancelled = true;
 	}
 
+	public async ValueTask<int> RescueAsync(DBRef character)
+	{
+		var rescued = new List<(InputSession Session, HandlePublicationLane.Slot? Place)>();
+		lock (_gate)
+		{
+			var now = _time.GetUtcNow();
+			foreach (var pair in _sessions.ToArray())
+			{
+				var session = pair.Value.Session;
+				if (session.Character != character || pair.Value.TimeoutPending || session.ExpiresAt <= now
+					|| !BindingMatches(session)) continue;
+				// The timeout worker picks the session up on its next tick and runs the callback as it would
+				// have at expiry, so the softcode's own timeout branch decides what happens to the work.
+				_sessions[pair.Key] = new Entry(session with { ExpiresAt = now });
+				rescued.Add((session, _lane?.Reserve(pair.Key, session.TransportSessionId)));
+			}
+		}
+		foreach (var (session, place) in rescued)
+			using (Publishing(place))
+				await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionRescued");
+		return rescued.Count;
+	}
+
 	public IReadOnlyList<InputSession> TakeExpired()
 	{
 		lock (_gate)
@@ -303,7 +326,7 @@ public sealed class InputSessionService : IInputSessionService
 		lock (_gate)
 			return _sessions.TryGetValue(session.Connection.Handle, out var entry) && entry.Session.Id == session.Id
 				&& entry.TimeoutPending == timeout && BindingMatches(session)
-				&& (timeout || session.ExpiresAt > _time.GetUtcNow());
+				&& (timeout || entry.Session.ExpiresAt > _time.GetUtcNow());
 	}
 
 	public async ValueTask<CallState?> DeliverAsync(IMUSHCodeParser parser, InputSession session, MString input, bool timeout = false)

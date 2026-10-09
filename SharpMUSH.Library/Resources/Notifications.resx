@@ -2840,6 +2840,18 @@
   <data name="InputSessionTimeoutRejected" xml:space="preserve">
     <value>Input session expired. Its timeout callback could not be queued.</value>
   </data>
+  <data name="InputSessionRescued" xml:space="preserve">
+    <value>A staff member ended your input session.</value>
+  </data>
+  <data name="InputRescueUsage" xml:space="preserve">
+    <value>Usage: @input/rescue &lt;player&gt;</value>
+  </data>
+  <data name="InputRescueNoneFormat" xml:space="preserve">
+    <value>{0} has no open input session.</value>
+  </data>
+  <data name="InputRescuedFormat" xml:space="preserve">
+    <value>Ended {0}'s input session. Its timeout callback runs now.</value>
+  </data>
   <data name="QueueControlSyntax" xml:space="preserve"><value>Use @queue/list [pid], @queue/pause pid=reason, or @queue/resume pid; add /owner or /object for a target batch.</value></data>
   <data name="QueueControlBadReason" xml:space="preserve"><value>Pause reasons must contain at most 160 characters and no control characters.</value></data>
   <data name="QueueControlOutcome" xml:space="preserve"><value>PID {0}: {1}.</value></data>

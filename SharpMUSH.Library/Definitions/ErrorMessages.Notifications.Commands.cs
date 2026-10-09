@@ -78,5 +78,11 @@ public static partial class ErrorMessages
 		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandUnknownSwitchFormat = "{0} doesn't know switch {1}.";
+
+		public const string InputRescueUsage = "Usage: @input/rescue <player>";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string InputRescueNoneFormat = "{0} has no open input session.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string InputRescuedFormat = "Ended {0}'s input session. Its timeout callback runs now.";
 	}
 }
