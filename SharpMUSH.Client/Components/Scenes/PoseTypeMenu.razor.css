@@ -1,0 +1,51 @@
+.story-show {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 6px;
+}
+
+.story-show-menu {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 4px 14px;
+	margin: 0;
+	padding: 8px 12px;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: var(--surface-2);
+}
+
+/* Read by assistive tech; the button already says what the boxes are for. */
+.story-show-legend {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.story-show-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	color: var(--text);
+	cursor: pointer;
+}
+
+.story-show-item input {
+	accent-color: var(--accent);
+}
+
+.story-show-item input:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.story-show-error {
+	font-size: 13px;
+	color: var(--danger);
+}

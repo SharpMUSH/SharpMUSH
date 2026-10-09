@@ -135,7 +135,8 @@ public class PluralFormatTests
 		["objects"] = 2,
 		["attributes"] = 2,
 		["location"] = "somewhere",
-		["signed"] = "+2"
+		["signed"] = "+2",
+		["label"] = "OOC"
 	};
 
 	/// <summary>The ICU-bearing keys, read from the neutral resource rather than restated here.</summary>

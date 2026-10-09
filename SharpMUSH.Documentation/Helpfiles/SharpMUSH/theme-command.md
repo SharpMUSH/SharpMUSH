@@ -96,6 +96,8 @@ The theme is worked out when the player connects, when `@theme` sets it, and whe
 
 A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it; the web portal has themes of its own. You must control *<object>*.
 
+Text written with [TONE()] names a theme colour, so it is drawn in the reader's theme too: their `muted` for `tone(muted,...)`, their `info` for `tone(info,...)`.
+
 ## Themes that do not read
 
 `@theme` refuses a theme it cannot read and says why, leaving the old one in place. A `THEME` attribute set some other way that does not read, or that names a theme since removed or disabled, is ignored: layouts use the game's theme, and the player is told at login why theirs was not used.

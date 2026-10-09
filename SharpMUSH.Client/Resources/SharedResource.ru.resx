@@ -5940,6 +5940,22 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Текст страницы (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Показать</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Показываемые типы поз</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# скрытая строка «{label}»} few {# скрытые строки «{label}»} many {# скрытых строк «{label}»} other {# скрытой строки «{label}»}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} на {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>Не удалось изменить. Попробуй ещё раз чуть позже.</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>Вывод игры</value>
   </data>

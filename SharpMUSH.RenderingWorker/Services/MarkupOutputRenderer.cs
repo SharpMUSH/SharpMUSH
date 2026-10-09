@@ -134,8 +134,10 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 				? measured(image, columns)
 				: null;
 		}
-		var ms = Relayout(NoticeMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), connection.Capabilities.ReadsAloud),
-			connection.Capabilities, connection.Preferences?.Theme, cells);
+		var reader = ReaderTheme(connection.Preferences?.Theme);
+		var deserialized = ToneMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), reader?.Palette);
+		var ms = Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),
+			connection.Capabilities, reader?.Look, cells);
 		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);
 		var text = connection.Capabilities.Format switch
 		{
@@ -169,12 +171,11 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// player's <c>@theme</c>, which sits over the game's look and under a layout's own theme. The browser
 	/// lays blocks out itself, so this is for every other connection.
 	/// </summary>
-	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, string? theme,
+	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, LayoutTheme? look,
 		Func<ImageMarkup, int, PictureCells?>? pictures)
 	{
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
-		var look = ReaderTheme(theme);
 		var context = !capabilities.SupportsUtf8 || capabilities.ReadsAloud || look is not null || pictures is not null
 			? new LayoutContext
 			{
@@ -237,11 +238,14 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 
 	private static readonly ConcurrentDictionary<(AnsiColorDepth Depth, TerminalFeatures Features), MarkupRegistry> AnsiWires = new();
 
-	/// <summary>Each theme a player has set, as the layout theme it makes, or null for one that no longer reads.</summary>
-	private static readonly ConcurrentDictionary<string, LayoutTheme?> ReaderThemes = new(StringComparer.Ordinal);
+	/// <summary>A reader's theme: its colours, for <c>tone()</c>, and the layout theme it makes.</summary>
+	private sealed record ReaderLook(ThemePalette Palette, LayoutTheme Look);
 
-	/// <summary>The layout theme <paramref name="theme"/> makes, or null for none.</summary>
-	private static LayoutTheme? ReaderTheme(string? theme)
+	/// <summary>Each theme a player has set, as the look it makes, or null for one that no longer reads.</summary>
+	private static readonly ConcurrentDictionary<string, ReaderLook?> ReaderThemes = new(StringComparer.Ordinal);
+
+	/// <summary>The look <paramref name="theme"/> makes, or null for none.</summary>
+	private static ReaderLook? ReaderTheme(string? theme)
 	{
 		if (string.IsNullOrWhiteSpace(theme)) return null;
 		// A handful of themes are in use at once; past that, start again rather than grow without bound.
@@ -252,7 +256,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 			// fails here, however it fails, leaves their output in the game's theme rather than stopping it.
 			try
 			{
-				return ThemePalette.TryParse(spec, out var palette, out _) ? palette!.ToLayoutTheme() : null;
+				return ThemePalette.TryParse(spec, out var palette, out _) ? new ReaderLook(palette!, palette!.ToLayoutTheme()) : null;
 			}
 			catch (Exception)
 			{

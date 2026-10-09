@@ -5940,6 +5940,22 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Textul paginii (Markdown)</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>Afișează</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>Tipuri de poze afișate</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, one {# rând {label} ascuns} few {# rânduri {label} ascunse} other {# de rânduri {label} ascunse}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0} pe {1}</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>Nu s-a putut modifica. Încearcă din nou peste puțin timp.</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>Ieșirea jocului</value>
   </data>

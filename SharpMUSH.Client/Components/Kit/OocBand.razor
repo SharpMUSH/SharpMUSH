@@ -10,7 +10,7 @@
                 <span class="kit-ooc-initials" aria-hidden="true">@Initials.From(Name)</span>
             </Fallback>
         </CharacterAvatar>
-        <span class="kit-ooc-tag">OOC</span>
+        <span class="kit-ooc-tag" title="@Tag">@Tag</span>
     </div>
     <div class="kit-ooc-body">
         <div class="kit-ooc-head">
@@ -35,5 +35,8 @@
     /// <summary>The author's softcode name colour; only <c>#rrggbb</c> is written (<see cref="NameColor"/>).</summary>
     [Parameter] public string? Color { get; set; }
     [Parameter] public string? Time { get; set; }
+
+    /// <summary>The word on the tile: "OOC", or the label of the pose type drawn as this band.</summary>
+    [Parameter] public string Tag { get; set; } = "OOC";
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

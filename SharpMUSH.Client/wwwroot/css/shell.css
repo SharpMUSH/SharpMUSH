@@ -776,6 +776,18 @@ pre.ms-preformatted {
     text-decoration-style: solid;
 }
 
+/* tone(): text coloured by a theme colour's name, so it follows the reader's portal theme. The same names are
+   @theme's colours on telnet (ToneMarkup). */
+.tone-foreground { color: var(--text); }
+.tone-primary { color: var(--accent); }
+.tone-secondary { color: var(--special); }
+.tone-tertiary { color: var(--info); }
+.tone-muted { color: var(--text-dim); }
+.tone-success { color: var(--success); }
+.tone-warning { color: var(--warn); }
+.tone-error { color: var(--danger); }
+.tone-info { color: var(--info); }
+
 /* ── Softcode Editor ── */
 .mush-editor-fill {
     width: 100%;

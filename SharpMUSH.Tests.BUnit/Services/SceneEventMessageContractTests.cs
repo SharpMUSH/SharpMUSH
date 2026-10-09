@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.BUnit.Services;
 public class SceneEventMessageContractTests
 {
 	private const string Wire =
-		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":["ooc"],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000"}""";
+		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":[],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000","type":"ooc","meta":{"frequency":"Harbour Watch"}}""";
 
 	[Test]
 	public async Task The_client_record_writes_the_plugin_wire_shape()
@@ -24,11 +24,13 @@ public class SceneEventMessageContractTests
 			PoseId: "7",
 			Content: "Tomas waves.",
 			Markup: "Tomas waves.",
-			Tags: ["ooc"],
+			Tags: [],
 			Source: "ooc",
 			Location: "Lower Docks",
 			Timestamp: 1790741467794,
-			ActorObjId: "#312:1718000000");
+			ActorObjId: "#312:1718000000",
+			Type: "ooc",
+			Meta: new Dictionary<string, string> { ["frequency"] = "Harbour Watch" });
 
 		await Assert.That(JsonSerializer.Serialize(message, JsonSerializerOptions.Web)).IsEqualTo(Wire);
 	}
@@ -39,13 +41,14 @@ public class SceneEventMessageContractTests
 		var message = JsonSerializer.Deserialize<SceneEventMessage>(Wire, JsonSerializerOptions.Web)!;
 
 		await Assert.That(message.ActorObjId).IsEqualTo("#312:1718000000");
-		await Assert.That(message.Tags).IsEquivalentTo(["ooc"]);
+		await Assert.That(message.Type).IsEqualTo("ooc");
+		await Assert.That(message.Meta!["frequency"]).IsEqualTo("Harbour Watch");
 	}
 
 	[Test]
 	public async Task An_event_without_ActorObjId_reads_as_null()
 	{
-		var older = Wire.Replace(""","actorObjId":"#312:1718000000"}""", "}", StringComparison.Ordinal);
+		var older = Wire.Replace("\"actorObjId\":\"#312:1718000000\",", "", StringComparison.Ordinal);
 
 		var message = JsonSerializer.Deserialize<SceneEventMessage>(older, JsonSerializerOptions.Web)!;
 

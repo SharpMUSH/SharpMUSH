@@ -30,6 +30,22 @@
 	min-width: 0;
 }
 
+/* The tag chips lead; the pose types' Show menu keeps the end of the row. */
+.scene-detail-filters {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.scene-detail-filters:empty {
+	display: none;
+}
+
+.scene-detail-filters ::deep .scene-detail-types {
+	margin-left: auto;
+}
+
 /* beside a long log the details and cast stay in view */
 .scene-detail-aside {
 	position: sticky;

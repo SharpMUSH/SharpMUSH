@@ -1,0 +1,92 @@
+.adm-pose-add-form {
+	display: grid;
+	grid-template-columns: minmax(140px, 1fr) minmax(180px, 2fr) auto;
+	align-items: start;
+	gap: 10px;
+	padding: 14px 16px 16px;
+}
+
+.adm-pose-problem-list {
+	margin: 0;
+	padding: 12px 16px 14px 32px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	color: var(--text);
+}
+
+.adm-pose-problem code {
+	font-family: var(--font-mono);
+	color: var(--warn);
+	margin-right: 8px;
+}
+
+.adm-pose-type-body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px 16px 16px;
+}
+
+/* The sample is drawn as a story draws it, in the current theme, and is not itself a control. */
+.adm-pose-sample {
+	padding: 8px 14px;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-row);
+	background: var(--bg);
+}
+
+.adm-pose-sample-label {
+	display: block;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.adm-pose-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+	align-items: center;
+	gap: 10px;
+}
+
+.adm-pose-tone-swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin-right: 8px;
+	border-radius: 50%;
+	background: var(--pose-tone);
+	vertical-align: middle;
+	border: 1px solid var(--border);
+}
+
+::deep .adm-pose-icon-glyph {
+	margin-right: 8px;
+	vertical-align: middle;
+}
+
+.adm-pose-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.adm-pose-spacer {
+	flex: 1;
+}
+
+.adm-pose-remove-ask {
+	flex: 1;
+	font-size: 13px;
+	color: var(--text);
+}
+
+@container page (max-width: 48rem) {
+	.adm-pose-add-form {
+		grid-template-columns: 1fr;
+	}
+}

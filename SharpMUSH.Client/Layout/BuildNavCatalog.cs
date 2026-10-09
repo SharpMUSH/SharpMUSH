@@ -95,6 +95,7 @@ public static class BuildNavCatalog
 		new("/admin/media", Icons.Material.Filled.PermMedia, "AdmMediaTitle", "AdmCardMedia", Group.Content, ["media.admin"]),
 		new("/admin/suggestions", Icons.Material.Filled.Spellcheck, "AdmSuggestionsLabel", "AdmCardSuggestions", Group.Content, ["config.admin"]),
 		new("/admin/messages", Icons.Material.Filled.Campaign, "AdmMessagesTitle", "AdmCardMessages", Group.Content, ["config.admin"]),
+		new("/admin/scenes/types", Icons.Material.Filled.TheaterComedy, "AdmPoseTypesTitle", "AdmCardPoseTypes", Group.Content, ["layout.admin"]),
 
 		new("/admin/applications", Icons.Material.Filled.Apps, "AdmApplicationsTitle", "AdmCardApplications", Group.Portal, ["applications.admin"]),
 		new("/admin/layout", Icons.Material.Filled.Dashboard, "AdmLayoutTitle", "AdmCardLayout", Group.Portal, ["layout.admin"]),
