@@ -431,6 +431,9 @@ public class JsonFunctionUnitTests
 	[Arguments("json_fill(json(object,a,1),/nope,x)", "#-1 PATH NOT FOUND: /nope")]
 	[Arguments("json_fill(json(object,a,1),a,x)", "#-1 PATH NOT FOUND: a")]
 	[Arguments("json_fill(json(array,1,2),/5,3)", "#-1 PATH NOT FOUND: /5")]
+	[Arguments("json_fill(json(string,old),,new)", "\"new\"")]
+	[Arguments("json_fill(json(object,a,1),,json(array,1))", "[1]")]
+	[Arguments("json_fill(json(object,a,1),,json(array,1),/0,2)", "[2]")]
 	[Arguments("json_fill(not json,/a,x)", "#-1 BAD ARGUMENT FORMAT TO json_fill")]
 	[Arguments("""json_fill(lit({"a":"","b":[0]}),/a,x,/b/0,7)""", """{"a":"x","b":[7]}""")]
 	public async Task JsonFill(string str, string expected)

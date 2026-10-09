@@ -292,6 +292,18 @@ public static class JsonHelpers
 
 		foreach (var (pointer, value) in fills)
 		{
+			if (pointer.Length == 0)
+			{
+				// RFC 6901: the empty pointer names the whole document, so its fill replaces the root.
+				switch (FillValue(root, pointer, value))
+				{
+					case JsonFill fill:
+						root = fill.Node;
+						continue;
+					case Error<string> rootError:
+						return rootError;
+				}
+			}
 			if (FillOne(root, pointer, value) is Error<string> error) return error;
 		}
 		return root?.ToJsonString(RelaxedJsonOptions) ?? "null";

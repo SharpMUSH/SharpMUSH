@@ -21,7 +21,7 @@
 
 Returns `<json>` with the value at each `<pointer>` replaced by its `<value>`. `<json>` is a template: usually JSON stored in an attribute and read with v() or get(), so a large structure such as a portal form is written once instead of being rebuilt from many json() calls every time it is used.
 
-A `<pointer>` is a JSON Pointer: each step starts with `/`, an object member by its name and an array element by its number counted from 0. `/pages/0/title` is the `title` of the first element of `pages`. A `/` inside a member name is written `~1`, and a `~` is written `~0`. The pointer must name a value the template already has; json_fill() changes values, it does not add them.
+A `<pointer>` is a JSON Pointer: each step starts with `/`, an object member by its name and an array element by its number counted from 0. `/pages/0/title` is the `title` of the first element of `pages`. A `/` inside a member name is written `~1`, and a `~` is written `~0`. An empty pointer names the whole template. The pointer must name a value the template already has; json_fill() changes values, it does not add them.
 
 What the template holds at a pointer decides how `<value>` is read:
 
