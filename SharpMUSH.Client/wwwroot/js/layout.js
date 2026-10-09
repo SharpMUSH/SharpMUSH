@@ -2,10 +2,9 @@
 window.sharpmushLayout = {
 	// True when the shell is in "touch chrome" mode (off-canvas drawer + bottom nav rather
 	// than the desktop sidebar), so the hamburger opens the drawer instead of toggling the
-	// desktop rail. MUST stay in sync with the touch-chrome @media condition in custom.css:
-	// any touch device (pointer: coarse) OR a narrow window (<=760px).
+	// desktop rail.
 	isTouchChrome: function () {
-		return window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+		return window.matchMedia(this.touchChromeQuery).matches;
 	},
 
 	// A modal (the image viewer) remembers what opened it and hands focus back when it closes, so a
@@ -120,6 +119,34 @@ window.sharpmushLayout = {
 	// the header on one line, the card edge to edge in focus mode. The same shape as shell.css's SHORT
 	// LANDSCAPE block. Calls OnShortScreenChanged on the page whenever it changes.
 	shortScreenQuery: '(orientation: landscape) and (max-height: 32rem)',
+
+	// Any touch device (pointer: coarse) OR a narrow window (<=760px). MUST stay in sync with the
+	// touch-chrome @media condition in shell.css (ResponsiveConventionsTests checks it).
+	touchChromeQuery: '(max-width: 760px), (pointer: coarse)',
+
+	// SectionShell: touch chrome now, and OnTouchChromeChanged on the component whenever a resize moves the
+	// window across it. Each shell gets a watch of its own (matches, dispose), since two can be mounted at
+	// once while a page changes section.
+	watchTouchChrome: function (dotnetRef) {
+		const query = window.matchMedia(this.touchChromeQuery);
+		const handler = event => {
+			const pending = dotnetRef.invokeMethodAsync('OnTouchChromeChanged', event.matches);
+			if (pending && typeof pending.catch === 'function') {
+				pending.catch(() => { });
+			}
+		};
+		if (typeof query.addEventListener === 'function') {
+			query.addEventListener('change', handler);
+		}
+		return {
+			matches: () => query.matches,
+			dispose: () => {
+				if (typeof query.removeEventListener === 'function') {
+					query.removeEventListener('change', handler);
+				}
+			}
+		};
+	},
 
 	watchCompactScreen: function (dotnetRef) {
 		return this._watchScreen('_compactScreen', this.compactScreenQuery, dotnetRef, 'OnCompactScreenChanged');

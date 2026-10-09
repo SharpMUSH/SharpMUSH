@@ -111,4 +111,24 @@ public class SectionShellTests : BunitContext
 		var config = Render<Host>(p => p.Add(x => x.Key, "config"));
 		await Assert.That(config.FindAll(".kit-pagebar--collapsed").Count).IsEqualTo(0);
 	}
+
+	[Test]
+	public async Task AWindowWidenedOutOfTouchChrome_CollapsesAgain()
+	{
+		// Drawn narrow (touch chrome: the off-canvas panel, no strip), then widened: the shell's CSS shows
+		// the collapse button again, and pressing it must collapse the sidebar rather than do nothing.
+		var watch = JSInterop.SetupModule(i => i.Identifier == "sharpmushLayout.watchTouchChrome");
+		watch.Setup<bool>("matches").SetResult(true);
+		var cut = Render<Host>();
+		var shell = cut.FindComponent<SectionShell>();
+		await cut.Find(".slot button.kit-pagebar-toggle").ClickAsync();
+		await Assert.That(cut.FindAll(".slot .kit-pagebar--collapsed").Count).IsEqualTo(0);
+
+		await shell.InvokeAsync(() => shell.Instance.OnTouchChromeChanged(false));
+		cut.WaitForAssertion(() => cut.Find(".slot .kit-pagebar--collapsed .side--collapsed"));
+
+		// and back to a narrow window: the panel is the full sidebar again
+		await shell.InvokeAsync(() => shell.Instance.OnTouchChromeChanged(true));
+		cut.WaitForAssertion(() => cut.Find(".slot .kit-pagebar .side:not(.side--collapsed)"));
+	}
 }

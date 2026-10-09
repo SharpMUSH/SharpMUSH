@@ -393,7 +393,7 @@ public class ResponsiveConventionsTests
 		var js = File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "js", "layout.js"));
 		var shell = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
 
-		var condition = Regex.Match(js, @"matchMedia\(\s*'(?<q>[^']+)'\s*\)");
+		var condition = Regex.Match(js, @"touchChromeQuery:\s*'(?<q>[^']+)'");
 		await Assert.That(condition.Success).IsTrue().Because("layout.js must state the condition it mirrors");
 
 		var normalised = Regex.Replace(condition.Groups["q"].Value, @"\s+", " ").Trim();
