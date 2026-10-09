@@ -40,8 +40,8 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
-		var left = args.TryGetValue("0", out var first) ? first.Message!.ToPlainText().Trim() : string.Empty;
-		var spec = args.TryGetValue("1", out var given) ? given.Message!.ToPlainText().Trim() : string.Empty;
+		var left = args.TryGetValue("0", out var first) ? first.Message.ToPlainText().Trim() : string.Empty;
+		var spec = args.TryGetValue("1", out var given) ? given.Message.ToPlainText().Trim() : string.Empty;
 
 		if (switches.Contains("LIST")) return await ThemeListAsync(executor);
 		if (switches.FirstOrDefault(ThemeAdminSwitches.Contains) is { } change)
@@ -240,7 +240,7 @@ public partial class Commands
 		var dbref = player.Object().DBRef;
 		var result = await parser.With(state => state with { Executor = dbref, Enactor = dbref, Caller = dbref },
 			async evaluating => await evaluating.FunctionParse(MarkupText.Plain(text)));
-		return result?.Message?.ToPlainText().Trim() ?? string.Empty;
+		return result?.Message.ToPlainText().Trim() ?? string.Empty;
 	}
 
 	/// <summary><paramref name="spec"/> with the game's added themes written out, if it reads; why not, if not.</summary>

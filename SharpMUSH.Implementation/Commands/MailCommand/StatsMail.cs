@@ -39,7 +39,7 @@ public static class StatsMail
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 					shouldNotify: true);
-				return errorResult.Message!;
+				return errorResult.Message;
 			}
 
 			switch (await locateService.LocateAndNotifyIfInvalid(
@@ -57,7 +57,7 @@ public static class StatsMail
 						errorReturn: ErrorMessages.Returns.NoSuchObject,
 						notifyMessage: ErrorMessages.Notifications.CantSeeThat,
 						shouldNotify: true);
-					return noTargetError.Message!;
+					return noTargetError.Message;
 				case Error<string> error:
 					return MarkupText.Plain(error.Value);
 			}

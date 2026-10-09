@@ -42,7 +42,7 @@ public partial class Commands
 		// The MString, NOT ToString(): rendering it here bakes the colour into the text as ANSI escape
 		// characters and hands a plain string onward, so the markup is gone before the transport sees
 		// it. A browser has no ANSI decoder and printed the escapes as literal text.
-		await NotifyService.Notify(executor, thought.Message!, executor);
+		await NotifyService.Notify(executor, thought.Message, executor);
 		return thought;
 	}
 

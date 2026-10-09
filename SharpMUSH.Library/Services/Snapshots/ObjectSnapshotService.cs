@@ -424,7 +424,7 @@ public sealed partial class ObjectSnapshotService(
 			foreach (var change in current.Except(snapshot.Flags).Select(f => "!" + f).Concat(snapshot.Flags.Except(current)))
 				mutations.Add(async () =>
 				{
-					if ((await flagsAndPowers.SetOrUnsetFlag(executor, obj, change, false)).Message?.ToPlainText() != "1")
+					if ((await flagsAndPowers.SetOrUnsetFlag(executor, obj, change, false)).Message.ToPlainText() != "1")
 						throw Error("write-failed", "Flag change was rejected: " + change);
 				});
 		}
@@ -432,7 +432,7 @@ public sealed partial class ObjectSnapshotService(
 			mutations.Add(async () =>
 			{
 				var result = await objectNames.SetName(executor, obj, MarkupText.Plain(snapshot.Name), false);
-				if (result.Message?.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
+				if (result.Message.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
 			});
 		foreach (var mutation in mutations)
 		{

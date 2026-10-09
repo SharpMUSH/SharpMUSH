@@ -46,7 +46,7 @@ public partial class Functions
 
 		if (argCount >= 3)
 		{
-			var firstArg = args["0"].Message!.ToPlainText().ToLower();
+			var firstArg = args["0"].Message.ToPlainText().ToLower();
 			if (firstArg == "count")
 			{
 				isCount = true;
@@ -54,9 +54,9 @@ public partial class Functions
 			}
 		}
 
-		var searchType = args[startArg.ToString()].Message!.ToPlainText().ToLower();
-		var pattern = args[(startArg + 1).ToString()].Message!.ToPlainText();
-		var osep = argCount > startArg + 2 ? args[(startArg + 2).ToString()].Message!.ToPlainText() : "|";
+		var searchType = args[startArg.ToString()].Message.ToPlainText().ToLower();
+		var pattern = args[(startArg + 1).ToString()].Message.ToPlainText();
+		var osep = argCount > startArg + 2 ? args[(startArg + 2).ToString()].Message.ToPlainText() : "|";
 
 		if (searchType != "ip" && searchType != "hostname")
 		{
@@ -142,7 +142,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var filter = args["0"].Message!.ToPlainText().ToLower();
+		var filter = args["0"].Message.ToPlainText().ToLower();
 
 		if (filter != "all" && filter != "logged in" && filter != "not logged in" && !filter.StartsWith("#"))
 		{
@@ -154,7 +154,7 @@ public partial class Functions
 
 		if (args.Count % 2 == 0)
 		{
-			osep = args[lastArgIndex.ToString()].Message!.ToPlainText();
+			osep = args[lastArgIndex.ToString()].Message.ToPlainText();
 			lastArgIndex--;
 		}
 
@@ -166,8 +166,8 @@ public partial class Functions
 				return new CallState(ErrorMessages.Returns.InvalidSpecPair);
 			}
 
-			var specType = args[i.ToString()].Message!.ToPlainText().ToLower();
-			var specValue = args[(i + 1).ToString()].Message!.ToPlainText();
+			var specType = args[i.ToString()].Message.ToPlainText().ToLower();
+			var specValue = args[(i + 1).ToString()].Message.ToPlainText();
 
 			if (specType != "after" && specType != "before" && specType != "ip" &&
 					specType != "hostname" && specType != "count")
@@ -215,7 +215,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var connectionId = args["0"].Message!.ToPlainText();
+		var connectionId = args["0"].Message.ToPlainText();
 		var osep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
 		if (string.IsNullOrWhiteSpace(connectionId))
 		{
@@ -313,7 +313,7 @@ public partial class Functions
 		Func<IConnectionService.ConnectionData, string> field)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		// lookup_desc takes a descriptor only from a strict integer (src/bsd.c:6634); anything else,
 		// a number past an int included, is a player name.
@@ -365,7 +365,7 @@ public partial class Functions
 	{
 		if (!TimePrecisions.TryParse(
 					parser.CurrentState.Arguments.TryGetValue("1", out var precisionArg)
-						? precisionArg.Message?.ToPlainText()
+						? precisionArg.Message.ToPlainText()
 						: null,
 					out var precision))
 		{
@@ -398,7 +398,7 @@ public partial class Functions
 
 		if (args.ContainsKey("0"))
 		{
-			var arg0 = args["0"].Message!.ToPlainText();
+			var arg0 = args["0"].Message.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(arg0))
 			{
 				var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
@@ -413,7 +413,7 @@ public partial class Functions
 
 		if (args.ContainsKey("1"))
 		{
-			status = args["1"].Message!.ToPlainText().ToLower();
+			status = args["1"].Message.ToPlainText().ToLower();
 			if (status != "all" && status != "online" && status != "offline")
 			{
 				return new CallState(ErrorMessages.Returns.InvalidSecondArgument);
@@ -454,11 +454,11 @@ public partial class Functions
 		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls, so it
 		// arrives here as an empty string rather than as an absent key; ResolveWhoLookerAsync treats
 		// blank as "no viewer named", which is the same thing.
-		var arg0Raw = args.TryGetValue("0", out var arg0) ? arg0.Message!.ToPlainText() : null;
+		var arg0Raw = args.TryGetValue("0", out var arg0) ? arg0.Message.ToPlainText() : null;
 		// Same for the status argument: PennMUSH's `if (nargs > 1 && args[1] && *args[1])` (bsd.c:6548)
 		// treats an explicitly empty <status> as absent, so lwho(<viewer>,) means the "online" default
 		// rather than "#-1 INVALID SECOND ARGUMENT".
-		var arg1Raw = args.TryGetValue("1", out var arg1Value) ? arg1Value.Message!.ToPlainText() : null;
+		var arg1Raw = args.TryGetValue("1", out var arg1Value) ? arg1Value.Message.ToPlainText() : null;
 		var arg1 = string.IsNullOrEmpty(arg1Raw)
 			? ["online"]
 			: arg1Raw.ToLower().Split(" ");
@@ -664,7 +664,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var (looker, powered, lookerError) = await ResolveWhoLookerAsync(
-			parser, executor, args.TryGetValue("0", out var arg0) ? arg0.Message!.ToPlainText() : null);
+			parser, executor, args.TryGetValue("0", out var arg0) ? arg0.Message.ToPlainText() : null);
 		if (lookerError is not null)
 		{
 			return lookerError;
@@ -739,7 +739,7 @@ public partial class Functions
 
 		// fun_terminfo checks the argument before it looks anything up, and says so rather than
 		// answering "unknown" — which would claim the descriptor exists and has no terminal type.
-		if (string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message!.ToPlainText()))
+		if (string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message.ToPlainText()))
 		{
 			return new CallState(ErrorMessages.Returns.FunctionRequiresOneArgument);
 		}
@@ -773,8 +773,8 @@ public partial class Functions
 	[SharpFunction(Name = "xmwho", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "count"])]
 	public async ValueTask<CallState> NumberRangeMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 
 		if (!TryWhoWindow(arg0, arg1, out var start, out var count))
 		{
@@ -796,8 +796,8 @@ public partial class Functions
 	public async ValueTask<CallState> NumberRangeMortalWhoObjectId(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 
 		if (!TryWhoWindow(arg0, arg1, out var start, out var count))
 		{
@@ -828,7 +828,7 @@ public partial class Functions
 		if (args.Count == 3)
 		{
 			var (resolved, resolvedPowered, lookerError) =
-				await ResolveWhoLookerAsync(parser, executor, args["0"].Message!.ToPlainText());
+				await ResolveWhoLookerAsync(parser, executor, args["0"].Message.ToPlainText());
 			if (lookerError is not null)
 			{
 				return lookerError;
@@ -836,14 +836,14 @@ public partial class Functions
 
 			(looker, powered) = (resolved, resolvedPowered);
 
-			if (!TryWhoWindow(args["1"].Message!.ToPlainText(), args["2"].Message!.ToPlainText(), out start, out count))
+			if (!TryWhoWindow(args["1"].Message.ToPlainText(), args["2"].Message.ToPlainText(), out start, out count))
 			{
 				return new CallState(ErrorMessages.Returns.Integer);
 			}
 		}
 		else
 		{
-			if (!TryWhoWindow(args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(), out start, out count))
+			if (!TryWhoWindow(args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText(), out start, out count))
 			{
 				return new CallState(ErrorMessages.Returns.Integer);
 			}
@@ -873,7 +873,7 @@ public partial class Functions
 		if (args.Count == 3)
 		{
 			var (resolved, resolvedPowered, lookerError) =
-				await ResolveWhoLookerAsync(parser, executor, args["0"].Message!.ToPlainText());
+				await ResolveWhoLookerAsync(parser, executor, args["0"].Message.ToPlainText());
 			if (lookerError is not null)
 			{
 				return lookerError;
@@ -881,14 +881,14 @@ public partial class Functions
 
 			(looker, powered) = (resolved, resolvedPowered);
 
-			if (!TryWhoWindow(args["1"].Message!.ToPlainText(), args["2"].Message!.ToPlainText(), out start, out count))
+			if (!TryWhoWindow(args["1"].Message.ToPlainText(), args["2"].Message.ToPlainText(), out start, out count))
 			{
 				return new CallState(ErrorMessages.Returns.Integer);
 			}
 		}
 		else
 		{
-			if (!TryWhoWindow(args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(), out start, out count))
+			if (!TryWhoWindow(args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText(), out start, out count))
 			{
 				return new CallState(ErrorMessages.Returns.Integer);
 			}
@@ -931,7 +931,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = args["0"].Message!.ToPlainText();
+		var arg0 = args["0"].Message.ToPlainText();
 
 		var maybeZone = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
 		if (maybeZone is not AnySharpObject zone)
@@ -944,7 +944,7 @@ public partial class Functions
 		var powered = !mortal && executorHasSeeAll;
 		var viewer = executor;
 
-		if (args.TryGetValue("1", out var arg1) && !string.IsNullOrWhiteSpace(arg1.Message!.ToPlainText()))
+		if (args.TryGetValue("1", out var arg1) && !string.IsNullOrWhiteSpace(arg1.Message.ToPlainText()))
 		{
 			// Only a powered caller may compute the answer for someone else (bsd.c:6822-6830), and the
 			// answer is then capped at that viewer's own privilege (:6847).
@@ -954,7 +954,7 @@ public partial class Functions
 			}
 
 			var maybeViewer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(
-				parser, executor, executor, arg1.Message!.ToPlainText());
+				parser, executor, executor, arg1.Message.ToPlainText());
 			switch (maybeViewer)
 			{
 				case Error<CallState> error:
@@ -992,7 +992,7 @@ public partial class Functions
 	public async ValueTask<CallState> Ports(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		// fun_ports resolves its target exactly as lookup_desc's player half does — lookup_player, then
 		// MAT_ABSOLUTE | MAT_PLAYER | MAT_ME | MAT_TYPE — so "me" works here too, and a name that
@@ -1042,7 +1042,7 @@ public partial class Functions
 	public async ValueTask<CallState> Hidden(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		var canSeeHidden = await executor.IsWizard() || await executor.IsRoyalty() ||
 											 await executor.IsSee_All();
@@ -1084,7 +1084,7 @@ public partial class Functions
 	private ValueTask<IConnectionService.ConnectionData?> LookupDescriptorAsync(IMUSHCodeParser parser,
 		AnySharpObject executor)
 		=> ArgHelpers.LookupDescriptorAsync(parser, LocateService, ConnectionService, executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText());
+			parser.CurrentState.Arguments["0"].Message.ToPlainText());
 
 	/// <summary>
 	/// PennMUSH's <c>fun_width</c> / <c>fun_height</c> (src/bsd.c), which are one function apart from
@@ -1104,7 +1104,7 @@ public partial class Functions
 	private async ValueTask<CallState> DescriptorDimensionAsync(
 		IMUSHCodeParser parser, string key, MString defaultArg)
 	{
-		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		if (string.IsNullOrEmpty(target))
 		{
@@ -1230,7 +1230,7 @@ public partial class Functions
 		// Note: the parser always injects Arguments["0"] = CallState.Empty via DefaultIfEmpty,
 		// so ContainsKey("0") is always true. Check for a non-empty value instead.
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0State)
-			? arg0State.Message?.ToPlainText()
+			? arg0State.Message.ToPlainText()
 			: null;
 
 		if (!string.IsNullOrEmpty(arg0))
@@ -1240,7 +1240,7 @@ public partial class Functions
 
 		if (!TimePrecisions.TryParse(
 					parser.CurrentState.Arguments.TryGetValue("1", out var precisionArg)
-						? precisionArg.Message?.ToPlainText()
+						? precisionArg.Message.ToPlainText()
 						: null,
 					out var precision))
 		{
@@ -1274,13 +1274,13 @@ public partial class Functions
 	public async ValueTask<CallState> Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var target = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, target,
 			player => ValueTask.FromResult<CallState>(
 				PasswordService.PasswordIsValid(
-					parser.CurrentState.Arguments["1"].Message!.ToPlainText(),
+					parser.CurrentState.Arguments["1"].Message.ToPlainText(),
 					player.PasswordHash)
 					? "1"
 					: "0"));

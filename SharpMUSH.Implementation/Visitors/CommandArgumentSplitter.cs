@@ -63,7 +63,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		// Parse failure: the argument split detected a syntax error. Bubble it up as Error<string>.
 		if (argCallState is not { Arguments: { } rawArguments })
 		{
-			var errorText = (argCallState.Message ?? MarkupText.Empty).ToPlainText();
+			var errorText = argCallState.Message.ToPlainText();
 			return new Error<string>(errorText);
 		}
 

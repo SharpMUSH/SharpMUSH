@@ -202,7 +202,7 @@ public class ListenerRoutingService(
 				"INPREFIX", arguments, ignorePermissions: true);
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			if (result.HadErrors) return;
-			prefix = MString.Concat(result.Message ?? MString.Empty, MString.Plain(" "));
+			prefix = MString.Concat(result.Message, MString.Plain(" "));
 		}
 		var executor = speaker;
 		if (context.Executor is DBRef reference)

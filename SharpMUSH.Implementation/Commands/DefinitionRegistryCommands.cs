@@ -52,14 +52,14 @@ public partial class Commands : ICommandRestrictionApplier
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
-		var commandName = args.Count == 0 ? null : args["0"].Message?.ToPlainText()?.ToUpper();
+		var commandName = args.Count == 0 ? null : args["0"].Message.ToPlainText()?.ToUpper();
 		if (string.IsNullOrEmpty(commandName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyName), executor);
 			return new CallState(ErrorMessages.Returns.NoCommandSpecified);
 		}
 
-		var rightSide = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+		var rightSide = args.GetValueOrDefault("1")?.Message.ToPlainText();
 
 		// cmd_command: /add, /alias and /clone are Wizard, /delete is God; each answers for itself.
 		return CommandActionSwitches.FirstOrDefault(switches.Contains) switch
@@ -1029,7 +1029,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return await SummarizeFunctionsAsync(parser, executor);
 		}
 
-		var functionName = args["0"].Message?.ToPlainText();
+		var functionName = args["0"].Message.ToPlainText();
 		if (string.IsNullOrEmpty(functionName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyName), executor);
@@ -1043,7 +1043,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.LibraryUnavailable);
 		}
 
-		var rightSide = args.GetValueOrDefault("1")?.Message?.ToPlainText();
+		var rightSide = args.GetValueOrDefault("1")?.Message.ToPlainText();
 		return FunctionActionSwitches.FirstOrDefault(switches.Contains) switch
 		{
 			"ALIAS" => await AliasFunctionAsync(executor, userFunctionService, functionName, rightSide),
@@ -1353,7 +1353,7 @@ public partial class Commands : ICommandRestrictionApplier
 		IUserDefinedFunctionService userFunctionService, string functionName)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (args.Count >= 2 && args.GetValueOrDefault("1")?.Message?.ToPlainText() is { Length: > 0 } objSpec)
+		if (args.Count >= 2 && args.GetValueOrDefault("1")?.Message.ToPlainText() is { Length: > 0 } objSpec)
 		{
 			return await DefineFunctionAsync(parser, executor, userFunctionService, functionName, objSpec);
 		}
@@ -1364,7 +1364,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> DefineFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IUserDefinedFunctionService userFunctionService, string functionName, string objSpec)
 	{
-		var attribSpec = parser.CurrentState.Arguments.GetValueOrDefault("2")?.Message?.ToPlainText();
+		var attribSpec = parser.CurrentState.Arguments.GetValueOrDefault("2")?.Message.ToPlainText();
 		if (string.IsNullOrEmpty(attribSpec))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyName), executor);
@@ -1402,10 +1402,10 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private static (int MinArgs, int MaxArgs) UserFunctionArgumentBounds(Dictionary<string, CallState> args)
 	{
-		var minArgs = args.Count >= 4 && int.TryParse(args.GetValueOrDefault("3")?.Message?.ToPlainText(), out var parsedMin)
+		var minArgs = args.Count >= 4 && int.TryParse(args.GetValueOrDefault("3")?.Message.ToPlainText(), out var parsedMin)
 			? Math.Clamp(parsedMin, 0, MaximumStackArguments)
 			: 0;
-		var maxArgs = args.Count >= 5 && int.TryParse(args.GetValueOrDefault("4")?.Message?.ToPlainText(), out var parsedMax)
+		var maxArgs = args.Count >= 5 && int.TryParse(args.GetValueOrDefault("4")?.Message.ToPlainText(), out var parsedMax)
 			? Math.Min(Math.Abs(parsedMax), MaximumStackArguments)
 			: DefaultUserFunctionArguments;
 		return (minArgs, maxArgs);
@@ -1579,10 +1579,10 @@ public partial class Commands : ICommandRestrictionApplier
 		{
 			return await RejectUnlessConfigAdmin(executor) is { } denied
 				? denied
-				: await DecompileAttributesAsync(executor, args.GetValueOrDefault("0")?.Message?.ToPlainText(), switches.Contains("RETROACTIVE"));
+				: await DecompileAttributesAsync(executor, args.GetValueOrDefault("0")?.Message.ToPlainText(), switches.Contains("RETROACTIVE"));
 		}
 
-		var attrName = args.Count == 0 ? null : args["0"].Message?.ToPlainText();
+		var attrName = args.Count == 0 ? null : args["0"].Message.ToPlainText();
 		if (string.IsNullOrEmpty(attrName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAttribute), executor);
@@ -1607,7 +1607,7 @@ public partial class Commands : ICommandRestrictionApplier
 			"RENAME" => await RenameAttributeEntryAsync(parser, executor, attrName),
 			// Penn's cmds.c tries /limit before /enum.
 			_ => await SetAttributeRestrictionAsync(executor, attrName,
-				args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? string.Empty, isEnum: action == "ENUM")
+				args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty, isEnum: action == "ENUM")
 		};
 	}
 
@@ -1676,7 +1676,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return usage;
 		}
 
-		var flagList = parser.CurrentState.Arguments["1"].Message?.ToPlainText() ?? "none";
+		var flagList = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 
 		// strcasecmp(perms, "none"): no permissions at all, not a flag called NONE.
 		var flagNames = flagList.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)
@@ -1737,7 +1737,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return usage;
 		}
 
-		var newName = parser.CurrentState.Arguments["1"].Message?.ToPlainText();
+		var newName = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		if (string.IsNullOrEmpty(newName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), executor);
@@ -1943,8 +1943,8 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		var powerArgs = parser.CurrentState.Arguments;
-		var objectArg = powerArgs.Count > 0 ? powerArgs["0"].Message!.ToPlainText().Trim() : string.Empty;
-		var powerArg = powerArgs.Count > 1 ? powerArgs["1"].Message!.ToPlainText() : string.Empty;
+		var objectArg = powerArgs.Count > 0 ? powerArgs["0"].Message.ToPlainText().Trim() : string.Empty;
+		var powerArg = powerArgs.Count > 1 ? powerArgs["1"].Message.ToPlainText() : string.Empty;
 
 		if (string.IsNullOrWhiteSpace(powerArg))
 		{
@@ -2183,7 +2183,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		var arguments = parser.CurrentState.Arguments;
 		var keys = registry.Messages;
-		string Argument(int index) => arguments.Count > index ? arguments[index.ToString()].Message!.ToPlainText() : string.Empty;
+		string Argument(int index) => arguments.Count > index ? arguments[index.ToString()].Message.ToPlainText() : string.Empty;
 
 		async ValueTask<CallState> Say(string key, params object[] values)
 		{
@@ -2481,7 +2481,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.NoCommandSpecified);
 		}
 
-		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
+		var commandName = args["0"].Message.ToPlainText()?.ToUpper();
 		if (string.IsNullOrEmpty(commandName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
@@ -2531,7 +2531,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.NoHookType);
 		}
 
-		if (args.Count < 2 || string.IsNullOrWhiteSpace(args["1"].Message?.ToPlainText()))
+		if (args.Count < 2 || string.IsNullOrWhiteSpace(args["1"].Message.ToPlainText()))
 		{
 			var cleared = await HookService.ClearHookAsync(commandName, selectedHookType);
 			if (cleared)
@@ -2548,7 +2548,7 @@ public partial class Commands : ICommandRestrictionApplier
 		// CB.RSArgs has already split the RHS on commas, so args["1"] = object and args["2"] = attribute.
 		// Read them directly — re-splitting args["1"] dropped the attribute and silently defaulted the
 		// hook to cmd.<type>.
-		var objectRef = args["1"].Message!.ToPlainText().Trim();
+		var objectRef = args["1"].Message.ToPlainText().Trim();
 
 		if (string.IsNullOrWhiteSpace(objectRef))
 		{
@@ -2565,7 +2565,7 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 		var dbref = targetObject.Object().DBRef;
 
-		var attributeArg = args.Count > 2 ? args["2"].Message?.ToPlainText() : null;
+		var attributeArg = args.Count > 2 ? args["2"].Message.ToPlainText() : null;
 		// An /override or /extend hook may leave the attribute out, and then tries every $-command on the
 		// object (do_hook, src/command.c:2624-2646; run_cmd_hook, src/command.c:2459-2465).
 		var wholeObject = string.IsNullOrWhiteSpace(attributeArg) && selectedHookType is "OVERRIDE" or "EXTEND";
@@ -2671,7 +2671,7 @@ public partial class Commands : ICommandRestrictionApplier
 			: switches.Contains("POWERS") ? ListKind.Powers
 			: switches.Contains("ALLOCATIONS") ? ListKind.Allocations
 			: ResolveListKind(parser.CurrentState.Arguments.TryGetValue("0", out var typeArg)
-				? typeArg.Message?.ToPlainText() ?? string.Empty
+				? typeArg.Message.ToPlainText()
 				: string.Empty);
 
 		var builtinOnly = switches.Contains("BUILTIN") && !switches.Contains("LOCAL");

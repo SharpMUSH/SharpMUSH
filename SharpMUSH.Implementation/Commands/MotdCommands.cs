@@ -240,7 +240,7 @@ public partial class Commands
 									await executor.IsRoyalty() ||
 									await executor.IsSee_All();
 
-		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
+		var pattern = args.ContainsKey("0") ? args["0"].Message.ToPlainText() : null;
 
 		var everyone = ConnectionService.GetAll();
 		var playerList = new List<ImmutableArray<Block>>();

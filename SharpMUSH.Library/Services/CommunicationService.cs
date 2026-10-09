@@ -114,7 +114,7 @@ public partial class CommunicationService(
 
 	private async ValueTask<DeliveryResult> TargetNotFoundAsync(AnySharpObject executor, CallState error)
 	{
-		await notifyService.Notify(executor, error.Message!);
+		await notifyService.Notify(executor, error.Message);
 		return new DeliveryFailure(DeliveryFailure.Cause.TargetNotFound);
 	}
 

@@ -176,7 +176,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 					CallState evaluated;
 					using (clock.Pause())
 						evaluated = await visitor.VisitChildren(x) ?? CallState.Empty;
-					var msg = evaluated.Message ?? MarkupText.Empty;
+					var msg = evaluated.Message;
 					retainedArguments?.Add(msg.Length);
 					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
 					refinedArguments.Add(new CallState(msg, x.Depth()) { HadErrors = evaluated.HadErrors });
@@ -346,7 +346,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		// Output ceiling: stop a single function that generates an enormous string from
 		// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
 		// at the return so it covers every function without each having to guard itself.
-		if (result.Message is not null && FunctionLimits.ExceedsOutput(currentState, result.Message.Length))
+		if (FunctionLimits.ExceedsOutput(currentState, result.Message.Length))
 			return LimitHit(limitExceeded, ErrorMessages.Returns.OutputTooLarge, contextDepth);
 
 		// A function that evaluates its own arguments (cand, iter, ...) may have run into a limit

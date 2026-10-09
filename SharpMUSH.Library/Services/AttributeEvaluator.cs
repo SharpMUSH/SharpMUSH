@@ -38,7 +38,7 @@ internal sealed class AttributeEvaluator(
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject obj, string attribute, Dictionary<string, CallState> args,
 		bool evalParent = true, bool ignorePermissions = false)
-		=> (await EvaluateAttributeFunctionResultAsync(parser, executor, obj, attribute, args, evalParent, ignorePermissions)).Message ?? MarkupText.Empty;
+		=> (await EvaluateAttributeFunctionResultAsync(parser, executor, obj, attribute, args, evalParent, ignorePermissions)).Message;
 
 	public async ValueTask<CallState> EvaluateAttributeFunctionResultAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject obj,
@@ -165,7 +165,7 @@ internal sealed class AttributeEvaluator(
 		MString objAndAttribute, Dictionary<string, CallState> args, bool evalParent = true,
 		bool ignorePermissions = false, bool ignoreLambda = false)
 		=> (await EvaluateAttributeFunctionResultAsync(parser, executor, objAndAttribute, args,
-			evalParent, ignorePermissions, ignoreLambda)).Message ?? MarkupText.Empty;
+			evalParent, ignorePermissions, ignoreLambda)).Message;
 
 	public async ValueTask<AttributeFunctionFetch> FetchAttributeFunctionAsync(IMUSHCodeParser parser,
 		AnySharpObject executor, string objectAndAttribute)
@@ -252,7 +252,7 @@ internal sealed class AttributeEvaluator(
 				if (applyFunction.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.StripAnsi))
 				{
 					slimArgs = slimArgs.ToDictionary(pair => pair.Key,
-						pair => pair.Value with { Message = MarkupText.Plain(pair.Value.Message?.ToPlainText() ?? "") });
+						pair => pair.Value with { Message = MarkupText.Plain(pair.Value.Message.ToPlainText()) });
 				}
 
 				var result = await parser.With(

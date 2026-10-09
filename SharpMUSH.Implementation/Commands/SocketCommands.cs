@@ -216,7 +216,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AlreadyConnected);
 		}
 
-		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
+		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message.ToPlainText());
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 

@@ -34,7 +34,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		string Arg(string key) => args.TryGetValue(key, out var value) ? value.Message?.ToPlainText().Trim() ?? "" : "";
+		string Arg(string key) => args.TryGetValue(key, out var value) ? value.Message.ToPlainText().Trim() ?? "" : "";
 
 		var name = Arg("0");
 		int? begin = null;
@@ -105,7 +105,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Scan(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.Any()
 			? parser.CurrentState.Switches.ToArray()
@@ -494,12 +494,12 @@ public partial class Commands
 	private static (string? Player, List<SearchSpecEngine.SearchPair> Pairs) ParseSearchCommandArgs(
 		IReadOnlyDictionary<string, CallState> args)
 	{
-		var lhs = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText() ?? "" : "";
+		var lhs = args.TryGetValue("0", out var arg0) ? arg0.Message.ToPlainText() : "";
 
 		var rhsChunks = Enumerable.Range(1, args.Count)
 			.Select(i => i.ToString())
 			.TakeWhile(args.ContainsKey)
-			.Select(key => args[key].Message?.ToPlainText() ?? "")
+			.Select(key => args[key].Message.ToPlainText())
 			.ToList();
 
 		var (player, leadingClass) = SplitSearchOwnerAndClass(lhs, hasRestriction: rhsChunks.Count > 0);
@@ -556,7 +556,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoPlayerSpecified);
 		}
 
-		var targetName = args["0"].Message!.ToPlainText();
+		var targetName = args["0"].Message.ToPlainText();
 
 		var maybeTarget = await LocateService.LocateAndNotifyIfInvalid(
 			parser,
@@ -612,7 +612,7 @@ public partial class Commands
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var objectSpec = args.Count == 0 ? null : args["0"].Message?.ToPlainText();
+		var objectSpec = args.Count == 0 ? null : args["0"].Message.ToPlainText();
 		if (string.IsNullOrEmpty(objectSpec))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouMustSpecifyObjectToDecompile), executor);
@@ -684,7 +684,7 @@ public partial class Commands
 	{
 		if (!isTf)
 		{
-			return args.Count >= 2 ? args["1"].Message?.ToPlainText() ?? "" : "";
+			return args.Count >= 2 ? args["1"].Message.ToPlainText() : "";
 		}
 
 		var tfPrefixAttr = await AttributeService.GetAttributeAsync(executor, executor, "TFPREFIX",
@@ -864,7 +864,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		var targetName = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText() : null;
+		var targetName = args.TryGetValue("0", out var arg0) ? arg0.Message.ToPlainText() : null;
 		if (string.IsNullOrEmpty(targetName))
 		{
 			return await ReportEntrancesAsync(executor, (await executor.Where()).WithExitOption(), args, switches);
@@ -881,7 +881,7 @@ public partial class Commands
 		[("EXITS", "exits"), ("THINGS", "things"), ("PLAYERS", "players"), ("ROOMS", "rooms")];
 
 	private static int? EntrancesBound(IReadOnlyDictionary<string, CallState> args, string key)
-		=> args.TryGetValue(key, out var arg) && int.TryParse(arg.Message?.ToPlainText(), out var bound) ? bound : null;
+		=> args.TryGetValue(key, out var arg) && int.TryParse(arg.Message.ToPlainText(), out var bound) ? bound : null;
 
 	private async ValueTask<CallState> ReportEntrancesAsync(AnySharpObject executor, AnySharpObject targetObject,
 		IReadOnlyDictionary<string, CallState> args, IEnumerable<string> switches)
@@ -952,8 +952,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrText = objAttrArg.Message!.ToPlainText();
-		var pattern = patternArg.Message!.ToPlainText();
+		var objAttrText = objAttrArg.Message.ToPlainText();
+		var pattern = patternArg.Message.ToPlainText();
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: var maybeAttributePattern })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);

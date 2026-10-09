@@ -56,7 +56,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		if (!args.TryGetValue("0", out var targetArg)) return new CallState(ErrorMessages.Returns.InvalidArguments);
-		var targetText = targetArg.Message!.ToPlainText();
+		var targetText = targetArg.Message.ToPlainText();
 		var type = fixedType ?? parser.CurrentState.Switches.FirstOrDefault();
 		var slash = targetText.IndexOf('/');
 		if (slash >= 0)
@@ -71,7 +71,7 @@ public partial class Commands
 				});
 		}
 
-		var key = !unlock && args.TryGetValue("1", out var keyArg) ? keyArg.Message!.ToPlainText() : string.Empty;
+		var key = !unlock && args.TryGetValue("1", out var keyArg) ? keyArg.Message.ToPlainText() : string.Empty;
 		await LockHelpers.LockAsync(parser, LocateService, NotifyService, PermissionService, LockService, executor,
 			targetText, key, type);
 		return CallState.Empty;
@@ -85,7 +85,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		await LockHelpers.SetFlagsAsync(parser, LocateService, NotifyService, LockService, executor,
-			args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText());
+			args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText());
 		return CallState.Empty;
 	}
 
@@ -101,7 +101,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrText = objAttrArg.Message!.ToPlainText();
+		var objAttrText = objAttrArg.Message.ToPlainText();
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrName })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
@@ -132,7 +132,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		if (!args.TryGetValue("1", out var valueArg) || string.IsNullOrEmpty(valueArg.Message?.ToPlainText()))
+		if (!args.TryGetValue("1", out var valueArg) || string.IsNullOrEmpty(valueArg.Message.ToPlainText()))
 		{
 			await NotifyService.NotifyLocalized(executor,
 				AttributeLockHelpers.IsLocked(attribute)
@@ -142,7 +142,7 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		if (AttributeLockSwitch.Parse(valueArg.Message!.ToPlainText()) is not bool shouldLock)
+		if (AttributeLockSwitch.Parse(valueArg.Message.ToPlainText()) is not bool shouldLock)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgument), executor);
 			return new CallState(ErrorMessages.Returns.InvalidValue);

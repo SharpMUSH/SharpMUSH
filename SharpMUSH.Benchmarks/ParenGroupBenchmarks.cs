@@ -125,7 +125,7 @@ public class ParenGroupBenchmarks : LightningBaseBenchmark
 		{
 			{ HadErrors: false, Message: { } message } => message.ToPlainText(),
 			var result => throw new InvalidOperationException(
-				$"'{code}' did not evaluate cleanly: '{result?.Message?.ToPlainText()}'; a failing workload measures the error path.")
+				$"'{code}' did not evaluate cleanly: '{result?.Message.ToPlainText()}'; a failing workload measures the error path.")
 		};
 
 	private Task Run(string name) => _parser!.FromState(BenchmarkHelpers.FreshState(_executor)).FunctionParse(_inputs[name]).AsTask();

@@ -87,5 +87,5 @@ public partial class Commands
 	}
 
 	private static string PlainArgument(IMUSHCodeParser parser, string key)
-		=> parser.CurrentState.Arguments.TryGetValue(key, out var argument) ? argument.Message?.ToPlainText() ?? "" : "";
+		=> parser.CurrentState.Arguments.TryGetValue(key, out var argument) ? argument.Message.ToPlainText() : "";
 }

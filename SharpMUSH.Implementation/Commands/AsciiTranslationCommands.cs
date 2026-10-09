@@ -38,7 +38,7 @@ public partial class Commands
 
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		var character = (args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "").Trim();
+		var character = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
 
 		if (switches.Contains("LIST") || (character.Length == 0 && switches.Length == 0))
 		{
@@ -83,7 +83,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var text = args["1"].Message?.ToPlainText() ?? "";
+		var text = args["1"].Message.ToPlainText();
 		if (!AsciiTranslations.IsText(text))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AsciiTranslationBadText), executor);

@@ -321,7 +321,7 @@ public partial class Commands
 			parser,
 			executor,
 			executor,
-			args["0"].Message!.ToPlainText(),
+			args["0"].Message.ToPlainText(),
 			LocateFlags.ExitsInTheRoomOfLooker
 			| LocateFlags.EnglishStyleMatching
 			| LocateFlags.ExitsPreference
@@ -359,8 +359,8 @@ public partial class Commands
 		// The exit name or alias actually typed: args["1"] when the visitor routed a bare exit command
 		// here, otherwise the argument to an explicit `goto`.
 		var typedName = args.TryGetValue("1", out var typedArg)
-			? typedArg.Message!.ToPlainText()
-			: args["0"].Message!.ToPlainText();
+			? typedArg.Message.ToPlainText()
+			: args["0"].Message.ToPlainText();
 
 		var resolved = await TeleportHelpers.ResolveExitDestination(
 			parser, TeleportServices, executor, executor, exitObj, typedName);
@@ -481,7 +481,7 @@ public partial class Commands
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var objectName = args["0"].Message!.ToPlainText();
+		var objectName = args["0"].Message.ToPlainText();
 
 		// move.c:930-931: MAT_ABSOLUTE is added to the match flags only for Hasprivs — God, Wizard or
 		// Royalty, which is IsPriv here. Without it "#N" is not a name a mortal can enter by, so the
@@ -638,13 +638,13 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
+		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
 			await NotifyService.Notify(executor, "Follow whom?", executor);
 			return CallState.Empty;
 		}
 
-		var targetName = args["0"].Message!.ToPlainText();
+		var targetName = args["0"].Message.ToPlainText();
 
 		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, targetName, LocateFlags.All);
@@ -725,7 +725,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
+		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
 			// clear_following then clear_followers (move.c:1201-1202), both of which keep the two
 			// lists in step. The leader's FOLLOWERS is what names the followers, so no scan of every
@@ -743,7 +743,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var targetName = args["0"].Message!.ToPlainText();
+		var targetName = args["0"].Message.ToPlainText();
 
 		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, targetName, LocateFlags.All);
@@ -804,7 +804,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
+		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
 			// clear_followers (move.c:1163). The leader's own FOLLOWERS names them, so nothing has to
 			// walk every object in the database to find out who was following.
@@ -819,7 +819,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var targetName = args["0"].Message!.ToPlainText();
+		var targetName = args["0"].Message.ToPlainText();
 
 		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, targetName, LocateFlags.All);

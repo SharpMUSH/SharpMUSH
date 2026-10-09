@@ -48,7 +48,7 @@ public class ExecuteListenPatternCommandHandler(
 				if (prefix.Success) action = action.Substring(prefix.Length);
 			}
 			if (action.Length == 0) return Unit.Value;
-			var arguments = request.Registers.ToDictionary(pair => pair.Key, pair => new CallState(pair.Value.Message ?? MarkupText.Empty));
+			var arguments = request.Registers.ToDictionary(pair => pair.Key, pair => new CallState(pair.Value.Message));
 			var state = ParserState.RootFor(listenerDbRef).SnapshotForQueuedAction() with
 			{
 				Enactor = speakerDbRef,

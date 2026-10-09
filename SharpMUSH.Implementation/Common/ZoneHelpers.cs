@@ -329,9 +329,9 @@ public static class ZoneHelpers
 	/// <c>"1"</c> or as the <c>#-1 …</c> return of a check this method already made.
 	/// </summary>
 	private static Result<Success> Written(CallState written)
-		=> written.Message?.ToPlainText() is "1"
+		=> written.Message.ToPlainText() is "1"
 			? new Success()
-			: new Error<string>(written.Message?.ToPlainText() ?? ErrorMessages.Returns.PermissionDenied);
+			: new Error<string>(written.Message.ToPlainText());
 
 	/// <summary>
 	/// A <c>do_chzone</c> refusal: it says why to the player when <paramref name="noisy"/>, and returns

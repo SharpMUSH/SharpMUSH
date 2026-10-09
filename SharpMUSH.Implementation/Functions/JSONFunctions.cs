@@ -34,7 +34,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
 	public async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> JsonFunctions.TryGetValue(parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToLower(), out var jsonFunction)
+		=> JsonFunctions.TryGetValue(parser.CurrentState.Arguments["0"].Message.ToPlainText().ToLower(), out var jsonFunction)
 			? await jsonFunction(parser.CurrentState.ArgumentsOrdered)
 			: new CallState(MarkupText.Plain(ErrorMessages.Returns.InvalidType));
 
@@ -58,11 +58,11 @@ public partial class Functions
 			return new CallState("[]");
 		}
 
-		var delimiterResult = parser.CurrentState.Arguments.TryGetValue("1", out var delimiterArg) && delimiterArg.Message!.Length > 0
+		var delimiterResult = parser.CurrentState.Arguments.TryGetValue("1", out var delimiterArg) && delimiterArg.Message.Length > 0
 			? await delimiterArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
-		var delimiter = delimiterResult.Message ?? MarkupText.Empty;
+		var delimiter = delimiterResult.Message;
 		var listResult = await listArg.GetParsedResultAsync();
-		var list = MushText.SplitList(delimiter, listResult.Message ?? MarkupText.Empty);
+		var list = MushText.SplitList(delimiter, listResult.Message);
 
 		try
 		{
@@ -89,7 +89,7 @@ public partial class Functions
 	{
 		try
 		{
-			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
+			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message.ToPlainText());
 			return ValueTask.FromResult(new CallState("1"));
 		}
 		catch (JsonException)
@@ -102,13 +102,13 @@ public partial class Functions
 	public async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
+		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var separatorResult = parser.CurrentState.Arguments.TryGetValue("2", out var separatorArg) && separatorArg.Message!.Length > 0
+		var jsonStr = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var separatorResult = parser.CurrentState.Arguments.TryGetValue("2", out var separatorArg) && separatorArg.Message.Length > 0
 			? await separatorArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
-		var osep = separatorResult.Message ?? MarkupText.Empty;
+		var osep = separatorResult.Message;
 
 		var userArgs = new Dictionary<string, CallState>();
 		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
@@ -144,7 +144,7 @@ public partial class Functions
 		{
 			var result = await evaluate(callArgs);
 			hadErrors |= result.HadErrors;
-			return result.Message ?? MarkupText.Empty;
+			return result.Message;
 		}
 
 		try
@@ -218,10 +218,10 @@ public partial class Functions
 		await ValueTask.CompletedTask;
 
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var json = args["0"].Message!.ToPlainText();
-		var action = args["1"].Message!.ToPlainText().ToLower();
-		var arg2 = args["2"].Message!.ToPlainText();
-		var json2 = args.Count > 3 ? args["3"].Message?.ToPlainText() : null;
+		var json = args["0"].Message.ToPlainText();
+		var action = args["1"].Message.ToPlainText().ToLower();
+		var arg2 = args["2"].Message.ToPlainText();
+		var json2 = args.Count > 3 ? args["3"].Message.ToPlainText() : null;
 
 		try
 		{
@@ -457,8 +457,8 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json_query", 1, int.MaxValue, args.Count));
 		}
 
-		var json = args["0"].Message!.ToPlainText();
-		var action = args.Count > 1 ? args["1"].Message!.ToPlainText().ToLower() : "type";
+		var json = args["0"].Message.ToPlainText();
+		var action = args.Count > 1 ? args["1"].Message.ToPlainText().ToLower() : "type";
 
 		try
 		{
@@ -475,7 +475,7 @@ public partial class Functions
 
 			if (action == "exists")
 			{
-				var existsPath = args.Skip(2).Select(a => a.Value.Message!.ToPlainText()).ToArray();
+				var existsPath = args.Skip(2).Select(a => a.Value.Message.ToPlainText()).ToArray();
 				var existsResult = JsonHelpers.JsonExists(rootElement, existsPath);
 				return existsResult switch
 				{
@@ -487,7 +487,7 @@ public partial class Functions
 
 			if (action == "get")
 			{
-				var getPath = args.Skip(2).Select(a => a.Value.Message!.ToPlainText()).ToArray();
+				var getPath = args.Skip(2).Select(a => a.Value.Message.ToPlainText()).ToArray();
 				var getResult = JsonHelpers.JsonGet(rootElement, getPath);
 				return getResult is null
 					? new CallState(errorBadArg)
@@ -496,7 +496,7 @@ public partial class Functions
 
 			if (action == "extract")
 			{
-				var extractPath = args.Count > 2 ? args["2"].Message!.ToPlainText() : "$";
+				var extractPath = args.Count > 2 ? args["2"].Message.ToPlainText() : "$";
 				var extractResult = JsonHelpers.JsonExtract(rootElement, extractPath);
 				return extractResult is null
 					? new CallState(errorBadArg)
@@ -521,10 +521,10 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var playersArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var package = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var playersArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var package = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState)
-			? msgState.Message?.ToPlainText() ?? ""
+			? msgState.Message.ToPlainText()
 			: "";
 
 		var players = ArgHelpers.NameListString(playersArg);
@@ -602,7 +602,7 @@ public partial class Functions
 		ParameterNames = ["json", "player"])]
 	public async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var jsonContent = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg)
@@ -610,7 +610,7 @@ public partial class Functions
 					parser,
 					executor,
 					executor,
-					targetArg.Message!.ToPlainText(),
+					targetArg.Message.ToPlainText(),
 					PlayersPreference | AbsoluteMatch) is Error<CallState> error)
 		{
 			return error.Value;

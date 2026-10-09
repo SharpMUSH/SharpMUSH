@@ -48,7 +48,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		var itemName = args["0"].Message!.ToPlainText();
+		var itemName = args["0"].Message.ToPlainText();
 		await NotifyService.Notify(executor, $"You try to buy '{itemName}'.", executor);
 		await NotifyService.Notify(executor, "The BUY command requires a full economy system implementation.", executor);
 		await NotifyService.Notify(executor, "Features needed: PRICELIST attribute parsing, @lock/pay checking, penny transfers.", executor);
@@ -62,7 +62,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var objectName = args["0"].Message!.ToPlainText();
+		var objectName = args["0"].Message.ToPlainText();
 
 		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
 
@@ -221,7 +221,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await RefusedNonHolder(executor) is not AnySharpContainer emptier) return CallState.Empty;
 		var args = parser.CurrentState.Arguments;
-		var objectName = args["0"].Message!.ToPlainText();
+		var objectName = args["0"].Message.ToPlainText();
 
 		// move.c:809-812: an unmatchable name is noisy_match_result's refusal, not a usage line.
 		if (string.IsNullOrWhiteSpace(objectName))
@@ -437,7 +437,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await RefusedNonHolder(executor) is not AnySharpContainer) return CallState.Empty;
-		var what = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var what = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(what))
 		{
@@ -774,8 +774,8 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		var recipientName = args["0"].Message!.ToPlainText();
-		var thingToGive = args["1"].Message!.ToPlainText();
+		var recipientName = args["0"].Message.ToPlainText();
+		var thingToGive = args["1"].Message.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(recipientName))
 		{
@@ -1008,7 +1008,7 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			var actionList = args["0"].Message!.ToPlainText();
+			var actionList = args["0"].Message.ToPlainText();
 
 			var executorLocation = await executor.Where();
 			await CommunicationService.SendToRoomAsync(executor, executorLocation,
@@ -1026,7 +1026,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var command = args["0"].Message!.ToPlainText();
+		var command = args["0"].Message.ToPlainText();
 
 		var location = await executor.Where();
 		await CommunicationService.SendToRoomAsync(executor, location,
@@ -1047,13 +1047,13 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
+		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
 			await NotifyService.Notify(executor, "Use what?", executor);
 			return CallState.Empty;
 		}
 
-		var objectName = args["0"].Message!.ToPlainText();
+		var objectName = args["0"].Message.ToPlainText();
 
 		var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 			parser, executor, executor, objectName, LocateFlags.All);
@@ -1159,20 +1159,20 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
+		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
 			await NotifyService.Notify(executor, "With whom?", executor);
 			return CallState.Empty;
 		}
 
-		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(arg1.Message?.ToPlainText()))
+		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(arg1.Message.ToPlainText()))
 		{
 			await NotifyService.Notify(executor, "Do what with them?", executor);
 			return CallState.Empty;
 		}
 
-		var targetName = args["0"].Message!.ToPlainText();
-		var command = arg1.Message!;
+		var targetName = args["0"].Message.ToPlainText();
+		var command = arg1.Message;
 
 		var roomSwitch = switches.Contains("ROOM");
 

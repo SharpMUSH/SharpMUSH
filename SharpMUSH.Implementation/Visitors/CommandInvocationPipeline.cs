@@ -219,9 +219,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			var prefix = switches.Length == 0 ? name : $"{name}/{string.Join('/', switches)}";
 			if (arguments.Count == 0) return MarkupText.Plain(prefix);
 
-			var values = arguments.Select(argument => argument.Message ?? MarkupText.Empty);
+			var values = arguments.Select(argument => argument.Message);
 			var text = EqSplit && arguments.Count > 1
-				? MarkupText.Concat([arguments[0].Message ?? MarkupText.Empty, MarkupText.Plain("="),
+				? MarkupText.Concat([arguments[0].Message, MarkupText.Plain("="),
 					MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])
 				: MarkupText.Join(MarkupText.Plain(","), values);
 			return MarkupText.Concat(MarkupText.Plain(prefix + " "), text);
@@ -290,7 +290,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 			for (int i = 0; i < arguments.Count; i++)
 			{
-				namedRegisters[$"LSA{i + 1}"] = arguments[i].Message ?? MarkupText.Empty;
+				namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
 			}
 
 			namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
@@ -703,7 +703,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// direct input.
 		prs.CurrentState.CommandText?.EvaluatedFrom(() =>
 		{
-			var values = arguments.Select(argument => argument.Message ?? MarkupText.Empty).ToList();
+			var values = arguments.Select(argument => argument.Message).ToList();
 			var name = MarkupText.Plain($"ATTRIB_SET/{rest.ToUpperInvariant()} ");
 			return values.Count > 1
 				? MarkupText.Concat([name, values[0], MarkupText.Plain("="), MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])

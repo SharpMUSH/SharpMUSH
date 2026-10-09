@@ -27,7 +27,7 @@ public partial class CommunicationService
 			return new SpeechOutcome(false, CallState.Empty, MString.Empty, MString.Empty);
 		var transformed = speechService is null ? new CallState(message) : await speechService.Value.TransformAsync(parser, executor, message, token);
 		if (transformed.HadErrors) return new SpeechOutcome(false, transformed, MString.Empty, MString.Empty);
-		message = transformed.Message!;
+		message = transformed.Message;
 		var name = speechService is null ? MString.Plain(executor.Object().Name) : await speechService.Value.Names.FormatAsync(executor, NameContext.Speech);
 		var type = token == "\"" ? INotifyService.NotificationType.Say : token == ":" ? INotifyService.NotificationType.Pose : INotifyService.NotificationType.SemiPose;
 		HashSet<DBRef>? omitted = null;
@@ -91,7 +91,7 @@ public partial class CommunicationService
 					var transformed = request.Scope == EmitScope.Immediate && speechService is not null
 						? await speechService.Value.TransformAsync(parser, executor, request.Message, "|") : new CallState(request.Message);
 					if (transformed.HadErrors) return new EmitOutcome(false, transformed);
-					await EmitLocationAsync(executor, speaker, location, transformed.Message!, type);
+					await EmitLocationAsync(executor, speaker, location, transformed.Message, type);
 					if (request.Scope == EmitScope.Outermost && !request.Silent && (await executor.Where()).Object().DBRef != location.Object().DBRef)
 						await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouLemitFormat), executor, request.Message);
 					break;

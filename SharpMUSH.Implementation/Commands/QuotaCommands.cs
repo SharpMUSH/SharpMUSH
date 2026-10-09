@@ -46,8 +46,8 @@ public partial class Commands
 				return usage;
 			}
 
-			var playerArg = args["0"].Message!.ToPlainText();
-			var amountArg = args["1"].Message!.ToPlainText();
+			var playerArg = args["0"].Message.ToPlainText();
+			var amountArg = args["1"].Message.ToPlainText();
 
 			if (!int.TryParse(amountArg, out var amount))
 			{
@@ -96,7 +96,7 @@ public partial class Commands
 		AnySharpObject targetPlayer;
 		if (args.Count > 0)
 		{
-			var playerArg = args["0"].Message!.ToPlainText();
+			var playerArg = args["0"].Message.ToPlainText();
 			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg))
 			{
 				case AnySharpObject found:
@@ -156,7 +156,7 @@ public partial class Commands
 		AnySharpObject targetPlayer;
 		if (args.Count > 0)
 		{
-			var playerArg = args["0"].Message!.ToPlainText();
+			var playerArg = args["0"].Message.ToPlainText();
 			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg))
 			{
 				case AnySharpObject found:
@@ -215,7 +215,7 @@ public partial class Commands
 			return usage;
 		}
 
-		var amountArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var amountArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		if (!int.TryParse(amountArg, out var amount))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
@@ -273,7 +273,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var playerArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
 		{
 			AnySharpObject and SharpPlayer player => await PoorAsync(executor, player),

@@ -200,7 +200,7 @@ public sealed class RecurringJobService(
 			}
 			finally { _gate.Release(); }
 			result = await evaluation;
-			var message = result?.Message?.ToPlainText();
+			var message = result?.Message.ToPlainText();
 			error = message?.StartsWith("#-", StringComparison.Ordinal) == true ? "Attribute execution returned an error." : null;
 		}
 		catch (Exception ex)

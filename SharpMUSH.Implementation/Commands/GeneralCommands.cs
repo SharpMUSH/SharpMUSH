@@ -97,7 +97,7 @@ public partial class Commands
 				parser,
 				executor,
 				executor,
-				args["0"].Message!.ToPlainText(),
+				args["0"].Message.ToPlainText(),
 				LocateFlags.All);
 
 			if (locate is AnySharpObject located)
@@ -143,7 +143,7 @@ public partial class Commands
 
 		if (args.Count == 1)
 		{
-			var argText = args["0"].Message!.ToPlainText();
+			var argText = args["0"].Message.ToPlainText();
 			var objectName = argText;
 
 			if (HelperFunctions.SplitDbRefAndOptionalAttr(argText) is { Object: var splitObject, Attribute: var maybeAttributePattern })

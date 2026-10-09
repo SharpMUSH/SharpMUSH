@@ -39,7 +39,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var topic = args["0"].Message!.ToPlainText();
+		var topic = args["0"].Message.ToPlainText();
 
 		// /search switch - search entry bodies for content containing the term (PennMUSH behavior)
 		if (switches.Contains("SEARCH"))

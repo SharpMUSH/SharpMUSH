@@ -51,7 +51,7 @@ public partial class Functions
 		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
 		var fieldSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		var registerName = args.Count > 3 && args.TryGetValue("3", out var value2)
-			? value2.Message?.ToPlainText() ?? string.Empty
+			? value2.Message.ToPlainText()
 			: string.Empty;
 
 		// If more than 4 arguments, treat remaining arguments as prepared statement parameters
@@ -99,7 +99,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var input = args["0"].Message?.ToPlainText() ?? string.Empty;
+		var input = args["0"].Message.ToPlainText();
 
 		var escaped = SqlService.Escape(input);
 
@@ -144,7 +144,7 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 
-		var objAttrStr = args["0"].Message?.ToPlainText() ?? string.Empty;
+		var objAttrStr = args["0"].Message.ToPlainText();
 
 		var query = (await EvaluateArgument(args["1"]))?.ToPlainText() ?? string.Empty;
 
@@ -154,7 +154,7 @@ public partial class Functions
 		}
 
 		var osep = args.Count > 2 && args.TryGetValue("2", out var osepArg)
-			? osepArg.Message!
+			? osepArg.Message
 			: MarkupText.Space;
 
 		var doFieldNames = args.Count > 3
@@ -196,7 +196,7 @@ public partial class Functions
 			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found, attrName,
 				attributeArgs);
 			hadErrors |= result.HadErrors;
-			return result.Message ?? MarkupText.Empty;
+			return result.Message;
 		}
 
 		try
@@ -257,7 +257,7 @@ public partial class Functions
 		{
 			var result = await argument.GetParsedResultAsync();
 			hadErrors |= result.HadErrors;
-			parameters.Add(result.Message?.ToPlainText() ?? string.Empty);
+			parameters.Add(result.Message.ToPlainText());
 		}
 
 		return ([.. parameters], hadErrors);

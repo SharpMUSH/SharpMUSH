@@ -134,13 +134,13 @@ public static partial class ArgHelpers
 	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
 		MString defaultValue)
 	{
-		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message?.ToPlainText()) ||
-				args[item.ToString()].Message?.ToPlainText() is null)
+		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message.ToPlainText()) ||
+				args[item.ToString()].Message.ToPlainText() is null)
 		{
 			return defaultValue;
 		}
 
-		return args[item.ToString()].Message!;
+		return args[item.ToString()].Message;
 	}
 
 	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
@@ -151,7 +151,7 @@ public static partial class ArgHelpers
 		MString defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (args.Count - 1 < item || args[item.ToString()].Message!.Length == 0)
+		if (args.Count - 1 < item || args[item.ToString()].Message.Length == 0)
 		{
 			return defaultValue;
 		}
@@ -185,7 +185,7 @@ public static partial class ArgHelpers
 
 		foreach (var arg in args)
 		{
-			var text = (arg.Value.Message ?? MarkupText.Empty).ToPlainText();
+			var text = arg.Value.Message.ToPlainText();
 			if (!numbers.TryDecimal(text, out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
@@ -211,7 +211,7 @@ public static partial class ArgHelpers
 
 		foreach (var arg in args)
 		{
-			var text = (arg.Value.Message ?? MarkupText.Empty).ToPlainText();
+			var text = arg.Value.Message.ToPlainText();
 			if (!numbers.TryUInt64(text, out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UIntegers);
@@ -229,7 +229,7 @@ public static partial class ArgHelpers
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var text = args["0"].Message.ToPlainText();
 		if (!numbers.TryUInt64(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UInteger);
@@ -243,7 +243,7 @@ public static partial class ArgHelpers
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var text = args["0"].Message.ToPlainText();
 		if (!numbers.TryDecimal(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -258,7 +258,7 @@ public static partial class ArgHelpers
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var text = args["0"].Message.ToPlainText();
 		if (!numbers.TryDecimal(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -272,7 +272,7 @@ public static partial class ArgHelpers
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var text = args["0"].Message.ToPlainText();
 		if (!numbers.TryDouble(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -299,7 +299,7 @@ public static partial class ArgHelpers
 		decimal? previous = null;
 		foreach (var arg in args)
 		{
-			if (!numbers.TryDecimal((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
+			if (!numbers.TryDecimal(arg.Value.Message.ToPlainText(), out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -318,14 +318,12 @@ public static partial class ArgHelpers
 	/// <summary>
 	/// The numbered arguments from <paramref name="first"/> on, each moved down one place (argument
 	/// <c>i</c> becomes register <c>i - 1</c>): how a command or function hands its trailing arguments
-	/// on as <c>%0</c>-<c>%9</c>. With <paramref name="requireMessage"/>, an argument with no message is
-	/// left out.
+	/// on as <c>%0</c>-<c>%9</c>.
 	/// </summary>
-	public static Dictionary<string, CallState> ShiftedArguments(IReadOnlyDictionary<string, CallState> args,
-		int first, bool requireMessage = false)
+	public static Dictionary<string, CallState> ShiftedArguments(IReadOnlyDictionary<string, CallState> args, int first)
 		=> Enumerable.Range(first, Math.Max(0, args.Count - first))
 			.Select(index => (index, found: args.TryGetValue(index.ToString(), out var value), value))
-			.Where(arg => arg.found && (!requireMessage || arg.value!.Message != null))
+			.Where(arg => arg.found)
 			.ToDictionary(arg => (arg.index - 1).ToString(), arg => arg.value!);
 
 	public static IEnumerable<DbRefOrName> NameList(string list)

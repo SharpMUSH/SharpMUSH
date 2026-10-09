@@ -57,7 +57,7 @@ public partial class Commands
 	/// </summary>
 	private string SocketArgument(IMUSHCodeParser parser)
 		=> parser.CurrentState.Arguments.TryGetValue("0", out var arg)
-			? arg.Message?.ToPlainText() ?? string.Empty
+			? arg.Message.ToPlainText()
 			: string.Empty;
 
 	/// <summary>
@@ -400,7 +400,7 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var isWizard = await executor.IsWizard();
 
-		var descriptorArg = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText().Trim() ?? string.Empty : string.Empty;
+		var descriptorArg = args.TryGetValue("0", out var arg0) ? arg0.Message.ToPlainText().Trim() ?? string.Empty : string.Empty;
 
 		var target = await ResolveSocksetTarget(parser, executor, descriptorArg, isWizard);
 		if (target is null)
@@ -423,7 +423,7 @@ public partial class Commands
 		// side is "OPTION,VALUE" — not "OPTION=VALUE" — and several pairs may be set in one command.
 		var pairs = args.Where(kv => kv.Key != "0")
 			.OrderBy(kv => int.Parse(kv.Key))
-			.Select(kv => kv.Value.Message?.ToPlainText() ?? string.Empty)
+			.Select(kv => kv.Value.Message.ToPlainText())
 			.ToArray();
 
 		if (pairs.Length == 0)

@@ -293,7 +293,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			var childResult = child is null ? null : await child.Accept(this);
 			if (childResult is not null)
 			{
-				retainedText?.Add(childResult.Message?.Length ?? 0);
+				retainedText?.Add(childResult.Message.Length);
 				results.Add(childResult);
 			}
 
@@ -380,7 +380,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		var messages = new MString[results.Length];
 		for (var i = 0; i < results.Length; i++)
 		{
-			messages[i] = results[i].Message ?? MarkupText.Empty;
+			messages[i] = results[i].Message;
 		}
 
 		var combined = MarkupText.Concat(messages);
@@ -424,7 +424,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		bool stripAnsi) => async () =>
 	{
 		var result = await visitor.VisitChildren(context) ?? CallState.Empty;
-		var message = result.Message ?? MarkupText.Empty;
+		var message = result.Message;
 		return result with { Message = stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message };
 	};
 
@@ -633,7 +633,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		var isBracketedPost = context.Parent?.Parent is IBracketPatternContext;
 		var debugExprPost = isBracketedPost ? $"[{context.GetText()}]" : context.GetText();
 		await SendDebugOrVerboseOutput(executorObj,
-			$"#{dbrefNumber}! {indent}{debugExprPost} => {result.Message?.ToPlainText() ?? ""}");
+			$"#{dbrefNumber}! {indent}{debugExprPost} => {result.Message.ToPlainText()}");
 
 		return result;
 	}
@@ -655,7 +655,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		// flag only triggers on literal space characters, not function/substitution output.
 		// The lexer's COMMAWS/CPAREN leading WS does NOT eat trailing spaces before delimiters
 		// (OTHER greedily consumes them), so this is the layer that handles trailing.
-		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+		if (parser.CurrentState.ParseMode is ParseMode.Default)
 		{
 			// Only strip if the last child is literal text (genericText/beginGenericText)
 			// Function output (brackets) trailing spaces should be preserved within the expression
@@ -698,7 +698,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		var named = nameContext is null
 			? CallState.Empty
 			: await Visit(nameContext) ?? new CallState(GetContextText(nameContext), nameContext.Depth());
-		var name = named.Message ?? MarkupText.Empty;
+		var name = named.Message;
 
 		if (state.HasRegexpContext)
 		{
@@ -746,7 +746,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 					{
 						Message = MarkupText.Concat([
 							MarkupText.Plain("{"),
-							vc.Message ?? MarkupText.Empty,
+							vc.Message,
 							MarkupText.Plain("}")
 						])
 					}
@@ -797,7 +797,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		{
 			Message = MarkupText.Concat([
 				MarkupText.Plain("["),
-				result.Message ?? MarkupText.Empty,
+				result.Message,
 				MarkupText.Plain("]")
 			])
 		};
@@ -811,8 +811,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		// (terminal token — VisitChildren returns null, so GetContextText has raw text).
 		// The beginGenericText alternative is already compressed by VisitBeginGenericText.
 		if (context.beginGenericText() is null
-				&& parser.CurrentState.ParseMode is ParseMode.Default
-				&& result.Message is not null)
+				&& parser.CurrentState.ParseMode is ParseMode.Default)
 			return result with { Message = MushText.CompressSpaces(result.Message) };
 		return result;
 	}
@@ -825,7 +824,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		// PE_COMPRESS_SPACES: compress literal space runs to single space.
 		// The lexer already eats leading spaces on function args (FUNCHAR WS, COMMAWS WS),
 		// but internal runs within OTHER tokens and top-level/command-arg leading spaces remain.
-		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
+		if (parser.CurrentState.ParseMode is ParseMode.Default)
 		{
 			var compressed = MushText.CompressSpaces(result.Message);
 			// Strip leading when this is the FIRST text node in an evaluation string
@@ -909,7 +908,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// </summary>
 	private static CallState? CapitalizeForUpperSelector(IValidSubstitutionContext context, CallState? result)
 	{
-		if (result?.Message is null || result.Message.Length < 1)
+		if (result is null || result.Message.Length < 1)
 		{
 			return result;
 		}
@@ -1148,7 +1147,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		var visited = await Visit(evalString);
 
 		return new CallState(
-			Message: null,
+			Message: MarkupText.Empty,
 			context.Depth(),
 			Arguments:
 			[
@@ -1175,7 +1174,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		var commaArgs = commaArgsContext is not null
 			? await VisitCommaCommandArgs(commaArgsContext)
 			: null;
-		return new CallState(null,
+		return new CallState(MarkupText.Empty,
 			context.Depth(),
 			[baseArg?.Message ?? MarkupText.Empty, .. commaArgs?.Arguments ?? []],
 			() => ValueTask.FromResult<MString?>(null))
@@ -1199,7 +1198,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (equalsToken is null)
 		{
 			var argument = evalStrings.Length > 0 ? await Visit(evalStrings[0]) : null;
-			return new CallState(null, context.Depth(), [
+			return new CallState(MarkupText.Empty, context.Depth(), [
 					argument?.Message ?? MarkupText.Empty
 				],
 				() => ValueTask.FromResult<MString?>(null))
@@ -1213,7 +1212,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		var lhsArg = lhsExists ? await Visit(evalStrings[0]) : null;
 		var rsIdx = lhsExists ? 1 : 0;
 		var rhsArg = rsIdx < evalStrings.Length ? await Visit(evalStrings[rsIdx]) : null;
-		return new CallState(null, context.Depth(),
+		return new CallState(MarkupText.Empty, context.Depth(),
 			[lhsArg?.Message ?? MarkupText.Empty, rhsArg?.Message ?? MarkupText.Empty],
 			() => ValueTask.FromResult<MString?>(null))
 		{
@@ -1260,7 +1259,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			}
 		}
 
-		return new CallState(null, context.Depth(), arguments, () => ValueTask.FromResult<MString?>(null))
+		return new CallState(MarkupText.Empty, context.Depth(), arguments, () => ValueTask.FromResult<MString?>(null))
 		{
 			ArgumentContexts = contexts,
 			HadErrors = hadErrors

@@ -68,7 +68,7 @@ public static class MessageHelpers
 			switch (maybeLocateTarget)
 			{
 				case Error<CallState> error:
-					await notifyService.Notify(executor, error.Value.Message!);
+					await notifyService.Notify(executor, error.Value.Message);
 					return new CallState(ErrorMessages.Returns.NotVisible);
 				case AnySharpObject located:
 					objToEvaluate = located;
@@ -133,7 +133,7 @@ public static class MessageHelpers
 					pinnedAttribute, defmsg, functionArgs);
 
 				await communicationService.SendToRoomAsync(
-					enactor, container, _ => evaluatedMessage.Message ?? defmsg, notificationType);
+					enactor, container, _ => evaluatedMessage.Message, notificationType);
 				hadErrors |= evaluatedMessage.HadErrors;
 
 				recipientCount++;
@@ -156,7 +156,7 @@ public static class MessageHelpers
 				pinnedAttribute, defmsg, functionArgs);
 
 			hadErrors |= message.HadErrors;
-			await notifyService.Notify(locateTarget, message.Message ?? defmsg, enactor, notificationType);
+			await notifyService.Notify(locateTarget, message.Message, enactor, notificationType);
 			recipientCount++;
 		}
 
@@ -182,7 +182,7 @@ public static class MessageHelpers
 				pinnedAttribute, defmsg, functionArgs);
 
 			await communicationService.SendToRoomAsync(
-				enactor, executorLocation, _ => message.Message ?? defmsg, notificationType, excludeObjects: excludeObjects);
+				enactor, executorLocation, _ => message.Message, notificationType, excludeObjects: excludeObjects);
 			hadErrors |= message.HadErrors;
 
 			recipientCount = 1;
@@ -212,7 +212,7 @@ public static class MessageHelpers
 
 		var processedArgs = functionArgs.Select(kvp =>
 		{
-			var value = kvp.Value.Message?.ToPlainText() ?? string.Empty;
+			var value = kvp.Value.Message.ToPlainText();
 			if (value == RecipientReplacementToken)
 			{
 				// PennMUSH substitutes unparse_dbref(target) -- the short "#N", not the objid
@@ -242,7 +242,7 @@ public static class MessageHelpers
 				},
 				newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
 
-			return result is null ? new CallState(defmsg) : result with { Message = result.Message ?? defmsg };
+			return result ?? new CallState(defmsg);
 		}
 		else
 		{
@@ -265,7 +265,7 @@ public static class MessageHelpers
 					newParser => attributeService.EvaluateAttributeFunctionResultAsync(
 						newParser, recipient, recipient, attrToEvaluate, processedArgs));
 
-				return result with { Message = result.Message ?? defmsg };
+				return result;
 			}
 		}
 	}

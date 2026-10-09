@@ -20,11 +20,11 @@ public partial class Functions
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var attrListStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var attrListStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var tokens = attrListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 		// The base is the value threaded through the pipeline; it becomes %0 for the first attribute.
-		var accumulator = parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty;
+		var accumulator = parser.CurrentState.Arguments["1"].Message;
 
 		if (tokens.Length == 0)
 		{

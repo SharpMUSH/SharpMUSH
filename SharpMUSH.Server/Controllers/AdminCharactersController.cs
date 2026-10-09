@@ -147,7 +147,7 @@ public class AdminCharactersController(
 		using var portal = audit.BeginPortal(User, reason);
 		var result = await commandInvoker.InvokeAsync("@BOOT", executor.Object().DBRef,
 			new Dictionary<string, CallState> { ["0"] = new(player.Object.DBRef.ToString()) });
-		return result?.Message?.ToPlainText() is { } message && message.StartsWith("#-1", StringComparison.Ordinal)
+		return result?.Message.ToPlainText() is { } message && message.StartsWith("#-1", StringComparison.Ordinal)
 			? StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(message))
 			: NoContent();
 	}

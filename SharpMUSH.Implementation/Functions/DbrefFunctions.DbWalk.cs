@@ -159,7 +159,7 @@ public partial class Functions
 	private static CallState Refused => new(ErrorMessages.Returns.PermissionDenied);
 
 	private string Arg(IMUSHCodeParser parser, string index)
-		=> parser.CurrentState.Arguments[index].Message!.ToPlainText();
+		=> parser.CurrentState.Arguments[index].Message.ToPlainText();
 
 	private string Render(IEnumerable<AnySharpContent> contents)
 		=> string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));

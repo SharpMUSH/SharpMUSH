@@ -248,7 +248,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var playerArg = args["0"].Message!.ToPlainText();
+		var playerArg = args["0"].Message.ToPlainText();
 		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
 		{
 			AnySharpObject and SharpPlayer playerObj => await KickAsync(executor, playerObj),
@@ -299,7 +299,7 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootPortUsage), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
-			var portText = args["0"].Message!.ToPlainText();
+			var portText = args["0"].Message.ToPlainText();
 			if (!long.TryParse(portText, out var handle))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootDescriptorMustBeNumber), executor);
@@ -322,7 +322,7 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootUsage), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
-			var playerArg = args["0"].Message!.ToPlainText();
+			var playerArg = args["0"].Message.ToPlainText();
 			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg))
 			{
 				case AnySharpObject and SharpPlayer playerObj:
@@ -460,7 +460,7 @@ public partial class Commands
 		if (switches.Contains("RECALL"))
 		{
 			var countArg = parser.CurrentState.Arguments.TryGetValue("0", out var countCallState)
-				? countCallState!.Message!.ToPlainText()
+				? countCallState!.Message.ToPlainText()
 				: "100";
 
 			if (!int.TryParse(countArg, out var count))
@@ -493,13 +493,13 @@ public partial class Commands
 
 		var logMessageArg = parser.CurrentState.Arguments.TryGetValue("0", out var logCallState);
 
-		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message!.ToPlainText()))
+		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message.ToPlainText()))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LogUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var logMessage = logCallState!.Message!;
+		var logMessage = logCallState!.Message;
 
 		using (Logger.BeginScope(new Dictionary<string, string>
 		{
@@ -532,7 +532,7 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> ToggleConfigOptionAsync(IMUSHCodeParser parser, bool enable)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var optionName = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim();
+		var optionName = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim();
 		if (string.IsNullOrEmpty(optionName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, enable ? "enable" : "disable");
@@ -726,7 +726,7 @@ public partial class Commands
 		}
 
 		// do_restart_com (src/cque.c:2412-2414): no object restarts the enactor, without a word of its own.
-		var targetName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var targetName = args.GetValueOrDefault("0")?.Message.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
 		{
 			await HaltQueuesAsync(executor);
@@ -906,7 +906,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 		}
 
-		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
+		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "";
 		if (name.Length == 0)
 		{
 			return await ObjectStatsAsync(executor, owner: null);
@@ -1055,14 +1055,14 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			var optionName = args.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
+			var optionName = args.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "";
 			if (optionName.Length == 0)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigWhatToSet), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			return await SetConfigOptionAsync(parser, executor, optionName, args.GetValueOrDefault("1")?.Message?.ToPlainText(), save);
+			return await SetConfigOptionAsync(parser, executor, optionName, args.GetValueOrDefault("1")?.Message.ToPlainText(), save);
 		}
 
 		if (args.Count == 0)
@@ -1079,7 +1079,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var searchTerm = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
+		var searchTerm = args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
 
 		var matchingCategory = allCategories.FirstOrDefault(c =>
 			c.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));

@@ -557,7 +557,7 @@ public static class LinkHelpers
 			LocateFlags.All) switch
 		{
 			AnySharpObject found => found,
-			Error<CallState> reported => new Error<string>(reported.Value.Message?.ToPlainText()
+			Error<CallState> reported => new Error<string>(reported.Value.Message.ToPlainText()
 				?? ErrorMessages.Returns.NoSuchObject)
 		};
 
