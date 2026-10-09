@@ -306,6 +306,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IOptionsChangeTokenSource<SharpMUSHOptions>>(sp =>
 			sp.GetRequiredService<ConfigurationReloadService>());
 		services.AddSingleton<ObjectVersions>();
+		services.AddSingleton<SharpMUSH.Implementation.Visitors.ExecutorDebugFlags>();
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));

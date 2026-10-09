@@ -88,6 +88,7 @@ public class CacheInvalidationBehavior<TRequest, TResponse>(IFusionCache cache, 
 
 		if (message.CacheTags.Length != 0)
 		{
+			foreach (var tag in message.CacheTags) versions.BumpTag(tag);
 			await cache.RemoveByTagAsync(message.CacheTags, token: cancellationToken);
 		}
 	}
