@@ -46,6 +46,7 @@ public class TerminalScrollbackTests
 			MarkupText.Plain("A bell rings. "),
 			MarkupText.Sound("bell.mp3", null, null),
 			MarkupText.StopSound(null),
+			MarkupText.Bell(),
 			MarkupText.ClearScreen(),
 			MarkupText.Prefetch("next.png"),
 			MarkupText.Image("quay.png", "The quay", null, null, null),
@@ -58,6 +59,7 @@ public class TerminalScrollbackTests
 
 		await Assert.That(restored.Html).DoesNotContain("<audio");
 		await Assert.That(restored.Html).DoesNotContain("ms-sound");
+		await Assert.That(restored.Html).DoesNotContain("ms-bell");
 		await Assert.That(restored.Html).DoesNotContain("ms-clear");
 		await Assert.That(restored.Html).DoesNotContain("prefetch");
 		await Assert.That(restored.Html).Contains("A bell rings.");
