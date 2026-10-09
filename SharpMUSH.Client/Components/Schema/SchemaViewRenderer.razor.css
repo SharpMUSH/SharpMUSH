@@ -48,6 +48,13 @@
 	grid-column: 1 / -1;
 }
 
+/* a run of buttons: one row that wraps */
+.schema-button-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
 .schema-field {
 	display: flex;
 	flex-direction: column;

@@ -56,6 +56,23 @@ public static class JsonHelpers
 		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(entry!.ToString(), RelaxedJsonOptions)));
 	}
 
+	/// <summary>
+	/// <c>json(markupstring, &lt;text&gt;)</c>: the text with its colour and markup kept, as a JSON string holding
+	/// the serialized MString a portal <c>mstring</c> field or timeline row draws. <c>json(string)</c> keeps only
+	/// the plain text.
+	/// </summary>
+	public static ValueTask<CallState> MarkupStringJSON(ImmutableSortedDictionary<string, CallState> args)
+	{
+		if (args.Count != 2)
+		{
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
+		}
+
+		var entry = args["1"].Message ?? MarkupText.Empty;
+
+		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(MarkupTextSerializer.Serialize(entry), RelaxedJsonOptions)));
+	}
+
 	public static ValueTask<CallState> NumberJSON(ImmutableSortedDictionary<string, CallState> args)
 	{
 		if (args.Count != 2)

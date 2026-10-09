@@ -9,6 +9,13 @@
         if (el) el.scrollTop = 0;
     };
 
+    // Brings the element with this id into view: an application row a link's #fragment names, drawn after
+    // the page loaded and so too late for the browser's own jump.
+    window.SharpMUSH.scrollToId = function (id) {
+        var el = document.getElementById(id);
+        if (el) el.scrollIntoView({ block: "start" });
+    };
+
     // The terminal output a pointer went down on (a drag of its scrollbar), until it comes up anywhere.
     // One pair of window listeners for every terminal: a pair per terminal stayed on window after the
     // terminal unmounted and kept its element, with its scrollback, alive.

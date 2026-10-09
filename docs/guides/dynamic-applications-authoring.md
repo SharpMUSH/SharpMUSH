@@ -95,6 +95,19 @@ its color). The table's `empty` text shows when there are no rows:
 Colors are `default`, `primary`, `secondary`, `tertiary`, `info`, `success`, `warning`,
 `error`, `dark`; anything else is `default`.
 
+A row's `group` field splits the table: a heading row with the group's name is drawn wherever the
+group changes, so rows arrive already in group order (Pinned, then Posts). A table's `reorder` lets
+the viewer move rows within one group, by dragging or with the up and down buttons on each row:
+
+```jsonc
+{ "kind": "table", "rows_field": "posts", "columns": [ ... ],
+  "reorder": { "group": "Pinned", "action": "act", "key": "key", "values": { "op": "pinorder" } } }
+```
+
+Only rows whose `group` is `reorder.group` move. A move dispatches `action` with `values` plus
+`item` (the moved row's `key` field) and `position` (its new place in the group, from 1). The
+route answers with the usual envelope; return `data` so the table redraws in the new order.
+
 **Timelines.** `{ "kind": "timeline", "rows_field": "entries", "empty": "No comments." }` over rows
 like:
 
@@ -108,6 +121,24 @@ like:
 
 `time` is unix seconds (number or string), shown in the viewer's local time. An entry action
 dispatches the named action with its `values` merged over the form's field values.
+
+`"format": "mstring"` takes a body made with `json(markupstring, <text>)`: the text with its colour
+and markup, drawn as the terminal draws it. A `markdown` element takes the same `format` and value.
+
+Rows can also form conversations:
+
+```jsonc
+{ "author": "[3] Bo", "body": "Agreed.", "group": "12",   // rows sharing a group read as one thread
+  "reply_to": "re [1] Ada",                               // a small tag naming what it answers
+  "anchor": "c3",                                         // its id: /apps/boards/5/2#c3 scrolls to it
+  "unread": true,                                         // marked new
+  "children_hidden": 4, "more": "/apps/boards/5/2/1",     // "4 more replies", linking there
+  "links": [ { "label": "Reply", "href": "/apps/boards/5/2/3" } ] }
+```
+
+The first row of a group sits at the margin and the rest are indented under it; a new group starts
+below a rule. Group rows in the order they are read: the timeline does not sort them. `more` and
+each link's `href` are followed only when they are relative or `http`/`https`/`mailto`.
 
 **Buttons** take `confirm` (asked in a dialog first), `values` (merged over the field values
 posted — two buttons can share a route and differ by intent), `color`, and `variant`

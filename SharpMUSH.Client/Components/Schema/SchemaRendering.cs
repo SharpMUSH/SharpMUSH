@@ -30,6 +30,45 @@ public static partial class SchemaRendering
 		.Build();
 
 	/// <summary>
+	/// A section's elements in the order given, with each run of consecutive buttons gathered into one
+	/// group, so the renderers draw a run as a single row that wraps rather than a button per row or per
+	/// grid column. Every other element is a group of one.
+	/// </summary>
+	public static IEnumerable<IReadOnlyList<SchemaElement>> GroupButtons(IEnumerable<SchemaElement> elements)
+	{
+		List<SchemaElement>? run = null;
+		foreach (var element in elements)
+		{
+			if (IsButton(element))
+			{
+				(run ??= []).Add(element);
+				continue;
+			}
+
+			if (run is not null)
+			{
+				yield return run;
+				run = null;
+			}
+
+			yield return [element];
+		}
+
+		if (run is not null)
+		{
+			yield return run;
+		}
+	}
+
+	public static bool IsButton(SchemaElement element) =>
+		string.Equals(element.Kind, "button", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>True when a section holds nothing but hidden fields, which draw nothing and so need no card.</summary>
+	public static bool IsHiddenOnly(SchemaSection section) =>
+		(section.Elements ?? []).All(e => string.Equals(e.Kind ?? "field", "field", StringComparison.OrdinalIgnoreCase)
+			&& string.Equals(e.Type, "hidden", StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>
 	/// Renders markdown to HTML that is safe to inject: raw HTML is escaped, and a link or image whose URL
 	/// carries a scheme other than http, https or mailto (<c>javascript:</c>, <c>data:</c>) points nowhere.
 	/// Timeline bodies are often player-written, so this is the only markdown path the renderers use.
@@ -126,7 +165,15 @@ public static partial class SchemaRendering
 	/// <summary>One action button on a timeline entry.</summary>
 	public sealed record TimelineAction(string Label, string Action, IReadOnlyDictionary<string, JsonElement>? Values, string? Confirm);
 
-	/// <summary>One timeline entry, read from a data row.</summary>
+	/// <summary>One link on a timeline entry, beside its actions: a page the entry leads to, such as a reply form.</summary>
+	public sealed record TimelineLink(string Label, string Href);
+
+	/// <summary>
+	/// One timeline entry, read from a data row. <c>Group</c> joins it to the rows around it holding the same
+	/// group, drawn as one conversation; <c>ReplyTo</c> is the small tag naming what it answers; <c>Anchor</c>
+	/// is its element id, for a link ending <c>#anchor</c>; <c>Unread</c> marks it new; <c>More</c> links to
+	/// the <c>ChildrenHidden</c> replies left out under it; <c>Links</c> are followed rather than posted.
+	/// </summary>
 	public sealed record TimelineEntry(
 		string Author,
 		string Time,
@@ -134,7 +181,15 @@ public static partial class SchemaRendering
 		bool IsCode,
 		string? Tag,
 		Color TagColor,
-		IReadOnlyList<TimelineAction> Actions);
+		IReadOnlyList<TimelineAction> Actions,
+		bool IsMarkup = false,
+		string? Group = null,
+		string? ReplyTo = null,
+		string? Anchor = null,
+		bool Unread = false,
+		int ChildrenHidden = 0,
+		string? More = null,
+		IReadOnlyList<TimelineLink>? Links = null);
 
 	/// <summary>Reads a timeline entry from a data row; a row that is not an object reads as empty.</summary>
 	public static TimelineEntry ReadTimelineEntry(JsonElement row)
@@ -166,15 +221,81 @@ public static partial class SchemaRendering
 			}
 		}
 
-		var tag = Text("tag");
+		var links = new List<TimelineLink>();
+		if (row.ValueKind == JsonValueKind.Object
+			&& row.TryGetProperty("links", out var linkList) && linkList.ValueKind == JsonValueKind.Array)
+		{
+			foreach (var item in linkList.EnumerateArray().Where(l => l.ValueKind == JsonValueKind.Object))
+			{
+				var href = item.TryGetProperty("href", out var hrefValue) ? SchemaViewRenderer.ValueToString(hrefValue) : string.Empty;
+				var label = item.TryGetProperty("label", out var labelValue) ? SchemaViewRenderer.ValueToString(labelValue) : string.Empty;
+				if (!string.IsNullOrWhiteSpace(href) && !string.IsNullOrWhiteSpace(label) && IsSafeUrl(href))
+				{
+					links.Add(new TimelineLink(label, href));
+				}
+			}
+		}
+
+		string? Optional(string name) => Text(name) is { Length: > 0 } text && !string.IsNullOrWhiteSpace(text) ? text : null;
+
+		var format = Text("format");
+		var more = Optional("more");
 		return new TimelineEntry(
 			Text("author"),
 			FormatTime(row.ValueKind == JsonValueKind.Object && row.TryGetProperty("time", out var time) ? time : null),
 			Text("body"),
-			string.Equals(Text("format"), "code", StringComparison.OrdinalIgnoreCase),
-			string.IsNullOrWhiteSpace(tag) ? null : tag,
+			string.Equals(format, "code", StringComparison.OrdinalIgnoreCase),
+			Optional("tag"),
 			ParseColor(Text("tag_color")),
-			actions);
+			actions,
+			IsMarkup: string.Equals(format, "mstring", StringComparison.OrdinalIgnoreCase),
+			Group: Optional("group"),
+			ReplyTo: Optional("reply_to"),
+			Anchor: Optional("anchor"),
+			Unread: IsTrue(row, "unread"),
+			ChildrenHidden: int.TryParse(Text("children_hidden"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var hidden)
+				? Math.Max(hidden, 0)
+				: 0,
+			More: more is not null && IsSafeUrl(more) ? more : null,
+			Links: links);
+	}
+
+	/// <summary>True when row field <paramref name="name"/> is JSON true, or a string or number reading 1 or true.</summary>
+	private static bool IsTrue(JsonElement row, string name)
+	{
+		if (row.ValueKind != JsonValueKind.Object || !row.TryGetProperty(name, out var value))
+		{
+			return false;
+		}
+
+		return value.ValueKind switch
+		{
+			JsonValueKind.True => true,
+			JsonValueKind.Number => value.TryGetInt64(out var number) && number != 0,
+			JsonValueKind.String => value.GetString()?.Trim().ToLowerInvariant() is "1" or "true" or "yes",
+			_ => false,
+		};
+	}
+
+	/// <summary>
+	/// A serialized MString as safe HTML, rendered the way the terminal renders it
+	/// (<c>MarkupText.Render(MarkupFormat.Html)</c>); a value that is not a serialized MString is HTML-encoded text.
+	/// </summary>
+	public static string MarkupToHtml(string? value)
+	{
+		if (string.IsNullOrEmpty(value))
+		{
+			return string.Empty;
+		}
+
+		try
+		{
+			return MarkupTextSerializer.Deserialize(value).Render(MarkupFormat.Html);
+		}
+		catch (Exception)
+		{
+			return System.Net.WebUtility.HtmlEncode(value);
+		}
 	}
 
 	/// <summary>

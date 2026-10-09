@@ -5992,4 +5992,24 @@
   <data name="TermReviewNone" xml:space="preserve">
     <value>Noch keine Zeile zum Vorlesen.</value>
   </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>neu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {# weitere Antwort} other {# weitere Antworten}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Nach oben</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Nach unten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Neu ordnen</value>
+    <comment>MT</comment>
+  </data>
 </root>

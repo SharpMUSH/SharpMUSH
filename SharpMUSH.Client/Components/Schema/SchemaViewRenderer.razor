@@ -43,11 +43,23 @@ else
                     <KitCard Title="@(string.IsNullOrWhiteSpace(section.Name) ? null : section.Name)" Class="schema-section">
                         <div class="schema-grid @(section.Columns > 1 ? "schema-grid--cols" : "schema-grid--auto")"
                              style="@(section.Columns > 1 ? $"--schema-cols:{section.Columns};" : null)">
-                            @foreach (var element in elements)
+                            @foreach (var group in SchemaRendering.GroupButtons(elements))
                             {
-                                <div class="schema-cell @(IsWide(element) ? "schema-cell--wide" : null)" style="@SpanStyle(section, element)">
-                                    @RenderElement(element)
-                                </div>
+                                @if (SchemaRendering.IsButton(group[0]))
+                                {
+                                    <div class="schema-cell schema-cell--wide schema-button-row">
+                                        @foreach (var button in group)
+                                        {
+                                            @RenderElement(button)
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="schema-cell @(IsWide(group[0]) ? "schema-cell--wide" : null)" style="@SpanStyle(section, group[0])">
+                                        @RenderElement(group[0])
+                                    </div>
+                                }
                             }
                         </div>
                     </KitCard>
@@ -225,7 +237,7 @@ else
                     @if (string.Equals(element.Type, "mstring", StringComparison.OrdinalIgnoreCase))
                     {
                         @* mstring fields carry ANSI/MXP markup — render it the way the terminal does. *@
-                        <div class="schema-value schema-value--markup">@((MarkupString)RenderMarkup(display))</div>
+                        <div class="schema-value schema-value--markup">@((MarkupString)SchemaRendering.MarkupToHtml(display))</div>
                     }
                     else
                     {
@@ -238,26 +250,6 @@ else
 
     private JsonElement? Lookup(string key)
         => _data?.Fields is not null && _data.Fields.TryGetValue(key, out var v) ? v.Value : null;
-
-    // Render a serialized MString to safe HTML the way the terminal does
-    // (MarkupText.Render(MarkupFormat.Html)). Falls back to HTML-encoded text when the
-    // value is not a serialized MString envelope.
-    private static string RenderMarkup(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            return MarkupTextSerializer.Deserialize(value).Render(MarkupFormat.Html);
-        }
-        catch (Exception)
-        {
-            return System.Net.WebUtility.HtmlEncode(value);
-        }
-    }
 
     /// <summary>Renders any JSON value as display text (strings unquoted, scalars as written).</summary>
     internal static string ValueToString(JsonElement? value)
