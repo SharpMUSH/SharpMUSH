@@ -731,9 +731,7 @@
 
     private async Task RemovePermission(CustomPermission permission)
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["RolCustomRemoveTitle"], Loc["RolCustomRemoveConfirm", permission.Scope], yesText: Loc["Delete"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmAsync(Loc, Loc["RolCustomRemoveTitle"], Loc["RolCustomRemoveConfirm", permission.Scope], Loc["Delete"])) return;
 
         _saving = true;
         var result = await Roles.RemovePermissionAsync(permission.Scope);
@@ -869,9 +867,7 @@
 
     private async Task DeleteCategory(CategoryKind kind, RoleCategory category)
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["RolCategoryDeleteTitle"], Loc["RolCategoryDeleteConfirm", category.Name], yesText: Loc["Delete"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmAsync(Loc, Loc["RolCategoryDeleteTitle"], Loc["RolCategoryDeleteConfirm", category.Name], Loc["Delete"])) return;
 
         _saving = true;
         var result = await Roles.DeleteCategoryAsync(kind, category.Name);

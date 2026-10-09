@@ -1,0 +1,29 @@
+@* A config list's values as chips, each with a × that removes it by position, or "No items" when
+   there are none. *@
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="cfg-chips">
+    @if (Items.Count == 0)
+    {
+        <span class="cfg-empty">@Loc["NoItems"]</span>
+    }
+    @for (var i = 0; i < Items.Count; i++)
+    {
+        var index = i;
+        <span class="cfg-chip @ChipClass">
+            @Items[index]
+            <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {Items[index]}")"
+                    @onclick="@(() => OnRemove.InvokeAsync(index))">×</button>
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<string> Items { get; set; } = [];
+
+    /// <summary>Extra classes on every chip, such as <c>cfg-chip--changed</c> for an edited list.</summary>
+    [Parameter] public string? ChipClass { get; set; }
+
+    /// <summary>Called with the position of the chip whose × was pressed.</summary>
+    [Parameter] public EventCallback<int> OnRemove { get; set; }
+}

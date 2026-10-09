@@ -75,21 +75,8 @@
         else if (Property.Component == "stringlist")
         {
             var items = Draft.StringList(Property);
-            <div class="cfg-chips">
-                @if (items.Count == 0)
-                {
-                    <span class="cfg-empty">@Loc["NoItems"]</span>
-                }
-                @for (var i = 0; i < items.Count; i++)
-                {
-                    var index = i;
-                    <span class="cfg-chip @(IsChanged ? "cfg-chip--changed" : "")">
-                        @items[index]
-                        <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {items[index]}")"
-                                @onclick="@(() => Edit(() => Draft.RemoveListItemAt(Property, index)))">×</button>
-                    </span>
-                }
-            </div>
+            <RemovableChips Items="items" ChipClass="@(IsChanged ? "cfg-chip--changed" : "")"
+                            OnRemove="index => Edit(() => Draft.RemoveListItemAt(Property, index))" />
             <input class="cfg-text" placeholder="@Loc["AddItem"]" aria-label="@Loc["AddItem"]"
                    value="@Draft.ListDraft(Property)"
                    @oninput="@(e => Draft.SetListDraft(Property, e.Value?.ToString() ?? string.Empty))"
@@ -118,21 +105,8 @@
                                 <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" />
                             </button>
                         </div>
-                        <div class="cfg-chips">
-                            @if (entry.Values.Count == 0)
-                            {
-                                <span class="cfg-empty">@Loc["NoItems"]</span>
-                            }
-                            @for (var v = 0; v < entry.Values.Count; v++)
-                            {
-                                var valueIndex = v;
-                                <span class="cfg-chip">
-                                    @entry.Values[valueIndex]
-                                    <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {entry.Values[valueIndex]}")"
-                                            @onclick="@(() => Edit(() => Draft.RemoveDictValueAt(Property, entryIndex, valueIndex)))">×</button>
-                                </span>
-                            }
-                        </div>
+                        <RemovableChips Items="entry.Values"
+                                        OnRemove="valueIndex => Edit(() => Draft.RemoveDictValueAt(Property, entryIndex, valueIndex))" />
                         <input class="cfg-text" placeholder="@Loc["AddValue"]" aria-label="@Loc["AddValue"]"
                                value="@entry.ValueDraft"
                                @oninput="@(ev => entry.ValueDraft = ev.Value?.ToString() ?? string.Empty)"

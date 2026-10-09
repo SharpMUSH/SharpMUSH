@@ -397,11 +397,8 @@
 
     private async Task RemovePasskeyAsync(AccountApiClient.PasskeySummary passkey)
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AuthPasskeyRemoveConfirmTitle", passkey.Name],
-            Loc["AuthPasskeyRemoveConfirm"],
-            yesText: Loc["AuthPasskeyRemove"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmAsync(Loc, Loc["AuthPasskeyRemoveConfirmTitle", passkey.Name],
+            Loc["AuthPasskeyRemoveConfirm"], Loc["AuthPasskeyRemove"])) return;
 
         ClearPasskeyMessages();
         _busy = true;
@@ -459,11 +456,8 @@
     {
         // One click took the character off the account at once, and with it whatever role it carried:
         // unlinking #1 left the administrator a Guest. Linking it back needs its in-game password.
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AuthUnlinkConfirmTitle", name],
-            Loc["AuthUnlinkConfirm", name],
-            yesText: Loc["AuthUnlinkCharacter"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmAsync(Loc, Loc["AuthUnlinkConfirmTitle", name], Loc["AuthUnlinkConfirm", name],
+            Loc["AuthUnlinkCharacter"])) return;
 
         _busy = true;
         var result = await AccountAuth.UnlinkCharacterAsync(dbrefNumber);

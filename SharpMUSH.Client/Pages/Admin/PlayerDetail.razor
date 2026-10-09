@@ -35,94 +35,90 @@
         </Actions>
     </PlainPageHeader>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Indeterminate="true" />
-    }
-    else if (_detail is not { } detail)
-    {
-        <KitCard>
-            <div class="adm-char-body">
-                <MudAlert Severity="Severity.Error" Dense="true">@(_error ?? Loc["AdmCharacterNotFound", Id].Value)</MudAlert>
-            </div>
-        </KitCard>
-    }
-    else
-    {
-        <div class="adm-char-grid">
-            <KitCard Title="@Loc["AdmCharacterOverview"]">
-                <dl class="adm-char-facts">
-                    <dt>@Loc["AdmCharactersDbref"]</dt>
-                    <dd>#@detail.Character.DbrefNumber:@detail.Character.CreationTime</dd>
-                    <dt>@Loc["AdmCharactersAccount"]</dt>
-                    <dd>
-                        @(detail.Character.AccountName ?? Loc["AdmCharactersNoAccount"].Value)
-                        @if (detail.Character.AccountKey is null)
-                        {
-                            <AuthorizeView Policy="players.moderate" Context="linker">
-                                <div class="adm-char-link">
-                                    <MudTextField T="string" @bind-Value="_linkAccount" Label="@Loc["AdmCharacterLinkAccount"]" id="character-link-account"
-                                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
-                                    <CapsuleButton Icon="@Icons.Material.Filled.Link" Class="adm-char-link-go"
-                                                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_linkAccount))"
-                                                   OnClick="LinkAsync">@Loc["AdmCharacterLink"]</CapsuleButton>
-                                </div>
-                            </AuthorizeView>
-                        }
-                    </dd>
-                    <dt>@Loc["AdmCharacterCreated"]</dt>
-                    <dd>@detail.Created.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</dd>
-                    <dt>@Loc["AdmCharactersFlags"]</dt>
-                    <dd class="adm-char-mono">@(detail.Character.Flags is { Length: > 0 } flags ? flags : "—")</dd>
-                    <dt>@Loc["AdmCharacterRoles"]</dt>
-                    <dd>
-                        @if (detail.Roles.Count == 0)
-                        {
-                            @Loc["AdmCharacterNoRoles"]
-                        }
-                        else
-                        {
-                            @foreach (var role in detail.Roles)
+    <LoadState TValue="AdminCharacterDetail" Value="_detail" Loading="_loading" Context="detail">
+        <Missing>
+            <KitCard>
+                <div class="adm-char-body">
+                    <MudAlert Severity="Severity.Error" Dense="true">@(_error ?? Loc["AdmCharacterNotFound", Id].Value)</MudAlert>
+                </div>
+            </KitCard>
+        </Missing>
+        <ChildContent>
+            <div class="adm-char-grid">
+                <KitCard Title="@Loc["AdmCharacterOverview"]">
+                    <dl class="adm-char-facts">
+                        <dt>@Loc["AdmCharactersDbref"]</dt>
+                        <dd>#@detail.Character.DbrefNumber:@detail.Character.CreationTime</dd>
+                        <dt>@Loc["AdmCharactersAccount"]</dt>
+                        <dd>
+                            @(detail.Character.AccountName ?? Loc["AdmCharactersNoAccount"].Value)
+                            @if (detail.Character.AccountKey is null)
                             {
-                                <MudChip T="string" Size="Size.Small">@role</MudChip>
+                                <AuthorizeView Policy="players.moderate" Context="linker">
+                                    <div class="adm-char-link">
+                                        <MudTextField T="string" @bind-Value="_linkAccount" Label="@Loc["AdmCharacterLinkAccount"]" id="character-link-account"
+                                                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
+                                        <CapsuleButton Icon="@Icons.Material.Filled.Link" Class="adm-char-link-go"
+                                                       Disabled="@(_busy || string.IsNullOrWhiteSpace(_linkAccount))"
+                                                       OnClick="LinkAsync">@Loc["AdmCharacterLink"]</CapsuleButton>
+                                    </div>
+                                </AuthorizeView>
                             }
-                        }
-                    </dd>
-                    <dt>@Loc["AdmCharacterAttributes"]</dt>
-                    <dd>@detail.AttributeCount</dd>
-                    <dt>@Loc["AdmCharacterMail"]</dt>
-                    <dd>@Loc["AdmCharacterMailCount", detail.MailTotal, detail.MailUnread]</dd>
-                </dl>
-            </KitCard>
+                        </dd>
+                        <dt>@Loc["AdmCharacterCreated"]</dt>
+                        <dd>@detail.Created.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</dd>
+                        <dt>@Loc["AdmCharactersFlags"]</dt>
+                        <dd class="adm-char-mono">@(detail.Character.Flags is { Length: > 0 } flags ? flags : "—")</dd>
+                        <dt>@Loc["AdmCharacterRoles"]</dt>
+                        <dd>
+                            @if (detail.Roles.Count == 0)
+                            {
+                                @Loc["AdmCharacterNoRoles"]
+                            }
+                            else
+                            {
+                                @foreach (var role in detail.Roles)
+                                {
+                                    <MudChip T="string" Size="Size.Small">@role</MudChip>
+                                }
+                            }
+                        </dd>
+                        <dt>@Loc["AdmCharacterAttributes"]</dt>
+                        <dd>@detail.AttributeCount</dd>
+                        <dt>@Loc["AdmCharacterMail"]</dt>
+                        <dd>@Loc["AdmCharacterMailCount", detail.MailTotal, detail.MailUnread]</dd>
+                    </dl>
+                </KitCard>
 
-            <KitCard Title="@Loc["AdmCharacterActivity"]">
-                <dl class="adm-char-facts">
-                    <dt>@Loc["AdmCharactersConnection"]</dt>
-                    <dd>
-                        <MudChip T="string" Size="Size.Small" Color="@(detail.Character.Online ? Color.Success : Color.Default)">
-                            @(detail.Character.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])
-                        </MudChip>
-                        @if (detail.Connections.Count > 0)
+                <KitCard Title="@Loc["AdmCharacterActivity"]">
+                    <dl class="adm-char-facts">
+                        <dt>@Loc["AdmCharactersConnection"]</dt>
+                        <dd>
+                            <MudChip T="string" Size="Size.Small" Color="@(detail.Character.Online ? Color.Success : Color.Default)">
+                                @(detail.Character.Online ? Loc["AdmCharactersOnline"] : Loc["AdmCharactersOffline"])
+                            </MudChip>
+                            @if (detail.Connections.Count > 0)
+                            {
+                                <span class="adm-char-dim">@Loc["AdmCharacterConnections", detail.Connections.Count]</span>
+                            }
+                        </dd>
+                        <dt>@Loc["AdmCharactersLastConnect"]</dt>
+                        <dd>@(detail.Character.LastConnect ?? Loc["AdmCharactersNever"].Value)</dd>
+                        <dt>@Loc["AdmCharacterLastLogout"]</dt>
+                        <dd>@(detail.LastLogout ?? "—")</dd>
+                        @* The server sends these only to server.admin; for everyone else they are null. *@
+                        @if (detail.LastSite is not null || detail.LastIp is not null)
                         {
-                            <span class="adm-char-dim">@Loc["AdmCharacterConnections", detail.Connections.Count]</span>
+                            <dt>@Loc["AdmCharacterLastSite"]</dt>
+                            <dd class="adm-char-mono">@(detail.LastSite ?? "—")</dd>
+                            <dt>@Loc["AdmCharacterLastIp"]</dt>
+                            <dd class="adm-char-mono">@(detail.LastIp ?? "—")</dd>
                         }
-                    </dd>
-                    <dt>@Loc["AdmCharactersLastConnect"]</dt>
-                    <dd>@(detail.Character.LastConnect ?? Loc["AdmCharactersNever"].Value)</dd>
-                    <dt>@Loc["AdmCharacterLastLogout"]</dt>
-                    <dd>@(detail.LastLogout ?? "—")</dd>
-                    @* The server sends these only to server.admin; for everyone else they are null. *@
-                    @if (detail.LastSite is not null || detail.LastIp is not null)
-                    {
-                        <dt>@Loc["AdmCharacterLastSite"]</dt>
-                        <dd class="adm-char-mono">@(detail.LastSite ?? "—")</dd>
-                        <dt>@Loc["AdmCharacterLastIp"]</dt>
-                        <dd class="adm-char-mono">@(detail.LastIp ?? "—")</dd>
-                    }
-                </dl>
-            </KitCard>
-        </div>
-    }
+                    </dl>
+                </KitCard>
+            </div>
+        </ChildContent>
+    </LoadState>
 </div>
 
 @code {
@@ -168,11 +164,7 @@
     {
         if (_detail is not { } detail) return;
         var name = detail.Character.Name;
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AdmCharacterBootConfirmTitle", name],
-            Loc["AdmCharacterBootConfirm", name],
-            yesText: Loc["AdmCharacterBoot"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmBootAsync(Loc, name)) return;
 
         await RunAsync(CharactersService.BootAsync(detail.Character.DbrefNumber, detail.Character.CreationTime),
             Loc["AdmCharacterBooted", name].Value, Loc["AdmOperationFailed"].Value);
@@ -181,11 +173,7 @@
     private async Task UnlinkAsync()
     {
         if (_detail is not { Character: { AccountKey: { } account } character }) return;
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AdmCharacterUnlinkConfirmTitle", character.Name],
-            Loc["AdmCharacterUnlinkConfirm", character.Name, character.AccountName ?? account],
-            yesText: Loc["AdmCharacterUnlink"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmUnlinkAsync(Loc, character.Name, character.AccountName ?? account)) return;
 
         await RunAsync(AccountsService.UnlinkCharacterAsync(account, character.DbrefNumber),
             Loc["AdmCharacterUnlinked", character.Name, character.AccountName ?? account].Value,

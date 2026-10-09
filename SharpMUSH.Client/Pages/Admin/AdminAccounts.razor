@@ -17,13 +17,8 @@
                           Variant="Variant.Outlined" Margin="Margin.Dense"
                           Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebouncedAsync" />
 
-            @if (_loading)
-            {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else
-            {
-                <MudTable Items="_rows" Dense="true" Hover="true" Elevation="0" Class="accounts-table">
+            <LoadState Value="_rows" Loading="_loading" Context="rows">
+                <MudTable Items="rows" Dense="true" Hover="true" Elevation="0" Class="accounts-table">
                     <HeaderContent>
                         <MudTh>@Loc["AdmUsername"]</MudTh>
                         <MudTh>@Loc["AdmEmail"]</MudTh>
@@ -76,7 +71,7 @@
                         </MudTd>
                     </RowTemplate>
                 </MudTable>
-            }
+            </LoadState>
         </div>
     </KitCard>
 </div>

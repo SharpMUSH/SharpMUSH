@@ -124,22 +124,7 @@
 </div>
 </div>
 
-<MudDialog @bind-Visible="_showReadme" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
-    <TitleContent><MudText Typo="Typo.h6">@_readmeTitle</MudText></TitleContent>
-    <DialogContent>
-        @if (_readmeHtml is null)
-        {
-            <MudProgressLinear Indeterminate="true" />
-        }
-        else
-        {
-            <div class="wiki-content">@((MarkupString)_readmeHtml)</div>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showReadme = false)">@Loc["PkgClose"]</MudButton>
-    </DialogActions>
-</MudDialog>
+<PackageReadmeDialog @ref="_readme" />
 
 @code {
     private IReadOnlyList<PackageRemoteRecord>? _remotes;
@@ -151,9 +136,7 @@
     private string _newTrust = "community";
     private string _newBranch = "";
 
-    private bool _showReadme;
-    private string? _readmeTitle;
-    private string? _readmeHtml;
+    private PackageReadmeDialog? _readme;
 
     protected override async Task OnInitializedAsync()
     {
@@ -223,15 +206,8 @@
         await LoadCommunityAsync();
     }
 
-    private async Task ShowReadmeAsync(CommunityRepoListing listing)
-    {
-        _readmeTitle = listing.Name;
-        _readmeHtml = null;
-        _showReadme = true;
-        _readmeHtml = await Packages.GetCommunityReadmeAsync(listing.Url) is ReadmeResponse readme
-            ? readme.Html
-            : $"<em>{Loc["PkgNoReadme"]}</em>";
-    }
+    private Task ShowReadmeAsync(CommunityRepoListing listing)
+        => _readme?.ShowAsync(listing.Name, () => Packages.GetCommunityReadmeAsync(listing.Url)) ?? Task.CompletedTask;
 
     /// <summary>The remote list, or an empty one with the reason reported.</summary>
     private async Task<IReadOnlyList<PackageRemoteRecord>> Remotes() =>

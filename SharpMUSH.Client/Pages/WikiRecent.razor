@@ -12,37 +12,35 @@
 <div class="wiki-recent">
     <PlainPageHeader Kicker="@Loc["Wiki"]" Title="@Loc["NavWikiRecentChanges"]" Description="@Loc["NavWikiRecentDesc"]" />
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
-    }
-    else if (_error is not null)
-    {
-        <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
-    }
-    else if (_pages.Count == 0)
-    {
-        <EmptyState>@Loc["WidNoRecentWikiActivity"]</EmptyState>
-    }
-    else
-    {
-        <KitCard>
-            <div class="wiki-recent-list">
-                @foreach (var page in _pages)
-                {
-                    var p = page;
-                    <SidebarRow Class="wiki-recent-row" Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@p.Image" Name="@p.Title" Label="@p.Title"
-                                Sub="@Meta(p)" Href="@WikiRoutes.PathFor(p.Namespace, p.Slug)" />
-                }
-            </div>
-        </KitCard>
-    }
+    <LoadState TValue="IReadOnlyList<WikiPageSummary>" Value="_pages" Loading="_loading" IsEmpty="pages => pages.Count == 0" Context="pages">
+        <LoadingContent>
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+        </LoadingContent>
+        <Missing>
+            <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
+        </Missing>
+        <Empty>
+            <EmptyState>@Loc["WidNoRecentWikiActivity"]</EmptyState>
+        </Empty>
+        <ChildContent>
+            <KitCard>
+                <div class="wiki-recent-list">
+                    @foreach (var page in pages)
+                    {
+                        var p = page;
+                        <SidebarRow Class="wiki-recent-row" Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@p.Image" Name="@p.Title" Label="@p.Title"
+                                    Sub="@Meta(p)" Href="@WikiRoutes.PathFor(p.Namespace, p.Slug)" />
+                    }
+                </div>
+            </KitCard>
+        </ChildContent>
+    </LoadState>
 </div>
 
 @code {
     private bool _loading = true;
     private string? _error;
-    private IReadOnlyList<WikiPageSummary> _pages = [];
+    private IReadOnlyList<WikiPageSummary>? _pages;
 
     protected override async Task OnInitializedAsync()
     {

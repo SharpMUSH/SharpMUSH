@@ -1,0 +1,58 @@
+@typeparam TValue where TValue : class
+@* A section that reads something before it can show it: the error above, then a progress bar while
+   it loads, what stands in when nothing came back, the empty state, or the content for what did.
+   Everything it shows by default is what the admin pages wrote out by hand before it. *@
+@if (Error is not null)
+{
+    <MudAlert Severity="Severity.Error" Dense="true" Class="@ErrorClass">@Error</MudAlert>
+}
+
+@if (Loading)
+{
+    @if (LoadingContent is not null)
+    {
+        @LoadingContent
+    }
+    else
+    {
+        <MudProgressLinear Indeterminate="true" Color="ProgressColor" />
+    }
+}
+else if (Value is null)
+{
+    @(Missing ?? Empty)
+}
+else if (IsEmpty?.Invoke(Value) == true)
+{
+    @Empty
+}
+else
+{
+    @ChildContent?.Invoke(Value)
+}
+
+@code {
+    /// <summary>What was read; null until it has been, or when it could not be.</summary>
+    [Parameter] public TValue? Value { get; set; }
+
+    /// <summary>Shows the progress bar in place of everything else.</summary>
+    [Parameter] public bool Loading { get; set; }
+
+    /// <summary>The failure shown above the section; leave it unset when <see cref="Missing"/> reports it.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    [Parameter] public string? ErrorClass { get; set; }
+    [Parameter] public Color ProgressColor { get; set; } = Color.Default;
+
+    /// <summary>Whether what was read has nothing to show, so <see cref="Empty"/> shows instead.</summary>
+    [Parameter] public Func<TValue, bool>? IsEmpty { get; set; }
+
+    [Parameter] public RenderFragment<TValue>? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Empty { get; set; }
+
+    /// <summary>What shows when loading is over and nothing was read; <see cref="Empty"/> when unset.</summary>
+    [Parameter] public RenderFragment? Missing { get; set; }
+
+    /// <summary>Replaces the default progress bar.</summary>
+    [Parameter] public RenderFragment? LoadingContent { get; set; }
+}

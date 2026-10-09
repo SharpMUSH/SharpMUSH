@@ -163,18 +163,9 @@
     </KitCard>
 </div>
 
-<MudDialog @bind-Visible="_showDeleteConfirm">
-    <TitleContent>
-        <MudText Typo="Typo.h6">@Loc["WkDeleteAssetTitle"]</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>@Loc["WkDeleteAssetConfirm", _deleteTarget?.FileName ?? string.Empty]</MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showDeleteConfirm = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ExecuteDeleteAsync">@Loc["Delete"]</MudButton>
-    </DialogActions>
-</MudDialog>
+<ConfirmDialog @bind-Visible="_showDeleteConfirm" Title="@Loc["WkDeleteAssetTitle"]" ConfirmText="@Loc["Delete"]" OnConfirm="ExecuteDeleteAsync">
+    <MudText>@Loc["WkDeleteAssetConfirm", _deleteTarget?.FileName ?? string.Empty]</MudText>
+</ConfirmDialog>
 
 @code {
     private List<WikiAssetInfo> _assets = [];
