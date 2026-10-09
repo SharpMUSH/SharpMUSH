@@ -39,48 +39,7 @@ public static class PrintfFormatter
 			if (!Append(format.Substring(position, field.Start - position))) return TooLarge(out error);
 			MarkupText value;
 			if (field.Type == '%') value = format.Substring(field.Start, 1);
-			else
-			{
-				var source = values[argument++];
-				if (field.Type == 's')
-					value = field.Precision is { } cells ? source.TruncateToWidth(cells, CutFrom.End) : source;
-				else
-				{
-					// .NET numeric parsing accepts trailing NULs; the printf grammar does not.
-					if (source.Text.Contains('\0')) { error = ErrorMessages.Returns.Numbers; return false; }
-					string number;
-					if (field.Type == 'd')
-					{
-						if (!long.TryParse(source.Text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer))
-						{ error = ErrorMessages.Returns.Numbers; return false; }
-						number = integer.ToString("D" + (field.Precision ?? 1).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
-					}
-					else
-					{
-						const NumberStyles numeric = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
-						if (!decimal.TryParse(source.Text, numeric, CultureInfo.InvariantCulture, out var fraction))
-						{ error = ErrorMessages.Returns.Numbers; return false; }
-						var precision = field.Precision ?? 6;
-						number = decimal.Round(fraction, precision, MidpointRounding.ToEven)
-							.ToString("F" + precision.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
-					}
-					if (field.Plus && !number.StartsWith('-')) number = "+" + number;
-					if (field.Zero && !field.Left && field.Width > number.Length)
-					{
-						var sign = number[0] is '+' or '-' ? 1 : 0;
-						number = number.Insert(sign, new string('0', field.Width - number.Length));
-					}
-					value = ApplyMarkupAt(source, 0, MarkupText.Plain(number));
-				}
-				var padding = Math.Max(0, field.Width - value.DisplayWidth);
-				if (length + value.Length + padding > maxOutput) return TooLarge(out error);
-				if (padding > 0)
-				{
-					var fill = MarkupText.Plain(new string(' ', padding));
-					value = field.Left ? MarkupText.Concat(value, fill) : MarkupText.Concat(fill, value);
-				}
-				value = ApplyMarkupAt(format, field.Start, value);
-			}
+			else if (!TryFormatConversion(format, field, values[argument++], maxOutput - length, out value, out error)) return false;
 			if (!Append(value)) return TooLarge(out error);
 			position = field.End;
 		}
@@ -96,6 +55,75 @@ public static class PrintfFormatter
 			parts.Add(part);
 			return true;
 		}
+	}
+
+	/// <summary>
+	/// One <c>%s</c>, <c>%d</c> or <c>%f</c> field: the argument converted, padded to its width and
+	/// wearing the markup of the field's <c>%</c>. Fails when the result would not fit in what is left
+	/// of the output.
+	/// </summary>
+	private static bool TryFormatConversion(MarkupText format, Field field, MarkupText source, long remaining,
+		out MarkupText value, out string? error)
+	{
+		value = MarkupText.Empty;
+		MarkupText converted;
+		if (field.Type == 's')
+			converted = field.Precision is { } cells ? source.TruncateToWidth(cells, CutFrom.End) : source;
+		else if (TryFormatNumber(field, source.Text, out var number))
+			converted = ApplyMarkupAt(source, 0, MarkupText.Plain(number));
+		else
+		{
+			error = ErrorMessages.Returns.Numbers;
+			return false;
+		}
+
+		var padding = Math.Max(0, field.Width - converted.DisplayWidth);
+		if (converted.Length + padding > remaining) return TooLarge(out error);
+		if (padding > 0)
+		{
+			var fill = MarkupText.Plain(new string(' ', padding));
+			converted = field.Left ? MarkupText.Concat(converted, fill) : MarkupText.Concat(fill, converted);
+		}
+		value = ApplyMarkupAt(format, field.Start, converted);
+		error = null;
+		return true;
+	}
+
+	private static bool TryFormatNumber(Field field, ReadOnlySpan<char> text, out string number)
+	{
+		// .NET numeric parsing accepts trailing NULs; the printf grammar does not.
+		if (text.Contains('\0')
+			|| !(field.Type == 'd' ? TryFormatInteger(field, text, out number) : TryFormatDecimal(field, text, out number)))
+		{
+			number = string.Empty;
+			return false;
+		}
+		if (field.Plus && !number.StartsWith('-')) number = "+" + number;
+		if (field.Zero && !field.Left && field.Width > number.Length)
+		{
+			var sign = number[0] is '+' or '-' ? 1 : 0;
+			number = number.Insert(sign, new string('0', field.Width - number.Length));
+		}
+		return true;
+	}
+
+	private static bool TryFormatInteger(Field field, ReadOnlySpan<char> text, out string number)
+	{
+		number = string.Empty;
+		if (!long.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var integer)) return false;
+		number = integer.ToString("D" + (field.Precision ?? 1).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+		return true;
+	}
+
+	private static bool TryFormatDecimal(Field field, ReadOnlySpan<char> text, out string number)
+	{
+		const NumberStyles numeric = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+		number = string.Empty;
+		if (!decimal.TryParse(text, numeric, CultureInfo.InvariantCulture, out var fraction)) return false;
+		var precision = field.Precision ?? 6;
+		number = decimal.Round(fraction, precision, MidpointRounding.ToEven)
+			.ToString("F" + precision.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+		return true;
 	}
 
 	private static bool TooLarge(out string? error)

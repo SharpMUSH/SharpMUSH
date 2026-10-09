@@ -136,60 +136,114 @@ internal sealed class AttributeWriter(
 		var existing = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath))
 			.ToListAsync();
 
+		var write = new AttributeWrite(executor, obj, attrPath, existing, creator, isAttributeCopy);
+
+		return await PlanWriteAsync(write) switch
+		{
+			WritePlan plan => await WritePlannedAsync(write, plan, value),
+			Error<string> refused => refused
+		};
+	}
+
+	/// <summary>One attribute write: who writes which path on what, and what of that path already exists.</summary>
+	private sealed record AttributeWrite(
+		AnySharpObject Executor,
+		AnySharpObject Obj,
+		string[] AttrPath,
+		List<SharpAttribute> Existing,
+		SharpPlayer Creator,
+		bool IsAttributeCopy);
+
+	/// <summary>
+	/// What the write gates learned: the level the path stops existing at (every level from there down
+	/// is created by this write), and the standard table's entry for the leaf when the leaf is one of them.
+	/// </summary>
+	private readonly record struct WritePlan(int CreatedFrom, SharpAttributeEntry? LeafEntry);
+
+	/// <summary>
+	/// The write gates: the executor may set every level of the path that exists, and may create every
+	/// level that does not.
+	/// </summary>
+	private async ValueTask<Result<WritePlan>> PlanWriteAsync(AttributeWrite write)
+	{
 		// Check both attribute permissions AND object permissions
 		// Attribute permissions: executor must be able to set each attribute in the path
 		// Object permissions: executor must control the object
-		foreach (var x in existing)
+		if (!await CanSetAllAsync(write, write.Existing))
 		{
-			if (!await permissionService.CanSet(executor, obj, x))
+			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+		}
+
+		// Where the path stops existing: every level from here down is one this call has to create,
+		// and so is gated below against the standard table's flags rather than a stored node's. When
+		// `existing` resolved, it IS the whole path and every prefix was already checked above.
+		Result<int> createdFrom = write.Existing.Count > 0
+			? write.AttrPath.Length
+			: await ExistingPrefixLengthAsync(write);
+
+		return createdFrom switch
+		{
+			int from => await GateCreatedLevelsAsync(write, from),
+			Error<string> refused => refused
+		};
+	}
+
+	/// <summary>
+	/// If the target attribute doesn't exist yet (creating new), we still need to check
+	/// permissions on the existing ancestor path. The stream in <see cref="WriteAttributeAsync"/> yields
+	/// nothing when the full path doesn't exist (count != attribute.Length check in GetAttributeAsync).
+	/// Check each existing prefix of the path, longest first, stopping at the first one that
+	/// resolves: its own path covers every shorter prefix.
+	/// </summary>
+	/// <returns>How many levels of the path exist, or the permission error.</returns>
+	private async ValueTask<Result<int>> ExistingPrefixLengthAsync(AttributeWrite write)
+	{
+		for (var i = write.AttrPath.Length - 1; i >= 1; i--)
+		{
+			var prefix = await mediator.CreateStream(new GetAttributeQuery(write.Obj.Object().DBRef, write.AttrPath[..i]))
+				.ToListAsync();
+
+			if (!await CanSetAllAsync(write, prefix))
 			{
 				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 			}
-		}
 
-		// If the target attribute doesn't exist yet (creating new), we still need to check
-		// permissions on the existing ancestor path. The stream above yields nothing when
-		// the full path doesn't exist (count != attribute.Length check in GetAttributeAsync).
-		// Check each existing prefix of the path, longest first, stopping at the first one that
-		// resolves: its own path covers every shorter prefix. When `existing` resolved, it IS the
-		// whole path and every prefix was already checked above.
-
-		// Where the path stops existing: every level from here down is one this call has to create,
-		// and so is gated below against the standard table's flags rather than a stored node's.
-		var createdFrom = existing.Count > 0 ? attrPath.Length : 0;
-
-		if (attrPath.Length > 1 && existing.Count == 0)
-		{
-			for (var i = attrPath.Length - 1; i >= 1; i--)
+			if (prefix.Count > 0)
 			{
-				var prefix = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath[..i]))
-					.ToListAsync();
-
-				foreach (var x in prefix)
-				{
-					if (!await permissionService.CanSet(executor, obj, x))
-					{
-						return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
-					}
-				}
-
-				if (prefix.Count > 0)
-				{
-					createdFrom = i;
-					break;
-				}
+				return i;
 			}
 		}
 
-		// PennMUSH's can_create_attr (src/attrib.c:446-486) gates every level of the path that does
-		// not exist yet, one at a time, against the flags the standard attribute table gives that
-		// level - set_default_flags (src/attrib.c:424-432) ORs them onto a synthetic ATTR and
-		// Cannot_Write_This_Attr is asked about THAT, before atr_add writes anything. The provider
-		// here applies SharpAttributeEntry.DefaultFlags to each level it creates
-		// (LightningDatabase.Attributes.cs:330-342), so without this the flags that should have
-		// refused the write only come into existence one line AFTER it happened: a mortal could
-		// create their own MAILQUOTA (lifting their mailbox limit) or AMAIL (code the game runs on
-		// their behalf), neither of which they could have overwritten once it existed. #1217.
+		return 0;
+	}
+
+	private async ValueTask<bool> CanSetAllAsync(AttributeWrite write, List<SharpAttribute> attributes)
+	{
+		foreach (var x in attributes)
+		{
+			if (!await permissionService.CanSet(write.Executor, write.Obj, x))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// PennMUSH's can_create_attr (src/attrib.c:446-486) gates every level of the path that does
+	/// not exist yet, one at a time, against the flags the standard attribute table gives that
+	/// level - set_default_flags (src/attrib.c:424-432) ORs them onto a synthetic ATTR and
+	/// Cannot_Write_This_Attr is asked about THAT, before atr_add writes anything. The provider
+	/// here applies SharpAttributeEntry.DefaultFlags to each level it creates
+	/// (LightningDatabase.Attributes.cs:330-342), so without this the flags that should have
+	/// refused the write only come into existence one line AFTER it happened: a mortal could
+	/// create their own MAILQUOTA (lifting their mailbox limit) or AMAIL (code the game runs on
+	/// their behalf), neither of which they could have overwritten once it existed. #1217.
+	/// </summary>
+	private async ValueTask<Result<WritePlan>> GateCreatedLevelsAsync(AttributeWrite write, int createdFrom)
+	{
+		var attrPath = write.AttrPath;
 		SharpAttributeEntry? leafEntry = null;
 
 		for (var level = createdFrom; level < attrPath.Length; level++)
@@ -206,13 +260,19 @@ internal sealed class AttributeWriter(
 				leafEntry = levelEntry;
 			}
 
-			if (!isAttributeCopy && !await permissionService.CanSet(executor, obj,
-						CreatedAttributeFor(levelEntry, attrPath[level], levelName, creator)))
+			if (!write.IsAttributeCopy && !await permissionService.CanSet(write.Executor, write.Obj,
+						CreatedAttributeFor(levelEntry, attrPath[level], levelName, write.Creator)))
 			{
 				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 			}
 		}
 
+		return new WritePlan(createdFrom, leafEntry);
+	}
+
+	/// <summary>The value checks that follow the permission gates, then the write itself.</summary>
+	private async ValueTask<Result<Success>> WritePlannedAsync(AttributeWrite write, WritePlan plan, MString value)
+	{
 		// The forward lists are validated here, four lines ahead of check_attr_value, exactly where
 		// Penn's do_set_atr puts them (src/attrib.c:2326-2358): an entry that is not an objid, does not
 		// name a live object, or names one unwilling to hear from THIS object refuses the whole set.
@@ -222,68 +282,89 @@ internal sealed class AttributeWriter(
 		// SOURCE was allowed to hold can be one the clone could not have created - a forward lock
 		// naming the source passes for the source and not for the copy - and refusing it there would
 		// silently drop the attribute from the clone. Penn never validates a copy at all.
-		var fullName = string.Join('`', attrPath).ToUpperInvariant();
+		var fullName = string.Join('`', write.AttrPath).ToUpperInvariant();
 
-		if (!isAttributeCopy && ForwardListRestriction.Applies(fullName)
-				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, obj, fullName,
+		if (!write.IsAttributeCopy && ForwardListRestriction.Applies(fullName)
+				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, write.Obj, fullName,
 					value.ToPlainText()) is Error<string> badList)
 		{
 			return badList;
 		}
 
-		// check_attr_value runs here in Penn's do_set_atr (src/attrib.c:2363): @attribute/limit and
-		// @attribute/enum refuse the set outright, and an enum stores the choice as the enum spells it.
-		// The leaf's entry was already fetched above whenever the leaf itself is being created, which
-		// is the only case the pre-set `existing` snapshot cannot answer for.
-		if ((createdFrom < attrPath.Length
-					? leafEntry
+		return await RestrictedValueAsync(write, plan, fullName, value) switch
+		{
+			MString stored => await StoreAsync(write, stored),
+			Error<string> refused => refused
+		};
+	}
+
+	/// <summary>
+	/// check_attr_value runs here in Penn's do_set_atr (src/attrib.c:2363): @attribute/limit and
+	/// @attribute/enum refuse the set outright, and an enum stores the choice as the enum spells it.
+	/// The leaf's entry was already fetched by <see cref="GateCreatedLevelsAsync"/> whenever the leaf
+	/// itself is being created, which is the only case the pre-set `existing` snapshot cannot answer for.
+	/// </summary>
+	private async ValueTask<Result<MString>> RestrictedValueAsync(AttributeWrite write, WritePlan plan, string fullName,
+		MString value)
+	{
+		if ((plan.CreatedFrom < write.AttrPath.Length
+					? plan.LeafEntry
 					: await mediator.Send(new GetAttributeEntryQuery(fullName)))
-				is { } entry)
+				is not { } entry)
 		{
-			var plain = value.ToPlainText();
-			switch (AttributeValueRestriction.Check(entry, plain))
-			{
-				case Error<string> refused:
-					return refused;
-				case string stored when !stored.Equals(plain, StringComparison.Ordinal):
-					value = MarkupText.Plain(stored);
-					break;
-			}
+			return value;
 		}
 
-		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value, creator));
-
-		// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and
-		// parity governs here, so a syntax error must never block the set -- only warn the setter,
-		// after the value is already stored. `existing` (fetched pre-set, above) is reused when the
-		// attribute already existed -- its flags cannot have changed underneath this call. But when
-		// `existing` is empty, this was a first-ever write: DefaultFlags was just applied to the
-		// brand-new node by the SetAttributeCommand handler, so only a fresh fetch can see it. Paying
-		// one extra query here is a one-time cost per attribute, not a per-set cost.
-		var storedAttribute = existing.Count != 0
-			? existing.LastOrDefault()
-			: await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath)).LastOrDefaultAsync();
-		var parseType = storedAttribute?.SyntaxParseType();
-
-		if (parseType is not null)
+		var plain = value.ToPlainText();
+		return AttributeValueRestriction.Check(entry, plain) switch
 		{
-			// IMUSHCodeParser is resolved lazily via the container rather than taken as a constructor
-			// parameter: MUSHCodeParser's own constructor eagerly resolves IAttributeService through
-			// this same IServiceProvider, so an eager IMUSHCodeParser dependency here would be a
-			// circular singleton resolution. Deferring the lookup to call time (long after both
-			// singletons are fully constructed) breaks the cycle.
-			var mushParser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
-			// Only the code half: a $-command's or listen's pattern is compiled to a match regex, never
-			// parsed, so validating it would warn about an attribute that works (SoftcodeSource.Validate).
-			var errors = SoftcodeSource.Validate(mushParser, value, parseType.Value);
+			Error<string> refused => refused,
+			string stored when !stored.Equals(plain, StringComparison.Ordinal) => MarkupText.Plain(stored),
+			_ => value
+		};
+	}
 
-			foreach (var error in errors)
-			{
-				await notifyService.Notify(executor, error.ToMushFailureString(), obj);
-			}
-		}
-
+	private async ValueTask<Result<Success>> StoreAsync(AttributeWrite write, MString value)
+	{
+		await mediator.Send(new SetAttributeCommand(write.Obj.Object().DBRef, write.AttrPath, value, write.Creator));
+		await WarnSyntaxErrorsAsync(write, value);
 		return new Success();
+	}
+
+	/// <summary>
+	/// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and
+	/// parity governs here, so a syntax error must never block the set -- only warn the setter,
+	/// after the value is already stored. `existing` (fetched pre-set, above) is reused when the
+	/// attribute already existed -- its flags cannot have changed underneath this call. But when
+	/// `existing` is empty, this was a first-ever write: DefaultFlags was just applied to the
+	/// brand-new node by the SetAttributeCommand handler, so only a fresh fetch can see it. Paying
+	/// one extra query here is a one-time cost per attribute, not a per-set cost.
+	/// </summary>
+	private async ValueTask WarnSyntaxErrorsAsync(AttributeWrite write, MString value)
+	{
+		var storedAttribute = write.Existing.Count != 0
+			? write.Existing.LastOrDefault()
+			: await mediator.CreateStream(new GetAttributeQuery(write.Obj.Object().DBRef, write.AttrPath)).LastOrDefaultAsync();
+
+		if (storedAttribute?.SyntaxParseType() is not { } parseType)
+		{
+			return;
+		}
+
+		// IMUSHCodeParser is resolved lazily via the container rather than taken as a constructor
+		// parameter: MUSHCodeParser's own constructor eagerly resolves IAttributeService through
+		// this same IServiceProvider, so an eager IMUSHCodeParser dependency here would be a
+		// circular singleton resolution. Deferring the lookup to call time (long after both
+		// singletons are fully constructed) breaks the cycle.
+		var mushParser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+		// Only the code half: a $-command's or listen's pattern is compiled to a match regex, never
+		// parsed, so validating it would warn about an attribute that works (SoftcodeSource.Validate).
+		var errors = SoftcodeSource.Validate(mushParser, value, parseType);
+
+		foreach (var error in errors)
+		{
+			await notifyService.Notify(write.Executor, error.ToMushFailureString(), write.Obj);
+		}
 	}
 
 	/// <summary>
@@ -376,26 +457,9 @@ internal sealed class AttributeWriter(
 		var patternIsWildcard = isWipe && AttributeService.HasUnescapedWildcard(attributePattern);
 		var executorIsGod = executor.IsGod();
 
-		// If no matching attributes exist, there is nothing to clear. Exact mode
-		// (@set obj/attr=, every caller other than @WIPE) succeeds silently, as before -
-		// PennMUSH does not error when clearing a non-existent attribute. But @wipe's own
-		// do_wipe (set.c:1567-1577) ALWAYS prints its tally, even when atr_iter_get matched
-		// nothing at all: a typo'd pattern still gets "No attributes wiped.", not silence.
-		// Round 3 moved the tally below this early return, which made a zero-match @wipe go
-		// completely silent - a real regression from round 2's (wrong, but at least present)
-		// generic success line (Task 6 fix round 4).
 		if (attrArr.Length == 0)
 		{
-			if (isWipe)
-			{
-				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoAttributesWiped), executor, 0);
-			}
-
-			// AE_NOTFOUND (src/attrib.c:2411-2412) is reported only where do_set_atr's own reporting is
-			// copied: a player's alias list.
-			return !isWipe && PlayerAliases.Applies(obj, attributePattern)
-				? new Error<string>(ErrorMessages.Notifications.NoSuchAttributeToReset)
-				: new Success();
+			return await NothingToClearAsync(executor, obj, attributePattern, isWipe);
 		}
 
 		var dbref = obj.Object().DBRef;
@@ -417,92 +481,24 @@ internal sealed class AttributeWriter(
 		// player learns both what was refused and what actually happened. Exact-mode
 		// (@set obj/attr=, used by callers other than @WIPE) keeps the original single
 		// aggregated Success/Error contract those callers already depend on.
-		var deniedNames = new List<string>();
+		var anyDenied = false;
 		var wipedCount = 0;
 
 		foreach (var attrItem in attrArr)
 		{
-			// wipe_helper's own guard, ahead of everything wipe_atr does: a wildcarded @wipe
-			// never touches a wizard-flagged attribute unless the player is God. It returns 0
-			// silently - no notify, and the match contributes nothing to the tally - so a mass
-			// wipe simply steps over the protected attributes rather than reporting each.
-			// PermissionService.CanSet grants any wizard outright before its own AF_WIZARD test,
-			// so without this a non-God wizard's `@wipe someplayer/**` destroyed every
-			// wizard-flagged attribute Penn protects.
-			if (patternIsWildcard && !executorIsGod && attrItem.IsWizard())
+			if (patternIsWildcard && ProtectedFromWildcardWipe(attrItem, executorIsGod))
 			{
 				continue;
 			}
 
-			// SharpMUSH keeps engine state in underscore-prefixed attributes: _LINKTYPE is
-			// written by @link <exit>=home and @link <exit>=variable (BuildingCommands) and read
-			// back by loc() to resolve where the exit actually goes. A wildcarded wipe has to
-			// step over those the way it steps over wizard-flagged ones, or clearing a player's
-			// attributes silently unlinks their exits. Naming one explicitly still clears it,
-			// which is the same rule the wizard guard above follows - the protection is against
-			// mass wipes, not against deliberate ones.
-			if (patternIsWildcard && attrItem.LongName!.Split('`')[0].StartsWith('_'))
-			{
-				continue;
-			}
-
-			// AE_SAFE, not AE_ERROR: real_atr_clr (src/attrib.c:1100-1104) tests AF_Safe on the
-			// matched attribute BEFORE Can_Write_Attr and returns a distinct code, which
-			// wipe_helper reports with wording that names the remedy (set.c:1507-1509). Ancestor
-			// safe flags still surface through CanSet below as the generic AE_ERROR, exactly as
-			// they do in Penn (there the ancestor walk lives inside can_write_attr_internal).
-			if (isWipe && attrItem.IsSafe())
-			{
-				deniedNames.Add(attrItem.LongName!);
-				await notifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.AttributeIsSafeSetNotSafe), executor, attrItem.LongName!);
-				continue;
-			}
-
-			var path = await ResolveWriteGatePathAsync(dbref, attrItem.LongName!, matchKnown);
-
-			// A path shorter than the split name is a broken/orphaned chain. PennMUSH's
-			// can_write_attr_internal (src/attrib.c:392-393) returns 0 the instant a prefix
-			// segment can't be found - denying, not silently permitting on incomplete data
-			// (Task 6 fix round 1, M1: CanSet(...) with an empty array returns true, so this
-			// must be checked explicitly before ever calling CanSet).
-			if (path is null || !await permissionService.CanSet(executor, obj, path))
-			{
-				deniedNames.Add(attrItem.LongName!);
-				if (isWipe)
-				{
-					// PennMUSH's AE_ERROR wording (set.c:1511-1513), one line per match -
-					// never the raw "#-1 NO PERMISSION..." return code.
-					await notifyService.NotifyLocalized(executor,
-						nameof(ErrorMessages.Notifications.UnableToWipeAttribute), executor, attrItem.LongName!);
-				}
-				continue;
-			}
-
-			// For wildcard patterns (used by @wipe), delete the attribute and its
-			// descendants - gated per descendant (WipeSubtreeGatedAsync). For exact patterns
-			// (used by @set obj/attr=), use ClearAttributeCommand, which preserves parent
-			// nodes that still have children.
-			if (isWipe)
-			{
-				var (fullyWiped, deletedCount) = await WipeSubtreeGatedAsync(executor, obj, attrItem);
-				wipedCount += deletedCount;
-				if (!fullyWiped)
-				{
-					// PennMUSH's AE_TREE wording (set.c:1514-1518), one line per match.
-					await notifyService.NotifyLocalized(executor,
-						nameof(ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked), executor, attrItem.LongName!);
-				}
-			}
-			else
-			{
-				await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`')));
-			}
+			var outcome = await ClearMatchAsync(executor, obj, dbref, attrItem, matchKnown, isWipe);
+			anyDenied |= outcome.Denied;
+			wipedCount += outcome.Wiped;
 		}
 
 		if (!isWipe)
 		{
-			return deniedNames.Count > 0
+			return anyDenied
 				? new Error<string>(ErrorMessages.Returns.AttrSetPermissions)
 				: new Success();
 		}
@@ -519,6 +515,114 @@ internal sealed class AttributeWriter(
 		}, executor, wipedCount);
 
 		return new Success();
+	}
+
+	/// <summary>
+	/// If no matching attributes exist, there is nothing to clear. Exact mode
+	/// (@set obj/attr=, every caller other than @WIPE) succeeds silently, as before -
+	/// PennMUSH does not error when clearing a non-existent attribute. But @wipe's own
+	/// do_wipe (set.c:1567-1577) ALWAYS prints its tally, even when atr_iter_get matched
+	/// nothing at all: a typo'd pattern still gets "No attributes wiped.", not silence.
+	/// Round 3 moved the tally below this early return, which made a zero-match @wipe go
+	/// completely silent - a real regression from round 2's (wrong, but at least present)
+	/// generic success line (Task 6 fix round 4).
+	/// </summary>
+	private async ValueTask<Result<Success>> NothingToClearAsync(AnySharpObject executor, AnySharpObject obj,
+		string attributePattern, bool isWipe)
+	{
+		if (isWipe)
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoAttributesWiped), executor, 0);
+		}
+
+		// AE_NOTFOUND (src/attrib.c:2411-2412) is reported only where do_set_atr's own reporting is
+		// copied: a player's alias list.
+		return !isWipe && PlayerAliases.Applies(obj, attributePattern)
+			? new Error<string>(ErrorMessages.Notifications.NoSuchAttributeToReset)
+			: new Success();
+	}
+
+	/// <summary>Whether a wildcarded @wipe steps over this match without a word.</summary>
+	private static bool ProtectedFromWildcardWipe(SharpAttribute attrItem, bool executorIsGod)
+	{
+		// wipe_helper's own guard, ahead of everything wipe_atr does: a wildcarded @wipe
+		// never touches a wizard-flagged attribute unless the player is God. It returns 0
+		// silently - no notify, and the match contributes nothing to the tally - so a mass
+		// wipe simply steps over the protected attributes rather than reporting each.
+		// PermissionService.CanSet grants any wizard outright before its own AF_WIZARD test,
+		// so without this a non-God wizard's `@wipe someplayer/**` destroyed every
+		// wizard-flagged attribute Penn protects.
+		if (!executorIsGod && attrItem.IsWizard())
+		{
+			return true;
+		}
+
+		// SharpMUSH keeps engine state in underscore-prefixed attributes: _LINKTYPE is
+		// written by @link <exit>=home and @link <exit>=variable (BuildingCommands) and read
+		// back by loc() to resolve where the exit actually goes. A wildcarded wipe has to
+		// step over those the way it steps over wizard-flagged ones, or clearing a player's
+		// attributes silently unlinks their exits. Naming one explicitly still clears it,
+		// which is the same rule the wizard guard above follows - the protection is against
+		// mass wipes, not against deliberate ones.
+		return attrItem.LongName!.Split('`')[0].StartsWith('_');
+	}
+
+	/// <summary>What clearing one match did: whether it was refused, and how many attribute nodes it removed.</summary>
+	private readonly record struct ClearOutcome(bool Denied, int Wiped);
+
+	/// <summary>Clears one matched attribute, or reports why it could not.</summary>
+	private async ValueTask<ClearOutcome> ClearMatchAsync(AnySharpObject executor, AnySharpObject obj, DBRef dbref,
+		SharpAttribute attrItem, IReadOnlyDictionary<string, SharpAttribute> matchKnown, bool isWipe)
+	{
+		// AE_SAFE, not AE_ERROR: real_atr_clr (src/attrib.c:1100-1104) tests AF_Safe on the
+		// matched attribute BEFORE Can_Write_Attr and returns a distinct code, which
+		// wipe_helper reports with wording that names the remedy (set.c:1507-1509). Ancestor
+		// safe flags still surface through CanSet below as the generic AE_ERROR, exactly as
+		// they do in Penn (there the ancestor walk lives inside can_write_attr_internal).
+		if (isWipe && attrItem.IsSafe())
+		{
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.AttributeIsSafeSetNotSafe), executor, attrItem.LongName!);
+			return new ClearOutcome(Denied: true, Wiped: 0);
+		}
+
+		var path = await ResolveWriteGatePathAsync(dbref, attrItem.LongName!, matchKnown);
+
+		// A path shorter than the split name is a broken/orphaned chain. PennMUSH's
+		// can_write_attr_internal (src/attrib.c:392-393) returns 0 the instant a prefix
+		// segment can't be found - denying, not silently permitting on incomplete data
+		// (Task 6 fix round 1, M1: CanSet(...) with an empty array returns true, so this
+		// must be checked explicitly before ever calling CanSet).
+		if (path is null || !await permissionService.CanSet(executor, obj, path))
+		{
+			if (isWipe)
+			{
+				// PennMUSH's AE_ERROR wording (set.c:1511-1513), one line per match -
+				// never the raw "#-1 NO PERMISSION..." return code.
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.UnableToWipeAttribute), executor, attrItem.LongName!);
+			}
+			return new ClearOutcome(Denied: true, Wiped: 0);
+		}
+
+		// For wildcard patterns (used by @wipe), delete the attribute and its
+		// descendants - gated per descendant (WipeSubtreeGatedAsync). For exact patterns
+		// (used by @set obj/attr=), use ClearAttributeCommand, which preserves parent
+		// nodes that still have children.
+		if (!isWipe)
+		{
+			await mediator.Send(new ClearAttributeCommand(dbref, attrItem.LongName!.Split('`')));
+			return new ClearOutcome(Denied: false, Wiped: 0);
+		}
+
+		var (fullyWiped, deletedCount) = await WipeSubtreeGatedAsync(executor, obj, attrItem);
+		if (!fullyWiped)
+		{
+			// PennMUSH's AE_TREE wording (set.c:1514-1518), one line per match.
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.AttributeCannotBeWipedChildBlocked), executor, attrItem.LongName!);
+		}
+		return new ClearOutcome(Denied: false, Wiped: deletedCount);
 	}
 
 	/// <summary>
