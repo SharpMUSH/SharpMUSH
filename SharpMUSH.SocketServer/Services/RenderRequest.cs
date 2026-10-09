@@ -8,13 +8,18 @@ namespace SharpMUSH.SocketServer.Services;
 /// The game's web address (<c>mud_url</c>): an MXP or Pueblo client is sent the game's own pictures at it, since it
 /// cannot fetch an address relative to the portal. Null while it is unset.
 /// </param>
+/// <param name="AsciiTranslations">
+/// The game's <c>ascii_translations</c>, for a connection not sent UTF-8 (<see cref="ProtocolCapabilities.Utf8"/>);
+/// null for one that is.
+/// </param>
 public sealed record RenderContext(
 	string ConnectionType,
 	ProtocolCapabilities Capabilities,
 	PlayerOutputPreferences? Preferences,
 	long Handle = 0,
 	string? SessionId = null,
-	string? Website = null);
+	string? Website = null,
+	string? AsciiTranslations = null);
 
 /// <param name="Prompt">Whether the markup is a prompt, which is not given a line ending.</param>
 public sealed record RenderRequest(string? Markup, byte[]? Data, RenderContext Context, bool Prompt = false);

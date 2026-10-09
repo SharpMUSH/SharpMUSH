@@ -13,12 +13,14 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 	private readonly CancellationToken _stopping;
 	private readonly ILogger<RemoteOutputRenderer> _logger;
 	private readonly MsspReportHolder? _mssp;
+	private readonly OutputSettingsHolder? _settings;
 
 	public RemoteOutputRenderer(IConfiguration configuration, IHostApplicationLifetime lifetime,
-		ILogger<RemoteOutputRenderer> logger, MsspReportHolder? mssp = null)
+		ILogger<RemoteOutputRenderer> logger, MsspReportHolder? mssp = null, OutputSettingsHolder? settings = null)
 	{
 		_logger = logger;
 		_mssp = mssp;
+		_settings = settings;
 		_stopping = lifetime.ApplicationStopping;
 		var socketPath = configuration["Rendering:SocketPath"] ?? "/run/sharpmush/render.sock";
 		_client = new HttpClient(new SocketsHttpHandler
@@ -51,11 +53,14 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 		ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default) =>
 		new(await SendAsync(new RenderRequest(markup, null,
 			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences,
-				connection.Handle, connection.SessionId, _mssp?.Website), prompt), ct), false);
+				connection.Handle, connection.SessionId, _mssp?.Website,
+				// Only a connection that is not sent UTF-8 uses them.
+				connection.Capabilities.Utf8 ? null : _settings?.AsciiTranslations), prompt), ct), false);
 
 	public ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
 		CancellationToken ct = default) =>
-		SendAsync(new RenderRequest(null, rawOutput, new RenderContext("telnet", capabilities, null)), ct);
+		SendAsync(new RenderRequest(null, rawOutput, new RenderContext("telnet", capabilities, null,
+			AsciiTranslations: capabilities.Utf8 ? null : _settings?.AsciiTranslations)), ct);
 
 	private async ValueTask<byte[]> SendAsync(RenderRequest payload, CancellationToken ct)
 	{

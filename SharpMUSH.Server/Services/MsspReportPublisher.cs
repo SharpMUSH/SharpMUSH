@@ -11,7 +11,8 @@ namespace SharpMUSH.Server.Services;
 
 /// <summary>
 /// Keeps the connection servers' copy of the MSSP report current: they answer the MSSP telnet option
-/// from it (<see cref="MSSPReportMessage"/>). The report is rebuilt every <see cref="Interval"/>, at
+/// from it (<see cref="MSSPReportMessage"/>). The output settings they render with
+/// (<see cref="OutputSettingsMessage"/>) go with it, at the same times. The report is rebuilt every <see cref="Interval"/>, at
 /// once when the configuration changes or a connection server asks, and sent only when it differs
 /// from the last one sent, or when asked.
 /// </summary>
@@ -32,6 +33,8 @@ public sealed class MsspReportPublisher(
 		new BoundedChannelOptions(4) { FullMode = BoundedChannelFullMode.DropOldest });
 
 	private string? _lastSent;
+
+	private string? _lastSettings;
 
 	/// <summary>A connection server asked for the report: send it whether or not it changed.</summary>
 	public void RequestSend() => _wake.Writer.TryWrite(true);
@@ -73,6 +76,14 @@ public sealed class MsspReportPublisher(
 	{
 		try
 		{
+			// Before the report: a connection server stops asking once the report arrives.
+			var translations = options.CurrentValue.Cosmetic.AsciiTranslations ?? string.Empty;
+			if (force || translations != _lastSettings)
+			{
+				await bus.Publish(new OutputSettingsMessage(translations), ct);
+				_lastSettings = translations;
+			}
+
 			var variables = (await report.BuildAsync())
 				.Select(variable => new MSSPVariable(variable.Name, [.. variable.Values]))
 				.ToArray();

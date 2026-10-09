@@ -2809,6 +2809,12 @@
   <data name="SocksetUnknownAnimationSetting" xml:space="preserve">
     <value>Unknown setting. Valid settings: 'on', 'off'.</value>
   </data>
+  <data name="SocksetCharsetSetFormat" xml:space="preserve">
+    <value>Charset set to '{0}'</value>
+  </data>
+  <data name="SocksetUnknownCharset" xml:space="preserve">
+    <value>Unknown charset. Valid settings: 'utf-8', 'latin-1', 'ascii', 'auto'.</value>
+  </data>
   <data name="SocksetTerminalSetFormat" xml:space="preserve">
     <value>Terminal set to '{0}'</value>
   </data>

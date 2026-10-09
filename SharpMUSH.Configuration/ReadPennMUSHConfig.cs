@@ -140,6 +140,7 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), d.Cosmetic.ChatStripQuote),
 				RequiredString(Get(nameof(CosmeticOptions.LayoutBorder)), d.Cosmetic.LayoutBorder).Trim().ToLowerInvariant(),
 				String(Get(nameof(CosmeticOptions.LayoutTheme)), d.Cosmetic.LayoutTheme)?.Trim() ?? string.Empty,
+				String(Get(nameof(CosmeticOptions.AsciiTranslations)), d.Cosmetic.AsciiTranslations)?.Trim() ?? string.Empty,
 				RequiredString(Get(nameof(CosmeticOptions.ImageHosts)), d.Cosmetic.ImageHosts).Trim().ToLowerInvariant(),
 				String(Get(nameof(CosmeticOptions.ImageHostList)), d.Cosmetic.ImageHostList)?.Trim() ?? string.Empty,
 				String(Get(nameof(CosmeticOptions.PortalLogo)), d.Cosmetic.PortalLogo)?.Trim() ?? string.Empty,

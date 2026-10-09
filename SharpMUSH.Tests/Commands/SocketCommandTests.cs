@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Utilities;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -254,6 +255,24 @@ public class SocketCommandTests
 			.Contains("Unknown graphics setting. Valid settings: 'auto', 'detect', 'kitty', 'iterm2', 'sixel', 'blocks', 'off'.");
 		await Assert.That(await RunAsync(handle, "SOCKSET COMMANDLINKS=maybe"))
 			.Contains("Unknown setting. Valid settings: 'on', 'off', 'auto'.");
+	}
+
+	/// <summary>The character set is pinned, shown and handed back to the client with auto; an unknown one is refused.</summary>
+	[Test]
+	public async Task SocksetPinsTheCharset()
+	{
+		var handle = await LoggedInHandleAsync("SocksetCharset");
+		var metadata = ConnectionService.Get(handle)!.Metadata;
+
+		await Assert.That(await RunAsync(handle, "SOCKSET CHARSET=US-ASCII")).Contains("Charset set to 'ascii'");
+		await Assert.That(metadata.GetValueOrDefault("CHARSET")).IsEqualTo("ascii");
+		await Assert.That(TerminalPins.Of(metadata).Charset).IsEqualTo(TerminalCharsets.Ascii);
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Charset")).IsNotNull().And.Contains("ascii");
+
+		await Assert.That(await RunAsync(handle, "SOCKSET CHARSET=auto")).Contains("Charset set to 'auto'");
+		await Assert.That(metadata.ContainsKey("CHARSET")).IsFalse();
+		await Assert.That(await RunAsync(handle, "SOCKSET CHARSET=ebcdic"))
+			.Contains("Unknown charset. Valid settings: 'utf-8', 'latin-1', 'ascii', 'auto'.");
 	}
 
 	[Test]

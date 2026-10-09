@@ -42,8 +42,11 @@ public static class OutputFormatNegotiation
 /// <param name="SupportsAnsi">Whether the client supports basic 16-color ANSI codes</param>
 /// <param name="SupportsXterm256">Whether the client supports 256-color ANSI codes (ESC[38;5;n)</param>
 /// <param name="SupportsTruecolor">Whether the client supports 24-bit RGB ANSI codes (ESC[38;2;r;g;b)</param>
-/// <param name="SupportsUtf8">Whether the client supports UTF-8 encoding</param>
-/// <param name="Charset">The character set used by the client (e.g., "UTF-8", "ASCII", "LATIN-1")</param>
+/// <param name="SupportsUtf8">Whether the client claims UTF-8 (MTTS), or has not reported its terminal yet</param>
+/// <param name="Charset">
+/// The character set telnet CHARSET negotiation settled on (one of <see cref="TerminalCharsets"/>), or null when it
+/// never did. What the connection is written in is <see cref="OutputCharset"/>.
+/// </param>
 /// <param name="MaxLineLength">Maximum line length supported by the client (-1 = unlimited)</param>
 /// <param name="Format">The output format negotiated for this connection</param>
 /// <param name="ScreenReader">Whether MTTS identified the client as a screen reader</param>
@@ -69,7 +72,7 @@ public record ProtocolCapabilities(
 	bool SupportsXterm256 = false,
 	bool SupportsTruecolor = false,
 	bool SupportsUtf8 = true,
-	string Charset = "UTF-8",
+	string? Charset = null,
 	int MaxLineLength = -1,
 	OutputFormat Format = OutputFormat.Ansi,
 	bool ScreenReader = false,
@@ -83,6 +86,17 @@ public record ProtocolCapabilities(
 	int CellHeight = 0
 )
 {
+	/// <summary>
+	/// The character set output is written in, through <see cref="TerminalCharsets.Resolve"/>. A terminal SharpMUSH
+	/// knows (<see cref="Terminal"/>) shows UTF-8 whether or not it says so; most never do.
+	/// </summary>
+	[JsonIgnore]
+	public string OutputCharset => TerminalCharsets.Resolve(Pins, Charset, SupportsUtf8 || Terminal is not null);
+
+	/// <summary>Whether output is written in UTF-8; otherwise each character the client cannot show is replaced.</summary>
+	[JsonIgnore]
+	public bool Utf8 => OutputCharset == TerminalCharsets.Utf8;
+
 	/// <summary>The terminal, through <see cref="TerminalFeatureReader.Identify"/>, or null when it is not one this server knows.</summary>
 	[JsonIgnore]
 	public TerminalProfile? Terminal => TerminalFeatureReader.Identify(TerminalTypes ?? [], Probe, Pins?.Terminal);
@@ -98,7 +112,7 @@ public record ProtocolCapabilities(
 		{
 			var terminal = Terminal;
 			return TerminalFeatureReader.Resolve(TerminalFeatureReader.Detect(terminal, TerminalTypes ?? [], Probe), terminal,
-				Pins ?? TerminalPins.None, Charset.Replace("-", "").Equals("UTF8", StringComparison.OrdinalIgnoreCase),
+				Pins ?? TerminalPins.None, Utf8,
 				ScreenReader);
 		}
 	}

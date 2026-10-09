@@ -72,6 +72,9 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetUnknownTerminalFormat = "Unknown terminal '{0}'. Known terminals: {1}, or 'auto'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetCharsetSetFormat = "Charset set to '{0}'";
+		public const string SocksetUnknownCharset = "Unknown charset. Valid settings: 'utf-8', 'latin-1', 'ascii', 'auto'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetInvalidOptionFormat = "@sockset option '{0}' is not a valid option.";
 		public const string SocksetInvalidDescriptor = "Invalid descriptor.";
 

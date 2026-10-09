@@ -137,6 +137,12 @@
   <data name="SocksetUnknownAnimationSetting" xml:space="preserve">
     <value>Réglage inconnu. Réglages valides : 'on', 'off'.</value>
   </data>
+  <data name="SocksetCharsetSetFormat" xml:space="preserve">
+    <value>Jeu de caractères défini sur « {0} »</value>
+  </data>
+  <data name="SocksetUnknownCharset" xml:space="preserve">
+    <value>Jeu de caractères inconnu. Valeurs valides : 'utf-8', 'latin-1', 'ascii', 'auto'.</value>
+  </data>
   <data name="SocksetTerminalSetFormat" xml:space="preserve">
     <value>Terminal défini sur « {0} »</value>
   </data>

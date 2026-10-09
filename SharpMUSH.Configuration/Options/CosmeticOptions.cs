@@ -166,12 +166,24 @@ public record CosmeticOptions(
 	string LayoutTheme,
 
 	[property: SharpConfig(
+		Name = "ascii_translations",
+		Category = "Cosmetic",
+		Description = "Stand-ins for characters a client without Unicode cannot show, such as ·=* or …=...",
+		ValidationPattern = AsciiTranslations.Pattern,
+		Group = "Layout",
+		Order = 3,
+		Tooltip = "Space separated character=text pairs, the text in double quotes when it holds a space: "
+			+ "·=\" - \" …=... ©=(c). They come before the built-in ones, which turn · into *, a dash into -, "
+			+ "é into e and anything else into ?. See help ASCII TRANSLATIONS.")]
+	string AsciiTranslations,
+
+	[property: SharpConfig(
 		Name = "image_hosts",
 		Category = "Cosmetic",
 		Description = "Which pictures image() and figure() may show: any, allow, block or off",
 		ValidationPattern = @"^(any|allow|block|off)$",
 		Group = "Layout",
-		Order = 3,
+		Order = 4,
 		Tooltip = "any shows pictures from every host; allow only those on image_host_list; block all but "
 			+ "those; off none. The game's own pictures (a relative address) are shown unless this is off. "
 			+ "A refused picture shows its text art or description.")]
@@ -182,7 +194,7 @@ public record CosmeticOptions(
 		Category = "Cosmetic",
 		Description = "Hosts for image_hosts allow or block, space separated",
 		Group = "Layout",
-		Order = 4,
+		Order = 5,
 		Tooltip = "For example: i.imgur.com *.example.com. A *. entry covers every subdomain.")]
 	string ImageHostList,
 

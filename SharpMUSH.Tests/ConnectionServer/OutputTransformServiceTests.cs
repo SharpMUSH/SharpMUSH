@@ -25,6 +25,18 @@ public class OutputTransformServiceTests
 	}
 
 	[Test]
+	public async Task Transform_SendsTheNearestCharacter_ForOutputSentAsItIs()
+	{
+		var input = "Wren · Scene — café"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsUtf8: false);
+
+		await Assert.That(Encoding.ASCII.GetString(OutputTransformService.Transform(input, capabilities)))
+			.IsEqualTo("Wren * Scene - cafe");
+		await Assert.That(Encoding.ASCII.GetString(OutputTransformService.Transform(input, capabilities, "·=+")))
+			.IsEqualTo("Wren + Scene - cafe");
+	}
+
+	[Test]
 	public async Task TransformAsync_ConvertsToLatin1_WhenLatin1Charset()
 	{
 		var input = "café ☃"u8.ToArray();

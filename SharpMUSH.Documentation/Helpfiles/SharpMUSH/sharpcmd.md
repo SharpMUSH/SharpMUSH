@@ -2387,6 +2387,7 @@ Options:
 - graphics: See [GRAPHICS]
 - animation: See [ANIMATION]
 - terminal: See [TERMINAL]
+- charset: See [CHARSET]
 - outputprefix: Same as OUTPUTPREFIX
 - outputsuffix: Same as OUTPUTSUFFIX
 - pueblo: Sets Pueblo-related options. If value has md5=...", then it will set the pueblo checksum. If empty, Pueblo mode is turned off.
@@ -2395,7 +2396,7 @@ Options:
 - height: Set your height(), same as SCREENHEIGHT
 - terminaltype: Your terminal type, used by terminfo()
 - prompt_newlines: Set whether a newline is shown after prompts from @prompt, same as PROMPT_NEWLINES
-- stripaccents: Strip accents for this connection. Like the NOACCENTS flag, but connection-specific. Set by default on connections which negotiate charset as [US-]ASCII
+- stripaccents: Send this connection plain ASCII, each other character replaced as [CHARSET] describes. Like the NOACCENTS flag, but connection-specific.
 - noquota: Input command quota is set to max every refresh. Can only be set by a logged-in Wizard.
 
 Note that changing 'telnet' or 'pueblo' may stop your client from parsing or displaying output correctly; only use if you know what you're doing!
@@ -2409,6 +2410,7 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 - [HYPERLINKS]
 - [GRAPHICS]
 - [TERMINAL]
+- [CHARSET]
 - [@prompt]
 :::
 # colorstyle
@@ -2540,6 +2542,43 @@ Terminal set to 'windows-terminal'
 - [ANIMATION]
 - [HYPERLINKS]
 - [@SOCKSET]
+:::
+# charset
+# ascii translations
+`SOCKSET charset=<utf-8|latin-1|ascii|auto>`<br>
+`@SOCKSET [me|<descriptor>]=charset,<utf-8|latin-1|ascii|auto>`
+
+SharpMUSH writes to your connection in UTF-8 when your client agrees to it during telnet negotiation, says it can in the terminal type it reports, or is a terminal SharpMUSH knows (see [TERMINAL]). A client that agrees to Latin-1 is written in Latin-1, and one that says neither is sent plain ASCII.
+
+A client that is not sent UTF-8 gets each character it cannot show as the nearest one it can, so output still reads:
+
+- a middle dot or a bullet as `*`
+- a dash as `-`
+- curly quotes as straight ones
+- an accented letter as the plain letter, such as `e` for an e with an acute accent
+- a line or corner of a box as `-`, `=`, `|` or `+` (see [LAYOUT BORDERS ASCII])
+- any other character as `?`, twice for a wide one
+
+Each of these takes as many columns as the character it replaces, so columns stay lined up. A Latin-1 client keeps the characters Latin-1 has, such as the middle dot and accented letters.
+
+'SOCKSET charset' names the character set yourself, for a client SharpMUSH guesses wrong. 'auto' goes back to what your client negotiated or reported. 'SOCKSET stripaccents=yes' sends ASCII whatever this is set to.
+
+A game can choose its own stand-ins with the `ascii_translations` option (see [@config cosmetic]): space separated character=text pairs, the text in double quotes when it holds a space. They come before the ones above, and may be longer than the character they replace. A layout such as a box or a table is laid out after they are applied, so it stays lined up; text you padded yourself may not.
+
+For example, a game that wants a middle dot shown as a spaced dash sets `ascii_translations` to a middle dot followed by `=" - "`. A title written as Wren, a middle dot, then Scene 3 then reaches an ASCII client as `Wren - Scene 3` rather than `Wren * Scene 3`.
+
+Example:
+```
+> SOCKSET charset=ascii
+Charset set to 'ascii'
+```
+
+
+::: seealso
+- [@SOCKSET]
+- [TERMINFO()]
+- [LAYOUT BORDERS]
+- [STRIPACCENTS()]
 :::
 # @speechmod
 `@speechmod <object>[=<modifier>]`

@@ -30,6 +30,11 @@ public class ValidateSharpOptions : IValidateOptions<SharpMUSHOptions>
 				+ "recognised BCP-47 locale. Use a tag such as 'en', 'fr' or 'pt-BR'.");
 		}
 
+		if (!AsciiTranslations.TryParse(options.Cosmetic.AsciiTranslations, out _, out var translationError))
+		{
+			failures.Add($"Cosmetic.AsciiTranslations (ascii_translations) does not read: {translationError}");
+		}
+
 		return failures.Count > 0 ? ValidateOptionsResult.Fail(failures) : ValidateOptionsResult.Success;
 	}
 

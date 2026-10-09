@@ -108,6 +108,7 @@ public record SharpMUSHOptions
 			ChatStripQuote: true,
 			LayoutBorder: "double",
 			LayoutTheme: "",
+			AsciiTranslations: "",
 			ImageHosts: "any",
 			ImageHostList: "",
 			PortalLogo: "",
