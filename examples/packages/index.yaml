@@ -91,3 +91,8 @@ packages:
     package: radio-scene
     version: 1.1.0
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
+  - path: bboards/
+    name: BBoards
+    package: bboards
+    version: 1.0.0
+    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help)
