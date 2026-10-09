@@ -28,7 +28,7 @@ These are cosmetic options of various sorts.
 - `float_precision=<numbers>`: How many digits after the decimal point in floating point numbers are kept when formatting the result of a floating point function?
 - `comma_exit_list=<boolean>`: Do exits show up like North, East, and West or as North East West?
 - `count_all=<boolean>`: Does the count of connected players in WHO include hidden connections for mortals?
-- `ascii_translations=<pairs>`: What a client without Unicode is sent for a character it cannot show, such as `·=*`. See [ascii translations]
+- `ascii_translations=<pairs>`: What a client without Unicode is sent for a character it cannot show, such as a middle dot sent as an asterisk. See [ascii translations]
 
 ## Page and flag display
 
