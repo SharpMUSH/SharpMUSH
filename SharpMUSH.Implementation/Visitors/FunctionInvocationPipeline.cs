@@ -48,83 +48,56 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		string? measuredName = null;
 		var didPushFunction = false;
 		LimitExceededFlag? limitExceeded = null;
-		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
+		var isolated = IsRestricted(parser);
 
 		try
 		{
-			if (!parser.FunctionLibrary.TryGetValue(name, out var libraryMatch))
+			if (!TryResolveFunction(parser, name, out var definition))
 			{
-				// Built-ins take precedence; only on a built-in miss do we consult the
-				// in-memory global user-defined-function registry (@function). Resolved
-				// entries are evaluated ufun-style against <object>/<attribute> with the
-				// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
-				// (so /enable, /disable, /delete take effect immediately and never leak).
-				var userFunction = ResolveUserDefinedFunction(name);
-				if (userFunction is null)
+				var restricted = IsRestricted(parser);
+				if (!restricted && !SharpMUSHParserVisitor.IsUnknownFunctionAnError(context))
 				{
-					if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
-					{
-						measuredName = TelemetryService.UnknownFunction;
-						throw new RestrictedExpressionException();
-					}
-					if (!SharpMUSHParserVisitor.IsUnknownFunctionAnError(context))
-					{
-						// Not a function and not required to be one: the text is prose, not a call, and
-						// its time is its caller's.
-						clock.Stop();
-						return await visitor.LiteralFunctionCall(context);
-					}
-
-					measuredName = TelemetryService.UnknownFunction;
-					success = false;
-					return new CallState(EvaluationDiagnostics.UnknownFunction(name, parser.FunctionLibrary), context.Depth());
+					// Not a function and not required to be one: the text is prose, not a call, and
+					// its time is its caller's.
+					clock.Stop();
+					return await visitor.LiteralFunctionCall(context);
 				}
 
-				libraryMatch = (userFunction.Value, false);
+				measuredName = TelemetryService.UnknownFunction;
+				if (restricted)
+					throw new RestrictedExpressionException();
+
+				success = false;
+				return new CallState(EvaluationDiagnostics.UnknownFunction(name, parser.FunctionLibrary), context.Depth());
 			}
 
-			var definition = libraryMatch.LibraryInformation;
 			measuredName = definition.Attribute.Name.ToUpperInvariant();
 			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
-			if ((EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
-				&& args.Length > EvaluationRestrictions.MaximumArguments)
+			if (IsRestricted(parser) && args.Length > EvaluationRestrictions.MaximumArguments)
 				throw new RestrictedExpressionException();
 			var attribute = definition.Attribute;
 
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
-
-			var invocationCounter = currentState.TotalInvocations!;
-			var callDepth = currentState.CallDepth!;
 			limitExceeded = currentState.LimitExceeded!;
 
-			var totalInvocations = invocationCounter.Increment();
-			if (totalInvocations > configuration.CurrentValue.Limit.FunctionInvocationLimit)
-			{
-				limitExceeded.IsExceeded = true;
-				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Invoke;
-				return new CallState(ErrorMessages.Returns.Invoke, contextDepth);
-			}
+			if (currentState.TotalInvocations!.Increment() > configuration.CurrentValue.Limit.FunctionInvocationLimit)
+				return LimitHit(limitExceeded, ErrorMessages.Returns.Invoke, contextDepth);
 
-			var currentDepth = callDepth.Increment();
+			var currentDepth = currentState.CallDepth!.Increment();
 			didPushFunction = true;
 
 			// Built-in functions do NOT track recursion - only nesting depth
 			// Recursion tracking only applies to user-defined attributes (u(), ufun(), etc.)
 
-			List<CallState> refinedArguments;
-
 			// @function/restrict restrictions. For user-defined functions the restriction string
 			// is carried on the synthesized attribute's Restrict (see ResolveUserDefinedFunction);
 			// for built-ins it lives in the registry overlay keyed by name.
-			var functionRestriction = attribute.Restrict is { Length: > 0 }
-				? string.Join(' ', attribute.Restrict)
-				: null;
 			var builtinRestriction = services.UserFunctions?.GetBuiltinRestriction(name);
 
 			// nobody is FN_DISABLED, which answers e_disabled before any permission check, so the
 			// permission gate below does not turn it into e_perm (src/parse.c).
-			if (Disables(functionRestriction) || Disables(builtinRestriction))
+			if (IsDisabled(attribute, builtinRestriction))
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.FunctionDisabled, contextDepth);
@@ -132,35 +105,21 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 			isolated |= visitor.BeginsRestrictedEvaluation(context);
 			AnySharpObject? executor = null;
-			string? permissionError;
-			if (isolated)
-			{
-				permissionError = FunctionDispatcher.CheckPermissionWithoutObjectData(attribute);
-			}
-			else
+			if (!isolated)
 			{
 				if (await currentState.ExecutorObject(services.Mediator) is not AnySharpObject knownExecutor)
 				{
 					success = false;
 					return CallState.Empty;
 				}
+
 				executor = knownExecutor;
-				permissionError = await FunctionDispatcher.CheckPermissionAsync(attribute, executor);
 			}
-			if (permissionError is not null)
+
+			if (await PermissionErrorAsync(attribute, executor, builtinRestriction) is { } permissionError)
 			{
 				success = false;
 				return new CallState(permissionError, contextDepth);
-			}
-
-			// Either restriction failing means the caller lacks permission and gets the standard error
-			// instead of the result. The function's own restriction (attribute.Restrict) was already
-			// answered by the permission check above — CheckPermissionAsync tests it, and the isolated
-			// check refuses any restricted function — so only the built-in overlay is left to ask.
-			if (builtinRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(builtinRestriction)))
-			{
-				success = false;
-				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			// PennMUSH compat: if minargs=0 and we got 1 empty arg from func(), treat as 0 args
@@ -181,11 +140,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			// in AttributeService.EvaluateAttributeFunctionAsync).
 			// The CallLimit below provides a safety net against infinite built-in nesting.
 			if (currentDepth > configuration.CurrentValue.Limit.CallLimit)
-			{
-				limitExceeded.IsExceeded = true;
-				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Call;
-				return new CallState(ErrorMessages.Returns.Call, contextDepth);
-			}
+				return LimitHit(limitExceeded, ErrorMessages.Returns.Call, contextDepth);
 
 			// Built-in functions do NOT check recursion limit
 			// Only user-defined attributes check recursion (see AttributeService.EvaluateAttributeFunctionAsync)
@@ -195,16 +150,16 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			// that serialize before the operation allowlist becomes ambient.
 			using var retainedArguments = RestrictedTextRetention.Enter(parser.CurrentState, isolated);
 
+			List<CallState> refinedArguments;
 			if (attribute.Flags.HasFlag(FunctionFlags.Literal))
 			{
-				// FunctionFlags.Literal: treat the entire content between parens as a single
-				// raw unevaluated string. Do NOT split on commas, do NOT evaluate substitutions.
-				// This is how PennMUSH's lit() works — lit(a,b,%q0) returns "a,b,%q0" verbatim.
-				// Slice it out of the source rather than rebuilding it from GetText(), which
-				// concatenates token text and so returns the content stripped of its markup.
-				refinedArguments = [new CallState(visitor.LiteralArgumentText(context), contextDepth)];
+				refinedArguments = LiteralArguments(visitor, context, contextDepth);
 			}
-			else if (!attribute.Flags.HasFlag(FunctionFlags.NoParse))
+			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse))
+			{
+				refinedArguments = DeferredArguments(visitor, context, args, clock, stripAnsi);
+			}
+			else
 			{
 				// Arguments evaluate left to right, one at a time. A plain loop rather than async LINQ:
 				// the enumerable adapters and a state machine per argument were a twelfth of the bytes
@@ -227,34 +182,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 					refinedArguments.Add(new CallState(msg, x.Depth()) { HadErrors = evaluated.HadErrors });
 				}
 
-				if (refinedArguments.Count == 0)
-				{
-					refinedArguments.Add(new CallState(MarkupText.Empty, context.Depth()));
-				}
-			}
-			else
-			{
-				// Store NoParse arguments as unevaluated text with deferred evaluation.
-				refinedArguments = new List<CallState>(Math.Max(args.Length, 1));
-				foreach (var x in args)
-				{
-					if (x is null)
-					{
-						refinedArguments.Add(CallState.Empty);
-						continue;
-					}
-
-					var text = visitor.GetContextText(x);
-					var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
-					var evaluate = Unclocked(clock, SharpMUSHParserVisitor.CreateDeferredEvaluation(x, visitor, stripAnsi));
-					refinedArguments.Add(new CallState(evalText, x.Depth(), null, async () => (await evaluate())?.Message)
-					{ ParsedResult = evaluate });
-				}
-
-				if (refinedArguments.Count == 0)
-				{
-					refinedArguments.Add(new CallState(MarkupText.Empty, context.Depth()));
-				}
+				AtLeastOneArgument(refinedArguments, context);
 			}
 
 			// If a limit was exceeded during argument evaluation, return immediately with the error
@@ -273,24 +201,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				configuration.CurrentValue.Function.FunctionSideEffects, services.NotifyService, visitor.Logger,
 				argumentCount: args.Length);
 
-			// Output ceiling: stop a single function that generates an enormous string from
-			// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
-			// at the return so it covers every function without each having to guard itself.
-			if (result.Message is not null && FunctionLimits.ExceedsOutput(currentState, result.Message.Length))
-			{
-				limitExceeded.IsExceeded = true;
-				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.OutputTooLarge;
-				return new CallState(ErrorMessages.Returns.OutputTooLarge, contextDepth);
-			}
-
-			// A function that evaluates its own arguments (cand, iter, ...) may have run into a limit
-			// and still returned a small value of its own; the limit halts the evaluation regardless.
-			if (limitExceeded.IsExceeded)
-			{
-				return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
-			}
-
-			return result with { Depth = contextDepth };
+			return Bounded(result, currentState, limitExceeded, contextDepth);
 		}
 		catch (RestrictedExpressionException) { success = false; throw; }
 		catch (OperationCanceledException)
@@ -298,7 +209,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			success = false;
 			throw;
 		}
-		catch (Exception) when (isolated || EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+		catch (Exception) when (isolated || IsRestricted(parser))
 		{
 			success = false;
 			throw new RestrictedExpressionException();
@@ -307,41 +218,189 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		{
 			visitor.Logger.LogError(ex, "CallFunction");
 			success = false;
-
-			// KnownExecutorObject throws when there is no executor — which is exactly the state at the
-			// connect screen. Using it here meant the error handler replaced the real exception with an
-			// ArgumentNullException of its own, hiding the actual failure. Resolve optionally instead.
-			if (await parser.CurrentState.ExecutorObject(services.Mediator) is AnySharpObject executor && executor.IsGod())
-			{
-				await services.NotifyService.Notify(executor,
-					string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
-			}
-
-			return CallState.Empty with { HadErrors = true };
+			return await ReportInternalErrorAsync(parser, ex);
 		}
 		finally
 		{
-			// Only decrement counters if we successfully executed the function
-			// If a limit was exceeded, we returned early and should NOT decrement
-			// (otherwise the counter resets and the limit never works)
-			if (didPushFunction && (limitExceeded == null || !limitExceeded.IsExceeded))
+			FinishInvocation(parser, clock, didPushFunction, limitExceeded, measuredName, success);
+		}
+	}
+
+	/// <summary>Whether this evaluation runs under an expression allowlist, ambient or on the parser state.</summary>
+	private static bool IsRestricted(IMUSHCodeParser parser)
+		=> EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
+
+	/// <summary>
+	/// The function <paramref name="name"/> calls. Built-ins take precedence; only on a built-in miss do
+	/// we consult the in-memory global user-defined-function registry (@function). Resolved
+	/// entries are evaluated ufun-style against &lt;object&gt;/&lt;attribute&gt; with the
+	/// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
+	/// (so /enable, /disable, /delete take effect immediately and never leak).
+	/// </summary>
+	private bool TryResolveFunction(IMUSHCodeParser parser, string name, out FunctionDefinition definition)
+	{
+		if (parser.FunctionLibrary.TryGetValue(name, out var libraryMatch))
+		{
+			definition = libraryMatch.LibraryInformation;
+			return true;
+		}
+
+		var userFunction = ResolveUserDefinedFunction(name);
+		definition = userFunction ?? default;
+		return userFunction is not null;
+	}
+
+	/// <summary>
+	/// Marks <paramref name="limitExceeded"/> — the first limit hit names the error — and answers
+	/// <paramref name="error"/>.
+	/// </summary>
+	private static CallState LimitHit(LimitExceededFlag limitExceeded, string error, int depth)
+	{
+		limitExceeded.IsExceeded = true;
+		limitExceeded.ErrorMessage ??= error;
+		return new CallState(error, depth);
+	}
+
+	/// <summary>Whether the function's own restriction or the built-in overlay disables it.</summary>
+	private static bool IsDisabled(SharpFunctionAttribute attribute, string? builtinRestriction)
+	{
+		var functionRestriction = attribute.Restrict is { Length: > 0 }
+			? string.Join(' ', attribute.Restrict)
+			: null;
+		return Disables(functionRestriction) || Disables(builtinRestriction);
+	}
+
+	/// <summary>
+	/// Why <paramref name="executor"/> may not call the function, or <see langword="null"/> when it may.
+	/// Without an executor the evaluation is isolated and only the checks that need no object data apply.
+	/// </summary>
+	private static async ValueTask<string?> PermissionErrorAsync(SharpFunctionAttribute attribute,
+		AnySharpObject? executor, string? builtinRestriction)
+	{
+		var permissionError = executor is null
+			? FunctionDispatcher.CheckPermissionWithoutObjectData(attribute)
+			: await FunctionDispatcher.CheckPermissionAsync(attribute, executor);
+		if (permissionError is not null)
+			return permissionError;
+
+		// Either restriction failing means the caller lacks permission and gets the standard error
+		// instead of the result. The function's own restriction (attribute.Restrict) was already
+		// answered by the permission check above — CheckPermissionAsync tests it, and the isolated
+		// check refuses any restricted function — so only the built-in overlay is left to ask.
+		return builtinRestriction is not null
+			&& (executor is null || !await executor.SatisfiesFunctionRestriction(builtinRestriction))
+				? ErrorMessages.Returns.PermissionDenied
+				: null;
+	}
+
+	/// <summary>
+	/// FunctionFlags.Literal: treat the entire content between parens as a single
+	/// raw unevaluated string. Do NOT split on commas, do NOT evaluate substitutions.
+	/// This is how PennMUSH's lit() works — lit(a,b,%q0) returns "a,b,%q0" verbatim.
+	/// Slice it out of the source rather than rebuilding it from GetText(), which
+	/// concatenates token text and so returns the content stripped of its markup.
+	/// </summary>
+	private static List<CallState> LiteralArguments(SharpMUSHParserVisitor visitor, IFunctionContext context,
+		int contextDepth)
+		=> [new CallState(visitor.LiteralArgumentText(context), contextDepth)];
+
+	/// <summary>Store NoParse arguments as unevaluated text with deferred evaluation.</summary>
+	private static List<CallState> DeferredArguments(SharpMUSHParserVisitor visitor, IFunctionContext context,
+		IEvaluationStringContext?[] args, InvocationClock clock, bool stripAnsi)
+	{
+		var refinedArguments = new List<CallState>(Math.Max(args.Length, 1));
+		foreach (var x in args)
+		{
+			if (x is null)
 			{
-				var currentCallDepth = parser.CurrentState.CallDepth;
-
-				currentCallDepth?.Decrement();
-
-				// NOTE: Built-in functions do NOT track recursion
-				// Only user-defined attributes track recursion (see AttributeService.EvaluateAttributeFunctionAsync)
+				refinedArguments.Add(CallState.Empty);
+				continue;
 			}
 
-			clock.Stop();
-			// A limit hit (invocation, recursion/call, or output size) aborts the invocation, so it is
-			// not a successful call even though it returned a value rather than throwing.
-			var limitHit = limitExceeded is { IsExceeded: true };
-			if (measuredName is not null)
-				services.Telemetry?.RecordFunctionInvocation(measuredName, clock.OwnMilliseconds,
-					clock.InclusiveMilliseconds, success && !limitHit);
+			var text = visitor.GetContextText(x);
+			var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
+			var evaluate = Unclocked(clock, SharpMUSHParserVisitor.CreateDeferredEvaluation(x, visitor, stripAnsi));
+			refinedArguments.Add(new CallState(evalText, x.Depth(), null, async () => (await evaluate())?.Message)
+			{ ParsedResult = evaluate });
 		}
+
+		AtLeastOneArgument(refinedArguments, context);
+		return refinedArguments;
+	}
+
+	/// <summary>A call with no arguments at all, <c>f()</c>, still passes the function one empty one.</summary>
+	private static void AtLeastOneArgument(List<CallState> refinedArguments, IFunctionContext context)
+	{
+		if (refinedArguments.Count == 0)
+		{
+			refinedArguments.Add(new CallState(MarkupText.Empty, context.Depth()));
+		}
+	}
+
+	/// <summary>
+	/// The function's result at the call's depth, unless a limit stops it.
+	/// </summary>
+	private static CallState Bounded(CallState result, ParserState currentState, LimitExceededFlag limitExceeded,
+		int contextDepth)
+	{
+		// Output ceiling: stop a single function that generates an enormous string from
+		// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
+		// at the return so it covers every function without each having to guard itself.
+		if (result.Message is not null && FunctionLimits.ExceedsOutput(currentState, result.Message.Length))
+			return LimitHit(limitExceeded, ErrorMessages.Returns.OutputTooLarge, contextDepth);
+
+		// A function that evaluates its own arguments (cand, iter, ...) may have run into a limit
+		// and still returned a small value of its own; the limit halts the evaluation regardless.
+		if (limitExceeded.IsExceeded)
+		{
+			return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
+		}
+
+		return result with { Depth = contextDepth };
+	}
+
+	/// <summary>
+	/// An exception no limit or restriction explains: God is told what it was, and the call answers an
+	/// empty, failed result.
+	/// </summary>
+	private async ValueTask<CallState> ReportInternalErrorAsync(IMUSHCodeParser parser, Exception ex)
+	{
+		// KnownExecutorObject throws when there is no executor — which is exactly the state at the
+		// connect screen. Using it here meant the error handler replaced the real exception with an
+		// ArgumentNullException of its own, hiding the actual failure. Resolve optionally instead.
+		if (await parser.CurrentState.ExecutorObject(services.Mediator) is AnySharpObject executor && executor.IsGod())
+		{
+			await services.NotifyService.Notify(executor,
+				string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
+		}
+
+		return CallState.Empty with { HadErrors = true };
+	}
+
+	/// <summary>Pops the call depth the invocation pushed, stops its clock and records its telemetry.</summary>
+	private void FinishInvocation(IMUSHCodeParser parser, InvocationClock clock, bool didPushFunction,
+		LimitExceededFlag? limitExceeded, string? measuredName, bool success)
+	{
+		// Only decrement counters if we successfully executed the function
+		// If a limit was exceeded, we returned early and should NOT decrement
+		// (otherwise the counter resets and the limit never works)
+		if (didPushFunction && (limitExceeded == null || !limitExceeded.IsExceeded))
+		{
+			var currentCallDepth = parser.CurrentState.CallDepth;
+
+			currentCallDepth?.Decrement();
+
+			// NOTE: Built-in functions do NOT track recursion
+			// Only user-defined attributes track recursion (see AttributeService.EvaluateAttributeFunctionAsync)
+		}
+
+		clock.Stop();
+		// A limit hit (invocation, recursion/call, or output size) aborts the invocation, so it is
+		// not a successful call even though it returned a value rather than throwing.
+		var limitHit = limitExceeded is { IsExceeded: true };
+		if (measuredName is not null)
+			services.Telemetry?.RecordFunctionInvocation(measuredName, clock.OwnMilliseconds,
+				clock.InclusiveMilliseconds, success && !limitHit);
 	}
 
 	/// <summary>
