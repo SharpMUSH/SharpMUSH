@@ -1197,6 +1197,15 @@ public partial class Functions
 			terminfo.Add("mxp");
 		}
 
+		// Not a PennMUSH token either: the client said a screen reader reads it (MTTS SCREEN_READER, or the
+		// portal's Screen reader mode), so softcode can leave out what only draws, such as a logo made of
+		// characters. Shown to anyone, as "pueblo" is: it is how the output should be written, and the message
+		// a connection is shown before it logs in is softcode that has no privilege over it.
+		if (TerminalCapabilityReader.Read(metadata).ScreenReader)
+		{
+			terminfo.Add("screenreader");
+		}
+
 		if (includeDetails)
 		{
 			// Set once the client genuinely answers a telnet option, not merely because it arrived on

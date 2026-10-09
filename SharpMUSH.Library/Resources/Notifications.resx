@@ -2791,6 +2791,9 @@
   <data name="SocksetCommandLinksSetFormat" xml:space="preserve">
     <value>Command links set to '{0}'</value>
   </data>
+  <data name="SocksetScreenReaderSetFormat" xml:space="preserve">
+    <value>Screen reader set to '{0}'</value>
+  </data>
   <data name="SocksetUnknownLinkSetting" xml:space="preserve">
     <value>Unknown setting. Valid settings: 'on', 'off', 'auto'.</value>
   </data>

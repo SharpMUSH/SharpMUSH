@@ -5,19 +5,19 @@
    colours, none, or a #rrggbb), bold, underline, inverse and blink, clear formatting, and, when the owner
    allows it, the switch to writing softcode. Every control keeps the focus (and so the selection) in the
    field: they act on mousedown's default being prevented, and the field puts the selection back after. The
-   panel is MudMenu's popover, drawn at the page's root, so a container the field sits in (the composer is a
-   query container) cannot clip it; Escape closes it, from the button or from inside, as MudMenu does not. *@
+   panel is a PopoverMenu, drawn at the page's root, so a container the field sits in (the composer is a
+   query container) cannot clip it; Escape closes it, from the button or from inside. *@
 <div class="fm @Class">
-    <MudMenu AnchorOrigin="@(Placement == "down" ? Origin.BottomRight : Origin.TopRight)"
-             TransformOrigin="@(Placement == "down" ? Origin.TopRight : Origin.BottomRight)"
-             Open="_open" OpenChanged="OnOpenChanged">
-        <ActivatorContent>
-            <button type="button" class="@ButtonClass fm-toggle" aria-haspopup="true" aria-expanded="@(_open ? "true" : "false")"
+    <PopoverMenu AnchorOrigin="@(Placement == "down" ? Origin.BottomRight : Origin.TopRight)"
+                 TransformOrigin="@(Placement == "down" ? Origin.TopRight : Origin.BottomRight)"
+                 Open="_open" OpenChanged="OnOpenChanged">
+        <Activator>
+            <button type="button" class="@ButtonClass fm-toggle" aria-expanded="@(_open ? "true" : "false")"
                     aria-label="@Loc["NavFormatMenu"]" title="@Loc["NavFormatMenu"]"
-                    @onmousedown:preventDefault @onclick="@context.ToggleAsync" @onkeydown="OnKeyDown">
+                    @onmousedown:preventDefault @onclick="() => OnOpenChanged(!_open)" @onkeydown="OnKeyDown">
                 <MudIcon Icon="@Icons.Material.Outlined.Palette" Size="Size.Small" />
             </button>
-        </ActivatorContent>
+        </Activator>
         <ChildContent>
             <div class="fm-panel" role="group" aria-label="@Loc["NavFormatMenu"]" @onclick:stopPropagation="true" @onkeydown="OnKeyDown">
                 <div class="fm-attrs">
@@ -51,7 +51,7 @@
                 }
             </div>
         </ChildContent>
-    </MudMenu>
+    </PopoverMenu>
 </div>
 
 @code {

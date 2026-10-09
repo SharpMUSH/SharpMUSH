@@ -57,6 +57,8 @@ public static partial class ErrorMessages
 		public const string SocksetHyperlinksSetFormat = "Hyperlinks set to '{0}'";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetCommandLinksSetFormat = "Command links set to '{0}'";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SocksetScreenReaderSetFormat = "Screen reader set to '{0}'";
 		public const string SocksetUnknownLinkSetting = "Unknown setting. Valid settings: 'on', 'off', 'auto'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetGraphicsSetFormat = "Graphics set to '{0}'";

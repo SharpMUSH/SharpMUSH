@@ -49,7 +49,10 @@ public static class OutputFormatNegotiation
 /// </param>
 /// <param name="MaxLineLength">Maximum line length supported by the client (-1 = unlimited)</param>
 /// <param name="Format">The output format negotiated for this connection</param>
-/// <param name="ScreenReader">Whether MTTS identified the client as a screen reader</param>
+/// <param name="ScreenReader">
+/// Whether MTTS identified the client as a screen reader. What output goes by is <see cref="ReadsAloud"/>,
+/// which a <c>SCREENREADER</c> pin overrides.
+/// </param>
 /// <param name="ColorStylePin">
 /// A colour style the player pinned with <c>SOCKSET colorstyle</c> — one of the
 /// <see cref="SharpMUSH.Library.Utilities.ColorStyles"/> values. Null means nothing is pinned and the
@@ -113,7 +116,15 @@ public record ProtocolCapabilities(
 			var terminal = Terminal;
 			return TerminalFeatureReader.Resolve(TerminalFeatureReader.Detect(terminal, TerminalTypes ?? [], Probe), terminal,
 				Pins ?? TerminalPins.None, Utf8,
-				ScreenReader);
+				ReadsAloud);
 		}
 	}
+
+	/// <summary>
+	/// Whether a screen reader reads this connection: the player's <c>SCREENREADER</c> pin, or else what MTTS
+	/// said, the way <see cref="TerminalCapabilityReader.Read(IReadOnlyDictionary{string, string})"/> reads it
+	/// for <c>terminfo()</c>.
+	/// </summary>
+	[JsonIgnore]
+	public bool ReadsAloud => Pins?.ScreenReader ?? ScreenReader;
 }

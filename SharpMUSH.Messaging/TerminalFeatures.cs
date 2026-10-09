@@ -22,6 +22,9 @@ public sealed record TerminalProbeResult(bool? KittyGraphics, bool Sixel, string
 /// <param name="Graphics">A <c>SOCKSET graphics</c> setting (<see cref="TerminalGraphics"/>), or null for off.</param>
 /// <param name="Animation">Whether <c>SOCKSET animation</c> is on.</param>
 /// <param name="Terminal">The terminal the player named with <c>SOCKSET terminal</c> (a <see cref="TerminalProfile.Id"/>), or null.</param>
+/// <param name="ScreenReader">
+/// A <c>SCREENREADER</c> (or <c>SOCKSET screenreader</c>) pin, or null for whatever the client said through MTTS.
+/// </param>
 /// <param name="Charset">The character set the player named with <c>SOCKSET charset</c> (one of <see cref="TerminalCharsets"/>), or null for auto.</param>
 /// <param name="StripAccents">Whether <c>SOCKSET stripaccents</c> is on, which sends ASCII whatever the client says.</param>
 public sealed record TerminalPins(
@@ -30,6 +33,7 @@ public sealed record TerminalPins(
 	string? Graphics = null,
 	bool Animation = false,
 	string? Terminal = null,
+	bool? ScreenReader = null,
 	string? Charset = null,
 	bool StripAccents = false)
 {
@@ -46,6 +50,7 @@ public sealed record TerminalPins(
 			metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey),
 			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.AnimationKey) == true,
 			metadata.GetValueOrDefault(TerminalFeatureReader.TerminalKey),
+			TerminalFeatureReader.PinOf(metadata, TerminalCapabilityReader.ScreenReaderKey),
 			TerminalCharsets.Parse(metadata.GetValueOrDefault(TerminalFeatureReader.CharsetKey)),
 			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.StripAccentsKey) == true);
 	}
@@ -258,7 +263,7 @@ public static class TerminalFeatureReader
 		var terminal = Identify(types, probe, pins.Terminal);
 
 		return Resolve(Detect(terminal, types, probe), terminal, pins, Utf8(metadata),
-			TerminalCapabilityReader.Read(types).ScreenReader);
+			TerminalCapabilityReader.ReadAsSent(metadata).ScreenReader);
 	}
 
 	/// <summary>The terminal's answers recorded in <paramref name="metadata"/>, or null when it was never asked.</summary>

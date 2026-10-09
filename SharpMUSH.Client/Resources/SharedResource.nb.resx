@@ -5940,4 +5940,40 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Sidetekst (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Spillutdata</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Spillkommando</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Meldinger i {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Medlemmer, {0} pålogget nå</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Skjermlesermodus</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>For å spille med skjermleser i denne nettleseren: bokstavtastene for utganger er slått av, dine egne kommandoer leses ikke opp igjen, Alt og et tall leser en av de siste linjene igjen (Alt+1 den nyeste), og spillet får beskjed så det kan utelate bilder tegnet med tegn.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Snarveier</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Navn på nytt attributt</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Søk etter objekter</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Siste spillutdata</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Ingen linje å lese ennå.</value>
+  </data>
 </root>

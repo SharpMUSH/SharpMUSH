@@ -5940,4 +5940,40 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Texto da página (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Saída do jogo</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Comando do jogo</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Mensagens em {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Membros, {0} conectados</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Modo leitor de tela</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Para jogar com um leitor de tela neste navegador: as teclas de letra das saídas ficam desligadas, seus próprios comandos não são lidos de volta, Alt e um número lê de novo uma linha recente (Alt+1 a mais nova), e o jogo é avisado para poder omitir desenhos feitos com caracteres.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Atalhos</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Nome do novo atributo</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Buscar objetos</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Saída mais recente do jogo</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Ainda não há linha para ler.</value>
+  </data>
 </root>

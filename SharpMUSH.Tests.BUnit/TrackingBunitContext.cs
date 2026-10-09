@@ -46,6 +46,7 @@ public abstract class TrackingBunitContext : BunitContext
 			sp.GetService<AccountAuthService>() ?? Substitute.For<IAccountAuthState>());
 		Services.TryAddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
 		Services.TryAddSingleton<CommandHistory>();
+		Services.TryAddSingleton<ScreenReaderMode>();
 		Services.TryAddSingleton<ICharacterPictures>(sp =>
 			sp.GetService<CharacterDirectoryService>() ?? (ICharacterPictures)new NoCharacterPictures());
 	}

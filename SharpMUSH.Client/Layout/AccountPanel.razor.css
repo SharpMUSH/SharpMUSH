@@ -142,6 +142,28 @@
     cursor: pointer;
 }
 
+/* The name button fills the row; the row's padding stays clickable for the mouse. */
+.account-panel-character-pick {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.account-panel-character-pick:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+}
+
 .account-panel-character:hover {
     background: var(--surface-3);
 }

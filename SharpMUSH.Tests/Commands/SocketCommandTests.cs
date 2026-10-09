@@ -1,9 +1,9 @@
-using SharpMUSH.Library.Utilities;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Text;
 
 namespace SharpMUSH.Tests.Commands;
@@ -99,6 +99,43 @@ public class SocketCommandTests
 		var handle = loggedIn ? await LoggedInHandleAsync("VerConn") : await AnonymousHandleAsync();
 
 		await Assert.That(await RunForLineAsync(handle, "VERSION", "You are connected to")).IsNotNull().And.Contains("You are connected to");
+	}
+
+	// --- SCREENREADER ------------------------------------------------------------------------
+
+	/// <summary>
+	/// For a client with no MTTS option: bare SCREENREADER pins the mode on, off pins it off even over
+	/// MTTS, and auto hands it back to what the client said. It answers at the connect screen too.
+	/// </summary>
+	[Test]
+	public async Task ScreenReaderPinsTheModeOnTheConnectionThatTypedIt()
+	{
+		var handle = await AnonymousHandleAsync();
+		var metadata = ConnectionService.Get(handle)!.Metadata;
+
+		await Assert.That(await RunAsync(handle, "SCREENREADER")).Contains("Screen reader set to 'on'");
+		await Assert.That(TerminalCapabilityReader.Read(metadata).ScreenReader).IsTrue();
+
+		metadata[TerminalCapabilityReader.TerminalTypesKey] = "MUDLET\tANSI\tSCREEN_READER";
+		await Assert.That(await RunAsync(handle, "SCREENREADER off")).Contains("Screen reader set to 'off'");
+		await Assert.That(TerminalCapabilityReader.Read(metadata).ScreenReader).IsFalse();
+
+		await RunAsync(handle, "SCREENREADER auto");
+		await Assert.That(metadata.ContainsKey(TerminalCapabilityReader.ScreenReaderKey)).IsFalse();
+		await Assert.That(TerminalCapabilityReader.Read(metadata).ScreenReader).IsTrue();
+
+		await Assert.That(await RunAsync(handle, "SCREENREADER maybe")).Contains("Unknown setting. Valid settings: 'on', 'off', 'auto'.");
+	}
+
+	/// <summary>SOCKSET reaches the same setting and reports it.</summary>
+	[Test]
+	public async Task SocksetScreenReaderIsTheSameSetting()
+	{
+		var handle = await LoggedInHandleAsync("SockReader");
+
+		await RunAsync(handle, "SOCKSET screenreader=on");
+		await Assert.That(ConnectionService.Get(handle)!.Metadata[TerminalCapabilityReader.ScreenReaderKey]).IsEqualTo("1");
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Screen Reader")).IsNotNull().And.Contains("Screen Reader  :  on");
 	}
 
 	// --- IDLE --------------------------------------------------------------------------------

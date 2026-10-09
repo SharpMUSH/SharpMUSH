@@ -44,7 +44,7 @@
     @* D1 §3 page-sidebar slot: a section's layout fills it through SectionShell. The column shows only
        while a sidebar is mounted (shell.css :has), 232px or the 62px strip; on touch chrome it is the
        off-canvas section panel. *@
-    <aside class="phosphor-pagebar">
+    <aside class="phosphor-pagebar" aria-label="@Loc["NavSectionMenu"]">
         <SectionOutlet SectionName="@PageSidebarSlot.Name" />
     </aside>
 
@@ -105,7 +105,7 @@
         }
 
         @* Always mounted so the command terminal auto-logs in on load; hidden until opened. *@
-        <div class="phosphor-terminal" style="@(_terminalOpen ? null : "display:none;")">
+        <div class="phosphor-terminal" role="region" aria-label="@Loc["NavCommandTerminal"]" style="@(_terminalOpen ? null : "display:none;")">
             <div class="phosphor-terminal-header">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
                 <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
@@ -113,7 +113,7 @@
                     · @(Terminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
                 </span>
                 <div style="flex:1;"></div>
-                <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="@Loc["NavCloseTerminal"]">
+                <button type="button" class="phosphor-icon-btn" @onclick="ToggleTerminal" title="@Loc["NavCloseTerminal"]" aria-label="@Loc["NavCloseTerminal"]">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
                 </button>
             </div>
@@ -128,7 +128,7 @@
            page's terminal input at the bottom of the screen. *@
         @if (!_isPlayRoute)
         {
-            <nav class="phosphor-bottomnav">
+            <nav class="phosphor-bottomnav" aria-label="@Loc["NavBottomNavLabel"]">
                 @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
                 @if (_showPlay)
                 {
@@ -138,7 +138,7 @@
                 @BottomTab("/characters", Icons.Material.Filled.Groups, Loc["NavCharsShort"])
                 <button type="button"
                         class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
-                        @onclick="ToggleMobileNav">
+                        aria-expanded="@(_mobileNavOpen ? "true" : "false")" @onclick="ToggleMobileNav">
                     <MudIcon Icon="@Icons.Material.Filled.Menu" Class="phosphor-bottomtab-icon" />
                     <span class="phosphor-bottomtab-label">@Loc["NavMenuLabel"]</span>
                 </button>
@@ -183,17 +183,60 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        _selfRef = DotNetObjectReference.Create(this);
+        if (firstRender)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("sharpmushLayout.registerPaletteHotkey", _selfRef);
+            }
+            catch (JSException)
+            {
+                // No layout.js (prerender, tests): the rail's search button still opens the palette.
+            }
+        }
+
+        await SyncMobilePanelAsync();
+    }
+
+    /// <summary>The touch-chrome panel layout.js was last told is open: none, the drawer, or the section panel.</summary>
+    private string? _panelShown;
+
+    /// <summary>
+    /// The panel closed for something that takes focus itself (a new page, for its heading; the palette, for its
+    /// field), so focus does not go back to the opener.
+    /// </summary>
+    private bool _panelFocusMovesOn;
+
+    /// <summary>
+    /// An open drawer or section panel takes focus and makes the rest of the shell inert, and Escape closes it
+    /// (layout.js <c>openPanel</c>); closing hands focus back to the button that opened it.
+    /// </summary>
+    private async Task SyncMobilePanelAsync()
+    {
+        var shown = _mobileNavOpen ? ".phosphor-sidebar" : _pagebarOpen ? ".phosphor-pagebar" : null;
+        if (shown == _panelShown) return;
+        _panelShown = shown;
+        var restore = !_panelFocusMovesOn;
+        _panelFocusMovesOn = false;
         try
         {
-            await JS.InvokeVoidAsync("sharpmushLayout.registerPaletteHotkey", _selfRef);
+            if (shown is null) await JS.InvokeVoidAsync("sharpmushLayout.closePanel", restore);
+            else await JS.InvokeVoidAsync("sharpmushLayout.openPanel", shown, _selfRef);
         }
         catch (JSException)
         {
-            // No layout.js (prerender, tests): the rail's search button still opens the palette.
+            // No layout.js: the backdrop and the menu button still close it.
         }
     }
+
+    /// <summary>Escape in an open drawer or section panel, from layout.js.</summary>
+    [JSInvokable]
+    public Task CloseMobilePanelsFromKey() => InvokeAsync(() =>
+    {
+        CloseMobilePanels();
+        StateHasChanged();
+    });
 
     /// <summary>⌘K / Ctrl+K from layout.js.</summary>
     [JSInvokable]
@@ -344,6 +387,7 @@
     {
         _ = InvokeAsync(async () =>
         {
+            _panelFocusMovesOn = _mobileNavOpen || _pagebarOpen;
             _mobileNavOpen = false;
             _pagebarOpen = false;
             UpdateConfigRouteState();
@@ -364,7 +408,8 @@
 
     // Bottom-nav tab: a link that highlights when its route is active.
     private RenderFragment BottomTab(string href, string icon, string label, bool exact = false) =>
-        @<a href="@href" class="phosphor-bottomtab @(IsNavActive(href, exact) ? "phosphor-bottomtab--on" : "")">
+        @<a href="@href" class="phosphor-bottomtab @(IsNavActive(href, exact) ? "phosphor-bottomtab--on" : "")"
+            aria-current="@(IsNavActive(href, exact) ? "page" : null)">
             <MudIcon Icon="@icon" Class="phosphor-bottomtab-icon" />
             <span class="phosphor-bottomtab-label">@label</span>
         </a>;
@@ -437,6 +482,7 @@
     /// <summary>The drawer's own copies of the header's buttons (Play, whose header is merged away) close it first.</summary>
     private void OpenPaletteFromDrawer()
     {
+        _panelFocusMovesOn = _mobileNavOpen;
         _mobileNavOpen = false;
         _paletteOpen = true;
     }
@@ -462,6 +508,8 @@
         try
         {
             await JS.InvokeVoidAsync("sharpmushLayout.unregisterPaletteHotkey");
+            // A page with a layout of its own (login, setup) replaces this one with a panel still open.
+            await JS.InvokeVoidAsync("sharpmushLayout.dropPanel");
         }
         catch (JSException) { }
         catch (JSDisconnectedException) { }

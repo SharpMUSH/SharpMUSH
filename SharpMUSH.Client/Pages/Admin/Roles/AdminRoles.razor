@@ -89,7 +89,7 @@
                     <div class="ra-fields">
                         <div class="ra-field">
                             <div class="ra-field-label">@Loc["RolNameLabel"]</div>
-                            <input class="ra-input" type="text" value="@_editName"
+                            <input class="ra-input" type="text" value="@_editName" aria-label="@Loc["RolNameLabel"]"
                                    @oninput="@(e => _editName = e.Value?.ToString() ?? string.Empty)" />
                         </div>
                         <div class="ra-field">
@@ -98,12 +98,12 @@
                         </div>
                         <div class="ra-field ra-field--narrow">
                             <div class="ra-field-label">@Loc["RolColorLabel"]</div>
-                            <input class="ra-input" type="text" value="@_editColor"
+                            <input class="ra-input" type="text" value="@_editColor" aria-label="@Loc["RolColorLabel"]"
                                    @oninput="@(e => _editColor = e.Value?.ToString() ?? string.Empty)" />
                         </div>
                         <div class="ra-field ra-field--narrow">
                             <div class="ra-field-label">@Loc["RolPriorityLabel"]</div>
-                            <input class="ra-input" type="number" inputmode="numeric" value="@_editPriority" disabled="@editing.IsSystem"
+                            <input class="ra-input" type="number" inputmode="numeric" value="@_editPriority" disabled="@editing.IsSystem" aria-label="@Loc["RolPriorityLabel"]"
                                    title="@Loc["RolPriorityHelper"]"
                                    @onchange="@(e => OnPriorityChange(e.Value?.ToString()))" />
                         </div>
@@ -216,7 +216,7 @@
         <KitCard Class="roleadmin-assign">
             <div class="ra-search">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Class="ra-ico ra-ico--faint" />
-                <input value="@_lookupName" placeholder="@Loc["RolSearchByUsername"]"
+                <input value="@_lookupName" placeholder="@Loc["RolSearchByUsername"]" aria-label="@Loc["RolSearchByUsername"]"
                        @oninput="@(e => _lookupName = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnLookupKeyDown" />
                 <button type="button" class="ra-btn ra-btn--primary" @onclick="Lookup" disabled="@_looking">

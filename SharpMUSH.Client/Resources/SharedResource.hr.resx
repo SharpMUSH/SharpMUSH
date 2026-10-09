@@ -5940,4 +5940,40 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Tekst stranice (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Izlaz igre</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Naredba igre</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Poruke u {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Članovi, {0} sada na mreži</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Način čitača zaslona</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Za igranje s čitačem zaslona u ovom pregledniku: tipke sa slovima za izlaze su isključene, vaše vlastite naredbe ne čitaju se ponovno, Alt i broj ponovno čita jedan od nedavnih redaka (Alt+1 najnoviji), a igra to zna pa može izostaviti slike nacrtane znakovima.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Brze poveznice</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Naziv novog atributa</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Pretraži objekte</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Najnoviji izlaz igre</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Još nema retka za čitanje.</value>
+  </data>
 </root>

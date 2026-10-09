@@ -273,3 +273,48 @@ test('the skip links focus the text box, or the page when it has none', () => {
     listeners.document['click:capture'](click(toMain, { detail: 0 }));
     assert.equal(document.activeElement, main);
 });
+
+test('a focused control taken off the page hands focus to the text box, or the page on a touch screen', () => {
+    for (const coarse of [false, true]) {
+        const { listeners, document, main, add, flush } = boot({ coarse });
+        const field = add(['textarea'], main, { 'data-primary-input': 'end' });
+        const close = add(['button'], main);
+        close.focus();
+        listeners.document.focusout({ target: close, relatedTarget: null });
+        close.isConnected = false;
+        document.activeElement = document.body;
+        flush();
+        assert.equal(document.activeElement, coarse ? main : field, coarse ? 'touch' : 'mouse');
+    }
+});
+
+test('focus that went somewhere, or left a control still on the page, is left alone', () => {
+    const { listeners, document, main, add, flush } = boot();
+    add(['textarea'], main, { 'data-primary-input': 'end' });
+    const button = add(['button'], main);
+    const heading = add(['h1'], main);
+
+    // Moved to another control: relatedTarget names it.
+    listeners.document.focusout({ target: button, relatedTarget: heading });
+    // Still on the page: the reader clicked the background.
+    listeners.document.focusout({ target: button, relatedTarget: null });
+    document.activeElement = document.body;
+    flush();
+    assert.equal(document.activeElement, document.body);
+
+    // Removed, but the router has already moved focus to the heading.
+    listeners.document.focusout({ target: button, relatedTarget: null });
+    button.isConnected = false;
+    heading.focus();
+    flush();
+    assert.equal(document.activeElement, heading);
+
+    // Removed while a dialog is open: the dialog hands focus back itself.
+    const other = add(['button'], main);
+    add(['[aria-modal="true"]'], main);
+    listeners.document.focusout({ target: other, relatedTarget: null });
+    other.isConnected = false;
+    document.activeElement = document.body;
+    flush();
+    assert.equal(document.activeElement, document.body);
+});

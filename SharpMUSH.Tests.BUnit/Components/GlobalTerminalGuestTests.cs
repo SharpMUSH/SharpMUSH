@@ -26,6 +26,7 @@ public class GlobalTerminalGuestTests : BunitContext
 	{
 		Services.AddMudServices();
 		Services.AddSingleton<CommandHistory>();
+		Services.AddSingleton<ScreenReaderMode>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
 		var hostEnv = Substitute.For<IWebAssemblyHostEnvironment>();

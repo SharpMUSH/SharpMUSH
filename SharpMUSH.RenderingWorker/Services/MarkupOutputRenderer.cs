@@ -136,7 +136,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 				: null;
 		}
 		var fold = FoldFor(connection.Capabilities, connection.AsciiTranslations);
-		var ms = Relayout(NoticeMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), connection.Capabilities.ScreenReader),
+		var ms = Relayout(NoticeMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), connection.Capabilities.ReadsAloud),
 			connection.Capabilities, connection.Preferences?.Theme, cells, fold);
 		// The blocks were folded as they were laid out; this is the text around them.
 		if (fold is not null) ms = fold.Fold(ms);
@@ -212,12 +212,12 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
 		var look = ReaderTheme(theme);
-		var context = fold is not null || capabilities.ScreenReader || look is not null || pictures is not null
+		var context = fold is not null || capabilities.ReadsAloud || look is not null || pictures is not null
 			? new LayoutContext
 			{
 				AsciiOnly = fold is not null,
 				Fold = fold,
-				Linear = capabilities.ScreenReader,
+				Linear = capabilities.ReadsAloud,
 				Theme = look ?? LayoutTheme.Default,
 				Pictures = pictures
 			}
@@ -319,7 +319,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 				Xterm256: capabilities.SupportsXterm256,
 				Truecolor: capabilities.SupportsTruecolor,
 				Utf8: capabilities.Utf8,
-				ScreenReader: capabilities.ScreenReader),
+				ScreenReader: capabilities.ReadsAloud),
 			preferences is null
 				? null
 				: new PlayerColorFlags(preferences.AnsiEnabled, preferences.ColorEnabled,

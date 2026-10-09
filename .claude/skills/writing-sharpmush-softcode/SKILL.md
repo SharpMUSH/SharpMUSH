@@ -164,6 +164,17 @@ The verb routers (`&GET`, `&POST`, …) are pre-installed on `#8`. URLs live und
 
 Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist/inline` for anything long — waiting yields to the scheduler and keeps the game responsive. `/inline` is fine for small fast loops; an `@break` inside stops it.
 
+## Free-text input: `@input`
+
+`@input/start <obj>/<attr>=<prompt>[,<seconds>]` captures every line the player sends and hands it to the callback as `%0` (`%1` is `input`, or `timeout` once at expiry). Nothing typed runs as a command, which is the point: plain text with no risk of setting off other commands. So the callback **must** recognise a finish line (`.done`) and end the session itself with `@input/cancel`; every other line is appended. Name that line in every prompt. **Never let the timeout be the way out**: it fires a fixed time after the start whether or not the player is still typing, and until then they are stuck. The player's own `@input/cancel` escape runs no callback, so it saves nothing either.
+
+```sharp
+&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start me/INPUT`NOTE=Type your note. Send .done on a line by itself to save it.,1800
+&INPUT`NOTE Notepad=@assert strmatch(%1,input)=@pemit %#=Time ran out before .done, so the note was not saved.; @break strmatch(trim(%0),.done)={&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=Note saved.; @input/cancel}; &DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, or .done to save:
+```
+
+`%0` is data: storing or substituting it never evaluates brackets or runs `;`. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
+
 ## Common mistakes (all observed in practice)
 
 | Mistake | Fix |
@@ -186,3 +197,4 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | `[ansi(h,rjust(%0:,14))] %1` label gutters | `fields(, <label>, <value>, …)` |
 | `width(%#)` passed to a layout function | Leave it empty; each reader gets their own width |
 | `{{"delim":"\n"}}` inline | `json(object,delim,json(string,%r))` |
+| `@input` session that only ends on its timeout | Callback ends it on a finish line (`.done`) with `@input/cancel`; the timeout is a safety net |

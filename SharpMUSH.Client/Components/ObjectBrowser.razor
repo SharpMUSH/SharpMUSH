@@ -28,7 +28,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@_searchExpr" @oninput="@(e => _searchExpr = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnSearchExprKeyDown"
-                       placeholder="lsearch(me, type, thing)" class="ob-search-input" />
+                       placeholder="lsearch(me, type, thing)" aria-label="@Loc["TermObjectSearch"]" class="ob-search-input" />
                 <button type="button" class="ob-go" @onclick="SearchAsync" disabled="@_loading">@Loc["TermBrowserGo"]</button>
             </div>
             <span class="ob-hint">@Loc["TermBrowserExampleLabel"] <code>lsearch(me)</code> · <code>lsearch(me, type, room)</code> · <code>lcon(loc(me))</code></span>

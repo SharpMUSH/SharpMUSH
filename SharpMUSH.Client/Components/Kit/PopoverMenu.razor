@@ -1,0 +1,67 @@
+@* A button that opens a panel of controls, drawn at the page's root so the container the button sits in cannot
+   clip it. Unlike MudMenu, it wraps the caller's button in nothing: MudMenu's activator is a div with
+   role="button" and a tab stop of its own around that button, two controls one inside the other (axe:
+   nested-interactive). Opened from the keyboard, focus moves to the panel's first control, since the panel is
+   not next in the tab order; closed, focus goes back to the button. Escape and a click outside close it. *@
+@inject IJSRuntime JS
+
+<div class="kit-popmenu @Class" @ref="_wrap">
+    @Activator
+    @if (Open)
+    {
+        <MudOverlay Visible="true" DarkBackground="false" LightBackground="false" OnClick="CloseAsync" />
+    }
+    <MudPopover Open="Open" AnchorOrigin="AnchorOrigin" TransformOrigin="TransformOrigin">
+        <div class="kit-popmenu-panel" @ref="_panel" @onkeydown="OnKeyDownAsync">
+            @ChildContent
+        </div>
+    </MudPopover>
+</div>
+
+@code {
+    /// <summary>The caller's own button, which toggles <see cref="Open"/> and says so with <c>aria-expanded</c>.</summary>
+    [Parameter, EditorRequired] public RenderFragment Activator { get; set; } = null!;
+
+    /// <summary>The panel.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public bool Open { get; set; }
+
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    [Parameter] public Origin AnchorOrigin { get; set; } = Origin.BottomRight;
+
+    [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopRight;
+
+    /// <summary>Up and Down move between the panel's buttons: for a list of choices, not for a panel of fields.</summary>
+    [Parameter] public bool ArrowKeys { get; set; }
+
+    /// <summary>Classes for the wrapper.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private ElementReference _wrap;
+    private ElementReference _panel;
+    private bool _wasOpen;
+
+    private async Task CloseAsync() => await OpenChanged.InvokeAsync(false);
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await CloseAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Open == _wasOpen) return;
+        _wasOpen = Open;
+        try
+        {
+            if (Open && ArrowKeys) await JS.InvokeVoidAsync("sharpmushLayout.arrowFocus", _panel);
+            await JS.InvokeVoidAsync(Open ? "sharpmushLayout.popoverOpened" : "sharpmushLayout.popoverClosed", _wrap, _panel);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // No layout script (a test): the panel still opens and closes.
+        }
+    }
+}

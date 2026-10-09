@@ -408,27 +408,47 @@ public class AccountPanelTests : TrackingBunitContext
 		CharacterSummary? chosen = null;
 		var cut = RenderPanel(
 			characters: [alpha, beta],
+			activeCharacter: alpha,
 			initialOpen: true,
 			onSwitchCharacter: EventCallback.Factory.Create<CharacterSummary>(this, c => chosen = c));
 
 		await cut.Find(".account-panel-switch-btn").ClickAsync();
 		var betaRow = cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Beta"));
+		var alphaRow = cut.FindAll(".account-panel-character").Single(r => r.TextContent.Contains("Alpha"));
 
-		// Reachable: a keyboard user tabbing through the popover must be able to land on the row.
-		await Assert.That(betaRow.GetAttribute("role")).IsEqualTo("menuitem");
-		await Assert.That(betaRow.GetAttribute("tabindex")).IsEqualTo("0");
+		// A real button beside the new-tab button, never around it: nesting controls is invalid, and a reader
+		// cannot reach the inner one.
+		var pick = betaRow.QuerySelector(".account-panel-character-pick")!;
+		await Assert.That(pick.TagName).IsEqualTo("BUTTON");
+		await Assert.That(pick.QuerySelector("button")).IsNull();
+		await Assert.That(betaRow.GetAttribute("role")).IsNull();
+		await Assert.That(alphaRow.QuerySelector(".account-panel-character-pick")!.GetAttribute("aria-current")).IsEqualTo("true");
+		await Assert.That(pick.GetAttribute("aria-current")).IsNull();
 
-		// Activatable: Enter (and Space) must do what a click does, since the row can't be a real
-		// <button> — it already hosts the sibling "open in a new tab" button, and nesting interactive
-		// controls is invalid HTML.
-		await betaRow.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+		await pick.ClickAsync();
 
 		await Assert.That(chosen).IsEqualTo(beta);
 		cut.WaitForAssertion(() =>
 		{
 			if (cut.FindAll(".account-panel").Count != 0)
-				throw new InvalidOperationException("panel still open after Enter-activating a row");
+				throw new InvalidOperationException("panel still open after choosing a character");
 		});
+	}
+
+	[Test]
+	public async Task The_hidden_level_is_inert()
+	{
+		var characters = new[] { new CharacterSummary(1, 1L, "Alpha", "") };
+		var cut = RenderPanel(characters: characters, initialOpen: true);
+
+		await Assert.That(cut.Find(".account-panel-level--submenu").HasAttribute("inert")).IsTrue();
+		await Assert.That(cut.Find(".account-panel-level--root").HasAttribute("inert")).IsFalse();
+
+		await cut.Find(".account-panel-switch-btn").ClickAsync();
+
+		await Assert.That(cut.Find(".account-panel-level--root").HasAttribute("inert")).IsTrue()
+			.Because("the slid-away level would otherwise still take Tab and be read");
+		await Assert.That(cut.Find(".account-panel-level--submenu").HasAttribute("inert")).IsFalse();
 	}
 
 	[Test]
