@@ -116,18 +116,15 @@ public class JsonFunctionUnitTests
 		await Assert.That(result).IsEqualTo("[1,2,3,4,5,6,7,8,9,10]");
 	}
 
-	// Regression: the seeded GET`PROFILE`SCHEMA softcode's json() payload must evaluate to valid
-	// JSON. (Field objects carry many args, exercising the ≥10-arg ordering path.) The seeded
-	// attribute is a command list — "@respond/type …; think json(…)" — so this evaluates the
-	// think payload as a function expression.
+	// The seeded GET`PROFILE`SCHEMA route answers with DATA`PROFILE`SCHEMA, the schema stored as JSON,
+	// so the stored value must be a valid Portal Schema Document.
 	[Test]
-	public async Task SeededProfileSchema_EvaluatesToValidJson()
+	public async Task SeededProfileSchema_IsValidJson()
 	{
-		var code = SharpMUSH.Server.Services.BundledHttpHooks.Attribute("GET`PROFILE`SCHEMA");
-		var jsonExpression = code[(code.IndexOf("think ", StringComparison.Ordinal) + "think ".Length)..];
-		var result = (await Parser.FunctionParse(MarkupText.Plain(jsonExpression)))?.Message?.ToString() ?? string.Empty;
+		await Assert.That(SharpMUSH.Server.Services.BundledHttpHooks.Attribute("GET`PROFILE`SCHEMA"))
+			.EndsWith("think v(DATA`PROFILE`SCHEMA)");
+		var result = SharpMUSH.Server.Services.BundledHttpHooks.Attribute("DATA`PROFILE`SCHEMA");
 
-		await Assert.That(result).DoesNotContain("#-1");
 		using var doc = System.Text.Json.JsonDocument.Parse(result);
 		// Area 21: the profile schema is a kind:"view" Portal Schema Document.
 		await Assert.That(doc.RootElement.GetProperty("kind").GetString()).IsEqualTo("view");
@@ -416,6 +413,49 @@ public class JsonFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain(
 			$@"json_map({objDbRef}/{attr3}, json(object,a,1,b,2,c,json(array,1,2,3)), #)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1#2#1@2@3");
+	}
+
+	[Test]
+	[Arguments("json_fill(json(object,title,json(string,)),/title,Zoë <3)", """{"title":"Zoë <3"}""")]
+	[Arguments("json_fill(json(object,pages,json(array,json(object,title,json(string,x)))),/pages/0/title,Hello)", """{"pages":[{"title":"Hello"}]}""")]
+	[Arguments("json_fill(json(object,a,json(string,),b,json(string,)),/a,one,/b,two)", """{"a":"one","b":"two"}""")]
+	[Arguments(@"json_fill(json(object,t,json(string,)),/t,Hello\, there)", """{"t":"Hello, there"}""")]
+	[Arguments("json_fill(json(object,t,json(string,)),/t,ansi(hr,red))", """{"t":"red"}""")]
+	[Arguments("json_fill(json(object,a/b,json(string,)),/a~1b,x)", """{"a/b":"x"}""")]
+	[Arguments("json_fill(json(object,n,json(number,0)),/n,42)", """{"n":42}""")]
+	[Arguments("json_fill(json(object,n,json(number,0)),/n,abc)", "#-1 VALUE FOR /n MUST BE A NUMBER")]
+	[Arguments("json_fill(json(object,b,json(boolean,false)),/b,1)", """{"b":true}""")]
+	[Arguments("json_fill(json(object,b,json(boolean,true)),/b,yes)", "#-1 VALUE FOR /b MUST BE A BOOLEAN")]
+	[Arguments("json_fill(json(object,o,json(null)),/o,json(array,1,2))", """{"o":[1,2]}""")]
+	[Arguments("json_fill(json(object,o,json_array()),/o,plain words)", "#-1 VALUE FOR /o MUST BE JSON")]
+	[Arguments("json_fill(json(object,a,1),/nope,x)", "#-1 PATH NOT FOUND: /nope")]
+	[Arguments("json_fill(json(object,a,1),a,x)", "#-1 PATH NOT FOUND: a")]
+	[Arguments("json_fill(json(array,1,2),/5,3)", "#-1 PATH NOT FOUND: /5")]
+	[Arguments("json_fill(not json,/a,x)", "#-1 BAD ARGUMENT FORMAT TO json_fill")]
+	[Arguments("""json_fill(lit({"a":"","b":[0]}),/a,x,/b/0,7)""", """{"a":"x","b":[7]}""")]
+	public async Task JsonFill(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task JsonFillFillsAStoredTemplate()
+	{
+		var attribute = TestIsolationHelpers.GenerateUniqueName("SCHEMA").ToUpperInvariant();
+		await WebAppFactoryArg.CommandParser.CommandParse(MarkupText.Plain(
+			$$"""&{{attribute}} me={"title":"","pages":[{"title":"","order":0}],"open":false}"""));
+
+		var result = (await Parser.FunctionParse(MarkupText.Plain(
+			$"json_fill(v({attribute}),/title,Hello %n,/pages/0/title,First,/pages/0/order,1,/open,1)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("""{"title":"Hello God","pages":[{"title":"First","order":1}],"open":true}""");
+	}
+
+	[Test]
+	public async Task JsonFillTakesPointerValuePairs()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("json_fill(json(object,a,1),/a,2,/a)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(string.Format(ErrorMessages.Returns.GotEvenArgs, "JSON_FILL"));
 	}
 
 	[Test]

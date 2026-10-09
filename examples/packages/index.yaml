@@ -25,7 +25,7 @@ packages:
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.0.2
+    version: 1.0.3
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
@@ -37,7 +37,7 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 1.0.0
+    version: 1.0.1
     description: Dynamic Application (Area 21) — a character-application form (requires http-handler)
   - path: chargen-app/
     package: chargen-app
@@ -65,7 +65,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.5.1
+    version: 1.5.2
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal

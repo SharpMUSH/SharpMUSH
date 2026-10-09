@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.5.1
+version: 1.5.2
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -902,7 +902,10 @@ objects:
         [t(words(squish(iter(lcon({{buckets}}),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))))]
       # A schema document: kind %0, title %1, sections %2 (%r-separated), actions object %3.
       WEB`DOC: |-
-        [json(object,kind,json(string,%0),schema_version,json(number,1),title,json(string,%1),pages,json(array,json(object,key,json(string,main),title,json(string,%1),order,json(number,1),sections,u({{jobs}}/WEB`ARR,%2))),actions,firstof(%3,u({{jobs}}/WEB`EMPTY)))]
+        [json_fill(get({{jobs}}/DATA`WEB`DOC),/kind,%0,/title,%1,/pages/0/title,%1,/pages/0/sections,u({{jobs}}/WEB`ARR,%2),/actions,firstof(%3,u({{jobs}}/WEB`EMPTY)))]
+      # WEB`DOC's template: json_fill() puts the kind, title, sections and actions into it.
+      DATA`WEB`DOC: |-
+        {"kind":"","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{}}
       # A section: name %0, order %1, elements %2 (%r-separated), %3 columns.
       WEB`SEC: |-
         [json(object,name,json(string,%0),order,json(number,%1),columns,json(number,firstof(%3,1)),elements,u({{jobs}}/WEB`ARR,%2))]
@@ -912,7 +915,10 @@ objects:
       WEB`BTN: |-
         [json(object,kind,json(string,button),label,json(string,%0),action,json(string,act),values,%1,color,json(string,firstof(%2,secondary)),variant,json(string,if(strmatch(%2,primary),filled,outlined)),confirm,json(string,%3))]
       WEB`ACTION: |-
-        [json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/jobs/act),payload,json(string,fields),on_success,json(object,reset_fields,json(boolean,true)),on_error,json(object,bind_field_errors,json(boolean,true)))]
+        [get({{jobs}}/DATA`WEB`ACTION)]
+      # The act action, as JSON.
+      DATA`WEB`ACTION: |-
+        {"transport":"http","method":"POST","route":"/http/jobs/act","payload":"fields","on_success":{"reset_fields":true},"on_error":{"bind_field_errors":true}}
       WEB`OPT: |-
         [json(object,value,json(string,%0),label,json(string,%1))]
       WEB`ERR: |-
@@ -939,7 +945,10 @@ objects:
       WEB`FPRED: |-
         [switch(%0,mine,MINE,new,NEW,overdue,OVERDUE,all,OPEN,old,OLD,DEFAULT)]
       WEB`COLS: |-
-        [json(array,json(object,key,json(string,num),label,json(string,#),link,json(string,/apps/jobs/\{number\})),json(object,key,json(string,title),label,json(string,Title),link,json(string,/apps/jobs/\{number\})),json(object,key,json(string,unread),label,json(string,),type,json(string,chip),color_key,json(string,unread_color)),json(object,key,json(string,bucket),label,json(string,Bucket)),json(object,key,json(string,status),label,json(string,Status),type,json(string,chip),color_key,json(string,color)),json(object,key,json(string,priority),label,json(string,Priority)),json(object,key,json(string,updated),label,json(string,Updated)))]
+        [get({{jobs}}/DATA`WEB`COLS)]
+      # The job table's columns, as JSON.
+      DATA`WEB`COLS: |-
+        [{"key":"num","label":"#","link":"/apps/jobs/{number}"},{"key":"title","label":"Title","link":"/apps/jobs/{number}"},{"key":"unread","label":"","type":"chip","color_key":"unread_color"},{"key":"bucket","label":"Bucket"},{"key":"status","label":"Status","type":"chip","color_key":"color"},{"key":"priority","label":"Priority"},{"key":"updated","label":"Updated"}]
       # The queue for viewer %0: filter %1, or the open jobs of the bucket whose slug is %2, titled with
       # what it shows. The sidebar (WEB`NAV) moves between them.
       WEB`SCHEMA`QUEUE: |-
@@ -1117,7 +1126,10 @@ objects:
         [json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,select),options,u({{jobs}}/WEB`ARR,iter(%2,u({{jobs}}/WEB`OPT,first(%i0),rest(%i0)),|,%r)))]
       # The act action without emptying the form, for a form that shows what it saved.
       WEB`ACTION`KEEP: |-
-        [json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/jobs/act),payload,json(string,fields),on_error,json(object,bind_field_errors,json(boolean,true)))]
+        [get({{jobs}}/DATA`WEB`ACTION`KEEP)]
+      # The act action that keeps the form, as JSON.
+      DATA`WEB`ACTION`KEEP: |-
+        {"transport":"http","method":"POST","route":"/http/jobs/act","payload":"fields","on_error":{"bind_field_errors":true}}
       WEB`DATA`BUCKET: |-
         [setq(_bk,u({{jobs}}/WEB`QBUCKET,%0,%1))][if(strlen(%q<_bk>),json(object,fields,json(object,Status,u({{jobs}}/WEB`V,json(string,if(u({{jobs}}/FUN`TAKES`JOBS,%q<_bk>),Taking new jobs,Disabled: no new jobs)),1),rename,u({{jobs}}/WEB`V,json(string,name(%q<_bk>)),1),Open jobs,u({{jobs}}/WEB`V,json(string,u({{jobs}}/WEB`COUNT,%0,BUCKET,%q<_bk>)),1),Permission,u({{jobs}}/WEB`V,json(string,softcode.jobs.[get(%q<_bk>/SLUG)]),1),Role,u({{jobs}}/WEB`V,json(string,job-admin-[get(%q<_bk>/SLUG)]),1),Hooks,u({{jobs}}/WEB`V,json(string,firstof(itemize(squish(iter(lattr(%q<_bk>/ON`*),if(strmatch(get(%q<_bk>/%i0),@@*),,lcstr(after(%i0,`)))))),None written)),1),description,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/DESCRIPTION)),1),turnaround,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/TURNAROUND),0)),1),reopen,u({{jobs}}/WEB`V,json(number,firstof(get(%q<_bk>/REOPEN),0)),1),anonymous,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/ANONYMOUS),none)),1),priority,u({{jobs}}/WEB`V,json(string,firstof(get(%q<_bk>/PRIORITY),normal)),1),keep,u({{jobs}}/WEB`V,json(string,get(%q<_bk>/KEEP)),1),hidden,u({{jobs}}/WEB`V,u({{jobs}}/WEB`B,get(%q<_bk>/HIDDEN)),1))),json(object,fields,u({{jobs}}/WEB`EMPTY)))]
 
