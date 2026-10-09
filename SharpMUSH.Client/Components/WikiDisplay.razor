@@ -37,9 +37,8 @@ else if (Article is null && IsCategoryPage)
        without one still lists its members, as MediaWiki's does. *@
     <div class="wiki-page">
         <div class="wiki-page-main">
-            <PlainPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@WikiHelpers.CategoryLabel(Slug, _categoryNames)">
+            <WikiPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@WikiHelpers.CategoryLabel(Slug, _categoryNames)">
                 <Actions>
-                    <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
                     @CategoryPinButton
                     <AuthorizeView Policy="wiki.create">
                         <Authorized>
@@ -47,7 +46,7 @@ else if (Article is null && IsCategoryPage)
                         </Authorized>
                     </AuthorizeView>
                 </Actions>
-            </PlainPageHeader>
+            </WikiPageHeader>
             <WikiCategoryMembers Category="@Slug" />
         </div>
         <aside class="wiki-page-aside">
@@ -101,28 +100,9 @@ else
         <div class="wiki-page-main">
             @if (!Embedded)
             {
-                @if (HasBanner)
-                {
-                    <GlassBanner Title="@Article.Title" Kicker="@Kicker" ImageUrl="@LeadImage?.Url" Alt="@(LeadImage?.Alt ?? Article.Title)"
-                                 Height="200" TitleSize="hero" HeadingLevel="1"
-                                 Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="@MinimisedFact">
-                        <Secondary>@MetaLine</Secondary>
-                        <Back>
-                            <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
-                        </Back>
-                        <Actions>@HeaderActions</Actions>
-                    </GlassBanner>
-                }
-                else
-                {
-                    <PlainPageHeader Kicker="@Kicker" Title="@Article.Title">
-                        <DescriptionContent>@MetaLine</DescriptionContent>
-                        <Actions>
-                            <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
-                            @HeaderActions
-                        </Actions>
-                    </PlainPageHeader>
-                }
+                <WikiPageHeader Title="@Article.Title" Kicker="@Kicker" Banner="@(HasBanner ? LeadImage : null)"
+                                Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="@MinimisedFact"
+                                Meta="@MetaLine" Actions="@HeaderActions" />
                 @FallbackNotice
                 @if (_hasBody)
                 {
@@ -168,61 +148,16 @@ else
                 }
                 @if (_toc.Count > 0 || OtherLocales.Any())
                 {
-                    <KitCard Aside="true" Title="@Loc["ResOnThisPage"]">
-                        @if (_toc.Count > 0)
-                        {
-                            <nav class="wiki-toc" aria-label="@Loc["ResOnThisPage"]">
-                                @foreach (var entry in _toc)
-                                {
-                                    var anchor = entry.Anchor;
-                                    <a href="@TocHref(anchor)" aria-current="@(anchor == _tocCurrent ? "location" : null)"
-                                       @onclick="@(() => _tocCurrent = anchor)">@entry.Text</a>
-                                }
-                            </nav>
-                        }
-                        @if (OtherLocales.Any())
-                        {
-                            <div class="wiki-locales">
-                                <SectionLabel>@Loc["NavWikiAlsoIn"]</SectionLabel>
-                                <div class="wiki-lang-chips" aria-label="@Loc["WikiAvailableTranslations"]">
-                                    @foreach (var locale in OtherLocales)
-                                    {
-                                        <a class="wiki-lang-chip" href="@LocaleHref(locale)" lang="@locale">@PortalLocales.DisplayName(locale)</a>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </KitCard>
+                    <WikiTocCard Entries="_toc" @bind-Current="_tocCurrent" Href="TocHref" Locales="OtherLocales" LocaleHref="LocaleHref" />
                 }
                 @if (_mentioned.Count > 0)
                 {
-                    <KitCard Aside="true" Class="wiki-mentioned" Title="@Loc.Plural("NavWikiMentioned", "count", _mentioned.Count)">
-                        <div class="wiki-mentioned-grid">
-                            @foreach (var person in _mentioned)
-                            {
-                                var m = person;
-                                <PortraitTile Name="@m.Name" ImageUrl="@MentionImage(m.Name)" Alt="@m.Name" Href="@m.Href" />
-                            }
-                        </div>
-                    </KitCard>
+                    <WikiMentionedCard Mentioned="_mentioned" ImageFor="MentionImage" />
                 }
                 @if (_more.Count > 0)
                 {
-                    <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], WikiHelpers.CategoryLabel(_moreLoadedFor!, _categoryNames))">
-                        <Controls>
-                            <a class="wiki-more-all" href="@WikiCategories.Route(_moreLoadedFor!)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
-                        </Controls>
-                        <ChildContent>
-                        <CardRows>
-                            @foreach (var sibling in _more)
-                            {
-                                var page2 = sibling;
-                                <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
-                                            Href="@WikiRoutes.PathFor(page2.Namespace, page2.Slug)" />
-                            }
-                        </CardRows>
-                        </ChildContent>
-                    </KitCard>
+                    <WikiMoreCard Category="@(_moreLoadedFor!)"CategoryLabel="@WikiHelpers.CategoryLabel(_moreLoadedFor!, _categoryNames)"
+                                  Pages="_more" Total="_moreTotal" />
                 }
             </aside>
         }
@@ -258,8 +193,6 @@ else
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
 
-    private sealed record TocEntry(string Text, string Anchor);
-
     private static readonly Regex DirectivePlaceholder = new(
         "<div class=\"wiki-directive\" data-directive=\"([a-z]+)\" data-arg=\"([^\"]*)\"></div>",
         RegexOptions.Compiled);
@@ -276,19 +209,16 @@ else
         RegexOptions.Compiled);
 
     private IReadOnlyList<WikiBodyNode> _segments = [];
-    private List<TocEntry> _toc = [];
+    private List<WikiTocEntry> _toc = [];
     private string _tocCurrent = TopAnchor;
     private bool _hasBody = true;
     private const string TopAnchor = "wiki-top";
-
-    /// <summary>A character the body links to: the link text and its /character/ href.</summary>
-    private sealed record Mentioned(string Name, string Href);
 
     private static readonly Regex CharacterLinkWithText = new(
         "<a href=\"(/character/[^\"#?/]+)\"[^>]*>(.*?)</a>",
         RegexOptions.Compiled | RegexOptions.Singleline);
 
-    private List<Mentioned> _mentioned = [];
+    private List<WikiMention> _mentioned = [];
 
     /// <summary>Directory rows for the Mentioned tiles' pictures (profile-handler 1.5's image column).</summary>
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _characters = [];
@@ -377,9 +307,9 @@ else
         </AuthorizeView>
     };
 
-    private static List<Mentioned> FindMentioned(string html) =>
+    private static List<WikiMention> FindMentioned(string html) =>
         CharacterLinkWithText.Matches(html)
-            .Select(m => new Mentioned(WebUtility.HtmlDecode(Regex.Replace(m.Groups[2].Value, "<[^>]+>", string.Empty)).Trim(), m.Groups[1].Value))
+            .Select(m => new WikiMention(WebUtility.HtmlDecode(Regex.Replace(m.Groups[2].Value, "<[^>]+>", string.Empty)).Trim(), m.Groups[1].Value))
             .Where(m => m.Name.Length > 0)
             .DistinctBy(m => m.Href, StringComparer.Ordinal)
             .ToList();
@@ -642,14 +572,14 @@ else
     /// <summary>The h2 headings as Markdig rendered them (their ids are the anchors the body
     /// carries), led by an "Overview" entry for the intro (board 23). Empty when the page has no
     /// headings: a one-section page needs no table of contents.</summary>
-    private List<TocEntry> BuildToc(string html)
+    private List<WikiTocEntry> BuildToc(string html)
     {
         if (string.IsNullOrEmpty(html)) return [];
         var headings = RenderedH2.Matches(html)
-            .Select(m => new TocEntry(WebUtility.HtmlDecode(AnyTag.Replace(m.Groups[2].Value, string.Empty)).Trim(), m.Groups[1].Value))
+            .Select(m => new WikiTocEntry(WebUtility.HtmlDecode(AnyTag.Replace(m.Groups[2].Value, string.Empty)).Trim(), m.Groups[1].Value))
             .Where(e => e.Text.Length > 0 && e.Anchor.Length > 0)
             .ToList();
-        return headings.Count == 0 ? [] : [new TocEntry(Loc["NavWikiOverview"], TopAnchor), .. headings];
+        return headings.Count == 0 ? [] : [new WikiTocEntry(Loc["NavWikiOverview"], TopAnchor), .. headings];
     }
 
     /// <summary>The link for a TOC entry: the page path with the query as addressed now (so a

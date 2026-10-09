@@ -75,81 +75,12 @@
 	color: var(--text);
 }
 
-/* ── Aside: table of contents, locales, mentioned, more ── */
-.wiki-toc {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-}
-
-.wiki-toc a {
-	display: block;
-	padding: 5px 10px;
-	border-left: 2px solid transparent;
-	border-radius: 0 6px 6px 0;
-	color: var(--text-dim);
-	font-size: 13px;
-	text-decoration: none;
-}
-
-.wiki-toc a:hover,
-.wiki-toc a:focus-visible {
-	color: var(--text);
-	background: var(--surface-2);
-	outline: none;
-}
-
-.wiki-toc a[aria-current] {
-	color: var(--accent);
-	border-left-color: var(--accent);
-}
-
-.wiki-locales {
-	margin-top: 10px;
-}
-
+/* ── The fallback notice's language chips (the aside's cards style their own) ── */
 .wiki-lang-chips {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
 	padding: 0 4px;
-}
-
-.wiki-lang-chip {
-	height: 26px;
-	padding: 0 10px;
-	border-radius: 13px;
-	background: var(--surface-2);
-	color: var(--text);
-	font-size: 12px;
-	display: inline-flex;
-	align-items: center;
-	text-decoration: none;
-}
-
-.wiki-lang-chip:hover,
-.wiki-lang-chip:focus-visible {
-	background: var(--border);
-	outline: none;
-}
-
-.wiki-mentioned-grid {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 10px;
-}
-
-.wiki-more-all {
-	display: inline-block;
-	font-size: 12px;
-	font-weight: 600;
-	color: var(--accent);
-	text-decoration: none;
-}
-
-.wiki-more-all:hover,
-.wiki-more-all:focus-visible {
-	text-decoration: underline;
 }
 
 /* mermaid diagrams inside the body */

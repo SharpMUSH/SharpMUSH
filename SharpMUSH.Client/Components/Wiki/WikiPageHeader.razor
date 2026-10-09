@@ -1,0 +1,42 @@
+@using SharpMUSH.Library.Services
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A wiki page's header: a glass banner when the page opens with an image, else the plain header. Both lead
+   with the way back to the wiki, then the page's actions. *@
+@if (Banner is { } banner)
+{
+    <GlassBanner Title="@Title" Kicker="@Kicker" ImageUrl="@banner.Url" Alt="@(banner.Alt ?? Title)"
+                 Height="200" TitleSize="hero" HeadingLevel="1"
+                 Minimised="@Minimised" MinimisedChanged="@MinimisedChanged" Fact="@Fact"
+                 Secondary="@Meta" Back="@BackToWiki" Actions="@Actions" />
+}
+else
+{
+    <PlainPageHeader Kicker="@Kicker" Title="@Title" DescriptionContent="@Meta">
+        <Actions>
+            @BackToWiki
+            @Actions
+        </Actions>
+    </PlainPageHeader>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Kicker { get; set; }
+
+    /// <summary>The image the page opens with, shown as the banner; null for the plain header.</summary>
+    [Parameter] public WikiImages.ImageReference? Banner { get; set; }
+
+    [Parameter] public bool Minimised { get; set; }
+    [Parameter] public EventCallback<bool> MinimisedChanged { get; set; }
+
+    /// <summary>The minimised banner's one line.</summary>
+    [Parameter] public string? Fact { get; set; }
+
+    /// <summary>The line under the title.</summary>
+    [Parameter] public RenderFragment? Meta { get; set; }
+
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    private RenderFragment BackToWiki => @<CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>;
+}
