@@ -67,6 +67,18 @@ public partial class BBoardsIntegrationTests
 		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 	}
 
+	/// <summary>
+	/// Types <paramref name="line"/> as <see cref="Typed"/> does, then waits until the player is told
+	/// <paramref name="expect"/>: an @input line reaches the session through the queue more than once.
+	/// </summary>
+	private async Task<string> TypedUntil(TestIsolationHelpers.TestPlayer player, string line, string expect)
+	{
+		var before = Notifications.CountFor(player.DbRef);
+		await Typed(player, line);
+		await Notifications.WaitForAsync(player.DbRef, expect, startIndex: before);
+		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
+	}
+
 	/// <summary>A connected player in a room of its own, holding <paramref name="role"/> when one is named.</summary>
 	private async Task<TestIsolationHelpers.TestPlayer> Player(string prefix, string? role = null)
 	{
@@ -359,10 +371,10 @@ public partial class BBoardsIntegrationTests
 			var board = await Board(admin, "BbKeys");
 			var post = await Post(admin, board, "Keyed", "Read me with keys.");
 
-			await Typed(mira, $"+bbreader {post}");
-			await Typed(mira, "c From the reader.");
-			await Assert.That(await Typed(mira, "?")).Contains("q");
-			await Typed(mira, "q");
+			await TypedUntil(mira, $"+bbreader {post}", "Read me with keys.");
+			await TypedUntil(mira, "c From the reader.", "Comment [1]");
+			await TypedUntil(mira, "?", "Reader keys");
+			await TypedUntil(mira, "q", "Left the reader.");
 
 			await Assert.That(await As(mira, $"+bbread {post}")).Contains("From the reader.");
 			await Assert.That(await Typed(mira, "think out")).Contains("out").Because("q leaves the reader");
