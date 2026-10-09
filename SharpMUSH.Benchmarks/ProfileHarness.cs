@@ -42,6 +42,22 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("loc", "[loc(me)]", false),
 		new("lcon", "[lcon(me)]", false),
 		new("lcon-names", "[iter(lcon(me),name(##))]", false),
+		new("hastype", "[hastype(me,player)]", false),
+		new("hasflag", "[hasflag(me,CONNECTED)]", false),
+		new("orflags", "[orflags(me,Wr)]", false),
+		new("num", "[num(me)]", false),
+		new("objid", "[objid(me)]", false),
+		new("name", "[name(me)]", false),
+		new("type", "[type(me)]", false),
+		new("idle", "[idle(me)]", false),
+		new("not", "[not(0)]", false),
+		new("strmatch", "[strmatch(#1,#1)]", false),
+		new("json", "[json(string,Hello)]", false),
+		new("json-obj", "[json(object,a,json(string,x),b,json(number,1))]", false),
+		new("json-mod", "[json_mod(json(object,a,json(number,1)),patch,json(object,b,json(number,2)))]", false),
+		new("setq", "[setq(w1,x)]", false),
+		new("rc-whovis", "[filter(me/PROFILE_WHOVIS,lcon(me),,,me)]", false),
+		new("rc-whobase", "[iter(lcon(me),u(me/PROFILE_WHOBASE,##))]", false),
 		new("set", "&PROFILE_X me=x", true),
 		new("set+lattr", "&PROFILE_X me=x;think [lattr(me)]", true, IsCommandList: true),
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
@@ -120,6 +136,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			await ParenGroupBenchmarks.VerifyWorkloadsAsync(baseParser, one);
 		if (parenGroups is { } on) baseParser = ParenGroupBenchmarks.WithParenGroups(baseParser, on);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOVIS"], MarkupText.Plain("cand(not(hastype(%0,exit)),cor(not(hastype(%0,player)),hasflag(%0,CONNECTED)),cor(not(hasflag(%0,DARK)),strmatch(num(%0),num(%1)),orflags(%1,Wr),haspower(%1,See_All)))"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOBASE"], MarkupText.Plain("json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,status,if(hastype(%0,player),json(string,idle(%0)),null),profile,if(hastype(%0,player),true,null)))"), god);
 		for (var i = 0; i < 50; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
 

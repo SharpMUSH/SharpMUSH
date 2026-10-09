@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Commands;
+using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
@@ -29,6 +30,7 @@ internal sealed class EvaluationServices
 	private IRealityPolicy? _reality;
 	private IPipeOutputCapture? _pipeCapture;
 	private ExecutorDebugFlags? _debugFlags;
+	private SoftcodeParseCache? _parseCache;
 
 	/// <param name="provider">Where the optional services are located.</param>
 	/// <param name="locateOptional">
@@ -122,6 +124,13 @@ internal sealed class EvaluationServices
 	/// </summary>
 	public ExecutorDebugFlags? DebugFlags
 		=> _debugFlags ??= LocatesOptional ? Provider.GetService<ExecutorDebugFlags>() : null;
+
+	/// <summary>
+	/// Parse trees of code already parsed; absent in hosts that do not register it, where code is parsed
+	/// on each evaluation.
+	/// </summary>
+	public SoftcodeParseCache? ParseCache
+		=> _parseCache ??= LocatesOptional ? Provider.GetService<SoftcodeParseCache>() : null;
 
 	/// <summary>Takes a piped command's output for the next command's <c>%|</c>; absent in hosts that do not register it.</summary>
 	public IPipeOutputCapture? PipeCapture

@@ -269,31 +269,51 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
 		var plainText = text.ToPlainText();
-		var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plainText, methodName);
 
-		// Refuse pathologically nested input before the recursive-descent parser overflows the
-		// stack (see SoftcodeParsePipeline.MaxParseNestingDepth). Reported as the call-limit error,
-		// matching PennMUSH's call_limit, which is the same guard against the same crash.
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
-			Configuration.CurrentValue.Compatibility.ParenGroups, out _))
-		{
-			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, true);
-		}
+		// The same text under the same settings parses to the same tree, and code run once per item
+		// (u(), filter(), iter()) is the same text every time. A tracing parse is never shared.
+		var options = Configuration.CurrentValue;
+		var cache = options.Debug.DebugSharpParser || plainText.Length > SoftcodeParseCache.MaxTextLength
+			? null
+			: Services.ParseCache;
+		var key = new SoftcodeParseCache.Key(plainText, methodName, lenient,
+			options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode);
 
-		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
-		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
-		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
 		TContext context;
 		ParserErrorListener errorListener;
-		try
+		if (cache is not null && cache.TryGet(key, out var parsed))
 		{
-			(context, errorListener) = ParseTwoStage(
-				bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
+			context = (TContext)parsed.Context;
+			errorListener = parsed.Errors;
 		}
-		catch (OperationCanceledException) when (budget.IsExpired)
+		else
 		{
-			// Parsing and diagnostic classification share the visitor's deadline contract.
-			return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
+			var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plainText, methodName);
+
+			// Refuse pathologically nested input before the recursive-descent parser overflows the
+			// stack (see SoftcodeParsePipeline.MaxParseNestingDepth). Reported as the call-limit error,
+			// matching PennMUSH's call_limit, which is the same guard against the same crash.
+			if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
+				options.Compatibility.ParenGroups, out _))
+			{
+				return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, true);
+			}
+
+			// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
+			// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
+			// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
+			try
+			{
+				(context, errorListener) = ParseTwoStage(
+					bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
+			}
+			catch (OperationCanceledException) when (budget.IsExpired)
+			{
+				// Parsing and diagnostic classification share the visitor's deadline contract.
+				return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
+			}
+
+			cache?.Add(key, new SoftcodeParseCache.Entry(context, errorListener));
 		}
 
 		// In strict mode (default for function evaluation), surface any syntax error
