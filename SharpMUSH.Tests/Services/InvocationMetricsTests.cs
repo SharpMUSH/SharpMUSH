@@ -74,7 +74,19 @@ public class InvocationMetricsTests
 
 	// The own-time tests below compare wall times, and a continuation waiting for a busy thread pool is
 	// charged to whichever clock is running, so they are unkeyed NotInParallel: a keyed one would still
-	// run alongside the rest of the suite.
+	// run alongside the rest of the suite. A GC pause lands the same way, so each takes the best of a few
+	// runs: that noise only adds time, and charging a call with work that is not its own fails every run.
+
+	private const int Runs = 3;
+
+	/// <summary>The smallest of up to <see cref="Runs"/> ratios, stopping at the first under 1.</summary>
+	private static async Task<double> BestRatio(Func<Task<double>> ratio)
+	{
+		var best = double.MaxValue;
+		for (var run = 0; run < Runs && best >= 1; run++)
+			best = Math.Min(best, await ratio());
+		return best;
+	}
 
 	/// <summary>Measurements taken in this test's own flow, so parallel tests' calls stay out.</summary>
 	private static MeterListener ListenHere(AsyncLocal<bool> here, ConcurrentQueue<(string Name, double Ms)> measured)
@@ -100,49 +112,8 @@ public class InvocationMetricsTests
 		return listener;
 	}
 
-	[Test, NotInParallel]
-	public async Task AFunctionsTimeLeavesOutItsArguments()
-	{
-		var here = new AsyncLocal<bool>();
-		var measured = new ConcurrentQueue<(string Name, double Ms)>();
-		using var listener = ListenHere(here, measured);
-
-		here.Value = true;
-		await WebAppFactoryArg.CommandParser.FunctionParse(MarkupText.Plain("[null(iter(lnum(3000),add(##,1)))]"));
-		here.Value = false;
-
-		var nullMs = measured.Single(m => m.Name == "NULL").Ms;
-		var nestedMs = measured.Where(m => m.Name != "NULL").Sum(m => m.Ms);
-		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(3000);
-		await Assert.That(nullMs).IsLessThan(nestedMs / 4);
-	}
-
-	[Test, NotInParallel]
-	public async Task ACommandsTimeLeavesOutWhatItRuns()
-	{
-		var here = new AsyncLocal<bool>();
-		var measured = new ConcurrentQueue<(string Name, double Ms)>();
-		using var listener = ListenHere(here, measured);
-
-		here.Value = true;
-		await WebAppFactoryArg.CommandParser.CommandParse(1,
-			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(),
-			MarkupText.Plain($"@ifelse 1={{think {TestIsolationHelpers.GenerateUniqueName("metrics")}[null(iter(lnum(10000),add(##,1)))]}}"));
-		here.Value = false;
-
-		// @IFELSE runs THINK in place, and THINK evaluates the functions.
-		var ifElseMs = measured.Single(m => m.Name == "@IFELSE").Ms;
-		var nestedMs = measured.Where(m => m.Name != "@IFELSE").Sum(m => m.Ms);
-		await Assert.That(measured.Count(m => m.Name == "THINK")).IsEqualTo(1);
-		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(10000);
-		await Assert.That(ifElseMs).IsLessThan(nestedMs / 4);
-	}
-
-	/// <summary>Substitution work with no call in it: an empty register, many times over.</summary>
-	private static readonly string Substitutions = string.Concat(Enumerable.Repeat("%qz", 20000));
-
-	/// <summary>Runs <paramref name="command"/> and returns each measured call's own time, and the wall time.</summary>
-	private async Task<(List<(string Name, double Ms)> Measured, double WallMs)> MeasureCommand(string command)
+	/// <summary>Runs <paramref name="run"/> and returns each measured call's own time, and the wall time.</summary>
+	private static async Task<(List<(string Name, double Ms)> Measured, double WallMs)> Measure(Func<Task> run)
 	{
 		var here = new AsyncLocal<bool>();
 		var measured = new ConcurrentQueue<(string Name, double Ms)>();
@@ -150,21 +121,67 @@ public class InvocationMetricsTests
 
 		here.Value = true;
 		var started = System.Diagnostics.Stopwatch.GetTimestamp();
-		await WebAppFactoryArg.CommandParser.CommandParse(1,
-			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command));
+		await run();
 		var wallMs = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
 		here.Value = false;
 		return (measured.ToList(), wallMs);
 	}
+
+	private Task<(List<(string Name, double Ms)> Measured, double WallMs)> MeasureCommand(string command) =>
+		Measure(() => WebAppFactoryArg.CommandParser.CommandParse(1,
+			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask());
+
+	[Test, NotInParallel]
+	public async Task AFunctionsTimeLeavesOutItsArguments()
+	{
+		var ratio = await BestRatio(async () =>
+		{
+			var (measured, _) = await Measure(async () =>
+				await WebAppFactoryArg.CommandParser.FunctionParse(MarkupText.Plain("[null(iter(lnum(3000),add(##,1)))]")));
+
+			await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(3000);
+			var nullMs = measured.Single(m => m.Name == "NULL").Ms;
+			var nestedMs = measured.Where(m => m.Name != "NULL").Sum(m => m.Ms);
+			return nullMs / (nestedMs / 4);
+		});
+
+		await Assert.That(ratio).IsLessThan(1);
+	}
+
+	[Test, NotInParallel]
+	public async Task ACommandsTimeLeavesOutWhatItRuns()
+	{
+		var ratio = await BestRatio(async () =>
+		{
+			var (measured, _) = await MeasureCommand(
+				$"@ifelse 1={{think {TestIsolationHelpers.GenerateUniqueName("metrics")}[null(iter(lnum(10000),add(##,1)))]}}");
+
+			// @IFELSE runs THINK in place, and THINK evaluates the functions.
+			await Assert.That(measured.Count(m => m.Name == "THINK")).IsEqualTo(1);
+			await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(10000);
+			var ifElseMs = measured.Single(m => m.Name == "@IFELSE").Ms;
+			var nestedMs = measured.Where(m => m.Name != "@IFELSE").Sum(m => m.Ms);
+			return ifElseMs / (nestedMs / 4);
+		});
+
+		await Assert.That(ratio).IsLessThan(1);
+	}
+
+	/// <summary>Substitution work with no call in it: an empty register, many times over.</summary>
+	private static readonly string Substitutions = string.Concat(Enumerable.Repeat("%qz", 20000));
 
 	[Test, NotInParallel]
 	public async Task ACommandsTimeLeavesOutTheArgumentsItEvaluatesItself()
 	{
 		// @SWITCH's patterns are no-parse: the command evaluates each one as it compares it, and that
 		// work is the pattern's.
-		var (measured, wallMs) = await MeasureCommand($"@switch 1={Substitutions}1,think");
+		var ratio = await BestRatio(async () =>
+		{
+			var (measured, wallMs) = await MeasureCommand($"@switch 1={Substitutions}1,think");
+			return measured.Single(m => m.Name == "@SWITCH").Ms / (wallMs / 10);
+		});
 
-		await Assert.That(measured.Single(m => m.Name == "@SWITCH").Ms).IsLessThan(wallMs / 10);
+		await Assert.That(ratio).IsLessThan(1);
 	}
 
 	[Test, NotInParallel]
@@ -173,9 +190,13 @@ public class InvocationMetricsTests
 		// THINK's argument is evaluated before THINK's clock starts, while @IFELSE's is running. Parsing
 		// the action is @IFELSE's own work, and each substitution is a token of it: about a sixth of the
 		// wall time here, against about two thirds when the argument was charged to @IFELSE as well.
-		var (measured, wallMs) = await MeasureCommand($"@ifelse 1={{think {Substitutions}}}");
+		var ratio = await BestRatio(async () =>
+		{
+			var (measured, wallMs) = await MeasureCommand($"@ifelse 1={{think {Substitutions}}}");
+			return measured.Single(m => m.Name == "@IFELSE").Ms / (wallMs / 3);
+		});
 
-		await Assert.That(measured.Single(m => m.Name == "@IFELSE").Ms).IsLessThan(wallMs / 3);
+		await Assert.That(ratio).IsLessThan(1);
 	}
 
 	[Test]
