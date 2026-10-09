@@ -54,6 +54,8 @@ builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 builder.Services.AddSingleton<SceneService>();
 // Commands the portal issues itself, run as the acting character (POST api/commands).
 builder.Services.AddSingleton<GameCommandService>();
+// The pose types (api/scenes/types), read once per acting character; hiding one runs +scene/hide.
+builder.Services.AddSingleton<PoseTypeService>();
 builder.Services.AddSingleton<ChannelBrowserService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();

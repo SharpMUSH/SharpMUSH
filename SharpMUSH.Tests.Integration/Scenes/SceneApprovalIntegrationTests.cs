@@ -105,9 +105,19 @@ public class SceneApprovalIntegrationTests
 	private async Task<string> EvalAs(long handle, string expression) =>
 		(await RunAs(handle, $"think {expression}")).Trim();
 
+	/// <summary>
+	/// The room this test's players stand in. DefaultHome holds every player the session made, and each scene
+	/// change in a room refreshes it for everyone connected there, on the queue every test waits behind.
+	/// </summary>
+	private DBRef? _room;
+
+	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
-		await God1($"@pcreate {name}=pw_{Tag}_123");
+		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		if (string.IsNullOrEmpty(dbref) || dbref.StartsWith("#-") || !DBRef.TryParse(dbref, out var parsed))
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
@@ -318,7 +328,7 @@ public class SceneApprovalIntegrationTests
 			$"sceneunmember({sceneId},{mortal})",
 			$"scenesetfocus({mortal},{sceneId})",
 			$"sceneshowas({sceneId},{mortal},Sneaky)",
-			$"sceneaddpose({sceneId},{mortal},,{mortal},pose,,intruding)",
+			$"sceneaddpose({sceneId},{mortal},,{mortal},ic,pose,,intruding)",
 			$"sceneplot(create,Mortal Plot {Tag}|desc|{mortal})"
 		};
 

@@ -1,0 +1,16 @@
+@using SharpMUSH.Client.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A run of poses of a type the reader hides, as one line: "3 OOC lines hidden". Choosing it shows them in this
+   view only; the type stays hidden everywhere else until the Show menu shows it. *@
+<button type="button" class="story-fold" data-pose-type="@Fold.Type.Key" @onclick="() => OnReveal.InvokeAsync(Fold)">
+    <MudIcon Icon="@Icons.Material.Outlined.UnfoldMore" Style="font-size:16px;" aria-hidden="true" />
+    <span>@Loc.Plural("RolPoseTypeLinesHidden", new Dictionary<string, object?> { ["count"] = Fold.Poses.Count, ["label"] = Fold.Type.Label })</span>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public StoryFold Fold { get; set; } = null!;
+
+    /// <summary>The fold was opened: the story shows its poses.</summary>
+    [Parameter] public EventCallback<StoryFold> OnReveal { get; set; }
+}

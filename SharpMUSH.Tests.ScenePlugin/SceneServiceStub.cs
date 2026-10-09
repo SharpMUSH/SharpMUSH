@@ -19,7 +19,7 @@ internal abstract class SceneServiceStub : ISceneService
 	public virtual Task<Found<Scene>> SetSceneMetaAsync(string sceneId, string key, string value) => throw new NotSupportedException();
 	public virtual Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null, long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) => throw new NotSupportedException();
 	public virtual Task<Found<Scene>> GetActiveSceneInRoomAsync(string roomDbref) => throw new NotSupportedException();
-	public virtual Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref, string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content) => throw new NotSupportedException();
+	public virtual Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref, string showAs, string originDbref, string type, string source, IReadOnlyList<string> tags, string content) => throw new NotSupportedException();
 	public virtual Task<Found<ScenePose>> GetPoseAsync(string poseId) => throw new NotSupportedException();
 	public virtual Task<Found<IReadOnlyList<ScenePose>>> GetPosesAsync(string sceneId, string? authorDbref = null, int? count = null) => throw new NotSupportedException();
 	public virtual Task<Found<ScenePosePage>> GetPosePageAsync(string sceneId, long? after, int take) => throw new NotSupportedException();

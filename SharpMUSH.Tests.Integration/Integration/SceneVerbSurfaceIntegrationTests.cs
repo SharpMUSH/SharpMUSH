@@ -58,9 +58,19 @@ public class SceneVerbSurfaceIntegrationTests
 		return [.. Notifications.For(actor).Skip(before)];
 	}
 
+	/// <summary>
+	/// The room this test's players stand in. DefaultHome holds every player the session made, and each scene
+	/// change in a room refreshes it for everyone connected there, on the queue every test waits behind.
+	/// </summary>
+	private DBRef? _room;
+
+	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
-		await God1($"@pcreate {name}=pw-{Tag}-1");
+		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
@@ -356,14 +366,14 @@ public class SceneVerbSurfaceIntegrationTests
 
 	/// <summary>
 	/// <c>+scene/ooc &lt;id&gt;=&lt;text&gt;</c>, the portal's OOC mode, records what the <c>ooc</c> command
-	/// would: the line less its <c>&lt;OOC&gt;</c> marker, tagged and sourced <c>ooc</c> (the tag is what the
+	/// would: the line less its <c>&lt;OOC&gt;</c> marker, as type and source <c>ooc</c> (the type is what the
 	/// portal draws as the OOC band), with a leading <c>:</c> posing and a leading <c>;</c> semiposing.
 	/// </summary>
 	[Test]
 	[Arguments("Back in five, sorry.", "{0}: Back in five, sorry.")]
 	[Arguments(":waves.", "{0} waves.")]
 	[Arguments(";'s back.", "{0}'s back.")]
-	public async Task WebOocVerb_RecordsATaggedOocLine(string text, string expected)
+	public async Task WebOocVerb_RecordsAnOocLine(string text, string expected)
 	{
 		await PutLoggerInMasterRoomAsync();
 		var name = $"Oak{Tag}{(text[0] is ':' or ';' ? (text[0] == ':' ? "p" : "s") : "t")}";
@@ -376,8 +386,9 @@ public class SceneVerbSurfaceIntegrationTests
 
 		var poseId = await Eval($"last(sceneposes({sceneId}))");
 		await Assert.That(await Eval($"scenepose({sceneId},{poseId},content)")).IsEqualTo(string.Format(expected, name));
-		await Assert.That(await Eval($"scenepose({sceneId},{poseId},tags)")).IsEqualTo("ooc");
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},type)")).IsEqualTo("ooc");
 		await Assert.That(await Eval($"scenepose({sceneId},{poseId},source)")).IsEqualTo("ooc");
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},tags)")).IsEqualTo(string.Empty);
 	}
 
 	/// <summary>

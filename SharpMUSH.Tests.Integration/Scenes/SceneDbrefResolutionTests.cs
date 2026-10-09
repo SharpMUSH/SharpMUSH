@@ -77,7 +77,7 @@ public class SceneDbrefResolutionTests
 	public async Task AddPose_ResolvesAuthorDbref_BackToOwner()
 	{
 		var id = await NewPublicSceneAsync("Dbref author");
-		var poseId = await Eval($"sceneaddpose({id},{PlayerDbref},,{PlayerDbref},pose,,dbref author check)");
+		var poseId = await Eval($"sceneaddpose({id},{PlayerDbref},,{PlayerDbref},ic,pose,,dbref author check)");
 		await Assert.That(poseId).DoesNotStartWith("#-1");
 
 		await Assert.That(await Eval($"scenepose({id}, {poseId}, authorname)")).IsNotEmpty();

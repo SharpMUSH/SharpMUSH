@@ -7,15 +7,18 @@
 @inject IConnectionStateService Hub
 @inject ISceneHubControl SceneHub
 @inject CharacterDirectoryService Directory
+@inject PoseTypeService PoseTypes
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
 @* D1 §5.4 the Story view of one scene: the REST backlog, then the scene hub's pose/edit/delete/move
    events, one StoryPose per pose. Shared by Play and /scenes/{id}/live. A portrait and a colour come
-   from the room's occupant rows, else the directory, and only for the name the pose shows. *@
+   from the room's occupant rows, else the directory, and only for the name the pose shows. Each pose draws as
+   its type says; the Show menu hides types, whose runs fold into one line that opens them here. *@
 <div class="story" @ref="_root">
     @* A pose that arrives live is read out; the backlog is not, it is the page the reader came to. *@
     <LiveAnnouncer @ref="_announcer" Label="@Loc["StoryNewPoses"]" />
+    <PoseTypeMenu Class="story-types" />
     @if (_posesError is not null)
     {
         <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
@@ -24,11 +27,20 @@
     {
         <div class="story-empty">@Loc["RolWaitingForActivity"]</div>
     }
-    @foreach (var pose in _poses)
+    @foreach (var entry in StoryFolds.Fold(_poses, PoseTypes.For, PoseTypes.IsHidden, _revealed))
     {
-        var who = Identify(pose);
-        <StoryPose @key="pose.Id" Pose="pose" ImageUrl="@who?.Image" Color="@who?.Color" Mentions="_mentions" OnCharacter="OnCharacter"
-                   CanEdit="@(OnEditPose.HasDelegate && !pose.IsDeleted && IsViewer(pose.AuthorName))" OnEdit="OnEditPose" />
+        switch (entry)
+        {
+            case ScenePoseView pose:
+                var who = Identify(pose);
+                <StoryPose @key="pose.Id" Pose="pose" PoseType="@PoseTypes.For(pose.Type)" Mine="@IsViewer(pose.AuthorName)"
+                           ImageUrl="@who?.Image" Color="@who?.Color" Mentions="_mentions" OnCharacter="OnCharacter"
+                           CanEdit="@(OnEditPose.HasDelegate && !pose.IsDeleted && IsViewer(pose.AuthorName))" OnEdit="OnEditPose" />
+                break;
+            case StoryFold fold:
+                <StoryFoldRow @key="@("fold:" + fold.Poses[0].Id)" Fold="fold" OnReveal="Reveal" />
+                break;
+        }
     }
 </div>
 
@@ -67,6 +79,9 @@
 
     private readonly List<ScenePoseView> _poses = [];
 
+    /// <summary>Hidden poses this view shows anyway: a fold was opened. The type stays hidden for the next one.</summary>
+    private readonly HashSet<string> _revealed = new(StringComparer.Ordinal);
+
     /// <summary>The objid each live pose's event carried (REST poses carry only the author's dbref).</summary>
     private readonly Dictionary<string, string> _objids = new(StringComparer.Ordinal);
 
@@ -88,6 +103,8 @@
     {
         SceneHub.OnSceneEventReceived += HandleSceneEvent;
         SceneHub.OnSceneLiveChanged += OnSceneLiveChanged;
+        PoseTypes.Changed += OnPoseTypesChanged;
+        _ = PoseTypes.LoadAsync();
         if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
         {
             _directory = rows;
@@ -110,6 +127,7 @@
         _posesError = null;
         _poses.Clear();
         _objids.Clear();
+        _revealed.Clear();
         var backlog = await SceneService.GetPosesAsync(sceneId, count: Backlog);
         if (generation != _generation) return;
         ShowPoses(backlog);
@@ -169,6 +187,13 @@
         }
     }
 
+    private void OnPoseTypesChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void Reveal(StoryFold fold)
+    {
+        foreach (var pose in fold.Poses) _revealed.Add(pose.Id);
+    }
+
     [JSInvokable]
     public Task OpenMention(string name) => OnCharacter.InvokeAsync(name);
 
@@ -195,6 +220,16 @@
             case "edit":
                 ReplacePose(msg.PoseId, existing => FromEvent(msg, existing));
                 Remember(msg);
+                break;
+
+            case "pose-meta":
+                // A field set after the pose went out (radio-scene sets the frequency right after recording):
+                // not an edit, so the edited badge stays as it was.
+                ReplacePose(msg.PoseId, existing => existing with
+                {
+                    Meta = msg.Meta ?? existing.Meta,
+                    Type = string.IsNullOrWhiteSpace(msg.Type) ? existing.Type : msg.Type,
+                });
                 break;
 
             case "delete":
@@ -284,7 +319,7 @@
         OriginName: existing?.OriginName ?? msg.Location,
         Source: msg.Source,
         Tags: msg.Tags ?? [],
-        Meta: existing?.Meta ?? new Dictionary<string, string>(),
+        Meta: msg.Meta ?? existing?.Meta ?? new Dictionary<string, string>(),
         CreatedAt: existing?.CreatedAt ?? msg.Timestamp,
         IsDeleted: false,
         Content: msg.Content,
@@ -292,7 +327,8 @@
         EditCount: existing is null ? 1 : existing.EditCount + 1,
         LastEditedAt: existing is null ? null : msg.Timestamp,
         LastEditorDbref: existing?.LastEditorDbref,
-        LastEditorName: existing is null ? null : msg.ActorName);
+        LastEditorName: existing is null ? null : msg.ActorName,
+        Type: string.IsNullOrWhiteSpace(msg.Type) ? existing?.Type ?? PoseTypeInfo.InCharacter : msg.Type);
 
     private sealed record Who(string? Image, string? Color);
 
@@ -423,6 +459,7 @@
     {
         SceneHub.OnSceneEventReceived -= HandleSceneEvent;
         SceneHub.OnSceneLiveChanged -= OnSceneLiveChanged;
+        PoseTypes.Changed -= OnPoseTypesChanged;
         _retry?.Cancel();
         _retry?.Dispose();
         await LeaveJoinedSceneAsync();

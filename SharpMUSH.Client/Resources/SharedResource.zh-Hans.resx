@@ -5940,6 +5940,22 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>页面文本（Markdown）</value>
   </data>
+  <data name="RolPoseTypesShow" xml:space="preserve">
+    <value>显示</value>
+  </data>
+  <data name="RolPoseTypesShowLegend" xml:space="preserve">
+    <value>要显示的姿态类型</value>
+  </data>
+  <data name="RolPoseTypeLinesHidden" xml:space="preserve">
+    <value>{count, plural, other {已隐藏 # 条{label}内容}}</value>
+    <comment>ICU MessageFormat. Named args: count, label (the pose type's name).</comment>
+  </data>
+  <data name="RolPoseOnFrequency" xml:space="preserve">
+    <value>{0}（{1}）</value>
+  </data>
+  <data name="RolPoseTypeNotChanged" xml:space="preserve">
+    <value>无法更改，请稍后再试。</value>
+  </data>
   <data name="TermOutputLabel" xml:space="preserve">
     <value>游戏输出</value>
   </data>

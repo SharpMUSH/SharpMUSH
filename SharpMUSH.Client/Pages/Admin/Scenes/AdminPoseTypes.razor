@@ -1,0 +1,279 @@
+@page "/admin/scenes/types"
+@attribute [Authorize(Policy = "layout.admin")]
+@using SharpMUSH.Client.Components.Scenes
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Library.DiscriminatedUnions
+@implements IDisposable
+@inject IStringLocalizer<SharedResource> Loc
+@inject PoseTypeService PoseTypes
+
+@* The pose types the scene package defines, each with a sample pose drawn as it will be in the current theme:
+   its label, presentation, tone, icon, whether readers start with it hidden, and its place in the Show menu.
+   Changes go through +scene/type/add|set|remove as the staff member's character, so the game checks
+   layout.admin again and a refusal shows what it said. How a type reads on telnet (its FORMAT softcode) is
+   wizard work in the game, not here. *@
+
+<PageTitle>@Loc["AdmPoseTypesTitle"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
+
+<FeatureGate Feature="@GameFeatures.Scenes">
+    <ChildContent>
+        <div class="page-stack page-stack--padded adm-pose">
+            <PlainPageHeader Kicker="@Loc["AdmGroupScenes"]" Title="@Loc["AdmPoseTypesTitle"]" Description="@Loc["AdmPoseTypesDescription"]" />
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="adm-pose-error">@_error</MudAlert>
+            }
+
+            @if (!_loaded)
+            {
+                @if (_error is null)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+            }
+            else
+            {
+                @if (PoseTypes.Problems.Count > 0)
+                {
+                    <KitCard Class="adm-pose-problems" Title="@Loc["AdmPoseTypesProblems"]" Sub="@Loc["AdmPoseTypesProblemsSub"]">
+                        <ul class="adm-pose-problem-list">
+                            @foreach (var problem in PoseTypes.Problems)
+                            {
+                                <li class="adm-pose-problem" data-pose-type="@problem.Key">
+                                    <code>TYPE`@problem.Key.ToUpperInvariant()</code>
+                                    <span>@problem.Reason</span>
+                                </li>
+                            }
+                        </ul>
+                    </KitCard>
+                }
+
+                <KitCard Class="adm-pose-add" Title="@Loc["AdmPoseTypesAdd"]" Sub="@Loc["AdmPoseTypesAddSub"]">
+                    <div class="adm-pose-add-form">
+                        <MudTextField T="string" @bind-Value="_newKey" Label="@Loc["AdmPoseTypesKey"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      HelperText="@Loc["AdmPoseTypesKeyHint"]" Class="adm-pose-new-key" Immediate="true" />
+                        <MudTextField T="string" @bind-Value="_newLabel" Label="@Loc["AdmPoseTypesLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Class="adm-pose-new-label" Immediate="true" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="adm-pose-add-submit"
+                                   Disabled="@(_busy || !CanAdd)" OnClick="AddAsync">@Loc["AdmPoseTypesAddButton"]</MudButton>
+                    </div>
+                </KitCard>
+
+                @if (PoseTypes.Types.Count == 0)
+                {
+                    <EmptyBox Class="adm-pose-none">@Loc["AdmPoseTypesNone"]</EmptyBox>
+                }
+
+                @foreach (var type in PoseTypes.Types)
+                {
+                    var key = type.Key;
+                    var draft = Draft(type);
+                    <KitCard @key="key" Class="adm-pose-type" Title="@type.Label" Sub="@key">
+                        <div class="adm-pose-type-body" data-pose-type="@key">
+                            <div class="adm-pose-sample" inert>
+                                <span class="adm-pose-sample-label">@Loc["AdmPoseTypesSample"]</span>
+                                <StoryPose Pose="@Sample(key, draft)" PoseType="@draft.ToInfo(key)" />
+                            </div>
+                            <div class="adm-pose-fields">
+                                <MudTextField T="string" @bind-Value="draft.Label" Label="@Loc["AdmPoseTypesLabel"]" Variant="Variant.Outlined"
+                                              Margin="Margin.Dense" Class="adm-pose-label" Immediate="true" />
+                                <MudSelect T="string" @bind-Value="draft.Presentation" Label="@Loc["AdmPoseTypesPresentation"]" Variant="Variant.Outlined"
+                                           Margin="Margin.Dense" Class="adm-pose-presentation">
+                                    @foreach (var presentation in PoseTypeInfo.Presentations)
+                                    {
+                                        <MudSelectItem T="string" Value="@presentation">@Loc[$"AdmPoseTypesPresentation{Title(presentation)}"]</MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudSelect T="string" @bind-Value="draft.Tone" Label="@Loc["AdmPoseTypesTone"]" Variant="Variant.Outlined"
+                                           Margin="Margin.Dense" Class="adm-pose-tone">
+                                    <MudSelectItem T="string" Value="@string.Empty">@Loc["AdmPoseTypesToneNone"]</MudSelectItem>
+                                    @foreach (var tone in PoseTypeInfo.Tones)
+                                    {
+                                        <MudSelectItem T="string" Value="@tone">
+                                            <span class="adm-pose-tone-swatch" style="@($"--pose-tone: var({PoseTypeStyle.ToneToken(tone)});")" aria-hidden="true"></span>@tone
+                                        </MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudSelect T="string" @bind-Value="draft.Icon" Label="@Loc["AdmPoseTypesIcon"]" Variant="Variant.Outlined"
+                                           Margin="Margin.Dense" Class="adm-pose-icon">
+                                    <MudSelectItem T="string" Value="@string.Empty">@Loc["AdmPoseTypesIconNone"]</MudSelectItem>
+                                    @foreach (var icon in PoseTypeInfo.Icons)
+                                    {
+                                        <MudSelectItem T="string" Value="@icon">
+                                            <MudIcon Icon="@PoseTypeStyle.Icon(icon)" Size="Size.Small" Class="adm-pose-icon-glyph" />@icon
+                                        </MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudNumericField T="int" @bind-Value="draft.Order" Label="@Loc["AdmPoseTypesOrder"]" Variant="Variant.Outlined"
+                                                 Margin="Margin.Dense" Class="adm-pose-order" />
+                                <MudSwitch T="bool" @bind-Value="draft.Hidden" Color="Color.Primary" Class="adm-pose-hidden"
+                                           Label="@Loc["AdmPoseTypesHidden"]" />
+                            </div>
+                            <div class="adm-pose-actions">
+                                @if (_confirmRemove == key)
+                                {
+                                    <span class="adm-pose-remove-ask">@Loc["AdmPoseTypesRemoveAsk", type.Label]</span>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="@_busy" OnClick="() => _confirmRemove = null">@Loc["Cancel"]</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" Class="adm-pose-remove-confirm"
+                                               Disabled="@_busy" OnClick="() => RemoveAsync(key)">@Loc["AdmPoseTypesRemove"]</MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Delete"
+                                               Class="adm-pose-remove" Disabled="@_busy" OnClick="() => _confirmRemove = key">@Loc["AdmPoseTypesRemove"]</MudButton>
+                                    <span class="adm-pose-spacer"></span>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="@(_busy || !draft.Differs(type))"
+                                               OnClick="() => _drafts[key] = TypeDraft.From(type)">@Loc["AdmPoseTypesRevert"]</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="adm-pose-save"
+                                               Disabled="@(_busy || !draft.Differs(type))" OnClick="() => SaveAsync(type)">@Loc["Save"]</MudButton>
+                                }
+                            </div>
+                        </div>
+                    </KitCard>
+                }
+            }
+        </div>
+    </ChildContent>
+    <Otherwise>
+        <ScenesNotEnabled />
+    </Otherwise>
+</FeatureGate>
+
+@code {
+    private bool _loaded;
+    private bool _busy;
+    private string? _error;
+    private string _newKey = string.Empty;
+    private string _newLabel = string.Empty;
+    private string? _confirmRemove;
+
+    /// <summary>Each type's fields as edited, by key; a type with none is shown as the server has it.</summary>
+    private readonly Dictionary<string, TypeDraft> _drafts = new(StringComparer.Ordinal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        PoseTypes.Changed += OnTypesChanged;
+        switch (await PoseTypes.LoadAsync(refresh: true))
+        {
+            case PoseTypeCatalogue:
+                _loaded = true;
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    private void OnTypesChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => PoseTypes.Changed -= OnTypesChanged;
+
+    private TypeDraft Draft(PoseTypeInfo type)
+    {
+        if (!_drafts.TryGetValue(type.Key, out var draft))
+        {
+            draft = TypeDraft.From(type);
+            _drafts[type.Key] = draft;
+        }
+        return draft;
+    }
+
+    private static string Title(string word) => char.ToUpperInvariant(word[0]) + word[1..];
+
+    /// <summary>The key the plugin accepts: 1 to 32 lower-case letters, digits, - and _, starting with a letter or digit.</summary>
+    private static bool IsKey(string key) =>
+        System.Text.RegularExpressions.Regex.IsMatch(key, "^[a-z0-9][a-z0-9_-]{0,31}$");
+
+    private bool CanAdd => IsKey(_newKey.Trim().ToLowerInvariant()) && !string.IsNullOrWhiteSpace(_newLabel);
+
+    /// <summary>A pose to show a type by: a radio line carries its frequency, so a message shows its header.</summary>
+    private ScenePoseView Sample(string key, TypeDraft draft) => new(
+        "sample-" + key, "", null, Loc["AdmPoseTypesSampleName"], "", null, "", "pose", [],
+        draft.Presentation == PoseTypeInfo.Message ? new Dictionary<string, string> { [StoryPose.FrequencyMeta] = "104.5" } : new Dictionary<string, string>(),
+        new DateTimeOffset(2026, 1, 1, 21, 4, 0, TimeSpan.Zero).ToUnixTimeMilliseconds(), false,
+        Loc["AdmPoseTypesSampleText"], Loc["AdmPoseTypesSampleText"], 1, null, null, null, key);
+
+    private async Task AddAsync()
+    {
+        var key = _newKey.Trim().ToLowerInvariant();
+        if (!await RunAsync(() => PoseTypes.AddAsync(key, _newLabel))) return;
+        _newKey = string.Empty;
+        _newLabel = string.Empty;
+    }
+
+    /// <summary>Sends each changed field, one command a field, stopping at the first the game refuses.</summary>
+    private async Task SaveAsync(PoseTypeInfo type)
+    {
+        var draft = Draft(type);
+        var changes = new List<(string Field, string Value)>();
+        if (draft.Label.Trim() != type.Label) changes.Add(("label", draft.Label));
+        if (draft.Presentation != type.Presentation) changes.Add(("presentation", draft.Presentation));
+        if (draft.Tone != type.Tone) changes.Add(("tone", draft.Tone));
+        if (draft.Icon != type.Icon) changes.Add(("icon", draft.Icon));
+        if (draft.Hidden != type.Hidden) changes.Add(("hidden", draft.Hidden ? "yes" : "no"));
+        if (draft.Order != type.Order) changes.Add(("order", draft.Order.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+        foreach (var (field, value) in changes)
+        {
+            if (!await RunAsync(() => PoseTypes.SetAsync(type.Key, field, value))) return;
+        }
+
+        // Saved: the form shows the type as the game now has it.
+        _drafts.Remove(type.Key);
+    }
+
+    private async Task RemoveAsync(string key)
+    {
+        _confirmRemove = null;
+        if (await RunAsync(() => PoseTypes.RemoveAsync(key))) _drafts.Remove(key);
+    }
+
+    /// <summary>Runs one change; refused, the page shows what the game said (or that it did not take).</summary>
+    private async Task<bool> RunAsync(Func<Task<ApiResult<Success>>> change)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            _error = await change() switch
+            {
+                Success => null,
+                ApiFailure { Message.Length: > 0 } failure => failure.Message,
+                ApiFailure => Loc["AdmPoseTypesNotChanged"],
+            };
+            return _error is null;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>One type's fields as the form edits them.</summary>
+    private sealed class TypeDraft
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Presentation { get; set; } = PoseTypeInfo.Prose;
+        public string Tone { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public bool Hidden { get; set; }
+        public int Order { get; set; }
+
+        public static TypeDraft From(PoseTypeInfo type) => new()
+        {
+            Label = type.Label,
+            Presentation = type.Presentation,
+            Tone = type.Tone,
+            Icon = type.Icon,
+            Hidden = type.Hidden,
+            Order = type.Order,
+        };
+
+        public PoseTypeInfo ToInfo(string key) => new(key, string.IsNullOrWhiteSpace(Label) ? key : Label.Trim(), Presentation, Tone, Icon, Hidden, Order);
+
+        public bool Differs(PoseTypeInfo type) =>
+            Label.Trim() != type.Label || Presentation != type.Presentation || Tone != type.Tone || Icon != type.Icon
+            || Hidden != type.Hidden || Order != type.Order;
+    }
+}

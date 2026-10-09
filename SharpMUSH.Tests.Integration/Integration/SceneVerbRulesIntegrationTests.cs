@@ -44,9 +44,19 @@ public class SceneVerbRulesIntegrationTests
 		return string.Join("\n", Notifications.For(actor).Skip(before));
 	}
 
+	/// <summary>
+	/// The room this test's players stand in. DefaultHome holds every player the session made, and each scene
+	/// change in a room refreshes it for everyone connected there, on the queue every test waits behind.
+	/// </summary>
+	private DBRef? _room;
+
+	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+
 	private async Task<(DBRef Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
-		await God1($"@pcreate {name}=pw-{Tag}-1");
+		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
@@ -233,8 +243,10 @@ public class SceneVerbRulesIntegrationTests
 
 		var recalled = await RunAs(readerHandle, $"+scene/recall {id}=5");
 		await Assert.That(recalled).Contains($"The lantern gutters {Tag}.");
-		await Assert.That(recalled).Contains($"<OOC> Lowner{Tag}: brb {Tag}")
-			.Because("an out-of-character line keeps its marker in the log");
+		await Assert.That(recalled).Contains($"<OOC · {id}> Lowner{Tag}: brb {Tag}")
+			.Because("an out-of-character line keeps its marker, with the scene it belongs to");
+		await Assert.That(recalled.Split('\n').Count(line => line.Contains("· pose ", StringComparison.Ordinal))).IsEqualTo(1)
+			.Because("the emit is drawn under a rule; the out-of-character line is one tagged line without one");
 
 		var log = await RunAs(readerHandle, $"+scene/log {id}");
 		await Assert.That(log).Contains($"Scene {id}: {Tag} Lantern Night");
@@ -261,8 +273,8 @@ public class SceneVerbRulesIntegrationTests
 		var pose = await Eval($"last(sceneposes({id}))");
 
 		await Assert.That(said).Contains($"Thunder rolls {Tag}.");
-		await Assert.That(said).Contains("posed").Because("the header rule names who posed, as for a captured pose");
-		await Assert.That(said).Contains($"Pose {pose}").Because("the footer rule carries the ids");
+		await Assert.That(said).Contains($"Frame{Tag} · pose {pose}").Because("the rule names who posed and the pose, as for a captured pose");
+		await Assert.That(said).Contains($"< Scene {id} >").Because("the rule carries the scene on its right");
 	}
 
 	[Test]

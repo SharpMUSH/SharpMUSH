@@ -80,7 +80,8 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 		int EditCount,
 		long? LastEditedAt,
 		string? LastEditorDbref,
-		string? LastEditorName);
+		string? LastEditorName,
+		string? Type);
 
 	private record SceneMemberDto(string? MemberDbref, bool IsCurrent);
 
@@ -252,5 +253,6 @@ public class SceneService(IHttpClientFactory httpClientFactory, IAccountAuthStat
 	private static ScenePoseView ToPose(ScenePoseDto d) => new(
 		d.Id, d.SceneId, d.AuthorDbref, d.AuthorName, d.ShowAsName, d.OriginDbref, d.OriginName,
 		d.Source, d.Tags ?? [], d.Meta ?? new Dictionary<string, string>(), d.CreatedAt, d.IsDeleted,
-		d.Content, d.Markup, d.EditCount, d.LastEditedAt, d.LastEditorDbref, d.LastEditorName);
+		d.Content, d.Markup, d.EditCount, d.LastEditedAt, d.LastEditorDbref, d.LastEditorName,
+		string.IsNullOrWhiteSpace(d.Type) ? PoseTypeInfo.InCharacter : d.Type);
 }

@@ -48,7 +48,14 @@
 	font-weight: 700;
 }
 
+/* A pose type's label can be longer than "OOC": it keeps to the tile and ends in an ellipsis. */
 .kit-ooc-tag {
+	max-width: 100%;
+	padding: 0 2px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-transform: uppercase;
 	font-family: var(--font-mono);
 	font-size: 9px;
 	font-weight: 700;

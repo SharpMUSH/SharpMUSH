@@ -1,0 +1,81 @@
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject PoseTypeService PoseTypes
+@implements IDisposable
+
+@* The story's Show menu: every pose type with a box, unticked for the ones the reader hides. Unticking hides that
+   type's poses here and in telnet recall (+scene/hide as the character); with nobody acting, the choice lasts
+   for the page. Nothing renders on a game whose scene package defines no types. *@
+@if (PoseTypes.Types.Count > 0)
+{
+    <div class="story-show @Class">
+        <CapsuleButton Class="story-show-toggle" Icon="@Icons.Material.Outlined.FilterList" Expanded="@_open" OnClick="Toggle">@Loc["RolPoseTypesShow"]</CapsuleButton>
+        @if (_open)
+        {
+            <fieldset class="story-show-menu">
+                <legend class="story-show-legend">@Loc["RolPoseTypesShowLegend"]</legend>
+                @foreach (var type in PoseTypes.Types)
+                {
+                    var key = type.Key;
+                    <label class="story-show-item" data-pose-type="@key">
+                        <input type="checkbox" checked="@(!PoseTypes.IsHidden(key))" disabled="@_busy"
+                               @onchange="e => SetShownAsync(key, e.Value is true)" />
+                        @if (PoseTypeStyle.Icon(type.Icon) is { } icon)
+                        {
+                            <MudIcon Icon="@icon" Style="font-size:16px;" aria-hidden="true" />
+                        }
+                        <span>@type.Label</span>
+                    </label>
+                }
+            </fieldset>
+            @if (_error is not null)
+            {
+                <div class="story-show-error" role="alert">@_error</div>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? Class { get; set; }
+
+    private bool _open;
+    private bool _busy;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        PoseTypes.Changed += OnTypesChanged;
+        await PoseTypes.LoadAsync();
+    }
+
+    private void OnTypesChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void Toggle()
+    {
+        _open = !_open;
+        _error = null;
+    }
+
+    private async Task SetShownAsync(string key, bool shown)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            _error = await (shown ? PoseTypes.ShowAsync(key) : PoseTypes.HideAsync(key)) switch
+            {
+                SharpMUSH.Library.DiscriminatedUnions.Success => null,
+                ApiFailure { Message.Length: > 0 } failure => failure.Message,
+                ApiFailure => Loc["RolPoseTypeNotChanged"],
+            };
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    public void Dispose() => PoseTypes.Changed -= OnTypesChanged;
+}

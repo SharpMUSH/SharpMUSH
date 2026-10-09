@@ -41,7 +41,8 @@ public sealed record SceneSummary(
 /// <summary>
 /// Client-side projection of <c>SceneController.ScenePoseDto</c>. Carries raw
 /// <see cref="Markup"/> (a serialized MString) rendered client-side; never trust
-/// server HTML for poses.
+/// server HTML for poses. <see cref="Type"/> is the pose type's key (<see cref="PoseTypeInfo"/>), which picks
+/// how the pose draws; a pose stored before types is <c>ic</c>.
 /// </summary>
 public sealed record ScenePoseView(
 	string Id,
@@ -61,7 +62,8 @@ public sealed record ScenePoseView(
 	int EditCount,
 	long? LastEditedAt,
 	string? LastEditorDbref,
-	string? LastEditorName)
+	string? LastEditorName,
+	string Type = PoseTypeInfo.InCharacter)
 {
 	/// <summary>Display persona — <see cref="ShowAsName"/> falling back to <see cref="AuthorName"/>.</summary>
 	public string DisplayName =>

@@ -1,11 +1,25 @@
+/* Every row carries its type's tone as --pose-tone (unset for a type with none) and data-pose-type, so a staff
+   stylesheet can restyle one type: [data-pose-type="radio"] { ... }. */
 .story-row {
-	display: flex;
-	gap: 12px;
 	padding: 8px 0;
 }
 
-.story-row--ooc {
+.story-row--prose {
+	display: flex;
+	gap: 12px;
+}
+
+.story-row--band {
 	display: block;
+}
+
+/* Every band, OOC's included, is tinted by its type's tone over the surface, so a tone set on the type is the one
+   the portal shows. The tile keeps the theme's own text on its raised surface. */
+.story-row--band {
+	--ooc-band-bg: color-mix(in srgb, var(--pose-tone, var(--text-dim)) 12%, var(--surface));
+	--ooc-band-border: color-mix(in srgb, var(--pose-tone, var(--text-dim)) 45%, var(--border));
+	--ooc-icon-bg: var(--surface-3);
+	--ooc-icon-fg: var(--text);
 }
 
 .story-row--deleted {
@@ -228,8 +242,108 @@
 	overflow-wrap: anywhere;
 }
 
-.story-row--ooc .story-body {
+.story-row--band .story-body {
 	font-size: 14px;
+}
+
+/* A prose type with a tone writes its words in it. */
+.story-row--prose .story-body {
+	color: var(--pose-tone, var(--text));
+}
+
+/* The icon is MudIcon's own element, out of this component's scope. */
+.story-row ::deep .story-type-icon {
+	color: var(--pose-tone, var(--text-dim));
+	flex-shrink: 0;
+	align-self: center;
+}
+
+/* message: a bubble, headed by who sent it (and on what frequency); the reader's own sit on the right. */
+.story-row--message {
+	display: flex;
+}
+
+.story-bubble {
+	max-width: min(85%, 640px);
+	padding: 8px 12px;
+	border-radius: 14px 14px 14px 4px;
+	background: color-mix(in srgb, var(--pose-tone, var(--accent)) 10%, var(--surface-2));
+	border: 1px solid color-mix(in srgb, var(--pose-tone, var(--accent)) 35%, var(--border));
+}
+
+.story-row--mine {
+	justify-content: flex-end;
+}
+
+.story-row--mine .story-bubble {
+	border-radius: 14px 14px 4px 14px;
+}
+
+.story-bubble-from {
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.story-row--message .story-body {
+	font-size: 14px;
+}
+
+/* aside: a stage direction, no portrait: centred, italic, the name small beneath. */
+.story-aside {
+	max-width: 640px;
+	margin: 0 auto;
+	text-align: center;
+}
+
+.story-row--aside .story-body {
+	font-style: italic;
+	color: var(--pose-tone, var(--text));
+}
+
+.story-aside-meta {
+	display: flex;
+	justify-content: center;
+	align-items: baseline;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 2px;
+}
+
+.story-aside-name {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-dim);
+}
+
+.story-row--aside .story-edit-btn {
+	margin-left: 0;
+}
+
+/* notice: one dim line, the name, the text and the time running on. */
+.story-row--notice {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 4px 0;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.story-row--notice .story-body {
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-dim);
+	min-width: 0;
+}
+
+.story-notice-name {
+	font-weight: 600;
+	flex-shrink: 0;
+}
+
+.story-row--notice .story-editor {
+	flex: 1;
 }
 
 /* names in rendered pose HTML: the mention style (§4.8), which scoped CSS cannot reach from Mention.razor */
@@ -243,9 +357,9 @@
 	text-decoration-color: var(--name, var(--text-faint));
 }
 
-/* In an OOC band the edited mark and the Edit follow the text. */
-.story-row--ooc .story-edited,
-.story-row--ooc .story-edit-btn {
+/* In a band the edited mark and the Edit follow the text. */
+.story-row--band .story-edited,
+.story-row--band .story-edit-btn {
 	margin-left: 8px;
 	vertical-align: baseline;
 }
