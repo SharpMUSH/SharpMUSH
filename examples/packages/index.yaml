@@ -95,4 +95,4 @@ packages:
     name: BBoards
     package: bboards
     version: 1.0.0
-    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking
+    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help)
