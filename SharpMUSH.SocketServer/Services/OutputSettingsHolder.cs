@@ -11,10 +11,19 @@ public sealed class OutputSettingsHolder
 {
 	private volatile string _asciiTranslations = string.Empty;
 
+	private readonly TaskCompletionSource _received = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
 	/// <summary>The <c>ascii_translations</c> option, as written; empty for none.</summary>
 	public string AsciiTranslations => _asciiTranslations;
 
-	public void Replace(OutputSettingsMessage message) => _asciiTranslations = message.AsciiTranslations ?? string.Empty;
+	/// <summary>Completes when the first settings from the main process arrive.</summary>
+	public Task Received => _received.Task;
+
+	public void Replace(OutputSettingsMessage message)
+	{
+		_asciiTranslations = message.AsciiTranslations ?? string.Empty;
+		_received.TrySetResult();
+	}
 }
 
 /// <summary>Takes each <see cref="OutputSettingsMessage"/> the main process sends.</summary>
