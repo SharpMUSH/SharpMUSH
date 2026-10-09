@@ -672,3 +672,30 @@ A package says its own name once and uses it for every message, so its players l
 - [LAYOUT THEMES]
 - [LAYOUT FUNCTIONS]
 :::
+
+# tone()
+
+`tone(<colour>, <text>)`
+
+*<text>* in a theme colour, named for what it is for rather than as a colour, so each reader sees it in their own theme. *<colour>* is one of the colours in [LAYOUT THEMES]: `foreground`, `primary`, `secondary`, `tertiary`, `muted`, `success`, `warning`, `error` or `info`.
+
+- A telnet reader with an [@THEME] sees that theme's colour, so a player who makes their `muted` colour paler sees every `tone(muted,...)` paler.
+- A telnet reader without one sees the game's `layout_theme` colour, or a standard colour when the game has none: `muted` in grey, `info` in cyan, `success` in green, `warning` in yellow, `error` in red.
+- The web portal colours it from the reader's portal theme.
+
+Use it for text whose colour says what kind of thing it is, such as an out-of-character remark or a radio call, and [ANSI()] for a colour chosen for its own sake. The scene package draws pose types with it; see `+help scene types`.
+
+### Example
+```sharp
+> think tone(muted,<OOC> Back in five.)
+<OOC> Back in five.
+```
+
+That line is grey for a reader with no theme, and their theme's `muted` colour for one with an @theme.
+
+::: seealso
+- [@THEME]
+- [LAYOUT THEMES]
+- [BADGE()]
+- [ANSI()]
+:::
