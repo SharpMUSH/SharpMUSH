@@ -1057,7 +1057,8 @@ objects:
 
         - `+bbleave <board>`: stop following a board. It stays readable, and `+bbread/all` still lists it.
         - `+bbjoin <board>`: follow it again.
-        - `+bbnotify <board>=off`: no notice when someone posts there. It still counts as new. `+bbnotify off` turns notices off everywhere.
+        - `+bbnotify <board>=off`: no notice when someone posts there. It still counts as new. `+bbnotify <board>=on` turns it back on.
+        - `+bbnotify off`: no notices anywhere, the same as `+bboptions notify=off`. `+bbnotify on` turns them back on.
         - `+bbfollow <post>`: hear about every comment on one post. `+bbunfollow <post>` stops.
       HELP`BBOARDS`POSTING: |-
         ## Posts
@@ -1128,14 +1129,16 @@ objects:
         - `+bbcleargroup <board>`: remove an empty board. `+bbcleargroup/confirm <board>` removes it with its posts.
         - `+bbparent <board>=<board>`: move a board, with everything in it, inside another. `=top` moves it to the top.
         - `+bborder <board>=up`, `=down` or `=<number>`: move a board among the boards of its category.
-        - `+bbcategory/create <name>` makes a category at the top, and `+bbcategory/create <board>/<name>` one inside a board. `+bbcategory <board>=<category>` puts a board in it. `/rename`, `/order` and `/delete` change categories.
+        - `+bbcategory/create <name>` makes a category at the top, and `+bbcategory/create <board>/<name>` one inside a board.
+        - `+bbcategory <board>=<category>` puts a board in a category, and `+bbcategory <board>=none` takes it out.
+        - `+bbcategory/rename <name>=<new name>`, `+bbcategory/order <name>=<number>` and `+bbcategory/delete <name>` change a category at the top. For one inside a board, write `<board>/<name>`.
         - `+bbinfo <board>`: a board's settings and locks.
         - `+bbconfig`: the defaults. `+bbconfig all`: every board's settings and locks. `+bbconfig all <board>` starts from one board.
         - `+bbconfig <board>/<option>=<value>`: set `description`, `color`, `timeout` (days, 0 for never), `pins` (0 to 10), `comments` (1 to 200), `anonymous` (a name shown in place of the poster's) or `name`. `+bbconfig default/<option>=<value>` changes the default.
 
         ## Locks
 
-        Each board has four locks, written as `@lock` would take them:
+        Each board has four locks, written as `@lock` would take them. `+bblock <board>=<lock>` with no kind sets the read lock.
 
         - `+bblock <board>/read=<lock>`: who may see the board.
         - `+bblock <board>/post=<lock>`: who may post. `+bbwritelock <board>=<lock>` is the same.
