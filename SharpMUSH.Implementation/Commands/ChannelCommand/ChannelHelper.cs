@@ -684,29 +684,22 @@ public static class ChannelHelper
 	}
 
 	/// <summary>
-	/// The channel's owner, or <see langword="null"/> when it cannot be resolved.
+	/// The channel's owner, or <see cref="NotFound"/> when it cannot be resolved.
 	///
 	/// <para>PennMUSH never dereferences a channel's creator to draw a listing: <c>do_channel_list</c>
 	/// (<c>src/extchat.c:2688</c>) compares <c>ChanCreator(c) == player</c>, a dbref, so a channel whose
-	/// creator is gone still lists. Here the owner is an object behind an <c>AsyncLazy</c> that THROWS
-	/// when it cannot be found, and the commands that walk every channel at once — <c>@channel/list</c>
-	/// and <c>@channel/what</c> — are exactly the ones that must not die because one row's owner is
-	/// unresolvable.</para>
+	/// creator is gone still lists. Here the owner is looked up by its dbref, so the commands that walk
+	/// every channel at once — <c>@channel/list</c> and <c>@channel/what</c> — are not stopped by one
+	/// row's owner being gone, or not being a player.</para>
 	///
-	/// <para>Commands that act on a single named channel do NOT use this — a missing owner there is worth
+	/// <para>Commands that act on a single named channel do NOT use this — they read
+	/// <see cref="SharpChannel.Owner"/>, which throws, because a missing owner there is worth
 	/// surfacing, not rendering as a dash.</para>
 	/// </summary>
-	public static async ValueTask<SharpPlayer?> TryResolveOwner(SharpChannel channel)
-	{
-		try
-		{
-			return await channel.Owner.WithCancellation(CancellationToken.None);
-		}
-		catch (InvalidOperationException)
-		{
-			return null;
-		}
-	}
+	public static async ValueTask<Found<SharpPlayer>> TryResolveOwner(IMediator mediator, SharpChannel channel)
+		=> await mediator.Send(new GetObjectNodeQuery(channel.OwnerDBRef)) is AnySharpObject and SharpPlayer owner
+			? owner
+			: new NotFound();
 
 	/// <summary>
 	/// Whether <paramref name="viewer"/> sees through <c>@channel/hide</c>: PennMUSH's <c>Priv_Who</c>

@@ -137,6 +137,7 @@ public class ConnectionAnnounceServiceTests
 		new()
 		{
 			Name = MarkupText.Plain(name),
+			OwnerDBRef = new DBRef(-1),
 			Owner = new(async _ => { await Task.CompletedTask; return null!; }),
 			Members = new(() => members.ToAsyncEnumerable()),
 			Privs = privs
