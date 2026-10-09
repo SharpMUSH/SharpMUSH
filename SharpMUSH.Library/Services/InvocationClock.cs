@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
@@ -18,7 +16,9 @@ namespace SharpMUSH.Library.Services;
 public sealed class InvocationClock
 {
 	private static readonly AsyncLocal<InvocationClock?> Running = new();
+	private static readonly AsyncLocal<TimeProvider?> Time = new();
 
+	private readonly TimeProvider _time;
 	private readonly InvocationClock? _caller;
 	private readonly long _started;
 	private long _ownTicks;
@@ -29,8 +29,20 @@ public sealed class InvocationClock
 
 	private InvocationClock(InvocationClock? caller)
 	{
+		_time = Time.Value ?? TimeProvider.System;
 		_caller = caller;
-		_started = _resumedAt = Stopwatch.GetTimestamp();
+		_started = _resumedAt = _time.GetTimestamp();
+	}
+
+	/// <summary>
+	/// Times the calls started in this flow by <paramref name="time"/> until the returned scope is
+	/// disposed, so a test can read what each clock was charged without timing real work.
+	/// </summary>
+	public static IDisposable UseTime(TimeProvider time)
+	{
+		var previous = Time.Value;
+		Time.Value = time;
+		return new TimeScope(previous);
 	}
 
 	/// <summary>Starts a call's clock, pausing the clock of the call it runs inside.</summary>
@@ -55,7 +67,7 @@ public sealed class InvocationClock
 		lock (_gate)
 		{
 			if (_stoppedAt == 0 && _pauses++ == 0)
-				_ownTicks += Stopwatch.GetTimestamp() - _resumedAt;
+				_ownTicks += _time.GetTimestamp() - _resumedAt;
 		}
 
 		return new Paused(this);
@@ -66,7 +78,7 @@ public sealed class InvocationClock
 		lock (_gate)
 		{
 			if (_stoppedAt == 0 && --_pauses == 0)
-				_resumedAt = Stopwatch.GetTimestamp();
+				_resumedAt = _time.GetTimestamp();
 		}
 	}
 
@@ -79,7 +91,7 @@ public sealed class InvocationClock
 		lock (_gate)
 		{
 			if (_stoppedAt != 0) return;
-			_stoppedAt = Stopwatch.GetTimestamp();
+			_stoppedAt = _time.GetTimestamp();
 			if (_pauses == 0) _ownTicks += _stoppedAt - _resumedAt;
 		}
 
@@ -94,8 +106,8 @@ public sealed class InvocationClock
 		{
 			lock (_gate)
 			{
-				var running = _stoppedAt == 0 && _pauses == 0 ? Stopwatch.GetTimestamp() - _resumedAt : 0;
-				return Stopwatch.GetElapsedTime(0, _ownTicks + running).TotalMilliseconds;
+				var running = _stoppedAt == 0 && _pauses == 0 ? _time.GetTimestamp() - _resumedAt : 0;
+				return _time.GetElapsedTime(0, _ownTicks + running).TotalMilliseconds;
 			}
 		}
 	}
@@ -106,8 +118,13 @@ public sealed class InvocationClock
 		get
 		{
 			lock (_gate)
-				return Stopwatch.GetElapsedTime(_started, _stoppedAt == 0 ? Stopwatch.GetTimestamp() : _stoppedAt).TotalMilliseconds;
+				return _time.GetElapsedTime(_started, _stoppedAt == 0 ? _time.GetTimestamp() : _stoppedAt).TotalMilliseconds;
 		}
+	}
+
+	private sealed class TimeScope(TimeProvider? previous) : IDisposable
+	{
+		public void Dispose() => Time.Value = previous;
 	}
 
 	/// <summary>A pause, ended by disposing it.</summary>
