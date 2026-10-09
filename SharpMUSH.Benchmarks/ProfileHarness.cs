@@ -14,7 +14,7 @@ namespace SharpMUSH.Benchmarks;
 /// </summary>
 public sealed class ProfileHarness : LightningBaseBenchmark
 {
-	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false);
+	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false, bool AsMortal = false);
 
 	private static readonly Scenario[] Scenarios =
 	[
@@ -63,7 +63,25 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
 		new("actions", "@pemit me=Hi [add(1,2)];@switch 1=1,think yes;@trigger me/PROFILE_NOOP=a,b", true, IsCommandList: true),
 		new("include", "@include me/PROFILE_ACTIONS=5", true, IsCommandList: true),
+		// {BIG}: a mortal's object holding BigFlat flat attributes and BigBranches trees of BigLeaves leaves.
+		// {KID}: a child of {BIG} with KidAttributes of its own. "-m" runs as that mortal, not as God.
+		new("lattr-big", "[lattr({BIG})]", false),
+		new("lattr-big-m", "[lattr({BIG})]", false, AsMortal: true),
+		new("lattr-pat-m", "[lattr({BIG}/FLAT1*)]", false, AsMortal: true),
+		new("lattr-tree-m", "[lattr({BIG}/BR05`*)]", false, AsMortal: true),
+		new("nattr-big-m", "[nattr({BIG})]", false, AsMortal: true),
+		new("xattr-big-m", "[xattr({BIG},1,10)]", false, AsMortal: true),
+		new("lattrp-kid-m", "[lattrp({KID})]", false, AsMortal: true),
+		new("reglattr-m", "[reglattr({BIG}/^FLAT00)]", false, AsMortal: true),
+		new("hasattr-m", "[hasattr({BIG},FLAT3999)]", false, AsMortal: true),
+		new("grep-m", "[grep({BIG},FLAT1*,value)]", false, AsMortal: true),
+		new("examine-m", "examine {BIG}", true, AsMortal: true),
 	];
+
+	private const int BigFlat = 4000;
+	private const int BigBranches = 40;
+	private const int BigLeaves = 50;
+	private const int KidAttributes = 100;
 
 	/// <summary>
 	/// <see cref="ParenGroupBenchmarks"/>' workloads, each in the form its setting reads: unescaped with
@@ -145,10 +163,16 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		for (var i = 0; i < 50; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
 
+		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))
+			? await SeedBigObjectsAsync()
+			: (one, one, one);
+		var inputs = scenarios.ToDictionary(scenario => scenario, scenario => MarkupText.Plain(scenario.Input
+			.Replace("{BIG}", $"#{big.Number}").Replace("{KID}", $"#{kid.Number}")));
+		DBRef Executor(Scenario scenario) => scenario.AsMortal ? mortal : one;
+
 		foreach (var scenario in scenarios)
 		{
-			var input = MarkupText.Plain(scenario.Input);
-			for (var i = 0; i < 200; i++) await RunOnce(baseParser, one, scenario, input);
+			for (var i = 0; i < 200; i++) await RunOnce(baseParser, Executor(scenario), scenario, inputs[scenario]);
 		}
 
 		if (wait > 0)
@@ -161,14 +185,15 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		Console.WriteLine($"{"scenario",-12} {"ops/s",10} {"us/op",10} {"KB/op",9} {"gen0/kop",9}");
 		foreach (var scenario in scenarios)
 		{
-			var input = MarkupText.Plain(scenario.Input);
+			var input = inputs[scenario];
+			var executor = Executor(scenario);
 			var allocBefore = GC.GetTotalAllocatedBytes(precise: true);
 			var gen0Before = GC.CollectionCount(0);
 			var sw = Stopwatch.StartNew();
 			long ops = 0;
 			while (sw.Elapsed.TotalSeconds < seconds)
 			{
-				await RunOnce(baseParser, one, scenario, input);
+				await RunOnce(baseParser, executor, scenario, input);
 				ops++;
 			}
 
@@ -178,6 +203,44 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			Console.WriteLine(
 				$"{scenario.Name,-12} {ops / sw.Elapsed.TotalSeconds,10:N0} {sw.Elapsed.TotalMilliseconds * 1000 / ops,10:N1} {alloc / 1024.0 / ops,9:N1} {gen0 * 1000.0 / ops,9:N2}");
 		}
+	}
+
+	/// <summary>
+	/// A mortal player, an object of theirs carrying thousands of attributes, and a child of it, for the
+	/// attribute-listing scenarios. The mortal owns both, so their reads take the non-privileged
+	/// permission path.
+	/// </summary>
+	private async Task<(DBRef Mortal, DBRef Big, DBRef Kid)> SeedBigObjectsAsync()
+	{
+		var room = await _database!.GetObjectNodeAsync(new DBRef(0)) is AnySharpObject { IsContainer: true } start
+			? start.AsContainer
+			: throw new InvalidOperationException("Room #0 is not seeded.");
+		var mortalRef = await _database.CreatePlayerAsync("ProfileMortal", "unused", new DBRef(0), new DBRef(0), 100);
+		if (await _database.GetObjectNodeAsync(mortalRef) is not (AnySharpObject and SharpPlayer mortal))
+			throw new InvalidOperationException("The profile mortal was not created.");
+
+		var value = MarkupText.Plain("some value");
+		var big = await _database.CreateThingAsync("ProfileBig", room, mortal, room);
+		var writes = new List<AttributeWrite>();
+		for (var i = 0; i < BigFlat; i++) writes.Add(new AttributeWrite([$"FLAT{i:D4}"], value, mortal, []));
+		for (var b = 0; b < BigBranches; b++)
+		{
+			writes.Add(new AttributeWrite([$"BR{b:D2}"], value, mortal, []));
+			for (var l = 0; l < BigLeaves; l++) writes.Add(new AttributeWrite([$"BR{b:D2}", $"L{l:D2}"], value, mortal, []));
+		}
+
+		foreach (var batch in writes.Chunk(2048)) await _database.SetAttributesAsync(big, batch);
+
+		var kid = await _database.CreateThingAsync("ProfileKid", room, mortal, room);
+		await _database.SetAttributesAsync(kid,
+			Enumerable.Range(0, KidAttributes).Select(i => new AttributeWrite([$"KID{i:D3}"], value, mortal, [])).ToList());
+		await _database.SetObjectParent(await Node(kid), await Node(big));
+		return (mortal.Object.DBRef, (await Node(big)).Object().DBRef, (await Node(kid)).Object().DBRef);
+
+		async ValueTask<AnySharpObject> Node(DBRef dbref)
+			=> await _database.GetObjectNodeAsync(dbref) is AnySharpObject node
+				? node
+				: throw new InvalidOperationException($"#{dbref.Number} is missing.");
 	}
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)

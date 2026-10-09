@@ -55,7 +55,11 @@ public class AttributePatternAncestorMemoTests
 			.Returns(_ => new[] { branch }.ToAsyncEnumerable());
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute[]>())
 			.Returns(call => new ValueTask<bool>(!call.Arg<LazySharpAttribute[]>().Any(x => x.Flags.Any(f => f.Name == "mortal_dark"))));
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<AttributeViewMemo>(), Arg.Any<LazySharpAttribute[]>())
+			.Returns(call => new ValueTask<bool>(!call.Arg<LazySharpAttribute[]>().Any(x => x.Flags.Any(f => f.Name == "mortal_dark"))));
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>())
+			.Returns(call => new ValueTask<bool>(!call.Arg<SharpAttribute[]>().Any(x => x.Flags.Any(f => f.Name == "mortal_dark"))));
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<AttributeViewMemo>(), Arg.Any<SharpAttribute[]>())
 			.Returns(call => new ValueTask<bool>(!call.Arg<SharpAttribute[]>().Any(x => x.Flags.Any(f => f.Name == "mortal_dark"))));
 
 		var lazy = await (await service.LazilyGetAttributePatternAsync(target, target, "FOO`*", false,
