@@ -84,6 +84,19 @@ public class JsonFunctionUnitTests
 	}
 
 	[Test]
+	public async Task JsonMarkupString_KeepsTheMarkupThatJsonStringDrops()
+	{
+		var styled = (await Parser.FunctionParse(MarkupText.Plain("json(markupstring,ansi(hr,red) plain)")))?.Message!.ToPlainText();
+		var plain = (await Parser.FunctionParse(MarkupText.Plain("json(string,ansi(hr,red) plain)")))?.Message!.ToPlainText();
+
+		await Assert.That(plain).IsEqualTo("\"red plain\"");
+		using var document = System.Text.Json.JsonDocument.Parse(styled!);
+		var text = MarkupTextSerializer.Deserialize(document.RootElement.GetString()!);
+		await Assert.That(text.ToPlainText()).IsEqualTo("red plain");
+		await Assert.That(text.Render(MarkupFormat.Html)).Contains("<span").Because("the colour survives the round trip");
+	}
+
+	[Test]
 	[Arguments("json(string,ansi(hr,foo))")]
 	[Arguments("json(object,key,json(string,ansi(hr,foo)))")]
 	public async Task JsonNotABadArgument(string function)

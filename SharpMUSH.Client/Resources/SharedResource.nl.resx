@@ -5992,4 +5992,24 @@
   <data name="TermReviewNone" xml:space="preserve">
     <value>Nog geen regel om voor te lezen.</value>
   </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>nieuw</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {nog # antwoord} other {nog # antwoorden}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Omhoog</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Omlaag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Herschikken</value>
+    <comment>MT</comment>
+  </data>
 </root>

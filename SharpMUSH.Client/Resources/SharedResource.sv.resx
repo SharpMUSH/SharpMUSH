@@ -5992,4 +5992,24 @@
   <data name="TermReviewNone" xml:space="preserve">
     <value>Ingen rad att läsa än.</value>
   </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>ny</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {# svar till} other {# svar till}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Flytta upp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Flytta ned</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Ordna om</value>
+    <comment>MT</comment>
+  </data>
 </root>

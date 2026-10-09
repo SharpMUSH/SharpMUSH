@@ -5992,4 +5992,24 @@
   <data name="TermReviewNone" xml:space="preserve">
     <value>Još nema retka za čitanje.</value>
   </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>novo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {još # odgovor} few {još # odgovora} other {još # odgovora}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Pomakni gore</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Pomakni dolje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Preuredi</value>
+    <comment>MT</comment>
+  </data>
 </root>

@@ -284,4 +284,30 @@ public class SchemaFormRendererShapeTests : BunitContext
 		await Assert.That(cut.FindAll(".mud-radio").Count).IsGreaterThanOrEqualTo(1);
 		await Assert.That(cut.FindAll(".mud-picker").Count).IsGreaterThanOrEqualTo(1);
 	}
+
+	[TUnit.Core.Test]
+	public async Task ARunOfButtons_IsOneRow_EvenInAColumnGrid()
+	{
+		SchemaElement Button(string label) => new(Kind: "button", Label: label, Action: "submit");
+		var doc = Form(null, SubmitOnly, ColumnsPage(5, Button("Follow"), Button("Edit"), Button("Pin"), Field("t", "T", "text"), Button("Remove")));
+		var cut = RenderForm(doc);
+
+		var rows = cut.FindAll(".schema-button-row");
+		await Assert.That(rows.Count).IsEqualTo(2).Because("the text field splits the buttons into two runs");
+		await Assert.That(rows[0].QuerySelectorAll("button").Length).IsEqualTo(3);
+		await Assert.That(rows[1].QuerySelectorAll("button").Length).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task ASectionOfHiddenFieldsOnly_DrawsNoCard()
+	{
+		var doc = Form(null, SubmitOnly, new SchemaPage("p1", null, 1,
+		[
+			new SchemaSection("Fields", 1, null, [Field("t", "T", "text")]),
+			new SchemaSection(null, 2, null, [Field("at", "At", "hidden")]),
+		], null, null));
+		var cut = RenderForm(doc);
+
+		await Assert.That(cut.FindAll(".mud-paper").Count).IsEqualTo(1);
+	}
 }

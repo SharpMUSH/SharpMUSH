@@ -84,8 +84,10 @@ public static class BundledPackages
 		// Available, not installed: joins radio and scene, so +radio/log puts a frequency into a scene.
 		new("radio-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
-		// game that already runs its own board code should not find them taken after an upgrade.
-		new("bboards", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// game that already runs its own board code should not find them taken after an upgrade. Its
+		// portal page is a separate application package, as jobs-app is for jobs.
+		new("bboards", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>

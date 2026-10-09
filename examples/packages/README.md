@@ -31,6 +31,7 @@ which games can add as a remote in the admin panel.
 | [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
 | [`radio-scene/`](radio-scene/) | A package that joins two others: a tap on the radio feed kind logs what a listener hears into their scene, and it adds `+radio/log` by attaching ``EXT`LOG`` to the radio (requires radio and scene) |
 | [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
+| [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
 
 ## The manifest: `package.yaml`
 

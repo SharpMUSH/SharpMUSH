@@ -2,6 +2,8 @@
 @using SharpMUSH.Client.Models.Applications
 @inject IDialogService DialogService
 @inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
 @* One display element of a Portal Schema Document — markdown, image, table, keyvalue, timeline, divider,
    button — drawn from the data payload. Shared by SchemaViewRenderer and SchemaFormRenderer so a form can
@@ -15,7 +17,14 @@
         break;
 
     case "markdown":
-        <div class="schema-markdown">@((MarkupString)SchemaRendering.MarkdownToHtml(Element.Value))</div>
+        @if (string.Equals(Element.Format, "mstring", StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="schema-markdown schema-markup">@((MarkupString)SchemaRendering.MarkupToHtml(Element.Value))</div>
+        }
+        else
+        {
+            <div class="schema-markdown">@((MarkupString)SchemaRendering.MarkdownToHtml(Element.Value))</div>
+        }
         break;
 
     case "image":
@@ -148,21 +157,120 @@
                     {
                         <th>@col.Label</th>
                     }
+                    @if (rows.Any(r => IsReorderable(RowText(r, "group"))))
+                    {
+                        <th><span class="visually-hidden">@Loc["WidTableMove"]</span></th>
+                    }
                 </tr>
             </thead>
             <tbody>
-                @foreach (var row in rows)
+                @{ string? group = null; }
+                @for (var i = 0; i < rows.Count; i++)
                 {
-                    <tr>
+                    var index = i; // the handlers below run after the loop has moved on
+                    var row = rows[index];
+                    var rowGroup = RowText(row, "group");
+                    @if (!string.IsNullOrEmpty(rowGroup) && rowGroup != group)
+                    {
+                        <tr class="schema-table-group">
+                            <th colspan="@(Element.Columns.Count + (IsReorderable(rowGroup) ? 1 : 0))" scope="rowgroup">@rowGroup</th>
+                        </tr>
+                    }
+                    group = rowGroup;
+                    var reorderable = IsReorderable(rowGroup);
+                    var place = reorderable ? GroupPlace(rows, index) : 0;
+                    var size = reorderable ? GroupSize(rows, rowGroup) : 0;
+                    <tr class="@(reorderable ? "schema-table-row--reorder" : null) @(_dragging == index ? "schema-table-row--dragging" : null)"
+                        draggable="@(reorderable && !Busy ? "true" : null)"
+                        @ondragstart="@(() => _dragging = reorderable ? index : null)"
+                        @ondragend="@(() => _dragging = null)"
+                        @ondragover:preventDefault="@reorderable"
+                        @ondrop="@(() => DropAsync(rows, index))">
                         @foreach (var col in Element.Columns)
                         {
                             <td>@RenderCell(col, row)</td>
+                        }
+                        @if (reorderable)
+                        {
+                            <td class="schema-table-move">
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                                               aria-label="@Loc["WidTableMoveUp"]"
+                                               Disabled="@(Busy || _pending || place <= 1)"
+                                               OnClick="@(() => MoveAsync(row, place - 1))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                                               aria-label="@Loc["WidTableMoveDown"]"
+                                               Disabled="@(Busy || _pending || place >= size)"
+                                               OnClick="@(() => MoveAsync(row, place + 1))" />
+                            </td>
                         }
                     </tr>
                 }
             </tbody>
         </MudSimpleTable>
     };
+
+    /// <summary>The row being dragged, by index, while a drag is under way.</summary>
+    private int? _dragging;
+
+    private static string RowText(JsonElement row, string name)
+        => row.ValueKind == JsonValueKind.Object && row.TryGetProperty(name, out var value)
+            ? SchemaViewRenderer.ValueToString(value)
+            : string.Empty;
+
+    // Only the group the schema names, and only when its action is one the document has.
+    private bool IsReorderable(string group)
+        => Element.Reorder is { Group: { Length: > 0 } named } reorder
+           && string.Equals(group, named, StringComparison.Ordinal)
+           && CanDispatch(reorder.Action)
+           && !string.IsNullOrEmpty(reorder.Key);
+
+    // A row's place within its group, from 1.
+    private static int GroupPlace(IReadOnlyList<JsonElement> rows, int index)
+    {
+        var group = RowText(rows[index], "group");
+        return rows.Take(index + 1).Count(r => RowText(r, "group") == group);
+    }
+
+    private static int GroupSize(IReadOnlyList<JsonElement> rows, string group)
+        => rows.Count(r => RowText(r, "group") == group);
+
+    /// <summary>The dragged row dropped on row <paramref name="target"/>: it takes that row's place in the group.</summary>
+    private async Task DropAsync(IReadOnlyList<JsonElement> rows, int target)
+    {
+        if (_dragging is not { } source || source == target || source >= rows.Count)
+        {
+            _dragging = null;
+            return;
+        }
+
+        _dragging = null;
+        var group = RowText(rows[source], "group");
+        if (!IsReorderable(group) || RowText(rows[target], "group") != group)
+        {
+            return;
+        }
+
+        await MoveAsync(rows[source], GroupPlace(rows, target));
+    }
+
+    /// <summary>Posts the reorder action for <paramref name="row"/>, moving it to <paramref name="position"/> in its group.</summary>
+    private async Task MoveAsync(JsonElement row, int position)
+    {
+        if (Element.Reorder is not { } reorder || string.IsNullOrEmpty(reorder.Key))
+        {
+            return;
+        }
+
+        var values = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var (key, value) in reorder.Values ?? new Dictionary<string, JsonElement>())
+        {
+            values[key] = value;
+        }
+
+        values["item"] = row.TryGetProperty(reorder.Key, out var item) ? item.Clone() : JsonSerializer.SerializeToElement(string.Empty);
+        values["position"] = JsonSerializer.SerializeToElement(position);
+        await RequestAsync(reorder.Action, values, null, null);
+    }
 
     private RenderFragment RenderCell(SchemaColumn column, JsonElement row) => __builder =>
     {
@@ -208,31 +316,51 @@
         }
 
         <ol class="schema-timeline">
-            @foreach (var entry in entries)
+            @for (var i = 0; i < entries.Count; i++)
             {
-                <li class="schema-timeline-entry">
+                var entry = entries[i];
+                // A row continues a conversation when the row before it holds the same group.
+                var reply = entry.Group is not null && i > 0 && entries[i - 1].Group == entry.Group;
+                var starts = entry.Group is not null && !reply && i > 0;
+                <li class="@EntryClass(entry, reply, starts)" id="@entry.Anchor">
                     <div class="schema-timeline-head">
                         <span class="schema-timeline-author">@entry.Author</span>
                         @if (!string.IsNullOrEmpty(entry.Time))
                         {
                             <span class="schema-timeline-time">@entry.Time</span>
                         }
+                        @if (entry.ReplyTo is not null)
+                        {
+                            <span class="schema-timeline-replyto">@entry.ReplyTo</span>
+                        }
                         @if (entry.Tag is not null)
                         {
                             <MudChip T="string" Size="Size.Small" Color="entry.TagColor" Class="schema-timeline-tag">@entry.Tag</MudChip>
+                        }
+                        @if (entry.Unread)
+                        {
+                            <span class="schema-timeline-new">@Loc["WidTimelineNew"]</span>
                         }
                     </div>
                     @if (entry.IsCode)
                     {
                         <pre class="schema-timeline-body schema-timeline-code"><code>@entry.Body</code></pre>
                     }
+                    else if (entry.IsMarkup)
+                    {
+                        <div class="schema-timeline-body schema-markup">@((MarkupString)SchemaRendering.MarkupToHtml(entry.Body))</div>
+                    }
                     else
                     {
                         <div class="schema-timeline-body schema-markdown">@((MarkupString)SchemaRendering.MarkdownToHtml(entry.Body))</div>
                     }
-                    @if (entry.Actions.Count > 0)
+                    @if (entry.Actions.Count > 0 || entry.Links is { Count: > 0 })
                     {
                         <div class="schema-timeline-actions">
+                            @foreach (var link in entry.Links ?? [])
+                            {
+                                <a class="schema-link schema-timeline-link" href="@link.Href">@link.Label</a>
+                            }
                             @foreach (var action in entry.Actions)
                             {
                                 <MudButton Variant="Variant.Text" Size="Size.Small" Class="schema-timeline-action"
@@ -243,8 +371,60 @@
                             }
                         </div>
                     }
+                    @if (entry.ChildrenHidden > 0 && entry.More is not null)
+                    {
+                        <a class="schema-link schema-timeline-more" href="@entry.More">@Loc.Plural("WidTimelineMore", "count", entry.ChildrenHidden)</a>
+                    }
                 </li>
             }
         </ol>
     };
+
+    private static string EntryClass(SchemaRendering.TimelineEntry entry, bool reply, bool starts)
+        => string.Join(' ', new[]
+        {
+            "schema-timeline-entry",
+            entry.Group is not null ? "schema-timeline-entry--grouped" : null,
+            reply ? "schema-timeline-entry--reply" : null,
+            starts ? "schema-timeline-entry--starts" : null,
+            entry.Unread ? "schema-timeline-entry--unread" : null,
+        }.Where(c => c is not null));
+
+    // The fragment last scrolled to, so a redraw (an action's answer) does not pull the page back to it.
+    private string? _scrolledTo;
+
+    /// <summary>
+    /// Scrolls to the timeline entry the address's <c>#fragment</c> names, once it is drawn: the rows arrive
+    /// after the page loads, too late for the browser's own jump.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Kind != "timeline")
+        {
+            return;
+        }
+
+        var uri = Nav.Uri;
+        var hash = uri.IndexOf('#');
+        if (hash < 0 || hash == uri.Length - 1)
+        {
+            return;
+        }
+
+        var fragment = Uri.UnescapeDataString(uri[(hash + 1)..]);
+        if (fragment == _scrolledTo || !Rows().Select(SchemaRendering.ReadTimelineEntry).Any(e => e.Anchor == fragment))
+        {
+            return;
+        }
+
+        _scrolledTo = fragment;
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.scrollToId", fragment);
+        }
+        catch (JSException)
+        {
+            // Not scrolling leaves the page where it was; nothing else depends on it.
+        }
+    }
 }
