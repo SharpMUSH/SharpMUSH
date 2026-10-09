@@ -45,7 +45,9 @@ public partial class BBoardsIntegrationTests
 		var before = Notifications.CountFor(player.DbRef);
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 		await WebAppFactoryArg.QueueBarrierAsync();
-		return string.Join("\n", Notifications.For(player.DbRef).Skip(before));
+		var told = string.Join("\n", Notifications.For(player.DbRef).Skip(before));
+		await Assert.That(told).DoesNotContain("notice(").Because("every message is drawn by notice(), not shown as its call");
+		return told;
 	}
 
 	/// <summary>
@@ -145,6 +147,38 @@ public partial class BBoardsIntegrationTests
 			await Assert.That(await As(admin, $"+bbread {post}")).Contains("Text with [add(1,2)] and half.");
 			await Assert.That(await As(admin, $"+bbedit {post}/3=Answer/Reply")).Contains("Edited")
 				.Because("an admin moderates every board");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task AModeratorsEditRunsAsTheModeratorAndSeesAnonymousAuthors()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbAdm", "bboard-admin");
+			var mira = await Player("BbMira");
+			var reader = await Player("BbRead");
+			var board = await Board(admin, "BbMod");
+
+			var post = await Post(mira, board, "Mine", "plain");
+			await As(mira, $"+bbedit/all/mush {post}=Written by [name(me)].");
+			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.");
+			await Assert.That(await As(admin, $"+bbedit/all/mush {post}=Edited by [name(me)]."))
+				.Contains($"Edited {post}.");
+			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Edited by {admin.Name}.")
+				.Because("a moderator's SharpMUSH text runs as the moderator, never as the post's author");
+
+			await As(admin, $"+bbconfig {board}/anonymous=Ghost");
+			var hidden = await Post(mira, board, "Who", "Guess.");
+			var seen = await As(reader, $"+bbread {hidden}");
+			await Assert.That(seen).Contains("Ghost").And.DoesNotContain(mira.Name);
+			await Assert.That(await As(admin, $"+bbread {hidden}")).Contains($"Ghost ({mira.Name})")
+				.Because("moderators still see who wrote an anonymous post");
 		}
 		finally
 		{

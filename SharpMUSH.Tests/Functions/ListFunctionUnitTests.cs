@@ -192,6 +192,10 @@ public class ListFunctionUnitTests
 	[Arguments("sort(#105 #1000 #99,d)", "#99 #105 #1000")]
 	[Arguments("sort(#105:1 #1000:2 #99:3 foo,d)", "foo #99:3 #105:1 #1000:2")]
 	[Arguments("setdiff(#105 #1000 #99 #7,#7,%b,d)", "#99 #105 #1000")]
+	[Arguments("setdiff(#105:1 #99,#105,%b,d)", "#99")]
+	[Arguments("setunion(#105 #7,#105:1,%b,d)", "#7 #105")]
+	[Arguments("setinter(#105:1 #7,#105,%b,d)", "#105:1")]
+	[Arguments("setunion(apple pear,APPLE,%b,d)", "apple pear")]
 	// Penn sort.3/sort.4 — ANSI-aware sort. SharpMUSH preserves ANSI through sort
 	// (superior behavior), so sorted output retains formatting. PennMUSH strips it.
 	// Comparison is correct in both — only output representation differs.
