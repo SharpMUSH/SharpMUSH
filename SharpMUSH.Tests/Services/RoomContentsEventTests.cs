@@ -32,7 +32,7 @@ public class RoomContentsEventTests
 	private async Task<string> Eval(string expression)
 	{
 		await WebAppFactoryArg.QueueBarrierAsync();
-		return (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		return (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 	}
 
 	[Test]

@@ -103,7 +103,7 @@ public class PrefixRedispatchTests
 		// Unique text, and selected by it rather than by being the only thing in the window (#1247):
 		// .Single() over everything that arrived throws rather than failing an assertion.
 		var marker = $"Red{Guid.NewGuid():N}"[..11];
-		var styled = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[ansi(r,{marker})]")))!.Message;
+		var styled = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"[ansi(r,{marker})]"));
 		var before = Factory.Notifications.RawCountFor(_actor!.DbRef);
 		await Factory.CommandParserFor(_actor.DbRef, _actor.Handle).CommandParse(_actor.Handle, Connections,
 			MarkupText.Concat(MarkupText.Plain(prefix), styled));
@@ -154,8 +154,8 @@ public class PrefixRedispatchTests
 		var parser = Factory.CommandParserFor(_actor!.DbRef, _actor.Handle);
 		if (queued) parser = parser.FromState(parser.CurrentState with { Handle = null });
 		await parser.CommandParse(MarkupText.Plain($"{(prefixed ? "]" : "")}&VALUE me=[add(1,2)]"));
-		var value = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[get({_actor.DbRef}/VALUE)]"));
-		await Assert.That(value!.Message.ToPlainText()).IsEqualTo(queued && !prefixed ? "3" : "[add(1,2)]");
+		var value = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"[get({_actor.DbRef}/VALUE)]"));
+		await Assert.That(value.ToPlainText()).IsEqualTo(queued && !prefixed ? "3" : "[add(1,2)]");
 	}
 
 	[Test]
@@ -164,8 +164,8 @@ public class PrefixRedispatchTests
 		await Run("&FOO me=original");
 		await Run("]&FOO [num(me)]=changed-object");
 		await Run("]&[cat(F,OO)] me=changed-name");
-		var value = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[get({_actor!.DbRef}/FOO)]"));
-		await Assert.That(value!.Message.ToPlainText()).IsEqualTo("original");
+		var value = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"[get({_actor!.DbRef}/FOO)]"));
+		await Assert.That(value.ToPlainText()).IsEqualTo("original");
 	}
 
 	[Test]

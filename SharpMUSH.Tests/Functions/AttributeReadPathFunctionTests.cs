@@ -33,7 +33,7 @@ public class AttributeReadPathFunctionTests
 	}
 
 	private async Task<string> God(string expression)
-		=> (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		=> (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	[Test]
 	[Arguments("lattr(me/{0}`*)")]

@@ -19,14 +19,14 @@ public class InformationFunctionUnitTests
 	[Arguments("type(%l)", "ROOM")]
 	public async Task Type(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task MudName()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mudname()")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("mudname()"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
@@ -34,7 +34,7 @@ public class InformationFunctionUnitTests
 	[Test, Skip("Not Yet Implemented")]
 	public async Task Name()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("name(%#)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("name(%#)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("One");
 	}
 
@@ -42,7 +42,7 @@ public class InformationFunctionUnitTests
 	[Arguments("alias(%#)", "")]
 	public async Task Alias(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -50,7 +50,7 @@ public class InformationFunctionUnitTests
 	[Arguments("fullname(%#)", "")]
 	public async Task Fullname(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotEmpty();
 	}
 
@@ -58,7 +58,7 @@ public class InformationFunctionUnitTests
 	[Arguments("accname(%#)", "")]
 	public async Task Accname(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -66,7 +66,7 @@ public class InformationFunctionUnitTests
 	[Arguments("iname(%#)", "")]
 	public async Task Iname(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -74,7 +74,7 @@ public class InformationFunctionUnitTests
 	[Arguments("moniker(%#)", "")]
 	public async Task Moniker(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -82,14 +82,14 @@ public class InformationFunctionUnitTests
 	[Arguments("money(%#)", "#-1 NOT SUPPORTED")]
 	public async Task Money(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Quota()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("quota(%#)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("quota(%#)"));
 		// One integer, the player's limit (src/wiz.c:1895). The permission and No_Quota cases are in
 		// QuotaFunctionPermissionTests, driven by mortals.
 		await Assert.That(result.ToPlainText()).IsEqualTo("999999");
@@ -99,7 +99,7 @@ public class InformationFunctionUnitTests
 	[Arguments("powers(%#)", "")]
 	public async Task Powers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -107,7 +107,7 @@ public class InformationFunctionUnitTests
 	[Arguments("findable(%#,%#)", "1")]
 	public async Task Findable(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -117,7 +117,7 @@ public class InformationFunctionUnitTests
 	[Skip("Test infrastructure issue - intermittent failure, returns '1' instead of '0'")]
 	public async Task Hidden(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -126,7 +126,7 @@ public class InformationFunctionUnitTests
 	[Arguments("playermem(%#)", "0")]
 	public async Task Playermem(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -134,7 +134,7 @@ public class InformationFunctionUnitTests
 	[Arguments("numversion()", "20250102000000")]
 	public async Task Numversion(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -143,7 +143,7 @@ public class InformationFunctionUnitTests
 	[Arguments("nearby(%#,%l)", "1")]
 	public async Task Nearby(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -158,7 +158,7 @@ public class InformationFunctionUnitTests
 	[Arguments("first(rloc(%#,99999999999999999999),:)", "%l")]
 	public async Task Rloc(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		var resultPlain = result.ToPlainText();
 		var expectedParsed = (await Parser.FunctionParse(MarkupText.Plain(expected)))?.Message.ToPlainText();
 		await Assert.That(resultPlain).IsEqualTo(expectedParsed);
@@ -222,7 +222,7 @@ public class InformationFunctionUnitTests
 			.Because("a freshly created player owns nothing but itself, and there is no garbage column");
 		await Assert.That(await Eval($"lstats({playerName})")).IsEqualTo("1 0 0 0 1")
 			.Because("lookup_player resolves a name or a #dbref to the same player");
-		await Assert.That((await player.FunctionParse(MarkupText.Plain("lstats(me)")))!.Message.ToPlainText())
+		await Assert.That((await player.EvaluateAsync(MarkupText.Plain("lstats(me)"))).ToPlainText())
 			.IsEqualTo("1 0 0 0 1").Because("\"me\" is the executor");
 	}
 
@@ -259,21 +259,21 @@ public class InformationFunctionUnitTests
 		var (mortalDbRef, _) = await MintPlayerAsync("LstatsMortal");
 		var mortal = WebAppFactoryArg.FunctionParserFor(mortalDbRef);
 
-		var world = (await mortal.FunctionParse(MarkupText.Plain("lstats()")))!.Message.ToPlainText();
+		var world = (await mortal.EvaluateAsync(MarkupText.Plain("lstats()"))).ToPlainText();
 		await Assert.That(world.Split(' ').Length).IsEqualTo(6)
 			.Because("who == ANY_OWNER never reaches the controls() test");
 
-		await Assert.That((await mortal.FunctionParse(MarkupText.Plain("lstats(me)")))!.Message.ToPlainText())
+		await Assert.That((await mortal.EvaluateAsync(MarkupText.Plain("lstats(me)"))).ToPlainText())
 			.IsEqualTo("1 0 0 0 1").Because("a mortal controls itself");
 
-		await Assert.That((await mortal.FunctionParse(
-				MarkupText.Plain($"lstats(#{WebAppFactoryArg.ExecutorDBRef.Number})")))!.Message.ToPlainText())
+		await Assert.That((await mortal.EvaluateAsync(
+				MarkupText.Plain($"lstats(#{WebAppFactoryArg.ExecutorDBRef.Number})"))).ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("without Search_All, a player you do not control is refused");
 	}
 
 	private async Task<string> Eval(string expression)
-		=> (await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	private async Task<(DBRef DbRef, string Name)> MintPlayerAsync(string prefix)
 	{
@@ -289,7 +289,7 @@ public class InformationFunctionUnitTests
 	[Arguments("pidinfo(abc)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Pidinfo_Invalid(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -297,7 +297,7 @@ public class InformationFunctionUnitTests
 	public async Task Pidinfo_ValidFormat()
 	{
 		// In a live environment with actual tasks, this would return task info
-		var result = (await Parser.FunctionParse(MarkupText.Plain("pidinfo(1)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("pidinfo(1)"));
 		var text = result.ToPlainText();
 
 		await Assert.That(text).IsNotNull();
@@ -311,14 +311,14 @@ public class InformationFunctionUnitTests
 	[Arguments("pidinfo(1,status)", "")]
 	public async Task Pidinfo_WithField(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Colors_NoArgs()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("colors()")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("colors()"));
 		var colors = result.ToPlainText();
 
 		await Assert.That(colors).IsNotEmpty();
@@ -332,7 +332,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(*yellow*)", "yellow")]
 	public async Task Colors_Wildcard(string str, string expectedContains)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		var colors = result.ToPlainText();
 
 		await Assert.That(colors).IsNotEmpty();
@@ -343,7 +343,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, hex)", "#ffff00")]
 	public async Task Colors_NameToHex(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -351,7 +351,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, rgb)", "255 255 0")]
 	public async Task Colors_NameToRgb(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -359,7 +359,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, xterm256)")]
 	public async Task Colors_NameToXterm(string str)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		var xterm = result.ToPlainText();
 
 		await Assert.That(int.TryParse(xterm, out var xtermNum)).IsTrue();
@@ -371,7 +371,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, 16color)")]
 	public async Task Colors_NameTo16Color(string str)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		var ansiCode = result.ToPlainText();
 
 		await Assert.That(ansiCode).IsNotEmpty();
@@ -383,7 +383,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(#ffff00, name)", "yellow")]
 	public async Task Colors_HexToName(string str, string expectedContains)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		var names = result.ToPlainText();
 
 		await Assert.That(names).IsNotEmpty();
@@ -394,7 +394,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+blue /+black, hex)", "#0000ff /#000000")]
 	public async Task Colors_ForegroundAndBackground(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -402,7 +402,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(iuB+red, hex styles)", "iuB #ff0000")]
 	public async Task Colors_WithStyles(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -410,7 +410,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+blue huyG/+black, auto)", "+blue huyG/+black")]
 	public async Task Colors_AutoFormat(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -418,7 +418,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(invalidcolor, hex)", "#-1 INVALID COLOR")]
 	public async Task Colors_InvalidColor(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -426,35 +426,35 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, invalidformat)", "#-1 INVALID FORMAT")]
 	public async Task Colors_InvalidFormat(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Motd_ReturnsConnectMotd()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("motd()")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("motd()"));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task WizMotd_ReturnsWizardMotd()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("wizmotd()")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("wizmotd()"));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task DownMotd_ReturnsDownMotd()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("downmotd()")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("downmotd()"));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task FullMotd_ReturnsFullMotd()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("fullmotd()")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("fullmotd()"));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

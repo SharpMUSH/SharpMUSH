@@ -27,7 +27,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("strdelete(abcdef,1,2)", "adef")]
 	public async Task DELETE_IsAnAliasOfStrdelete(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -50,7 +50,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("strdelete(abcdef,4,99)", "abcd")]
 	public async Task StrdeleteOutOfRange(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -60,7 +60,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("insert(meep bleep gleep,-3,GOOP)", "meep GOOP bleep gleep")]
 	public async Task INSERT_AddsItemToList(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -70,7 +70,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("linsert(meep bleep gleep,-3,GOOP)", "meep GOOP bleep gleep")]
 	public async Task LINSERT_InsertsItemAtPosition(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -84,7 +84,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("lcstr2(MiXeD CaSe)", "mixed case")]
 	public async Task LCSTR2_ConvertsToLowercase(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -94,7 +94,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("ucstr2(MiXeD CaSe)", "MIXED CASE")]
 	public async Task UCSTR2_ConvertsToUppercase(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -106,7 +106,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("sha0(test)")]
 	public async Task SHA0_ReturnsNotSupported(string input)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 NOT SUPPORTED");
 	}
 
@@ -117,7 +117,7 @@ public class NewPennMUSHFunctionTests
 	[Test]
 	public async Task CONVSECS_ConvertsSecondsToTimeString()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("convsecs(0)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("convsecs(0)"));
 		// The exact output depends on the local timezone
 		var resultText = result.ToPlainText();
 		await Assert.That(resultText).Contains("1969").Or.Contains("1970");
@@ -126,7 +126,7 @@ public class NewPennMUSHFunctionTests
 	[Test]
 	public async Task CONVTIME_HandlesInvalidInput()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("convtime(invalid)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("convtime(invalid)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidTime);
 	}
 
@@ -141,7 +141,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("config(money_plural)", "Pennies")]
 	public async Task CONFIG_ReturnsConfigurationValues(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -153,7 +153,7 @@ public class NewPennMUSHFunctionTests
 	public async Task IDLESECS_ReturnsIdleTimeOrNegativeOne()
 	{
 		// It may return -1 if not connected, which is valid
-		var result = (await Parser.FunctionParse(MarkupText.Plain("idlesecs()")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("idlesecs()"));
 		var isNumeric = int.TryParse(result.ToPlainText(), out var idleTime);
 		await Assert.That(isNumeric).IsTrue();
 		// -1 is a valid return value for disconnected/dark wizards
@@ -170,7 +170,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("regreplace(HELLO,hello,hi,i)", "hi")] // Case insensitive with 'i' flag
 	public async Task REGREPLACE_ReplacesPatternInString(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -181,14 +181,14 @@ public class NewPennMUSHFunctionTests
 	[Test]
 	public async Task WEBSOCKET_HTML_ReturnsEmpty()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("websocket_html(<b>test</b>)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("websocket_html(<b>test</b>)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
 	[Test]
 	public async Task WEBSOCKET_JSON_ReturnsEmpty()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("websocket_json({\"test\":\"value\"})")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("websocket_json({\"test\":\"value\"})"));
 		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
@@ -197,7 +197,7 @@ public class NewPennMUSHFunctionTests
 	[Arguments("websocket_json({\"test\":\"value\"},NoSuchPlayerForWebsocket)")]
 	public async Task WEBSOCKET_UnknownPlayer_ReturnsNoMatch(string input)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 NO MATCH");
 	}
 

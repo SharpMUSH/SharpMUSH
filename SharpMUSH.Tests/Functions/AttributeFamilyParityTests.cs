@@ -18,7 +18,7 @@ public class AttributeFamilyParityTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	/// <summary>
 	/// PennMUSH reports this one as <c>called_as</c> — <c>"#-1 BAD ARGUMENT FORMAT TO %s"</c>

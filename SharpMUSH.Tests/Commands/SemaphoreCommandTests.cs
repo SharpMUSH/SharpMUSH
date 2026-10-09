@@ -478,7 +478,7 @@ public class SemaphoreCommandTests
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CountedDrain");
 		var attribute = $"SEM_{Guid.NewGuid():N}";
 		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message.ToPlainText();
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/{attribute})"))).ToPlainText();
 		await Command($"@wait {target}/{attribute}=think first");
 		await Command($"@wait {target}/{attribute}=think second");
 		await Assert.That(await Count()).IsEqualTo("2");
@@ -512,7 +512,7 @@ public class SemaphoreCommandTests
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message.ToPlainText();
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/{attribute})"))).ToPlainText();
 		await Scheduler.AdmitWork(async () => { blocked.SetResult(); await release.Task; return null; }, "drain-block", "test");
 		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
@@ -557,7 +557,7 @@ public class SemaphoreCommandTests
 		}
 		finally { release.SetResult(); }
 		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		var result = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message.ToPlainText();
+		var result = (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/{attribute})"))).ToPlainText();
 		await Assert.That(result).IsEqualTo("-1");
 	}
 
@@ -570,7 +570,7 @@ public class SemaphoreCommandTests
 			ConnectionService, "SemaphoreOutsider");
 		var attribute = $"SEM_{Guid.NewGuid():N}";
 		async ValueTask Command(long handle, string command) => await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
-		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({player.DbRef}/{attribute})")))!.Message.ToPlainText();
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({player.DbRef}/{attribute})"))).ToPlainText();
 		await Command(player.Handle, $"@notify me/{attribute}=2");
 		await Assert.That(await Count()).IsEqualTo("-2");
 		var created = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, [attribute])).LastAsync();

@@ -27,10 +27,10 @@ public class SceneCommandFunctionIntegrationTests
 	private const string God = "#1";
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	private async Task<MString> EvalMarkup(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message;
+		await FunctionParser.EvaluateAsync(MarkupText.Plain(expression));
 
 	private async Task Cmd(string command) =>
 		await CommandParser.CommandParse(1, Connection, MarkupText.Plain(command));

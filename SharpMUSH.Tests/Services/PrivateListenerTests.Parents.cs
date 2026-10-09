@@ -43,7 +43,7 @@ public partial class PrivateListenerTests
 		await Admin($"&TREE`ACTION {parent}=^hello *:&CAPTURE me=%0|%!|%#|%@");
 		await Admin($"@lock/{lockName} {child}=#FALSE");
 		var pipeline = await Build(actor, actor.DbRef);
-		var styled = (await pipeline.Parser.FunctionParse(MarkupText.Plain("ansi(r,hello world)")))!.Message;
+		var styled = await pipeline.Parser.EvaluateAsync(MarkupText.Plain("ansi(r,hello world)"));
 		await pipeline.Notify.Notify(child, styled, await Node(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		await Assert.That(pipeline.Queue).IsEmpty();
 		await Admin($"@lock/{lockName} {child}=#TRUE");

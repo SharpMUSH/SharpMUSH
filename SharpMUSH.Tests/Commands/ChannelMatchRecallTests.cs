@@ -337,7 +337,7 @@ public class ChannelMatchRecallTests
 		await Run(mortal, $"@chat {name}=omega");
 
 		var parser = WebAppFactoryArg.FunctionParserFor(mortal.DbRef);
-		var result = (await parser.FunctionParse(MarkupText.Plain($"crecall({name},10,,|)")))!.Message.ToPlainText();
+		var result = (await parser.EvaluateAsync(MarkupText.Plain($"crecall({name},10,,|)"))).ToPlainText();
 
 		await Assert.That(result.IndexOf("alpha", StringComparison.Ordinal))
 			.IsLessThan(result.IndexOf("omega", StringComparison.Ordinal));
@@ -394,7 +394,7 @@ public class ChannelMatchRecallTests
 		await Assert.That(seen).DoesNotContain(hiderName);
 
 		var funResult = (await WebAppFactoryArg.FunctionParserFor(watcher.DbRef)
-			.FunctionParse(MarkupText.Plain($"cwho({name})")))!.Message.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"cwho({name})"))).ToPlainText();
 		await Assert.That(funResult).DoesNotContain($"#{hider.DbRef.Number}");
 	}
 
@@ -442,7 +442,7 @@ public class ChannelMatchRecallTests
 			.FunctionParse(MarkupText.Plain($"cbufferadd({name},a reconstructed line)"));
 
 		var recall = (await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
-			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"crecall({name})"))).ToPlainText();
 
 		await Assert.That(recall).Contains("a reconstructed line");
 	}
@@ -466,7 +466,7 @@ public class ChannelMatchRecallTests
 		await Mediator.Send(new AddUserToChannelCommand(again, owner));
 
 		var recall = (await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
-			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"crecall({name})"))).ToPlainText();
 		await Assert.That(recall).DoesNotContain("an old line");
 	}
 
@@ -484,7 +484,7 @@ public class ChannelMatchRecallTests
 			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		var result = (await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
-			.FunctionParse(MarkupText.Plain($"cbufferadd({name},forged)")))!.Message.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"cbufferadd({name},forged)"))).ToPlainText();
 
 		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 	}
@@ -756,7 +756,7 @@ public class ChannelMatchRecallTests
 		var commandOutput = string.Join("\n",
 			await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/recall {name}")));
 		var functionOutput = (await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
-			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"crecall({name})"))).ToPlainText();
 
 		await Assert.That(commandOutput).DoesNotContain("wizard business");
 		await Assert.That(functionOutput).DoesNotContain("wizard business");
@@ -826,7 +826,7 @@ public class ChannelMatchRecallTests
 		await Assert.That(hidden).DoesNotContain(thingName);
 
 		var funResult = (await WebAppFactoryArg.FunctionParserFor(watcher.DbRef)
-			.FunctionParse(MarkupText.Plain($"cwho({name})")))!.Message.ToPlainText();
+			.EvaluateAsync(MarkupText.Plain($"cwho({name})"))).ToPlainText();
 		await Assert.That(funResult).DoesNotContain($"#{thingRef.Number}");
 	}
 

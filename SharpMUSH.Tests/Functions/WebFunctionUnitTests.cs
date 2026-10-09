@@ -25,7 +25,7 @@ public class WebFunctionUnitTests
 	[Arguments(@"urlencode(100\%)", "100%25")]
 	public async Task Urlencode(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -40,7 +40,7 @@ public class WebFunctionUnitTests
 	[Arguments(@"urldecode(a\%09b)", "a?b")]
 	public async Task Urldecode(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -59,7 +59,7 @@ public class WebFunctionUnitTests
 	[Arguments("wshtml()", "")]
 	public async Task WshtmlReturnsTheFragmentsTextAsItsPlainReading(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -74,7 +74,7 @@ public class WebFunctionUnitTests
 	[Arguments("wshtml(<b>x</b>,)", "x", "<b>x</b>")]
 	public async Task WshtmlAcceptsPennMUSHsDefaultArgument(string str, string plain, string html)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(plain);
 		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo(html);
 	}
@@ -89,7 +89,7 @@ public class WebFunctionUnitTests
 	[Arguments("wshtml(<B>upper</B>)", "<b>upper</b>")]
 	public async Task WshtmlRendersBackToTheSameHtml(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo(expected);
 	}
 
@@ -100,7 +100,7 @@ public class WebFunctionUnitTests
 	[Test]
 	public async Task WshtmlDegradesToStylingOrTextOnATerminal()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("wshtml(<b>bold</b> <a href=\"https://x\">link</a>)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("wshtml(<b>bold</b> <a href=\"https://x\">link</a>)"));
 
 		// <b> is bold: SGR 1, the same as ansi(h,...) with no colour letter after the h.
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("\u001b[1mbold\u001b[0m link");
@@ -119,7 +119,7 @@ public class WebFunctionUnitTests
 	[Arguments("wshtml(a<br/>c)", "a\nc")]
 	public async Task WshtmlDropsWhatHasNothingToCover(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo(expected);
 	}
 
@@ -135,7 +135,7 @@ public class WebFunctionUnitTests
 	[Arguments("wshtml(<!DOCTYPE html>x)", "x")]
 	public async Task WshtmlRepairsMalformedHtmlTheWayABrowserDoes(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo(expected);
 	}
 
@@ -154,18 +154,18 @@ public class WebFunctionUnitTests
 		var parser = WebAppFactoryArg.FunctionParserFor(mortal.DbRef);
 
 		// A bare ( ) inside a function argument is a MUSH grouping and would end the call; escaped, it is text.
-		var refused = await parser.FunctionParse(MarkupText.Plain(@"wshtml(<b>ok</b><script>alert\(1\)</script>)"));
-		await Assert.That(refused!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		var refused = await parser.EvaluateAsync(MarkupText.Plain(@"wshtml(<b>ok</b><script>alert\(1\)</script>)"));
+		await Assert.That(refused.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
-		var stripped = await parser.FunctionParse(MarkupText.Plain(@"wshtml(<a href=""javascript:alert\(1\)"" onclick=""x\(\)"">link</a>)"));
-		await Assert.That(stripped!.Message.Render(MarkupFormat.Html)).IsEqualTo("<a>link</a>");
+		var stripped = await parser.EvaluateAsync(MarkupText.Plain(@"wshtml(<a href=""javascript:alert\(1\)"" onclick=""x\(\)"">link</a>)"));
+		await Assert.That(stripped.Render(MarkupFormat.Html)).IsEqualTo("<a>link</a>");
 
-		var allowed = await parser.FunctionParse(MarkupText.Plain("wshtml(<a href=\"https://sharpmush.com\">link</a>)"));
-		await Assert.That(allowed!.Message.Render(MarkupFormat.Html)).IsEqualTo("<a href=\"https://sharpmush.com\">link</a>");
+		var allowed = await parser.EvaluateAsync(MarkupText.Plain("wshtml(<a href=\"https://sharpmush.com\">link</a>)"));
+		await Assert.That(allowed.Render(MarkupFormat.Html)).IsEqualTo("<a href=\"https://sharpmush.com\">link</a>");
 
 		// God is a wizard: the gate lifts and the fragment goes through as written.
-		var privileged = await Parser.FunctionParse(MarkupText.Plain(@"wshtml(<script>alert\(1\)</script>)"));
-		await Assert.That(privileged!.Message.Render(MarkupFormat.Html)).IsEqualTo("<script>alert(1)</script>");
+		var privileged = await Parser.EvaluateAsync(MarkupText.Plain(@"wshtml(<script>alert\(1\)</script>)"));
+		await Assert.That(privileged.Render(MarkupFormat.Html)).IsEqualTo("<script>alert(1)</script>");
 	}
 
 	/// <summary>
@@ -175,7 +175,7 @@ public class WebFunctionUnitTests
 	[Test]
 	public async Task WshtmlOutputIsOrdinaryMarkupThatSurvivesStringFunctions()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mid(wshtml(<b>bold</b> and <i>italic</i>),0,8)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("mid(wshtml(<b>bold</b> and <i>italic</i>),0,8)"));
 		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo("<b>bold</b> and");
 	}
 
@@ -189,7 +189,7 @@ public class WebFunctionUnitTests
 		await Assert.That(RegistryInventory.Functions.Select(f => f.Name))
 			.DoesNotContain("wsjson", StringComparer.OrdinalIgnoreCase);
 		// An unregistered name is not a call at all; the text passes through as written.
-		var result = (await Parser.FunctionParse(MarkupText.Plain("wsjson(x)")))!.Message.ToPlainText();
+		var result = (await Parser.EvaluateAsync(MarkupText.Plain("wsjson(x)"))).ToPlainText();
 		await Assert.That(result).IsEqualTo("wsjson(x)");
 	}
 
@@ -197,7 +197,7 @@ public class WebFunctionUnitTests
 	[Arguments("oob(test)", "")]
 	public async Task Oob(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -205,7 +205,7 @@ public class WebFunctionUnitTests
 	[Arguments("oob(me, room.contents)", "0")]
 	public async Task OobNoConnectionReturnsZero(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -213,7 +213,7 @@ public class WebFunctionUnitTests
 	[Arguments("pueblo()", "0")]
 	public async Task Pueblo(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -221,7 +221,7 @@ public class WebFunctionUnitTests
 	[Arguments("ssl(%#)", "0")]
 	public async Task Ssl(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -229,7 +229,7 @@ public class WebFunctionUnitTests
 	[Arguments("terminfo(%#)", "")]
 	public async Task Terminfo(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -237,7 +237,7 @@ public class WebFunctionUnitTests
 	[Arguments("width(%#)", "78")]
 	public async Task Width(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

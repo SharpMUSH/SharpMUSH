@@ -66,7 +66,7 @@ public class AttributeTreeWipeBranchTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"hasattr({objDbRef},FOO)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"hasattr({objDbRef},FOO)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("1")
 			.Because("setting foo`bar should auto-create FOO branch");
 	}
@@ -85,7 +85,7 @@ public class AttributeTreeWipeBranchTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR`BAZ {objDbRef}=deeper"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"get({objDbRef}/FOO`BAR)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"get({objDbRef}/FOO`BAR)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("original")
 			.Because("adding a child should not wipe the parent's value");
 	}
@@ -104,7 +104,7 @@ public class AttributeTreeWipeBranchTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAZ {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR`BAZ {objDbRef}=baz"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"lattr({objDbRef})")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"lattr({objDbRef})"));
 		var text = result.ToPlainText();
 
 		await Assert.That(text).Contains("FOO")
@@ -126,7 +126,7 @@ public class AttributeTreeWipeBranchTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR`BAZ {objDbRef}=baz"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"lattr({objDbRef}/**)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"lattr({objDbRef}/**)"));
 		var text = result.ToPlainText();
 
 		await Assert.That(text).Contains("FOO")
@@ -150,9 +150,9 @@ public class AttributeTreeWipeBranchTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=middle"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR`BAZ {objDbRef}=leaf"));
 
-		var rootResult = (await Parser.FunctionParse(MarkupText.Plain($"get({objDbRef}/FOO)")))!.Message;
-		var midResult = (await Parser.FunctionParse(MarkupText.Plain($"get({objDbRef}/FOO`BAR)")))!.Message;
-		var leafResult = (await Parser.FunctionParse(MarkupText.Plain($"get({objDbRef}/FOO`BAR`BAZ)")))!.Message;
+		var rootResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({objDbRef}/FOO)"));
+		var midResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({objDbRef}/FOO`BAR)"));
+		var leafResult = await Parser.EvaluateAsync(MarkupText.Plain($"get({objDbRef}/FOO`BAR`BAZ)"));
 
 		await Assert.That(rootResult.ToPlainText()).IsEqualTo("root");
 		await Assert.That(midResult.ToPlainText()).IsEqualTo("middle");
@@ -172,7 +172,7 @@ public class AttributeTreeWipeBranchTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"flags({objDbRef}/FOO)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"flags({objDbRef}/FOO)"));
 		var text = result.ToPlainText();
 
 		await Assert.That(text).Contains("`")

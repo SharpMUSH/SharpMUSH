@@ -1346,7 +1346,7 @@ public class WikiCommandTests
 		msg is MString markup && markup.Render(format).Contains(contains);
 
 	private async Task<string> AsPlayerAsync(SharpMUSH.Library.Models.DBRef player, string code)
-		=> (await WebAppFactoryArg.FunctionParserFor(player).FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
+		=> (await WebAppFactoryArg.FunctionParserFor(player).EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	/// <summary>A page filed in a category of its own, created and filed by <paramref name="player"/>.</summary>
 	private async Task<(string Title, string Slug, string Category)> FiledPageAsync(TestIsolationHelpers.TestPlayer player, string prefix)

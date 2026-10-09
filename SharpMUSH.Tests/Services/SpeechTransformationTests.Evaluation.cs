@@ -183,7 +183,7 @@ public partial class SpeechTransformationTests
 	{
 		var actor = await Player();
 		await Admin($"&SPEECHMOD {actor.DbRef}=%0");
-		var body = (await Factory.CommandParser.FunctionParse(MarkupText.Plain("[ansi(r,hello)]")))!.Message;
+		var body = await Factory.CommandParser.EvaluateAsync(MarkupText.Plain("[ansi(r,hello)]"));
 		var result = await new SpeechService(Attributes, new FixedOptions(Options)).TransformAsync(
 			Factory.CommandParserFor(actor.DbRef, actor.Handle), await Node(actor.DbRef), body, "|");
 		await Assert.That(result.Message.Render(global::MarkupString.MarkupFormat.Ansi)).IsEqualTo(body.Render(global::MarkupString.MarkupFormat.Ansi));

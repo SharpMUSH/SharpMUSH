@@ -23,7 +23,7 @@ public class PennMUSHImportTimestampTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	private async Task<string> Eval(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
+		=> (await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	// ---- the unit conversion --------------------------------------------------------------------
 

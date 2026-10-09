@@ -42,7 +42,7 @@ public class UserDefinedFunctionTests
 		CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	/// <summary>Evaluates <paramref name="expression"/> with <paramref name="executor"/> as the executor (not #1).</summary>
 	private async Task<string> EvalAs(DBRef executor, string expression)
@@ -55,7 +55,7 @@ public class UserDefinedFunctionTests
 			Services,
 			state: ParserState.RootFor(executor) with { Command = "think", Handle = 1 });
 
-		return (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		return (await parser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 	}
 
 	private Task<DBRef> NewNonWizardPlayer() =>

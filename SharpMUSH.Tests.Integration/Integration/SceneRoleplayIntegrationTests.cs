@@ -57,7 +57,7 @@ public class SceneRoleplayIntegrationTests
 
 	/// <summary>Evaluates a softcode expression as God and returns its plain text.</summary>
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	/// <summary>Runs a command as God (#1, handle 1).</summary>
 	private async Task<CallState> God1(string command) =>

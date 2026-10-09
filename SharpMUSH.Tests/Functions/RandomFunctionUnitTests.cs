@@ -15,7 +15,7 @@ public class RandomFunctionUnitTests
 	[Arguments("die(3,10)", "")]
 	public async Task Die(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsGreaterThan(0);
@@ -91,7 +91,7 @@ public class RandomFunctionUnitTests
 		var seen = new HashSet<string>();
 		for (var draw = 0; draw < 100; draw++)
 		{
-			seen.Add((await Parser.FunctionParse(MarkupText.Plain("rand(-5)")))!.Message.ToPlainText());
+			seen.Add((await Parser.EvaluateAsync(MarkupText.Plain("rand(-5)"))).ToPlainText());
 		}
 
 		await Assert.That(seen).IsNotEmpty();
@@ -124,7 +124,7 @@ public class RandomFunctionUnitTests
 	[Arguments("shuffle(a b c d e)", "")]
 	public async Task Shuffle(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -132,7 +132,7 @@ public class RandomFunctionUnitTests
 	[Arguments("scramble(test)", "")]
 	public async Task Scramble(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

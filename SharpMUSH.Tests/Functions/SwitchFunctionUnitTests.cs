@@ -21,7 +21,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(abc,AB*,YES,NO)", "YES")]
 	public async Task Switch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -39,7 +39,7 @@ public class SwitchFunctionUnitTests
 	// [A-Z], {6} get consumed by the parser. PennMUSH passes them raw.
 	public async Task Reswitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -52,7 +52,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("reswitchall(test,t.*,match1,e.*,match2)", "match1match2")]
 	public async Task Reswitchall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -65,7 +65,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("reswitchi(TEST,t.*,match)", "match")]
 	public async Task Reswitchi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -78,7 +78,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("reswitchalli(TEST,t.*,match1,e.*,match2)", "match1match2")]
 	public async Task Reswitchalli(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -86,7 +86,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("slev()", "0")]
 	public async Task SlevOutsideSwitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -95,7 +95,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(foo,foo,switch(bar,bar,slev(),0),0)", "2")]
 	public async Task SlevInsideSwitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -103,7 +103,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("stext()", "")]
 	public async Task StextOutsideSwitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -112,7 +112,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(world,world,stext(0),0)", "world")]
 	public async Task StextInsideSwitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -122,7 +122,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(outer,outer,switch(inner,inner,stext(L),0),0)", "outer")]
 	public async Task StextNestedSwitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -130,7 +130,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("reswitch(test,t.*,stext(),0)", "test")]
 	public async Task StextInsideReswitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -139,7 +139,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("stext(-1)", "#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER")]
 	public async Task StextWithInvalidArguments(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -147,7 +147,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(test,test,stext(10),0)", "")]
 	public async Task StextBeyondDepth(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -155,7 +155,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(test,test,stext(l),0)", "test")]
 	public async Task StextLowercaseL(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -164,7 +164,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(world,world,%$0,0)", "world")]
 	public async Task PercentDollarRegisterSwitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -174,7 +174,7 @@ public class SwitchFunctionUnitTests
 	[Arguments("switch(outer,outer,switch(inner,inner,%$L,0),0)", "outer")]
 	public async Task PercentDollarNestedSwitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

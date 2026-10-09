@@ -42,10 +42,10 @@ public class CommApiTests(ServerWebAppFactory factory)
 		TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
 
 	private async Task<string> ObjidOf(DBRef who) =>
-		(await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid(#{who.Number})")))!.Message.ToPlainText();
+		(await factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"objid(#{who.Number})"))).ToPlainText();
 
 	private async Task<string> GodObjid() =>
-		(await factory.FunctionParser.FunctionParse(MarkupText.Plain("objid(#1)")))!.Message.ToPlainText();
+		(await factory.FunctionParser.EvaluateAsync(MarkupText.Plain("objid(#1)"))).ToPlainText();
 
 	/// <summary>An open player channel with God and <paramref name="members"/> on it.</summary>
 	private async Task<string> ChannelAsync(string prefix, params DBRef[] members)

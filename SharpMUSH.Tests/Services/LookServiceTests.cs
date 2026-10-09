@@ -73,8 +73,8 @@ public class LookServiceTests
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=TERSE"));
 
-		var flags = (await GodParser.FunctionParse(MarkupText.Plain(
-			$"[hasflag({player.DbRef},TERSE)] [hasflag({player.DbRef},CLOUDY)]")))!.Message.ToPlainText();
+		var flags = (await GodParser.EvaluateAsync(MarkupText.Plain(
+			$"[hasflag({player.DbRef},TERSE)] [hasflag({player.DbRef},CLOUDY)]"))).ToPlainText();
 		await Assert.That(flags).IsEqualTo("1 0");
 	}
 

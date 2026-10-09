@@ -18,7 +18,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("condall(1 0 1,YES,NO)", "YES")]
 	public async Task Condall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -27,7 +27,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("ncond(0,a,1,b,c)", "a")]
 	public async Task Ncond(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -37,7 +37,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("ncondall(-0,a,1,b,c)", "a")]
 	public async Task Ncondall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -49,7 +49,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("firstof(1,2,3)", "1")]
 	public async Task Firstof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -67,15 +67,15 @@ public class ConditionalFunctionUnitTests
 	[Arguments("allof(1,2,3,@)", "1@2@3")]
 	public async Task Allof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task AllofPreservesSelectedMarkupAndDelimiter()
 	{
-		var actual = (await Parser.FunctionParse(MarkupText.Plain("allof(ansi(r,a),0,ansi(b,b),ansi(g,|))")))!.Message;
-		var expected = (await Parser.FunctionParse(MarkupText.Plain("strcat(ansi(r,a),ansi(g,|),ansi(b,b))")))!.Message;
+		var actual = await Parser.EvaluateAsync(MarkupText.Plain("allof(ansi(r,a),0,ansi(b,b),ansi(g,|))"));
+		var expected = await Parser.EvaluateAsync(MarkupText.Plain("strcat(ansi(r,a),ansi(g,|),ansi(b,b))"));
 		await Assert.That(actual.ToPlainText()).IsEqualTo("a|b");
 		await Assert.That(actual.Runs.ToArray()).IsEquivalentTo(expected.Runs.ToArray());
 	}
@@ -97,7 +97,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("strfirstof(,add(1,1))", "2")]
 	public async Task Strfirstof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -113,7 +113,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("strallof(foo,bar,,@)", "foo@bar")]
 	public async Task Strallof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -128,8 +128,8 @@ public class ConditionalFunctionUnitTests
 	[Test]
 	public async Task StrallofParsesItsDelimiterBeforeItsCandidates()
 	{
-		var result = (await Parser.FunctionParse(
-			MarkupText.Plain("[setq(sallof,old)][strallof(%q<sallof>,setq(sallof,new))]")))!.Message;
+		var result = await Parser.EvaluateAsync(
+			MarkupText.Plain("[setq(sallof,old)][strallof(%q<sallof>,setq(sallof,new))]"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("new");
 	}

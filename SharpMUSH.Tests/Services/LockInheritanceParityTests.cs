@@ -139,5 +139,5 @@ public class LockInheritanceParityTests
 		=> (await Factory.CommandParser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command))).Message.ToPlainText();
 
 	private async Task<string> ReadAsync(string expression)
-		=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		=> (await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 }

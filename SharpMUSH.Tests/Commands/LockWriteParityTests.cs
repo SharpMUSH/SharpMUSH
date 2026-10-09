@@ -22,7 +22,7 @@ public class LockWriteParityTests
 		=> (await Parser.CommandParse(1, Connections, MarkupText.Plain($"@create LockParity{Guid.NewGuid():N}"))).Message.ToPlainText();
 
 	private async Task<string> Read(string expression)
-		=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+		=> (await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	[Test]
 	public async Task InvalidReplacementPreservesPreviousLock()

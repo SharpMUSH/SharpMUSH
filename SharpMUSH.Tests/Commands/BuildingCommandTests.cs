@@ -110,8 +110,8 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DoDigForCommandListCheck()
 	{
-		var currentLocation = await Parser.FunctionParse(MarkupText.Plain("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message.ToPlainText());
+		var currentLocation = await Parser.EvaluateAsync(MarkupText.Plain("%l"));
+		var currentLocationDbRef = DBRef.Parse(currentLocation.ToPlainText());
 
 		var newRoom = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain("@dig DoDigTestRoom=DoDigTestExit;DoDigTestExitAlias,DoDigTestExitBack;DoDigTestExitAliasBack"));
@@ -130,8 +130,8 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DigFunctionNotifiesLikeTheCommand()
 	{
-		var currentLocation = await Parser.FunctionParse(MarkupText.Plain("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message.ToPlainText());
+		var currentLocation = await Parser.EvaluateAsync(MarkupText.Plain("%l"));
+		var currentLocationDbRef = DBRef.Parse(currentLocation.ToPlainText());
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain("think dig(DigFnTestRoom,DigFnTestExit;DigFnTestExitAlias,DigFnTestExitBack;DigFnTestExitAliasBack)"));
@@ -146,8 +146,8 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DoDigForCommandListCheck2()
 	{
-		var currentLocation = await Parser.FunctionParse(MarkupText.Plain("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message.ToPlainText());
+		var currentLocation = await Parser.EvaluateAsync(MarkupText.Plain("%l"));
+		var currentLocationDbRef = DBRef.Parse(currentLocation.ToPlainText());
 
 		var newRoom = await Parser.CommandListParse(MarkupText.Plain("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
@@ -163,11 +163,11 @@ public class BuildingCommandTests
 	public async Task DigAndMoveTest()
 	{
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@dig NewRoom=Forward;F,Backward;B"));
-		var initialRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message.ToPlainText();
+		var initialRoom = (await Parser.EvaluateAsync(MarkupText.Plain("%l"))).ToPlainText();
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("goto Forward"));
-		var newRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message.ToPlainText();
+		var newRoom = (await Parser.EvaluateAsync(MarkupText.Plain("%l"))).ToPlainText();
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("goto Backward"));
-		var finalRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message.ToPlainText();
+		var finalRoom = (await Parser.EvaluateAsync(MarkupText.Plain("%l"))).ToPlainText();
 
 		await Assert.That(initialRoom).Length().IsPositive();
 		await Assert.That(initialRoom).IsEqualTo(finalRoom);
@@ -1416,8 +1416,8 @@ public class BuildingCommandTests
 
 	private async Task<string> OwnerOf(DBRef reference)
 	{
-		var owner = await Parser.FunctionParse(MarkupText.Plain($"[owner(#{reference.Number})]"));
-		return BareDbref(owner!.Message.ToPlainText().Trim());
+		var owner = await Parser.EvaluateAsync(MarkupText.Plain($"[owner(#{reference.Number})]"));
+		return BareDbref(owner.ToPlainText().Trim());
 	}
 
 	private async Task<DBRef> UnlinkedExit(string prefix)

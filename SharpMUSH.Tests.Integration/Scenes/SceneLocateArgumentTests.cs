@@ -55,7 +55,7 @@ public class SceneLocateArgumentTests
 	}
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	[Test]
 	public async Task SceneCreate_ResolvesOwner_FromMeKeyword()

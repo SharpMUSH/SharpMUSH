@@ -25,7 +25,7 @@ public class SceneServiceIntegrationTests
 
 	/// <summary>Evaluates a softcode expression as God and returns its trimmed plain text.</summary>
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
+		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	/// <summary>Creates a fresh PUBLIC scene owned by God and returns its id.</summary>
 	private async Task<string> NewSceneAsync(string title = "Test Scene")

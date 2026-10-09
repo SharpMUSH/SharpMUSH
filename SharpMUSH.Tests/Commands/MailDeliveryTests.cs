@@ -65,7 +65,7 @@ public class MailDeliveryTests
 	}
 
 	private async Task<string> Get(DBRef obj, string attribute)
-		=> (await GodParser.FunctionParse(MarkupText.Plain($"[get(#{obj.Number}/{attribute})]")))!.Message.ToPlainText();
+		=> (await GodParser.EvaluateAsync(MarkupText.Plain($"[get(#{obj.Number}/{attribute})]"))).ToPlainText();
 
 	/// <summary>
 	/// <c>do_mail_fwd</c> delivers through <c>send_mail</c> (<c>extmail.c:1296</c>), so the recipient hears

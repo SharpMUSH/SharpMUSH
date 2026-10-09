@@ -30,7 +30,7 @@ public class ConfigListOptionTests
 	[Arguments("channel_flags", " player")]
 	public async Task FlagOptionPrintsItsFlags(string option, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"[config({option})]")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"[config({option})]"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
@@ -69,7 +69,7 @@ public class ConfigListOptionTests
 	[Test]
 	public async Task ConfigFunctionPrintsAMapping()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("[config(command_aliases)]")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("[config(command_aliases)]"));
 
 		await Assert.That(result.ToPlainText()).Contains("@ATRLOCK=@attrlock|");
 	}

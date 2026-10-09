@@ -50,10 +50,10 @@ public class LockViewParityTests
 		await Assert.That(lockLines).Contains($"@lset {reference}/Basic=!no_inherit");
 		await AsGod($"@unlock {target}");
 		foreach (var line in lockLines) await AsGod(line);
-		var readback = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"lock({target})"));
-		await Assert.That(readback!.Message.ToPlainText()).IsEqualTo("=#1");
-		var flags = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"lockflags({target})"));
-		await Assert.That(flags!.Message.ToPlainText()).IsEqualTo("v");
+		var readback = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"lock({target})"));
+		await Assert.That(readback.ToPlainText()).IsEqualTo("=#1");
+		var flags = await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"lockflags({target})"));
+		await Assert.That(flags.ToPlainText()).IsEqualTo("v");
 	}
 	[Test]
 	public async Task AttributeLockDenialDoesNotReportSuccess()
@@ -92,7 +92,7 @@ public class LockViewParityTests
 		await Assert.That(await Read($"get({target}/ROOT`LEAF)")).IsEqualTo("leaf value");
 
 		async Task<string> Read(string expression)
-			=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
+			=> (await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 	}
 
 }

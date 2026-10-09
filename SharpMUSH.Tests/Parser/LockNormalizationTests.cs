@@ -39,7 +39,7 @@ public class LockNormalizationTests
 	[Test]
 	public async Task Normalize_ExactObjectLock_BareDbRef_PreservedAsIs()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestObj1)")))!.Message;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(NormTestObj1)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
@@ -56,7 +56,7 @@ public class LockNormalizationTests
 	[Test]
 	public async Task Normalize_ExactObjectLock_ObjId_PreservesObjId()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestObjId1)")))!.Message;
+		var createResult = await Parser.EvaluateAsync(MarkupText.Plain("create(NormTestObjId1)"));
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).Expect<DBRef>();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Expect<AnySharpObject>();
@@ -72,13 +72,13 @@ public class LockNormalizationTests
 	[Test]
 	public async Task Normalize_ComplexLock_PreservesBareDbrefs()
 	{
-		var createResult1 = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestComplex1)")))!.Message;
+		var createResult1 = await Parser.EvaluateAsync(MarkupText.Plain("create(NormTestComplex1)"));
 		var testObjDbRefStr1 = createResult1.ToPlainText();
 		var testObjDbRef1 = HelperFunctions.ParseDbRef(testObjDbRefStr1).Expect<DBRef>();
 		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Expect<AnySharpObject>();
 		var testObjFullDbRef1 = testObj1.Object().DBRef;
 
-		var createResult2 = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestComplex2)")))!.Message;
+		var createResult2 = await Parser.EvaluateAsync(MarkupText.Plain("create(NormTestComplex2)"));
 		var testObjDbRefStr2 = createResult2.ToPlainText();
 		var testObjDbRef2 = HelperFunctions.ParseDbRef(testObjDbRefStr2).Expect<DBRef>();
 		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Expect<AnySharpObject>();

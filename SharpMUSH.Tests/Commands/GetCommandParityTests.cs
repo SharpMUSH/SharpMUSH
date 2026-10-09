@@ -31,7 +31,7 @@ public class GetCommandParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
 	private async Task<string> Eval(string expression)
-		=> (await GodParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
+		=> (await GodParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
 
 	private async Task<string> NameOf(DBRef obj) => await Eval($"[name({obj})]");
 

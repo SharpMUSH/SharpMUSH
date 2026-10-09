@@ -24,7 +24,7 @@ public class MessageFunctionTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MsgFuncBasic");
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGFUNC_19283 {objDbRef}=MessageFunc_Value_19283"));
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"message({objDbRef},Default,TESTFORMAT_MSGFUNC_19283)")))!.Message;
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"message({objDbRef},Default,TESTFORMAT_MSGFUNC_19283)"));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 	}

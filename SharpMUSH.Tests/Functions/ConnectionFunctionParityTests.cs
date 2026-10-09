@@ -24,7 +24,7 @@ public class ConnectionFunctionParityTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> EvaluateAsync(string code) =>
-		(await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
+		(await Parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
 
 	/// <summary>
 	/// A name that matches no player at all. PennMUSH's <c>lookup_desc</c> returns NULL and each

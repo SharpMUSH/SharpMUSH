@@ -21,7 +21,7 @@ public class LockIntegrationTests
 
 	private async Task<string> Eval(string expr)
 	{
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain(expr)))!.Message;
+		var result = await FunctionParser.EvaluateAsync(MarkupText.Plain(expr));
 		return result.ToPlainText();
 	}
 

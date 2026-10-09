@@ -293,8 +293,8 @@ public class DidItServiceTests
 			OWhat: "OTICK",
 			Loc: roomDbRef));
 
-		var count = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/COUNT)]"));
-		await Assert.That(count!.Message.ToPlainText().Trim()).IsEqualTo("1");
+		var count = await GodParser.EvaluateAsync(MarkupText.Plain($"[get({thing}/COUNT)]"));
+		await Assert.That(count.ToPlainText().Trim()).IsEqualTo("1");
 	}
 
 	[Test]

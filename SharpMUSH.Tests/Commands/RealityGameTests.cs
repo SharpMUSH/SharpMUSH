@@ -265,10 +265,10 @@ public class RealityGameTests
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
 			var parser = Factory.FunctionParserFor(player.Object.DBRef);
-			var matched = await parser.FunctionParse(MarkupText.Plain($"locate(%#,{name},n)"));
-			await Assert.That(matched!.Message.ToPlainText()).IsEqualTo($"#{visible.Number}");
-			var direct = await parser.FunctionParse(MarkupText.Plain($"locate(%#,{hidden.Object().DBRef},a)"));
-			await Assert.That(direct!.Message.ToPlainText()).StartsWith("#-");
+			var matched = await parser.EvaluateAsync(MarkupText.Plain($"locate(%#,{name},n)"));
+			await Assert.That(matched.ToPlainText()).IsEqualTo($"#{visible.Number}");
+			var direct = await parser.EvaluateAsync(MarkupText.Plain($"locate(%#,{hidden.Object().DBRef},a)"));
+			await Assert.That(direct.ToPlainText()).StartsWith("#-");
 			var output = new HttpResponseContext();
 			using (Get<IHttpOutputCapture>().BeginCapture(player.Object.Key, output))
 				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"look {room.Object.DBRef}"));

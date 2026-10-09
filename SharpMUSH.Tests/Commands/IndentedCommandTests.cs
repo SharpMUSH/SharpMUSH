@@ -42,9 +42,9 @@ public class IndentedCommandTests
 
 		await NotifiedWhile(player, $"{indent}@describe me={description}");
 
-		var stored = await WebAppFactoryArg.CommandParser.FunctionParse(
+		var stored = await WebAppFactoryArg.CommandParser.EvaluateAsync(
 			MarkupText.Plain($"get(#{player.DbRef.Number}/DESCRIBE)"));
-		await Assert.That(stored!.Message.ToPlainText()).IsEqualTo(description);
+		await Assert.That(stored.ToPlainText()).IsEqualTo(description);
 	}
 
 	[Test]

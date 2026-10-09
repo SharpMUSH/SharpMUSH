@@ -27,7 +27,7 @@ public class MailFolderNumberTests
 
 		return (player,
 			async command => await commands.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command)),
-			async expression => (await functions.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText());
+			async expression => (await functions.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText());
 	}
 
 	[Test]
