@@ -8,7 +8,8 @@
             <div class="kit-card-titles">
                 @if (Title is not null)
                 {
-                    <div class="kit-card-title">@Title</div>
+                    @* A heading, so a reader can jump from card to card; the card keeps its own look. *@
+                    <div class="kit-card-title" role="heading" aria-level="@HeadingLevel">@Title</div>
                 }
                 @if (Sub is not null)
                 {
@@ -33,4 +34,7 @@
     /// <summary>The aside variant: padded 12px, 13px title, no header rule.</summary>
     [Parameter] public bool Aside { get; set; }
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>The title's heading level: under the page's h1 by default.</summary>
+    [Parameter] public int HeadingLevel { get; set; } = 2;
 }

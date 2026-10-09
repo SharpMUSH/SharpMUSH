@@ -15,7 +15,7 @@ function boot() {
         HTMLElement: class {}
     });
     vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
-    return { layout: context.window.sharpmushLayout, listeners };
+    return { layout: context.window.sharpmushLayout, listeners, document: context.document };
 }
 
 function key(target, init) {
@@ -346,4 +346,28 @@ test('the short-screen watch is the landscape half of the compact one, and is a 
     assert.equal(compact.listeners.size, 1);
     layout.unwatchCompactScreen();
     assert.equal(compact.listeners.size, 0);
+});
+
+test('nested modals hand focus back in turn: the inner to the outer, the outer to what opened it', () => {
+    const { layout, document } = boot();
+    const focused = [];
+    const control = name => ({ isConnected: true, focus() { focused.push(name); } });
+
+    document.activeElement = control('row');
+    layout.rememberFocus();
+    document.activeElement = control('sheet');
+    layout.rememberFocus();
+
+    layout.restoreFocus();
+    layout.restoreFocus();
+    assert.deepEqual(focused, ['sheet', 'row']);
+});
+
+test('a control gone from the page gets no focus back', () => {
+    const { layout, document } = boot();
+    let focused = false;
+    document.activeElement = { isConnected: false, focus() { focused = true; } };
+    layout.rememberFocus();
+    layout.restoreFocus();
+    assert.equal(focused, false);
 });

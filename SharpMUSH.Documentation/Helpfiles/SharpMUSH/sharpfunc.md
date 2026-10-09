@@ -5806,6 +5806,8 @@ a          b          areallylon d
 
   Other elements in the list describe client capabilities, and currently include:<br>
   pueblo           present if the client is in Pueblo mode.<br>
+  mxp              present if the client is in MXP mode.<br>
+  screenreader     a screen reader reads this connection: MTTS says so, or the player turned on Screen reader mode in the web portal's Settings.<br>
   telnet           present if the client understands the telnet protocol.<br>
   gmcp             present if GMCP is negotiated via telnet; see help oob()<br>
   ssl              present if the client is using an SSL/TLS connection.<br>
@@ -5820,7 +5822,13 @@ a          b          areallylon d
 
   One of the color styles shown in [COLORSTYLE] will also be included.
 
-  Other fields may be added in the future, if, for example, MXP support is ever added.
+  Anyone may see pueblo, mxp, screenreader, stripaccents and the color style. Softcode can use screenreader to leave out what only draws, such as a logo made of characters.
+
+  Example, in the web portal with Screen reader mode on:
+```sharp
+think terminfo(me)
+SHARPMUSH-PORTAL screenreader websocket plain
+```
 
   You must have see_all, or use terminfo() on yourself, to see all information or use a `<descriptor>`. Mortals using terminfo() on another player will always receive "unknown" for the client name, and will not get telnet/gmcp/ssl/prompt_newlines in the output list.
 

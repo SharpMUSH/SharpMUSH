@@ -152,6 +152,35 @@ public class ConnectionTerminfoTests
 	/// out of terminal metadata alone told a "dumb"-terminal player with XTERM256 that they were on
 	/// "hilite" while the wire carried 256-colour output, which is a capability claim softcode acts on.
 	/// </summary>
+	/// <summary>
+	/// A client that names MTTS SCREEN_READER (the portal's Screen reader mode sends it) is reported as
+	/// "screenreader", to any caller, so softcode can leave out what only draws.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsScreenReader()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "ReaderTermClient");
+		var handle = await ConnectAsAsync(playerRef, "websocket", terminalType: "SHARPMUSH-PORTAL");
+		connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "SHARPMUSH-PORTAL\tUTF8");
+		try
+		{
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).DoesNotContain("screenreader");
+
+			connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "SHARPMUSH-PORTAL\tUTF8\tSCREEN_READER");
+			var tokens = (await TerminfoAsync(playerRef)).Split(' ');
+			await Assert.That(tokens).Contains("screenreader");
+			await Assert.That(tokens).Contains(ColorStyles.Plain).Because("a screen reader is sent no colour");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
 	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
 	public async Task Terminfo_ReportsTheStyleAPlayerFlagRaisesItTo()
 	{

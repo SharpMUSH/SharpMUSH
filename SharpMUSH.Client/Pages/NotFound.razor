@@ -2,6 +2,8 @@
 @layout MainLayout
 @inject IStringLocalizer<SharedResource> Loc
 
+<PageTitle>@Loc["NotFound"] — @Loc["AppTitle"]</PageTitle>
+
 @* The same centred panel as App.razor's Not Authorized: it had no page padding (flush to the screen edge
    on a phone), no h1 for FocusOnNavigate, and no way back. *@
 <div class="not-authorized">

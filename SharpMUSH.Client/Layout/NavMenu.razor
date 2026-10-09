@@ -25,7 +25,7 @@
         }
     </NavLink>
 
-    <nav class="phosphor-nav">
+    <nav class="phosphor-nav" aria-label="@Loc["NavMenuLabel"]">
 
         <div class="nav-group">
             <div class="nav-group-label">@Loc["Play"]</div>
@@ -40,8 +40,9 @@
                     }
                     @if (_playActive)
                     {
-                        <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")"
+                        <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")" aria-hidden="true"
                               title="@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])"></span>
+                        <span class="visually-hidden">@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])</span>
                     }
                 </NavLink>
             }

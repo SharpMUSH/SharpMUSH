@@ -5940,4 +5940,34 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Seitentext (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Spielausgabe</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Spielbefehl</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Nachrichten in {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Mitglieder, {0} online</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Screenreader-Modus</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Zum Spielen mit einem Screenreader in diesem Browser: Die Buchstabentasten für Ausgänge sind aus, und das Spiel erfährt davon, damit es aus Zeichen gezeichnete Bilder weglassen kann.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Schnellzugriff</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Name des neuen Attributs</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Objekte suchen</value>
+  </data>
 </root>

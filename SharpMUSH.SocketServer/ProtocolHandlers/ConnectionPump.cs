@@ -375,6 +375,9 @@ public sealed class ConnectionPump(
 		if (WebSocketControlFrame.TryParseNaws(message, out var cols, out var rows))
 			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
 				handle, new NAWSUpdateMessage(handle, rows, cols), ct);
+		else if (WebSocketControlFrame.TryParseTerminalTypes(message, out var types))
+			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
+				handle, new TerminalTypeNegotiatedMessage(handle, types), ct);
 		else
 			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
 				handle, new WebSocketInputMessage(handle, message, connectionService.Get(handle)?.SessionId), ct);

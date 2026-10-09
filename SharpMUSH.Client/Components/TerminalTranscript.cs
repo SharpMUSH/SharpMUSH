@@ -63,6 +63,24 @@ public static class TerminalInput
 			: new NotFound();
 	}
 
+	/// <summary>The name the portal's terminal gives itself, the first of its terminal types (telnet TTYPE).</summary>
+	public const string ClientName = "SHARPMUSH-PORTAL";
+
+	/// <summary>
+	/// The control frame reporting what the portal's terminal is, as a telnet client reports its terminal types
+	/// with MTTS: its name, then what it renders (colour at every depth, UTF-8, command links), then whether a
+	/// screen reader reads it. The game reads these as it reads a telnet client's, so <c>terminfo()</c> names the
+	/// client and says <c>screenreader</c> while <see cref="Services.ScreenReaderMode"/> is on.
+	/// </summary>
+	public static string TerminalTypesFrame(bool screenReader)
+	{
+		string[] types = screenReader
+			? [ClientName, "ANSI", "256 COLORS", "TRUECOLOR", "UTF8", "MSLP", "SCREEN_READER"]
+			: [ClientName, "ANSI", "256 COLORS", "TRUECOLOR", "UTF8", "MSLP"];
+		// Fixed names with nothing to escape, so written out as NawsFrame is.
+		return $"{{\"type\":\"ttype\",\"types\":[{string.Join(',', types.Select(t => $"\"{t}\""))}]}}";
+	}
+
 	/// <summary>The control frame reporting the terminal's character grid (telnet NAWS).</summary>
 	public static string NawsFrame(int cols, int rows) => $"{{\"type\":\"naws\",\"cols\":{cols},\"rows\":{rows}}}";
 }

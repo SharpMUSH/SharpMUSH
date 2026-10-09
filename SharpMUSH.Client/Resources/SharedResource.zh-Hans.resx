@@ -5940,4 +5940,34 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>页面文本（Markdown）</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>游戏输出</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>游戏命令</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>{0} 中的消息</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}：{1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>成员，{0} 人在线</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>读屏模式</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>在此浏览器中使用读屏软件游玩：出口的字母快捷键会关闭，并告知游戏，以便省略用字符绘制的图片。</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>快捷链接</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>新属性名称</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>搜索对象</value>
+  </data>
 </root>

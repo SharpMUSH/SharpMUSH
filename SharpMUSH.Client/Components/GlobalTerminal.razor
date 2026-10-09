@@ -10,22 +10,28 @@
 @inject ServerInfoService ServerInfo
 @inject IStringLocalizer<SharedResource> Loc
 @inject CommandHistory History
+@inject ScreenReaderMode ScreenReader
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
 
-    @* With an input line, a plain click in the output focuses it, as a terminal does (input-focus.js). *@
+    @* With an input line, a plain click in the output focuses it, as a terminal does (input-focus.js).
+       A log: a screen reader reads each new line as it arrives on the terminal the player types into, and
+       the background terminal in the drawer stays quiet. It takes focus so the keyboard can scroll it. *@
     <div id="@_outputId"
          class="sharp-terminal-output" data-input-region="@Interactive"
+         role="log" aria-live="@(Interactive ? "polite" : "off")" aria-label="@Loc["TermOutputLabel"]" tabindex="0"
          style="flex:1;min-height:0;overflow:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
            floor width of that many characters. On a narrow screen the output scrolls
            horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
            and the measured NAWS is floored to match (see OnTerminalResize). *@
         <div class="sharp-terminal-track" style="@(TargetColumns > 0 ? $"min-width:{TargetColumns}ch;" : "")">
+            @* Keyed, so a full scrollback drops its oldest line instead of rewriting every line in place, which
+               the log would read out again from the top. *@
             @foreach (var line in _transcript.Lines)
             {
-                <div class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
+                <div @key="line" class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
             }
             <div id="@_bottomId"></div>
         </div>
@@ -76,21 +82,21 @@
     @if (Interactive)
     {
         <div class="sharp-terminal-input">
-            <span class="term-prompt">›</span>
+            <span class="term-prompt" aria-hidden="true">›</span>
             @* The page's main text box (input-focus.js): focused once the connection is up, and where typing on the
                page goes. Enter sends, so a touch keyboard labels it Send. *@
             <input class="term-input" @ref="_inputRef" data-primary-input="end" enterkeyhint="send"
                    value="@_input"
                    @oninput="OnInput"
                    @onkeydown="OnInputKeyDown"
-                   disabled="@(!_connected)"
+                   disabled="@(!_connected)" aria-label="@Loc["TermInputLabel"]"
                    placeholder="@Loc["TermInputPlaceholder"]" />
-            <button type="button" class="term-send" @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]">
+            <button type="button" class="term-send" @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]" aria-label="@Loc["Send"]">
                 <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:0.875rem;" />
             </button>
             @if (ShowClearButton)
             {
-                <button type="button" class="term-clear" @onclick="ClearAsync" title="@Loc["TermClearTerminal"]">
+                <button type="button" class="term-clear" @onclick="ClearAsync" title="@Loc["TermClearTerminal"]" aria-label="@Loc["TermClearTerminal"]">
                     <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:0.9375rem;" />
                 </button>
             }
@@ -227,6 +233,7 @@
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
+        ScreenReader.Changed += OnScreenReaderChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
         if (Terminal is TerminalServiceHost host) host.Recreated += OnRecreated;
 
@@ -518,9 +525,23 @@
         if (!connected) SetPlayerName(null);
         // Report the grid for this connection now that it's up — covers the case where the initial
         // measurement happened before connect and the user never resizes afterward.
-        else if (_hasMeasured) _ = SendNawsAsync(_lastCols, _lastRows);
+        else
+        {
+            if (_hasMeasured) _ = SendNawsAsync(_lastCols, _lastRows);
+            _ = SendTerminalTypesAsync();
+        }
         InvokeAsync(StateHasChanged);
     }
+
+    /// <summary>Says what this terminal is, whether a screen reader reads it included (TerminalInput.TerminalTypesFrame).</summary>
+    private async Task SendTerminalTypesAsync()
+    {
+        await ScreenReader.LoadAsync();
+        if (Terminal.IsConnected) await Terminal.SendControlAsync(TerminalInput.TerminalTypesFrame(ScreenReader.On));
+    }
+
+    /// <summary>Screen reader mode turned on or off in Settings: the game is told at once.</summary>
+    private void OnScreenReaderChanged() => _ = SendTerminalTypesAsync();
 
     // GlobalTerminal is a sibling of MainLayout's own AccountAuth reads, not a child of anything
     // that re-renders it when identity changes on its own — without this, a switch that doesn't
@@ -578,6 +599,7 @@
         _disposed = true;
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        ScreenReader.Changed -= OnScreenReaderChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
         if (Terminal is TerminalServiceHost host) host.Recreated -= OnRecreated;
 

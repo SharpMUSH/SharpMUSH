@@ -44,7 +44,7 @@
     @* D1 §3 page-sidebar slot: a section's layout fills it through SectionShell. The column shows only
        while a sidebar is mounted (shell.css :has), 232px or the 62px strip; on touch chrome it is the
        off-canvas section panel. *@
-    <aside class="phosphor-pagebar">
+    <aside class="phosphor-pagebar" aria-label="@Loc["NavSectionMenu"]">
         <SectionOutlet SectionName="@PageSidebarSlot.Name" />
     </aside>
 
@@ -105,7 +105,7 @@
         }
 
         @* Always mounted so the command terminal auto-logs in on load; hidden until opened. *@
-        <div class="phosphor-terminal" style="@(_terminalOpen ? null : "display:none;")">
+        <div class="phosphor-terminal" role="region" aria-label="@Loc["NavCommandTerminal"]" style="@(_terminalOpen ? null : "display:none;")">
             <div class="phosphor-terminal-header">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
                 <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
@@ -113,7 +113,7 @@
                     · @(Terminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
                 </span>
                 <div style="flex:1;"></div>
-                <button class="phosphor-icon-btn" @onclick="ToggleTerminal" title="@Loc["NavCloseTerminal"]">
+                <button type="button" class="phosphor-icon-btn" @onclick="ToggleTerminal" title="@Loc["NavCloseTerminal"]" aria-label="@Loc["NavCloseTerminal"]">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
                 </button>
             </div>
@@ -128,7 +128,7 @@
            page's terminal input at the bottom of the screen. *@
         @if (!_isPlayRoute)
         {
-            <nav class="phosphor-bottomnav">
+            <nav class="phosphor-bottomnav" aria-label="@Loc["NavBottomNavLabel"]">
                 @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
                 @if (_showPlay)
                 {
@@ -138,7 +138,7 @@
                 @BottomTab("/characters", Icons.Material.Filled.Groups, Loc["NavCharsShort"])
                 <button type="button"
                         class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
-                        @onclick="ToggleMobileNav">
+                        aria-expanded="@(_mobileNavOpen ? "true" : "false")" @onclick="ToggleMobileNav">
                     <MudIcon Icon="@Icons.Material.Filled.Menu" Class="phosphor-bottomtab-icon" />
                     <span class="phosphor-bottomtab-label">@Loc["NavMenuLabel"]</span>
                 </button>
@@ -364,7 +364,8 @@
 
     // Bottom-nav tab: a link that highlights when its route is active.
     private RenderFragment BottomTab(string href, string icon, string label, bool exact = false) =>
-        @<a href="@href" class="phosphor-bottomtab @(IsNavActive(href, exact) ? "phosphor-bottomtab--on" : "")">
+        @<a href="@href" class="phosphor-bottomtab @(IsNavActive(href, exact) ? "phosphor-bottomtab--on" : "")"
+            aria-current="@(IsNavActive(href, exact) ? "page" : null)">
             <MudIcon Icon="@icon" Class="phosphor-bottomtab-icon" />
             <span class="phosphor-bottomtab-label">@label</span>
         </a>;

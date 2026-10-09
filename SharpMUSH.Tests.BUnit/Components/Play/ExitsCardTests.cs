@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using SharpMUSH.Client.Components.Play;
 using SharpMUSH.Client.Models;
+using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.BUnit.Components.Play;
 
@@ -17,6 +18,7 @@ public class ExitsCardTests : BunitContext
 	{
 		Services.AddLocalization();
 		Services.AddMudServices();
+		Services.AddSingleton<ScreenReaderMode>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -172,6 +174,21 @@ public class ExitsCardTests : BunitContext
 		await cut.InvokeAsync(() => cut.Instance.GoByKey("e"));
 		await Assert.That(ran.Count).IsEqualTo(1).Because("the scene exit asks first, even from a key");
 		await Assert.That(cut.FindAll("[role='alertdialog']").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ScreenReaderMode_TurnsTheAliasKeysOff()
+	{
+		// WCAG 2.1.4: a letter typed to a screen reader must not walk the character out of the room.
+		var cut = RenderExits([Row, Customs]);
+		await Assert.That(Tile(cut, "Harbour Row").QuerySelector("[aria-keyshortcuts]")).IsNotNull();
+
+		await cut.InvokeAsync(() => Services.GetRequiredService<ScreenReaderMode>().SetAsync(true));
+
+		var last = JSInterop.Invocations["sharpmushLayout.registerExitKeys"][^1];
+		await Assert.That((string[])last.Arguments[1]!).IsEmpty();
+		await Assert.That(cut.FindAll("[aria-keyshortcuts]").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".exit-go[title]").Count).IsEqualTo(0).Because("no key to tell of");
 	}
 
 	[Test]

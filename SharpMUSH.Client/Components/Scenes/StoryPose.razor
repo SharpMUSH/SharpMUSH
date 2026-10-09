@@ -18,7 +18,7 @@
             }
             else
             {
-                <span class="story-body">@Body</span>
+                <span class="story-body">@DeletedNote@Body</span>
                 @EditedBadge
                 @EditButton
             }
@@ -30,7 +30,8 @@ else
     <div class="story-row @(Pose.IsDeleted ? "story-row--deleted" : null) @(_flash ? "story-row--just-edited" : null)">
         @if (OnCharacter.HasDelegate)
         {
-            <button type="button" class="story-portrait-btn" aria-label="@Pose.DisplayName" @onclick="Open">@Portrait</button>
+            @* The name beside it opens the same sheet: one stop per pose for the keyboard and the reader. *@
+            <button type="button" class="story-portrait-btn" tabindex="-1" aria-hidden="true" @onclick="Open">@Portrait</button>
         }
         else
         {
@@ -59,13 +60,22 @@ else
             }
             else
             {
-                <div class="story-body">@Body</div>
+                <div class="story-body">@DeletedNote@Body</div>
             }
         </div>
     </div>
 }
 
 @code {
+    /// <summary>A deleted pose is struck through and faded; a screen reader is told in words.</summary>
+    private RenderFragment DeletedNote => __builder =>
+    {
+        if (Pose.IsDeleted)
+        {
+            <span class="visually-hidden">@Loc["StoryPoseDeleted"] </span>
+        }
+    };
+
     [Parameter, EditorRequired] public ScenePoseView Pose { get; set; } = null!;
 
     /// <summary>The author's picture, raw; rendered only when <see cref="ImageUrlPolicy"/> allows it.</summary>

@@ -40,7 +40,7 @@
                 <input class="wiki-edit-localeinput" value="@_customLocale"
                        @oninput="@(e => _customLocale = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="@(async e => { if (e.Key == "Enter") await AddCustomLocaleAsync(); })"
-                       placeholder="@Loc["WkCustomLocalePlaceholder"]" />
+                       placeholder="@Loc["WkCustomLocalePlaceholder"]" aria-label="@Loc["WkCustomLocalePlaceholder"]" />
             }
             else
             {
@@ -132,7 +132,7 @@
             <input class="wiki-edit-taginput" value="@_categoryEntry"
                    disabled="@IsTranslation"
                    @oninput="@(e => _categoryEntry = e.Value?.ToString() ?? string.Empty)"
-                   @onkeydown="OnCategoryKeyDown" placeholder="@Loc["WkAddCategory"]" />
+                   @onkeydown="OnCategoryKeyDown" placeholder="@Loc["WkAddCategory"]" aria-label="@Loc["WkAddCategory"]" />
             <div style="flex:1;"></div>
             <label class="wiki-edit-pub">
                 <input type="checkbox" checked="@Article.Published"
@@ -153,7 +153,7 @@
             <div class="wiki-edit-summary">
                 <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;color:var(--text-faint);" />
                 <input value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"
-                       placeholder="@Loc["WkSummaryPlaceholder"]" />
+                       placeholder="@Loc["WkSummaryPlaceholder"]" aria-label="@Loc["WkSummaryLabel"]" />
             </div>
             <button type="button" class="wiki-edit-minor" @onclick="@(() => _minor = !_minor)">
                 <span class="wiki-edit-check @(_minor ? "on" : "")">

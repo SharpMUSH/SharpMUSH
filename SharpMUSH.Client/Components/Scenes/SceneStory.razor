@@ -14,6 +14,8 @@
    events, one StoryPose per pose. Shared by Play and /scenes/{id}/live. A portrait and a colour come
    from the room's occupant rows, else the directory, and only for the name the pose shows. *@
 <div class="story" @ref="_root">
+    @* A pose that arrives live is read out; the backlog is not, it is the page the reader came to. *@
+    <LiveAnnouncer @ref="_announcer" Label="@Loc["StoryNewPoses"]" />
     @if (_posesError is not null)
     {
         <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
@@ -182,8 +184,10 @@
                 // here and renders for the first time.
                 if (_poses.All(p => !string.Equals(p.Id, msg.PoseId, StringComparison.Ordinal)))
                 {
-                    _poses.Add(FromEvent(msg, existing: null));
+                    var added = FromEvent(msg, existing: null);
+                    _poses.Add(added);
                     Remember(msg);
+                    _announcer?.Announce(Spoken(added));
                     if (OnPoseAdded.HasDelegate) _ = InvokeAsync(() => OnPoseAdded.InvokeAsync());
                 }
                 break;
@@ -209,6 +213,14 @@
         RebuildMentions();
         _ = InvokeAsync(StateHasChanged);
     }
+
+    private LiveAnnouncer? _announcer;
+
+    /// <summary>A pose as it is read out: its text, after the name it shows when the text does not start with it.</summary>
+    private string Spoken(ScenePoseView pose) =>
+        pose.Content.TrimStart().StartsWith(pose.DisplayName, StringComparison.OrdinalIgnoreCase)
+            ? pose.Content
+            : Loc["NavPlayLineSaid", pose.DisplayName, pose.Content];
 
     private void Remember(SceneEventMessage msg)
     {

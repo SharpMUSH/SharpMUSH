@@ -1,0 +1,31 @@
+@* Says what arrived to a screen reader, without showing it: the view's own lines are laid out for the eye
+   (a channel's lines grouped under one name, a pose's portrait beside it), so a line read where it lands
+   would lose who said it. A polite log, mounted empty with the view so the first line is read too, and
+   holding only the last few: what came before is in the view itself. *@
+<div class="visually-hidden" role="log" aria-live="polite" aria-atomic="false" aria-label="@Label">
+    @foreach (var said in _said)
+    {
+        <div @key="said">@said.Text</div>
+    }
+</div>
+
+@code {
+    /// <summary>What the log is called when a reader lands on it.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    /// <summary>How many announcements stay in the log.</summary>
+    private const int Kept = 5;
+
+    private sealed record Said(string Text);
+
+    private readonly List<Said> _said = [];
+
+    /// <summary>Reads <paramref name="text"/> out after whatever it is reading now.</summary>
+    public void Announce(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        _said.Add(new Said(text));
+        if (_said.Count > Kept) _said.RemoveRange(0, _said.Count - Kept);
+        _ = InvokeAsync(StateHasChanged);
+    }
+}

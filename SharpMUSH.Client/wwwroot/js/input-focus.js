@@ -151,9 +151,29 @@
 			}
 		},
 
+		// The control that had focus was taken off the page by a re-render (a channel view's close button, an exit
+		// once the room changes, a confirmation's Cancel): focus would be left on <body>, and a screen reader starts
+		// again from the top. It goes to the page's main text box instead, or to the page itself on a touch screen,
+		// where a field would open the keyboard. Only when nothing else took focus meanwhile (a dialog handing it
+		// back, the router's move to the heading), and never for a control that is still on the page.
+		onFocusOut: function (event) {
+			const left = event.target;
+			if (event.relatedTarget || !left || typeof left.isConnected !== 'boolean') return;
+			setTimeout(() => {
+				if (left.isConnected) return;
+				const active = document.activeElement;
+				if (active && active !== document.body && active !== document.documentElement) return;
+				if (api.overlayOpen()) return;
+				if (!window.matchMedia('(pointer: coarse)').matches && api.focus()) return;
+				const main = document.getElementById('main-content');
+				if (main) main.focus({ preventScroll: true });
+			}, 0);
+		},
+
 		install: function () {
 			if (api._installed) return;
 			api._installed = true;
+			document.addEventListener('focusout', api.onFocusOut);
 			window.addEventListener('keydown', api.onKeyDown);
 			document.addEventListener('pointerdown', api.onPointerDown, { capture: true, passive: true });
 			document.addEventListener('click', api.onSkip, { capture: true });

@@ -83,7 +83,7 @@
                      @key="rev.RevisionNumber">
 
                     <div style="display:flex;justify-content:center;">
-                        <input type="radio" name="rev-old"
+                        <input type="radio" name="rev-old" aria-label="@Loc["WkCompareFrom", rev.RevisionNumber]"
                                checked="@(_oldRev == rev.RevisionNumber)"
                                disabled="@(isCurrent)"
                                @onchange="@(() => SelectOldRev(rev.RevisionNumber))"
@@ -91,7 +91,7 @@
                     </div>
 
                     <div style="display:flex;justify-content:center;">
-                        <input type="radio" name="rev-new"
+                        <input type="radio" name="rev-new" aria-label="@Loc["WkCompareTo", rev.RevisionNumber]"
                                checked="@(_newRev == rev.RevisionNumber)"
                                disabled="@(idx == _revisions.Count - 1)"
                                @onchange="@(() => SelectNewRev(rev.RevisionNumber))"
@@ -140,13 +140,13 @@
 
                     <div style="display:flex;gap:0.25rem;align-items:center;justify-content:center;">
                         <MudTooltip Text="@Loc["WkViewRevision"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
+                            <MudIconButton aria-label="@Loc["WkViewRevision"]" Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
                                            Href="@WithLang($"/wiki/{Ns}/{Slug}")" />
                         </MudTooltip>
                         @if (!isCurrent)
                         {
                             <MudTooltip Text="@Loc["WkRestoreRevision"]">
-                                <MudIconButton Icon="@Icons.Material.Filled.Restore" Size="Size.Small"
+                                <MudIconButton aria-label="@Loc["WkRestoreRevision"]" Icon="@Icons.Material.Filled.Restore" Size="Size.Small"
                                                Color="Color.Warning"
                                                OnClick="@(() => RestoreAsync(rev))"
                                                Disabled="_restoring" />

@@ -5940,4 +5940,34 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Oldal szövege (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Játékkimenet</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Játékparancs</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Üzenetek itt: {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Tagok, most {0} elérhető</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Képernyőolvasó mód</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Képernyőolvasóval való játékhoz ebben a böngészőben: a kijáratok betűbillentyűi ki vannak kapcsolva, és a játék is tud róla, így elhagyhatja a karakterekből rajzolt képeket.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Gyorshivatkozások</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Új attribútum neve</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Objektumok keresése</value>
+  </data>
 </root>

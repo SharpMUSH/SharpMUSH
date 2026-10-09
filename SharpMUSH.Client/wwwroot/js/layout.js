@@ -9,14 +9,19 @@ window.sharpmushLayout = {
 	},
 
 	// A modal (the image viewer) remembers what opened it and hands focus back when it closes, so a
-	// keyboard user is not dropped on <body>.
+	// keyboard user is not dropped on <body>. A stack: a modal opened from another (a picture from the
+	// character sheet) hands focus back to the sheet, and the sheet then to what opened it.
+	_focusReturns: [],
+
 	rememberFocus: function () {
-		this._focusReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		const active = document.activeElement;
+		this._focusReturns.push(active && typeof active.focus === 'function' && active !== document.body ? active : null);
+		// A modal closed some other way than restoreFocus leaves its entry behind; nesting is never this deep.
+		if (this._focusReturns.length > 8) this._focusReturns.shift();
 	},
 
 	restoreFocus: function () {
-		const target = this._focusReturn;
-		this._focusReturn = null;
+		const target = this._focusReturns.pop();
 		if (target && target.isConnected) {
 			target.focus();
 		}

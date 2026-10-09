@@ -7484,4 +7484,52 @@
   <data name="PkgPlanUploaded" xml:space="preserve">
     <value>Uploaded package {0}</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Game output</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Game command</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Messages in {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Members, {0} on now</value>
+  </data>
+  <data name="StoryNewPoses" xml:space="preserve">
+    <value>New poses</value>
+  </data>
+  <data name="StoryPoseDeleted" xml:space="preserve">
+    <value>Deleted:</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Screen reader mode</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>For playing with a screen reader in this browser: the exit letter keys are off, and the game is told so it can leave out pictures made of characters.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Quick links</value>
+  </data>
+  <data name="Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="WkSummaryLabel" xml:space="preserve">
+    <value>Summary of your change</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>New attribute name</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Search objects</value>
+  </data>
+  <data name="WkCompareFrom" xml:space="preserve">
+    <value>Compare from revision {0}</value>
+  </data>
+  <data name="WkCompareTo" xml:space="preserve">
+    <value>Compare to revision {0}</value>
+  </data>
 </root>

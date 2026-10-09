@@ -5940,4 +5940,34 @@
   <data name="WkSourceLabel" xml:space="preserve">
     <value>Texto de la página (Markdown)</value>
   </data>
+  <data name="TermOutputLabel" xml:space="preserve">
+    <value>Salida del juego</value>
+  </data>
+  <data name="TermInputLabel" xml:space="preserve">
+    <value>Comando del juego</value>
+  </data>
+  <data name="NavPlayLinesOf" xml:space="preserve">
+    <value>Mensajes en {0}</value>
+  </data>
+  <data name="NavPlayLineSaid" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="NavPlayMembersCount" xml:space="preserve">
+    <value>Miembros, {0} conectados</value>
+  </data>
+  <data name="NavScreenReaderMode" xml:space="preserve">
+    <value>Modo lector de pantalla</value>
+  </data>
+  <data name="NavScreenReaderModeTooltip" xml:space="preserve">
+    <value>Para jugar con un lector de pantalla en este navegador: las teclas de letra de las salidas se desactivan y el juego lo sabe, para poder omitir los dibujos hechos con caracteres.</value>
+  </data>
+  <data name="NavBottomNavLabel" xml:space="preserve">
+    <value>Accesos rápidos</value>
+  </data>
+  <data name="TermNewAttributeName" xml:space="preserve">
+    <value>Nombre del nuevo atributo</value>
+  </data>
+  <data name="TermObjectSearch" xml:space="preserve">
+    <value>Buscar objetos</value>
+  </data>
 </root>
