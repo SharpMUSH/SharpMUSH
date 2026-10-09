@@ -669,6 +669,35 @@ public partial class MarkupOutputRendererTests
 		=> await Assert.That(StripAnsi(Render(HouseBox(), new ProtocolCapabilities(), AllColour with { Theme = "{\"look\":{\"bullet\":\"\\ud800\"}}" })))
 			.StartsWith("+=");
 
+	/// <summary>
+	/// A tone() reaches the worker as a span naming a theme colour. Each reader gets it in their own theme's
+	/// colour; one without a theme gets the colour written with it; no client is sent the span.
+	/// </summary>
+	[Test]
+	public async Task ATone_IsDrawnInTheReadersThemeOrTheColourWrittenWithIt()
+	{
+		var tone = ToneMarkup.Build(ThemeRole.Info, MarkupText.Plain("Calls"), ThemeColor.Standard(14));
+		if (!ThemePalette.TryParse("fantasy", out var fantasy, out _)) throw new InvalidOperationException("fantasy does not read");
+
+		await Assert.That(Render(tone, new ProtocolCapabilities(SupportsAnsi: true), AllColour with { Theme = "fantasy" }))
+			.IsEqualTo(Render(MarkupText.Wrap(AnsiTheme.Paint(fantasy![ThemeRole.Info]!.Value), "Calls"), new ProtocolCapabilities(SupportsAnsi: true), AllColour));
+		await Assert.That(Render(tone, new ProtocolCapabilities(SupportsAnsi: true), AllColour))
+			.IsEqualTo(Render(MarkupText.Wrap(AnsiTheme.Paint(ThemeColor.Standard(14)), "Calls"), new ProtocolCapabilities(SupportsAnsi: true), AllColour));
+	}
+
+	[Test]
+	[Arguments(OutputFormat.Ansi)]
+	[Arguments(OutputFormat.Pueblo)]
+	[Arguments(OutputFormat.Mxp)]
+	public async Task ATone_SendsNoTag(OutputFormat format)
+	{
+		var rendered = Render(ToneMarkup.Build(ThemeRole.Muted, MarkupText.Plain("<OOC> brb"), ThemeColor.Standard(8)),
+			new ProtocolCapabilities(SupportsAnsi: true, Format: format), AllColour);
+
+		await Assert.That(rendered).DoesNotContain("span").And.DoesNotContain("tone-");
+		await Assert.That(StripAnsi(rendered)).Contains("brb");
+	}
+
 	/// <summary>A notice() as it reaches the renderer: its lead, then the message.</summary>
 	private static MarkupText Notice(string? word, string message) =>
 		MarkupText.Concat([NoticeMarkup.Build(MarkupText.Plain("JOBS"), word, BoldRed), MarkupText.Space, MarkupText.Plain(message)]);

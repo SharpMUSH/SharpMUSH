@@ -229,7 +229,17 @@ public class RadioIntegrationTests
 			}
 
 			await Assert.That(logged).IsEquivalentTo(new[] { $"<Ship> {ann.Name} says, \"{said}\"" });
-			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},tags)]")).Contains("radio");
+			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},type)]")).IsEqualTo("radio");
+			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},frequency)]")).IsEqualTo("Ship");
+			await Assert.That(await God("think [scenetype(radio,presentation)]")).IsEqualTo("message")
+				.Because("radio-scene adds the radio type to the Scene Logger");
+			await Assert.That(await As(logger, "+scene/types")).Contains("Radio");
+			await Assert.That(await As(logger, "+scene/hide radio")).Contains("Radio lines are hidden from your recall and log.");
+			var recalled = await As(logger, "+scene/recall 1");
+			await Assert.That(recalled).DoesNotContain(said);
+			await Assert.That(recalled).Contains("1 line of radio hidden.");
+			await Assert.That(await As(logger, "+scene/show radio")).Contains("Radio lines show in your recall and log.");
+			await Assert.That(await As(logger, "+scene/recall 1")).Contains(said);
 
 			await As(logger, "+radio/stoplog Ship");
 			var unlogged = TestIsolationHelpers.GenerateUniqueName("RadUnlogged");

@@ -14,7 +14,7 @@ public class SceneEventMessageContractTests
 {
 	/// <summary>SignalR's JSON protocol names properties in camelCase, which is what <see cref="JsonSerializerOptions.Web"/> does.</summary>
 	private const string Wire =
-		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":["ooc"],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000"}""";
+		"""{"sceneId":"42","eventType":"pose","actorName":"Tomas","poseId":"7","content":"Tomas waves.","markup":"Tomas waves.","tags":[],"source":"ooc","location":"Lower Docks","timestamp":1790741467794,"actorObjId":"#312:1718000000","type":"ooc"}""";
 
 	private static SceneEventMessage Sample(string? actorObjId = "#312:1718000000") => new(
 		SceneId: "42",
@@ -23,14 +23,15 @@ public class SceneEventMessageContractTests
 		PoseId: "7",
 		Content: "Tomas waves.",
 		Markup: "Tomas waves.",
-		Tags: ["ooc"],
+		Tags: [],
 		Source: "ooc",
 		Location: "Lower Docks",
 		Timestamp: 1790741467794,
-		ActorObjId: actorObjId);
+		ActorObjId: actorObjId,
+		Type: "ooc");
 
 	[Test]
-	public async Task ActorObjId_is_the_last_member_on_the_wire()
+	public async Task Type_is_the_last_member_on_the_wire()
 	{
 		await Assert.That(JsonSerializer.Serialize(Sample(), JsonSerializerOptions.Web)).IsEqualTo(Wire);
 	}
@@ -42,7 +43,7 @@ public class SceneEventMessageContractTests
 
 		await Assert.That(back.ActorObjId).IsEqualTo("#312:1718000000");
 		await Assert.That(back.SceneId).IsEqualTo("42");
-		await Assert.That(back.Tags).IsEquivalentTo(["ooc"]);
+		await Assert.That(back.Type).IsEqualTo("ooc");
 	}
 
 	/// <summary>NATS carries the record with the serializer's defaults (PascalCase); it must survive that too.</summary>
@@ -58,7 +59,7 @@ public class SceneEventMessageContractTests
 	[Test]
 	public async Task A_missing_ActorObjId_reads_as_null()
 	{
-		var older = Wire.Replace(""","actorObjId":"#312:1718000000"}""", "}", StringComparison.Ordinal);
+		var older = Wire.Replace("\"actorObjId\":\"#312:1718000000\",", "", StringComparison.Ordinal);
 
 		var back = JsonSerializer.Deserialize<SceneEventMessage>(older, JsonSerializerOptions.Web)!;
 
@@ -78,7 +79,7 @@ public class SceneEventMessageContractTests
 			OriginDbref: "#1201",
 			OriginName: "Lower Docks",
 			Source: "ooc",
-			Tags: new List<string> { "ooc" },
+			Tags: new List<string>(),
 			Meta: new Dictionary<string, string>(),
 			CreatedAt: 1,
 			IsDeleted: false,
@@ -87,13 +88,14 @@ public class SceneEventMessageContractTests
 			EditCount: 1,
 			LastEditedAt: null,
 			LastEditorDbref: null,
-			LastEditorName: null);
+			LastEditorName: null,
+			Type: "ooc");
 
 		var message = SceneBroadcast.BuildMessage("42", "pose", pose, "#312:1718000000");
 
 		await Assert.That(message.ActorObjId).IsEqualTo("#312:1718000000");
 		await Assert.That(message.ActorName).IsEqualTo("Tomas");
-		await Assert.That(message.Tags).IsEquivalentTo(["ooc"]);
+		await Assert.That(message.Type).IsEqualTo("ooc");
 	}
 
 	[Test]

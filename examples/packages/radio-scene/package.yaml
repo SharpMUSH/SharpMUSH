@@ -1,6 +1,6 @@
 format: 1.2
 package: radio-scene
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Radio in scenes: +radio/log puts what a player hears on a frequency into the scene they are in. Joins the radio and scene packages through a tap on the radio feed kind."
 license: MIT
@@ -18,7 +18,7 @@ depends:
       path: examples/packages/radio/
       branch: main
   - package: scene
-    version: ">=1.4 <2.0"
+    version: ">=1.5 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
@@ -38,9 +38,10 @@ objects:
       # A tap on the radio kind, queued once per line after it is delivered. %0 line id, %1 radio/<id>,
       # %2 who heard it, %3 speaker, %4 style, %5 text, %6 alterego. A listener who logs this frequency
       # and is in a scene gets the line into that scene, drawn as they heard it, once per scene however
-      # many people in it are logging.
+      # many people in it are logging. It is recorded as the radio type, with the frequency's name in the
+      # pose's frequency field, which the portal shows in the message's header.
       TAP`LOG: |-
-        think [setq(_f,after(%1,/))][setq(_d,)][setq(_p,)][iter(%2,if(cand(hasattr({{radiolog}},P`[u({{radio/radio}}/FUN`KEY,%i0)]`LOG`%q<_f>),not(strmatch(setr(_x,scenefocus(%i0)),#-*)),not(member(%q<_d>,%q<_x>))),[setq(_d,%q<_d> %q<_x>)][setq(_p,%q<_p> %q<_x>~%i0)]))]; @dolist/inline %q<_p>=@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],emit,radio,[u({{radio/radio}}/FUN`LINE,%q<_f>,%3,firstof(%6,name(%3)),%4,%5,after(##,~))]
+        think [setq(_f,after(%1,/))][setq(_d,)][setq(_p,)][iter(%2,if(cand(hasattr({{radiolog}},P`[u({{radio/radio}}/FUN`KEY,%i0)]`LOG`%q<_f>),not(strmatch(setr(_x,scenefocus(%i0)),#-*)),not(member(%q<_d>,%q<_x>))),[setq(_d,%q<_d> %q<_x>)][setq(_p,%q<_p> %q<_x>~%i0)]))]; @dolist/inline %q<_p>={@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],radio,emit,,[u({{radio/radio}}/FUN`LINE,%q<_f>,%3,firstof(%6,name(%3)),%4,%5,after(##,~))]; @scene/setpose [last(sceneposes(before(##,~)))]/frequency=[u({{radio/radio}}/FUN`NAME,%q<_f>)]}
 
       # +radio includes these with its registers: %q<lhs> the frequency as typed, %q<me> the player's key and
       # %q<ext> this object. The radio is the executor while they run, so they name it %! and this object
@@ -59,6 +60,17 @@ objects:
         @feed/tap radio={{radiolog}}/TAP`LOG
       AINSTALL: |-
         @trigger {{radiolog}}/STARTUP
+
+  # The radio pose type, on the Scene Logger beside the scene package's own (see TYPE` there): a message in
+  # the portal, in the info colour, with the radio icon. Uninstalling this package takes it away, and radio
+  # lines already recorded then read as in character.
+  - ref: scene_type_radio
+    target: "{{scene/logger}}"
+    attributes:
+      TYPE`RADIO: |-
+        {"label":"Radio","presentation":"message","tone":"info","icon":"radio","order":40}
+      TYPE`RADIO`FORMAT: |-
+        [tone(info,%2)]
 
   # +radio/log and /stoplog: the radio runs INC`LOG and INC`STOPLOG on the logger. Uninstalling this
   # package takes them away again.
@@ -94,4 +106,4 @@ objects:
       HELP`SCENE`RADIO: |-
         A frequency you are tuned in to can be logged into your scene: `+radio/log <frequency>` starts, `+radio/stoplog <frequency>` stops, and `+radio/log` lists what you log.
 
-        Each line goes into the scene once, under the name of the first person in it who logs that frequency, drawn the way they heard it. See `+help radio log` for the rest.
+        Each line goes into the scene once, under the name of the first person in it who logs that frequency, drawn the way they heard it. Radio lines are their own pose type, `radio`, so `+scene/hide radio` leaves them out of your recall and log. See `+help radio log` for the rest.

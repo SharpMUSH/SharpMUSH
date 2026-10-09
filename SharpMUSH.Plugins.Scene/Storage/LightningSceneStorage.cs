@@ -157,6 +157,10 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 		public long? OriginDbref { get; set; }
 		public string OriginName { get; set; } = "";
 		public string Source { get; set; } = "";
+
+		/// <summary>The pose's type; a record written before types were kept reads as in character.</summary>
+		public string Type { get; set; } = PoseTypes.InCharacter;
+
 		public List<string> Tags { get; set; } = [];
 		public Dictionary<string, string> Meta { get; init; } = [];
 		public long CreatedAt { get; init; }
@@ -425,7 +429,15 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 	#region ISceneService — poses
 
 	public Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref,
-		string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content)
+		string showAs, string originDbref, string type, string source, IReadOnlyList<string> tags, string content)
+		=> PoseTypes.Normalize(type) switch
+		{
+			string key => AddPoseOfTypeAsync(sceneId, authorDbref, showAs, originDbref, key, source, tags, content),
+			Error<string> error => Task.FromResult<FoundResult<ScenePose>>(error),
+		};
+
+	private Task<FoundResult<ScenePose>> AddPoseOfTypeAsync(string sceneId, string authorDbref,
+		string showAs, string originDbref, string type, string source, IReadOnlyList<string> tags, string content)
 		=> _accessor.WriteAsync<FoundResult<ScenePose>>(tx =>
 		{
 			var id = BareId(sceneId);
@@ -451,6 +463,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 				OriginDbref = origin,
 				OriginName = ObjectName(tx, origin) ?? "",
 				Source = source ?? "",
+				Type = type,
 				Tags = (tags ?? []).ToList(),
 				CreatedAt = now,
 				IsDeleted = false,
@@ -562,6 +575,10 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 					break;
 				case "source":
 					pose.Source = value;
+					break;
+				case "type":
+					// Callers refuse a key that is not one (PoseTypes.Normalize); this keeps the record valid regardless.
+					if (PoseTypes.Normalize(value) is string type) pose.Type = type;
 					break;
 				case "tags":
 					pose.Tags = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
@@ -1249,7 +1266,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			EditCount: Math.Max(1, versions),
 			LastEditedAt: edited ? current!.EditedAt : null,
 			LastEditorDbref: edited ? LiveDbref(tx, current!.EditorDbref) : null,
-			LastEditorName: edited ? current!.EditorName : null);
+			LastEditorName: edited ? current!.EditorName : null,
+			Type: rec.Type);
 	}
 
 	private ScenePoseEdit ProjectEdit(ITx tx, ScenePoseEditRecord rec) => new(

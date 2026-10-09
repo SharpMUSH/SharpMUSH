@@ -59,7 +59,7 @@ public class SceneCommandFunctionIntegrationTests
 		var sceneId = await CreateSceneAsync("Phase3 poses");
 		await Cmd($"@scene/set {sceneId}/public=1");
 
-		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,hello phase3 pose)");
+		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,hello phase3 pose)");
 		await Assert.That(poseId).DoesNotStartWith("#-1");
 
 		var posesList = await Eval($"sceneposes({sceneId})");
@@ -104,8 +104,8 @@ public class SceneCommandFunctionIntegrationTests
 		await Assert.That(IdSeq(b)).IsEqualTo(IdSeq(a) + 1)
 			.Because("scene ids increment by a 1-based counter");
 
-		var p1 = await Eval($"sceneaddpose({b},{God},,{God},pose,,one)");
-		var p2 = await Eval($"sceneaddpose({b},{God},,{God},pose,,two)");
+		var p1 = await Eval($"sceneaddpose({b},{God},,{God},ic,pose,,one)");
+		var p2 = await Eval($"sceneaddpose({b},{God},,{God},ic,pose,,two)");
 		await Assert.That(int.TryParse(p1.Split(':')[^1], out _)).IsTrue()
 			.Because("pose ids must be 1-based counter values");
 		await Assert.That(IdSeq(p2)).IsEqualTo(IdSeq(p1) + 1)
@@ -125,10 +125,10 @@ public class SceneCommandFunctionIntegrationTests
 	{
 		var sceneId = await CreateSceneAsync("Colour");
 		await Cmd($"@scene/set {sceneId}/public=1");
-		var plainId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,A red ember.)");
+		var plainId = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,A red ember.)");
 		var plainMarkup = await Eval($"scenepose({sceneId},{plainId},markup)");
 
-		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,A [ansi(hr,red)] ember.)");
+		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,A [ansi(hr,red)] ember.)");
 		await Assert.That(await Eval($"scenepose({sceneId},{poseId},content)")).IsEqualTo("A red ember.");
 		await Assert.That(await Eval($"scenepose({sceneId},{poseId},markup)")).IsNotEqualTo(plainMarkup)
 			.Because("the markup of an uncoloured pose means the colour never reached storage");
@@ -150,13 +150,13 @@ public class SceneCommandFunctionIntegrationTests
 		var sceneId = await CreateSceneAsync("Written");
 		await Cmd($"@scene/set {sceneId}/public=1");
 
-		var colourId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,A [ansi(hr,red)] ember.)");
+		var colourId = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,A [ansi(hr,red)] ember.)");
 		var colour = await EvalMarkup($"scenepose({sceneId},{colourId},content)");
 		await Assert.That(colour.ToPlainText()).IsEqualTo("A red ember.");
 		await Assert.That(colour.Render(MarkupFormat.Ansi)).IsNotEqualTo("A red ember.")
 			.Because("the content a recall prints must keep the pose's colour");
 
-		var pictureId = await Eval($"sceneaddpose({sceneId},{God},,{God},emit,,[box(figure(https://example.com/cat.png,A cat))])");
+		var pictureId = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,emit,,[box(figure(https://example.com/cat.png,A cat))])");
 		var picture = MarkupTextSerializer.Serialize(await EvalMarkup($"scenepose({sceneId},{pictureId},content)"));
 		await Assert.That(picture).Contains("\"t\":\"frame\"")
 			.Because("the box must come back as a box, not as the text art drawn from it");
@@ -182,8 +182,8 @@ public class SceneCommandFunctionIntegrationTests
 		await using var events = await nats.SubscribeCoreAsync<string>($"game.scene.{sceneId}");
 		await nats.PingAsync();
 
-		var first = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,first)");
-		var second = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,second)");
+		var first = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,first)");
+		var second = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,second)");
 		await Eval($"sceneeditpose({first},{God},first again)");
 		await Eval($"scenemovepose({second})");
 		await Eval($"scenedelpose({first})");
@@ -213,7 +213,7 @@ public class SceneCommandFunctionIntegrationTests
 	public async Task SceneUndoAndRedo_BroadcastAnEdit_InBothPaths()
 	{
 		var sceneId = await CreateSceneAsync("UndoRedo");
-		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,before)");
+		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,before)");
 		await Eval($"sceneeditpose({poseId},{God},after)");
 
 		await using var nats = new NatsConnection(new NatsOpts

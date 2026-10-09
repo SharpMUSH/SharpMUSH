@@ -18,17 +18,18 @@ public static class ScenePoseHandlers
 		MString sceneIdArg,
 		MString rest)
 	{
-		// @scene/addpose <sceneId>=<authorDbref>,<showAs>,<originDbref>,<source>,<tags>,<content>
+		// @scene/addpose <sceneId>=<authorDbref>,<showAs>,<originDbref>,<type>,<source>,<tags>,<content>
 		var sceneId = SceneCommandHelper.Plain(sceneIdArg);
 		// The content field keeps its markup: storage takes it as a serialised MString and derives the
 		// plain column from that. Everything before it is a dbref or a keyword, compared as text.
-		var (fields, contentMarkup) = SceneCommandHelper.SplitFieldsKeepingMarkup(rest, 6);
+		var (fields, contentMarkup) = SceneCommandHelper.SplitFieldsKeepingMarkup(rest, 7);
 		// author/origin resolve through the engine LocateService (here/me/name -> dbref).
 		var authorDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
 		var showAs = fields[1];
 		var originDbref = await SceneLocate.ObjectOrSelf(parser, fields[2]);
-		var source = fields[3];
-		var tagsRaw = fields[4];
+		var type = fields[3];
+		var source = fields[4];
+		var tagsRaw = fields[5];
 		var content = MarkupTextSerializer.Serialize(contentMarkup);
 
 		if (string.IsNullOrEmpty(authorDbref))
@@ -41,7 +42,7 @@ public static class ScenePoseHandlers
 			? Array.Empty<string>()
 			: tagsRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-		var result = await sceneService.AddPoseAsync(sceneId, authorDbref, showAs, originDbref, source, tags, content);
+		var result = await sceneService.AddPoseAsync(sceneId, authorDbref, showAs, originDbref, type, source, tags, content);
 		if (result is Error<string> err)
 		{
 			await notifyService.Notify(executor, $"SCENE: {err.Value}");
@@ -73,6 +74,12 @@ public static class ScenePoseHandlers
 		{
 			await notifyService.Notify(executor, "SCENE: /setpose needs <poseId>/<key>=<value>.");
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
+		}
+
+		if (key!.Trim().Equals("type", StringComparison.OrdinalIgnoreCase) && PoseTypes.Normalize(value.ToPlainText()) is Error<string> invalid)
+		{
+			await notifyService.Notify(executor, $"SCENE: {invalid.Value}");
+			return MarkupText.Plain($"#-1 {invalid.Value}");
 		}
 
 		var result = await sceneService.SetPoseMetaAsync(poseId, key!, value.ToPlainText());

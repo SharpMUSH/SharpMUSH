@@ -318,7 +318,7 @@ public class SceneApprovalIntegrationTests
 			$"sceneunmember({sceneId},{mortal})",
 			$"scenesetfocus({mortal},{sceneId})",
 			$"sceneshowas({sceneId},{mortal},Sneaky)",
-			$"sceneaddpose({sceneId},{mortal},,{mortal},pose,,intruding)",
+			$"sceneaddpose({sceneId},{mortal},,{mortal},ic,pose,,intruding)",
 			$"sceneplot(create,Mortal Plot {Tag}|desc|{mortal})"
 		};
 

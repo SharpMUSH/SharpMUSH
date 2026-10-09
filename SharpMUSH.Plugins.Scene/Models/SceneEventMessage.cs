@@ -23,6 +23,7 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// not the original author. Null for an event with no pose, or when nothing holds that dbref. Appended
 /// last: the wire is positional in both copies of this record.
 /// </param>
+/// <param name="Type">The pose's type key (<see cref="PoseTypes"/>); <c>ic</c> for an event with no pose.</param>
 public record SceneEventMessage(
 	string SceneId,
 	string EventType,
@@ -34,4 +35,5 @@ public record SceneEventMessage(
 	string Source,
 	string Location,
 	long Timestamp,
-	string? ActorObjId);
+	string? ActorObjId,
+	string Type = PoseTypes.InCharacter);

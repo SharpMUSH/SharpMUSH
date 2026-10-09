@@ -297,6 +297,28 @@ public class LayoutFunctionTests
 	}
 
 	/// <summary>
+	/// tone() names a theme colour rather than a colour: the portal colours the span from its theme, and a
+	/// telnet reader's own @theme decides the colour when their output is rendered.
+	/// </summary>
+	[Test]
+	public async Task AToneIsColouredByTheReadersThemeWhenItIsRendered()
+	{
+		var tone = await Eval("tone(info,Calls [ansi(u,in)].)");
+		await Assert.That(tone.ToPlainText()).IsEqualTo("Calls in.");
+		await Assert.That((await Eval("tone(muted,<OOC> Back in five.)")).ToPlainText()).IsEqualTo("<OOC> Back in five.");
+		await Assert.That(tone.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-info\"");
+
+		if (!ThemePalette.TryParse("fantasy", out var fantasy, out _)) throw new InvalidOperationException("fantasy does not read");
+		var themed = ToneMarkup.ForTelnet(tone, fantasy).Render(MarkupFormat.Ansi);
+		var colour = MarkupText.Wrap(AnsiTheme.Paint(fantasy![ThemeRole.Info]!.Value), "x").Render(MarkupFormat.Ansi);
+		await Assert.That(themed).StartsWith(colour[..colour.IndexOf('x')] + "Calls ")
+			.Because("the theme's info colour paints the text, and the text's own underline stays");
+		await Assert.That(themed).DoesNotContain("span");
+		await Assert.That(ToneMarkup.ForTelnet(await Eval("tone(foreground,plain)"), null).Render(MarkupFormat.Ansi))
+			.IsEqualTo("plain").Because("the text colour has no standard colour to fall back on");
+	}
+
+	/// <summary>
 	/// The options are one JSON object, written inside a second pair of braces or built with
 	/// <c>json()</c>; a string keeps its colour and an escaped quote is a quote.
 	/// </summary>
@@ -393,6 +415,8 @@ public class LayoutFunctionTests
 	[Arguments("datatable({{\"min\":\"x\"}},A|B,1|2)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("notice(JOBS,x,purple)", "#-1 UNKNOWN BADGE KIND")]
+	[Arguments("tone(background,x)", "#-1 UNKNOWN TONE")]
+	[Arguments("tone(purple,x)", "#-1 UNKNOWN TONE")]
 	[Arguments("gradient(x,h|r)", "#-1 UNKNOWN COLOR")]
 	[Arguments("gradient(x,r|g,{{\"rgb\":\"\"}})", "#-1 UNKNOWN LAYOUT OPTION RGB")]
 	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]
