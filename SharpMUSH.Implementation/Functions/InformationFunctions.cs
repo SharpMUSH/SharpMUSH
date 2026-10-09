@@ -38,23 +38,8 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			async found =>
-			{
-				var accnameAttr = await AttributeService.GetAttributeAsync(
-					executor, found, "ACCNAME", IAttributeService.AttributeMode.Read);
-
-				if (accnameAttr is SharpAttribute[] chain)
-				{
-					var attr = chain.Last();
-					var attrValue = attr.Value.ToString();
-					if (!string.IsNullOrWhiteSpace(attrValue))
-					{
-						return new CallState(attrValue);
-					}
-				}
-
-				return new CallState(found.Object().Name);
-			});
+			async found => new CallState(await new SharpMUSH.Library.Services.NameFormatter(AttributeService, Configuration)
+				.FormatAsync(found, SharpMUSH.Library.Services.NameContext.Accented)));
 	}
 
 	[SharpFunction(Name = "folderstats", MinArgs = 0, MaxArgs = 2,
