@@ -175,9 +175,10 @@ public sealed partial class ObjectSnapshotService(
 		var selectedNames = selection?.Attributes.SelectMany(AttributePathPrefixes).ToHashSet(StringComparer.Ordinal);
 		var captured = new List<SnapshotAttribute>();
 		var capturedBytes = 0;
-		await foreach (var attribute in attributes.GetAttributesAsync(obj.Object().DBRef, "**", ct))
+		var candidates = attributes.GetAttributesAsync(obj.Object().DBRef, "**", ct)
+			.Where(attribute => selectedNames is null || selectedNames.Contains(attribute.LongName));
+		await foreach (var attribute in candidates)
 		{
-			if (selectedNames is not null && !selectedNames.Contains(attribute.LongName)) continue;
 			var path = await reads.Path(attribute.LongName, ct);
 			if (!await permissions.CanViewAttribute(executor, obj, path)) continue;
 			if (captured.Count == MaxAttributes) throw Error("limit", "Snapshot exceeds 1024 attributes.");
@@ -423,7 +424,7 @@ public sealed partial class ObjectSnapshotService(
 			foreach (var change in current.Except(snapshot.Flags).Select(f => "!" + f).Concat(snapshot.Flags.Except(current)))
 				mutations.Add(async () =>
 				{
-					if ((await flagsAndPowers.SetOrUnsetFlag(executor, obj, change, false)).Message?.ToPlainText() != "1")
+					if ((await flagsAndPowers.SetOrUnsetFlag(executor, obj, change, false)).Message.ToPlainText() != "1")
 						throw Error("write-failed", "Flag change was rejected: " + change);
 				});
 		}
@@ -431,7 +432,7 @@ public sealed partial class ObjectSnapshotService(
 			mutations.Add(async () =>
 			{
 				var result = await objectNames.SetName(executor, obj, MarkupText.Plain(snapshot.Name), false);
-				if (result.Message?.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
+				if (result.Message.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
 			});
 		foreach (var mutation in mutations)
 		{

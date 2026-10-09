@@ -92,13 +92,9 @@ public static class ChannelDecompile
 		{
 			var privilegedWho = await ChannelHelper.PrivilegedWho(executor);
 
-			foreach (var member in await ChannelHelper.ChannelMembers(ConnectionService, channel))
+			var members = await ChannelHelper.ChannelMembers(ConnectionService, channel);
+			foreach (var member in members.Where(member => !member.Hidden || privilegedWho))
 			{
-				if (member.Hidden && !privilegedWho)
-				{
-					continue;
-				}
-
 				commands.Add(MarkupText.Plain(member.Object.IsPlayer
 					? $"@channel/on {name} = *{member.Object.Object().Name}"
 					: $"@channel/on {name} = #{member.Object.Object().DBRef.Number}"));

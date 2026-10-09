@@ -1,0 +1,44 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The aside's "On this page" card: the table of contents, then the page's other languages. *@
+<KitCard Aside="true" Title="@Loc["ResOnThisPage"]">
+    @if (Entries.Count > 0)
+    {
+        <nav class="wiki-toc" aria-label="@Loc["ResOnThisPage"]">
+            @foreach (var entry in Entries)
+            {
+                var anchor = entry.Anchor;
+                <a href="@Href(anchor)" aria-current="@(anchor == Current ? "location" : null)"
+                   @onclick="@(() => CurrentChanged.InvokeAsync(anchor))">@entry.Text</a>
+            }
+        </nav>
+    }
+    @if (Locales.Any())
+    {
+        <div class="wiki-locales">
+            <SectionLabel>@Loc["NavWikiAlsoIn"]</SectionLabel>
+            <div class="wiki-lang-chips" aria-label="@Loc["WikiAvailableTranslations"]">
+                @foreach (var locale in Locales)
+                {
+                    <a class="wiki-lang-chip" href="@LocaleHref(locale)" lang="@locale">@PortalLocales.DisplayName(locale)</a>
+                }
+            </div>
+        </div>
+    }
+</KitCard>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<WikiTocEntry> Entries { get; set; } = [];
+
+    /// <summary>The entry the reader last followed.</summary>
+    [Parameter] public string? Current { get; set; }
+    [Parameter] public EventCallback<string> CurrentChanged { get; set; }
+
+    /// <summary>The link for an entry's anchor.</summary>
+    [Parameter, EditorRequired] public Func<string, string> Href { get; set; } = null!;
+
+    /// <summary>The page's other languages.</summary>
+    [Parameter, EditorRequired] public IEnumerable<string> Locales { get; set; } = [];
+
+    [Parameter, EditorRequired] public Func<string, string> LocaleHref { get; set; } = null!;
+}

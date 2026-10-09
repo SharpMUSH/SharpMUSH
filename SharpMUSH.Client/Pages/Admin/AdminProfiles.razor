@@ -29,72 +29,68 @@
         </Actions>
     </PlainPageHeader>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-    }
-    else if (_status is null)
-    {
-        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Loc["AdmProfilesStatusLoadFailed"]</MudAlert>
-    }
-    else
-    {
-        <KitCard Title="@Loc["AdmStatus"]">
-            <div class="adm-profiles-status">
-                <div class="adm-profiles-status-row">
-                    <span class="adm-profiles-status-label">@Loc["AdmProfilesConfigured"]</span>
-                    <span class="adm-profiles-status-value">@(_status.Configured ? Loc["AdmYes"] : Loc["AdmProfilesNotConfiguredValue"])</span>
-                </div>
-                @if (_status.Configured)
-                {
+    <LoadState TValue="HandlerStatus" Value="_status" Loading="_loading" ProgressColor="Color.Primary" Context="status">
+        <Missing>
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Loc["AdmProfilesStatusLoadFailed"]</MudAlert>
+        </Missing>
+        <ChildContent>
+            <KitCard Title="@Loc["AdmStatus"]">
+                <div class="adm-profiles-status">
                     <div class="adm-profiles-status-row">
-                        <span class="adm-profiles-status-label">@Loc["AdmProfilesHandler"]</span>
-                        <span class="adm-profiles-status-value">
-                            @(_status.HandlerExists
-                                ? $"{_status.HandlerName} (#{_status.HandlerDbref})"
-                                : Loc["AdmProfilesHandlerNotFound", _status.HandlerDbref?.ToString() ?? string.Empty].Value)
-                        </span>
+                        <span class="adm-profiles-status-label">@Loc["AdmProfilesConfigured"]</span>
+                        <span class="adm-profiles-status-value">@(status.Configured ? Loc["AdmYes"] : Loc["AdmProfilesNotConfiguredValue"])</span>
                     </div>
-                }
-            </div>
-        </KitCard>
-
-        @if (_status.HandlerExists)
-        {
-            <KitCard Title="@Loc["AdmProfilesAttributesTitle"]">
-                <div class="adm-profiles-attrs-head">
-                    <span>@Loc["AdmAttribute"]</span>
-                    <span>@Loc["AdmStatus"]</span>
+                    @if (status.Configured)
+                    {
+                        <div class="adm-profiles-status-row">
+                            <span class="adm-profiles-status-label">@Loc["AdmProfilesHandler"]</span>
+                            <span class="adm-profiles-status-value">
+                                @(status.HandlerExists
+                                    ? $"{status.HandlerName} (#{status.HandlerDbref})"
+                                    : Loc["AdmProfilesHandlerNotFound", status.HandlerDbref?.ToString() ?? string.Empty].Value)
+                            </span>
+                        </div>
+                    }
                 </div>
-                @foreach (var attr in _status.Attributes)
-                {
-                    <div class="adm-profiles-attrs-row">
-                        <code>@attr.Attribute</code>
-                        @if (attr.Present)
-                        {
-                            <Pill Tag="true" Class="adm-profiles-present">@Loc["AdmPresent"]</Pill>
-                        }
-                        else
-                        {
-                            <Pill Tag="true" Warn="true">@Loc["AdmMissing"]</Pill>
-                        }
-                    </div>
-                }
-                <AuthorizeView Policy="packages.admin">
-                    <Authorized>
-                        <p class="adm-profiles-caption">
-                            @((MarkupString)Loc["AdmProfilesResetCaption",
-                                "<code>GET`*</code>",
-                                "<code>FN`*</code>"].Value)
-                        </p>
-                    </Authorized>
-                    <NotAuthorized>
-                        <p class="adm-profiles-caption">@Loc["AdmProfilesResetNeedsPackagesAdmin"]</p>
-                    </NotAuthorized>
-                </AuthorizeView>
             </KitCard>
-        }
-    }
+
+            @if (status.HandlerExists)
+            {
+                <KitCard Title="@Loc["AdmProfilesAttributesTitle"]">
+                    <div class="adm-profiles-attrs-head">
+                        <span>@Loc["AdmAttribute"]</span>
+                        <span>@Loc["AdmStatus"]</span>
+                    </div>
+                    @foreach (var attr in status.Attributes)
+                    {
+                        <div class="adm-profiles-attrs-row">
+                            <code>@attr.Attribute</code>
+                            @if (attr.Present)
+                            {
+                                <Pill Tag="true" Class="adm-profiles-present">@Loc["AdmPresent"]</Pill>
+                            }
+                            else
+                            {
+                                <Pill Tag="true" Warn="true">@Loc["AdmMissing"]</Pill>
+                            }
+                        </div>
+                    }
+                    <AuthorizeView Policy="packages.admin">
+                        <Authorized>
+                            <p class="adm-profiles-caption">
+                                @((MarkupString)Loc["AdmProfilesResetCaption",
+                                    "<code>GET`*</code>",
+                                    "<code>FN`*</code>"].Value)
+                            </p>
+                        </Authorized>
+                        <NotAuthorized>
+                            <p class="adm-profiles-caption">@Loc["AdmProfilesResetNeedsPackagesAdmin"]</p>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </KitCard>
+            }
+        </ChildContent>
+    </LoadState>
 </div>
 
 @code {

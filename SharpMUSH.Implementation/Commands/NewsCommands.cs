@@ -39,7 +39,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var topic = args["0"].Message!.ToPlainText();
+		var topic = args["0"].Message.ToPlainText();
 
 		if (switches.Contains("SEARCH"))
 		{
@@ -121,7 +121,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var topic = args["0"].Message!.ToPlainText();
+		var topic = args["0"].Message.ToPlainText();
 
 		if (switches.Contains("SEARCH"))
 		{

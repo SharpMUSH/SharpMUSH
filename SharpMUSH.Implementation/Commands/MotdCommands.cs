@@ -240,17 +240,14 @@ public partial class Commands
 									await executor.IsRoyalty() ||
 									await executor.IsSee_All();
 
-		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
+		var pattern = args.ContainsKey("0") ? args["0"].Message.ToPlainText() : null;
 
 		var everyone = ConnectionService.GetAll();
 		var playerList = new List<ImmutableArray<Block>>();
-		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
+		var listed = everyone.Where(player => player.Ref.HasValue
+			&& (isAdmin || player.PresenceClass != PresenceClasses.Portal));
+		await foreach (var connection in listed)
 		{
-			if (!isAdmin && connection.PresenceClass == PresenceClasses.Portal)
-			{
-				continue;
-			}
-
 			// Like WHO, a descriptor whose player is gone is left out rather than failing the listing.
 			if (await Mediator.Send(new GetObjectNodeQuery(connection.Ref!.Value)) is not AnySharpObject obj)
 			{

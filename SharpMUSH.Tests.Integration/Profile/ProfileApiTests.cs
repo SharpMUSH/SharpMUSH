@@ -142,7 +142,7 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		{
 			async Task<string> Probe(string expression) =>
 				(await factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!
-					.Message!.ToPlainText().Replace("\n", "\\n");
+					.Message.ToPlainText().Replace("\n", "\\n");
 
 			var players = await Probe("lsearch(all,type,player)");
 			var visible = await Probe("filter(#8/FN`CHARVIS,lsearch(all,type,player))");

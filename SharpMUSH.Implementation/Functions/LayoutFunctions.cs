@@ -352,7 +352,7 @@ public partial class Functions
 
 	/// <summary>The arguments from <paramref name="first"/> on, in order.</summary>
 	private static IEnumerable<MString> Rest(IReadOnlyDictionary<string, CallState> args, int first) =>
-		args.Keys.Select(int.Parse).Where(i => i >= first).Order().Select(i => args[i.ToString()].Message ?? MarkupText.Empty);
+		args.Keys.Select(int.Parse).Where(i => i >= first).Order().Select(i => args[i.ToString()].Message);
 
 	/// <summary>An argument as tree items: the items a <c>node()</c> or <c>tree()</c> made, or the content as a leaf.</summary>
 	private IEnumerable<TreeItem> TreeItemsOf(MString content) =>
@@ -419,5 +419,5 @@ public partial class Functions
 	}
 
 	private static MString Arg(IReadOnlyDictionary<string, CallState> args, int index) =>
-		args.TryGetValue(index.ToString(), out var arg) && arg.Message is { } message ? message : MarkupText.Empty;
+		args.TryGetValue(index.ToString(), out var arg) ? arg.Message : MarkupText.Empty;
 }

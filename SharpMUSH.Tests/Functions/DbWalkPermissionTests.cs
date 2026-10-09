@@ -31,10 +31,10 @@ public class DbWalkPermissionTests
 
 	private async Task<string> EvalAs(DBRef executor, string expr)
 		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expr)))
-			?.Message!.ToPlainText() ?? "<null>";
+			?.Message.ToPlainText() ?? "<null>";
 
 	private async Task<string> God(string command)
-		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText() ?? "";
+		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText() ?? "";
 
 	private async Task<DBRef> Dig(string name)
 		=> DBRef.Parse((await God($"@dig {name}")).Trim().Split(' ')[^1].Trim());

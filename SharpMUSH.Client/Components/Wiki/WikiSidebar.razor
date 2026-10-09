@@ -30,9 +30,8 @@
     }
     <SidebarGroup Class="wiki-side-cats" Label="@Loc["NavWikiCategories"]">
         @* Uncategorized pages have no category page to go to, so the strip lists named categories only. *@
-        @foreach (var group in _groups.Where(g => !g.IsUncategorized))
+        @foreach (var g in _groups.Where(g => !g.IsUncategorized))
         {
-            var g = group;
             var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"], _names);
             var route = WikiCategories.Route(g.Key);
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />

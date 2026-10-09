@@ -35,4 +35,14 @@ internal static class ObjectRefs
 			DBRef reference => await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken),
 			NotFound => new None()
 		};
+
+	/// <summary>
+	/// The container a location or home edge names. No edge may name an exit as a container, so one that
+	/// does is a corrupt edge and throws.
+	/// </summary>
+	public static AnySharpContainer EdgeContainer(AnySharpObject found) => found.AsOptionalContainer switch
+	{
+		AnySharpContainer container => container,
+		None => throw new InvalidOperationException($"#{found.Object().DBRef.Number} is an exit, which cannot be a container")
+	};
 }

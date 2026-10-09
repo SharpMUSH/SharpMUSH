@@ -62,7 +62,7 @@ public class LocateServiceCompatibilityTests
 				Arg.Is<GetContentsQuery>(q =>
 					ContainerNumber(q.DBRef) == container.Object.DBRef.Number),
 				Arg.Any<CancellationToken>())
-			.Returns(_ => contents.Select(x => x.AsContent));
+			.Returns(_ => contents.Select(x => x.AsOptionalContent.Expect<AnySharpContent>()));
 	}
 
 	[Test]

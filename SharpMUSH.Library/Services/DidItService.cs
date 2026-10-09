@@ -18,91 +18,14 @@ public class DidItService(
 	public async ValueTask<bool> DidIt(IMUSHCodeParser parser, DidItRequest request)
 	{
 		var used = false;
-		var loc = request.Loc ?? (request.Player.IsContent ? await request.Player.AsContent.Location() : null);
+		var loc = request.Loc ?? (request.Player is SharpRoom ? null : await request.Player.Where());
 
 		// PennMUSH guards only the messages on a good location; the action attribute runs regardless.
 		if (loc is not null)
 		{
 			var args = BuildArgs(request);
-
-			if (!string.IsNullOrEmpty(request.What))
-			{
-				var attr = await attributeService.GetAttributeAsync(
-					request.Thing, request.Thing, request.What,
-					IAttributeService.AttributeMode.Execute, parent: true);
-
-				if (attr.IsAttribute)
-				{
-					used = true;
-					var message = await Evaluate(parser, request, request.What, args);
-
-					if (!string.IsNullOrEmpty(message.ToPlainText()))
-					{
-						await notifyService.Notify(request.Player, message, request.Thing);
-					}
-				}
-				else if (request.Def is not null && request.Def.Length > 0)
-				{
-					await notifyService.Notify(request.Player, request.Def, request.Thing);
-				}
-				else if (request.DefaultNotification is { } notification)
-				{
-					await notifyService.NotifyLocalized(request.Player, notification.Key, request.Thing, notification.Arguments);
-				}
-			}
-
-			// A Dark object that is legally dark produces no o-messages at all.
-			if (!await request.Player.IsDarkLegal())
-			{
-				MString? broadcast = null;
-				var oattrFound = false;
-
-				if (!string.IsNullOrEmpty(request.OWhat))
-				{
-					var oattr = await attributeService.GetAttributeAsync(
-						request.Thing, request.Thing, request.OWhat,
-						IAttributeService.AttributeMode.Execute, parent: true);
-
-					if (oattr.IsAttribute)
-					{
-						oattrFound = true;
-						used = true;
-						var evaluated = await Evaluate(parser, request, request.OWhat, args);
-
-						// UFUN_NAME (src/utils.c:351): the actor's name and a space go in front of the
-						// evaluated text, and an attribute that evaluated to nothing sends nothing —
-						// the name alone is stripped back off.
-						if (!string.IsNullOrEmpty(evaluated.ToPlainText()))
-						{
-							broadcast = MarkupText.Concat(
-								MarkupText.Plain($"{request.Player.Object().Name} "), evaluated);
-						}
-					}
-				}
-
-				// The odef branch is an `else if` on the FETCH in real_did_it, not on the result: an
-				// o-attribute that exists and evaluates to nothing stays silent rather than falling
-				// back to the default.
-				if (!oattrFound && !string.IsNullOrEmpty(request.ODef))
-				{
-					broadcast = MarkupText.Plain($"{request.Player.Object().Name} {request.ODef}");
-				}
-
-				if (broadcast is not null)
-				{
-					var message = broadcast;
-
-					// notify_except2(player, loc, player, thing, ...): the actor is both the executor and
-					// the speaker of the o-message, and the actor and the object are the two exclusions.
-					await communicationService.SendToRoomAsync(
-						request.Player,
-						loc,
-						_ => message,
-						INotifyService.NotificationType.Emit,
-						excludeObjects: [request.Player, request.Thing],
-						interact: request.Interact);
-				}
-			}
+			used = await SendMessage(parser, request, args);
+			used = await SendOMessage(parser, request, loc, args) || used;
 		}
 
 		if (!string.IsNullOrEmpty(request.AWhat))
@@ -111,6 +34,125 @@ public class DidItService(
 		}
 
 		return used;
+	}
+
+	/// <summary>
+	/// Tells the actor the <c>What</c> attribute, or the default when the object has none. Returns
+	/// whether the attribute was found.
+	/// </summary>
+	private async ValueTask<bool> SendMessage(
+		IMUSHCodeParser parser,
+		DidItRequest request,
+		Dictionary<string, CallState> args)
+	{
+		if (string.IsNullOrEmpty(request.What))
+		{
+			return false;
+		}
+
+		var attr = await attributeService.GetAttributeAsync(
+			request.Thing, request.Thing, request.What,
+			IAttributeService.AttributeMode.Execute, parent: true);
+
+		if (attr.IsAttribute)
+		{
+			var message = await Evaluate(parser, request, request.What, args);
+
+			if (!string.IsNullOrEmpty(message.ToPlainText()))
+			{
+				await notifyService.Notify(request.Player, message, request.Thing);
+			}
+
+			return true;
+		}
+
+		if (request.Def is not null && request.Def.Length > 0)
+		{
+			await notifyService.Notify(request.Player, request.Def, request.Thing);
+		}
+		else if (request.DefaultNotification is { } notification)
+		{
+			await notifyService.NotifyLocalized(request.Player, notification.Key, request.Thing, notification.Arguments);
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Shows the room the <c>OWhat</c> attribute, or the <c>ODef</c> default when the object has none.
+	/// Returns whether the attribute was found.
+	/// </summary>
+	private async ValueTask<bool> SendOMessage(
+		IMUSHCodeParser parser,
+		DidItRequest request,
+		AnySharpContainer loc,
+		Dictionary<string, CallState> args)
+	{
+		// A Dark object that is legally dark produces no o-messages at all.
+		if (await request.Player.IsDarkLegal())
+		{
+			return false;
+		}
+
+		var (oattrFound, broadcast) = await EvaluateOMessage(parser, request, args);
+
+		// The odef branch is an `else if` on the FETCH in real_did_it, not on the result: an
+		// o-attribute that exists and evaluates to nothing stays silent rather than falling
+		// back to the default.
+		if (!oattrFound && !string.IsNullOrEmpty(request.ODef))
+		{
+			broadcast = MarkupText.Plain($"{request.Player.Object().Name} {request.ODef}");
+		}
+
+		if (broadcast is not null)
+		{
+			var message = broadcast;
+
+			// notify_except2(player, loc, player, thing, ...): the actor is both the executor and
+			// the speaker of the o-message, and the actor and the object are the two exclusions.
+			await communicationService.SendToRoomAsync(
+				request.Player,
+				loc,
+				_ => message,
+				INotifyService.NotificationType.Emit,
+				excludeObjects: [request.Player, request.Thing],
+				interact: request.Interact);
+		}
+
+		return oattrFound;
+	}
+
+	/// <summary>
+	/// Fetches and evaluates the <c>OWhat</c> attribute: whether it was found, and the text to show
+	/// the room (none when it is missing or evaluated to nothing).
+	/// </summary>
+	private async ValueTask<(bool Found, MString? Broadcast)> EvaluateOMessage(
+		IMUSHCodeParser parser,
+		DidItRequest request,
+		Dictionary<string, CallState> args)
+	{
+		if (string.IsNullOrEmpty(request.OWhat))
+		{
+			return (false, null);
+		}
+
+		var oattr = await attributeService.GetAttributeAsync(
+			request.Thing, request.Thing, request.OWhat,
+			IAttributeService.AttributeMode.Execute, parent: true);
+
+		if (!oattr.IsAttribute)
+		{
+			return (false, null);
+		}
+
+		var evaluated = await Evaluate(parser, request, request.OWhat, args);
+
+		// UFUN_NAME (src/utils.c:351): the actor's name and a space go in front of the
+		// evaluated text, and an attribute that evaluated to nothing sends nothing —
+		// the name alone is stripped back off.
+		return string.IsNullOrEmpty(evaluated.ToPlainText())
+			? (true, null)
+			: (true, MarkupText.Concat(MarkupText.Plain($"{request.Player.Object().Name} "), evaluated));
 	}
 
 	public async ValueTask<bool> FailLock(

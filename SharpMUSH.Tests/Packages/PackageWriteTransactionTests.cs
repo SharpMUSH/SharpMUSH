@@ -86,7 +86,7 @@ public class PackageWriteTransactionTests
 
 		await WriteEverythingAsync(writes, node, dbref, objid, package);
 		var created = await writes.CreateAsync(
-			new CreateThingCommand("Tx Revert Created", node.AsContainer, await PackageManagerAsync(), node.AsContainer), CancellationToken.None);
+			new CreateThingCommand("Tx Revert Created", node.AsOptionalContainer.Expect<AnySharpContainer>(), await PackageManagerAsync(), node.AsOptionalContainer.Expect<AnySharpContainer>()), CancellationToken.None);
 
 		var error = await writes.RevertAsync(new Error<string>("Something failed."));
 
@@ -140,7 +140,7 @@ public class PackageWriteTransactionTests
 		AnySharpContainer home = pm;
 		var room = await Database.CreateRoomAsync("Tx Link Room", pm);
 		var roomNode = (await Database.GetObjectNodeAsync(room)).Expect<AnySharpObject>();
-		var exitRef = await Database.CreateExitAsync("Tx Link Exit", [], roomNode.AsContainer, pm);
+		var exitRef = await Database.CreateExitAsync("Tx Link Exit", [], roomNode.AsOptionalContainer.Expect<AnySharpContainer>(), pm);
 		var exit = (await Database.GetObjectNodeAsync(exitRef)).Expect<AnySharpObject>().Expect<SharpExit>();
 
 		await Assert.That(() => writes.LinkCreatedExitAsync(exit, home, CancellationToken.None))

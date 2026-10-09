@@ -37,7 +37,7 @@ public class SceneWebComposeIntegrationTests
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -81,13 +81,13 @@ public class SceneWebComposeIntegrationTests
 	private DBRef? _room;
 
 	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
-		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message.ToPlainText().Trim());
 
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
 		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
 			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -128,7 +128,7 @@ public class SceneWebComposeIntegrationTests
 		var (remote, remoteHandle) = await CreatePlayerAsync($"Aster{Tag}");
 
 		// A room with the scene in it; the witness stands there, the remote poser does not.
-		var yard = (await God1($"@dig Well Yard {Tag}")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var yard = (await God1($"@dig Well Yard {Tag}")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		var yardRef = yard.Split(' ').First(t => t.StartsWith('#'));
 		await God1($"@tel {witness}={yardRef}");
 
@@ -177,7 +177,7 @@ public class SceneWebComposeIntegrationTests
 		await PutLoggerInMasterRoomAsync();
 
 		var (owner, ownerHandle) = await CreatePlayerAsync($"Cass{Tag}");
-		var yard = (await God1($"@dig Cass Yard {Tag}")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var yard = (await God1($"@dig Cass Yard {Tag}")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		var yardRef = yard.Split(' ').First(t => t.StartsWith('#'));
 		await God1($"@tel {owner}={yardRef}");
 

@@ -14,7 +14,7 @@ public partial class SpeechTransformationTests
 	public async Task MonikerRetainsPositionalStylesWithoutSplittingGraphemes(string name)
 	{
 		var parser = Factory.CommandParser;
-		var template = (await parser.FunctionParse(MarkupText.Plain("[ansi(r,x)][ansi(g,y)]")))!.Message!;
+		var template = (await parser.FunctionParse(MarkupText.Plain("[ansi(r,x)][ansi(g,y)]")))!.Message;
 		var result = NameFormatter.ApplyMoniker(name, template);
 		var first = System.Globalization.StringInfo.GetNextTextElement(name);
 		var expected = MarkupText.Concat(MarkupText.Wrap(template.Runs[0].Markups, first),
@@ -31,11 +31,11 @@ public partial class SpeechTransformationTests
 		var suffix = Guid.NewGuid().ToString("N")[..12];
 		await Admin($"@name {actor.DbRef}=A{suffix}");
 		var parser = Factory.CommandParser;
-		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"accname({actor.DbRef})")))!.Message!.ToPlainText())
+		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"accname({actor.DbRef})")))!.Message.ToPlainText())
 			.IsEqualTo("A" + suffix);
 
 		await Admin($"@nameaccent {actor.DbRef}='{new string('-', suffix.Length)}");
-		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"accname({actor.DbRef})")))!.Message!.ToPlainText())
+		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"accname({actor.DbRef})")))!.Message.ToPlainText())
 			.IsEqualTo("Á" + suffix);
 	}
 

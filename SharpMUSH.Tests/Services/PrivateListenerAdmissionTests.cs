@@ -82,9 +82,9 @@ public partial class PrivateListenerTests
 		}, CancellationToken.None);
 		arguments["0"] = new CallState("changed");
 		var state = pipeline.Queue.Single().State;
-		await Assert.That(state.EnvironmentRegisters["0"].Message!.ToPlainText()).IsEqualTo("original");
+		await Assert.That(state.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo("original");
 		state.Arguments["0"] = new CallState("changed queued argument");
-		await Assert.That(state.EnvironmentRegisters["0"].Message!.ToPlainText()).IsEqualTo("original");
+		await Assert.That(state.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo("original");
 		await Assert.That(state.ExecutionBudget).IsNull();
 		await Assert.That(state.CommandHistory).IsNull();
 		await Assert.That(state.CommandModifierDepth).IsEqualTo(0u);

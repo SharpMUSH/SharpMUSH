@@ -169,9 +169,9 @@ public class SynchronousFunctionResultTests
 		}
 		var result = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!;
 		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax" && kind != "markdown");
-		if (kind == "markdown" && mode == "syntax") await Assert.That(result.Message!.ToPlainText()).Contains("word");
+		if (kind == "markdown" && mode == "syntax") await Assert.That(result.Message.ToPlainText()).Contains("word");
 		if (kind is "fn" or "render" or "json" or "jsonlambda" && mode != "syntax")
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(value);
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(value);
 		if (mode != "syntax")
 		{
 			var expected = kind switch
@@ -187,9 +187,9 @@ public class SynchronousFunctionResultTests
 				"case" or "switch" => "default",
 				_ => null
 			};
-			if (expected is not null) await Assert.That(result.Message!.ToPlainText()).IsEqualTo(expected);
+			if (expected is not null) await Assert.That(result.Message.ToPlainText()).IsEqualTo(expected);
 		}
-		if (kind == "namelist") await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1");
+		if (kind == "namelist") await Assert.That(result.Message.ToPlainText()).IsEqualTo("#-1");
 	}
 	[Test]
 	[Arguments("if(1,selected,CHILD)")]
@@ -209,7 +209,7 @@ public class SynchronousFunctionResultTests
 		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain("["));
 		var result = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression.Replace("CHILD", $"ufun(me/{name})"))))!;
 		await Assert.That(result.HadErrors).IsFalse();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("selected");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("selected");
 	}
 
 }

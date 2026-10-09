@@ -1,0 +1,32 @@
+@using SharpMUSH.Client.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Above the terminal while the room has a scene: says a scene is running here and opens its Story when
+   pressed. The room's scene is always a running one (room.info leaves out paused and finished scenes). *@
+<div class="play-scene-hint" role="status">
+    <button type="button" class="play-scene-hint-open" title="@Loc["NavPlaySceneHereOpen"]" @onclick="OnOpen">
+        <MudIcon Icon="@Icons.Material.Outlined.AutoStories" Size="Size.Small" />
+        <span class="play-scene-hint-text">
+            <span class="play-scene-hint-label">@Loc["NavPlaySceneHere"]</span>
+            @if (Scene.Title is { Length: > 0 } title)
+            {
+                <span class="play-scene-hint-title">@title</span>
+            }
+        </span>
+        <span class="play-scene-hint-action">@Loc["NavPlaySceneHereOpen"]</span>
+    </button>
+    <button type="button" class="play-scene-hint-hide" aria-label="@Loc["NavPlaySceneHereHide"]" title="@Loc["NavPlaySceneHereHide"]"
+            @onclick="OnHide">
+        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RoomScene Scene { get; set; } = null!;
+
+    /// <summary>Opens the scene's Story.</summary>
+    [Parameter] public EventCallback OnOpen { get; set; }
+
+    /// <summary>Hides the marker for this scene.</summary>
+    [Parameter] public EventCallback OnHide { get; set; }
+}

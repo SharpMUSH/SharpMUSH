@@ -69,7 +69,7 @@ public class QueueDiagnosticsCommandTests
 		var parser = new SharpMUSH.Implementation.MUSHCodeParser(original.Logger, original.FunctionLibrary,
 			original.CommandLibrary, original.Configuration, provider);
 		var result = await parser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(path));
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 DIAGNOSTICS UNSUPPORTED");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("#-1 DIAGNOSTICS UNSUPPORTED");
 		await Assert.That(recorder.ProfileRegistrations().Count).IsEqualTo(0);
 	}
 
@@ -134,6 +134,6 @@ public class QueueDiagnosticsCommandTests
 	public async Task InvalidArgumentsAreRejected(string command)
 	{
 		var result = await Factory.CommandParser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command));
-		await Assert.That(result.Message!.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)).IsTrue();
+		await Assert.That(result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)).IsTrue();
 	}
 }

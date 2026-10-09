@@ -34,8 +34,8 @@ public abstract class ExtendedDatabaseBenchmarks
 		_god = await Database.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false) is AnySharpObject and SharpPlayer god
 			? god
 			: throw new InvalidOperationException("God (#1) is not seeded as a player.");
-		_masterRoom = await Database.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false) is AnySharpObject { IsContainer: true } masterRoom
-			? masterRoom.AsContainer
+		_masterRoom = await Database.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false) is AnySharpObject { AsOptionalContainer: AnySharpContainer masterRoom }
+			? masterRoom
 			: throw new InvalidOperationException("The master room (#2) is not seeded.");
 
 		await SeedInheritanceWalkAsync().ConfigureAwait(false);

@@ -27,8 +27,8 @@ public partial class Functions
 	public async ValueTask<CallState> TextEntries(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var fileReference = args["0"].Message!.ToPlainText();
-		var pattern = args["1"].Message!.ToPlainText();
+		var fileReference = args["0"].Message.ToPlainText();
+		var pattern = args["1"].Message.ToPlainText();
 		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 
 		return await ReadableCorpusAsync(parser, fileReference) switch
@@ -66,8 +66,8 @@ public partial class Functions
 	public async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var fileReference = args["0"].Message!.ToPlainText();
-		var entryName = args["1"].Message!.ToPlainText();
+		var fileReference = args["0"].Message.ToPlainText();
+		var entryName = args["1"].Message.ToPlainText();
 
 		return await ReadableCorpusAsync(parser, fileReference) switch
 		{

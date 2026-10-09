@@ -51,22 +51,6 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 		SharpThing thing => thing.Aliases
 	} ?? [];
 
-	public AnySharpContainer MinusExit() => this switch
-	{
-		SharpPlayer player => player,
-		SharpRoom room => room,
-		SharpExit => throw new ArgumentException("Cannot convert an exit to a non-exit."),
-		SharpThing thing => thing
-	};
-
-	public AnySharpContent MinusRoom() => this switch
-	{
-		SharpPlayer player => player,
-		SharpRoom => throw new ArgumentException("Cannot convert an room to a non-room."),
-		SharpExit exit => exit,
-		SharpThing thing => thing
-	};
-
 	public bool IsPlayer => Value is SharpPlayer;
 	public bool IsRoom => Value is SharpRoom;
 	public bool IsExit => Value is SharpExit;
@@ -74,19 +58,25 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 
 	public bool IsContent => IsPlayer || IsExit || IsThing;
 
-	public AnySharpContent AsContent => this switch
+	/// <summary>
+	/// This object as content, or none for a room: <c>obj.AsOptionalContent is AnySharpContent content</c>.
+	/// </summary>
+	public AnyOptionalSharpContent AsOptionalContent => this switch
 	{
 		SharpPlayer player => player,
-		SharpRoom => throw new ArgumentException("Cannot convert a room to content."),
+		SharpRoom => new None(),
 		SharpExit exit => exit,
 		SharpThing thing => thing
 	};
 
-	public AnySharpContainer AsContainer => this switch
+	/// <summary>
+	/// This object as a container, or none for an exit: <c>obj.AsOptionalContainer is AnySharpContainer container</c>.
+	/// </summary>
+	public AnyOptionalSharpContainer AsOptionalContainer => this switch
 	{
 		SharpPlayer player => player,
 		SharpRoom room => room,
-		SharpExit => throw new ArgumentException("Cannot convert an exit to container."),
+		SharpExit => new None(),
 		SharpThing thing => thing
 	};
 

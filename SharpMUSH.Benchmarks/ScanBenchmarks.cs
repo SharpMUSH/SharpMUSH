@@ -32,9 +32,8 @@ public class LightningScanBenchmarks : LightningBaseBenchmark
 
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
-		if (await _database!.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false) is not AnySharpObject { IsContainer: true } masterRoom)
+		if (await _database!.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false) is not AnySharpObject { AsOptionalContainer: AnySharpContainer room })
 			throw new InvalidOperationException("The master room (#2) is not seeded.");
-		var room = masterRoom.AsContainer;
 		for (var i = 0; i < 10; i++)
 			await _database!.CreateThingAsync($"ScanThing_{i}", room, god, room).ConfigureAwait(false);
 	}

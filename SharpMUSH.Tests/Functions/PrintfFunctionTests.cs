@@ -24,14 +24,14 @@ public class PrintfFunctionTests
 	public async Task ParserEscapingAndArgumentContracts(string expression, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.Text).IsEqualTo(expected);
+		await Assert.That(result!.Message.Text).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task MixedColorCjkAndEmojiFieldsAlign()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))")))!.Message!;
-		var expected = (await Parser.FunctionParse(MarkupText.Plain("strcat(%b%b,ansi(r,界),|,ansi(b,😀),%b%b)")))!.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))")))!.Message;
+		var expected = (await Parser.FunctionParse(MarkupText.Plain("strcat(%b%b,ansi(r,界),|,ansi(b,😀),%b%b)")))!.Message;
 		await Assert.That(result.Text).IsEqualTo("  界|😀  ");
 		await Assert.That(result.Runs.SequenceEqual(expected.Runs)).IsTrue();
 	}
@@ -42,7 +42,7 @@ public class PrintfFunctionTests
 		var format = string.Concat(Enumerable.Repeat("%65536s", 81));
 		var values = string.Join(',', Enumerable.Repeat("x", 81));
 		var expression = $"cat(printf(lit({format}),{values}),unexpected)";
-		var result = (await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message;
 		await Assert.That(result.Text).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 	}
 

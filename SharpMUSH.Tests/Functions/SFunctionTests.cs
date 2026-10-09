@@ -20,7 +20,7 @@ public class SFunctionTests
 	public async Task SFunction(string input, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToString()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -37,7 +37,7 @@ public class SFunctionTests
 	public async Task ObjevalFunction(string input, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToString()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -52,7 +52,7 @@ public class SFunctionTests
 	public async Task Objeval_UnmatchedObject_EvaluatesAsTheExecutor(string input, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToString()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -67,7 +67,7 @@ public class SFunctionTests
 
 		var result = await Parser.FunctionParse(MarkupText.Plain($"objeval(#{mortal.Number},objeval(#1,num(me)))"));
 
-		await Assert.That(result!.Message!.ToString()).IsEqualTo($"#{mortal.Number}");
+		await Assert.That(result!.Message.ToString()).IsEqualTo($"#{mortal.Number}");
 	}
 
 	/// <summary>

@@ -20,12 +20,12 @@ public partial class Functions
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var attrListStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var attrListStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var tokens = attrListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 		// jiter fans ONE input across every attribute: each is evaluated with the same %0,
 		// side by side (contrast chain(), which threads each result into the next step).
-		var input = parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty;
+		var input = parser.CurrentState.Arguments["1"].Message;
 		var osep = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 
 		if (tokens.Length == 0)

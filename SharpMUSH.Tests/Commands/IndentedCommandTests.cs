@@ -44,7 +44,7 @@ public class IndentedCommandTests
 
 		var stored = await WebAppFactoryArg.CommandParser.FunctionParse(
 			MarkupText.Plain($"get(#{player.DbRef.Number}/DESCRIBE)"));
-		await Assert.That(stored!.Message!.ToPlainText()).IsEqualTo(description);
+		await Assert.That(stored!.Message.ToPlainText()).IsEqualTo(description);
 	}
 
 	[Test]

@@ -1,0 +1,29 @@
+@* One row of the packages page's lists: the kind's icon, the name and its tags, a meta line, and the actions. *@
+<div class="pkg-row">
+    <MudIcon Icon="@Icon" Class="@($"pkg-row-icon pkg-kind-{Kind}")" Title="@IconTitle" />
+    <div class="pkg-row-main">
+        <div class="pkg-row-tags">
+            <span class="pkg-row-name">@Name</span>
+            @Tags
+        </div>
+        <div class="pkg-row-meta">
+            @Meta
+        </div>
+    </div>
+    <div class="pkg-row-actions">
+        @Actions
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+
+    /// <summary>The kind, lower case, which colours the icon.</summary>
+    [Parameter, EditorRequired] public string Kind { get; set; } = string.Empty;
+
+    [Parameter] public string? IconTitle { get; set; }
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? Tags { get; set; }
+    [Parameter] public RenderFragment? Meta { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

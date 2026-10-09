@@ -50,9 +50,8 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		}
 		var history = new List<DiagnosticQueueRow>();
 		Guid? next = null;
-		foreach (var row in recent)
+		foreach (var row in recent.Where(row => beforeSequence is not { } before || row.Sequence < before))
 		{
-			if (beforeSequence is { } before && row.Sequence >= before) continue;
 			if (!await queues.CanInspectAsync(scope!, row.Owner, row.Source, ct)) continue;
 			history.Add(new(row.Pid, row.Source?.ToString(), row.Owner?.ToString(), row.Kind,
 				row.Outcome.ToString(), row.SourceAttribute, row.EnqueuedAt, row.StartedAt, row.EndedAt,

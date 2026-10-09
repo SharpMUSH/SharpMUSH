@@ -39,7 +39,7 @@ public partial class NavigationTests
 
 	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
-	private async Task<AnySharpContainer> MasterRoom() => (await Node(new DBRef(2))).AsContainer;
+	private async Task<AnySharpContainer> MasterRoom() => (await Node(new DBRef(2))).AsOptionalContainer.Expect<AnySharpContainer>();
 
 	private async Task<AnySharpObject> Node(DBRef dbref) => (await _db.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 
@@ -142,7 +142,7 @@ public partial class NavigationTests
 		var god = await God();
 		var room = await MasterRoom();
 		var destinationRef = await _db.CreateRoomAsync("Destination", god);
-		var destination = (await Node(destinationRef)).AsContainer;
+		var destination = (await Node(destinationRef)).AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var exitRef = await _db.CreateExitAsync("Out", ["O"], room, god);
 		var exit = (await _db.GetObjectNodeAsync(exitRef)).Expect<SharpExit>();
@@ -160,7 +160,7 @@ public partial class NavigationTests
 		var room = await MasterRoom();
 
 		var homeRef = await _db.CreateRoomAsync("Home Base", god);
-		var home = (await Node(homeRef)).AsContainer;
+		var home = (await Node(homeRef)).AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var thingRef = await _db.CreateThingAsync("Wanderer", room, god, home);
 
@@ -236,11 +236,11 @@ public partial class NavigationTests
 		var boxRef = await _db.CreateThingAsync("Box", room, god, room);
 		var boxNode = await Node(boxRef);
 		var coinRef = await _db.CreateThingAsync("Coin", room, god, room);
-		var coin = (await Node(coinRef)).AsContent;
+		var coin = (await Node(coinRef)).AsOptionalContent.Expect<AnySharpContent>();
 
 		// Coin sits inside the box, which sits in the room: two hops to the room.
-		await _db.SetContentLocation(coin, boxNode.AsContainer);
-		await _db.SetContentLocation(boxNode.AsContent, room);
+		await _db.SetContentLocation(coin, boxNode.AsOptionalContainer.Expect<AnySharpContainer>());
+		await _db.SetContentLocation(boxNode.AsOptionalContent.Expect<AnySharpContent>(), room);
 
 		var top = (await _db.GetLocationRefAsync(coinRef, -1)).Expect<DBRef>();
 		await Assert.That(top).IsEqualTo(room.Object().DBRef);
@@ -280,10 +280,10 @@ public partial class NavigationTests
 		var god = await God();
 		var room = await MasterRoom();
 		var destinationRef = await _db.CreateRoomAsync("Elsewhere", god);
-		var destination = (await Node(destinationRef)).AsContainer;
+		var destination = (await Node(destinationRef)).AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var thingRef = await _db.CreateThingAsync("Traveler", room, god, room);
-		var thing = (await Node(thingRef)).AsContent;
+		var thing = (await Node(thingRef)).AsOptionalContent.Expect<AnySharpContent>();
 
 		await _db.MoveObjectAsync(thing, destination);
 

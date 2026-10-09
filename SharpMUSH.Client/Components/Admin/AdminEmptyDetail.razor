@@ -1,0 +1,27 @@
+@* What an admin detail pane shows with nothing to show: a large faint icon, a sentence, and, when there is
+   one, the primary action that gives it something (New role, Register). The page names its classes with its
+   Prefix (ra-empty-detail, ra-btn) and styles them, under ::deep, itself. *@
+<div class="@($"{Prefix}-empty-detail")">
+    <MudIcon Icon="@Icon" Class="@($"{Prefix}-ico {Prefix}-ico--empty")" />
+    <span>@Text</span>
+    @if (ActionText is not null)
+    {
+        <button type="button" class="@($"{Prefix}-btn {Prefix}-btn--primary")" @onclick="OnAction">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="@($"{Prefix}-ico")" /> @ActionText
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>The page's class prefix, e.g. <c>ra</c>.</summary>
+    [Parameter, EditorRequired] public string Prefix { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
+
+    /// <summary>The add action's label; no button when unset.</summary>
+    [Parameter] public string? ActionText { get; set; }
+
+    [Parameter] public EventCallback OnAction { get; set; }
+}

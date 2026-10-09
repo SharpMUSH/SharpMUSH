@@ -1,0 +1,42 @@
+@* One of Play's header controls (play-conn): an icon button named by its label, or a filled text button or
+   link such as Connect and Login. They sit in the card header and in the banner's controls row. *@
+@if (Href is not null)
+{
+    <a class="@CssClass" href="@Href">@ChildContent</a>
+}
+else
+{
+    <button type="button" class="@CssClass" aria-label="@Label" title="@Label"
+            aria-haspopup="@(PopsUp ? "dialog" : null)" disabled="@Disabled" @onclick="OnClick">
+        @if (Icon is not null)
+        {
+            <MudIcon Icon="@Icon" Size="Size.Small" />
+        }
+        @ChildContent
+    </button>
+}
+
+@code {
+    /// <summary>Names an icon button for a screen reader and the pointer's tooltip; text buttons leave it out.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Extra classes after play-conn.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>The control opens a dialog (one of a phone's sheets).</summary>
+    [Parameter] public bool PopsUp { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Makes the control a link rather than a button.</summary>
+    [Parameter] public string? Href { get; set; }
+
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>The text of a text button or link.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string CssClass => Class is null ? "play-conn" : $"play-conn {Class}";
+}

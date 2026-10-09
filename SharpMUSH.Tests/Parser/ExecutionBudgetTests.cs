@@ -29,9 +29,9 @@ public class ExecutionBudgetTests
 		using var budget = new ExecutionBudget(TimeSpan.Zero);
 		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(Factory.ExecutorDBRef) with { ExecutionBudget = budget });
 		var result = await parser.FunctionParse(MarkupText.Plain("add(1,add(2,3))"));
-		await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
+		await Assert.That(result?.Message.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
 		var unrelated = await Factory.FunctionParser.FunctionParse(MarkupText.Plain("add(1,2)"));
-		await Assert.That(unrelated?.Message?.ToPlainText()).IsEqualTo("3");
+		await Assert.That(unrelated?.Message.ToPlainText()).IsEqualTo("3");
 	}
 
 	[Test]

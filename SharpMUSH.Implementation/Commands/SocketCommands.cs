@@ -101,8 +101,8 @@ public partial class Commands
 			string[] cells;
 			if (isWizard)
 			{
-				var location = known.IsContent
-					? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
+				var location = known.AsOptionalContent is AnySharpContent connected
+					? "#" + ((await connected.Location())?.Object().DBRef.Number.ToString() ?? "-1")
 					: "#-1";
 				// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH). A bare
 				// address (a website connection's) is never cut: an IPv6 one runs to 39 characters, and the
@@ -216,7 +216,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AlreadyConnected);
 		}
 
-		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
+		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message.ToPlainText());
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 
@@ -248,24 +248,12 @@ public partial class Commands
 
 		if (nameItems.Count != 1)
 		{
-			// Trigger SOCKET`LOGINFAIL for invalid player name
-			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
-				null, // System event
-				handle.ToString(),
-				ipAddress,
-				"1", // count - simplified for now
-				"invalid player name",
-				"#-1", // no valid player
-				username);
-
+			await TriggerLoginFailAsync(handle, ipAddress, "invalid player name", "#-1", username);
 			await NotifyService.Notify(handle, "Could not find that player.");
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
-		var nameItem = nameItems.First();
-
-		var foundDB = nameItem switch
+		var foundDB = nameItems.First() switch
 		{
 			DBRef dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject and SharpPlayer player
 				? player
@@ -275,36 +263,37 @@ public partial class Commands
 
 		if (foundDB is null)
 		{
-			// Trigger SOCKET`LOGINFAIL for player not found
-			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
-				null, // System event
-				handle.ToString(),
-				ipAddress,
-				"1", // count - simplified for now
-				"player not found",
-				"#-1", // no valid player
-				username);
-
+			await TriggerLoginFailAsync(handle, ipAddress, "player not found", "#-1", username);
 			await NotifyService.Notify(handle, "Could not find that player.");
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
+		return await LoginPlayerAsync(parser, handle, ipAddress, foundDB, password, mode);
+	}
+
+	/// <summary>
+	/// Fires SOCKET`LOGINFAIL as a system event.
+	/// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
+	/// </summary>
+	private async ValueTask TriggerLoginFailAsync(long handle, string ipAddress, string reason, string playerObjid, string name)
+		=> await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
+			null, // System event
+			handle.ToString(),
+			ipAddress,
+			"1", // count - simplified for now
+			reason,
+			playerObjid,
+			name);
+
+	/// <summary>Checks the password and the account, then binds the connection to the player and logs it in.</summary>
+	private async ValueTask<Option<CallState>> LoginPlayerAsync(
+		IMUSHCodeParser parser, long handle, string ipAddress, SharpPlayer foundDB, string password, ConnectMode mode)
+	{
 		var validPassword = PasswordService.PasswordIsValid(password, foundDB.PasswordHash);
 
 		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
-			// Trigger SOCKET`LOGINFAIL for invalid password
-			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL",
-				null, // System event
-				handle.ToString(),
-				ipAddress,
-				"1", // count - simplified for now
-				"invalid password",
-				$"#{foundDB.Object.Key}", // valid player objid
-				foundDB.Object.Name);
-
+			await TriggerLoginFailAsync(handle, ipAddress, "invalid password", $"#{foundDB.Object.Key}", foundDB.Object.Name);
 			await NotifyService.Notify(handle, "Invalid Password.");
 			return new CallState(ErrorMessages.Returns.InvalidPassword);
 		}
@@ -318,8 +307,7 @@ public partial class Commands
 
 		if (await AccountRefusalAsync(foundDB.Object.DBRef) is { } refusal)
 		{
-			await EventService.TriggerEventAsync("SOCKET`LOGINFAIL", null,
-				handle.ToString(), ipAddress, "1", "account not active", $"#{foundDB.Object.Key}", foundDB.Object.Name);
+			await TriggerLoginFailAsync(handle, ipAddress, "account not active", $"#{foundDB.Object.Key}", foundDB.Object.Name);
 			await NotifyService.Notify(handle, refusal);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -332,46 +320,63 @@ public partial class Commands
 		}
 
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
-		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
+		await ConnectionService.Bind(handle, playerDbRef);
+		await ApplyConnectModeAsync(handle, foundDB, mode);
 
-		if (mode != ConnectMode.Normal)
-		{
-			var connectedPlayer = new AnySharpObject(foundDB);
-
-			if (mode is ConnectMode.Dark or ConnectMode.Hidden && await connectedPlayer.CanHide())
-			{
-				ConnectionService.Update(parser.CurrentState.Handle!.Value, "Hidden", "1");
-			}
-
-			if (mode is ConnectMode.Dark or ConnectMode.Visible)
-			{
-				var darkFlag = await Mediator.Send(new GetObjectFlagQuery("DARK"));
-				if (darkFlag is not null)
-				{
-					if (mode == ConnectMode.Dark)
-					{
-						// PennMUSH's set_flag special-cases DARK: only a Wizard or a player with the
-						// Can_Dark power may set it on a living player (flags.c ~1793-1798) - cd must
-						// respect the same gate rather than force DARK on unconditionally. cv (clearing
-						// DARK) has no such special case in PennMUSH - clearing your own flag only needs
-						// ordinary self-set permission, which every player already has - so it stays
-						// ungated here.
-						if (await connectedPlayer.CanDark())
-						{
-							await Mediator.Send(new SetObjectFlagCommand(connectedPlayer, darkFlag));
-						}
-					}
-					else
-					{
-						await Mediator.Send(new UnsetObjectFlagCommand(connectedPlayer, darkFlag));
-					}
-				}
-			}
-		}
-
-		await CompletePlayerLoginAsync(parser, parser.CurrentState.Handle!.Value, foundDB, playerDbRef);
+		await CompletePlayerLoginAsync(parser, handle, foundDB, playerDbRef);
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
+	}
+
+	/// <summary>
+	/// What <c>cd</c>, <c>cv</c> and <c>ch</c> add to a plain <c>connect</c>: <c>cd</c> and <c>ch</c> hide
+	/// the connection when the player may hide, <c>cd</c> sets <c>DARK</c> and <c>cv</c> clears it.
+	/// </summary>
+	private async ValueTask ApplyConnectModeAsync(long handle, SharpPlayer player, ConnectMode mode)
+	{
+		if (mode == ConnectMode.Normal)
+		{
+			return;
+		}
+
+		var connectedPlayer = new AnySharpObject(player);
+
+		if (mode is ConnectMode.Dark or ConnectMode.Hidden && await connectedPlayer.CanHide())
+		{
+			ConnectionService.Update(handle, "Hidden", "1");
+		}
+
+		await (mode switch
+		{
+			ConnectMode.Dark => SetDarkOnConnectAsync(connectedPlayer),
+			ConnectMode.Visible => ClearDarkOnConnectAsync(connectedPlayer),
+			_ => ValueTask.CompletedTask
+		});
+	}
+
+	/// <summary>
+	/// PennMUSH's set_flag special-cases DARK: only a Wizard or a player with the Can_Dark power may
+	/// set it on a living player (flags.c ~1793-1798) - cd must respect the same gate rather than
+	/// force DARK on unconditionally.
+	/// </summary>
+	private async ValueTask SetDarkOnConnectAsync(AnySharpObject player)
+	{
+		if (await Mediator.Send(new GetObjectFlagQuery("DARK")) is { } darkFlag && await player.CanDark())
+		{
+			await Mediator.Send(new SetObjectFlagCommand(player, darkFlag));
+		}
+	}
+
+	/// <summary>
+	/// cv (clearing DARK) has no special case in PennMUSH - clearing your own flag only needs ordinary
+	/// self-set permission, which every player already has - so it stays ungated here.
+	/// </summary>
+	private async ValueTask ClearDarkOnConnectAsync(AnySharpObject player)
+	{
+		if (await Mediator.Send(new GetObjectFlagQuery("DARK")) is { } darkFlag)
+		{
+			await Mediator.Send(new UnsetObjectFlagCommand(player, darkFlag));
+		}
 	}
 
 	private async ValueTask<Option<CallState>> HandleTokenLogin(

@@ -82,12 +82,12 @@ public partial class Functions
 	{
 		if (args.Count == 1)
 		{
-			var (ownFolder, ownIndex) = await ParseMessageSpec(parser, executor, args["0"].Message!.ToPlainText());
+			var (ownFolder, ownIndex) = await ParseMessageSpec(parser, executor, args["0"].Message.ToPlainText());
 			return ownIndex < 0 ? null : await GetMailMessage(executor, ownFolder, ownIndex);
 		}
 
 		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor,
-				args["0"].Message!.ToPlainText(), LocateFlags.PlayersPreference) is not AnySharpObject found)
+				args["0"].Message.ToPlainText(), LocateFlags.PlayersPreference) is not AnySharpObject found)
 		{
 			return null;
 		}
@@ -105,7 +105,7 @@ public partial class Functions
 			return null;
 		}
 
-		var (folder, index) = await ParseMessageSpec(parser, player, args["1"].Message!.ToPlainText());
+		var (folder, index) = await ParseMessageSpec(parser, player, args["1"].Message.ToPlainText());
 		if (index < 0)
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.MailInvalidMessageSpecification, executor);
@@ -145,7 +145,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
+		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText())))
 		{
 			// Only a player has a mailbox; anything else holds no mail.
 			var count = executor is SharpPlayer own
@@ -156,8 +156,8 @@ public partial class Functions
 
 		// fun_mail (src/extmail.c:2121-2137) tries mail(<player>) first, matching quietly; anything that
 		// is not a player falls through to the message fetch.
-		if (args.Count == 1 && !IsMessageNumber(args["0"].Message!.ToPlainText())
-				&& await LocateService.Locate(parser, executor, executor, args["0"].Message!.ToPlainText(),
+		if (args.Count == 1 && !IsMessageNumber(args["0"].Message.ToPlainText())
+				&& await LocateService.Locate(parser, executor, executor, args["0"].Message.ToPlainText(),
 					LocateFlags.PlayersPreference) is AnySharpObject and SharpPlayer mailbox)
 		{
 			if (!await CanReadMailOf(executor, mailbox))
@@ -204,12 +204,12 @@ public partial class Functions
 
 		if (args.Count == 1)
 		{
-			messageListSpec = args["0"].Message?.ToPlainText();
+			messageListSpec = args["0"].Message.ToPlainText();
 		}
 		else if (args.Count == 2)
 		{
 			// fun_maillist (src/extmail.c:817-821) matches quietly and answers anything but a player with #-1 NO MATCH.
-			var playerArg = args["0"].Message!.ToPlainText()!;
+			var playerArg = args["0"].Message.ToPlainText()!;
 			if (await LocateService.Locate(parser, executor, executor, playerArg, LocateFlags.PlayersPreference)
 				is not (AnySharpObject and SharpPlayer located))
 			{
@@ -222,7 +222,7 @@ public partial class Functions
 			}
 
 			targetPlayer = located;
-			messageListSpec = args["1"].Message?.ToPlainText();
+			messageListSpec = args["1"].Message.ToPlainText();
 		}
 
 		// Only a player has a mailbox; anything else holds no mail.
@@ -287,7 +287,7 @@ public partial class Functions
 		await SendMail.Handle(parser, LocateService, Mediator, NotifyService,
 			new MailDelivery.Services(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,
 			Configuration, ConnectionService),
-			args["0"].Message!, args["1"].Message!, ["SILENT"]);
+			args["0"].Message, args["1"].Message, ["SILENT"]);
 
 		// do_mail_send notifies the sender about a bad recipient, so the function returns nothing.
 		return new CallState(string.Empty);
@@ -313,7 +313,7 @@ public partial class Functions
 	private async ValueTask<CallState> MailStatsAsync(IMUSHCodeParser parser, MailStatsDetail detail)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var playerArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -409,7 +409,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered
-			.Select(arg => arg.Value.Message?.ToPlainText() ?? string.Empty)
+			.Select(arg => arg.Value.Message.ToPlainText())
 			.ToArray();
 
 		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService, ConnectionService),

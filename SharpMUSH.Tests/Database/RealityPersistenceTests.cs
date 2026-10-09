@@ -35,18 +35,18 @@ public class RealityPersistenceTests
 		var admin = new RealityAdministration(policy, capabilities, objects, Get<IPermissionService>(), Get<IValidateService>());
 		try
 		{
-			await admin.ExecuteAsync(actor, "add", "ghost", "");
-			await admin.ExecuteAsync(actor, "rx", player.Object.DBRef.ToString(), "ghost");
-			await admin.ExecuteAsync(actor, "tx", target.ToString(), "ghost");
-			await admin.ExecuteAsync(actor, "describe", target.ToString(), "ghost/GHOSTDESC");
-			await admin.ExecuteAsync(actor, "enable", "", "");
+			(await admin.ExecuteAsync(actor, "add", "ghost", "")).Expect<string>();
+			(await admin.ExecuteAsync(actor, "rx", player.Object.DBRef.ToString(), "ghost")).Expect<string>();
+			(await admin.ExecuteAsync(actor, "tx", target.ToString(), "ghost")).Expect<string>();
+			(await admin.ExecuteAsync(actor, "describe", target.ToString(), "ghost/GHOSTDESC")).Expect<string>();
+			(await admin.ExecuteAsync(actor, "enable", "", "")).Expect<string>();
 			await Assert.That(await policy.IsEnabledAsync()).IsTrue();
 			var reloaded = new RealityPolicy(store, objects);
 			await Assert.That(await reloaded.CanPerceiveAsync(player.Object.DBRef, target)).IsTrue();
 			await Assert.That(await reloaded.DescriptionAttributeAsync(player.Object.DBRef, target)).IsEqualTo("GHOSTDESC");
-			await admin.ExecuteAsync(actor, "describe", target.ToString(), "ghost");
+			(await admin.ExecuteAsync(actor, "describe", target.ToString(), "ghost")).Expect<string>();
 			await Assert.That(await policy.DescriptionAttributeAsync(player.Object.DBRef, target)).IsNull();
-			await admin.ExecuteAsync(actor, "remove", "ghost", "");
+			(await admin.ExecuteAsync(actor, "remove", "ghost", "")).Expect<string>();
 			await Assert.That(await policy.CanPerceiveAsync(player.Object.DBRef, target)).IsFalse();
 			await Assert.That(await new RealityPolicy(store, objects).CanPerceiveAsync(player.Object.DBRef, target)).IsFalse();
 		}

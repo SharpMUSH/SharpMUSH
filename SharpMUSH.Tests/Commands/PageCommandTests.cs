@@ -676,7 +676,7 @@ public class PageCommandTests
 		{
 			var thingName = TestIsolationHelpers.GenerateUniqueName("PageThing");
 			var thing = (await TestIsolationHelpers.CreateObjectCommandAsync(
-				WebAppFactoryArg.CommandParser, ConnectionService, thingName)).Message!.ToPlainText().Trim();
+				WebAppFactoryArg.CommandParser, ConnectionService, thingName)).Message.ToPlainText().Trim();
 			await GodCommandAsync($"@teleport/silent {thing}={sender.DbRef}");
 
 			var senderStart = Notifications.CountFor(sender.DbRef);
@@ -710,7 +710,7 @@ public class PageCommandTests
 		var dug = await WebAppFactoryArg.CommandParser.CommandParse(
 			1, ConnectionService, MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 
-		return dug.Message!.ToPlainText().Trim();
+		return dug.Message.ToPlainText().Trim();
 	}
 
 	private async Task<PagePlayer> CreatePlayerAsync(string prefix)

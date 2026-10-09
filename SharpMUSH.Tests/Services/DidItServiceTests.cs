@@ -136,7 +136,7 @@ public class DidItServiceTests
 		while (true)
 		{
 			var value = (await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/{attribute})]")))!
-				.Message!.ToPlainText().Trim();
+				.Message.ToPlainText().Trim();
 			if (value.Length > 0 || DateTime.UtcNow >= deadline) return value;
 			await Task.Delay(20);
 		}
@@ -155,7 +155,7 @@ public class DidItServiceTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName("DidItRoom");
 		var dig = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomRef = dig.Message!.ToPlainText().Trim();
+		var roomRef = dig.Message.ToPlainText().Trim();
 
 		foreach (var player in players)
 		{
@@ -167,7 +167,7 @@ public class DidItServiceTests
 			? dbref!.Value
 			: throw new InvalidOperationException($"@dig did not return a dbref: {roomRef}");
 
-		return (await Mediator.Send(new GetObjectNodeQuery(parsed))).Expect<AnySharpObject>().AsContainer;
+		return (await Mediator.Send(new GetObjectNodeQuery(parsed))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 	}
 
 	[Test]
@@ -294,7 +294,7 @@ public class DidItServiceTests
 			Loc: roomDbRef));
 
 		var count = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/COUNT)]"));
-		await Assert.That(count!.Message!.ToPlainText().Trim()).IsEqualTo("1");
+		await Assert.That(count!.Message.ToPlainText().Trim()).IsEqualTo("1");
 	}
 
 	[Test]

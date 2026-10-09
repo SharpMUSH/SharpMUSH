@@ -104,7 +104,7 @@ public class HttpHandlerSitePolicyTests
 		await Assert.That(result.Status).IsEqualTo(200);
 		await Assert.That(fixture.Executed).Contains("GET");
 		// bsd.c:4076 — the address is the first argument of HTTP`COMMAND, not an empty slot.
-		await Assert.That(fixture.EventState!.EnvironmentRegisters["0"].Message!.ToPlainText()).IsEqualTo("198.51.100.4");
+		await Assert.That(fixture.EventState!.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo("198.51.100.4");
 	}
 
 	[Test]

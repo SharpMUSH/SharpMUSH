@@ -39,7 +39,7 @@ public class SetDispatchTests
 		var room = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, DBRef.Parse(room.Message!.ToPlainText()));
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, DBRef.Parse(room.Message.ToPlainText()));
 	}
 
 	/// <summary>
@@ -157,7 +157,7 @@ public class SetDispatchTests
 	{
 		var room = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("SetActorRoom")}"));
-		var roomDb = DBRef.Parse(room.Message!.ToPlainText());
+		var roomDb = DBRef.Parse(room.Message.ToPlainText());
 
 		var agent = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetActorAgent");
 		var beacon = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetActorBeacon");
@@ -283,7 +283,7 @@ public class SetDispatchTests
 		var attempt = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@set me=NOT_A_REAL_FLAG"));
 
-		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).StartsWith("#-1")
+		await Assert.That(attempt.Message.ToPlainText()).StartsWith("#-1")
 			.Because("only the function discards the failure; the command's result is load-bearing");
 	}
 }

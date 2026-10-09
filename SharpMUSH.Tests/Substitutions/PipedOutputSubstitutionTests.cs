@@ -26,7 +26,7 @@ public class PipedOutputSubstitutionTests
 	[Before(Test)]
 	public async Task CreateActor()
 	{
-		_room = (await God($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText();
+		_room = (await God($"@dig {Guid.NewGuid():N}")).Message.ToPlainText();
 		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "PipeOut",
 			DBRef.Parse(_room.Trim()));
 	}
@@ -157,7 +157,7 @@ public class PipedOutputSubstitutionTests
 	public async Task ExitOutputsTheDestination()
 	{
 		var exit = Unique("pipeexit");
-		var destination = (await God($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText();
+		var destination = (await God($"@dig {Guid.NewGuid():N}")).Message.ToPlainText();
 		await God($"@open {exit}={destination},,{_room}");
 
 		await Assert.That(await Queued($"{exit};@pemit me=at=[num(%>)] [num(here)]"))

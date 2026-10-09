@@ -36,7 +36,7 @@ public class PredictionLookaheadTests
 		var result = await Parser.FunctionParse(MarkupText.Plain(BracketInThirdArgument(14)));
 		stopwatch.Stop();
 
-		await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(new string('2', 14));
+		await Assert.That(result?.Message.ToPlainText()).IsEqualTo(new string('2', 14));
 		await Assert.That(stopwatch.Elapsed).IsLessThan(Bound);
 	}
 

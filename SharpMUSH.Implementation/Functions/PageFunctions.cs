@@ -40,7 +40,7 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, MarkupText.NewLine);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await PageRecall.MatchAsync(Mediator, ConnectionService, executor.Object().DBRef, arguments["0"].Message!.ToPlainText()) switch
+		return await PageRecall.MatchAsync(Mediator, ConnectionService, executor.Object().DBRef, arguments["0"].Message.ToPlainText()) switch
 		{
 			MatchedPartners matched => await RecalledPagesAsync(executor.Object().DBRef, matched.Partners, lines, delimiter),
 			UnmatchedPartner { Ambiguous: true } => new CallState(ErrorMessages.Returns.AmbiguousMatch),
@@ -71,7 +71,7 @@ public partial class Functions
 
 		// pageconversations() arrives with one empty argument, which is no delimiter given.
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("0", out var delimiterArgument)
-			&& delimiterArgument.Message!.ToPlainText() is { Length: > 0 } given
+			&& delimiterArgument.Message.ToPlainText() is { Length: > 0 } given
 				? given
 				: "|";
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

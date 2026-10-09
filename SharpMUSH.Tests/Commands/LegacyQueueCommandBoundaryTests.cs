@@ -36,7 +36,7 @@ public class LegacyQueueCommandBoundaryTests
 		scheduler.GetQueueEntries().Returns(_ => throw new NotSupportedException());
 		scheduler.GetQueueUsage().Returns(_ => throw new NotSupportedException());
 		var result = (await Invoke(commands, parser, method)).Expect<CallState>();
-		await Assert.That(result.Message?.ToPlainText() ?? "").IsEqualTo(
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(
 			method == "ProcessStatus" && commandSwitch is not ("DEBUG" or "SEMAPHORE") ? "" : ErrorMessages.Returns.ErrorNotSupported);
 		var expectedKey = method == "ProcessStatus" && commandSwitch is not ("DEBUG" or "SEMAPHORE")
 			? nameof(ErrorMessages.Notifications.PsQueueForTargetFormat)
@@ -68,7 +68,7 @@ public class LegacyQueueCommandBoundaryTests
 		scheduler.GetQueueEntry(42).Returns(_ => behavior == "unsupported" ? throw new NotSupportedException() : null);
 		var functions = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Functions.Functions>(Factory.Services, mediator);
 		var result = await functions.PIDInfo(parser, new SharpFunctionAttribute { Name = "pidinfo", Flags = FunctionFlags.Regular });
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -82,7 +82,7 @@ public class LegacyQueueCommandBoundaryTests
 		var metadata = typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("QueueControl")!
 			.GetCustomAttributes(typeof(SharpCommandAttribute), false).Cast<SharpCommandAttribute>().Single();
 		var result = (await commands.QueueControl(parser, metadata)).Expect<CallState>();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
 	}
 
 	[Test]
@@ -104,7 +104,7 @@ public class LegacyQueueCommandBoundaryTests
 		var result = (await Invoke(commands, parser, "Halt")).Expect<CallState>();
 		await Assert.That(admittedAfterLookup).IsTrue();
 		await Assert.That(victimHalted).IsFalse();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NotFound);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NotFound);
 		await mediator.DidNotReceive().Send(Arg.Any<HaltByPidRequest>(), Arg.Any<CancellationToken>());
 	}
 

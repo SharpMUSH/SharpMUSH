@@ -26,18 +26,18 @@ public partial class Functions
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var registerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var registerName = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		if (string.IsNullOrWhiteSpace(registerName))
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 
-		var rawAttrArg = parser.CurrentState.Arguments["1"].Message!;
+		var rawAttrArg = parser.CurrentState.Arguments["1"].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{

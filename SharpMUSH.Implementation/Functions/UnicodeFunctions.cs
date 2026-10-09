@@ -10,16 +10,16 @@ public partial class Functions
 {
 	[SharpFunction(Name = "displaywidth", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> DisplayWidth(IMUSHCodeParser parser, SharpFunctionAttribute _)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.DisplayWidth);
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.DisplayWidth);
 
 	[SharpFunction(Name = "graphemecount", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> GraphemeCount(IMUSHCodeParser parser, SharpFunctionAttribute _)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.GraphemeCount);
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.GraphemeCount);
 
 	[SharpFunction(Name = "graphemes", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "output-separator"])]
 	public ValueTask<CallState> Graphemes(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
-		var text = parser.CurrentState.Arguments["0"].Message!;
+		var text = parser.CurrentState.Arguments["0"].Message;
 		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Space);
 		var outputLength = text.Length + (long)Math.Max(0, text.GraphemeCount - 1) * separator.Length;
 		if (FunctionLimits.ExceedsOutput(parser.CurrentState, outputLength))

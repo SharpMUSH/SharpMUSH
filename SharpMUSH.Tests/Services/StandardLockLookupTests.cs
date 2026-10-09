@@ -39,7 +39,7 @@ public class StandardLockLookupTests
 	{
 		var created = await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create LockLookup{lockType}"));
-		var target = DBRef.Parse(created.Message!.ToPlainText().Trim());
+		var target = DBRef.Parse(created.Message.ToPlainText().Trim());
 
 		await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@lock/{lockType} #{target.Number}=#TRUE"));

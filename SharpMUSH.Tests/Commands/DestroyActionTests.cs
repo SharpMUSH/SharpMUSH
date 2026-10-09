@@ -25,7 +25,7 @@ public class DestroyActionTests
 	private ValueTask<CallState> AsGod(string command) =>
 		Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-	private static DBRef Parse(CallState result) => DBRef.Parse(result.Message!.ToPlainText().Trim());
+	private static DBRef Parse(CallState result) => DBRef.Parse(result.Message.ToPlainText().Trim());
 
 	private async Task<DBRef> CreateAsync(string prefix)
 		=> Parse(await AsGod($"@create {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
@@ -34,7 +34,7 @@ public class DestroyActionTests
 		=> Parse(await AsGod($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 
 	private async Task<string> GetAsync(DBRef obj, string attr)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"get({obj}/{attr})")))?.Message?.ToPlainText() ?? string.Empty;
+		=> (await Parser.FunctionParse(MarkupText.Plain($"get({obj}/{attr})")))?.Message.ToPlainText() ?? string.Empty;
 
 	private async Task WaitForAsync(DBRef obj, string attr, string expected)
 		=> await Assert.That(async () => await GetAsync(obj, attr))

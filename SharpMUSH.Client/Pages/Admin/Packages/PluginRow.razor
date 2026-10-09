@@ -1,0 +1,84 @@
+@using SharpMUSH.Library.Models.Packages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A plugin: its id, version, origin, status and any change waiting on a restart, and the on/off action. *@
+<PackageRow Icon="@Icons.Material.Filled.Extension" Kind="plugin" Name="@Plugin.Name">
+    <Tags>
+        @if (!string.Equals(Plugin.Name, Plugin.Id, StringComparison.Ordinal))
+        {
+            <Pill Tag="true">@Plugin.Id</Pill>
+        }
+        @if (Plugin.Version is not null)
+        {
+            <Pill Tag="true">v@(Plugin.Version)</Pill>
+        }
+        <Pill Tag="true">@OriginLabel(Plugin)</Pill>
+        <MudChip T="string" Size="Size.Small" Color="@StatusColor(Plugin.Status)">@StatusLabel(Plugin.Status)</MudChip>
+        @if (Plugin.Pending != PluginPendingChange.None)
+        {
+            <Pill Tag="true" Warn="true">
+                @(Plugin.Pending == PluginPendingChange.Starts ? Loc["PkgPluginStartsAtRestart"] : Loc["PkgPluginStopsAtRestartShort"])
+            </Pill>
+        }
+    </Tags>
+    <Meta>
+        @if (Plugin.Description is not null)
+        {
+            <span>@Plugin.Description</span>
+        }
+        @if (Plugin.Status == PluginBootStatus.Loaded)
+        {
+            <span>@Loc["PkgPluginAdds", Plugin.Commands, Plugin.Functions]</span>
+        }
+        @if (Plugin.Dependents.Count > 0)
+        {
+            <span>@Loc["PkgRequiredBy", string.Join(", ", Plugin.Dependents)]</span>
+        }
+        @if (Plugin.Reason is not null)
+        {
+            <span class="pkg-row-reason">@Plugin.Reason</span>
+        }
+    </Meta>
+    <Actions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@Busy"
+                   Color="@(Plugin.Enabled ? Color.Error : Color.Primary)"
+                   aria-label="@Loc[Plugin.Enabled ? "PkgPluginTurnOffNamed" : "PkgPluginTurnOnNamed", Plugin.Name]"
+                   OnClick="@OnToggle">
+            @(Plugin.Enabled ? Loc["PkgPluginTurnOff"] : Loc["PkgPluginTurnOn"])
+        </MudButton>
+    </Actions>
+</PackageRow>
+
+@code {
+    [Parameter, EditorRequired] public PluginStatusDto Plugin { get; set; } = null!;
+
+    /// <summary>Whether a request or a restart is under way; the toggle waits for it.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Turns the plugin the other way.</summary>
+    [Parameter] public EventCallback OnToggle { get; set; }
+
+    private string OriginLabel(PluginStatusDto plugin) => plugin switch
+    {
+        { Origin: PluginOrigin.BuiltIn } => Loc["PkgPluginShipped"],
+        { Package: { } package } => Loc["PkgPluginFromPackage", package],
+        _ => Loc["PkgPluginFromFolder"]
+    };
+
+    private string StatusLabel(PluginBootStatus status) => status switch
+    {
+        PluginBootStatus.Loaded => Loc["PkgPluginRunning"],
+        PluginBootStatus.Disabled => Loc["PkgPluginOff"],
+        PluginBootStatus.Failed => Loc["PkgPluginFailed"],
+        PluginBootStatus.Incompatible => Loc["PkgPluginIncompatible"],
+        PluginBootStatus.Duplicate => Loc["PkgPluginDuplicate"],
+        _ => Loc["PkgPluginNotStarted"]
+    };
+
+    private static Color StatusColor(PluginBootStatus status) => status switch
+    {
+        PluginBootStatus.Loaded => Color.Success,
+        PluginBootStatus.Failed or PluginBootStatus.Incompatible or PluginBootStatus.Duplicate => Color.Error,
+        _ => Color.Default
+    };
+}

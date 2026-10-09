@@ -47,13 +47,10 @@ public partial class CodeActionHandler : CodeActionHandlerBase
 		{
 			var diagnostics = _parser.GetDiagnostics(document.Text, MushParseMode.ForFileName(uri));
 
-			foreach (var diagnostic in diagnostics)
+			foreach (var diagnostic in diagnostics.Where(diagnostic => diagnostic.Severity == Library.Models.DiagnosticSeverity.Error))
 			{
-				if (diagnostic.Severity == Library.Models.DiagnosticSeverity.Error)
-				{
-					var actions = GetCodeActionsForDiagnostic(diagnostic, request.TextDocument.Uri, document.Text);
-					codeActions.AddRange(actions);
-				}
+				var actions = GetCodeActionsForDiagnostic(diagnostic, request.TextDocument.Uri, document.Text);
+				codeActions.AddRange(actions);
 			}
 
 			var lines = document.Text.Split('\n');

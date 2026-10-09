@@ -38,7 +38,7 @@ public class LookServiceTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "TerseLooker");
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("TerseRoom")}"));
-		var roomRef = dig.Message!.ToPlainText().Trim();
+		var roomRef = dig.Message.ToPlainText().Trim();
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {player.DbRef}={roomRef}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@describe {roomRef}=A distinctive description."));
@@ -74,7 +74,7 @@ public class LookServiceTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=TERSE"));
 
 		var flags = (await GodParser.FunctionParse(MarkupText.Plain(
-			$"[hasflag({player.DbRef},TERSE)] [hasflag({player.DbRef},CLOUDY)]")))!.Message!.ToPlainText();
+			$"[hasflag({player.DbRef},TERSE)] [hasflag({player.DbRef},CLOUDY)]")))!.Message.ToPlainText();
 		await Assert.That(flags).IsEqualTo("1 0");
 	}
 
@@ -86,10 +86,10 @@ public class LookServiceTests
 	{
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("TerseThingRoom")}"));
-		var roomRef = dig.Message!.ToPlainText().Trim();
+		var roomRef = dig.Message.ToPlainText().Trim();
 		var create = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("TerseThing")}"));
-		var thingRef = DBRef.Parse(create.Message!.ToPlainText().Trim());
+		var thingRef = DBRef.Parse(create.Message.ToPlainText().Trim());
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thingRef}={roomRef}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@describe {roomRef}=A thing-terse description."));
@@ -122,7 +122,7 @@ public class LookServiceTests
 		// The return exit of @dig is the one that lives in the new room.
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("DialectRoom")}=,{exitName};nw"));
-		var roomDbRef = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		var roomDbRef = DBRef.Parse(dig.Message.ToPlainText().Trim());
 
 		var room = await Mediator.Send(new GetObjectNodeQuery(roomDbRef));
 		var looker = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();

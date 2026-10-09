@@ -26,7 +26,7 @@ public class EdgePagingTests : LightningDatabaseFixture
 		=> Db.Store.Read(tx => tx.Dups(table, Keys.Dbref(key)).Select(v => Keys.ReadDbref(v)).ToList());
 
 	private async Task<AnySharpContainer> NewRoom(string name)
-		=> (await Node(await Db.CreateRoomAsync(name, await God()))).AsContainer;
+		=> (await Node(await Db.CreateRoomAsync(name, await God()))).AsOptionalContainer.Expect<AnySharpContainer>();
 
 	private async Task<List<DBRef>> NewThings(AnySharpContainer room, int count)
 	{

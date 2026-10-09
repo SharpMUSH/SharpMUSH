@@ -27,7 +27,7 @@ public partial class Functions
 	public async ValueTask<CallState> wiki(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
+		var target = args["0"].Message.ToPlainText();
 		var field = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "text").ToPlainText().Trim().ToLowerInvariant();
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
@@ -54,7 +54,7 @@ public partial class Functions
 		// Third argument wins; otherwise the executor's LOCALE, exactly as @wiki does. An unparseable tag is
 		// treated as absent by the localization service — a bad locale must not turn a read into #-1.
 		var explicitLocale = args.TryGetValue("2", out var localeArg)
-			? localeArg.Message!.ToPlainText().Trim()
+			? localeArg.Message.ToPlainText().Trim()
 			: null;
 		var locale = string.IsNullOrWhiteSpace(explicitLocale)
 			? await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor)
@@ -93,7 +93,7 @@ public partial class Functions
 		WikiNamespace? ns = null;
 		if (args.TryGetValue("0", out var nsArg))
 		{
-			var nsText = nsArg.Message!.ToPlainText().Trim();
+			var nsText = nsArg.Message.ToPlainText().Trim();
 			if (nsText.Length > 0)
 			{
 				if (!Enum.TryParse<WikiNamespace>(nsText, ignoreCase: true, out var parsed))
@@ -125,7 +125,7 @@ public partial class Functions
 		ParameterNames = ["category"])]
 	public async ValueTask<CallState> wikicategory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var name = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var key = WikiHelpers.CategoryKey(name.StartsWith("category:", StringComparison.OrdinalIgnoreCase) ? name["category:".Length..] : name);
 		if (key.Length == 0)
 		{
@@ -151,7 +151,7 @@ public partial class Functions
 		ParameterNames = ["text"])]
 	public async ValueTask<CallState> wikisearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var needle = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+		var needle = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
 		if (needle.Length == 0)
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "WIKISEARCH"));
@@ -185,7 +185,7 @@ public partial class Functions
 		var count = 10;
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var countArg))
 		{
-			var countText = countArg.Message!.ToPlainText().Trim();
+			var countText = countArg.Message.ToPlainText().Trim();
 			if (countText.Length > 0 && (!int.TryParse(countText, out count) || count < 1 || count > 50))
 			{
 				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "WIKIRECENT"));
@@ -214,16 +214,16 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!Enum.TryParse<WikiAction>(args["1"].Message!.ToPlainText().Trim(), ignoreCase: true, out var action)
+		if (!Enum.TryParse<WikiAction>(args["1"].Message.ToPlainText().Trim(), ignoreCase: true, out var action)
 			|| action == WikiAction.Create
-			|| int.TryParse(args["1"].Message!.ToPlainText().Trim(), out _))
+			|| int.TryParse(args["1"].Message.ToPlainText().Trim(), out _))
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "WIKIACCESS"));
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var access = WikiCommandHelper.Access(parser);
-		var (ns, slug) = WikiHelpers.ResolveTitle(args["0"].Message!.ToPlainText());
+		var (ns, slug) = WikiHelpers.ResolveTitle(args["0"].Message.ToPlainText());
 		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page
 			|| !(await WikiCommandHelper.SoftcodeVisibilityAsync(parser, executor)).Admits(page))
 		{
@@ -231,7 +231,7 @@ public partial class Functions
 		}
 
 		var subject = executor;
-		if (args.TryGetValue("2", out var playerArg) && playerArg.Message!.ToPlainText().Trim() is { Length: > 0 } name)
+		if (args.TryGetValue("2", out var playerArg) && playerArg.Message.ToPlainText().Trim() is { Length: > 0 } name)
 		{
 			if (await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, name.TrimStart('*'))
 				is not AnySharpObject who)

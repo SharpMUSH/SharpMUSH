@@ -17,7 +17,7 @@ public class ProjectionTests : LightningDatabaseFixture
 
 	private async Task<AnySharpObject> Node(DBRef dbref) => (await Db.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 
-	private async Task<AnySharpContainer> Room() => (await Node(new DBRef(2))).AsContainer;
+	private async Task<AnySharpContainer> Room() => (await Node(new DBRef(2))).AsOptionalContainer.Expect<AnySharpContainer>();
 
 	private async Task<DBRef> Thing(string name, SharpPlayer? owner = null)
 	{

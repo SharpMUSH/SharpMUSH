@@ -347,12 +347,12 @@ public partial class LightningDatabase
 		tx.DeletePrefix(Tables.FeedMemberOf, Keys.Dbref(number));
 
 		var dbref = $"#{number}:";
-		foreach (var (key, _) in tx.Range(Tables.FeedTap, []).ToList())
+		var taps = tx.Range(Tables.FeedTap, [])
+			.Where(entry => ToTap(entry.Key).Object.ToString().StartsWith(dbref, StringComparison.Ordinal))
+			.ToList();
+		foreach (var (key, _) in taps)
 		{
-			if (ToTap(key).Object.ToString().StartsWith(dbref, StringComparison.Ordinal))
-			{
-				tx.Delete(Tables.FeedTap, key);
-			}
+			tx.Delete(Tables.FeedTap, key);
 		}
 	}
 

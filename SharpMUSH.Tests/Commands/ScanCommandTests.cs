@@ -41,7 +41,7 @@ public class ScanCommandTests
 
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
-		var room = digResult.Message!.ToPlainText().Trim();
+		var room = digResult.Message.ToPlainText().Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={room}"));
 
 		// Players and rooms are created NO_COMMAND, so neither is scanned until the flag comes off.
@@ -55,7 +55,7 @@ public class ScanCommandTests
 	private async Task<string> ScanAsync(TestIsolationHelpers.TestPlayer player, string command)
 	{
 		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
-		return result.Message?.ToPlainText() ?? string.Empty;
+		return result.Message.ToPlainText();
 	}
 
 	/// <summary>The lines <paramref name="player"/> was notified of by one <c>@scan</c>, in order.</summary>
@@ -121,7 +121,7 @@ public class ScanCommandTests
 		// the master room.
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanGlobalObj")}"));
-		var global = createResult.Message!.ToPlainText().Trim();
+		var global = createResult.Message.ToPlainText().Trim();
 		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(global));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {global}=#{MasterRoom}"));
 
@@ -149,7 +149,7 @@ public class ScanCommandTests
 
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanZoneObj")}"));
-		var zone = createResult.Message!.ToPlainText().Trim();
+		var zone = createResult.Message.ToPlainText().Trim();
 		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(zone));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -231,7 +231,7 @@ public class ScanCommandTests
 
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanCountObj")}"));
-		var box = createResult.Message!.ToPlainText().Trim();
+		var box = createResult.Message.ToPlainText().Trim();
 		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(box));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,

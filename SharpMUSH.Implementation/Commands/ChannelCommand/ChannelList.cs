@@ -90,8 +90,7 @@ public static class ChannelList
 			var messageCount = await Mediator.Send(new CountChannelMessagesQuery(channel.Id ?? string.Empty));
 			// The owner is read only to decide one character, so an unresolvable one costs the '*' and not
 			// the listing — see ChannelHelper.TryResolveOwner.
-			var owner = await ChannelHelper.TryResolveOwner(channel);
-			var owned = owner is not null
+			var owned = await ChannelHelper.TryResolveOwner(Mediator, channel) is SharpPlayer owner
 									&& owner.Object.DBRef.Number == executor.Object().DBRef.Number;
 
 			rows.Add(

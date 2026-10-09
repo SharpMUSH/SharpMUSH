@@ -45,7 +45,7 @@ public class ConnectionAnnounceIntegrationTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {name}"));
-		return DBRef.Parse(result.Message!.ToPlainText()!.Trim());
+		return DBRef.Parse(result.Message.ToPlainText()!.Trim());
 	}
 
 	/// <summary>Teleports (as God, so locks are irrelevant) into a room dug by <see cref="DigRoomAsync"/>.</summary>
@@ -437,7 +437,7 @@ public class ConnectionAnnounceIntegrationTests
 		await TeleportAsync(witness.DbRef, zoneRoom);
 
 		var hookThingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create AnnounceHookThing10"));
-		var hookThing = DBRef.Parse(hookThingResult.Message!.ToPlainText());
+		var hookThing = DBRef.Parse(hookThingResult.Message.ToPlainText());
 		await TeleportAsync(hookThing, zoneRoom);
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&ACONNECT {hookThing}=@emit Zone hook fired for connection %1"));
@@ -491,7 +491,7 @@ public class ConnectionAnnounceIntegrationTests
 		await TeleportAsync(witness.DbRef, zoneRoom);
 
 		var hookThingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create AnnounceWizHookThing11"));
-		var hookThing = DBRef.Parse(hookThingResult.Message!.ToPlainText());
+		var hookThing = DBRef.Parse(hookThingResult.Message.ToPlainText());
 		await TeleportAsync(hookThing, zoneRoom);
 		// The HOOK OBJECT itself carries WIZARD, not the connecting player. Setting the flag requires
 		// a trusted/wizard executor, so this runs as God (handle 1).

@@ -1,0 +1,56 @@
+@using SharpMUSH.Client.Models.Roles
+@using SharpMUSH.Library.Authorization
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The viewer's own access to one scope: allowed or refused, and what decided it: the deciding roles as chips,
+   or the override or default that applied. *@
+<span class="ra-access @(Decision.Allowed ? "ra-access--allow" : "ra-access--deny")"
+      title="@Loc[Decision.Allowed ? "RolAccessHeld" : "RolAccessNotHeld"]">
+    <span class="ra-access-who">@Loc["RolAccessYou"]</span>
+    <MudIcon Icon="@(Decision.Allowed ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Block)" Class="ra-ico" />
+    <span class="ra-sr">@Loc[Decision.Allowed ? "RolAccessHeld" : "RolAccessNotHeld"]</span>
+    @if (DecidingRoles(Decision) is { Count: > 0 } deciding)
+    {
+        @foreach (var slug in deciding)
+        {
+            var role = Roles.FirstOrDefault(r => r.Slug == slug);
+            <span class="ra-access-role">
+                <span class="ra-dot ra-dot--sm" style="@($"background:{RoleColor.Safe(role?.Color ?? "")};")"></span>
+                @(role?.Name ?? slug)
+            </span>
+        }
+    }
+    else
+    {
+        <span>@Loc[ReasonKey(Decision.Reason)]</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public PermissionExplanation Decision { get; set; } = null!;
+
+    /// <summary>The game's roles, to name and colour the deciding ones.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<PortalRoleModel> Roles { get; set; } = [];
+
+    /// <summary>
+    /// The resolutions that decide every scope at once (<c>owner</c>, <c>administrator</c>): stated once above the
+    /// matrix rather than on each row.
+    /// </summary>
+    public static bool IsGlobalReason(string reason) => reason is "owner" or "administrator";
+
+    /// <summary>The roles that decided a role resolution; the everyone role for <c>everyone-allow</c>.</summary>
+    private static IReadOnlyList<string> DecidingRoles(PermissionExplanation decision) => decision.Reason switch
+    {
+        "role-allow" or "role-deny" => decision.Roles,
+        "everyone-allow" => decision.Roles.Length > 0 ? decision.Roles : [BuiltInRoles.EveryoneSlug],
+        _ => []
+    };
+
+    private static string ReasonKey(string reason) => reason switch
+    {
+        "object-allow" or "object-deny" => "RolAccessCharacterOverride",
+        "account-allow" or "account-deny" => "RolAccessAccountOverride",
+        "unknown-scope" => "RolAccessUnknown",
+        _ => "RolAccessNoRole"
+    };
+}

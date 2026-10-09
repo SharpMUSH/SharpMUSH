@@ -36,7 +36,7 @@ public class LazyAttributeParentParityTests
 	private async ValueTask<AnySharpObject> CreateAsync(string name)
 	{
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
-		var dbref = DBRef.Parse(result.Message!.ToPlainText()!);
+		var dbref = DBRef.Parse(result.Message.ToPlainText()!);
 		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 	}
 

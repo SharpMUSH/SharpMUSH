@@ -229,55 +229,9 @@
 	font-weight: 700;
 }
 
-/* ── Chips (string list, dictionary values) ── */
-.cfg-chips {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-	align-items: center;
-	min-height: 30px;
-}
-
 .cfg-empty {
 	font-size: 13px;
 	color: var(--text-faint);
-}
-
-.cfg-chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	height: 26px;
-	padding: 0 4px 0 10px;
-	border-radius: 13px;
-	background: var(--surface-2);
-	color: var(--text);
-	font-family: var(--font-mono);
-	font-size: 12px;
-}
-
-.cfg-chip--changed {
-	color: var(--warn);
-	background: var(--warn-tint);
-}
-
-.cfg-chip-x {
-	width: 24px;
-	height: 24px;
-	border: 0;
-	border-radius: 12px;
-	background: transparent;
-	color: inherit;
-	font-size: 15px;
-	line-height: 1;
-	cursor: pointer;
-	opacity: 0.7;
-}
-
-.cfg-chip-x:hover,
-.cfg-chip-x:focus-visible {
-	opacity: 1;
-	background: var(--border);
 }
 
 /* ── Dictionary editor ── */

@@ -42,7 +42,7 @@ public class ObjectSearchFilterPushdownTests
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
 		var result = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, name);
-		return DBRef.Parse(result.Message!.ToPlainText().Trim());
+		return DBRef.Parse(result.Message.ToPlainText().Trim());
 	}
 
 	private ValueTask<CallState> RunAsync(string command) =>

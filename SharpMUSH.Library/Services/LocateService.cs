@@ -504,9 +504,10 @@ public class LocateService(
 		var walksExits = TypeAllows(state.Preferred, flags, SharpObjectTypes.Exit);
 
 		// MAT_POSSESSION — the looker's own contents.
-		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && looker.IsContainer)
+		if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
+				&& looker.AsOptionalContainer is AnySharpContainer carrier)
 		{
-			foreach (var candidate in ContentsOf(await reader.Of(looker.AsContainer))) yield return candidate;
+			foreach (var candidate in ContentsOf(await reader.Of(carrier))) yield return candidate;
 		}
 
 		// MAT_NEIGHBOR — what is in the room with the looker.
@@ -552,9 +553,10 @@ public class LocateService(
 		if (walksExits
 				&& flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
 				&& looker.IsRoom
+				&& looker.AsOptionalContainer is AnySharpContainer lookerRoom
 				&& (!sameSpot || !flags.HasFlag(LocateFlags.ExitsInTheRoomOfLooker)))
 		{
-			foreach (var candidate in ExitsIn(await reader.Of(looker.AsContainer))) yield return candidate;
+			foreach (var candidate in ExitsIn(await reader.Of(lookerRoom))) yield return candidate;
 		}
 	}
 

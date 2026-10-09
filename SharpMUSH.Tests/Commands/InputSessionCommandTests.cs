@@ -33,7 +33,7 @@ public class InputSessionCommandTests
 		var result = await Parser.CommandListParseVisitor(MarkupText.Plain(text))();
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.HadErrors).IsTrue();
-		if (depthLimit) await Assert.That(result.Message!.Text).IsEqualTo(SharpMUSH.Library.Definitions.ErrorMessages.Returns.Call);
+		if (depthLimit) await Assert.That(result.Message.Text).IsEqualTo(SharpMUSH.Library.Definitions.ErrorMessages.Returns.Call);
 	}
 
 	private Task<TestIsolationHelpers.TestPlayer> Player() => TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -360,7 +360,7 @@ public class InputSessionCommandTests
 		try
 		{
 			var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain("@create GuidedInputCallback"));
-			var target = DBRef.Parse(created.Message!.Text);
+			var target = DBRef.Parse(created.Message.Text);
 			await Command(player.Handle, $"&CALLBACK {target}=&ANSWER me=%0");
 			var callbackParser = Parser.FromState(ParserState.Empty with
 			{

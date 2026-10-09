@@ -21,7 +21,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.ToArray();
-		var id = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "").Trim();
+		var id = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
 
 		MString output = switches switch
 		{

@@ -84,7 +84,7 @@ public partial class Functions
 	private async ValueTask<List<AnySharpContent>?> DbWalk(AnySharpObject executor,
 		AnySharpObject enactor, AnySharpObject loc, WalkSpec spec)
 	{
-		if (!await WalkGate(executor, enactor, loc, spec.Types)) return null;
+		if (!await WalkGate(executor, enactor, loc, spec.Types) || loc.AsOptionalContainer is not AnySharpContainer walked) return null;
 
 		// ldark = IsPlayer(loc) ? Opaque(loc) : Dark(loc)
 		var locIsDark = loc.IsPlayer ? await loc.IsOpaque() : await loc.IsDark();
@@ -94,7 +94,7 @@ public partial class Functions
 		var matched = new List<AnySharpContent>();
 		var seen = 0;
 
-		await foreach (var item in loc.AsContainer.Content(Mediator))
+		await foreach (var item in walked.Content(Mediator))
 		{
 			var thing = item.WithRoomOption();
 
@@ -159,7 +159,7 @@ public partial class Functions
 	private static CallState Refused => new(ErrorMessages.Returns.PermissionDenied);
 
 	private string Arg(IMUSHCodeParser parser, string index)
-		=> parser.CurrentState.Arguments[index].Message!.ToPlainText();
+		=> parser.CurrentState.Arguments[index].Message.ToPlainText();
 
 	private string Render(IEnumerable<AnySharpContent> contents)
 		=> string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));

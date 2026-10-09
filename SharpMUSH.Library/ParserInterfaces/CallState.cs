@@ -7,6 +7,12 @@ namespace SharpMUSH.Library.ParserInterfaces;
 
 public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<ValueTask<MString?>> ParsedMessage, bool PreserveSpaces = false)
 {
+	/// <summary>
+	/// The text this state carries; never null — a state built without one (the command argument-split
+	/// carriers, whose payload is <see cref="Arguments"/>) carries <see cref="MarkupText.Empty"/>.
+	/// </summary>
+	public MString Message { get; init; } = Message ?? MarkupText.Empty;
+
 	public static implicit operator CallState(MString? m) => new(m);
 	public static implicit operator CallState(DBRef m) => new(m);
 	public static implicit operator CallState(AnySharpObject m) => new(m.Object().DBRef);
@@ -19,10 +25,10 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	public static implicit operator CallState(Error<string> m) => new(m.Value);
 
 	public CallState(MString? Message, int Depth)
-		: this(Message ?? MarkupText.Empty, Depth, null, () => ValueTask.FromResult(Message)) { }
+		: this(Message, Depth, null, () => ValueTask.FromResult(Message)) { }
 
 	public CallState(MString? Message)
-		: this(Message ?? MarkupText.Empty, 0, null, () => ValueTask.FromResult(Message)) { }
+		: this(Message, 0, null, () => ValueTask.FromResult(Message)) { }
 
 	public CallState(int Message) : this(Message.ToString()) { }
 

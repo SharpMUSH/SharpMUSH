@@ -1,0 +1,12 @@
+.wiki-more-all {
+	display: inline-block;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.wiki-more-all:hover,
+.wiki-more-all:focus-visible {
+	text-decoration: underline;
+}

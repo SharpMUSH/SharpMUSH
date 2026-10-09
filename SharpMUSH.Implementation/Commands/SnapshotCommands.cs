@@ -28,13 +28,13 @@ public partial class Commands
 		var actor = await capabilities.GetGameActorAsync(executor.Object().DBRef, cancellationToken);
 		if (actor is null) return await NotifyService.NotifyAndReturn(executor.Object().DBRef, "#-1 PERMISSION DENIED", "A linked player executor is required.", true);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(), LocateFlags.All, async obj =>
+			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All, async obj =>
 			{
 				string output;
 				try
 				{
 					var switches = parser.CurrentState.Switches;
-					var rhs = parser.CurrentState.Arguments.TryGetValue("1", out var argument) ? argument.Message?.ToPlainText() ?? "" : "";
+					var rhs = parser.CurrentState.Arguments.TryGetValue("1", out var argument) ? argument.Message.ToPlainText() : "";
 					var operations = switches.Where(s => s is "CAPTURE" or "LIST" or "PREVIEW" or "RESTORE" or "RESOLVE").ToArray();
 					if (operations.Length != 1) throw new SnapshotOperationException("invalid", "Choose one of /capture, /list, /preview, /restore or /resolve.");
 					if (operations[0] == "CAPTURE") output = "Captured snapshot " + (await snapshots.CaptureAsync(actor, obj.Object().DBRef, rhs, ct: cancellationToken)).Id;

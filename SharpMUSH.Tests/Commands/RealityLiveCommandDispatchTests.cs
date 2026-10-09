@@ -54,8 +54,8 @@ public class RealityLiveCommandDispatchTests
 		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("dispatch zone", god)))).Expect<AnySharpObject>();
 		if (source == "zone") await mediator.Send(new SetObjectZoneCommand(room, zone));
 		if (source == "personal") await mediator.Send(new SetObjectZoneCommand(actor, zone));
-		AnySharpContainer container = source is "zone" or "personal" ? zone.AsContainer
-			: source == "global-contents" ? master.AsContainer : room;
+		AnySharpContainer container = source is "zone" or "personal" ? zone.AsOptionalContainer.Expect<AnySharpContainer>()
+			: source == "global-contents" ? master.AsOptionalContainer.Expect<AnySharpContainer>() : room;
 		AnySharpObject host = source == "location" ? room : source == "global-room" ? master
 			: (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("dispatch host", container, actor, room)))).Expect<AnySharpObject>();
 		var setup = Factory.CommandParser.FromState(ParserState.RootFor(god.Object.DBRef));
@@ -72,7 +72,7 @@ public class RealityLiveCommandDispatchTests
 			await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {host.Object().DBRef}=${word}:&{marker} me=1"));
 			if (source == "precedence")
 			{
-				fallback = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible fallback", master.AsContainer, actor, room)))).Expect<AnySharpObject>();
+				fallback = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible fallback", master.AsOptionalContainer.Expect<AnySharpContainer>(), actor, room)))).Expect<AnySharpObject>();
 				await setup.CommandListParse(MarkupText.Plain($"@set {fallback.Object().DBRef}=!NO_COMMAND"));
 				await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {fallback.Object().DBRef}=${word}:&{marker} me=1"));
 			}

@@ -23,7 +23,7 @@ public static class AdminMail
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);
-			return errorResult.Message!;
+			return errorResult.Message;
 		}
 
 		switch (switches)

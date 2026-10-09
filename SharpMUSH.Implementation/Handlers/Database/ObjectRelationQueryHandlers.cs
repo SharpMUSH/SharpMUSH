@@ -10,16 +10,11 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 // object node cache, so a miss builds the related object once, by that cache, and the caching
 // behaviour's re-resolve of the stored ref is a hit (#1554).
 
-public class GetOwnerOfQueryHandler(INavigationStore database, IMediator mediator) : IQueryHandler<GetOwnerOfQuery, SharpPlayer>
+public class GetOwnerOfQueryHandler(INavigationStore database, IMediator mediator) : IQueryHandler<GetOwnerOfQuery, AnyOptionalSharpObject>
 {
-	public async ValueTask<SharpPlayer> Handle(GetOwnerOfQuery query, CancellationToken cancellationToken)
+	public async ValueTask<AnyOptionalSharpObject> Handle(GetOwnerOfQuery query, CancellationToken cancellationToken)
 		=> await ObjectRefs.NodeAsync(mediator,
-				await database.GetRelationRefAsync(ObjectRelationKind.Owner, new DBRef(query.Number), cancellationToken), cancellationToken) switch
-		{
-			AnySharpObject and SharpPlayer owner => owner,
-			AnySharpObject => throw new InvalidOperationException($"The owner of #{query.Number} is not a player"),
-			None => throw new InvalidOperationException($"No owner found for #{query.Number}")
-		};
+			await database.GetRelationRefAsync(ObjectRelationKind.Owner, new DBRef(query.Number), cancellationToken), cancellationToken);
 }
 
 public class GetParentOfQueryHandler(INavigationStore database, IMediator mediator) : IQueryHandler<GetParentOfQuery, AnyOptionalSharpObject>
@@ -41,7 +36,7 @@ public class GetHomeOfQueryHandler(INavigationStore database, IMediator mediator
 	public async ValueTask<AnySharpContainer> Handle(GetHomeOfQuery query, CancellationToken cancellationToken)
 		=> await HomeEdge.ReadAsync(database, mediator, query.Number, cancellationToken) switch
 		{
-			AnySharpObject home => home.AsContainer,
+			AnySharpObject home => ObjectRefs.EdgeContainer(home),
 			None => throw new InvalidOperationException($"No home found for #{query.Number}")
 		};
 }
@@ -69,10 +64,10 @@ internal static class HomeEdge
 		=> await ObjectRefs.NodeAsync(mediator,
 			await database.GetRelationRefAsync(ObjectRelationKind.Home, new DBRef(number), cancellationToken), cancellationToken);
 
-	/// <remarks><c>AsContainer</c> throws for an exit, which no edge may name as a container.</remarks>
+	/// <remarks><see cref="ObjectRefs.EdgeContainer"/> throws for an exit, which no edge may name as a container.</remarks>
 	public static AnyOptionalSharpContainer Optional(AnyOptionalSharpObject node) => node switch
 	{
-		AnySharpObject found => found.AsContainer.WithNoneOption(),
+		AnySharpObject found => ObjectRefs.EdgeContainer(found).WithNoneOption(),
 		None none => none
 	};
 }

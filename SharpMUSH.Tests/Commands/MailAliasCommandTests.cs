@@ -35,7 +35,7 @@ public class MailAliasCommandTests
 
 	private async Task<string> EvaluateAsync(TestIsolationHelpers.TestPlayer player, string expression)
 		=> (await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
-			.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+			.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	private static string UniqueAlias(string stem) => $"+{stem}{Guid.NewGuid().ToString("N")[..6]}";
 

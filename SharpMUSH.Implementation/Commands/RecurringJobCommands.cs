@@ -31,8 +31,8 @@ public partial class Commands
 			var switches = parser.CurrentState.Switches;
 			var operation = switches.Where(s => s is "CREATE" or "LIST" or "DISABLE" or "ENABLE" or "DELETE" or "SCHEDULE").ToArray();
 			if (operation.Length != 1) throw new RecurringJobException("invalid", "Choose /create, /list, /disable, /enable, /delete or /schedule.");
-			var lhs = parser.CurrentState.Arguments.TryGetValue("0", out var left) ? left.Message?.ToPlainText() ?? "" : "";
-			var rhs = parser.CurrentState.Arguments.TryGetValue("1", out var right) ? right.Message?.ToPlainText() ?? "" : "";
+			var lhs = parser.CurrentState.Arguments.TryGetValue("0", out var left) ? left.Message.ToPlainText() : "";
+			var rhs = parser.CurrentState.Arguments.TryGetValue("1", out var right) ? right.Message.ToPlainText() : "";
 			if (operation[0] == "LIST")
 			{
 				var jobs = await service.ListAsync(actor, switches.Contains("ALL"), ct);

@@ -43,8 +43,8 @@ public class AttributeTreeReadBenchmarks
 		var god = (await _database.GetObjectNodeAsync(new DBRef(1))) is AnySharpObject and SharpPlayer player
 			? player
 			: throw new InvalidOperationException("God (#1) is not seeded as a player.");
-		var room = (await _database.GetObjectNodeAsync(new DBRef(2))) is AnySharpObject { IsContainer: true } master
-			? master.AsContainer
+		var room = (await _database.GetObjectNodeAsync(new DBRef(2))) is AnySharpObject { AsOptionalContainer: AnySharpContainer master }
+			? master
 			: throw new InvalidOperationException("The master room (#2) is not seeded.");
 
 		var body = MarkupText.Plain(new string('x', BodyBytes));

@@ -65,7 +65,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 
 	/// <summary>Evaluates a softcode expression as God and returns its trimmed plain text.</summary>
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	/// <summary>
 	/// Client pinned to https so the DebugAuth principal survives the http→https redirect

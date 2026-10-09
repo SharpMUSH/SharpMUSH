@@ -1,0 +1,29 @@
+@using SharpMUSH.Client.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Story's footer while the viewer is not focused on the room's scene: a pose sent from here would reach
+   the room and never the story, so it says so and offers to join instead, repeating a refused join's reason. *@
+<div class="play-join" role="status">
+    <span class="play-join-text">
+        @(Scene.Elsewhere ? Loc["NavPlaySceneFocusedElsewhere"] : Loc["NavPlaySceneNotJoined"])
+        @if (Refusal is { } refusal)
+        {
+            <span class="play-join-refusal" role="alert">@refusal</span>
+        }
+    </span>
+    <button type="button" class="play-join-btn" disabled="@Disabled" @onclick="OnJoin">
+        @Loc["NavPlaySceneJoin"]
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RoomScene Scene { get; set; } = null!;
+
+    /// <summary>Why the game refused this scene's last join, when it did.</summary>
+    [Parameter] public string? Refusal { get; set; }
+
+    /// <summary>Not connected, or a join is already on its way.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnJoin { get; set; }
+}

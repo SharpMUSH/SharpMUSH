@@ -158,6 +158,7 @@ public class LockRecursionTests
 		return new SharpChannel
 		{
 			Name = MarkupText.Plain("Test"),
+			OwnerDBRef = owner.Object.DBRef,
 			Owner = new DotNext.Threading.AsyncLazy<SharpPlayer>(_ => Task.FromResult(owner)),
 			Members = new(() => AsyncEnumerable.Empty<SharpChannel.MemberAndStatus>()),
 			Privs = []

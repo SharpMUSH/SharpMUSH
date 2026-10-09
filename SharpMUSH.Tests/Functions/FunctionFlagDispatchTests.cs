@@ -33,7 +33,7 @@ public class FunctionFlagDispatchTests
 		foreach (var entry in original.FunctionLibrary) library.Add(entry.Key, entry.Value);
 		library.Add("flagprobe", (new FunctionDefinition(
 			new SharpFunctionAttribute { Name = "flagprobe", Flags = flags, MinArgs = 1, MaxArgs = 1 },
-			p => ValueTask.FromResult(new CallState(p.CurrentState.Arguments["0"].Message!))), true));
+			p => ValueTask.FromResult(new CallState(p.CurrentState.Arguments["0"].Message))), true));
 		var config = original.Configuration.CurrentValue;
 		return original with
 		{
@@ -50,7 +50,7 @@ public class FunctionFlagDispatchTests
 	public async Task DispatchGates(FunctionFlags flags, bool enabled, string expected)
 	{
 		var result = await Parser(flags, enabled).FunctionParse(MarkupText.Plain("flagprobe(hello)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -63,7 +63,7 @@ public class FunctionFlagDispatchTests
 	public async Task NumericFlagsValidateEvaluatedArguments(FunctionFlags flags, string input, string expected)
 	{
 		var result = await Parser(flags).FunctionParse(MarkupText.Plain($"flagprobe({input})"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -84,7 +84,7 @@ public class FunctionFlagDispatchTests
 	public async Task AuditedDeclarationsHandleBoundaries(string input, string expected)
 	{
 		var result = await Parser(FunctionFlags.Regular).FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 	}
 	[Test]
 	[Arguments("name(me,newname)")]
@@ -113,7 +113,7 @@ public class FunctionFlagDispatchTests
 	public async Task RealMutatorsRespectGlobalSwitch(string input)
 	{
 		var result = await Parser(FunctionFlags.Regular, false).FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 FUNCTION DISABLED");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#-1 FUNCTION DISABLED");
 	}
 
 	[Test]
@@ -132,7 +132,7 @@ public class FunctionFlagDispatchTests
 			}
 		}, true);
 		var result = await parser.FunctionParse(MarkupText.Plain("flagprobe(hello)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("outer");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("outer");
 		await Assert.That(parser.CurrentState.Registers.First()["X"].ToPlainText()).IsEqualTo("outer");
 	}
 
@@ -140,7 +140,7 @@ public class FunctionFlagDispatchTests
 	public async Task ApplyCannotBypassDisabledFlag()
 	{
 		var result = await Parser(FunctionFlags.Disabled).FunctionParse(MarkupText.Plain("map(#apply/flagprobe,hello)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 FUNCTION DISABLED");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#-1 FUNCTION DISABLED");
 	}
 
 	[Test]
@@ -157,7 +157,7 @@ public class FunctionFlagDispatchTests
 		await WebAppFactoryArg.CommandParser.CommandParse(1, connection, MarkupText.Plain($"@set {player}={objectFlag}"));
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Executor = player, Caller = player, Enactor = player });
 		var result = await parser.FunctionParse(MarkupText.Plain("flagprobe(hello)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -172,7 +172,7 @@ public class FunctionFlagDispatchTests
 		await WebAppFactoryArg.CommandParser.CommandParse(1, connection,
 			MarkupText.Plain("&FLAGLOCAL me=%qx[setq(x,inner)]%qx"));
 		var result = await parser.FunctionParse(MarkupText.Plain($"{function}({arguments})"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("outerinner");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("outerinner");
 		await Assert.That(parser.CurrentState.Registers.First()["X"].ToPlainText()).IsEqualTo("outer");
 	}
 
@@ -182,7 +182,7 @@ public class FunctionFlagDispatchTests
 		var parser = Parser(FunctionFlags.Regular);
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Registers = new([new() { ["X"] = MarkupText.Plain("outer") }]) });
 		var result = await parser.FunctionParse(MarkupText.Plain("uldefault(me/NONEXISTENTFLAGDEFAULT,%qx[setq(x,inner)]%qx)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("outerinner");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("outerinner");
 		await Assert.That(parser.CurrentState.Registers.First()["X"].ToPlainText()).IsEqualTo("outer");
 	}
 
@@ -229,7 +229,7 @@ public class FunctionFlagDispatchTests
 	public async Task GetterFormsRemainAvailableWithoutSideEffects(string input)
 	{
 		var result = await Parser(FunctionFlags.Regular, false).FunctionParse(MarkupText.Plain(input));
-		await Assert.That(result!.Message!.ToPlainText()).DoesNotContain("DISABLED");
+		await Assert.That(result!.Message.ToPlainText()).DoesNotContain("DISABLED");
 	}
 
 	[Test]
@@ -243,7 +243,7 @@ public class FunctionFlagDispatchTests
 			Function = async p => new CallState(await p.CurrentState.Arguments["0"].ParsedMessage())
 		}, true);
 		var result = await parser.FunctionParse(MarkupText.Plain("flagprobe(%qx[setq(x,inner)]%qx)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("outerinner");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("outerinner");
 		await Assert.That(parser.CurrentState.Registers.First()["X"].ToPlainText()).IsEqualTo("outer");
 	}
 
@@ -265,7 +265,7 @@ public class FunctionFlagDispatchTests
 		await WebAppFactoryArg.CommandParser.CommandParse(1, connection, MarkupText.Plain($"@set {playerRef}={objectFlag}"));
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Executor = thing, Caller = playerRef, Enactor = playerRef });
 		var result = await parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
 	}
 
 	[Test]
@@ -282,13 +282,13 @@ public class FunctionFlagDispatchTests
 		var expected = parity
 			? string.Format(ErrorMessages.Returns.GotUnEvenArgs, "FLAGPROBE")
 			: string.Format(ErrorMessages.Returns.TooFewArguments, "FLAGPROBE", 2, 1);
-		await Assert.That(parsed!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(parsed!.Message.ToPlainText()).IsEqualTo(expected);
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Arguments = new() { ["0"] = new CallState("hello") } });
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
 		var applied = await FunctionDispatcher.InvokeAsync(parser, definition, executor,
 			false, Substitute.For<INotifyService>(), new RecordingLogger());
-		await Assert.That(applied.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(applied.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 }

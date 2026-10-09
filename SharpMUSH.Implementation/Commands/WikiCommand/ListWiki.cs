@@ -290,10 +290,9 @@ public static class ListWiki
 			var batch = await wikiService.GetAllPagesAsync(skip, SearchScanPageSize);
 			if (batch.Count == 0) break;
 
-			foreach (var page in batch)
+			foreach (var page in batch.Where(page => visibility.Admits(page) && Hit(page.Title, page.PlainText)))
 			{
-				if (visibility.Admits(page) && Hit(page.Title, page.PlainText))
-					Record(page, localization.SourceLocaleOf(page));
+				Record(page, localization.SourceLocaleOf(page));
 			}
 
 			if (batch.Count < SearchScanPageSize) break;
@@ -312,11 +311,10 @@ public static class ListWiki
 			var batch = await wikiService.GetAllTranslationsAsync(skip, SearchScanPageSize);
 			if (batch.Count == 0) break;
 
-			foreach (var translation in batch)
+			var hits = batch.Where(translation => (visibility.IncludeDrafts || translation.Published)
+				&& Hit(translation.Title, translation.PlainText));
+			foreach (var translation in hits)
 			{
-				if (!visibility.IncludeDrafts && !translation.Published) continue;
-				if (!Hit(translation.Title, translation.PlainText)) continue;
-
 				if (byPage.TryGetValue(translation.PageId, out var already))
 				{
 					Record(already.Page, translation.Locale);

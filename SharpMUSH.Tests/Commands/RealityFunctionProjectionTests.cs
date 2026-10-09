@@ -54,7 +54,7 @@ public class RealityFunctionProjectionTests
 			await policy.SaveConfigurationAsync(new(1, enabled, ["normal", "ghost"]), default);
 			var result = await Factory.FunctionParser.FromState(ParserState.RootFor(actor.Object.DBRef))
 				.FunctionParse(MarkupText.Plain($"scan(me,{command},{scope})"));
-			var output = result!.Message!.ToPlainText();
+			var output = result!.Message.ToPlainText();
 			await Assert.That(output.Contains($"{visible.Object.DBRef}/CMD")).IsTrue();
 			await Assert.That(output.Contains($"{hidden.Object.DBRef}/CMD")).IsEqualTo(!enabled);
 		}
@@ -85,7 +85,7 @@ public class RealityFunctionProjectionTests
 				.FunctionParse(MarkupText.Plain($"rnum({room.Object.DBRef},{(ambiguous ? "projection" : hidden.Object.Name)})"));
 			var expected = ambiguous ? enabled ? $"#{visible.Object.DBRef.Number}" : ErrorMessages.Returns.AmbiguousMatch
 				: enabled ? ErrorMessages.Returns.NoMatch : $"#{hidden.Object.DBRef.Number}";
-			await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+			await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}

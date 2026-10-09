@@ -1,0 +1,68 @@
+@using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One category list: its create form, then a row per category to rename, describe or delete it. *@
+<div class="ra-section" data-kind="@Kind.ToString().ToLowerInvariant()">
+    <div class="ra-section-label">@Heading</div>
+    <div class="ra-override-add">
+        <input class="ra-input" type="text" placeholder="@Loc["RolCategoryLabel"]" aria-label="@Loc["RolCategoryLabel"]" value="@Draft.Name"
+               maxlength="@Categories.MaxNameLength" @oninput="@(e => Draft.Name = e.Value?.ToString() ?? string.Empty)" />
+        <input class="ra-input" type="text" placeholder="@Loc["RolCategoryDescriptionLabel"]" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@Draft.Description"
+               maxlength="@Categories.MaxDescriptionLength" @oninput="@(e => Draft.Description = e.Value?.ToString() ?? string.Empty)" />
+        <button type="button" class="ra-btn ra-btn--primary" @onclick="@(() => OnCreate.InvokeAsync(Kind))" disabled="@Saving">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCategoryAdd"]
+        </button>
+    </div>
+    @if (Items.Count == 0)
+    {
+        <div class="ra-empty">@Loc["RolCategoryEmpty"]</div>
+    }
+    else
+    {
+        <div class="ra-perm-card">
+            @foreach (var c in Items)
+            {
+                var edit = EditOf(Kind, c);
+                <div class="ra-perm-row ra-category-row">
+                    <div class="ra-perm-label">
+                        <input class="ra-input" type="text" aria-label="@Loc["RolCategoryLabel"]" value="@edit.Name" maxlength="@Categories.MaxNameLength"
+                               @oninput="@(e => edit.Name = e.Value?.ToString() ?? string.Empty)" />
+                        <input class="ra-input" type="text" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@edit.Description" maxlength="@Categories.MaxDescriptionLength"
+                               @oninput="@(e => edit.Description = e.Value?.ToString() ?? string.Empty)" />
+                        <div class="ra-perm-desc">@Holds(c)</div>
+                    </div>
+                    <div class="ra-row-actions">
+                        <RoleIconAction Icon="@Icons.Material.Filled.Save" Label="@Loc["Save"]" Disabled="Saving"
+                                        OnClick="@(() => OnSave.InvokeAsync((Kind, c)))" />
+                        <RoleIconAction Icon="@Icons.Material.Filled.Delete" Label="@Loc["Delete"]" Danger="true" Disabled="Saving"
+                                        OnClick="@(() => OnDelete.InvokeAsync((Kind, c)))" />
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CategoryKind Kind { get; set; }
+    [Parameter, EditorRequired] public string Heading { get; set; } = string.Empty;
+
+    /// <summary>The categories in this list.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<RoleCategory> Items { get; set; } = [];
+
+    /// <summary>What is typed into the create form.</summary>
+    [Parameter, EditorRequired] public RoleCategoryDraft Draft { get; set; } = null!;
+
+    /// <summary>A category row's unsaved name and description.</summary>
+    [Parameter, EditorRequired] public Func<CategoryKind, RoleCategory, RoleCategoryDraft> EditOf { get; set; } = null!;
+
+    /// <summary>What a category holds, as its row says it: so many roles, or so many permissions.</summary>
+    [Parameter, EditorRequired] public Func<RoleCategory, string> Holds { get; set; } = null!;
+
+    [Parameter] public bool Saving { get; set; }
+
+    [Parameter] public EventCallback<CategoryKind> OnCreate { get; set; }
+    [Parameter] public EventCallback<(CategoryKind Kind, RoleCategory Category)> OnSave { get; set; }
+    [Parameter] public EventCallback<(CategoryKind Kind, RoleCategory Category)> OnDelete { get; set; }
+}

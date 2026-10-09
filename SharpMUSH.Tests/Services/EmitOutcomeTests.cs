@@ -38,7 +38,7 @@ public class EmitOutcomeTests
 	private async Task<DBRef> Room(params TestIsolationHelpers.TestPlayer[] players)
 	{
 		var result = await Admin($"@dig {Guid.NewGuid():N}");
-		var room = DBRef.Parse(result.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(result.Message.ToPlainText().Trim());
 		foreach (var player in players) await Admin($"@tel {player.DbRef}={room}");
 		return room;
 	}
@@ -61,7 +61,7 @@ public class EmitOutcomeTests
 		var room = await Room(actor, recipient);
 		var accepted = $"accepted_{Guid.NewGuid():N}";
 		var result = await Command(actor, Invocation(name, room, recipient.DbRef, accepted));
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(accepted);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(accepted);
 		await Assert.That(result.HadErrors).IsFalse();
 		if (name == "nsprompt")
 			await Notifications.Received().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(accepted),
@@ -70,7 +70,7 @@ public class EmitOutcomeTests
 		await Admin(name == "nsprompt" ? $"@lock/page {recipient.DbRef}=#FALSE" : $"@lock/speech {room}=#FALSE");
 		var denied = $"denied_{Guid.NewGuid():N}";
 		result = await Command(actor, Invocation(name, room, recipient.DbRef, denied));
-		await Assert.That(result.Message!.ToPlainText()).IsEmpty();
+		await Assert.That(result.Message.ToPlainText()).IsEmpty();
 		await Assert.That(result.HadErrors).IsFalse();
 		await Assert.That(Factory.Notifications.For(recipient.DbRef)).DoesNotContain(denied);
 		await Notifications.DidNotReceive().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(denied),
@@ -87,7 +87,7 @@ public class EmitOutcomeTests
 		await Admin(gate == "haven" ? $"@set {recipient.DbRef}=HAVEN" : $"@lock/interact {recipient.DbRef}=#FALSE");
 		var body = $"refused_{Guid.NewGuid():N}";
 		var result = await Command(actor, $"@nsprompt/silent {recipient.DbRef}={body}");
-		await Assert.That(result.Message!.ToPlainText()).IsEmpty();
+		await Assert.That(result.Message.ToPlainText()).IsEmpty();
 		await Notifications.DidNotReceive().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(body),
 			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 	}
@@ -100,10 +100,10 @@ public class EmitOutcomeTests
 		var actor = await Player();
 		var target = $"missing_{Guid.NewGuid():N}/unmatched";
 		var result = await Command(actor, $"@{name} {target}=undeliverable");
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidRoom);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidRoom);
 		await Assert.That(result.HadErrors).IsFalse();
 		result = (await Factory.CommandParserFor(actor.DbRef, actor.Handle).FunctionParse(MarkupText.Plain($"[{name}({target},undeliverable)]")))!;
-		await Assert.That(result.Message!.ToPlainText()).IsEmpty();
+		await Assert.That(result.Message.ToPlainText()).IsEmpty();
 		await Assert.That(result.HadErrors).IsFalse();
 	}
 
@@ -130,12 +130,12 @@ public class EmitOutcomeTests
 			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		await Notifications.DidNotReceive().Prompt(TestHelpers.MatchingObject(denied.DbRef), TestHelpers.MatchingMessage(body),
 			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(missingTarget
-			? expectedFailure.Expect<Error<CallState>>().Value.Message!.ToPlainText() : body);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(missingTarget
+			? expectedFailure.Expect<Error<CallState>>().Value.Message.ToPlainText() : body);
 		await Assert.That(result.HadErrors).IsFalse();
 		var functionResult = (await Factory.CommandParserFor(actor.DbRef, actor.Handle)
 			.FunctionParse(MarkupText.Plain($"[nsprompt({targets},{body})]")))!;
-		await Assert.That(functionResult.Message!.ToPlainText()).IsEmpty();
+		await Assert.That(functionResult.Message.ToPlainText()).IsEmpty();
 	}
 
 	[Test]
@@ -152,7 +152,7 @@ public class EmitOutcomeTests
 		{
 			var arguments = name switch { "nsoemit" => $"{room}/unmatched,{body}", "nsprompt" => $"{recipient.DbRef},{body}", _ => body };
 			var result = (await Factory.CommandParserFor(actor.DbRef, actor.Handle).FunctionParse(MarkupText.Plain($"[{name}({arguments})]")))!;
-			await Assert.That(result.Message!.ToPlainText()).IsEmpty();
+			await Assert.That(result.Message.ToPlainText()).IsEmpty();
 			await Assert.That(result.HadErrors).IsFalse();
 			if (name == "nsprompt")
 				await Notifications.Received().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(body),
@@ -180,7 +180,7 @@ public class EmitOutcomeTests
 		});
 		var definition = new SharpCommandAttribute { Name = name };
 		var result = (name == "@EMIT" ? await commands.Emit(parser, definition) : await commands.NoSpoofEmit(parser, definition)).Expect<CallState>();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(body);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(body);
 		await Assert.That(notify.ReceivedCalls()).IsEmpty();
 	}
 }

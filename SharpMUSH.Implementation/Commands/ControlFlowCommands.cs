@@ -65,7 +65,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoAttributeSpecified);
 		}
 
-		var attributePath = args["0"].Message?.ToPlainText();
+		var attributePath = args["0"].Message.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute), executor);
@@ -84,7 +84,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoAttributeSpecified);
 		}
 
-		var originalListText = args.Count >= 2 ? args["1"].Message! : MarkupText.Empty;
+		var originalListText = args.Count >= 2 ? args["1"].Message : MarkupText.Empty;
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
 		var list = listText.Split(delimiter);
 
@@ -161,7 +161,7 @@ public partial class Commands
 				});
 
 				hadErrors |= result?.HadErrors == true;
-				if (result != null && result.Message != null)
+				if (result != null)
 				{
 					results.Add(result.Message.ToPlainText() ?? string.Empty);
 				}
@@ -237,7 +237,7 @@ public partial class Commands
 		if (hasDelimit)
 		{
 			var (delimiterParam, extractedList) = ExtractFirstParameter(
-				parser.CurrentState.Arguments["0"].Message!,
+				parser.CurrentState.Arguments["0"].Message,
 				true);
 			delimiter = delimiterParam;
 			listText = extractedList;
@@ -245,18 +245,18 @@ public partial class Commands
 		else if (hasPid)
 		{
 			var (pidParam, extractedList) = ExtractFirstParameter(
-				parser.CurrentState.Arguments["0"].Message!,
+				parser.CurrentState.Arguments["0"].Message,
 				true);
 			notifyPid = pidParam;
 			listText = extractedList;
 		}
 		else
 		{
-			listText = parser.CurrentState.Arguments["0"].Message!;
+			listText = parser.CurrentState.Arguments["0"].Message;
 		}
 
 		var list = listText.Split(delimiter);
-		var command = parser.CurrentState.Arguments["1"].Message!;
+		var command = parser.CurrentState.Arguments["1"].Message;
 
 		// Replace ## with %iL in the command for PennMUSH backward compatibility
 		var commandParts = command.Split("##");
@@ -372,7 +372,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var strArg = args["0"];
-		var testString = strArg.Message?.ToPlainText() ?? string.Empty;
+		var testString = strArg.Message.ToPlainText();
 		Option<MString> defaultArg = new None();
 		var matched = false;
 		var hadErrors = false;
@@ -383,7 +383,7 @@ public partial class Commands
 		var remainingArgs = args.Values.Skip(1).ToList();
 		if (args.Count % 2 == 0)
 		{
-			defaultArg = remainingArgs[^1].Message!;
+			defaultArg = remainingArgs[^1].Message;
 			remainingArgs.RemoveAt(remainingArgs.Count - 1);
 		}
 
@@ -409,7 +409,7 @@ public partial class Commands
 		// frame, so $0-$9 in it read the match; a queued action takes a copy of the frame with it.
 		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		parser.CurrentState.RegexRegisters.Push(captures);
-		parser.CurrentState.SwitchStack.Push(strArg.Message!);
+		parser.CurrentState.SwitchStack.Push(strArg.Message);
 
 		try
 		{
@@ -423,13 +423,13 @@ public partial class Commands
 				// Patterns are RSNoParse (stored raw); evaluate lazily before comparing.
 				// This matches PennMUSH behavior where pattern expressions like [func()] are
 				// evaluated at match time, not pre-evaluated.
-				var evaluatedPattern = (await exprArg.ParsedMessage()) ?? exprArg.Message!;
+				var evaluatedPattern = (await exprArg.ParsedMessage()) ?? exprArg.Message;
 				var patternText = evaluatedPattern.ToPlainText();
 
 				bool patternMatched;
 				try
 				{
-					patternMatched = SwitchPatterns.Matches(strArg.Message!, patternText, isRegexp, captures);
+					patternMatched = SwitchPatterns.Matches(strArg.Message, patternText, isRegexp, captures);
 				}
 				catch (ArgumentException ex)
 				{
@@ -445,7 +445,7 @@ public partial class Commands
 				{
 					matched = true;
 					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
-					var actionText = actionArg.Message!.ToPlainText().Replace("#$", testString);
+					var actionText = actionArg.Message.ToPlainText().Replace("#$", testString);
 					hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(actionText),
 						isInline, noBreak, hasLocalize, hasClearRegs);
 
@@ -532,11 +532,11 @@ public partial class Commands
 
 		if (truthy)
 		{
-			nestedResult = await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message!);
+			nestedResult = await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message);
 		}
 		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
 		{
-			nestedResult = await parser.CommandListParse(arg2.Message!);
+			nestedResult = await parser.CommandListParse(arg2.Message);
 		}
 
 		return new CallState(truthy) { HadErrors = nestedResult?.HadErrors == true };
@@ -552,7 +552,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		var testString = args["0"].Message?.ToPlainText();
+		var testString = args["0"].Message.ToPlainText();
 		if (string.IsNullOrEmpty(testString))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectMustSpecifyTestString), executor);
@@ -575,7 +575,7 @@ public partial class Commands
 		// Like @switch, the matched action runs with the match's captures for $0-$9.
 		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
 		parser.CurrentState.RegexRegisters.Push(captures);
-		parser.CurrentState.SwitchStack.Push(args["0"].Message!);
+		parser.CurrentState.SwitchStack.Push(args["0"].Message);
 
 		try
 		{
@@ -589,13 +589,13 @@ public partial class Commands
 				var exprIndex = (i * 2) + 1;
 				var actionIndex = (i * 2) + 2;
 
-				var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
+				var pattern = args[exprIndex.ToString()].Message.ToPlainText();
 				var action = args[actionIndex.ToString()].Message;
 
 				bool matches;
 				try
 				{
-					matches = SwitchPatterns.Matches(args["0"].Message!, pattern, isRegexp, captures);
+					matches = SwitchPatterns.Matches(args["0"].Message, pattern, isRegexp, captures);
 				}
 				catch (ArgumentException)
 				{
@@ -686,7 +686,7 @@ public partial class Commands
 			case 2 when args["0"].Message.Truthy(parser):
 				// The action list runs as commands, which evaluate it as they go (PennMUSH do_break). Evaluating it
 				// here first made a second pass, so text a player typed (%0) ran as code with the object's powers.
-				var command = HelperFunctions.StripOuterBraces(args["1"].Message!);
+				var command = HelperFunctions.StripOuterBraces(args["1"].Message);
 
 				if (useQueue)
 				{
@@ -742,7 +742,7 @@ public partial class Commands
 			case 2 when args["0"].Message.Falsy(parser):
 				// The action list runs as commands, which evaluate it as they go (PennMUSH do_break). Evaluating it
 				// here first made a second pass, so text a player typed (%0) ran as code with the object's powers.
-				var command = HelperFunctions.StripOuterBraces(args["1"].Message!);
+				var command = HelperFunctions.StripOuterBraces(args["1"].Message);
 
 				if (useQueue)
 				{
@@ -780,7 +780,7 @@ public partial class Commands
 
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
-			nestedResult = await parser.CommandListParse(arg1.Message!);
+			nestedResult = await parser.CommandListParse(arg1.Message);
 		}
 
 		return new CallState(!falsey) { HadErrors = nestedResult?.HadErrors == true };
@@ -818,10 +818,10 @@ public partial class Commands
 		var retryArgTexts = args
 			.Where(kvp => kvp.Key != "0")
 			.OrderBy(kvp => int.Parse(kvp.Key))
-			.Select(kvp => kvp.Value.Message!)
+			.Select(kvp => kvp.Value.Message)
 			.ToList();
 
-		var conditionText = predicate.Message!;
+		var conditionText = predicate.Message;
 		var currentArgs = parentArgs;
 		var limit = 1000;
 		var hadErrors = false;
@@ -871,7 +871,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		var attributePath = args.TryGetValue("0", out var target) ? target.Message?.ToPlainText() : null;
+		var attributePath = args.TryGetValue("0", out var target) ? target.Message.ToPlainText() : null;
 		if (string.IsNullOrEmpty(attributePath))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyAttributePath), executor);
@@ -896,7 +896,7 @@ public partial class Commands
 		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters);
 		for (var i = 1; i < args.Count; i++)
 		{
-			if (args.TryGetValue(i.ToString(), out var argVal) && argVal.Message != null)
+			if (args.TryGetValue(i.ToString(), out var argVal))
 			{
 				envArgs[(i - 1).ToString()] = argVal;
 			}

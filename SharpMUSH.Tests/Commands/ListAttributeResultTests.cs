@@ -20,7 +20,7 @@ public class ListAttributeResultTests
 	public async Task ReverseWordsUsesDocumentedSeparators(string expression, string expected)
 	{
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.Text).IsEqualTo(expected);
+		await Assert.That(result!.Message.Text).IsEqualTo(expected);
 		await Assert.That(result.HadErrors).IsFalse();
 	}
 
@@ -42,9 +42,9 @@ public class ListAttributeResultTests
 		for (var run = 0; run < 200; run++)
 		{
 			var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-			var observed = $"run {run}: errors={result!.HadErrors}; text={result.Message?.ToPlainText()}";
+			var observed = $"run {run}: errors={result!.HadErrors}; text={result.Message.ToPlainText()}";
 			await Assert.That(result.HadErrors).IsFalse().Because(observed);
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(string.Join(' ', items.Order())).Because(observed);
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(string.Join(' ', items.Order())).Because(observed);
 		}
 	}
 
@@ -178,7 +178,7 @@ public class ListAttributeResultTests
 		// expectation for several functions, a bare failure cannot even say which assertion went.
 		// Carried on the assertions too, where it is failure-only output and always survives.
 		var observed = $"{function}/{route}/{mode}: expression={expression}; "
-			+ $"errors={result.HadErrors}; text={result.Message?.ToPlainText()}";
+			+ $"errors={result.HadErrors}; text={result.Message.ToPlainText()}";
 
 		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax").Because(observed);
 		if (mode != "syntax")
@@ -193,7 +193,7 @@ public class ListAttributeResultTests
 				"sortkey" => "a b",
 				_ => null
 			};
-			if (expected is not null) await Assert.That(result.Message!.Text).IsEqualTo(expected).Because(observed);
+			if (expected is not null) await Assert.That(result.Message.Text).IsEqualTo(expected).Because(observed);
 		}
 	}
 }

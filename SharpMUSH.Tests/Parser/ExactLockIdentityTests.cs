@@ -24,7 +24,7 @@ public class ExactLockIdentityTests
 	private async Task<AnySharpObject> Create(string prefix)
 	{
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create({prefix}_{Guid.NewGuid():N})"));
-		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message.ToPlainText())))).Expect<AnySharpObject>();
 	}
 
 	[Test]
@@ -39,7 +39,7 @@ public class ExactLockIdentityTests
 		var key = await Create("IdentityKey");
 		var carrier = await Create("IdentityCarrier");
 		var unrelated = await Create("IdentityOther");
-		await Mediator.Send(new MoveObjectCommand(key.MinusRoom(), carrier.AsContainer, (await key.Where()).Object().DBRef));
+		await Mediator.Send(new MoveObjectCommand(key.AsOptionalContent.Expect<AnySharpContent>(), carrier.AsOptionalContainer.Expect<AnySharpContainer>(), (await key.Where()).Object().DBRef));
 		var identity = key.Object().DBRef;
 		var reference = stamped ? identity.ToString() : $"#{identity.Number}";
 		var expression = prefix + reference;
@@ -74,7 +74,7 @@ public class ExactLockIdentityTests
 	private async Task<AnySharpObject> Parse(string expression)
 	{
 		var made = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(made!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(made!.Message.ToPlainText())))).Expect<AnySharpObject>();
 	}
 
 	/// <summary>
@@ -95,7 +95,7 @@ public class ExactLockIdentityTests
 			$"link(#{droppingRoom.Object().DBRef.Number},#{room.Object().DBRef.Number})"));
 		var unrelated = await Create("CarryGate");
 
-		var contents = await Mediator.CreateStream(new GetContentsQuery(room.AsContainer))
+		var contents = await Mediator.CreateStream(new GetContentsQuery(room.AsOptionalContainer.Expect<AnySharpContainer>()))
 			.Select(item => item.Object().DBRef.Number).ToListAsync();
 		await Assert.That(contents).Contains(exit.Object().DBRef.Number)
 			.Because("precondition: a room's contents list the exits leading out of it");

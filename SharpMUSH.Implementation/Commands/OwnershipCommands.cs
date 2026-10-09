@@ -21,8 +21,8 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var targetName = args["0"].Message!.ToPlainText();
-		var newOwnerName = args["1"].Message!.ToPlainText();
+		var targetName = args["0"].Message.ToPlainText();
+		var newOwnerName = args["1"].Message.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -55,7 +55,7 @@ public partial class Commands
 
 						// chown_object only runs once the transfer is allowed (do_chown, src/set.c:237); a refused
 						// @chown leaves the object as it was.
-						if (result.Message?.ToPlainText() == ErrorMessages.Returns.PermissionDenied)
+						if (result.Message.ToPlainText() == ErrorMessages.Returns.PermissionDenied)
 						{
 							return result;
 						}
@@ -99,8 +99,8 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var targetName = args["0"].Message!.ToPlainText();
-		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message!.ToPlainText() : string.Empty;
+		var targetName = args["0"].Message.ToPlainText();
+		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		// set.c:380: MAT_NEARBY for the object, which is MAT_EVERYTHING plus MAT_NEAR — you re-zone what
@@ -150,7 +150,7 @@ public partial class Commands
 			return usage;
 		}
 
-		var playerArg = args["0"].Message!.ToPlainText();
+		var playerArg = args["0"].Message.ToPlainText();
 		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
 		{
 			AnySharpObject and SharpPlayer oldOwner => await ChownAllFromAsync(parser, executor, oldOwner, switches, args,
@@ -166,7 +166,7 @@ public partial class Commands
 		var newOwner = executor;
 		if (args.Count > 1)
 		{
-			var newOwnerArg = args["1"].Message!.ToPlainText();
+			var newOwnerArg = args["1"].Message.ToPlainText();
 			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, newOwnerArg))
 			{
 				case AnySharpObject found:
@@ -255,8 +255,8 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var playerName = args["0"].Message!.ToPlainText();
-		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message!.ToPlainText() : string.Empty;
+		var playerName = args["0"].Message.ToPlainText();
+		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		// A player by name, so MAT_PMATCH: MAT_EVERYTHING carries MAT_PLAYER, which only answers to a

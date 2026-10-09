@@ -211,7 +211,7 @@ public class MailControllerTests
 		await controller.Send(Request(subject: "and/or", body: "Body."), CancellationToken.None);
 
 		await invoker.Received().InvokeAsync("@MAIL", Actor,
-			Arg.Is<Dictionary<string, CallState>>(a => a["1"].Message!.ToPlainText() == "and//or/Body."),
+			Arg.Is<Dictionary<string, CallState>>(a => a["1"].Message.ToPlainText() == "and//or/Body."),
 			Arg.Any<IEnumerable<string>?>());
 	}
 

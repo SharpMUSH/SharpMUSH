@@ -14,20 +14,7 @@
 <div class="page-stack page-stack--padded adm-msg">
     <PlainPageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["AdmMessagesTitle"]" Description="@Loc["AdmMessagesDescription"]" />
 
-    @if (_error is not null)
-    {
-        <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
-    }
-
-    @if (_state is null)
-    {
-        @if (_error is null)
-        {
-            <MudProgressLinear Indeterminate="true" />
-        }
-    }
-    else
-    {
+    <LoadState TValue="GameMessagesResponse" Value="_state" Loading="@(_state is null && _error is null)" Error="@_error" Context="state">
         <KitCard Title="@Loc["AdmMessagesSourceTitle"]" Sub="@Loc["AdmMessagesSourceSub"]">
             <div class="adm-msg-source">
                 <div class="adm-msg-source-choices" role="radiogroup" aria-label="@Loc["AdmMessagesSourceTitle"]">
@@ -35,7 +22,7 @@
                     @SourceChoice(GameMessageSource.Object, "AdmMessagesSourceObject", "AdmMessagesSourceObjectHint", Icons.Material.Outlined.Code)
                 </div>
                 <div class="adm-msg-source-status" id="messages-source-status">
-                    @if (_state.ObjectDbref is { } dbref && _state.ObjectName is { } name)
+                    @if (state.ObjectDbref is { } dbref && state.ObjectName is { } name)
                     {
                         <span>@Loc["AdmMessagesObjectIs", name, dbref]</span>
                     }
@@ -45,7 +32,7 @@
                         <MudLink Href="/admin/packages">@Loc["AdmMessagesInstallPackage"]</MudLink>
                     }
                 </div>
-                @if (_state.ObjectDbref is { } missing && _state.ObjectName is null)
+                @if (state.ObjectDbref is { } missing && state.ObjectName is null)
                 {
                     <MudAlert Severity="Severity.Warning" Dense="true">@Loc["AdmMessagesObjectMissing", missing]</MudAlert>
                 }
@@ -54,7 +41,7 @@
 
         <div class="adm-msg-layout">
             <nav class="adm-msg-list" aria-label="@Loc["AdmMessagesTitle"]">
-                @foreach (var entry in _state.Messages)
+                @foreach (var entry in state.Messages)
                 {
                     var current = entry.Message == _selected;
                     <button type="button" class="adm-msg-item @(current ? "adm-msg-item--current" : null)"
@@ -87,11 +74,11 @@
                         @if (FromObject(selected))
                         {
                             <MudAlert Severity="Severity.Info" Dense="true" id="messages-from-object">
-                                @Loc["AdmMessagesShownFromObject", selected.Attribute, _state.ObjectName ?? string.Empty, _state.ObjectDbref ?? 0]
+                                @Loc["AdmMessagesShownFromObject", selected.Attribute, state.ObjectName ?? string.Empty, state.ObjectDbref ?? 0]
                                 <MudLink Href="/softcode" Class="ml-1">@Loc["AdmMessagesOpenSoftcode"]</MudLink>
                             </MudAlert>
                         }
-                        else if (_state.Source == GameMessageSource.Object && _state.ObjectName is not null)
+                        else if (state.Source == GameMessageSource.Object && state.ObjectName is not null)
                         {
                             <MudAlert Severity="Severity.Info" Dense="true">@Loc["AdmMessagesObjectLacks", selected.Attribute]</MudAlert>
                         }
@@ -136,7 +123,7 @@
                 </KitCard>
             }
         </div>
-    }
+    </LoadState>
 </div>
 
 @code {

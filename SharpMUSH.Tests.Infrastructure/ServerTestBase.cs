@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests;
 /// spelling each of "evaluate this expression" and "run this command".
 ///
 /// <para>The helpers exist because the hand-rolled copies disagreed about what a null result means:
-/// <c>!.Message!</c> throws, <c>?? "&lt;null&gt;"</c> returns a sentinel and <c>?? string.Empty</c>
+/// <c>!.Message</c> throws, <c>?? "&lt;null&gt;"</c> returns a sentinel and <c>?? string.Empty</c>
 /// returns the empty string, so the same engine bug surfaced as a crash in one file and a silently
 /// passing assertion in another. <see cref="Eval"/> and <see cref="Cmd"/> answer
 /// <see cref="NullResult"/> — a value no correct evaluation produces, which an equality assertion
@@ -61,9 +61,9 @@ public abstract class ServerTestBase
 		Execute(WebAppFactoryArg.CommandParserFor(executor, handle), handle, command);
 
 	private static async Task<string> Evaluate(IMUSHCodeParser parser, string code) =>
-		(await parser.FunctionParse(MString.Plain(code)))?.Message?.ToPlainText() ?? NullResult;
+		(await parser.FunctionParse(MString.Plain(code)))?.Message.ToPlainText() ?? NullResult;
 
 	private async Task<string> Execute(IMUSHCodeParser parser, long handle, string command) =>
-		(await parser.CommandParse(handle, ConnectionService, MString.Plain(command)))?.Message?.ToPlainText()
+		(await parser.CommandParse(handle, ConnectionService, MString.Plain(command)))?.Message.ToPlainText()
 		?? NullResult;
 }

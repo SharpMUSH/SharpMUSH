@@ -46,14 +46,14 @@ public class ZoneCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("ZoneMaster");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 		var zoneObject = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(zoneObject.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("ZonedObject");
 		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var zonedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(zonedObject.Object().DBRef.Number).IsEqualTo(objDbRef.Number);
@@ -82,13 +82,13 @@ public class ZoneCommandTests
 		// Create unique zone master object as the fresh player (they own it → controls check passes)
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("ZoneMasterClear");
 		var zoneResult = await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 		await Assert.That(zoneObject.IsNone).IsFalse();
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("ZonedClearObject");
 		var objResult = await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(zonedObject.IsNone).IsFalse();
 
@@ -245,11 +245,11 @@ public class ZoneCommandTests
 	{
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("PowerStripZone");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("PowerStripObject");
 		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {objDbRef}=Builder Boot"));
 		var granted = await PowerNamesOf(objDbRef);
@@ -269,11 +269,11 @@ public class ZoneCommandTests
 	{
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("PowerKeepZone");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("PowerKeepObject");
 		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {objDbRef}=Builder"));
 		await Assert.That(await PowerNamesOf(objDbRef)).Contains("Builder");
@@ -290,7 +290,7 @@ public class ZoneCommandTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(namePrefix);
 		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
-		return DBRef.Parse(result.Message!.ToPlainText()!);
+		return DBRef.Parse(result.Message.ToPlainText()!);
 	}
 
 	/// <summary>
@@ -366,13 +366,13 @@ public class ZoneCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("PermTestZone");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 		await Assert.That(zoneObject.IsNone).IsFalse();
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("PermTestObject");
 		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 
@@ -569,7 +569,7 @@ public class ZoneCommandTests
 		// Create a unique object as the fresh player (they will own it → controls check passes)
 		var objName = TestIsolationHelpers.GenerateUniqueName("InvalidZoneTest");
 		var objResult = await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 
@@ -590,7 +590,7 @@ public class ZoneCommandTests
 
 		var zmrName = TestIsolationHelpers.GenerateUniqueName("ZMR");
 		var zmrResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@dig {zmrName}"));
-		var zmrDbRefText = zmrResult.Message!.ToPlainText()!;
+		var zmrDbRefText = zmrResult.Message.ToPlainText()!;
 		var zmrMatch = System.Text.RegularExpressions.Regex.Match(zmrDbRefText, @"#(\d+)");
 		if (!zmrMatch.Success) return;
 		var zmrDbRef = new DBRef(int.Parse(zmrMatch.Groups[1].Value));
@@ -599,7 +599,7 @@ public class ZoneCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("ZonedRoom");
 		var room1Result = await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var room1DbRefText = room1Result.Message!.ToPlainText()!;
+		var room1DbRefText = room1Result.Message.ToPlainText()!;
 		var room1Match = System.Text.RegularExpressions.Regex.Match(room1DbRefText, @"#(\d+)");
 		if (!room1Match.Success) return;
 		var room1DbRef = new DBRef(int.Parse(room1Match.Groups[1].Value));
@@ -626,7 +626,7 @@ public class ZoneCommandTests
 
 		var zmrName = TestIsolationHelpers.GenerateUniqueName("ZMRCmd");
 		var zmrResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@dig {zmrName}"));
-		var zmrDbRefText = zmrResult.Message!.ToPlainText()!;
+		var zmrDbRefText = zmrResult.Message.ToPlainText()!;
 		var zmrMatch = System.Text.RegularExpressions.Regex.Match(zmrDbRefText, @"#(\d+)");
 		if (!zmrMatch.Success) return;
 		var zmrDbRef = new DBRef(int.Parse(zmrMatch.Groups[1].Value));
@@ -635,7 +635,7 @@ public class ZoneCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("ZonedCmdRoom");
 		var zonedRoomResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var zonedRoomDbRefText = zonedRoomResult.Message!.ToPlainText()!;
+		var zonedRoomDbRefText = zonedRoomResult.Message.ToPlainText()!;
 		var zonedRoomMatch = System.Text.RegularExpressions.Regex.Match(zonedRoomDbRefText, @"#(\d+)");
 		if (!zonedRoomMatch.Success) return;
 		var zonedRoomDbRef = new DBRef(int.Parse(zonedRoomMatch.Groups[1].Value));
@@ -650,7 +650,7 @@ public class ZoneCommandTests
 
 		var cmdObjName = TestIsolationHelpers.GenerateUniqueName("ZMRCmdObj");
 		var cmdObjResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@create {cmdObjName}"));
-		var cmdObjDbRef = DBRef.Parse(cmdObjResult.Message!.ToPlainText()!);
+		var cmdObjDbRef = DBRef.Parse(cmdObjResult.Message.ToPlainText()!);
 		var cmdObject = await Mediator.Send(new GetObjectNodeQuery(cmdObjDbRef));
 		await Assert.That(cmdObject.IsNone).IsFalse();
 
@@ -681,7 +681,7 @@ public class ZoneCommandTests
 
 		var personalZMRName = TestIsolationHelpers.GenerateUniqueName("PersonalZMR");
 		var personalZMRResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@dig {personalZMRName}"));
-		var personalZMRDbRefText = personalZMRResult.Message!.ToPlainText();
+		var personalZMRDbRefText = personalZMRResult.Message.ToPlainText();
 		var personalZMRMatch = System.Text.RegularExpressions.Regex.Match(personalZMRDbRefText, @"#(\d+)");
 		if (!personalZMRMatch.Success) return;
 		var personalZMRDbRef = new DBRef(int.Parse(personalZMRMatch.Groups[1].Value));
@@ -697,7 +697,7 @@ public class ZoneCommandTests
 
 		var personalCmdObjName = TestIsolationHelpers.GenerateUniqueName("PersonalCmdObj");
 		var personalCmdObjResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {personalCmdObjName}"));
-		var personalCmdObjDbRef = DBRef.Parse(personalCmdObjResult.Message!.ToPlainText()!);
+		var personalCmdObjDbRef = DBRef.Parse(personalCmdObjResult.Message.ToPlainText()!);
 		var personalCmdObject = await Mediator.Send(new GetObjectNodeQuery(personalCmdObjDbRef));
 		await Assert.That(personalCmdObject.IsNone).IsFalse();
 
@@ -709,7 +709,7 @@ public class ZoneCommandTests
 
 		var testRoomName = TestIsolationHelpers.GenerateUniqueName("PersonalZoneTestRoom");
 		var testRoomResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@dig {testRoomName}"));
-		var testRoomDbRefText = testRoomResult.Message!.ToPlainText();
+		var testRoomDbRefText = testRoomResult.Message.ToPlainText();
 		var testRoomMatch = System.Text.RegularExpressions.Regex.Match(testRoomDbRefText, @"#(\d+)");
 		if (!testRoomMatch.Success) return;
 		var testRoomDbRef = new DBRef(int.Parse(testRoomMatch.Groups[1].Value));
@@ -736,7 +736,7 @@ public class ZoneCommandTests
 
 		var zmrName = TestIsolationHelpers.GenerateUniqueName("ZMRSelfTest");
 		var zmrResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@dig {zmrName}"));
-		var zmrDbRefText = zmrResult.Message!.ToPlainText()!;
+		var zmrDbRefText = zmrResult.Message.ToPlainText()!;
 		var zmrMatch = System.Text.RegularExpressions.Regex.Match(zmrDbRefText, @"#(\d+)");
 		if (!zmrMatch.Success) return;
 		var zmrDbRef = new DBRef(int.Parse(zmrMatch.Groups[1].Value));
@@ -745,7 +745,7 @@ public class ZoneCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("SelfTestRoom");
 		var zonedRoomResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var zonedRoomDbRefText = zonedRoomResult.Message!.ToPlainText()!;
+		var zonedRoomDbRefText = zonedRoomResult.Message.ToPlainText()!;
 		var zonedRoomMatch = System.Text.RegularExpressions.Regex.Match(zonedRoomDbRefText, @"#(\d+)");
 		if (!zonedRoomMatch.Success) return;
 		var zonedRoomDbRef = new DBRef(int.Parse(zonedRoomMatch.Groups[1].Value));

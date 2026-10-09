@@ -18,7 +18,7 @@ public class BreakActionEvaluationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private async ValueTask<string> Eval(string expression)
-		=> (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think {expression}"))).Message?.ToPlainText()?.Trim() ?? "";
+		=> (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think {expression}"))).Message.ToPlainText()?.Trim() ?? "";
 
 	private async ValueTask Cmd(string command)
 		=> await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));

@@ -96,7 +96,7 @@ public class LogCommandTests
 
 		await Assert.That(messages).Contains(string.Format(ErrorMessages.Notifications.LogWipeUnsupportedFormat, policy, log));
 		await Assert.That(messages.Any(m => m.StartsWith("@logwipe", StringComparison.OrdinalIgnoreCase) && m.Contains("Would", StringComparison.Ordinal))).IsFalse();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
 	}
 
 	/// <summary><c>/check</c> names Penn's LT_CHECK log; it is not a dry-run action.</summary>
@@ -125,7 +125,7 @@ public class LogCommandTests
 	{
 		// Create a dedicated test object so we don't mutate God (#1) in the shared DB
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create LSetTestObject"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock #{newDb.Number}=#TRUE"));
 

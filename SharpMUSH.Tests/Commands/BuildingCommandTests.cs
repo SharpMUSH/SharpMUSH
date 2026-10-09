@@ -57,7 +57,7 @@ public class BuildingCommandTests
 	{
 		var created = await TestIsolationHelpers.CreateObjectCommandAsync(
 			Parser, ConnectionService, TestIsolationHelpers.GenerateUniqueName(prefix), Actor.Handle);
-		return DBRef.Parse(created.Message!.ToPlainText());
+		return DBRef.Parse(created.Message.ToPlainText());
 	}
 
 	private async Task<SharpExit> ExitIn(DBRef room, string name) =>
@@ -90,7 +90,7 @@ public class BuildingCommandTests
 	{
 		var result = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create CreateObject - Test Object"));
 
-		var newDb = DBRef.Parse(result.Message!.ToPlainText());
+		var newDb = DBRef.Parse(result.Message.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
@@ -101,7 +101,7 @@ public class BuildingCommandTests
 	{
 		var result = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create CreateObjectWithCost - Test Object=10"));
 
-		var newDb = DBRef.Parse(result.Message!.ToPlainText());
+		var newDb = DBRef.Parse(result.Message.ToPlainText());
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
@@ -111,12 +111,12 @@ public class BuildingCommandTests
 	public async ValueTask DoDigForCommandListCheck()
 	{
 		var currentLocation = await Parser.FunctionParse(MarkupText.Plain("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText());
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message.ToPlainText());
 
 		var newRoom = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain("@dig DoDigTestRoom=DoDigTestExit;DoDigTestExitAlias,DoDigTestExitBack;DoDigTestExitAliasBack"));
 
-		var newDb = DBRef.Parse(newRoom.Message!.ToPlainText());
+		var newDb = DBRef.Parse(newRoom.Message.ToPlainText());
 		var forward = await ExitIn(currentLocationDbRef, "DoDigTestExit");
 		var back = await ExitIn(newDb, "DoDigTestExitBack");
 
@@ -131,7 +131,7 @@ public class BuildingCommandTests
 	public async ValueTask DigFunctionNotifiesLikeTheCommand()
 	{
 		var currentLocation = await Parser.FunctionParse(MarkupText.Plain("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText());
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message.ToPlainText());
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain("think dig(DigFnTestRoom,DigFnTestExit;DigFnTestExitAlias,DigFnTestExitBack;DigFnTestExitAliasBack)"));
@@ -147,11 +147,11 @@ public class BuildingCommandTests
 	public async ValueTask DoDigForCommandListCheck2()
 	{
 		var currentLocation = await Parser.FunctionParse(MarkupText.Plain("%l"));
-		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText());
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message.ToPlainText());
 
 		var newRoom = await Parser.CommandListParse(MarkupText.Plain("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
-		var newDb = DBRef.Parse(newRoom!.Message!.ToPlainText());
+		var newDb = DBRef.Parse(newRoom!.Message.ToPlainText());
 		var forward = await ExitIn(currentLocationDbRef, "Exit");
 		var back = await ExitIn(newDb, "ExitBack");
 
@@ -163,11 +163,11 @@ public class BuildingCommandTests
 	public async Task DigAndMoveTest()
 	{
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@dig NewRoom=Forward;F,Backward;B"));
-		var initialRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message!.ToPlainText();
+		var initialRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message.ToPlainText();
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("goto Forward"));
-		var newRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message!.ToPlainText();
+		var newRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message.ToPlainText();
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("goto Backward"));
-		var finalRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message!.ToPlainText();
+		var finalRoom = (await Parser.FunctionParse(MarkupText.Plain("%l")))!.Message.ToPlainText();
 
 		await Assert.That(initialRoom).Length().IsPositive();
 		await Assert.That(initialRoom).IsEqualTo(finalRoom);
@@ -179,7 +179,7 @@ public class BuildingCommandTests
 	{
 		// Create an object first, capturing the dbref to avoid ambiguous name lookup
 		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create DigAndMoveTest - Rename Test"));
-		var newDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		// Rename it using dbref to avoid "#-2 I DON'T KNOW WHICH ONE YOU MEAN" ambiguity
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@name {newDbRef}=DigAndMoveTest - New Name"));
@@ -193,7 +193,7 @@ public class BuildingCommandTests
 	{
 		var result = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@dig DigRoom - Test Room"));
 
-		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(result.Message.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("DigRoom - Test Room");
@@ -205,7 +205,7 @@ public class BuildingCommandTests
 		var executor = Actor.DbRef;
 		var result = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@dig Room With Exits=In;I,Out;O"));
 
-		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(result.Message.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("Room With Exits");
@@ -219,10 +219,10 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var roomResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@dig LinkExitTestRoom"));
-		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!);
+		var roomDbRef = DBRef.Parse(roomResult.Message.ToPlainText()!);
 
 		var exitResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@open LinkExitTestExit"));
-		var exitDbRef = DBRef.Parse(exitResult.Message!.ToPlainText()!);
+		var exitDbRef = DBRef.Parse(exitResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@link {exitDbRef}={roomDbRef}"));
 
@@ -240,10 +240,10 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var sourceResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create CloneObjectTestSource"));
-		var sourceDbRef = DBRef.Parse(sourceResult.Message!.ToPlainText()!);
+		var sourceDbRef = DBRef.Parse(sourceResult.Message.ToPlainText()!);
 
 		var cloneResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@clone {sourceDbRef}"));
-		var cloneDbRef = DBRef.Parse(cloneResult.Message!.ToPlainText());
+		var cloneDbRef = DBRef.Parse(cloneResult.Message.ToPlainText());
 		var clone = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
 		await Assert.That(clone.Object()!.Name).IsEqualTo("CloneObjectTestSource");
 		await Assert.That(cloneDbRef).IsNotEqualTo(sourceDbRef);
@@ -256,10 +256,10 @@ public class BuildingCommandTests
 	public async ValueTask ParentSetAndGet()
 	{
 		var parentResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create ParentTestObject"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!);
 
 		var childResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create ChildTestObject"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!);
 
 		var parentObj = await Mediator.Send(new GetObjectNodeQuery(parentDbRef));
 		var childObj = (await Mediator.Send(new GetObjectNodeQuery(childDbRef))).Expect<AnySharpObject>();
@@ -279,10 +279,10 @@ public class BuildingCommandTests
 	public async ValueTask ParentUnset()
 	{
 		var parentResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create ParentUnsetTest_Parent"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!);
 
 		var childResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create ParentUnsetTest_Child"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
 
@@ -302,10 +302,10 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var objAResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create CycleTest_A"));
-		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
+		var objADbRef = DBRef.Parse(objAResult.Message.ToPlainText()!);
 
 		var objBResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create CycleTest_B"));
-		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
+		var objBDbRef = DBRef.Parse(objBResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objADbRef}={objBDbRef}"));
 
@@ -330,13 +330,13 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var objAResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create IndirectCycle_A"));
-		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
+		var objADbRef = DBRef.Parse(objAResult.Message.ToPlainText()!);
 
 		var objBResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create IndirectCycle_B"));
-		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
+		var objBDbRef = DBRef.Parse(objBResult.Message.ToPlainText()!);
 
 		var objCResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create IndirectCycle_C"));
-		var objCDbRef = DBRef.Parse(objCResult.Message!.ToPlainText()!);
+		var objCDbRef = DBRef.Parse(objCResult.Message.ToPlainText()!);
 
 		// Create chain: A -> B -> C
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objADbRef}={objBDbRef}"));
@@ -366,7 +366,7 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create SelfParentTest"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		// Try to set object as its own parent (self-cycle)
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objDbRef}={objDbRef}"));
@@ -388,7 +388,7 @@ public class BuildingCommandTests
 		for (int i = 0; i < 5; i++)
 		{
 			var result = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create LongChain_{i}"));
-			objDbRefs.Add(DBRef.Parse(result.Message!.ToPlainText()!));
+			objDbRefs.Add(DBRef.Parse(result.Message.ToPlainText()!));
 		}
 
 		// Create chain: 0 -> 1 -> 2 -> 3 -> 4
@@ -432,10 +432,10 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var zoneResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create Zone Object"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create Zoned Object"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
 
@@ -456,7 +456,7 @@ public class BuildingCommandTests
 		var executor = Actor.DbRef;
 		var name = TestIsolationHelpers.GenerateUniqueName("RecycleTest");
 		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
-		var recycleDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var recycleDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var before = WebAppFactoryArg.Notifications.CountFor(executor);
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {recycleDbRef}"));
@@ -485,7 +485,7 @@ public class BuildingCommandTests
 		var executor = Actor.DbRef;
 		var name = TestIsolationHelpers.GenerateUniqueName("HaltReport");
 		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
-		var doomed = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var doomed = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {doomed}"));
 
@@ -506,7 +506,7 @@ public class BuildingCommandTests
 		var executor = Actor.DbRef;
 		var name = TestIsolationHelpers.GenerateUniqueName("QuietHalt");
 		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
-		var doomed = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var doomed = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {doomed}"));
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@set me=QUIET"));
@@ -525,7 +525,7 @@ public class BuildingCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("UnlinkRoom");
 		var digResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("UnlinkExit");
 		var openResult = await Parser.CommandParse(Actor.Handle, ConnectionService,
@@ -533,7 +533,7 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@unlink {exitName}"));
 
-		DBRef.TryParse(openResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		DBRef.TryParse(openResult.Message.ToPlainText()!.Trim(), out var exitRef);
 		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
 		var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
@@ -561,7 +561,7 @@ public class BuildingCommandTests
 		var executor = Actor.DbRef;
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create LockObjectTest"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@lock {objDbRef}=#TRUE"));
 
@@ -580,7 +580,7 @@ public class BuildingCommandTests
 		var executor = Actor.DbRef;
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create UnlockObjectTest"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@lock {objDbRef}=#TRUE"));
 
@@ -605,7 +605,7 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create DescEvalTestObject"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
@@ -632,7 +632,7 @@ public class BuildingCommandTests
 	public async ValueTask DescribeCommand_PrefixMatch_Works()
 	{
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create DescPrefixMatchTestObject"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
@@ -656,7 +656,7 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create LookDescTestObject"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		// Use @desc with a unique literal value to verify look displays it unchanged.
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=LookDesc_UniqueTestValue_38471"));
@@ -682,7 +682,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomDF_{token}"));
-		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@desc here=roomdesc_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&DESCFORMAT here=[ucstr(%0)]"));
@@ -706,7 +706,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomEval_{token}"));
-		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 
 		var room = (await Mediator.Send(new GetObjectNodeQuery(roomDbRef))).Expect<AnySharpObject>();
@@ -734,7 +734,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomAdesc_{token}"));
-		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@adesc here=@pemit %#=adesc_{token}_from_%!"));
@@ -760,7 +760,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var roomResult = await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@dig HaltedRoom_{token}"));
-		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(roomResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=@pemit me=teleport_barrier_{token}"));
@@ -792,9 +792,9 @@ public class BuildingCommandTests
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("lip");
 		var parentResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@dig LookParent_{token}"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!.Trim());
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!.Trim());
 		var childResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@dig LookChild_{token}"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!.Trim());
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!.Trim());
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@desc {parentDbRef}=inherited_[add(20,22)]"));
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT {parentDbRef}=parent_{token}:%0"));
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@set {parentDbRef}/DESCRIBE=!visual"));
@@ -821,9 +821,9 @@ public class BuildingCommandTests
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("liip");
 		var parentResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create InsideParent_{token}"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!.Trim());
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!.Trim());
 		var childResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create InsideChild_{token}"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!.Trim());
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!.Trim());
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&IDESCRIBE {parentDbRef}=inside_[add(20,22)]"));
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&IDESCFORMAT {parentDbRef}=inner_{token}:%0"));
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@set {parentDbRef}/IDESCRIBE=!visual"));
@@ -850,7 +850,7 @@ public class BuildingCommandTests
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("lfi");
 		var roomResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@dig ForceRoom_{token}"));
-		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(roomResult.Message.ToPlainText()!.Trim());
 		var player = await CreatePlayer($"ForceLook{token}");
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@desc {roomDbRef}=desc:%#:%@"));
@@ -881,7 +881,7 @@ public class BuildingCommandTests
 		var player = await CreatePlayer($"LookEmpty{token}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var roomResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig EmptyRoom_{token}"));
-		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(roomResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@desc here="));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT here=empty_{token}:%+:%0:end"));
@@ -904,7 +904,7 @@ public class BuildingCommandTests
 		var player = await CreatePlayer($"LookEmptyFormat{token}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var roomResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig EmptyFormatRoom_{token}"));
-		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(roomResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@desc here=visible_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&DESCFORMAT here="));
@@ -927,7 +927,7 @@ public class BuildingCommandTests
 		var player = await CreatePlayer($"LookSnapshot{token}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var roomResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig SnapshotRoom_{token}"));
-		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(roomResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@adesc here=@pemit %#=snapshot_old_{token}"));
@@ -953,7 +953,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomND_{token}"));
-		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 		// Keep the teleport's queued auto-look out of the explicit look's notification window.
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/silent me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
@@ -979,7 +979,7 @@ public class BuildingCommandTests
 		var player = await CreatePlayer($"LookRoomDefault{token}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomDefault_{token}"));
-		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var roomDbRef = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 		// Keep the teleport's queued auto-look out of the explicit look's notification window.
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/silent me={roomDbRef}"));
 
@@ -1003,7 +1003,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var objResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create ThingIT_{token}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=thingdesc_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT {objDbRef}=[ucstr(%0)]"));
 		// @create puts the thing in inventory; drop it so entering it isn't a containment loop.
@@ -1032,7 +1032,7 @@ public class BuildingCommandTests
 		var player = await CreatePlayer($"LookIdescFallback{token}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var objResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create ThingIF_{token}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=outer_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&DESCFORMAT {objDbRef}=wrong_format_{token}:%0"));
@@ -1069,7 +1069,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var objResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create ThingII_{token}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=outsidedesc_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&IDESCRIBE {objDbRef}=insidedesc_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&IDESCFORMAT {objDbRef}=[ucstr(%0)]"));
@@ -1099,7 +1099,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var objResult = await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create HaltedContainer_{token}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&IDESCRIBE {objDbRef}=inside_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
@@ -1132,7 +1132,7 @@ public class BuildingCommandTests
 
 		var objResult = await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create ThingIINF_{token}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&IDESCRIBE {objDbRef}=inside_raw_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
@@ -1176,7 +1176,7 @@ public class BuildingCommandTests
 	{
 		var executor = Actor.DbRef;
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create DescClearTest"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=Initial description"));
 
@@ -1209,10 +1209,10 @@ public class BuildingCommandTests
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@clone ClnSrc_{token}=ClnCopy_{token}"));
 
 		var flagResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think hasflag(ClnCopy_{token}, WIZARD)"));
-		await Assert.That(flagResult.Message!.ToPlainText()!.Trim()).IsEqualTo("0");
+		await Assert.That(flagResult.Message.ToPlainText()!.Trim()).IsEqualTo("0");
 
 		var attrResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think hasattr(ClnCopy_{token}, FOO)"));
-		await Assert.That(attrResult.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+		await Assert.That(attrResult.Message.ToPlainText()!.Trim()).IsEqualTo("1");
 	}
 
 	/// <summary>
@@ -1229,7 +1229,7 @@ public class BuildingCommandTests
 		var flagged = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"think hasflag(DfltThing_{token}, NO_COMMAND)"));
 
-		await Assert.That(flagged.Message!.ToPlainText()!.Trim()).IsEqualTo("1")
+		await Assert.That(flagged.Message.ToPlainText()!.Trim()).IsEqualTo("1")
 			.Because("thing_flags ships as no_command, and a default nothing applies is not a default");
 	}
 
@@ -1252,7 +1252,7 @@ public class BuildingCommandTests
 		var cloned = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"think hasflag(ClncCopy_{token}, NO_COMMAND)"));
 
-		await Assert.That(cloned.Message!.ToPlainText()!.Trim()).IsEqualTo("0")
+		await Assert.That(cloned.Message.ToPlainText()!.Trim()).IsEqualTo("0")
 			.Because("the clone's flags are synchronised to the source, not unioned with the defaults");
 	}
 
@@ -1270,7 +1270,7 @@ public class BuildingCommandTests
 		var cloned = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"think hasflag(ClnkCopy_{token}, OPAQUE)"));
 
-		await Assert.That(cloned.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+		await Assert.That(cloned.Message.ToPlainText()!.Trim()).IsEqualTo("1");
 	}
 
 	/// <summary>
@@ -1288,7 +1288,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@clone/preserve ClpSrc_{token}=ClpCopy_{token}"));
 
 		var flagResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think hasflag(ClpCopy_{token}, WIZARD)"));
-		await Assert.That(flagResult.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+		await Assert.That(flagResult.Message.ToPlainText()!.Trim()).IsEqualTo("1");
 	}
 
 	/// <summary>
@@ -1305,11 +1305,11 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think clone(ClfSrc_{token}, ClfNP_{token})"));
 		var npFlag = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think hasflag(ClfNP_{token}, WIZARD)"));
-		await Assert.That(npFlag.Message!.ToPlainText()!.Trim()).IsEqualTo("0");
+		await Assert.That(npFlag.Message.ToPlainText()!.Trim()).IsEqualTo("0");
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think clone(ClfSrc_{token}, ClfP_{token}, , preserve)"));
 		var pFlag = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think hasflag(ClfP_{token}, WIZARD)"));
-		await Assert.That(pFlag.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+		await Assert.That(pFlag.Message.ToPlainText()!.Trim()).IsEqualTo("1");
 	}
 
 	/// <summary>
@@ -1324,7 +1324,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@clone NoSuchObj_{token}"));
 
 		var result = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"think clone(NoSuchObj_{token})"));
-		var output = result.Message!.ToPlainText()!.Trim();
+		var output = result.Message.ToPlainText()!.Trim();
 		// SharpMUSH returns "#-1 NO MATCH" for failed locate
 		await Assert.That(output).StartsWith("#-1");
 	}
@@ -1343,7 +1343,7 @@ public class BuildingCommandTests
 	private async Task<string> HomeOf(DBRef reference)
 	{
 		var home = await Parser.FunctionParse(MarkupText.Plain($"[home(#{reference.Number})]"));
-		return BareDbref(home!.Message!.ToPlainText().Trim());
+		return BareDbref(home!.Message.ToPlainText().Trim());
 	}
 
 	/// <summary>
@@ -1362,7 +1362,7 @@ public class BuildingCommandTests
 
 		var abode = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("LinkGateAbode")}"));
-		var abodeRoom = BareDbref(abode.Message!.ToPlainText().Trim());
+		var abodeRoom = BareDbref(abode.Message.ToPlainText().Trim());
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@set {abodeRoom}=ABODE"));
 
 		var before = await HomeOf(item);
@@ -1372,7 +1372,7 @@ public class BuildingCommandTests
 		var seen = recorder.CountFor(linker.DbRef);
 		var refusal = await Parser.CommandParse(linker.Handle, ConnectionService,
 			MarkupText.Plain($"@link #{item.Number}=#{stranger.DbRef.Number}"));
-		await Assert.That(refusal.Message!.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refusal.Message.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		await Assert.That(await HomeOf(item)).IsEqualTo(before);
 		await Assert.That(recorder.For(linker.DbRef).Skip(seen).Any(m => m == ErrorMessages.Notifications.PermissionDenied))
@@ -1405,26 +1405,26 @@ public class BuildingCommandTests
 
 		var refused = await Parser.CommandParse(linker.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{item.Number}, #{stranger.DbRef.Number})"));
-		await Assert.That(refused.Message!.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refused.Message.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(await HomeOf(item)).IsEqualTo(before);
 
 		var allowed = await Parser.CommandParse(linker.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{item.Number}, #{linker.DbRef.Number})"));
-		await Assert.That(allowed.Message!.ToPlainText().Trim()).IsEqualTo("1");
+		await Assert.That(allowed.Message.ToPlainText().Trim()).IsEqualTo("1");
 		await Assert.That(await HomeOf(item)).IsEqualTo($"#{linker.DbRef.Number}");
 	}
 
 	private async Task<string> OwnerOf(DBRef reference)
 	{
 		var owner = await Parser.FunctionParse(MarkupText.Plain($"[owner(#{reference.Number})]"));
-		return BareDbref(owner!.Message!.ToPlainText().Trim());
+		return BareDbref(owner!.Message.ToPlainText().Trim());
 	}
 
 	private async Task<DBRef> UnlinkedExit(string prefix)
 	{
 		var opened = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"@open {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		return DBRef.Parse(opened.Message!.ToPlainText()!);
+		return DBRef.Parse(opened.Message.ToPlainText()!);
 	}
 
 	/// <summary>A room anyone may link into: <c>can_link_to</c>'s <c>LINK_OK</c> half.</summary>
@@ -1432,7 +1432,7 @@ public class BuildingCommandTests
 	{
 		var dug = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		var room = DBRef.Parse(dug.Message!.ToPlainText()!);
+		var room = DBRef.Parse(dug.Message.ToPlainText()!);
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@set {room}=LINK_OK"));
 		return room;
 	}
@@ -1459,7 +1459,7 @@ public class BuildingCommandTests
 		var linked = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{exitDbRef.Number}, #{thing.Number})"));
 
-		await Assert.That(linked.Message!.ToPlainText().Trim()).IsEqualTo("1");
+		await Assert.That(linked.Message.ToPlainText().Trim()).IsEqualTo("1");
 		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(thing);
 	}
 
@@ -1519,7 +1519,7 @@ public class BuildingCommandTests
 		var refused = await Parser.CommandParse(linker.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{exitDbRef.Number}, #{destination.Number}, 1)"));
 
-		await Assert.That(refused.Message!.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refused.Message.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(await DestinationOf(exitDbRef)).IsNull();
 		await Assert.That(await OwnerOf(exitDbRef)).IsEqualTo($"#{owner.DbRef.Number}");
 
@@ -1570,7 +1570,7 @@ public class BuildingCommandTests
 		var unlinked = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{exitDbRef.Number},)"));
 
-		await Assert.That(unlinked.Message!.ToPlainText().Trim())
+		await Assert.That(unlinked.Message.ToPlainText().Trim())
 			.IsEqualTo(ErrorMessages.Returns.MissingArguments);
 		await Assert.That(await DestinationOf(exitDbRef)).IsNull();
 	}
@@ -1598,7 +1598,7 @@ public class BuildingCommandTests
 		var refused = await Parser.CommandParse(stranger.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{exitDbRef.Number},)"));
 
-		await Assert.That(refused.Message!.ToPlainText().Trim())
+		await Assert.That(refused.Message.ToPlainText().Trim())
 			.IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
 
@@ -1683,7 +1683,7 @@ public class BuildingCommandTests
 		{
 			var result = await Parser.CommandParse(Actor.Handle, ConnectionService,
 				MarkupText.Plain($"@create {name}"));
-			created = DBRef.Parse(result.Message!.ToPlainText());
+			created = DBRef.Parse(result.Message.ToPlainText());
 		});
 
 		await Assert.That(heard).Contains($"Created: Object #{created!.Value.Number}.");
@@ -1705,7 +1705,7 @@ public class BuildingCommandTests
 		{
 			var result = await Parser.CommandParse(Actor.Handle, ConnectionService,
 				MarkupText.Plain($"@clone {source}"));
-			clone = DBRef.Parse(result.Message!.ToPlainText());
+			clone = DBRef.Parse(result.Message.ToPlainText());
 		});
 
 		await Assert.That(heard).Contains($"Cloned: Object #{clone!.Value.Number}.");
@@ -1725,7 +1725,7 @@ public class BuildingCommandTests
 		{
 			var result = await Parser.CommandParse(Actor.Handle, ConnectionService,
 				MarkupText.Plain($"@clone {source}"));
-			clone = DBRef.Parse(result.Message!.ToPlainText());
+			clone = DBRef.Parse(result.Message.ToPlainText());
 		});
 
 		await Assert.That(heard).Contains($"Cloned: Room #{clone!.Value.Number}.");
@@ -1743,7 +1743,7 @@ public class BuildingCommandTests
 		var exitName = TestIsolationHelpers.GenerateUniqueName("ClonedExit");
 		var opened = await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"@open {exitName}={destination}"));
-		var source = DBRef.Parse(opened.Message!.ToPlainText());
+		var source = DBRef.Parse(opened.Message.ToPlainText());
 
 		var heard = await ActorHeardWhile(async () => await Parser.CommandParse(Actor.Handle, ConnectionService,
 			MarkupText.Plain($"@clone {source}={TestIsolationHelpers.GenerateUniqueName("ClonedExitCopy")}")));
