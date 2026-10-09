@@ -9,6 +9,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -309,7 +310,10 @@ public class InputSessionCommandTests
 			await Command(player.Handle, "&CALLBACK me=&REASON me=%1");
 			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,3600");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
-			await Command(1, $"@input/rescue {player.Name}");
+			await Factory.Services.GetRequiredService<IMediator>().Send(new AdmitCommandListRequest(
+				MarkupText.Plain($"@input/rescue {player.Name}; &RESCUED {player.DbRef}=%>"),
+				Factory.CommandParserFor(new DBRef(1), 1).CurrentState, new DbRefAttribute(new DBRef(1), ["RESCUETEST"]), -1));
+			await WaitFor(player.DbRef, "RESCUED", "1");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNull()
 				.Because("a rescued session stops capturing at once, before its callback runs");
 			await WaitFor(player.DbRef, "REASON", "timeout");
