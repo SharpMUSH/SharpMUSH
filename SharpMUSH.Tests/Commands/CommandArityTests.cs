@@ -61,6 +61,46 @@ public class CommandArityTests
 	}
 
 	/// <summary>
+	/// A bare <c>&amp;</c> carries only its (empty) attribute name, one argument short of the two it needs,
+	/// and reports that rather than crashing on the missing object (#1754).
+	/// </summary>
+	[Test]
+	public async Task ABareAttributeSetReportsItsArity()
+	{
+		const string command = "&";
+		var player = await IsolatedPlayerAsync("AritySetAttr");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+
+		var messages = NotificationsTo(player.DbRef);
+
+		await Assert.That(messages).DoesNotContain(m => m.StartsWith("#-1 EXCEPTION: "));
+		await Assert.That(messages).Contains("#-1 COMMAND (&) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1");
+	}
+
+	/// <summary>
+	/// <c>@include</c> with no target names no attribute, so it answers with its own usage line rather than
+	/// crashing on the missing first argument, whichever switch it carries (#1754).
+	/// </summary>
+	[Test]
+	[Arguments("@include")]
+	[Arguments("@include/chain")]
+	[Arguments("@include/localize")]
+	public async Task ABareIncludeAsksForTheAttribute(string command)
+	{
+		var player = await IsolatedPlayerAsync($"IncludeArity{command.Replace("@", "").Replace("/", "")}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+
+		var messages = NotificationsTo(player.DbRef);
+
+		await Assert.That(messages).DoesNotContain(m => m.StartsWith("#-1 EXCEPTION: "));
+		await Assert.That(messages).Contains("You must specify an object/attribute to include.");
+	}
+
+	/// <summary>
 	/// The counterpart: a command that legitimately takes zero arguments must not be caught by the
 	/// same gate. <c>@channel/list</c> takes an OPTIONAL prefix (sharpchat.md:179), so a bare
 	/// invocation is a legal listing request.

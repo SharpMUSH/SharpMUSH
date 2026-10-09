@@ -871,7 +871,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		var attributePath = args["0"].Message?.ToPlainText();
+		var attributePath = args.TryGetValue("0", out var target) ? target.Message?.ToPlainText() : null;
 		if (string.IsNullOrEmpty(attributePath))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyAttributePath), executor);
