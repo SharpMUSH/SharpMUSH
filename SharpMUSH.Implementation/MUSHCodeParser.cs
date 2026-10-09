@@ -272,11 +272,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		// The same text under the same settings parses to the same tree, and code run once per item
 		// (u(), filter(), iter()) is the same text every time. Only evaluated code and queued action
-		// lists are kept: a typed command line is rarely repeated, and some carry a password (CONNECT,
-		// @password) that must not outlive the command. A tracing parse is never shared.
+		// lists are kept, and never text taken from a typed line: a typed line is rarely repeated, and
+		// some carry a password (CONNECT, @password) that must not outlive the command. Attribute text
+		// a typed command runs (look's formats, u()) is not part of the line, so it is still kept.
+		// A tracing parse is never shared.
 		var options = Configuration.CurrentValue;
+		var typedLine = parser.State.IsEmpty ? null : parser.CurrentState.TypedLine;
 		var cache = options.Debug.DebugSharpParser || plainText.Length > SoftcodeParseCache.MaxTextLength
 			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse))
+			|| typedLine?.Contains(plainText, StringComparison.Ordinal) == true
 			? null
 			: Services.ParseCache;
 		var key = new SoftcodeParseCache.Key(plainText, methodName, lenient,
@@ -548,7 +552,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// else's command, which must not run with the player read above.
 		var current = connectionService.Get(handle);
 		if (current?.Ref != player || current?.Metadata.GetValueOrDefault("SessionId") != session) return CallState.Empty;
-		var newParser = Push(ParserState.ForTypedLine(player, handle, expectedSession, outputLimit));
+		var newParser = Push(ParserState.ForTypedLine(player, handle, expectedSession, outputLimit, text.ToPlainText()));
 
 		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
 		// Nothing in a line that does not parse ran, so nothing else answers it: say why, as Huh? would be
@@ -572,7 +576,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public async ValueTask<CallState> CommandParse(DBRef player, MString text)
 	{
 		var outputLimit = await OutputLimitForAsync(player);
-		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit));
+		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit, text.ToPlainText()));
 		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
 		if (result is { IsParseFailure: true, Message: { } failure })
 		{

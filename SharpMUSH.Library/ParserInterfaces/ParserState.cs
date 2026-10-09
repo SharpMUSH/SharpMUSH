@@ -447,6 +447,13 @@ public partial record ParserState(
 	public CommandText? CommandText { get; init; }
 
 	/// <summary>
+	/// The line a player typed, as plain text, carried by the states that run it; null for a state that
+	/// did not start from one. Text drawn from it is never kept by the parse cache, since a typed line can
+	/// carry a password.
+	/// </summary>
+	public string? TypedLine { get; init; }
+
+	/// <summary>
 	/// <c>%></c> as the list that queued this state had it when it did. A queued entry has no
 	/// <see cref="CommandText"/> of its own until its list starts, and starts it with this output.
 	/// </summary>
@@ -604,11 +611,12 @@ public partial record ParserState(
 	/// <summary>
 	/// The fresh state a line typed by <paramref name="player"/> starts from: the player is executor,
 	/// enactor and caller, the line is <see cref="ParserStateFlags.DirectInput"/>, and it begins its
-	/// own <c>%c</c>/<c>%u</c>. <paramref name="handle"/> is the connection it was typed at, if any.
+	/// own <c>%c</c>/<c>%u</c>. <paramref name="handle"/> is the connection it was typed at, if any, and
+	/// <paramref name="line"/> is the line, kept as <see cref="TypedLine"/>.
 	/// </summary>
-	public static ParserState ForTypedLine(DBRef? player, long? handle, string? session, int outputLimit)
+	public static ParserState ForTypedLine(DBRef? player, long? handle, string? session, int outputLimit, string line)
 		=> Fresh(player, player, player, handle, ParserStateFlags.DirectInput, session,
-			budget: null, restrictions: null, new CommandText(), outputLimit);
+			budget: null, restrictions: null, new CommandText(), outputLimit, line);
 
 	/// <summary>
 	/// A fresh state carrying invocation and recursion tracking for an evaluation entered without it.
@@ -622,7 +630,7 @@ public partial record ParserState(
 
 	private static ParserState Fresh(DBRef? executor, DBRef? enactor, DBRef? caller, long? handle,
 		ParserStateFlags flags, string? session, ExecutionBudget? budget, EvaluationRestrictions? restrictions,
-		CommandText? commandText, int outputLimit) => new(
+		CommandText? commandText, int outputLimit, string? typedLine = null) => new(
 		Registers: new([[]]),
 		IterationRegisters: [],
 		RegexRegisters: [],
@@ -653,6 +661,7 @@ public partial record ParserState(
 			ExecutionBudget = budget,
 			Restrictions = restrictions,
 			CommandText = commandText,
+			TypedLine = typedLine,
 			OutputLimit = outputLimit
 		};
 

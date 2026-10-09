@@ -11,10 +11,10 @@ public class SoftcodeParseCacheTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory Factory { get; init; }
 
-	private SoftcodeParseCache.Key KeyFor(string text)
+	private SoftcodeParseCache.Key KeyFor(string text, bool lenient = false)
 	{
 		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
-		return new SoftcodeParseCache.Key(text, "FunctionParse", false,
+		return new SoftcodeParseCache.Key(text, "FunctionParse", lenient,
 			options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode);
 	}
 
@@ -47,6 +47,35 @@ public class SoftcodeParseCacheTests
 		await Assert.That(styled!.Message!.ToPlainText()).IsEqualTo(plain!.Message!.ToPlainText());
 		await Assert.That(styled.Message.Render(MarkupFormat.Ansi)).IsNotEqualTo(styled.Message.ToPlainText());
 		await Assert.That(plain.Message.Render(MarkupFormat.Ansi)).IsEqualTo(plain.Message.ToPlainText());
+	}
+
+	/// <summary>A typed line can carry a password, so no part of it outlives the command.</summary>
+	[Test]
+	public async Task TypedText_IsNotKept()
+	{
+		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
+		var attribute = TestIsolationHelpers.GenerateUniqueName("TYPED").ToUpperInvariant();
+
+		// & evaluates the attribute name it was typed with on its own.
+		await Factory.CommandParser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(),
+			MarkupText.Plain($"&{attribute} me=1"));
+
+		await Assert.That(cache.TryGet(KeyFor(attribute), out _)).IsFalse();
+	}
+
+	/// <summary>Attribute text a typed command runs is not part of the line, and is still kept.</summary>
+	[Test]
+	public async Task AttributeTextATypedLineRuns_IsKept()
+	{
+		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
+		var attribute = TestIsolationHelpers.GenerateUniqueName("PARSED").ToUpperInvariant();
+		var body = $"{attribute}[add(%0,2)]";
+		var connections = Factory.Services.GetRequiredService<IConnectionService>();
+
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"&{attribute} me={body}"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"think u(me/{attribute},1)"));
+
+		await Assert.That(cache.TryGet(KeyFor(body), out _)).IsTrue();
 	}
 
 	[Test]
