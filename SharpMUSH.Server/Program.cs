@@ -297,13 +297,11 @@ public class Program
 		}
 
 		context.Response.ContentType = handled.ContentType;
-		foreach (var (name, value) in handled.Headers)
+		// @respond already forbids Content-Length; defend anyway since the server computes it.
+		var responseHeaders = handled.Headers.Where(header => !header.Name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase));
+		foreach (var (name, value) in responseHeaders)
 		{
-			// @respond already forbids Content-Length; defend anyway since the server computes it.
-			if (!name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-			{
-				context.Response.Headers.Append(name, value);
-			}
+			context.Response.Headers.Append(name, value);
 		}
 
 		await context.Response.WriteAsync(handled.Body, context.RequestAborted);

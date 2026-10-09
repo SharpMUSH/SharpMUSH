@@ -72,10 +72,8 @@ public partial class MushQueryService(ITerminalService terminal, ILogger<MushQue
 	{
 		var results = new List<MushSearchResult>();
 
-		foreach (var line in lines)
+		foreach (var line in lines.Where(line => line.StartsWith("SHARP_OBJ:")))
 		{
-			if (!line.StartsWith("SHARP_OBJ:")) continue;
-
 			// SHARP_OBJ:<dbref>:<type>:<name…>
 			var parts = line.Split(':', 4);
 			if (parts.Length < 4) continue;

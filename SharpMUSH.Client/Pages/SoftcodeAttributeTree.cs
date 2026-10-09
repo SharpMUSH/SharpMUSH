@@ -105,13 +105,8 @@ public static class SoftcodeAttributeTree
 		IEnumerable<SoftcodeAttributeNode> nodes, IReadOnlySet<string> expanded, string? filter)
 	{
 		var filtering = !string.IsNullOrWhiteSpace(filter);
-		foreach (var node in nodes)
+		foreach (var node in nodes.Where(node => !filtering || Matches(node, filter!)))
 		{
-			if (filtering && !Matches(node, filter!))
-			{
-				continue;
-			}
-
 			yield return node;
 
 			if (filtering || expanded.Contains(node.Path))

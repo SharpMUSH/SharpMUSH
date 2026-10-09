@@ -66,39 +66,34 @@ public partial class MushCodeAnalyzer
 			var wordStart = character;
 			while (wordStart > 0 && IsCompletionWordChar(text[wordStart - 1])) wordStart--;
 			var prefix = wordStart < text.Length ? text.Substring(wordStart, character - wordStart) : string.Empty;
+			bool Offered(string name) => prefix.Length == 0 || name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
 
-			foreach (var (name, definition) in parser.FunctionLibrary)
+			foreach (var (name, definition) in parser.FunctionLibrary.Where(entry => Offered(entry.Key)))
 			{
-				if (prefix.Length == 0 || name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-				{
-					var attr = definition.LibraryInformation.Attribute;
-					completions.Add(new CompletionSuggestion(
-						name,
-						"Function",
-						$"{name}({GetParameterList(attr.MinArgs, attr.MaxArgs, ", ...")})",
-						$"Min args: {attr.MinArgs}, Max args: {attr.MaxArgs}",
-						$"{name}($0)",
-						IsSnippet: true));
-				}
+				var attr = definition.LibraryInformation.Attribute;
+				completions.Add(new CompletionSuggestion(
+					name,
+					"Function",
+					$"{name}({GetParameterList(attr.MinArgs, attr.MaxArgs, ", ...")})",
+					$"Min args: {attr.MinArgs}, Max args: {attr.MaxArgs}",
+					$"{name}($0)",
+					IsSnippet: true));
 			}
 
 			// Offer commands at the start of a line/after whitespace, or while typing an @command.
 			if (character == 0 || (character > 0 && char.IsWhiteSpace(text[character - 1])) ||
 					prefix.StartsWith('@'))
 			{
-				foreach (var (name, definition) in parser.CommandLibrary)
+				foreach (var (name, definition) in parser.CommandLibrary.Where(entry => Offered(entry.Key)))
 				{
-					if (prefix.Length == 0 || name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-					{
-						var switches = definition.LibraryInformation.Attribute.Switches ?? [];
-						completions.Add(new CompletionSuggestion(
-							name,
-							"Keyword",
-							$"Command: {name}",
-							$"Switches: {string.Join(", ", switches)}",
-							name,
-							IsSnippet: false));
-					}
+					var switches = definition.LibraryInformation.Attribute.Switches ?? [];
+					completions.Add(new CompletionSuggestion(
+						name,
+						"Keyword",
+						$"Command: {name}",
+						$"Switches: {string.Join(", ", switches)}",
+						name,
+						IsSnippet: false));
 				}
 			}
 
@@ -284,8 +279,8 @@ public partial class MushCodeAnalyzer
 
 	private static void AddCommonPatterns(List<CompletionSuggestion> completions, string prefix)
 	{
-		var patterns = new[]
-		{
+		(string Label, string Detail)[] patterns =
+		[
 			("%#", "Current object (#dbref)"),
 			("%!", "Executing object (#dbref)"),
 			("%@", "Calling object (#dbref)"),
@@ -294,14 +289,12 @@ public partial class MushCodeAnalyzer
 			("%1", "Argument 1"),
 			("%qa", "Q-register a"),
 			("%va", "V-register a")
-		};
+		];
 
-		foreach (var (label, detail) in patterns)
+		var offered = patterns.Where(pattern => prefix.Length == 0 || pattern.Label.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+		foreach (var (label, detail) in offered)
 		{
-			if (prefix.Length == 0 || label.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-			{
-				completions.Add(new CompletionSuggestion(label, "Variable", detail, null, label, IsSnippet: false));
-			}
+			completions.Add(new CompletionSuggestion(label, "Variable", detail, null, label, IsSnippet: false));
 		}
 	}
 

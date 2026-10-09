@@ -385,13 +385,8 @@ public class GitPackageSourceService(
 	{
 		var prefix = path.Length == 0 ? "v" : $"{path}/v";
 		var tags = new List<(PackageVersion Version, PackageVersionTag Tag)>();
-		foreach (var tag in repository.Tags)
+		foreach (var tag in repository.Tags.Where(tag => tag.FriendlyName.StartsWith(prefix, StringComparison.Ordinal)))
 		{
-			if (!tag.FriendlyName.StartsWith(prefix, StringComparison.Ordinal))
-			{
-				continue;
-			}
-
 			var versionText = tag.FriendlyName[prefix.Length..];
 			// Reject deeper paths that share the prefix (e.g. "bbs/v1" vs "bbs/extras/v1").
 			if (versionText.Contains('/') || !PackageVersion.TryParse(versionText, out var version))

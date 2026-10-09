@@ -54,11 +54,8 @@ public class SeoController(
 		while (true)
 		{
 			var chunk = await wikiService.GetAllPagesAsync(skip, PageSize);
-			foreach (var page in chunk)
+			foreach (var page in chunk.Where(page => page.Published && visibility.Admits(page)))
 			{
-				if (!page.Published || !visibility.Admits(page))
-					continue;
-
 				// Bot-facing, so includeDrafts: false — the sitemap must never advertise a locale whose only
 				// translation is an unpublished draft.
 				AppendUrl(
