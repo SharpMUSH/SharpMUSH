@@ -196,9 +196,9 @@ public class AccountAuthService(
 				_ = RetrySessionAuthorityAsync();
 				break;
 			case SessionAuthorityLoad.SignedOut:
-				// The tab's own session ran out while it was closed or idle; the remembered login, if this
-				// browser has one, outlasts it.
-				await ResumeRememberedLoginAsync(character: null);
+				// The tab's own session ran out while it was closed or idle (a deploy, say); the remembered
+				// login, if this browser has one, outlasts it, and is asked for the character the tab was on.
+				await ResumeRememberedLoginAsync(stored.Character);
 				break;
 		}
 	}
@@ -207,7 +207,7 @@ public class AccountAuthService(
 	/// Signs this tab in from the browser's remembered login, bound to <paramref name="character"/> when
 	/// the account still owns it; false, with nothing changed, when there is none to use.
 	/// </summary>
-	private async Task<bool> ResumeRememberedLoginAsync(CharacterSummary? character)
+	private async Task<bool> ResumeRememberedLoginAsync(AccountSessionStorage.BoundCharacter? character)
 	{
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		return await _api.ResumeAsync(character, timeout.Token) switch
@@ -246,7 +246,8 @@ public class AccountAuthService(
 		await Task.Yield();
 		try
 		{
-			if (await ResumeRememberedLoginAsync(ActiveCharacter) && AccountSessionToken is { } renewed)
+			if (await ResumeRememberedLoginAsync(AccountSessionStorage.BoundCharacter.Of(ActiveCharacter))
+					&& AccountSessionToken is { } renewed)
 				return renewed;
 			_unrenewable = rejectedToken;
 			return null;
@@ -431,7 +432,7 @@ public class AccountAuthService(
 	/// </summary>
 	private async Task<ApiResult<IReadOnlyList<CharacterSummary>>> SignedInAsync(LoginResponse session)
 	{
-		if (!await TryPersistSessionAsync(session.AccountSessionToken, session.Username, session.MustChangePassword, session.Role, session.Permissions))
+		if (!await TryPersistSessionAsync(session.AccountSessionToken, Acting(session), session.Username, session.MustChangePassword, session.Role, session.Permissions))
 			return SessionNotSaved();
 		_roster.SetRoster(session.Characters);
 		return new ApiResult<IReadOnlyList<CharacterSummary>>(session.Characters);
@@ -477,7 +478,7 @@ public class AccountAuthService(
 			return false;
 
 		// Same for a session this tab cannot store: the claim stands, only the automatic sign-in is lost.
-		if (!await TryPersistSessionAsync(session.AccountSessionToken, session.Username, session.MustChangePassword, session.Role, session.Permissions))
+		if (!await TryPersistSessionAsync(session.AccountSessionToken, Acting(session), session.Username, session.MustChangePassword, session.Role, session.Permissions))
 			return false;
 		_roster.SetRoster(session.Characters);
 		return true;
@@ -553,7 +554,7 @@ public class AccountAuthService(
 		}
 
 		if (result.AccountSessionToken is not null && result.AccountUsername is not null
-			&& !await TryPersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null))
+			&& !await TryPersistSessionAsync(result.AccountSessionToken, character: null, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null))
 		{
 			_debugOttTask = null;
 			return null;
@@ -618,7 +619,7 @@ public class AccountAuthService(
 		// is that character without the client asserting anything. The old token is left to lapse
 		// on its own TTL rather than revoked, because a tab opened from this one may still hold a
 		// copy of it.
-		if (!await TryAdoptSessionTokenAsync(switched.AccountSessionToken))
+		if (!await TryAdoptSessionTokenAsync(switched.AccountSessionToken, character))
 			return Logged(SessionNotSaved(), "Switch character");
 
 		SetActiveCharacter(character);
@@ -873,12 +874,12 @@ public class AccountAuthService(
 	/// account identity behind it is the same, so username/role/permissions are left alone.
 	/// </summary>
 	/// <returns>False, with nothing adopted, when this tab could not store the token.</returns>
-	private async Task<bool> TryAdoptSessionTokenAsync(string token)
+	private async Task<bool> TryAdoptSessionTokenAsync(string token, CharacterSummary character)
 	{
 		// Storage first. A write that fails leaves the in-memory token where it was, and the caller
 		// reports the switch as failed; otherwise the tab would be acting as the new character while
 		// the caller believes it isn't, and a reload would restore the old one.
-		if (!await _storage.TryWriteTokenAsync(token))
+		if (!await _storage.TryWriteTokenAsync(token, AccountSessionStorage.BoundCharacter.Of(character)))
 			return false;
 		AccountSessionToken = token;
 		return true;
@@ -890,11 +891,11 @@ public class AccountAuthService(
 	/// outright, so the tab never runs as an account a reload would not bring back.
 	/// </summary>
 	/// <returns>False, with nothing adopted, when this tab could not store the session.</returns>
-	private async Task<bool> TryPersistSessionAsync(
-		string token, string username, bool mustChangePassword, string? role, IReadOnlyList<string>? permissions)
+	private async Task<bool> TryPersistSessionAsync(string token, CharacterSummary? character,
+		string username, bool mustChangePassword, string? role, IReadOnlyList<string>? permissions)
 	{
 		permissions ??= [];
-		if (!await _storage.TryWriteAsync(token, username, mustChangePassword, role, permissions))
+		if (!await _storage.TryWriteAsync(token, AccountSessionStorage.BoundCharacter.Of(character), username, mustChangePassword, role, permissions))
 			return false;
 
 		_authorityGeneration++;
@@ -925,6 +926,9 @@ public class AccountAuthService(
 			logger.LogError(ex, "AuthStateChanged subscriber threw");
 		}
 	}
+
+	/// <summary>The character a freshly minted session is bound to: the one its roster marks.</summary>
+	private static CharacterSummary? Acting(LoginResponse session) => session.Characters.FirstOrDefault(c => c.IsActing);
 
 	private static ApiFailure NotLoggedIn(string message) => new(ApiFailureKind.Unauthenticated, message);
 

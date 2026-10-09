@@ -94,7 +94,7 @@ public class ActiveCharacterStateTests
 	}
 }
 
-/// <summary>The six <c>sessionStorage</c> keys behind <see cref="AccountSessionStorage"/>.</summary>
+/// <summary>The <c>sessionStorage</c> keys behind <see cref="AccountSessionStorage"/>.</summary>
 public class AccountSessionStorageTests : TrackingBunitContext
 {
 	[Test]
@@ -109,16 +109,46 @@ public class AccountSessionStorageTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task AStoredSessionComesBackWithItsNameAndFlag()
+	public async Task AStoredSessionComesBackWithItsCharacterNameAndFlag()
 	{
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("token-1");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult("headwiz");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult("True");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.character").SetResult("7:70");
 
 		var stored = (await new AccountSessionStorage(JSInterop.JSRuntime).ReadAsync())
 			.Expect<AccountSessionStorage.StoredSession>();
 
-		await Assert.That(stored).IsEqualTo(new AccountSessionStorage.StoredSession("token-1", "headwiz", true));
+		await Assert.That(stored).IsEqualTo(new AccountSessionStorage.StoredSession("token-1", "headwiz", true,
+			new AccountSessionStorage.BoundCharacter(7, 70)));
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("7")]
+	[Arguments("x:70")]
+	[Arguments("7:70:1")]
+	public async Task AnUnreadableCharacterIsNone(string? stored)
+	{
+		await Assert.That(AccountSessionStorage.BoundCharacter.Parse(stored)).IsNull();
+	}
+
+	[Test]
+	public async Task ASwitchWritesTheTokenWithItsCharacter()
+	{
+		JSInterop.Mode = JSRuntimeMode.Loose;
+
+		var written = await new AccountSessionStorage(JSInterop.JSRuntime)
+			.TryWriteTokenAsync("token-2", new AccountSessionStorage.BoundCharacter(9, 90));
+
+		await Assert.That(written).IsTrue();
+		var calls = JSInterop.Invocations.Select(c => (c.Identifier, string.Join(",", c.Arguments))).ToList();
+		await Assert.That(calls).IsEquivalentTo(new[]
+		{
+			("sessionStorage.setItem", "sharpmush.account.sessionToken,token-2"),
+			("sessionStorage.setItem", "sharpmush.account.character,9:90"),
+		});
 	}
 
 	[Test]
@@ -129,7 +159,7 @@ public class AccountSessionStorageTests : TrackingBunitContext
 			.SetException(new JSException("quota exceeded"));
 
 		var written = await new AccountSessionStorage(JSInterop.JSRuntime)
-			.TryWriteAsync("token-1", "headwiz", mustChangePassword: false, role: null, permissions: []);
+			.TryWriteAsync("token-1", character: null, "headwiz", mustChangePassword: false, role: null, permissions: []);
 
 		await Assert.That(written).IsFalse();
 		var last = JSInterop.Invocations.Last();
@@ -145,7 +175,7 @@ public class AccountSessionStorageTests : TrackingBunitContext
 		await new AccountSessionStorage(JSInterop.JSRuntime).ClearAndLatchLoggedOutAsync();
 
 		var calls = JSInterop.Invocations.ToList();
-		await Assert.That(calls.Count(c => c.Identifier == "sessionStorage.removeItem")).IsEqualTo(5);
+		await Assert.That(calls.Count(c => c.Identifier == "sessionStorage.removeItem")).IsEqualTo(6);
 		await Assert.That(calls[^1].Identifier).IsEqualTo("sessionStorage.setItem");
 		await Assert.That(calls[^1].Arguments[0]).IsEqualTo("sharpmush.account.loggedOut");
 	}

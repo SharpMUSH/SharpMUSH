@@ -185,6 +185,7 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult("headwiz");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.character").SetResult(null);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("God");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("{not json");
 

@@ -96,7 +96,8 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	/// handler waits on, and it is how the handler recovers from a rejected bearer, so it must neither
 	/// wait on the one nor trigger the other.
 	/// </remarks>
-	public async Task<ApiResult<LoginResponse>> ResumeAsync(CharacterSummary? character, CancellationToken cancellationToken)
+	public async Task<ApiResult<LoginResponse>> ResumeAsync(AccountSessionStorage.BoundCharacter? character,
+		CancellationToken cancellationToken)
 	{
 		using var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/account-resume")
 		{
