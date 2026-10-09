@@ -301,6 +301,38 @@ public class InputSessionCommandTests
 	}
 
 	[Test]
+	public async Task RescueRunsTheTimeoutCallbackNow()
+	{
+		var player = await Player();
+		try
+		{
+			await Command(player.Handle, "&CALLBACK me=&REASON me=%1");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,3600");
+			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
+			await Command(1, $"@input/rescue {player.Name}");
+			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNull()
+				.Because("a rescued session stops capturing at once, before its callback runs");
+			await WaitFor(player.DbRef, "REASON", "timeout");
+		}
+		finally { await Connections.Disconnect(player.Handle); }
+	}
+
+	[Test]
+	public async Task RescueNeedsPlayersModerate()
+	{
+		var player = await Player();
+		var other = await Player();
+		try
+		{
+			await Command(player.Handle, "&CALLBACK me=&REASON me=%1");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,3600");
+			await Command(other.Handle, $"@input/rescue {player.Name}");
+			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
+		}
+		finally { await Connections.Disconnect(player.Handle); await Connections.Disconnect(other.Handle); }
+	}
+
+	[Test]
 	public async Task CallbackTargetRequiresRealControlAndCharacterContext()
 	{
 		var player = await Player();
@@ -352,7 +384,7 @@ public class InputSessionCommandTests
 		await Assert.That(help!).Contains("@input/start");
 		var attribute = typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Input")!.GetCustomAttribute<SharpCommandAttribute>()!;
 		await Assert.That(attribute.Name).IsEqualTo("@INPUT");
-		await Assert.That(attribute.Switches.SequenceEqual(new[] { "START", "PROMPT", "CANCEL" })).IsTrue();
+		await Assert.That(attribute.Switches.SequenceEqual(new[] { "START", "PROMPT", "CANCEL", "RESCUE" })).IsTrue();
 		await Assert.That(attribute.ParameterNames.SequenceEqual(new[] { "object/attribute", "prompt", "timeout-seconds" })).IsTrue();
 	}
 }

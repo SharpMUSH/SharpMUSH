@@ -14,6 +14,8 @@ public interface IInputSessionService
 	ValueTask<string?> PromptAsync(IMUSHCodeParser parser, MString prompt);
 	ValueTask<string?> CancelAsync(IMUSHCodeParser parser);
 	ValueTask<bool> TryEscapeAsync(long handle, string? transportSessionId, MString input, Guid? expectedCapture = null);
+	/// <summary>Moves every open session of <paramref name="character"/> to its timeout now; returns how many.</summary>
+	ValueTask<int> RescueAsync(DBRef character);
 	IReadOnlyList<InputSession> TakeExpired();
 	void Discard(InputSession session);
 	ValueTask<CallState?> DeliverAsync(IMUSHCodeParser parser, InputSession session, MString input, bool timeout = false);
