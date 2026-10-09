@@ -38,13 +38,8 @@ public partial class CommandDiscoveryService(IMediator mediator, ILockService lo
 		var trimmedCommandString = commandString.Trim(TrimType.TrimBoth);
 		var plainCommandString = trimmedCommandString.ToPlainText();
 		var matched = new List<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>();
-		await foreach (var obj in objects)
+		await foreach (var obj in objects.Where(ListensForCommandsAsync))
 		{
-			if (await obj.HasFlag("NO_COMMAND") || await obj.HasFlag("HALT"))
-			{
-				continue;
-			}
-
 			var objectMatches = new List<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)>();
 			foreach (var cached in await mediator.Send(new GetCommandAttributesQuery(obj)))
 			{
@@ -81,6 +76,10 @@ public partial class CommandDiscoveryService(IMediator mediator, ILockService lo
 		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
 			.FromOption(matched);
 	}
+
+	/// <summary>Neither NO_COMMAND nor HALT: the object's <c>$</c>-commands are matched at all.</summary>
+	private static async ValueTask<bool> ListensForCommandsAsync(AnySharpObject obj, CancellationToken _)
+		=> !(await obj.HasFlag("NO_COMMAND") || await obj.HasFlag("HALT"));
 
 	/// <summary>
 	/// The <c>$pattern:</c> prefix of a <c>$</c>-command attribute. Everything the match covers is

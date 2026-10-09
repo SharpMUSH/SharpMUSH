@@ -936,12 +936,9 @@ public class AttributeService(
 	{
 		var results = InChainOrder(await attributes.ToArrayAsync(cancellationToken),
 			static x => x.SourceObject, static x => x.Attribute.LongName);
-		foreach (var (attr, _) in results)
+		foreach (var (attr, _) in results.Where(x => !x.Attribute.IsInternal()))
 		{
-			if (!attr.IsInternal())
-			{
-				yield return attr;
-			}
+			yield return attr;
 		}
 	}
 

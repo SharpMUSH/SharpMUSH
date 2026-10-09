@@ -165,9 +165,8 @@ public sealed partial class QueueDiagnosticsRecorder
 		{
 			PruneProfiles();
 			if (!_profiles.TryGetValue(id, out var capture)) return;
-			foreach (var sample in samples.Take(ProfileMailboxCapacity))
+			foreach (var sample in samples.Take(ProfileMailboxCapacity).Where(sample => sample.ProfileId == id))
 			{
-				if (sample.ProfileId != id) continue;
 				var invocation = sample.Invocation;
 				var key = new AggregateKey(sample.Source, sample.Owner, sample.SourceAttribute, invocation.Kind, invocation.Name);
 				if (!capture.Aggregates.TryGetValue(key, out var previous))

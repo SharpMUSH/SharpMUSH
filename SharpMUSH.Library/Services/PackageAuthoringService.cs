@@ -239,15 +239,12 @@ public partial class PackageAuthoringService(
 		// level, so a child such as DESC`SHORT was read by nobody and silently absent from the
 		// manifest. Keyed by LongName because that backtick-joined path is what the manifest carries
 		// and what the apply engine splits again; the leaf Name alone would collide across branches.
-		await foreach (var attribute in attributeStore.GetAttributesAsync(dbref, "**", cancellationToken))
+		// The PM` tree is engine-managed ref indirection (decision 20.21) —
+		// the apply engine recreates it; exports must never carry it.
+		var exported = attributeStore.GetAttributesAsync(dbref, "**", cancellationToken)
+			.Where(attribute => !PackageRefIndirection.IsReservedAttribute(attribute.LongName));
+		await foreach (var attribute in exported)
 		{
-			// The PM` tree is engine-managed ref indirection (decision 20.21) —
-			// the apply engine recreates it; exports must never carry it.
-			if (PackageRefIndirection.IsReservedAttribute(attribute.LongName))
-			{
-				continue;
-			}
-
 			attributes[attribute.LongName] = attribute.Value.ToPlainText();
 		}
 

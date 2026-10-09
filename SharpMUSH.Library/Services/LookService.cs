@@ -371,11 +371,12 @@ public class LookService(
 		var canSeeContent = await WorldVisibility.CreateScanAsync(
 			look.Looker, look.Viewing, reality, connectionService, ExecutionBudget.CurrentToken);
 		var lookerRef = look.Looker.Object().DBRef;
-		await foreach (var item in allContents.WithCancellation(ExecutionBudget.CurrentToken))
+		// predicat.c:338-344 (can_see): "your own body isn't listed in a 'look'".
+		var visible = allContents
+			.Where(item => item.Object().DBRef != lookerRef)
+			.Where((item, _) => canSeeContent(item, ExecutionBudget.CurrentToken));
+		await foreach (var item in visible.WithCancellation(ExecutionBudget.CurrentToken))
 		{
-			// predicat.c:338-344 (can_see): "your own body isn't listed in a 'look'".
-			if (item.Object().DBRef == lookerRef) continue;
-			if (!await canSeeContent(item, ExecutionBudget.CurrentToken)) continue;
 			if (item.IsExit) visibleExits.Add(item);
 			else visibleContents.Add(item);
 		}

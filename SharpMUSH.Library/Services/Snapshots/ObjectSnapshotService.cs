@@ -175,9 +175,10 @@ public sealed partial class ObjectSnapshotService(
 		var selectedNames = selection?.Attributes.SelectMany(AttributePathPrefixes).ToHashSet(StringComparer.Ordinal);
 		var captured = new List<SnapshotAttribute>();
 		var capturedBytes = 0;
-		await foreach (var attribute in attributes.GetAttributesAsync(obj.Object().DBRef, "**", ct))
+		var candidates = attributes.GetAttributesAsync(obj.Object().DBRef, "**", ct)
+			.Where(attribute => selectedNames is null || selectedNames.Contains(attribute.LongName));
+		await foreach (var attribute in candidates)
 		{
-			if (selectedNames is not null && !selectedNames.Contains(attribute.LongName)) continue;
 			var path = await reads.Path(attribute.LongName, ct);
 			if (!await permissions.CanViewAttribute(executor, obj, path)) continue;
 			if (captured.Count == MaxAttributes) throw Error("limit", "Snapshot exceeds 1024 attributes.");

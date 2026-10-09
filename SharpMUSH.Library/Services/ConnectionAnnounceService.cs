@@ -288,13 +288,10 @@ public class ConnectionAnnounceService(
 	{
 		var playerNumber = player.Object().DBRef.Number;
 
-		await foreach (var channel in mediator.CreateStream(new GetOnChannelQuery(player)))
+		var announcing = mediator.CreateStream(new GetOnChannelQuery(player))
+			.Where(channel => !channel.HasPriv("Quiet"));
+		await foreach (var channel in announcing)
 		{
-			if (channel.HasPriv("Quiet"))
-			{
-				continue;
-			}
-
 			var hiddenOnChannel = isHiddenConnection;
 			if (!hiddenOnChannel)
 			{

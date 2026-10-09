@@ -484,13 +484,8 @@ internal sealed class AttributeWriter(
 		var anyDenied = false;
 		var wipedCount = 0;
 
-		foreach (var attrItem in attrArr)
+		foreach (var attrItem in attrArr.Where(attrItem => !patternIsWildcard || !ProtectedFromWildcardWipe(attrItem, executorIsGod)))
 		{
-			if (patternIsWildcard && ProtectedFromWildcardWipe(attrItem, executorIsGod))
-			{
-				continue;
-			}
-
 			var outcome = await ClearMatchAsync(executor, obj, dbref, attrItem, matchKnown, isWipe);
 			anyDenied |= outcome.Denied;
 			wipedCount += outcome.Wiped;
@@ -803,13 +798,10 @@ internal sealed class AttributeWriter(
 		// no ClearAttributeCommand call, no value change, matching real_atr_clr leaving a
 		// blocked branch completely alone.
 		var deletedCount = 0;
-		foreach (var descendant in deepestFirst)
+		foreach (var descendant in deepestFirst.Where(descendant => fullyClearable[descendant.LongName!]))
 		{
-			if (fullyClearable[descendant.LongName!])
-			{
-				await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`')));
-				deletedCount++;
-			}
+			await mediator.Send(new ClearAttributeCommand(dbref, descendant.LongName!.Split('`')));
+			deletedCount++;
 		}
 
 		if (rootFullyClearable)

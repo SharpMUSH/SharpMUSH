@@ -33,12 +33,9 @@ public partial class PackageInstallService
 		}
 
 		var attributeFlags = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
-		foreach (var (attrName, attrSpec) in spec.Attributes)
+		foreach (var (attrName, attrSpec) in spec.Attributes.Where(attribute => attribute.Value.Flags.Count > 0))
 		{
-			if (attrSpec.Flags.Count > 0)
-			{
-				attributeFlags[attrName] = attrSpec.Flags;
-			}
+			attributeFlags[attrName] = attrSpec.Flags;
 		}
 
 		if (spec.Flags.Count == 0 && spec.Powers.Count == 0 && locks.Count == 0 && attributeFlags.Count == 0)

@@ -2124,13 +2124,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private async Task SetFlagsAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
-		foreach (var name in pennObj.Flags)
+		foreach (var name in pennObj.Flags.Where(name => !name.Equals("CONNECTED", StringComparison.OrdinalIgnoreCase)))
 		{
-			if (name.Equals("CONNECTED", StringComparison.OrdinalIgnoreCase))
-			{
-				continue;
-			}
-
 			var flag = await _mediator.Send(new GetObjectFlagQuery(name), cancellationToken);
 			if (flag is null)
 			{
@@ -2253,14 +2248,10 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				var objectOwner = await sharpObj.Object().Owner.WithCancellation(cancellationToken);
 				var writes = new List<(PennMUSHAttribute Source, AttributeWrite Write)>(pennObj.Attributes.Count);
 
-				foreach (var pennAttr in pennObj.Attributes)
+				var converted = pennObj.Attributes.Where(pennAttr => pennObj.Type != PennMUSHObjectType.Player
+					|| !pennAttr.Name.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase));
+				foreach (var pennAttr in converted)
 				{
-					if (pennObj.Type == PennMUSHObjectType.Player
-						&& pennAttr.Name.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase))
-					{
-						continue;
-					}
-
 					try
 					{
 						var named = pennAttr.Flags.Select(flagTable.Named).ToArray();

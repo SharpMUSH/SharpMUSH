@@ -253,9 +253,8 @@ public partial class CommunicationService
 		var notified = new List<AnySharpObject>();
 		var portsNotified = 0;
 		long lastPort = 0;
-		foreach (var name in request.Targets)
+		foreach (var name in request.Targets.Where(name => !string.IsNullOrWhiteSpace(name)))
 		{
-			if (string.IsNullOrWhiteSpace(name)) continue;
 			if (request.Scope == EmitScope.Private && request.PortTargets)
 			{
 				if (!await executor.IsPriv())

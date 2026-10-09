@@ -19,12 +19,10 @@ public class GameBroadcastService(
 	/// <inheritdoc />
 	public async ValueTask BroadcastAsync(string message)
 	{
-		await foreach (var conn in connectionService.GetAll())
+		var loggedIn = connectionService.GetAll().Where(conn => conn.State == IConnectionService.ConnectionState.LoggedIn);
+		await foreach (var conn in loggedIn)
 		{
-			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
-			{
-				await notifyService.Notify(conn.Handle, message);
-			}
+			await notifyService.Notify(conn.Handle, message);
 		}
 	}
 
