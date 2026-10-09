@@ -36,8 +36,12 @@ public partial class BBoardsIntegrationTests
 	[GeneratedRegex(@"Posted (\S+), ")]
 	private static partial Regex PostedLabel();
 
-	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message?.ToPlainText()?.Trim() ?? string.Empty;
+	private async Task<string> God(string command)
+	{
+		var said = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		await WebAppFactoryArg.QueueBarrierAsync();
+		return said;
+	}
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
@@ -307,6 +311,36 @@ public partial class BBoardsIntegrationTests
 			await Assert.That(tree).Contains("boards below").And.DoesNotContain("Level6")
 				.Because("a deep tree stops a few levels down and says how to see the rest");
 			await Assert.That(await As(admin, $"+bblist {board}/Level1/Level2/Level3")).Contains("Level6");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task GodKeepsReadingStateThoughTheBoardsCannotSetAttributesOnGod()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbGodA", "bboard-admin");
+			var board = await Board(admin, "BbGod");
+			await Post(admin, board, "One", "First.");
+			var two = await Post(admin, board, "Two", "Second.");
+			await God($"+bbread {board}");
+			await As(admin, $"+bbpost {board}/Three=Third.");
+			await As(admin, $"+bbpin {board}/3");
+
+			var marker = TestIsolationHelpers.GenerateUniqueName("GodSays");
+			await God($"+bbcomment {two}={marker}");
+			await Assert.That(await As(admin, $"+bbread {two}")).DoesNotContain(marker)
+				.Because("the numbers changed since God looked, so the first try is stopped");
+			await God($"+bbcomment {two}={marker}");
+			await Assert.That(await As(admin, $"+bbread {two}")).Contains(marker)
+				.Because("God's look was kept, so the guard stops God only once");
+			await Assert.That(await God("think [lattr(#1/BBOARD*)]")).IsEmpty()
+				.Because("God's state is kept on the readers object, not on God");
 		}
 		finally
 		{
