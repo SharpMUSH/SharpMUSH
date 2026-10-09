@@ -75,6 +75,17 @@ window.sharpmushLayout = {
 		}
 	},
 
+	// The layout that opened a panel is going away with it still open (a page with a layout of its own): let
+	// go of the shell, the Escape key and the opener's focus slot, and move focus nowhere, since the new
+	// layout's page takes it.
+	dropPanel: function () {
+		if (!this._panelOpen) return;
+		this._releasePanel();
+		this._panelOpen = false;
+		this._panelEl = null;
+		this._focusReturns.pop();
+	},
+
 	_releasePanel: function () {
 		(this._panelInert || []).forEach(child => { child.inert = false; });
 		this._panelInert = null;
@@ -120,7 +131,7 @@ window.sharpmushLayout = {
 			if (node.getAttribute('aria-hidden') === 'true') return '';
 			const tag = node.tagName;
 			if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEMPLATE') return '';
-			if (tag === 'BR') return ' ';
+			if (tag === 'BR' || tag === 'METER') return ' ';
 			if (tag === 'IMG') return ' ' + (node.getAttribute('alt') || '') + ' ';
 			const label = node.getAttribute('aria-label');
 			if (label && node.getAttribute('role') === 'img') return ' ' + label + ' ';
@@ -167,6 +178,16 @@ window.sharpmushLayout = {
 			event.preventDefault();
 			const back = match[1] === '0' ? 10 : Number(match[1]);
 			dotnetRef.invokeMethodAsync('ReviewLine', back).catch(() => { });
+		});
+	},
+
+	// A tab list that moves with the arrows, Home and End: those keys do not also scroll what it sits in. Every
+	// other key, Tab included, is left alone. Installed once per element.
+	tabKeys: function (list) {
+		if (!list || list._tabKeys) return;
+		list._tabKeys = true;
+		list.addEventListener('keydown', event => {
+			if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) event.preventDefault();
 		});
 	},
 

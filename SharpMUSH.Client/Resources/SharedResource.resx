@@ -7515,7 +7515,7 @@
     <value>Screen reader mode</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>For playing with a screen reader in this browser: the exit letter keys are off, your own commands are not read back, Alt and a number reads a recent line again (Alt+1 the newest), and the game is told so it can leave out pictures made of characters.</value>
+    <value>For playing with a screen reader in this browser: the exit letter keys are off, your own commands are not read back, Alt+number reads a recent line again (Alt+1 the newest), and the game is told so it can leave out pictures made of characters.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Quick links</value>

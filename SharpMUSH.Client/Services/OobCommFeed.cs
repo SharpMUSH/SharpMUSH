@@ -187,14 +187,14 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	/// <inheritdoc/>
 	/// <remarks>Pulls nothing until the markers have been read for the viewer: until then the feed does not
 	/// know that the session's character is the one this feed is for.</remarks>
-	public async Task LoadHistoryAsync(string key)
+	public async Task<bool> LoadHistoryAsync(string key)
 	{
-		if (_server is null || _syncedFor is null) return;
+		if (_server is null || _syncedFor is null) return false;
 
 		if (IsConversationKey(key))
 		{
 			await LoadConversationAsync(_server, key);
-			return;
+			return true;
 		}
 
 		var generation = _generation;
@@ -203,12 +203,14 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		var pulled = _markers.TryGetValue(key, out var marker) && marker.Id is { } seen
 			? await _server.RecallAsync(key, HistoryLimit, seen)
 			: await _server.RecallAsync(key, 0);
-		if (generation != _generation || pulled is not IReadOnlyList<ChannelRecallLine> lines) return;
+		if (generation != _generation) return false;
+		if (pulled is not IReadOnlyList<ChannelRecallLine> lines) return true;
 
 		_pulled.Add(key);
 		if (Merge(key, lines.Select(line => new CommMessage(CommPayloadParser.ChannelKind, key, [], line.From,
 				line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList()))
 			Changed?.Invoke();
+		return true;
 	}
 
 	/// <summary>

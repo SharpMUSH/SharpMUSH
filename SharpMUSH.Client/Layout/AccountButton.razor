@@ -39,6 +39,7 @@
             </button>
             <AccountPanel IsOpen="_panelOpen"
                           IsOpenChanged="OnPanelOpenChangedAsync"
+                          OnLinkFollowed="() => _leavingByLink = true"
                           Characters="AccountAuth.Characters"
                           ActiveCharacter="AccountAuth.ActiveCharacter"
                           OnSwitchCharacter="HandleSwitchCharacterAsync"
@@ -73,6 +74,7 @@
     private bool _characterActive;
     private bool _panelOpen;
     private ElementReference _card;
+    private bool _leavingByLink;
 
     /// <summary>
     /// A closed panel hands focus back to the card that opened it, so a keyboard user is not dropped on the page.
@@ -81,7 +83,9 @@
     private async Task OnPanelOpenChangedAsync(bool open)
     {
         _panelOpen = open;
-        if (open) return;
+        var leaving = _leavingByLink;
+        _leavingByLink = false;
+        if (open || leaving) return;
         try
         {
             await _card.FocusAsync();

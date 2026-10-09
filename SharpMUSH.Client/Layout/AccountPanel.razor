@@ -43,13 +43,13 @@
                                 <span class="account-panel-item-label">@Loc["AuthNoCharacter"]</span>
                             </div>
                         }
-                        <a href="/account" class="account-panel-item" @onclick="ClosePanelAsync">
+                        <a href="/account" class="account-panel-item" @onclick="FollowLinkAsync">
                             <span class="account-panel-item-icon" aria-hidden="true">&#9881;</span>
                             <span class="account-panel-item-label">@Loc["AuthAccountManagement"]</span>
                         </a>
                         @* The look of each character (theme and accent) is per character, so it sits beside
                            the character switch rather than only behind Account management's sidebar. *@
-                        <a href="/settings/theme" class="account-panel-item account-panel-theme" @onclick="ClosePanelAsync">
+                        <a href="/settings/theme" class="account-panel-item account-panel-theme" @onclick="FollowLinkAsync">
                             <span class="account-panel-item-icon" aria-hidden="true">&#9680;</span>
                             <span class="account-panel-item-label">@Loc["NavTheme"]</span>
                         </a>
@@ -104,6 +104,9 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>Raised before a close by a link in the panel: the page it opens takes focus, not the opener.</summary>
+    [Parameter] public EventCallback OnLinkFollowed { get; set; }
     [Parameter] public IReadOnlyList<AccountAuthService.CharacterSummary> Characters { get; set; } = [];
     [Parameter] public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
     [Parameter] public EventCallback<AccountAuthService.CharacterSummary> OnSwitchCharacter { get; set; }
@@ -193,6 +196,12 @@
     {
         _level = PanelLevel.Root;
         await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task FollowLinkAsync()
+    {
+        await OnLinkFollowed.InvokeAsync();
+        await ClosePanelAsync();
     }
 
     private async Task SelectCharacterAsync(AccountAuthService.CharacterSummary character)

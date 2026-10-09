@@ -231,6 +231,8 @@
         var before = _lines;
         _lines = Feed.Messages(Key);
         AnnounceArrivals(before, _lines);
+        // Opened before the feed caught up with the server: its history comes with this change or a later one.
+        if (!_historyRead && !_historyReading && _openedKey is { } key) _ = ReadHistoryAsync(key);
         _newAt = FirstUnreadIndex();
         _ = InvokeAsync(StateHasChanged);
     }
@@ -250,15 +252,20 @@
         }
     }
 
+    private bool _historyReading;
+
     private async Task ReadHistoryAsync(string key)
     {
+        _historyReading = true;
+        var read = false;
         try
         {
-            await Feed.LoadHistoryAsync(key);
+            read = await Feed.LoadHistoryAsync(key);
         }
         finally
         {
-            if (string.Equals(_openedKey, key, StringComparison.Ordinal)) _historyRead = true;
+            _historyReading = false;
+            if (read && string.Equals(_openedKey, key, StringComparison.Ordinal)) _historyRead = true;
         }
     }
 

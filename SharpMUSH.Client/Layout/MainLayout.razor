@@ -508,6 +508,8 @@
         try
         {
             await JS.InvokeVoidAsync("sharpmushLayout.unregisterPaletteHotkey");
+            // A page with a layout of its own (login, setup) replaces this one with a panel still open.
+            await JS.InvokeVoidAsync("sharpmushLayout.dropPanel");
         }
         catch (JSException) { }
         catch (JSDisconnectedException) { }

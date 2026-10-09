@@ -524,14 +524,16 @@
         }
     }
 
-    private void OnLineReceived(TerminalLine line)
+    // A reconnect's receive loop runs off the renderer's dispatcher; the transcript and the announcer are the
+    // renderer's.
+    private void OnLineReceived(TerminalLine line) => _ = InvokeAsync(() =>
     {
         _transcript.Add(line);
         // The player's own command is not read back: they have just typed it.
         if (ScreenReader.On && line.Source != TerminalLineSource.Client && Spoken(line) is { Length: > 0 } said)
             _announcer?.Announce(said);
-        InvokeAsync(StateHasChanged);
-    }
+        StateHasChanged();
+    });
 
     private LiveAnnouncer? _announcer;
     private bool _reviewKeys;

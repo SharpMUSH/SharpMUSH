@@ -5808,7 +5808,7 @@ a          b          areallylon d
   Other elements in the list describe client capabilities, and currently include:<br>
   pueblo           present if the client is in Pueblo mode.<br>
   mxp              present if the client is in MXP mode.<br>
-  screenreader     a screen reader reads this connection: MTTS says so, or the player turned on Screen reader mode in the web portal's Settings.<br>
+  screenreader     a screen reader reads this connection: MTTS says so, or the player turned on Screen reader mode in the web portal's Terminal settings, on Play.<br>
   telnet           present if the client understands the telnet protocol.<br>
   gmcp             present if GMCP is negotiated via telnet; see help oob()<br>
   ssl              present if the client is using an SSL/TLS connection.<br>

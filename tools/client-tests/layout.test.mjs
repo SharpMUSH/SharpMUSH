@@ -479,6 +479,24 @@ test('an open drawer takes focus, makes the page inert, closes on Escape and han
     assert.deepEqual(s.focused, ['first link', 'menu button']);
 });
 
+test('a drawer whose layout goes away lets go of the page, and the next drawer still hands focus back', () => {
+    const { layout, document } = bootTouch(true);
+    const s = shellWith(document, true);
+    const ref = { invokeMethodAsync: () => Promise.resolve() };
+    document.activeElement = s.control('menu button');
+    layout.openPanel('.phosphor-sidebar', ref);
+
+    layout.dropPanel();
+    assert.equal(s.content.inert, false);
+    assert.equal(s.keys.size, 0, 'Escape is not swallowed on the next layout');
+    assert.deepEqual(s.focused, ['first link'], 'focus is left to the new page');
+
+    document.activeElement = s.control('menu button');
+    layout.openPanel('.phosphor-sidebar', ref);
+    layout.closePanel(true);
+    assert.deepEqual(s.focused, ['first link', 'first link', 'menu button']);
+});
+
 test('a drawer closed by a page change puts focus on the new page\'s heading, and a desktop is left alone', () => {
     const touch = bootTouch(true);
     const s = shellWith(touch.document, true);
@@ -554,6 +572,7 @@ test('a line is heard as its words: a separator\'s title, a picture\'s descripti
     assert.equal(said(el('SPAN', {}, el('SPAN', { 'aria-hidden': 'true' }, text('*')), text('Mira'))), 'Mira');
     assert.equal(said(el('SPAN', { role: 'img', 'aria-label': 'A map of the pier' }, text('/\\_/\\'))), 'A map of the pier');
     assert.equal(said(el('SPAN', {}, text('one'), el('BR', {}), text('two'))), 'one two');
+    assert.equal(said(el('SPAN', {}, el('SPAN', {}, text('Health')), el('METER', { value: '3' }), el('SPAN', {}, text('30%')))), 'Health 30%');
 });
 
 test('a table is heard cell by cell, a full stop after each row, field and list item', () => {
@@ -576,4 +595,17 @@ test('drawing is dropped from plain words, punctuation in a sentence is not', ()
     assert.equal(layout.withoutDrawing('----------------------------------'), '');
     assert.equal(layout.withoutDrawing('Mail: 3 new ===== read with @mail'), 'Mail: 3 new read with @mail');
     assert.equal(layout.withoutDrawing('Wait... what?! -- no.'), 'Wait... what?! -- no.');
+});
+
+test('a tab list claims only the keys that move between its tabs', () => {
+    const { layout } = boot();
+    let handler;
+    const list = { addEventListener: (name, h) => { handler = h; } };
+    layout.tabKeys(list);
+    layout.tabKeys(list);
+    const press = key => { let prevented = false; handler({ key, preventDefault: () => { prevented = true; } }); return prevented; };
+
+    for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End']) assert.equal(press(key), true, key);
+    assert.equal(press('Tab'), false);
+    assert.equal(press('a'), false);
 });

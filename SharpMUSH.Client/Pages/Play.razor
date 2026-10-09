@@ -201,7 +201,7 @@ else
                         @* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the
                            scope panels, each rendered as the aside renders it but in sheet mode. *@
                         @* The tabs pattern: one tab stop, the arrows, Home and End move between them (selection follows focus). *@
-                        <div class="play-sheet-tabs" role="tablist" aria-label="@SheetLabel(sheet)" @onkeydown="OnSheetTabKeyAsync">
+                        <div class="play-sheet-tabs" role="tablist" aria-label="@SheetLabel(sheet)" @onkeydown="OnSheetTabKeyAsync" @ref="_sheetTabList">
                             @foreach (var entry in _asideEntries)
                             {
                                 var e = entry;
@@ -328,6 +328,9 @@ else
     private string? _sheetEntry;
 
     private readonly Dictionary<string, ElementReference> _sheetTabs = new(StringComparer.Ordinal);
+
+    private ElementReference _sheetTabList;
+    private string? _sheetTabKeys;
 
     private async Task OnSheetTabKeyAsync(KeyboardEventArgs e)
     {
@@ -787,6 +790,13 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The sheet scrolls, so the keys the tabs move with must not scroll it as well (layout.js tabKeys).
+        if (_sheetTabList.Id is { } tabs && tabs != _sheetTabKeys)
+        {
+            _sheetTabKeys = tabs;
+            try { await JS.InvokeVoidAsync("sharpmushLayout.tabKeys", _sheetTabList); }
+            catch (JSException) { return; }
+        }
         if (!firstRender) return;
         var changed = false;
         var stored = await JS.GetItemAsync(BrowserStore.Local, "play.cols");

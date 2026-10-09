@@ -216,11 +216,19 @@
 
     private LiveAnnouncer? _announcer;
 
-    /// <summary>A pose as it is read out: its text, after the name it shows when the text does not start with it.</summary>
+    /// <summary>
+    /// A pose as it is read out: its text, after the name it shows when the text does not start with that name as
+    /// a word of its own ("Ann waves", not "Announcement").
+    /// </summary>
     private string Spoken(ScenePoseView pose) =>
-        pose.Content.TrimStart().StartsWith(pose.DisplayName, StringComparison.OrdinalIgnoreCase)
+        StartsWithName(pose.Content.TrimStart(), pose.DisplayName)
             ? pose.Content
             : Loc["NavPlayLineSaid", pose.DisplayName, pose.Content];
+
+    private static bool StartsWithName(string text, string name) =>
+        name.Length > 0
+        && text.StartsWith(name, StringComparison.OrdinalIgnoreCase)
+        && (text.Length == name.Length || !char.IsLetterOrDigit(text[name.Length]));
 
     private void Remember(SceneEventMessage msg)
     {
