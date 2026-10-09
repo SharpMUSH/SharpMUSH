@@ -202,7 +202,7 @@ public class ConfigurationController(
 			{
 				Error<string> error => new Error<string>($"Invalid value: {error.Value}"),
 				None => ConfigAccessor.WithValue(current, property, null, corrections.Add),
-				object converted => ConfigAccessor.WithValue(current, property, converted, corrections.Add)
+				Converted converted => ConfigAccessor.WithValue(current, property, converted.Value, corrections.Add)
 			};
 		}
 		// Only what reading a JsonElement and assigning it can raise. Anything else — a null
@@ -215,8 +215,11 @@ public class ConfigurationController(
 		}
 	}
 
-	/// <summary>The value an option is set to: an object, null (<see cref="None"/>), or why the JSON cannot be one.</summary>
-	private union ConvertedValue(object, None, Error<string>);
+	private readonly record struct Converted(object Value);
+
+	/// <summary>The value an option is set to, null (<see cref="None"/>), or why the JSON cannot be one.</summary>
+	/// <remarks>The value is wrapped: an <c>object</c> case would also match the union itself in a switch.</remarks>
+	private union ConvertedValue(Converted, None, Error<string>);
 
 	private static ConvertedValue ConvertJsonElement(JsonElement element, Type targetType)
 	{
@@ -226,7 +229,7 @@ public class ConfigurationController(
 			_ when element.ValueKind == JsonValueKind.Null => NullFor(targetType),
 			_ when actualType == typeof(uint) => ReadUInt32(element),
 			_ when actualType == typeof(char) => ReadChar(element),
-			_ => ReadValue(element, actualType, targetType) is { } value ? value : new None()
+			_ => ReadValue(element, actualType, targetType) is { } value ? new Converted(value) : new None()
 		};
 	}
 
@@ -238,15 +241,15 @@ public class ConfigurationController(
 	// Handle negative values sent as int
 	private static ConvertedValue ReadUInt32(JsonElement element) => element.ValueKind switch
 	{
-		JsonValueKind.Number when element.TryGetUInt32(out var uval) => uval,
-		JsonValueKind.Number when element.TryGetInt32(out var ival) && ival >= 0 => (uint)ival,
+		JsonValueKind.Number when element.TryGetUInt32(out var uval) => new Converted(uval),
+		JsonValueKind.Number when element.TryGetInt32(out var ival) && ival >= 0 => new Converted((uint)ival),
 		JsonValueKind.Number => new Error<string>($"Value {element} is out of range for uint"),
 		_ => new Error<string>($"Expected number, got {element.ValueKind}")
 	};
 
 	private static ConvertedValue ReadChar(JsonElement element) =>
 		element.GetString() is { Length: > 0 } str
-			? str[0]
+			? new Converted(str[0])
 			: new Error<string>("Empty string for char");
 
 	private static object? ReadValue(JsonElement element, Type actualType, Type targetType) => actualType switch
