@@ -185,6 +185,9 @@ public partial class BBoardsIntegrationTests
 			var post = await Post(mira, board, "Mine", "plain");
 			await As(mira, $"+bbedit/all/mush {post}=Written by [name(me)].");
 			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.");
+			await Assert.That(await As(admin, $"+bbedit {post}=Written/Typed")).Contains("Replace it whole");
+			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.")
+				.Because("a partial edit of someone else's SharpMUSH text would run their code as the moderator");
 			await Assert.That(await As(admin, $"+bbedit/all/mush {post}=Edited by [name(me)]."))
 				.Contains($"Edited {post}.");
 			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Edited by {admin.Name}.")
