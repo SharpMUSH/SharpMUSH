@@ -63,6 +63,7 @@
 
     private DotNetObjectReference<SectionShell>? _self;
     private IJSObjectReference? _touchWatch;
+    private bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -71,10 +72,21 @@
         bool touch;
         try
         {
-            _touchWatch = await JS.InvokeAsync<IJSObjectReference>("sharpmushLayout.watchTouchChrome", _self);
-            touch = await _touchWatch.InvokeAsync<bool>("matches");
+            var watch = await JS.InvokeAsync<IJSObjectReference>("sharpmushLayout.watchTouchChrome", _self);
+            if (_disposed)
+            {
+                // Navigated away while the watch was being set up: release it here, DisposeAsync already ran.
+                await ReleaseAsync(watch);
+                return;
+            }
+            _touchWatch = watch;
+            touch = await watch.InvokeAsync<bool>("matches");
         }
         catch (JSException)
+        {
+            return;
+        }
+        catch (JSDisconnectedException)
         {
             return;
         }
@@ -113,19 +125,26 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         CollapseMemory.Changed -= OnChanged;
-        if (_touchWatch is not null)
+        if (_touchWatch is { } watch)
         {
-            try
-            {
-                await _touchWatch.InvokeVoidAsync("dispose");
-                await _touchWatch.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // The page is going away; so is the listener.
-            }
+            _touchWatch = null;
+            await ReleaseAsync(watch);
         }
         _self?.Dispose();
+    }
+
+    private static async Task ReleaseAsync(IJSObjectReference watch)
+    {
+        try
+        {
+            await watch.InvokeVoidAsync("dispose");
+            await watch.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The page is going away; so is the listener.
+        }
     }
 }
