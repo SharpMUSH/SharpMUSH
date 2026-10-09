@@ -12,12 +12,21 @@
     {
       "id": "viewing-and-discovery",
       "heading": "Viewing and discovery",
-      "lookup": "wiki viewing and discovery"
+      "lookup": "wiki viewing and discovery",
+      "aliases": [
+        "@WIKI/VIEW",
+        "@WIKI/LIST",
+        "@WIKI/SEARCH",
+        "@WIKI/RECENT"
+      ]
     },
     {
       "id": "reading-source",
       "heading": "Reading source",
-      "lookup": "wiki reading source"
+      "lookup": "wiki reading source",
+      "aliases": [
+        "@WIKI/MD"
+      ]
     },
     {
       "id": "reading-drafts",
@@ -35,11 +44,6 @@
       "lookup": "wiki links"
     },
     {
-      "id": "authoring-commands",
-      "heading": "Authoring commands",
-      "lookup": "wiki authoring commands"
-    },
-    {
       "id": "editing",
       "heading": "Editing wiki pages",
       "lookup": "wiki editing",
@@ -48,7 +52,14 @@
         "@WIKI/CREATE",
         "@WIKI/EDIT",
         "@WIKI/APPEND",
-        "@WIKI/ROLLBACK",
+        "@WIKI/ROLLBACK"
+      ]
+    },
+    {
+      "id": "translating",
+      "heading": "Translating pages",
+      "lookup": "wiki translating",
+      "aliases": [
         "@WIKI/TRANSLATE"
       ]
     },
@@ -56,11 +67,6 @@
       "id": "example",
       "heading": "Example",
       "lookup": "wiki example"
-    },
-    {
-      "id": "administration-commands",
-      "heading": "Administration commands",
-      "lookup": "wiki administration commands"
     },
     {
       "id": "administration",
@@ -81,7 +87,14 @@
       "heading": "Wiki permissions",
       "lookup": "wiki permissions",
       "aliases": [
-        "WIKI-PERMISSIONS",
+        "WIKI-PERMISSIONS"
+      ]
+    },
+    {
+      "id": "requirements",
+      "heading": "Wiki requirements",
+      "lookup": "wiki requirements",
+      "aliases": [
         "@WIKI/REQUIRE",
         "@WIKI/ACCESS"
       ]
@@ -92,13 +105,28 @@
       "lookup": "wiki categories",
       "aliases": [
         "WIKI-CATEGORIES",
-        "@WIKI/CATEGORY",
+        "@WIKI/CATEGORY"
+      ]
+    },
+    {
+      "id": "category-pages",
+      "heading": "Category pages",
+      "lookup": "wiki category pages"
+    },
+    {
+      "id": "pinning",
+      "heading": "Pinning categories",
+      "lookup": "wiki pinning",
+      "aliases": [
         "@WIKI/PIN",
         "@WIKI/UNPIN"
       ]
     }
   ],
-  "redirects": {}
+  "redirects": {
+    "wiki authoring commands": "wiki editing",
+    "wiki administration commands": "wiki administration"
+  }
 }
 -->
 # Wiki
@@ -113,35 +141,28 @@ on the website immediately, and vice versa.
 Page targets may carry a namespace prefix: `Help:Markdown Guide` refers to the
 page "Markdown Guide" in the help namespace. Without a prefix, pages live in
 the main namespace. Valid namespaces: main, help, character, system, category.
-A page is identified by its namespace and title alone; categories are labels
-it carries (see [wiki categories]).
-
-The `/noeval` switch may be combined with any `@wiki` switch to suppress
-softcode evaluation of the arguments.
 
 Page content is Markdown; see [rendermarkdown supported markdown features], or
-the wiki's own "Help:Markdown Guide" page (`@wiki help:markdown_guide`). Live listing blocks
-(`::: category ...`) render on the web portal and appear in-game as a
-placeholder.
+the wiki's own "Help:Markdown Guide" page (`@wiki help:markdown_guide`). The
+`/noeval` switch may be combined with any `@wiki` switch to suppress softcode
+evaluation of the arguments.
 
-The rest of this topic:
-
-- [wiki viewing and discovery] - reading, listing and searching pages
-- [wiki reading source] - a page's Markdown, exactly as stored
-- [wiki reading drafts] - unpublished pages and who may read them
-- [wiki locale selection] - translations, your locale, and the `/source`, `/md` and `/draft` modifiers
-- [wiki links] - linking one page to another
-- [wiki authoring commands] and [wiki editing] - creating, editing and translating pages
-- [wiki example] - a short session
-- [wiki administration commands] and [wiki administration] - deleting, protecting, publishing, history
-- [wiki permissions] - what a namespace, category or page requires
-- [wiki categories] - filing pages in categories
+- [wiki viewing and discovery]: reading, listing and searching pages
+- [wiki reading source]: a page's Markdown, exactly as stored
+- [wiki reading drafts]: unpublished pages and who may read them
+- [wiki locale selection]: your locale and the `/source`, `/md` and `/draft` modifiers
+- [wiki links]: linking one page to another
+- [wiki editing]: creating, editing and rolling back pages
+- [wiki translating]: writing a page's translation
+- [wiki example]: a short session
+- [wiki administration]: deleting, protecting, publishing and history
+- [wiki permissions]: what each wiki permission allows, and how they combine
+- [wiki requirements]: what a namespace, category or page requires
+- [wiki categories]: filing pages in categories and listing one
+- [wiki category pages]: a category's own page and its translated name
+- [wiki pinning]: categories on the portal's wiki home
 
 ::: seealso
-- [wiki editing]
-- [wiki administration]
-- [wiki categories]
-- [wiki permissions]
 - [WIKI()]
 :::
 
@@ -296,24 +317,12 @@ the page in that category (see [wiki categories]).
 - [RENDERMARKDOWNCUSTOM()]
 :::
 
-## Authoring commands
-
-- `@wiki/create <title>=<markdown>` - create a page
-- `@wiki/edit <page>=<markdown>` - replace a page's content
-- `@wiki/append <page>=<markdown>` - add a paragraph to a page
-- `@wiki/rollback <page>=<revision #>` - restore an earlier revision
-- `@wiki/translate <page>/<lang>=<markdown>` - write one locale's translation
-- `@wiki/category <page>=<names>` - set a page's categories (comma-separated; see [wiki categories])
-
-Each is described in [wiki editing].
-
 ## Editing wiki pages
 
 - `@wiki/create <title>=<markdown>`
 - `@wiki/edit <page>=<markdown>`
 - `@wiki/append <page>=<markdown>`
 - `@wiki/rollback <page>=<revision #>`
-- `@wiki/translate <page>/<lang>=<markdown>`
 
 Creating a page needs `wiki.create`, and editing one `wiki.edit`, along with
 whatever the page's namespace, categories and the page itself require (see
@@ -345,7 +354,9 @@ revision rather than rewriting history, so a rollback can itself be rolled
 back. The web portal offers the same action via the Restore button in each
 page's history dialog.
 
-### Translating
+## Translating pages
+
+- `@wiki/translate <page>/<lang>=<markdown>`
 
 @wiki/translate writes one locale's translation of a page: the same rows the
 web portal's language selector edits. The language is part of the target,
@@ -389,18 +400,6 @@ WIKI: a translation needs an explicit language: @wiki/translate <page>/<lang>=<t
 - [wiki editing]
 :::
 
-## Administration commands
-
-- `@wiki/delete <page>` - delete a page (`wiki.delete`)
-- `@wiki/protect <page>`, `@wiki/unprotect <page>` - require `wiki.admin` to edit and delete the page, or stop requiring it (`wiki.admin`)
-- `@wiki/publish <page>`, `@wiki/unpublish <page>` - publish or mark as draft (`wiki.admin`)
-- `@wiki/require <target>=<action> <permission>...` - what a namespace, category or page requires (`wiki.admin`)
-- `@wiki/access <target>[=<player>]` - show what a target requires, or what a player may do with a page
-- `@wiki/pin <category>`, `@wiki/unpin <category>` - show a category on the wiki home, or stop showing it (`wiki.admin`)
-
-The first three are described in [wiki administration], the next two in
-[wiki permissions], and pins in [wiki categories].
-
 ## Wiki administration
 
 - `@wiki/delete <page>`
@@ -434,10 +433,6 @@ holder or the author.
 :::
 
 ## Wiki permissions
-
-- `@wiki/require <target>=<action> [<permission> ...][, <action> ...]`
-- `@wiki/access <target>`
-- `@wiki/access <page>=<player>`
 
 Every wiki action has a permission everybody needs for it: `wiki.read`,
 `wiki.create`, `wiki.edit` and `wiki.delete`. On top of that, a namespace, a
@@ -473,7 +468,11 @@ requires to create it and what the categories it starts in require.
 New games start with the system namespace requiring `wiki.admin` to create,
 edit and delete its pages.
 
-### Setting and checking requirements
+## Wiki requirements
+
+- `@wiki/require <target>=<action> [<permission> ...][, <action> ...]`
+- `@wiki/access <target>`
+- `@wiki/access <page>=<player>`
 
 `@wiki/require` replaces what the actions it names require and leaves the rest
 alone; an action with no permissions after it requires nothing again. The
@@ -510,8 +509,6 @@ From softcode, `wikiaccess(<page>, <action>[, <player>])` returns 1 or 0.
 
 - `@wiki/category <name>`
 - `@wiki/category <page>=<name>[, <name>...]`
-- `@wiki/pin [<category>]`
-- `@wiki/unpin <category>`
 
 Categories work the way they do in MediaWiki, except that they are held by
 the page rather than written in its text. A page can be in any number of
@@ -525,23 +522,6 @@ It is an edit: the page's requirements apply, and so do the new categories'
 Every page in the character namespace is in the Character category, whatever
 its list says. The category comes from the namespace: it is added when the
 page is written and put back if a list leaves it out, so it cannot be removed.
-
-### Category pages
-
-Each category has a page of its own, `Category:Lore`, in the category
-namespace. Filing a page in a category that has no page yet makes one, titled
-with the name exactly as you typed it, so `Places of Note` keeps its capitals
-(when you may create pages there; a name typed in lower case, like `lore`,
-makes none). Writing more on that page is optional: whatever it says is shown
-above the list of the category's members. A category page that is itself in the Setting
-category is a subcategory of Setting. `[[Category:Lore]]` in a page's text is
-an ordinary link to that page.
-
-A translation is in the same categories as its page; only a category's name
-is translated. The name shown is the title of the category's page, so giving
-`Category:Lore` a French translation in the portal shows French readers its
-French title wherever the category appears. A category with no page is shown
-by its key, with a capital first letter.
 
 ### Listing a category
 
@@ -563,7 +543,27 @@ dash and `1 page(s), 0 subcategory(ies):`, then one line per member:
   main:combat_primer             Combat Primer (rev 2, 2026-10-05)
 ```
 
-### Pinning categories
+## Category pages
+
+Each category has a page of its own, `Category:Lore`, in the category
+namespace. Filing a page in a category that has no page yet makes one, titled
+with the name exactly as you typed it, so `Places of Note` keeps its capitals
+(when you may create pages there; a name typed in lower case, like `lore`,
+makes none). Writing more on that page is optional: whatever it says is shown
+above the list of the category's members. A category page that is itself in the Setting
+category is a subcategory of Setting. `[[Category:Lore]]` in a page's text is
+an ordinary link to that page.
+
+A translation is in the same categories as its page; only a category's name
+is translated. The name shown is the title of the category's page, so giving
+`Category:Lore` a French translation in the portal shows French readers its
+French title wherever the category appears. A category with no page is shown
+by its key, with a capital first letter.
+
+## Pinning categories
+
+- `@wiki/pin [<category>]`
+- `@wiki/unpin <category>`
 
 The portal's wiki home shows a card for each pinned category, with its newest
 pages. Other categories are still listed in the wiki sidebar, and a search on
