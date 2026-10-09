@@ -5,6 +5,7 @@
 @inject SceneService SceneService
 @inject IAccountAuthState AccountAuth
 @inject GameCommandService Commands
+@inject PoseTypeService PoseTypes
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -162,10 +163,13 @@
 
         <div class="scene-detail-grid">
             <div class="scene-detail-main">
-                @if (_allTags.Count > 0)
-                {
-                    <TypeChips Items="@TagChips" Selected="@(_activeTag ?? AllTags)" SelectedChanged="SetTag" AriaLabel="@Loc["NavSceneTagFilter"]" />
-                }
+                <div class="scene-detail-filters">
+                    @if (_allTags.Count > 0)
+                    {
+                        <TypeChips Items="@TagChips" Selected="@(_activeTag ?? AllTags)" SelectedChanged="SetTag" AriaLabel="@Loc["NavSceneTagFilter"]" />
+                    }
+                    <PoseTypeMenu Class="scene-detail-types" />
+                </div>
 
                 @if (_posesError is not null)
                 {
@@ -183,13 +187,23 @@
                 }
                 else
                 {
-                    @* The log reads as the live view does (StoryPose): a portrait, the name and time, the pose in
-                       the portal's font, the other participants' names as mentions. *@
+                    @* The log reads as the live view does (StoryPose): each pose as its type draws it, the other
+                       participants' names as mentions, and the types the reader hides folded into one line a run. *@
+                    var viewer = AccountAuth.ActiveCharacter?.Name;
                     <KitCard>
                         <div class="scene-detail-log">
-                            @foreach (var pose in visible)
+                            @foreach (var entry in StoryFolds.Fold(visible, PoseTypes.For, PoseTypes.IsHidden, _revealed))
                             {
-                                <StoryPose @key="pose.Id" Pose="pose" Mentions="_mentions" />
+                                switch (entry)
+                                {
+                                    case ScenePoseView pose:
+                                        <StoryPose @key="pose.Id" Pose="pose" PoseType="@PoseTypes.For(pose.Type)" Mentions="_mentions"
+                                                   Mine="@(viewer is not null && string.Equals(pose.AuthorName, viewer, StringComparison.OrdinalIgnoreCase))" />
+                                        break;
+                                    case StoryFold fold:
+                                        <StoryFoldRow @key="@("fold:" + fold.Poses[0].Id)" Fold="fold" OnReveal="Reveal" />
+                                        break;
+                                }
                             }
                         </div>
                     </KitCard>
@@ -311,7 +325,23 @@
     /// </summary>
     private readonly ViewerScopedReload _reload = new();
 
-    protected override void OnInitialized() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () =>
+    /// <summary>Hidden poses this page shows anyway: a fold was opened. The type stays hidden.</summary>
+    private readonly HashSet<string> _revealed = new(StringComparer.Ordinal);
+
+    private void Reveal(StoryFold fold)
+    {
+        foreach (var pose in fold.Poses) _revealed.Add(pose.Id);
+    }
+
+    private void OnPoseTypesChanged() => _ = InvokeAsync(StateHasChanged);
+
+    protected override void OnInitialized()
+    {
+        PoseTypes.Changed += OnPoseTypesChanged;
+        WatchViewer();
+    }
+
+    private void WatchViewer() => _reload.Watch(AccountAuth, () => _ = InvokeAsync(async () =>
     {
         // LoadAsync clears the scene before its first await; rendering then takes the previous
         // character's log off the screen at the switch rather than when the new read answers.
@@ -325,6 +355,7 @@
 
     public void Dispose()
     {
+        PoseTypes.Changed -= OnPoseTypesChanged;
         _reload.Dispose();
         _stream?.Cancel();
         _stream?.Dispose();
@@ -344,6 +375,7 @@
         _cast = [];
         _mentions = [];
         _activeTag = null;
+        _revealed.Clear();
         _scene = null;
         // A form open on the scene this page showed before holds that scene's values; saving them here would
         // write them onto this one.

@@ -157,7 +157,7 @@ public enum ValueKind
 	/// <summary><c>true</c> or <c>false</c>.</summary>
 	Boolean = 4,
 
-	/// <summary>A JSON object or array, kept as the plain text it was written as.</summary>
+	/// <summary>A JSON object or array, kept as the text it was written as, markup included.</summary>
 	Json = 8,
 }
 
@@ -175,13 +175,26 @@ public static class OptionObject
 	{
 		var source = text.Text;
 		var position = 0;
-		var members = new List<Member>();
 		SkipSpace(source, ref position);
-		if (position == source.Length) return members;
-		if (source[position++] != '{') return NotAnObject;
+		if (position == source.Length) return new List<Member>();
+		if (ReadObject(text, ref position) is not { } members) return NotAnObject;
+		SkipSpace(source, ref position);
+		return position == source.Length ? members : NotAnObject;
+	}
 
+	/// <summary>
+	/// The items of the array <paramref name="text"/> holds, in order, each an object's members; a string item is
+	/// read as an object whose only member is <c>text</c>. Null when it is not such an array.
+	/// </summary>
+	public static IReadOnlyList<IReadOnlyList<Member>>? ReadArray(MString text)
+	{
+		var source = text.Text;
+		var position = 0;
+		var items = new List<IReadOnlyList<Member>>();
 		SkipSpace(source, ref position);
-		if (position < source.Length && source[position] == '}')
+		if (position == source.Length || source[position++] != '[') return null;
+		SkipSpace(source, ref position);
+		if (position < source.Length && source[position] == ']')
 		{
 			position++;
 		}
@@ -190,22 +203,60 @@ public static class OptionObject
 			while (true)
 			{
 				SkipSpace(source, ref position);
-				if (ReadString(text, ref position) is not { } key) return NotAnObject;
+				if (position == source.Length) return null;
+				if (source[position] == '"')
+				{
+					if (ReadString(text, ref position) is not { } value) return null;
+					items.Add([new Member("text", ValueKind.String, value)]);
+				}
+				else if (ReadObject(text, ref position) is { } members)
+				{
+					items.Add(members);
+				}
+				else
+				{
+					return null;
+				}
 				SkipSpace(source, ref position);
-				if (position == source.Length || source[position++] != ':') return NotAnObject;
-				SkipSpace(source, ref position);
-				if (ReadValue(text, ref position) is not var (kind, value)) return NotAnObject;
-				members.Add(new Member(key.ToPlainText().ToLowerInvariant(), kind, value));
-				SkipSpace(source, ref position);
-				if (position == source.Length) return NotAnObject;
+				if (position == source.Length) return null;
 				var next = source[position++];
-				if (next == '}') break;
-				if (next != ',') return NotAnObject;
+				if (next == ']') break;
+				if (next != ',') return null;
 			}
 		}
+		SkipSpace(source, ref position);
+		return position == source.Length ? items : null;
+	}
+
+	/// <summary>The object at <paramref name="position"/>, its members in order; null when it is not one.</summary>
+	private static List<Member>? ReadObject(MString text, ref int position)
+	{
+		var source = text.Text;
+		var members = new List<Member>();
+		if (position == source.Length || source[position++] != '{') return null;
 
 		SkipSpace(source, ref position);
-		return position == source.Length ? members : NotAnObject;
+		if (position < source.Length && source[position] == '}')
+		{
+			position++;
+			return members;
+		}
+
+		while (true)
+		{
+			SkipSpace(source, ref position);
+			if (ReadString(text, ref position) is not { } key) return null;
+			SkipSpace(source, ref position);
+			if (position == source.Length || source[position++] != ':') return null;
+			SkipSpace(source, ref position);
+			if (ReadValue(text, ref position) is not var (kind, value)) return null;
+			members.Add(new Member(key.ToPlainText().ToLowerInvariant(), kind, value));
+			SkipSpace(source, ref position);
+			if (position == source.Length) return null;
+			var next = source[position++];
+			if (next == '}') return members;
+			if (next != ',') return null;
+		}
 	}
 
 	private static Error<string> NotAnObject => new(OptionSchema<object>.NotAnObject);
@@ -220,7 +271,12 @@ public static class OptionObject
 		var source = text.Text;
 		if (position == source.Length) return null;
 		if (source[position] == '"') return ReadString(text, ref position) is { } value ? (ValueKind.String, value) : null;
-		if (source[position] is '{' or '[') return ReadNested(source, ref position) is { } nested ? (ValueKind.Json, MarkupText.Plain(nested)) : null;
+		if (source[position] is '{' or '[')
+		{
+			// Kept with its markup, so a title in an array of titles keeps its colour.
+			var opened = position;
+			return ReadNested(source, ref position) is not null ? (ValueKind.Json, text.Substring(opened, position - opened)) : null;
+		}
 
 		foreach (var literal in (ReadOnlySpan<string>)["true", "false"])
 		{
@@ -363,6 +419,51 @@ public static class LayoutOptionGroups
 			ThemePalette palette => set(settings, palette.ToLayoutTheme()),
 			Error<string> error => error,
 		});
+
+	/// <summary>
+	/// A list of titles for a line or an edge (<c>titles</c> on <c>rule()</c> and <c>box()</c>, <c>bottomtitles</c> on
+	/// <c>box()</c>): a JSON array whose items are a title's text, set in the middle, or an object with <c>text</c>,
+	/// <c>side</c> (<c>left</c>, <c>center</c> or <c>right</c>) and <c>priority</c> (1 to 1000; the highest is left out first
+	/// when they do not fit, and a title without one takes its side's: left 1, right 2, middle 3).
+	/// </summary>
+	public static OptionSchema<T> Titles<T>(this OptionSchema<T> schema, string key, Func<T, ImmutableArray<EdgeTitle>, T> set) where T : class =>
+		schema.Json(key, (settings, value) => OptionObject.ReadArray(value) is { } items
+			? ReadTitles(items) switch
+			{
+				ImmutableArray<EdgeTitle> titles => set(settings, titles),
+				Error<string> error => error,
+			}
+			: new Error<string>(ErrorMessages.Returns.InvalidArgument));
+
+	private static Result<ImmutableArray<EdgeTitle>> ReadTitles(IReadOnlyList<IReadOnlyList<OptionObject.Member>> items)
+	{
+		var titles = ImmutableArray.CreateBuilder<EdgeTitle>(items.Count);
+		foreach (var item in items)
+		{
+			var title = new EdgeTitle(MarkupText.Empty);
+			foreach (var member in item)
+			{
+				switch (member.Key)
+				{
+					case "text" when member.Kind is ValueKind.String or ValueKind.Number:
+						title = title with { Text = member.Value };
+						break;
+					case "side" when member.Kind == ValueKind.String && Alignments.TryGetValue(member.Value.ToPlainText().Trim().ToLowerInvariant(), out var side):
+						title = title with { Side = side };
+						break;
+					case "priority" when member.Kind == ValueKind.Number:
+						if (!int.TryParse(member.Value.ToPlainText(), out var priority) || priority is < 1 or > 1000)
+							return new Error<string>(ErrorMessages.Returns.ArgRange);
+						title = title with { Priority = priority };
+						break;
+					default:
+						return new Error<string>(ErrorMessages.Returns.InvalidArgument);
+				}
+			}
+			titles.Add(title);
+		}
+		return titles.ToImmutable();
+	}
 
 	/// <summary>
 	/// <c>stripe:</c> <c>true</c> lays every second row on the theme's stripe colour, and ansi() codes

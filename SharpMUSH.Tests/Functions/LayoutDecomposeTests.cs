@@ -62,6 +62,8 @@ public class LayoutDecomposeTests
 	[Arguments("box(x,,,{{\"theme\":\"fantasy\",\"border\":\"heavy\"}})")]
 	[Arguments("fields({{\"stripe\":\"/#202020\",\"border\":\"ascii\"}},a,box(b))")]
 	[Arguments("box(x,,,{{\"theme\":{\"seed\":\"#7aa2f7\",\"harmony\":\"triadic\"}}})")]
+	[Arguments("rule(Wren,40,json(object,title,\"left\",titles,json(array,json(object,text,json(string,ansi(r,Scene 5)),side,\"right\",priority,1))))")]
+	[Arguments("box(x,T,20,json(object,titles,json(array,json(string,Mid)),bottomtitles,json(array,json(object,text,json(string,1/3),side,\"right\"))))")]
 	public async Task ALayoutRebuildsFromItsDecomposition(string call)
 		=> await AssertRebuilds(call, (await Eval($"decompose({call})")).ToPlainText());
 

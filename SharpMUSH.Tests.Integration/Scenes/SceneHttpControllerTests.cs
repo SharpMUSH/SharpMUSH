@@ -2,6 +2,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
 
@@ -100,6 +101,22 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(dto!.Id).IsEqualTo(sceneId);
 		await Assert.That(dto.IsPublic).IsTrue();
 		await Assert.That(dto.StartedAt).IsGreaterThan(0);
+	}
+
+	private record PoseTypeDto(string Key, string Label, string Presentation, string Tone, string Icon, bool Hidden, int Order);
+	private record PoseTypesDto(List<PoseTypeDto> Types, List<JsonElement> Problems, List<string> Hidden);
+
+	[Test]
+	public async Task GetTypes_ReturnsTheSceneLoggersPoseTypesInOrder()
+	{
+		var response = await CreateClient().GetAsync("api/scenes/types");
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var dto = (await response.Content.ReadFromJsonAsync<PoseTypesDto>())!;
+		await Assert.That(dto.Types.Take(3).Select(t => t.Key)).IsEquivalentTo(new[] { "ic", "ooc", "narration" });
+		await Assert.That(dto.Types.Single(t => t.Key == "ooc"))
+			.IsEqualTo(new PoseTypeDto("ooc", "Out of character", "band", "secondary", "", false, 20));
+		await Assert.That(dto.Hidden.All(key => dto.Types.Any(t => t.Key == key))).IsTrue();
 	}
 
 	[Test]
@@ -206,8 +223,8 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		var sceneId = await NewPublicSceneAsync("Poses");
-		await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,First pose.)");
-		await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,Second pose.)");
+		await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,First pose.)");
+		await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,Second pose.)");
 
 		var poses = await http.GetFromJsonAsync<List<ScenePoseDto>>($"api/scenes/{sceneId}/poses");
 
@@ -249,7 +266,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		var sceneId = await NewPublicSceneAsync("Cast");
-		await Eval($"sceneaddpose({sceneId},{God},Guard Captain,{God},pose,,stands watch.)");
+		await Eval($"sceneaddpose({sceneId},{God},Guard Captain,{God},ic,pose,,stands watch.)");
 
 		var cast = await http.GetFromJsonAsync<List<string>>($"api/scenes/{sceneId}/cast");
 
@@ -262,7 +279,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 	{
 		var http = CreateClient();
 		var sceneId = await NewPublicSceneAsync("Tags");
-		await Eval($"sceneaddpose({sceneId},{God},,{God},pose,combat,swings a sword.)");
+		await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,combat,swings a sword.)");
 
 		var tags = await http.GetFromJsonAsync<List<string>>($"api/scenes/{sceneId}/tags");
 

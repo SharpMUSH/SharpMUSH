@@ -88,6 +88,8 @@ Options:
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS].
 - `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"title":"left"`, `"title":"center"` or `"title":"right"` - where the title sits. Centred by default.
+- `"titles":[...]` - more titles in the top edge, written as for [RULE()].
+- `"bottomtitles":[...]` - titles in the bottom edge, written the same way.
 - `"pad":<n>` - spaces between each side and the body, 0 to 10. One by default.
 
 ### Examples
@@ -121,6 +123,13 @@ A Unicode client sees this box in light lines with rounded corners. A client wit
 *==================*
 ```
 
+```sharp
+> think box(Page one,Notes,20,{{"bottomtitles":\[{"text":"1/3","side":"right"}]}})
++=====< Notes >====+
+| Page one         |
++==========< 1/3 >=+
+```
+
 ::: seealso
 - [RULE()]
 - [LAYOUT BORDERS]
@@ -137,6 +146,7 @@ Options:
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. Inside a box, a rule with none of these takes the box's border.
 - `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"title":"left"`, `"title":"center"` or `"title":"right"` - where the title sits. Centred by default.
+- `"titles":[...]` - more titles. Each is its text, set in the middle, or an object with `"text"`, `"side"` (`"left"`, `"center"` or `"right"`) and `"priority"` (1 to 1000). Titles on one side sit in the order given. When the line is too narrow for them all, the title with the highest priority is left out first. A title without one takes its side's: 1 on the left, 2 on the right, 3 in the middle.
 
 ### Examples
 ```sharp
@@ -144,6 +154,13 @@ Options:
 ==============< Factions >==============
 > think rule(Left,30,{{"title":"left"}})
 =< Left >=====================
+```
+
+A name on the left and a scene on the right. On a narrow screen the scene is left out first, since a right title's priority is 2 and a left one's 1:
+
+```sharp
+> think rule(Wren,40,{{"title":"left","titles":\[{"text":"Scene 5","side":"right"}]}})
+=< Wren >===================< Scene 5 >=
 ```
 
 ::: seealso
@@ -654,4 +671,31 @@ A package says its own name once and uses it for every message, so its players l
 - [BADGE()]
 - [LAYOUT THEMES]
 - [LAYOUT FUNCTIONS]
+:::
+
+# tone()
+
+`tone(<colour>, <text>)`
+
+*<text>* in a theme colour, named for what it is for rather than as a colour, so each reader sees it in their own theme. *<colour>* is one of the colours in [LAYOUT THEMES]: `foreground`, `primary`, `secondary`, `tertiary`, `muted`, `success`, `warning`, `error` or `info`.
+
+- A telnet reader with an [@THEME] sees that theme's colour, so a player who makes their `muted` colour paler sees every `tone(muted,...)` paler.
+- A telnet reader without one sees the game's `layout_theme` colour, or a standard colour when the game has none: `muted` in grey, `info` in cyan, `success` in green, `warning` in yellow, `error` in red.
+- The web portal colours it from the reader's portal theme.
+
+Use it for text whose colour says what kind of thing it is, such as an out-of-character remark or a radio call, and [ANSI()] for a colour chosen for its own sake. The scene package draws pose types with it; see `+help scene types`.
+
+### Example
+```sharp
+> think tone(muted,<OOC> Back in five.)
+<OOC> Back in five.
+```
+
+That line is grey for a reader with no theme, and their theme's `muted` colour for one with an @theme.
+
+::: seealso
+- [@THEME]
+- [LAYOUT THEMES]
+- [BADGE()]
+- [ANSI()]
 :::

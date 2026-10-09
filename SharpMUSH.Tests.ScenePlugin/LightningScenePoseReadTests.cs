@@ -57,7 +57,7 @@ public class LightningScenePoseReadTests
 	private async Task<string> NewPlayer(string name) => $"#{(await _db.CreatePlayerAsync(name, "pw", new DBRef(0), new DBRef(0), 0)).Number}";
 
 	private async Task<string> Pose(string sceneId, string author, string content)
-		=> Expect<ScenePose>(await _scenes.AddPoseAsync(sceneId, author, "", "#0", "pose", [], content)).Id;
+		=> Expect<ScenePose>(await _scenes.AddPoseAsync(sceneId, author, "", "#0", "ic", "pose", [], content)).Id;
 
 	private async Task<IReadOnlyList<ScenePose>> Poses(string sceneId, string? author = null, int? count = null)
 		=> Expect<IReadOnlyList<ScenePose>>(await _scenes.GetPosesAsync(sceneId, author, count));
@@ -130,16 +130,33 @@ public class LightningScenePoseReadTests
 		await Assert.That(rest[^1].Id).IsEqualTo(late);
 	}
 
+	/// <summary>A pose keeps its type in lower case; an empty one is in character, and one that is not a key is refused.</summary>
+	[Test]
+	public async Task APoseKeepsItsType()
+	{
+		var scene = (await _scenes.CreateSceneAsync("#0", "#1")).Id;
+		var radio = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", " Radio ", "emit", [], "Calls in."));
+		var plain = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "", "pose", [], "waves."));
+
+		await Assert.That(radio.Type).IsEqualTo("radio");
+		await Assert.That(plain.Type).IsEqualTo(PoseTypes.InCharacter);
+		await Assert.That(Expect<Error<string>>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "not a key", "pose", [], "x")).Value)
+			.IsEqualTo(PoseTypes.InvalidKey);
+
+		Expect<ScenePose>(await _scenes.SetPoseMetaAsync(plain.Id, "type", "OOC"));
+		await Assert.That((await Poses(scene)).Select(p => p.Type)).IsEquivalentTo(new[] { "radio", "ooc" }, CollectionOrdering.Matching);
+	}
+
 	/// <summary>Tags and cast, read off the pose records, are what the projected live poses give.</summary>
 	[Test]
 	public async Task TagsAndCastMatchTheLivePoses()
 	{
 		var other = await NewPlayer("CastOther");
 		var scene = (await _scenes.CreateSceneAsync("#0", "#1")).Id;
-		var first = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "pose", ["combat", "Combat", " "], "a")).Id;
-		Expect<ScenePose>(await _scenes.AddPoseAsync(scene, other, "Masked", "#0", "pose", ["intrigue"], "b"));
-		var gone = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, other, "Ghost", "#0", "pose", ["deleted-only"], "c")).Id;
-		Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "pose", ["combat"], "d"));
+		var first = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "ic", "pose", ["combat", "Combat", " "], "a")).Id;
+		Expect<ScenePose>(await _scenes.AddPoseAsync(scene, other, "Masked", "#0", "ic", "pose", ["intrigue"], "b"));
+		var gone = Expect<ScenePose>(await _scenes.AddPoseAsync(scene, other, "Ghost", "#0", "ic", "pose", ["deleted-only"], "c")).Id;
+		Expect<ScenePose>(await _scenes.AddPoseAsync(scene, "#1", "", "#0", "ic", "pose", ["combat"], "d"));
 		await _scenes.DeletePoseAsync(gone);
 		Expect<ScenePose>(await _scenes.SetPoseMetaAsync(first, "tags", "renamed combat"));
 

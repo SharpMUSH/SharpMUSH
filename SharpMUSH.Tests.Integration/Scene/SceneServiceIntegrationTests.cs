@@ -162,8 +162,8 @@ public class SceneServiceIntegrationTests
 	{
 		var id = await NewSceneAsync();
 
-		var p1 = await Eval($"sceneaddpose({id},{God},,{God},pose,,First pose.)");
-		var p2 = await Eval($"sceneaddpose({id},{God},,{God},pose,,Second pose.)");
+		var p1 = await Eval($"sceneaddpose({id},{God},,{God},ic,pose,,First pose.)");
+		var p2 = await Eval($"sceneaddpose({id},{God},,{God},ic,pose,,Second pose.)");
 		await Assert.That(p1).DoesNotStartWith("#-1");
 		await Assert.That(p2).DoesNotStartWith("#-1");
 
@@ -178,7 +178,7 @@ public class SceneServiceIntegrationTests
 	public async Task EditPose_VersionsContent_AndUndoRestores()
 	{
 		var id = await NewSceneAsync();
-		var poseId = await Eval($"sceneaddpose({id},{God},,{God},pose,,Original.)");
+		var poseId = await Eval($"sceneaddpose({id},{God},,{God},ic,pose,,Original.)");
 		await Assert.That(poseId).DoesNotStartWith("#-1");
 
 		await Eval($"sceneeditpose({poseId},{God},Edited.)");
@@ -197,7 +197,7 @@ public class SceneServiceIntegrationTests
 	{
 		var id = await NewSceneAsync();
 
-		var poseId = await Eval($"sceneaddpose({id},{God},Guard Captain,{God},pose,,stands watch.)");
+		var poseId = await Eval($"sceneaddpose({id},{God},Guard Captain,{God},ic,pose,,stands watch.)");
 		await Assert.That(poseId).DoesNotStartWith("#-1");
 
 		await Assert.That(await Eval($"scenepose({id}, {poseId}, showas)")).IsEqualTo("Guard Captain");
@@ -209,7 +209,7 @@ public class SceneServiceIntegrationTests
 	public async Task DeletePose_SoftDeletes()
 	{
 		var id = await NewSceneAsync();
-		var poseId = await Eval($"sceneaddpose({id},{God},,{God},pose,,Doomed.)");
+		var poseId = await Eval($"sceneaddpose({id},{God},,{God},ic,pose,,Doomed.)");
 		await Assert.That(poseId).DoesNotStartWith("#-1");
 
 		await Eval($"scenedelpose({poseId})");
