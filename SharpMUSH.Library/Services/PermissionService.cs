@@ -544,16 +544,19 @@ public class PermissionService(
 	public ValueTask<bool> IsHearer(AnySharpObject obj)
 		=> obj.IsHearer(connectionService, attributeService.Value);
 
+	/// <remarks>
+	/// Every question here is a role (WIZARD, ROYALTY), so only the grants are read: the object's stored
+	/// flags would be a database read whose answer nothing uses, and <c>u()</c> asks this on every call.
+	/// </remarks>
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
 	{
-		var targetFlags = await evaluationTarget.ReadFlagsAsync();
-		if (!targetFlags.IsPriv || evaluator.IsGod())
+		var targetIsWizard = await evaluationTarget.IsWizard();
+		if (!(targetIsWizard || await evaluationTarget.IsRoyalty()) || evaluator.IsGod())
 		{
 			return true;
 		}
 
-		var evaluatorFlags = await evaluator.ReadFlagsAsync();
-		return (evaluatorFlags.IsWizard || (evaluatorFlags.IsRoyalty && !targetFlags.IsWizard))
+		return (await evaluator.IsWizard() || (await evaluator.IsRoyalty() && !targetIsWizard))
 					 && !evaluationTarget.IsGod();
 	}
 
