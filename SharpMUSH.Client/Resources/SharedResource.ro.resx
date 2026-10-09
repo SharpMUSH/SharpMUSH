@@ -5992,4 +5992,24 @@
   <data name="TermReviewNone" xml:space="preserve">
     <value>Încă nu există niciun rând de citit.</value>
   </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>nou</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {încă # răspuns} few {încă # răspunsuri} other {încă # de răspunsuri}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Mută în sus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Mută în jos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Reordonează</value>
+    <comment>MT</comment>
+  </data>
 </root>

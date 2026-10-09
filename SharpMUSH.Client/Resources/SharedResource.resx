@@ -4952,12 +4952,6 @@
   <data name="AdmSetupPkgCommFeedDesc" xml:space="preserve">
     <value>Gives the Play page's sidebar a player's channels, and each channel line and page to exactly the players who received it.</value>
   </data>
-  <data name="AdmSetupPkgCommonFunctionsTitle" xml:space="preserve">
-    <value>Common functions</value>
-  </data>
-  <data name="AdmSetupPkgCommonFunctionsDesc" xml:space="preserve">
-    <value>header(), footer() and line(): the rules and titles the other packages draw their output with.</value>
-  </data>
   <data name="AdmSetupPkgPlusHelpTitle" xml:space="preserve">
     <value>+help</value>
   </data>
@@ -4975,6 +4969,18 @@
   </data>
   <data name="AdmSetupPkgJobsAppDesc" xml:space="preserve">
     <value>A Jobs page in the portal where players file and follow requests and staff answer, claim and close them.</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsTitle" xml:space="preserve">
+    <value>Bulletin boards</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsDesc" xml:space="preserve">
+    <value>Boards that nest, with posts, comments and replies, read with +bbread and written with +bbpost, as Myrddin's boards are.</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsAppTitle" xml:space="preserve">
+    <value>Boards in the portal</value>
+  </data>
+  <data name="AdmSetupPkgBBoardsAppDesc" xml:space="preserve">
+    <value>A Boards page in the portal where players read boards, follow conversations, and post, comment and reply.</value>
   </data>
   <data name="AdmImportConfigRecommended" xml:space="preserve">
     <value>Configuration (mush.cnf, recommended)</value>
@@ -7698,5 +7704,20 @@
   </data>
   <data name="ErrorRemovingAsciiTranslation" xml:space="preserve">
     <value>Could not remove the translation for {0}: {1}</value>
+  </data>
+  <data name="WidTimelineNew" xml:space="preserve">
+    <value>new</value>
+  </data>
+  <data name="WidTimelineMore" xml:space="preserve">
+    <value>{count, plural, one {# more reply} other {# more replies}}</value>
+  </data>
+  <data name="WidTableMoveUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="WidTableMoveDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="WidTableMove" xml:space="preserve">
+    <value>Reorder</value>
   </data>
 </root>

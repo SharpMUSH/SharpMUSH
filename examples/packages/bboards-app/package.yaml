@@ -1,0 +1,38 @@
+format: 1.2
+package: bboards-app
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers the bulletin boards (the bboards package) as a portal page at /apps/boards: every board by category, each board's posts, each post with its comments as conversations, and forms to post, comment, reply and edit."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [portal, application, bboards, boards, forum]
+requires_server: ">=0.1"
+
+# An application package owns no objects. The bboards package serves the routes it points at:
+# GET /http/boards/schema, /http/boards/data and /http/boards/nav, and POST /http/boards/act.
+# Everything the page shows, and every button on it, is decided by that softcode for the character
+# viewing it, through the same locks the commands use.
+depends:
+  - package: bboards
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      path: bboards/
+
+# Every player may open it. {path} is what follows /apps/boards/: nothing (every board), a number
+# path as +bbread takes it (5, 5/3, 5/3/2 for a comment's conversation), "unread" or "new"; the
+# page's query string (?page=, ?edit=1, ?board=) is passed on to both routes. The Community
+# section's sidebar comes from nav_url: What's new with its count, then the boards the viewer follows.
+application:
+  slug: boards
+  display_name: Boards
+  icon: forum
+  type: page
+  schema_url: http/boards/schema?at={path}
+  data_url: http/boards/data?at={path}
+  submit_route: http/boards/act
+  minimum_role: player
+  nav_placement: Community
+  nav_url: http/boards/nav
+  order: 30

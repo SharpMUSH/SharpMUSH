@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -34,7 +35,7 @@ public static class ScenePoseHandlers
 
 		if (string.IsNullOrEmpty(authorDbref))
 		{
-			await notifyService.Notify(executor, "SCENE: /addpose needs an author dbref.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/addpose needs an author dbref.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
@@ -45,17 +46,17 @@ public static class ScenePoseHandlers
 		var result = await sceneService.AddPoseAsync(sceneId, authorDbref, showAs, originDbref, type, source, tags, content);
 		if (result is Error<string> err)
 		{
-			await notifyService.Notify(executor, $"SCENE: {err.Value}");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(err.Value, NoticeKind.Warn));
 			return MarkupText.Plain($"#-1 {err.Value}");
 		}
 
 		if (result is not Contracts.ScenePose pose)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
-		await notifyService.Notify(executor, $"SCENE: Added pose #{pose.Id} to scene #{sceneId}.");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice($"Added pose #{pose.Id} to scene #{sceneId}.", NoticeKind.Ok));
 		await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
 		return MarkupText.Plain(pose.Id);
 	}
@@ -72,13 +73,13 @@ public static class ScenePoseHandlers
 		var (poseId, key) = SceneCommandHelper.SplitIdKey(lhs);
 		if (string.IsNullOrEmpty(key))
 		{
-			await notifyService.Notify(executor, "SCENE: /setpose needs <poseId>/<key>=<value>.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/setpose needs <poseId>/<key>=<value>.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		if (key!.Trim().Equals("type", StringComparison.OrdinalIgnoreCase) && PoseTypes.Normalize(value.ToPlainText()) is Error<string> invalid)
 		{
-			await notifyService.Notify(executor, $"SCENE: {invalid.Value}");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(invalid.Value, NoticeKind.Warn));
 			return MarkupText.Plain($"#-1 {invalid.Value}");
 		}
 
@@ -102,7 +103,7 @@ public static class ScenePoseHandlers
 
 		if (string.IsNullOrEmpty(editorDbref))
 		{
-			await notifyService.Notify(executor, "SCENE: /editpose needs an editor dbref.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/editpose needs an editor dbref.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
@@ -178,11 +179,11 @@ public static class ScenePoseHandlers
 	{
 		if (result is not Contracts.ScenePose pose)
 		{
-			await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No pose '{poseId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
-		await notifyService.Notify(executor, $"SCENE: {successMessage}");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice(successMessage, NoticeKind.Ok));
 		if (parser is not null && eventType is not null)
 			await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
 		return MarkupText.Plain(pose.Id);
@@ -199,17 +200,17 @@ public static class ScenePoseHandlers
 	{
 		if (result is Error<string> err)
 		{
-			await notifyService.Notify(executor, $"SCENE: {err.Value}");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(err.Value, NoticeKind.Warn));
 			return MarkupText.Plain($"#-1 {err.Value}");
 		}
 
 		if (result is not Contracts.ScenePose pose)
 		{
-			await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No pose '{poseId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
-		await notifyService.Notify(executor, $"SCENE: {successMessage}");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice(successMessage, NoticeKind.Ok));
 		if (parser is not null && eventType is not null)
 			await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
 		return MarkupText.Plain(pose.Id);

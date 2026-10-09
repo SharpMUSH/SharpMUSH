@@ -30,6 +30,7 @@ For `<type>`...   `<data>` should be...<br>
 null            not given<br>
 boolean         one arg, either "true", "1", "false" or "0"<br>
 string          one arg, any string, including an empty string<br>
+markupstring    one arg, any string; its colour and markup are kept, for a portal page that draws them<br>
 number          one arg, a valid number<br>
 array           zero or more args, each themselves valid JSON<br>
 object          zero or more pairs of arguments, the first a plain string (NOT a quoted JSON string), the second valid JSON of any type

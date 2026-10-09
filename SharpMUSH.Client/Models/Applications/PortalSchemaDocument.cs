@@ -64,7 +64,9 @@ public sealed record SchemaSection(
 /// <c>Empty</c> is a table's or timeline's text for no rows. <c>Confirm</c>, <c>Values</c>, <c>Color</c> and
 /// <c>Variant</c> belong to a button: a question asked before it dispatches, values merged over the field
 /// values it posts, and its MudBlazor color and variant. <c>TriggersAction</c> belongs to a field: the action
-/// dispatched whenever its value changes.
+/// dispatched whenever its value changes. <c>Format</c> belongs to markdown: "mstring" draws <c>Value</c> as a
+/// serialized MString, the way an mstring field is drawn. <c>Reorder</c> belongs to a table: the row group whose
+/// rows the viewer may drag into a new order.
 /// </remarks>
 public sealed record SchemaElement(
 	string? Kind = null,
@@ -92,7 +94,20 @@ public sealed record SchemaElement(
 	IReadOnlyDictionary<string, JsonElement>? Values = null,
 	string? Color = null,
 	string? Variant = null,
-	[property: JsonPropertyName("triggers_action")] string? TriggersAction = null);
+	[property: JsonPropertyName("triggers_action")] string? TriggersAction = null,
+	string? Format = null,
+	SchemaReorder? Reorder = null);
+
+/// <summary>
+/// The rows of a table's <c>Group</c> (rows whose <c>group</c> field holds it) that the viewer may put in a new
+/// order. Moving one dispatches <c>Action</c> with <c>Values</c>, plus <c>item</c> (the moved row's <c>Key</c>
+/// field) and <c>position</c> (its new place in the group, from 1).
+/// </summary>
+public sealed record SchemaReorder(
+	string? Group,
+	string? Action,
+	string? Key,
+	IReadOnlyDictionary<string, JsonElement>? Values = null);
 
 /// <summary>A select/radio/multiselect choice.</summary>
 public sealed record SchemaOption(string Value, string Label);

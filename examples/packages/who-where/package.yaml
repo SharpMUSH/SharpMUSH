@@ -1,6 +1,6 @@
 format: 1
 package: who-where
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+who and +where commands with a shared formatting object, drawn as layout tables."
 license: MIT
@@ -38,15 +38,15 @@ objects:
       # Columns are joined with %r and the delimiter is a newline (WW_FN_OPTS), so a room name with a |
       # in it stays one cell; WW_FN_OPTS takes the nowrap columns and the priorities split the same way.
       # Every column is nowrap, so a narrow screen drops the lower-priority columns instead of breaking
-      # names across lines.
+      # names across lines. Headings are bold, and the count under the table is in the muted theme colour.
       WW_FN_OPTS: |-
         json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1))
       WW_FN_FOOT: |-
-        %r[rule()]%r[words(%0)] connected
+        %r[rule()]%r[tone(muted,[words(%0)] connected)]
       WW_FN_WHO: |-
-        box(datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2),Name%r[iter(%0,name(%i0),,%r)],>Idle%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>Connected%r[iter(%0,trim(timestring(conn(%i0))),,%r)])[u(%!/WW_FN_FOOT,%0)],Who's Online)
+        box(datacolumns(u(%!/WW_FN_OPTS,1%r2%r3,1%r1%r2),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],>[ansi(h,Idle)]%r[iter(%0,trim(timestring(idle(%i0))),,%r)],>[ansi(h,Connected)]%r[iter(%0,trim(timestring(conn(%i0))),,%r)])[u(%!/WW_FN_FOOT,%0)],Who's Online)
       WW_FN_WHERE: |-
-        box(datacolumns(u(%!/WW_FN_OPTS,1%r2,1%r2),Name%r[iter(%0,name(%i0),,%r)],Location%r[iter(%0,firstof(name(loc(%i0)),-),,%r)])[u(%!/WW_FN_FOOT,%0)],Where)
+        box(datacolumns(u(%!/WW_FN_OPTS,1%r2,1%r2),[ansi(h,Name)]%r[iter(%0,name(%i0),,%r)],[ansi(h,Location)]%r[iter(%0,firstof(name(loc(%i0)),-),,%r)])[u(%!/WW_FN_FOOT,%0)],Where)
 
   # ---- +help topics ---------------------------------------------------------
   # On the function object, which is unflagged — the librarian cannot u() a privileged object's

@@ -8,12 +8,12 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.1.0
+    version: 1.2.0
     description: +who and +where commands
   - path: bbs-lite/
     name: BBS Lite
     package: bbs-lite
-    version: 0.9.0-beta
+    version: 0.9.1-beta
     description: Tiny bulletin board — dependencies, configure, cross-package refs
   - path: starter-area/
     package: starter-area
@@ -43,18 +43,14 @@ packages:
     package: chargen-app
     version: 1.0.0
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
-  - path: common-functions/
-    package: common-functions
-    version: 1.1.0
-    description: "Global UI-helper functions: header(), footer(), line()"
   - path: scene/
     package: scene
-    version: 1.5.1
+    version: 1.5.2
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.4.1
+    version: 1.5.0
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: hello-ui/
     name: Hello UI
@@ -64,12 +60,12 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.5.0
+    version: 1.6.0
     description: +wiki — paged listings, a rendered article view, and an editorial audit
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.5.0
+    version: 1.5.1
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -84,7 +80,7 @@ packages:
   - path: radio/
     name: Radio
     package: radio
-    version: 1.0.0
+    version: 1.1.0
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-scene/
     name: Radio in scenes
@@ -95,4 +91,9 @@ packages:
     name: BBoards
     package: bboards
     version: 1.0.0
-    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help)
+    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help and http-handler)
+  - path: bboards-app/
+    name: BBoards in the portal
+    package: bboards-app
+    version: 1.0.0
+    description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)

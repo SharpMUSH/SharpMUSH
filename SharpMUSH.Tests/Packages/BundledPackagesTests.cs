@@ -98,7 +98,7 @@ public class BundledPackagesTests
 
 		await Assert.That(installed).IsEquivalentTo(new[]
 		{
-			"http-handler", "profile-handler", "room-contents", "comm-feed", "common-functions", "plus-help", "scene"
+			"http-handler", "profile-handler", "room-contents", "comm-feed", "plus-help", "scene"
 		});
 	}
 
@@ -115,7 +115,6 @@ public class BundledPackagesTests
 
 		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("scene"));
 		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("wiki-reader"));
-		await Assert.That(order.IndexOf("common-functions")).IsLessThan(order.IndexOf("plus-help"));
 	}
 
 	/// <summary>

@@ -26,7 +26,7 @@ public partial class Functions
 		{"null", JsonHelpers.NullJSON},
 		{"boolean", JsonHelpers.BooleanJSON},
 		{"string", JsonHelpers.StringJSON },
-		{"markupstring", JsonHelpers.StringJSON },
+		{"markupstring", JsonHelpers.MarkupStringJSON },
 		{"number", JsonHelpers.NumberJSON },
 		{"array", JsonHelpers.ArrayJSON },
 		{"object", JsonHelpers.ObjectJSON }

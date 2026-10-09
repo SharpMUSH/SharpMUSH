@@ -309,6 +309,7 @@ internal static class EngineRegistration
 			sp.GetRequiredService<ConfigurationReloadService>());
 		services.AddSingleton<ObjectVersions>();
 		services.AddSingleton<SharpMUSH.Implementation.Visitors.ExecutorDebugFlags>();
+		services.AddSingleton<SharpMUSH.Implementation.Parsing.SoftcodeParseCache>();
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));

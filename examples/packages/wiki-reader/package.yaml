@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.5.0
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -37,23 +37,23 @@ objects:
       # syntax-highlight and lay out better than a template would here.
       RENDERMARKUP`H1:
         value: |-
-          [ansi(hw,%0)]
+          [ansi(h,%0)]
         flags: [funsyntax]
       RENDERMARKUP`H2:
         value: |-
-          [ansi(hc,%0)]
+          [ansi(h,tone(primary,%0))]
         flags: [funsyntax]
       RENDERMARKUP`H3:
         value: |-
-          [ansi(hb,%0)]
+          [ansi(h,tone(secondary,%0))]
         flags: [funsyntax]
       RENDERMARKUP`LISTITEM:
         value: |-
-          [if(%0,[ansi(hc,%1.)],[ansi(hc,*)])] %2
+          [tone(primary,if(%0,%1.,*))] %2
         flags: [funsyntax]
       RENDERMARKUP`QUOTE:
         value: |-
-          [ansi(hy,%0)]
+          [tone(muted,%0)]
         flags: [funsyntax]
       # [[Page]] in an article body becomes a +wiki command for a client that
       # can click one, and stays highlighted prose for everyone else. A RENDERMARKUP
@@ -61,7 +61,7 @@ objects:
       # through wikilink(): a global @function, which runs as this object.
       RENDERMARKUP`WIKILINK:
         value: |-
-          [ansi(hc,[wikilink(%0,%1,%2)])]
+          [tone(info,wikilink(%0,%1,%2))]
         flags: [funsyntax]
       # wikilink(<text>, <page>[, <hint>]) — registered globally by STARTUP. It can only ever
       # write a link running "+wiki <page>", which is why lending this object's Send_OOB to
@@ -193,7 +193,7 @@ objects:
       # The category bar under an article, as MediaWiki puts it under the page. Empty for a page in none.
       FUN`DISPLAY`CATBAR:
         value: |-
-          [@@(%0 a page reference)][if(words(setr(c,wiki(%0,categories))),[rule()]%r[ansi(h,Categories:)]%b[iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b)]%r)]
+          [@@(%0 a page reference)][if(words(setr(c,wiki(%0,categories))),[rule()]%r[ansi(h,tone(primary,Categories:))]%b[iter(%q<c>,u(%!/FUN`DISPLAY`CATREF,%i0),%b,%b·%b)]%r)]
         flags: [funsyntax]
       FUN`DISPLAY`REF:
         value: |-

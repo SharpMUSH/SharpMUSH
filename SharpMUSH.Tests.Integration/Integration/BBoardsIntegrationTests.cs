@@ -95,7 +95,7 @@ public partial class BBoardsIntegrationTests
 		return player;
 	}
 
-	private async Task InstallAsync()
+	private async Task InstallAsync(string package = "bboards")
 	{
 		var controller = new PackagesController(
 			WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>(),
@@ -107,14 +107,17 @@ public partial class BBoardsIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>());
 		var applied = await controller.Apply(
-			new ApplyRequest(BundledPackages.RemoteName, "bboards", null, null, null), CancellationToken.None);
-		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("bboards must install from the catalogue");
+			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
+		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
 		// AINSTALL is queued after the apply: it seeds the boards and adds the commands.
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
-	private async Task UninstallAsync() =>
+	private async Task UninstallAsync()
+	{
+		await Installer.UninstallAsync("bboards-app", force: true, CancellationToken.None);
 		await Installer.UninstallAsync("bboards", force: true, CancellationToken.None);
+	}
 
 	/// <summary>A board of the test's own at the top, made by <paramref name="admin"/>; returns its name.</summary>
 	private async Task<string> Board(TestIsolationHelpers.TestPlayer admin, string prefix)

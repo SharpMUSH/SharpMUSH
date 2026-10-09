@@ -741,6 +741,25 @@ public partial class MarkupOutputRendererTests
 		=> await Assert.That(Render(Notice("Error", "x"), new ProtocolCapabilities(ScreenReader: true, ColorStylePin: ColorStyles.SixteenColor), null))
 			.StartsWith("\u001b[");
 
+	/// <summary>
+	/// A notice written in C# (the scene plugin's) reads as notice()'s does, and its lead is a tone, so each
+	/// reader gets it in their own theme's warning colour.
+	/// </summary>
+	[Test]
+	public async Task ANoticeWrittenInCSharp_ReadsLikeNoticeAndTakesTheReadersTheme()
+	{
+		var notice = NoticeMarkup.Message("SCENE", "No scene '9'.", NoticeKind.Warn);
+		var plain = Render(notice, new ProtocolCapabilities(SupportsAnsi: true), AllColour);
+		var themed = Render(notice, new ProtocolCapabilities(SupportsAnsi: true), AllColour with { Theme = "fantasy" });
+
+		await Assert.That(StripAnsi(plain)).IsEqualTo("[SCENE] Warning: No scene '9'.");
+		await Assert.That(StripAnsi(themed)).IsEqualTo("[SCENE] Warning: No scene '9'.");
+		await Assert.That(themed).IsNotEqualTo(plain);
+		await Assert.That(plain).DoesNotContain("span");
+		await Assert.That(StripAnsi(Render(notice, new ProtocolCapabilities(ScreenReader: true), null)))
+			.IsEqualTo("SCENE warning: No scene '9'.");
+	}
+
 	[Test]
 	public async Task ThePortal_KeepsANoticesBracketsFromItsScreenReader()
 		=> await Assert.That(TagwrapPolicy.Portal.TryCreate("span", "aria-hidden=\"true\"", out var tag) ? tag.Attributes : null)

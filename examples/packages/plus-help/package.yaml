@@ -1,6 +1,6 @@
 format: 1
 package: plus-help
-version: 1.4.1
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -301,7 +301,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`NAV:
         value: |-
-          [@@(%0 records · %1 a record — the subtopic and see-also lines after a blank line, each omitted when empty)][if(words(setr(kids,u(%!/FUN`GET`CHILDREN,%0,%1))),%r%r[ansi(hc,Subtopics:)] [iter(%q<kids>,u(%!/FUN`DISPLAY`CHILD,%i0),%b,[ansi(h,%b·%b)])])][if(strlen(setr(see,u(%!/FUN`GET`SEE,%1))),%r[if(words(%q<kids>),,%r)][ansi(hc,See also:)] [iter(%q<see>,u(%!/FUN`DISPLAY`SEEONE,%i0),|,[ansi(h,%b·%b)])])]
+          [@@(%0 records · %1 a record — the subtopic and see-also lines after a blank line, each omitted when empty)][if(words(setr(kids,u(%!/FUN`GET`CHILDREN,%0,%1))),%r%r[ansi(h,tone(primary,Subtopics:))] [iter(%q<kids>,u(%!/FUN`DISPLAY`CHILD,%i0),%b,[tone(muted,%b·%b)])])][if(strlen(setr(see,u(%!/FUN`GET`SEE,%1))),%r[if(words(%q<kids>),,%r)][ansi(h,tone(primary,See also:))] [iter(%q<see>,u(%!/FUN`DISPLAY`SEEONE,%i0),|,[tone(muted,%b·%b)])])]
         flags: [funsyntax]
       # The body is markdown, rendered against this object's own RENDERMARKUP templates so a topic's
       # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
@@ -327,23 +327,23 @@ objects:
       # Send_OOB for cmdlink(), and the librarian does.
       RENDERMARKUP`H1:
         value: |-
-          [ansi(hw,%0)]
+          [ansi(h,%0)]
         flags: [funsyntax]
       RENDERMARKUP`H2:
         value: |-
-          [ansi(hc,%0)]
+          [ansi(h,tone(primary,%0))]
         flags: [funsyntax]
       RENDERMARKUP`H3:
         value: |-
-          [ansi(hb,%0)]
+          [ansi(h,tone(secondary,%0))]
         flags: [funsyntax]
       RENDERMARKUP`LISTITEM:
         value: |-
-          [if(%0,[ansi(hc,%1.)],[ansi(hc,*)])] %2
+          [tone(primary,if(%0,%1.,*))] %2
         flags: [funsyntax]
       RENDERMARKUP`QUOTE:
         value: |-
-          [ansi(hy,%0)]
+          [tone(muted,%0)]
         flags: [funsyntax]
       # The engine renders a bare [topic] as a command link running "help <topic>" — right for the
       # engine's corpus, wrong inside +help, where a cross-reference means the game's own topic. %1
@@ -351,7 +351,7 @@ objects:
       # is a live "+help join". A topic that means the ENGINE's help says so in prose.
       RENDERMARKUP`LINK:
         value: |-
-          [if(and(%2,strmatch(%1,help *)),[ansi(hc,[helplink(%0,after(%1,help%b))])],%0)]
+          [if(and(%2,strmatch(%1,help *)),[tone(info,helplink(%0,after(%1,help%b)))],%0)]
         flags: [funsyntax]
 
       # helplink(<text>, <topic>) — registered globally by STARTUP, so it runs as this librarian for
@@ -594,7 +594,7 @@ objects:
           topic: `+help/write house rules=...` is then read by `+help house rules`.
 
           `<text>` is markdown, and it is **evaluated when it is read**, so a topic can carry
-          colour or the reader's own name: `\[ansi(hc,...)\]` and `\[name(%%#)\]` both work. Because it
+          colour or the reader's own name: `\[tone(info,...)\]` and `\[name(%%#)\]` both work. Because it
           is evaluated, writing help is a staff verb.
 
           The line you type is evaluated once on its way in, exactly as `&attr obj=...` is, so you

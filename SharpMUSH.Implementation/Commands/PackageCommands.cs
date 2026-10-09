@@ -53,6 +53,7 @@ public partial class Commands
 		ParameterNames = ["objects", "package", "version", "description"])]
 	public async ValueTask<Option<CallState>> Package(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
