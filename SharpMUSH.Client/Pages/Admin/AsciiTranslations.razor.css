@@ -1,0 +1,3 @@
+/* Intentionally empty: this route renders a kit header and <AdminKeyValueList>, whose own
+   stylesheet carries every rule and the container tiers. EveryRoutablePageHasAStylesheet
+   requires the file to exist. */

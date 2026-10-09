@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -11,7 +12,8 @@ namespace SharpMUSH.Server.Services;
 
 /// <summary>
 /// Keeps the connection servers' copy of the MSSP report current: they answer the MSSP telnet option
-/// from it (<see cref="MSSPReportMessage"/>). The report is rebuilt every <see cref="Interval"/>, at
+/// from it (<see cref="MSSPReportMessage"/>). The output settings they render with
+/// (<see cref="OutputSettingsMessage"/>) go with it, at the same times. The report is rebuilt every <see cref="Interval"/>, at
 /// once when the configuration changes or a connection server asks, and sent only when it differs
 /// from the last one sent, or when asked.
 /// </summary>
@@ -32,6 +34,8 @@ public sealed class MsspReportPublisher(
 		new BoundedChannelOptions(4) { FullMode = BoundedChannelFullMode.DropOldest });
 
 	private string? _lastSent;
+
+	private string? _lastSettings;
 
 	/// <summary>A connection server asked for the report: send it whether or not it changed.</summary>
 	public void RequestSend() => _wake.Writer.TryWrite(true);
@@ -73,6 +77,15 @@ public sealed class MsspReportPublisher(
 	{
 		try
 		{
+			// Before the report: a connection server stops asking once the report arrives.
+			var translations = options.CurrentValue.AsciiTranslations.Translations;
+			var settings = AsciiTranslations.Fingerprint(translations);
+			if (force || settings != _lastSettings)
+			{
+				await bus.Publish(new OutputSettingsMessage(new Dictionary<string, string>(translations, StringComparer.Ordinal)), ct);
+				_lastSettings = settings;
+			}
+
 			var variables = (await report.BuildAsync())
 				.Select(variable => new MSSPVariable(variable.Name, [.. variable.Values]))
 				.ToArray();

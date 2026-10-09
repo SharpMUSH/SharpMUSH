@@ -83,6 +83,13 @@ public record MSSPVariable(string Name, string[] Values);
 public record MSSPReportMessage(MSSPVariable[] Variables);
 
 /// <summary>
+/// Message sent from MainProcess to ConnectionServer with the game settings that shape each connection's output:
+/// the <c>ascii_translations</c> table, the stand-in a client without Unicode is sent for each character. Published
+/// with the MSSP report, when it changes and when a connection server asks.
+/// </summary>
+public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations);
+
+/// <summary>
 /// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection
 /// </summary>
 public record UpdatePlayerPreferencesMessage(

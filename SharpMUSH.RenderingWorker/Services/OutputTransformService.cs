@@ -18,29 +18,18 @@ public sealed class OutputTransformService : IOutputTransformService
 	}
 
 	/// <summary>
-	/// <paramref name="rawOutput"/>, UTF-8, in the client's character set. UTF-8 output is the input itself,
-	/// byte for byte; anything else is transcoded, and a character the set lacks becomes <c>?</c>.
+	/// <paramref name="rawOutput"/>, UTF-8, in the connection's character set
+	/// (<see cref="ProtocolCapabilities.OutputCharset"/>). UTF-8 output is the input itself, byte for byte; anything
+	/// else has each character the set lacks replaced with the nearest one it has
+	/// (<see cref="MarkupOutputRenderer.FoldFor"/>), then is transcoded. Rendered output was folded already, before
+	/// it was laid out; this catches output sent as it is.
 	/// </summary>
-	public static byte[] Transform(byte[] rawOutput, ProtocolCapabilities capabilities)
+	/// <param name="translations">The game's <c>ascii_translations</c> table, or null for the built-in stand-ins alone.</param>
+	public static byte[] Transform(byte[] rawOutput, ProtocolCapabilities capabilities,
+		IReadOnlyDictionary<string, string>? translations = null)
 	{
-		var targetEncoding = GetTargetEncoding(capabilities.Charset);
-		return targetEncoding == Encoding.UTF8 ? rawOutput : targetEncoding.GetBytes(Encoding.UTF8.GetString(rawOutput));
-	}
-
-	private static Encoding GetTargetEncoding(string charset)
-	{
-		if (charset.Equals("ASCII", StringComparison.OrdinalIgnoreCase))
-		{
-			return Encoding.ASCII;
-		}
-
-		if (charset.Equals("LATIN-1", StringComparison.OrdinalIgnoreCase)
-				|| charset.Equals("ISO-8859-1", StringComparison.OrdinalIgnoreCase))
-		{
-			return Encoding.Latin1;
-		}
-
-		// UTF-8, and the default for anything unrecognised.
-		return Encoding.UTF8;
+		if (MarkupOutputRenderer.FoldFor(capabilities, translations) is not { } fold) return rawOutput;
+		var text = fold.Fold(Encoding.UTF8.GetString(rawOutput));
+		return (fold.Latin1 ? Encoding.Latin1 : Encoding.ASCII).GetBytes(text);
 	}
 }

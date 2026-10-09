@@ -4,6 +4,7 @@ using MarkupString.Ansi;
 using MarkupString.Layout;
 using MarkupString.Mxp;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Text;
@@ -134,10 +135,13 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 				? measured(image, columns)
 				: null;
 		}
+		var fold = FoldFor(connection.Capabilities, connection.AsciiTranslations);
 		var reader = ReaderTheme(connection.Preferences?.Theme);
 		var deserialized = ToneMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), reader?.Palette);
 		var ms = Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),
-			connection.Capabilities, reader?.Look, cells);
+			connection.Capabilities, reader?.Look, cells, fold);
+		// The blocks were folded as they were laid out; this is the text around them.
+		if (fold is not null) ms = fold.Fold(ms);
 		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);
 		var text = connection.Capabilities.Format switch
 		{
@@ -165,21 +169,48 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	}
 
 	/// <summary>
+	/// For a connection not written in UTF-8, the fold that replaces each character it cannot show: the game's
+	/// <c>ascii_translations</c> first, then the built-in stand-ins, keeping what Latin-1 has for a client that
+	/// reads it. Null for a connection written in UTF-8.
+	/// </summary>
+	public static AsciiFold? FoldFor(ProtocolCapabilities capabilities, IReadOnlyDictionary<string, string>? translations)
+	{
+		if (capabilities.Utf8) return null;
+		var latin1 = capabilities.OutputCharset == TerminalCharsets.Latin1;
+		if (translations is null or { Count: 0 }) return latin1 ? Latin1Fold : AsciiFold.Default;
+
+		// The game changes them rarely and every connection shares them; past a handful, start again.
+		if (Folds.Count > 16) Folds.Clear();
+		return Folds.GetOrAdd((AsciiTranslations.Fingerprint(translations), latin1), static (key, translations) =>
+		{
+			// The engine refuses an entry that cannot work, so one here is from before that check: it is left out
+			// rather than costing the rest.
+			var usable = translations.Where(pair => AsciiTranslations.Problem(pair.Key, pair.Value) is null);
+			return new AsciiFold(usable, key.Latin1);
+		}, translations);
+	}
+
+	private static readonly AsciiFold Latin1Fold = new(latin1: true);
+
+	private static readonly ConcurrentDictionary<(string Translations, bool Latin1), AsciiFold> Folds = new();
+
+	/// <summary>
 	/// <paramref name="text"/> with each intact layout block (<c>box()</c>, <c>flex()</c>, ...) laid out
-	/// for this client: an automatic-width block at the width it reported, box drawing as ASCII for a
-	/// client without UTF-8, the content alone in reading order for a screen reader, and under the
-	/// player's <c>@theme</c>, which sits over the game's look and under a layout's own theme. The browser
-	/// lays blocks out itself, so this is for every other connection.
+	/// for this client: an automatic-width block at the width it reported, box drawing as ASCII and its text
+	/// folded (<paramref name="fold"/>) for a client without UTF-8, the content alone in reading order for a
+	/// screen reader, and under the player's <c>@theme</c>, which sits over the game's look and under a
+	/// layout's own theme. The browser lays blocks out itself, so this is for every other connection.
 	/// </summary>
 	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, LayoutTheme? look,
-		Func<ImageMarkup, int, PictureCells?>? pictures)
+		Func<ImageMarkup, int, PictureCells?>? pictures, AsciiFold? fold)
 	{
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
-		var context = !capabilities.SupportsUtf8 || capabilities.ReadsAloud || look is not null || pictures is not null
+		var context = fold is not null || capabilities.ReadsAloud || look is not null || pictures is not null
 			? new LayoutContext
 			{
-				AsciiOnly = !capabilities.SupportsUtf8,
+				AsciiOnly = fold is not null,
+				Fold = fold,
 				Linear = capabilities.ReadsAloud,
 				Theme = look ?? LayoutTheme.Default,
 				Pictures = pictures
@@ -284,7 +315,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 				Ansi: capabilities.SupportsAnsi,
 				Xterm256: capabilities.SupportsXterm256,
 				Truecolor: capabilities.SupportsTruecolor,
-				Utf8: capabilities.SupportsUtf8,
+				Utf8: capabilities.Utf8,
 				ScreenReader: capabilities.ReadsAloud),
 			preferences is null
 				? null

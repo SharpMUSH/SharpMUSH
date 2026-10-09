@@ -88,11 +88,12 @@ A telnet client that did not agree to UTF-8 is sent each box-drawing character a
 - an upright as `|`
 - a corner or tee as `+`
 
-A double box stays recognisably double, and colour is kept. A piece that is not box drawing at all, such as an emoji or the tee bracket round a title in the Unicode styles, becomes the `ascii` style's piece instead. Tree guides become `|-` and `` `- ``. A `"sep"` between flex items is translated the same way. The text inside a layout is never changed. The portal ignores border characters and draws borders itself.
+A double box stays recognisably double, and colour is kept. A piece that is not box drawing at all, such as an emoji or the tee bracket round a title in the Unicode styles, becomes the `ascii` style's piece instead. Tree guides become `|-` and `` `- ``. A `"sep"` between flex items is translated the same way. The text inside a layout is sent as [CHARSET] describes, before the layout is lined up. The portal ignores border characters and draws borders itself.
 
 ::: seealso
 - [BOX()]
 - [RULE()]
 - [TREE()]
 - [LAYOUT FUNCTIONS]
+- [CHARSET]
 :::

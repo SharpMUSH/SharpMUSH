@@ -176,6 +176,7 @@ public class Program
 		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
 		builder.Services.AddTelnetServer();
 		builder.Services.AddSingleton<MsspReportHolder>();
+		builder.Services.AddSingleton<OutputSettingsHolder>();
 		builder.Services.AddSingleton<TerminalProbes>();
 		builder.Services.AddHostedService<MsspReportRequestService>();
 
@@ -210,6 +211,7 @@ public class Program
 				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
 				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();
 				x.AddConsumer<MSSPReportConsumer, MSSPReportMessage>();
+				x.AddConsumer<OutputSettingsConsumer, OutputSettingsMessage>();
 				x.AddConsumer<SessionResumeResponseConsumer, SessionResumeResponseMessage>();
 				x.AddConsumer<MainProcessShutdownConsumer, MainProcessShutdownMessage>();
 			});

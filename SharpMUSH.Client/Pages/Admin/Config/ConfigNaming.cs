@@ -31,6 +31,7 @@ public static partial class ConfigNaming
 		"bannednames" => "BannedNames",
 		"sitelock" or "sitelockrules" => "SitelockRules",
 		"mssp" => "Mssp",
+		"asciitranslations" => "AsciiTranslations",
 		"dump" => "Dump",
 		"file" or "files" => "File",
 		"textfile" or "textfiles" => "TextFile",

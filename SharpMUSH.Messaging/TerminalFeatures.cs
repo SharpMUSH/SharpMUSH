@@ -25,13 +25,17 @@ public sealed record TerminalProbeResult(bool? KittyGraphics, bool Sixel, string
 /// <param name="ScreenReader">
 /// A <c>SCREENREADER</c> (or <c>SOCKSET screenreader</c>) pin, or null for whatever the client said through MTTS.
 /// </param>
+/// <param name="Charset">The character set the player named with <c>SOCKSET charset</c> (one of <see cref="TerminalCharsets"/>), or null for auto.</param>
+/// <param name="StripAccents">Whether <c>SOCKSET stripaccents</c> is on, which sends ASCII whatever the client says.</param>
 public sealed record TerminalPins(
 	bool? Hyperlinks = null,
 	bool? CommandLinks = null,
 	string? Graphics = null,
 	bool Animation = false,
 	string? Terminal = null,
-	bool? ScreenReader = null)
+	bool? ScreenReader = null,
+	string? Charset = null,
+	bool StripAccents = false)
 {
 	/// <summary>Nothing set: links worked out from the terminal, no pictures.</summary>
 	public static TerminalPins None { get; } = new();
@@ -46,8 +50,48 @@ public sealed record TerminalPins(
 			metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey),
 			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.AnimationKey) == true,
 			metadata.GetValueOrDefault(TerminalFeatureReader.TerminalKey),
-			TerminalFeatureReader.PinOf(metadata, TerminalCapabilityReader.ScreenReaderKey));
+			TerminalFeatureReader.PinOf(metadata, TerminalCapabilityReader.ScreenReaderKey),
+			TerminalCharsets.Parse(metadata.GetValueOrDefault(TerminalFeatureReader.CharsetKey)),
+			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.StripAccentsKey) == true);
 	}
+}
+
+/// <summary>
+/// The character sets output is written in. A client without UTF-8 is sent each character it cannot show as
+/// the nearest one it can (<see cref="MarkupString.AsciiFold"/>), so a middle dot reaches it as <c>*</c>
+/// rather than as <c>?</c> or as two bytes it shows as two wrong characters.
+/// </summary>
+public static class TerminalCharsets
+{
+	public const string Utf8 = "utf-8";
+	public const string Latin1 = "latin-1";
+	public const string Ascii = "ascii";
+
+	/// <summary>The character set <paramref name="name"/> names, however it is spelled, or null for one that is not one of these.</summary>
+	public static string? Parse(string? name) => name?.Trim().ToLowerInvariant().Replace("_", "-") switch
+	{
+		"utf-8" or "utf8" => Utf8,
+		"latin-1" or "latin1" or "iso-8859-1" or "iso8859-1" or "l1" => Latin1,
+		"ascii" or "us-ascii" or "us" => Ascii,
+		_ => null
+	};
+
+	/// <summary>
+	/// The character set a connection is written in: ASCII under <c>SOCKSET stripaccents</c>; otherwise the one
+	/// <c>SOCKSET charset</c> names; otherwise the one telnet CHARSET negotiation settled on; otherwise UTF-8 for a
+	/// client that claims it, ASCII for one that does not.
+	/// </summary>
+	/// <param name="pins">What the player set.</param>
+	/// <param name="negotiated">What CHARSET negotiation settled on, or null when it never did.</param>
+	/// <param name="claimsUtf8">
+	/// Whether the client claims UTF-8 (MTTS) or is a terminal known to show it, or has not reported its terminal yet.
+	/// </param>
+	public static string Resolve(TerminalPins? pins, string? negotiated, bool claimsUtf8) =>
+		pins is { StripAccents: true } ? Ascii
+		: pins?.Charset is { } pinned ? pinned
+		: Parse(negotiated) is { } settled ? settled
+		: claimsUtf8 ? Utf8
+		: Ascii;
 }
 
 /// <summary>The values <c>SOCKSET graphics</c> takes.</summary>
@@ -103,6 +147,12 @@ public static class TerminalFeatureReader
 
 	/// <summary>The metadata key holding <c>SOCKSET terminal</c>: a <see cref="TerminalProfile.Id"/>.</summary>
 	public const string TerminalKey = "TERMINAL";
+
+	/// <summary>The metadata key holding <c>SOCKSET charset</c>: one of <see cref="TerminalCharsets"/>, or absent for auto.</summary>
+	public const string CharsetKey = "CHARSET";
+
+	/// <summary>The metadata key holding PennMUSH's <c>SOCKSET stripaccents</c>: <c>1</c> or <c>0</c>.</summary>
+	public const string StripAccentsKey = "STRIPACCENTS";
 
 	/// <summary>Metadata keys holding what the terminal answered when asked.</summary>
 	public const string ProbeKittyKey = "TerminalKitty";
@@ -245,13 +295,11 @@ public static class TerminalFeatureReader
 			.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 	/// <summary>
-	/// Whether the connection's output is written in UTF-8: the charset it negotiated when one is recorded,
-	/// and otherwise yes, which is what the socket server writes by default. Not the MTTS UTF-8 claim, which
-	/// most terminals never make and which governs only whether box drawing is ASCII.
+	/// Whether the connection is written in UTF-8 as far as the engine knows: what the player set, and otherwise
+	/// yes. The socket server also knows what the client negotiated and claimed (<see cref="TerminalCharsets.Resolve"/>).
 	/// </summary>
 	private static bool Utf8(IReadOnlyDictionary<string, string> metadata) =>
-		metadata.GetValueOrDefault("CHARSET") is not { Length: > 0 } charset
-		|| charset.Replace("-", "").Equals("UTF8", StringComparison.OrdinalIgnoreCase);
+		TerminalCharsets.Resolve(TerminalPins.Of(metadata), null, claimsUtf8: true) == TerminalCharsets.Utf8;
 
 	private static TerminalFeatures Pin(TerminalFeatures features, TerminalFeatures feature, bool? pin) =>
 		pin is { } on ? Set(features, feature, on) : features;

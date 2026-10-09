@@ -258,6 +258,19 @@ public class TelnetServer : ConnectionHandler
 			})
 			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
+			// What the client agreed to read: output is written in it, each character it lacks replaced.
+			.OnCharsetChange(async encoding =>
+			{
+				await AnnounceTelnetIfNegotiatedAsync();
+				await PublishAfterRegistrationAsync(() =>
+				{
+					_connectionService.UpdateCapabilities(nextPort, current => current with
+					{
+						Charset = TerminalCharsets.Parse(encoding.WebName) ?? encoding.WebName
+					});
+					return Task.CompletedTask;
+				});
+			})
 			.AddPlugin<MCCPProtocol>()
 			// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 			// terminfo() reports as the client. Without it every connection is "unknown".

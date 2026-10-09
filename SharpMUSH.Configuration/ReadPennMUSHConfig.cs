@@ -291,6 +291,8 @@ public static partial class ReadPennMushConfig
 			SitelockRules = new SitelockRulesOptions(
 				Rules: new Dictionary<string, string[]>()
 			),
+			// PennMUSH has no such table.
+			AsciiTranslations = d.AsciiTranslations,
 			Mssp = new MsspOptions(
 				Variables: Mssp(text, skipped, d.Mssp.Variables)
 			),

@@ -82,6 +82,8 @@ public class ResponsiveConventionsTests
 
 	private static readonly Dictionary<string, string> PagesWithoutContainerTiersByDesign = new(StringComparer.Ordinal)
 	{
+		["Pages/Admin/AsciiTranslations.razor.css"] =
+			"renders only the kit header and <AdminKeyValueList>, whose own stylesheet carries the tiers",
 		["Pages/Admin/BannedNames.razor.css"] =
 			"renders only the kit header and <AdminKeyValueList>, whose own stylesheet carries the tiers",
 		["Pages/Admin/AdminServer.razor.css"] =

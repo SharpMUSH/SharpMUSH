@@ -23,6 +23,22 @@ public partial class SpeechTransformationTests
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(expected.Render(MarkupFormat.Ansi));
 	}
 
+	/// <summary><c>accname()</c> is the name with its @nameaccent applied (PennMUSH <c>accented_name</c>).</summary>
+	[Test]
+	public async Task AccnameAppliesTheNameAccent()
+	{
+		var actor = await Player();
+		var suffix = Guid.NewGuid().ToString("N")[..12];
+		await Admin($"@name {actor.DbRef}=A{suffix}");
+		var parser = Factory.CommandParser;
+		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"accname({actor.DbRef})")))!.Message!.ToPlainText())
+			.IsEqualTo("A" + suffix);
+
+		await Admin($"@nameaccent {actor.DbRef}='{new string('-', suffix.Length)}");
+		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"accname({actor.DbRef})")))!.Message!.ToPlainText())
+			.IsEqualTo("Á" + suffix);
+	}
+
 	[Test]
 	[Arguments(true)]
 	[Arguments(false)]

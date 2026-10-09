@@ -679,7 +679,7 @@ public partial class Commands
 public static class SocketOptions
 {
 	internal const string PromptNewlinesKey = "PROMPT_NEWLINES";
-	internal const string StripAccentsKey = "STRIPACCENTS";
+	internal const string StripAccentsKey = TerminalFeatureReader.StripAccentsKey;
 	internal const string NoQuotaKey = "NOQUOTA";
 	internal const string ColorStyleKey = "COLORSTYLE";
 
@@ -718,6 +718,8 @@ public static class SocketOptions
 		Row("Height", connection.Metadata.GetValueOrDefault("HEIGHT", "24"));
 		Row("Terminal Type", connection.Metadata.GetValueOrDefault("TerminalType", "unknown"));
 		Row("Stripaccents", YesNo(connection.Metadata.GetValueOrDefault(StripAccentsKey) == "1"));
+		// The engine does not see what the client negotiated, so an unpinned charset is only "auto".
+		Row("Charset", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.CharsetKey) ?? "auto");
 
 		// PennMUSH reports "auto (<derived>)" until the style has been pinned explicitly, so the
 		// player can tell a negotiated default apart from a choice they made. The derived half is the
@@ -846,6 +848,9 @@ public static class SocketOptions
 
 			case "TERMINAL":
 				return SetTerminal(value);
+
+			case "CHARSET":
+				return SetCharset(value);
 
 			default:
 				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetInvalidOptionFormat), name);
@@ -996,6 +1001,25 @@ public static class SocketOptions
 					connection.Metadata.TryRemove(TerminalFeatureReader.AnimationKey, out _);
 					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetAnimationSetFormat), "off");
 			}
+		}
+
+		// The character set output is written in, for a client that gets it wrong or does not say; auto goes back
+		// to what the client negotiated or claimed. A character the set lacks is sent as the nearest one it has.
+		SocksetResult SetCharset(string newValue)
+		{
+			if (newValue.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase))
+			{
+				connection.Metadata.TryRemove(TerminalFeatureReader.CharsetKey, out _);
+				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetCharsetSetFormat), "auto");
+			}
+
+			if (TerminalCharsets.Parse(newValue) is not { } charset)
+			{
+				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetUnknownCharset));
+			}
+
+			connection.Metadata[TerminalFeatureReader.CharsetKey] = charset;
+			return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetCharsetSetFormat), charset);
 		}
 
 		// Names the terminal, for one that does not say what it is (Windows Terminal) or says it wrongly; auto
