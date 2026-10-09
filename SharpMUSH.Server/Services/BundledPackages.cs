@@ -62,7 +62,6 @@ public static class BundledPackages
 		new("room-contents", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		// The Play sidebar's Channels and Pages, as room-contents is its Here and Exits.
 		new("comm-feed", BundledPackageHandler.Event, InstallAtFirstBoot: true),
-		new("common-functions", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// +help before its contributors: scene and wiki-reader attach their SRC registration to the
 		// librarian, so it has to exist first. The stock helpfiles already promise players a +help,
 		// which is why this installs at first boot rather than shipping available-and-unenabled.

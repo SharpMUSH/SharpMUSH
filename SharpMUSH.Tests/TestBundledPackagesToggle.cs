@@ -4,7 +4,7 @@ namespace SharpMUSH.Tests;
 
 /// <summary>
 /// Generic unit tests run against the bare engine: the bundled default packages (scene,
-/// common-functions, http-/profile-handler) are NOT installed into the test server. This keeps a
+/// plus-help, http-/profile-handler) are NOT installed into the test server. This keeps a
 /// package's server-global side effects — notably the scene package's <c>@hook/override @EMIT</c>
 /// capture — from changing core command behaviour (e.g. <c>@emit</c>'s sender) underneath unrelated
 /// tests. Package- and plugin-dependent tests live in <c>SharpMUSH.Tests.Integration</c>, which leaves

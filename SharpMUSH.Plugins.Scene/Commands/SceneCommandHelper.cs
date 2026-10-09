@@ -1,5 +1,6 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Plugins.Scene.Commands;
 
@@ -10,10 +11,17 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 /// </summary>
 public static class SceneCommandHelper
 {
-	public const string PermissionDeniedNotice = "SCENE: Permission denied.";
+	/// <summary>The refusal a caller without the right to run a switch is told.</summary>
+	public static MString PermissionDeniedNotice => Notice("Permission denied.", NoticeKind.Error);
 	public const string PermissionDeniedReturn = "#-1 PERMISSION DENIED";
 	public const string BadArguments = "#-1 BAD ARGUMENTS TO SCENE COMMAND";
 	public const string NotFound = "#-1 NO SUCH SCENE OR POSE";
+
+	/// <summary>
+	/// <paramref name="text"/> as softcode's <c>notice(SCENE,...)</c> writes it: the <c>[SCENE]</c> lead in the
+	/// kind's theme colour, with <c>Done:</c>, <c>Warning:</c> or <c>Error:</c> for those kinds.
+	/// </summary>
+	public static MString Notice(string text, NoticeKind kind = NoticeKind.Info) => NoticeMarkup.Message("SCENE", text, kind);
 
 	/// <summary>
 	/// Splits a left-hand-side <c>&lt;id&gt;[/&lt;key&gt;]</c> reference into its id and an

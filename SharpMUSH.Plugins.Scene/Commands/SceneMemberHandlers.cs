@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -21,20 +22,20 @@ public static class SceneMemberHandlers
 		var (sceneId, role) = SceneCommandHelper.SplitIdKey(lhs);
 		if (string.IsNullOrEmpty(role))
 		{
-			await notifyService.Notify(executor, "SCENE: /member needs <sceneId>/<role>=<playerDbref>.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/member needs <sceneId>/<role>=<playerDbref>.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
 		if (await sceneService.AddMemberAsync(sceneId, playerDbref, role!) is not SceneMember member)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
 		await SceneRoomRefresh.AfterMembershipAsync(parser, sceneService, sceneId);
 		await notifyService.Notify(executor,
-			$"SCENE: {member.MemberName} is now '{member.Role}' in scene #{sceneId}.");
+			SceneCommandHelper.Notice($"{member.MemberName} is now '{member.Role}' in scene #{sceneId}.", NoticeKind.Ok));
 		return MarkupText.Plain(sceneId);
 	}
 
@@ -51,12 +52,12 @@ public static class SceneMemberHandlers
 		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
 		if (await sceneService.RemoveMemberAsync(sceneId, playerDbref) is NotFound)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
 		await SceneRoomRefresh.AfterMembershipAsync(parser, sceneService, sceneId);
-		await notifyService.Notify(executor, $"SCENE: Removed {playerDbref} from scene #{sceneId}.");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice($"Removed {playerDbref} from scene #{sceneId}.", NoticeKind.Ok));
 		return MarkupText.Plain(sceneId);
 	}
 
@@ -74,7 +75,7 @@ public static class SceneMemberHandlers
 		var focusBefore = await SceneRoomRefresh.FocusOfAsync(sceneService, playerDbref);
 		if (await sceneService.SetFocusAsync(playerDbref, string.IsNullOrEmpty(sceneId) ? null : sceneId) is NotFound)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
@@ -82,8 +83,8 @@ public static class SceneMemberHandlers
 			await SceneRoomRefresh.FocusOfAsync(sceneService, playerDbref));
 
 		await notifyService.Notify(executor, string.IsNullOrEmpty(sceneId)
-			? $"SCENE: Cleared focus for {playerDbref}."
-			: $"SCENE: {playerDbref} now focused on scene #{sceneId}.");
+			? SceneCommandHelper.Notice($"Cleared focus for {playerDbref}.", NoticeKind.Ok)
+			: SceneCommandHelper.Notice($"{playerDbref} now focused on scene #{sceneId}.", NoticeKind.Ok));
 		return MarkupText.Plain(sceneId);
 	}
 
@@ -99,20 +100,20 @@ public static class SceneMemberHandlers
 		var (sceneId, playerDbref) = SceneCommandHelper.SplitIdKey(lhs);
 		if (string.IsNullOrEmpty(playerDbref))
 		{
-			await notifyService.Notify(executor, "SCENE: /showas needs <sceneId>/<playerDbref>=<name>.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/showas needs <sceneId>/<playerDbref>=<name>.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var resolvedPlayer = await SceneLocate.PlayerOrSelf(parser, playerDbref!);
 		if (await sceneService.SetShowAsAsync(sceneId, resolvedPlayer, nameArg.ToPlainText()) is not SceneMember member)
 		{
-			await notifyService.Notify(executor, "SCENE: No such scene or member.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("No such scene or member.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
 		await notifyService.Notify(executor, member.ShowAs.Length == 0
-			? $"SCENE: {member.MemberName} shown under their own name in scene #{sceneId}."
-			: $"SCENE: {member.MemberName} now shown as '{member.ShowAs}' in scene #{sceneId}.");
+			? SceneCommandHelper.Notice($"{member.MemberName} shown under their own name in scene #{sceneId}.", NoticeKind.Ok)
+			: SceneCommandHelper.Notice($"{member.MemberName} now shown as '{member.ShowAs}' in scene #{sceneId}.", NoticeKind.Ok));
 		return MarkupText.Plain(sceneId);
 	}
 }

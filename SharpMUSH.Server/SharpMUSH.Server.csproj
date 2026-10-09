@@ -149,10 +149,6 @@
       <Link>BundledPackages\comm-feed.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.comm-feed.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\common-functions\package.yaml">
-      <Link>BundledPackages\common-functions.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.common-functions.package.yaml</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\plus-help\package.yaml">
       <Link>BundledPackages\plus-help.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.plus-help.package.yaml</LogicalName>

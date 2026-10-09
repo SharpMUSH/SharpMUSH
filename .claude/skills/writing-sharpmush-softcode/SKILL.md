@@ -98,7 +98,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 
 ## Layout: draw screens with the layout functions
 
-`help layout functions`. Describe the shape once; a telnet client gets box art at its own width, a client without UTF-8 gets ASCII, the web portal gets a card, a table and a definition list, a screen reader the content alone. Hand-padded `align()`/`center()`/`header()` output is one fixed text for all of them.
+`help layout functions`. Describe the shape once; a telnet client gets box art at its own width, a client without UTF-8 gets ASCII, the web portal gets a card, a table and a definition list, a screen reader the content alone. Hand-padded `align()`/`center()` output is one fixed text for all of them; a titled divider is `rule(<title>)`.
 
 | Want | Use |
 |---|---|
