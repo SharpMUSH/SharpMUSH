@@ -85,6 +85,7 @@
         // The sheet scrolls, so the keys the tabs move with must not scroll it as well (layout.js tabKeys).
         if (_tabList.Id is not { } tabs || tabs == _tabKeys) return;
         _tabKeys = tabs;
+        // Best-effort: without it the arrow keys scroll the sheet as well, which is all that is lost.
         try { await JS.InvokeVoidAsync("sharpmushLayout.tabKeys", _tabList); }
         catch (JSException) { }
     }

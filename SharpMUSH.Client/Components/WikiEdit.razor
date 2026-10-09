@@ -111,9 +111,8 @@
         <div class="wiki-edit-tags">
             @* Categories are held by the page, not written in its text; a translation inherits them. *@
             <span class="wiki-edit-taglabel">@Loc["NavWikiCategories"]</span>
-            @foreach (var category in Article.Categories)
+            @foreach (var c in Article.Categories)
             {
-                var c = category;
                 @if (IsNamespaceCategory(c))
                 {
                     @* Every page in this namespace is in it; the server puts it back, so it has no remove button. *@

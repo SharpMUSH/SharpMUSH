@@ -240,9 +240,8 @@
         else
         {
             <div class="adminwiki-catlist">
-                @foreach (var category in _categories)
+                @foreach (var c in _categories)
                 {
-                    var c = category;
                     <div class="@($"adminwiki-catcard{(c.HasPage ? null : " adminwiki-catcard--nopage")}")">
                         <a class="adminwiki-catcard-link" href="@WikiCategories.Route(c.Key)"
                            title="@(c.HasPage ? null : Loc["WikiCategoryNoPage"].Value)">

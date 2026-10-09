@@ -35,9 +35,8 @@
         {
             <SidebarNote>@Loc["NavCharNoneOnline"]</SidebarNote>
         }
-        @foreach (var row in (_online ?? []).Take(OnlineShown))
+        @foreach (var r in (_online ?? []).Take(OnlineShown))
         {
-            var r = row;
             <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="@ImageOf(r.Name)" Name="@r.Name" Label="@r.Name"
                         Trail="@(IsMine(r.Name) ? Loc["NavCharYou"].Value : null)"
                         Href="@ProfileHref(r.Name)" IsCurrent="@IsCurrent(r.Name)" Collapsed="@Collapsed" />
@@ -54,9 +53,8 @@
             <SectionLabel>@Loc["NavCharYourCharacters"]</SectionLabel>
         }
         <SidebarGroup Class="char-side-mine" Label="@Loc["NavCharYourCharacters"]">
-            @foreach (var mine in _mine)
+            @foreach (var m in _mine)
             {
-                var m = mine;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="@ImageOf(m.Name)" Name="@m.Name" Label="@m.Name"
                             Trail="@(m.IsActing ? Loc["NavCharYou"].Value : null)"
                             Href="@ProfileHref(m.Name)" IsCurrent="@IsCurrent(m.Name)" Collapsed="@Collapsed" />

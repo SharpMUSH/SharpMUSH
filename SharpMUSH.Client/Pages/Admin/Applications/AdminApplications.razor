@@ -53,9 +53,8 @@
                 {
                     <div class="aa-empty-list">@Loc["LayAppsNoMatch"]</div>
                 }
-                @foreach (var app in Filtered)
+                @foreach (var a in Filtered)
                 {
-                    var a = app;
                     <AdminSelectableCard Prefix="aa" Selected="@List.IsSelected(a)" OnSelect="@(() => List.Select(a))">
                         <div class="aa-card-top">
                             <span class="aa-card-icon">

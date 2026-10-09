@@ -9,9 +9,8 @@
     </Controls>
     <ChildContent>
     <CardRows>
-        @foreach (var sibling in Pages)
+        @foreach (var page2 in Pages)
         {
-            var page2 = sibling;
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
                         Href="@WikiRoutes.PathFor(page2.Namespace, page2.Slug)" />
         }

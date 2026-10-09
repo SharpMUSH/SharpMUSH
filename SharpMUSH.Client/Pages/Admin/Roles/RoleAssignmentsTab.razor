@@ -53,9 +53,8 @@
                     {
                         <span class="ra-empty">@Loc["RolNoRolesAssigned"]</span>
                     }
-                    @foreach (var slug in account.RoleSlugs)
+                    @foreach (var s in account.RoleSlugs)
                     {
-                        var s = slug;
                         var role = Roles.FirstOrDefault(r => r.Slug == s);
                         <span class="ra-chip">
                             <span class="ra-dot ra-dot--sm" style="@($"background:{RoleColor.Safe(role?.Color ?? "#888")};")"></span>
@@ -103,9 +102,8 @@
                 <div class="ra-section">
                     <div class="ra-section-label">@Loc["RolAddRole"]</div>
                     <div class="ra-chips">
-                        @foreach (var role in assignable)
+                        @foreach (var r in assignable)
                         {
-                            var r = role;
                             <button type="button" class="ra-add-chip" @onclick="@(() => AddAssignmentAsync(r.Slug))">
                                 <span class="ra-dot ra-dot--sm" style="@($"background:{RoleColor.Safe(r.Color)};")"></span>
                                 @r.Name

@@ -50,9 +50,8 @@
                 @if (Small.Count > 0)
                 {
                     <div class="gallery-small">
-                        @foreach (var entry in Small)
+                        @foreach (var e in Small)
                         {
-                            var e = entry;
                             <button type="button" class="gallery-small-tile" aria-label="@(e.Caption ?? e.FileName)" @onclick="@(() => OpenViewer(IndexOf(e)))">
                                 @if (ImageUrlPolicy.IsRenderable(e.Url))
                                 {

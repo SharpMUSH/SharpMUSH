@@ -25,9 +25,8 @@
         <ChildContent>
             <KitCard>
                 <div class="wiki-recent-list">
-                    @foreach (var page in pages)
+                    @foreach (var p in pages)
                     {
-                        var p = page;
                         <SidebarRow Class="wiki-recent-row" Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@p.Image" Name="@p.Title" Label="@p.Title"
                                     Sub="@Meta(p)" Href="@WikiRoutes.PathFor(p.Namespace, p.Slug)" />
                     }

@@ -636,6 +636,8 @@ public partial class Play
 
 	private async Task RunFocusAsync(string identifier)
 	{
+		// Focus is best-effort: the element may be gone, or the page not yet interactive, and neither
+		// is worth more than not moving the caret.
 		try { await JS.InvokeVoidAsync(identifier); }
 		catch (JSException) { }
 		catch (InvalidOperationException) { }

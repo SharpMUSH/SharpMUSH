@@ -99,9 +99,8 @@
                     </EmptyState>
                 }
                 <div class="pkg-rows">
-                    @foreach (var pkg in visible)
+                    @foreach (var p in visible)
                     {
-                        var p = pkg;
                         _updates.TryGetValue(p.Package.Id, out var update);
                         <InstalledPackageRow Package="p" Update="update" Busy="_busy"
                                              OnCheck="@(() => CheckUpdateAsync(p.Package.Id))"

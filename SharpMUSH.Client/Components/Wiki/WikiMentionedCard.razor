@@ -3,9 +3,8 @@
 @* The aside's card of the characters the body links to, each a portrait tile. *@
 <KitCard Aside="true" Class="wiki-mentioned" Title="@Loc.Plural("NavWikiMentioned", "count", Mentioned.Count)">
     <div class="wiki-mentioned-grid">
-        @foreach (var person in Mentioned)
+        @foreach (var m in Mentioned)
         {
-            var m = person;
             <PortraitTile Name="@m.Name" ImageUrl="@ImageFor(m.Name)" Alt="@m.Name" Href="@m.Href" />
         }
     </div>

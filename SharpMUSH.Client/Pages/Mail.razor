@@ -55,9 +55,8 @@ else
                     }
                     else
                     {
-                        @foreach (var msg in _messages)
+                        @foreach (var m in _messages)
                         {
-                            var m = msg;
                             <button type="button" class="mail-row @(_selected?.Number == m.Number ? "mail-row--selected" : null) @(m.Read ? null : "mail-row--unread")"
                                     aria-current="@(_selected?.Number == m.Number ? "true" : null)" @onclick="() => SelectMessageAsync(m)">
                                 <CharacterAvatar Class="mail-avatar mail-row-avatar" Name="@m.From" Character="@m.From" />

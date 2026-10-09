@@ -26,9 +26,8 @@
             <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@Loc["FailedToLoadSchema"]: @_error</MudAlert>
         }
         <div class="config-cat-grid">
-                @foreach (var group in ConfigSections.Groups)
+                @foreach (var g in ConfigSections.Groups)
                 {
-                    var g = group;
                     var shown = g.Sections.Take(ChipsShown).ToList();
                     var more = g.Sections.Count - shown.Count;
                     <a class="config-cat-card" href="@g.FirstRoute">
