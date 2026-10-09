@@ -185,10 +185,62 @@ public class ScenePoseTypeIntegrationTests
 		var before = Notifications.CountFor(witness.DbRef);
 		await As(poser, $"+scene/narrate {scene}={line}");
 
-		await Assert.That(Notifications.For(witness.DbRef).Skip(before)).Contains(line);
 		var pose = await Eval($"last(sceneposes({scene}))");
+		await Assert.That(Notifications.For(witness.DbRef).Skip(before).Single(message => message.Contains(line, StringComparison.Ordinal)))
+			.Contains($"pose {pose}").And.Contains($"< Scene {scene} >").And.EndsWith(line)
+			.Because("narration is drawn under the pose's rule, with the scene on the right");
 		await Assert.That(await Eval($"scenepose({scene},{pose},type)")).IsEqualTo("narration");
 		await Assert.That(await Eval($"scenepose({scene},{pose},source)")).IsEqualTo("emit");
+	}
+
+	/// <summary>
+	/// The rule is drawn for each hearer with the line, so a FORMAT that shows one hearer nothing sends them no rule
+	/// either; the FORMAT is given the scene as %3.
+	/// </summary>
+	[Test]
+	public async Task A_FORMAT_that_draws_nothing_for_a_hearer_sends_them_no_rule()
+	{
+		var logger = await LoggerAsync();
+		var room = await RoomAsync("HushRoom");
+		var poser = await PlayerAsync("HushPoser", room);
+		var witness = await PlayerAsync("HushWit", room);
+		await As(poser, $"+scene/create {TestIsolationHelpers.GenerateUniqueName("HushScene")}");
+		var scene = await Eval($"scenefocus(#{poser.DbRef.Number})");
+		var line = TestIsolationHelpers.GenerateUniqueName("Fog");
+		try
+		{
+			await God($"&TYPE`NARRATION`FORMAT {logger}=[if(strmatch(%1,#{witness.DbRef.Number}),,%2 in %3)]");
+			var witnessBefore = Notifications.CountFor(witness.DbRef);
+			var heard = await As(poser, $"+scene/narrate {scene}={line}");
+
+			// NotifyService sends an empty message to no one; the recorder still sees the call.
+			await Assert.That(Notifications.For(witness.DbRef).Skip(witnessBefore).Where(message => message.Length > 0)).IsEmpty()
+				.Because("the witness's FORMAT draws nothing, so neither the line nor its rule reaches them");
+			await Assert.That(heard).Contains($"< Scene {scene} >").And.Contains($"{line} in {scene}");
+		}
+		finally
+		{
+			await God($"&TYPE`NARRATION`FORMAT {logger}=[tone(secondary,%2)]");
+		}
+		await Assert.That(await Eval($"get({logger}/TYPE`NARRATION`FORMAT)")).IsEqualTo("[tone(secondary,%2)]");
+	}
+
+	[Test]
+	public async Task An_out_of_character_line_is_one_line_tagged_with_its_scene()
+	{
+		await LoggerAsync();
+		var room = await RoomAsync("TagRoom");
+		var poser = await PlayerAsync("TagPoser", room);
+		var witness = await PlayerAsync("TagWit", room);
+		await As(poser, $"+scene/create {TestIsolationHelpers.GenerateUniqueName("TagScene")}");
+		var scene = await Eval($"scenefocus(#{poser.DbRef.Number})");
+		var words = TestIsolationHelpers.GenerateUniqueName("brb");
+
+		var before = Notifications.CountFor(witness.DbRef);
+		await As(poser, $"+scene/ooc {scene}={words}");
+
+		await Assert.That(Notifications.For(witness.DbRef).Skip(before)).Contains($"<OOC · {scene}> {poser.Name}: {words}")
+			.Because("a band type is drawn without a rule, tagged with the scene");
 	}
 
 	[Test]

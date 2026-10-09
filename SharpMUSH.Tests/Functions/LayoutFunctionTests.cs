@@ -69,6 +69,35 @@ public class LayoutFunctionTests
 			.IsEqualTo("==============< Factions >==============");
 
 	[Test]
+	public async Task Rule_TakesTitlesOnBothSides()
+		=> await Assert.That((await Eval("rule(Wren [chr(183)] pose 17,40,{{\"title\":\"left\",\"titles\":\\[{\"text\":\"Scene 5\",\"side\":\"right\"}]}})")).ToPlainText())
+			.IsEqualTo("=< Wren · pose 17 >=========< Scene 5 >=");
+
+	[Test]
+	public async Task Rule_LeavesOutTheHighestPriorityTitleWhenNarrow()
+	{
+		const string titles = "\\[{\"text\":\"A\",\"side\":\"left\",\"priority\":2},\"B\",{\"text\":\"C\",\"side\":\"right\",\"priority\":1}]";
+		await Assert.That((await Eval($"rule(,30,{{{{\"titles\":{titles}}}}})")).ToPlainText()).IsEqualTo("=< A >=======< B >======< C >=");
+		await Assert.That((await Eval($"rule(,18,{{{{\"titles\":{titles}}}}})")).ToPlainText()).IsEqualTo("=< A >======< C >=")
+			.Because("the middle B takes its side's priority, 3, the highest");
+		await Assert.That((await Eval($"rule(,12,{{{{\"titles\":{titles}}}}})")).ToPlainText()).IsEqualTo("======< C >=")
+			.Because("A's own priority, 2, goes before C's 1, though a left title would otherwise stay longest");
+	}
+
+	[Test]
+	public async Task Rule_KeepsATitlesColour()
+	{
+		var rule = await Eval("rule(,30,{{\"titles\":\\[{\"text\":\"[ansi(r,Red)]\",\"side\":\"right\"}]}})");
+		await Assert.That(rule.ToPlainText()).IsEqualTo("======================< Red >=");
+		await Assert.That(rule.Render(MarkupFormat.Ansi)).Contains("\u001b[31mRed");
+	}
+
+	[Test]
+	public async Task Box_PutsTitlesInItsBottomEdge()
+		=> await Assert.That((await Eval("box(x,,16,{{\"bottomtitles\":\\[{\"text\":\"1/3\",\"side\":\"right\"}]}})")).ToPlainText().Split('\n')[^1])
+			.IsEqualTo("+======< 1/3 >=+");
+
+	[Test]
 	public async Task Flex_PutsItemsSideBySide()
 		=> await Assert.That(TrimLines(await Eval("flex({{\"sep\":\" | \",\"width\":40}},item(Strength%rAgility,18),item(High%rLow,19))")))
 			.IsEqualTo(Lines(
@@ -395,6 +424,10 @@ public class LayoutFunctionTests
 	[Arguments("box(x,,0)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("box(x,,1001)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("rule(x,abc)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("rule(x,20,{{\"titles\":\"Scene 5\"}})", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"side\":\"up\"}]}})", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"priority\":0}]}})", ErrorMessages.Returns.ArgRange)]
+	[Arguments("rule(x,20,{{\"bottomtitles\":\\[\"a\"]}})", "#-1 UNKNOWN LAYOUT OPTION BOTTOMTITLES")]
 	[Arguments("flex({{\"gap\":99}},a,b)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("flex({{\"vertical\":\"maybe\"}},a,b)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("item(x,wide)", ErrorMessages.Returns.InvalidArgument)]

@@ -50,11 +50,14 @@ public partial class Functions
 		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border }, Border = border })
 		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
 		.Int("pad", 0, 10, (laid, pad) => laid with { Block = laid.Block with { Padding = pad } })
+		.Titles("titles", (laid, titles) => laid with { Block = laid.Block with { Titles = titles } })
+		.Titles("bottomtitles", (laid, titles) => laid with { Block = laid.Block with { BottomTitles = titles } })
 		.Theme(laid => laid.ReadTheme, (laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Rule>> RuleSchema { get; } = OptionSchema<Laid<Rule>>.Empty
 		.Border(laid => laid.Block.Border ?? laid.House, (laid, border) => laid with { Block = laid.Block with { Border = border } })
 		.Choice("title", LayoutOptionGroups.Alignments, (laid, alignment) => laid with { Block = laid.Block with { TitleAlignment = alignment } })
+		.Titles("titles", (laid, titles) => laid with { Block = laid.Block with { Titles = titles } })
 		.Theme(laid => laid.ReadTheme, (laid, theme) => laid with { Theme = theme });
 
 	private static OptionSchema<Laid<Flex>> FlexSchema { get; } = InnerBorder(OptionSchema<Laid<Flex>>.Empty)

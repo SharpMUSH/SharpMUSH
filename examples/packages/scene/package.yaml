@@ -150,8 +150,12 @@ objects:
       #                      secondary, tertiary, muted, success, warning, error, info), icon, hidden (whether
       #                      a reader starts with it hidden) and order. @scene/types shows what it made of them.
       #   TYPE`<KEY>`FORMAT  Softcode drawing one line of the type for telnet: %0 the pose id (empty for a
-      #                      sample), %1 the reader, %2 the line with its markup. Empty shows that reader
-      #                      nothing. Live lines (INC`CAP_LINE), recall and log all go through it.
+      #                      sample), %1 the reader, %2 the line with its markup, %3 the scene id (empty for
+      #                      a sample). Empty shows that reader nothing. Live lines (INC`CAP_LINE), recall
+      #                      and log all go through it.
+      # A pose of a prose or aside type is drawn under a rule naming who posed it and the pose on the left and
+      # the scene on the right. A band, message or notice type has no rule: it is one line, tagged with the
+      # scene its FORMAT is given, <OOC · 12>.
       # tone() colours by theme colour rather than by colour, so each reader sees it in their own @theme.
       # A package adding a type attaches both attributes here, as radio-scene does for radio; uninstalling
       # it takes the type away. Staff with layout.admin change the JSON with +scene/type/set; the FORMAT runs
@@ -163,15 +167,27 @@ objects:
       TYPE`OOC: |-
         {"label":"Out of character","presentation":"band","tone":"secondary","order":20}
       TYPE`OOC`FORMAT: |-
-        [tone(muted,<OOC> %2)]
+        [tone(muted,<OOC[if(strlen(%3),%b[chr(183)] %3)]> %2)]
       TYPE`NARRATION: |-
         {"label":"Narration","presentation":"aside","tone":"secondary","order":30}
       TYPE`NARRATION`FORMAT: |-
         [tone(secondary,%2)]
-      # Type %0's line %2 (pose %1) for the reader: its FORMAT, or without one the line, marked <KEY> for a
-      # listed type other than ic. A type no longer listed draws as in character, as the portal draws it.
+      # Type %0's line %2 (pose %1 of scene %3) for reader %4 (or %#): its FORMAT, or without one the line, marked
+      # <KEY> for a listed type other than ic, with the scene for a type drawn without a rule. A type no longer
+      # listed draws as in character, as the portal draws it.
       FUN`TYPE`DRAW: |-
-        [if(hasattr(%!,TYPE`%0`FORMAT),u(%!/TYPE`%0`FORMAT,%1,%#,%2),[if(cand(member(scenetypes(),%0),not(strmatch(%0,ic))),<[ucstr(%0)]>%b)]%2)]
+        [if(hasattr(%!,TYPE`%0`FORMAT),u(%!/TYPE`%0`FORMAT,%1,firstof(%4,%#),%2,%3),[if(cand(member(scenetypes(),lcstr(%0)),not(strmatch(%0,ic))),<[ucstr(%0)][if(cand(strlen(%3),not(u(%!/FUN`TYPE`FRAMED,%0))),%b[chr(183)] %3)]>%b)]%2)]
+      # 1 when type %0 is drawn under a rule: any type but a band, message or notice, a removed one included.
+      FUN`TYPE`FRAMED: |-
+        [not(match(band message notice,scenetype(lcstr(%0),presentation)))]
+      # The rule over pose %1 of scene %0: who posed it and the pose on the left, the scene on the right. When the
+      # line is too narrow for both, the scene goes first.
+      FUN`POSE`RULE: |-
+        [rule([firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname))] [chr(183)] pose %1,,json(object,title,"left",titles,json(array,json(object,text,json(string,Scene %0),side,"right"))))]
+      # Pose %1 of scene %3, type %0 and line %2, as reader %4 sees it: under its rule when its type has one,
+      # nothing when its FORMAT draws nothing for them. Live lines, recall and log all go through it.
+      FUN`POSE`DRAW: |-
+        [if(strlen(setr(_d,u(%!/FUN`TYPE`DRAW,%0,%1,%2,%3,%4))),[if(u(%!/FUN`TYPE`FRAMED,%0),[u(%!/FUN`POSE`RULE,%3,%1)]%r)]%q<_d>)]
       # The types %0 has hidden from recall and log: the ones they hid with +scene/hide that are still listed,
       # and the ones the game starts hidden that they have not shown with +scene/show.
       FUN`HIDDEN: |-
@@ -182,7 +198,7 @@ objects:
       FUN`TYPE`VALUE: |-
         [switch(%0,hidden,switch(lcstr(%1),yes,true,true,true,on,true,1,true,no,false,false,false,off,false,0,false,json(string,%1)),order,if(isint(%1),%1,json(string,%1)),json(string,%1))]
       FUN`TYPE`SAMPLE: |-
-        [u(%!/FUN`TYPE`DRAW,%0,,[name(%#)] waves.)]
+        [u(%!/FUN`TYPE`DRAW,%0,,[name(%#)] waves.,,%#)]
       FUN`TYPES`TABLE: |-
         [setq(_k,scenetypes())][setq(_h,u(%!/FUN`HIDDEN,%#))][box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|1|3,||1|),[ansi(h,Type)]%r[iter(%q<_k>,%i0,,%r)],[ansi(h,Name)]%r[iter(%q<_k>,scenetype(%i0,label),,%r)],[ansi(h,Looks like)]%r[iter(%q<_k>,u(%!/FUN`TYPE`SAMPLE,%i0),,%r)],[ansi(h,You)]%r[iter(%q<_k>,if(member(%q<_h>,%i0),hidden,shown),,%r)]),Pose types,,u(%!/FUN`FRAME))]
       FUN`TYPE`CARD: |-
@@ -225,8 +241,8 @@ objects:
       # ---- capture hooks --------------------------------------------------------
       # Each hook RE-BROADCASTS its type-specific speech via @message/spoof, then records
       # the rendered line. The @scene/addpose call itself stays inline in each hook because
-      # each speech type renders a different line; only the shared header/footer rules are
-      # factored out into INC`CAP_HEADER / INC`CAP_FOOTER and @included.
+      # each speech type renders a different line; drawing it for each hearer, with its rule, is
+      # factored out into INC`CAP_LINE and @included.
       #
       # Why @message/spoof instead of hand-rolled @remit/@pemit/@oemit (the old form):
       #   • /spoof makes the notification SENDER the real speaker (%# / enactor), NOT the
@@ -265,12 +281,12 @@ objects:
       #      when they joined would keep writing poses into the scene after losing the flag, since
       #      their focus and membership survive the revocation.
       #   2. Captured ⇒ record with @scene/addpose as type ic, set the registers INC`CAP_LINE reads, and
-      #      @include it: the header rule, the line drawn by the speaker's FORMAT`<VERB> or else the
-      #      type's FORMAT, then the footer rule.
+      #      @include it: the line drawn by the speaker's FORMAT`<VERB> or else the type's FORMAT,
+      #      under the pose's rule.
       #   3. Otherwise ⇒ @message/spoof the pose to the room exactly as before (so a pose outside any
       #      scene behaves like the un-hooked built-in -- the emit is never lost).
-      # So a CAPTURED pose is framed (header + pose + footer with the Scene/Pose ids); an uncaptured
-      # one is a plain pose. The header must come AFTER addpose because it reads the new pose id.
+      # So a CAPTURED pose is framed (a rule naming the poser, the pose and the scene, or a scene tag); an
+      # uncaptured one is a plain pose. The rule must come AFTER addpose because it reads the new pose id.
       #
       # EVERY capture pattern carries BOTH inline flags, `(?is)`, and the `s` is not decoration.
       # $-commands are matched against the command line AFTER evaluation, so a multi-line pose --
@@ -281,18 +297,11 @@ objects:
       # looks like nothing at all, which is why it survived so long -- only multi-line poses go
       # missing from the archive, and only from the scene, never from the room.
 
-      # When a pose IS captured, frame the room line. The emit LOGIC is factored into INC`CAP_HEADER /
-      # INC`CAP_FOOTER, which INC`CAP_LINE @includes for every hook and verb, so there is no replicated @remit (they
-      # read the hook's %q<RoomID> / %q<SceneID> registers; %# is the poser). @include runs the tail AS the
-      # Logger (the executor), so it works even for a REMOTE poser — this relied on the engine fix that
-      # makes @include locate its target (%!) as the executor, not the enactor.
-      # Header = WHO posed, read off the pose just added, so it is the name the pose went out under: the
-      # persona, or the player's own name for an OOC line, which has none (title left); footer = the
-      # Scene/Pose ids (title right). Both are rule()s with
-      # no width, so each reader in the room gets them at their own width. CAP_FOOTER reads the
-      # JUST-added pose id via last(sceneposes()), so it MUST run after @scene/addpose.
-      #
-      # A captured line as the room hears it, framed by the two rules. The hook sets the registers first:
+      # A captured line as the room hears it, drawn once per hearer by FUN`POSE`DRAW: under a rule naming who
+      # posed and the pose (left) and the scene (right), or for a band, message or notice type as one line tagged
+      # with the scene. A hearer whose type FORMAT draws nothing gets nothing, rule included. It runs AS the
+      # Logger (@include locates its target as the executor), so it works for a remote poser too, and reads the
+      # pose id off last(sceneposes()), so it MUST run after @scene/addpose. The hook sets the registers first:
       #   Type    the pose type's key, upper case (IC, OOC, NARRATION)
       #   Verb    POSE, SAY, SEMIPOSE, EMIT or OOC: which FORMAT`<VERB> on the speaker would apply
       #   Words   what the speaker typed, the %0 a FORMAT`<VERB> is given
@@ -300,16 +309,10 @@ objects:
       #   Heard   what is sent when there is no format: Line, or for OOC the line with its <OOC>
       #   Hearers who hears it; Self, when set, is what the speaker hears instead (SAY's "You say")
       # A speaker's own FORMAT`<VERB> (on them, not inherited from the Ancestor Player) wins, as it does for
-      # a line no scene records. Otherwise the type's TYPE`<KEY>`FORMAT here draws it, once per hearer, with
-      # %0 the pose id, %1 the hearer and %2 the line; empty sends that hearer nothing. Without a FORMAT the
-      # hearer gets Heard. The registers are all set by each hook, so nothing left over from the speaker's
-      # own code leaks in.
+      # a line no scene records; the room then gets the rule as it is, before the line. The registers are all
+      # set by each hook, so nothing left over from the speaker's own code leaks in.
       INC`CAP_LINE: |-
-        think [setq(PoseID,last(sceneposes(%q<SceneID>)))]; @include %!/INC`CAP_HEADER; @if strlen(%q<Self>)={@message/spoof %#=%q<Self>,%#/FORMAT`%q<Verb>,%q<Words>,##}; @if hasattrval(%#,FORMAT`%q<Verb>)={@message/spoof %q<Hearers>=%q<Heard>,%#/FORMAT`%q<Verb>,%q<Words>,##},{@message/spoof %q<Hearers>=%q<Heard>,%!/TYPE`%q<Type>`FORMAT,%q<PoseID>,##,%q<Line>}; @include %!/INC`CAP_FOOTER
-      INC`CAP_HEADER: |-
-        @remit %q<RoomID>=[rule([firstof(scenepose(%q<SceneID>,last(sceneposes(%q<SceneID>)),showas),name(%#))] posed,,json(object,title,"left"))]
-      INC`CAP_FOOTER: |-
-        @remit %q<RoomID>=[rule(Scene %q<SceneID> [chr(183)] Pose [last(sceneposes(%q<SceneID>))],,json(object,title,"right"))]
+        think [setq(PoseID,last(sceneposes(%q<SceneID>)))]; @if hasattrval(%#,FORMAT`%q<Verb>)={@if u(%!/FUN`TYPE`FRAMED,%q<Type>)={@remit %q<RoomID>=[u(%!/FUN`POSE`RULE,%q<SceneID>,%q<PoseID>)]}; @if strlen(%q<Self>)={@message/spoof %#=%q<Self>,%#/FORMAT`%q<Verb>,%q<Words>,##}; @message/spoof %q<Hearers>=%q<Heard>,%#/FORMAT`%q<Verb>,%q<Words>,##},{@if strlen(%q<Self>)={@message/spoof %#=%q<Self>,%!/FUN`POSE`DRAW,%q<Type>,%q<PoseID>,%q<Self>,%q<SceneID>,##}; @message/spoof %q<Hearers>=%q<Heard>,%!/FUN`POSE`DRAW,%q<Type>,%q<PoseID>,%q<Line>,%q<SceneID>,##}
 
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE:
@@ -368,7 +371,7 @@ objects:
       #   * they never call the built-in pose/say/semipose/@emit, because those are hooked above --
       #     delegating would record the pose a second time.
       #
-      # The rendered line matches its hook exactly, framed by the same header and footer rules in the room,
+      # The rendered line matches its hook exactly, framed by the same rule in the room,
       # so a pose composed on the web and one typed in a terminal are indistinguishable in the archive
       # and on screen. Note the two comma spellings, both required and
       # for different reasons: `\,` inside @scene/addpose's argument list, and `[chr(44)]` inside
@@ -632,8 +635,9 @@ objects:
       DATA`RECALL_ROUNDS: |-
         2
 
-      # One entry per pose: a left rule naming who posed and the pose's id, then the pose as its type draws
-      # it (FUN`TYPE`DRAW: the type's FORMAT, with the stored markup, so colour survives).
+      # One entry per pose, drawn as it is live (FUN`POSE`DRAW): a rule naming who posed, the pose's id and the
+      # scene, then the pose as its type's FORMAT draws it, with the stored markup, so colour survives. A band,
+      # message or notice type is one line with no rule.
       # Recall used to print bare content lines, which ran together into an undifferentiated block --
       # an @emit carries no name of its own, a multi-line pose reads as several separate ones, and
       # there was no id on screen to hand to +scene/edit or +scene/undo.
@@ -646,10 +650,8 @@ objects:
       # A pose whose type the reader hides (FUN`HIDDEN) is left out and counted, and a note under the
       # recall says how many; one its FORMAT draws as nothing is left out silently, as it is live.
       # The rule has no width, so it is drawn at the reader's own.
-      FUN`RECALL`RULE: |-
-        [rule([firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname))] [chr(183)] pose %1,,json(object,title,"left"))]
       INC`RECALL: |-
-        think [setq(Hidden,u(%!/FUN`HIDDEN,%#))][setq(Folded,0)][setq(Out,)][null(iter(sceneposes(%q<SceneID>,,%q<Count>),if(member(%q<Hidden>,setr(_t,firstof(scenepose(%q<SceneID>,%iL,type),ic))),setq(Folded,inc(%q<Folded>)),if(strlen(setr(_e,u(%!/FUN`TYPE`DRAW,%q<_t>,%iL,scenepose(%q<SceneID>,%iL,content)))),setq(Out,%q<Out>[if(strlen(%q<Out>),%r)][u(%!/FUN`RECALL`RULE,%q<SceneID>,%iL)]%r%q<_e>)))))]; @pemit %#=%q<Out>; @if %q<Folded>={@pemit %#=[notice(SCENE,%q<Folded> [if(eq(%q<Folded>,1),line,lines)] of [itemize(%q<Hidden>)] hidden. +scene/show <type> shows them.)]}
+        think [setq(Hidden,u(%!/FUN`HIDDEN,%#))][setq(Folded,0)][setq(Out,)][null(iter(sceneposes(%q<SceneID>,,%q<Count>),if(member(%q<Hidden>,setr(_t,firstof(scenepose(%q<SceneID>,%iL,type),ic))),setq(Folded,inc(%q<Folded>)),if(strlen(setr(_e,u(%!/FUN`POSE`DRAW,%q<_t>,%iL,scenepose(%q<SceneID>,%iL,content),%q<SceneID>,%#))),setq(Out,%q<Out>[if(strlen(%q<Out>),%r)]%q<_e>)))))]; @pemit %#=%q<Out>; @if %q<Folded>={@pemit %#=[notice(SCENE,%q<Folded> [if(eq(%q<Folded>,1),line,lines)] of [itemize(%q<Hidden>)] hidden. +scene/show <type> shows them.)]}
       # The count is validated here rather than left to sceneposes(), which rejects anything below 1
       # with a sentinel this verb would then iterate the WORDS of -- one bogus pose lookup per word,
       # printed at the player. `+scene/recall 0` failed differently and just as badly: "0" is falsy,
@@ -1183,10 +1185,15 @@ objects:
 
         How a type reads in a terminal is softcode, `` TYPE`<TYPE>`FORMAT `` on the Scene Logger, which
         only someone controlling the logger can set. It is given the pose id as `%%0`, the reader as
-        `%%1` and the line as `%%2`, and returns the line that reader sees, or nothing to hide it from
-        them. Use `tone\(\)` for colour, so readers get their own theme's: the shipped `ooc` one is
+        `%%1`, the line as `%%2` and the scene id as `%%3`, and returns the line that reader sees, or
+        nothing to hide it from them. Use `tone\(\)` for colour, so readers get their own theme's:
 
-        `` &TYPE`OOC`FORMAT <logger>=\[tone\(muted,<OOC> %%2\)\] ``
+        `` &TYPE`OOC`FORMAT <logger>=\[tone\(muted,<OOC %%3> %%2\)\] ``
+
+        A `prose` or `aside` type is shown under a line naming who posed, the pose and the scene. A
+        `band`, `message` or `notice` type has no line: it is one line of its own, so its format
+        should say the scene, as the shipped `ooc` one does: `<OOC` followed by a middle dot and the
+        scene id, then `>`. A type with no format is shown that way too, with its name.
       HELP`POT: |-
         `+pot` — "pose tracker" — shows who is in your focused scene, how long since each of them
         last posed, so a table can tell whose turn it is.

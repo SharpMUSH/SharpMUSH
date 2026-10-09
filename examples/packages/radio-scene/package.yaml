@@ -62,7 +62,8 @@ objects:
         @trigger {{radiolog}}/STARTUP
 
   # The radio pose type, on the Scene Logger beside the scene package's own (see TYPE` there): a message in
-  # the portal, in the info colour, with the radio icon. Uninstalling this package takes it away, and radio
+  # the portal, in the info colour, with the radio icon; in a terminal one line tagged with the scene,
+  # <RADIO · 12>, in the reader's info colour. Uninstalling this package takes it away, and radio
   # lines already recorded then read as in character.
   - ref: scene_type_radio
     target: "{{scene/logger}}"
@@ -70,7 +71,7 @@ objects:
       TYPE`RADIO: |-
         {"label":"Radio","presentation":"message","tone":"info","icon":"radio","order":40}
       TYPE`RADIO`FORMAT: |-
-        [tone(info,%2)]
+        [tone(info,<RADIO[if(strlen(%3),%b[chr(183)] %3)]> %2)]
 
   # +radio/log and /stoplog: the radio runs INC`LOG and INC`STOPLOG on the logger. Uninstalling this
   # package takes them away again.

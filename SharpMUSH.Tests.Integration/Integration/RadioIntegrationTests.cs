@@ -239,7 +239,8 @@ public class RadioIntegrationTests
 			await Assert.That(recalled).DoesNotContain(said);
 			await Assert.That(recalled).Contains("1 line of radio hidden.");
 			await Assert.That(await As(logger, "+scene/show radio")).Contains("Radio lines show in your recall and log.");
-			await Assert.That(await As(logger, "+scene/recall 1")).Contains(said);
+			await Assert.That(await As(logger, "+scene/recall 1")).IsEqualTo($"<RADIO · {scene}> <Ship> {ann.Name} says, \"{said}\"")
+				.Because("a radio line is one line tagged with its scene, with no rule over it");
 
 			await As(logger, "+radio/stoplog Ship");
 			var unlogged = TestIsolationHelpers.GenerateUniqueName("RadUnlogged");
