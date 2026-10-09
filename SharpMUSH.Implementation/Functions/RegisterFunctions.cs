@@ -1,5 +1,6 @@
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Utilities;
@@ -137,6 +138,66 @@ public partial class Functions
 	[SharpFunction(Name = "setr", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.EvenArgsOnly)]
 	public ValueTask<CallState> setr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: true));
+
+	/// <summary>
+	/// The one body behind <c>setqm</c> and <c>setrm</c>, RhostMUSH's in-order setq()/setr()
+	/// (<c>fun_setqm</c>/<c>fun_setrm</c>, <c>Server/src/functions.c</c>). Each pair's name and value are
+	/// evaluated only after the pair before it is set, so a value can read the registers set to its left.
+	/// </summary>
+	/// <returns>The values set, in order, or <c>#-1 BAD REGISTER NAME</c> if any name was refused.</returns>
+	private static async ValueTask<Result<List<MString>>> SetRegistersInOrder(IMUSHCodeParser parser, int pairArguments)
+	{
+		var arguments = parser.CurrentState.ArgumentsOrdered;
+		var values = new List<MString>(pairArguments / 2);
+		var everythingIsOkay = true;
+
+		for (var i = 0; i < pairArguments; i += 2)
+		{
+			var name = (await arguments[i.ToString()].GetParsedResultAsync()).Message ?? MarkupText.Empty;
+			var value = (await arguments[(i + 1).ToString()].GetParsedResultAsync()).Message ?? MarkupText.Empty;
+			everythingIsOkay &= parser.CurrentState.AddRegister(name.ToPlainText().ToUpper(), value);
+			values.Add(value);
+		}
+
+		return everythingIsOkay ? values : new Error<string>(ErrorMessages.Returns.BadRegName);
+	}
+
+	[SharpFunction(Name = "setqm", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.EvenArgsOnly)]
+	public async ValueTask<CallState> SetQM(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await SetRegistersInOrder(parser, parser.CurrentState.ArgumentsOrdered.Count) switch
+		{
+			List<MString> => CallState.Empty,
+			Error<string> error => new CallState(error.Value)
+		};
+
+	/// <remarks>
+	/// RhostMUSH's <c>setrm</c> returns every value it set, joined by an optional trailing
+	/// <c>&lt;delimiter&gt;</c> (a space by default), which an odd argument count marks. Three
+	/// arguments are one pair and a delimiter with nothing to separate, which Rhost refuses.
+	/// </remarks>
+	[SharpFunction(Name = "setrm", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public async ValueTask<CallState> SetRM(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var arguments = parser.CurrentState.ArgumentsOrdered;
+		if (arguments.Count == 3)
+			return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, "SETRM"));
+
+		var hasDelimiter = arguments.Count % 2 == 1;
+		var delimiter = hasDelimiter
+			? (await arguments[(arguments.Count - 1).ToString()].GetParsedResultAsync()).Message ?? MarkupText.Empty
+			: MarkupText.Space;
+
+		return await SetRegistersInOrder(parser, hasDelimiter ? arguments.Count - 1 : arguments.Count) switch
+		{
+			List<MString> values => JoinWithinOutputLimit(parser, values, delimiter),
+			Error<string> error => new CallState(error.Value)
+		};
+	}
+
+	private static CallState JoinWithinOutputLimit(IMUSHCodeParser parser, List<MString> values, MString delimiter)
+		=> FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, values, delimiter.Length)
+			? FunctionLimits.RejectOutput(parser.CurrentState)
+			: new CallState(MarkupText.Join(delimiter, values));
 
 	// r(<register>[, <type>]) — read a register. <type> (default "qregisters") selects the store, per
 	// `help r`: qregisters (setq/setr), args (the %0-%9 stack + named regexp $-command captures), iter
