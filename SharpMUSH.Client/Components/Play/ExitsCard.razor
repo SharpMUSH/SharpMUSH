@@ -195,9 +195,10 @@ else
 
     private async Task RunFocusAsync(string identifier)
     {
+        // Moving focus is a courtesy: before the script loads, or while prerendering, there is nothing to move.
         try { await JS.InvokeVoidAsync(identifier); }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
+        catch (JSException) { return; }
+        catch (InvalidOperationException) { return; }
     }
 
     /// <summary>A new room.exits (a move) drops a confirmation for an exit this room no longer has.</summary>

@@ -566,7 +566,8 @@
             {
                 if (js.Invoke<string?>("sharpmushLayout.spokenText", line.Html) is { } said) return said;
             }
-            catch (JSException) { }
+            // layout.js not loaded yet: the plain text is read instead.
+            catch (JSException) { return line.Text.Trim(); }
         }
         return line.Text.Trim();
     }

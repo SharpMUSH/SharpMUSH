@@ -345,8 +345,9 @@ else
         _sheetEntry = _asideEntries[index].Name;
         if (_sheetTabs.TryGetValue(_sheetEntry, out var tab))
         {
+            // A tab not rendered yet has no element to focus; the key then just selects it.
             try { await tab.FocusAsync(); }
-            catch (InvalidOperationException) { }
+            catch (InvalidOperationException) { return; }
         }
     }
 

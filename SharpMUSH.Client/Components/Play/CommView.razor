@@ -244,9 +244,9 @@
         if (_announcer is null || !_historyRead) return;
         var held = before.ToHashSet();
         var newest = before.Count == 0 ? DateTimeOffset.MinValue : before.Max(l => l.Timestamp);
-        foreach (var line in now)
+        foreach (var line in now.Where(l => l.Timestamp >= newest && !held.Contains(l)))
         {
-            if (line.Timestamp >= newest && !held.Contains(line)) _announcer.Announce(Loc["NavPlayLineSaid", line.From, line.Text]);
+            _announcer.Announce(Loc["NavPlayLineSaid", line.From, line.Text]);
         }
     }
 
