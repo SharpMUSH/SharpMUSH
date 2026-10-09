@@ -137,9 +137,11 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		}
 		var fold = FoldFor(connection.Capabilities, connection.AsciiTranslations);
 		var reader = ReaderTheme(connection.Preferences?.Theme);
-		var deserialized = ToneMarkup.ForTelnet(MarkupTextSerializer.Deserialize(markup), reader?.Palette);
-		var ms = Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),
-			connection.Capabilities, reader?.Look, cells, fold);
+		var deserialized = MarkupTextSerializer.Deserialize(markup);
+		// Tones are coloured after the layout: a block laid out again is drawn from its own copy of the text, which
+		// still holds the tone's span.
+		var ms = ToneMarkup.ForTelnet(Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),
+			connection.Capabilities, reader?.Look, cells, fold), reader?.Palette);
 		// The blocks were folded as they were laid out; this is the text around them.
 		if (fold is not null) ms = fold.Fold(ms);
 		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);

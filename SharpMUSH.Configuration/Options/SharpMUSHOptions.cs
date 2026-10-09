@@ -108,7 +108,7 @@ public record SharpMUSHOptions
 			AnsiNames: true,
 			ChatStripQuote: true,
 			LayoutBorder: "double",
-			LayoutTheme: "",
+			LayoutTheme: "sharpmush",
 			ImageHosts: "any",
 			ImageHostList: "",
 			PortalLogo: "",
