@@ -5959,7 +5959,7 @@
     <value>Режим за екранен четец</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>За игра с екранен четец в този браузър: буквените клавиши за изходи са изключени, а играта е уведомена, за да може да пропуска картинки, нарисувани със символи.</value>
+    <value>За игра с екранен четец в този браузър: буквените клавиши за изходи са изключени, собствените ви команди не се четат отново, Alt и цифра прочита отново един от последните редове (Alt+1 най-новия), а играта е уведомена, за да може да пропуска картинки, нарисувани със символи.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Бързи връзки</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Търсене на обекти</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Най-новият изход на играта</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Все още няма ред за четене.</value>
   </data>
 </root>

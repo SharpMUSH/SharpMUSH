@@ -5959,7 +5959,7 @@
     <value>Mod cititor de ecran</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>Pentru a juca cu un cititor de ecran în acest browser: tastele cu litere pentru ieșiri sunt oprite, iar jocul află, ca să poată omite desenele făcute din caractere.</value>
+    <value>Pentru a juca cu un cititor de ecran în acest browser: tastele cu litere pentru ieșiri sunt oprite, propriile comenzi nu sunt citite înapoi, Alt și o cifră citește din nou un rând recent (Alt+1 cel mai nou), iar jocul află, ca să poată omite desenele făcute din caractere.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Linkuri rapide</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Caută obiecte</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Cea mai recentă ieșire a jocului</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Încă nu există niciun rând de citit.</value>
   </data>
 </root>

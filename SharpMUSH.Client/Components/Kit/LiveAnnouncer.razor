@@ -16,15 +16,18 @@
     /// <summary>How many announcements stay in the log.</summary>
     private const int Kept = 5;
 
-    private sealed record Said(string Text);
+    /// <summary>One announcement. Numbered, since the same words can be said twice in a row (two "Huh?"s),
+    /// and each is its own entry: a key equal to another's would stop the render.</summary>
+    private sealed record Said(long Number, string Text);
 
     private readonly List<Said> _said = [];
+    private long _count;
 
     /// <summary>Reads <paramref name="text"/> out after whatever it is reading now.</summary>
     public void Announce(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        _said.Add(new Said(text));
+        _said.Add(new Said(++_count, text));
         if (_said.Count > Kept) _said.RemoveRange(0, _said.Count - Kept);
         _ = InvokeAsync(StateHasChanged);
     }

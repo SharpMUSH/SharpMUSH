@@ -30,4 +30,17 @@ public class LiveAnnouncerTests : TrackingBunitContext
 		var lines = cut.FindAll("[role='log'] > div").Select(d => d.TextContent).ToArray();
 		await Assert.That(lines).IsEquivalentTo(new[] { "line 3", "line 4", "line 5", "line 6", "line 7" });
 	}
+
+	[Test]
+	public async Task The_same_words_twice_are_two_announcements()
+	{
+		var cut = Render<LiveAnnouncer>(p => p.Add(x => x.Label, "Output"));
+		await cut.InvokeAsync(() =>
+		{
+			cut.Instance.Announce("Huh?");
+			cut.Instance.Announce("Huh?");
+		});
+
+		await Assert.That(cut.FindAll("[role='log'] > div").Count).IsEqualTo(2);
+	}
 }

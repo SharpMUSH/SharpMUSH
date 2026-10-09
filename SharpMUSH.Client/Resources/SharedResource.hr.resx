@@ -5959,7 +5959,7 @@
     <value>Način čitača zaslona</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>Za igranje s čitačem zaslona u ovom pregledniku: tipke sa slovima za izlaze su isključene, a igra to zna pa može izostaviti slike nacrtane znakovima.</value>
+    <value>Za igranje s čitačem zaslona u ovom pregledniku: tipke sa slovima za izlaze su isključene, vaše vlastite naredbe ne čitaju se ponovno, Alt i broj ponovno čita jedan od nedavnih redaka (Alt+1 najnoviji), a igra to zna pa može izostaviti slike nacrtane znakovima.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Brze poveznice</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Pretraži objekte</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Najnoviji izlaz igre</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Još nema retka za čitanje.</value>
   </data>
 </root>

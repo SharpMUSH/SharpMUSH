@@ -5959,7 +5959,7 @@
     <value>Режим программы чтения с экрана</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>Для игры с программой чтения с экрана в этом браузере: буквенные клавиши выходов отключены, а игра об этом знает и может не показывать картинки, нарисованные символами.</value>
+    <value>Для игры с программой чтения с экрана в этом браузере: буквенные клавиши выходов отключены, ваши собственные команды не зачитываются, Alt и цифра повторно читает одну из последних строк (Alt+1 — самую новую), а игра об этом знает и может не показывать картинки, нарисованные символами.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Быстрые ссылки</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Поиск объектов</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Последний вывод игры</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Пока нечего прочитать.</value>
   </data>
 </root>

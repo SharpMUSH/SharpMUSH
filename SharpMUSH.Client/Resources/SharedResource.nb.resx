@@ -5959,7 +5959,7 @@
     <value>Skjermlesermodus</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>For å spille med skjermleser i denne nettleseren: bokstavtastene for utganger er slått av, og spillet får beskjed så det kan utelate bilder tegnet med tegn.</value>
+    <value>For å spille med skjermleser i denne nettleseren: bokstavtastene for utganger er slått av, dine egne kommandoer leses ikke opp igjen, Alt og et tall leser en av de siste linjene igjen (Alt+1 den nyeste), og spillet får beskjed så det kan utelate bilder tegnet med tegn.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Snarveier</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Søk etter objekter</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Siste spillutdata</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Ingen linje å lese ennå.</value>
   </data>
 </root>

@@ -5959,7 +5959,7 @@
     <value>Skärmläsarläge</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>För att spela med skärmläsare i den här webbläsaren: bokstavstangenterna för utgångar är avstängda, och spelet får veta det så att det kan utelämna bilder ritade med tecken.</value>
+    <value>För att spela med skärmläsare i den här webbläsaren: bokstavstangenterna för utgångar är avstängda, dina egna kommandon läses inte upp igen, Alt och en siffra läser en av de senaste raderna igen (Alt+1 den nyaste), och spelet får veta det så att det kan utelämna bilder ritade med tecken.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Snabblänkar</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Sök objekt</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Senaste spelutdata</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Ingen rad att läsa än.</value>
   </data>
 </root>

@@ -5959,7 +5959,7 @@
     <value>Modo lector de pantalla</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>Para jugar con un lector de pantalla en este navegador: las teclas de letra de las salidas se desactivan y el juego lo sabe, para poder omitir los dibujos hechos con caracteres.</value>
+    <value>Para jugar con un lector de pantalla en este navegador: las teclas de letra de las salidas se desactivan, tus propios comandos no se vuelven a leer, Alt y un número vuelve a leer una línea reciente (Alt+1 la más nueva) y el juego lo sabe, para poder omitir los dibujos hechos con caracteres.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Accesos rápidos</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Buscar objetos</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Última salida del juego</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Aún no hay ninguna línea que leer.</value>
   </data>
 </root>

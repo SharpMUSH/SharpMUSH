@@ -101,6 +101,75 @@ window.sharpmushLayout = {
 		if (button) button.focus();
 	},
 
+	// What a screen reader should hear for a line of game output: its markup read the way a page is read, not its
+	// plain text. A picture is its description, a separator its title, a table cell by cell with a stop after
+	// each row (and after each field, list item and title), and anything aria-hidden nothing. Whatever drawing is
+	// left in the words (a rule of dashes, box characters) goes. Parsed in a template, so nothing in it loads or
+	// runs.
+	spokenText: function (html) {
+		if (typeof html !== 'string') return null;
+		const template = document.createElement('template');
+		template.innerHTML = html;
+		return this.withoutDrawing(this._spoken(template.content));
+	},
+
+	_spoken: function (node) {
+		if (node.nodeType === 3) return node.data;
+		if (node.nodeType !== 1 && node.nodeType !== 11) return '';
+		if (node.nodeType === 1) {
+			if (node.getAttribute('aria-hidden') === 'true') return '';
+			const tag = node.tagName;
+			if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEMPLATE') return '';
+			if (tag === 'BR') return ' ';
+			if (tag === 'IMG') return ' ' + (node.getAttribute('alt') || '') + ' ';
+			const label = node.getAttribute('aria-label');
+			if (label && node.getAttribute('role') === 'img') return ' ' + label + ' ';
+		}
+		let said = '';
+		for (const child of node.childNodes) said += this._spoken(child);
+		if (node.nodeType === 1) {
+			const tag = node.tagName;
+			// A row, a field's value, a list item, a title or a separator is a phrase of its own: it ends with a
+			// stop, so the reader pauses there instead of running it into the next.
+			if (tag === 'TR' || tag === 'DD' || tag === 'LI' || tag === 'LEGEND' || tag === 'CAPTION'
+				|| node.getAttribute('role') === 'separator') {
+				const phrase = this.withoutDrawing(said);
+				return phrase === '' || /[.!?:;,]$/.test(phrase) ? ' ' + phrase + ' ' : ' ' + phrase + '. ';
+			}
+			if (tag === 'TD' || tag === 'TH' || tag === 'DIV' || tag === 'P') return ' ' + said + ' ';
+		}
+		return said;
+	},
+
+	// Drawing in plain words: box and block characters, and a run of four or more of the same mark ("-----",
+	// "====", "****"), are dropped; the spaces left are collapsed. Letters, digits and ordinary punctuation stay.
+	withoutDrawing: function (text) {
+		if (typeof text !== 'string') return '';
+		return text
+			.replace(/[\u2500-\u259F]+/g, ' ')
+			.replace(/([^\p{L}\p{N}\s])\1{3,}/gu, ' ')
+			.replace(/\s+/g, ' ')
+			.trim();
+	},
+
+	// Screen reader mode's review keys, in the command box: Alt and a number reads a recent line again (1 the
+	// newest, 0 the tenth), the way MUD clients for screen readers do, without leaving the box. Only while the
+	// box says data-review-keys="on"; otherwise the key is the browser's and the keyboard layout's. Installed
+	// once per box.
+	reviewKeys: function (input, dotnetRef) {
+		if (!input || input._reviewKeys) return;
+		input._reviewKeys = true;
+		input.addEventListener('keydown', event => {
+			if (input.dataset.reviewKeys !== 'on') return;
+			if (!event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+			const match = /^Digit([0-9])$/.exec(event.code || '');
+			if (!match) return;
+			event.preventDefault();
+			const back = match[1] === '0' ? 10 : Number(match[1]);
+			dotnetRef.invokeMethodAsync('ReviewLine', back).catch(() => { });
+		});
+	},
+
 	// A popover of actions (the account panel): Up and Down move between its controls, Home and End go to
 	// the first and last, wrapping round. Only controls outside an inert part count, so a hidden level is
 	// skipped. Installed once per element.

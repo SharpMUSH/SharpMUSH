@@ -495,3 +495,85 @@ test('a drawer closed by a page change puts focus on the new page\'s heading, an
     assert.deepEqual(d.focused, []);
     assert.equal(d.content.inert, false);
 });
+
+// Screen reader mode's review keys: Alt and a number in the command box reads a recent line again.
+function reviewBox(on) {
+    const listeners = {};
+    return {
+        dataset: on ? { reviewKeys: 'on' } : {},
+        addEventListener: (type, handler) => { listeners[type] = handler; },
+        press(init) {
+            let prevented = false;
+            listeners.keydown({ altKey: false, ctrlKey: false, metaKey: false, repeat: false, code: '', preventDefault: () => { prevented = true; }, ...init });
+            return prevented;
+        }
+    };
+}
+
+test('Alt and a number reads that line back, 0 the tenth, and is not typed', () => {
+    const { layout } = boot();
+    const box = reviewBox(true);
+    const asked = [];
+    layout.reviewKeys(box, { invokeMethodAsync: (name, n) => { asked.push([name, n]); return Promise.resolve(); } });
+
+    assert.equal(box.press({ altKey: true, code: 'Digit1' }), true, 'macOS would otherwise type a symbol');
+    box.press({ altKey: true, code: 'Digit0' });
+    assert.deepEqual(asked, [['ReviewLine', 1], ['ReviewLine', 10]]);
+});
+
+test('review keys are left alone with the mode off, with Ctrl or Cmd, held down, or on other keys', () => {
+    const { layout } = boot();
+    const asked = [];
+    const ref = { invokeMethodAsync: name => { asked.push(name); return Promise.resolve(); } };
+
+    const off = reviewBox(false);
+    layout.reviewKeys(off, ref);
+    assert.equal(off.press({ altKey: true, code: 'Digit1' }), false);
+
+    const on = reviewBox(true);
+    layout.reviewKeys(on, ref);
+    for (const init of [{ altKey: true, ctrlKey: true, code: 'Digit1' }, { altKey: true, metaKey: true, code: 'Digit2' },
+        { altKey: true, repeat: true, code: 'Digit3' }, { altKey: true, code: 'KeyA' }, { code: 'Digit4' }]) {
+        assert.equal(on.press(init), false);
+    }
+    assert.deepEqual(asked, []);
+});
+
+// A small stand-in for the parsed markup spokenText walks: text nodes, and elements with attributes.
+const text = data => ({ nodeType: 3, data });
+function el(tagName, attributes, ...childNodes) {
+    return { nodeType: 1, tagName, childNodes, getAttribute: name => attributes[name] ?? null };
+}
+
+test('a line is heard as its words: a separator\'s title, a picture\'s description, nothing hidden', () => {
+    const { layout } = boot();
+    const said = node => layout.withoutDrawing(layout._spoken(node));
+
+    assert.equal(said(el('DIV', { role: 'separator', class: 'ms-rule' }, el('SPAN', {}, text('God posed')))), 'God posed.');
+    assert.equal(said(el('SPAN', {}, text('Look: '), el('IMG', { alt: 'The logo', src: '/assets/logo.png' }))), 'Look: The logo');
+    assert.equal(said(el('SPAN', {}, el('SPAN', { 'aria-hidden': 'true' }, text('*')), text('Mira'))), 'Mira');
+    assert.equal(said(el('SPAN', { role: 'img', 'aria-label': 'A map of the pier' }, text('/\\_/\\'))), 'A map of the pier');
+    assert.equal(said(el('SPAN', {}, text('one'), el('BR', {}), text('two'))), 'one two');
+});
+
+test('a table is heard cell by cell, a full stop after each row, field and list item', () => {
+    const { layout } = boot();
+    const row = (...cells) => el('TR', {}, ...cells.map(c => el('TD', {}, text(c))));
+    const table = el('TABLE', {}, el('TBODY', {}, row('Name', 'Idle'), row('Mira', '3m'), row('Done!')));
+
+    assert.equal(layout.withoutDrawing(layout._spoken(table)), 'Name Idle. Mira 3m. Done!');
+
+    const box = el('FIELDSET', {}, el('LEGEND', {}, text('Kit')),
+        el('DL', {}, el('DIV', {}, el('DT', {}, text('Sex:')), el('DD', {}, text('Male')))),
+        el('UL', {}, el('LI', {}, text('Sword')), el('LI', {}, text('Shield'))));
+    assert.equal(layout.withoutDrawing(layout._spoken(box)), 'Kit. Sex: Male. Sword. Shield.');
+});
+
+test('drawing is dropped from plain words, punctuation in a sentence is not', () => {
+    const { layout } = boot();
+
+    assert.equal(layout.withoutDrawing('═╡ God posed ╞════════'), 'God posed');
+    assert.equal(layout.withoutDrawing('----------------------------------'), '');
+    assert.equal(layout.withoutDrawing('Mail: 3 new ===== read with @mail'), 'Mail: 3 new read with @mail');
+    assert.equal(layout.withoutDrawing('Wait... what?! -- no.'), 'Wait... what?! -- no.');
+});

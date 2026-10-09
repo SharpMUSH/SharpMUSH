@@ -5959,7 +5959,7 @@
     <value>Screenreader-Modus</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>Zum Spielen mit einem Screenreader in diesem Browser: Die Buchstabentasten für Ausgänge sind aus, und das Spiel erfährt davon, damit es aus Zeichen gezeichnete Bilder weglassen kann.</value>
+    <value>Zum Spielen mit einem Screenreader in diesem Browser: Die Buchstabentasten für Ausgänge sind aus, eigene Befehle werden nicht vorgelesen, Alt und eine Zahl liest eine der letzten Zeilen erneut vor (Alt+1 die neueste), und das Spiel erfährt davon, damit es aus Zeichen gezeichnete Bilder weglassen kann.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Schnellzugriff</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Objekte suchen</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Neueste Spielausgabe</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Noch keine Zeile zum Vorlesen.</value>
   </data>
 </root>

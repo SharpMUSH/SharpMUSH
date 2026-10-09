@@ -5253,7 +5253,7 @@
     <value>Mode lecteur d'écran</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>Pour jouer avec un lecteur d'écran dans ce navigateur : les touches de lettre des sorties sont désactivées, et le jeu en est informé pour pouvoir omettre les images dessinées avec des caractères.</value>
+    <value>Pour jouer avec un lecteur d'écran dans ce navigateur : les touches de lettre des sorties sont désactivées, vos propres commandes ne sont pas relues, Alt et un chiffre relit une ligne récente (Alt+1 la plus récente), et le jeu en est informé pour pouvoir omettre les images dessinées avec des caractères.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Liens rapides</value>
@@ -5263,5 +5263,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Rechercher des objets</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Dernière sortie du jeu</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Aucune ligne à lire pour l'instant.</value>
   </data>
 </root>

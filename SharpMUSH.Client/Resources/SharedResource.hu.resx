@@ -5959,7 +5959,7 @@
     <value>Képernyőolvasó mód</value>
   </data>
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
-    <value>Képernyőolvasóval való játékhoz ebben a böngészőben: a kijáratok betűbillentyűi ki vannak kapcsolva, és a játék is tud róla, így elhagyhatja a karakterekből rajzolt képeket.</value>
+    <value>Képernyőolvasóval való játékhoz ebben a böngészőben: a kijáratok betűbillentyűi ki vannak kapcsolva, a saját parancsaidat nem olvassa fel újra, az Alt és egy szám újra felolvas egy friss sort (Alt+1 a legújabbat), és a játék is tud róla, így elhagyhatja a karakterekből rajzolt képeket.</value>
   </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Gyorshivatkozások</value>
@@ -5969,5 +5969,11 @@
   </data>
   <data name="TermObjectSearch" xml:space="preserve">
     <value>Objektumok keresése</value>
+  </data>
+  <data name="TermLatestLines" xml:space="preserve">
+    <value>Legutóbbi játékkimenet</value>
+  </data>
+  <data name="TermReviewNone" xml:space="preserve">
+    <value>Még nincs felolvasható sor.</value>
   </data>
 </root>
