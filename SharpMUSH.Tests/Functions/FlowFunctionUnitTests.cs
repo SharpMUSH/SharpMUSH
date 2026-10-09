@@ -16,7 +16,7 @@ public class FlowFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -29,7 +29,7 @@ public class FlowFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -41,7 +41,7 @@ public class FlowFunctionUnitTests
 	[Arguments("setr(A, 1):[letq(setr(A, 2))]:%qA", "1:2:2")]
 	public async Task LetQ(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -59,7 +59,7 @@ public class FlowFunctionUnitTests
 	[Arguments("letq(A,1,%qA)", "1")]
 	public async Task ParityAcceptsValidArgumentCounts(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -69,7 +69,7 @@ public class FlowFunctionUnitTests
 	[Arguments("setr(A,1,B)", "#-1 FUNCTION (SETR) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
 	public async Task ParityRejectsInvalidArgumentCounts(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -84,7 +84,7 @@ public class FlowFunctionUnitTests
 	[Arguments("caseall(b,a,first,b,second,fallback)", "second")]
 	public async Task CaseHasNoParityRequirement(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

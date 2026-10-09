@@ -357,8 +357,8 @@ public class ConnectionAnnounceServiceTests
 		await Assert.That(state.Executor).IsEqualTo(hookTarget.Object().DBRef);
 		await Assert.That(state.Enactor).IsEqualTo(player.Object().DBRef);
 		await Assert.That(state.Caller).IsEqualTo(player.Object().DBRef);
-		await Assert.That(state.Arguments["0"].Message!.ToPlainText()).IsEqualTo(string.Empty);
-		await Assert.That(state.Arguments["1"].Message!.ToPlainText()).IsEqualTo("3");
+		await Assert.That(state.Arguments["0"].Message.ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That(state.Arguments["1"].Message.ToPlainText()).IsEqualTo("3");
 		await Assert.That(state.ExecutionBudget).IsNull();
 	}
 

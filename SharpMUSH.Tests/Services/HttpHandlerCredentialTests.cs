@@ -57,7 +57,7 @@ public class HttpHandlerCredentialTests
 
 		await Assert.That(pushed).IsNotNull();
 		pushed!.Registers.TryPeek(out var registers);
-		return (registers!, pushed.EnvironmentRegisters["0"].Message!.ToPlainText());
+		return (registers!, pushed.EnvironmentRegisters["0"].Message.ToPlainText());
 	}
 
 	[Test]

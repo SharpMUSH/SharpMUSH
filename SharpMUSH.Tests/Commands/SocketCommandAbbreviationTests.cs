@@ -57,7 +57,7 @@ public class SocketCommandAbbreviationTests
 		return name;
 	}
 
-	private static string PlainMessage(CallState result) => result.Message?.ToString() ?? "";
+	private static string PlainMessage(CallState result) => result.Message.ToString();
 
 	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
 	public async ValueTask Connect_FullCommand_Succeeds()

@@ -50,7 +50,7 @@ public class MessageFormatResultTests
 			: await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"message({reference},fallback,{format})"));
 		TestDiagnostics.WriteLine($"command={command}, pinned={pinned}, mode={mode}: errors={result!.HadErrors}, output={result.Message}");
 		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("");
 		var delivered = Factory.Notifications.For(reference);
 		await Assert.That(delivered.Count).IsEqualTo(1);
 		if (mode == "syntax") await Assert.That(delivered.Single()).Contains("#-1 PARSER FAILURE");

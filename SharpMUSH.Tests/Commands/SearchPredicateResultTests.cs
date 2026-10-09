@@ -40,6 +40,6 @@ public class SearchPredicateResultTests
 			: await parser.FunctionParse(MarkupText.Plain(expression));
 		await Assert.That(result!.HadErrors).IsEqualTo(mode == "syntax");
 		// @search's output is the list lsearch() gives for the same search.
-		await Assert.That(result.Message!.Text).IsEqualTo(mode == "true" ? $"#{id.Number}" : "");
+		await Assert.That(result.Message.Text).IsEqualTo(mode == "true" ? $"#{id.Number}" : "");
 	}
 }

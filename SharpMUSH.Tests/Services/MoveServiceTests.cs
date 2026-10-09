@@ -27,7 +27,7 @@ public class MoveServiceTests
 	{
 		var result = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		DBRef.TryParse(result.Message!.ToPlainText().Trim(), out var dbref);
+		DBRef.TryParse(result.Message.ToPlainText().Trim(), out var dbref);
 		return dbref!.Value;
 	}
 

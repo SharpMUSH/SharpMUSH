@@ -41,7 +41,7 @@ public class SpeechCommandParityTests
 		// queued, and could otherwise land among what a test counts.
 		_roomName = TestIsolationHelpers.GenerateUniqueName("SpeechParity");
 		var dig = await God($"@dig {_roomName}");
-		_room = dig.Message!.ToPlainText().Trim();
+		_room = dig.Message.ToPlainText().Trim();
 		var room = DBRef.Parse(_room);
 		_speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "Speaker", room);
@@ -496,7 +496,7 @@ public class SpeechCommandParityTests
 	private async Task<DBRef> ThingInTheRoom(string name)
 	{
 		var created = await God($"@create {name}");
-		var thing = DBRef.Parse(created.Message!.ToPlainText());
+		var thing = DBRef.Parse(created.Message.ToPlainText());
 		await God($"@tel {thing}={_room}");
 		return thing;
 	}

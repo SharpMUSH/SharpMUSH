@@ -61,7 +61,7 @@ public class QueueInspectionPermissionTests
 				_ => $"@ps {target}"
 			};
 			var result = await Factory.CommandParser.CommandParse(mortal.Handle, connections, MarkupText.Plain(command));
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 			await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.Contains("PrivateQueueSecret"))).IsFalse();
 		}
 		finally { if (job.Pid is { } pid) await queue.HaltByPid(pid); }

@@ -54,14 +54,14 @@ public class ObjectDestructionTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
-		return DBRef.Parse(result.Message!.ToPlainText().Trim());
+		return DBRef.Parse(result.Message.ToPlainText().Trim());
 	}
 
 	private async Task<DBRef> DigRoomAsync(string prefix)
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {name}"));
-		return DBRef.Parse(result.Message!.ToPlainText().Trim());
+		return DBRef.Parse(result.Message.ToPlainText().Trim());
 	}
 
 	private ValueTask<CallState> RunAsync(string command) =>
@@ -156,11 +156,11 @@ public class ObjectDestructionTests
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("DoomedExit");
 		var openResult = await RunAsync($"@open {exitName}={room},,{elsewhere}");
-		var exit = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
+		var exit = DBRef.Parse(openResult.Message.ToPlainText().Trim());
 
 		// An exit whose source is the room that is about to die.
 		var relocated = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("RoomExit")}={elsewhere},,{room}");
-		var roomExit = DBRef.Parse(relocated.Message!.ToPlainText().Trim());
+		var roomExit = DBRef.Parse(relocated.Message.ToPlainText().Trim());
 
 		await RunAsync($"@destroy {room}");
 		await RunAsync($"@destroy {room}");
@@ -183,7 +183,7 @@ public class ObjectDestructionTests
 		var source = await DigRoomAsync("DestroyEntranceSource");
 
 		var openResult = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("Entrance")}={doomed},,{source}");
-		var entrance = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
+		var entrance = DBRef.Parse(openResult.Message.ToPlainText().Trim());
 
 		await RunAsync($"@destroy {doomed}");
 		await RunAsync($"@destroy {doomed}");
@@ -332,7 +332,7 @@ public class ObjectDestructionTests
 		do
 		{
 			var opened = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("NukeCascadeExit")}=,,{room}");
-			exit = DBRef.Parse(opened.Message!.ToPlainText().Trim());
+			exit = DBRef.Parse(opened.Message.ToPlainText().Trim());
 		} while (exit.Number < room.Number);
 
 		await RunAsync($"@chown {room}={player}");

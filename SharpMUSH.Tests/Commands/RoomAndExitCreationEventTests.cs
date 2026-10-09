@@ -35,7 +35,7 @@ public class RoomAndExitCreationEventTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private async Task<string> AsGod(string command)
-		=> (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText()
+		=> (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText()
 			?? string.Empty;
 
 	/// <summary>What the handler recorded, once the events queued so far have run.</summary>
@@ -190,7 +190,7 @@ public class RoomAndExitCreationEventTests
 			original.CommandLibrary, original.Configuration, provider);
 
 		var result = (await parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain(string.Format(build, uid, destination))))?.Message?.ToPlainText() ?? string.Empty;
+			MarkupText.Plain(string.Format(build, uid, destination))))?.Message.ToPlainText() ?? string.Empty;
 		var first = DBRef.Parse(result).Number;
 
 		var named = new List<int> { first };

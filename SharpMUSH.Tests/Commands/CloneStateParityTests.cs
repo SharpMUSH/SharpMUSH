@@ -32,7 +32,7 @@ public class CloneStateParityTests
 	private IAttributeStore Attributes => WebAppFactoryArg.Services.GetRequiredService<IAttributeStore>();
 
 	private async Task<string> Run(long handle, string command)
-		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText()
+		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText()
 			?? string.Empty;
 
 	private Task<string> AsGod(string command) => Run(1, command);
@@ -61,7 +61,7 @@ public class CloneStateParityTests
 			: await AsGod($"@clone {target}={newName}"));
 
 	private async Task<string> GetAsync(DBRef obj, string attr)
-		=> (await Parser.FunctionParse(MarkupText.Plain($"get({obj}/{attr})")))?.Message?.ToPlainText() ?? string.Empty;
+		=> (await Parser.FunctionParse(MarkupText.Plain($"get({obj}/{attr})")))?.Message.ToPlainText() ?? string.Empty;
 
 	/// <summary>Polls until a queued command list has written the attribute it ends with.</summary>
 	private async Task WaitForAsync(DBRef obj, string attr, string expected)

@@ -492,7 +492,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdownCustom_ContainerTemplate_GetsTheSeeAlsoTopics()
 	{
-		var testDbref = (await Parser.FunctionParse(MarkupText.Plain("create(SeeAlsoTemplateObj)")))!.Message!.ToString().Trim();
+		var testDbref = (await Parser.FunctionParse(MarkupText.Plain("create(SeeAlsoTemplateObj)")))!.Message.ToString().Trim();
 		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`CONTAINER {testDbref}=%0 -> %2"));
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdowncustom(::: seealso%r- \\[newbie\\]%r- \\[ZONES\\]%r:::,{testDbref})")))?.Message;
@@ -503,7 +503,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdownCustom_AllCustomTemplates_NonDefaultBehavior()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(MarkdownCustomTestObj)")))?.Message?.ToString()!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(MarkdownCustomTestObj)")))?.Message.ToString()!;
 		await Assert.That(createResult).IsNotNull();
 		var testDbref = createResult.Trim();
 
@@ -620,7 +620,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdownCustom_NoTemplates_MatchesDefaultRenderingForNewHooks()
 	{
-		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(MarkdownNoTemplateObj)")))?.Message?.ToString()!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(MarkdownNoTemplateObj)")))?.Message.ToString()!;
 		await Assert.That(createResult).IsNotNull();
 		var obj = createResult.Trim();
 

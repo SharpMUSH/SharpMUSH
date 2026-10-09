@@ -68,7 +68,7 @@ public partial class SpeechTransformationTests
 		}, async scoped =>
 		{
 			var result = await new SpeechService(Attributes, new FixedOptions(Options)).TransformAsync(scoped, await Node(actor.DbRef), MarkupText.Plain("body"), "|");
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo($"#{actor.DbRef.Number}|{actor.Name}|changed|body");
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo($"#{actor.DbRef.Number}|{actor.Name}|changed|body");
 			await Assert.That(scoped.CurrentState.Enactor).IsEqualTo(enactor.DbRef);
 			await Assert.That(scoped.CurrentState.Registers.First()["A"].ToPlainText()).IsEqualTo("original");
 			return result;
@@ -183,10 +183,10 @@ public partial class SpeechTransformationTests
 	{
 		var actor = await Player();
 		await Admin($"&SPEECHMOD {actor.DbRef}=%0");
-		var body = (await Factory.CommandParser.FunctionParse(MarkupText.Plain("[ansi(r,hello)]")))!.Message!;
+		var body = (await Factory.CommandParser.FunctionParse(MarkupText.Plain("[ansi(r,hello)]")))!.Message;
 		var result = await new SpeechService(Attributes, new FixedOptions(Options)).TransformAsync(
 			Factory.CommandParserFor(actor.DbRef, actor.Handle), await Node(actor.DbRef), body, "|");
-		await Assert.That(result.Message!.Render(global::MarkupString.MarkupFormat.Ansi)).IsEqualTo(body.Render(global::MarkupString.MarkupFormat.Ansi));
+		await Assert.That(result.Message.Render(global::MarkupString.MarkupFormat.Ansi)).IsEqualTo(body.Render(global::MarkupString.MarkupFormat.Ansi));
 	}
 
 	[Test]

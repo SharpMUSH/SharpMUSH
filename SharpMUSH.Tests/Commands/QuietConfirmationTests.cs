@@ -30,7 +30,7 @@ public class QuietConfirmationTests
 		var room = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, DBRef.Parse(room.Message!.ToPlainText()));
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, DBRef.Parse(room.Message.ToPlainText()));
 		if (quiet)
 		{
 			await God($"@set {player.DbRef}=QUIET");

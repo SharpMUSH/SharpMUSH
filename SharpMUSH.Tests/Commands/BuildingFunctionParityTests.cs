@@ -30,7 +30,7 @@ public class BuildingFunctionParityTests
 	/// <summary>Runs <paramref name="expression"/> as the player behind <paramref name="handle"/>.</summary>
 	private async Task<string> Eval(long handle, string expression)
 		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}")))
-			?.Message?.ToPlainText() ?? string.Empty;
+			?.Message.ToPlainText() ?? string.Empty;
 
 	private async Task<AnySharpObject> Node(DBRef dbref)
 		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
@@ -62,14 +62,14 @@ public class BuildingFunctionParityTests
 
 		var zoneResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create BfpZone{Guid.NewGuid():N}"));
-		var zone = DBRef.Parse(zoneResult.Message!.ToPlainText());
+		var zone = DBRef.Parse(zoneResult.Message.ToPlainText());
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {player.DbRef}={zone}"));
 
 		var name = $"BfpZoned{Guid.NewGuid():N}";
 		var created = DBRef.Parse(throughTheFunction
 			? await Eval(player.Handle, $"create({name})")
 			: (await Parser.CommandParse(player.Handle, ConnectionService,
-				MarkupText.Plain($"@create {name}"))).Message!.ToPlainText());
+				MarkupText.Plain($"@create {name}"))).Message.ToPlainText());
 
 		var inherited = await (await Node(created)).Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(inherited.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(zone.Number)
@@ -88,12 +88,12 @@ public class BuildingFunctionParityTests
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var roomResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig BfpExitRoom{uid}"));
 		var room = new DBRef(int.Parse(System.Text.RegularExpressions.Regex.Match(
-			roomResult.Message!.ToPlainText(), @"#(\d+)").Groups[1].Value));
+			roomResult.Message.ToPlainText(), @"#(\d+)").Groups[1].Value));
 
 		var exitResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@open BfpExit{uid}={room}"));
 		var exit = new DBRef(int.Parse(System.Text.RegularExpressions.Regex.Match(
-			exitResult.Message!.ToPlainText(), @"#(\d+)").Groups[1].Value));
+			exitResult.Message.ToPlainText(), @"#(\d+)").Groups[1].Value));
 
 		// Where the exit itself lives is the answer we expect, and it is not necessarily `room`.
 		var exitHome = (await (await Node(exit)).Where()).Object().DBRef;

@@ -25,7 +25,7 @@ public class AttributeTreeParentPermissionTests
 	private async Task<string> Eval(long handle, string expr)
 	{
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expr}"));
-		return result?.Message?.ToPlainText() ?? "";
+		return result?.Message.ToPlainText() ?? "";
 	}
 
 	private async Task Cmd(string cmd)

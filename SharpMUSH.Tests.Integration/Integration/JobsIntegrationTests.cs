@@ -35,7 +35,7 @@ public class JobsIntegrationTests
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
 	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)

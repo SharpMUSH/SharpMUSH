@@ -44,7 +44,7 @@ public class SceneApprovalIntegrationTests
 	private const string NotApproved = "You are not approved to take part in scenes.";
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -112,13 +112,13 @@ public class SceneApprovalIntegrationTests
 	private DBRef? _room;
 
 	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
-		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message.ToPlainText().Trim());
 
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
 		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
 			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (string.IsNullOrEmpty(dbref) || dbref.StartsWith("#-") || !DBRef.TryParse(dbref, out var parsed))
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -175,7 +175,7 @@ public class SceneApprovalIntegrationTests
 		Log($"[PREDICATE] approved={approved} unapproved={unapproved} guest={guest} — all four answers correct");
 
 		// ---- 2. Stage: a room, the three players, and the Scene Logger co-located ----------------
-		var digOut = (await God1($"@dig ApprovalStage_{Tag}")).Message!.ToPlainText().Trim();
+		var digOut = (await God1($"@dig ApprovalStage_{Tag}")).Message.ToPlainText().Trim();
 		var roomDbref = Num(digOut);
 		foreach (var who in new[] { approved, unapproved, guest })
 			await God1($"@tel {who}={digOut}");
@@ -293,12 +293,12 @@ public class SceneApprovalIntegrationTests
 		foreach (var name in switches)
 		{
 			var result = await Parser.CommandParse(mortalHandle, ConnectionService, MarkupText.Plain($"@scene/{name} something=else"));
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
 				.Because($"@scene/{name} is wizard-only — players drive the system through +scene");
 		}
 
 		var bareResult = await Parser.CommandParse(mortalHandle, ConnectionService, MarkupText.Plain("@scene something"));
-		await Assert.That(bareResult.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
+		await Assert.That(bareResult.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
 			.Because("the bare display form is gated by the same check");
 
 		// And the player is told, not silently ignored. The FLAG^WIZARD CommandLock refuses first, so the

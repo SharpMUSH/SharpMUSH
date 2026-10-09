@@ -29,7 +29,7 @@ public class PrefixRedispatchTests
 		// could otherwise arrive inside the window a test counts.
 		var room = await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@dig {Guid.NewGuid():N}"));
 		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "PrefixActor",
-			DBRef.Parse(room.Message!.ToPlainText().Trim()));
+			DBRef.Parse(room.Message.ToPlainText().Trim()));
 		_name = (await mediator.Send(new GetObjectNodeQuery(_actor.DbRef))).Expect<AnySharpObject>().Object().Name;
 	}
 	[After(Test)]
@@ -91,7 +91,7 @@ public class PrefixRedispatchTests
 	{
 		var result = await Run(text);
 		await Assert.That(result.HadErrors).IsTrue();
-		await Assert.That(result.Message!.ToPlainText()).Contains("PARSER FAILURE");
+		await Assert.That(result.Message.ToPlainText()).Contains("PARSER FAILURE");
 	}
 
 	[Test]
@@ -103,7 +103,7 @@ public class PrefixRedispatchTests
 		// Unique text, and selected by it rather than by being the only thing in the window (#1247):
 		// .Single() over everything that arrived throws rather than failing an assertion.
 		var marker = $"Red{Guid.NewGuid():N}"[..11];
-		var styled = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[ansi(r,{marker})]")))!.Message!;
+		var styled = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[ansi(r,{marker})]")))!.Message;
 		var before = Factory.Notifications.RawCountFor(_actor!.DbRef);
 		await Factory.CommandParserFor(_actor.DbRef, _actor.Handle).CommandParse(_actor.Handle, Connections,
 			MarkupText.Concat(MarkupText.Plain(prefix), styled));
@@ -125,7 +125,7 @@ public class PrefixRedispatchTests
 		var before = Factory.Notifications.CountForHandle(_actor.Handle);
 		var result = await parser.CommandParse(MarkupText.Plain($"{prefixes}@emit depth-body"));
 		await Assert.That(result.HadErrors).IsTrue();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.Call);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.Call);
 		await Assert.That(Factory.Notifications.For(_actor.DbRef)).DoesNotContain("depth-body");
 		await Assert.That(Factory.Notifications.ForHandle(_actor.Handle).Skip(before)).IsEquivalentTo(new[] { ErrorMessages.Returns.Call });
 		await Assert.That(parser.CurrentState.CommandModifierDepth).IsEqualTo(limit - 1);
@@ -155,7 +155,7 @@ public class PrefixRedispatchTests
 		if (queued) parser = parser.FromState(parser.CurrentState with { Handle = null });
 		await parser.CommandParse(MarkupText.Plain($"{(prefixed ? "]" : "")}&VALUE me=[add(1,2)]"));
 		var value = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[get({_actor.DbRef}/VALUE)]"));
-		await Assert.That(value!.Message!.ToPlainText()).IsEqualTo(queued && !prefixed ? "3" : "[add(1,2)]");
+		await Assert.That(value!.Message.ToPlainText()).IsEqualTo(queued && !prefixed ? "3" : "[add(1,2)]");
 	}
 
 	[Test]
@@ -165,7 +165,7 @@ public class PrefixRedispatchTests
 		await Run("]&FOO [num(me)]=changed-object");
 		await Run("]&[cat(F,OO)] me=changed-name");
 		var value = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[get({_actor!.DbRef}/FOO)]"));
-		await Assert.That(value!.Message!.ToPlainText()).IsEqualTo("original");
+		await Assert.That(value!.Message.ToPlainText()).IsEqualTo("original");
 	}
 
 	[Test]

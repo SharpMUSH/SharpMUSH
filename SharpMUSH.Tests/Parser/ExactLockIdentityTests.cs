@@ -24,7 +24,7 @@ public class ExactLockIdentityTests
 	private async Task<AnySharpObject> Create(string prefix)
 	{
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create({prefix}_{Guid.NewGuid():N})"));
-		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message.ToPlainText())))).Expect<AnySharpObject>();
 	}
 
 	[Test]
@@ -74,7 +74,7 @@ public class ExactLockIdentityTests
 	private async Task<AnySharpObject> Parse(string expression)
 	{
 		var made = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(made!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(made!.Message.ToPlainText())))).Expect<AnySharpObject>();
 	}
 
 	/// <summary>

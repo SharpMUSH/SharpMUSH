@@ -56,7 +56,7 @@ public class LocateServiceDefaultMemberTests
 		var result = await locate.LocateAndNotifyIfInvalidWithCallState(Parser, Looker, Looker, "nothing",
 			LocateFlags.All);
 
-		await Assert.That(result is Error<CallState> { Value: var e } && e.Message!.ToPlainText() == ErrorMessages.Returns.NoMatch)
+		await Assert.That(result is Error<CallState> { Value: var e } && e.Message.ToPlainText() == ErrorMessages.Returns.NoMatch)
 			.IsTrue();
 		await Assert.That(fake.Calls).IsEquivalentTo(new[] { ("noisy", "nothing", LocateFlags.All) });
 	}
@@ -69,7 +69,7 @@ public class LocateServiceDefaultMemberTests
 		var result = await locate.LocateAndNotifyIfInvalidWithCallStateFunction(Parser, Looker, Looker, "both",
 			LocateFlags.All, _ => new CallState("found"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.AmbiguousMatch);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.AmbiguousMatch);
 	}
 
 	[Test]
@@ -80,7 +80,7 @@ public class LocateServiceDefaultMemberTests
 		var result = await locate.LocateAndNotifyIfInvalidWithCallStateFunction(Parser, Looker, Looker, "me",
 			LocateFlags.All, found => ValueTask.FromResult(new CallState(found.Object().Name)));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("Looker");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("Looker");
 	}
 
 	[Test]

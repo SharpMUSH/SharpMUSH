@@ -22,10 +22,10 @@ public class BooleanFunctionUnitTests
 		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { TinyBooleans = false } });
 		var parser = (MUSHCodeParser)Parser;
 		parser = parser with { ServiceProvider = new OptionsProvider(parser.ServiceProvider, options) };
-		await Assert.That((await parser.FunctionParse(MarkupText.Plain("t(text)")))!.Message!.ToPlainText()).IsEqualTo("1");
+		await Assert.That((await parser.FunctionParse(MarkupText.Plain("t(text)")))!.Message.ToPlainText()).IsEqualTo("1");
 		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { TinyBooleans = true } });
 		foreach (var expression in new[] { "t(text)", "and(text,1)", "if(text,1,0)", "map(#apply/t,text)" })
-			await Assert.That((await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText()).IsEqualTo("0");
+			await Assert.That((await parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText()).IsEqualTo("0");
 	}
 
 	private sealed class OptionsProvider(IServiceProvider inner, IOptionsWrapper<SharpMUSHOptions> options) : IServiceProvider
@@ -60,7 +60,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -74,7 +74,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -88,7 +88,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -103,7 +103,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -118,7 +118,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -132,7 +132,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -146,7 +146,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -160,7 +160,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -174,7 +174,7 @@ public class BooleanFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}

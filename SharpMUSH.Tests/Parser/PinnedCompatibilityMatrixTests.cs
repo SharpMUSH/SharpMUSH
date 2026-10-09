@@ -57,7 +57,7 @@ public class PinnedCompatibilityMatrixTests
 		});
 		var original = (MUSHCodeParser)Factory.FunctionParser;
 		var parser = original with { ServiceProvider = new OptionsProvider(original.ServiceProvider, options) };
-		var actual = (await parser.FunctionParse(MarkupText.Plain(item.Expression)))!.Message!.ToPlainText();
+		var actual = (await parser.FunctionParse(MarkupText.Plain(item.Expression)))!.Message.ToPlainText();
 		await Assert.That(actual).IsEqualTo(item.Expected).Because(item.ToString());
 	}
 
@@ -72,9 +72,9 @@ public class PinnedCompatibilityMatrixTests
 		{
 			options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { TinyTrimFun = tiny } });
 			var expression = tiny ? "trim(xxabcxx,l,x)" : "trim(xxabcxx,x,l)";
-			await Assert.That((await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText()).IsEqualTo("abcxx");
-			await Assert.That((await parser.FunctionParse(MarkupText.Plain("trimpenn(xxabcxx,x,r)")))!.Message!.ToPlainText()).IsEqualTo("xxabc");
-			await Assert.That((await parser.FunctionParse(MarkupText.Plain("trimtiny(xxabcxx,r,x)")))!.Message!.ToPlainText()).IsEqualTo("xxabc");
+			await Assert.That((await parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText()).IsEqualTo("abcxx");
+			await Assert.That((await parser.FunctionParse(MarkupText.Plain("trimpenn(xxabcxx,x,r)")))!.Message.ToPlainText()).IsEqualTo("xxabc");
+			await Assert.That((await parser.FunctionParse(MarkupText.Plain("trimtiny(xxabcxx,r,x)")))!.Message.ToPlainText()).IsEqualTo("xxabc");
 		}
 	}
 

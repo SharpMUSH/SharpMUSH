@@ -31,7 +31,7 @@ public class TelDiagnosticTests
 	private async ValueTask<string> Eval(string expression)
 	{
 		var result = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return result.Message?.ToPlainText()?.Trim() ?? "";
+		return result.Message.ToPlainText()?.Trim() ?? "";
 	}
 
 	/// <summary>
@@ -100,9 +100,9 @@ public class TelDiagnosticTests
 		var objName = TestIsolationHelpers.GenerateUniqueName("telobj2");
 		var destName = TestIsolationHelpers.GenerateUniqueName("teldst2");
 		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var obj = r1.Message!.ToPlainText()!.Trim();
+		var obj = r1.Message.ToPlainText()!.Trim();
 		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {destName}"));
-		var dest = r2.Message!.ToPlainText()!.Trim();
+		var dest = r2.Message.ToPlainText()!.Trim();
 
 		var errors = await ExecAndCollectErrors($"@tel {obj}={dest}");
 
@@ -146,7 +146,7 @@ public class TelDiagnosticTests
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("ngobj");
 		var r = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var dbref = r.Message!.ToPlainText()!.Trim();
+		var dbref = r.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&last_mod {dbref}=2024-01-01"));
 
 		TestDiagnostics.WriteLine($"Created {objName} = {dbref}");
@@ -189,9 +189,9 @@ public class TelDiagnosticTests
 		var containerName = TestIsolationHelpers.GenerateUniqueName("diagcont");
 		var innerName = TestIsolationHelpers.GenerateUniqueName("diaginn");
 		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {containerName}"));
-		var containerDbref = r1.Message!.ToPlainText()!.Trim();
+		var containerDbref = r1.Message.ToPlainText()!.Trim();
 		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {innerName}"));
-		var innerDbref = r2.Message!.ToPlainText()!.Trim();
+		var innerDbref = r2.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&test_attr {innerDbref}=test_value"));
 
@@ -221,9 +221,9 @@ public class TelDiagnosticTests
 		var outerName = TestIsolationHelpers.GenerateUniqueName("diagout");
 		var innerName = TestIsolationHelpers.GenerateUniqueName("diagitm");
 		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {outerName}"));
-		var outerDbref = r1.Message!.ToPlainText()!.Trim();
+		var outerDbref = r1.Message.ToPlainText()!.Trim();
 		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {innerName}"));
-		var innerDbref = r2.Message!.ToPlainText()!.Trim();
+		var innerDbref = r2.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&test_attr {innerDbref}=inner_value"));
 
@@ -261,9 +261,9 @@ public class TelDiagnosticTests
 		var srcName = TestIsolationHelpers.GenerateUniqueName("telsrc");
 		var dstName = TestIsolationHelpers.GenerateUniqueName("teldst");
 		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {srcName}"));
-		var srcDbref = r1.Message!.ToPlainText()!.Trim();
+		var srcDbref = r1.Message.ToPlainText()!.Trim();
 		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {dstName}"));
-		var dstDbref = r2.Message!.ToPlainText()!.Trim();
+		var dstDbref = r2.Message.ToPlainText()!.Trim();
 
 		TestDiagnostics.WriteLine($"Created {srcName} = {srcDbref}");
 		TestDiagnostics.WriteLine($"Created {dstName} = {dstDbref}");
@@ -297,9 +297,9 @@ public class TelDiagnosticTests
 		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbspkt");
 		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsbrd");
 		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {pocketName}"));
-		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
+		var pocketDbref = r1.Message.ToPlainText()!.Trim();
 		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {boardName}"));
-		var boardDbref = r2.Message!.ToPlainText()!.Trim();
+		var boardDbref = r2.Message.ToPlainText()!.Trim();
 
 		TestDiagnostics.WriteLine($"Created {pocketName} = {pocketDbref}");
 		TestDiagnostics.WriteLine($"Created {boardName} = {boardDbref}");
@@ -410,9 +410,9 @@ public class TelDiagnosticTests
 		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbsrpkt");
 		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsrbrd");
 		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {pocketName}"));
-		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
+		var pocketDbref = r1.Message.ToPlainText()!.Trim();
 		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {boardName}"));
-		var boardDbref = r2.Message!.ToPlainText()!.Trim();
+		var boardDbref = r2.Message.ToPlainText()!.Trim();
 
 		TestDiagnostics.WriteLine($"pocket = {pocketDbref}");
 		TestDiagnostics.WriteLine($"board = {boardDbref}");
@@ -487,9 +487,9 @@ public class TelDiagnosticTests
 		var aName = TestIsolationHelpers.GenerateUniqueName("frcda");
 		var bName = TestIsolationHelpers.GenerateUniqueName("frcdb");
 		var r1 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {aName}"));
-		var aDbref = r1.Message!.ToPlainText()!.Trim();
+		var aDbref = r1.Message.ToPlainText()!.Trim();
 		var r2 = await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@create {bName}"));
-		var bDbref = r2.Message!.ToPlainText()!.Trim();
+		var bDbref = r2.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&ref {aDbref}=#222"));
 

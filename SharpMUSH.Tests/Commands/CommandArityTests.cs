@@ -33,7 +33,7 @@ public class CommandArityTests
 	{
 		var dug = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
-		var room = DBRef.Parse(dug.Message!.ToPlainText());
+		var room = DBRef.Parse(dug.Message.ToPlainText());
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
 	}

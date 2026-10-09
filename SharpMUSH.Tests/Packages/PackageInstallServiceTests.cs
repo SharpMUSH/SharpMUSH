@@ -95,7 +95,7 @@ public class PackageInstallServiceTests
 	private async Task<string> EvaluateAttributeAsync(string objid, string attribute)
 	{
 		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/{attribute})]"));
-		return result!.Message!.ToPlainText();
+		return result!.Message.ToPlainText();
 	}
 
 	private async Task<IReadOnlyList<string>> ReadAttributeFlagsAsync(string objid, string attribute)
@@ -150,7 +150,7 @@ public class PackageInstallServiceTests
 		await Database.SetAttributeAsync(DBRef.Parse(objid),
 			["PM", "REFS", "PACKAGE_MANAGER"], MarkupText.Empty, pm);
 		var beforeRepair = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
-		await Assert.That(beforeRepair!.Message!.ToPlainText()).IsEqualTo("");
+		await Assert.That(beforeRepair!.Message.ToPlainText()).IsEqualTo("");
 		var repair = await Installer.PlanAsync(upgraded, answers);
 		await Assert.That(repair.Attributes.Single(a => a.Attribute == "PM`REFS`PACKAGE_MANAGER").Action)
 			.IsEqualTo(PackageAttributeAction.AutoUpgrade);
@@ -158,7 +158,7 @@ public class PackageInstallServiceTests
 		var expectedPm = await ObjidAsync(7);
 		await Assert.That(await ReadAttributeAsync(objid, "PM`REFS`PACKAGE_MANAGER")).IsEqualTo(expectedPm);
 		var evaluated = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
-		await Assert.That(evaluated!.Message!.ToPlainText()).IsEqualTo(expectedPm);
+		await Assert.That(evaluated!.Message.ToPlainText()).IsEqualTo(expectedPm);
 		await Assert.That((await Installer.UninstallAsync(manifest.Name)).Value).IsTypeOf<Success>();
 	}
 
@@ -247,7 +247,7 @@ public class PackageInstallServiceTests
 		await Assert.That(await ReadAttributeAsync(host, isolated)).IsEqualTo(custom);
 		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`GOD")).IsEqualTo(custom);
 		var evaluated = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({host}/LEGACY_SRC)]"));
-		await Assert.That(evaluated!.Message!.ToPlainText()).IsEqualTo(custom);
+		await Assert.That(evaluated!.Message.ToPlainText()).IsEqualTo(custom);
 		await Assert.That((await Installer.PlanAsync(manifest, answers)).HasConflicts).IsFalse();
 		await Assert.That((await Installer.UninstallAsync(manifest.Name)).Value).IsTypeOf<Success>();
 		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`GOD")).IsEqualTo(custom);

@@ -204,12 +204,12 @@ public class FollowCommandTests
 		}
 
 		var followers = (await WebAppFactoryArg.FunctionParser.FunctionParse(
-			MarkupText.Plain($"followers(#{leader.DbRef.Number})")))!.Message!.ToPlainText();
+			MarkupText.Plain($"followers(#{leader.DbRef.Number})")))!.Message.ToPlainText();
 		await Assert.That(followers).IsEqualTo($"{earlier.DbRef} {later.DbRef}");
 
 		await Parser.CommandParse(earlier.Handle, ConnectionService, MarkupText.Plain("unfollow"));
 		followers = (await WebAppFactoryArg.FunctionParser.FunctionParse(
-			MarkupText.Plain($"followers(#{leader.DbRef.Number})")))!.Message!.ToPlainText();
+			MarkupText.Plain($"followers(#{leader.DbRef.Number})")))!.Message.ToPlainText();
 		await Assert.That(followers).IsEqualTo(later.DbRef.ToString())
 			.Because("del_follower takes the follower off the leader's list");
 	}

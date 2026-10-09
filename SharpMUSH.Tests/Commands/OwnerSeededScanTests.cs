@@ -31,11 +31,11 @@ public class OwnerSeededScanTests
 	private async Task<DBRef> Make(DBRef executor, string expression)
 	{
 		var result = await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expression));
-		return DBRef.Parse(result!.Message!.ToPlainText());
+		return DBRef.Parse(result!.Message.ToPlainText());
 	}
 
 	private async Task<string> Eval(string expression)
-		=> (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		=> (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	private async Task<AnySharpObject> Node(DBRef dbref)
 		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();

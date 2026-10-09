@@ -19,7 +19,7 @@ public class WikiFunctionUnitTests
 	private IWikiService WikiService => WebAppFactoryArg.Services.GetRequiredService<IWikiService>();
 
 	private async Task<string> Eval(string expression) =>
-		(await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	[Test]
 	public async Task Wiki_Title_ReturnsSeededHomeTitle()
@@ -334,8 +334,8 @@ public class WikiFunctionUnitTests
 			"Fn Wiki Link Page", "See [[Getting Started]] for details.", "#1");
 		var page = created.Expect<WikiPage>();
 
-		var text = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug})")))!.Message!;
-		var markdown = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug},markdown)")))!.Message!;
+		var text = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug})")))!.Message;
+		var markdown = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug},markdown)")))!.Message;
 
 		await Assert.That(text.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
 		await Assert.That(text.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");

@@ -35,7 +35,7 @@ public class QuotaVisibilityTests
 		var before = Factory.Notifications.CountFor(mortal.DbRef);
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@quota {target.Name}"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.Contains(target.Name)))
 			.IsFalse()
 			.Because("the target's quota and owned-object count must not reach a mortal who does not control them");
@@ -63,7 +63,7 @@ public class QuotaVisibilityTests
 		var before = Factory.Notifications.CountFor(mortal.DbRef);
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("@quota"));
 
-		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.Contains($"{mortal.Name}'s quota")))
 			.IsTrue()
 			.Because("controls(player, player) is always true, so a player always sees their own quota");
@@ -84,7 +84,7 @@ public class QuotaVisibilityTests
 		var before = Factory.Notifications.CountFor(mortal.DbRef);
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@quota {mortal.Name}"));
 
-		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.Contains($"{mortal.Name}'s quota"))).IsTrue();
 	}
 
@@ -101,7 +101,7 @@ public class QuotaVisibilityTests
 		var before = Factory.Notifications.CountFor(mortal.DbRef);
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@squota {target.Name}"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.StartsWith("Quota:")))
 			.IsFalse()
 			.Because("the short form leaks the same used/quota pair as the long one");
@@ -115,7 +115,7 @@ public class QuotaVisibilityTests
 		var before = Factory.Notifications.CountFor(mortal.DbRef);
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("@squota"));
 
-		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.StartsWith("Quota:"))).IsTrue();
 	}
 
@@ -137,7 +137,7 @@ public class QuotaVisibilityTests
 
 		var result = await Factory.CommandParserFor(thing, mortal.Handle).CommandParse(MarkupText.Plain("@quota"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("predicat.c:405 refuses controls(thing, owner) once the target is a player");
 	}
 
@@ -160,7 +160,7 @@ public class QuotaVisibilityTests
 		var before = Factory.Notifications.CountFor(thing);
 		var result = await Factory.CommandParserFor(thing, mortal.Handle).CommandParse(MarkupText.Plain("@quota"));
 
-		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(Factory.Notifications.For(thing).Skip(before).Any(m => m.Contains($"{mortal.Name}'s quota")))
 			.IsTrue()
 			.Because("a trusted thing controls its owner, so it reads the quota the owner would read");
@@ -180,7 +180,7 @@ public class QuotaVisibilityTests
 		var before = Factory.Notifications.CountFor(mortal.DbRef);
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@quota {target.Name}"));
 
-		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.Contains($"{target.Name}'s quota"))).IsTrue();
 	}
 
@@ -194,7 +194,7 @@ public class QuotaVisibilityTests
 
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@quota/set {target.Name}=777"));
 
-		await Assert.That(result.Message!.ToPlainText())
+		await Assert.That(result.Message.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("wiz.c:175-178 restricts setting to wizards regardless of the QUOTAS power");
 	}
@@ -204,7 +204,7 @@ public class QuotaVisibilityTests
 		var name = $"{namePrefix}{Guid.NewGuid():N}";
 		var created = await Factory.CommandParser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
 
-		var message = created.Message?.ToPlainText() ?? string.Empty;
+		var message = created.Message.ToPlainText();
 		await Assert.That(DBRef.TryParse(message, out _)).IsTrue()
 			.Because($"@create {name} must return a dbref, got: \"{message}\"");
 

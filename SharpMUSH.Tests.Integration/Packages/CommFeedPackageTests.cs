@@ -54,7 +54,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		// events wait behind.
 		var dug = await factory.CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
-		var room = DBRef.Parse(dug.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(dug.Message.ToPlainText().Trim());
 		var player = await Mediator.Send(new CreatePlayerCommand(
 			name, "TestPassword123", room, room, (int)options.CurrentValue.Limit.StartingQuota));
 		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player, "websocket");
@@ -69,7 +69,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		factory.CommandParser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Objid(Viewer who) =>
-		(await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid({who.Number})")))!.Message!.ToPlainText();
+		(await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid({who.Number})")))!.Message.ToPlainText();
 
 	private static string UniqueChannel(string prefix) =>
 		TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
@@ -292,7 +292,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var marker = TestIsolationHelpers.GenerateUniqueName("pagecustom");
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
 		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FN`COMM`TEXT)")))!
-			.Message!.ToPlainText();
+			.Message.ToPlainText();
 		using var pageLog = TestOptionsOverride.Scope(options => options with { Chat = options.Chat with { PageLog = true } });
 
 		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
@@ -348,7 +348,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var marker = TestIsolationHelpers.GenerateUniqueName("custom");
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
 		var original = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"get(#{handler}/FN`COMM`TEXT)")))!
-			.Message!.ToPlainText();
+			.Message.ToPlainText();
 
 		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
 		try
@@ -546,13 +546,13 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var channel = await ChannelAsync("CommWhoDestroy", "player object open", watcher);
 		var created = await factory.CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("CommWhoDoomed")}"));
-		var thing = DBRef.Parse(created.Message!.ToPlainText().Trim());
+		var thing = DBRef.Parse(created.Message.ToPlainText().Trim());
 		// @channel/on names only players; a thing joins itself, which is what this stands in for.
 		await Mediator.Send(new AddUserToChannelCommand(
 			(await Mediator.Send(new GetChannelQuery(channel)))!,
 			(await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>()));
 		var objid = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid(#{thing.Number})")))!
-			.Message!.ToPlainText();
+			.Message.ToPlainText();
 
 		await using var watch = await OobWatch.OpenAsync(factory);
 		var destroyed = await watch.SentWhile(async () =>
@@ -746,7 +746,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var handler = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.EventHandler;
 		var gone = UniqueChannel("CommGone");
 		var row = (await factory.FunctionParser.FunctionParse(
-			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message!.ToPlainText();
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message.ToPlainText();
 
 		await Assert.That(row).IsEqualTo(string.Empty);
 	}
@@ -763,7 +763,7 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		var longer = await ChannelAsync("CommAbbrev");
 		var gone = longer[..^2];
 		var row = (await factory.FunctionParser.FunctionParse(
-			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message!.ToPlainText();
+			MarkupText.Plain($"[u(#{handler}/FN`COMM`CHANNELROW,{gone},#1)]")))!.Message.ToPlainText();
 
 		await Assert.That(row).IsEqualTo(string.Empty);
 	}

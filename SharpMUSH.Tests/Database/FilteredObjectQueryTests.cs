@@ -52,7 +52,7 @@ public class FilteredObjectQueryTests
 	public async ValueTask FilterByDbRefRange_ReturnsObjectsInRange()
 	{
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DbRefRangeTest"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var dbRefNum = objDbRef.Number;
 
 		var filter = new ObjectSearchFilter
@@ -73,7 +73,7 @@ public class FilteredObjectQueryTests
 	{
 		var uniqueName = $"CombinedFilterTest_{Guid.NewGuid():N}";
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		var filter = new ObjectSearchFilter
 		{
@@ -94,16 +94,16 @@ public class FilteredObjectQueryTests
 	public async ValueTask FilterByZone_ReturnsZonedObjects()
 	{
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterZoneMaster"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 		var zoneObject = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
 
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterZonedObject"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new SetObjectZoneCommand(obj, zoneObject));
 
 		var unzonedResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterUnzonedObject"));
-		var unzonedDbRef = DBRef.Parse(unzonedResult.Message!.ToPlainText()!);
+		var unzonedDbRef = DBRef.Parse(unzonedResult.Message.ToPlainText()!);
 
 		var filter = new ObjectSearchFilter { Zone = zoneDbRef };
 		var results = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();

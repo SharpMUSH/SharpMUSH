@@ -107,5 +107,5 @@ public class LockPermissionParityTests
 		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, prefix);
 
 	private async Task<string> RunAsync(long handle, string command)
-		=> (await Factory.CommandParser.CommandParse(handle, Connections, MarkupText.Plain(command))).Message!.ToPlainText();
+		=> (await Factory.CommandParser.CommandParse(handle, Connections, MarkupText.Plain(command))).Message.ToPlainText();
 }

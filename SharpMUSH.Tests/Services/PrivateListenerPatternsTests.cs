@@ -95,8 +95,8 @@ public partial class PrivateListenerTests
 		await Assert.That(pipeline.Queue.Count).IsEqualTo(1);
 		var queued = pipeline.Queue.Single();
 		await Assert.That(queued.Command.ToPlainText()).StartsWith("&RESULT me=");
-		await Assert.That(queued.State.EnvironmentRegisters[regexp ? "1" : "0"].Message!.Render(MarkupFormat.Ansi)).Contains("\u001b[");
-		await Assert.That(queued.State.EnvironmentRegisters["0"].Message!.ToPlainText()).IsEqualTo(regexp ? "Hello one and two" : "one");
+		await Assert.That(queued.State.EnvironmentRegisters[regexp ? "1" : "0"].Message.Render(MarkupFormat.Ansi)).Contains("\u001b[");
+		await Assert.That(queued.State.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo(regexp ? "Hello one and two" : "one");
 		await pipeline.Parser.FromState(queued.State).CommandListParse(queued.Command);
 		var result = (await Factory.Services.GetRequiredService<IAttributeService>().GetAttributeAsync(await Node(listener), await Node(listener),
 			"RESULT", IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>().Last().Value;
@@ -162,7 +162,7 @@ public partial class PrivateListenerTests
 		await pipeline.Notify.Notify(listener, input, await Node(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		await Assert.That(pipeline.Queue.Count).IsEqualTo(1);
 		await Assert.That(pipeline.Queue[0].Command.ToPlainText()).IsEqualTo("&RESULT me=%0");
-		await Assert.That(pipeline.Queue[0].State.EnvironmentRegisters.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "").IsEqualTo(capture);
+		await Assert.That(pipeline.Queue[0].State.EnvironmentRegisters.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").IsEqualTo(capture);
 	}
 
 	[Test]

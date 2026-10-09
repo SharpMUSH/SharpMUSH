@@ -42,7 +42,7 @@ public class OemitCompatibilityTests
 	private async Task<DBRef> Room(params TestIsolationHelpers.TestPlayer[] players)
 	{
 		var result = await Command($"@dig {Guid.NewGuid():N}");
-		var room = DBRef.Parse(result.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(result.Message.ToPlainText().Trim());
 		foreach (var player in players) await Command($"@tel {player.DbRef}={room}");
 		return room;
 	}
@@ -107,7 +107,7 @@ public class OemitCompatibilityTests
 			(await Node(actor.DbRef)).Expect<SharpPlayer>()));
 		var message = $"exit_{Guid.NewGuid():N}";
 		var result = await Emit(actor, name, function, $"{exit}/{actor.DbRef}", message);
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidRoom);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidRoom);
 		await Assert.That(result.HadErrors).IsTrue();
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(Factory.Services.GetRequiredService<INotifyService>(),
 			nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), actor.DbRef, actor.DbRef)).IsTrue();
@@ -136,7 +136,7 @@ public class OemitCompatibilityTests
 		var message = $"container_{Guid.NewGuid():N}";
 		var result = await Emit(actor, name, function, $"{container}/unmatched", message);
 		await Assert.That(result.HadErrors).IsFalse();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(function || name == "oemit" ? "" : message);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(function || name == "oemit" ? "" : message);
 		await Assert.That(Heard(witness.DbRef, message)).IsTrue();
 		await Assert.That(Heard(container, message)).IsTrue();
 		await Assert.That(Heard(actor.DbRef, message)).IsFalse();

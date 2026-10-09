@@ -29,7 +29,7 @@ public class SceneVerbRulesIntegrationTests
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -51,13 +51,13 @@ public class SceneVerbRulesIntegrationTests
 	private DBRef? _room;
 
 	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
-		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message.ToPlainText().Trim());
 
 	private async Task<(DBRef Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
 		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
 			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -265,7 +265,7 @@ public class SceneVerbRulesIntegrationTests
 	{
 		await PutLoggerInMasterRoomAsync();
 		var (who, handle) = await CreatePlayerAsync($"Frame{Tag}");
-		var room = (await God1($"@dig FrameRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var room = (await God1($"@dig FrameRoom_{Tag}")).Message.ToPlainText().Trim();
 		await God1($"@tel {Num(who)}={room}");
 		var id = await CreateSceneAsync(handle, $"Frame Scene {Tag}");
 

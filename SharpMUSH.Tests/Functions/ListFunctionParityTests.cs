@@ -25,7 +25,7 @@ public class ListFunctionParityTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private async Task<string> ListAsync(string arguments) =>
-		(await Parser.FunctionParse(MarkupText.Plain($"list({arguments})")))!.Message!.ToPlainText();
+		(await Parser.FunctionParse(MarkupText.Plain($"list({arguments})")))!.Message.ToPlainText();
 
 	[Test]
 	[Arguments("f")]

@@ -42,7 +42,7 @@ public class DestroyPermissionTests
 	private Task<TestIsolationHelpers.TestPlayer> MortalAsync(string prefix) =>
 		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
-	private static DBRef Parse(CallState result) => DBRef.Parse(result.Message!.ToPlainText().Trim());
+	private static DBRef Parse(CallState result) => DBRef.Parse(result.Message.ToPlainText().Trim());
 
 	private async Task<DBRef> CreateAsync(string prefix, TestIsolationHelpers.TestPlayer? owner = null)
 	{

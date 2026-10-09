@@ -34,7 +34,7 @@ public class AttributeReadPermissionParityTests
 	private async Task<string> Eval(long handle, string expression)
 	{
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return result?.Message?.ToPlainText() ?? string.Empty;
+		return result?.Message.ToPlainText() ?? string.Empty;
 	}
 
 	private static string Uid() => Guid.NewGuid().ToString("N")[..8].ToUpper();

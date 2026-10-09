@@ -22,14 +22,14 @@ public class StringDistanceFunctionTests
 	[Arguments("strdistance(é,é)", "1")]
 	public async Task PublicContract(string expression, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message;
 		await Assert.That(result.Text).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task ExcessiveWorkReturnsTheDocumentedError()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("strdistance(repeat(a,2001),repeat(b,2000))")))!.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("strdistance(repeat(a,2001),repeat(b,2000))")))!.Message;
 		await Assert.That(result.Text).IsEqualTo(StringDistance.WorkLimitExceeded);
 	}
 
@@ -46,9 +46,9 @@ public class StringDistanceFunctionTests
 				["distancecase"] = ["A", "b"],
 				["distanceunits"] = ["ab", "é"]
 			}));
-			var folded = (await Parser.FunctionParse(MarkupText.Plain("suggest(distancecase,a,|)")))!.Message!;
+			var folded = (await Parser.FunctionParse(MarkupText.Plain("suggest(distancecase,a,|)")))!.Message;
 			await Assert.That(folded.Text).IsEqualTo("A|b");
-			var units = (await Parser.FunctionParse(MarkupText.Plain("suggest(distanceunits,é,|)")))!.Message!;
+			var units = (await Parser.FunctionParse(MarkupText.Plain("suggest(distanceunits,é,|)")))!.Message;
 			await Assert.That(units.Text).IsEqualTo("ab|é");
 		}
 		finally { await data.SetExpandedServerDataAsync(original ?? new SuggestionData()); }

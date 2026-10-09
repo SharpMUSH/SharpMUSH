@@ -160,7 +160,7 @@ public class NumericCompatibilityTests
 		});
 		var original = (MUSHCodeParser)Factory.FunctionParser;
 		var parser = original with { ServiceProvider = new OptionsProvider(original.ServiceProvider, options) };
-		var result = (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		var result = (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 

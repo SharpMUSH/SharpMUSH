@@ -35,17 +35,17 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PM{uid} me=baz"));
 		var g1 = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PM{uid})"));
-		await Assert.That(g1!.Message!.ToPlainText()).IsEqualTo("baz");
+		await Assert.That(g1!.Message.ToPlainText()).IsEqualTo("baz");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PM{uid}`BAR me=baz"));
 		var g2 = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PM{uid}`BAR)"));
-		await Assert.That(g2!.Message!.ToPlainText()).IsEqualTo("baz");
+		await Assert.That(g2!.Message.ToPlainText()).IsEqualTo("baz");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PM{uid}`BAR`DEEP me=baz"));
 		var g3 = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PM{uid}`BAR`DEEP)"));
-		await Assert.That(g3!.Message!.ToPlainText()).IsEqualTo("baz");
+		await Assert.That(g3!.Message.ToPlainText()).IsEqualTo("baz");
 	}
 
 	/// <summary>
@@ -73,7 +73,7 @@ public class AttributeTreePermissionTests
 			MarkupText.Plain($"&PW{uid}`BAR me=newval"));
 
 		var getResult = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PW{uid}`BAR)"));
-		await Assert.That(getResult!.Message!.ToPlainText()).IsEqualTo("baz")
+		await Assert.That(getResult!.Message.ToPlainText()).IsEqualTo("baz")
 			.Because("mortal should not be able to overwrite wiz-flagged attribute");
 	}
 
@@ -101,13 +101,13 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PC{uid}`BAR`DEEP me=newval"));
 		var getDeep = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PC{uid}`BAR`DEEP)"));
-		await Assert.That(getDeep!.Message!.ToPlainText()).IsEqualTo("baz")
+		await Assert.That(getDeep!.Message.ToPlainText()).IsEqualTo("baz")
 			.Because("mortal should not be able to modify child of wiz-flagged attribute");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PC{uid}`BAR`NEWCHILD me=val"));
 		var getNew = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PC{uid}`BAR`NEWCHILD)"));
-		await Assert.That(getNew!.Message!.ToPlainText()).IsEqualTo("")
+		await Assert.That(getNew!.Message.ToPlainText()).IsEqualTo("")
 			.Because("mortal should not be able to create child under wiz-flagged attribute");
 	}
 
@@ -135,12 +135,12 @@ public class AttributeTreePermissionTests
 
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think get(me/PD{uid}`BAR)"));
-		await Assert.That(r1.Message!.ToPlainText()).DoesNotContain("secret")
+		await Assert.That(r1.Message.ToPlainText()).DoesNotContain("secret")
 			.Because("mortal should not see mortal_dark attribute");
 
 		var r2 = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"think get({mortalDbRef}/PD{uid}`BAR)"));
-		await Assert.That(r2.Message!.ToPlainText()).Contains("secret");
+		await Assert.That(r2.Message.ToPlainText()).Contains("secret");
 	}
 
 	/// <summary>
@@ -166,7 +166,7 @@ public class AttributeTreePermissionTests
 
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think get(me/PDC{uid}`BAR`DEEP)"));
-		await Assert.That(r1.Message!.ToPlainText()).DoesNotContain("hidden")
+		await Assert.That(r1.Message.ToPlainText()).DoesNotContain("hidden")
 			.Because("mortal should not see children of mortal_dark attribute");
 	}
 
@@ -193,7 +193,7 @@ public class AttributeTreePermissionTests
 
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think lattr(me/**)"));
-		var text = r1.Message!.ToPlainText();
+		var text = r1.Message.ToPlainText();
 
 		await Assert.That(text).Contains($"PDL{uid}")
 			.Because("parent of dark branch should still be visible");
@@ -227,17 +227,17 @@ public class AttributeTreePermissionTests
 
 		var visible = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think lattr(me/PDLL{uid})"));
-		await Assert.That(visible.Message!.ToPlainText()).Contains($"PDLL{uid}")
+		await Assert.That(visible.Message.ToPlainText()).Contains($"PDLL{uid}")
 			.Because("the unflagged root is still listed by a leaf-only pattern");
 
 		var branch = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think lattr(me/PDLL{uid}`BAR)"));
-		await Assert.That(branch.Message!.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR")
+		await Assert.That(branch.Message.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR")
 			.Because("a pattern naming the dark branch itself must not list it");
 
 		var deep = await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"think lattr(me/PDLL{uid}`BAR`DEEP)"));
-		await Assert.That(deep.Message!.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR`DEEP")
+		await Assert.That(deep.Message.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR`DEEP")
 			.Because("a pattern naming only the leaf must still consult the dark branch above it");
 	}
 
@@ -265,7 +265,7 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PX{uid}`BAR me=newval"));
 		var getBlocked = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PX{uid}`BAR)"));
-		await Assert.That(getBlocked!.Message!.ToPlainText()).IsEqualTo("baz")
+		await Assert.That(getBlocked!.Message.ToPlainText()).IsEqualTo("baz")
 			.Because("wiz flag should block mortal write");
 
 		await Parser.CommandParse(1, ConnectionService,
@@ -274,7 +274,7 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PX{uid}`BAR me=newval"));
 		var getUnblocked = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PX{uid}`BAR)"));
-		await Assert.That(getUnblocked!.Message!.ToPlainText()).IsEqualTo("newval")
+		await Assert.That(getUnblocked!.Message.ToPlainText()).IsEqualTo("newval")
 			.Because("mortal_dark only blocks reading, not writing — removing wiz restores write access");
 	}
 
@@ -300,13 +300,13 @@ public class AttributeTreePermissionTests
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PDW{uid}`BAR me=newval"));
 		var getWrite = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PDW{uid}`BAR)"));
-		await Assert.That(getWrite!.Message!.ToPlainText()).IsEqualTo("newval")
+		await Assert.That(getWrite!.Message.ToPlainText()).IsEqualTo("newval")
 			.Because("mortal_dark does not prevent writing, only reading");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"&PDW{uid}`BAR`CHILD me=val"));
 		var getChild = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PDW{uid}`BAR`CHILD)"));
-		await Assert.That(getChild!.Message!.ToPlainText()).IsEqualTo("val")
+		await Assert.That(getChild!.Message.ToPlainText()).IsEqualTo("val")
 			.Because("mortal_dark does not prevent creating children");
 	}
 }

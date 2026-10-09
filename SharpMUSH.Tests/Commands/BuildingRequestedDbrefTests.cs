@@ -28,7 +28,7 @@ public class BuildingRequestedDbrefTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private async Task<string> Run(long handle, string command)
-		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText()
+		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText()
 			?? string.Empty;
 
 	/// <summary>Creates a thing as God and frees its dbref again — <c>@destroy</c> twice is Penn's immediate free.</summary>

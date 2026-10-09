@@ -35,7 +35,7 @@ public class AttributeFunctionUnitTests
 		}
 
 		var result = await Parser.FunctionParse(MarkupText.Plain(expression));
-		return result!.Message!;
+		return result!.Message;
 	}
 
 	[Test]
@@ -99,7 +99,7 @@ public class AttributeFunctionUnitTests
 			await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&GENDER {player}={gender}"));
 
 		var result = await WebAppFactoryArg.FunctionParserFor(player).FunctionParse(MarkupText.Plain(input));
-		return result!.Message!.ToString();
+		return result!.Message.ToString();
 	}
 
 
@@ -319,7 +319,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xattr(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -513,7 +513,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xattrp(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -522,7 +522,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xcon(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -531,7 +531,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xexits(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -540,7 +540,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xmwhoid(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -549,7 +549,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xplayers(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -558,7 +558,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xthings(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -567,7 +567,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvcon(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -576,7 +576,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvexits(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -585,7 +585,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvplayers(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -594,7 +594,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvthings(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -603,7 +603,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xwho(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -612,7 +612,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xwhoid(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -640,7 +640,7 @@ public class AttributeFunctionUnitTests
 	public async Task Test_V_AttributeName(string str, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(str));
-		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToString()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -659,7 +659,7 @@ public class AttributeFunctionUnitTests
 		var uid = TestIsolationHelpers.GenerateUniqueName("OWN");
 
 		var createResult = await Parser.FunctionParse(MarkupText.Plain($"create(OwnerTarget_{uid})"));
-		var otherObj = createResult!.Message!.ToPlainText();
+		var otherObj = createResult!.Message.ToPlainText();
 
 		await Parser.FunctionParse(MarkupText.Plain($"[attrib_set({otherObj}/OW{uid},val_{uid})]"));
 
@@ -667,14 +667,14 @@ public class AttributeFunctionUnitTests
 		// executor (self) - otherwise a buggy owner() that reads off the executor instead of the
 		// located object could coincidentally still appear to pass.
 		var hasAttrOther = await Parser.FunctionParse(MarkupText.Plain($"hasattr({otherObj},OW{uid})"));
-		await Assert.That(hasAttrOther!.Message!.ToPlainText()).IsEqualTo("1")
+		await Assert.That(hasAttrOther!.Message.ToPlainText()).IsEqualTo("1")
 			.Because("the attribute must actually exist on the OTHER object for this test to mean anything");
 		var hasAttrSelf = await Parser.FunctionParse(MarkupText.Plain($"hasattr(%!,OW{uid})"));
-		await Assert.That(hasAttrSelf!.Message!.ToPlainText()).IsEqualTo("0")
+		await Assert.That(hasAttrSelf!.Message.ToPlainText()).IsEqualTo("0")
 			.Because("the executor must NOT carry this attribute name, so a buggy owner() reading off the executor would report NO SUCH ATTRIBUTE rather than coincidentally succeeding");
 
 		var ownerResult = await Parser.FunctionParse(MarkupText.Plain($"owner({otherObj}/OW{uid})"));
-		await Assert.That(ownerResult!.Message!.ToPlainText())
+		await Assert.That(ownerResult!.Message.ToPlainText())
 			.IsEqualTo($"#{WebAppFactoryArg.ExecutorDBRef.Number}")
 			.Because("owner(obj/attr) must resolve the attribute on the LOCATED object (obj), not the calling executor - red before the fix, since the located object argument was discarded in favour of executor");
 	}
@@ -696,7 +696,7 @@ public class AttributeFunctionUnitTests
 		var result = await Parser.FunctionParse(MarkupText.Plain(
 			$"[attrib_set(me/HASATTRONEARG,value)][{function}(me/HASATTRONEARG)]"));
 
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -708,7 +708,7 @@ public class AttributeFunctionUnitTests
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain($"{function}(me)"));
 
-		await Assert.That(result!.Message!.ToPlainText())
+		await Assert.That(result!.Message.ToPlainText())
 			.IsEqualTo($"#-1 BAD ARGUMENT FORMAT TO {function.ToUpperInvariant()}");
 	}
 
@@ -726,18 +726,18 @@ public class AttributeFunctionUnitTests
 		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRVALSPACE,%b)"));
 
 		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("strlen(get(me/HASATTRVALSPACE))")))!
-			.Message!.ToPlainText()).IsEqualTo("1").Because("the fixture must hold exactly one space");
+			.Message.ToPlainText()).IsEqualTo("1").Because("the fixture must hold exactly one space");
 
 		using (TestOptionsOverride.Scope(o => o with { Attribute = o.Attribute with { EmptyAttributes = true } }))
 		{
 			var on = await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALSPACE)"));
-			await Assert.That(on!.Message!.ToPlainText()).IsEqualTo("1");
+			await Assert.That(on!.Message.ToPlainText()).IsEqualTo("1");
 		}
 
 		using (TestOptionsOverride.Scope(o => o with { Attribute = o.Attribute with { EmptyAttributes = false } }))
 		{
 			var off = await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALSPACE)"));
-			await Assert.That(off!.Message!.ToPlainText()).IsEqualTo("0");
+			await Assert.That(off!.Message.ToPlainText()).IsEqualTo("0");
 		}
 	}
 
@@ -769,9 +769,9 @@ public class AttributeFunctionUnitTests
 		var oneArgument = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god}/HASATTRUNREADABLE)"));
 		var twoArguments = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god},HASATTRUNREADABLE)"));
 
-		await Assert.That(oneArgument!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(oneArgument!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("an attribute that exists but cannot be read is a refusal, not an absence");
-		await Assert.That(twoArguments!.Message!.ToPlainText()).IsEqualTo(oneArgument.Message!.ToPlainText())
+		await Assert.That(twoArguments!.Message.ToPlainText()).IsEqualTo(oneArgument.Message.ToPlainText())
 			.Because("obj/attr in one argument and obj,attr in two are the same call");
 	}
 
@@ -797,7 +797,7 @@ public class AttributeFunctionUnitTests
 
 		var result = await Parser.FunctionParse(MarkupText.Plain($"{function}({child}/{attribute})"));
 
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -819,7 +819,7 @@ public class AttributeFunctionUnitTests
 
 		var result = await Parser.FunctionParse(MarkupText.Plain(string.Format(call, child, attribute)));
 
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("fromparent");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("fromparent");
 	}
 
 	/// <summary>
@@ -840,13 +840,13 @@ public class AttributeFunctionUnitTests
 		using (TestOptionsOverride.Scope(o => o with { Attribute = o.Attribute with { EmptyAttributes = emptyAttributes } }))
 		{
 			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALTWOSPACES)")))!
-				.Message!.ToPlainText()).IsEqualTo("1").Because("two spaces are a value under either setting");
+				.Message.ToPlainText()).IsEqualTo("1").Because("two spaces are a value under either setting");
 			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALTAB)")))!
-				.Message!.ToPlainText()).IsEqualTo("1").Because("a tab is a value under either setting");
+				.Message.ToPlainText()).IsEqualTo("1").Because("a tab is a value under either setting");
 			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattr(me/HASATTRVALEMPTY)")))!
-				.Message!.ToPlainText()).IsEqualTo("1").Because("the attribute is there; it just holds nothing");
+				.Message.ToPlainText()).IsEqualTo("1").Because("the attribute is there; it just holds nothing");
 			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALEMPTY)")))!
-				.Message!.ToPlainText()).IsEqualTo("0").Because("the empty string is the one value that is not one");
+				.Message.ToPlainText()).IsEqualTo("0").Because("the empty string is the one value that is not one");
 		}
 	}
 
@@ -868,7 +868,7 @@ public class AttributeFunctionUnitTests
 		var thing = $"AliasRead_{Guid.NewGuid():N}"[..20];
 		var result = await Parser.FunctionParse(MarkupText.Plain(
 			$"[setq(0,create({thing}))][attrib_set(%q0/{realName},Read via {alias}.)][get(%q0/{alias})]|[u(%q0/{alias})]|[hasattr(%q0/{alias}`SUB)]"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo($"Read via {alias}.|Read via {alias}.|0");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo($"Read via {alias}.|Read via {alias}.|0");
 	}
 
 	/// <summary>
@@ -898,7 +898,7 @@ public class AttributeFunctionUnitTests
 		var thing = $"AliasAll_{Guid.NewGuid():N}"[..20];
 		var result = await Parser.FunctionParse(MarkupText.Plain(
 			$"[setq(0,create({thing}))][attrib_set(%q0/DESCRIBE,x\\%0)][{call}]"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 	}
 
 	/// <summary>An attribute that really is named like an alias wins over the aliased one, as in atr_get_noparent.</summary>
@@ -908,14 +908,14 @@ public class AttributeFunctionUnitTests
 		var thing = $"AliasOwn_{Guid.NewGuid():N}"[..20];
 		var result = await Parser.FunctionParse(MarkupText.Plain(
 			$"[setq(0,create({thing}))][attrib_set(%q0/DESCRIBE,long)][attrib_set(%q0/DESC,short)][get(%q0/DESC)]"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("short");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("short");
 	}
 
 	private async Task<DBRef> MintMortalAsync(string prefix)
 	{
 		var name = $"{prefix}{Guid.NewGuid():N}"[..14];
 		var created = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=pw_{name}"));
-		return DBRef.Parse(created.Message!.ToPlainText()!);
+		return DBRef.Parse(created.Message.ToPlainText()!);
 	}
 
 	/// <summary>The shipped default has to be the one PennMUSH ships, in both places that spell it.</summary>

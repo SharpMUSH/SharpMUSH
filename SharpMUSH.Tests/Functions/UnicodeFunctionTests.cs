@@ -34,7 +34,7 @@ public class UnicodeFunctionTests
 	public async Task UnicodeContracts(string expression, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.Text).IsEqualTo(expected);
+		await Assert.That(result!.Message.Text).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -44,7 +44,7 @@ public class UnicodeFunctionTests
 			MarkupText.Wrap(AnsiMarkup.Create(underlined: true), "é"),
 			MarkupText.Wrap(HtmlMarkup.Create("b"), "😀界"));
 		var expression = MarkupText.Concat([MarkupText.Plain("graphemes("), input, MarkupText.Plain(",)")]);
-		var result = (await Parser.FunctionParse(expression))!.Message!;
+		var result = (await Parser.FunctionParse(expression))!.Message;
 		await Assert.That(result.Text).IsEqualTo(input.Text);
 		await Assert.That(result.Runs.SequenceEqual(input.Runs)).IsTrue();
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(input.Render(MarkupFormat.Ansi));
@@ -59,7 +59,7 @@ public class UnicodeFunctionTests
 		var separator = MarkupText.Wrap(HtmlMarkup.Create("i"), "|");
 		var expression = MarkupText.Concat([MarkupText.Plain("graphemes("), input,
 			MarkupText.Plain(","), separator, MarkupText.Plain(")")]);
-		var result = (await Parser.FunctionParse(expression))!.Message!;
+		var result = (await Parser.FunctionParse(expression))!.Message;
 		var expected = MarkupText.Join(separator, input.EnumerateGraphemes());
 		await Assert.That(result.Text).IsEqualTo("é|😀|界");
 		await Assert.That(result.Runs.SequenceEqual(expected.Runs)).IsTrue();
@@ -83,7 +83,7 @@ public class UnicodeFunctionTests
 		var cluster = "e" + new string('\u0301', 1024);
 		var split = await Parser.FunctionParse(MarkupText.Plain($"graphemes({cluster}界,|)"));
 		var flip = await Parser.FunctionParse(MarkupText.Plain($"flip({cluster}界)"));
-		await Assert.That(split!.Message!.Text).IsEqualTo(cluster + "|界");
-		await Assert.That(flip!.Message!.Text).IsEqualTo("界" + cluster);
+		await Assert.That(split!.Message.Text).IsEqualTo(cluster + "|界");
+		await Assert.That(flip!.Message.Text).IsEqualTo("界" + cluster);
 	}
 }

@@ -33,7 +33,7 @@ public class FlagAliasTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string expr)
-		=> (await FunctionParser.FunctionParse(MarkupText.Plain(expr)))?.Message!.ToPlainText() ?? "<null>";
+		=> (await FunctionParser.FunctionParse(MarkupText.Plain(expr)))?.Message.ToPlainText() ?? "<null>";
 
 	private async Task<DBRef> ThingFlagged(string label, string flag)
 	{
