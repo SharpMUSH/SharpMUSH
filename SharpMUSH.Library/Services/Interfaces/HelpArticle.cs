@@ -15,8 +15,11 @@ public sealed record HelpArticle(
 	public HelpEntry Entry(HelpSection? section = null)
 	{
 		var command = Corpus;
+		// An overview that already lists a section, as `[<lookup>]` with a line saying what it holds, is its own
+		// directory for that section; repeating it as a bare command would show the reader every section twice.
+		var unlisted = Sections.Where(child => !Overview.Contains($"[{child.Lookup}]", StringComparison.OrdinalIgnoreCase)).ToList();
 		var navigation = section is null
-			? (Sections.Count == 0 ? string.Empty : "\n") + string.Concat(Sections.Select(child => $"\n- `{command} {child.Lookup}`"))
+			? (unlisted.Count == 0 ? string.Empty : "\n") + string.Concat(unlisted.Select(child => $"\n- `{command} {child.Lookup}`"))
 			: $"\n\n`{command} {Lookup}`";
 		return new HelpEntry(section?.Lookup ?? Lookup, (section?.Markdown ?? Overview) + navigation)
 		{

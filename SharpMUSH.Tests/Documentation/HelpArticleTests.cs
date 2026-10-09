@@ -43,6 +43,16 @@ public class HelpArticleTests
 	}
 
 	[Test]
+	public async Task AnOverviewThatListsASectionIsNotGivenItAgain()
+	{
+		var article = HelpArticleParser.Parse(Article.Replace("Overview.", "Overview: see [sample options] for the options."), "help")
+			.Single().Article;
+		var overview = article.Entry().Markdown;
+		await Assert.That(overview).Contains("- `help sample examples`");
+		await Assert.That(overview).DoesNotContain("`help sample options`");
+	}
+
+	[Test]
 	public async Task WebHasStableAnchorsAndOneCompleteArticle()
 	{
 		var article = HelpArticleParser.Parse(Article, "help").Single().Article;

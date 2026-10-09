@@ -43,9 +43,24 @@
       "lookup": "rendermarkdowncustom example usage"
     },
     {
+      "id": "list-examples",
+      "heading": "List examples",
+      "lookup": "rendermarkdowncustom list examples"
+    },
+    {
+      "id": "wiki-link-example",
+      "heading": "Wiki link example",
+      "lookup": "rendermarkdowncustom wiki link example"
+    },
+    {
       "id": "table-example",
       "heading": "Table example",
       "lookup": "rendermarkdowncustom table example"
+    },
+    {
+      "id": "notes",
+      "heading": "Notes and errors",
+      "lookup": "rendermarkdowncustom notes"
     }
   ]
 }
@@ -240,6 +255,8 @@ CODE:
 ```
 (CODE: in bright yellow, code content in white)
 
+## List examples
+
 Set up custom list items with colored bullets:
 ```sharp
 &RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,%1.) %2,ansi(hb,*) %2)]
@@ -284,6 +301,8 @@ Tasks
   Important note
 ```
 (heading in cyan, arrow bullets in green, quote in yellow)
+
+## Wiki link example
 
 Spell out where a wiki link goes, instead of only styling it:
 ```sharp
@@ -341,9 +360,11 @@ through `json_query(%1,unescape)`. ``FUN`TABLE`ROW`` and ``FUN`TABLE`CELL`` read
 would break them. The `max(10,...)` is `rendermarkdown()`'s own minimum width,
 which a narrow column can fall under.
 
+## Notes and errors
+
 ### Elements without templates
 
- Every element the renderer can be asked to style
+Every element the renderer can be asked to style
 is in the list above. What is left renders with fixed behaviour and has no hook:
 plain text, paragraphs, line breaks, horizontal rules, raw HTML, and the
 individual rows and cells of a table, which arrive as part of `TABLE` rather

@@ -26,6 +26,21 @@
       "id": "examples",
       "heading": "Examples",
       "lookup": "rendermarkdown examples"
+    },
+    {
+      "id": "table-examples",
+      "heading": "Table examples",
+      "lookup": "rendermarkdown table examples"
+    },
+    {
+      "id": "code-examples",
+      "heading": "Code block examples",
+      "lookup": "rendermarkdown code examples"
+    },
+    {
+      "id": "list-examples",
+      "heading": "List and quote examples",
+      "lookup": "rendermarkdown list examples"
     }
   ]
 }
@@ -173,6 +188,8 @@ Click here
 
 (with ANSI OSC 8 hyperlink - clickable in compatible terminals)
 
+## Table examples
+
 ### Tables
 
 ```sharp
@@ -207,6 +224,8 @@ Topic | Summary
 
 (the widest column wraps to fit 40 characters)
 
+## Code block examples
+
 ### Highlighted code blocks
 
 Use the `sharp` tag for SharpMUSH softcode:
@@ -240,6 +259,8 @@ Output:
 ```
 
 (2-space indentation, no colour)
+
+## List and quote examples
 
 ### Ordered lists
 
