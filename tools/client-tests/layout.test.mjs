@@ -371,3 +371,127 @@ test('a control gone from the page gets no focus back', () => {
     layout.restoreFocus();
     assert.equal(focused, false);
 });
+
+// The account panel: Up, Down, Home and End move between its controls, skipping an inert level.
+function panel(document, names, inertNames = []) {
+    const listeners = {};
+    const items = names.map(name => ({
+        name,
+        focus() { document.activeElement = this; },
+        closest: selector => (selector === '[inert]' && inertNames.includes(name) ? {} : null)
+    }));
+    return {
+        items,
+        container: {
+            addEventListener: (type, handler) => { listeners[type] = handler; },
+            querySelectorAll: () => items
+        },
+        press(keyName) {
+            let prevented = false;
+            listeners.keydown({ key: keyName, preventDefault: () => { prevented = true; } });
+            return prevented;
+        }
+    };
+}
+
+test('arrow keys move through the panel and wrap, Home and End go to the ends', () => {
+    const { layout, document } = boot();
+    const p = panel(document, ['switch', 'account', 'theme', 'logout'], ['back']);
+    layout.arrowFocus(p.container);
+
+    assert.equal(p.press('ArrowDown'), true, 'the page must not scroll');
+    assert.equal(document.activeElement.name, 'switch', 'from the panel itself, the first control');
+    p.press('ArrowUp');
+    assert.equal(document.activeElement.name, 'logout', 'Up from the first wraps to the last');
+    p.press('ArrowDown');
+    assert.equal(document.activeElement.name, 'switch');
+    p.press('End');
+    assert.equal(document.activeElement.name, 'logout');
+    p.press('Home');
+    assert.equal(document.activeElement.name, 'switch');
+    assert.equal(p.press('Tab'), false, 'Tab is left to the browser');
+});
+
+test('an inert level is skipped, and focusFirst lands on the visible one', () => {
+    const { layout, document } = boot();
+    const p = panel(document, ['switch', 'logout', 'back', 'alpha'], ['switch', 'logout']);
+    layout.arrowFocus(p.container);
+    layout.arrowFocus(p.container);
+
+    layout.focusFirst(p.container);
+    assert.equal(document.activeElement.name, 'back');
+    p.press('ArrowDown');
+    assert.equal(document.activeElement.name, 'alpha');
+    p.press('ArrowDown');
+    assert.equal(document.activeElement.name, 'back');
+});
+
+// Touch chrome's drawer: focus in, the rest of the shell inert, Escape closes, focus back to the opener.
+function shellWith(document, touch) {
+    const focused = [];
+    const control = name => ({ name, isConnected: true, focus() { focused.push(name); document.activeElement = this; }, closest: () => null });
+    const first = control('first link');
+    const drawer = { querySelectorAll: () => [first], contains: node => node === drawer || node === first };
+    const heading = { name: 'h1', attributes: {}, hasAttribute(n) { return n in this.attributes; }, setAttribute(n, v) { this.attributes[n] = v; }, focus() { focused.push('h1'); document.activeElement = this; } };
+    const content = { inert: false, contains: () => false, classList: { contains: () => false } };
+    const backdrop = { inert: false, contains: () => false, classList: { contains: name => name === 'phosphor-nav-backdrop' } };
+    const drawerHost = { inert: false, contains: node => node === drawer, classList: { contains: () => false } };
+    const shell = { children: [backdrop, drawerHost, content] };
+    drawer.closest = selector => (selector === '.phosphor-shell' ? shell : null);
+    document.querySelector = selector => (selector.includes('h1') ? heading : drawer);
+    const keys = new Set();
+    document.addEventListener = (name, handler) => { if (name === 'keydown') keys.add(handler); };
+    document.removeEventListener = (name, handler) => { keys.delete(handler); };
+    return { focused, control, content, backdrop, drawerHost, keys, touch, heading };
+}
+
+function bootTouch(touch) {
+    const listeners = new Map();
+    const context = vm.createContext({
+        window: { matchMedia: () => ({ matches: touch }) },
+        document: { addEventListener: (name, handler) => listeners.set(name, handler) },
+        HTMLElement: class {}
+    });
+    vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
+    return { layout: context.window.sharpmushLayout, document: context.document };
+}
+
+test('an open drawer takes focus, makes the page inert, closes on Escape and hands focus back', () => {
+    const { layout, document } = bootTouch(true);
+    const s = shellWith(document, true);
+    const calls = [];
+    document.activeElement = s.control('menu button');
+
+    layout.openPanel('.phosphor-sidebar', { invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+    assert.deepEqual(s.focused, ['first link']);
+    assert.equal(s.content.inert, true);
+    assert.equal(s.backdrop.inert, false, 'tapping the backdrop still closes it');
+    assert.equal(s.drawerHost.inert, false);
+
+    let prevented = false;
+    [...s.keys][0]({ key: 'Escape', preventDefault: () => { prevented = true; } });
+    assert.deepEqual(calls, ['CloseMobilePanelsFromKey']);
+    assert.ok(prevented);
+
+    layout.closePanel(true);
+    assert.equal(s.content.inert, false);
+    assert.equal(s.keys.size, 0);
+    assert.deepEqual(s.focused, ['first link', 'menu button']);
+});
+
+test('a drawer closed by a page change puts focus on the new page\'s heading, and a desktop is left alone', () => {
+    const touch = bootTouch(true);
+    const s = shellWith(touch.document, true);
+    touch.document.activeElement = s.control('menu button');
+    touch.layout.openPanel('.phosphor-sidebar', { invokeMethodAsync: () => Promise.resolve() });
+    touch.layout.closePanel(false);
+    assert.deepEqual(s.focused, ['first link', 'h1'], 'FocusOnNavigate could not reach the inert page, so the heading is focused here');
+    assert.equal(s.heading.attributes.tabindex, '-1');
+    assert.equal(touch.layout._focusReturns.length, 0, 'the opener is dropped, not left for the next modal');
+
+    const desktop = bootTouch(false);
+    const d = shellWith(desktop.document, false);
+    desktop.layout.openPanel('.phosphor-sidebar', { invokeMethodAsync: () => Promise.resolve() });
+    assert.deepEqual(d.focused, []);
+    assert.equal(d.content.inert, false);
+});

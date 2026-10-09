@@ -183,17 +183,60 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        _selfRef = DotNetObjectReference.Create(this);
+        if (firstRender)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("sharpmushLayout.registerPaletteHotkey", _selfRef);
+            }
+            catch (JSException)
+            {
+                // No layout.js (prerender, tests): the rail's search button still opens the palette.
+            }
+        }
+
+        await SyncMobilePanelAsync();
+    }
+
+    /// <summary>The touch-chrome panel layout.js was last told is open: none, the drawer, or the section panel.</summary>
+    private string? _panelShown;
+
+    /// <summary>
+    /// The panel closed for something that takes focus itself (a new page, for its heading; the palette, for its
+    /// field), so focus does not go back to the opener.
+    /// </summary>
+    private bool _panelFocusMovesOn;
+
+    /// <summary>
+    /// An open drawer or section panel takes focus and makes the rest of the shell inert, and Escape closes it
+    /// (layout.js <c>openPanel</c>); closing hands focus back to the button that opened it.
+    /// </summary>
+    private async Task SyncMobilePanelAsync()
+    {
+        var shown = _mobileNavOpen ? ".phosphor-sidebar" : _pagebarOpen ? ".phosphor-pagebar" : null;
+        if (shown == _panelShown) return;
+        _panelShown = shown;
+        var restore = !_panelFocusMovesOn;
+        _panelFocusMovesOn = false;
         try
         {
-            await JS.InvokeVoidAsync("sharpmushLayout.registerPaletteHotkey", _selfRef);
+            if (shown is null) await JS.InvokeVoidAsync("sharpmushLayout.closePanel", restore);
+            else await JS.InvokeVoidAsync("sharpmushLayout.openPanel", shown, _selfRef);
         }
         catch (JSException)
         {
-            // No layout.js (prerender, tests): the rail's search button still opens the palette.
+            // No layout.js: the backdrop and the menu button still close it.
         }
     }
+
+    /// <summary>Escape in an open drawer or section panel, from layout.js.</summary>
+    [JSInvokable]
+    public Task CloseMobilePanelsFromKey() => InvokeAsync(() =>
+    {
+        CloseMobilePanels();
+        StateHasChanged();
+    });
 
     /// <summary>⌘K / Ctrl+K from layout.js.</summary>
     [JSInvokable]
@@ -344,6 +387,7 @@
     {
         _ = InvokeAsync(async () =>
         {
+            _panelFocusMovesOn = _mobileNavOpen || _pagebarOpen;
             _mobileNavOpen = false;
             _pagebarOpen = false;
             UpdateConfigRouteState();
@@ -438,6 +482,7 @@
     /// <summary>The drawer's own copies of the header's buttons (Play, whose header is merged away) close it first.</summary>
     private void OpenPaletteFromDrawer()
     {
+        _panelFocusMovesOn = _mobileNavOpen;
         _mobileNavOpen = false;
         _paletteOpen = true;
     }

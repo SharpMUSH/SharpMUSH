@@ -22,6 +22,7 @@
                     aria-label="@(Compact ? string.Format(Loc["NavAccountFor"], DisplayName) : null)"
                     aria-haspopup="true"
                     aria-expanded="@(_panelOpen ? "true" : "false")"
+                    @ref="_card"
                     @onclick="TogglePanel">
                 <div class="phosphor-avatar-wrap">
                     <CharacterAvatar Class="phosphor-avatar" Name="@DisplayName" Character="@ActiveObjid" />
@@ -37,7 +38,7 @@
                 }
             </button>
             <AccountPanel IsOpen="_panelOpen"
-                          IsOpenChanged="@(open => _panelOpen = open)"
+                          IsOpenChanged="OnPanelOpenChangedAsync"
                           Characters="AccountAuth.Characters"
                           ActiveCharacter="AccountAuth.ActiveCharacter"
                           OnSwitchCharacter="HandleSwitchCharacterAsync"
@@ -71,6 +72,25 @@
 
     private bool _characterActive;
     private bool _panelOpen;
+    private ElementReference _card;
+
+    /// <summary>
+    /// A closed panel hands focus back to the card that opened it, so a keyboard user is not dropped on the page.
+    /// A link in the panel navigates, and the new page then takes focus for its heading.
+    /// </summary>
+    private async Task OnPanelOpenChangedAsync(bool open)
+    {
+        _panelOpen = open;
+        if (open) return;
+        try
+        {
+            await _card.FocusAsync();
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // Not attached (a test without JS): nothing to hand back to.
+        }
+    }
 
     /// <summary>The acting character, whose picture the avatar shows; none while the account plays no one.</summary>
     private string? ActiveObjid => AccountAuth.ActiveCharacter is { } ch ? $"#{ch.DbrefNumber}:{ch.CreationTime}" : null;

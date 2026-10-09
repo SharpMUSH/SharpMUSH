@@ -714,17 +714,18 @@ else
 
     private RenderFragment TerminalSettings(SettingsMenu menu) => __builder =>
     {
-        @* Escape closes it, from the button or from inside: MudMenu does not. *@
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true"
-                 Open="@(_settingsOpen == menu)" OpenChanged="@((bool open) => OnSettingsOpenChanged(menu, open))">
-            <ActivatorContent>
-                <button type="button" class="play-settings-btn" @onclick="@context.ToggleAsync" @onkeydown="CloseSettingsOnEscape"
-                        title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]">
+        var open = _settingsOpen == menu;
+        var readerWhat = $"play-cfg-reader-what-{menu}";
+        <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                     Open="open" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))">
+            <Activator>
+                <button type="button" class="play-settings-btn" @onclick="() => OnSettingsOpenChanged(menu, !open)" @onkeydown="CloseSettingsOnEscape"
+                        title="@Loc["NavTerminalSettings"]" aria-label="@Loc["NavTerminalSettings"]" aria-expanded="@(open ? "true" : "false")">
                     <MudIcon Icon="@Icons.Material.Outlined.Tune" Size="Size.Small" />
                 </button>
-            </ActivatorContent>
+            </Activator>
             <ChildContent>
-                <div class="play-cfg" @onclick:stopPropagation="true" @onkeydown="CloseSettingsOnEscape">
+                <div class="play-cfg" role="group" aria-label="@Loc["NavTerminalSettings"]" @onclick:stopPropagation="true">
                     <div class="play-cfg-kicker">@Loc["Terminal"]</div>
                     <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
                         <span>@Loc["NavTerminalWidthCols"]</span>
@@ -735,9 +736,9 @@ else
                     <label class="play-cfg-row">
                         <span>@Loc["NavScreenReaderMode"]</span>
                         <input class="play-cfg-check" type="checkbox" checked="@ScreenReader.On"
-                               aria-describedby="play-cfg-reader-what" @onchange="OnScreenReaderModeChanged" />
+                               aria-describedby="@readerWhat" @onchange="OnScreenReaderModeChanged" />
                     </label>
-                    <div class="play-cfg-note" id="play-cfg-reader-what">@Loc["NavScreenReaderModeTooltip"]</div>
+                    <div class="play-cfg-note" id="@readerWhat">@Loc["NavScreenReaderModeTooltip"]</div>
                     <button type="button" class="play-cfg-item" @onclick="ClearTerminal">
                         <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
                         <span>@Loc["TermClearTerminal"]</span>
@@ -749,7 +750,7 @@ else
                     </button>
                 </div>
             </ChildContent>
-        </MudMenu>
+        </PopoverMenu>
     };
 
     /// <summary>

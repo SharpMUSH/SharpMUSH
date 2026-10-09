@@ -5,26 +5,30 @@
 @inject ILogger<LanguagePicker> Logger
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Escape closes it, from the button (keydown bubbles to this span) or from an item: MudMenu does not. *@
-<span style="display:contents;" @onkeydown="CloseOnEscape">
-<MudMenu Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" Dense="true" AnchorOrigin="AnchorOrigin" TransformOrigin="TransformOrigin"
-         AriaLabel="@Loc["NavLanguage"]" @bind-Open="_open">
-    <div style="display:contents;" @onkeydown="CloseOnEscape">
-    @foreach (var lang in _languages)
-    {
-        <MudMenuItem OnClick="@(() => SetLanguageAsync(lang.Code))">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudText Typo="Typo.body2">@lang.DisplayName</MudText>
-                @if (lang.Code == _currentLocale)
-                {
-                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Secondary" />
-                }
-            </MudStack>
-        </MudMenuItem>
-    }
-    </div>
-</MudMenu>
-</span>
+@* The language button and its list. Escape and a click outside close it (PopoverMenu); Up and Down move
+   between the languages. *@
+<PopoverMenu AnchorOrigin="AnchorOrigin" TransformOrigin="TransformOrigin" ArrowKeys="true" Open="_open" OpenChanged="v => _open = v">
+    <Activator>
+        <MudIconButton Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" aria-label="@Loc["NavLanguage"]"
+                       aria-expanded="@(_open ? "true" : "false")" OnClick="() => _open = !_open" @onkeydown="CloseOnEscape" />
+    </Activator>
+    <ChildContent>
+        <div class="lang-list" role="group" aria-label="@Loc["NavLanguage"]">
+            @foreach (var lang in _languages)
+            {
+                var current = lang.Code == _currentLocale;
+                <button type="button" class="lang-item" lang="@lang.Code" aria-current="@(current ? "true" : null)"
+                        @onclick="@(() => SetLanguageAsync(lang.Code))">
+                    <span>@lang.DisplayName</span>
+                    @if (current)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Secondary" aria-hidden="true" />
+                    }
+                </button>
+            }
+        </div>
+    </ChildContent>
+</PopoverMenu>
 
 @code {
     /// <summary>Where the menu anchors: under the old top bar's icon by default; beside the rail's.</summary>

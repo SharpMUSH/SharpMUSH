@@ -27,6 +27,112 @@ window.sharpmushLayout = {
 		}
 	},
 
+	// Touch chrome's off-canvas panels (the menu drawer, a section's panel) behave as a dialog while open:
+	// focus moves to the panel's first control, the rest of the shell is inert, and Escape closes it through
+	// dotnetRef's CloseMobilePanelsFromKey. Closing hands focus back to what opened it, unless the page changed
+	// (the new page takes focus for its heading). Nothing happens on a desktop, where the panels are columns.
+	openPanel: function (selector, dotnetRef) {
+		const panel = document.querySelector(selector);
+		const shell = panel && panel.closest('.phosphor-shell');
+		if (!shell || !this.isTouchChrome()) return;
+		// One panel replacing another (the drawer opening a section's panel) keeps the first one's opener.
+		if (this._panelOpen) this._releasePanel();
+		else this.rememberFocus();
+		this._panelInert = Array.from(shell.children)
+			.filter(child => !child.contains(panel) && !child.classList.contains('phosphor-nav-backdrop') && !child.inert);
+		this._panelInert.forEach(child => { child.inert = true; });
+		this._panelKey = event => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			dotnetRef.invokeMethodAsync('CloseMobilePanelsFromKey').catch(() => { });
+		};
+		document.addEventListener('keydown', this._panelKey);
+		this._panelOpen = true;
+		this._panelEl = panel;
+		this.focusFirst(panel);
+	},
+
+	closePanel: function (restore) {
+		if (!this._panelOpen) return;
+		this._releasePanel();
+		this._panelOpen = false;
+		const panel = this._panelEl;
+		this._panelEl = null;
+		if (restore) {
+			this.restoreFocus();
+			return;
+		}
+		this._focusReturns.pop();
+		// A page change: Blazor's FocusOnNavigate tried the new page's h1 while the page was still inert, and
+		// could not focus it, so focus is still on the link in the panel, which is about to be hidden.
+		const active = document.activeElement;
+		if (!active || active === document.body || !active.isConnected || (panel && panel.contains(active))) {
+			const heading = document.querySelector('#main-content h1') || document.querySelector('h1');
+			if (heading) {
+				if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+				heading.focus();
+			}
+		}
+	},
+
+	_releasePanel: function () {
+		(this._panelInert || []).forEach(child => { child.inert = false; });
+		this._panelInert = null;
+		document.removeEventListener('keydown', this._panelKey);
+		this._panelKey = null;
+	},
+
+	// PopoverMenu: the panel is drawn at the page's root, so it is not next in the tab order. Opened with
+	// focus on its button (the keyboard, or a click that focused the button), focus moves to the panel's
+	// first control; a click that kept focus in a text field (the format menu's mousedown is prevented)
+	// leaves it there. Closed with focus in the panel, or lost to the page, focus goes back to the button.
+	popoverOpened: function (wrap, panel) {
+		if (!wrap || !panel || !wrap.contains(document.activeElement)) return;
+		const first = panel.querySelector('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+		if (first) first.focus();
+	},
+
+	popoverClosed: function (wrap, panel) {
+		if (!wrap) return;
+		const active = document.activeElement;
+		const lost = !active || active === document.body || (panel && panel.contains(active));
+		if (!lost) return;
+		const button = wrap.querySelector('button');
+		if (button) button.focus();
+	},
+
+	// A popover of actions (the account panel): Up and Down move between its controls, Home and End go to
+	// the first and last, wrapping round. Only controls outside an inert part count, so a hidden level is
+	// skipped. Installed once per element.
+	arrowFocus: function (container) {
+		if (!container || container._arrowFocus) return;
+		container._arrowFocus = true;
+		container.addEventListener('keydown', event => {
+			if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+			const items = this._arrowItems(container);
+			if (items.length === 0) return;
+			event.preventDefault();
+			const at = items.indexOf(document.activeElement);
+			const next = event.key === 'Home' ? 0
+				: event.key === 'End' ? items.length - 1
+					: event.key === 'ArrowDown' ? (at + 1) % items.length
+						: (at <= 0 ? items.length : at) - 1;
+			items[next].focus();
+		});
+	},
+
+	// Moves focus to the first control of a popover, as when it switches to another level.
+	focusFirst: function (container) {
+		const items = this._arrowItems(container);
+		if (items.length > 0) items[0].focus();
+	},
+
+	_arrowItems: function (container) {
+		if (!container) return [];
+		return Array.from(container.querySelectorAll('button:not([disabled]), a[href]'))
+			.filter(item => !item.closest('[inert]'));
+	},
+
 	// ⌘K / Ctrl+K opens the command palette (README §10 Q1) from anywhere except a place the reader is
 	// typing: the terminal input and every text field keep their keys. One listener for the page; a
 	// later registration (a re-rendered shell) replaces the one it answers to.
