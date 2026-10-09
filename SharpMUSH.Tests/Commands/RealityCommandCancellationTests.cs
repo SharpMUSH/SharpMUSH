@@ -80,7 +80,7 @@ public class RealityCommandCancellationTests
 		parser.CurrentState.Returns(state);
 		parser.ServiceProvider.Returns(services);
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services, mediator);
-		Task<string>? holder = null;
+		Task<Result<string>>? holder = null;
 		if (stage == "gate")
 		{
 			holder = administration.ExecuteAsync(actor, "list", "", "");

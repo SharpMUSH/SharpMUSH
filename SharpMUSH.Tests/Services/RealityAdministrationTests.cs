@@ -58,8 +58,8 @@ public class RealityAdministrationTests
 		var objects = Substitute.For<IObjectStore>();
 		var service = new RealityAdministration(new(store, objects), Substitute.For<IAdministrativeCapabilityService>(),
 			objects, Substitute.For<IPermissionService>(), Substitute.For<IValidateService>());
-		await Assert.That(async () => await service.ExecuteAsync(new("disabled", new DBRef(1, 1), new DBRef(1, 1)), "enable", "", ""))
-			.Throws<UnauthorizedAccessException>();
+		var result = await service.ExecuteAsync(new("disabled", new DBRef(1, 1), new DBRef(1, 1)), "enable", "", "");
+		await Assert.That(result.Expect<Error<string>>().Value).IsEqualTo("The active player requires reality.admin.");
 		await store.DidNotReceiveWithAnyArgs().SetExpandedServerData(default!, default!);
 	}
 
@@ -82,8 +82,9 @@ public class RealityAdministrationTests
 		if (revokeAfterControl) permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(_ => { allowed = false; return true; });
 		var service = new RealityAdministration(new(store, objects), capabilities, objects, permissions, Substitute.For<IValidateService>());
-		await Assert.That(async () => await service.ExecuteAsync(new("admin", actor.Object().DBRef, actor.Object().DBRef),
-			"rx", target.Object().DBRef.ToString(), "normal")).Throws<UnauthorizedAccessException>();
+		var result = await service.ExecuteAsync(new("admin", actor.Object().DBRef, actor.Object().DBRef),
+			"rx", target.Object().DBRef.ToString(), "normal");
+		result.Expect<Error<string>>();
 		await store.DidNotReceiveWithAnyArgs().SetExpandedObjectData(default!, default!, default!);
 	}
 	[Test]
