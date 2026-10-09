@@ -82,7 +82,7 @@ public class ScenePoseTypeIntegrationTests
 		var types = (await Eval("scenetypes()")).Split(' ');
 		await Assert.That(types.Take(3)).IsEquivalentTo(new[] { "ic", "ooc", "narration" });
 		await Assert.That(await Eval("scenetype(ooc,presentation)")).IsEqualTo("band");
-		await Assert.That(await Eval("scenetype(ooc,tone)")).IsEqualTo("muted");
+		await Assert.That(await Eval("scenetype(ooc,tone)")).IsEqualTo("secondary");
 		await Assert.That(await Eval("scenetype(narration)")).IsEqualTo("Narration");
 		await Assert.That(await Eval("scenetype(nosuchtype)")).IsEqualTo("#-1 NO SUCH POSE TYPE");
 		await Assert.That(await Eval("scenetype(ic,colour)")).IsEqualTo("#-1 UNKNOWN TYPE FIELD");
@@ -127,6 +127,7 @@ public class ScenePoseTypeIntegrationTests
 			await Assert.That(await As(reader, "+scene/types")).Contains("Telepathy");
 
 			await As(reader, $"+scene/hide {key}");
+			await Assert.That(await Eval($"get(#{reader.DbRef.Number}/SCENE`HIDE)")).IsEqualTo(key);
 			await Assert.That(await As(reader, "+scene/hide")).Contains($"Hidden from your recall and log: {key}.");
 		}
 		finally
@@ -135,6 +136,15 @@ public class ScenePoseTypeIntegrationTests
 			await God($"&TYPE`{key.ToUpperInvariant()} {logger}=");
 		}
 		await Assert.That(await Eval($"scenetype({key})")).IsEqualTo("#-1 NO SUCH POSE TYPE");
+	}
+
+	/// <summary>Nothing changes God's attributes but God, so the package's own write fails there and says so.</summary>
+	[Test]
+	public async Task Hiding_a_type_says_so_when_the_choice_cannot_be_saved()
+	{
+		await LoggerAsync();
+		await Assert.That(await God("+scene/hide ooc")).Contains("Your choice could not be saved on your character.");
+		await Assert.That(await Eval("get(#1/SCENE`HIDE)")).DoesNotContain("ooc");
 	}
 
 	[Test]

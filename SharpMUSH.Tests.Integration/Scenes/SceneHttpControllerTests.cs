@@ -115,7 +115,7 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		var dto = (await response.Content.ReadFromJsonAsync<PoseTypesDto>())!;
 		await Assert.That(dto.Types.Take(3).Select(t => t.Key)).IsEquivalentTo(new[] { "ic", "ooc", "narration" });
 		await Assert.That(dto.Types.Single(t => t.Key == "ooc"))
-			.IsEqualTo(new PoseTypeDto("ooc", "Out of character", "band", "muted", "", false, 20));
+			.IsEqualTo(new PoseTypeDto("ooc", "Out of character", "band", "secondary", "", false, 20));
 		await Assert.That(dto.Hidden.All(key => dto.Types.Any(t => t.Key == key))).IsTrue();
 	}
 

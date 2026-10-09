@@ -161,7 +161,7 @@ objects:
       TYPE`IC`FORMAT: |-
         %2
       TYPE`OOC: |-
-        {"label":"Out of character","presentation":"band","tone":"muted","order":20}
+        {"label":"Out of character","presentation":"band","tone":"secondary","order":20}
       TYPE`OOC`FORMAT: |-
         [tone(muted,<OOC> %2)]
       TYPE`NARRATION: |-
@@ -215,11 +215,11 @@ objects:
       # the reader, as SCENE`HIDE and SCENE`SHOW, so the portal's Show menu reads the same choice.
       CMD`TYPE`HIDE:
         value: |-
-          $(?is)^\+scene/hi(?\:d(?\:e)?)?(?\: +(.*))?$: think [setq(T,lcstr(trim(%1)))]; @assert strlen(%q<T>)=@pemit %#=[notice(SCENE,u(%!/FUN`HIDDEN`NOW,%#))]; @assert member(scenetypes(),%q<T>)=@pemit %#=[notice(SCENE,No pose type called %q<T>. +scene/types lists them.,warn)]; &SCENE`HIDE %#=[setunion(get(%#/SCENE`HIDE),%q<T>)]; &SCENE`SHOW %#=[setdiff(get(%#/SCENE`SHOW),%q<T>)]; @pemit %#=[notice(SCENE,[scenetype(%q<T>,label)] lines are hidden from your recall and log. +scene/show %q<T> shows them again.,ok)]
+          $(?is)^\+scene/hi(?\:d(?\:e)?)?(?\: +(.*))?$: think [setq(T,lcstr(trim(%1)))]; @assert strlen(%q<T>)=@pemit %#=[notice(SCENE,u(%!/FUN`HIDDEN`NOW,%#))]; @assert member(scenetypes(),%q<T>)=@pemit %#=[notice(SCENE,No pose type called %q<T>. +scene/types lists them.,warn)]; &SCENE`HIDE %#=[setunion(get(%#/SCENE`HIDE),%q<T>)]; &SCENE`SHOW %#=[setdiff(get(%#/SCENE`SHOW),%q<T>)]; @assert member(get(%#/SCENE`HIDE),%q<T>)=@pemit %#=[notice(SCENE,Your choice could not be saved on your character.,warn)]; @pemit %#=[notice(SCENE,[scenetype(%q<T>,label)] lines are hidden from your recall and log. +scene/show %q<T> shows them again.,ok)]
         flags: [REGEXP]
       CMD`TYPE`SHOW:
         value: |-
-          $(?is)^\+scene/sh(?\:o(?\:w)?)? +(.+)$: think [setq(T,lcstr(trim(%1)))]; @assert member(scenetypes(),%q<T>)=@pemit %#=[notice(SCENE,No pose type called %q<T>. +scene/types lists them.,warn)]; &SCENE`SHOW %#=[setunion(get(%#/SCENE`SHOW),%q<T>)]; &SCENE`HIDE %#=[setdiff(get(%#/SCENE`HIDE),%q<T>)]; @pemit %#=[notice(SCENE,[scenetype(%q<T>,label)] lines show in your recall and log.,ok)]
+          $(?is)^\+scene/sh(?\:o(?\:w)?)? +(.+)$: think [setq(T,lcstr(trim(%1)))]; @assert member(scenetypes(),%q<T>)=@pemit %#=[notice(SCENE,No pose type called %q<T>. +scene/types lists them.,warn)]; &SCENE`SHOW %#=[setunion(get(%#/SCENE`SHOW),%q<T>)]; &SCENE`HIDE %#=[setdiff(get(%#/SCENE`HIDE),%q<T>)]; @assert member(get(%#/SCENE`SHOW),%q<T>)=@pemit %#=[notice(SCENE,Your choice could not be saved on your character.,warn)]; @pemit %#=[notice(SCENE,[scenetype(%q<T>,label)] lines show in your recall and log.,ok)]
         flags: [REGEXP]
 
       # ---- capture hooks --------------------------------------------------------

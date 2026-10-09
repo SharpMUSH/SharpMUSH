@@ -13,9 +13,9 @@
 	display: block;
 }
 
-/* A band other than OOC: the OOC band's shape, tinted by the type's tone over the surface rather than the OOC
-   purple. The tile keeps the theme's own text on its raised surface. */
-.story-row--band:not(.story-row--ooc) {
+/* Every band, OOC's included, is tinted by its type's tone over the surface, so a tone set on the type is the one
+   the portal shows. The tile keeps the theme's own text on its raised surface. */
+.story-row--band {
 	--ooc-band-bg: color-mix(in srgb, var(--pose-tone, var(--text-dim)) 12%, var(--surface));
 	--ooc-band-border: color-mix(in srgb, var(--pose-tone, var(--text-dim)) 45%, var(--border));
 	--ooc-icon-bg: var(--surface-3);
