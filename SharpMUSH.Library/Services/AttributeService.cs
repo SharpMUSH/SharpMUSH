@@ -359,7 +359,7 @@ public class AttributeService(
 	{
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
-		return await GetVisibleAttributesAsync(obj.Object().Attributes.Value, executor, obj, Math.Max(1, depth), token).ToArrayAsync(token);
+		return await GetVisibleAttributesAsync(obj.Object().Attributes.Value, executor, obj, Math.Max(1, depth), new AttributeViewMemo(), token).ToArrayAsync(token);
 	}
 
 	public ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor,
@@ -379,11 +379,10 @@ public class AttributeService(
 	/// </summary>
 	private async IAsyncEnumerable<SharpAttribute> GetVisibleAttributesAsync(
 		IAsyncEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth,
-		[EnumeratorCancellation] CancellationToken token = default)
+		AttributeViewMemo memo, [EnumeratorCancellation] CancellationToken token = default)
 	{
 		token.ThrowIfCancellationRequested();
 		if (depth <= 0) yield break;
-		var memo = new AttributeViewMemo();
 		var visible = await attributes
 			.Where((x, _) => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, memo, x), token))
 			.ToListAsync(token);
@@ -396,7 +395,7 @@ public class AttributeService(
 		foreach (var attribute in visible)
 		{
 			var leaves = await attribute.Leaves.WithCancellation(token);
-			await foreach (var descendant in GetVisibleAttributesAsync(leaves, executor, obj, depth - 1, token).WithCancellation(token))
+			await foreach (var descendant in GetVisibleAttributesAsync(leaves, executor, obj, depth - 1, memo, token).WithCancellation(token))
 				yield return descendant;
 		}
 	}
