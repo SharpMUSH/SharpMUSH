@@ -306,7 +306,7 @@
     cursor: pointer;
     transition: all 0.12s;
 }
-.roleadmin ::deep .ra-add-chip:hover {
+.roleadmin ::deep .ra-add-chip:hover { border-color: rgba(var(--glow), 0.4); color: var(--accent); }
 
 @container page (max-width: 48rem) {
     .roleadmin ::deep .roleadmin-grid { grid-template-columns: minmax(0, 1fr); }
