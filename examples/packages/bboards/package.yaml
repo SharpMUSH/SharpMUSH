@@ -272,7 +272,7 @@ objects:
       # was posted under one, else the name kept when it was written. A viewer who moderates the board
       # sees both, "Anon (Mira)"; every caller names its viewer, so nobody is shown a name by default.
       FUN`WHO: |-
-        [setq(_wp,if(strlen(%1),C`%1`))][setq(_wa,get(%0/%q<_wp>ANON))][if(strlen(%q<_wa>),%q<_wa>[if(cand(strlen(%2),u(%!/FUN`CAN,u(%!/FUN`UP,%0),moderate,%2)),%b%([firstof(get(%0/%q<_wp>NAME),Someone)]%))],firstof(get(%0/%q<_wp>NAME),Someone))]
+        [setq(_whop,if(strlen(%1),C`%1`))][setq(_whoa,get(%0/%q<_whop>ANON))][if(strlen(%q<_whoa>),%q<_whoa>[if(cand(strlen(%2),u(%!/FUN`CAN,u(%!/FUN`UP,%0),moderate,%2)),%b%([firstof(get(%0/%q<_whop>NAME),Someone)]%))],firstof(get(%0/%q<_whop>NAME),Someone))]
       # Seconds %0 as a time today or a date before.
       FUN`WHEN: |-
         [if(strmatch(timefmt($Y$m$d,%0),timefmt($Y$m$d,secs())),timefmt($H:$M,%0),timefmt($b $d,%0))]
