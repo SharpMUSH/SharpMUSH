@@ -5823,12 +5823,12 @@ a          b          areallylon d
 
   One of the color styles shown in [COLORSTYLE] will also be included.
 
-  Anyone may see pueblo, mxp, screenreader, stripaccents and the color style. Softcode can use screenreader to leave out what only draws, such as a logo made of characters.
+  Anyone may see pueblo, mxp, screenreader, stripaccents and the color style. Softcode can use screenreader to leave out what only draws, such as a logo made of characters. A screen reader on telnet is sent no color, links or pictures, so its color style is plain; the web portal draws them itself, so it keeps its own.
 
   Example, in the web portal with Screen reader mode on:
 ```sharp
 think terminfo(me)
-SHARPMUSH-PORTAL screenreader websocket plain
+SHARPMUSH-PORTAL screenreader websocket commandlinks truecolor
 ```
 
   You must have see_all, or use terminfo() on yourself, to see all information or use a `<descriptor>`. Mortals using terminfo() on another player will always receive "unknown" for the client name, and will not get telnet/gmcp/ssl/prompt_newlines in the output list.

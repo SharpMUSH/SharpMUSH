@@ -208,7 +208,7 @@ public static class TerminalFeatureReader
 		var terminal = Identify(types, probe, pins.Terminal);
 
 		return Resolve(Detect(terminal, types, probe), terminal, pins, Utf8(metadata),
-			TerminalCapabilityReader.Read(types).ScreenReader);
+			TerminalCapabilityReader.ReadAsSent(metadata).ScreenReader);
 	}
 
 	/// <summary>The terminal's answers recorded in <paramref name="metadata"/>, or null when it was never asked.</summary>

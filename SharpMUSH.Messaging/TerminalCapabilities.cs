@@ -145,8 +145,28 @@ public static class TerminalCapabilityReader
 	{
 		ArgumentNullException.ThrowIfNull(metadata);
 
-		return ResolveColorStyle(metadata.GetValueOrDefault(ColorStyleKey, ""), Read(metadata), flags);
+		return ResolveColorStyle(metadata.GetValueOrDefault(ColorStyleKey, ""), ReadAsSent(metadata), flags);
 	}
+
+	/// <summary>
+	/// What a connection's terminal types claim, as what it is sent goes by them. The browser draws a
+	/// WebSocket connection's markup itself (the renderer forwards it untouched), so a screen reader there is
+	/// sent no less: leaving colour, links and pictures out is for a terminal, whose escapes a reader would
+	/// speak. <see cref="Read(IReadOnlyDictionary{string, string})"/> still says it is a screen reader.
+	/// </summary>
+	public static TerminalCapabilities ReadAsSent(IReadOnlyDictionary<string, string> metadata)
+	{
+		var terminal = Read(metadata);
+		return metadata.GetValueOrDefault(ConnectionTypeKey, "") == WebSocketConnectionType
+			? terminal with { ScreenReader = false }
+			: terminal;
+	}
+
+	/// <summary>The connection metadata key holding how the connection arrived.</summary>
+	public const string ConnectionTypeKey = "ConnectionType";
+
+	/// <summary>The <see cref="ConnectionTypeKey"/> of a WebSocket connection: the portal's terminal.</summary>
+	public const string WebSocketConnectionType = "websocket";
 
 	/// <summary>
 	/// The one calculation behind both what goes on the wire and what <c>terminfo()</c> and
