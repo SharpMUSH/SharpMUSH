@@ -1,0 +1,46 @@
+@using SharpMUSH.Client.Pages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The open attributes, one tab each: its reference, a dot while it holds unsaved edits, and a close button. *@
+<div class="sc-tabstrip">
+    @for (int i = 0; i < Tabs.Count; i++)
+    {
+        var idx = i;
+        var tab = Tabs.Tabs[i];
+        // '#8/DESCRIBE' is how softcode itself addresses an attribute — get(), u(), @force.
+        // The '&' sigil belongs to the '&DESCRIBE #8=…' set syntax, so '#8&DESCRIBE' is
+        // neither form and reads as a typo.
+        var reference = $"#{tab.Obj.Dbref}/{tab.Attr.Name}";
+        <div class="sc-tab @(idx == Tabs.ActiveIndex ? "sc-tab--on" : "")">
+            <button type="button" class="sc-tab-label" title="@reference"
+                    @onclick="() => OnSwitch.InvokeAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/@tab.Branch</span><span class="sc-tab-leaf">@SoftcodeAttributeTree.Segment(tab.Attr.Name)</span></button>
+            @if (tab.IsDirty)
+            {
+                @* role="img" + aria-label, not aria-hidden: the dot is the only thing
+                   distinguishing a tab with unsaved edits, so hiding it from assistive
+                   tech would leave that state with no representation at all. A bare
+                   aria-label on a <span> is not reliably announced without the role. *@
+                <span class="sc-tab-dirty" role="img"
+                      title="@Loc["TermUnsaved"]" aria-label="@Loc["TermUnsaved"]">●</span>
+            }
+            @* A button of its own, not a click handler on a wrapper around a MudIconButton:
+               MudBlazor's buttons stop click propagation unconditionally, so a handler on
+               any ancestor of one never fires and the 'x' did nothing at all. *@
+            <button type="button" class="sc-tab-close"
+                    @onclick="() => OnClose.InvokeAsync(idx)"
+                    title="@Loc["TermCloseTab", reference]" aria-label="@Loc["TermCloseTab", reference]">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.75rem;" />
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SoftcodeTabs Tabs { get; set; } = null!;
+
+    /// <summary>Makes the tab at an index the active one.</summary>
+    [Parameter] public EventCallback<int> OnSwitch { get; set; }
+
+    /// <summary>Closes the tab at an index.</summary>
+    [Parameter] public EventCallback<int> OnClose { get; set; }
+}

@@ -4,6 +4,7 @@
 @using BlazorMonaco
 @using BlazorMonaco.Editor
 @using SharpMUSH.Client.Components
+@using SharpMUSH.Client.Components.Softcode
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject ITerminalService Terminal
@@ -47,16 +48,17 @@
             else
             {
                 @* The whole name, clipped from its outermost branch when short of room. *@
-                <span class="sc-crumb-trail">&amp;@TabBranch(ActiveTab)</span>
+                <span class="sc-crumb-trail">&amp;@ActiveTab.Branch</span>
                 <span class="sc-crumb-leaf">@SoftcodeAttributeTree.Segment(ActiveTab.Attr.Name)</span>
             }
         </button>
     </div>
 
     <div class="sc-panel sc-pane-objects @(_objCollapsed ? "sc-pane--collapsed" : "")">
-        <div style="display:flex;align-items:center;padding:0.5rem 0.5rem 0.375rem;border-bottom:1px solid var(--border-soft);gap:0.375rem;flex-shrink:0;">
-            @if (!_objCollapsed)
-            {
+        <CollapsiblePane @bind-Collapsed="_objCollapsed" Ruled="true" RailIcon="@Icons.Material.Filled.Inventory2"
+                         RailText="@(_selectedObject is null ? null : $"#{_selectedObject.Dbref}")"
+                         ExpandLabel="@Loc["TermExpandObjects"]" CollapseLabel="@Loc["TermCollapseObjects"]">
+            <Header>
                 <MudText Class="section-kicker" Style="flex:1;">@Loc["TermObjects"]</MudText>
                 <MudTooltip Text="@Loc["TermCreateThing"]">
                     <MudIconButton aria-label="@Loc["TermCreateThing"]" Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Thing))" />
@@ -67,190 +69,94 @@
                 <MudTooltip Text="@Loc["TermCreateExit"]">
                     <MudIconButton aria-label="@Loc["TermCreateExit"]" Icon="@Icons.Material.Filled.CallMade" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Exit))" />
                 </MudTooltip>
-            }
-            <MudIconButton Icon="@(_objCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
-                           Size="Size.Small" OnClick="@(() => _objCollapsed = !_objCollapsed)"
-                           title="@(_objCollapsed ? Loc["TermExpandObjects"] : Loc["TermCollapseObjects"])"
-                           aria-label="@(_objCollapsed ? Loc["TermExpandObjects"] : Loc["TermCollapseObjects"])" />
-        </div>
-
-        @if (_objCollapsed)
-        {
-            <div style="display:flex;flex-direction:column;align-items:center;padding:0.625rem 0;gap:0.5rem;">
-                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Color="Color.Primary" />
-                @if (_selectedObject is not null)
-                {
-                    <MudText Style="font-size:0.625rem;font-family:var(--font-mono);color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;">
-                        #@_selectedObject.Dbref
-                    </MudText>
-                }
-            </div>
-        }
-        else
-        {
-            <div style="flex:1;overflow:hidden;padding:0.25rem;">
-                <ObjectBrowser @ref="_objectBrowser" OnObjectSelected="@(dbref => OnObjectSelected(dbref))" />
-            </div>
-
-            @if (_createObjectType.HasValue)
-            {
-                <div style="padding:0.375rem 0.5rem;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:0.25rem;align-items:center;flex-shrink:0;">
-                    <MudText Style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--accent);white-space:nowrap;">
-                        @(_createObjectType switch { MushObjectType.Room => "@dig", MushObjectType.Exit => "@open", _ => "@create" })
-                    </MudText>
-                    <MudTextField @bind-Value="_createObjectName" Placeholder="@Loc["TermObjectNamePlaceholder"]"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  Style="flex:1;font-size:0.75rem;" OnKeyDown="OnCreateObjectKeyDown" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" OnClick="ExecuteCreateObjectAsync" aria-label="@Loc["Create"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CancelCreateObject" aria-label="@Loc["Cancel"]" />
+            </Header>
+            <ChildContent>
+                <div class="sc-objects-body">
+                    <ObjectBrowser @ref="_objectBrowser" OnObjectSelected="@(dbref => OnObjectSelected(dbref))" />
                 </div>
-            }
-        }
+
+                @if (_createObjectType.HasValue)
+                {
+                    <div class="sc-create-object">
+                        <MudText Style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--accent);white-space:nowrap;">
+                            @(_createObjectType switch { MushObjectType.Room => "@dig", MushObjectType.Exit => "@open", _ => "@create" })
+                        </MudText>
+                        <MudTextField @bind-Value="_createObjectName" Placeholder="@Loc["TermObjectNamePlaceholder"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Style="flex:1;font-size:0.75rem;" OnKeyDown="OnCreateObjectKeyDown" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" OnClick="ExecuteCreateObjectAsync" aria-label="@Loc["Create"]" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CancelCreateObject" aria-label="@Loc["Cancel"]" />
+                    </div>
+                }
+            </ChildContent>
+        </CollapsiblePane>
     </div>
 
     <div class="sc-panel sc-pane-attrs @(_attrCollapsed ? "sc-pane--collapsed" : "")">
-        <div style="display:flex;align-items:center;padding:0.625rem 0.625rem 0.375rem;gap:0.375rem;flex-shrink:0;">
-            @if (!_attrCollapsed)
-            {
+        <CollapsiblePane @bind-Collapsed="_attrCollapsed" RailIcon="@Icons.Material.Filled.Code"
+                         RailText="@(ActiveTab is null ? null : $"&{ActiveTab.Attr.Name}")"
+                         ExpandLabel="@Loc["TermExpandAttributes"]" CollapseLabel="@Loc["TermCollapseAttributes"]">
+            <Header>
                 <MudText Class="section-kicker" Style="flex:1;display:flex;align-items:center;gap:0.375rem;">
                     <span>@Loc["Attributes"]</span>
                     @if (_selectedObject is not null)
                     {
-                        <span style="color:var(--accent);">· #@(_selectedObject?.Dbref)</span>
+                        <span class="sc-attrs-dbref">· #@(_selectedObject?.Dbref)</span>
                     }
                 </MudText>
                 <button type="button" class="sc-add-btn" @onclick="ShowCreateAttr"
                         disabled="@(_selectedObject is null)" title="@Loc["TermAddAttribute"]">
                     <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.8125rem;" /> @Loc["Add"]
                 </button>
-            }
-            <MudIconButton Icon="@(_attrCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
-                           Size="Size.Small" OnClick="@(() => _attrCollapsed = !_attrCollapsed)"
-                           title="@(_attrCollapsed ? Loc["TermExpandAttributes"] : Loc["TermCollapseAttributes"])"
-                           aria-label="@(_attrCollapsed ? Loc["TermExpandAttributes"] : Loc["TermCollapseAttributes"])" />
-        </div>
-
-        @if (_attrCollapsed)
-        {
-            <div style="display:flex;flex-direction:column;align-items:center;padding:0.625rem 0;gap:0.5rem;">
-                <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Primary" />
-                @if (ActiveTab is not null)
-                {
-                    <MudText Style="font-size:0.625rem;font-family:var(--font-mono);color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;">
-                        &amp;@ActiveTab.Attr.Name
-                    </MudText>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="sc-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
-                <input value="@_attrSearch" @oninput="@(e => _attrSearch = e.Value?.ToString() ?? string.Empty)"
-                       placeholder="@Loc["TermFilterAttributes"]" aria-label="@Loc["TermFilterAttributes"]" class="sc-search-input" />
-                @if (!string.IsNullOrEmpty(_attrSearch))
-                {
-                    <button type="button" class="sc-search-clear" @onclick="@(() => _attrSearch = string.Empty)" title="@Loc["TermClear"]">
-                        <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.75rem;" />
-                    </button>
-                }
-            </div>
-
-            <div style="flex:1;overflow-y:auto;min-height:0;padding:0.5rem;">
-                @if (_showCreateAttr)
-                {
-                    <div class="sc-add-row">
-                        <span class="sc-add-amp">&amp;</span>
-                        <input @ref="_newAttrInput" value="@_newAttrName" aria-label="@Loc["TermNewAttributeName"]"
-                               @oninput="@(e => _newAttrName = e.Value?.ToString() ?? string.Empty)"
-                               @onkeydown="OnCreateAttrKeyDown"
-                               placeholder="ATTR`NAME" class="sc-add-input" />
-                        <button type="button" class="sc-add-icon" @onclick="ExecuteCreateAttrAsync" title="@Loc["Create"]" aria-label="@Loc["Create"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:0.875rem;" />
-                        </button>
-                        <button type="button" class="sc-add-icon" @onclick="CancelCreateAttr" title="@Loc["Cancel"]" aria-label="@Loc["Cancel"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.875rem;" />
-                        </button>
-                    </div>
-                }
-
-                @if (_loadingAttrs)
-                {
-                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-                }
-                else if (_selectedObject is null)
-                {
-                    <div style="padding:0.875rem;color:var(--text-faint);font-size:0.75rem;">@Loc["TermSelectAnObject"]</div>
-                }
-                else
-                {
-                    var rows = SoftcodeAttributeTree.Rows(AttributeTree, _expandedBranches, _attrSearch).ToList();
-                    var filtering = !string.IsNullOrWhiteSpace(_attrSearch);
-
-                    @* The attribute tree: FOO`BAR`BAZ sits under BAR, under FOO. A branch is still an
-                       attribute of its own, so its name opens it and only the chevron folds it. *@
-                    @foreach (var row in rows)
+            </Header>
+            <ChildContent>
+                <div class="sc-search">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
+                    <input value="@_attrSearch" @oninput="@(e => _attrSearch = e.Value?.ToString() ?? string.Empty)"
+                           placeholder="@Loc["TermFilterAttributes"]" aria-label="@Loc["TermFilterAttributes"]" class="sc-search-input" />
+                    @if (!string.IsNullOrEmpty(_attrSearch))
                     {
-                        var node = row;
-                        var a = node.Attribute;
-                        var isActive = a is not null && ActiveTab is not null && ActiveTab.Obj.Dbref == _selectedObject.Dbref
-                                       && string.Equals(ActiveTab.Attr.Name, a.Name, StringComparison.OrdinalIgnoreCase);
-                        var isOpen = filtering || _expandedBranches.Contains(node.Path);
-                        <div class="sc-tree-row @(node.Depth > 0 ? "sc-tree-row--nested" : "")" style="--sc-depth:@node.Depth;">
-                            @if (node.IsBranch)
-                            {
-                                <button type="button" class="sc-tree-toggle" disabled="@filtering"
-                                        aria-expanded="@(isOpen ? "true" : "false")"
-                                        title="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
-                                        aria-label="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
-                                        @onclick="() => ToggleBranch(node.Path)">
-                                    <MudIcon Icon="@(isOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Style="font-size:0.875rem;" />
-                                </button>
-                            }
-                            else
-                            {
-                                <span class="sc-tree-spacer"></span>
-                            }
-                            @if (a is not null)
-                            {
-                                <button type="button" class="sc-attr-item @(isActive ? "sc-attr-item--on" : "")"
-                                        title="@a.Name" @onclick="() => OnAttributeSelected(a)">
-                                    <span class="sc-attr-row1">
-                                        <span class="sc-kind-badge" style="@KindBadgeStyle(a)" title="@Loc[AttrKindLabelKey(a)]">@AttrKindBadge(a)</span>
-                                        <span class="sc-attr-name">@node.Segment</span>
-                                        @if (node.IsBranch && !isOpen)
-                                        {
-                                            <span class="sc-tree-count" aria-hidden="true">@node.DescendantCount</span>
-                                        }
-                                    </span>
-                                </button>
-                            }
-                            else
-                            {
-                                @* Listed only through what is beneath it: nothing to open, so the name folds too. *@
-                                <button type="button" class="sc-attr-item sc-attr-item--bare" title="@node.Path"
-                                        disabled="@filtering" @onclick="() => ToggleBranch(node.Path)">
-                                    <span class="sc-attr-row1">
-                                        <span class="sc-attr-name">@node.Segment</span>
-                                        @if (!isOpen)
-                                        {
-                                            <span class="sc-tree-count" aria-hidden="true">@node.DescendantCount</span>
-                                        }
-                                    </span>
-                                </button>
-                            }
+                        <button type="button" class="sc-search-clear" @onclick="@(() => _attrSearch = string.Empty)" title="@Loc["TermClear"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.75rem;" />
+                        </button>
+                    }
+                </div>
+
+                <div class="sc-attrs-body">
+                    @if (_showCreateAttr)
+                    {
+                        <div class="sc-add-row">
+                            <span class="sc-add-amp">&amp;</span>
+                            <input @ref="_newAttrInput" value="@_newAttrName" aria-label="@Loc["TermNewAttributeName"]"
+                                   @oninput="@(e => _newAttrName = e.Value?.ToString() ?? string.Empty)"
+                                   @onkeydown="OnCreateAttrKeyDown"
+                                   placeholder="ATTR`NAME" class="sc-add-input" />
+                            <button type="button" class="sc-add-icon" @onclick="ExecuteCreateAttrAsync" title="@Loc["Create"]" aria-label="@Loc["Create"]">
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:0.875rem;" />
+                            </button>
+                            <button type="button" class="sc-add-icon" @onclick="CancelCreateAttr" title="@Loc["Cancel"]" aria-label="@Loc["Cancel"]">
+                                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.875rem;" />
+                            </button>
                         </div>
                     }
 
-                    @if (rows.Count == 0 && !_showCreateAttr)
+                    @if (_loadingAttrs)
                     {
-                        <div style="padding:0.75rem;color:var(--text-faint);font-size:0.75rem;text-align:center;font-family:var(--font-mono);">
-                            @(string.IsNullOrWhiteSpace(_attrSearch) ? Loc["TermNoAttributes"] : Loc["TermNoMatch"])
-                        </div>
+                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
                     }
-                }
-            </div>
-        }
+                    else if (_selectedObject is null)
+                    {
+                        <div class="sc-attrs-note">@Loc["TermSelectAnObject"]</div>
+                    }
+                    else
+                    {
+                        <SoftcodeAttributeTreeView Tree="AttributeTree" Expanded="_expandedBranches" Search="@_attrSearch"
+                                                   ActiveName="@ActiveNameOn(_selectedObject)" HideEmpty="_showCreateAttr"
+                                                   OnToggle="ToggleBranch" OnSelect="attr => OnAttributeSelected(attr)" />
+                    }
+                </div>
+            </ChildContent>
+        </CollapsiblePane>
     </div>
 
     <div class="sc-panel sc-pane-editor">
@@ -258,7 +164,7 @@
         <div class="sc-editor-toolbar">
             @if (ActiveTab is not null)
             {
-                <span class="sc-kind-badge" style="@KindBadgeStyle(ActiveTab.Attr)" title="@Loc[AttrKindLabelKey(ActiveTab.Attr)]">@AttrKindBadge(ActiveTab.Attr)</span>
+                <SoftcodeKindBadge Attribute="ActiveTab.Attr" />
                 @* The tab strip below already names the object by dbref and marks unsaved edits, so
                    this line carries only what it adds: the object's name and links to the branches. *@
                 <span class="sc-crumb-obj" title="@($"{ActiveTab.Obj.Name} (#{ActiveTab.Obj.Dbref})")">@ActiveTab.Obj.Name</span>
@@ -335,41 +241,10 @@
 
         @if (_tabs.Count > 0)
         {
-            <div class="sc-tabstrip">
-                @for (int i = 0; i < _tabs.Count; i++)
-                {
-                    var idx = i;
-                    var tab = _tabs.Tabs[i];
-                    // '#8/DESCRIBE' is how softcode itself addresses an attribute — get(), u(), @force.
-                    // The '&' sigil belongs to the '&DESCRIBE #8=…' set syntax, so '#8&DESCRIBE' is
-                    // neither form and reads as a typo.
-                    var reference = $"#{tab.Obj.Dbref}/{tab.Attr.Name}";
-                    <div class="sc-tab @(idx == _tabs.ActiveIndex ? "sc-tab--on" : "")">
-                        <button type="button" class="sc-tab-label" title="@reference"
-                                @onclick="() => SwitchTabAsync(idx)"><span class="sc-tab-ref">#@tab.Obj.Dbref/@TabBranch(tab)</span><span class="sc-tab-leaf">@SoftcodeAttributeTree.Segment(tab.Attr.Name)</span></button>
-                        @if (tab.IsDirty)
-                        {
-                            @* role="img" + aria-label, not aria-hidden: the dot is the only thing
-                               distinguishing a tab with unsaved edits, so hiding it from assistive
-                               tech would leave that state with no representation at all. A bare
-                               aria-label on a <span> is not reliably announced without the role. *@
-                            <span class="sc-tab-dirty" role="img"
-                                  title="@Loc["TermUnsaved"]" aria-label="@Loc["TermUnsaved"]">●</span>
-                        }
-                        @* A button of its own, not a click handler on a wrapper around a MudIconButton:
-                           MudBlazor's buttons stop click propagation unconditionally, so a handler on
-                           any ancestor of one never fires and the 'x' did nothing at all. *@
-                        <button type="button" class="sc-tab-close"
-                                @onclick="() => CloseTabAsync(idx)"
-                                title="@Loc["TermCloseTab", reference]" aria-label="@Loc["TermCloseTab", reference]">
-                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.75rem;" />
-                        </button>
-                    </div>
-                }
-            </div>
+            <SoftcodeTabStrip Tabs="_tabs" OnSwitch="index => SwitchTabAsync(index)" OnClose="index => CloseTabAsync(index)" />
         }
 
-        <div style="flex:1;min-height:0;">
+        <div class="sc-editor-host">
             @* Monaco is 3.67 MB and this is the only page that uses it, so it is fetched when this
                page opens rather than by every visitor of the home page. The editor is not rendered
                until the bundle is usable: BlazorMonaco's interop reaches for window.monaco as soon
@@ -385,7 +260,7 @@
             }
             else if (!_editorAssetsReady)
             {
-                <div style="display:flex;align-items:center;justify-content:center;height:100%;">
+                <div class="sc-editor-loading">
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                 </div>
             }
@@ -402,100 +277,8 @@
 
         @if (_consoleOpen)
         {
-            var repl = Repl;
-            <section class="sc-console" aria-label="@Loc["TermConsole"]">
-                <div class="sc-console-head">
-                    <span class="sc-console-title">@Loc["TermConsole"]</span>
-                    @* Who the code runs as is the question every softcode author asks first, so the
-                       panel says it rather than leaving it to be found out. *@
-                    <span class="sc-console-hint">@(ActiveTab is { } runTab
-                        ? Loc["TermConsoleSemantics", $"{runTab.Obj.Name}(#{runTab.Obj.Dbref})"]
-                        : Loc["TermConsoleAsYou"])</span>
-                    <MudSpacer />
-                    <MudTooltip Text="@Loc["TermConsoleClear"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.ClearAll" Size="Size.Small"
-                                       OnClick="repl.Clear" Disabled="@(repl.Entries.Count == 0)"
-                                       aria-label="@Loc["TermConsoleClear"]" Class="sc-console-clear" />
-                    </MudTooltip>
-                </div>
-                <div class="sc-console-args">
-                    @for (var i = 0; i < repl.Arguments.Count; i++)
-                    {
-                        var index = i;
-                        <label class="sc-console-arg">
-                            <span class="sc-console-arg-name">%@index</span>
-                            <input class="sc-console-arg-input" value="@repl.Arguments[index]" spellcheck="false"
-                                   @oninput="e => repl.SetArgument(index, e.Value?.ToString() ?? string.Empty)" />
-                        </label>
-                    }
-                    @if (repl.Arguments.Count < SoftcodeConsole.MaxArguments)
-                    {
-                        <button type="button" class="sc-console-argbtn sc-console-addarg" @onclick="repl.AddArgument"
-                                title="@Loc["TermConsoleAddArgument", $"%{repl.Arguments.Count}"]"
-                                aria-label="@Loc["TermConsoleAddArgument", $"%{repl.Arguments.Count}"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" />
-                        </button>
-                    }
-                    @if (repl.Arguments.Count > 0)
-                    {
-                        <button type="button" class="sc-console-argbtn sc-console-removearg" @onclick="repl.RemoveArgument"
-                                title="@Loc["TermConsoleRemoveArgument", $"%{repl.Arguments.Count - 1}"]"
-                                aria-label="@Loc["TermConsoleRemoveArgument", $"%{repl.Arguments.Count - 1}"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Remove" Style="font-size:0.875rem;" />
-                        </button>
-                    }
-                </div>
-                <div class="sc-console-log" id="@ConsoleLogId" role="log" aria-live="polite">
-                    @foreach (var entry in repl.Entries)
-                    {
-                        <div class="sc-console-entry">
-                            <div class="sc-console-src">
-                                <span class="sc-console-sigil" aria-hidden="true">@(entry.IsBuffer ? "▶" : "›")</span>
-                                <span class="sc-console-code">@entry.Source</span>
-                                @if (entry.Unsaved)
-                                {
-                                    <span class="sc-console-unsaved">@Loc["TermUnsaved"]</span>
-                                }
-                            </div>
-                            @if (entry.Arguments.Count > 0)
-                            {
-                                <div class="sc-console-argline">@string.Join("  ", entry.Arguments.Select((a, n) => $"%{n}={a}"))</div>
-                            }
-                            @foreach (var line in entry.Output)
-                            {
-                                <div class="sc-console-out">@line</div>
-                            }
-                            @if (entry.Error is not null)
-                            {
-                                <div class="sc-console-error">@Loc["TermErrorLine", entry.Error]</div>
-                            }
-                            else if (!string.IsNullOrEmpty(entry.Result))
-                            {
-                                <div class="sc-console-result">@entry.Result</div>
-                            }
-                            else if (entry.Output.Count == 0)
-                            {
-                                <div class="sc-console-none">@Loc["TermNoOutput"]</div>
-                            }
-                        </div>
-                    }
-                </div>
-                @if (_evaluating)
-                {
-                    <MudProgressLinear Indeterminate="true" Color="Color.Success" Style="height:2px;flex-shrink:0;" />
-                }
-                <div class="sc-console-input">
-                    <span class="sc-console-prompt" aria-hidden="true">›</span>
-                    <input class="sc-console-line" value="@_consoleInput" spellcheck="false"
-                           @oninput="OnConsoleInput" @onkeydown="OnConsoleKeyDown"
-                           placeholder="@Loc["TermConsoleInputPlaceholder"]"
-                           aria-label="@Loc["TermConsoleInputPlaceholder"]" />
-                    <button type="button" class="sc-console-send" @onclick="EvaluateInputAsync"
-                            disabled="@_evaluating" title="@Loc["TermConsoleEvaluate"]" aria-label="@Loc["TermConsoleEvaluate"]">
-                        <MudIcon Icon="@Icons.Material.Filled.KeyboardReturn" Style="font-size:0.875rem;" />
-                    </button>
-                </div>
-            </section>
+            <SoftcodeConsolePanel Console="Repl" Line="_consoleLine" Hint="@ConsoleHint" Evaluating="_evaluating"
+                                  OnEvaluate="EvaluateExpressionAsync" />
         }
 
         @if (_saveMessage is not null)
@@ -552,27 +335,20 @@
     private Severity _saveSeverity = Severity.Success;
     private bool _evaluating;
     private bool _consoleOpen;
-    private string _consoleInput = string.Empty;
-    private const string ConsoleLogId = "sc-console-log";
 
-    // Typed expressions, oldest first, for Up and Down. Kept in memory only, for as long as the page is
-    // open: an expression can carry a secret anywhere in it (checkpass(me,...), decrypt(...,key)), which
-    // no rule about a leading verb catches, so none of it goes to localStorage as the terminal's does.
-    private readonly List<string> _consoleHistory = [];
-    private readonly HistoryWalk _consoleWalk = new();
-
-    private void RememberExpression(string line)
-    {
-        if (_consoleHistory.Count > 0 && _consoleHistory[^1] == line) return;
-        _consoleHistory.Add(line);
-        if (_consoleHistory.Count > CommandHistory.Capacity) _consoleHistory.RemoveAt(0);
-    }
+    // The console's input line and its history, kept here so they outlive the panel being closed.
+    private readonly SoftcodeConsoleLine _consoleLine = new();
 
     // With no tab open, typed expressions still run; their scrollback lives here until one is.
     private readonly SoftcodeConsole _looseRepl = new();
 
     /// <summary>The console the panel shows: the active tab's, or the page's own with none open.</summary>
     private SoftcodeConsole Repl => ActiveTab?.Repl ?? _looseRepl;
+
+    /// <summary>Who the console's code runs as: the active tab's object, else the character.</summary>
+    private string ConsoleHint => ActiveTab is { } runTab
+        ? Loc["TermConsoleSemantics", $"{runTab.Obj.Name}(#{runTab.Obj.Dbref})"]
+        : Loc["TermConsoleAsYou"];
 
     private bool _objCollapsed;
     private bool _attrCollapsed;
@@ -633,12 +409,9 @@
             attributes.FirstOrDefault(a => string.Equals(a.Name, path, StringComparison.OrdinalIgnoreCase))));
     }
 
-    /// <summary>The branch part of a tab's attribute name, backtick included: <c>FOO`</c> for <c>FOO`BAR</c>.</summary>
-    private static string TabBranch(SoftcodeTab tab)
-    {
-        var cut = tab.Attr.Name.LastIndexOf(SoftcodeAttributeTree.Separator);
-        return cut < 0 ? string.Empty : tab.Attr.Name[..(cut + 1)];
-    }
+    /// <summary>The active tab's attribute name when that tab belongs to <paramref name="obj"/>.</summary>
+    private string? ActiveNameOn(MushObject obj) =>
+        ActiveTab is { } tab && tab.Obj.Dbref == obj.Dbref ? tab.Attr.Name : null;
 
     private MushObjectType? _createObjectType;
     private string _createObjectName = string.Empty;
@@ -647,53 +420,6 @@
     private string _newAttrName = string.Empty;
     private ElementReference _newAttrInput;
     private bool _focusNewAttr;
-
-    private static readonly HashSet<string> FunctionBranches =
-        new(["FN", "FUN", "FUNC", "FUNCS", "FUNCTION", "FUNCTIONS", "UFUN"], StringComparer.OrdinalIgnoreCase);
-
-    private static string AttrKindBadge(MushAttribute attr)
-    {
-        if (attr.Value.TrimStart().StartsWith('$')) return "$";
-        if (attr.Value.TrimStart().StartsWith('^')) return "^";
-        // The tree already shows that an attribute is nested, so nesting alone no longer marks a
-        // function: a branch named for functions does (FN`ROW, FUN`HEADER), as SAFE does.
-        if (attr.AttributeFlags.Contains("SAFE", StringComparer.OrdinalIgnoreCase)
-            || attr.Name.Split(SoftcodeAttributeTree.Separator).SkipLast(1).Any(FunctionBranches.Contains))
-            return "ƒ";
-        return attr.Value.Length > 0 && (char.IsDigit(attr.Value[0]) || attr.Value == "0" || attr.Value.StartsWith("#-"))
-            ? "•"
-            : "¶";
-    }
-
-    private static string AttrKindColor(MushAttribute attr) => AttrKindBadge(attr) switch
-    {
-        "$" => "var(--accent)",
-        "ƒ" => "#5aa9ff",
-        "^" => "#b39cff",
-        "•" => "#d9a23a",
-        _   => "var(--text-faint)",
-    };
-
-    private static string AttrKindLabelKey(MushAttribute attr) => AttrKindBadge(attr) switch
-    {
-        "$" => "TermAttrKindCommand",
-        "ƒ" => "TermAttrKindFunction",
-        "^" => "TermAttrKindListen",
-        "•" => "TermAttrKindData",
-        _   => "TermAttrKindText",
-    };
-
-    private static string AttrKindGlow(MushAttribute attr) => AttrKindBadge(attr) switch
-    {
-        "$" => "var(--glow)",
-        "ƒ" => "90,169,255",
-        "^" => "179,156,255",
-        "•" => "217,162,58",
-        _   => "95,104,112",
-    };
-
-    private static string KindBadgeStyle(MushAttribute attr)
-        => $"background:rgba({AttrKindGlow(attr)},0.14);border:1px solid rgba({AttrKindGlow(attr)},0.3);color:{AttrKindColor(attr)};";
 
     protected override Task OnInitializedAsync() => LoadEditorAssetsAsync();
 
@@ -986,40 +712,9 @@
         await EvaluateAsync(tab.Repl, $"#{tab.Obj.Dbref}/{tab.Attr.Name}", isBuffer: true, tab.IsDirty, value, tab.Obj.Dbref);
     }
 
-    private void OnConsoleInput(ChangeEventArgs e)
-    {
-        _consoleInput = e.Value?.ToString() ?? string.Empty;
-        _consoleWalk.Reset();
-    }
-
-    /// <summary>Enter evaluates; Up and Down walk the console's history, as the terminal's input line does.</summary>
-    private async Task OnConsoleKeyDown(KeyboardEventArgs e)
-    {
-        switch (e.Key)
-        {
-            case "Enter":
-                await EvaluateInputAsync();
-                break;
-            case "ArrowUp":
-                if (_consoleWalk.Older(_consoleHistory, _consoleInput) is { } older) _consoleInput = older;
-                break;
-            case "ArrowDown":
-                if (_consoleWalk.Newer(_consoleHistory) is { } newer) _consoleInput = newer;
-                break;
-        }
-    }
-
     /// <summary>Evaluates the typed expression as the character, with the console's arguments.</summary>
-    private async Task EvaluateInputAsync()
-    {
-        var line = _consoleInput.Trim();
-        if (line.Length == 0 || _evaluating) return;
-
-        _consoleInput = string.Empty;
-        _consoleWalk.Reset();
-        RememberExpression(line);
-        await EvaluateAsync(Repl, line, isBuffer: false, unsaved: false, line, objectDbref: null);
-    }
+    private Task EvaluateExpressionAsync(string line) =>
+        EvaluateAsync(Repl, line, isBuffer: false, unsaved: false, line, objectDbref: null);
 
     /// <summary>Evaluates <paramref name="expression"/> and adds what came back to <paramref name="console"/>.</summary>
     /// <remarks>
@@ -1061,7 +756,7 @@
 
     private async Task ScrollConsoleAsync()
     {
-        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.jumpToLatest", ConsoleLogId); }
+        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.jumpToLatest", SoftcodeConsolePanel.LogId); }
         catch (JSException) { /* the newest entry is still there to scroll to */ }
     }
 

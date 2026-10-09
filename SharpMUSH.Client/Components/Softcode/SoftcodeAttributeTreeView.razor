@@ -1,0 +1,91 @@
+@using SharpMUSH.Client.Pages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The attribute tree: FOO`BAR`BAZ sits under BAR, under FOO. A branch is still an attribute of its own, so
+   its name opens it and only the chevron folds it. While filtering, every match shows with the branches
+   leading to it, and nothing folds. *@
+@{
+    var rows = SoftcodeAttributeTree.Rows(Tree, Expanded, Search).ToList();
+}
+@foreach (var row in rows)
+{
+    var node = row;
+    var a = node.Attribute;
+    var isActive = a is not null && string.Equals(ActiveName, a.Name, StringComparison.OrdinalIgnoreCase);
+    var isOpen = Filtering || Expanded.Contains(node.Path);
+    <div class="sc-tree-row @(node.Depth > 0 ? "sc-tree-row--nested" : "")" style="--sc-depth:@node.Depth;">
+        @if (node.IsBranch)
+        {
+            <button type="button" class="sc-tree-toggle" disabled="@Filtering"
+                    aria-expanded="@(isOpen ? "true" : "false")"
+                    title="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
+                    aria-label="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
+                    @onclick="() => OnToggle.InvokeAsync(node.Path)">
+                <MudIcon Icon="@(isOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Style="font-size:0.875rem;" />
+            </button>
+        }
+        else
+        {
+            <span class="sc-tree-spacer"></span>
+        }
+        @if (a is not null)
+        {
+            <button type="button" class="sc-attr-item @(isActive ? "sc-attr-item--on" : "")"
+                    title="@a.Name" @onclick="() => OnSelect.InvokeAsync(a)">
+                <span class="sc-attr-row1">
+                    <SoftcodeKindBadge Attribute="a" />
+                    <span class="sc-attr-name">@node.Segment</span>
+                    @if (node.IsBranch && !isOpen)
+                    {
+                        <span class="sc-tree-count" aria-hidden="true">@node.DescendantCount</span>
+                    }
+                </span>
+            </button>
+        }
+        else
+        {
+            @* Listed only through what is beneath it: nothing to open, so the name folds too. *@
+            <button type="button" class="sc-attr-item sc-attr-item--bare" title="@node.Path"
+                    disabled="@Filtering" @onclick="() => OnToggle.InvokeAsync(node.Path)">
+                <span class="sc-attr-row1">
+                    <span class="sc-attr-name">@node.Segment</span>
+                    @if (!isOpen)
+                    {
+                        <span class="sc-tree-count" aria-hidden="true">@node.DescendantCount</span>
+                    }
+                </span>
+            </button>
+        }
+    </div>
+}
+
+@if (rows.Count == 0 && !HideEmpty)
+{
+    <div class="sc-tree-empty">
+        @(Filtering ? Loc["TermNoMatch"] : Loc["TermNoAttributes"])
+    </div>
+}
+
+@code {
+    /// <summary>The object's attributes arranged by name.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<SoftcodeAttributeNode> Tree { get; set; } = [];
+
+    /// <summary>The branches shown open.</summary>
+    [Parameter, EditorRequired] public IReadOnlySet<string> Expanded { get; set; } = new HashSet<string>();
+
+    /// <summary>The filter typed above the tree; empty shows every row the folds allow.</summary>
+    [Parameter] public string? Search { get; set; }
+
+    /// <summary>The attribute open in the editor, when it belongs to this object.</summary>
+    [Parameter] public string? ActiveName { get; set; }
+
+    /// <summary>Leaves out the empty message, while the add row stands at the top of the list.</summary>
+    [Parameter] public bool HideEmpty { get; set; }
+
+    /// <summary>Folds or unfolds the branch at a path.</summary>
+    [Parameter] public EventCallback<string> OnToggle { get; set; }
+
+    [Parameter] public EventCallback<MushAttribute> OnSelect { get; set; }
+
+    private bool Filtering => !string.IsNullOrWhiteSpace(Search);
+}

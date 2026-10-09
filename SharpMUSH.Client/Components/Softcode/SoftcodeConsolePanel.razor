@@ -1,0 +1,141 @@
+@using SharpMUSH.Client.Pages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Softcode Editor's console under the editor: who the code runs as, the arguments it passes as %0
+   onward, the scrollback of what came back, and an input line that evaluates as the character. *@
+<section class="sc-console" aria-label="@Loc["TermConsole"]">
+    <div class="sc-console-head">
+        <span class="sc-console-title">@Loc["TermConsole"]</span>
+        @* Who the code runs as is the question every softcode author asks first, so the
+           panel says it rather than leaving it to be found out. *@
+        <span class="sc-console-hint">@Hint</span>
+        <MudSpacer />
+        <MudTooltip Text="@Loc["TermConsoleClear"]">
+            <MudIconButton Icon="@Icons.Material.Filled.ClearAll" Size="Size.Small"
+                           OnClick="Console.Clear" Disabled="@(Console.Entries.Count == 0)"
+                           aria-label="@Loc["TermConsoleClear"]" Class="sc-console-clear" />
+        </MudTooltip>
+    </div>
+    <div class="sc-console-args">
+        @for (var i = 0; i < Console.Arguments.Count; i++)
+        {
+            var index = i;
+            <label class="sc-console-arg">
+                <span class="sc-console-arg-name">%@index</span>
+                <input class="sc-console-arg-input" value="@Console.Arguments[index]" spellcheck="false"
+                       @oninput="e => Console.SetArgument(index, e.Value?.ToString() ?? string.Empty)" />
+            </label>
+        }
+        @if (Console.Arguments.Count < SoftcodeConsole.MaxArguments)
+        {
+            <button type="button" class="sc-console-argbtn sc-console-addarg" @onclick="Console.AddArgument"
+                    title="@Loc["TermConsoleAddArgument", $"%{Console.Arguments.Count}"]"
+                    aria-label="@Loc["TermConsoleAddArgument", $"%{Console.Arguments.Count}"]">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" />
+            </button>
+        }
+        @if (Console.Arguments.Count > 0)
+        {
+            <button type="button" class="sc-console-argbtn sc-console-removearg" @onclick="Console.RemoveArgument"
+                    title="@Loc["TermConsoleRemoveArgument", $"%{Console.Arguments.Count - 1}"]"
+                    aria-label="@Loc["TermConsoleRemoveArgument", $"%{Console.Arguments.Count - 1}"]">
+                <MudIcon Icon="@Icons.Material.Filled.Remove" Style="font-size:0.875rem;" />
+            </button>
+        }
+    </div>
+    <div class="sc-console-log" id="@LogId" role="log" aria-live="polite">
+        @foreach (var entry in Console.Entries)
+        {
+            <div class="sc-console-entry">
+                <div class="sc-console-src">
+                    <span class="sc-console-sigil" aria-hidden="true">@(entry.IsBuffer ? "▶" : "›")</span>
+                    <span class="sc-console-code">@entry.Source</span>
+                    @if (entry.Unsaved)
+                    {
+                        <span class="sc-console-unsaved">@Loc["TermUnsaved"]</span>
+                    }
+                </div>
+                @if (entry.Arguments.Count > 0)
+                {
+                    <div class="sc-console-argline">@string.Join("  ", entry.Arguments.Select((a, n) => $"%{n}={a}"))</div>
+                }
+                @foreach (var line in entry.Output)
+                {
+                    <div class="sc-console-out">@line</div>
+                }
+                @if (entry.Error is not null)
+                {
+                    <div class="sc-console-error">@Loc["TermErrorLine", entry.Error]</div>
+                }
+                else if (!string.IsNullOrEmpty(entry.Result))
+                {
+                    <div class="sc-console-result">@entry.Result</div>
+                }
+                else if (entry.Output.Count == 0)
+                {
+                    <div class="sc-console-none">@Loc["TermNoOutput"]</div>
+                }
+            </div>
+        }
+    </div>
+    @if (Evaluating)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Success" Style="height:2px;flex-shrink:0;" />
+    }
+    <div class="sc-console-input">
+        <span class="sc-console-prompt" aria-hidden="true">›</span>
+        <input class="sc-console-line" value="@Line.Text" spellcheck="false"
+               @oninput="e => Line.Type(e.Value?.ToString() ?? string.Empty)" @onkeydown="OnKeyDown"
+               placeholder="@Loc["TermConsoleInputPlaceholder"]"
+               aria-label="@Loc["TermConsoleInputPlaceholder"]" />
+        <button type="button" class="sc-console-send" @onclick="EvaluateLineAsync"
+                disabled="@Evaluating" title="@Loc["TermConsoleEvaluate"]" aria-label="@Loc["TermConsoleEvaluate"]">
+            <MudIcon Icon="@Icons.Material.Filled.KeyboardReturn" Style="font-size:0.875rem;" />
+        </button>
+    </div>
+</section>
+
+@code {
+    /// <summary>The scrollback's element id, for scrolling it to its newest entry.</summary>
+    public const string LogId = "sc-console-log";
+
+    /// <summary>The console shown: the active tab's, or the page's own with none open.</summary>
+    [Parameter, EditorRequired] public SoftcodeConsole Console { get; set; } = null!;
+
+    /// <summary>The input line, kept by the page so it outlives the panel being closed.</summary>
+    [Parameter, EditorRequired] public SoftcodeConsoleLine Line { get; set; } = null!;
+
+    /// <summary>Who the code runs as.</summary>
+    [Parameter] public string? Hint { get; set; }
+
+    /// <summary>An evaluation is out; the line waits for it.</summary>
+    [Parameter] public bool Evaluating { get; set; }
+
+    /// <summary>Evaluates a typed expression as the character.</summary>
+    [Parameter] public EventCallback<string> OnEvaluate { get; set; }
+
+    /// <summary>Enter evaluates; Up and Down walk the console's history, as the terminal's input line does.</summary>
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await EvaluateLineAsync();
+                break;
+            case "ArrowUp":
+                Line.Older();
+                break;
+            case "ArrowDown":
+                Line.Newer();
+                break;
+        }
+    }
+
+    private async Task EvaluateLineAsync()
+    {
+        if (Evaluating) return;
+        var line = Line.Take();
+        if (line.Length == 0) return;
+        await OnEvaluate.InvokeAsync(line);
+    }
+}
