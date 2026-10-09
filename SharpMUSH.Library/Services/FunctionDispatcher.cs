@@ -122,7 +122,10 @@ public static class FunctionDispatcher
 				{
 					async ValueTask<CallState?> Evaluate()
 					{
-						var result = await localized.FunctionParse(pair.Value.Message ?? MarkupText.Empty) ?? CallState.Empty;
+						// The argument's work is its own, not the function's that asked for it.
+						CallState result;
+						using (InvocationClock.PauseRunning())
+							result = await localized.FunctionParse(pair.Value.Message ?? MarkupText.Empty) ?? CallState.Empty;
 						return flags.HasFlag(FunctionFlags.StripAnsi)
 							? result with { Message = MarkupText.Plain(result.Message?.ToPlainText() ?? "") } : result;
 					}

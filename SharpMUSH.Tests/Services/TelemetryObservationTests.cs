@@ -31,10 +31,10 @@ public class TelemetryObservationTests
 		});
 		listener.Start();
 		using var telemetry = new TelemetryService([observer]);
-		telemetry.RecordFunctionInvocation(functionName, 2.5, true);
-		telemetry.RecordCommandInvocation(commandName, 4, false);
-		observer.Received(1).RecordInvocation(new(TelemetryInvocationKind.Function, functionName, 2.5, true));
-		observer.Received(1).RecordInvocation(new(TelemetryInvocationKind.Command, commandName, 4, false));
+		telemetry.RecordFunctionInvocation(functionName, 2.5, 7, true);
+		telemetry.RecordCommandInvocation(commandName, 4, 9, false);
+		observer.Received(1).RecordInvocation(new(TelemetryInvocationKind.Function, functionName, 7, true));
+		observer.Received(1).RecordInvocation(new(TelemetryInvocationKind.Command, commandName, 9, false));
 		await Assert.That(measurements.Contains(("sharpmush.function.invocation.duration", 2.5))).IsTrue();
 		await Assert.That(measurements.Contains(("sharpmush.command.invocation.duration", 4))).IsTrue();
 	}
@@ -46,7 +46,7 @@ public class TelemetryObservationTests
 		broken.When(x => x.RecordInvocation(Arg.Any<TelemetryInvocation>())).Do(_ => throw new InvalidOperationException("private error"));
 		var healthy = Substitute.For<ITelemetryInvocationObserver>();
 		using var telemetry = new TelemetryService([broken, healthy]);
-		telemetry.RecordFunctionInvocation("add", 1, true);
+		telemetry.RecordFunctionInvocation("add", 1, 1, true);
 		healthy.Received(1).RecordInvocation(new(TelemetryInvocationKind.Function, "add", 1, true));
 	}
 }

@@ -99,6 +99,7 @@ public static class BuiltInRoles
 			&& s is not (PortalPermission.ServerAdmin or PortalPermission.Administrator)),
 		PortalPermission.GameWizard,
 		PortalPermission.ChatAdmin,
+		PortalPermission.FeedAdmin,
 		PortalPermission.ServerOperate,
 		PortalPermission.ControlAll,
 		PortalPermission.ProtectWizard,

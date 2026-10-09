@@ -50,7 +50,7 @@ The MUSH checks for GOING objects every ten minutes or so (see '@config purge_in
 
 When an object is destroyed, any commands, @waits and semaphores it has queued are drained, and the object stops counting against its owner's used building quota. SharpMUSH has no monetary creation deposit to refund. The ``OBJECT`DESTROY`` event is also queued.
 
-Players can only be @destroyed when they are not connected, and even then can only be destroyed by a Wizard player. If the destroy_possessions @config option is on, anything the player owns is @destroyed. If the really_safe option is also on, his SAFE possessions are spared. Any objects he owns which aren't destroyed are @chown'd to the Probate player (as per '@config probate_judge'), as are any @channels the player owned.
+Players can only be @destroyed when they are not connected, and even then can only be destroyed by a Wizard player. If the destroy_possessions @config option is on, anything the player owns is @destroyed. If the really_safe option is also on, his SAFE possessions are spared. Any objects he owns which aren't destroyed are @chown'd to the Probate player (as per '@config probate_judge'), as are any @channels and @feed kinds the player owned.
 
 
 ::: seealso

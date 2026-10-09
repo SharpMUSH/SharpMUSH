@@ -2,6 +2,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -232,7 +233,13 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 
 		CallState DeferredArgument(MString text)
 		{
-			async ValueTask<CallState?> Evaluate() => argumentResults.Record(await prs.FunctionParse(text));
+			// The command evaluates it when it asks for it; that time is the argument's, not the command's.
+			async ValueTask<CallState?> Evaluate()
+			{
+				using (InvocationClock.PauseRunning())
+					return argumentResults.Record(await prs.FunctionParse(text));
+			}
+
 			return new CallState(text, argCallState.Depth, null, async () => (await Evaluate())?.Message)
 			{ ParsedResult = Evaluate };
 		}

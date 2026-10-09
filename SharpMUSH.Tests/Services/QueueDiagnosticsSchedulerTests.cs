@@ -57,9 +57,9 @@ public class QueueDiagnosticsSchedulerTests
 				for (var warmup = 0; warmup < (measure ? 300 : 0); warmup++)
 					await queue.AdmitWork(() =>
 					{
-						telemetry.RecordFunctionInvocation("add", .01, true);
-						telemetry.RecordFunctionInvocation("mul", .01, true);
-						telemetry.RecordCommandInvocation("think", .03, true);
+						telemetry.RecordFunctionInvocation("add", .01, .01, true);
+						telemetry.RecordFunctionInvocation("mul", .01, .01, true);
+						telemetry.RecordCommandInvocation("think", .03, .03, true);
 						return ValueTask.FromResult<CallState?>(null);
 					}, "warmup", "enqueue");
 				using var warmupTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -75,9 +75,9 @@ public class QueueDiagnosticsSchedulerTests
 					var admitted = await queue.AdmitWork(() =>
 					{
 						if (observed != expected) throw new InvalidOperationException("Queue order changed");
-						telemetry.RecordFunctionInvocation("add", .01, true);
-						telemetry.RecordFunctionInvocation("mul", .01, true);
-						telemetry.RecordCommandInvocation("think", .03, true);
+						telemetry.RecordFunctionInvocation("add", .01, .01, true);
+						telemetry.RecordFunctionInvocation("mul", .01, .01, true);
+						telemetry.RecordCommandInvocation("think", .03, .03, true);
 						if (++observed == count) completed.SetResult();
 						return ValueTask.FromResult<CallState?>(null);
 					}, "benchmark", "enqueue");

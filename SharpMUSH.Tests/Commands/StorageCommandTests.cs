@@ -44,11 +44,11 @@ public class StorageCommandTests : ServerTestBase
 	{
 		var heard = await HeardAfterAsync("@storage");
 
-		await Assert.That(heard.Any(m => m.Contains("map limit") && m.Contains("file length") && m.Contains("allocated on disk")))
-			.IsTrue();
-		await Assert.That(heard.Any(m => m.Contains("Live data") && m.Contains("before the map is full"))).IsTrue();
-		await Assert.That(heard.Any(m => m.Contains("never shrinks the file"))).IsTrue();
-		await Assert.That(heard.Any(m => m.Contains("At its peak"))).IsTrue();
+		var report = string.Join("\n", heard);
+		await Assert.That(report).Contains("limit").And.Contains("live,").And.Contains("reusable");
+		await Assert.That(report).Contains("On disk:").And.Contains("Disk free:");
+		await Assert.That(report).Contains("Only a compacted copy shrinks it.");
+		await Assert.That(report).Contains("at the peak").And.Contains("Next run:");
 	}
 
 	[Test]
@@ -64,7 +64,7 @@ public class StorageCommandTests : ServerTestBase
 
 		var heard = await HeardAfterAsync("@storage");
 
-		await Assert.That(heard.Any(m => m.Contains("reader slot(s) freed since startup"))).IsTrue();
+		await Assert.That(heard.Any(m => m.Contains("dead reader(s) cleared since startup"))).IsTrue();
 	}
 
 	[Test]
@@ -72,8 +72,9 @@ public class StorageCommandTests : ServerTestBase
 	{
 		var heard = await HeardAfterAsync("@storage/history");
 
-		await Assert.That(heard.Any(m => m.Contains("wiki (") && m.Contains("Policy: keep everything"))).IsTrue();
-		await Assert.That(heard.Any(m => m.Contains("No archive is configured"))).IsTrue();
+		var report = string.Join("\n", heard);
+		await Assert.That(heard.Any(m => m.Split('\n').Any(line => line.Contains("wiki ") && line.Contains("keep everything")))).IsTrue();
+		await Assert.That(report).Contains("No archive:");
 	}
 
 	/// <summary>Nothing is configured in the test host, so a pass purges nothing — the default is archival.</summary>

@@ -185,7 +185,14 @@ A label holds the function's or command's registered name in capitals, whatever 
 `exp()` is counted as `E` and `@pe` as `@PEMIT`. A call to a function that does not exist is
 counted as `(unknown)`, so players cannot add series by typing names. `@function` globals and
 `@command/add` commands appear under their own names. Softcode `$-commands` are not timed on their
-own; their time shows in the built-ins they run. A call's time includes every call nested inside it.
+own; their time shows in the built-ins they run.
+
+A call's time is its own work only. The time spent evaluating its arguments and in every call nested
+inside it is left out and counted where it was spent, so `null(iter(...))` charges the iteration to
+`ITER` and the functions it runs, not to `NULL`. That holds for arguments a function evaluates itself
+(`iter`, `switch`, `if`, and the other functions that take unevaluated arguments). A command's time
+leaves out the functions and commands it runs the same way, and includes its own hooks, switch and
+lock checks. `@profile` still reports wall time, nested calls included.
 
 For a function, `success` is `false` when the call errored, was refused, or hit a limit. A command is
 timed only once it starts running: one refused first (a bad switch, permission denied) is not

@@ -47,7 +47,7 @@ rule (`CacheEntryProfileTests`) is only possible because policy is data on the r
 **Decision:** `ISharpDatabase` is a composite of per-aggregate store interfaces in
 `SharpMUSH.Library/Stores`: `IDatabaseLifecycle`, `IObjectStore`, `IFlagAndPowerStore`,
 `INavigationStore`, `IAttributeStore`, `IMailStore`, `IExpandedDataStore`, `IChannelStore`,
-`IAccountStore`, `IServerStateStore`, `ISessionRecordStore`, `IReadMarkerStore`, `IPageLogStore`. Each provider implements the
+`IAccountStore`, `IServerStateStore`, `ISessionRecordStore`, `IReadMarkerStore`, `IPageLogStore`, `IFeedStore`. Each provider implements the
 composite; each handler and service depends on the store it uses. The concrete provider is the
 one registered singleton, and every interface it serves (the stores, `IWikiStore`,
 `IRoleRegistryService`, the package, application and layout registries, the storage accessor)
