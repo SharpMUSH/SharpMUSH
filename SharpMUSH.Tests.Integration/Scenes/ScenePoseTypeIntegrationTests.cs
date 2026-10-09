@@ -97,6 +97,7 @@ public class ScenePoseTypeIntegrationTests
 		var reader = await PlayerAsync("TypRead", room);
 		await God($"@permission/allow #{staff.DbRef.Number}=layout.admin");
 		var key = Key();
+		var said = TestIsolationHelpers.GenerateUniqueName("Thought");
 		try
 		{
 			await Assert.That(await As(reader, $"+scene/type/add {key}=Telepathy")).Contains("needs the layout.admin permission");
@@ -115,7 +116,6 @@ public class ScenePoseTypeIntegrationTests
 
 			await As(reader, $"+scene/create {TestIsolationHelpers.GenerateUniqueName("TypeScene")}");
 			var scene = await Eval($"scenefocus(#{reader.DbRef.Number})");
-			var said = TestIsolationHelpers.GenerateUniqueName("Thought");
 			await Eval($"sceneaddpose({scene},#{staff.DbRef.Number},,#{room.Number},{key},emit,,{said})");
 
 			var hidden = await As(reader, "+scene/recall 1");
@@ -136,6 +136,9 @@ public class ScenePoseTypeIntegrationTests
 			await God($"&TYPE`{key.ToUpperInvariant()} {logger}=");
 		}
 		await Assert.That(await Eval($"scenetype({key})")).IsEqualTo("#-1 NO SUCH POSE TYPE");
+		var removed = await As(reader, "+scene/recall 1");
+		await Assert.That(removed).Contains(said).Because("a removed type draws as in character, though the reader hid it");
+		await Assert.That(removed).DoesNotContain($"<{key.ToUpperInvariant()}>");
 	}
 
 	/// <summary>Nothing changes God's attributes but God, so the package's own write fails there and says so.</summary>

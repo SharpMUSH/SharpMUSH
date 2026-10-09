@@ -168,14 +168,14 @@ objects:
         {"label":"Narration","presentation":"aside","tone":"secondary","order":30}
       TYPE`NARRATION`FORMAT: |-
         [tone(secondary,%2)]
-      # Type %0's line %2 (pose %1) for the reader: its FORMAT, or without one the line, marked <KEY> for
-      # anything but ic.
+      # Type %0's line %2 (pose %1) for the reader: its FORMAT, or without one the line, marked <KEY> for a
+      # listed type other than ic. A type no longer listed draws as in character, as the portal draws it.
       FUN`TYPE`DRAW: |-
-        [if(hasattr(%!,TYPE`%0`FORMAT),u(%!/TYPE`%0`FORMAT,%1,%#,%2),[if(strmatch(%0,ic),,<[ucstr(%0)]>%b)]%2)]
-      # The types %0 has hidden from recall and log: the ones they hid with +scene/hide, and the ones the game
-      # starts hidden that they have not shown with +scene/show.
+        [if(hasattr(%!,TYPE`%0`FORMAT),u(%!/TYPE`%0`FORMAT,%1,%#,%2),[if(cand(member(scenetypes(),%0),not(strmatch(%0,ic))),<[ucstr(%0)]>%b)]%2)]
+      # The types %0 has hidden from recall and log: the ones they hid with +scene/hide that are still listed,
+      # and the ones the game starts hidden that they have not shown with +scene/show.
       FUN`HIDDEN: |-
-        [setunion(get(%0/SCENE`HIDE),squish(iter(scenetypes(),if(cand(scenetype(%i0,hidden),not(member(get(%0/SCENE`SHOW),%i0))),%i0))))]
+        [setunion(setinter(get(%0/SCENE`HIDE),scenetypes()),squish(iter(scenetypes(),if(cand(scenetype(%i0,hidden),not(member(get(%0/SCENE`SHOW),%i0))),%i0))))]
       FUN`HIDDEN`NOW: |-
         [if(words(setr(_h,u(%!/FUN`HIDDEN,%0))),Hidden from your recall and log: [itemize(%q<_h>)]. +scene/show <type> shows one again.,Every pose type shows in your recall and log. +scene/hide <type> hides one.)]
       # %0's value for field %1, as JSON. scenetypecheck() refuses anything that does not fit the field.
