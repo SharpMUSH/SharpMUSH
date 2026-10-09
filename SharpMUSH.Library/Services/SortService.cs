@@ -117,9 +117,13 @@ public class SortService(ILocateService locateService, IConnectionService connec
 					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.OrdinalIgnoreCase,
 						direction),
 
+			// By dbref number, as PennMUSH does: #99 before #105, and an objid sorts as its dbref.
+			// Anything that is not a dbref counts as #-1.
 			ISortService.SortType.DbRef
 				=> source
-					.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal, direction),
+					.Select(mString => (n: DbRefNumber(mString.ToPlainText()), mString))
+					.OrderByAwait((val, ct) => ValueTask.FromResult(val.n), Comparer<int>.Default, direction)
+					.Select(val => val.mString),
 
 			ISortService.SortType.IntegerSort
 				=> source
@@ -211,6 +215,13 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		})
 		{
 			yield return item;
+		}
+
+		static int DbRefNumber(string text)
+		{
+			var colon = text.IndexOf(':');
+			var number = colon < 0 ? text : text[..colon];
+			return number.StartsWith('#') && int.TryParse(number.AsSpan(1), out var value) ? value : -1;
 		}
 
 		// Locates the named object and reads one of its connection's timings; anything that is not a

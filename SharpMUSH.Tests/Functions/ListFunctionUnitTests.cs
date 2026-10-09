@@ -188,6 +188,10 @@ public class ListFunctionUnitTests
 	// Sorting by location compares each object's loc(); the key used to be an unawaited task, so any
 	// two distinct keys threw and the sort returned nothing.
 	[Arguments("sort(#2 #0,loc)", "#0 #2")]
+	// Dbref sort compares numbers, not text, and reads an objid as its dbref.
+	[Arguments("sort(#105 #1000 #99,d)", "#99 #105 #1000")]
+	[Arguments("sort(#105:1 #1000:2 #99:3 foo,d)", "foo #99:3 #105:1 #1000:2")]
+	[Arguments("setdiff(#105 #1000 #99 #7,#7,%b,d)", "#99 #105 #1000")]
 	// Penn sort.3/sort.4 — ANSI-aware sort. SharpMUSH preserves ANSI through sort
 	// (superior behavior), so sorted output retains formatting. PennMUSH strips it.
 	// Comparison is correct in both — only output representation differs.

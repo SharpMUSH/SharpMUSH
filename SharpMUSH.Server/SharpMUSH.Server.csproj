@@ -187,6 +187,10 @@
       <Link>BundledPackages\radio-scene.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.radio-scene.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\bboards\package.yaml">
+      <Link>BundledPackages\bboards.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.bboards.package.yaml</LogicalName>
+    </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the
          file names carry hyphens. -->
