@@ -669,7 +669,7 @@ public partial class LightningDatabase
 			var resume = after;
 			var (page, last, read, pastMax) = Store.Read(tx =>
 			{
-				var found = new List<(long, ObjectRecord)>();
+				var found = new List<(long Dbref, ObjectRecord Record)>();
 				byte[]? lastKey = null;
 				var count = 0;
 				var entries = resume is not null
@@ -690,12 +690,9 @@ public partial class LightningDatabase
 				return (found, lastKey, count, false);
 			});
 
-			foreach (var (dbref, record) in page)
+			foreach (var (dbref, record) in page.Where(entry => MatchesName(entry.Record, filter)))
 			{
-				if (MatchesName(record, filter))
-				{
-					yield return (dbref, record);
-				}
+				yield return (dbref, record);
 			}
 
 			if (pastMax || read < pageSize || last is null) yield break;
