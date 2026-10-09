@@ -18,7 +18,7 @@ public class AttributeFamilyParityTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
 
 	/// <summary>
 	/// PennMUSH reports this one as <c>called_as</c> — <c>"#-1 BAD ARGUMENT FORMAT TO %s"</c>
@@ -156,7 +156,7 @@ public class AttributeFamilyParityTests
 		var asMortal = (await WebAppFactoryArg.CommandParser.CommandParse(
 			mortal.Handle,
 			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(),
-			MarkupText.Plain($"think {function}({owner},S{uid})")))?.Message?.ToPlainText() ?? string.Empty;
+			MarkupText.Plain($"think {function}({owner},S{uid})")))?.Message.ToPlainText() ?? string.Empty;
 
 		await Assert.That(asMortal).StartsWith("#-1")
 			.Because("PennMUSH answers e_perm for an attribute it can see is there but may not read");

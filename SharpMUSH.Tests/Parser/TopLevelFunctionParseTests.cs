@@ -65,7 +65,7 @@ public class TopLevelFunctionParseTests
 
 		var result = await parser.FunctionParse(MarkupText.Plain("add(1,2)"));
 
-		await Assert.That(result?.Message?.ToPlainText()).IsEqualTo("3")
+		await Assert.That(result?.Message.ToPlainText()).IsEqualTo("3")
 			.Because("dropping the executor made every function call fail its permission gate and return empty");
 	}
 
@@ -76,7 +76,7 @@ public class TopLevelFunctionParseTests
 
 		var result = await parser.FunctionParse(MarkupText.Plain("beep()"));
 
-		await Assert.That(result?.Message?.ToPlainText()).DoesNotContain("PERMISSION DENIED")
+		await Assert.That(result?.Message.ToPlainText()).DoesNotContain("PERMISSION DENIED")
 			.Because("God evaluating an admin-only function must still be God after the tracking frame is pushed");
 	}
 
@@ -87,7 +87,7 @@ public class TopLevelFunctionParseTests
 
 		var result = await parser.FunctionParse(MarkupText.Plain("add(1,2)"));
 
-		await Assert.That(result?.Message?.ToPlainText()).IsNullOrEmpty()
+		await Assert.That(result?.Message.ToPlainText()).IsNullOrEmpty()
 			.Because("the connect screen has no executor; a function call there is answered, not logged as an internal error");
 	}
 }

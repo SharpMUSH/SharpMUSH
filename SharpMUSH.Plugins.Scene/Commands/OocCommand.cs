@@ -107,7 +107,7 @@ public static class OocCommand
 		if (!parser.CurrentState.Arguments.TryGetValue("0", out var argument)) return MarkupText.Empty;
 
 		return parser.CurrentState.Switches.Contains("NOEVAL")
-			? argument.Message ?? MarkupText.Empty
+			? argument.Message
 			: await argument.ParsedMessage() ?? MarkupText.Empty;
 	}
 

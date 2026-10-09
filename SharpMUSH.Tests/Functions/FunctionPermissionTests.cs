@@ -41,7 +41,7 @@ public class FunctionPermissionTests
 		var parser = WebAppFactoryArg.FunctionParser;
 		var result = await parser.FunctionParse(MarkupText.Plain("pcreate(TestWiz,password)"));
 
-		await Assert.That(result?.Message?.ToPlainText()).DoesNotContain("PERMISSION DENIED");
+		await Assert.That(result?.Message.ToPlainText()).DoesNotContain("PERMISSION DENIED");
 	}
 
 	[Test]
@@ -58,7 +58,7 @@ public class FunctionPermissionTests
 
 		var result = await parser.FunctionParse(MarkupText.Plain("pcreate(AnotherPlayer,password)"));
 
-		await Assert.That(result?.Message?.ToPlainText()).Contains("PERMISSION DENIED");
+		await Assert.That(result?.Message.ToPlainText()).Contains("PERMISSION DENIED");
 	}
 
 	[Test]
@@ -67,7 +67,7 @@ public class FunctionPermissionTests
 		var parser = WebAppFactoryArg.FunctionParser;
 		var result = await parser.FunctionParse(MarkupText.Plain("beep()"));
 
-		await Assert.That(result?.Message?.ToPlainText()).DoesNotContain("PERMISSION DENIED");
+		await Assert.That(result?.Message.ToPlainText()).DoesNotContain("PERMISSION DENIED");
 	}
 
 	[Test]
@@ -84,6 +84,6 @@ public class FunctionPermissionTests
 
 		var result = await parser.FunctionParse(MarkupText.Plain("beep()"));
 
-		await Assert.That(result?.Message?.ToPlainText()).Contains("PERMISSION DENIED");
+		await Assert.That(result?.Message.ToPlainText()).Contains("PERMISSION DENIED");
 	}
 }

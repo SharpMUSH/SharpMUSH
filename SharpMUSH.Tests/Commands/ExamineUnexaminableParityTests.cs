@@ -78,7 +78,7 @@ public class ExamineUnexaminableParityTests
 	private async Task<(DBRef DbRef, string Name)> CreateGodOwnedThingAsync(DBRef where)
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("ExamWidget");
-		var container = (await Mediator.Send(new GetObjectNodeQuery(where))).Expect<AnySharpObject>().AsContainer;
+		var container = (await Mediator.Send(new GetObjectNodeQuery(where))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var thing = await Mediator.Send(new CreateThingCommand(name, container, _god, container));
 
 		var god = WebAppFactoryArg.CommandParser;
@@ -136,10 +136,10 @@ public class ExamineUnexaminableParityTests
 	[Test]
 	public async Task Examine_OfANearbyContainerSomeoneElseOwns_HidesDarkContentsAndDbrefs()
 	{
-		var room = (await Mediator.Send(new GetObjectNodeQuery(_room))).Expect<AnySharpObject>().AsContainer;
+		var room = (await Mediator.Send(new GetObjectNodeQuery(_room))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var boxName = TestIsolationHelpers.GenerateUniqueName("ExamBox");
 		var box = await Mediator.Send(new CreateThingCommand(boxName, room, _god, room));
-		var inside = (await Mediator.Send(new GetObjectNodeQuery(box))).Expect<AnySharpObject>().AsContainer;
+		var inside = (await Mediator.Send(new GetObjectNodeQuery(box))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var plainName = TestIsolationHelpers.GenerateUniqueName("ExamPlain");
 		await Mediator.Send(new CreateThingCommand(plainName, inside, _god, inside));
@@ -170,7 +170,7 @@ public class ExamineUnexaminableParityTests
 	public async Task ExamineOfAnAttributeTheOwnerCanRead_IsTheAttributeAlone()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("ExamOwn");
-		var container = (await Mediator.Send(new GetObjectNodeQuery(_room))).Expect<AnySharpObject>().AsContainer;
+		var container = (await Mediator.Send(new GetObjectNodeQuery(_room))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var owned = (await Mediator.Send(new GetObjectNodeQuery(_mortal.DbRef))).Expect<SharpPlayer>();
 		var thing = await Mediator.Send(new CreateThingCommand(name, container, owned, container));
 		await Parser.CommandParse(_mortal.Handle, ConnectionService,

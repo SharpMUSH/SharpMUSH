@@ -44,7 +44,7 @@ public class UnrecycleAliasTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
 		var result = owner is null ? await AsGod($"@create {name}") : await As(owner, $"@create {name}");
-		return DBRef.Parse(result.Message!.ToPlainText().Trim());
+		return DBRef.Parse(result.Message.ToPlainText().Trim());
 	}
 
 	private async Task<bool> IsGoingAsync(DBRef target)
@@ -80,7 +80,7 @@ public class UnrecycleAliasTests
 
 		var result = await As(mortal, $"{command} {thing}");
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NotGoing);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NotGoing);
 		await Assert.That(WasTold(mortal.DbRef, ErrorMessages.Notifications.NotMarkedForDestruction)).IsTrue();
 	}
 
@@ -120,7 +120,7 @@ public class UnrecycleAliasTests
 
 		var result = await As(stranger, $"{command} {thing}");
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(WasTold(stranger.DbRef, ErrorMessages.Notifications.PermissionDenied)).IsTrue();
 		await Assert.That(await IsGoingAsync(thing)).IsTrue();
 	}

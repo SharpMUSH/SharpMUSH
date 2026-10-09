@@ -36,7 +36,7 @@ public class PmatchFunctionTests
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {target}=#2"));
 
 		// Only a GLOBAL player-name match can resolve the target now.
-		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"pmatch({name})")))?.Message?.ToString();
+		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"pmatch({name})")))?.Message.ToString();
 
 		await Assert.That(result).IsEqualTo(target.ToString());
 	}

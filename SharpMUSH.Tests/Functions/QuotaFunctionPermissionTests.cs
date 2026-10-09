@@ -28,7 +28,7 @@ public class QuotaFunctionPermissionTests
 
 	private async Task<string> EvalAs(DBRef executor, string expr)
 		=> (await Factory.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expr)))
-			?.Message!.ToPlainText() ?? "<null>";
+			?.Message.ToPlainText() ?? "<null>";
 
 	private Task God(string command)
 		=> Factory.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
@@ -183,7 +183,7 @@ public class QuotaFunctionPermissionTests
 		var name = $"{namePrefix}{Guid.NewGuid():N}";
 		var created = await Factory.CommandParser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
 
-		var message = created.Message?.ToPlainText() ?? string.Empty;
+		var message = created.Message.ToPlainText();
 		await Assert.That(DBRef.TryParse(message, out _)).IsTrue()
 			.Because($"@create {name} must return a dbref, got: \"{message}\"");
 

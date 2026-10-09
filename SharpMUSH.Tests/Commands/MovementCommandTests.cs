@@ -85,12 +85,12 @@ public class MovementCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("NoDestRoom");
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("NoDestExit");
 		var openResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
-		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
+		var exitDbRef = DBRef.Parse(openResult.Message.ToPlainText().Trim());
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
@@ -109,12 +109,12 @@ public class MovementCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("FailAttrRoom");
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("FailAttrExit");
 		var openResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
-		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
+		var exitDbRef = DBRef.Parse(openResult.Message.ToPlainText().Trim());
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&FAILURE {exitName}=The door is bricked up."));
 
@@ -134,18 +134,18 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("UnlinkSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("UnlinkDest");
 		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
-		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+		var destDbRef = destResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("UnlinkExitWalk");
 		var openResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@open {exitName}={destDbRef}"));
-		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
+		var exitDbRef = DBRef.Parse(openResult.Message.ToPlainText().Trim());
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@unlink {exitName}"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
@@ -164,11 +164,11 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("LinkedSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("LinkedDest");
 		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
-		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+		var destDbRef = destResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
@@ -214,7 +214,7 @@ public class MovementCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelSelfRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		await Assert.That(roomDbRef).StartsWith("#");
 
@@ -234,10 +234,10 @@ public class MovementCommandTests
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelObjDest");
 
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
-		var objDbRef = createResult.Message!.ToPlainText()!.Trim();
+		var objDbRef = createResult.Message.ToPlainText()!.Trim();
 
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		await Assert.That(objDbRef).StartsWith("#");
 		await Assert.That(roomDbRef).StartsWith("#");
@@ -322,7 +322,7 @@ public class MovementCommandTests
 
 		var boxName = TestIsolationHelpers.GenerateUniqueName("LeaveBox");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boxName}"));
-		var boxDbRef = createResult.Message!.ToPlainText()!.Trim();
+		var boxDbRef = createResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {boxName}=ENTER_OK"));
 
@@ -355,11 +355,11 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarDestSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("VarDestTarget");
 		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
-		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+		var destDbRef = destResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
@@ -387,11 +387,11 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarEvalSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("VarEvalTarget");
 		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
-		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+		var destDbRef = destResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
@@ -419,11 +419,11 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarExitToSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("VarExitToTarget");
 		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
-		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+		var destDbRef = destResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
@@ -451,15 +451,15 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarArgSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 
 		var northName = TestIsolationHelpers.GenerateUniqueName("VarArgNorth");
 		var northResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {northName}"));
-		var northDbRef = northResult.Message!.ToPlainText()!.Trim();
+		var northDbRef = northResult.Message.ToPlainText()!.Trim();
 
 		var southName = TestIsolationHelpers.GenerateUniqueName("VarArgSouth");
 		var southResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {southName}"));
-		var southDbRef = southResult.Message!.ToPlainText()!.Trim();
+		var southDbRef = southResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
@@ -488,12 +488,12 @@ public class MovementCommandTests
 
 		var homeName = TestIsolationHelpers.GenerateUniqueName("HomeLinkHome");
 		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {homeName}"));
-		var homeDbRef = homeResult.Message!.ToPlainText()!.Trim();
+		var homeDbRef = homeResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link me={homeDbRef}"));
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("HomeLinkSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("HomeLinkExit");
@@ -517,7 +517,7 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarMissingSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("VarMissingExit");
@@ -541,11 +541,11 @@ public class MovementCommandTests
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("TelVarSource");
 		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
-		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("TelVarTarget");
 		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
-		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
+		var destDbRef = destResult.Message.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
@@ -573,7 +573,7 @@ public class MovementCommandTests
 
 		var homeName = TestIsolationHelpers.GenerateUniqueName("TelHomeTargetHome");
 		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {homeName}"));
-		var homeDbRef = homeResult.Message!.ToPlainText()!.Trim();
+		var homeDbRef = homeResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link me={homeDbRef}"));
 
 		// Opened where God stands, so God can see it to teleport the player through it.

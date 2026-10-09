@@ -31,7 +31,7 @@ public class LookFormatInheritanceTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var dig = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig Room_{token}"));
-		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(dig.Message.ToPlainText().Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={room}"));
 		return (player, parser, room);
 	}
@@ -48,7 +48,7 @@ public class LookFormatInheritanceTests
 
 		// A God-owned parent the mortal can neither read nor evaluate.
 		var created = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create Parent_{token}"));
-		var parent = DBRef.Parse(created.Message!.ToPlainText().Trim());
+		var parent = DBRef.Parse(created.Message.ToPlainText().Trim());
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NAMEFORMAT {parent}=PNAME_{token}:[name(%0)]"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CONFORMAT {parent}=PCON_{token}:[words(%0)]"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&EXITFORMAT {parent}=PEXIT_{token}:[words(%0)]"));

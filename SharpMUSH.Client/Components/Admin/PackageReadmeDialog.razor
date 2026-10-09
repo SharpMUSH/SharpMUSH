@@ -1,0 +1,40 @@
+@* A package's README in a dialog: open it with ShowAsync, which shows a progress bar until the
+   README arrives, or says there is none. *@
+@using SharpMUSH.Library.API
+@inject IStringLocalizer<SharedResource> Loc
+
+<MudDialog @bind-Visible="_visible" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent><MudText Typo="Typo.h6">@_title</MudText></TitleContent>
+    <DialogContent>
+        @if (_html is null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <div class="wiki-content">@((MarkupString)_html)</div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _visible = false)">@Loc["PkgClose"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _visible;
+    private string? _title;
+    private string? _html;
+
+    /// <summary>Opens the dialog on <paramref name="title"/> and shows the README <paramref name="readme"/> reads.</summary>
+    public async Task ShowAsync(string title, Func<Task<ApiResult<ReadmeResponse>>> readme)
+    {
+        _title = title;
+        _html = null;
+        _visible = true;
+        StateHasChanged();
+        _html = await readme() is ReadmeResponse response
+            ? response.Html
+            : $"<em>{Loc["PkgNoReadme"]}</em>";
+        StateHasChanged();
+    }
+}

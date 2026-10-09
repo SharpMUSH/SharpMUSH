@@ -42,16 +42,16 @@ public partial class Commands
 		if (evaluated.HadErrors)
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-			await NotifyService.Notify(executor, evaluated.Message!, executor);
+			await NotifyService.Notify(executor, evaluated.Message, executor);
 			return evaluated;
 		}
-		var message = evaluated.Message!;
+		var message = evaluated.Message;
 		var list = !contents && switches.Contains("LIST") || scope is EmitScope.Prompt or EmitScope.Omit;
 		var silent = switches.Contains("SILENT") || (!switches.Contains("NOISY") &&
 			(Configuration.CurrentValue.Compatibility.SilentPEmit
 			 || scope == EmitScope.Private && list && !ports));
 		var outcome = await CommunicationService.EmitWithOutcomeAsync(parser, EmitHelpers.Create(scope,
-			messageIndex == 0 ? "" : args["0"].Message!.ToPlainText(), message, list, silent, noSpoof,
+			messageIndex == 0 ? "" : args["0"].Message.ToPlainText(), message, list, silent, noSpoof,
 			!ports && switches.Contains("SPOOF"), ports));
 		if (outcome.Result.HadErrors) return outcome.Result;
 		var returnsMessage = definition.Name is "@EMIT" or "@NSEMIT" or "@NSOEMIT" or "@NSPROMPT";
@@ -146,9 +146,9 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var recipientsArg = args.ElementAtOrDefault(0).Value.Message!;
-		var defmsg = args.ElementAtOrDefault(1).Value.Message!;
-		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message!.ToPlainText();
+		var recipientsArg = args.ElementAtOrDefault(0).Value.Message;
+		var defmsg = args.ElementAtOrDefault(1).Value.Message;
+		var objectAttrArg = args.ElementAtOrDefault(2).Value.Message.ToPlainText();
 		var otherArgs = args
 			.Skip(3)
 			.Select(x =>
@@ -193,7 +193,7 @@ public partial class Commands
 
 		// ElementAtOrDefault past the end yields a default KeyValuePair whose Value is a null CallState,
 		// so every optional slot has to be read through a null-safe accessor.
-		string ArgAt(int index) => args.ElementAtOrDefault(index).Value?.Message?.ToPlainText() ?? string.Empty;
+		string ArgAt(int index) => args.ElementAtOrDefault(index).Value?.Message.ToPlainText() ?? string.Empty;
 
 		var victimName = ArgAt(0);
 		var actorName = ArgAt(1);

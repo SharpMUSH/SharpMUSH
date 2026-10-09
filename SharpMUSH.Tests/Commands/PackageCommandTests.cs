@@ -148,7 +148,7 @@ public class PackageCommandTests
 		var nonWizParser = Parser.Push(Parser.CurrentState with { Executor = nonWizardDbRef });
 
 		var result = await nonWizParser.CommandParse(MarkupText.Plain("@package #1"));
-		var resultText = result.Message?.ToPlainText() ?? "";
+		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
 	}

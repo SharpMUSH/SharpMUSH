@@ -199,6 +199,6 @@ public partial class StatsCommandTests
 			async () => result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@stats/{sw}")));
 
 		await Assert.That(messages.Any(m => m.StartsWith($"@stats/{sw}: SharpMUSH has no chunk allocator"))).IsTrue();
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
 	}
 }

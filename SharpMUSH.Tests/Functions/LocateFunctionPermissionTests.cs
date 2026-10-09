@@ -28,10 +28,10 @@ public class LocateFunctionPermissionTests
 
 	private async Task<string> EvalAs(DBRef executor, string expr)
 		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expr)))
-			?.Message!.ToPlainText() ?? "<null>";
+			?.Message.ToPlainText() ?? "<null>";
 
 	private async Task<string> God(string command)
-		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText() ?? "";
+		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText() ?? "";
 
 	[Test]
 	public async Task AMortalCannotSearchARemoteLookersNeighbours()

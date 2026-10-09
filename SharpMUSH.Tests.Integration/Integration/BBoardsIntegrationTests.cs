@@ -38,7 +38,7 @@ public partial class BBoardsIntegrationTests
 
 	private async Task<string> God(string command)
 	{
-		var said = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var said = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
 		await WebAppFactoryArg.QueueBarrierAsync();
 		return said;
 	}

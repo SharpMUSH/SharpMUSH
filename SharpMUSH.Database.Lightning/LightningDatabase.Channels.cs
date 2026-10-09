@@ -55,6 +55,7 @@ public partial class LightningDatabase
 			ModLock = record.ModLock,
 			Buffer = record.Buffer,
 			Mogrifier = record.Mogrifier,
+			OwnerDBRef = new DBRef((int)record.Owner),
 			Owner = new AsyncLazy<SharpPlayer>(_ => Task.FromResult(LoadChannelOwner(record.Owner, channelName))),
 			Members = new Lazy<IAsyncEnumerable<SharpChannel.MemberAndStatus>>(() =>
 				new FreshAsyncEnumerable<SharpChannel.MemberAndStatus>(ct => GetChannelMembersCoreAsync(key, ct)))

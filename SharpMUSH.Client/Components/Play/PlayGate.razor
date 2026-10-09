@@ -1,0 +1,35 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The pre-terminal states, centred in the play area: a spinner while the roster resolves, then a card that
+   says what is missing with the one action that fixes it. *@
+<div class="play-gate full-height">
+    @switch (State)
+    {
+        case PlayGateState.Resolving:
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            break;
+        case PlayGateState.RosterFailed:
+            <EmptyState Class="play-gate-card">
+                <MudText>@Loc["NavPlayRosterUnavailable"]</MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="OnRetry" Class="mt-2">
+                    @Loc["NavTryAgain"]
+                </MudButton>
+            </EmptyState>
+            break;
+        case PlayGateState.NeedsCharacter:
+            <EmptyState Class="play-gate-card">
+                <MudText>@Loc["NavPlayNeedsCharacter"]</MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters/new" Class="mt-2">
+                    @Loc["NavCreateCharacter"]
+                </MudButton>
+            </EmptyState>
+            break;
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlayGateState State { get; set; }
+
+    /// <summary>Asks for the roster again, from the failed state.</summary>
+    [Parameter] public EventCallback OnRetry { get; set; }
+}

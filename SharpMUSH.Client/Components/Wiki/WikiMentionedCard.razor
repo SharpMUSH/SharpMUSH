@@ -1,0 +1,18 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The aside's card of the characters the body links to, each a portrait tile. *@
+<KitCard Aside="true" Class="wiki-mentioned" Title="@Loc.Plural("NavWikiMentioned", "count", Mentioned.Count)">
+    <div class="wiki-mentioned-grid">
+        @foreach (var m in Mentioned)
+        {
+            <PortraitTile Name="@m.Name" ImageUrl="@ImageFor(m.Name)" Alt="@m.Name" Href="@m.Href" />
+        }
+    </div>
+</KitCard>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<WikiMention> Mentioned { get; set; } = [];
+
+    /// <summary>A character's picture by name; null shows initials.</summary>
+    [Parameter, EditorRequired] public Func<string, string?> ImageFor { get; set; } = null!;
+}

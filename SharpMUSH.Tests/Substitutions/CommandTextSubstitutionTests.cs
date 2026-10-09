@@ -29,7 +29,7 @@ public class CommandTextSubstitutionTests
 	{
 		// Created in its room, not teleported there: the look after a move is queued and could otherwise
 		// land among what a test counts.
-		_room = (await God($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText();
+		_room = (await God($"@dig {Guid.NewGuid():N}")).Message.ToPlainText();
 		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "CmdText",
 			DBRef.Parse(_room.Trim()));
 	}
@@ -172,7 +172,7 @@ public class CommandTextSubstitutionTests
 	public async Task ExitRecordsGoto()
 	{
 		var exit = $"cmdexit{Guid.NewGuid():N}"[..20];
-		var destination = (await God($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText();
+		var destination = (await God($"@dig {Guid.NewGuid():N}")).Message.ToPlainText();
 		await God($"@open {exit}={destination},,{_room}");
 
 		await Assert.That(await Queued($"@pemit me=pre;{exit};@pemit me=after u=%u"))

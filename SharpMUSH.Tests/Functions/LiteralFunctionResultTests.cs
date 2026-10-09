@@ -14,6 +14,6 @@ public class LiteralFunctionResultTests
 	{
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
 		await Assert.That(result!.HadErrors).IsEqualTo(expected);
-		if (expression.Contains("add(1,2)")) await Assert.That(result.Message!.Text).IsEqualTo("plaintextwrapper(3)");
+		if (expression.Contains("add(1,2)")) await Assert.That(result.Message.Text).IsEqualTo("plaintextwrapper(3)");
 	}
 }

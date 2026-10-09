@@ -31,7 +31,7 @@ public class GetCommandParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
 	private async Task<string> Eval(string expression)
-		=> (await GodParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		=> (await GodParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	private async Task<string> NameOf(DBRef obj) => await Eval($"[name({obj})]");
 
@@ -48,7 +48,7 @@ public class GetCommandParityTests
 	{
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		var room = dig.Message!.ToPlainText().Trim();
+		var room = dig.Message.ToPlainText().Trim();
 
 		foreach (var occupant in occupants)
 		{
@@ -157,7 +157,7 @@ public class GetCommandParityTests
 		var hat = await Thing("GetLitHat");
 		var (boxName, hatName) = (await NameOf(box), await NameOf(hat));
 		var literal = DBRef.Parse((await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {boxName}'s {hatName}"))).Message!.ToPlainText().Trim());
+			MarkupText.Plain($"@create {boxName}'s {hatName}"))).Message.ToPlainText().Trim());
 		var room = await Room("GetLiteralRoom", taker.DbRef, box, literal);
 		await God($"@set {box}=ENTER_OK");
 		await God($"@teleport/silent {hat}={box}");

@@ -18,7 +18,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("render(test %r newline)", "#-1 FUNCTION (RENDER) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
 	public async Task Render(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -36,14 +36,14 @@ public class FormattingFunctionUnitTests
 	[Arguments("render(plain,nosuchformat)", "#-1 INVALID SECOND ARGUMENT")]
 	public async Task RenderConvertsByFormatName(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task RenderToHtmlEscapesTheTextAndKeepsTheColour()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("render(ansi(r,a<b>c),html)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("render(ansi(r,a<b>c),html)")))!.Message;
 
 		await Assert.That(result.ToPlainText()).Contains("&lt;b&gt;");
 	}
@@ -51,7 +51,7 @@ public class FormattingFunctionUnitTests
 	[Test]
 	public async Task RenderToAnsiEmitsEscapeCodes()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("render(ansi(r,red),ansi)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("render(ansi(r,red),ansi)")))!.Message;
 
 		await Assert.That(result.ToPlainText()).Contains("\u001b[");
 	}
@@ -61,7 +61,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("html(b)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Tag(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -71,7 +71,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("tagwrap(a,href=\"https://sharpmush.com\",SharpMUSH)", "<a href=\"https://sharpmush.com\">SharpMUSH</a>")]
 	public async Task Tagwrap(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo(expected);
 	}
 
@@ -79,7 +79,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("endtag(b)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Endtag(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -96,7 +96,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("wrap(日本語です,4)", "日本\n語で\nす")]
 	public async Task Wrap(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -108,7 +108,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("strlen(abc)", "3")]
 	public async Task StringLengthMeasuresColumns(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -118,7 +118,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("align(1,日本語)", true)]
 	public async Task AlignTerminatesOnAColumnNarrowerThanItsText(string str, bool _)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message;
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -131,7 +131,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("ljust(foo,-3)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Ljust(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -145,7 +145,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("rjust(foo,-3)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Rjust(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -159,7 +159,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("center(foo,5,=,~)", "=foo~")]
 	public async Task Center(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -174,7 +174,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("table(abcdefg,3,20)", "abc")]
 	public async Task Table(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -202,7 +202,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("table(,5,10)", "")]
 	public async Task TableClampsItsWidths(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -223,7 +223,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("table(a b c d,5,15)", "a     b    \nc     d    ")]
 	public async Task TablePacksByTheRunningColumn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -254,7 +254,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("table(a b c d,5,16,%b,--)", "a    --b    \nc    --d    ")]
 	public async Task TableChargesAMultiCharacterSeparatorItsOwnWidth(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -271,7 +271,7 @@ public class FormattingFunctionUnitTests
 	[Test]
 	public async Task TablePadsTheDisplayWidthAndKeepsTheColour()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("table(ansi(r,ab) cd,4,10)")))!.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("table(ansi(r,ab) cd,4,10)")))!.Message;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("ab   cd  ")
 			.Because("each cell is four wide and the separator is one, so the line is nine characters");

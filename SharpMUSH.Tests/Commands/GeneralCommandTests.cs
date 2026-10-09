@@ -327,7 +327,7 @@ public class GeneralCommandTests
 			var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "RestartOwnThing");
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown/preserve {thing}={owner.DbRef}"));
 			var name = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"name({thing})")))!
-				.Message!.ToPlainText();
+				.Message.ToPlainText();
 			var recorder = WebAppFactoryArg.Notifications;
 			var before = recorder.CountFor(owner.DbRef);
 
@@ -536,7 +536,7 @@ public class GeneralCommandTests
 	{
 		var dig = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
-		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(dig.Message.ToPlainText().Trim());
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
 	}
@@ -807,7 +807,7 @@ public class GeneralCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("LookOutsideRoomDest");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look/outside"));
@@ -828,11 +828,11 @@ public class GeneralCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("LookOutsideOuter");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var boxName = TestIsolationHelpers.GenerateUniqueName("LookOutsideContainer");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boxName}"));
-		var boxDbRef = createResult.Message!.ToPlainText()!.Trim();
+		var boxDbRef = createResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {boxName}=ENTER_OK"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {boxDbRef}={roomDbRef}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={boxDbRef}"));
@@ -864,7 +864,7 @@ public class GeneralCommandTests
 		// KeyNotFoundException is swallowed upstream and surfaces only as a null Message.
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result.Message).IsNotNull();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
 	[Test]
@@ -876,7 +876,7 @@ public class GeneralCommandTests
 		var result = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("think lnum(10,1)"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("10 9 8 7 6 5 4 3 2 1");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("10 9 8 7 6 5 4 3 2 1");
 		await Assert.That(HeardBy(player.DbRef, "10 9 8 7 6 5 4 3 2 1", player.DbRef, INotifyService.NotificationType.Announce)).IsEqualTo(1);
 	}
 
@@ -893,13 +893,13 @@ public class GeneralCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestRoom");
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var decoyName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestDecoy");
 		var decoyResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@open {decoyName}={roomDbRef}"));
-		var decoyDbRef = decoyResult.Message!.ToPlainText()!.Trim();
+		var decoyDbRef = decoyResult.Message.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestExit");
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -921,19 +921,19 @@ public class GeneralCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestRoom");
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestThing");
 		var thingResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create {thingName}"));
-		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+		var thingDbRef = thingResult.Message.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestExit");
 		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
-		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		DBRef.TryParse(exitResult.Message.ToPlainText()!.Trim(), out var exitRef);
 		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
 		var destination = (await exit.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
 
@@ -953,20 +953,20 @@ public class GeneralCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermRoom");
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		// God's thing, not LINK_OK, brought within reach so the locate succeeds and only permission decides.
 		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermThing");
 		var thingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
-		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+		var thingDbRef = thingResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {thingDbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermExit");
 		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
-		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		DBRef.TryParse(exitResult.Message.ToPlainText()!.Trim(), out var exitRef);
 		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
 		var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
@@ -985,12 +985,12 @@ public class GeneralCommandTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkRoom");
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkThing");
 		var thingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
-		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
+		var thingDbRef = thingResult.Message.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {thingDbRef}={roomDbRef}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=LINK_OK"));
 
@@ -998,7 +998,7 @@ public class GeneralCommandTests
 		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
-		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
+		DBRef.TryParse(exitResult.Message.ToPlainText()!.Trim(), out var exitRef);
 		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
 		var destination = (await exit.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
 

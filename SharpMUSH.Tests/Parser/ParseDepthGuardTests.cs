@@ -30,7 +30,7 @@ public class ParseDepthGuardTests
 		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		return result.Message!.ToPlainText();
+		return result.Message.ToPlainText();
 	}
 
 	// Above the guard (1000) so it must fire, and — for the largest — past the observed

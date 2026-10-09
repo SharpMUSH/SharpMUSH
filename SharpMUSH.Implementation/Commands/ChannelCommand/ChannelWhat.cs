@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
@@ -36,13 +37,13 @@ public static class ChannelWhat
 
 			// One unresolvable owner must not take the whole sweep with it — see
 			// ChannelHelper.TryResolveOwner.
-			var owner = await ChannelHelper.TryResolveOwner(channel);
+			var owner = await ChannelHelper.TryResolveOwner(mediator, channel);
 
 			lines.Add(channel.Name);
 			lines.Add(MarkupText.Concat(MarkupText.Plain("Description: "), channel.Description));
-			lines.Add(MarkupText.Plain(owner is null
-				? "Owner: #-1"
-				: $"Owner: {owner.Object.Name}(#{owner.Object.DBRef.Number})"));
+			lines.Add(MarkupText.Plain(owner is SharpPlayer player
+				? $"Owner: {player.Object.Name}(#{player.Object.DBRef.Number})"
+				: "Owner: #-1"));
 
 			// extchat.c:2757 — the mogrifier line only appears when one is set.
 			if (!string.IsNullOrEmpty(channel.Mogrifier))

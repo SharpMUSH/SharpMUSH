@@ -28,22 +28,22 @@ public partial class Commands
 		if (switches.Contains("CANCEL"))
 			return await InputResult(parser, await sessions.CancelAsync(parser));
 		if (switches.Contains("RESCUE"))
-			return await InputRescue(parser, arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "");
+			return await InputRescue(parser, arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "");
 		if (switches.Contains("PROMPT"))
 			return await InputResult(parser, await sessions.PromptAsync(parser, arguments.GetValueOrDefault("0")?.Message ?? MString.Empty));
-		var path = arguments.GetValueOrDefault("0")?.Message?.Text ?? "";
+		var path = arguments.GetValueOrDefault("0")?.Message.Text ?? "";
 		var separator = path.IndexOf('/');
 		if (separator < 1 || separator == path.Length - 1 || !arguments.TryGetValue("1", out var prompt))
 			return await InputError(parser, InputSessionService.InvalidCallback);
 		var seconds = 60;
 		if (arguments.TryGetValue("2", out var timeout)
-			&& (!int.TryParse(timeout.Message?.Text, NumberStyles.None, CultureInfo.InvariantCulture, out seconds) || seconds is < 1 or > 3600))
+			&& (!int.TryParse(timeout.Message.Text, NumberStyles.None, CultureInfo.InvariantCulture, out seconds) || seconds is < 1 or > 3600))
 			return await InputError(parser, InputSessionService.InvalidTimeout);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, path[..separator], LocateFlags.All) switch
 		{
 			AnySharpObject target => await InputResult(parser, await sessions.StartAsync(parser, target.Object().DBRef,
-				path[(separator + 1)..], prompt.Message ?? MString.Empty, TimeSpan.FromSeconds(seconds))),
+				path[(separator + 1)..], prompt.Message, TimeSpan.FromSeconds(seconds))),
 			Error<CallState> error => error.Value
 		};
 	}

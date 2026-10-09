@@ -340,15 +340,11 @@ public class PackagePlanService : IPackagePlanService
 		}
 
 		// Baselines whose attribute vanished from the manifest: delete / conflict / cleanup.
-		foreach (var baseline in inputs.Baselines)
+		// Not those still in the manifest, nor those whose whole object is being deleted (the object action covers it).
+		var vanished = inputs.Baselines.Where(baseline => !manifestKeys.Contains((baseline.Objid, baseline.Attribute.ToUpperInvariant()))
+			&& !deletedObjids.Contains(baseline.Objid));
+		foreach (var baseline in vanished)
 		{
-			if (manifestKeys.Contains((baseline.Objid, baseline.Attribute.ToUpperInvariant()))
-				|| deletedObjids.Contains(baseline.Objid))
-			{
-				// Still in the manifest, or the whole object is being deleted (object action covers it).
-				continue;
-			}
-
 			var live = inputs.Live.Objects.GetValueOrDefault(baseline.Objid);
 			string? liveValue = null;
 			if (live is not null && live.Attributes.TryGetValue(baseline.Attribute, out var lv))

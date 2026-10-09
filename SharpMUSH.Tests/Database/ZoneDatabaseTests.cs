@@ -25,11 +25,11 @@ public class ZoneDatabaseTests
 	public async ValueTask SetObjectZone()
 	{
 		var zoneResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBZoneMaster");
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 		var zoneObject = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
 
 		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBZonedObject");
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var zonedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Mediator.Send(new SetObjectZoneCommand(zonedObject, zoneObject));
@@ -45,11 +45,11 @@ public class ZoneDatabaseTests
 	public async ValueTask UnsetObjectZone()
 	{
 		var zoneResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBUnsetZoneMaster");
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 		var zoneObject = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
 
 		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBUnsetZonedObject");
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var zonedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Mediator.Send(new SetObjectZoneCommand(zonedObject, zoneObject));
@@ -71,15 +71,15 @@ public class ZoneDatabaseTests
 	public async ValueTask UpdateObjectZone()
 	{
 		var zone1Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBUpdateZone1");
-		var zone1DbRef = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
+		var zone1DbRef = DBRef.Parse(zone1Result.Message.ToPlainText()!);
 		var zone1Object = (await Mediator.Send(new GetObjectNodeQuery(zone1DbRef))).Expect<AnySharpObject>();
 
 		var zone2Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBUpdateZone2");
-		var zone2DbRef = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
+		var zone2DbRef = DBRef.Parse(zone2Result.Message.ToPlainText()!);
 		var zone2Object = (await Mediator.Send(new GetObjectNodeQuery(zone2DbRef))).Expect<AnySharpObject>();
 
 		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBUpdateZonedObject");
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var zonedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Mediator.Send(new SetObjectZoneCommand(zonedObject, zone1Object));
@@ -100,7 +100,7 @@ public class ZoneDatabaseTests
 	public async ValueTask SetObjectZoneToNull()
 	{
 		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBNullZoneObject");
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var zonedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		// This bypasses the Mediator and tests the database implementation
@@ -117,15 +117,15 @@ public class ZoneDatabaseTests
 	public async ValueTask MultipleObjectsSameZone()
 	{
 		var zoneResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBSharedZone");
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 		var zoneObject = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
 
 		var obj1Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBSharedZoneObj1");
-		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
+		var obj1DbRef = DBRef.Parse(obj1Result.Message.ToPlainText()!);
 		var obj1 = (await Mediator.Send(new GetObjectNodeQuery(obj1DbRef))).Expect<AnySharpObject>();
 
 		var obj2Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBSharedZoneObj2");
-		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
+		var obj2DbRef = DBRef.Parse(obj2Result.Message.ToPlainText()!);
 		var obj2 = (await Mediator.Send(new GetObjectNodeQuery(obj2DbRef))).Expect<AnySharpObject>();
 
 		await Mediator.Send(new SetObjectZoneCommand(obj1, zoneObject));
@@ -147,15 +147,15 @@ public class ZoneDatabaseTests
 	{
 		// An object can be both a zone master and be zoned to another zone
 		var topZoneResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBTopZone");
-		var topZoneDbRef = DBRef.Parse(topZoneResult.Message!.ToPlainText()!);
+		var topZoneDbRef = DBRef.Parse(topZoneResult.Message.ToPlainText()!);
 		var topZone = (await Mediator.Send(new GetObjectNodeQuery(topZoneDbRef))).Expect<AnySharpObject>();
 
 		var midZoneResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBMidZone");
-		var midZoneDbRef = DBRef.Parse(midZoneResult.Message!.ToPlainText()!);
+		var midZoneDbRef = DBRef.Parse(midZoneResult.Message.ToPlainText()!);
 		var midZone = (await Mediator.Send(new GetObjectNodeQuery(midZoneDbRef))).Expect<AnySharpObject>();
 
 		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DBNestedZonedObj");
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Mediator.Send(new SetObjectZoneCommand(midZone, topZone));

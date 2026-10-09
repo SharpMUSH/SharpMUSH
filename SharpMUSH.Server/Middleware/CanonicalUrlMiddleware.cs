@@ -36,13 +36,10 @@ public sealed partial class CanonicalUrlMiddleware(RequestDelegate next, ILogger
 		var req = context.Request;
 		var path = req.Path.Value ?? "/";
 
-		foreach (var exempt in ExemptPrefixes)
+		if (ExemptPrefixes.Any(exempt => path.StartsWith(exempt, StringComparison.OrdinalIgnoreCase)))
 		{
-			if (path.StartsWith(exempt, StringComparison.OrdinalIgnoreCase))
-			{
-				await next(context);
-				return;
-			}
+			await next(context);
+			return;
 		}
 
 		if (HasFileExtension(path))

@@ -73,7 +73,7 @@ public class LoginsConfigTests
 		// A private wizard can still connect with logins disabled.
 		var staffHandle = await AllocateHandleAsync();
 		var result = await Parser.CommandParse(staffHandle, ConnectionService, MarkupText.Plain($"connect {staffName} staff-password-1"));
-		await Assert.That((result.Message?.ToString() ?? "").Contains("#-1")).IsFalse();
+		await Assert.That((result.Message.ToString()).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(staffHandle)?.Ref?.Number).IsEqualTo(staffId.Number);
 
 		// Guest login also refused.

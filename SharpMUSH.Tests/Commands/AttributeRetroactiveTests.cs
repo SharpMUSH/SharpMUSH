@@ -116,7 +116,7 @@ public class AttributeRetroactiveTests
 		var name = AttributeName();
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "RetroOwner");
 		var created = await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("@create RetroOwned"));
-		var thing = DBRef.Parse(created.Message!.ToPlainText());
+		var thing = DBRef.Parse(created.Message.ToPlainText());
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&{name} {thing}=value"));
 		var ownerBefore = await (await CopyOn(thing, name)).Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(ownerBefore!.Object.DBRef.Number).IsEqualTo(mortal.DbRef.Number).Because("precondition");

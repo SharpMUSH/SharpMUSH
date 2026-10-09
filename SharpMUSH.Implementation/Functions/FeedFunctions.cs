@@ -27,7 +27,7 @@ public partial class Functions
 	private static IFeedService FeedRules(IMUSHCodeParser parser) => parser.ServiceProvider.GetRequiredService<IFeedService>();
 
 	private static string FeedArg(IMUSHCodeParser parser, int index)
-		=> parser.CurrentState.Arguments.GetValueOrDefault(index.ToString(CultureInfo.InvariantCulture))?.Message?.ToPlainText().Trim() ?? "";
+		=> parser.CurrentState.Arguments.GetValueOrDefault(index.ToString(CultureInfo.InvariantCulture))?.Message.ToPlainText().Trim() ?? "";
 
 	/// <summary>A kind the executor may run, or the error a function returns in its place.</summary>
 	private async ValueTask<Result<SharpFeedKind>> RunnableKindAsync(IMUSHCodeParser parser, string kindName)

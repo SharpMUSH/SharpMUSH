@@ -363,7 +363,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask God_CanSetTrustFlag()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create GodTrustFlagTestObj"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {newDb}=TRUST"));
 
@@ -389,7 +389,7 @@ public class FlagAndPowerCommandTests
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerGrant")}"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 
@@ -404,7 +404,7 @@ public class FlagAndPowerCommandTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("PowerGrantMsg");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
@@ -425,7 +425,7 @@ public class FlagAndPowerCommandTests
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerRevoke")}"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");
@@ -442,7 +442,7 @@ public class FlagAndPowerCommandTests
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerMulti")}"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder Boot"));
 		var granted = await PowerNamesOf(newDb);
@@ -463,7 +463,7 @@ public class FlagAndPowerCommandTests
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerUnknown")}"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=NOSUCHPOWERXYZ"));
@@ -547,7 +547,7 @@ public class FlagAndPowerCommandTests
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerFnRevoke")}"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");

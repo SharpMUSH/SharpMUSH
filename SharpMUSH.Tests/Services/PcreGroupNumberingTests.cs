@@ -48,8 +48,8 @@ public class PcreGroupNumberingTests
 
 		var arguments = PatternArguments.Capture(regex, isRegex: true, text);
 
-		await Assert.That(arguments["1"].Message!.ToPlainText()).IsEqualTo("north");
-		await Assert.That(arguments["2"].Message!.ToPlainText()).IsEqualTo("fast");
-		await Assert.That(arguments["dir"].Message!.ToPlainText()).IsEqualTo("north");
+		await Assert.That(arguments["1"].Message.ToPlainText()).IsEqualTo("north");
+		await Assert.That(arguments["2"].Message.ToPlainText()).IsEqualTo("fast");
+		await Assert.That(arguments["dir"].Message.ToPlainText()).IsEqualTo("north");
 	}
 }

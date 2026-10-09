@@ -104,6 +104,11 @@ public partial class LightningDatabase : IWikiStore
 	private static bool WikiVisibilityAdmits(WikiVisibility visibility, byte[] value)
 		=> visibility.Admits(value[0] == 1, Keys.ReadStr(value.AsSpan(1)));
 
+	/// <summary>Whether <paramref name="visibility"/> admits an index entry, reading its page only when a hidden rule needs it.</summary>
+	private static bool WikiEntryAdmitted(ITx tx, (byte[] Key, byte[] Value) entry, WikiVisibility visibility)
+		=> WikiVisibilityAdmits(visibility, entry.Value)
+			&& (visibility.Hidden is null || ReadWikiPage(tx, WikiIndexPageKey(entry.Key)) is { } page && visibility.Admits(page));
+
 	private static long WikiIndexPageKey(byte[] key) => Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
 
 	private static byte[] WikiRecentKey(long pageKey, WikiPageRecord r)
@@ -344,11 +349,8 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult(Store.Read(tx =>
 		{
 			int published = 0, drafts = 0;
-			foreach (var (key, value) in tx.Range(Tables.WikiByNamespace, []))
+			foreach (var (_, value) in tx.Range(Tables.WikiByNamespace, []).Where(entry => WikiEntryAdmitted(tx, entry, visibility)))
 			{
-				if (!WikiVisibilityAdmits(visibility, value)) continue;
-				if (visibility.Hidden is not null && !(ReadWikiPage(tx, WikiIndexPageKey(key)) is { } page && visibility.Admits(page)))
-					continue;
 				if (value[0] == 1) published++;
 				else drafts++;
 			}
@@ -361,11 +363,8 @@ public partial class LightningDatabase : IWikiStore
 		{
 			// The index key opens with the upper-cased category and a separator; category keys are lower case.
 			var counts = new Dictionary<string, int>(StringComparer.Ordinal);
-			foreach (var (key, value) in tx.Range(Tables.WikiByCategory, []))
+			foreach (var (key, _) in tx.Range(Tables.WikiByCategory, []).Where(entry => WikiEntryAdmitted(tx, entry, visibility)))
 			{
-				if (!WikiVisibilityAdmits(visibility, value)) continue;
-				if (visibility.Hidden is not null && !(ReadWikiPage(tx, WikiIndexPageKey(key)) is { } page && visibility.Admits(page)))
-					continue;
 				var category = Keys.ReadStr(key.AsSpan(0, key.AsSpan().IndexOf(Keys.Sep[0]))).ToLowerInvariant();
 				counts[category] = counts.GetValueOrDefault(category) + 1;
 			}

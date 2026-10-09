@@ -49,13 +49,8 @@ public class DefaultPackagesBootstrapService(
 
 		var declined = (await serverData.GetExpandedServerDataAsync<DeclinedBundledPackages>())?.PackageIds ?? [];
 
-		foreach (var package in BundledPackages.All)
+		foreach (var package in BundledPackages.All.Where(HasHandler))
 		{
-			if (!HasHandler(package))
-			{
-				continue;
-			}
-
 			// A package over a plugin that is turned off or failed to load would install commands that call into nothing.
 			if (GameFeatureService.All.FirstOrDefault(a => a.PackageId == package.PackageId)?.RequiredPlugin is { } plugin
 					&& !plugins.Plugins.Any(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase)))

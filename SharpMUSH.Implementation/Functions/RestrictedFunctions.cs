@@ -22,8 +22,8 @@ public partial class Functions
 	public async ValueTask<CallState> RestrictedExpression(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
 		var args = parser.CurrentState.Arguments;
-		if ((args["0"].Message?.Length ?? 0) > 1024) return new CallState(EvaluationRestrictions.Error);
-		var allowlist = args["0"].Message?.ToPlainText() ?? "";
+		if (args["0"].Message.Length > 1024) return new CallState(EvaluationRestrictions.Error);
+		var allowlist = args["0"].Message.ToPlainText();
 		var operations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		foreach (var name in allowlist.Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
@@ -32,11 +32,11 @@ public partial class Functions
 				return new CallState(EvaluationRestrictions.Error);
 			operations.Add(operation);
 		}
-		if (FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, args.Values.Select(value => value.Message ?? MarkupText.Empty)))
+		if (FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, args.Values.Select(value => value.Message)))
 			return FunctionLimits.RejectOutput(parser.CurrentState);
 		// The source and literal inputs remain live throughout the nested parse.
 		using var retainedSource = RestrictedTextRetention.Enter(parser.CurrentState, recognizedEntry: true);
-		foreach (var argument in args.Values) retainedSource!.Add(argument.Message?.Length ?? 0);
+		foreach (var argument in args.Values) retainedSource!.Add(argument.Message.Length);
 		using var scope = new EvaluationRestrictions(operations).Enter();
 		var parent = parser.CurrentState;
 		var inputs = Enumerable.Range(0, args.Count - 2).ToDictionary(i => i.ToString(), i => new CallState(args[(i + 2).ToString()].Message));
@@ -57,6 +57,6 @@ public partial class Functions
 			Restrictions = EvaluationRestrictions.Current,
 			OutputLimit = parent.OutputLimit
 		};
-		return await parser.FromState(state).FunctionParse(args["1"].Message ?? MarkupText.Empty) ?? CallState.Empty;
+		return await parser.FromState(state).FunctionParse(args["1"].Message) ?? CallState.Empty;
 	}
 }

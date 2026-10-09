@@ -125,7 +125,7 @@ public static class TeleportHelpers
 		// Teleporting to an exit means going where it leads. That is resolved per target inside the loop,
 		// because a home-linked exit leads somewhere different for each mover.
 		var destinationExit = validDestination is SharpExit exitDestination ? exitDestination : null;
-		var fixedDestination = destinationExit is null ? validDestination.AsContainer : null;
+		var fixedDestination = validDestination.AsOptionalContainer is AnySharpContainer container ? container : null;
 
 		foreach (var obj in toTeleportList.Select(x => x switch
 		{
@@ -155,7 +155,7 @@ public static class TeleportHelpers
 	{
 		var locateTarget = await services.LocateService.LocateAndNotifyIfInvalid(parser, executor, executor,
 			objectName, LocateFlags.All);
-		if (locateTarget is not AnySharpObject target || target.IsRoom)
+		if (locateTarget is not AnySharpObject target || target.AsOptionalContent is not AnySharpContent targetContent)
 		{
 			// Rooms cannot be teleported (PennMUSH src/wiz.c).
 			if (locateTarget.IsRoom)
@@ -170,8 +170,6 @@ public static class TeleportHelpers
 
 			return;
 		}
-
-		var targetContent = target.AsContent;
 
 		AnySharpContainer destinationContainer;
 
@@ -381,11 +379,11 @@ public static class TeleportHelpers
 	{
 		// move.c:402-404: !Mobile, no home, a home the mover is carrying, and being its own home are
 		// one refusal — "Bad destination.".
-		if ((!mover.IsPlayer && !mover.IsThing)
-				|| await mover.AsContent.Home() is not AnySharpContainer homeLocation
+		if (mover.AsOptionalContent is not AnySharpContent { IsExit: false } mobile
+				|| await mobile.Home() is not AnySharpContainer homeLocation
 				|| homeLocation.Object().DBRef.Number < 0
 				|| homeLocation.Object().DBRef.Equals(mover.Object().DBRef)
-				|| await services.MoveService.WouldCreateLoop(mover.AsContent, homeLocation))
+				|| await services.MoveService.WouldCreateLoop(mobile, homeLocation))
 		{
 			await services.NotifyService.NotifyLocalized(mover,
 				nameof(ErrorMessages.Notifications.BadDestination), mover);
@@ -416,7 +414,7 @@ public static class TeleportHelpers
 
 		// move.c:418. safe_tel steals the possessions the mover does not control, and the automatic
 		// look it reaches through enter_room is the only one the command needs.
-		var moveResult = await services.MoveService.SafeTel(parser, mover.AsContent, homeLocation,
+		var moveResult = await services.MoveService.SafeTel(parser, mobile, homeLocation,
 			noMoveMsgs: false, mover.Object().DBRef, "home");
 
 		if (moveResult is Error<string> error)
@@ -453,14 +451,14 @@ public static class TeleportHelpers
 				nameof(ErrorMessages.Notifications.TooManyContainers), target);
 
 			// wiz.c:531: a home that is the container they are stuck in would leave them stuck.
-			var targetContent = target.AsContent;
-			if (await targetContent.Home() is AnySharpContainer home
+			if (target.AsOptionalContent is AnySharpContent targetContent
+					&& await targetContent.Home() is AnySharpContainer home
 					&& home.Object().DBRef.Equals((await targetContent.Location()).Object().DBRef)
 					&& await services.Mediator.Send(new GetObjectNodeQuery(
 						new DBRef((int)services.Configuration.CurrentValue.Database.PlayerStart)))
-						is AnySharpObject { IsContainer: true } playerStart)
+						is AnySharpObject { AsOptionalContainer: AnySharpContainer playerStart })
 			{
-				await services.Mediator.Send(new SetObjectHomeCommand(targetContent, playerStart.AsContainer));
+				await services.Mediator.Send(new SetObjectHomeCommand(targetContent, playerStart));
 			}
 
 			await SendHomeAsync(parser, services, target);
@@ -678,12 +676,12 @@ public static class TeleportHelpers
 		if (linkType == LinkTypeHome)
 		{
 			// PennMUSH do_move (move.c:451): an exit linked to HOME sends the mover to their own home.
-			if (!mover.IsContent)
+			if (mover.AsOptionalContent is not AnySharpContent moving)
 			{
 				return ExitDestinationFailure.Unlinked;
 			}
 
-			return await mover.AsContent.Home() switch
+			return await moving.Home() switch
 			{
 				AnySharpContainer moverHome => moverHome,
 				None => ExitDestinationFailure.Unlinked
@@ -749,7 +747,7 @@ public static class TeleportHelpers
 
 		// PennMUSH only permits a variable destination the exit itself could have been linked to
 		// (move.c:457), and an exit is not somewhere you can end up.
-		if (located is not AnySharpObject destination || !destination.IsContainer
+		if (located is not AnySharpObject destination || destination.AsOptionalContainer is not AnySharpContainer container
 				|| !await ExitCanLinkTo(services, exitObject, destination))
 		{
 			await services.NotifyService.NotifyLocalized(executor,
@@ -763,7 +761,7 @@ public static class TeleportHelpers
 			return null;
 		}
 
-		return destination.AsContainer;
+		return container;
 	}
 
 	/// <summary>

@@ -54,7 +54,7 @@ public class AttributeInheritanceTests
 
 	private async Task<DBRef> Thing(string name)
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		return await _db.CreateThingAsync(name, room, await God(), room);
 	}
 

@@ -1,0 +1,205 @@
+@using SharpMUSH.Client.Models.Roles
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject IStringLocalizer<SharedResource> Loc
+@inject RoleRegistryClient RoleRegistry
+@inject ISnackbar Snackbar
+
+@* The Assignments tab: look an account up by username, then its roles as removable chips, its overrides,
+   and the roles it can still be given. *@
+<KitCard Class="roleadmin-assign">
+    <div class="ra-search">
+        <MudIcon Icon="@Icons.Material.Filled.Search" Class="ra-ico ra-ico--faint" />
+        <input value="@Lookup.Name" placeholder="@Loc["RolSearchByUsername"]" aria-label="@Loc["RolSearchByUsername"]"
+               @oninput="@(e => Lookup.Name = e.Value?.ToString() ?? string.Empty)"
+               @onkeydown="OnLookupKeyDown" />
+        <button type="button" class="ra-btn ra-btn--primary" @onclick="LookUpAsync" disabled="@Lookup.Looking">
+            @if (Lookup.Looking)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <text>@Loc["RolLookUp"]</text>
+            }
+        </button>
+    </div>
+
+    @if (Lookup.LookedUp && Lookup.Account is null)
+    {
+        <AdminEmptyDetail Prefix="ra" Icon="@Icons.Material.Filled.PersonOff" Text="@Loc["RolNoAccountFound", Lookup.Name]" />
+    }
+    else if (Lookup.Account is { } account)
+    {
+        <div class="ra-account-card">
+            <div class="ra-account-head">
+                <div class="ra-grow">
+                    <div class="ra-titles">
+                        <h2 class="ra-detail-name">@account.Username</h2>
+                        @if (account.Status != "Active")
+                        {
+                            <span class="ra-badge ra-badge--danger">@Loc[$"AdmAccountStatus{account.Status}"]</span>
+                        }
+                    </div>
+                    <div class="ra-account-email">@account.Email</div>
+                </div>
+            </div>
+
+            <div class="ra-section">
+                <div class="ra-section-label">@Loc["RolAssignedRoles"]</div>
+                <div class="ra-chips">
+                    @if (account.RoleSlugs.Length == 0)
+                    {
+                        <span class="ra-empty">@Loc["RolNoRolesAssigned"]</span>
+                    }
+                    @foreach (var s in account.RoleSlugs)
+                    {
+                        var role = Roles.FirstOrDefault(r => r.Slug == s);
+                        <span class="ra-chip">
+                            <span class="ra-dot ra-dot--sm" style="@($"background:{RoleColor.Safe(role?.Color ?? "#888")};")"></span>
+                            @(role?.Name ?? s)
+                            <button type="button" class="ra-chip-x" title="@Loc["RolRemoveRole"]" aria-label="@Loc["RolRemoveRole"]"
+                                    @onclick="@(() => RemoveAssignmentAsync(s))">×</button>
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <div class="ra-section">
+                <div class="ra-section-label">@Loc["RolOverrides"]</div>
+                <div class="ra-chips">
+                    @if (account.Overrides.Count == 0)
+                    {
+                        <span class="ra-empty">@Loc["RolNoOverrides"]</span>
+                    }
+                    @foreach (var (scope, state) in account.Overrides.OrderBy(o => o.Key, StringComparer.Ordinal))
+                    {
+                        var sc = scope;
+                        <span class="ra-chip">
+                            @Loc[state == "Allow" ? "RolAllow" : "RolDeny"]: @sc
+                            <button type="button" class="ra-chip-x" title="@Loc["RolClearOverride"]" aria-label="@Loc["RolClearOverride"]"
+                                    @onclick="@(() => SetOverrideAsync(sc, "Inherit"))">×</button>
+                        </span>
+                    }
+                </div>
+                <div class="ra-override-add">
+                    <select class="ra-input" aria-label="@Loc["RolOverrideScope"]" value="@Lookup.OverrideScope"
+                            @onchange="@(e => Lookup.OverrideScope = e.Value?.ToString() ?? string.Empty)">
+                        @foreach (var scope in OverridableScopes)
+                        {
+                            <option value="@scope">@scope</option>
+                        }
+                    </select>
+                    <button type="button" class="ra-btn" @onclick="@(() => SetOverrideAsync(Lookup.OverrideScope, "Allow"))">@Loc["RolAllow"]</button>
+                    <button type="button" class="ra-btn ra-btn--danger" @onclick="@(() => SetOverrideAsync(Lookup.OverrideScope, "Deny"))">@Loc["RolDeny"]</button>
+                </div>
+                <div class="ra-field-help">@Loc["RolOverridesHelp"]</div>
+            </div>
+
+            @if (Assignable(account) is { Count: > 0 } assignable)
+            {
+                <div class="ra-section">
+                    <div class="ra-section-label">@Loc["RolAddRole"]</div>
+                    <div class="ra-chips">
+                        @foreach (var r in assignable)
+                        {
+                            <button type="button" class="ra-add-chip" @onclick="@(() => AddAssignmentAsync(r.Slug))">
+                                <span class="ra-dot ra-dot--sm" style="@($"background:{RoleColor.Safe(r.Color)};")"></span>
+                                @r.Name
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" />
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <AdminEmptyDetail Prefix="ra" Icon="@Icons.Material.Filled.ManageAccounts" Text="@Loc["RolSearchAccountPrompt"]" />
+    }
+</KitCard>
+
+@code {
+    /// <summary>The lookup and the account it found, kept by the page across tabs.</summary>
+    [Parameter, EditorRequired] public RoleAccountLookup Lookup { get; set; } = null!;
+
+    /// <summary>The game's roles, highest first.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<PortalRoleModel> Roles { get; set; } = [];
+
+    /// <summary>The scopes an account override may name.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> OverridableScopes { get; set; } = [];
+
+    /// <summary>The roles the account does not hold that can be given by hand.</summary>
+    private List<PortalRoleModel> Assignable(AccountRolesModel account) =>
+        Roles.Where(r => !BuiltInRoles.IsImplicit(r.Slug) && !account.RoleSlugs.Contains(r.Slug)).ToList();
+
+    private async Task OnLookupKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter") await LookUpAsync();
+    }
+
+    private async Task LookUpAsync()
+    {
+        var name = Lookup.Name.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            Snackbar.Add(Loc["RolEnterUsername"], Severity.Warning);
+            return;
+        }
+
+        Lookup.Looking = true;
+        Lookup.Account = await RoleRegistry.LookupAccountAsync(name);
+        Lookup.Looking = false;
+        Lookup.LookedUp = true;
+    }
+
+    private async Task AddAssignmentAsync(string slug)
+    {
+        if (Lookup.Account is null) return;
+
+        switch (await RoleRegistry.AssignAsync(Lookup.Account.AccountId, slug))
+        {
+            case Success:
+                Snackbar.Add(Loc["RolAssigned", slug], Severity.Success);
+                Lookup.Account = await RoleRegistry.LookupAccountAsync(Lookup.Account.Username);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolAssignFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+
+    private async Task RemoveAssignmentAsync(string slug)
+    {
+        if (Lookup.Account is null) return;
+
+        switch (await RoleRegistry.RemoveAsync(Lookup.Account.AccountId, slug))
+        {
+            case Success:
+                Snackbar.Add(Loc["RolRemoved", slug], Severity.Success);
+                Lookup.Account = await RoleRegistry.LookupAccountAsync(Lookup.Account.Username);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolRemoveFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+
+    private async Task SetOverrideAsync(string scope, string state)
+    {
+        if (Lookup.Account is null || string.IsNullOrEmpty(scope)) return;
+
+        switch (await RoleRegistry.SetOverrideAsync(Lookup.Account.AccountId, scope, state))
+        {
+            case Success:
+                Snackbar.Add(Loc["RolOverrideSaved", scope], Severity.Success);
+                Lookup.Account = await RoleRegistry.LookupAccountAsync(Lookup.Account.Username);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+}

@@ -19,7 +19,7 @@ public class NameListCallbackTests
 		var connection = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		var created = await WebAppFactoryArg.CommandParser.CommandParse(1, connection,
 			MarkupText.Plain($"@create NameListCallback_{Guid.NewGuid():N}"));
-		var dbref = DBRef.Parse(created.Message!.ToPlainText());
+		var dbref = DBRef.Parse(created.Message.ToPlainText());
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var obj = (await mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
@@ -35,7 +35,7 @@ public class NameListCallbackTests
 		var missing = $"Missing_{Guid.NewGuid():N}";
 		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(
 			MarkupText.Plain($"[namelist({missing},{obj}/CALLBACK)]|[r(namelist_callback)]"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo($"#-1|{missing}|#-1");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo($"#-1|{missing}|#-1");
 	}
 
 	[Test]
@@ -46,7 +46,7 @@ public class NameListCallbackTests
 			MarkupText.Plain($"namelist(Missing_{Guid.NewGuid():N},{obj}/CALLBACK)"));
 		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(
 			MarkupText.Plain($"hasattr({obj},COMMAND_EXECUTED)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("0");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("0");
 	}
 
 	[Test]
@@ -56,6 +56,6 @@ public class NameListCallbackTests
 		// not the live object's, does not.
 		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(
 			MarkupText.Plain("namelist(#1 #99999999 #1:1)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#1 #-1 #-1");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#1 #-1 #-1");
 	}
 }

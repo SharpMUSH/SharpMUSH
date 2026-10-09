@@ -19,7 +19,7 @@ public partial class Functions
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		var caller = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var owner = (await caller.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
-		var name = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var registry = parser.ServiceProvider.GetRequiredService<IUserDefinedFunctionService>();
 		UserDefinedFunction? entry;
 		try

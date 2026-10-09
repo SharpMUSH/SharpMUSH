@@ -23,7 +23,7 @@ public class PennMUSHImportTimestampTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	private async Task<string> Eval(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
 
 	// ---- the unit conversion --------------------------------------------------------------------
 
@@ -308,6 +308,6 @@ public class PennMUSHImportTimestampTests
 	{
 		var limbo = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>();
 		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
-		return (limbo.AsContainer, god);
+		return (limbo.AsOptionalContainer.Expect<AnySharpContainer>(), god);
 	}
 }

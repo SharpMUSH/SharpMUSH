@@ -1,0 +1,52 @@
+@* One of the Softcode Editor's side panes inside its panel: a header with its own controls and a chevron that
+   folds the pane, then the pane's body, or a narrow rail with the pane's icon and what it has selected. *@
+<div class="sc-pane-head @(Ruled ? "sc-pane-head--ruled" : null)">
+    @if (!Collapsed)
+    {
+        @Header
+    }
+    <MudIconButton Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
+                   Size="Size.Small" OnClick="@(() => CollapsedChanged.InvokeAsync(!Collapsed))"
+                   title="@(Collapsed ? ExpandLabel : CollapseLabel)"
+                   aria-label="@(Collapsed ? ExpandLabel : CollapseLabel)" />
+</div>
+
+@if (Collapsed)
+{
+    <div class="sc-pane-rail">
+        <MudIcon Icon="@RailIcon" Size="Size.Small" Color="Color.Primary" />
+        @if (RailText is not null)
+        {
+            <MudText Style="font-size:0.625rem;font-family:var(--font-mono);color:var(--accent);writing-mode:vertical-rl;text-orientation:mixed;">
+                @RailText
+            </MudText>
+        }
+    </div>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public bool Collapsed { get; set; }
+    [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
+
+    /// <summary>A rule under the header, between it and the body.</summary>
+    [Parameter] public bool Ruled { get; set; }
+
+    [Parameter, EditorRequired] public string ExpandLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string CollapseLabel { get; set; } = string.Empty;
+
+    /// <summary>The pane's icon on the folded rail.</summary>
+    [Parameter, EditorRequired] public string RailIcon { get; set; } = string.Empty;
+
+    /// <summary>What the pane has selected, written down the folded rail; nothing when unset.</summary>
+    [Parameter] public string? RailText { get; set; }
+
+    /// <summary>The header's title and controls, before the chevron, while the pane is open.</summary>
+    [Parameter] public RenderFragment? Header { get; set; }
+
+    /// <summary>The pane's body while it is open.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

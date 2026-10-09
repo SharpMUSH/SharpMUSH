@@ -94,7 +94,7 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Mail_NoArgs_ReturnsCount()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mail()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mail()")))!.Message;
 		var count = int.Parse(result.ToPlainText()!);
 		await Assert.That(count).IsEqualTo(3);
 	}
@@ -102,7 +102,7 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Mail_WithMessageNumber_ReturnsContent()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mail(1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mail(1)")))!.Message;
 		var content = result.ToPlainText();
 		await Assert.That(content).Contains($"TESTMAIL-{TestRunId}");
 	}
@@ -122,7 +122,7 @@ public class MailFunctionUnitTests
 		var original = (MUSHCodeParser)Parser;
 		var parser = original with { ServiceProvider = new OptionsProvider(original.ServiceProvider, options) };
 
-		var result = (await parser.FunctionParse(MarkupText.Plain(str)))!.Message!.ToPlainText();
+		var result = (await parser.FunctionParse(MarkupText.Plain(str)))!.Message.ToPlainText();
 		await Assert.That(result.Contains($"TESTMAIL-{TestRunId}")).IsEqualTo(readsMessage);
 	}
 
@@ -136,14 +136,14 @@ public class MailFunctionUnitTests
 	[Arguments("mail(999)", "#-1 INVALID MESSAGE OR PLAYER")]
 	public async Task Mail_InvalidMessage_ReturnsError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Maillist_NoArgs_ReturnsMailList()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("maillist()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("maillist()")))!.Message;
 		var mailList = result.ToPlainText()!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(mailList.Length).IsGreaterThanOrEqualTo(3);
 		foreach (var entry in mailList)
@@ -155,7 +155,7 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Maillist_WithFilter_ReturnsFilteredList()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("maillist(unread)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("maillist(unread)")))!.Message;
 		var mailList = result.ToPlainText()!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(mailList.Length).IsGreaterThanOrEqualTo(2);
 	}
@@ -164,7 +164,7 @@ public class MailFunctionUnitTests
 	public async Task Mailfrom_ValidMessage_ReturnsSenderDbref()
 	{
 		// The fixture player sent every message to itself; fun_mailfrom writes a bare dbref.
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mailfrom(1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mailfrom(1)")))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo($"#{_player.Number}");
 	}
 
@@ -172,14 +172,14 @@ public class MailFunctionUnitTests
 	[Arguments("mailfrom(999)", "#-1")]
 	public async Task Mailfrom_InvalidMessage_ReturnsError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Mailstats_ValidPlayer_ReturnsStats()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mailstats(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mailstats(%#)")))!.Message;
 		var parts = result.ToPlainText()!.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(2);
 		await Assert.That(int.TryParse(parts[0], out var sent)).IsTrue();
@@ -201,11 +201,11 @@ public class MailFunctionUnitTests
 			+ $"TESTMAIL-{TestRunId}-MSG2-Content with more text".Length
 			+ $"TESTMAIL-{TestRunId}-MSG3-Content".Length;
 
-		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("maildstats(%#)")))!.Message!.ToPlainText())
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("maildstats(%#)")))!.Message.ToPlainText())
 			.IsEqualTo("3 1 1 3 1 1");
-		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("mailfstats(%#)")))!.Message!.ToPlainText())
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("mailfstats(%#)")))!.Message.ToPlainText())
 			.IsEqualTo($"3 1 1 {bytes} 3 1 1 {bytes}");
-		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("mail(%#)")))!.Message!.ToPlainText())
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("mail(%#)")))!.Message.ToPlainText())
 			.IsEqualTo("1 1 1");
 	}
 
@@ -233,7 +233,7 @@ public class MailFunctionUnitTests
 			WebAppFactoryArg.Services, Mediator, "MailStatsMortal");
 		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
 
-		var result = (await asMortal.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		var result = (await asMortal.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -263,7 +263,7 @@ public class MailFunctionUnitTests
 		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
 		await asMortal.FunctionParse(MarkupText.Plain("mailsend(me,MortalOwnMailSubject/MortalOwnMailBody)"));
 
-		var result = (await asMortal.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		var result = (await asMortal.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -296,7 +296,7 @@ public class MailFunctionUnitTests
 		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
 		await asMortal.FunctionParse(MarkupText.Plain("mailsend(me,FromSubject/FromBody)"));
 
-		var result = (await asMortal.FunctionParse(MarkupText.Plain("mailfrom(me,1)")))!.Message!.ToPlainText();
+		var result = (await asMortal.FunctionParse(MarkupText.Plain("mailfrom(me,1)")))!.Message.ToPlainText();
 
 		// fun_mailfrom writes a bare dbref, not an objid.
 		await Assert.That(result).IsEqualTo($"#{mortal.Number}");
@@ -306,7 +306,7 @@ public class MailFunctionUnitTests
 	public async Task Mailstatus_ValidMessage_ReturnsStatusFormat()
 	{
 		// Use maillist() to obtain the actual mail number rather than assuming it is always 1.
-		var listResult = (await Parser.FunctionParse(MarkupText.Plain("maillist()")))?.Message!;
+		var listResult = (await Parser.FunctionParse(MarkupText.Plain("maillist()")))!.Message;
 		var mailList = listResult.ToPlainText()!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(mailList.Length).IsGreaterThan(0).Because("EnsureTestMailSetup should have created at least one mail");
 
@@ -315,7 +315,7 @@ public class MailFunctionUnitTests
 		await Assert.That(firstEntry.Length).IsEqualTo(2).Because("each maillist entry should be in folder:number format");
 		var mailNumber = firstEntry[1];
 
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"mailstatus({mailNumber})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"mailstatus({mailNumber})")))!.Message;
 		var status = result.ToPlainText();
 		// Status should be 5 characters in NCUF+ format
 		await Assert.That(status).Length().IsEqualTo(5);
@@ -326,7 +326,7 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Mailstatus_ChecksForUrgentFlag()
 	{
-		var allMail = (await Parser.FunctionParse(MarkupText.Plain("maillist()")))?.Message!;
+		var allMail = (await Parser.FunctionParse(MarkupText.Plain("maillist()")))!.Message;
 		var mailList = allMail.ToPlainText()!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 		bool foundUrgent = false;
@@ -335,7 +335,7 @@ public class MailFunctionUnitTests
 			var parts = mailId.Split(':');
 			if (parts.Length == 2)
 			{
-				var result = (await Parser.FunctionParse(MarkupText.Plain($"mailstatus({parts[1]})")))?.Message!;
+				var result = (await Parser.FunctionParse(MarkupText.Plain($"mailstatus({parts[1]})")))!.Message;
 				var status = result.ToPlainText();
 				if (status!.Contains("U"))
 				{
@@ -353,14 +353,14 @@ public class MailFunctionUnitTests
 	[Arguments("mailstatus(999)", "#-1")]
 	public async Task Mailstatus_InvalidMessage_ReturnsError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Mailsubject_ValidMessage_ReturnsSubject()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mailsubject(1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mailsubject(1)")))!.Message;
 		var subject = result.ToPlainText();
 		await Assert.That(subject).Contains($"TESTMAIL-{TestRunId}");
 	}
@@ -369,7 +369,7 @@ public class MailFunctionUnitTests
 	[Arguments("mailsubject(999)", "#-1")]
 	public async Task Mailsubject_InvalidMessage_ReturnsError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -377,7 +377,7 @@ public class MailFunctionUnitTests
 	[Test]
 	public async Task Mailtime_ValidMessage_ReturnsTimestamp()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mailtime(1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mailtime(1)")))!.Message;
 		var parsed = DateTime.ParseExact(result.ToPlainText(), "ddd MMM dd HH:mm:ss yyyy",
 			System.Globalization.CultureInfo.InvariantCulture);
 		await Assert.That(parsed).IsGreaterThan(DateTime.Now.AddDays(-1));
@@ -388,14 +388,14 @@ public class MailFunctionUnitTests
 	[Arguments("mailtime(999)", "#-1")]
 	public async Task Mailtime_InvalidMessage_ReturnsError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Folderstats_NoArgs_ReturnsStats()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("folderstats()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("folderstats()")))!.Message;
 		var parts = result.ToPlainText()!.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(3);
 		foreach (var part in parts)
@@ -433,7 +433,7 @@ public class MailFunctionUnitTests
 	public async Task MailFunctions_NonPlayer_HasNoMailbox(string str, string expected)
 	{
 		// God, who controls the room objeval() runs as.
-		var result = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

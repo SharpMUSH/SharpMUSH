@@ -114,7 +114,7 @@ public class IncludeFromDollarCommandTests
 
 		// Assert the whole value, not just that a newline exists somewhere: this is the
 		// byte-for-byte storage contract, so position and surrounding text matter.
-		var stored = (await Parser.FunctionParse(MarkupText.Plain($"[get({obj}/DO_NL_{tag})]")))?.Message?.ToPlainText();
+		var stored = (await Parser.FunctionParse(MarkupText.Plain($"[get({obj}/DO_NL_{tag})]")))?.Message.ToPlainText();
 		await Assert.That(stored).IsEqualTo($"${token}:@pemit %#=FIRST_{tag};\n@pemit %#=SECOND_{tag}")
 			.Because($"a real newline must follow the ';' and nothing else may have been rewritten; stored: [{stored}]");
 

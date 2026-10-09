@@ -37,50 +37,41 @@
                 }
             </div>
 
-            @if (_error is not null)
-            {
-                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
-            }
-
-            @if (_loading)
-            {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else if (_list is null || _list.Guests.Count == 0)
-            {
-                <div class="adm-players-empty">
-                    <MudIcon Icon="@Icons.Material.Filled.Group" Class="adm-players-empty-icon" />
-                    <div class="adm-players-empty-text">@Loc["AdmGuestsEmpty"]</div>
-                </div>
-            }
-            else
-            {
-                <MudTable Items="_list.Guests" Dense="true" Hover="true" Elevation="0">
-                    <HeaderContent>
-                        <MudTh>@Loc["AdmGuestName"]</MudTh>
-                        <MudTh>@Loc["AdmGuestDbref"]</MudTh>
-                        <MudTh>@Loc["AdmGuestStatus"]</MudTh>
-                        <MudTh />
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd data-label="@Loc["AdmGuestName"]">@context.Name</MudTd>
-                        <MudTd data-label="@Loc["AdmGuestDbref"]">#@context.DbrefNumber</MudTd>
-                        <MudTd data-label="@Loc["AdmGuestStatus"]">
-                            <MudChip T="string" Size="Size.Small" Color="@(context.InUse ? Color.Success : Color.Default)">
-                                @(context.InUse ? Loc["AdmGuestInUse"] : Loc["AdmGuestAvailable"])
-                            </MudChip>
-                        </MudTd>
-                        <MudTd>
-                            @* Destroying a connected player is refused by the game itself, so the button that
-                               would fail is disabled rather than offered and then rejected. *@
-                            <MudButton Size="Size.Small" Color="Color.Error" data-testid="guest-delete"
-                                       Disabled="@(_busy || context.InUse)"
-                                       title="@(context.InUse ? Loc["AdmGuestDeleteInUse"].Value : null)"
-                                       OnClick="@(() => DeleteAsync(context))">@Loc["AdmGuestDelete"]</MudButton>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
+            <LoadState TValue="AdminGuestsService.GuestListResponse" Value="_list" Loading="_loading" Error="@_error" IsEmpty="list => list.Guests.Count == 0" Context="list">
+                <Empty>
+                    <div class="adm-players-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.Group" Class="adm-players-empty-icon" />
+                        <div class="adm-players-empty-text">@Loc["AdmGuestsEmpty"]</div>
+                    </div>
+                </Empty>
+                <ChildContent>
+                    <MudTable Items="list.Guests" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>@Loc["AdmGuestName"]</MudTh>
+                            <MudTh>@Loc["AdmGuestDbref"]</MudTh>
+                            <MudTh>@Loc["AdmGuestStatus"]</MudTh>
+                            <MudTh />
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd data-label="@Loc["AdmGuestName"]">@context.Name</MudTd>
+                            <MudTd data-label="@Loc["AdmGuestDbref"]">#@context.DbrefNumber</MudTd>
+                            <MudTd data-label="@Loc["AdmGuestStatus"]">
+                                <MudChip T="string" Size="Size.Small" Color="@(context.InUse ? Color.Success : Color.Default)">
+                                    @(context.InUse ? Loc["AdmGuestInUse"] : Loc["AdmGuestAvailable"])
+                                </MudChip>
+                            </MudTd>
+                            <MudTd>
+                                @* Destroying a connected player is refused by the game itself, so the button that
+                                   would fail is disabled rather than offered and then rejected. *@
+                                <MudButton Size="Size.Small" Color="Color.Error" data-testid="guest-delete"
+                                           Disabled="@(_busy || context.InUse)"
+                                           title="@(context.InUse ? Loc["AdmGuestDeleteInUse"].Value : null)"
+                                           OnClick="@(() => DeleteAsync(context))">@Loc["AdmGuestDelete"]</MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </ChildContent>
+            </LoadState>
         </div>
     </KitCard>
 </div>

@@ -1,0 +1,102 @@
+/* On touch chrome a menu button before the avatar opens the navigation drawer (the shell's header is merged away). */
+.play-lead {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.play-menu-btn {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-left: -8px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    position: relative;
+}
+
+/* Unread channels or pages, on the menu button that opens them. */
+.play-menu-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--surface);
+}
+
+.play-menu-btn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.play-menu-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* The viewer in the card header: a 32px avatar with a connection dot. */
+.play-me {
+    position: relative;
+    display: block;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+::deep .play-me-img,
+::deep .play-me-initial {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.play-me-dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+    background: var(--text-faint);
+}
+
+.play-me--on .play-me-dot {
+    background: var(--accent);
+}
+
+/* Read by a screen reader with the name; the dot says it to the eye. */
+.play-me-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* A 320–360px phone: with the header's four buttons (focus mode, or before a room has come and the banner can take
+   them), the menu button and the avatar leave the name almost no width, so the picture steps back (the power button
+   still says whether the character is connected). Otherwise two buttons remain and the avatar keeps its place. This
+   queries the header's own container (PlaySceneCard.razor.css), whose content box is 344px on a 390px phone, not
+   the page's: page tiers are fixed at 48 / 64 / 90rem. */
+@container (max-width: 20rem) {
+    .play--focus .play-lead .play-me,
+    .play:not(.play--room) .play-lead .play-me {
+        display: none;
+    }
+}

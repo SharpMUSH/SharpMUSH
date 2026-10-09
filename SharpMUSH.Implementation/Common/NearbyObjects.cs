@@ -27,13 +27,10 @@ public static class NearbyObjects
 			yield return item.WithRoomOption();
 		}
 
-		await foreach (var item in mediator.CreateStream(new GetContentsQuery(location.Object().DBRef), ct))
+		var neighbours = mediator.CreateStream(new GetContentsQuery(location.Object().DBRef), ct)
+			.Where(item => item.Object().DBRef != self);
+		await foreach (var item in neighbours)
 		{
-			if (item.Object().DBRef == self)
-			{
-				continue;
-			}
-
 			yield return item.WithRoomOption();
 		}
 	}

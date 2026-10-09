@@ -41,8 +41,8 @@
     }
     else
     {
-        <div class="appadmin-grid">
-            <div class="appadmin-list">
+        <AdminMasterDetail Area="appadmin">
+            <Records>
                 <div class="aa-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Class="aa-ico aa-ico--faint" />
                     <input value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
@@ -53,11 +53,9 @@
                 {
                     <div class="aa-empty-list">@Loc["LayAppsNoMatch"]</div>
                 }
-                @foreach (var app in Filtered)
+                @foreach (var a in Filtered)
                 {
-                    var a = app;
-                    var on = List.IsSelected(a);
-                    <button type="button" class="aa-card @(on ? "aa-card--on" : "")" @onclick="@(() => List.Select(a))">
+                    <AdminSelectableCard Prefix="aa" Selected="@List.IsSelected(a)" OnSelect="@(() => List.Select(a))">
                         <div class="aa-card-top">
                             <span class="aa-card-icon">
                                 <MudIcon Icon="@AppIcons.Fill(a.Icon, Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--card" />
@@ -68,20 +66,14 @@
                             </div>
                             <span class="aa-kind @KindClass(a.Kind)">@KindLabel(a.Kind)</span>
                         </div>
-                    </button>
+                    </AdminSelectableCard>
                 }
-            </div>
-
-            <KitCard Class="appadmin-detail">
+            </Records>
+            <Detail>
                 @if (List.Selected is not { } selected)
                 {
-                    <div class="aa-empty-detail">
-                        <MudIcon Icon="@Icons.Material.Filled.Apps" Class="aa-ico aa-ico--empty" />
-                        <span>@Loc["LayAppsEmptyDetail"]</span>
-                        <button type="button" class="aa-btn aa-btn--primary" @onclick="@(() => Edit(null))">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Class="aa-ico" /> @Loc["LayAppsRegister"]
-                        </button>
-                    </div>
+                    <AdminEmptyDetail Prefix="aa" Icon="@Icons.Material.Filled.Apps" Text="@Loc["LayAppsEmptyDetail"]"
+                                      ActionText="@Loc["LayAppsRegister"]" OnAction="@(() => Edit(null))" />
                 }
                 else
                 {
@@ -160,8 +152,8 @@
                         </div>
                     </div>
                 }
-            </KitCard>
-        </div>
+            </Detail>
+        </AdminMasterDetail>
     }
 </div>
 

@@ -21,7 +21,7 @@ public class RestrictedExpressionTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory Factory { get; init; }
 	private async Task<string> Eval(string expression) =>
-		(await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 	private Task Cmd(string command) => Factory.CommandParser.CommandParse(1,
 		Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask();
 
@@ -68,7 +68,7 @@ public class RestrictedExpressionTests
 			_ => $"cat(space({size}),space({size}),space({size}))"
 		};
 		var result = await parser.FunctionParse(MarkupText.Plain(restricted ? $"restrictedexpr(space cat,{expression})" : expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 		await Assert.That(expansions).IsEqualTo(restricted ? 2 : 3);
 	}
 
@@ -89,7 +89,7 @@ public class RestrictedExpressionTests
 		var target = indirectEntry ? $"restrictedexpr,strlen,strlen({payload})" : $"strlen,{payload}";
 		var expression = $"fn({string.Concat(Enumerable.Repeat("fn,", 11))}{target})";
 		var result = await parser.FunctionParse(MarkupText.Plain(restricted && !indirectEntry ? $"restrictedexpr(fn strlen,{expression})" : expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(restricted ? ErrorMessages.Returns.OutputTooLarge : payload.Length.ToString());
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(restricted ? ErrorMessages.Returns.OutputTooLarge : payload.Length.ToString());
 		if (restricted) await Assert.That(calls).IsLessThan(12);
 		else await Assert.That(calls).IsEqualTo(12);
 	}
@@ -109,7 +109,7 @@ public class RestrictedExpressionTests
 		var expression = $"strlen({new string('x', size)})";
 		for (var i = 0; i < 12; i++) expression = $"restrictedexpr(restrictedexpr strlen,{expression})";
 		var result = await parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(size == 1024 ? size.ToString() : ErrorMessages.Returns.OutputTooLarge);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(size == 1024 ? size.ToString() : ErrorMessages.Returns.OutputTooLarge);
 		if (size == 1024) await Assert.That(calls).IsEqualTo(12);
 		else await Assert.That(calls).IsLessThan(12);
 	}
@@ -163,7 +163,7 @@ public class RestrictedExpressionTests
 		var arguments = string.Join(',', Enumerable.Repeat("", 33));
 		var expression = $"{name}(cat,{arguments})";
 		var result = await parser.FunctionParse(MarkupText.Plain(restricted ? $"restrictedexpr(fn cat,{expression})" : expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(restricted ? EvaluationRestrictions.Error : "DISPATCHED");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(restricted ? EvaluationRestrictions.Error : "DISPATCHED");
 		await Assert.That(invoked).IsEqualTo(!restricted);
 	}
 
@@ -211,7 +211,7 @@ public class RestrictedExpressionTests
 		foreach (var pair in Factory.FunctionParser.FunctionLibrary) library.Add(pair.Key, pair.Value);
 		library.Add("restricted_alias", library["restrictedexpr"]);
 		var parser = (MUSHCodeParser)Factory.FunctionParser with { FunctionLibrary = library };
-		var result = (await parser.FunctionParse(MarkupText.Plain($"ulambda({apply},get({target}/SECRET))")))!.Message!.ToPlainText();
+		var result = (await parser.FunctionParse(MarkupText.Plain($"ulambda({apply},get({target}/SECRET))")))!.Message.ToPlainText();
 		await Assert.That(result).IsEqualTo(EvaluationRestrictions.Error);
 	}
 
@@ -255,7 +255,7 @@ public class RestrictedExpressionTests
 		var heard = Factory.Notifications.DeliveryCountFor(target);
 		var parser = Factory.FunctionParser.FromState(state);
 		var expression = denied ? "restrictedexpr(ucstr,get(%0),private-input)" : "restrictedexpr(ucstr,ucstr(%0),private-input)";
-		var result = (await parser.FunctionParse(MarkupText.Plain(expression), substitutionTrace))!.Message!.ToPlainText();
+		var result = (await parser.FunctionParse(MarkupText.Plain(expression), substitutionTrace))!.Message.ToPlainText();
 		if (denied) await Assert.That(result).Contains("RESTRICTED EXPRESSION");
 		else await Assert.That(result).IsEqualTo("PRIVATE-INPUT");
 		await Assert.That(Said(target, heard)).IsFalse();
@@ -277,7 +277,7 @@ public class RestrictedExpressionTests
 		};
 		using var scope = ambient ? restrictions.Enter() : null;
 		var result = await Factory.FunctionParser.FromState(state).FunctionParse(MarkupText.Plain("%0"), true);
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("private-input");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("private-input");
 		await Assert.That(Said(executor, heard)).IsFalse();
 	}
 
@@ -294,7 +294,7 @@ public class RestrictedExpressionTests
 		};
 		parent.Registers.First()["SECRET"] = MarkupText.Plain("classified");
 		var parser = Factory.FunctionParser.FromState(parent);
-		async Task<string> InParent(string expression) => (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		async Task<string> InParent(string expression) => (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 		await Assert.That(await InParent("r(secret)")).IsEqualTo("classified");
 		foreach (var substitution in new[] { "%q<secret>", "%#", "%n", "%L", "%i0", "%$0", "%@" })
 			await Assert.That(await InParent($"restrictedexpr(,{substitution})")).Contains("RESTRICTED EXPRESSION");
@@ -327,7 +327,7 @@ public class RestrictedExpressionTests
 		{
 			var created = await Factory.CommandParser.CommandParse(1,
 				Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain($"@create {attribute}"));
-			target = created.Message!.ToPlainText();
+			target = created.Message.ToPlainText();
 			await Assert.That(SharpMUSH.Library.Models.DBRef.TryParse(target, out _)).IsTrue();
 			await Cmd($"&{attribute} {target}=classified attribute");
 			if (halted) await Cmd($"@set {target}=HALT");
@@ -368,12 +368,12 @@ public class RestrictedExpressionTests
 		library.Add("plus_alias", library["add"]);
 		var parser = original with { FunctionLibrary = library };
 		var allowed = await parser.FunctionParse(MarkupText.Plain("restrictedexpr(plus_alias,add(2,3))"));
-		await Assert.That(allowed!.Message!.ToPlainText()).IsEqualTo("5");
+		await Assert.That(allowed!.Message.ToPlainText()).IsEqualTo("5");
 		var called = false;
 		library["add"] = (new FunctionDefinition(new SharpFunctionAttribute { Name = "add", Flags = FunctionFlags.Regular },
 			_ => { called = true; return ValueTask.FromResult(new CallState("leak")); }), true);
 		var denied = await parser.FunctionParse(MarkupText.Plain("restrictedexpr(plus_alias,add())"));
-		await Assert.That(denied!.Message!.ToPlainText()).Contains("RESTRICTED EXPRESSION");
+		await Assert.That(denied!.Message.ToPlainText()).Contains("RESTRICTED EXPRESSION");
 		await Assert.That(called).IsFalse();
 	}
 
@@ -409,7 +409,7 @@ public class RestrictedExpressionTests
 		var config = original.Configuration.CurrentValue;
 		var parser = original with { Configuration = new Options(config with { Limit = config.Limit with { FunctionInvocationLimit = 2 } }) };
 		var result = await parser.FunctionParse(MarkupText.Plain("restrictedexpr(add,add(1,add(2,3)))"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.Invoke);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.Invoke);
 	}
 
 	[Test]
@@ -422,7 +422,7 @@ public class RestrictedExpressionTests
 			? new Dictionary<string, CallState> { ["0"] = new("5242881") }
 			: new Dictionary<string, CallState> { ["0"] = new("ab"), ["1"] = new("2621441") };
 		var result = await original.FunctionLibrary[function].LibraryInformation.Function(original.Push(original.CurrentState with { Arguments = args }));
-		await Assert.That(result.Message!.Length).IsLessThan(100);
+		await Assert.That(result.Message.Length).IsLessThan(100);
 		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 	}
 
@@ -433,10 +433,10 @@ public class RestrictedExpressionTests
 		using var expired = new ExecutionBudget(TimeSpan.Zero);
 		var root = ParserState.RootFor(original.CurrentState.Executor!.Value) with { TotalInvocations = null, ExecutionBudget = expired };
 		var result = await original.FromState(root).FunctionParse(MarkupText.Plain("add(1,2)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
 		root = ParserState.RootFor(original.CurrentState.Executor!.Value) with { TotalInvocations = null, Restrictions = new EvaluationRestrictions(["add"]) };
 		result = await original.FromState(root).FunctionParse(MarkupText.Plain("get(#1/DESC)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
 	}
 
 	[Test]
@@ -448,7 +448,7 @@ public class RestrictedExpressionTests
 		var before = queue.GetQueueUsage().Total;
 		using var scope = new EvaluationRestrictions([]).Enter();
 		var result = await Factory.FunctionParser.CommandListParse(MarkupText.Plain("@wait 3600=think denied"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(before);
 	}
 
@@ -525,7 +525,7 @@ public class RestrictedExpressionTests
 			"command" => await parser.CommandListParse(MarkupText.Plain("@pemit me=[fn(add,1,2)]")),
 			_ => await parser.CommandListParseVisitor(MarkupText.Plain("@pemit me=[fn(add,1,2)]"))()
 		};
-		if (expiry) await Assert.That((await Invoke())?.Message?.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
+		if (expiry) await Assert.That((await Invoke())?.Message.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
 		else await Assert.ThrowsAsync<OperationCanceledException>(Invoke);
 		await Assert.That(scanned).IsTrue();
 	}
@@ -559,7 +559,7 @@ public class RestrictedExpressionTests
 		var parser = new MUSHCodeParser(logger, library, original.CommandLibrary, original.Configuration, services)
 			.FromState(ParserState.RootFor(new DBRef(1, 1)));
 		var result = await parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
 		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
 		await Assert.That(notify.ReceivedCalls().Any()).IsFalse();
 		await Assert.That(mediator.ReceivedCalls().Any()).IsFalse();
@@ -621,7 +621,7 @@ public class RestrictedExpressionTests
 		var parser = (original with { FunctionLibrary = library, Logger = logger }).FromState(state);
 		using var scope = ambient ? restrictions.Enter() : null;
 		var result = await parser.FunctionParse(MarkupText.Plain("add(1,2)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
 		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
 		await Assert.That(Said(executor, heard)).IsFalse();
 	}
@@ -642,7 +642,7 @@ public class RestrictedExpressionTests
 			with
 		{ Flags = ParserStateFlags.Debug });
 		var result = await parser.FunctionParse(MarkupText.Plain(expression), true);
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("PRIVATE-INPUT");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("PRIVATE-INPUT");
 		await Assert.That(Said(executor, heard)).IsFalse();
 	}
 
@@ -683,7 +683,7 @@ public class RestrictedExpressionTests
 		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
 		var parser = (original with { FunctionLibrary = library, Logger = logger }).FromState(ParserState.RootFor(executor));
 		var result = await parser.FunctionParse(MarkupText.Plain("restrictedexpr(add,add(%0,2),3)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("5");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("5");
 		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
 		await Assert.That(Said(executor, heard)).IsFalse();
 	}
@@ -820,7 +820,7 @@ public class RestrictedExpressionTests
 			{ Restrictions = stateCarried ? new EvaluationRestrictions(["add"]) : null });
 		using var scope = ambient ? new EvaluationRestrictions(["add"]).Enter() : null;
 		var result = await parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("3");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("3");
 		await Assert.That(mediator.ReceivedCalls().Any()).IsFalse();
 	}
 
@@ -847,7 +847,7 @@ public class RestrictedExpressionTests
 		var parser = new MUSHCodeParser(original.Logger, library, original.CommandLibrary, original.Configuration, services)
 			.FromState(ParserState.RootFor(new DBRef(987654321, 1)) with { Restrictions = new EvaluationRestrictions(["add"]) });
 		var result = await parser.FunctionParse(MarkupText.Plain("add(1,2)"));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(flags == FunctionFlags.Disabled
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(flags == FunctionFlags.Disabled
 			? ErrorMessages.Returns.FunctionDisabled : ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(mediator.ReceivedCalls().Any()).IsFalse();
 	}
@@ -868,7 +868,7 @@ public class RestrictedExpressionTests
 			with
 		{ Executor = null, Enactor = null, Caller = null });
 		var result = await parser.FunctionParse(MarkupText.Plain(expression));
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(expected);
 		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
 	}
 

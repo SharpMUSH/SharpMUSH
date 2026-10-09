@@ -85,13 +85,10 @@ public static partial class MailDelivery
 		}
 
 		var delivered = new List<SharpPlayer>();
-		foreach (var entry in forwardList.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		var forwards = forwardList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			.Where(entry => ObjidPattern().IsMatch(entry));
+		foreach (var entry in forwards)
 		{
-			if (!ObjidPattern().IsMatch(entry))
-			{
-				continue;
-			}
-
 			switch (await ForwardTargetAsync(services, entry))
 			{
 				case AnySharpObject and SharpPlayer forward when await MayForwardTo(services, target, forward):

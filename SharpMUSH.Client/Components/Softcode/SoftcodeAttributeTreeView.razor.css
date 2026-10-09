@@ -1,0 +1,125 @@
+/* ── Attribute list item: kind badge + name + preview ── */
+.sc-attr-item {
+    width: 100%;
+    text-align: left;
+    display: block;
+    padding: 0.3125rem 0.5rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    margin-bottom: 1px;
+    transition: background 0.12s;
+}
+.sc-attr-item:hover {
+    background: var(--surface-2);
+}
+.sc-attr-item--on {
+    background: rgba(var(--glow), 0.10);
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+.sc-attr-row1 {
+    display: flex;
+    align-items: center;
+    gap: 0.4375rem;
+}
+.sc-attr-name {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: 0.78125rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sc-attr-item--on .sc-attr-name {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* ── Attribute tree: one row per attribute, indented by its depth under FOO`BAR`… ── */
+.sc-tree-row {
+    --sc-toggle: 20px;
+    --sc-indent: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding-left: calc(var(--sc-depth, 0) * var(--sc-indent));
+}
+/* A faint guide marks the branch a nested row belongs to. */
+.sc-tree-row--nested {
+    background-image: linear-gradient(var(--border-soft), var(--border-soft));
+    background-size: 1px 100%;
+    /* Under the centre of the parent's fold control. */
+    background-position: calc((var(--sc-depth, 0) - 1) * var(--sc-indent) + var(--sc-toggle) / 2) 0;
+    background-repeat: no-repeat;
+}
+.sc-tree-row .sc-attr-item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+.sc-tree-row .sc-attr-row1 {
+    flex: 1;
+    min-width: 0;
+}
+.sc-tree-toggle,
+.sc-tree-spacer {
+    display: grid;
+    place-items: center;
+    width: var(--sc-toggle);
+    height: var(--sc-toggle);
+    flex-shrink: 0;
+}
+.sc-tree-toggle {
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+    padding: 0;
+}
+.sc-tree-toggle:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--surface-2);
+}
+.sc-tree-toggle:disabled {
+    cursor: default;
+}
+.sc-tree-count {
+    flex-shrink: 0;
+    padding: 0 0.3125rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    line-height: 1rem;
+}
+.sc-attr-item--bare:disabled {
+    cursor: default;
+}
+/* Nothing to list: no attributes, or none matching the filter. */
+.sc-tree-empty {
+    padding: 0.75rem;
+    color: var(--text-faint);
+    font-size: 0.75rem;
+    text-align: center;
+    font-family: var(--font-mono);
+}
+
+/* Mobile: rows a finger can hit. */
+@container page (max-width: 48rem) {
+    /* Finger-sized fold controls; the tree rows themselves already are. */
+    .sc-tree-row {
+        --sc-toggle: 32px;
+        --sc-indent: 1.25rem;
+    }
+    /* One line per attribute is too short a target for a finger. */
+    .sc-tree-row .sc-attr-item {
+        min-height: 2.5rem;
+    }
+}

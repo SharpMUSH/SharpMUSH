@@ -26,10 +26,10 @@ public class StampedLockOperandTests
 	public async Task StampedOperandPreservesIdentity(string prefix)
 	{
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create(StampedLock_{Guid.NewGuid():N})"));
-		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message.ToPlainText())))).Expect<AnySharpObject>();
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		if (prefix == "+")
-			await Mediator.Send(new MoveObjectCommand(target.MinusRoom(), god.AsContainer, (await target.Where()).Object().DBRef));
+			await Mediator.Send(new MoveObjectCommand(target.AsOptionalContent.Expect<AnySharpContent>(), god.AsOptionalContainer.Expect<AnySharpContainer>(), (await target.Where()).Object().DBRef));
 		var unlocker = prefix is "" or "=" ? target : god;
 		var identity = target.Object().DBRef;
 		await Assert.That(identity.CreationMilliseconds.HasValue).IsTrue();
@@ -75,7 +75,7 @@ public class StampedLockOperandTests
 	public async Task StampedValuesRemainAttributeAndEvaluationComparisons()
 	{
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create(StampedValue_{Guid.NewGuid():N})"));
-		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		var target = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message.ToPlainText())))).Expect<AnySharpObject>();
 		var identity = target.Object().DBRef.ToString();
 		await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"attrib_set({identity}/RACE,Elf)"));
 		await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"attrib_set({identity}/REF,{identity})"));

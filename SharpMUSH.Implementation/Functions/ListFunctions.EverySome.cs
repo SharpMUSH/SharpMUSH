@@ -33,14 +33,14 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
+		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 
 		string? registerName = null;
-		if (parser.CurrentState.ArgumentsOrdered.TryGetValue("3", out var registerArg) && registerArg.Message is not null)
+		if (parser.CurrentState.ArgumentsOrdered.TryGetValue("3", out var registerArg))
 		{
 			var candidate = registerArg.Message.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(candidate))

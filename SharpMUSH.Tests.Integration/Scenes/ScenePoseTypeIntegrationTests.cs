@@ -29,7 +29,7 @@ public class ScenePoseTypeIntegrationTests
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	/// <summary>What God was told while <paramref name="command"/> ran. The recorder keys on the full objid.</summary>
 	private async Task<string> God(string command)

@@ -186,7 +186,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&DIAGFUNC_UNIQ2 DiagDebugThing=[add(1,2)]"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DiagDebugThing/DIAGFUNC_UNIQ2=DEBUG"));
 
-		var dbref = DBRef.Parse(created.Message!.ToPlainText());
+		var dbref = DBRef.Parse(created.Message.ToPlainText());
 
 		// Read via GetAttributeQuery (old path) - should pass
 		var attrsOld = await Mediator.CreateStream(new GetAttributeQuery(
@@ -365,7 +365,7 @@ public class DebugVerboseTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgOwner");
 		var created = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugOwnerObj"));
-		var executor = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created.Message!.ToPlainText()))))
+		var executor = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created.Message.ToPlainText()))))
 			.Expect<AnySharpObject>().Object().DBRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugOwnerObj=DEBUG"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugOwnerObj=!no_command"));
@@ -517,7 +517,7 @@ public class DebugVerboseTests
 		// player setting the list; an object never controls a player (src/predicat.c:405), so the
 		// forward target has to have set a forward lock the object passes.
 		var fwdObj = (await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MarkupText.Plain("think [num(DbgFwdObj)]")))?.Message?.ToPlainText();
+			MarkupText.Plain("think [num(DbgFwdObj)]")))?.Message.ToPlainText();
 		await Parser.CommandParse(forwardPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"@lock/forward me={fwdObj}"));
 
@@ -550,7 +550,7 @@ public class DebugVerboseTests
 
 		// Both targets must allow the object through a forward lock - see the single-target test.
 		var mfwdObj = (await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MarkupText.Plain("think [num(DbgMFwdObj)]")))?.Message?.ToPlainText();
+			MarkupText.Plain("think [num(DbgMFwdObj)]")))?.Message.ToPlainText();
 		await Parser.CommandParse(target1.Handle, ConnectionService,
 			MarkupText.Plain($"@lock/forward me={mfwdObj}"));
 		await Parser.CommandParse(target2.Handle, ConnectionService,

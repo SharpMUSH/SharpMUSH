@@ -1,0 +1,9 @@
+@* A help note on the roles page: an info icon and a sentence or two. *@
+<div class="ra-note">
+    <MudIcon Icon="@Icons.Material.Outlined.Info" Class="ra-ico ra-note-ico" />
+    <span>@Text</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = string.Empty;
+}

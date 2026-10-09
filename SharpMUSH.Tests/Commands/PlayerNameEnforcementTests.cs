@@ -114,7 +114,7 @@ public class PlayerNameEnforcementTests
 
 		var result = await Parser.FunctionParse(MarkupText.Plain($"pcreate({name},otherpassword)"));
 
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PlayerNameInUse);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PlayerNameInUse);
 		await Assert.That(await Mediator.CreateStream(new GetPlayerQuery(name)).CountAsync()).IsEqualTo(1);
 	}
 

@@ -132,7 +132,7 @@ public class AdminGuestsController(
 			});
 
 		// @PCREATE answers with the new dbref on success and an empty CallState on refusal.
-		if (created?.Message?.ToPlainText() is not { Length: > 0 } dbrefText
+		if (created?.Message.ToPlainText() is not { Length: > 0 } dbrefText
 			|| !DBRef.TryParse(dbrefText, out var parsed) || parsed is not { } dbref)
 		{
 			return StatusCode(StatusCodes.Status500InternalServerError,
@@ -217,7 +217,7 @@ public class AdminGuestsController(
 		var result = await commandInvoker.InvokeAsync("@NUKE", executor.Object().DBRef,
 			new Dictionary<string, CallState> { ["0"] = new(target.ToString()) });
 
-		var message = result?.Message?.ToPlainText();
+		var message = result?.Message.ToPlainText();
 		return message is not null && message.StartsWith("#-1", StringComparison.Ordinal) ? message : null;
 	}
 

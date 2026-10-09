@@ -37,7 +37,7 @@ public class RemoteEnactorLocateIsolationTests
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -84,7 +84,7 @@ public class RemoteEnactorLocateIsolationTests
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name, string password)
 	{
 		await God1($"@pcreate {name}={password}");
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (string.IsNullOrEmpty(dbref) || dbref.StartsWith("#-") || !DBRef.TryParse(dbref, out var parsed))
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -113,7 +113,7 @@ public class RemoteEnactorLocateIsolationTests
 		await Assert.That(Num(await Eval($"loc({probe})"))).IsEqualTo("#2")
 			.Because("the probe must be in the master room so its $-commands are global to a remote enactor");
 
-		var room = Num((await God1($"@dig Room{who}_{Tag}")).Message!.ToPlainText().Trim());
+		var room = Num((await God1($"@dig Room{who}_{Tag}")).Message.ToPlainText().Trim());
 		var (pc, pcHandle) = await CreatePlayerAsync($"{who}_{Tag}", "pw_remote_123");
 		await God1($"@tel {pc}={room}");
 		await Assert.That(Num(await Eval($"loc({pc})"))).IsEqualTo(room)

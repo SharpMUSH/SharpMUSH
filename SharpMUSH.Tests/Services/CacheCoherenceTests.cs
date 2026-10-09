@@ -93,7 +93,7 @@ public class CacheCoherenceTests
 			.Returns(new ValueTask<AnyOptionalSharpObject>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 		var behaviour = new StreamQueryCachingBehavior<ContentsProbeQuery, AnySharpContent>(cache, mediator);
 
-		var listed = await behaviour.Handle(new ContentsProbeQuery(), (_, _) => new[] { thing.AsContent }.ToAsyncEnumerable(), CancellationToken.None).ToListAsync();
+		var listed = await behaviour.Handle(new ContentsProbeQuery(), (_, _) => new[] { thing.AsOptionalContent.Expect<AnySharpContent>() }.ToAsyncEnumerable(), CancellationToken.None).ToListAsync();
 
 		await Assert.That(listed).Count().IsEqualTo(1);
 		await Assert.That(ReferenceEquals(listed[0].Object(), thing.Object())).IsTrue();

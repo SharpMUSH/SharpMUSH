@@ -79,8 +79,8 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message", "spoof"])]
 	public async ValueTask<CallState> ChannelBufferAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var message = parser.CurrentState.Arguments["1"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
+		var message = parser.CurrentState.Arguments["1"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (message.Length == 0)
@@ -99,7 +99,7 @@ public partial class Functions
 			// extchat.c:2380 — the third argument attributes the line to the enactor instead of the executor,
 			// which is what makes it usable from a command object replaying somebody's speech.
 			var speaker = executor;
-			if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2) && arg2.Message!.Truthy())
+			if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2) && arg2.Message.Truthy())
 			{
 				speaker = await parser.CurrentState.KnownEnactorObject(Mediator);
 			}
@@ -137,8 +137,8 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await ChannelEmit.Handle(PermissionService, ChannelPermissions, Mediator, NotifyService, executor,
-			parser.CurrentState.Arguments["0"].Message!,
-			parser.CurrentState.Arguments["1"].Message!,
+			parser.CurrentState.Arguments["0"].Message,
+			parser.CurrentState.Arguments["1"].Message,
 			spoof);
 	}
 
@@ -155,12 +155,12 @@ public partial class Functions
 
 	private async ValueTask<CallState> ChannelFlagList(IMUSHCodeParser parser, bool verbose)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1) || arg1.Message!.Length == 0)
+			if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1) || arg1.Message.Length == 0)
 			{
 				return new CallState(verbose
 					? ChannelHelper.PrivilegeNames(channel.Privs)
@@ -168,7 +168,7 @@ public partial class Functions
 			}
 
 			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-				arg1.Message!.ToPlainText(), LocateFlags.All, async player =>
+				arg1.Message.ToPlainText(), LocateFlags.All, async player =>
 				{
 					// extchat.c:2295 — a member's own channel flags are examine-gated, so this cannot be used to
 					// read who is hiding or gagging on a channel you share with them.
@@ -196,10 +196,10 @@ public partial class Functions
 
 		var player = executor;
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0) &&
-				!string.IsNullOrWhiteSpace(arg0.Message!.ToPlainText()))
+				!string.IsNullOrWhiteSpace(arg0.Message.ToPlainText()))
 		{
 			var maybePlayer = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
-				arg0.Message!.ToPlainText(), LocateFlags.All);
+				arg0.Message.ToPlainText(), LocateFlags.All);
 			switch (maybePlayer)
 			{
 				case Error<CallState> error:
@@ -213,7 +213,7 @@ public partial class Functions
 		var type = "all";
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
-			type = arg1.Message!.ToPlainText().ToLower();
+			type = arg1.Message.ToPlainText().ToLower();
 		}
 
 		// PennMUSH fun_channels (src/extchat.c:3313-3375): "You can see an object's channels if you can
@@ -285,7 +285,7 @@ public partial class Functions
 		ParameterNames = ["channel/locktype", "lock"])]
 	public async ValueTask<CallState> ChannelLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var argument = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var argument = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var separator = argument.IndexOf('/');
@@ -330,7 +330,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
 	public async ValueTask<CallState> ChannelMogrifier(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, channel => new CallState(channel.Mogrifier));
@@ -339,7 +339,7 @@ public partial class Functions
 	[SharpFunction(Name = "cowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
 	public async ValueTask<CallState> ChannelOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
@@ -364,10 +364,10 @@ public partial class Functions
 		var arguments = parser.CurrentState.Arguments;
 
 		MString Argument(string key)
-			=> arguments.TryGetValue(key, out var value) ? value.Message! : MarkupText.Empty;
+			=> arguments.TryGetValue(key, out var value) ? value.Message : MarkupText.Empty;
 
 		return await ChannelRecall.SelectAsync(ChannelPermissions, Mediator, NotifyService, executor,
-			arguments["0"].Message!, Argument("1"), Argument("2"), notify: false) switch
+			arguments["0"].Message, Argument("1"), Argument("2"), notify: false) switch
 		{
 			ChannelRecall.RecallWindow window => RecalledLines(window, arguments),
 			CallState refusal => refusal,
@@ -375,8 +375,8 @@ public partial class Functions
 
 		static CallState RecalledLines(ChannelRecall.RecallWindow window, Dictionary<string, CallState> arguments)
 		{
-			var separator = arguments.TryGetValue("3", out var osep) ? osep.Message! : MarkupText.Space;
-			var showStamp = arguments.TryGetValue("4", out var stamp) && stamp.Message!.Truthy();
+			var separator = arguments.TryGetValue("3", out var osep) ? osep.Message : MarkupText.Space;
+			var showStamp = arguments.TryGetValue("4", out var stamp) && stamp.Message.Truthy();
 
 			var messages = window.Lines
 				.Select(x => showStamp ? ChannelRecall.Stamped(x) : x.Message);
@@ -389,8 +389,8 @@ public partial class Functions
 	public async ValueTask<CallState> ChannelStatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Object first, unlike PennMUSH (pennmush-compatibility.md, "Argument order").
-		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var channelArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var playerArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var channelArg = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, playerArg, channelArg);
@@ -420,8 +420,8 @@ public partial class Functions
 	[SharpFunction(Name = "ctitle", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "channel"])]
 	public async ValueTask<CallState> ChannelTitle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, arg0, arg1);
@@ -451,15 +451,15 @@ public partial class Functions
 		ParameterNames = ["channel", "type", "skipgagged"])]
 	public async ValueTask<CallState> ChannelWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
 			var matchCondition = "on";
-			if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1) && arg1.Message!.Length != 0)
+			if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1) && arg1.Message.Length != 0)
 			{
-				matchCondition = arg1.Message!.ToPlainText().ToLowerInvariant();
+				matchCondition = arg1.Message.ToPlainText().ToLowerInvariant();
 				if (matchCondition is not ("on" or "off" or "all"))
 				{
 					return new CallState(ErrorMessages.Returns.InvalidArgument);
@@ -467,7 +467,7 @@ public partial class Functions
 			}
 
 			var skipGagged = parser.CurrentState.Arguments.TryGetValue("2", out var arg2)
-											 && arg2.Message!.Truthy();
+											 && arg2.Message.Truthy();
 
 			var privilegedWho = await ChannelHelper.PrivilegedWho(executor);
 
@@ -489,7 +489,7 @@ public partial class Functions
 	[SharpFunction(Name = "cbuffer", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
 	public async ValueTask<CallState> ChannelBuffer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, channel => new CallState(channel.Buffer.ToString()));
@@ -498,7 +498,7 @@ public partial class Functions
 	[SharpFunction(Name = "cdesc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
 	public async ValueTask<CallState> ChannelDescription(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, channel => new CallState(channel.Description));
@@ -507,7 +507,7 @@ public partial class Functions
 	[SharpFunction(Name = "cmsgs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
 	public async ValueTask<CallState> ChannelMessages(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
@@ -521,7 +521,7 @@ public partial class Functions
 	[SharpFunction(Name = "cusers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
 	public async ValueTask<CallState> ChannelUsers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await WithVisibleChannel(executor, channelName, async channel =>
@@ -536,7 +536,7 @@ public partial class Functions
 		ParameterNames = ["channel", "info-type"])]
 	public async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var channelName = parser.CurrentState.Arguments["0"].Message;
 		var infoType = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "name").ToPlainText().ToLowerInvariant();
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

@@ -240,9 +240,8 @@
         else
         {
             <div class="adminwiki-catlist">
-                @foreach (var category in _categories)
+                @foreach (var c in _categories)
                 {
-                    var c = category;
                     <div class="@($"adminwiki-catcard{(c.HasPage ? null : " adminwiki-catcard--nopage")}")">
                         <a class="adminwiki-catcard-link" href="@WikiCategories.Route(c.Key)"
                            title="@(c.HasPage ? null : Loc["WikiCategoryNoPage"].Value)">
@@ -285,20 +284,10 @@
     </KitCard>
 </div>
 
-<MudDialog @bind-Visible="_showDeleteConfirm">
-    <TitleContent>
-        <MudText Typo="Typo.h6">@Loc["WikiDeleteConfirmTitle"]</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>@Loc.Plural("WikiDeleteConfirmText", "count", _selected.Count)</MudText>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showDeleteConfirm = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Error" Variant="Variant.Filled" Disabled="@_busy" OnClick="@BatchDeleteAsync">
-            @Loc["WikiDelete"]
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<ConfirmDialog @bind-Visible="_showDeleteConfirm" Title="@Loc["WikiDeleteConfirmTitle"]" ConfirmText="@Loc["WikiDelete"]"
+               Busy="_busy" OnConfirm="BatchDeleteAsync">
+    <MudText>@Loc.Plural("WikiDeleteConfirmText", "count", _selected.Count)</MudText>
+</ConfirmDialog>
 
 <MudDialog @bind-Visible="_showMetadataDialog" Options="@DialogOptions">
     <TitleContent>

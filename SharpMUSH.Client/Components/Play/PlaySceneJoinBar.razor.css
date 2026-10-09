@@ -1,0 +1,37 @@
+/* The Story's footer while the viewer is not focused on the room's scene: say so, and offer to join. */
+.play-join {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.play-join-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.play-join-refusal {
+    display: block;
+    margin-top: 4px;
+    color: var(--warn);
+}
+
+.play-join-btn {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-on);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.play-join-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}

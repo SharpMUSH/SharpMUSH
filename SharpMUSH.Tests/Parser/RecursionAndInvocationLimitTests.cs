@@ -40,7 +40,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		var output = result!.Message!.ToPlainText();
+		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 		var hasRecursion = output.Contains("RECURSION");
 		var hasInvocation = output.Contains("INVOCATION");
@@ -66,7 +66,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		var output = result!.Message!.ToPlainText();
+		var output = result!.Message.ToPlainText();
 		TestDiagnostics.WriteLine($"Stack depth test result: {output}");
 
 		await Assert.That(output).IsEqualTo("1");
@@ -98,9 +98,9 @@ public class RecursionAndInvocationLimitTests
 		await Assert.That(result11).IsNotNull();
 
 		await Assert.That(result10!.Message).IsNotNull();
-		var output10 = result10!.Message!.ToPlainText();
+		var output10 = result10!.Message.ToPlainText();
 		await Assert.That(result11!.Message).IsNotNull();
-		var output11 = result11!.Message!.ToPlainText();
+		var output11 = result11!.Message.ToPlainText();
 
 		TestDiagnostics.WriteLine($"10-deep result: {output10}");
 		TestDiagnostics.WriteLine($"11-deep result: {output11}");
@@ -124,7 +124,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		var output = result!.Message!.ToPlainText();
+		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 	}
 
@@ -144,7 +144,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		var output = result!.Message!.ToPlainText();
+		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 	}
 
@@ -172,7 +172,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("11");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("11");
 	}
 
 	/// <summary>
@@ -191,7 +191,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		var output = result!.Message!.ToPlainText();
+		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 	}
 
@@ -233,9 +233,9 @@ public class RecursionAndInvocationLimitTests
 		await Assert.That(stackResult).IsNotNull();
 
 		await Assert.That(recursionResult!.Message).IsNotNull();
-		var recursionError = recursionResult!.Message!.ToPlainText();
+		var recursionError = recursionResult!.Message.ToPlainText();
 		await Assert.That(stackResult!.Message).IsNotNull();
-		var stackOutput = stackResult!.Message!.ToPlainText();
+		var stackOutput = stackResult!.Message.ToPlainText();
 
 		await Assert.That(recursionError).Contains("#-1");
 
@@ -272,11 +272,11 @@ public class RecursionAndInvocationLimitTests
 		await Assert.That(ulocalResult).IsNotNull();
 
 		await Assert.That(uResult!.Message).IsNotNull();
-		var uOutput = uResult!.Message!.ToPlainText();
+		var uOutput = uResult!.Message.ToPlainText();
 		await Assert.That(ufunResult!.Message).IsNotNull();
-		var ufunOutput = ufunResult!.Message!.ToPlainText();
+		var ufunOutput = ufunResult!.Message.ToPlainText();
 		await Assert.That(ulocalResult!.Message).IsNotNull();
-		var ulocalOutput = ulocalResult!.Message!.ToPlainText();
+		var ulocalOutput = ulocalResult!.Message.ToPlainText();
 
 		TestDiagnostics.WriteLine($"u() recursion test: {uOutput}");
 		TestDiagnostics.WriteLine($"ufun() recursion test: {ufunOutput}");
@@ -381,7 +381,7 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain("repeat(x,5242881)"));
 
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
 	}
 
 	/// <summary>A result comfortably under the ceiling is returned unchanged.</summary>
@@ -390,7 +390,7 @@ public class RecursionAndInvocationLimitTests
 	{
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain("repeat(ab,5)"));
 
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("ababababab");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("ababababab");
 	}
 
 	/// <summary>
@@ -406,7 +406,7 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain("strcat(repeat(x,5242881),tail)"));
 
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
 	}
 
 	/// <summary>
@@ -431,7 +431,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
-		var output = result!.Message!.ToPlainText();
+		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1 FUNCTION RECURSION LIMIT EXCEEDED");
 		await Assert.That(output).DoesNotContain("INVOCATION LIMIT");
 	}

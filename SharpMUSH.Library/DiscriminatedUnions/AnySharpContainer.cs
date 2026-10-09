@@ -60,9 +60,9 @@ public sealed class AnySharpContainer : IUnion, IObjectShaped<AnySharpContainer>
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpContainer value)
 	{
-		if (node is AnySharpObject { IsContainer: true } found)
+		if (node is AnySharpObject { AsOptionalContainer: AnySharpContainer found })
 		{
-			value = found.AsContainer;
+			value = found;
 			return true;
 		}
 

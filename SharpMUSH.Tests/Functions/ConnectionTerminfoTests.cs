@@ -48,7 +48,7 @@ public class ConnectionTerminfoTests
 	}
 
 	private async Task<string> TerminfoAsync(DBRef player) =>
-		(await Parser.FunctionParse(MarkupText.Plain($"terminfo(#{player.Number})")))!.Message!.ToPlainText();
+		(await Parser.FunctionParse(MarkupText.Plain($"terminfo(#{player.Number})")))!.Message.ToPlainText();
 
 	/// <summary>
 	/// PennMUSH's <c>lookup_desc()</c> (src/bsd.c) falls back to
@@ -70,7 +70,7 @@ public class ConnectionTerminfoTests
 		try
 		{
 			var asSelf = WebAppFactoryArg.FunctionParserFor(playerRef);
-			var byMe = (await asSelf.FunctionParse(MarkupText.Plain("terminfo(me)")))!.Message!.ToPlainText();
+			var byMe = (await asSelf.FunctionParse(MarkupText.Plain("terminfo(me)")))!.Message.ToPlainText();
 
 			await Assert.That(byMe).StartsWith("SharpMUTerm");
 			await Assert.That(byMe).IsEqualTo(await TerminfoAsync(playerRef))

@@ -21,7 +21,7 @@ public class ObjectManipulationCommandTests
 	public async ValueTask GetCommand()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create GetTestObject"));
-		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
+		var thingDbRef = DBRef.Parse(result.Message.ToPlainText()!);
 
 		var getResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get GetTestObject"));
 

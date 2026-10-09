@@ -32,7 +32,7 @@ public class RadioIntegrationTests
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 
 	private async Task<string> God(string command) =>
-		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		(await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message.ToPlainText()?.Trim() ?? string.Empty;
 
 	/// <summary>What <paramref name="player"/> was told while <paramref name="command"/> ran.</summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer player, string command)
@@ -160,7 +160,7 @@ public class RadioIntegrationTests
 				.Single(o => o.Ref == "radio").Objid;
 			async Task<string> Paint(string colour) =>
 				(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"u({radio}/FUN`PAINT,{colour},Police)")))!
-					.Message!.Render(MarkupFormat.Html);
+					.Message.Render(MarkupFormat.Html);
 
 			await Assert.That(await Paint("success")).Contains("tone-success").And.Contains("Police");
 			await Assert.That(await Paint("hg")).DoesNotContain("tone-").And.Contains("Police");

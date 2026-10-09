@@ -59,12 +59,9 @@ public class AdminCharactersController(
 		pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 		page = Math.Max(page, 1);
 
-		var named = new List<SharpPlayer>();
-		await foreach (var player in mediator.CreateStream(new GetAllPlayersQuery()).WithCancellation(ct))
-		{
-			if (search is not { Length: > 0 } || player.Object.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-				named.Add(player);
-		}
+		var named = await mediator.CreateStream(new GetAllPlayersQuery())
+			.Where(player => search is not { Length: > 0 } || player.Object.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+			.ToListAsync(ct);
 
 		named.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Object.Name, b.Object.Name));
 		var skip = (page - 1) * pageSize;
@@ -150,7 +147,7 @@ public class AdminCharactersController(
 		using var portal = audit.BeginPortal(User, reason);
 		var result = await commandInvoker.InvokeAsync("@BOOT", executor.Object().DBRef,
 			new Dictionary<string, CallState> { ["0"] = new(player.Object.DBRef.ToString()) });
-		return result?.Message?.ToPlainText() is { } message && message.StartsWith("#-1", StringComparison.Ordinal)
+		return result?.Message.ToPlainText() is { } message && message.StartsWith("#-1", StringComparison.Ordinal)
 			? StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(message))
 			: NoContent();
 	}

@@ -84,7 +84,7 @@ public class SystemCommandTests
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@command/list"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
 	}
 
 	// PennMUSH src/command.c: an unknown switch is formatted as "%s doesn't know switch %s." into
@@ -98,7 +98,7 @@ public class SystemCommandTests
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@shutdown/what"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: what");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: what");
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
 			NotifyService, nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
 			"@SHUTDOWN doesn't know switch WHAT.")).IsTrue();
@@ -112,7 +112,7 @@ public class SystemCommandTests
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wiki/get home"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: get");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: get");
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
 			NotifyService, nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
 			"@WIKI doesn't know switch GET.")).IsTrue();
@@ -215,7 +215,7 @@ public class SystemCommandTests
 		var exitName = TestIsolationHelpers.GenerateUniqueName("SystemTestFirstexitExit");
 		var exitResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@open {exitName}"));
-		var exitMessage = exitResult.Message?.ToPlainText()
+		var exitMessage = exitResult.Message.ToPlainText()
 			?? throw new InvalidOperationException($"@open {exitName} returned a null message.");
 		var exitDbRef = DBRef.Parse(exitMessage);
 
@@ -224,6 +224,6 @@ public class SystemCommandTests
 		var result = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@firstexit {exitDbRef}"));
 
-		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsEqualTo(string.Empty);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(string.Empty);
 	}
 }

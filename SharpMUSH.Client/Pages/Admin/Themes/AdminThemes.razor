@@ -26,23 +26,10 @@
         </Actions>
     </PlainPageHeader>
 
-    @if (_error is not null)
-    {
-        <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
-    }
-
-    @if (_state is null)
-    {
-        @if (_error is null)
-        {
-            <MudProgressLinear Indeterminate="true" />
-        }
-    }
-    else
-    {
+    <LoadState TValue="PortalThemesResponse" Value="_state" Loading="@(_state is null && _error is null)" Error="@_error" Context="state">
         <div class="adm-theme-layout">
             <nav class="adm-theme-list" aria-label="@Loc["AdmThemesTitle"]">
-                @foreach (var theme in _state.Themes)
+                @foreach (var theme in state.Themes)
                 {
                     var current = _draft?.Id == theme.Id;
                     <button type="button" class="adm-theme-item @(current ? "adm-theme-item--current" : null)" data-theme="@theme.Id"
@@ -113,15 +100,7 @@
                                 <h3 class="adm-theme-group-title">@Loc["AdmThemesGenerate"]</h3>
                                 <p class="adm-theme-hint">@Loc["AdmThemesGenerateHint"]</p>
                                 <div class="adm-theme-generate">
-                                    <label class="adm-theme-token">
-                                        <input type="color" class="adm-theme-color" value="@_seed" aria-label="@Loc["AdmThemesSeed"]"
-                                               @onchange="e => SetSeed(e.Value?.ToString())" />
-                                        <span class="adm-theme-token-text">
-                                            <span class="adm-theme-token-name">@Loc["AdmThemesSeed"]</span>
-                                            <input type="text" class="adm-theme-hex" value="@_seed" spellcheck="false" maxlength="7" id="theme-seed"
-                                                   aria-label="@($"{Loc["AdmThemesSeed"]} (hex)")" @onchange="e => SetSeed(e.Value?.ToString())" />
-                                        </span>
-                                    </label>
+                                    <ThemeTokenInput Label="@Loc["AdmThemesSeed"]" Value="@_seed" HexId="theme-seed" OnChange="SetSeed" />
                                     <MudSelect T="ThemeHarmony" @bind-Value="_harmony" Label="@Loc["AdmThemesHarmony"]" Variant="Variant.Outlined"
                                                Margin="Margin.Dense" Dense="true" id="theme-harmony">
                                         @foreach (var harmony in Enum.GetValues<ThemeHarmony>())
@@ -185,16 +164,8 @@
                                 <div class="adm-theme-tokens">
                                     @foreach (var token in tokens)
                                     {
-                                        <label class="adm-theme-token" data-token="@token">
-                                            <input type="color" class="adm-theme-color" value="@_draft.Tokens[token]" disabled="@locked"
-                                                   aria-label="@Loc[TokenKey(token)]" @onchange="e => SetToken(token, e.Value?.ToString())" />
-                                            <span class="adm-theme-token-text">
-                                                <span class="adm-theme-token-name">@Loc[TokenKey(token)]</span>
-                                                <input type="text" class="adm-theme-hex" value="@_draft.Tokens[token]" disabled="@locked" spellcheck="false"
-                                                       maxlength="7" aria-label="@($"{Loc[TokenKey(token)]} (hex)")"
-                                                       @onchange="e => SetToken(token, e.Value?.ToString())" />
-                                            </span>
-                                        </label>
+                                        <ThemeTokenInput Token="@token" Label="@Loc[TokenKey(token)]" Value="@_draft.Tokens[token]" Disabled="locked"
+                                                         OnChange="value => SetToken(token, value)" />
                                     }
                                 </div>
                             </section>
@@ -256,17 +227,8 @@
                                 <div class="adm-theme-tokens" id="theme-decorative">
                                     @foreach (var token in ThemeTokens.Decorative)
                                     {
-                                        var value = DecorativeValue(token);
-                                        <label class="adm-theme-token" data-token="@token">
-                                            <input type="color" class="adm-theme-color" value="@value" disabled="@locked"
-                                                   aria-label="@Loc[TokenKey(token)]" @onchange="e => SetToken(token, e.Value?.ToString())" />
-                                            <span class="adm-theme-token-text">
-                                                <span class="adm-theme-token-name">@Loc[TokenKey(token)]</span>
-                                                <input type="text" class="adm-theme-hex" value="@value" disabled="@locked" spellcheck="false"
-                                                       maxlength="7" aria-label="@($"{Loc[TokenKey(token)]} (hex)")"
-                                                       @onchange="e => SetToken(token, e.Value?.ToString())" />
-                                            </span>
-                                        </label>
+                                        <ThemeTokenInput Token="@token" Label="@Loc[TokenKey(token)]" Value="@DecorativeValue(token)" Disabled="locked"
+                                                         OnChange="value => SetToken(token, value)" />
                                     }
                                 </div>
                             }
@@ -351,7 +313,7 @@
                 </KitCard>
             }
         </div>
-    }
+    </LoadState>
 </div>
 
 @code {
@@ -626,8 +588,8 @@
         Edited();
     }
 
-    private async Task<bool> ConfirmAsync(string title, string body)
-        => await DialogService.ShowMessageBoxAsync(Loc[title], Loc[body], yesText: Loc["AdmThemesSwitchMode"], cancelText: Loc["Cancel"]) == true;
+    private Task<bool> ConfirmAsync(string title, string body)
+        => DialogService.ConfirmAsync(Loc, Loc[title], Loc[body], Loc["AdmThemesSwitchMode"]);
 
     private void SetStyle(string key, string? value)
     {
@@ -765,10 +727,8 @@
     private async Task DeleteAsync()
     {
         if (_draft?.Id is not { } id) return;
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AdmThemesDeleteTitle", _draft.Name], Loc["AdmThemesDeleteBody"],
-            yesText: Loc["AdmThemesDelete"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmAsync(Loc, Loc["AdmThemesDeleteTitle", _draft.Name], Loc["AdmThemesDeleteBody"],
+            Loc["AdmThemesDelete"])) return;
 
         _busy = true;
         _error = null;

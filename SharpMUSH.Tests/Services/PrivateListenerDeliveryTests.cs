@@ -32,7 +32,7 @@ public partial class PrivateListenerTests
 		var actor = await Player();
 		var owner = await Player();
 		var puppet = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "PrivatePuppet");
-		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText().Trim());
+		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message.ToPlainText().Trim());
 		await Admin($"@tel {puppet}={room}");
 		if (!remoteOwner) await Admin($"@tel {owner.DbRef}={room}");
 		await Admin($"@chown {puppet}={owner.DbRef}");

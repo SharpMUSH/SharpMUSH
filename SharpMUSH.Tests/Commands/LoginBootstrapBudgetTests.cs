@@ -32,7 +32,7 @@ public class LoginBootstrapBudgetTests
 		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "LoginBudget");
 		var room = await Factory.CommandParser.CommandParse(1, connections,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("LoginBudgetRoom")}"));
-		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message!.ToPlainText().Trim()}"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message.ToPlainText().Trim()}"));
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@set {playerRef}=WIZARD"));
 		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();
 		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(connections, "telnet");
@@ -84,7 +84,7 @@ public class LoginBootstrapBudgetTests
 		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "LoginLook");
 		var roomName = TestIsolationHelpers.GenerateUniqueName("LoginLookRoom");
 		var room = await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@dig {roomName}"));
-		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message!.ToPlainText().Trim()}"));
+		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@tel {playerRef}={room.Message.ToPlainText().Trim()}"));
 		// The teleport's own look shows the room too; only what the login says counts.
 		var heardBeforeLogin = Factory.Notifications.CountFor(playerRef);
 		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();

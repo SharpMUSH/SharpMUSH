@@ -393,7 +393,7 @@ public class PackageInstallAdmissionTests
 	private async Task<Dictionary<string, string>> AttachHostAsync()
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 		var host = await Database.CreateThingAsync("Admission Attach Host", location, pmNode.Expect<SharpPlayer>(), location);
 		var objid = (await Database.GetObjectNodeAsync(host)).Expect<AnySharpObject>().Object().DBRef.ToString();
 		return new Dictionary<string, string> { ["host"] = objid };

@@ -29,14 +29,14 @@ public class NearbyObjectsTests
 	public async Task NearbyIsSelfThenContentsThenTheLocationsOtherContents()
 	{
 		var god = (await Node(new DBRef(1))).Expect<SharpPlayer>();
-		var room = (await Node(await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("NearRoom"), god)))).AsContainer;
+		var room = (await Node(await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("NearRoom"), god)))).AsOptionalContainer.Expect<AnySharpContainer>();
 		async Task<DBRef> Thing(string prefix, AnySharpContainer where)
 			=> await Mediator.Send(new CreateThingCommand(TestIsolationHelpers.GenerateUniqueName(prefix), where, god, room));
 
 		var self = await Thing("NearSelf", room);
 		var before = await Thing("NearBefore", room);
 		var after = await Thing("NearAfter", room);
-		var selfContainer = (await Node(self)).AsContainer;
+		var selfContainer = (await Node(self)).AsOptionalContainer.Expect<AnySharpContainer>();
 		var carried = await Thing("NearCarried", selfContainer);
 
 		var nearby = await NearbyObjects.ForAsync(Mediator, await Node(self)).Select(o => o.Object().DBRef.Number).ToListAsync();

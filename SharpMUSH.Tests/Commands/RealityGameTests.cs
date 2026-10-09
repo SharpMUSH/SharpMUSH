@@ -266,9 +266,9 @@ public class RealityGameTests
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
 			var parser = Factory.FunctionParserFor(player.Object.DBRef);
 			var matched = await parser.FunctionParse(MarkupText.Plain($"locate(%#,{name},n)"));
-			await Assert.That(matched!.Message!.ToPlainText()).IsEqualTo($"#{visible.Number}");
+			await Assert.That(matched!.Message.ToPlainText()).IsEqualTo($"#{visible.Number}");
 			var direct = await parser.FunctionParse(MarkupText.Plain($"locate(%#,{hidden.Object().DBRef},a)"));
-			await Assert.That(direct!.Message!.ToPlainText()).StartsWith("#-");
+			await Assert.That(direct!.Message.ToPlainText()).StartsWith("#-");
 			var output = new HttpResponseContext();
 			using (Get<IHttpOutputCapture>().BeginCapture(player.Object.Key, output))
 				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"look {room.Object.DBRef}"));
@@ -298,11 +298,11 @@ public class RealityGameTests
 		try
 		{
 			var added = await parser.CommandListParse(MarkupText.Plain($"@reality/add {name}"));
-			await Assert.That(added!.Message!.ToPlainText()).IsEqualTo("Reality configuration updated.");
+			await Assert.That(added!.Message.ToPlainText()).IsEqualTo("Reality configuration updated.");
 			var listed = await parser.CommandListParse(MarkupText.Plain("@reality/list"));
-			await Assert.That(listed!.Message!.ToPlainText()).Contains(name);
+			await Assert.That(listed!.Message.ToPlainText()).Contains(name);
 			var inspected = await parser.CommandListParse(MarkupText.Plain($"@reality/inspect {player.Object.DBRef}"));
-			await Assert.That(inspected!.Message!.ToPlainText()).Contains("RX: normal");
+			await Assert.That(inspected!.Message.ToPlainText()).Contains("RX: normal");
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
@@ -511,7 +511,7 @@ public class RealityGameTests
 			await Get<RealityPolicy>().SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Version = 2 }, default);
 			var output = await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef))
 				.CommandListParse(MarkupText.Plain($"@reality/inspect {target.Object.DBRef}"));
-			await Assert.That(output!.Message!.ToPlainText()).IsEqualTo("#-1 Invalid object reality data.");
+			await Assert.That(output!.Message.ToPlainText()).IsEqualTo("#-1 Invalid object reality data.");
 		}
 		finally { await Get<RealityPolicy>().SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef), default); }
 	}

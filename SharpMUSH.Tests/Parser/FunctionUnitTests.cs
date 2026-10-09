@@ -39,7 +39,7 @@ public class FunctionUnitTests
 	public async Task Test(string str, string? expected = null)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 
 		TestDiagnostics.WriteLine(string.Join("", result));
 

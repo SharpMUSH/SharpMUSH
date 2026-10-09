@@ -29,7 +29,7 @@ public class RealityProjectionCancellationTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(actor));
 		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
-			.Returns(new[] { target.MinusRoom() }.ToAsyncEnumerable());
+			.Returns(new[] { target.AsOptionalContent.Expect<AnySharpContent>() }.ToAsyncEnumerable());
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var cleanup = new CancellationTokenSource();
 		var policy = Substitute.For<IRealityPolicy>();

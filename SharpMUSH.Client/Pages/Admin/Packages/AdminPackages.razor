@@ -99,74 +99,13 @@
                     </EmptyState>
                 }
                 <div class="pkg-rows">
-                    @foreach (var pkg in visible)
+                    @foreach (var p in visible)
                     {
-                        var p = pkg;
                         _updates.TryGetValue(p.Package.Id, out var update);
-                        <div class="pkg-row">
-                            <MudIcon Icon="@KindIcon(p.Package.Kind)" Class="@($"pkg-row-icon pkg-kind-{p.Package.Kind.ToString().ToLowerInvariant()}")"
-                                     Title="@KindName(p.Package.Kind)" />
-                            <div class="pkg-row-main">
-                                <div class="pkg-row-tags">
-                                    <span class="pkg-row-name">@p.Package.Id</span>
-                                    @if (p.Package.Kind != PackageKind.Softcode)
-                                    {
-                                        <Pill Tag="true">@KindName(p.Package.Kind)</Pill>
-                                    }
-                                    <Pill Tag="true">v@(p.Package.Version)</Pill>
-                                    @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
-                                    {
-                                        <Pill Tag="true">@p.Package.SourceRepo</Pill>
-                                    }
-                                    @if (update is not null)
-                                    {
-                                        @if (update.InstalledTagMoved)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Error">@Loc["PkgTagMoved"]</MudChip>
-                                        }
-                                        else if (update.UpdateAvailable)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">@Loc["PkgVersionAvailable", update.LatestVersion ?? string.Empty]</MudChip>
-                                        }
-                                        else
-                                        {
-                                            <Pill Tag="true">@Loc["PkgCurrent"]</Pill>
-                                        }
-                                        @if (update.PathChangedAtHead)
-                                        {
-                                            <Pill Tag="true" Warn="true">@Loc["PkgDevDrift"]</Pill>
-                                        }
-                                    }
-                                </div>
-                                <div class="pkg-row-meta">
-                                    <span>@Loc["PkgInstalledOn", p.Package.InstalledAt.ToString("yyyy-MM-dd")]</span>
-                                    <span>@Loc["PkgObjAttrCounts", p.ObjectCount, p.ManagedAttributeCount]</span>
-                                    @if (p.Dependents.Count > 0)
-                                    {
-                                        <span>@Loc["PkgRequiredBy", string.Join(", ", p.Dependents)]</span>
-                                    }
-                                </div>
-                            </div>
-                            <div class="pkg-row-actions">
-                                @if (update is null)
-                                {
-                                    <MudButton Variant="Variant.Text" Size="Size.Small"
-                                               Disabled="@_busy"
-                                               OnClick="@(() => CheckUpdateAsync(p.Package.Id))">
-                                        @Loc["PkgCheck"]
-                                    </MudButton>
-                                }
-                                <MudTooltip Text="@Loc["PkgRevisionHistory"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["PkgRevisionHistory"]"
-                                                   OnClick="@(() => OpenHistoryAsync(p.Package.Id))" />
-                                </MudTooltip>
-                                <MudTooltip Text="@Loc["PkgUninstall"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@Loc["PkgUninstall"]"
-                                                   Color="Color.Error"
-                                                   OnClick="@(() => OpenUninstall(p))" />
-                                </MudTooltip>
-                            </div>
-                        </div>
+                        <InstalledPackageRow Package="p" Update="update" Busy="_busy"
+                                             OnCheck="@(() => CheckUpdateAsync(p.Package.Id))"
+                                             OnHistory="@(() => OpenHistoryAsync(p.Package.Id))"
+                                             OnUninstall="@(() => OpenUninstall(p))" />
                     }
                 </div>
             }
@@ -212,64 +151,38 @@
     </DialogActions>
 </MudDialog>
 
-<MudDialog @bind-Visible="_showUninstall">
-    <TitleContent>
-        <MudText Typo="Typo.h6">@Loc["PkgUninstallConfirmTitle", _uninstallTarget?.Package.Id ?? string.Empty]</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>
-            @Loc.Plural("PkgUninstallConfirmBody", "objects", _uninstallTarget?.ObjectCount ?? 0, "attributes", _uninstallTarget?.ManagedAttributeCount ?? 0)
-        </MudText>
-        @if (_uninstallTarget?.Dependents.Count > 0)
+<ConfirmDialog @bind-Visible="_showUninstall" Title="@Loc["PkgUninstallConfirmTitle", _uninstallTarget?.Package.Id ?? string.Empty]"
+               ConfirmText="@Loc["PkgUninstall"]" Busy="_busy" OnConfirm="UninstallAsync">
+    <MudText>
+        @Loc.Plural("PkgUninstallConfirmBody", "objects", _uninstallTarget?.ObjectCount ?? 0, "attributes", _uninstallTarget?.ManagedAttributeCount ?? 0)
+    </MudText>
+    @if (_uninstallTarget?.Dependents.Count > 0)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mt-2">
+            @Loc["PkgDependedOnBy", string.Join(", ", _uninstallTarget.Dependents)]
+        </MudAlert>
+        <MudCheckBox T="bool" @bind-Value="_forceUninstall" Label="@Loc["PkgForceRemoval"]" Color="Color.Error" />
+    }
+</ConfirmDialog>
+
+<ConfirmDialog @bind-Visible="_showDisable" Title="@Loc["PkgPluginDisableTitle", _disableTarget?.Name ?? string.Empty]"
+               ConfirmText="@Loc["PkgPluginTurnOff"]" Busy="_busy" OnConfirm="DisablePluginAsync">
+    @if (_disableTarget is { } target)
+    {
+        @if (target.Dependents.Count > 0)
         {
-            <MudAlert Severity="Severity.Warning" Class="mt-2">
-                @Loc["PkgDependedOnBy", string.Join(", ", _uninstallTarget.Dependents)]
+            <MudAlert Severity="Severity.Warning" Class="mb-2">
+                @Loc["PkgPluginDisableDependents", string.Join(", ", target.Dependents)]
             </MudAlert>
-            <MudCheckBox T="bool" @bind-Value="_forceUninstall" Label="@Loc["PkgForceRemoval"]" Color="Color.Error" />
         }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showUninstall = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Error" Variant="Variant.Filled" Disabled="@_busy" OnClick="@UninstallAsync">
-            @Loc["PkgUninstall"]
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+        <MudText>@(target.Unloadable ? Loc["PkgPluginStopsNow", target.Name] : Loc["PkgPluginStopsAtRestart", target.Name])</MudText>
+    }
+</ConfirmDialog>
 
-<MudDialog @bind-Visible="_showDisable">
-    <TitleContent>
-        <MudText Typo="Typo.h6">@Loc["PkgPluginDisableTitle", _disableTarget?.Name ?? string.Empty]</MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (_disableTarget is { } target)
-        {
-            @if (target.Dependents.Count > 0)
-            {
-                <MudAlert Severity="Severity.Warning" Class="mb-2">
-                    @Loc["PkgPluginDisableDependents", string.Join(", ", target.Dependents)]
-                </MudAlert>
-            }
-            <MudText>@(target.Unloadable ? Loc["PkgPluginStopsNow", target.Name] : Loc["PkgPluginStopsAtRestart", target.Name])</MudText>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showDisable = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Error" Variant="Variant.Filled" Disabled="@_busy" OnClick="@DisablePluginAsync">
-            @Loc["PkgPluginTurnOff"]
-        </MudButton>
-    </DialogActions>
-</MudDialog>
-
-<MudDialog @bind-Visible="_showRestart">
-    <TitleContent><MudText Typo="Typo.h6">@Loc["PkgRestartTitle"]</MudText></TitleContent>
-    <DialogContent><MudText>@Loc["PkgRestartBody"]</MudText></DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showRestart = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Warning" Variant="Variant.Filled" Disabled="@_busy" OnClick="@RestartAsync">
-            @Loc["PkgRestart"]
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+<ConfirmDialog @bind-Visible="_showRestart" Title="@Loc["PkgRestartTitle"]" ConfirmText="@Loc["PkgRestart"]" ConfirmColor="Color.Warning"
+               Busy="_busy" OnConfirm="RestartAsync">
+    <MudText>@Loc["PkgRestartBody"]</MudText>
+</ConfirmDialog>
 
 @code {
     private enum PkgTab { Installed, Updates, Plugins }
@@ -319,56 +232,7 @@
             @foreach (var plugin in _plugins.Plugins)
             {
                 var pl = plugin;
-                <div class="pkg-row">
-                    <MudIcon Icon="@Icons.Material.Filled.Extension" Class="pkg-row-icon pkg-kind-plugin" />
-                    <div class="pkg-row-main">
-                        <div class="pkg-row-tags">
-                            <span class="pkg-row-name">@pl.Name</span>
-                            @if (!string.Equals(pl.Name, pl.Id, StringComparison.Ordinal))
-                            {
-                                <Pill Tag="true">@pl.Id</Pill>
-                            }
-                            @if (pl.Version is not null)
-                            {
-                                <Pill Tag="true">v@(pl.Version)</Pill>
-                            }
-                            <Pill Tag="true">@OriginLabel(pl)</Pill>
-                            <MudChip T="string" Size="Size.Small" Color="@StatusColor(pl.Status)">@StatusLabel(pl.Status)</MudChip>
-                            @if (pl.Pending != PluginPendingChange.None)
-                            {
-                                <Pill Tag="true" Warn="true">
-                                    @(pl.Pending == PluginPendingChange.Starts ? Loc["PkgPluginStartsAtRestart"] : Loc["PkgPluginStopsAtRestartShort"])
-                                </Pill>
-                            }
-                        </div>
-                        <div class="pkg-row-meta">
-                            @if (pl.Description is not null)
-                            {
-                                <span>@pl.Description</span>
-                            }
-                            @if (pl.Status == PluginBootStatus.Loaded)
-                            {
-                                <span>@Loc["PkgPluginAdds", pl.Commands, pl.Functions]</span>
-                            }
-                            @if (pl.Dependents.Count > 0)
-                            {
-                                <span>@Loc["PkgRequiredBy", string.Join(", ", pl.Dependents)]</span>
-                            }
-                            @if (pl.Reason is not null)
-                            {
-                                <span class="pkg-row-reason">@pl.Reason</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="pkg-row-actions">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@(_busy || _restarting)"
-                                   Color="@(pl.Enabled ? Color.Error : Color.Primary)"
-                                   aria-label="@Loc[pl.Enabled ? "PkgPluginTurnOffNamed" : "PkgPluginTurnOnNamed", pl.Name]"
-                                   OnClick="@(() => TogglePluginAsync(pl, !pl.Enabled))">
-                            @(pl.Enabled ? Loc["PkgPluginTurnOff"] : Loc["PkgPluginTurnOn"])
-                        </MudButton>
-                    </div>
-                </div>
+                <PluginRow Plugin="pl" Busy="@(_busy || _restarting)" OnToggle="@(() => TogglePluginAsync(pl, !pl.Enabled))" />
             }
         </div>
         }
@@ -604,44 +468,6 @@
         }
         finally { _busy = false; }
     }
-
-    private static string KindIcon(PackageKind kind) => kind switch
-    {
-        PackageKind.Application => Icons.Material.Filled.Apps,
-        PackageKind.Plugin => Icons.Material.Filled.Extension,
-        _ => Icons.Material.Filled.Archive
-    };
-
-    private string KindName(PackageKind kind) => kind switch
-    {
-        PackageKind.Application => Loc["PkgKindApplication"],
-        PackageKind.Plugin => Loc["PkgKindPlugin"],
-        _ => Loc["PkgKindSoftcode"]
-    };
-
-    private string OriginLabel(PluginStatusDto plugin) => plugin switch
-    {
-        { Origin: PluginOrigin.BuiltIn } => Loc["PkgPluginShipped"],
-        { Package: { } package } => Loc["PkgPluginFromPackage", package],
-        _ => Loc["PkgPluginFromFolder"]
-    };
-
-    private string StatusLabel(PluginBootStatus status) => status switch
-    {
-        PluginBootStatus.Loaded => Loc["PkgPluginRunning"],
-        PluginBootStatus.Disabled => Loc["PkgPluginOff"],
-        PluginBootStatus.Failed => Loc["PkgPluginFailed"],
-        PluginBootStatus.Incompatible => Loc["PkgPluginIncompatible"],
-        PluginBootStatus.Duplicate => Loc["PkgPluginDuplicate"],
-        _ => Loc["PkgPluginNotStarted"]
-    };
-
-    private static Color StatusColor(PluginBootStatus status) => status switch
-    {
-        PluginBootStatus.Loaded => Color.Success,
-        PluginBootStatus.Failed or PluginBootStatus.Incompatible or PluginBootStatus.Duplicate => Color.Error,
-        _ => Color.Default
-    };
 
     // RevisionDto.Kind is the wire string, so a revision written by a newer server may name a kind this
     // build has no PackageRevisionKind member (and no label) for; show it verbatim rather than guessing.

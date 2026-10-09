@@ -49,7 +49,7 @@ public class EmitLocalizationTests
 		while (true)
 		{
 			var value = (await Factory.CommandParser.FunctionParse(MarkupText.Plain($"[get({thing}/{attribute})]")))!
-				.Message!.ToPlainText().Trim();
+				.Message.ToPlainText().Trim();
 			if (value.Length > 0 || DateTime.UtcNow >= deadline) return value;
 			await Task.Delay(20);
 		}

@@ -26,7 +26,7 @@ public class RegexpCaptureContextTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser.FromState(ParserState.RootFor(new DBRef(1)));
 
 	private async Task<string> Evaluate(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
 
 	/// <summary>
 	/// A capture is text. Pasting it into the body before evaluation ran matched user input as

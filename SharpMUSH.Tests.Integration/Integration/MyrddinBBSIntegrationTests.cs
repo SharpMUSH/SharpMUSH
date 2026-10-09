@@ -147,7 +147,7 @@ public class MyrddinBBSIntegrationTests
 				{
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MarkupText.Plain("think [num(bbpocket)]"));
-					bbpocketDbref = numResult.Message?.ToPlainText()?.Trim();
+					bbpocketDbref = numResult.Message.ToPlainText()?.Trim();
 					_bbpocketDbref = bbpocketDbref;
 					Log($"[BBS INSTALL] bbpocket created with dbref: {bbpocketDbref} (replacing #222 in remaining lines)");
 
@@ -160,7 +160,7 @@ public class MyrddinBBSIntegrationTests
 				{
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MarkupText.Plain("think [num(mbboard)]"));
-					mbboardDbref = numResult.Message?.ToPlainText()?.Trim();
+					mbboardDbref = numResult.Message.ToPlainText()?.Trim();
 					_mbboardDbref = mbboardDbref;
 					Log($"[BBS INSTALL] mbboard created with dbref: {mbboardDbref}");
 
@@ -203,7 +203,7 @@ public class MyrddinBBSIntegrationTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@pcreate BBSTester=bbs_test_password_123"));
 		var testerDbrefResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("think [pmatch(BBSTester)]"));
-		_regularUserDbref = testerDbrefResult.Message?.ToPlainText()?.Trim();
+		_regularUserDbref = testerDbrefResult.Message.ToPlainText()?.Trim();
 		Log($"[BBS INSTALL] Regular test user created with dbref: {_regularUserDbref}");
 		if (!string.IsNullOrEmpty(_regularUserDbref) && _regularUserDbref != "#-1"
 			&& DBRef.TryParse(_regularUserDbref, out var testerDbRef))
@@ -224,7 +224,7 @@ public class MyrddinBBSIntegrationTests
 			{
 				var godLocResult = await Parser.CommandParse(1, ConnectionService,
 					MarkupText.Plain("think [loc(#1)]"));
-				var room = godLocResult.Message?.ToPlainText()?.Trim();
+				var room = godLocResult.Message.ToPlainText()?.Trim();
 
 				if (!string.IsNullOrEmpty(room) && !room.StartsWith("#-"))
 				{
@@ -730,7 +730,7 @@ public class MyrddinBBSIntegrationTests
 			return string.Empty;
 		var result = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"think [name(extract(get({bbpocket}/groups),{position},1))]"));
-		return result.Message?.ToPlainText()?.Trim() ?? string.Empty;
+		return result.Message.ToPlainText()?.Trim() ?? string.Empty;
 	}
 
 	/// <summary>
@@ -772,7 +772,7 @@ public class MyrddinBBSIntegrationTests
 		{
 			var numResult = await Parser.CommandParse(1, ConnectionService,
 				MarkupText.Plain($"think [num({groupName})]"));
-			groupDbref = numResult.Message?.ToPlainText()?.Trim();
+			groupDbref = numResult.Message.ToPlainText()?.Trim();
 
 			if (groupDbref != null && !groupDbref.Contains("#-1"))
 			{

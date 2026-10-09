@@ -130,8 +130,8 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var left = args.TryGetValue("0", out var leftArg) ? leftArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
-		var right = args.TryGetValue("1", out var rightArg) ? rightArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
+		var left = args.TryGetValue("0", out var leftArg) ? leftArg.Message.ToPlainText() : string.Empty;
+		var right = args.TryGetValue("1", out var rightArg) ? rightArg.Message.ToPlainText() : string.Empty;
 
 		await MailAliases.Handle(MailAliasServices, executor, [.. parser.CurrentState.Switches], left.Trim(), right.Trim());
 		return CallState.Empty;

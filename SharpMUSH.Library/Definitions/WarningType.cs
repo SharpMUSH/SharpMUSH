@@ -204,13 +204,8 @@ public static class WarningTypeHelper
 
 		var result = new List<string>();
 
-		foreach (var (name, flag) in UnparseOrder)
+		foreach (var (name, flag) in UnparseOrder.Where(entry => entry.Flag != WarningType.None))
 		{
-			if (flag == WarningType.None)
-			{
-				continue;
-			}
-
 			if ((warnings & flag) == flag)
 			{
 				result.Add(name);

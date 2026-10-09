@@ -32,8 +32,8 @@ public partial class Commands
 		var allSwitches = parser.CurrentState.Switches.ToArray();
 		var switches = CategorySwitches(allSwitches.Where(PermissionOperations.Contains).ToArray());
 		var args = parser.CurrentState.Arguments;
-		var left = (args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "").Trim();
-		var right = (args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "").Trim();
+		var left = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
+		var right = (args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "").Trim();
 		var hasRight = args.ContainsKey("1");
 
 		MString output;

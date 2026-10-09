@@ -25,7 +25,7 @@ public class PrintedOutputSubstitutionTests
 	public async Task CreateActor()
 	{
 		_room = DBRef.Parse((await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@dig {Guid.NewGuid():N}")))
-			.Message!.ToPlainText().Trim());
+			.Message.ToPlainText().Trim());
 		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "PipePrint", _room);
 	}
 

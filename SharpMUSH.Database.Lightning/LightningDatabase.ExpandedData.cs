@@ -24,12 +24,9 @@ public partial class LightningDatabase
 		var newDoc = JsonSerializer.Deserialize<JsonElement>(newBytes, ExpandedDataJsonOptions);
 
 		var merged = existingDoc.EnumerateObject().ToDictionary(prop => prop.Name, prop => prop.Value);
-		foreach (var prop in newDoc.EnumerateObject())
+		foreach (var prop in newDoc.EnumerateObject().Where(prop => prop.Value.ValueKind != JsonValueKind.Null))
 		{
-			if (prop.Value.ValueKind != JsonValueKind.Null)
-			{
-				merged[prop.Name] = prop.Value;
-			}
+			merged[prop.Name] = prop.Value;
 		}
 
 		return JsonSerializer.SerializeToUtf8Bytes(merged, ExpandedDataJsonOptions);

@@ -54,7 +54,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Channels_ReturnsTestChannel()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("channels()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("channels()")))!.Message;
 		var channels = result.ToPlainText();
 
 		await Assert.That(channels).Contains(_channelName);
@@ -63,7 +63,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Channels_WithOnFilter_ReturnsChannelsPlayerIsOn()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("channels(%#,on)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("channels(%#,on)")))!.Message;
 		var channels = result.ToPlainText();
 
 		await Assert.That(channels).Contains(_channelName);
@@ -72,7 +72,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cowner_ReturnsChannelOwner()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cowner({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cowner({_channelName})")))!.Message;
 		var owner = result.ToPlainText();
 
 		await Assert.That(owner).StartsWith($"#{TestPlayerDbRef}:");
@@ -85,7 +85,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cflags_ReturnsChannelPrivilegeLetters()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cflags({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cflags({_channelName})")))!.Message;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("o");
 	}
@@ -94,7 +94,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Clflags_ReturnsChannelPrivilegeNames()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"clflags({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"clflags({_channelName})")))!.Message;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(TestChannelPrivilege);
 	}
@@ -102,7 +102,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cwho_ReturnsChannelMembers()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cwho({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cwho({_channelName})")))!.Message;
 		var members = result.ToPlainText();
 
 		await Assert.That(members).Contains($"#{TestPlayerDbRef}");
@@ -111,7 +111,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cusers_ReturnsUserCount()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cusers({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cusers({_channelName})")))!.Message;
 		var count = result.ToPlainText();
 
 		await Assert.That(int.Parse(count)).IsGreaterThanOrEqualTo(1);
@@ -120,7 +120,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cstatus_ReturnsPlayerStatus()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))!.Message;
 		var status = result.ToPlainText();
 
 		await Assert.That(status).Contains("ON");
@@ -135,23 +135,23 @@ public class ChannelFunctionUnitTests
 		}
 		var player = (await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef))).Expect<SharpPlayer>();
 
-		var userStartsOn = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))?.Message!;
+		var userStartsOn = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))!.Message;
 		await Assert.That(userStartsOn.ToPlainText()).Contains("ON");
 
 		await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, player));
 
-		var userEndsOff = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))?.Message!;
+		var userEndsOff = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))!.Message;
 		await Assert.That(userEndsOff.ToPlainText()).IsEqualTo("OFF");
 
 		await Mediator.Send(new AddUserToChannelCommand(_testChannel, player));
-		var userIsPutBackOn = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))?.Message!;
+		var userIsPutBackOn = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{_channelName})")))!.Message;
 		await Assert.That(userIsPutBackOn.ToPlainText()).Contains("ON");
 	}
 
 	[Test]
 	public async Task Cbuffer_ReturnsBufferSize()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cbuffer({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cbuffer({_channelName})")))!.Message;
 		var buffer = result.ToPlainText();
 
 		await Assert.That(int.TryParse(buffer, out _)).IsTrue();
@@ -160,14 +160,14 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cdesc_ReturnsChannelDescription()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cdesc({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cdesc({_channelName})")))!.Message;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Cmogrifier_ReturnsEmptyForNoMogrifier()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cmogrifier({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cmogrifier({_channelName})")))!.Message;
 		var mogrifier = result.ToPlainText();
 
 		await Assert.That(mogrifier).IsEmpty();
@@ -176,7 +176,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Clock_ReturnsEmptyForNoLock()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"clock({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"clock({_channelName})")))!.Message;
 		var lockStr = result.ToPlainText();
 
 		await Assert.That(lockStr).IsNotNull();
@@ -185,7 +185,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Ctitle_ReturnsEmptyForNoTitle()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"ctitle(%#,{_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"ctitle(%#,{_channelName})")))!.Message;
 		var title = result.ToPlainText();
 
 		await Assert.That(title).IsEmpty();
@@ -194,14 +194,14 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Clflags_ReturnsLockFlags()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"clflags({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"clflags({_channelName})")))!.Message;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Cmsgs_ReturnsZeroForNoMessages()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"cmsgs({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"cmsgs({_channelName})")))!.Message;
 		var msgCount = result.ToPlainText();
 
 		await Assert.That(msgCount).IsEqualTo("0");
@@ -210,14 +210,14 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Crecall_ReturnsEmptyForNoHistory()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain($"crecall({_channelName})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"crecall({_channelName})")))!.Message;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Cemit_WithNonExistentChannel_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("cemit(NonExistentChan,test message)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("cemit(NonExistentChan,test message)")))!.Message;
 		var error = result.ToPlainText();
 
 		await Assert.That(error).Contains("#-1");
@@ -226,7 +226,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Nscemit_WithNonExistentChannel_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("nscemit(NonExistentChan,test message)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("nscemit(NonExistentChan,test message)")))!.Message;
 		var error = result.ToPlainText();
 
 		await Assert.That(error).Contains("#-1");
@@ -235,7 +235,7 @@ public class ChannelFunctionUnitTests
 	[Test]
 	public async Task Cbufferadd_WithNonExistentChannel_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("cbufferadd(NonExistentChan,test message)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("cbufferadd(NonExistentChan,test message)")))!.Message;
 		var error = result.ToPlainText();
 
 		await Assert.That(error).Contains("#-1");

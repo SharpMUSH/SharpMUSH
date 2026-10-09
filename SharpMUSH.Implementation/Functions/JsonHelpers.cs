@@ -24,7 +24,7 @@ public static class JsonHelpers
 		{
 			return ValueTask.FromResult(new CallState("null"));
 		}
-		if (args.Count == 2 && (args["1"].Message ?? MarkupText.Empty).ToPlainText().Equals("null", StringComparison.OrdinalIgnoreCase))
+		if (args.Count == 2 && args["1"].Message.ToPlainText().Equals("null", StringComparison.OrdinalIgnoreCase))
 		{
 			return ValueTask.FromResult(new CallState("null"));
 		}
@@ -38,7 +38,7 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
-		var entry = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
+		var entry = args["1"].Message.ToPlainText();
 
 		return entry switch
 		{
@@ -71,7 +71,7 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
-		var entry = args["1"].Message ?? MarkupText.Empty;
+		var entry = args["1"].Message;
 
 		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(MarkupTextSerializer.Serialize(entry), RelaxedJsonOptions)));
 	}
@@ -83,7 +83,7 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
-		var entry = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
+		var entry = args["1"].Message.ToPlainText();
 		if (!decimal.TryParse(entry, out var value))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Number));
@@ -103,7 +103,7 @@ public static class JsonHelpers
 		{
 			var elements = args
 				.Skip(1)
-				.Select(x => ParseElement(x.Value.Message!.ToPlainText()));
+				.Select(x => ParseElement(x.Value.Message.ToPlainText()));
 
 			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(elements)));
 		}
@@ -135,7 +135,7 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, "json")));
 		}
 
-		var pairs = args.Values.Select(x => x.Message!).Skip(1).Chunk(2).ToList();
+		var pairs = args.Values.Select(x => x.Message).Skip(1).Chunk(2).ToList();
 		var duplicateKeys = pairs.Select(x => x[0].ToPlainText()).Duplicates().ToList();
 
 		if (duplicateKeys.Count > 0)

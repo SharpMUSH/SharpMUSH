@@ -48,7 +48,7 @@ public class ParentPermissionParityTests
 	{
 		var dig = await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(dig.Message.ToPlainText().Trim());
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
 	}
@@ -66,7 +66,7 @@ public class ParentPermissionParityTests
 	{
 		var created = await GodParser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ParentKid")}"));
-		return DBRef.Parse(created.Message!.ToPlainText().Trim());
+		return DBRef.Parse(created.Message.ToPlainText().Trim());
 	}
 
 	private async Task<string> AsMortal(TestIsolationHelpers.TestPlayer mortal, string command)

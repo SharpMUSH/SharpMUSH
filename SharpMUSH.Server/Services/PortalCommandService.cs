@@ -208,7 +208,7 @@ public sealed class PortalCommandService(
 				// the expression read after it is the character's code too, and gets the same one.
 				var value = await parser.Push(ParserState.RootFor(actor) with { OutputLimit = await OutputLimitAsync(actor) })
 					.FunctionParse(MarkupText.Plain(request.Result));
-				result = value?.Message?.ToPlainText() ?? string.Empty;
+				result = value?.Message.ToPlainText() ?? string.Empty;
 			}
 		}
 		catch (OperationCanceledException) when (BudgetExpired())
@@ -258,7 +258,7 @@ public sealed class PortalCommandService(
 						Arguments = arguments,
 						EnvironmentRegisters = arguments
 					}).FunctionParse(MarkupText.Plain(request.Expression));
-					result = value?.Message?.ToPlainText() ?? string.Empty;
+					result = value?.Message.ToPlainText() ?? string.Empty;
 				}
 			}
 		}

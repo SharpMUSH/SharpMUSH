@@ -1,4 +1,4 @@
-.aa-btn {
+.appadmin ::deep .aa-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -14,31 +14,31 @@
     text-decoration: none;
     transition: all 0.12s;
 }
-.aa-btn:hover { border-color: rgba(var(--glow), 0.4); }
-.aa-btn--primary {
+.appadmin ::deep .aa-btn:hover { border-color: rgba(var(--glow), 0.4); }
+.appadmin ::deep .aa-btn--primary {
     background: var(--accent);
     color: var(--accent-on);
     border-color: transparent;
     font-weight: 600;
     box-shadow: 0 0 18px rgba(var(--glow), 0.25);
 }
-.aa-btn--primary:hover { filter: brightness(1.08); }
+.appadmin ::deep .aa-btn--primary:hover { filter: brightness(1.08); }
 
-.appadmin-grid {
+.appadmin ::deep .appadmin-grid {
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 1rem;
 }
 /* README §3: list and detail stay side by side at the medium tier (the design size); only narrow stacks */
 @container page (max-width: 64rem) {
-    .appadmin-grid { grid-template-columns: 280px minmax(0, 1fr); }
+    .appadmin ::deep .appadmin-grid { grid-template-columns: 280px minmax(0, 1fr); }
 }
 @container page (max-width: 48rem) {
-    .appadmin-grid { grid-template-columns: minmax(0, 1fr); }
+    .appadmin ::deep .appadmin-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* List */
-.appadmin-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.appadmin ::deep .appadmin-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .aa-search {
     display: flex;
     align-items: center;
@@ -68,7 +68,7 @@
 .appadmin ::deep .aa-ico--detail { font-size: 1.375rem; }
 .appadmin ::deep .aa-ico--empty { font-size: 2.5rem; color: var(--text-faint); opacity: 0.4; }
 
-.aa-card {
+.appadmin ::deep .aa-card {
     text-align: left;
     padding: 0.875rem;
     cursor: pointer;
@@ -77,8 +77,8 @@
     border: 1px solid var(--border);
     transition: border-color 0.12s, box-shadow 0.12s;
 }
-.aa-card:hover { border-color: rgba(var(--glow), 0.3); }
-.aa-card--on {
+.appadmin ::deep .aa-card:hover { border-color: rgba(var(--glow), 0.3); }
+.appadmin ::deep .aa-card--on {
     border-color: rgba(var(--glow), 0.45);
     box-shadow: 0 0 0 1px rgba(var(--glow), 0.25);
 }
@@ -107,12 +107,13 @@
     background: var(--surface-2); border: 1px solid var(--border);
 }
 
-/* Detail: a KitCard, so its root carries the card's scope, not this page's */
-.appadmin-grid ::deep .appadmin-detail {
+/* The grid, the cards, the detail card and its empty state come from the shared master-detail components
+   (Components/Admin), so they carry those components' scope, not this page's: hence ::deep. */
+.appadmin ::deep .appadmin-detail {
     overflow: hidden;
     align-self: start;
 }
-.aa-empty-detail {
+.appadmin ::deep .aa-empty-detail {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
     padding: 3.75rem 1.25rem; color: var(--text-faint); font-family: var(--font-ui); font-size: 0.875rem;
 }

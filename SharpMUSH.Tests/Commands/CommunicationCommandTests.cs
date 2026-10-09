@@ -223,7 +223,7 @@ public class CommunicationCommandTests
 	{
 		var dig = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix + "Room")}"));
-		var room = dig.Message!.ToPlainText()!.Trim();
+		var room = dig.Message.ToPlainText()!.Trim();
 		var listener = await CreatePlayerAsync(prefix + "Listener");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {listener.DbRef}={room}"));
 		return (room, listener.DbRef);
@@ -242,7 +242,7 @@ public class CommunicationCommandTests
 		// Create a unique thing to omit so that the executor (player #1) still receives the emit.
 		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExclude");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
-		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var excludeDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var expectedMsg = TestIsolationHelpers.GenerateUniqueName("Test omit emit");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@oemit {excludeDbRef}={expectedMsg}"));
@@ -260,7 +260,7 @@ public class CommunicationCommandTests
 	{
 		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExcluded");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
-		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var excludeDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"drop {excludeDbRef}"));
 
 		var expectedMsg = TestIsolationHelpers.GenerateUniqueName("Test omit exclusion");
@@ -281,7 +281,7 @@ public class CommunicationCommandTests
 		// Create a unique zone master object (ZMO).
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitZMO");
 		var zmoResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zmoName}"));
-		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
+		var zmoDbRef = DBRef.Parse(zmoResult.Message.ToPlainText()!);
 
 		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone #0={zmoDbRef}"));
@@ -341,7 +341,7 @@ public class CommunicationCommandTests
 		// executor (player #1) among the recipients.
 		var excludeName = TestIsolationHelpers.GenerateUniqueName("NsoemitExclude");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
-		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var excludeDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var expectedMsg = TestIsolationHelpers.GenerateUniqueName("Test nospoof omit");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nsoemit {excludeDbRef}={expectedMsg}"));
@@ -361,7 +361,7 @@ public class CommunicationCommandTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName("NsoemitRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitSpeaker");
@@ -406,7 +406,7 @@ public class CommunicationCommandTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName("NsoemitListRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitListSpeaker");
@@ -444,7 +444,7 @@ public class CommunicationCommandTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName("NsoemitRemoteRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var excluded = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitRemoteExcluded");
@@ -490,7 +490,7 @@ public class CommunicationCommandTests
 		// Create a unique zone master object (ZMO).
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("NsZemitZMO");
 		var zmoResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zmoName}"));
-		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
+		var zmoDbRef = DBRef.Parse(zmoResult.Message.ToPlainText()!);
 
 		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone #0={zmoDbRef}"));
@@ -588,7 +588,7 @@ public class CommunicationCommandTests
 			var asPlayer = WebAppFactoryArg.FunctionParserFor(player.DbRef);
 			// cwho() lists bare dbrefs, as PennMUSH's does.
 			async Task<bool> OnChannel() => (await asPlayer.FunctionParse(MarkupText.Plain($"cwho({channel})")))!
-				.Message!.ToPlainText().Split(' ').Contains($"#{player.DbRef.Number}");
+				.Message.ToPlainText().Split(' ').Contains($"#{player.DbRef.Number}");
 
 			await NotifiedWhile(player, $"addcom {first}={channel}");
 			await NotifiedWhile(player, $"addcom {second}={channel}");
@@ -720,7 +720,7 @@ public class CommunicationCommandTests
 	{
 		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitSilentTarget");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {targetName}"));
-		var targetDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var targetDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var message = TestIsolationHelpers.GenerateUniqueName("Quietly");
 		var notified = await NotifiedGodWhile($"@pemit/silent {targetName}={message}");
@@ -773,7 +773,7 @@ public class CommunicationCommandTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitExitRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("RemitExit");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open {exitName}={roomDbRef}"));
@@ -792,7 +792,7 @@ public class CommunicationCommandTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitEchoRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var message = TestIsolationHelpers.GenerateUniqueName("Anyone there?");
 		var said = await NotifiedGodWhile($"@remit {roomDbRef}={message}");
@@ -805,7 +805,7 @@ public class CommunicationCommandTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitSilentRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var message = TestIsolationHelpers.GenerateUniqueName("Hush");
 		var notified = await NotifiedGodWhile($"@remit/silent {roomDbRef}={message}");
@@ -821,7 +821,7 @@ public class CommunicationCommandTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName(prefix);
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 
 		var listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Listener");
@@ -942,7 +942,7 @@ public class CommunicationCommandTests
 	{
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitEchoZMO");
 		var zmoResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zmoName}"));
-		var zmoDbRef = zmoResult.Message!.ToPlainText()!.Trim();
+		var zmoDbRef = zmoResult.Message.ToPlainText()!.Trim();
 
 		var message = TestIsolationHelpers.GenerateUniqueName("Zone wide");
 		var said = await NotifiedGodWhile($"@zemit {zmoDbRef}={message}");

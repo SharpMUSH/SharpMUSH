@@ -216,14 +216,14 @@ public class CommunicationFunctionSpeechLockTests
 	private async Task<string> Eval(long handle, string expression)
 	{
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return result?.Message?.ToPlainText() ?? string.Empty;
+		return result?.Message.ToPlainText() ?? string.Empty;
 	}
 
 	private async Task<string> Dig(string prefix)
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {name}"));
-		return result.Message!.ToPlainText()!.Trim();
+		return result.Message.ToPlainText()!.Trim();
 	}
 
 	private sealed record Scene(

@@ -38,7 +38,7 @@ public partial class Functions
 	private static bool TryPrecision(IReadOnlyDictionary<string, CallState> args, string key,
 		out TimePrecision precision)
 		=> TimePrecisions.TryParse(
-			args.TryGetValue(key, out var arg) ? arg.Message?.ToPlainText() : null,
+			args.TryGetValue(key, out var arg) ? arg.Message.ToPlainText() : null,
 			out precision);
 
 	/// <summary>
@@ -52,7 +52,7 @@ public partial class Functions
 	public async ValueTask<CallState> CreationTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var utc = parser.CurrentState.Arguments.TryGetValue("1", out var utcArgument) && utcArgument.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
@@ -73,7 +73,7 @@ public partial class Functions
 	public ValueTask<CallState> IsDaylight(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var secs = args.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
+		var secs = args.TryGetValue("0", out var value) ? value.Message.ToPlainText() : null;
 		var timezone = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, TimeZoneInfo.Utc.Id).ToPlainText();
 
 		if (!TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
@@ -99,7 +99,7 @@ public partial class Functions
 	public async ValueTask<CallState> ModifiedTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var utc = parser.CurrentState.Arguments.TryGetValue("1", out var utcArgument) && utcArgument.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
@@ -120,129 +120,129 @@ public partial class Functions
 	public ValueTask<CallState> SecsCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var timeStr = args["0"].Message!.ToPlainText().Trim();
+		var timeStr = args["0"].Message.ToPlainText().Trim();
 
-		DateTimeOffset baseTime;
-		bool isUnixEpoch = false;
+		if (!TryParseSecsCalcBase(timeStr, out var baseTime))
+		{
+			// If we can't parse it, try simple duration parsing for backward compatibility
+			return ValueTask.FromResult(SecsCalcDuration(timeStr));
+		}
 
+		var result = CalcModifiers(args)
+			.Aggregate(baseTime, (time, modifier) =>
+				ApplyCalcModifier(time, modifier.ToLower(), trimStartOfUnit: true, ApplySecsCalcOffset));
+
+		return ValueTask.FromResult<CallState>(result.ToUnixTimeSeconds().ToString());
+	}
+
+	private static bool TryParseSecsCalcBase(string timeStr, out DateTimeOffset baseTime)
+	{
 		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
 		{
 			baseTime = DateTimeOffset.UtcNow;
+			return true;
 		}
-		else if (long.TryParse(timeStr, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var julianOrEpoch))
+
+		if (long.TryParse(timeStr, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var epoch))
 		{
-			baseTime = DateTimeOffset.FromUnixTimeSeconds(julianOrEpoch);
-			isUnixEpoch = true;
-		}
-		else if (DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var parsedTime))
-		{
-			baseTime = parsedTime;
-		}
-		else
-		{
-			// If we can't parse it, try simple duration parsing for backward compatibility
-			var matches = DurationPattern().Matches(timeStr);
-			if (matches.Count > 0)
-			{
-				long totalSeconds = 0;
-				foreach (Match match in matches)
-				{
-					if (!double.TryParse(match.Groups["number"].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-					{
-						return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
-					}
-
-					var unit = match.Groups["unit"].Value.ToLower();
-					totalSeconds += unit switch
-					{
-						['y', ..] => (long)(value * 365 * 24 * 3600),
-						['w', ..] => (long)(value * 7 * 24 * 3600),
-						['d', ..] => (long)(value * 24 * 3600),
-						['h', ..] => (long)(value * 3600),
-						['m', ..] => (long)(value * 60),
-						['s', ..] => (long)value,
-						"" => (long)value,
-						_ => 0
-					};
-				}
-				return ValueTask.FromResult<CallState>(totalSeconds.ToString());
-			}
-
-			return new ValueTask<CallState>(ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "SECSCALC"));
+			baseTime = DateTimeOffset.FromUnixTimeSeconds(epoch);
+			return true;
 		}
 
-		for (int i = 1; i < args.Count; i++)
-		{
-			var modifier = args[i.ToString()].Message!.ToPlainText().Trim().ToLower();
-
-			if (modifier == "unixepoch")
-			{
-				if (isUnixEpoch)
-				{
-					// Already treated as epoch, no change needed
-				}
-				continue;
-			}
-
-			if (modifier == "localtime")
-			{
-				baseTime = baseTime.ToLocalTime();
-				continue;
-			}
-
-			if (modifier == "utc")
-			{
-				baseTime = baseTime.ToUniversalTime();
-				continue;
-			}
-
-			if (modifier.StartsWith("start of "))
-			{
-				var unit = modifier.Substring(9).Trim();
-				baseTime = unit switch
-				{
-					"day" => new DateTimeOffset(baseTime.Year, baseTime.Month, baseTime.Day, 0, 0, 0, baseTime.Offset),
-					"month" => new DateTimeOffset(baseTime.Year, baseTime.Month, 1, 0, 0, 0, baseTime.Offset),
-					"year" => new DateTimeOffset(baseTime.Year, 1, 1, 0, 0, 0, baseTime.Offset),
-					_ => baseTime
-				};
-				continue;
-			}
-
-			if (modifier.StartsWith("weekday "))
-			{
-				if (int.TryParse(modifier.AsSpan(8).Trim(), out var targetWeekday))
-				{
-					var currentWeekday = (int)baseTime.DayOfWeek;
-					var daysToAdd = (targetWeekday - currentWeekday + 7) % 7;
-					baseTime = baseTime.AddDays(daysToAdd);
-				}
-				continue;
-			}
-
-			// Parse numeric modifiers like "5 days", "3 hours", etc.
-			var parts = modifier.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			if (parts.Length == 2)
-			{
-				if (double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-				{
-					var unit = parts[1];
-					baseTime = unit switch
-					{
-						"years" or "year" => baseTime.AddYears((int)value),
-						"months" or "month" => baseTime.AddMonths((int)value),
-						"days" or "day" => baseTime.AddDays(value),
-						"hours" or "hour" => baseTime.AddHours(value),
-						"minutes" or "minute" => baseTime.AddMinutes(value),
-						"seconds" or "second" => baseTime.AddSeconds(value),
-						_ => baseTime
-					};
-				}
-			}
-		}
-
-		return ValueTask.FromResult<CallState>(baseTime.ToUnixTimeSeconds().ToString());
+		return DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out baseTime);
 	}
+
+	/// <summary>A secscalc() time string that is not a time, read as a duration in seconds.</summary>
+	private static CallState SecsCalcDuration(string timeStr)
+	{
+		var matches = DurationPattern().Matches(timeStr);
+		if (matches.Count == 0)
+		{
+			return ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "SECSCALC");
+		}
+
+		long totalSeconds = 0;
+		foreach (Match match in matches)
+		{
+			if (!double.TryParse(match.Groups["number"].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+			{
+				return ErrorMessages.Returns.Integer;
+			}
+
+			totalSeconds += match.Groups["unit"].Value.ToLower() switch
+			{
+				['y', ..] => (long)(value * 365 * 24 * 3600),
+				['w', ..] => (long)(value * 7 * 24 * 3600),
+				['d', ..] => (long)(value * 24 * 3600),
+				['h', ..] => (long)(value * 3600),
+				['m', ..] => (long)(value * 60),
+				['s', ..] => (long)value,
+				"" => (long)value,
+				_ => 0
+			};
+		}
+
+		return totalSeconds.ToString();
+	}
+
+	/// <summary>Parses numeric modifiers like "5 days", "3 hours", etc.</summary>
+	private static DateTimeOffset ApplySecsCalcOffset(DateTimeOffset time, string modifier)
+		=> SplitOffset(modifier) is (var amount, var unit)
+			? unit switch
+			{
+				"years" or "year" => time.AddYears((int)amount),
+				"months" or "month" => time.AddMonths((int)amount),
+				"days" or "day" => time.AddDays(amount),
+				"hours" or "hour" => time.AddHours(amount),
+				"minutes" or "minute" => time.AddMinutes(amount),
+				"seconds" or "second" => time.AddSeconds(amount),
+				_ => time
+			}
+			: time;
+
+	/// <summary>The modifiers after a secscalc()/timecalc() time string, each trimmed.</summary>
+	private static IEnumerable<string> CalcModifiers(Dictionary<string, CallState> args)
+		=> Enumerable.Range(1, args.Count - 1)
+			.Select(i => args[i.ToString()].Message.ToPlainText().Trim());
+
+	/// <summary>
+	/// One secscalc()/timecalc() modifier, already lower-cased: <c>unixepoch</c> (the time is already
+	/// one), <c>localtime</c>, <c>utc</c>, <c>start of day|month|year</c> and <c>weekday N</c>. Anything
+	/// else is an offset, which each function reads its own way through <paramref name="applyOffset"/>.
+	/// </summary>
+	private static DateTimeOffset ApplyCalcModifier(DateTimeOffset time, string modifier, bool trimStartOfUnit,
+		Func<DateTimeOffset, string, DateTimeOffset> applyOffset)
+		=> modifier switch
+		{
+			"unixepoch" => time,
+			"localtime" => time.ToLocalTime(),
+			"utc" => time.ToUniversalTime(),
+			_ when modifier.StartsWith("start of ") =>
+				StartOf(time, trimStartOfUnit ? modifier[9..].Trim() : modifier[9..]),
+			_ when modifier.StartsWith("weekday ") => NextWeekday(time, modifier.AsSpan(8)),
+			_ => applyOffset(time, modifier)
+		};
+
+	private static DateTimeOffset StartOf(DateTimeOffset time, string unit)
+		=> unit switch
+		{
+			"day" => new DateTimeOffset(time.Year, time.Month, time.Day, 0, 0, 0, time.Offset),
+			"month" => new DateTimeOffset(time.Year, time.Month, 1, 0, 0, 0, time.Offset),
+			"year" => new DateTimeOffset(time.Year, 1, 1, 0, 0, 0, time.Offset),
+			_ => time
+		};
+
+	private static DateTimeOffset NextWeekday(DateTimeOffset time, ReadOnlySpan<char> weekday)
+		=> int.TryParse(weekday.Trim(), out var targetWeekday)
+			? time.AddDays((targetWeekday - (int)time.DayOfWeek + 7) % 7)
+			: time;
+
+	/// <summary>An offset modifier's amount and unit ("5 days"), or null when it is not one.</summary>
+	private static (double Amount, string Unit)? SplitOffset(string modifier)
+		=> modifier.Split(' ', StringSplitOptions.RemoveEmptyEntries) is [var amountText, var unit]
+			&& double.TryParse(amountText, NumberStyles.Float, CultureInfo.InvariantCulture, out var amount)
+				? (amount, unit)
+				: null;
 
 	[SharpFunction(Name = "starttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public async ValueTask<CallState> StartTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -260,7 +260,7 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
 
 		if (!TryParseDurationMilliseconds(timeStr, out var milliseconds, out var error))
 		{
@@ -331,7 +331,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
-			? arg0Value.Message!.ToPlainText()
+			? arg0Value.Message.ToPlainText()
 			: null;
 
 		if (string.IsNullOrEmpty(arg0))
@@ -369,105 +369,72 @@ public partial class Functions
 	public ValueTask<CallState> TimeCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var timeStr = args["0"].Message.ToPlainText().Trim();
 
-		var timeStr = args["0"].Message!.ToPlainText().Trim();
-
-		DateTimeOffset dt;
-
-		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
-		{
-			dt = DateTimeOffset.UtcNow;
-		}
-		else if (long.TryParse(timeStr, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var secs))
-		{
-			dt = DateTimeOffset.FromUnixTimeSeconds(secs);
-		}
-		else if (DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, out var parsed))
-		{
-			dt = new DateTimeOffset(parsed);
-		}
-		else
+		if (!TryParseTimeCalcBase(timeStr, out var baseTime))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "TIMECALC"));
 		}
 
-		dt = Enumerable.Range(1, args.Count - 1)
-			.Aggregate(dt, (currentDt, i) =>
-			{
-				var modifier = args[i.ToString()].Message!.ToPlainText().Trim();
-
-				if (modifier.Equals("unixepoch", StringComparison.OrdinalIgnoreCase))
-				{
-					// Already in Unix epoch format
-					return currentDt;
-				}
-				else if (modifier.Equals("localtime", StringComparison.OrdinalIgnoreCase))
-				{
-					return currentDt.ToLocalTime();
-				}
-				else if (modifier.Equals("utc", StringComparison.OrdinalIgnoreCase))
-				{
-					return currentDt.ToUniversalTime();
-				}
-				else if (modifier.StartsWith("start of ", StringComparison.OrdinalIgnoreCase))
-				{
-					var unit = modifier.Substring(9).ToLower();
-					return unit switch
-					{
-						"month" => new DateTimeOffset(currentDt.Year, currentDt.Month, 1, 0, 0, 0, currentDt.Offset),
-						"year" => new DateTimeOffset(currentDt.Year, 1, 1, 0, 0, 0, currentDt.Offset),
-						"day" => new DateTimeOffset(currentDt.Year, currentDt.Month, currentDt.Day, 0, 0, 0, currentDt.Offset),
-						_ => currentDt
-					};
-				}
-				else if (modifier.StartsWith("weekday ", StringComparison.OrdinalIgnoreCase))
-				{
-					if (int.TryParse(modifier.AsSpan(8), out var targetDay))
-					{
-						var currentDay = (int)currentDt.DayOfWeek;
-						var daysToAdd = (targetDay - currentDay + 7) % 7;
-						return currentDt.AddDays(daysToAdd);
-					}
-					return currentDt;
-				}
-				else
-				{
-					// Try to parse as time offset like "+100 years", "-5 days", etc.
-					var parts = modifier.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-					if (parts.Length == 2 && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var amount))
-					{
-						var unit = parts[1].ToLower().TrimEnd('s');
-						return unit switch
-						{
-							"year" => currentDt.AddYears((int)amount),
-							"month" => currentDt.AddMonths((int)amount),
-							"week" => currentDt.AddDays(amount * 7),
-							"day" => currentDt.AddDays(amount),
-							"hour" => currentDt.AddHours(amount),
-							"minute" => currentDt.AddMinutes(amount),
-							"second" => currentDt.AddSeconds(amount),
-							_ => currentDt
-						};
-					}
-					return currentDt;
-				}
-			});
+		var result = CalcModifiers(args)
+			.Aggregate(baseTime, (time, modifier) =>
+				ApplyCalcModifier(time, modifier.ToLowerInvariant(), trimStartOfUnit: false, ApplyTimeCalcOffset));
 
 		// PennMUSH: "timecalc() returns a time in the same format as time()".
-		return ValueTask.FromResult<CallState>(dt.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(result.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 	}
+
+	private static bool TryParseTimeCalcBase(string timeStr, out DateTimeOffset baseTime)
+	{
+		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
+		{
+			baseTime = DateTimeOffset.UtcNow;
+			return true;
+		}
+
+		if (long.TryParse(timeStr, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var secs))
+		{
+			baseTime = DateTimeOffset.FromUnixTimeSeconds(secs);
+			return true;
+		}
+
+		if (DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, out var parsed))
+		{
+			baseTime = new DateTimeOffset(parsed);
+			return true;
+		}
+
+		baseTime = default;
+		return false;
+	}
+
+	/// <summary>Parses a time offset like "+100 years", "-5 days", etc.</summary>
+	private static DateTimeOffset ApplyTimeCalcOffset(DateTimeOffset time, string modifier)
+		=> SplitOffset(modifier) is (var amount, var unit)
+			? unit.TrimEnd('s') switch
+			{
+				"year" => time.AddYears((int)amount),
+				"month" => time.AddMonths((int)amount),
+				"week" => time.AddDays(amount * 7),
+				"day" => time.AddDays(amount),
+				"hour" => time.AddHours(amount),
+				"minute" => time.AddMinutes(amount),
+				"second" => time.AddSeconds(amount),
+				_ => time
+			}
+			: time;
 
 	[SharpFunction(Name = "timefmt", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["format", "seconds", "timezone"])]
 	public ValueTask<CallState> TimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var format = args["0"].Message!.ToPlainText();
+		var format = args["0"].Message.ToPlainText();
 
 		DateTimeOffset dt;
 		if (args.TryGetValue("1", out var secsArg))
 		{
-			var secsStr = secsArg.Message!.ToPlainText();
+			var secsStr = secsArg.Message.ToPlainText();
 			if (!TimePrecisions.TryParseInstant(secsStr, out dt))
 			{
 				return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
@@ -480,7 +447,7 @@ public partial class Functions
 
 		if (args.TryGetValue("2", out var tzArg))
 		{
-			var tzStr = tzArg.Message!.ToPlainText();
+			var tzStr = tzArg.Message.ToPlainText();
 			if (TimeZoneInfo.TryFindSystemTimeZoneById(tzStr, out var tz))
 			{
 				dt = TimeZoneInfo.ConvertTime(dt, tz);
@@ -564,7 +531,7 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var secsStr = args["0"].Message!.ToPlainText();
+		var secsStr = args["0"].Message.ToPlainText();
 		var padFlag = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "0").ToPlainText();
 
 		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
@@ -670,7 +637,7 @@ public partial class Functions
 		}
 
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
-			? arg0Value.Message!.ToPlainText()
+			? arg0Value.Message.ToPlainText()
 			: null;
 
 		var data = (await ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
@@ -716,7 +683,7 @@ public partial class Functions
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
@@ -734,7 +701,7 @@ public partial class Functions
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
@@ -752,9 +719,9 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var secsStr = args["0"].Message!.ToPlainText();
+		var secsStr = args["0"].Message.ToPlainText();
 		var width = args.TryGetValue("1", out var widthArg)
-			? widthArg.Message!.ToPlainText()
+			? widthArg.Message.ToPlainText()
 			: null;
 
 		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
@@ -832,8 +799,8 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var format = args["0"].Message!.ToPlainText();
-		var secsStr = args["1"].Message!.ToPlainText();
+		var format = args["0"].Message.ToPlainText();
+		var secsStr = args["1"].Message.ToPlainText();
 
 		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
 		{
@@ -919,9 +886,9 @@ public partial class Functions
 		ParameterNames = ["seconds", "timezone"])]
 	public ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var secsStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
-			? tzArg.Message!.ToPlainText()
+			? tzArg.Message.ToPlainText()
 			: null;
 
 		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
@@ -959,7 +926,7 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		// Format: Ddd MMM DD HH:MM:SS YYYY
 		if (!DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var dateTime))
@@ -979,7 +946,7 @@ public partial class Functions
 		ParameterNames = ["seconds"])]
 	public ValueTask<CallState> ConvUtcSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var secsStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
@@ -999,7 +966,7 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		// Try standard format first: Ddd Mmm DD HH:MM:SS YYYY
 		if (DateTimeOffset.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,

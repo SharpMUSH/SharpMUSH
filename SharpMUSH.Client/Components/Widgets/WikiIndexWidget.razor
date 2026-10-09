@@ -63,9 +63,8 @@
         else
         {
             <div class="wiki-cat-grid">
-                @foreach (var group in FilteredGroups)
+                @foreach (var g in FilteredGroups)
                 {
-                    var g = group;
                     var label = WikiCategories.Label(g.Key, Loc["NavWikiUncategorized"], _names);
                     <div class="wiki-cat-card">
                         <ThemeMarks />

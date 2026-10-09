@@ -31,58 +31,136 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		MString src, ICommandContext context, CommandDefinition libraryCommandDefinition, string? rootCommand = null,
 		bool noEvalSwitch = false, bool singleArgument = false)
 	{
-		var argCallState = CallState.EmptyArgument;
-		var behavior = libraryCommandDefinition.Attribute.Behavior;
-		if (singleArgument) behavior &= ~(CommandBehavior.EqSplit | CommandBehavior.RSArgs);
-
-		// PennMUSH's command_parse computes `noeval = SW_ISSET(sw, SWITCH_NOEVAL) || noevtoken` and
-		// hands it to command_argparse, so /noeval suppresses evaluation for ANY command that takes
-		// the switch — `say/noeval [add(1,2)]` says "[add(1,2)]". The leading ] mode applies to
-		// both EQSPLIT sides. The explicit switch on an EQSPLIT command is the other branch
-		// (command.c:1436-1446): with an '=' the left side is evaluated after all and only the right
-		// side is left raw, so `@force/noeval *Alice=think %!` hands Alice `%!` to evaluate herself;
-		// without one the left side is the whole argument and stays raw.
-		var noEval = prs.CurrentState.ParseMode == ParseMode.NoEval
-			|| noEvalSwitch && !behavior.HasFlag(CommandBehavior.EqSplit);
-		var noEvalEqSplitSwitch = noEvalSwitch && behavior.HasFlag(CommandBehavior.EqSplit);
-
-		// Do not parse the argument splitting.
-		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
-		// - RSBrace (PennMUSH CS_BRACES): commands like @wait, @force, @halt preserve braces
-		//   during parsing, then strip them at execution time via StripOuterBraces.
-		//   Also used for & (attribute value storage): player-typed `& ATTR OBJ={code}` must
-		//   store the braces verbatim so get(OBJ/ATTR) returns `{code}`, matching PennMUSH.
-		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like ] store the raw value text.
-		//   In PennMUSH, noeval arguments never go through process_expression, so braces
-		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
-		//   preserve braces via the flag to match PennMUSH behavior.
-		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
-												 || behavior.HasFlag(CommandBehavior.NoParse)
-												 || noEval
-												 || noEvalEqSplitSwitch;
-		var newFlags = preserveBraces
-			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
-			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
-		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse, Flags = newFlags });
-		var realSubtext = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
-
-		// PennMUSH's command_parse skips leading spaces (`while (*p == ' ') p++`) before it reads the
-		// command name, so `  say hi` says "hi". CommandDispatcher.DispatchAsync already TrimStart()s to find the
-		// command name; without the same trim here the first space would read as the name/argument
-		// boundary and the command name itself would land in the argument.
-		var leadingSpaces = SkipSpaces(realSubtext, 0);
-		if (leadingSpaces > 0)
+		var mode = SplitMode.For(libraryCommandDefinition.Attribute.Behavior, prs.CurrentState.ParseMode, noEvalSwitch,
+			singleArgument);
+		var newNoParseParser = prs.Push(prs.CurrentState with
 		{
-			realSubtext = realSubtext.Substring(leadingSpaces, realSubtext.Length - leadingSpaces);
-		}
-
-		var spaceInContext = realSubtext.IndexOf(" ");
+			ParseMode = ParseMode.NoParse,
+			Flags = mode.PreserveBraces
+				? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
+				: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces
+		});
 
 		// The exact text the NoParse pass below parses to produce argCallState. Retained
 		// IEvaluationStringContext nodes on argCallState.ArgumentContexts have token offsets
 		// relative to THIS text (not the command's full source line), so re-visiting them later
 		// in EvaluateArgumentSubtree requires a visitor whose `source` field is this same MString.
-		var parsedArgumentText = MarkupText.Empty;
+		if (ArgumentText(CommandSubtext(src, context), rootCommand) is not { } parsedArgumentText)
+		{
+			return new CommandArguments();
+		}
+
+		var argCallState = await SplitAs(newNoParseParser, mode.Behavior, parsedArgumentText);
+
+		// TODO: Implement lsargs (list-style arguments) support.
+		// No immediate commands require this feature yet, so implementation is deferred.
+		// Also return early when Arguments is empty (EmptyArgument sentinel), meaning no args were provided.
+		if (argCallState is null or { Arguments: [] })
+		{
+			return new CommandArguments();
+		}
+
+		// Parse failure: the argument split detected a syntax error. Bubble it up as Error<string>.
+		if (argCallState is not { Arguments: { } rawArguments })
+		{
+			var errorText = argCallState.Message.ToPlainText();
+			return new Error<string>(errorText);
+		}
+
+		return await EvaluateSplitAsync(visitor, prs, mode, parsedArgumentText, argCallState, rawArguments);
+	}
+
+	/// <summary>
+	/// How a command's arguments split and which of them are evaluated, from its behavior, the parse
+	/// mode it runs in and its switches.
+	/// </summary>
+	private readonly record struct SplitMode(CommandBehavior Behavior, bool NoEval, bool NoEvalEqSplitSwitch)
+	{
+		public static SplitMode For(CommandBehavior behavior, ParseMode parseMode, bool noEvalSwitch, bool singleArgument)
+		{
+			if (singleArgument) behavior &= ~(CommandBehavior.EqSplit | CommandBehavior.RSArgs);
+
+			// PennMUSH's command_parse computes `noeval = SW_ISSET(sw, SWITCH_NOEVAL) || noevtoken` and
+			// hands it to command_argparse, so /noeval suppresses evaluation for ANY command that takes
+			// the switch — `say/noeval [add(1,2)]` says "[add(1,2)]". The leading ] mode applies to
+			// both EQSPLIT sides. The explicit switch on an EQSPLIT command is the other branch
+			// (command.c:1436-1446): with an '=' the left side is evaluated after all and only the right
+			// side is left raw, so `@force/noeval *Alice=think %!` hands Alice `%!` to evaluate herself;
+			// without one the left side is the whole argument and stays raw.
+			var noEval = parseMode == ParseMode.NoEval
+				|| noEvalSwitch && !behavior.HasFlag(CommandBehavior.EqSplit);
+			var noEvalEqSplitSwitch = noEvalSwitch && behavior.HasFlag(CommandBehavior.EqSplit);
+			return new SplitMode(behavior, noEval, noEvalEqSplitSwitch);
+		}
+
+		public bool EqSplit => Behavior.HasFlag(CommandBehavior.EqSplit);
+
+		public bool NoParse => Behavior.HasFlag(CommandBehavior.NoParse) || NoEval;
+
+		/// <summary>
+		/// Do not parse the argument splitting.
+		/// Set PreserveBraces so VisitBracePattern preserves outer braces when:
+		/// - RSBrace (PennMUSH CS_BRACES): commands like @wait, @force, @halt preserve braces
+		///   during parsing, then strip them at execution time via StripOuterBraces.
+		///   Also used for &amp; (attribute value storage): player-typed `&amp; ATTR OBJ={code}` must
+		///   store the braces verbatim so get(OBJ/ATTR) returns `{code}`, matching PennMUSH.
+		/// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like ] store the raw value text.
+		///   In PennMUSH, noeval arguments never go through process_expression, so braces
+		///   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
+		///   preserve braces via the flag to match PennMUSH behavior.
+		/// </summary>
+		public bool PreserveBraces => Behavior.HasFlag(CommandBehavior.RSBrace)
+			|| Behavior.HasFlag(CommandBehavior.NoParse)
+			|| NoEval
+			|| NoEvalEqSplitSwitch;
+
+		/// <summary>
+		/// Whether argument <paramref name="index"/> of <paramref name="count"/> is left raw for the
+		/// command to evaluate on demand rather than evaluated now.
+		/// <para>
+		/// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
+		/// Commands that only want their RHS unevaluated (like &amp;) use RSNoParse instead of NoParse,
+		/// so that the LHS (object reference) is evaluated normally here while the RHS is deferred.
+		/// For a full-NoParse EqSplit command the LHS stays raw, BUT we still attach a
+		/// deferred ParsedMessage (mirroring the RHS args below) so a command that opts
+		/// to evaluate its LHS — e.g. @SCENE, which evaluates args itself unless /NOEVAL —
+		/// can do so. Without this, the raw LHS (e.g. "[scenewhere(%L)]") never evaluated.
+		/// </para>
+		/// <para>
+		/// Without EqSplit, a NoParse command still gets a deferred ParsedMessage so a self-evaluating
+		/// NoParse command (e.g. @SCENE/undo &lt;poseId&gt;) can evaluate a functional single arg on demand.
+		/// </para>
+		/// </summary>
+		public bool Defers(int index, int count) => EqSplit
+			? index == 0
+				? NoParse || (NoEvalEqSplitSwitch && count < 2)
+				: Behavior.HasFlag(CommandBehavior.RSNoParse) || NoParse || NoEvalEqSplitSwitch
+			: NoParse;
+	}
+
+	/// <summary>
+	/// This command's slice of <paramref name="src"/>, without the leading spaces PennMUSH's
+	/// command_parse skips (`while (*p == ' ') p++`) before it reads the command name, so `  say hi`
+	/// says "hi". CommandDispatcher.DispatchAsync already TrimStart()s to find the
+	/// command name; without the same trim here the first space would read as the name/argument
+	/// boundary and the command name itself would land in the argument.
+	/// </summary>
+	private static MString CommandSubtext(MString src, ICommandContext context)
+	{
+		var realSubtext = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
+		var leadingSpaces = SkipSpaces(realSubtext, 0);
+		return leadingSpaces > 0
+			? realSubtext.Substring(leadingSpaces, realSubtext.Length - leadingSpaces)
+			: realSubtext;
+	}
+
+	/// <summary>
+	/// The text after the command name that its arguments split from, or <see langword="null"/> when
+	/// there is none.
+	/// </summary>
+	private static MString? ArgumentText(MString realSubtext, string? rootCommand)
+	{
+		var spaceInContext = realSubtext.IndexOf(" ");
 
 		// command (space) argument(s)
 		if (spaceInContext != -1)
@@ -93,78 +171,64 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 			// `pose   waves` and `"  hi`. Skipping only one space left the rest inside the argument.
 			var argumentStart = SkipSpaces(realSubtext, spaceInContext);
 			var remainder = realSubtext.Substring(argumentStart, realSubtext.Length - argumentStart);
-			parsedArgumentText = remainder;
 
 			// Nothing but trailing spaces after the command name: the command has no arguments at all
 			// (`say ` is `say`), so leave the EmptyArgument sentinel in place rather than splitting "".
-			if (remainder.Length == 0)
-			{
-				return new CommandArguments();
-			}
-
-			argCallState = await SplitAs(newNoParseParser, behavior, remainder);
+			return remainder.Length == 0 ? null : remainder;
 		}
-		else if (realSubtext.Length > 0)
+
+		if (realSubtext.Length == 0)
 		{
-			// No space found but the realSubtext is non-empty.
-			// This can happen when the command name is directly followed by its arguments without a space
-			// (e.g., "addcom=Public" where "addcom" is the command and "=Public" is the arg,
-			//  or "@retry gt(%0,-1)=dec(%0)" where the args portion has no space).
-			// Strip the command name prefix (if present) to get just the arguments portion.
-			var realSubtextStr = realSubtext.ToPlainText();
-			var argsStr = realSubtextStr;
-			if (!string.IsNullOrEmpty(rootCommand)
-					&& realSubtextStr.StartsWith(rootCommand, StringComparison.OrdinalIgnoreCase))
-			{
-				argsStr = realSubtextStr[rootCommand.Length..];
-			}
-
-			// Strip any switch prefixes (e.g., "/type" in "@respond/type") that appear before
-			// the actual argument. Switches start with '/' and precede the first space or end of string.
-			while (argsStr.StartsWith('/'))
-			{
-				var nextSlash = argsStr.IndexOf('/', 1);
-				var nextSpace = argsStr.IndexOf(' ', 1);
-				int endPos;
-				if (nextSlash >= 0 && (nextSpace < 0 || nextSlash < nextSpace))
-					endPos = nextSlash;
-				else if (nextSpace >= 0)
-					endPos = nextSpace;
-				else
-					endPos = argsStr.Length;
-				argsStr = argsStr[endPos..].TrimStart();
-			}
-
-			if (argsStr.Length > 0)
-			{
-				var argsSubtext = MarkupText.Plain(argsStr);
-				parsedArgumentText = argsSubtext;
-				argCallState = await SplitAs(newNoParseParser, behavior, argsSubtext);
-			}
+			return null;
 		}
 
+		// No space found but the realSubtext is non-empty.
+		// This can happen when the command name is directly followed by its arguments without a space
+		// (e.g., "addcom=Public" where "addcom" is the command and "=Public" is the arg,
+		//  or "@retry gt(%0,-1)=dec(%0)" where the args portion has no space).
+		// Strip the command name prefix (if present) to get just the arguments portion.
+		var realSubtextStr = realSubtext.ToPlainText();
+		var argsStr = !string.IsNullOrEmpty(rootCommand)
+				&& realSubtextStr.StartsWith(rootCommand, StringComparison.OrdinalIgnoreCase)
+			? realSubtextStr[rootCommand.Length..]
+			: realSubtextStr;
+
+		argsStr = WithoutSwitchPrefixes(argsStr);
+		return argsStr.Length > 0 ? MarkupText.Plain(argsStr) : null;
+	}
+
+	/// <summary>
+	/// Strip any switch prefixes (e.g., "/type" in "@respond/type") that appear before
+	/// the actual argument. Switches start with '/' and precede the first space or end of string.
+	/// </summary>
+	private static string WithoutSwitchPrefixes(string argsStr)
+	{
+		while (argsStr.StartsWith('/'))
+		{
+			var nextSlash = argsStr.IndexOf('/', 1);
+			var nextSpace = argsStr.IndexOf(' ', 1);
+			int endPos;
+			if (nextSlash >= 0 && (nextSpace < 0 || nextSlash < nextSpace))
+				endPos = nextSlash;
+			else if (nextSpace >= 0)
+				endPos = nextSpace;
+			else
+				endPos = argsStr.Length;
+			argsStr = argsStr[endPos..].TrimStart();
+		}
+
+		return argsStr;
+	}
+
+	/// <summary>
+	/// The split's arguments in order, each either evaluated now against the parse-tree slot it came
+	/// from or left raw with a deferred evaluation, as <see cref="SplitMode.Defers"/> decides.
+	/// </summary>
+	private async ValueTask<Result<CommandArguments>> EvaluateSplitAsync(SharpMUSHParserVisitor visitor,
+		IMUSHCodeParser prs, SplitMode mode, MString parsedArgumentText, CallState argCallState, MString[] rawArguments)
+	{
 		var argumentResults = new CommandArguments();
 		var arguments = argumentResults.Values;
-
-		var eqSplit = behavior.HasFlag(CommandBehavior.EqSplit);
-		var noParse = behavior.HasFlag(CommandBehavior.NoParse) || noEval;
-		var noRsParse = behavior.HasFlag(CommandBehavior.RSNoParse);
-		var nArgs = argCallState?.Arguments?.Length;
-
-		// TODO: Implement lsargs (list-style arguments) support.
-		// No immediate commands require this feature yet, so implementation is deferred.
-		// Also return early when Arguments is empty (EmptyArgument sentinel), meaning no args were provided.
-		if (argCallState is null or { Arguments: [] })
-		{
-			return argumentResults;
-		}
-
-		// Parse failure: the argument split detected a syntax error. Bubble it up as Error<string>.
-		if (argCallState is { Arguments: null })
-		{
-			var errorText = (argCallState.Message ?? MarkupText.Empty).ToPlainText();
-			return new Error<string>(errorText);
-		}
 
 		// Retained parse-tree nodes from the NoParse pass above, index-parallel to
 		// argCallState.Arguments — see CallState.ArgumentContexts. Reused below so evaluated
@@ -172,7 +236,6 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		// EvaluateArgumentSubtree) instead of running FunctionParse's full lex+parse pipeline
 		// a third time on text the NoParse pass already tokenized and structured.
 		var argContexts = argCallState.ArgumentContexts ?? [];
-		object? ContextAt(int i) => i >= 0 && i < argContexts.Length ? argContexts[i] : null;
 
 		// The split pass above always runs lenient (CommandCommaArgsParse etc. pass
 		// lenient: !StrictParse, and StrictParse is only ever set by the single-token command
@@ -187,46 +250,16 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		// behavior exactly rather than risking a wrong best-effort value for a malformed argument.
 		var splitHadErrors = argCallState.HadErrors;
 
-		if (eqSplit)
+		// Arguments evaluate left to right, one at a time, each against the parse-tree slot it came from.
+		// An EqSplit command's LHS is evaluated without the substitution-only debug trace.
+		for (var i = 0; i < rawArguments.Length; i++)
 		{
-			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
-			// Commands that only want their RHS unevaluated (like &) use RSNoParse instead of NoParse,
-			// so that the LHS (object reference) is evaluated normally here while the RHS is deferred.
-			// For a full-NoParse EqSplit command the LHS stays raw, BUT we still attach a
-			// deferred ParsedMessage (mirroring the RHS args below) so a command that opts
-			// to evaluate its LHS — e.g. @SCENE, which evaluates args itself unless /NOEVAL —
-			// can do so. Without this, the raw LHS (e.g. "[scenewhere(%L)]") never evaluated.
-			var noParseLhs = argCallState.Arguments.FirstOrDefault() ?? MarkupText.Empty;
-			arguments.Add(noParse || (noEvalEqSplitSwitch && nArgs < 2)
-				? DeferredArgument(noParseLhs)
-				: (await EvaluateArgumentSubtree(visitor, prs, parsedArgumentText, ContextAt(0), noParseLhs, emitSubstDebug: false, splitHadErrors))!);
-
-			if (nArgs < 2) return argumentResults;
-
-			if (noRsParse || noParse || noEvalEqSplitSwitch)
-			{
-				arguments.AddRange(argCallState.Arguments!
-					.Skip(1)
-					.Select(DeferredArgument));
-			}
-			else
-			{
-				await EvaluateArgumentsInto(arguments, argCallState.Arguments, firstIndex: 1);
-			}
-		}
-		else
-		{
-			if (noParse)
-			{
-				// Attach a deferred ParsedMessage so a self-evaluating NoParse command
-				// (e.g. @SCENE/undo <poseId>) can evaluate a functional single arg on demand.
-				arguments.AddRange(argCallState.Arguments
-					.Select(DeferredArgument));
-			}
-			else
-			{
-				await EvaluateArgumentsInto(arguments, argCallState.Arguments, firstIndex: 0);
-			}
+			var raw = rawArguments[i];
+			arguments.Add(mode.Defers(i, rawArguments.Length)
+				? DeferredArgument(raw)
+				: (await EvaluateArgumentSubtree(visitor, prs, parsedArgumentText,
+					i < argContexts.Length ? argContexts[i] : null, raw,
+					emitSubstDebug: !(mode.EqSplit && i == 0), splitHadErrors))!);
 		}
 
 		return argumentResults;
@@ -242,16 +275,6 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 
 			return new CallState(text, argCallState.Depth, null, async () => (await Evaluate())?.Message)
 			{ ParsedResult = Evaluate };
-		}
-
-		// Arguments evaluate left to right, one at a time, each against the parse-tree slot it came from.
-		async ValueTask EvaluateArgumentsInto(List<CallState> target, MString[] raw, int firstIndex)
-		{
-			for (var i = firstIndex; i < raw.Length; i++)
-			{
-				target.Add((await EvaluateArgumentSubtree(visitor, prs, parsedArgumentText, ContextAt(i), raw[i],
-					emitSubstDebug: true, splitHadErrors))!);
-			}
 		}
 	}
 

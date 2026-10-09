@@ -73,7 +73,7 @@
                                                     <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" />
                                                 </button>
                                             </div>
-                                            @Chips(other.Values, index => other.Values.RemoveAt(index))
+                                            <RemovableChips Items="other.Values" OnRemove="index => Edit(() => other.Values.RemoveAt(index))" />
                                             <input class="cfg-text" placeholder="@Loc["AdmMsspAddValue"]" aria-label="@Loc["AdmMsspAddValue"]"
                                                    value="@other.ValueDraft"
                                                    @oninput="@(e => other.ValueDraft = e.Value?.ToString() ?? string.Empty)"
@@ -296,7 +296,7 @@
                         </div>
                         break;
                     case MsspValueKind.List:
-                        @Chips(_draft.Values(name), index => _draft.RemoveAt(name, index))
+                        <RemovableChips Items="_draft.Values(name)" OnRemove="index => Edit(() => _draft.RemoveAt(name, index))" />
                         <input class="cfg-text" placeholder="@(variable.Example ?? Loc["AdmMsspAddValue"].Value)" aria-label="@title" aria-describedby="@HelpId(variable)"
                                list="@(variable.Choices.Count > 0 ? ListId(name) : null)"
                                value="@_draft.ListDraft(name)"
@@ -344,25 +344,6 @@
                 @onclick="@(() => Edit(pick))">
             @label
         </button>
-    };
-
-    private RenderFragment Chips(IReadOnlyList<string> values, Action<int> remove) => __builder =>
-    {
-        <div class="cfg-chips">
-            @if (values.Count == 0)
-            {
-                <span class="cfg-empty">@Loc["NoItems"]</span>
-            }
-            @for (var i = 0; i < values.Count; i++)
-            {
-                var index = i;
-                <span class="cfg-chip">
-                    @values[index]
-                    <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {values[index]}")"
-                            @onclick="@(() => Edit(() => remove(index)))">×</button>
-                </span>
-            }
-        </div>
     };
 
     private RenderFragment TocLink(string anchor, string title, int count) => __builder =>

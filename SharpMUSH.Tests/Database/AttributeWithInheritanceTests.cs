@@ -21,7 +21,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create TestDirectAttr"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -48,7 +48,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create TestParentAttr"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -59,7 +59,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create TestChildAttr"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -89,7 +89,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create TestZoneAttr"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -100,7 +100,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create TestZonedObj"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -123,7 +123,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create TestNoParentCheck"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -134,7 +134,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create TestNoParentCheckChild"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -157,7 +157,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create PrecedenceZone"));
-		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneDbRef = DBRef.Parse(zoneResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -168,7 +168,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create PrecedenceParent"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -179,7 +179,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create PrecedenceChild"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -209,7 +209,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create NestedAttrTest"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -235,7 +235,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create ComplexGrandparent"));
-		var grandparentDbRef = DBRef.Parse(grandparentResult.Message!.ToPlainText()!);
+		var grandparentDbRef = DBRef.Parse(grandparentResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -246,7 +246,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create ComplexParent"));
-		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+		var parentDbRef = DBRef.Parse(parentResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -257,7 +257,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create ComplexChild"));
-		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+		var childDbRef = DBRef.Parse(childResult.Message.ToPlainText()!);
 
 		await WebAppFactoryArg.CommandParser.CommandParse(
 			1,
@@ -283,7 +283,7 @@ public class AttributeWithInheritanceTests
 			1,
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MarkupText.Plain("@create NonExistentAttrTest"));
-		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var objDbRef = DBRef.Parse(objResult.Message.ToPlainText()!);
 
 		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			objDbRef,

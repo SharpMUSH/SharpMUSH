@@ -107,7 +107,9 @@ public class AttributeReadCancellationTests
 			return true;
 		}
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Permission());
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<AttributeViewMemo>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Permission());
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute[]>()).Returns(call => stage.StartsWith("second-") && call.Arg<LazySharpAttribute[]>().Last().LongName == "A" ? new ValueTask<bool>(true) : Permission());
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<AttributeViewMemo>(), Arg.Any<LazySharpAttribute[]>()).Returns(call => stage.StartsWith("second-") && call.Arg<LazySharpAttribute[]>().Last().LongName == "A" ? new ValueTask<bool>(true) : Permission());
 		async Task Read()
 		{
 			if (!lazy) await service.GetAttributePatternAsync(target, target, "*", false, IAttributeService.AttributePatternMode.Wildcard);

@@ -15,7 +15,7 @@ public class RandomFunctionUnitTests
 	[Arguments("die(3,10)", "")]
 	public async Task Die(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsGreaterThan(0);
@@ -29,7 +29,7 @@ public class RandomFunctionUnitTests
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var parsed = await Parser.FunctionParse(MarkupText.Plain(str));
-		var result = parsed?.Message?.ToPlainText();
+		var result = parsed?.Message.ToPlainText();
 		TestDiagnostics.WriteLine($"Result value: '{result}'");
 		TestDiagnostics.WriteLine($"Result length: {result?.Length}");
 		await Assert.That(result).IsNotNull();
@@ -43,7 +43,7 @@ public class RandomFunctionUnitTests
 	public async Task RandOne(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToPlainText();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToPlainText();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -73,7 +73,7 @@ public class RandomFunctionUnitTests
 	[Arguments("rand(-2147483648,-2147483648)", new[] { "-2147483648" })]
 	public async Task RandRange(string str, string[] allowed)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToPlainText();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToPlainText();
 
 		await Assert.That(allowed).Contains(result!);
 	}
@@ -91,7 +91,7 @@ public class RandomFunctionUnitTests
 		var seen = new HashSet<string>();
 		for (var draw = 0; draw < 100; draw++)
 		{
-			seen.Add((await Parser.FunctionParse(MarkupText.Plain("rand(-5)")))!.Message!.ToPlainText());
+			seen.Add((await Parser.FunctionParse(MarkupText.Plain("rand(-5)")))!.Message.ToPlainText());
 		}
 
 		await Assert.That(seen).IsNotEmpty();
@@ -106,7 +106,7 @@ public class RandomFunctionUnitTests
 	public async Task RandDeterministic(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToPlainText();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToPlainText();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -116,7 +116,7 @@ public class RandomFunctionUnitTests
 	public async Task RandwordSingle(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToPlainText();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToPlainText();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -124,7 +124,7 @@ public class RandomFunctionUnitTests
 	[Arguments("shuffle(a b c d e)", "")]
 	public async Task Shuffle(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -132,7 +132,7 @@ public class RandomFunctionUnitTests
 	[Arguments("scramble(test)", "")]
 	public async Task Scramble(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

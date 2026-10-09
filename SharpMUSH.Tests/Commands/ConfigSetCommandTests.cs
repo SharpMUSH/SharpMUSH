@@ -105,7 +105,7 @@ public class ConfigSetCommandTests
 		{
 			var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config/set player_queue_limit=0"));
 
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo("1");
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo("1");
 			await Assert.That(Configuration.CurrentValue.Limit.PlayerQueueLimit).IsEqualTo(1u);
 		});
 

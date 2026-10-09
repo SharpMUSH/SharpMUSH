@@ -19,7 +19,7 @@ public class ParserFailureTests
 	private async Task<string?> Eval(string input)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(input));
-		return result?.Message?.ToString();
+		return result?.Message.ToString();
 	}
 
 	/// <summary>Baseline: what does the parser return for a valid expression?</summary>
