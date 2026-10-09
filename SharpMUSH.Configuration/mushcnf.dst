@@ -924,14 +924,6 @@ layout_border mush
 # OPTIONAL
 # layout_theme terminal
 
-# Stand-ins for characters a client without Unicode cannot show, before the
-# built-in ones (which turn a middle dot into *, a dash into -, an accented
-# letter into the plain letter, and anything else into ?). Space separated
-# character=text pairs, the text in double quotes when it holds a space.
-# See 'help ascii translations'.
-# OPTIONAL
-# ascii_translations ·=" - " …=... ©=(c)
-
 # Which pictures image() and figure() may show. any: every host. allow:
 # only the hosts in image_host_list. block: every host but those. off: no
 # pictures at all. The game's own pictures (a relative address) are shown

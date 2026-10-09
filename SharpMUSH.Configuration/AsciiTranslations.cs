@@ -1,61 +1,32 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Configuration;
 
 /// <summary>
-/// The <c>ascii_translations</c> option: space separated <c>character=text</c> pairs, the stand-in a client
-/// without Unicode is sent for each character, before the built-in ones. The text is printable ASCII, in
-/// double quotes when it holds a space (<c>·=" - "</c>), and may be empty to leave the character out.
+/// What an entry of the <c>ascii_translations</c> table may hold: one character outside ASCII, and the
+/// printable ASCII text a client without Unicode is sent for it, which may be empty to leave it out.
 /// </summary>
-public static partial class AsciiTranslations
+public static class AsciiTranslations
 {
-	/// <summary>The option's shape, for the configuration page; <see cref="TryParse"/> checks each pair too.</summary>
-	/// <remarks>A double quote is written <c>\x22</c>: the pattern is copied into generated code and the portal as it is.</remarks>
-	public const string Pattern = @"^\s*(?:[^\s=\x22]+=(?:\x22[^\x22]*\x22|[^\s\x22]*)(?:\s+|$))*$";
+	/// <summary>Whether <paramref name="character"/> is one character (a grapheme cluster) with something outside ASCII.</summary>
+	public static bool IsCharacter(string? character)
+		=> !string.IsNullOrEmpty(character)
+			&& new StringInfo(character).LengthInTextElements == 1
+			&& !character.All(char.IsAscii);
 
-	/// <summary>The pairs <paramref name="text"/> holds, or why it does not read.</summary>
-	/// <param name="text">The option's value.</param>
-	/// <param name="pairs">Each character and its stand-in, in order; empty when there are none.</param>
-	/// <param name="error">What is wrong, or null when it reads.</param>
-	public static bool TryParse(string? text, out IReadOnlyList<KeyValuePair<string, string>> pairs, out string? error)
-	{
-		pairs = [];
-		error = null;
-		if (string.IsNullOrWhiteSpace(text)) return true;
-		if (!ShapeRegex().IsMatch(text))
-		{
-			error = "Write each as character=text, space separated, the text in double quotes when it holds a space.";
-			return false;
-		}
+	/// <summary>Whether <paramref name="text"/> is printable ASCII, which an empty text is.</summary>
+	public static bool IsText(string? text) => text is not null && text.All(c => c is >= ' ' and <= '~');
 
-		var read = new List<KeyValuePair<string, string>>();
-		foreach (Match pair in PairRegex().Matches(text))
-		{
-			var key = pair.Groups["Key"].Value;
-			var value = pair.Groups["Quoted"].Success ? pair.Groups["Quoted"].Value : pair.Groups["Bare"].Value;
-			if (new StringInfo(key).LengthInTextElements != 1 || key.All(char.IsAscii))
-			{
-				error = $"'{key}' is not one character outside ASCII.";
-				return false;
-			}
+	/// <summary>Why <paramref name="character"/> cannot stand for <paramref name="text"/>, or null when it can.</summary>
+	public static string? Problem(string? character, string? text)
+		=> !IsCharacter(character) ? $"'{character}' is not one character outside ASCII."
+			: !IsText(text) ? $"The text for '{character}' is not plain ASCII."
+			: null;
 
-			if (value.Any(c => c is < ' ' or > '~'))
-			{
-				error = $"The text for '{key}' is not plain ASCII.";
-				return false;
-			}
-
-			read.Add(new KeyValuePair<string, string>(key, value));
-		}
-
-		pairs = read;
-		return true;
-	}
-
-	[GeneratedRegex(Pattern)]
-	private static partial Regex ShapeRegex();
-
-	[GeneratedRegex(@"(?<Key>[^\s=""]+)=(?:""(?<Quoted>[^""]*)""|(?<Bare>[^\s""]*))")]
-	private static partial Regex PairRegex();
+	/// <summary>The table as one string, the same for the same entries in any order: what tells two tables apart.</summary>
+	public static string Fingerprint(IReadOnlyDictionary<string, string>? translations)
+		=> translations is null or { Count: 0 }
+			? string.Empty
+			: string.Join('\n', translations.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+				.Select(pair => pair.Key + '\t' + pair.Value));
 }

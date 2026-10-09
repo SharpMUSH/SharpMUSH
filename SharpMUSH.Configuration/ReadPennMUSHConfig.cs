@@ -140,7 +140,6 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), d.Cosmetic.ChatStripQuote),
 				RequiredString(Get(nameof(CosmeticOptions.LayoutBorder)), d.Cosmetic.LayoutBorder).Trim().ToLowerInvariant(),
 				String(Get(nameof(CosmeticOptions.LayoutTheme)), d.Cosmetic.LayoutTheme)?.Trim() ?? string.Empty,
-				String(Get(nameof(CosmeticOptions.AsciiTranslations)), d.Cosmetic.AsciiTranslations)?.Trim() ?? string.Empty,
 				RequiredString(Get(nameof(CosmeticOptions.ImageHosts)), d.Cosmetic.ImageHosts).Trim().ToLowerInvariant(),
 				String(Get(nameof(CosmeticOptions.ImageHostList)), d.Cosmetic.ImageHostList)?.Trim() ?? string.Empty,
 				String(Get(nameof(CosmeticOptions.PortalLogo)), d.Cosmetic.PortalLogo)?.Trim() ?? string.Empty,
@@ -292,6 +291,8 @@ public static partial class ReadPennMushConfig
 			SitelockRules = new SitelockRulesOptions(
 				Rules: new Dictionary<string, string[]>()
 			),
+			// PennMUSH has no such table.
+			AsciiTranslations = d.AsciiTranslations,
 			Mssp = new MsspOptions(
 				Variables: Mssp(text, skipped, d.Mssp.Variables)
 			),

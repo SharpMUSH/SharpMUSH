@@ -52,7 +52,7 @@ public class MsspReportHolderTests
 				if (Interlocked.Increment(ref asked) == 2)
 				{
 					holder.Replace([new MSSPVariable("NAME", ["Test Game"])]);
-					settings.Replace(new OutputSettingsMessage("·=-"));
+					settings.Replace(new OutputSettingsMessage(new Dictionary<string, string> { ["·"] = "-" }));
 				}
 
 				return Task.CompletedTask;
@@ -84,7 +84,7 @@ public class MsspReportHolderTests
 			{
 				var count = Interlocked.Increment(ref asked);
 				if (count == 1) holder.Replace([new MSSPVariable("NAME", ["Test Game"])]);
-				if (count == 2) settings.Replace(new OutputSettingsMessage("·=-"));
+				if (count == 2) settings.Replace(new OutputSettingsMessage(new Dictionary<string, string> { ["·"] = "-" }));
 				return Task.CompletedTask;
 			});
 		using var service = new MsspReportRequestService(bus, holder, settings, NullLogger<MsspReportRequestService>.Instance);
@@ -94,6 +94,6 @@ public class MsspReportHolderTests
 		await service.StopAsync(CancellationToken.None);
 
 		await Assert.That(asked).IsEqualTo(2);
-		await Assert.That(settings.AsciiTranslations).IsEqualTo("·=-");
+		await Assert.That(settings.AsciiTranslations["·"]).IsEqualTo("-");
 	}
 }

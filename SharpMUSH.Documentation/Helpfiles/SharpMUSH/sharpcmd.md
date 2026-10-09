@@ -2551,7 +2551,6 @@ Terminal set to 'windows-terminal'
 - [@SOCKSET]
 :::
 # charset
-# ascii translations
 `SOCKSET charset=<utf-8|latin-1|ascii|auto>`<br>
 `@SOCKSET [me|<descriptor>]=charset,<utf-8|latin-1|ascii|auto>`
 
@@ -2570,9 +2569,7 @@ Each of these takes as many columns as the character it replaces, so columns sta
 
 'SOCKSET charset' names the character set yourself, for a client SharpMUSH guesses wrong. 'auto' goes back to what your client negotiated or reported. 'SOCKSET stripaccents=yes' sends ASCII whatever this is set to.
 
-A game can choose its own stand-ins with the `ascii_translations` option (see [@config cosmetic]): space separated character=text pairs, the text in double quotes when it holds a space. They come before the ones above, and may be longer than the character they replace. A layout such as a box or a table is laid out after they are applied, so it stays lined up; text you padded yourself may not.
-
-For example, a game that wants a middle dot shown as a spaced dash sets `ascii_translations` to a middle dot followed by `=" - "`. A title written as Wren, a middle dot, then Scene 3 then reaches an ASCII client as `Wren - Scene 3` rather than `Wren * Scene 3`.
+A game can choose its own stand-ins, which come before the ones above; see [@ASCII].
 
 Example:
 ```
@@ -2586,6 +2583,7 @@ Charset set to 'ascii'
 - [TERMINFO()]
 - [LAYOUT BORDERS]
 - [STRIPACCENTS()]
+- [@ASCII]
 :::
 # @speechmod
 `@speechmod <object>[=<modifier>]`

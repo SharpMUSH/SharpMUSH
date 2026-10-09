@@ -9,19 +9,19 @@ namespace SharpMUSH.SocketServer.Services;
 /// </summary>
 public sealed class OutputSettingsHolder
 {
-	private volatile string _asciiTranslations = string.Empty;
+	private volatile IReadOnlyDictionary<string, string> _asciiTranslations = new Dictionary<string, string>();
 
 	private readonly TaskCompletionSource _received = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-	/// <summary>The <c>ascii_translations</c> option, as written; empty for none.</summary>
-	public string AsciiTranslations => _asciiTranslations;
+	/// <summary>The <c>ascii_translations</c> table; empty for none.</summary>
+	public IReadOnlyDictionary<string, string> AsciiTranslations => _asciiTranslations;
 
 	/// <summary>Completes when the first settings from the main process arrive.</summary>
 	public Task Received => _received.Task;
 
 	public void Replace(OutputSettingsMessage message)
 	{
-		_asciiTranslations = message.AsciiTranslations ?? string.Empty;
+		_asciiTranslations = message.AsciiTranslations ?? new Dictionary<string, string>();
 		_received.TrySetResult();
 	}
 }

@@ -194,4 +194,25 @@
   <data name="PowerAlreadyExistsFormat" xml:space="preserve">
     <value>Le pouvoir '{0}' existe déjà.</value>
   </data>
+  <data name="AsciiTranslationSetFormat" xml:space="preserve">
+    <value>{0} est envoyé aux clients sans Unicode sous la forme « {1} ».</value>
+  </data>
+  <data name="AsciiTranslationDroppedFormat" xml:space="preserve">
+    <value>{0} est omis pour les clients sans Unicode.</value>
+  </data>
+  <data name="AsciiTranslationRemovedFormat" xml:space="preserve">
+    <value>{0} est de nouveau envoyé sous sa forme intégrée.</value>
+  </data>
+  <data name="AsciiTranslationNotFoundFormat" xml:space="preserve">
+    <value>{0} n'a pas de traduction.</value>
+  </data>
+  <data name="AsciiTranslationBadCharacterFormat" xml:space="preserve">
+    <value>« {0} » n'est pas un seul caractère hors ASCII.</value>
+  </data>
+  <data name="AsciiTranslationBadText" xml:space="preserve">
+    <value>Le texte doit être en ASCII simple. Écrivez une espace avec %b.</value>
+  </data>
+  <data name="AsciiTranslationUsage" xml:space="preserve">
+    <value>Usage : @ascii[/remove] &lt;caractère&gt;[=&lt;texte&gt;]</value>
+  </data>
 </root>

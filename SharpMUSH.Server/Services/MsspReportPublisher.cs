@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -77,11 +78,12 @@ public sealed class MsspReportPublisher(
 		try
 		{
 			// Before the report: a connection server stops asking once the report arrives.
-			var translations = options.CurrentValue.Cosmetic.AsciiTranslations ?? string.Empty;
-			if (force || translations != _lastSettings)
+			var translations = options.CurrentValue.AsciiTranslations.Translations;
+			var settings = AsciiTranslations.Fingerprint(translations);
+			if (force || settings != _lastSettings)
 			{
-				await bus.Publish(new OutputSettingsMessage(translations), ct);
-				_lastSettings = translations;
+				await bus.Publish(new OutputSettingsMessage(new Dictionary<string, string>(translations, StringComparer.Ordinal)), ct);
+				_lastSettings = settings;
 			}
 
 			var variables = (await report.BuildAsync())

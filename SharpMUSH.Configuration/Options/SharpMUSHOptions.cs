@@ -21,6 +21,7 @@ public record SharpMUSHOptions
 	public required RestrictionOptions Restriction { get; init; }
 	public required BannedNamesOptions BannedNames { get; init; }
 	public required SitelockRulesOptions SitelockRules { get; init; }
+	public required AsciiTranslationsOptions AsciiTranslations { get; init; }
 	public required MsspOptions Mssp { get; init; }
 	public required WarningOptions Warning { get; init; }
 	public required TextFileOptions TextFile { get; init; }
@@ -108,7 +109,6 @@ public record SharpMUSHOptions
 			ChatStripQuote: true,
 			LayoutBorder: "double",
 			LayoutTheme: "",
-			AsciiTranslations: "",
 			ImageHosts: "any",
 			ImageHostList: "",
 			PortalLogo: "",
@@ -292,6 +292,9 @@ public record SharpMUSHOptions
 				{ "192.168.1.*", ["register"] },
 				{ "trusted.domain.org", ["connect", "create", "guest"] }
 			}
+		),
+		AsciiTranslations = new AsciiTranslationsOptions(
+			Translations: new Dictionary<string, string>()
 		),
 		Mssp = new MsspOptions(
 			Variables: new Dictionary<string, string[]>

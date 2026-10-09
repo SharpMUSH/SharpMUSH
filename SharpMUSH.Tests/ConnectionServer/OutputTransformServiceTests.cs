@@ -32,7 +32,7 @@ public class OutputTransformServiceTests
 
 		await Assert.That(Encoding.ASCII.GetString(OutputTransformService.Transform(input, capabilities)))
 			.IsEqualTo("Wren * Scene - cafe");
-		await Assert.That(Encoding.ASCII.GetString(OutputTransformService.Transform(input, capabilities, "·=+")))
+		await Assert.That(Encoding.ASCII.GetString(OutputTransformService.Transform(input, capabilities, new Dictionary<string, string> { ["·"] = "+" })))
 			.IsEqualTo("Wren + Scene - cafe");
 	}
 

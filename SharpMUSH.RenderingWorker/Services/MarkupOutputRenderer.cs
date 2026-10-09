@@ -171,28 +171,21 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// <c>ascii_translations</c> first, then the built-in stand-ins, keeping what Latin-1 has for a client that
 	/// reads it. Null for a connection written in UTF-8.
 	/// </summary>
-	public static AsciiFold? FoldFor(ProtocolCapabilities capabilities, string? translations)
+	public static AsciiFold? FoldFor(ProtocolCapabilities capabilities, IReadOnlyDictionary<string, string>? translations)
 	{
 		if (capabilities.Utf8) return null;
 		var latin1 = capabilities.OutputCharset == TerminalCharsets.Latin1;
-		if (string.IsNullOrWhiteSpace(translations)) return latin1 ? Latin1Fold : AsciiFold.Default;
+		if (translations is null or { Count: 0 }) return latin1 ? Latin1Fold : AsciiFold.Default;
 
 		// The game changes them rarely and every connection shares them; past a handful, start again.
 		if (Folds.Count > 16) Folds.Clear();
-		return Folds.GetOrAdd((translations, latin1), static key =>
+		return Folds.GetOrAdd((AsciiTranslations.Fingerprint(translations), latin1), static (key, translations) =>
 		{
-			// The engine refuses a value that does not read, so this is a value from before that check: the
-			// built-in stand-ins alone, rather than none at all.
-			if (!AsciiTranslations.TryParse(key.Translations, out var pairs, out _)) pairs = [];
-			try
-			{
-				return new AsciiFold(pairs, key.Latin1);
-			}
-			catch (ArgumentException)
-			{
-				return new AsciiFold(latin1: key.Latin1);
-			}
-		});
+			// The engine refuses an entry that cannot work, so one here is from before that check: it is left out
+			// rather than costing the rest.
+			var usable = translations.Where(pair => AsciiTranslations.Problem(pair.Key, pair.Value) is null);
+			return new AsciiFold(usable, key.Latin1);
+		}, translations);
 	}
 
 	private static readonly AsciiFold Latin1Fold = new(latin1: true);

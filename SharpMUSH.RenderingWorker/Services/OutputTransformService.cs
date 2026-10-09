@@ -24,8 +24,9 @@ public sealed class OutputTransformService : IOutputTransformService
 	/// (<see cref="MarkupOutputRenderer.FoldFor"/>), then is transcoded. Rendered output was folded already, before
 	/// it was laid out; this catches output sent as it is.
 	/// </summary>
-	/// <param name="translations">The game's <c>ascii_translations</c>, or null for the built-in stand-ins alone.</param>
-	public static byte[] Transform(byte[] rawOutput, ProtocolCapabilities capabilities, string? translations = null)
+	/// <param name="translations">The game's <c>ascii_translations</c> table, or null for the built-in stand-ins alone.</param>
+	public static byte[] Transform(byte[] rawOutput, ProtocolCapabilities capabilities,
+		IReadOnlyDictionary<string, string>? translations = null)
 	{
 		if (MarkupOutputRenderer.FoldFor(capabilities, translations) is not { } fold) return rawOutput;
 		var text = fold.Fold(Encoding.UTF8.GetString(rawOutput));

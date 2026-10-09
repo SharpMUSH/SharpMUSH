@@ -7544,4 +7544,46 @@
   <data name="TermReviewNone" xml:space="preserve">
     <value>No line to read yet.</value>
   </data>
+  <data name="AsciiTranslations" xml:space="preserve">
+    <value>ASCII Translations</value>
+  </data>
+  <data name="AsciiTranslationsDescription" xml:space="preserve">
+    <value>What a client without Unicode is sent for a character it cannot show. Each character is in the table once; adding it again replaces its text. Characters not listed get the built-in stand-ins: a middle dot becomes *, a dash -, an accented letter the plain one, anything else ?.</value>
+  </data>
+  <data name="AddAsciiTranslation" xml:space="preserve">
+    <value>Add a translation</value>
+  </data>
+  <data name="AsciiTranslationCharacter" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="AsciiTranslationText" xml:space="preserve">
+    <value>Sent as</value>
+  </data>
+  <data name="AsciiTranslationTextHelper" xml:space="preserve">
+    <value>Plain ASCII, spaces kept; empty leaves the character out</value>
+  </data>
+  <data name="AsciiTranslationsList" xml:space="preserve">
+    <value>Translations</value>
+  </data>
+  <data name="NoAsciiTranslations" xml:space="preserve">
+    <value>No translations: clients without Unicode get the built-in stand-ins.</value>
+  </data>
+  <data name="AsciiTranslationLeftOut" xml:space="preserve">
+    <value>(left out)</value>
+  </data>
+  <data name="AsciiTranslationSaved" xml:space="preserve">
+    <value>Saved the translation for {0}</value>
+  </data>
+  <data name="AsciiTranslationRemoved" xml:space="preserve">
+    <value>Removed the translation for {0}</value>
+  </data>
+  <data name="ErrorLoadingAsciiTranslations" xml:space="preserve">
+    <value>Could not load the ASCII translations: {0}</value>
+  </data>
+  <data name="ErrorSavingAsciiTranslation" xml:space="preserve">
+    <value>Could not save the translation for {0}: {1}</value>
+  </data>
+  <data name="ErrorRemovingAsciiTranslation" xml:space="preserve">
+    <value>Could not remove the translation for {0}: {1}</value>
+  </data>
 </root>

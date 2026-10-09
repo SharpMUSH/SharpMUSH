@@ -43,4 +43,13 @@ public sealed record AdminKeyValueListText(
 	public string? ValuesPlaceholder { get; init; }
 
 	public string? ValuesRequired { get; init; }
+
+	/// <summary>
+	/// Whether the second field is one text kept as typed, spaces and commas included, and may be empty (an ASCII
+	/// translation), rather than a comma-separated list. Only meaningful when <see cref="ValuesLabel"/> is set.
+	/// </summary>
+	public bool SingleValue { get; init; }
+
+	/// <summary>What a row shows for an empty single value.</summary>
+	public string? EmptyValue { get; init; }
 }

@@ -9,7 +9,7 @@ namespace SharpMUSH.SocketServer.Services;
 /// cannot fetch an address relative to the portal. Null while it is unset.
 /// </param>
 /// <param name="AsciiTranslations">
-/// The game's <c>ascii_translations</c>, for a connection not sent UTF-8 (<see cref="ProtocolCapabilities.Utf8"/>);
+/// The game's <c>ascii_translations</c> table, for a connection not sent UTF-8 (<see cref="ProtocolCapabilities.Utf8"/>);
 /// null for one that is.
 /// </param>
 public sealed record RenderContext(
@@ -19,7 +19,7 @@ public sealed record RenderContext(
 	long Handle = 0,
 	string? SessionId = null,
 	string? Website = null,
-	string? AsciiTranslations = null);
+	IReadOnlyDictionary<string, string>? AsciiTranslations = null);
 
 /// <param name="Prompt">Whether the markup is a prompt, which is not given a line ending.</param>
 public sealed record RenderRequest(string? Markup, byte[]? Data, RenderContext Context, bool Prompt = false);

@@ -2985,4 +2985,25 @@ PLAYERS:</value>
   <data name="OwnerChanged" xml:space="preserve">
     <value>Owner changed.</value>
   </data>
+  <data name="AsciiTranslationSetFormat" xml:space="preserve">
+    <value>{0} is sent to clients without Unicode as '{1}'.</value>
+  </data>
+  <data name="AsciiTranslationDroppedFormat" xml:space="preserve">
+    <value>{0} is left out for clients without Unicode.</value>
+  </data>
+  <data name="AsciiTranslationRemovedFormat" xml:space="preserve">
+    <value>{0} is sent as its built-in stand-in again.</value>
+  </data>
+  <data name="AsciiTranslationNotFoundFormat" xml:space="preserve">
+    <value>{0} has no translation.</value>
+  </data>
+  <data name="AsciiTranslationBadCharacterFormat" xml:space="preserve">
+    <value>'{0}' is not one character outside ASCII.</value>
+  </data>
+  <data name="AsciiTranslationBadText" xml:space="preserve">
+    <value>The text must be plain ASCII. Write a space as %b.</value>
+  </data>
+  <data name="AsciiTranslationUsage" xml:space="preserve">
+    <value>Usage: @ascii[/remove] &lt;character&gt;[=&lt;text&gt;]</value>
+  </data>
 </root>
