@@ -28,4 +28,12 @@ public sealed class ObjectVersions
 	public long Of(int number) => _versions.GetValueOrDefault(number);
 
 	public void Bump(int number) => _versions.AddOrUpdate(number, 1, static (_, version) => version + 1);
+
+	private readonly ConcurrentDictionary<string, long> _tagVersions = new(StringComparer.Ordinal);
+
+	/// <summary>How many times entries tagged <paramref name="tag"/> have been removed, for a reader that
+	/// keeps an answer of its own outside the cache (<c>FlagList</c>: a flag renamed or deleted).</summary>
+	public long OfTag(string tag) => _tagVersions.GetValueOrDefault(tag);
+
+	public void BumpTag(string tag) => _tagVersions.AddOrUpdate(tag, 1, static (_, version) => version + 1);
 }

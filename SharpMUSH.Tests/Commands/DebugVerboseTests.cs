@@ -80,6 +80,29 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugEvalObj"));
 	}
 
+	/// <summary>
+	/// The executor's DEBUG flag is kept between function calls (<c>ExecutorDebugFlags</c>); setting or
+	/// clearing it has to show on the very next call.
+	/// </summary>
+	[Test]
+	public async Task DebugFlag_SetAndCleared_TakesEffectOnTheNextCall()
+	{
+		// The player is the executor, so each think runs inline, in order, with no queue between them.
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgToggle");
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("think [add(9101,1)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set me=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("think [add(9102,1)]"));
+		await ExpectHeardOnce(testPlayer.DbRef, @"^#\d+! +\[add\(9102,1\)\] :$");
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set me=!DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("think [add(9103,1)]"));
+		await WebAppFactoryArg.Notifications.WaitForAsync(testPlayer.DbRef, "9104", TimeSpan.FromSeconds(10));
+		await ExpectNotHeard(testPlayer.DbRef, Regex.Escape("add(9101,1)"));
+		await ExpectNotHeard(testPlayer.DbRef, Regex.Escape("add(9103,1)"));
+	}
+
 	[Test]
 	public async Task DebugFlag_ShowsNesting_WithIndentation()
 	{

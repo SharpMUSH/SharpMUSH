@@ -589,7 +589,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 			// QUEUE_NODEBUG / QUEUE_DEBUG on the attribute decide; with neither, the executor's DEBUG flag does.
 			shouldDebug = EvaluationDiagnostics.DebugOverride(parser.CurrentState.Flags)
-				?? await executorObj.HasFlag("DEBUG");
+				?? (_services.DebugFlags is { } debugFlags
+					? await debugFlags.IsDebugging(executorObj)
+					: await executorObj.HasFlag("DEBUG"));
 
 			if (shouldDebug)
 			{

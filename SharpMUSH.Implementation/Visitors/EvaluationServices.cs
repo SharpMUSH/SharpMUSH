@@ -28,6 +28,7 @@ internal sealed class EvaluationServices
 	private IPluginHookDispatcher? _pluginHooks;
 	private IRealityPolicy? _reality;
 	private IPipeOutputCapture? _pipeCapture;
+	private ExecutorDebugFlags? _debugFlags;
 
 	/// <param name="provider">Where the optional services are located.</param>
 	/// <param name="locateOptional">
@@ -114,6 +115,13 @@ internal sealed class EvaluationServices
 	/// fails the first <c>$</c>-command lookup, as it always did.
 	/// </summary>
 	public IRealityPolicy Reality => _reality ??= Provider.GetRequiredService<IRealityPolicy>();
+
+	/// <summary>
+	/// The executor's DEBUG flag, kept between writes; absent in hosts that do not register it, where the
+	/// flag is read on each call.
+	/// </summary>
+	public ExecutorDebugFlags? DebugFlags
+		=> _debugFlags ??= LocatesOptional ? Provider.GetService<ExecutorDebugFlags>() : null;
 
 	/// <summary>Takes a piped command's output for the next command's <c>%|</c>; absent in hosts that do not register it.</summary>
 	public IPipeOutputCapture? PipeCapture
