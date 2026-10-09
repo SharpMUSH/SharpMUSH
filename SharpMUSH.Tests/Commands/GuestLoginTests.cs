@@ -33,7 +33,7 @@ public class GuestLoginTests
 		var guestHandle = 1002L;
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
-		var resultMessage = result.Message?.ToString() ?? "";
+		var resultMessage = result.Message.ToString();
 		await Assert.That(resultMessage.Contains("#-1")).IsTrue();
 		await Assert.That(resultMessage.Contains("NO GUEST CHARACTERS")).IsTrue();
 
@@ -74,7 +74,7 @@ public class GuestLoginTests
 		var guestHandle = 1000L;
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
-		var resultMessage = result.Message?.ToString() ?? "";
+		var resultMessage = result.Message.ToString();
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse().Because(resultMessage);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest1"));
@@ -104,7 +104,7 @@ public class GuestLoginTests
 		var guestHandle = 1001L;
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect GUEST"));
 
-		var resultMessage = result.Message?.ToString() ?? "";
+		var resultMessage = result.Message.ToString();
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse().Because(resultMessage);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest2"));
@@ -132,7 +132,7 @@ public class GuestLoginTests
 		var guestHandle = 1003L;
 		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
-		var resultMessage = result.Message?.ToString() ?? "";
+		var resultMessage = result.Message.ToString();
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse().Because(resultMessage);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest3"));

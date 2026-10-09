@@ -47,12 +47,12 @@ public class ObjectsTests
 	[Test]
 	public async Task CreateThingWiresNameOwnerLocationAndHome()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var dbref = await _db.CreateThingAsync("Widget", room, god, room);
 		var thing = (await _db.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 		await Assert.That(thing.Object().Name).IsEqualTo("Widget");
-		await Assert.That((await thing.AsContent.Location()).Object().DBRef.Number).IsEqualTo(2);
+		await Assert.That((await thing.AsOptionalContent.Expect<AnySharpContent>().Location()).Object().DBRef.Number).IsEqualTo(2);
 		await Assert.That((await thing.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number).IsEqualTo(1);
 		await Assert.That(await _db.GetOwnedObjectCountAsync(god)).IsGreaterThanOrEqualTo(9);
 	}
@@ -60,7 +60,7 @@ public class ObjectsTests
 	[Test]
 	public async Task OwnedObjectCountFollowsCreationAndDestruction()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var before = await _db.GetOwnedObjectCountAsync(god);
 
@@ -75,7 +75,7 @@ public class ObjectsTests
 	[Test]
 	public async Task DeleteObjectRemovesEveryEdgeInBothDirections()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var dbref = await _db.CreateThingAsync("Doomed", room, god, room);
 

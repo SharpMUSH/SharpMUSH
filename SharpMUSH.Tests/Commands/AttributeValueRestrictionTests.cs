@@ -259,5 +259,5 @@ public class AttributeValueRestrictionTests
 		CommandParser.CommandParse(_wizard.Handle, ConnectionService, MarkupText.Plain(command));
 
 	private async Task<string> FunctionAsync(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 }

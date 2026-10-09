@@ -265,7 +265,7 @@ public class PostmanEchoHttpTests
 			MarkupText.Plain($"@http #1/{attrName}=not-a-valid-url"));
 
 		// Invalid URLs are rejected synchronously before the task is queued.
-		await Assert.That(result.Message?.ToPlainText()).Contains("#-1");
+		await Assert.That(result.Message.ToPlainText()).Contains("#-1");
 	}
 
 	[Test]

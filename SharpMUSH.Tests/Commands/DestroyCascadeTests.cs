@@ -34,7 +34,7 @@ public class DestroyCascadeTests
 	private ValueTask<CallState> AsGod(string command) =>
 		Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-	private static DBRef Parse(CallState result) => DBRef.Parse(result.Message!.ToPlainText().Trim());
+	private static DBRef Parse(CallState result) => DBRef.Parse(result.Message.ToPlainText().Trim());
 
 	private async Task<DBRef> CreateAsync(string prefix)
 		=> Parse(await AsGod($"@create {TestIsolationHelpers.GenerateUniqueName(prefix)}"));

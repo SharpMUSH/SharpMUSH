@@ -104,51 +104,43 @@
 
     <KitCard Title="@Loc["AdmModerationBansTitle"]">
         <div class="adm-mod-body">
-            @if (_error is not null)
-            {
-                <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
-            }
-            @if (_bans is null)
-            {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else if (_bans.Bans.Count == 0)
-            {
-                <EmptyBox>@Loc["AdmModerationNoBans"]</EmptyBox>
-            }
-            else
-            {
-                <MudTable Items="_bans.Bans" Dense="true" Hover="true" Elevation="0" Class="adm-mod-table">
-                    <HeaderContent>
-                        <MudTh>@Loc["AdmCharactersAccount"]</MudTh>
-                        <MudTh>@Loc["AdmModerationReason"]</MudTh>
-                        <MudTh>@Loc["AdmModerationBannedBy"]</MudTh>
-                        <MudTh>@Loc["AdmModerationUntil"]</MudTh>
-                        <MudTh></MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd data-label="@Loc["AdmCharactersAccount"]">
-                            <span>@context.AccountName</span>
-                            @if (context.Characters.Count > 0)
-                            {
-                                <span class="adm-mod-dim">@string.Join(", ", context.Characters)</span>
-                            }
-                        </MudTd>
-                        <MudTd data-label="@Loc["AdmModerationReason"]" Class="adm-mod-reason">@context.Reason</MudTd>
-                        <MudTd data-label="@Loc["AdmModerationBannedBy"]">
-                            <span>@(context.BannedBy ?? "—")</span>
-                            <span class="adm-mod-dim">@context.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</span>
-                        </MudTd>
-                        <MudTd data-label="@Loc["AdmModerationUntil"]">
-                            @(context.ExpiresAt is { } until ? until.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) : Loc["AdmModerationPermanent"].Value)
-                        </MudTd>
-                        <MudTd>
-                            <CapsuleButton Icon="@Icons.Material.Filled.LockOpen" Class="adm-mod-lift"
-                                           Disabled="_busy" OnClick="() => LiftAsync(context)">@Loc["AdmModerationLift"]</CapsuleButton>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
+            <LoadState TValue="AdminBansResponse" Value="_bans" Loading="@(_bans is null)" Error="@_error" IsEmpty="bans => bans.Bans.Count == 0" Context="bans">
+                <Empty>
+                    <EmptyBox>@Loc["AdmModerationNoBans"]</EmptyBox>
+                </Empty>
+                <ChildContent>
+                    <MudTable Items="bans.Bans" Dense="true" Hover="true" Elevation="0" Class="adm-mod-table">
+                        <HeaderContent>
+                            <MudTh>@Loc["AdmCharactersAccount"]</MudTh>
+                            <MudTh>@Loc["AdmModerationReason"]</MudTh>
+                            <MudTh>@Loc["AdmModerationBannedBy"]</MudTh>
+                            <MudTh>@Loc["AdmModerationUntil"]</MudTh>
+                            <MudTh></MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd data-label="@Loc["AdmCharactersAccount"]">
+                                <span>@context.AccountName</span>
+                                @if (context.Characters.Count > 0)
+                                {
+                                    <span class="adm-mod-dim">@string.Join(", ", context.Characters)</span>
+                                }
+                            </MudTd>
+                            <MudTd data-label="@Loc["AdmModerationReason"]" Class="adm-mod-reason">@context.Reason</MudTd>
+                            <MudTd data-label="@Loc["AdmModerationBannedBy"]">
+                                <span>@(context.BannedBy ?? "—")</span>
+                                <span class="adm-mod-dim">@context.At.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)</span>
+                            </MudTd>
+                            <MudTd data-label="@Loc["AdmModerationUntil"]">
+                                @(context.ExpiresAt is { } until ? until.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) : Loc["AdmModerationPermanent"].Value)
+                            </MudTd>
+                            <MudTd>
+                                <CapsuleButton Icon="@Icons.Material.Filled.LockOpen" Class="adm-mod-lift"
+                                               Disabled="_busy" OnClick="() => LiftAsync(context)">@Loc["AdmModerationLift"]</CapsuleButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </ChildContent>
+            </LoadState>
         </div>
     </KitCard>
 
@@ -261,11 +253,7 @@
     private async Task BootAsync()
     {
         if (_picked is not { } picked) return;
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AdmCharacterBootConfirmTitle", picked.Name],
-            Loc["AdmCharacterBootConfirm", picked.Name],
-            yesText: Loc["AdmCharacterBoot"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmBootAsync(Loc, picked.Name)) return;
 
         await RunAsync(CharactersService.BootAsync(picked.DbrefNumber, picked.CreationTime, Reason),
             Loc["AdmCharacterBooted", picked.Name].Value);
@@ -275,11 +263,8 @@
     {
         if (_picked is not { AccountKey: { } account } picked || Reason is not { } reason) return;
         var accountName = picked.AccountName ?? account;
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AdmModerationBanConfirmTitle", accountName],
-            Loc["AdmModerationBanConfirm", accountName, BanLengthLabel(_banDays)],
-            yesText: Loc["AdmModerationBan"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmAsync(Loc, Loc["AdmModerationBanConfirmTitle", accountName],
+            Loc["AdmModerationBanConfirm", accountName, BanLengthLabel(_banDays)], Loc["AdmModerationBan"])) return;
 
         DateTimeOffset? expires = _banDays == 0 ? null : DateTimeOffset.UtcNow.AddDays(_banDays);
         await RunAsync(BansService.BanAsync(account, reason, expires), Loc["AdmModerationBannedDone", accountName].Value);
@@ -287,11 +272,8 @@
 
     private async Task LiftAsync(AdminBanRow ban)
     {
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AdmModerationLiftConfirmTitle", ban.AccountName],
-            Loc["AdmModerationLiftConfirm", ban.AccountName],
-            yesText: Loc["AdmModerationLift"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmAsync(Loc, Loc["AdmModerationLiftConfirmTitle", ban.AccountName],
+            Loc["AdmModerationLiftConfirm", ban.AccountName], Loc["AdmModerationLift"])) return;
 
         await RunAsync(BansService.LiftAsync(ban.AccountKey), Loc["AdmModerationLifted", ban.AccountName].Value);
     }
@@ -299,11 +281,7 @@
     private async Task UnlinkAsync()
     {
         if (_picked is not { AccountKey: { } account } picked) return;
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["AdmCharacterUnlinkConfirmTitle", picked.Name],
-            Loc["AdmCharacterUnlinkConfirm", picked.Name, picked.AccountName ?? account],
-            yesText: Loc["AdmCharacterUnlink"], cancelText: Loc["Cancel"]);
-        if (confirmed != true) return;
+        if (!await DialogService.ConfirmUnlinkAsync(Loc, picked.Name, picked.AccountName ?? account)) return;
 
         await RunAsync(AccountsService.UnlinkCharacterAsync(account, picked.DbrefNumber, Reason),
             Loc["AdmCharacterUnlinked", picked.Name, picked.AccountName ?? account].Value);

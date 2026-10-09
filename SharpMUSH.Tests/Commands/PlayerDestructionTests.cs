@@ -71,7 +71,7 @@ public class PlayerDestructionTests
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
 			MarkupText.Plain("@create PDT_DestroyThing_NonPlayerTest"));
-		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var thingDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(
 			1, ConnectionService,
@@ -179,9 +179,9 @@ public class PlayerDestructionTests
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open"], testPlayer));
 
 		var doomed = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_UndDoomed")}"))).Message!.ToPlainText());
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_UndDoomed")}"))).Message.ToPlainText());
 		var safe = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_UndSafe")}"))).Message!.ToPlainText());
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_UndSafe")}"))).Message.ToPlainText());
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {safe}=SAFE"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {doomed}={playerDbRef}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {safe}={playerDbRef}"));
@@ -213,7 +213,7 @@ public class PlayerDestructionTests
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
 			MarkupText.Plain("@create PDT_NonSafeThing_PossessionTest"));
-		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var thingDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(
 			1, ConnectionService,
@@ -241,7 +241,7 @@ public class PlayerDestructionTests
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_SafeThing")}"));
-		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var thingDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=SAFE"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {thingDbRef}={playerDbRef}"));
@@ -267,7 +267,7 @@ public class PlayerDestructionTests
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_AttrHolder")}"));
-		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var thingDbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		// The test player authored an attribute on an object someone else owns.
 		const string attrName = "PDT_ATTR_OWNER_TEST";
@@ -292,11 +292,11 @@ public class PlayerDestructionTests
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open"], testPlayer));
 
 		var nonSafeDbRef = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_CombNonSafe")}"))).Message!.ToPlainText());
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_CombNonSafe")}"))).Message.ToPlainText());
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {nonSafeDbRef}={playerDbRef}"));
 
 		var safeDbRef = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_CombSafe")}"))).Message!.ToPlainText());
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_CombSafe")}"))).Message.ToPlainText());
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {safeDbRef}=SAFE"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {safeDbRef}={playerDbRef}"));
 

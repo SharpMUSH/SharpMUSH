@@ -21,11 +21,11 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
+		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 
 		// A blank list has nothing to group.
 		if (IsBlankList(list))

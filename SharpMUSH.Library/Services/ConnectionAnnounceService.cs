@@ -195,8 +195,11 @@ public class ConnectionAnnounceService(
 
 		try
 		{
-			await communicationService.SendToRoomAsync(
-				player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+			if (player.AsOptionalContainer is AnySharpContainer playerContainer)
+			{
+				await communicationService.SendToRoomAsync(
+					player, playerContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+			}
 
 			if (!isDark)
 			{
@@ -252,9 +255,9 @@ public class ConnectionAnnounceService(
 			{
 				await QueueHookAsync(zone, player, attrName, countArg);
 			}
-			else if (zone.IsRoom)
+			else if (zone.AsOptionalContainer is AnySharpContainer { IsRoom: true } zoneRoom)
 			{
-				await foreach (var content in zone.AsContainer.Content(mediator))
+				await foreach (var content in zoneRoom.Content(mediator))
 				{
 					await QueueHookAsync(content.WithRoomOption(), player, attrName, countArg);
 				}
@@ -262,9 +265,9 @@ public class ConnectionAnnounceService(
 		}
 
 		var masterRoomDbref = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
-		if (await mediator.Send(new GetObjectNodeQuery(masterRoomDbref)) is AnySharpObject masterRoom)
+		if (await mediator.Send(new GetObjectNodeQuery(masterRoomDbref)) is AnySharpObject { AsOptionalContainer: AnySharpContainer masterRoom })
 		{
-			await foreach (var content in masterRoom.AsContainer.Content(mediator))
+			await foreach (var content in masterRoom.Content(mediator))
 			{
 				await QueueHookAsync(content.WithRoomOption(), player, attrName, countArg);
 			}
@@ -285,13 +288,10 @@ public class ConnectionAnnounceService(
 	{
 		var playerNumber = player.Object().DBRef.Number;
 
-		await foreach (var channel in mediator.CreateStream(new GetOnChannelQuery(player)))
+		var announcing = mediator.CreateStream(new GetOnChannelQuery(player))
+			.Where(channel => !channel.HasPriv("Quiet"));
+		await foreach (var channel in announcing)
 		{
-			if (channel.HasPriv("Quiet"))
-			{
-				continue;
-			}
-
 			var hiddenOnChannel = isHiddenConnection;
 			if (!hiddenOnChannel)
 			{

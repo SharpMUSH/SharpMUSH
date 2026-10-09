@@ -1,0 +1,9 @@
+@using SharpMUSH.Client.Pages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The small coloured mark for what an attribute holds ($, ƒ, ^, •, ¶), named in its tooltip. *@
+<span class="sc-kind-badge" style="@SoftcodeAttributeKind.BadgeStyle(Attribute)" title="@Loc[SoftcodeAttributeKind.LabelKey(Attribute)]">@SoftcodeAttributeKind.Badge(Attribute)</span>
+
+@code {
+    [Parameter, EditorRequired] public MushAttribute Attribute { get; set; } = null!;
+}

@@ -726,7 +726,7 @@ public class DatabaseCommandTests
 		var created = await TestIsolationHelpers.CreateObjectCommandAsync(
 			SqlWebAppFactoryArg.CommandParserFor(owner.DbRef, owner.Handle), ConnectionService,
 			TestIsolationHelpers.GenerateUniqueName(prefix), owner.Handle);
-		return DBRef.Parse(created.Message!.ToPlainText());
+		return DBRef.Parse(created.Message.ToPlainText());
 	}
 
 	/// <summary>
@@ -959,10 +959,10 @@ public class DatabaseCommandTests
 		await Assert.That(arguments.Keys.Where(key => int.TryParse(key, out _)).Order())
 			.IsEquivalentTo(new[] { "0", "1", "2", "3", "4" });
 		await Assert.That((ParserState.Empty with { Arguments = arguments }).ArgumentsOrdered
-				.Values.Select(value => value.Message!.ToPlainText()))
+				.Values.Select(value => value.Message.ToPlainText()))
 			.IsEquivalentTo(new[] { "7", "A", "B", "C", "D" });
-		await Assert.That(arguments["alpha"].Message!.ToPlainText()).IsEqualTo("A");
-		await Assert.That(arguments["beta"].Message!.ToPlainText()).IsEqualTo("D");
+		await Assert.That(arguments["alpha"].Message.ToPlainText()).IsEqualTo("A");
+		await Assert.That(arguments["beta"].Message.ToPlainText()).IsEqualTo("D");
 	}
 
 	/// <summary>

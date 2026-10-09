@@ -28,7 +28,7 @@ public class CommandLockTests
 		var uniqueName = $"Pct{Guid.NewGuid():N}"[..12];
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {uniqueName}=TestPassword123"));
 
-		var resultText = result.Message!.ToPlainText()!;
+		var resultText = result.Message.ToPlainText()!;
 		var newDb = DBRef.Parse(resultText);
 		var newObject = (await Mediator.Send(new GetObjectNodeQuery(newDb))).Expect<AnySharpObject>();
 
@@ -45,7 +45,7 @@ public class CommandLockTests
 
 		// Try to use @dump (which has CommandLock = "FLAG^WIZARD")
 		var result = await nonWizParser.CommandParse(MarkupText.Plain("@dump"));
-		var resultText = result.Message?.ToPlainText() ?? "";
+		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
 	}
@@ -54,7 +54,7 @@ public class CommandLockTests
 	public async ValueTask CommandLockAllowsWizard()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dump"));
-		var resultText = result.Message?.ToPlainText() ?? "";
+		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).DoesNotContain("PERMISSION DENIED");
 	}
@@ -70,7 +70,7 @@ public class CommandLockTests
 		// Try to use @pcreate (which has CommandLock = "FLAG^WIZARD")
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("ShouldNotCreate");
 		var result = await nonWizParser.CommandParse(MarkupText.Plain($"@pcreate {uniqueName}=TestPassword123"));
-		var resultText = result.Message?.ToPlainText() ?? "";
+		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
 	}
@@ -81,7 +81,7 @@ public class CommandLockTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LockUseWildcard");
 
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/use {obj}=#FALSE"));
-		var resultText = result.Message?.ToPlainText() ?? string.Empty;
+		var resultText = result.Message.ToPlainText();
 
 		await Assert.That(resultText).DoesNotContain("#-1 INVALID SWITCH");
 

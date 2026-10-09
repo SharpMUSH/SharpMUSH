@@ -1,0 +1,46 @@
+@using SharpMUSH.Client.Models.Roles
+@using SharpMUSH.Library.Authorization
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One permission's row in the role editor: what it is, why the viewer holds it or not, and its three states. *@
+<div class="ra-perm-row">
+    <div class="ra-perm-label">
+        <div class="ra-perm-name">@Label</div>
+        <div class="ra-perm-desc">@Description</div>
+        <div class="ra-perm-meta">
+            @if (!string.Equals(Label, Scope, StringComparison.Ordinal))
+            {
+                <code class="ra-perm-scope">@Scope</code>
+            }
+            @if (Effective.TryGetValue(Scope, out var decision) && !RoleAccessBadge.IsGlobalReason(decision.Reason))
+            {
+                <RoleAccessBadge Decision="decision" Roles="Roles" />
+            }
+        </div>
+    </div>
+    <div class="ra-tristate">
+        @foreach (var option in new[] { "Inherit", "Allow", "Deny" })
+        {
+            var on = State == option;
+            <button type="button"
+                    class="ra-tri ra-tri--@option.ToLowerInvariant() @(on ? "ra-tri--on" : "")" aria-pressed="@(on ? "true" : "false")"
+                    @onclick="@(() => StateChanged.InvokeAsync(option))">@Loc["Rol" + option]</button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Scope { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>The viewer's own access, by scope.</summary>
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, PermissionExplanation> Effective { get; set; } = new Dictionary<string, PermissionExplanation>();
+
+    /// <summary>The game's roles, to name the ones that decided the viewer's access.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<PortalRoleModel> Roles { get; set; } = [];
+
+    /// <summary>The role's state for the scope: Inherit, Allow or Deny.</summary>
+    [Parameter] public string State { get; set; } = "Inherit";
+    [Parameter] public EventCallback<string> StateChanged { get; set; }
+}

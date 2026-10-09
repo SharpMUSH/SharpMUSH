@@ -56,7 +56,7 @@ public class RoomContentsHandlerReferenceTests
 		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	/// <summary>Raises ROOM`CONTENTS on <paramref name="handler"/> as God, and returns once the queued handler has run.</summary>
 	private Task Trigger(string handler, string room, string cause) => Raise(handler, WebAppFactoryArg.ExecutorDBRef, room, cause);

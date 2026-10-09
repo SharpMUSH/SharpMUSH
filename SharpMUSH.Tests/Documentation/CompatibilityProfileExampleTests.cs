@@ -57,7 +57,7 @@ public class CompatibilityProfileExampleTests
 		foreach (var step in block.Steps)
 		{
 			var output = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(step.Command)))
-				?.Message?.ToPlainText() ?? string.Empty;
+				?.Message.ToPlainText() ?? string.Empty;
 
 			switch (step.Expected)
 			{

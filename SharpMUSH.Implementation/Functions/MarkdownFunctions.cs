@@ -25,13 +25,13 @@ public partial class Functions
 		var markdown = "";
 		if (args.TryGetValue("0", out var markdownArg))
 		{
-			markdown = markdownArg.Message!.ToPlainText();
+			markdown = markdownArg.Message.ToPlainText();
 		}
 
 		var width = 78;
 		if (args.TryGetValue("1", out var widthArg))
 		{
-			var widthStr = widthArg.Message!.ToPlainText();
+			var widthStr = widthArg.Message.ToPlainText();
 			if (!int.TryParse(widthStr, out width) || width < 10 || width > 1000)
 			{
 				return new CallState(ErrorMessages.Returns.InvalidWidth);
@@ -65,15 +65,15 @@ public partial class Functions
 		var markdown = "";
 		if (args.TryGetValue("0", out var markdownArg))
 		{
-			markdown = markdownArg.Message!.ToPlainText();
+			markdown = markdownArg.Message.ToPlainText();
 		}
 
-		var templateObjRef = args["1"].Message!.ToPlainText();
+		var templateObjRef = args["1"].Message.ToPlainText();
 
 		var width = 78;
 		if (args.TryGetValue("2", out var widthArg))
 		{
-			var widthStr = widthArg.Message!.ToPlainText();
+			var widthStr = widthArg.Message.ToPlainText();
 			if (!int.TryParse(widthStr, out width) || width < 10 || width > 1000)
 			{
 				return new CallState(ErrorMessages.Returns.InvalidWidth);

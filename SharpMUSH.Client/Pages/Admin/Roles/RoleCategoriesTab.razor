@@ -1,0 +1,35 @@
+@using SharpMUSH.Library.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The Categories tab: the role categories and the permission categories, each list with its create form. *@
+<KitCard Class="roleadmin-assign">
+    <div class="ra-section">
+        <RoleNote Text="@Loc["RolCategoriesHelp"]" />
+    </div>
+    <RoleCategoryList Kind="CategoryKind.Role" Heading="@Loc["RolRoleCategories"]" Items="@Categories[CategoryKind.Role]" Draft="@Drafts[CategoryKind.Role]"
+                      EditOf="EditOf" Holds="@(category => Holds(CategoryKind.Role, category))" Saving="Saving"
+                      OnCreate="OnCreate" OnSave="OnSave" OnDelete="OnDelete" />
+    <RoleCategoryList Kind="CategoryKind.Permission" Heading="@Loc["RolPermissionCategories"]" Items="@Categories[CategoryKind.Permission]" Draft="@Drafts[CategoryKind.Permission]"
+                      EditOf="EditOf" Holds="@(category => Holds(CategoryKind.Permission, category))" Saving="Saving"
+                      OnCreate="OnCreate" OnSave="OnSave" OnDelete="OnDelete" />
+</KitCard>
+
+@code {
+    /// <summary>The two category lists, by kind.</summary>
+    [Parameter, EditorRequired] public IReadOnlyDictionary<CategoryKind, IReadOnlyList<RoleCategory>> Categories { get; set; } = null!;
+
+    /// <summary>What is typed into each list's create form.</summary>
+    [Parameter, EditorRequired] public IReadOnlyDictionary<CategoryKind, RoleCategoryDraft> Drafts { get; set; } = null!;
+
+    /// <summary>A category row's unsaved name and description.</summary>
+    [Parameter, EditorRequired] public Func<CategoryKind, RoleCategory, RoleCategoryDraft> EditOf { get; set; } = null!;
+
+    /// <summary>What a category in a list holds, as its row says it.</summary>
+    [Parameter, EditorRequired] public Func<CategoryKind, RoleCategory, string> Holds { get; set; } = null!;
+
+    [Parameter] public bool Saving { get; set; }
+
+    [Parameter] public EventCallback<CategoryKind> OnCreate { get; set; }
+    [Parameter] public EventCallback<(CategoryKind Kind, RoleCategory Category)> OnSave { get; set; }
+    [Parameter] public EventCallback<(CategoryKind Kind, RoleCategory Category)> OnDelete { get; set; }
+}

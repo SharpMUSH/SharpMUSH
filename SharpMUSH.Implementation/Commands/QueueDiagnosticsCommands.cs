@@ -26,7 +26,7 @@ public partial class Commands
 		if (actor is null) return await DiagnosticFailure(parser, DiagnosticsError.PermissionDenied);
 		var service = parser.ServiceProvider.GetRequiredService<IQueueDiagnosticsService>();
 		var switches = parser.CurrentState.Switches.ToArray();
-		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
+		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
 		if (switches.Length > 1 || (switches.Contains("STOP") && argument.Length > 0))
 			return await DiagnosticFailure(parser, DiagnosticsError.InvalidRequest);
 		if (switches.Contains("START"))
@@ -62,7 +62,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (parser.CurrentState.Switches.Count() != 1) return await DiagnosticFailure(parser, DiagnosticsError.InvalidRequest);
-		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
+		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
 		var limit = 50;
 		if (argument.Length > 0 && (!int.TryParse(argument, NumberStyles.None, CultureInfo.InvariantCulture, out limit)
 			|| limit is < 1 or > 100)) return await DiagnosticFailure(parser, DiagnosticsError.InvalidRequest);

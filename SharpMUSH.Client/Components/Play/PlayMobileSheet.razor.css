@@ -1,0 +1,36 @@
+/* A phone's side panels, as a chat app's: Play's sidebar from the left, the Room panel from the right, full
+   height on MudOverlay's fixed layer (§4.12), clear of the notch and the home indicator. */
+.play-sheet {
+    position: relative;
+    width: min(320px, 86vw);
+    height: 100vh;
+    height: 100svh;
+    overflow-y: auto;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    background: var(--surface);
+    text-align: left;
+    cursor: default;
+    outline: none;
+}
+
+.play-sheet--side {
+    padding-left: max(16px, env(safe-area-inset-left));
+    border-right: 1px solid var(--border);
+    border-radius: 0 18px 18px 0;
+}
+
+.play-sheet--room {
+    padding-right: max(16px, env(safe-area-inset-right));
+    border-left: 1px solid var(--border);
+    border-radius: 18px 0 0 18px;
+}
+
+/* The room's details, dropped from the top over the page (a chat app's channel details): the banner and its
+   controls row, as tall as they are. */
+.play-sheet--details {
+    box-sizing: border-box;
+    width: 100vw;
+    height: auto;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
+    background: transparent;
+}

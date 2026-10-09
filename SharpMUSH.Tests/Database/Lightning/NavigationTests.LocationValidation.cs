@@ -20,9 +20,9 @@ public partial class NavigationTests
 	{
 		var god = await God();
 		var original = await MasterRoom();
-		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsContainer;
+		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsOptionalContainer.Expect<AnySharpContainer>();
 		var reference = await _db.CreateExitAsync("Exit", [], original, god);
-		var exit = (await Node(reference)).AsContent;
+		var exit = (await Node(reference)).AsOptionalContent.Expect<AnySharpContent>();
 		await _db.Store.WriteAsync(tx =>
 		{
 			for (var index = 100; index < 800; index++) LightningDatabase.PutEdge(tx, Tables.Exit, index, reference.Number);
@@ -55,9 +55,9 @@ public partial class NavigationTests
 	{
 		var god = await God();
 		var original = await MasterRoom();
-		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsContainer;
+		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsOptionalContainer.Expect<AnySharpContainer>();
 		var reference = await _db.CreateExitAsync("Exit", [], original, god);
-		var exit = (await Node(reference)).AsContent;
+		var exit = (await Node(reference)).AsOptionalContent.Expect<AnySharpContent>();
 		await _db.Store.WriteAsync(tx =>
 		{
 			var key = Keys.Dbref(change.StartsWith("source", StringComparison.Ordinal) ? reference.Number : next.Object().DBRef.Number);
@@ -85,8 +85,8 @@ public partial class NavigationTests
 	{
 		var god = await God();
 		var original = await MasterRoom();
-		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsContainer;
-		var content = (await Node(await _db.CreateExitAsync("Exit", [], original, god))).AsContent;
+		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsOptionalContainer.Expect<AnySharpContainer>();
+		var content = (await Node(await _db.CreateExitAsync("Exit", [], original, god))).AsOptionalContent.Expect<AnySharpContent>();
 		var location = Edges(Tables.Location.Forward);
 		var exits = Edges(Tables.Exit.Forward);
 		var token = new CancellationToken(true);
@@ -108,9 +108,9 @@ public partial class NavigationTests
 	{
 		var god = await God();
 		var original = await MasterRoom();
-		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsContainer;
+		var next = (await Node(await _db.CreateRoomAsync("Next", god))).AsOptionalContainer.Expect<AnySharpContainer>();
 		var content = player ? new AnySharpContent(god)
-			: (await Node(await _db.CreateThingAsync("Thing", original, god, original))).AsContent;
+			: (await Node(await _db.CreateThingAsync("Thing", original, god, original))).AsOptionalContent.Expect<AnySharpContent>();
 		var home = Edges(Tables.Home.Forward);
 		var exits = Edges(Tables.Exit.Forward);
 		if (rawSetter) await _db.SetContentLocation(content, next);

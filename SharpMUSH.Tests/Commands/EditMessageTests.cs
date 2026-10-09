@@ -24,7 +24,7 @@ public class EditMessageTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
 		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var room = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var room = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
@@ -46,7 +46,7 @@ public class EditMessageTests
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("EditThing");
 		var created = await Run(who, $"@create {name}");
-		var thing = created.Message!.ToPlainText().Trim();
+		var thing = created.Message.ToPlainText().Trim();
 		await Run(who, $"&ALPHA {thing}=foo bar foo");
 		await Run(who, $"&BETA {thing}=nothing here");
 		return thing;

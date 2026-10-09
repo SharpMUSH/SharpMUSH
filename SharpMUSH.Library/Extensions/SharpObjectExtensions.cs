@@ -115,17 +115,7 @@ public static class SharpObjectExtensions
 			return true;
 		}
 
-		if (checkHierarchy)
-		{
-			await foreach (var zone in obj.GetZoneChain(ct: ct))
-			{
-				if (zone.Object().DBRef.Number == targetZone.Object().DBRef.Number)
-				{
-					return true;
-				}
-			}
-		}
-
-		return false;
+		return checkHierarchy && await obj.GetZoneChain(ct: ct)
+			.AnyAsync(zone => zone.Object().DBRef.Number == targetZone.Object().DBRef.Number);
 	}
 }

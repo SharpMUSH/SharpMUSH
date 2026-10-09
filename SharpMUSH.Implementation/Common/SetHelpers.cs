@@ -144,7 +144,7 @@ public static class SetHelpers
 				var result = await flagAndPowerService.SetOrUnsetFlag(executor, found, flagName,
 					togglesQuiet || !areQuiet);
 
-				if (failure is null && result.Message?.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true)
+				if (failure is null && result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true)
 				{
 					failure = result;
 				}

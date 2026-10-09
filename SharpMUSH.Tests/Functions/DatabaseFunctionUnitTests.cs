@@ -64,7 +64,7 @@ public class DatabaseFunctionUnitTests
 	{
 		var result =
 			(await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = 1))")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("test_sql_row1");
@@ -75,7 +75,7 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Sql_SelectMultipleRows_DefaultSeparators()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(SELECT `name` FROM `test_sql_data_func` ORDER BY id)")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("test_sql_row1");
@@ -87,7 +87,7 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Sql_SelectWithCustomRowSeparator()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(SELECT `name` FROM `test_sql_data_func` ORDER BY id,|)")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("test_sql_row1|test_sql_row2|test_sql_row3");
@@ -98,7 +98,7 @@ public class DatabaseFunctionUnitTests
 	{
 		var result =
 			(await Parser.FunctionParse(
-				MarkupText.Plain("sql(lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = 1),%b,~)")))?.Message!;
+				MarkupText.Plain("sql(lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = 1),%b,~)")))!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("test_sql_row1~100");
@@ -109,7 +109,7 @@ public class DatabaseFunctionUnitTests
 	{
 		var result =
 			(await Parser.FunctionParse(
-				MarkupText.Plain("sql(lit(SELECT `name`,`value` FROM `test_sql_data_func` ORDER BY id),|,~)")))?.Message!;
+				MarkupText.Plain("sql(lit(SELECT `name`,`value` FROM `test_sql_data_func` ORDER BY id),|,~)")))!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("test_sql_row1~100");
@@ -120,7 +120,7 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sql_Count()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `id` FROM `test_sql_data_func`))")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `id` FROM `test_sql_data_func`))")))!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsNotEmpty();
@@ -131,7 +131,7 @@ public class DatabaseFunctionUnitTests
 	{
 		var result =
 			(await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `value` FROM `test_sql_data_func` WHERE id = 2))")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEqualTo("200");
@@ -141,7 +141,7 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Sql_NoResults()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT * FROM `test_sql_data_func` WHERE id = 999))")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEmpty();
@@ -150,7 +150,7 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Sql_TableDoesNotExist()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT * FROM `nonexistent_table`))")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT * FROM `nonexistent_table`))")))!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).StartsWith("#-1 SQL ERROR");
@@ -161,7 +161,7 @@ public class DatabaseFunctionUnitTests
 	{
 		var result =
 			(await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `name` FROM `test_sql_data_func`), , ,rowcount)")))
-			?.Message!;
+			!.Message;
 
 		// The register should be set, but we can't easily test it in function context
 		// Just verify the query succeeded
@@ -172,7 +172,7 @@ public class DatabaseFunctionUnitTests
 	[Arguments("sqlescape(test_string_no_special_chars)", "test_string_no_special_chars")]
 	public async Task Test_Sqlescape_NoSpecialChars(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -180,7 +180,7 @@ public class DatabaseFunctionUnitTests
 	[Arguments("sqlescape(test'string)", "test\\'string")]
 	public async Task Test_Sqlescape_SingleQuote(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -188,7 +188,7 @@ public class DatabaseFunctionUnitTests
 	[Arguments("sqlescape(You don't say)", "You don\\'t say")]
 	public async Task Test_Sqlescape_MultipleQuotes(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -196,7 +196,7 @@ public class DatabaseFunctionUnitTests
 	[Arguments("sqlescape(test''double)", "test\\'\\'double")]
 	public async Task Test_Sqlescape_DoubleQuotes(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -204,7 +204,7 @@ public class DatabaseFunctionUnitTests
 	[Arguments("sqlescape(It's a test's test)", "It\\'s a test\\'s test")]
 	public async Task Test_Sqlescape_ManyQuotes(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -212,16 +212,16 @@ public class DatabaseFunctionUnitTests
 	[Arguments("sqlescape(Jim = \"John\" and 'Jimmy')", "Jim = \\\"John\\\" and \\'Jimmy\\'")]
 	public async Task Test_Sqlescape_MixedQuotes(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Test_Sqlescape_RealWorldUse()
 	{
-		var escapedValue = (await Parser.FunctionParse(MarkupText.Plain("sqlescape(test_sql_row1)")))?.Message!.ToPlainText();
+		var escapedValue = (await Parser.FunctionParse(MarkupText.Plain("sqlescape(test_sql_row1)")))?.Message.ToPlainText();
 		var query = $"Test_Sqlescape_RealWorldUse: [sql(lit(SELECT DISTINCT value FROM test_sql_data_func WHERE name = '{escapedValue}'))]";
-		var result = (await Parser.FunctionParse(MarkupText.Plain(query)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(query)))!.Message;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Sqlescape_RealWorldUse: 100");
 	}
@@ -230,12 +230,12 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Sqlescape_PreventInjection()
 	{
 		var maliciousInput = "test' OR '1'='1";
-		var escaped = (await Parser.FunctionParse(MarkupText.Plain($"sqlescape({maliciousInput})")))?.Message!.ToPlainText();
+		var escaped = (await Parser.FunctionParse(MarkupText.Plain($"sqlescape({maliciousInput})")))?.Message.ToPlainText();
 
 		await Assert.That(escaped).Contains("\\'");
 
 		var query = $"sql(lit(SELECT * FROM test_sql_data_func WHERE name = '{escaped}'))";
-		var result = (await Parser.FunctionParse(MarkupText.Plain(query)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(query)))!.Message;
 
 		await Assert.That(result.ToPlainText()).IsEmpty();
 	}
@@ -243,7 +243,7 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_AttributeDoesNotExist()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mapsql(me/nonexistent_attr_test,SELECT 1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mapsql(me/nonexistent_attr_test,SELECT 1)")))!.Message;
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 NO SUCH ATTRIBUTE");
 	}
 
@@ -280,7 +280,7 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_InvalidObjectAttribute()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mapsql(invalid_format,SELECT 1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mapsql(invalid_format,SELECT 1)")))!.Message;
 		await Assert.That(result.ToPlainText()).Contains("#-1");
 	}
 
@@ -301,7 +301,7 @@ public class DatabaseFunctionUnitTests
 		// sql() with more than 4 args automatically uses prepared statements
 		var result =
 			(await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = ?),%b,%b,%b,1)")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("test_sql_row1");
@@ -313,7 +313,7 @@ public class DatabaseFunctionUnitTests
 	{
 		var result =
 			(await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `name` FROM `test_sql_data_func` WHERE id >= ? AND id <= ? ORDER BY id),%b,%b,%b,1,2)")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).Contains("test_sql_row1");
@@ -325,7 +325,7 @@ public class DatabaseFunctionUnitTests
 	{
 		var result =
 			(await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT `value` FROM `test_sql_data_func` WHERE name = ? LIMIT 1),%b,%b,%b,test_sql_row2)")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEqualTo("200");
@@ -335,7 +335,7 @@ public class DatabaseFunctionUnitTests
 	public async Task Test_Sql_PreparedStatement_NoResults()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT * FROM `test_sql_data_func` WHERE id = ?),%b,%b,%b,999)")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEmpty();
@@ -346,7 +346,7 @@ public class DatabaseFunctionUnitTests
 	{
 		// Try to inject SQL via a string parameter - prepared statements should prevent this
 		var result = (await Parser.FunctionParse(MarkupText.Plain("sql(lit(SELECT * FROM `test_sql_data_func` WHERE name = ?),%b,%b,%b,test' OR '1'='1)")))
-			?.Message!;
+			!.Message;
 		var plainText = result.ToPlainText();
 
 		// The parameter "test' OR '1'='1" should be treated as a literal string value
@@ -399,7 +399,7 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_PreparedStatement_InvalidObjectAttribute()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mapsql(invalid_format,SELECT 1,%b,0,param)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mapsql(invalid_format,SELECT 1,%b,0,param)")))!.Message;
 		await Assert.That(result.ToPlainText()).Contains("#-1");
 	}
 

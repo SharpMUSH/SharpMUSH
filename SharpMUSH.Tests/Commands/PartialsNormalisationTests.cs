@@ -27,7 +27,7 @@ public class PartialsNormalisationTests
 		CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	private async Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix) =>
 		await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,

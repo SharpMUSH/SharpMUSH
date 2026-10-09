@@ -48,6 +48,6 @@ public class FunctionResultPropagationTests
 	{
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"{function}(#-1 EXCEPTION: ordinary text,1)"));
 		await Assert.That(result!.HadErrors).IsFalse();
-		await Assert.That(result.Message!.Text).IsEqualTo(expected);
+		await Assert.That(result.Message.Text).IsEqualTo(expected);
 	}
 }

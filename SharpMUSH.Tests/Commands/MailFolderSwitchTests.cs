@@ -73,7 +73,7 @@ public class MailFolderSwitchTests
 			MarkupText.Plain($"@mail/{switchName}"));
 		var told = WebAppFactoryArg.Notifications.For(player.DbRef);
 
-		await Assert.That(result.Message!.ToPlainText())
+		await Assert.That(result.Message.ToPlainText())
 			.DoesNotContain("INVALID SWITCH", StringComparison.OrdinalIgnoreCase);
 		await Assert.That(told).Contains(m => m.Contains("Current folder: 0 (INBOX)", StringComparison.Ordinal));
 	}

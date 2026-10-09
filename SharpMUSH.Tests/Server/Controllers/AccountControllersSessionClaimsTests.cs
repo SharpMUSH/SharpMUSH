@@ -51,6 +51,7 @@ public class AccountControllersSessionClaimsTests
 				new PasskeyRelyingParty(new ConfigurationBuilder().Build(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>()),
 				new PasskeyCeremonyStore(TimeProvider.System), TimeProvider.System, NullLogger<PasskeyService>.Instance),
 			Substitute.For<SharpMUSH.Library.Services.Interfaces.IPortalThemeService>(),
+			new BearerAccountResolver(sessions, accounts),
 			NullLogger<AccountController>.Instance)
 		{ ControllerContext = Context(user, bearer) };
 
@@ -105,7 +106,8 @@ public class AccountControllersSessionClaimsTests
 		var claims = new AccountClaimsService(
 			Substitute.For<IAdministrativeCapabilityService>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
 		return new AdminAccountsController(accounts, sessions, claims, Substitute.For<IAdministrativeCapabilityService>(),
-			Substitute.For<IAuditLog>(), Substitute.For<IMediator>(), NullLogger<AdminAccountsController>.Instance)
+			Substitute.For<IAuditLog>(), Substitute.For<IMediator>(), new BearerAccountResolver(sessions, accounts),
+			NullLogger<AdminAccountsController>.Instance)
 		{ ControllerContext = Context(user, "token") };
 	}
 

@@ -1,0 +1,22 @@
+@* An admin page's records beside the selected one's detail (Roles, Applications): the list's cards on the
+   left and the detail in a card on the right. The page names the layout's classes with its Area
+   (roleadmin-grid, roleadmin-list, roleadmin-detail) and styles them, under ::deep, in its own stylesheet. *@
+<div class="@($"{Area}-grid")">
+    <div class="@($"{Area}-list")">
+        @Records
+    </div>
+    <KitCard Class="@($"{Area}-detail")">
+        @Detail
+    </KitCard>
+</div>
+
+@code {
+    /// <summary>The page's class prefix for the layout, e.g. <c>roleadmin</c>.</summary>
+    [Parameter, EditorRequired] public string Area { get; set; } = string.Empty;
+
+    /// <summary>The records: a search, an empty note, the selectable cards.</summary>
+    [Parameter] public RenderFragment? Records { get; set; }
+
+    /// <summary>The selected record, or what stands in while none is.</summary>
+    [Parameter] public RenderFragment? Detail { get; set; }
+}

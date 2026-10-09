@@ -49,8 +49,8 @@ public partial class Commands
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
 		var args = parser.CurrentState.Arguments;
-		var name = args["0"].Message!.ToPlainText();
-		var password = args["1"].Message!.ToPlainText();
+		var name = args["0"].Message.ToPlainText();
+		var password = args["1"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
@@ -109,7 +109,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var arg0 = args["0"].Message!.ToPlainText();
+		var arg0 = args["0"].Message.ToPlainText();
 		var isGenerate = parser.CurrentState.Switches.Contains("GENERATE");
 
 		if (isGenerate && parser.CurrentState.Arguments.Count > 1)
@@ -158,7 +158,7 @@ public partial class Commands
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewCommandArguments, "@NEWPASSWORD", 2, 1));
 		}
 
-		var arg1 = arg1CallState.Message!.ToPlainText();
+		var arg1 = arg1CallState.Message.ToPlainText();
 		var newHashedPassword = PasswordService.HashPassword(arg1);
 
 		await Mediator.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
@@ -193,7 +193,7 @@ public partial class Commands
 
 		if (switches.Contains("NAME"))
 		{
-			return await SitelockNameAsync(executor, args.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "");
+			return await SitelockNameAsync(executor, args.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "");
 		}
 
 		if (args.Count == 0 || switches.Contains("LIST"))
@@ -225,7 +225,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			var hostToCheck = args["0"].Message!.ToPlainText();
+			var hostToCheck = args["0"].Message.ToPlainText();
 
 			KeyValuePair<string, string[]>? matchingRule = sitelockRules.Rules
 				.FirstOrDefault(rule => SitelockMatcher.Matches(rule.Key, hostToCheck, hostToCheck));
@@ -252,7 +252,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			var banPattern = args["0"].Message!.ToPlainText();
+			var banPattern = args["0"].Message.ToPlainText();
 			string[] banFlags = ["!connect", "!create", "!guest"];
 			await AddSitelockRuleAsync(executor, banPattern, banFlags);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, banPattern, string.Join(" ", banFlags));
@@ -268,7 +268,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			var registerPattern = args["0"].Message!.ToPlainText();
+			var registerPattern = args["0"].Message.ToPlainText();
 			string[] registerFlags = ["!create", "register"];
 			await AddSitelockRuleAsync(executor, registerPattern, registerFlags);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, registerPattern, string.Join(" ", registerFlags));
@@ -283,7 +283,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			var removePattern = args["0"].Message!.ToPlainText();
+			var removePattern = args["0"].Message.ToPlainText();
 			var removed = await RemoveSitelockRuleAsync(executor, removePattern);
 			if (!removed)
 			{
@@ -297,8 +297,8 @@ public partial class Commands
 
 		if (args.Count == 2)
 		{
-			var rulePattern = args["0"].Message!.ToPlainText();
-			var ruleFlags = args["1"].Message!.ToPlainText()
+			var rulePattern = args["0"].Message.ToPlainText();
+			var ruleFlags = args["1"].Message.ToPlainText()
 				.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 			await AddSitelockRuleAsync(executor, rulePattern, ruleFlags);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, rulePattern, string.Join(" ", ruleFlags));
@@ -518,8 +518,8 @@ public partial class Commands
 				return usage;
 			}
 
-			var category = args["0"].Message!.ToPlainText().ToLower();
-			var word = args["1"].Message!.ToPlainText().ToLower();
+			var category = args["0"].Message.ToPlainText().ToLower();
+			var word = args["1"].Message.ToPlainText().ToLower();
 
 			if (string.IsNullOrWhiteSpace(category) || string.IsNullOrWhiteSpace(word))
 			{
@@ -553,8 +553,8 @@ public partial class Commands
 				return usage;
 			}
 
-			var category = args["0"].Message!.ToPlainText().ToLower();
-			var word = args["1"].Message!.ToPlainText().ToLower();
+			var category = args["0"].Message.ToPlainText().ToLower();
+			var word = args["1"].Message.ToPlainText().ToLower();
 
 			if (!suggestionData.Categories.ContainsKey(category))
 			{
@@ -582,7 +582,7 @@ public partial class Commands
 
 		if (args.Count == 1)
 		{
-			var category = args["0"].Message!.ToPlainText().ToLower();
+			var category = args["0"].Message.ToPlainText().ToLower();
 
 			if (!suggestionData.Categories.ContainsKey(category))
 			{
@@ -607,8 +607,8 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var oldPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var newPassword = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var oldPassword = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var newPassword = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 
 		if (executor is not SharpPlayer player)
 		{
@@ -635,7 +635,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToPlainText()))
+		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message.ToPlainText()))
 		{
 			await NotifyService.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
 			await NotifyService.Notify(executor, "Available warnings: none, serious, normal, extra, all", executor);
@@ -651,7 +651,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var objectString = objectArg.Message?.ToString() ?? string.Empty;
+		var objectString = objectArg.Message.ToString();
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString,
 			LocateFlags.All) switch
 		{
@@ -671,7 +671,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var warningListString = warningListArg.Message?.ToPlainText() ?? string.Empty;
+		var warningListString = warningListArg.Message.ToPlainText();
 		var unknownWarnings = new List<string>();
 		var newWarnings = WarningTypeHelper.ParseWarnings(warningListString, unknownWarnings);
 
@@ -735,13 +735,13 @@ public partial class Commands
 		}
 		else
 		{
-			if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToPlainText()))
+			if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message.ToPlainText()))
 			{
 				await NotifyService.Notify(executor, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all", executor);
 				return CallState.Empty;
 			}
 
-			var objectString = objectArg.Message?.ToString() ?? string.Empty;
+			var objectString = objectArg.Message.ToString();
 			return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectString,
 				LocateFlags.All) switch
 			{

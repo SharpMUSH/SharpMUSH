@@ -23,7 +23,7 @@ public class LockDecompileReplayTests
 		=> (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>();
 
 	private async Task<string> Read(string expression)
-		=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	/// <summary>
 	/// What #1 was told while <paramref name="command"/> ran. #1 hears every other running test too,
@@ -41,7 +41,7 @@ public class LockDecompileReplayTests
 	public async Task InvalidLockDiagnosticKeepsDecompilePrefix()
 	{
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create(InvalidLock{Guid.NewGuid():N})"));
-		var reference = DBRef.Parse(created!.Message!.ToPlainText());
+		var reference = DBRef.Parse(created!.Message.ToPlainText());
 		var target = await Object(reference);
 		var invalid = new SharpLockData("=me");
 		await Factory.Services.GetRequiredService<ISharpDatabase>().SetLockAsync(target.Object(), "Basic", invalid);
@@ -67,7 +67,7 @@ public class LockDecompileReplayTests
 		var name = expression == "NAME^A  B" ? "A  B" : $"Replay_{Guid.NewGuid():N}";
 		var createName = expression == "NAME^A  B" ? "A%b%bB" : name;
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create({createName})"));
-		var reference = DBRef.Parse(created!.Message!.ToPlainText());
+		var reference = DBRef.Parse(created!.Message.ToPlainText());
 		var target = await Object(reference);
 		await Assert.That(target.Object().Name).IsEqualTo(name);
 		var god = await Object(new DBRef(1));

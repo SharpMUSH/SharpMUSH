@@ -31,7 +31,7 @@ public class SoftcodeParseCacheTests
 		var second = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(text));
 		await Assert.That(cache.TryGet(KeyFor(text), out var again)).IsTrue();
 		await Assert.That(again).IsSameReferenceAs(entry);
-		await Assert.That(second!.Message!.ToPlainText()).IsEqualTo(first!.Message!.ToPlainText());
+		await Assert.That(second!.Message.ToPlainText()).IsEqualTo(first!.Message.ToPlainText());
 		await Assert.That(second.Message.ToPlainText()).EndsWith("3");
 	}
 
@@ -44,7 +44,7 @@ public class SoftcodeParseCacheTests
 		var styled = await Factory.FunctionParser.FunctionParse(red);
 		var plain = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(text));
 
-		await Assert.That(styled!.Message!.ToPlainText()).IsEqualTo(plain!.Message!.ToPlainText());
+		await Assert.That(styled!.Message.ToPlainText()).IsEqualTo(plain!.Message.ToPlainText());
 		await Assert.That(styled.Message.Render(MarkupFormat.Ansi)).IsNotEqualTo(styled.Message.ToPlainText());
 		await Assert.That(plain.Message.Render(MarkupFormat.Ansi)).IsEqualTo(plain.Message.ToPlainText());
 	}

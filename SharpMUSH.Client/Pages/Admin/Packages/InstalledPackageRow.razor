@@ -1,0 +1,91 @@
+@using SharpMUSH.Library.Models.Packages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* An installed package: its kind, version, source and update state, and the check, history and uninstall actions. *@
+<PackageRow Icon="@KindIcon(Package.Package.Kind)" Kind="@Package.Package.Kind.ToString().ToLowerInvariant()"
+            IconTitle="@KindName(Package.Package.Kind)" Name="@Package.Package.Id">
+    <Tags>
+        @if (Package.Package.Kind != PackageKind.Softcode)
+        {
+            <Pill Tag="true">@KindName(Package.Package.Kind)</Pill>
+        }
+        <Pill Tag="true">v@(Package.Package.Version)</Pill>
+        @if (!string.IsNullOrEmpty(Package.Package.SourceRepo))
+        {
+            <Pill Tag="true">@Package.Package.SourceRepo</Pill>
+        }
+        @if (Update is not null)
+        {
+            @if (Update.InstalledTagMoved)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error">@Loc["PkgTagMoved"]</MudChip>
+            }
+            else if (Update.UpdateAvailable)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success">@Loc["PkgVersionAvailable", Update.LatestVersion ?? string.Empty]</MudChip>
+            }
+            else
+            {
+                <Pill Tag="true">@Loc["PkgCurrent"]</Pill>
+            }
+            @if (Update.PathChangedAtHead)
+            {
+                <Pill Tag="true" Warn="true">@Loc["PkgDevDrift"]</Pill>
+            }
+        }
+    </Tags>
+    <Meta>
+        <span>@Loc["PkgInstalledOn", Package.Package.InstalledAt.ToString("yyyy-MM-dd")]</span>
+        <span>@Loc["PkgObjAttrCounts", Package.ObjectCount, Package.ManagedAttributeCount]</span>
+        @if (Package.Dependents.Count > 0)
+        {
+            <span>@Loc["PkgRequiredBy", string.Join(", ", Package.Dependents)]</span>
+        }
+    </Meta>
+    <Actions>
+        @if (Update is null)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                       Disabled="@Busy"
+                       OnClick="@OnCheck">
+                @Loc["PkgCheck"]
+            </MudButton>
+        }
+        <MudTooltip Text="@Loc["PkgRevisionHistory"]">
+            <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["PkgRevisionHistory"]"
+                           OnClick="@OnHistory" />
+        </MudTooltip>
+        <MudTooltip Text="@Loc["PkgUninstall"]">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@Loc["PkgUninstall"]"
+                           Color="Color.Error"
+                           OnClick="@OnUninstall" />
+        </MudTooltip>
+    </Actions>
+</PackageRow>
+
+@code {
+    [Parameter, EditorRequired] public InstalledPackageDto Package { get; set; } = null!;
+
+    /// <summary>The package's last update check; null until one is made.</summary>
+    [Parameter] public PackageUpdateInfo? Update { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public EventCallback OnCheck { get; set; }
+    [Parameter] public EventCallback OnHistory { get; set; }
+    [Parameter] public EventCallback OnUninstall { get; set; }
+
+    private static string KindIcon(PackageKind kind) => kind switch
+    {
+        PackageKind.Application => Icons.Material.Filled.Apps,
+        PackageKind.Plugin => Icons.Material.Filled.Extension,
+        _ => Icons.Material.Filled.Archive
+    };
+
+    private string KindName(PackageKind kind) => kind switch
+    {
+        PackageKind.Application => Loc["PkgKindApplication"],
+        PackageKind.Plugin => Loc["PkgKindPlugin"],
+        _ => Loc["PkgKindSoftcode"]
+    };
+}

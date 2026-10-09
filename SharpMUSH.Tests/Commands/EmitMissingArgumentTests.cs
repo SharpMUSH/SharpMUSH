@@ -30,7 +30,7 @@ public class EmitMissingArgumentTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			Factory.Services, Factory.Services.GetRequiredService<IMediator>(), connection, "MissingEmit");
 		var result = await Factory.CommandParser.CommandParse(player.Handle, connection, MarkupText.Plain(command));
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NothingToDo);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NothingToDo);
 		await Assert.That(Factory.Notifications.For(player.DbRef)).Contains(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail);
 	}
 
@@ -42,7 +42,7 @@ public class EmitMissingArgumentTests
 			Factory.Services, Factory.Services.GetRequiredService<IMediator>(), connection, "MissingPrompt");
 		var result = await Factory.CommandParser.CommandParse(player.Handle, connection, MarkupText.Plain("@nsprompt me"));
 		var expected = string.Format(ErrorMessages.Returns.TooFewCommandArguments, "@NSPROMPT", 2, 1);
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(expected);
 		await Assert.That(Factory.Notifications.For(player.DbRef)).Contains(expected);
 	}
 
@@ -63,7 +63,7 @@ public class EmitMissingArgumentTests
 		{
 			var before = Factory.Notifications.CountFor(player.DbRef);
 			var result = await Factory.CommandParser.CommandParse(player.Handle, connection, MarkupText.Plain(command));
-			await Assert.That(result.Message!.ToPlainText()).IsEmpty();
+			await Assert.That(result.Message.ToPlainText()).IsEmpty();
 			await Assert.That(Factory.Notifications.For(player.DbRef).Skip(before)).IsEmpty();
 		}
 		finally

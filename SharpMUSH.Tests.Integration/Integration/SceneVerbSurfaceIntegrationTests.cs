@@ -38,7 +38,7 @@ public class SceneVerbSurfaceIntegrationTests
 	/// the subject of the assertion rather than noise around it.
 	/// </summary>
 	private async Task<string> EvalRaw(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -65,13 +65,13 @@ public class SceneVerbSurfaceIntegrationTests
 	private DBRef? _room;
 
 	private async Task<DBRef> RoomAsync() => _room ??= DBRef.Parse(
-		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message!.ToPlainText().Trim());
+		(await God1($"@dig {TestIsolationHelpers.GenerateUniqueName("SceneRoom")}")).Message.ToPlainText().Trim());
 
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
 		await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services,
 			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), name, await RoomAsync());
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -321,7 +321,7 @@ public class SceneVerbSurfaceIntegrationTests
 		var logger = await LoggerAsync();
 		const string url = "https://example.test/scenes/7";
 
-		var text = (await FunctionParser.FunctionParse(MarkupText.Plain($"u({logger}/FUN`URL_TEXT,{url})")))!.Message!;
+		var text = (await FunctionParser.FunctionParse(MarkupText.Plain($"u({logger}/FUN`URL_TEXT,{url})")))!.Message;
 
 		await Assert.That(text.ToPlainText()).IsEqualTo(url)
 			.Because("a client that cannot render an anchor reads the address alone");

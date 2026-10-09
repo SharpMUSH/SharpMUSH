@@ -34,9 +34,9 @@ public class RegexDefaultResultTests
 		}), true));
 		var parser = original with { FunctionLibrary = library };
 		var result = await parser.FunctionParse(MarkupText.Plain($"{function}(a,b,unused,resultprobe())"));
-		await Assert.That(result!.Message!.Text).IsEqualTo("value");
+		await Assert.That(result!.Message.Text).IsEqualTo("value");
 		await Assert.That(result.HadErrors).IsEqualTo(hadErrors);
-		await Assert.That((await result.GetParsedResultAsync()).Message!.Text).IsEqualTo("value");
+		await Assert.That((await result.GetParsedResultAsync()).Message.Text).IsEqualTo("value");
 		await Assert.That(calls).IsEqualTo(1);
 	}
 }

@@ -116,8 +116,8 @@ public partial class PrivateListenerTests
 		await Assert.That(queued.State.Executor).IsEqualTo(listener);
 		await Assert.That(queued.State.Enactor).IsEqualTo(actor.DbRef);
 		await Assert.That(queued.State.Caller).IsEqualTo(actor.DbRef);
-		await Assert.That(queued.State.EnvironmentRegisters["0"].Message!.ToPlainText()).IsEqualTo("one");
-		await Assert.That(queued.State.EnvironmentRegisters["1"].Message!.ToPlainText()).IsEqualTo("two");
+		await Assert.That(queued.State.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo("one");
+		await Assert.That(queued.State.EnvironmentRegisters["1"].Message.ToPlainText()).IsEqualTo("two");
 		await Admin($"@ahear {listener}=&CAPTURE me=changed");
 		await pipeline.Parser.FromState(queued.State).CommandListParse(queued.Command);
 		var captured = await Factory.Services.GetRequiredService<IAttributeService>().GetAttributeAsync(await Node(listener), await Node(listener),

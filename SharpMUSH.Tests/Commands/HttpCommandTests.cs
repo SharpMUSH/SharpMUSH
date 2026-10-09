@@ -57,7 +57,7 @@ public class HttpCommandTests
 		using var scope = budget.Enter();
 		var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
 
-		await Assert.That(result.Message?.ToPlainText() ?? "").IsEqualTo(admission.Accepted ? "" : admission.Error);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(admission.Accepted ? "" : admission.Error);
 		await mediator.Received(1).Send(Arg.Any<AdmitAttributeRequest>(), budget.Token);
 		clients.DidNotReceive().CreateClient(Arg.Any<string>());
 		if (reason is QueueRejectionReason.InvalidTarget or QueueRejectionReason.AlreadyReleased)
@@ -123,7 +123,7 @@ public class HttpCommandTests
 		{
 			var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
 
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(new QueueAdmissionResult(null, reason).Error);
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(new QueueAdmissionResult(null, reason).Error);
 			// A quota refusal is reported by the runaway notice to the owner instead (pay_queue, src/cque.c:304).
 			var runaway = reason == QueueRejectionReason.OwnerLimit;
 			await notifications.Received(reason == QueueRejectionReason.InvalidTarget || runaway ? 0 : 1)

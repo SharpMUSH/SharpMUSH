@@ -16,9 +16,8 @@
     {
         <SidebarHead Title="@Section" />
     }
-    @foreach (var app in _apps)
+    @foreach (var a in _apps)
     {
-        var a = app;
         if (_navs.TryGetValue(a.Slug, out var groups))
         {
             foreach (var group in groups)

@@ -69,7 +69,7 @@ public partial class Commands
 		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val
 		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register
 		// substitutions like %q1 resolve to their current values before the attribute is set.
-		var attrNameRaw = args["0"].Message ?? MarkupText.Empty;
+		var attrNameRaw = args["0"].Message;
 		var attrNameResult = await parser.FunctionParse(attrNameRaw);
 		var attrNameParsed = attrNameResult?.Message ?? attrNameRaw;
 		var attrName = attrNameParsed.ToPlainText();
@@ -80,11 +80,11 @@ public partial class Commands
 		var result = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
-			args["1"].Message!.ToPlainText(), LocateFlags.All, async realLocated =>
+			args["1"].Message.ToPlainText(), LocateFlags.All, async realLocated =>
 			{
 				if (!args.TryGetValue("2", out var tmpContents)
 					|| (!Configuration.CurrentValue.Attribute.EmptyAttributes
-						&& string.IsNullOrEmpty(tmpContents.Message?.ToPlainText())))
+						&& string.IsNullOrEmpty(tmpContents.Message.ToPlainText())))
 				{
 					// PennMUSH: & attr obj (no '=') always clears.
 					// & attr obj= (empty value) clears only when empty_attrs is off.
@@ -121,7 +121,7 @@ public partial class Commands
 				// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
 				//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
 				var contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
-					? tmpContents!.Message!
+					? tmpContents!.Message
 					: await tmpContents!.ParsedMessage() ?? MarkupText.Empty;
 
 				// command_atrset() in cmds.c passes executor to do_set_atr() for both

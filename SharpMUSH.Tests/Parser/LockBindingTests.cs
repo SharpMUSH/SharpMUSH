@@ -20,7 +20,7 @@ public class LockBindingTests
 	private async Task<AnySharpObject> CreateSetter()
 	{
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create(Binding_{Guid.NewGuid():N})"));
-		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		return (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message.ToPlainText())))).Expect<AnySharpObject>();
 	}
 
 	[Test]
@@ -34,7 +34,7 @@ public class LockBindingTests
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create({name})"));
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		await Assert.That((await Locks.BindAsync(prefix + name, god)).Expect<string>())
-			.IsEqualTo(prefix + created!.Message!.ToPlainText() + (prefix == "@" ? "/Basic" : ""));
+			.IsEqualTo(prefix + created!.Message.ToPlainText() + (prefix == "@" ? "/Basic" : ""));
 	}
 
 	[Test]
@@ -44,7 +44,7 @@ public class LockBindingTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, connections, "LockPreference");
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create({player.Name})"));
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
-		await Assert.That((await Locks.BindAsync(player.Name, god)).Expect<string>()).IsEqualTo(created!.Message!.ToPlainText());
+		await Assert.That((await Locks.BindAsync(player.Name, god)).Expect<string>()).IsEqualTo(created!.Message.ToPlainText());
 	}
 
 	[Test]
@@ -95,7 +95,7 @@ public class LockBindingTests
 	{
 		var prefix = $"Pattern_{Guid.NewGuid():N}_";
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create({prefix}{suffix})"));
-		var obj = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message!.ToPlainText())))).Expect<AnySharpObject>();
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(created!.Message.ToPlainText())))).Expect<AnySharpObject>();
 		var expression = "NAME^" + prefix + patternSuffix;
 		var bound = (await Locks.BindAsync(expression, obj)).Expect<string>();
 		await Assert.That(bound).IsEqualTo(expression);
@@ -126,7 +126,7 @@ public class LockBindingTests
 	{
 		var prefix = $"Binding_{Guid.NewGuid():N}_";
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create({prefix}{suffix})"));
-		var reference = created!.Message!.ToPlainText();
+		var reference = created!.Message.ToPlainText();
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		await Assert.That((await Locks.BindAsync("=" + prefix + operandSuffix, god)).Expect<string>()).IsEqualTo("=" + reference);
 	}

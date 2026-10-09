@@ -130,8 +130,8 @@ public class InputHookFailureTests
 			{
 				await Assert.That(bodyCalls).IsEqualTo(0);
 				await Assert.That(overrideCalls).IsEqualTo(mode is "branch-override" or "branch-extend" ? 1 : 0);
-				if (mode == "branch-plugin") await Assert.That(result.Message!.Text).IsEqualTo("plugin result");
-				if (mode == "branch-invalid") await Assert.That(result.Message!.Text).IsEqualTo("#-1 INVALID SWITCH: extra");
+				if (mode == "branch-plugin") await Assert.That(result.Message.Text).IsEqualTo("plugin result");
+				if (mode == "branch-invalid") await Assert.That(result.Message.Text).IsEqualTo("#-1 INVALID SWITCH: extra");
 			}
 			if (!failed) await Assert.That(bodyCalls).IsEqualTo(hookType == "IGNORE" && mode is "literal" or "legacy" ? 0 : 1);
 		}

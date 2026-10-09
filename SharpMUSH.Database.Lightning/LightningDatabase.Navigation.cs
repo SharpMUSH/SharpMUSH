@@ -113,8 +113,9 @@ public partial class LightningDatabase
 	/// contents and homed-at reads share.</summary>
 	private AnySharpContent? ReadContent(ITx tx, byte[] value)
 		=> ReadObject(tx, Keys.ReadDbref(value)) is { } found && found.Record.Type != DatabaseConstants.TypeRoom
-			? Hydrate(found.Dbref, found.Record).AsContent
-			: null;
+			&& Hydrate(found.Dbref, found.Record).AsOptionalContent is AnySharpContent content
+				? content
+				: null;
 
 	public ValueTask<Found<DBRef>> GetLocationRefAsync(DBRef subject, int depth = 1, CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult(Store.Read<Found<DBRef>>(tx =>

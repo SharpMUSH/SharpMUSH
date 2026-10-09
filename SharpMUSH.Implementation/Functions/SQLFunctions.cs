@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -50,7 +51,7 @@ public partial class Functions
 		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
 		var fieldSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		var registerName = args.Count > 3 && args.TryGetValue("3", out var value2)
-			? value2.Message?.ToPlainText() ?? string.Empty
+			? value2.Message.ToPlainText()
 			: string.Empty;
 
 		// If more than 4 arguments, treat remaining arguments as prepared statement parameters
@@ -62,17 +63,9 @@ public partial class Functions
 
 			if (isPreparedStatement)
 			{
-				var parameters = new List<object?>();
-				for (var i = 4; i < args.Count; i++)
-				{
-					if (args.TryGetValue(i.ToString(), out var paramArg))
-					{
-						var paramValue = (await EvaluateArgument(paramArg))?.ToPlainText() ?? string.Empty;
-						parameters.Add(paramValue);
-					}
-				}
-
-				results = await SqlService.ExecutePreparedQueryAsync(query, [.. parameters]);
+				var (parameters, parameterErrors) = await SqlPreparedParametersAsync(args);
+				hadErrors |= parameterErrors;
+				results = await SqlService.ExecutePreparedQueryAsync(query, parameters);
 			}
 			else
 			{
@@ -106,7 +99,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var input = args["0"].Message?.ToPlainText() ?? string.Empty;
+		var input = args["0"].Message.ToPlainText();
 
 		var escaped = SqlService.Escape(input);
 
@@ -151,7 +144,7 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 
-		var objAttrStr = args["0"].Message?.ToPlainText() ?? string.Empty;
+		var objAttrStr = args["0"].Message.ToPlainText();
 
 		var query = (await EvaluateArgument(args["1"]))?.ToPlainText() ?? string.Empty;
 
@@ -161,15 +154,12 @@ public partial class Functions
 		}
 
 		var osep = args.Count > 2 && args.TryGetValue("2", out var osepArg)
-			? osepArg.Message!
+			? osepArg.Message
 			: MarkupText.Space;
 
 		var doFieldNames = args.Count > 3
 											 && args.TryGetValue("3", out var fieldNameArg)
 											 && fieldNameArg.Message.Truthy(parser);
-
-		// If more than 4 arguments, treat remaining arguments as prepared statement parameters
-		var isPreparedStatement = args.Count > 4;
 
 		if (HelperFunctions.SplitObjectAndAttr(objAttrStr) is not { Object: var targetObjRef, Attribute: var attrName })
 		{
@@ -178,75 +168,98 @@ public partial class Functions
 
 		var mappedResult = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
-			async found =>
-			{
-				var maybeAttribute = await AttributeService.GetAttributeAsync(executor, found, attrName,
-					IAttributeService.AttributeMode.Execute);
-
-				if (!maybeAttribute.IsAttribute)
-				{
-					return maybeAttribute.AsCallState with { HadErrors = hadErrors || maybeAttribute.AsCallState.HadErrors };
-				}
-
-				var results = new List<MString>();
-
-				try
-				{
-					IAsyncEnumerable<Dictionary<string, object?>> queryResults;
-
-					if (isPreparedStatement)
-					{
-						// Collect parameters starting from argument 4
-						var parameters = new List<object?>();
-						for (var i = 4; i < args.Count; i++)
-						{
-							if (args.TryGetValue(i.ToString(), out var paramArg))
-							{
-								var paramValue = (await EvaluateArgument(paramArg))?.ToPlainText() ?? string.Empty;
-								parameters.Add(paramValue);
-							}
-						}
-
-						queryResults = SqlService.ExecuteStreamPreparedQueryAsync(query, [.. parameters]);
-					}
-					else
-					{
-						queryResults = SqlService.ExecuteStreamQueryAsync(query);
-					}
-
-					var firstRow = true;
-					var rowNumber = 1;
-
-					await foreach (var row in queryResults)
-					{
-						if (doFieldNames && firstRow)
-						{
-							var headerResult = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found,
-								attrName,
-								SqlRowArguments.ForHeader(row.Keys));
-
-							hadErrors |= headerResult.HadErrors;
-							results.Add(headerResult.Message ?? MarkupText.Empty);
-
-							firstRow = false;
-						}
-
-						var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found, attrName,
-							SqlRowArguments.ForRow(row, rowNumber));
-
-						hadErrors |= result.HadErrors;
-						results.Add(result.Message ?? MarkupText.Empty);
-
-						rowNumber++;
-					}
-				}
-				catch (Exception ex) when (ex is DbException or InvalidOperationException)
-				{
-					return new CallState(string.Format(ErrorMessages.Returns.SqlErrorFormat, ex.Message)) { HadErrors = hadErrors };
-				}
-
-				return new CallState(MarkupText.Join(osep, results)) { HadErrors = hadErrors };
-			});
+			found => MapSqlRowsAsync(parser, executor, found, attrName, query, args, doFieldNames, osep));
 		return mappedResult with { HadErrors = hadErrors || mappedResult.HadErrors };
+	}
+
+	/// <summary>
+	/// mapsql() once its object is found: the attribute evaluated for the header (when asked for) and
+	/// for every row the query streams, joined with <paramref name="osep"/>.
+	/// </summary>
+	private async ValueTask<CallState> MapSqlRowsAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject found, string attrName, string query, Dictionary<string, CallState> args, bool doFieldNames,
+		MString osep)
+	{
+		var maybeAttribute = await AttributeService.GetAttributeAsync(executor, found, attrName,
+			IAttributeService.AttributeMode.Execute);
+
+		if (!maybeAttribute.IsAttribute)
+		{
+			return maybeAttribute.AsCallState;
+		}
+
+		var hadErrors = false;
+		var results = new List<MString>();
+
+		async ValueTask<MString> EvaluateAttribute(Dictionary<string, CallState> attributeArgs)
+		{
+			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found, attrName,
+				attributeArgs);
+			hadErrors |= result.HadErrors;
+			return result.Message;
+		}
+
+		try
+		{
+			var (queryResults, parameterErrors) = await SqlStreamAsync(query, args);
+			hadErrors |= parameterErrors;
+
+			var rowNumber = 1;
+			await foreach (var row in queryResults)
+			{
+				if (doFieldNames && rowNumber == 1)
+				{
+					results.Add(await EvaluateAttribute(SqlRowArguments.ForHeader(row.Keys)));
+				}
+
+				results.Add(await EvaluateAttribute(SqlRowArguments.ForRow(row, rowNumber)));
+				rowNumber++;
+			}
+		}
+		catch (Exception ex) when (ex is DbException or InvalidOperationException)
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.SqlErrorFormat, ex.Message)) { HadErrors = hadErrors };
+		}
+
+		return new CallState(MarkupText.Join(osep, results)) { HadErrors = hadErrors };
+	}
+
+	/// <summary>
+	/// mapsql()'s rows: a prepared statement when it has arguments past the fourth, which are its
+	/// parameters, and a plain query otherwise.
+	/// </summary>
+	private async ValueTask<(IAsyncEnumerable<Dictionary<string, object?>> Rows, bool HadErrors)> SqlStreamAsync(
+		string query, Dictionary<string, CallState> args)
+	{
+		if (args.Count <= 4)
+		{
+			return (SqlService.ExecuteStreamQueryAsync(query), false);
+		}
+
+		var (parameters, parameterErrors) = await SqlPreparedParametersAsync(args);
+		return (SqlService.ExecuteStreamPreparedQueryAsync(query, parameters), parameterErrors);
+	}
+
+	/// <summary>
+	/// The prepared-statement parameters sql() and mapsql() take from their fifth argument on, each
+	/// evaluated to plain text, and whether any of those evaluations had errors.
+	/// </summary>
+	private static async ValueTask<(object?[] Parameters, bool HadErrors)> SqlPreparedParametersAsync(
+		Dictionary<string, CallState> args)
+	{
+		var hadErrors = false;
+		var parameters = new List<object?>();
+		var arguments = Enumerable.Range(4, args.Count - 4)
+			.Select(i => args.GetValueOrDefault(i.ToString()))
+			.OfType<CallState>();
+
+		foreach (var argument in arguments)
+		{
+			var result = await argument.GetParsedResultAsync();
+			hadErrors |= result.HadErrors;
+			parameters.Add(result.Message.ToPlainText());
+		}
+
+		return ([.. parameters], hadErrors);
 	}
 }

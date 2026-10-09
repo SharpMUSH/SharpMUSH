@@ -162,7 +162,7 @@ public class HttpCompletionEventLifetimeTests
 		await Assert.That(fixture.EventBody!.ToPlainText()).IsEqualTo("event");
 		await Assert.That(fixture.EventState!.Executor!.Value.Number).IsEqualTo(9);
 		await Assert.That(fixture.EventState.ExecutionBudget).IsNull();
-		await Assert.That(fixture.EventState.EnvironmentRegisters["3"].Message!.ToPlainText()).IsEqualTo("201");
+		await Assert.That(fixture.EventState.EnvironmentRegisters["3"].Message.ToPlainText()).IsEqualTo("201");
 	}
 
 	private sealed class HeldTimerProvider : TimeProvider

@@ -380,9 +380,9 @@ public class MailCommandTests
 		var missing = await parser.CommandParse(sender.Handle, ConnectionService,
 			MarkupText.Plain("@mail NoSuchPlayerAtAll=Subject/Body."));
 
-		await Assert.That(refused.Message!.ToPlainText())
+		await Assert.That(refused.Message.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.RecipientDoesNotAcceptMail);
-		await Assert.That(missing.Message!.ToPlainText())
+		await Assert.That(missing.Message.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.NoSuchPlayer);
 	}
 }

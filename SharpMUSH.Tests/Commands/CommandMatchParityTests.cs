@@ -50,7 +50,7 @@ public class CommandMatchParityTests
 	{
 		var created = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService,
 			TestIsolationHelpers.GenerateUniqueName(prefix), owner.Handle);
-		var dbref = DBRef.Parse(created.Message!.ToPlainText());
+		var dbref = DBRef.Parse(created.Message.ToPlainText());
 		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, dbref);
 		return dbref;
 	}

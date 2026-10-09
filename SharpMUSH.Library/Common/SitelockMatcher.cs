@@ -32,20 +32,9 @@ public static class SitelockMatcher
 		// Parsed once per call rather than once per rule.
 		var ipAddress = ParseAddress(ip);
 
-		foreach (var (pattern, flags) in rules)
-		{
-			if (Array.IndexOf(flags, surfaceFlag) < 0)
-			{
-				continue;
-			}
-
-			if (Matches(pattern, ip, ipAddress, host))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return rules
+			.Where(rule => Array.IndexOf(rule.Value, surfaceFlag) >= 0)
+			.Any(rule => Matches(rule.Key, ip, ipAddress, host));
 	}
 
 	/// <summary>

@@ -128,13 +128,10 @@ public sealed class BanEnforcementService(
 	{
 		var matchedIps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		await foreach (var connection in connectionService.GetAll().WithCancellation(ct))
+		var banned = connectionService.GetAll()
+			.Where(connection => MatchesConnection(connection.InternetProtocolAddress, connection.HostName, hostPattern));
+		await foreach (var connection in banned.WithCancellation(ct))
 		{
-			if (!MatchesConnection(connection.InternetProtocolAddress, connection.HostName, hostPattern))
-			{
-				continue;
-			}
-
 			// Track the concrete IP for the session-revoke/registry-abort fan-outs below, but
 			// never the "unknown" sentinel (e.g. the hostname field matched while the IP field
 			// itself was never resolved) — that bucket is shared by every connection with no
@@ -182,14 +179,9 @@ public sealed class BanEnforcementService(
 		// SitelockMatcher and the providers keep their one simple query.
 		await RunGuardedAsync("collect stored session origins for host rule", hostPattern, async () =>
 		{
-			foreach (var ip in await sessionStore.GetKnownOriginIpsAsync(ct))
-			{
-				if (!string.Equals(ip, UnknownOrigin, StringComparison.OrdinalIgnoreCase)
-					&& MatchesConnection(ip, string.Empty, hostPattern))
-				{
-					matchedIps.Add(ip);
-				}
-			}
+			matchedIps.UnionWith((await sessionStore.GetKnownOriginIpsAsync(ct))
+				.Where(ip => !string.Equals(ip, UnknownOrigin, StringComparison.OrdinalIgnoreCase)
+					&& MatchesConnection(ip, string.Empty, hostPattern)));
 		});
 
 		// Revoke sessions from every concrete IP the rule matched — whether it was found on a live

@@ -68,7 +68,7 @@ public class LockOperandRangeTests
 	public async Task OversizedReferenceTextRemainsLiteralInAttributeAndEvalLocks(string value)
 	{
 		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create(RangeLiteral_{Guid.NewGuid():N})"));
-		var reference = created!.Message!.ToPlainText();
+		var reference = created!.Message.ToPlainText();
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(reference)))).Expect<AnySharpObject>();
 		await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"attrib_set({reference}/VALUE,{value})"));
 		foreach (var separator in new[] { ":", "/" })

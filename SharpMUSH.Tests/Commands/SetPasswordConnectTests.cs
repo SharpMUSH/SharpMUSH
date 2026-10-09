@@ -40,7 +40,7 @@ public class SetPasswordConnectTests
 	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
 	private IOptionsWrapper<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
-	private static string PlainMessage(CallState result) => result.Message?.ToString() ?? "";
+	private static string PlainMessage(CallState result) => result.Message.ToString();
 
 	private async ValueTask<long> RegisterConnectionAsync(long handle)
 	{

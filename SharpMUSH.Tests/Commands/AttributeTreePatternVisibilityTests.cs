@@ -29,7 +29,7 @@ public class AttributeTreePatternVisibilityTests
 	private async Task<string> Eval(long handle, string expression)
 	{
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return result?.Message?.ToPlainText() ?? string.Empty;
+		return result?.Message.ToPlainText() ?? string.Empty;
 	}
 
 	[Test]
@@ -198,7 +198,7 @@ public class AttributeTreePatternVisibilityTests
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("PatNearRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var roomDbRef = digResult.Message.ToPlainText()!.Trim();
 		// /SILENT so the arrival produces no movement messages inside another test's assertion
 		// window. The automatic look still runs, but it runs inline, so it cannot land later.
 		await Parser.CommandParse(1, ConnectionService,
@@ -286,7 +286,7 @@ public class AttributeTreePatternVisibilityTests
 		// @set command's own result instead.
 		var attempt = await Parser.CommandParse(owner.Handle, ConnectionService,
 			MarkupText.Plain($"@set me=PIW{uid}:changed"));
-		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
+		await Assert.That(attempt.Message.ToPlainText()).Contains("NO PERMISSION")
 			.Because("AF_INTERNAL blocks writes for everyone but God - a wizard owner must not be able to overwrite it");
 	}
 

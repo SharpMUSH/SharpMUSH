@@ -38,9 +38,8 @@
     @if (_editing)
     {
         <p class="wiki-req-help">@Loc["WikiRequirementsHelp"]</p>
-        @foreach (var action in Actions)
+        @foreach (var name in Actions)
         {
-            var name = action;
             <div class="wiki-req-field">
                 <div class="wiki-req-label">@Loc[ActionLabelKey(name)]</div>
                 @if (_draft[name].Count > 0)

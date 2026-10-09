@@ -23,7 +23,7 @@ public class NewLockCommandTests
 	public async ValueTask ELOCK_CommandExecutes()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ELockTestObject"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@elock #{newDb.Number}=#TRUE"));
 
@@ -34,7 +34,7 @@ public class NewLockCommandTests
 	public async ValueTask EUNLOCK_CommandExecutes()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EUnlockTestObject"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@eunlock #{newDb.Number}"));
 
@@ -45,7 +45,7 @@ public class NewLockCommandTests
 	public async ValueTask ULOCK_CommandExecutes()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ULockTestObject"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@ulock #{newDb.Number}=#TRUE"));
 
@@ -56,7 +56,7 @@ public class NewLockCommandTests
 	public async ValueTask UUNLOCK_CommandExecutes()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create UUnlockTestObject"));
-		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDb = DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@uunlock #{newDb.Number}"));
 

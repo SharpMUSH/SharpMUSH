@@ -29,9 +29,8 @@ else
     else
     {
         <div class="here-grid">
-            @foreach (var occupant in _listed)
+            @foreach (var o in _listed)
             {
-                var o = occupant;
                 @if (IsThing(o))
                 {
                     <button type="button" class="here-thing" aria-label="@o.Name" disabled="@(string.IsNullOrWhiteSpace(o.Cmd))"

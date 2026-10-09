@@ -1,6 +1,7 @@
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
+using System.Collections.Frozen;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.API;
@@ -129,40 +130,53 @@ public static partial class SchemaBuilder
 		return PascalCaseSplitRegex().Replace(name, " $1").Trim();
 	}
 
-	private static string GetPropertyTypeName(Type type)
+	/// <summary>The kinds of value an option holds, which decide both its schema type and its editor.</summary>
+	private enum ValueShape { Boolean, Integer, Number, Enum, StringList, Dictionary, Text }
+
+	private static readonly FrozenDictionary<Type, ValueShape> ShapesByType = new Dictionary<Type, ValueShape>
+	{
+		[typeof(bool)] = ValueShape.Boolean,
+		[typeof(int)] = ValueShape.Integer,
+		[typeof(uint)] = ValueShape.Integer,
+		[typeof(long)] = ValueShape.Integer,
+		[typeof(ulong)] = ValueShape.Integer,
+		[typeof(short)] = ValueShape.Integer,
+		[typeof(ushort)] = ValueShape.Integer,
+		[typeof(float)] = ValueShape.Number,
+		[typeof(double)] = ValueShape.Number,
+		[typeof(decimal)] = ValueShape.Number,
+		[typeof(string[])] = ValueShape.StringList,
+		[typeof(Dictionary<string, string[]>)] = ValueShape.Dictionary
+	}.ToFrozenDictionary();
+
+	private static ValueShape ShapeOf(Type type)
 	{
 		var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-
-		if (underlyingType == typeof(bool)) return "boolean";
-		if (underlyingType == typeof(int) || underlyingType == typeof(uint) ||
-				underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
-				underlyingType == typeof(short) || underlyingType == typeof(ushort)) return "integer";
-		if (underlyingType == typeof(float) || underlyingType == typeof(double) ||
-				underlyingType == typeof(decimal)) return "number";
-		if (underlyingType == typeof(string)) return "string";
-		if (underlyingType.IsEnum) return "enum";
-		if (underlyingType == typeof(string[])) return "array";
-		if (underlyingType == typeof(Dictionary<string, string[]>)) return "dictionary";
-
-		return "string";
+		return ShapesByType.TryGetValue(underlyingType, out var shape) ? shape
+			: underlyingType.IsEnum ? ValueShape.Enum
+			: ValueShape.Text;
 	}
 
-	private static string InferComponentType(Type type)
+	private static string GetPropertyTypeName(Type type) => ShapeOf(type) switch
 	{
-		var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+		ValueShape.Boolean => "boolean",
+		ValueShape.Integer => "integer",
+		ValueShape.Number => "number",
+		ValueShape.Enum => "enum",
+		ValueShape.StringList => "array",
+		ValueShape.Dictionary => "dictionary",
+		_ => "string"
+	};
 
-		if (underlyingType == typeof(bool)) return "switch";
-		if (underlyingType == typeof(int) || underlyingType == typeof(uint) ||
-				underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
-				underlyingType == typeof(short) || underlyingType == typeof(ushort) ||
-				underlyingType == typeof(float) || underlyingType == typeof(double) ||
-				underlyingType == typeof(decimal)) return "numeric";
-		if (underlyingType.IsEnum) return "select";
-		if (underlyingType == typeof(string[])) return "stringlist";
-		if (underlyingType == typeof(Dictionary<string, string[]>)) return "dictionary";
-
-		return "text";
-	}
+	private static string InferComponentType(Type type) => ShapeOf(type) switch
+	{
+		ValueShape.Boolean => "switch",
+		ValueShape.Integer or ValueShape.Number => "numeric",
+		ValueShape.Enum => "select",
+		ValueShape.StringList => "stringlist",
+		ValueShape.Dictionary => "dictionary",
+		_ => "text"
+	};
 
 	private static bool IsNullable(Type type)
 	{

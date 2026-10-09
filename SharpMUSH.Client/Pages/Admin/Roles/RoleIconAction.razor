@@ -1,0 +1,16 @@
+@* A row action on the roles page as an icon button, its name in the tooltip and the accessible label. *@
+<MudTooltip Text="@Label">
+    <MudIconButton Icon="@Icon" Size="Size.Small" Color="@(Danger ? Color.Error : Color.Default)"
+                   aria-label="@Label" Disabled="@Disabled" OnClick="@(() => OnClick.InvokeAsync())" />
+</MudTooltip>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public bool Danger { get; set; }
+
+    /// <summary>While a save is out.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnClick { get; set; }
+}

@@ -30,7 +30,7 @@ public class FlagWildcardMatchingTests
 	public async ValueTask SetFlag_PartialMatch_NoCommand()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FlagTestThing1"));
-		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
+		var thingDbRef = DBRef.Parse(result.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=no_com"));
 
@@ -68,7 +68,7 @@ public class FlagWildcardMatchingTests
 	public async ValueTask SetFlag_PartialMatch_Visual()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FlagTestThing3"));
-		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
+		var thingDbRef = DBRef.Parse(result.Message.ToPlainText()!);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=vis"));
 
@@ -87,7 +87,7 @@ public class FlagWildcardMatchingTests
 		// Pattern B: "{uniqueName} - VISUAL reset." appears exactly once across the session.
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest4");
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
-		var createPlainText = createResult.Message?.ToPlainText()
+		var createPlainText = createResult.Message.ToPlainText()
 			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message.");
 		var thingDbRef = DBRef.Parse(createPlainText);
 

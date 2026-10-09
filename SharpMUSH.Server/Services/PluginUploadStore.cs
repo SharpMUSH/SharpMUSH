@@ -192,12 +192,11 @@ public sealed partial class PluginUploadStore(
 			return;
 		}
 
-		foreach (var folder in Directory.EnumerateDirectories(directories.UploadStaging))
+		var expired = Directory.EnumerateDirectories(directories.UploadStaging)
+			.Where(folder => DateTime.UtcNow - Directory.GetCreationTimeUtc(folder) > Lifetime);
+		foreach (var folder in expired)
 		{
-			if (DateTime.UtcNow - Directory.GetCreationTimeUtc(folder) > Lifetime)
-			{
-				TryDelete(folder);
-			}
+			TryDelete(folder);
 		}
 	}
 

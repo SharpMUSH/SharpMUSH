@@ -1,0 +1,82 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The anchor the Settings sidebar's Characters row lands on. *@
+<div id="characters" class="acct-anchor">
+    <KitCard Title="@Loc["Characters"]" Sub="@Loc["NavSettingsCharactersDescription"]">
+        <Controls>
+            <button class="acct-btn acct-btn-outline" @onclick="OnRefresh" disabled="@Busy">
+                <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-1" />
+                @Loc["Refresh"]
+            </button>
+        </Controls>
+        <ChildContent>
+            <div class="acct-section">
+                @if (Loading)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                }
+                else if (Characters.Count == 0)
+                {
+                    <div class="acct-empty">@Loc["AuthNoCharactersLinked"]</div>
+                }
+                else
+                {
+                    <div class="acct-table-scroll">
+                        <MudTable Items="Characters" Dense="true" Hover="true" Class="acct-table" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>@Loc["AuthColumnName"]</MudTh>
+                                <MudTh>@Loc["AuthColumnDbref"]</MudTh>
+                                <MudTh>@Loc["Flags"]</MudTh>
+                                <MudTh>@Loc["AuthColumnActions"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd data-label="@Loc["AuthColumnName"]">@context.Name</MudTd>
+                                <MudTd data-label="@Loc["AuthColumnDbref"]">#@context.DbrefNumber</MudTd>
+                                <MudTd data-label="@Loc["Flags"]">
+                                    @foreach (var flag in (context.Flags ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <span class="acct-flag">@flag</span>
+                                    }
+                                </MudTd>
+                                <MudTd data-label="@Loc["AuthColumnActions"]">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Palette" Size="Size.Small"
+                                                   Href="@($"/settings/theme#theme-{context.DbrefNumber}")"
+                                                   aria-label="@Loc["NavThemeForCharacter", context.Name]" />
+                                    @* God (#1) never leaves its account. *@
+                                    @if (context.DbrefNumber != 1)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
+                                                       Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
+                                                       OnClick="() => OnUnlink.InvokeAsync(context)" />
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                }
+
+                <div class="acct-create">
+                    <a class="acct-btn acct-btn-primary" href="/characters/new">
+                        @Loc["AuthCreateNewCharacter"]
+                    </a>
+                    <a class="acct-btn acct-btn-outline" href="/characters/claim">
+                        @Loc["AuthClaimExistingCharacter"]
+                    </a>
+                </div>
+            </div>
+        </ChildContent>
+    </KitCard>
+</div>
+
+@code {
+    /// <summary>The characters linked to the account.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<AccountAuthService.CharacterSummary> Characters { get; set; } = [];
+
+    [Parameter] public bool Loading { get; set; }
+
+    /// <summary>Whether any of the page's requests is in flight; refreshing waits for it.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<AccountAuthService.CharacterSummary> OnUnlink { get; set; }
+}

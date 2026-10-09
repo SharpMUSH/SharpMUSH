@@ -18,7 +18,7 @@ public partial class Functions
 		public async ValueTask<MString> DefaultArgumentAsync(IMUSHCodeParser parser, int index, MString fallback)
 		{
 			var arguments = parser.CurrentState.Arguments;
-			if (arguments.Count - 1 < index || arguments[index.ToString()].Message!.Length == 0) return fallback;
+			if (arguments.Count - 1 < index || arguments[index.ToString()].Message.Length == 0) return fallback;
 			return Record(await arguments[index.ToString()].GetParsedResultAsync());
 		}
 		public CallState Complete(CallState result) => Volatile.Read(ref _hadErrors) != 0 ? result with { HadErrors = true } : result;

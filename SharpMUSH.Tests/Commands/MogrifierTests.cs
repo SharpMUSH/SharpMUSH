@@ -35,7 +35,7 @@ public class MogrifierTests
 
 	private async Task<string> AsGod(string command)
 		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))
-			.Message?.ToPlainText() ?? string.Empty;
+			.Message.ToPlainText();
 
 	private async Task As(TestIsolationHelpers.TestPlayer who, string command)
 		=> await GodParser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain(command));

@@ -17,7 +17,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "roles", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Roles(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await WithGrants(parser, parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+		=> await WithGrants(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText(),
 			grants =>
 			{
 				var held = grants.Roles.Select(r => r.Role).DistinctBy(r => r.Slug).ToArray();
@@ -29,8 +29,8 @@ public partial class Functions
 	[SharpFunction(Name = "hasrole", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "role"])]
 	public async ValueTask<CallState> HasRole(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var slug = parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim();
-		return await WithGrants(parser, parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+		var slug = parser.CurrentState.Arguments["1"].Message.ToPlainText().Trim();
+		return await WithGrants(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText(),
 			grants => new CallState(grants.HoldsRole(slug)));
 	}
 
@@ -41,8 +41,8 @@ public partial class Functions
 	[SharpFunction(Name = "permission", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "permission"])]
 	public async ValueTask<CallState> Permission(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var scope = parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim();
-		return await WithGrants(parser, parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+		var scope = parser.CurrentState.Arguments["1"].Message.ToPlainText().Trim();
+		return await WithGrants(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText(),
 			grants => grants.Canonical(scope) is { } canonical
 				? new CallState(grants.Has(canonical))
 				: new CallState("#-1 NO SUCH PERMISSION"));

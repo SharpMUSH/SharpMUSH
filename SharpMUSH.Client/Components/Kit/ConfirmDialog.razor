@@ -1,0 +1,34 @@
+@* An inline dialog that asks before an action: a title, what the action will do, Cancel, and the
+   button that does it. Bind Visible to open and close it; Cancel closes it, OnConfirm is the page's. *@
+@inject IStringLocalizer<SharedResource> Loc
+
+<MudDialog Visible="Visible" VisibleChanged="VisibleChanged" TitleContent="@TitleFragment">
+    <DialogContent>
+        @ChildContent
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelAsync">@Loc["Cancel"]</MudButton>
+        <MudButton Color="ConfirmColor" Variant="Variant.Filled" Disabled="Busy" OnClick="OnConfirm">@ConfirmText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    /// <summary>The dialog's heading; none when unset.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter, EditorRequired] public string ConfirmText { get; set; } = string.Empty;
+    [Parameter] public Color ConfirmColor { get; set; } = Color.Error;
+
+    /// <summary>Disables the confirm button while the action it started is still running.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private RenderFragment? TitleFragment => Title is null ? null : @<MudText Typo="Typo.h6">@Title</MudText>;
+
+    private Task CancelAsync() => VisibleChanged.InvokeAsync(false);
+}

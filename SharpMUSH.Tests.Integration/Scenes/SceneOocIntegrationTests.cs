@@ -36,7 +36,7 @@ public class SceneOocIntegrationTests
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -63,7 +63,7 @@ public class SceneOocIntegrationTests
 		// Player names stop at 15 characters, which GenerateUniqueName's suffix alone would overrun.
 		var name = $"{prefix}{Guid.NewGuid():N}"[..15];
 		await God1($"@pcreate {name}=pw-{name}");
-		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var dbref = (await God1($"think [pmatch({name})]")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
@@ -75,7 +75,7 @@ public class SceneOocIntegrationTests
 
 	private async Task<string> DigAsync(string prefix)
 	{
-		var dug = (await God1($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}")).Message?.ToPlainText()?.Trim()
+		var dug = (await God1($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}")).Message.ToPlainText()?.Trim()
 			?? string.Empty;
 		return dug.Split(' ').First(t => t.StartsWith('#'));
 	}
@@ -325,7 +325,7 @@ public class SceneOocIntegrationTests
 		var room = await DigAsync("OocDisRoom");
 		await God1($"@tel {speaker.Dbref}={room}");
 		var marker = Guid.NewGuid().ToString("N")[..10];
-		var created = (await God1($"@create OocSoftcode{marker}")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var created = (await God1($"@create OocSoftcode{marker}")).Message.ToPlainText()?.Trim() ?? string.Empty;
 		var softcode = created.Split(' ').First(t => t.StartsWith('#'));
 		await God1($"&CMD`OOC {softcode}=$ooc *:@pemit %#=GAMEOOC{marker} %0");
 		await God1($"@set {softcode}=!NO_COMMAND");

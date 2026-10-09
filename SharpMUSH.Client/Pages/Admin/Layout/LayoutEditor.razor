@@ -502,12 +502,7 @@
             return;
         }
 
-        var confirmed = await DialogService.ShowMessageBoxAsync(
-            Loc["LayResetLayout"],
-            Loc["LayResetConfirm", ScopeLabel],
-            yesText: Loc["LayReset"], cancelText: Loc["Cancel"]);
-
-        if (confirmed != true)
+        if (!await DialogService.ConfirmAsync(Loc, Loc["LayResetLayout"], Loc["LayResetConfirm", ScopeLabel], Loc["LayReset"]))
         {
             return;
         }

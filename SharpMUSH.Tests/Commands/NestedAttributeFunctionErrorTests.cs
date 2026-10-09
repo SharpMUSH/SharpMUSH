@@ -60,7 +60,7 @@ public class NestedAttributeFunctionErrorTests
 			var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
 			TestDiagnostics.WriteLine($"{kind}/{mode}: errors={result!.HadErrors}; message={result.Message}");
 			await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
-			if (mode != "syntax") await Assert.That(result.Message!.ToPlainText()).IsEqualTo(value);
+			if (mode != "syntax") await Assert.That(result.Message.ToPlainText()).IsEqualTo(value);
 		}
 		finally
 		{

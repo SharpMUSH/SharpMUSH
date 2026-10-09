@@ -25,7 +25,7 @@ public class PackageAuthoringServiceTests
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var coreDbref = await Database.CreateThingAsync("Author Core", location, pm, location);
 		var globalDbref = await Database.CreateThingAsync("Author Global", location, pm, location);
@@ -77,7 +77,7 @@ public class PackageAuthoringServiceTests
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var dbref = await Database.CreateThingAsync("Nested Attr Source", location, pm, location);
 		await Database.SetAttributeAsync(dbref, ["DESCRIBE"], MarkupText.Plain("top level"), pm);
@@ -106,7 +106,7 @@ public class PackageAuthoringServiceTests
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var dbref = await Database.CreateThingAsync("Reserved Tree Source", location, pm, location);
 		await Database.SetAttributeAsync(dbref, ["FN_KEEP"], MarkupText.Plain("kept"), pm);
@@ -133,7 +133,7 @@ public class PackageAuthoringServiceTests
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var sourceDbref = await Database.CreateThingAsync("Roundtrip Source", location, pm, location);
 		await Database.SetAttributeAsync(sourceDbref, ["FN_GREET"],
@@ -179,7 +179,7 @@ public class PackageAuthoringServiceTests
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var dbref = await Database.CreateThingAsync("Author Loner", location, pm, location);
 		await Database.SetAttributeAsync(dbref, ["FN_X"], MarkupText.Plain("points at #4242 mysteriously"), pm);
@@ -200,7 +200,7 @@ public class PackageAuthoringServiceTests
 	{
 		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
 		var pm = pmNode.Expect<SharpPlayer>();
-		var location = pmNode.AsContainer;
+		var location = pmNode.AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var dbref = await Database.CreateThingAsync("Whitespace Edge", location, pm, location);
 		// A whitespace-only value is the regression: emitted as a block scalar whose

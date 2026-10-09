@@ -1,0 +1,181 @@
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject IStringLocalizer<SharedResource> Loc
+@inject IDialogService DialogService
+@inject AccountPasskeyService Passkeys
+
+@* The anchor the Settings sidebar's Passkeys row lands on. *@
+<div id="passkeys" class="acct-anchor">
+    <KitCard Title="@Loc["AuthPasskeys"]" Sub="@Loc["AuthPasskeysDescription"]">
+        <div class="acct-section">
+            @if (!State.Supported)
+            {
+                <div class="acct-empty mb-3">@Loc["AuthPasskeyUnsupported"]</div>
+            }
+
+            @if (State.Passkeys is null)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+            }
+            else if (State.Passkeys.Count == 0)
+            {
+                <div class="acct-empty">@Loc["AuthPasskeysNone"]</div>
+            }
+            else
+            {
+                <ul class="acct-passkeys">
+                    @foreach (var passkey in State.Passkeys)
+                    {
+                        <li class="acct-passkey">
+                            <MudIcon Icon="@Icons.Material.Outlined.Key" Size="Size.Small" Class="acct-passkey-icon" />
+                            <div class="acct-passkey-text">
+                                @if (State.Renaming == passkey.Id)
+                                {
+                                    <div class="acct-row acct-passkey-rename">
+                                        <MudTextField @bind-Value="State.Rename" Label="@Loc["AuthPasskeyName"]" MaxLength="64"
+                                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input acct-grow" />
+                                        <button class="acct-btn acct-btn-primary" disabled="@Busy" @onclick="() => RenameAsync(passkey)">@Loc["Save"]</button>
+                                        <button class="acct-btn acct-btn-ghost" @onclick="() => State.Renaming = null">@Loc["Cancel"]</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="acct-passkey-name">
+                                        @passkey.Name
+                                        @if (passkey.IsSynced)
+                                        {
+                                            <span class="acct-flag">@Loc["AuthPasskeySynced"]</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="acct-passkey-meta">
+                                    @Loc["AuthPasskeyCreatedOn", passkey.CreatedAt.LocalDateTime.ToString("d")]
+                                    ·
+                                    @(passkey.LastUsedAt is { } used
+                                        ? Loc["AuthPasskeyLastUsed", used.LocalDateTime.ToString("d")]
+                                        : Loc["AuthPasskeyNeverUsed"])
+                                </div>
+                            </div>
+                            @if (State.Renaming != passkey.Id)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" aria-label="@Loc["AuthPasskeyRename"]"
+                                               Disabled="Busy" OnClick="() => { State.Rename = passkey.Name; State.Renaming = passkey.Id; }" />
+                                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
+                                               aria-label="@Loc["AuthPasskeyRemove"]" Disabled="Busy"
+                                               OnClick="() => RemoveAsync(passkey)" />
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (State.Adding)
+            {
+                <div class="acct-row acct-row--password acct-passkey-add">
+                    <div class="acct-fields">
+                        <MudTextField @bind-Value="State.Name" Label="@Loc["AuthPasskeyName"]" MaxLength="64"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
+                        <MudTextField @bind-Value="State.Password" Label="@Loc["AuthCurrentPassword"]"
+                                      InputType="InputType.Password"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
+                    </div>
+                    <div class="acct-field-actions">
+                        <button class="acct-btn acct-btn-primary" disabled="@Busy" @onclick="AddAsync">@Loc["AuthPasskeyCreate"]</button>
+                        <button class="acct-btn acct-btn-ghost" @onclick="() => State.Adding = false">@Loc["Cancel"]</button>
+                    </div>
+                </div>
+            }
+            else if (State.Supported)
+            {
+                <button class="acct-btn acct-btn-outline acct-create" disabled="@Busy"
+                        @onclick="() => { State.Name = string.Empty; State.Password = string.Empty; State.Adding = true; }">
+                    <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" Class="mr-1" />
+                    @Loc["AuthPasskeyAdd"]
+                </button>
+            }
+
+            @if (State.Error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3">@State.Error</MudAlert>
+            }
+            @if (State.Success is not null)
+            {
+                <MudAlert Severity="Severity.Success" Class="mt-3">@State.Success</MudAlert>
+            }
+        </div>
+    </KitCard>
+</div>
+
+@code {
+    /// <summary>The list and its forms, kept by the page.</summary>
+    [Parameter, EditorRequired] public PasskeyListState State { get; set; } = null!;
+
+    /// <summary>Whether any of the page's requests is in flight; the list's actions wait for it.</summary>
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public EventCallback<bool> BusyChanged { get; set; }
+
+    private async Task AddAsync()
+    {
+        State.ClearMessages();
+        await BusyChanged.InvokeAsync(true);
+        var result = await Passkeys.AddAsync(State.Password, State.Name);
+        await BusyChanged.InvokeAsync(false);
+        switch (result)
+        {
+            case AccountApiClient.PasskeySummary added:
+                State.Passkeys = [.. State.Passkeys ?? [], added];
+                State.Adding = false;
+                State.Password = string.Empty;
+                State.Success = Loc["AuthPasskeyAdded"];
+                break;
+            case ApiFailure failure:
+                State.Error = failure.Message;
+                break;
+            // Dismissing the browser's prompt leaves the form open to try again.
+            case PasskeyCancelled:
+                break;
+        }
+    }
+
+    private async Task RenameAsync(AccountApiClient.PasskeySummary passkey)
+    {
+        State.ClearMessages();
+        var name = State.Rename.Trim();
+        if (name.Length == 0) return;
+        await BusyChanged.InvokeAsync(true);
+        var result = await Passkeys.RenameAsync(passkey.Id, name);
+        await BusyChanged.InvokeAsync(false);
+        switch (result)
+        {
+            case Success:
+                State.Passkeys = State.Passkeys?.Select(p => p.Id == passkey.Id ? p with { Name = name } : p).ToList();
+                State.Renaming = null;
+                break;
+            case ApiFailure failure:
+                State.Error = failure.Message;
+                break;
+        }
+    }
+
+    private async Task RemoveAsync(AccountApiClient.PasskeySummary passkey)
+    {
+        if (!await DialogService.ConfirmAsync(Loc, Loc["AuthPasskeyRemoveConfirmTitle", passkey.Name],
+            Loc["AuthPasskeyRemoveConfirm"], Loc["AuthPasskeyRemove"])) return;
+
+        State.ClearMessages();
+        await BusyChanged.InvokeAsync(true);
+        var result = await Passkeys.RemoveAsync(passkey.Id);
+        await BusyChanged.InvokeAsync(false);
+        switch (result)
+        {
+            case Success:
+                State.Passkeys = State.Passkeys?.Where(p => p.Id != passkey.Id).ToList();
+                State.Success = Loc["AuthPasskeyRemoved"];
+                break;
+            case ApiFailure failure:
+                State.Error = failure.Message;
+                break;
+        }
+        StateHasChanged();
+    }
+}

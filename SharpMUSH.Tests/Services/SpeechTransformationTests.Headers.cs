@@ -187,7 +187,7 @@ public partial class SpeechTransformationTests
 		await pipeline.Connections.Register(903, "127.0.0.1", "localhost", "telnet", _ => ValueTask.CompletedTask,
 			_ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>());
 		await pipeline.Connections.Bind(903, plainRecipient.DbRef);
-		var body = (await Factory.CommandParser.FunctionParse(MarkupText.Plain("[ansi(r,hello)]")))!.Message!;
+		var body = (await Factory.CommandParser.FunctionParse(MarkupText.Plain("[ansi(r,hello)]")))!.Message;
 		await pipeline.Notify.Notify([902L, 903L], body, await Node(actor.DbRef), INotifyService.NotificationType.Emit);
 		var output = pipeline.Bus.ReceivedCalls().SelectMany(call => call.GetArguments().OfType<MarkupOutputMessage>()).ToDictionary(message => message.Handle);
 		await Assert.That(output[902].SessionId).IsEqualTo("speech-session");

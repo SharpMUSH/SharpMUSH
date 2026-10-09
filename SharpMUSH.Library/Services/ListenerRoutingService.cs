@@ -165,8 +165,8 @@ public class ListenerRoutingService(
 			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, isSelf ? "AMHEAR" : "AHEAR", arguments), ExecutionBudget.CurrentToken);
 			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, "AAHEAR", arguments), ExecutionBudget.CurrentToken);
 		}
-		if (context.Location == listener.Object().DBRef || !listener.IsContainer) return;
-		await using var contents = listener.AsContainer.Content(mediator)
+		if (context.Location == listener.Object().DBRef || listener.AsOptionalContainer is not AnySharpContainer container) return;
+		await using var contents = container.Content(mediator)
 			.Where(content => content.IsPlayer || content.IsThing).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
 		if (!await contents.MoveNextAsync()) return;
 		using (LockEvaluationArguments.Enter(new Dictionary<string, MString> { ["0"] = message }))
@@ -202,7 +202,7 @@ public class ListenerRoutingService(
 				"INPREFIX", arguments, ignorePermissions: true);
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			if (result.HadErrors) return;
-			prefix = MString.Concat(result.Message ?? MString.Empty, MString.Plain(" "));
+			prefix = MString.Concat(result.Message, MString.Plain(" "));
 		}
 		var executor = speaker;
 		if (context.Executor is DBRef reference)

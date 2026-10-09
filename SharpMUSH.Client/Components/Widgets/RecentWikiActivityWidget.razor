@@ -20,9 +20,8 @@
         else if (_recentChanges is { Count: > 0 })
         {
             <CardRows>
-                @foreach (var wp in _recentChanges.Take(6))
+                @foreach (var entry in _recentChanges.Take(6))
                 {
-                    var entry = wp;
                     <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@entry.Image" Name="@entry.Title" Label="@entry.Title"
                                 Sub="@Meta(entry)" Href="@WikiRoutes.PathFor(entry.Namespace, entry.Slug)" />
                 }

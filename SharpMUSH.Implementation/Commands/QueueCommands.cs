@@ -43,8 +43,8 @@ public partial class Commands
 		var owner = switches.Contains("OWNER");
 		var source = switches.Contains("OBJECT");
 		var args = parser.CurrentState.Arguments;
-		var selection = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
-		var reason = args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "";
+		var selection = args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
+		var reason = args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "";
 		if ((pause && resume) || ((pause || resume) && switches.Contains("LIST")) || (owner && source)
 			|| (!pause && args.Count > 1) || ((pause || resume || owner || source) && string.IsNullOrWhiteSpace(selection)))
 		{
@@ -200,11 +200,11 @@ public partial class Commands
 
 		if (switches.Contains("PID"))
 		{
-			return await HaltPidAsync(parser, executor, args.GetValueOrDefault("0")?.Message?.ToPlainText());
+			return await HaltPidAsync(parser, executor, args.GetValueOrDefault("0")?.Message.ToPlainText());
 		}
 
 		// do_halt1 (src/cque.c:2239-2240): no object halts the enactor, and leaves its HALT flag alone.
-		var targetName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var targetName = args.GetValueOrDefault("0")?.Message.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
 		{
 			await HaltQueuesAsync(executor);
@@ -423,7 +423,7 @@ public partial class Commands
 		var notifyType = "ANY";
 		var args = parser.CurrentState.Arguments;
 
-		if ((parser.CurrentState.Arguments.Count == 0) || string.IsNullOrEmpty(args["0"].Message?.ToPlainText()))
+		if ((parser.CurrentState.Arguments.Count == 0) || string.IsNullOrEmpty(args["0"].Message.ToPlainText()))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifySemaphoreObject), executor);
 			return new None();
@@ -446,7 +446,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText()) is not { Object: var db, Attribute: var maybeAttributeString })
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message.ToPlainText()) is not { Object: var db, Attribute: var maybeAttributeString })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyValidObjectAttribute), executor);
 			return new None();
@@ -505,14 +505,14 @@ public partial class Commands
 			qRegisters = new Dictionary<string, MString>();
 			for (var i = 1; i < args.Count; i += 2)
 			{
-				var qregName = args[i.ToString()].Message!.ToPlainText().Trim();
-				var qregValue = args[(i + 1).ToString()].Message!.ToPlainText();
+				var qregName = args[i.ToString()].Message.ToPlainText().Trim();
+				var qregValue = args[(i + 1).ToString()].Message.ToPlainText();
 				qRegisters[qregName] = MarkupText.Plain(qregValue);
 			}
 		}
 		else if (args.Count > 1 && args.TryGetValue("1", out var arg1))
 		{
-			var countArg = arg1.Message?.ToPlainText();
+			var countArg = arg1.Message.ToPlainText();
 			if (!string.IsNullOrEmpty(countArg) &&
 					(!int.TryParse(countArg, out notifyCount) || notifyCount < 1))
 			{
@@ -564,7 +564,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 2, ParameterNames = ["seconds", "command"])]
 	public async ValueTask<Option<CallState>> Wait(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? string.Empty;
+		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? string.Empty;
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -805,8 +805,8 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Drain(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -1012,7 +1012,7 @@ public partial class Commands
 
 		if (switches.Contains("DEBUG"))
 		{
-			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+			var pidStr = args.GetValueOrDefault("0")?.Message.ToPlainText();
 			if (string.IsNullOrEmpty(pidStr))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltMustSpecifyPid), executor);
@@ -1060,7 +1060,7 @@ public partial class Commands
 		AnySharpObject target;
 		if (args.Count > 0)
 		{
-			var playerName = args["0"].Message?.ToPlainText();
+			var playerName = args["0"].Message.ToPlainText();
 			if (string.IsNullOrEmpty(playerName))
 			{
 				target = executor;
@@ -1215,7 +1215,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
-		var attributePath = args["0"].Message?.ToPlainText();
+		var attributePath = args["0"].Message.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustSpecifyAttributePath), executor);
@@ -1274,7 +1274,7 @@ public partial class Commands
 		// With /match, the first argument (index 1) is the test string. Refused before the notice below, so a
 		// refusal is never also reported as a trigger.
 		CallState? matchArg = null;
-		if (switches.Contains("MATCH") && (!args.TryGetValue("1", out matchArg) || matchArg.Message == null))
+		if (switches.Contains("MATCH") && !args.TryGetValue("1", out matchArg))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustProvideMatchString), executor);
 			return new CallState(ErrorMessages.Returns.NoMatchString);
@@ -1305,14 +1305,7 @@ public partial class Commands
 		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
 		// RSArgs that become %0, %1, %2, … inside the triggered attribute.
 		// These go into EnvironmentRegisters (the positional %0-%9 args), NOT the q-register stack.
-		var envRegisters = new Dictionary<string, CallState>();
-		for (var i = 1; i < args.Count; i++)
-		{
-			if (args.TryGetValue(i.ToString(), out var argValue) && argValue.Message != null)
-			{
-				envRegisters[(i - 1).ToString()] = argValue;
-			}
-		}
+		var envRegisters = ArgHelpers.ShiftedArguments(args, 1);
 
 		// Q-registers from the calling context are copied into the triggered attribute unless
 		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger
@@ -1330,7 +1323,7 @@ public partial class Commands
 
 		if (switches.Contains("MATCH"))
 		{
-			var testString = matchArg!.Message!.ToPlainText();
+			var testString = matchArg!.Message.ToPlainText();
 
 			var patterns = attributeText.Split(new[] { '\n', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 

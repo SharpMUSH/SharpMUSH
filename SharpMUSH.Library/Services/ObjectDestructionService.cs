@@ -529,7 +529,7 @@ public class ObjectDestructionService(
 		var configured = new DBRef((int)configuration.CurrentValue.Database.DefaultHome);
 		var node = await mediator.Send(new GetObjectNodeQuery(configured), ct);
 
-		return node is AnySharpObject found && found.IsContainer ? found.AsContainer : null;
+		return node is AnySharpObject { AsOptionalContainer: AnySharpContainer found } ? found : null;
 	}
 
 	private async ValueTask<SharpPlayer?> ResolveProbatePlayerAsync(CancellationToken ct)

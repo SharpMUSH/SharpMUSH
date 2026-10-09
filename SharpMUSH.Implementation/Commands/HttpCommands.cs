@@ -37,7 +37,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.QueryWhere);
 		}
 
-		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
+		var objAttrStr = objAttrArg.Message.ToPlainText();
 		if (HelperFunctions.SplitObjectAndAttr(objAttrStr) is not { Object: var targetObjRef, Attribute: var attrName })
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.InvalidObjectAttribute, executor);
@@ -68,14 +68,14 @@ public partial class Commands
 					return new CallState(ErrorMessages.Returns.GetRequestsCannotHaveBody);
 				}
 
-				if (!Uri.TryCreate(uriArg.Message?.ToPlainText() ?? string.Empty, UriKind.Absolute, out var uri))
+				if (!Uri.TryCreate(uriArg.Message.ToPlainText(), UriKind.Absolute, out var uri))
 				{
 					await NotifyService.Notify(executor, "Invalid URI format.", executor);
 					return new CallState(ErrorMessages.Returns.InvalidUriFormat);
 				}
 
 				var requestUri = uri;
-				var requestBody = dataArg?.Message?.ToPlainText();
+				var requestBody = dataArg?.Message.ToPlainText();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 				// The callback's %> and %| are the ones at admission, like any queued entry's; the state below is built later.
 				var queuedOutput = parser.CurrentState.PipedOutput;
@@ -150,13 +150,13 @@ public partial class Commands
 		if (hasTypeSwitch)
 		{
 			parser.CurrentState.Arguments.TryGetValue("0", out var contentTypeArg);
-			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message?.ToPlainText()))
+			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message.ToPlainText()))
 			{
 				await NotifyService.Notify(executor, "Content-Type cannot be empty.", executor);
 				return new CallState(ErrorMessages.Returns.ContentTypeCannotBeEmpty);
 			}
 
-			var contentType = contentTypeArg.Message!.ToPlainText();
+			var contentType = contentTypeArg.Message.ToPlainText();
 
 			if (isHttpContext)
 			{
@@ -179,8 +179,8 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.HeaderRequired);
 			}
 
-			var headerName = headerNameArg.Message?.ToPlainText()?.Trim() ?? string.Empty;
-			var headerValue = headerValueArg?.Message?.ToPlainText()?.Trim() ?? string.Empty;
+			var headerName = headerNameArg.Message.ToPlainText()?.Trim() ?? string.Empty;
+			var headerValue = headerValueArg?.Message.ToPlainText()?.Trim() ?? string.Empty;
 
 			if (string.IsNullOrWhiteSpace(headerName))
 			{
@@ -214,7 +214,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.StatusCodeRequired);
 			}
 
-			var fullStatusText = statusArg.Message?.ToPlainText() ?? string.Empty;
+			var fullStatusText = statusArg.Message.ToPlainText();
 
 			// PennMUSH-exact validation (src/cmds.c cmd_respond, oracle-verified): exactly three
 			// digits, a space, then text whose first character is alphanumeric. The text is

@@ -77,7 +77,7 @@ public class FlagUnsetPermissionTests
 	{
 		var name = $"Susp{Guid.NewGuid():N}"[..12];
 		var created = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=pw_{name}"));
-		var playerDbRef = DBRef.Parse(created.Message!.ToPlainText()!);
+		var playerDbRef = DBRef.Parse(created.Message.ToPlainText()!);
 		var player = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 
 		var suspect = await Mediator.Send(new GetObjectFlagQuery("SUSPECT"));
@@ -86,7 +86,7 @@ public class FlagUnsetPermissionTests
 		var reread = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 		var result = await FlagAndPowerService.SetOrUnsetFlag(reread, reread, "!SUSPECT", false);
 
-		await Assert.That(result.Message!.ToPlainText())
+		await Assert.That(result.Message.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		var after = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();

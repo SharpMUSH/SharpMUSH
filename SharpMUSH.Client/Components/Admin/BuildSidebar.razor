@@ -27,9 +27,8 @@
             <SectionLabel>@label</SectionLabel>
         }
         <SidebarGroup Label="@label">
-            @foreach (var entry in group)
+            @foreach (var e in group)
             {
-                var e = entry;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@e.Icon" Label="@Loc[e.LabelKey]" Href="@e.Href"
                             IsCurrent="@IsCurrent(e.Href, e.ExactMatch)" Collapsed="@Collapsed" />
             }
@@ -42,9 +41,8 @@
             <SectionLabel>@Loc["NavApps"]</SectionLabel>
         }
         <SidebarGroup Label="@Loc["NavApps"]">
-            @foreach (var app in _apps)
+            @foreach (var a in _apps)
             {
-                var a = app;
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@AppIcons.Outline(a.Icon, Icons.Material.Outlined.Apps)"
                             Label="@a.DisplayName" Href="@($"/apps/{a.Slug}")" IsCurrent="@IsCurrent($"/apps/{a.Slug}", false)" Collapsed="@Collapsed" />
             }

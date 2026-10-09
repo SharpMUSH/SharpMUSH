@@ -18,10 +18,10 @@ public class TextFunctionUnitTests
 
 	private async Task<string> EvalAs(DBRef executor, string expression)
 		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expression)))
-			?.Message!.ToPlainText() ?? "<null>";
+			?.Message.ToPlainText() ?? "<null>";
 
 	private async Task<string> Eval(string expression)
-		=> (await Parser.FunctionParse(MarkupText.Plain(expression)))?.Message!.ToPlainText() ?? "<null>";
+		=> (await Parser.FunctionParse(MarkupText.Plain(expression)))?.Message.ToPlainText() ?? "<null>";
 
 	/// <summary>
 	/// <c>fun_textentries</c> is <c>textentries(&lt;type&gt;, &lt;pattern&gt;[, &lt;osep&gt;])</c>
@@ -80,7 +80,7 @@ public class TextFunctionUnitTests
 	public async Task Textfile(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -89,7 +89,7 @@ public class TextFunctionUnitTests
 	public async Task Textsearch(string str, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 }

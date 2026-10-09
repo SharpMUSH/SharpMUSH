@@ -849,7 +849,7 @@ public class PageRecallCommandTests
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
 		var result = await WebAppFactoryArg.FunctionParserFor(player.DbRef).FunctionParse(MarkupText.Plain(expression));
-		return result!.Message!.ToPlainText();
+		return result!.Message.ToPlainText();
 	}
 
 	private async Task<PagePlayer> CreatePlayerAsync(string prefix)

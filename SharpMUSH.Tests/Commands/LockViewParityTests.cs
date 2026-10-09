@@ -35,7 +35,7 @@ public class LockViewParityTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "LockView");
 		var created = await Factory.CommandParser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create LockView{Guid.NewGuid():N}"));
-		var target = created.Message!.ToPlainText();
+		var target = created.Message.ToPlainText();
 		await AsGod($"@lock {target}==me");
 		await AsGod($"@lset {target}/Basic=visual");
 		await AsGod($"@lset {target}/Basic=!no_inherit");
@@ -51,9 +51,9 @@ public class LockViewParityTests
 		await AsGod($"@unlock {target}");
 		foreach (var line in lockLines) await AsGod(line);
 		var readback = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"lock({target})"));
-		await Assert.That(readback!.Message!.ToPlainText()).IsEqualTo("=#1");
+		await Assert.That(readback!.Message.ToPlainText()).IsEqualTo("=#1");
 		var flags = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"lockflags({target})"));
-		await Assert.That(flags!.Message!.ToPlainText()).IsEqualTo("v");
+		await Assert.That(flags!.Message.ToPlainText()).IsEqualTo("v");
 	}
 	[Test]
 	public async Task AttributeLockDenialDoesNotReportSuccess()
@@ -61,13 +61,13 @@ public class LockViewParityTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "AttrLockView");
 		var created = await Factory.CommandParser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create AttrLock{Guid.NewGuid():N}"));
-		var target = created.Message!.ToPlainText();
+		var target = created.Message.ToPlainText();
 		await AsGod($"&SECRET {target}=value");
 		await AsGod($"@set {target}/SECRET=wizard");
 		var output = string.Join("\n", await Output(player, $"@lock {target}/SECRET"));
 		await Assert.That(output).DoesNotContain("AttributeLocked");
 		var flags = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"flags({target}/SECRET)"));
-		await Assert.That(flags!.Message!.ToPlainText()).DoesNotContain("+");
+		await Assert.That(flags!.Message.ToPlainText()).DoesNotContain("+");
 	}
 
 	[Test]
@@ -76,7 +76,7 @@ public class LockViewParityTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "LeafLockOwner");
 		var created = await Factory.CommandParser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create LeafLock{Guid.NewGuid():N}"));
-		var target = created.Message!.ToPlainText();
+		var target = created.Message.ToPlainText();
 		await AsGod($"&ROOT {target}=root value");
 		await AsGod($"&ROOT`LEAF {target}=leaf value");
 		await Assert.That(await Read($"owner({target}/ROOT)")).IsEqualTo("#1");
@@ -92,7 +92,7 @@ public class LockViewParityTests
 		await Assert.That(await Read($"get({target}/ROOT`LEAF)")).IsEqualTo("leaf value");
 
 		async Task<string> Read(string expression)
-			=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+			=> (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 	}
 
 }

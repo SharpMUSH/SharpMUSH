@@ -39,8 +39,8 @@ public partial class Functions
 	public ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var fullString = args["0"].Message ?? MarkupText.Empty;
-		var search = args["1"].Message ?? MarkupText.Empty;
+		var fullString = args["0"].Message;
+		var search = args["1"].Message;
 		var idx = fullString.IndexOf(search.ToPlainText());
 
 		if (idx == -1)
@@ -90,19 +90,61 @@ public partial class Functions
   If <say string> is specified, it is used instead of "says,".
 		 */
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var speaker = args["0"].Message!; // & for direct name!
-		var speakString = args["1"].Message!;
-		var sayString = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "says, ");
+		var speaker = args["0"].Message; // & for direct name!
+		var speakString = args["1"].Message;
 		var transformObjAttr = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "");
 		var isNullObjAttr = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, "");
-		var open = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\"");
-		var close = ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\"");
 
-		var plainSpeak = speakString.ToPlainText();
-		var messageType = MessageHelpers.DetermineMessageType(plainSpeak);
+		var speech = new SpeechInput(
+			SpeakerArgument: args["0"],
+			Text: StripSpeechPrefix(speakString),
+			Type: MessageHelpers.DetermineMessageType(speakString.ToPlainText()),
+			SayString: ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "says, "),
+			Open: ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\""),
+			Close: ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\""));
 
-		// Strip the prefix (including quotes)
-		speakString = plainSpeak switch
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		return await SpeakerAsync(parser, executor, speaker) switch
+		{
+			CallState refusal => refusal,
+			SpeechSpeaker resolved => await SpeechTransformAsync(parser, executor, transformObjAttr, isNullObjAttr) switch
+			{
+				CallState refusal => refusal,
+				None => new CallState(SpeechClosed(speech, MarkupText.Concat(SpeechPrefix(speech, resolved.Name), speech.Text))),
+				SpeechTransform transform => await TransformedSpeechAsync(parser, executor, speech, resolved, transform)
+			}
+		};
+	}
+
+	/// <summary>The arguments speak() formats, with the speech's leading token (or quote) taken off.</summary>
+	private sealed record SpeechInput(
+		CallState SpeakerArgument,
+		MString Text,
+		INotifyService.NotificationType Type,
+		MString SayString,
+		MString Open,
+		MString Close);
+
+	/// <summary>Who speak() speaks as: the object, and the name its speech carries.</summary>
+	private sealed record SpeechSpeaker(AnySharpObject Object, MString Name);
+
+	/// <summary>speak()'s transformation attribute, and the optional attribute that skips a fragment.</summary>
+	private sealed record SpeechTransform(
+		AnySharpObject Object,
+		string Attribute,
+		AnySharpObject? NullObject = null,
+		string? NullAttribute = null);
+
+	/// <summary>The speaker, or the error speak() returns because it could not be found.</summary>
+	private union SpeakerOrRefusal(SpeechSpeaker, CallState);
+
+	/// <summary>The transformation to apply, none at all, or the error speak() returns instead.</summary>
+	private union SpeechTransformOrRefusal(SpeechTransform, None, CallState);
+
+	/// <summary>Strip the prefix (including quotes)</summary>
+	private static MString StripSpeechPrefix(MString speakString)
+		=> speakString.ToPlainText() switch
 		{
 			[':', .. _]
 				or [';', .. _]
@@ -111,190 +153,153 @@ public partial class Functions
 			_ => speakString
 		};
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var speakerIsLiteral = speaker.ToPlainText().StartsWith('&');
+	/// <summary>
+	/// A <c>&amp;name</c> speaker is that name, spoken by the executor. Any other speaker is located;
+	/// one the executor does not control leaves the executor speaking under its own name.
+	/// </summary>
+	private async ValueTask<SpeakerOrRefusal> SpeakerAsync(IMUSHCodeParser parser, AnySharpObject executor, MString speaker)
+	{
+		if (speaker.ToPlainText().StartsWith('&'))
+		{
+			return new SpeechSpeaker(executor, speaker.Substring(1, speaker.Length - 1));
+		}
+
+		var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+			speaker.ToPlainText(), LocateFlags.All);
+
+		switch (maybeFound)
+		{
+			case Error<CallState> error:
+				return error.Value;
+			case AnySharpObject found when await PermissionService.Controls(executor, found):
+				return new SpeechSpeaker(found, MarkupText.Plain(found.Object().Name));
+			default:
+				return new SpeechSpeaker(executor, MarkupText.Plain(executor.Object().Name));
+		}
+	}
+
+	/// <summary>
+	/// If not Emit, use Speakername. Build the prefix using ConcatMany to avoid O(N²) sequential concat.
+	/// </summary>
+	private static MString SpeechPrefix(SpeechInput speech, MString speakerName)
+		=> speech.Type switch
+		{
+			INotifyService.NotificationType.Emit => MarkupText.Empty,
+			INotifyService.NotificationType.Pose => MarkupText.Concat([speakerName, MarkupText.Space]),
+			INotifyService.NotificationType.Say =>
+				MarkupText.Concat([speakerName, MarkupText.Space, speech.SayString, speech.Open]),
+			_ => MarkupText.Concat([speakerName])
+		};
+
+	/// <summary>Said speech ends with the close quote.</summary>
+	private static MString SpeechClosed(SpeechInput speech, MString composed)
+		=> speech.Type is INotifyService.NotificationType.Say ? MarkupText.Concat(composed, speech.Close) : composed;
+
+	/*
+	  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
+	  the speech portions of <string> are passed through the transformation function.
+
+		Speech is delimited by double-quotes (i.e., "text"), or by the specified <open> and <close> strings.
+		For instance, if you wanted <<text>> to denote text to be transformed,
+		you would specify <open> as << and close as >> in the function call.
+		Only the portions of the string between those delimiters are transformed. If <close> is not specified,
+		it defaults to <open>.
+
+		The transformation function receives the speech text as %0, the dbref of <speaker> as %1,
+		and the speech fragment number as %2.
+		For non-say input strings (i.e., for an original <string> beginning with the :, ;, or | tokens),
+		fragments are numbered starting with 1; otherwise,
+		fragments are numbered starting with 0.
+		(A fragment is a chunk of speech text within the overall original input string.)
+	 */
+	private async ValueTask<SpeechTransformOrRefusal> SpeechTransformAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, MString transformObjAttr, MString isNullObjAttr)
+	{
+		if (string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText()))
+		{
+			return new None();
+		}
+
+		if (HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText()) is not { } splitTransform)
+		{
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+				splitTransform.Object, LocateFlags.All) switch
+		{
+			Error<CallState> error => error.Value,
+			AnySharpObject found => await WithSpeechNullCheckAsync(parser, executor,
+				new SpeechTransform(found, splitTransform.Attribute), isNullObjAttr)
+		};
+	}
+
+	private async ValueTask<SpeechTransformOrRefusal> WithSpeechNullCheckAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, SpeechTransform transform, MString isNullObjAttr)
+	{
+		if (string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText()))
+		{
+			return transform;
+		}
+
+		if (HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText()) is not { } splitNull)
+		{
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+				splitNull.Object, LocateFlags.All) switch
+		{
+			Error<CallState> error => error.Value,
+			AnySharpObject found => transform with { NullObject = found, NullAttribute = splitNull.Attribute }
+		};
+	}
+
+	/// <summary>
+	/// Runs the transformation over each delimited fragment. As before, a transformed string contributes
+	/// only its evaluations' errors to the answer, not its text.
+	/// </summary>
+	private async ValueTask<CallState> TransformedSpeechAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		SpeechInput speech, SpeechSpeaker speaker, SpeechTransform transform)
+	{
 		var hadErrors = false;
-		var hasTransform = !string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText());
-		var hasNull = !string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText());
-		var speakerObject = executor;
-		MString speakerName;
+		var speakString = speech.Text;
+		var safeOpen = Regex.Escape(speech.Open.ToPlainText());
+		var safeClose = Regex.Escape(speech.Close.ToPlainText());
+		var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
+			static key => SoftcodeRegex.Create($"{key.Open}(?<Content>[^{key.Close}]){key.Close}", RegexOptions.None)
+		);
 
-		if (!speakerIsLiteral)
+		var markupContents = pattern.Matches(speakString.ToPlainText())
+			.Select(x => x.Groups["Content"]);
+
+		foreach (var markupContent in markupContents)
 		{
-			var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
-				speaker.ToPlainText(), LocateFlags.All);
-			switch (maybeFound)
+			var content = speakString.Substring(markupContent.Index, markupContent.Length);
+			Dictionary<string, CallState> FragmentArgs() => new()
 			{
-				case Error<CallState> error:
-					return error.Value;
-				case AnySharpObject found when await PermissionService.Controls(executor, found):
-					speakerObject = found;
-					break;
+				{ "0", speech.SpeakerArgument },
+				{ "1", new CallState(MarkupText.Plain(speaker.Object.Object().DBRef.ToString())) },
+				{ "2", new CallState(content) }
+			};
+
+			if (transform is { NullObject: { } nullObject, NullAttribute: { } nullAttribute })
+			{
+				var nullEvaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
+					parser, executor, nullObject, nullAttribute, FragmentArgs());
+
+				hadErrors |= nullEvaluated.HadErrors;
+				if (nullEvaluated.Message.Truthy(parser)) continue;
 			}
 
-			speakerName = MarkupText.Plain(speakerObject.Object().Name);
-		}
-		else
-		{
-			speakerName = speaker.Substring(1, speaker.Length - 1);
-		}
+			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
+				parser, executor, transform.Object, transform.Attribute, FragmentArgs());
 
-		// If not Emit, use Speakername.
-		// Build the prefix using ConcatMany to avoid O(N²) sequential concat.
-		// List is allocated lazily to avoid an allocation for the Emit case (no prefix).
-		List<MString>? parts = null;
-
-		if (messageType is not INotifyService.NotificationType.Emit)
-		{
-			parts ??= new List<MString>(4);
-			parts.Add(speakerName);
+			hadErrors |= evaluated.HadErrors;
+			speakString = speakString.Replace(markupContent.Index, markupContent.Length, evaluated.Message);
 		}
 
-		if (messageType is INotifyService.NotificationType.Pose or INotifyService.NotificationType.Say)
-		{
-			parts ??= new List<MString>(4);
-			parts.Add(MarkupText.Space);
-		}
-
-		if (messageType is INotifyService.NotificationType.Say)
-		{
-			parts ??= new List<MString>(4);
-			parts.Add(sayString);
-			parts.Add(open);
-		}
-
-		var concat = parts is { Count: > 0 } ? MarkupText.Concat(parts) : MarkupText.Empty;
-
-		/*
-		  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
-		  the speech portions of <string> are passed through the transformation function.
-
-			Speech is delimited by double-quotes (i.e., "text"), or by the specified <open> and <close> strings.
-			For instance, if you wanted <<text>> to denote text to be transformed,
-			you would specify <open> as << and close as >> in the function call.
-			Only the portions of the string between those delimiters are transformed. If <close> is not specified,
-			it defaults to <open>.
-
-			The transformation function receives the speech text as %0, the dbref of <speaker> as %1,
-			and the speech fragment number as %2.
-			For non-say input strings (i.e., for an original <string> beginning with the :, ;, or | tokens),
-			fragments are numbered starting with 1; otherwise,
-			fragments are numbered starting with 0.
-			(A fragment is a chunk of speech text within the overall original input string.)
-		 */
-
-		string? actualTransformAttribute = null;
-		string? actualNullAttribute = null;
-		AnySharpObject? actualTransformationObject = null;
-		AnySharpObject? actualNullObject = null;
-
-		if (hasTransform)
-		{
-			if (HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText()) is not { } splitTransform)
-			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
-			}
-
-			var transformationObject = await
-				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor,
-					executor,
-					splitTransform.Object,
-					LocateFlags.All);
-
-			switch (transformationObject)
-			{
-				case Error<CallState> error:
-					return error.Value;
-				case AnySharpObject found:
-					actualTransformationObject = found;
-					break;
-			}
-
-			actualTransformAttribute = splitTransform.Attribute;
-		}
-
-		if (hasTransform && hasNull)
-		{
-			if (HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText()) is not { } splitNull)
-			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
-			}
-
-			actualNullAttribute = splitNull.Attribute;
-
-			var nullObject = await
-				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor,
-					executor,
-					splitNull.Object,
-					LocateFlags.All);
-
-			switch (nullObject)
-			{
-				case Error<CallState> error:
-					return error.Value;
-				case AnySharpObject found:
-					actualNullObject = found;
-					break;
-			}
-		}
-
-		if (hasTransform)
-		{
-			var safeOpen = Regex.Escape(open.ToPlainText());
-			var safeClose = Regex.Escape(close.ToPlainText());
-			var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
-				static key => SoftcodeRegex.Create($"{key.Open}(?<Content>[^{key.Close}]){key.Close}", RegexOptions.None)
-			);
-
-			var contents = pattern.Matches(speakString.ToPlainText());
-			var markupContents = contents
-				.Select(x => x.Groups["Content"]);
-
-			foreach (var markupContent in markupContents)
-			{
-				var content = speakString.Substring(markupContent.Index, markupContent.Length);
-
-				if (actualNullAttribute is not null)
-				{
-					var nullEvaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-						parser, executor, actualNullObject!, actualNullAttribute,
-						new Dictionary<string, CallState>
-						{
-							{ "0", args["0"] },
-							{ "1", new CallState(MarkupText.Plain(speakerObject.Object().DBRef.ToString())) },
-							{ "2", new CallState(content) }
-						});
-
-					hadErrors |= nullEvaluated.HadErrors;
-					if (nullEvaluated.Message.Truthy(parser)) continue;
-				}
-
-				var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
-					new Dictionary<string, CallState>
-					{
-						{ "0", args["0"] },
-						{ "1", new CallState(MarkupText.Plain(speakerObject.Object().DBRef.ToString())) },
-						{ "2", new CallState(content) }
-					});
-
-				hadErrors |= evaluated.HadErrors;
-				speakString = speakString.Replace(markupContent.Index, markupContent.Length, evaluated.Message ?? MarkupText.Empty);
-			}
-		}
-		else
-		{
-			concat = MarkupText.Concat(concat, speakString);
-		}
-
-		if (messageType is INotifyService.NotificationType.Say)
-		{
-			concat = MarkupText.Concat(concat, close);
-		}
-
-		return new CallState(concat) { HadErrors = hadErrors };
+		return new CallState(SpeechClosed(speech, SpeechPrefix(speech, speaker.Name))) { HadErrors = hadErrors };
 	}
 
 	/// <summary>
@@ -314,9 +319,9 @@ public partial class Functions
 	[SharpFunction(Name = "strdelete", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "length"])]
 	public ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var first = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var len = parser.CurrentState.Arguments["2"].Message.ToPlainText();
 
 		if (!ArgHelpers.TryInteger(parser, first, out var index)
 				|| !ArgHelpers.TryInteger(parser, len, out var length))
@@ -337,9 +342,9 @@ public partial class Functions
 	[SharpFunction(Name = "strinsert", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "insert"])]
 	public ValueTask<CallState> StrInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var positionStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var insert = parser.CurrentState.Arguments["2"].Message!;
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var positionStr = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var insert = parser.CurrentState.Arguments["2"].Message;
 
 		if (!ArgHelpers.TryInteger(parser, positionStr, out var position) || position < 0)
 		{
@@ -358,10 +363,10 @@ public partial class Functions
 	[SharpFunction(Name = "strreplace", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "character"])]
 	public ValueTask<CallState> StrReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var startStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var lengthStr = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-		var text = parser.CurrentState.Arguments["3"].Message!;
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var startStr = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var lengthStr = parser.CurrentState.Arguments["2"].Message.ToPlainText();
+		var text = parser.CurrentState.Arguments["3"].Message;
 
 		if (!ArgHelpers.TryInteger(parser, startStr, out var start) || start < 0)
 		{
@@ -388,7 +393,7 @@ public partial class Functions
 	[SharpFunction(Name = "strcat", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
+		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message);
 		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, values)
 			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Concat(values)));
 	}
@@ -396,7 +401,7 @@ public partial class Functions
 	[SharpFunction(Name = "cat", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
+		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message);
 		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, values, 1)
 			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Join(MarkupText.Space, values)));
 	}
@@ -404,8 +409,8 @@ public partial class Functions
 	[SharpFunction(Name = "accent", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "template"])]
 	public ValueTask<CallState> Accent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var template = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var template = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 
 		if (str.Length != template.Length)
 		{
@@ -423,7 +428,7 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var widths = args["0"].Message!.ToPlainText();
+		var widths = args["0"].Message.ToPlainText();
 
 		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		if (widthSpecs.Length == 0)
@@ -448,12 +453,12 @@ public partial class Functions
 		var columnArguments = args
 			.Skip(1)
 			.Take(expectedColumnCount)
-			.Select(x => x.Value.Message!);
+			.Select(x => x.Value.Message);
 
 		// The remaining arguments are filler, colsep, rowsep (in that order)
 		var remainder = args
 			.Skip(1 + expectedColumnCount)
-			.Select(x => x.Value.Message!)
+			.Select(x => x.Value.Message)
 			.ToArray();
 
 		// Columns are laid out by their own spacing, which is what Preformatted says: a Pueblo client
@@ -472,8 +477,8 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var widths = args["0"].Message!.ToPlainText();
-		var cols = args["1"].Message!;
+		var widths = args["0"].Message.ToPlainText();
+		var cols = args["1"].Message;
 		var colDelim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var filler = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 		var columnSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MarkupText.Space);
@@ -494,7 +499,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["word..."])]
 	public ValueTask<CallState> AlphaMax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
+		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message.ToPlainText());
 		return ValueTask.FromResult(new CallState(list.Max() ?? string.Empty));
 	}
 
@@ -502,7 +507,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["word..."])]
 	public ValueTask<CallState> AlphaMin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
+		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message.ToPlainText());
 		return ValueTask.FromResult(new CallState(list.Min() ?? string.Empty));
 	}
 
@@ -514,7 +519,7 @@ public partial class Functions
 	[SharpFunction(Name = "art", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> Art(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var text = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		return ValueTask.FromResult<CallState>(text.Length > 0 && char.ToLowerInvariant(text[0]) is 'a' or 'e' or 'i' or 'o' or 'u'
 			? "an"
@@ -525,8 +530,8 @@ public partial class Functions
 	public ValueTask<CallState> Before(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var fullString = args["0"].Message ?? MarkupText.Empty;
-		var search = args["1"].Message ?? MarkupText.Empty;
+		var fullString = args["0"].Message;
+		var search = args["1"].Message;
 		var idx = fullString.IndexOf(search.ToPlainText());
 
 		if (idx == -1)
@@ -542,7 +547,7 @@ public partial class Functions
 	[SharpFunction(Name = "brackets", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> Brackets(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		int leftSquare = 0, rightSquare = 0, leftParen = 0, rightParen = 0, leftCurly = 0, rightCurly = 0;
 		foreach (var c in arg0)
@@ -565,7 +570,7 @@ public partial class Functions
 	[SharpFunction(Name = "capstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> CapStr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
 
 		if (arg0.Length < 1)
 		{
@@ -598,8 +603,8 @@ public partial class Functions
 	public ValueTask<CallState> Center(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var width = parser.CurrentState.Arguments["1"].Message!;
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var width = parser.CurrentState.Arguments["1"].Message;
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var rightFill = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, fill);
 
@@ -616,7 +621,7 @@ public partial class Functions
 	[SharpFunction(Name = "chr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> Char(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
 		if (!ArgHelpers.TryStrictUnsignedInteger(arg0, out var charInt))
 		{
@@ -643,8 +648,8 @@ public partial class Functions
 	[SharpFunction(Name = "comp", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string1", "string2"])]
 	public ValueTask<CallState> Comp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var value1 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var value2 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var value1 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var value2 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var type = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "A").ToPlainText().ToUpperInvariant();
 
 		// fun_comp compares N only as strict integers and F only as strict numbers, refusing anything
@@ -691,11 +696,11 @@ public partial class Functions
 		var hadErrors = false;
 		for (var i = 0; i < pairCount; i++)
 		{
-			var condition = await parser.FunctionParse(args[(i * 2).ToString()].Message!);
+			var condition = await parser.FunctionParse(args[(i * 2).ToString()].Message);
 			hadErrors |= condition?.HadErrors == true;
 			if (condition?.Message.Truthy(parser) == !negate)
 			{
-				var result = await parser.FunctionParse(args[(i * 2 + 1).ToString()].Message!);
+				var result = await parser.FunctionParse(args[(i * 2 + 1).ToString()].Message);
 				hadErrors |= result?.HadErrors == true;
 				if (!all) return (result ?? CallState.Empty) with { HadErrors = hadErrors };
 				// Keep an empty selected result: the default runs only if no condition matched.
@@ -704,7 +709,7 @@ public partial class Functions
 		}
 		if (results.Count > 0) return new CallState(MarkupText.Concat(results)) { HadErrors = hadErrors };
 		var fallback = args.Count % 2 == 1
-			? await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!) ?? CallState.Empty
+			? await parser.FunctionParse(args[(args.Count - 1).ToString()].Message) ?? CallState.Empty
 			: CallState.Empty;
 		return fallback with { HadErrors = hadErrors || fallback.HadErrors };
 	}
@@ -721,9 +726,9 @@ public partial class Functions
 	public async ValueTask<CallState> Digest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToUpperInvariant();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText().ToUpperInvariant();
 		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var result)
-			? result.Message!
+			? result.Message
 			: null;
 
 		if (arg1 is null && !arg0.Equals("LIST", StringComparison.InvariantCultureIgnoreCase))
@@ -755,12 +760,12 @@ public partial class Functions
 	{
 		// fun_edit (src/funstr.c) edits the markup string, so the text it leaves alone keeps its colour.
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var str = args["0"].Message!;
+		var str = args["0"].Message;
 
 		for (var i = 1; i < args.Count - 1; i += 2)
 		{
-			var search = args[i.ToString()].Message!.ToPlainText();
-			var replace = args[(i + 1).ToString()].Message!;
+			var search = args[i.ToString()].Message.ToPlainText();
+			var replace = args[(i + 1).ToString()].Message;
 
 			str = search switch
 			{
@@ -781,7 +786,7 @@ public partial class Functions
 	[SharpFunction(Name = "escape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Escape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
 		var text = arg0.ToPlainText();
 		if (text.Length == 0)
 		{
@@ -836,8 +841,8 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		}
 
-		var text = args["1"].Message ?? MarkupText.Empty;
-		var rawAttrArg = args["0"].Message!;
+		var text = args["1"].Message;
+		var rawAttrArg = args["0"].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -872,7 +877,7 @@ public partial class Functions
 		marker = null;
 		if (!args.TryGetValue(index, out var argument)) return true;
 
-		var value = argument.Message ?? MarkupText.Empty;
+		var value = argument.Message;
 		if (value.Length == 0)
 		{
 			marker = " ";
@@ -926,18 +931,18 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> DecomposeWeb(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message!.Render(MarkupFormat.Html)));
+		=> ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message.Render(MarkupFormat.Html)));
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Decompose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message!, HouseTheme())));
+		=> ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(parser.CurrentState.Arguments["0"].Message, HouseTheme())));
 
 	[SharpFunction(Name = "formdecode", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> FormDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "").ToPlainText();
 		var arg2 = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
@@ -973,7 +978,7 @@ public partial class Functions
 	public ValueTask<CallState> FormQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var formString = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var formString = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var prefix = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "FORM.").ToPlainText().ToUpperInvariant();
 
 		// Form -> dictionary translation: accumulate values per normalized name, preserving
@@ -1039,9 +1044,9 @@ public partial class Functions
 	[SharpFunction(Name = "hmac", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["algorithm", "key", "string"])]
 	public ValueTask<CallState> HashMessageAuthenticationCode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var digest = parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToUpperInvariant();
-		var key = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var text = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var digest = parser.CurrentState.Arguments["0"].Message.ToPlainText().ToUpperInvariant();
+		var key = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var text = parser.CurrentState.Arguments["2"].Message.ToPlainText();
 		var encoding = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, "base16").ToPlainText().ToLowerInvariant();
 
 		HMAC? hmac = digest switch
@@ -1082,11 +1087,11 @@ public partial class Functions
 
 		if (truthy)
 		{
-			result = await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message!);
+			result = await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message);
 		}
 		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
 		{
-			result = await parser.FunctionParse(arg2.Message!);
+			result = await parser.FunctionParse(arg2.Message);
 		}
 
 		return (result ?? CallState.Empty) with { HadErrors = result?.HadErrors == true || parsedIfElse.HadErrors };
@@ -1101,22 +1106,22 @@ public partial class Functions
 	public ValueTask<CallState> LowerCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return new ValueTask<CallState>(
-			parser.CurrentState.Arguments["0"].Message!.Apply(transform: x => x.ToLowerInvariant()));
+			parser.CurrentState.Arguments["0"].Message.Apply(transform: x => x.ToLowerInvariant()));
 	}
 
 	[SharpFunction(Name = "LCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["string"])]
 	public ValueTask<CallState> LCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		return new ValueTask<CallState>(new CallState(str.ToLowerInvariant()));
 	}
 
 	[SharpFunction(Name = "left", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "length"])]
 	public ValueTask<CallState> Left(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var len = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var len = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 
 		// fun_left: e_int, then e_range for a negative length (src/funstr.c:303-312).
 		return ArgHelpers.TryInteger(parser, len, out var strlen) switch
@@ -1130,8 +1135,8 @@ public partial class Functions
 	[SharpFunction(Name = "ljust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill", "truncate"])]
 	public ValueTask<CallState> LeftJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var width = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
 			MarkupText.Space);
 		var truncate = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MarkupText.Plain("")).ToPlainText();
@@ -1149,15 +1154,15 @@ public partial class Functions
 	public ValueTask<CallState> ListPositions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
 			string.Join(" ",
-				parser.CurrentState.Arguments["0"].Message!.IndexesOf(parser.CurrentState.Arguments["1"].Message!.Text)
+				parser.CurrentState.Arguments["0"].Message.IndexesOf(parser.CurrentState.Arguments["1"].Message.Text)
 					.Select(x => x.ToString())));
 
 	[SharpFunction(Name = "merge", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
 	public ValueTask<CallState> Merge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var string1 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var string2 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var separator = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var string1 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var string2 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var separator = parser.CurrentState.Arguments["2"].Message.ToPlainText();
 
 		var parts1 = string.IsNullOrEmpty(separator)
 			? new[] { string1 }
@@ -1193,9 +1198,9 @@ public partial class Functions
 	[SharpFunction(Name = "mid", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "first", "length"])]
 	public ValueTask<CallState> Mid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var length = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var first = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var length = parser.CurrentState.Arguments["2"].Message.ToPlainText();
 
 		// fun_mid (pennmush src/funstr.c:266-295): both numbers must be integers, a negative start is out of
 		// range, and a negative length counts back from the start. safe_ansi_string clips the slice to the string.
@@ -1235,7 +1240,7 @@ public partial class Functions
 	[SharpFunction(Name = "ord", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["character"])]
 	public ValueTask<CallState> CharacterOrdinance(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		return arg0.Length is > 1 or < 0
 			? new ValueTask<CallState>(ErrorMessages.Returns.SingleCharArgument)
 			: ValueTask.FromResult<CallState>(arg0.EnumerateRunes().First().Value);
@@ -1250,7 +1255,7 @@ public partial class Functions
 	[SharpFunction(Name = "ORDINAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> Ordinal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var number = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim(' ');
+		var number = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim(' ');
 		var minus = number.StartsWith('-');
 		if (minus || number.StartsWith('+'))
 		{
@@ -1368,8 +1373,8 @@ public partial class Functions
 	[SharpFunction(Name = "pos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["needle", "haystack"])]
 	public ValueTask<CallState> StringPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var needle = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var haystack = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var needle = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var haystack = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var index = haystack.IndexOf(needle, StringComparison.Ordinal);
 
 		return ValueTask.FromResult<CallState>(index < 0 ? ErrorMessages.Returns.Nothing : (index + 1).ToString());
@@ -1378,8 +1383,8 @@ public partial class Functions
 	[SharpFunction(Name = "repeat", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "count"])]
 	public ValueTask<CallState> Repeat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var repeatNumberStr = parser.CurrentState.Arguments["1"].Message!;
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var repeatNumberStr = parser.CurrentState.Arguments["1"].Message;
 
 		if (!ArgHelpers.TryInteger(parser, repeatNumberStr.ToPlainText(), out var repeatNumber))
 		{
@@ -1396,8 +1401,8 @@ public partial class Functions
 	[SharpFunction(Name = "right", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "length"])]
 	public ValueTask<CallState> Right(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var len = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var len = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 
 		// fun_right: e_int, then e_range for a negative length (src/funstr.c:325-334).
 		if (!ArgHelpers.TryInteger(parser, len, out var strlen))
@@ -1419,8 +1424,8 @@ public partial class Functions
 	[SharpFunction(Name = "rjust", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill", "truncate"])]
 	public ValueTask<CallState> RightJustifyString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var width = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2,
 			MarkupText.Space);
 		var truncate = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, MarkupText.Plain("")).ToPlainText();
@@ -1437,7 +1442,7 @@ public partial class Functions
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Scramble(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
 		var shuffled = SplitIntoGraphemes(arg0).Shuffle();
 		return ValueTask.FromResult<CallState>(MarkupText.Concat(shuffled));
 	}
@@ -1445,13 +1450,13 @@ public partial class Functions
 	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeDecomposer.SoftcodeSpecial"/> character becomes a space.</summary>
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message
 			.Apply(text => SoftcodeDecomposer.SoftcodeSpecial().Replace(text, " ")));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["count"])]
 	public ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var repeatNumberStr = parser.CurrentState.Arguments["0"].Message!;
+		var repeatNumberStr = parser.CurrentState.Arguments["0"].Message;
 
 		if (!ArgHelpers.TryStrictUnsignedInteger(repeatNumberStr.ToPlainText(), out var repeatNumber))
 		{
@@ -1467,7 +1472,7 @@ public partial class Functions
 	[SharpFunction(Name = "spellnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> SpellNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var numberString = parser.CurrentState.Arguments["0"].Message!;
+		var numberString = parser.CurrentState.Arguments["0"].Message;
 
 		if (!decimal.TryParse(numberString.ToPlainText(), out var repeatNumber))
 		{
@@ -1486,7 +1491,7 @@ public partial class Functions
 	[SharpFunction(Name = "squish", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "delimiter"])]
 	public ValueTask<CallState> Squish(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
 		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1,
 			MarkupText.Space);
 
@@ -1553,7 +1558,7 @@ public partial class Functions
 	public ValueTask<CallState> StripAccents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// We do nothing with arg1 for SharpMUSH.
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
 
 		var func = (Func<string, string>)RemoveDiacritics;
 		return ValueTask.FromResult<CallState>(arg0.Apply(func));
@@ -1561,7 +1566,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "stripansi", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.ToPlainText());
 
 	[SharpFunction(Name = "strlen", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "count-controls"])]
 	public ValueTask<CallState> StringLen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1576,15 +1581,15 @@ public partial class Functions
 			|| arg1.Message.Truthy(parser);
 
 		return ValueTask.FromResult<CallState>(
-			parser.CurrentState.Arguments["0"].Message!.GetDisplayWidth(
+			parser.CurrentState.Arguments["0"].Message.GetDisplayWidth(
 				countControls ? ControlCharacterWidth.One : ControlCharacterWidth.Zero));
 	}
 
 	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern"])]
 	public ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var pattern = parser.CurrentState.Arguments["1"].Message!;
+		var str = parser.CurrentState.Arguments["0"].Message;
+		var pattern = parser.CurrentState.Arguments["1"].Message;
 
 		var match = MushText.IsWildcardMatch(str, pattern);
 
@@ -1670,9 +1675,9 @@ public partial class Functions
 	[SharpFunction(Name = "tr", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "from", "to"])]
 	public ValueTask<CallState> Tr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var find = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var replace = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var find = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var replace = parser.CurrentState.Arguments["2"].Message.ToPlainText();
 
 		// Expand ranges (e.g., a-z)
 		var expandedFind = ExpandRanges(find);
@@ -1760,13 +1765,13 @@ public partial class Functions
 			_ => TrimType.TrimBoth,
 		};
 
-		return ValueTask.FromResult<CallState>(args["0"].Message!.Trim(trimType, characters.ToPlainText()));
+		return ValueTask.FromResult<CallState>(args["0"].Message.Trim(trimType, characters.ToPlainText()));
 	}
 
 	[SharpFunction(Name = "ucstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> UpperCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message;
 		var result = arg0.Apply(x => x.ToUpperInvariant());
 
 		return new ValueTask<CallState>(result);
@@ -1776,17 +1781,17 @@ public partial class Functions
 		ParameterNames = ["string"])]
 	public ValueTask<CallState> UCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		return new ValueTask<CallState>(new CallState(str.ToUpperInvariant()));
 	}
 
 	[SharpFunction(Name = "urldecode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> URLDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> new(new CallState(PercentDecode(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
+		=> new(new CallState(PercentDecode(parser.CurrentState.Arguments["0"].Message.ToPlainText())));
 
 	[SharpFunction(Name = "urlencode", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> URLEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> new(new CallState(Uri.EscapeDataString(parser.CurrentState.Arguments["0"].Message!.ToPlainText())));
+		=> new(new CallState(Uri.EscapeDataString(parser.CurrentState.Arguments["0"].Message.ToPlainText())));
 
 	/// <summary>
 	/// Percent-decodes a string the way PennMUSH's <c>urldecode()</c> does (via libcurl's
@@ -1825,7 +1830,7 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var str = args["0"].Message!;
+		var str = args["0"].Message;
 		var lineSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.NewLine);
 
 		// fun_wrap (src/funstr.c:1644-1669): an empty text is answered as it is, before the widths are
@@ -1836,8 +1841,8 @@ public partial class Functions
 			return str;
 		}
 
-		if (!ArgHelpers.TryIntCheck(parser, args["1"].Message!.ToPlainText(), 72, out var widthInt)
-			|| !ArgHelpers.TryIntCheck(parser, args.TryGetValue("2", out var firstArg) ? firstArg.Message?.ToPlainText() ?? "" : null,
+		if (!ArgHelpers.TryIntCheck(parser, args["1"].Message.ToPlainText(), 72, out var widthInt)
+			|| !ArgHelpers.TryIntCheck(parser, args.TryGetValue("2", out var firstArg) ? firstArg.Message.ToPlainText() : null,
 				widthInt, out var firstLineInt))
 		{
 			return ErrorMessages.Returns.Integer;
@@ -1917,14 +1922,14 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
-		var delimParsed = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
+		var delimParsed = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message);
 		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
 		var hadErrors = delimParsed?.HadErrors == true;
 
 		var kept = new List<MString>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
-			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
+			var parsed = await parser.FunctionParse(args[i.ToString()].Message);
 			hadErrors |= parsed?.HadErrors == true;
 			var value = parsed?.Message ?? MarkupText.Empty;
 			if (isBool ? value.Truthy(parser) : value.Length > 0) kept.Add(value);
@@ -1941,7 +1946,7 @@ public partial class Functions
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(AnsiCodes(args["0"].Message!.ToPlainText()), args["1"].Message ?? MarkupText.Empty)));
+		return ValueTask.FromResult(new CallState(MarkupText.Wrap(AnsiCodes(args["0"].Message.ToPlainText()), args["1"].Message)));
 	}
 
 	/// <summary>
@@ -1980,13 +1985,13 @@ public partial class Functions
 	public async ValueTask<CallState> Render(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var text = args["0"].Message ?? MarkupText.Empty;
+		var text = args["0"].Message;
 
 		var ansi = false;
 		var html = false;
 		var noAccents = false;
 
-		foreach (var format in args["1"].Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		foreach (var format in args["1"].Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
 			// PennMUSH prefix-matches "noaccents" alone; the other three are spelled in full.
 			if (format.Equals("ansi", StringComparison.OrdinalIgnoreCase)) ansi = true;
@@ -2014,5 +2019,5 @@ public partial class Functions
 
 	[SharpFunction(Name = "s", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
+		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message))!;
 }

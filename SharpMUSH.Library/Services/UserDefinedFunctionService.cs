@@ -220,10 +220,11 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 			var invalidated = entries.Where(entry => entry.Value.Owner is { } owner &&
 				(owner.Matches(target) || (entry.Value.AliasOf is null && entry.Value.Object.Matches(target))))
 				.Select(entry => entry.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-			foreach (var entry in entries)
+			var stale = entries.Where(entry => invalidated.Contains(entry.Key)
+				|| (entry.Value.Owner is { } owner && entry.Value.AliasOf is { } alias && invalidated.Contains(Key(alias, owner))));
+			foreach (var entry in stale)
 			{
-				if (invalidated.Contains(entry.Key) || (entry.Value.Owner is { } owner && entry.Value.AliasOf is { } alias && invalidated.Contains(Key(alias, owner))))
-					_functions.TryRemove(entry);
+				_functions.TryRemove(entry);
 			}
 		}
 	}

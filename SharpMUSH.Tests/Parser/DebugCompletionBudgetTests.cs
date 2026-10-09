@@ -40,9 +40,9 @@ public class DebugCompletionBudgetTests
 		{
 			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 			var result = await pending.WaitAsync(TimeSpan.FromSeconds(2));
-			await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
+			await Assert.That(result?.Message.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
 			await Assert.That(ExecutionBudget.Current is null).IsTrue();
-			await Assert.That((await parser.FunctionParse(MarkupText.Plain("ordinary")))?.Message?.ToPlainText()).IsEqualTo("ordinary");
+			await Assert.That((await parser.FunctionParse(MarkupText.Plain("ordinary")))?.Message.ToPlainText()).IsEqualTo("ordinary");
 		}
 		finally
 		{
@@ -57,7 +57,7 @@ public class DebugCompletionBudgetTests
 		var (parser, mediator) = Create((_, _) => Task.CompletedTask);
 		using var budget = new ExecutionBudget(TimeSpan.Zero);
 		var result = await parser.FromState(parser.CurrentState with { ExecutionBudget = budget }).FunctionParse(MarkupText.Plain("%0"), true);
-		await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
+		await Assert.That(result?.Message.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
 		await mediator.DidNotReceive().Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>());
 	}
 

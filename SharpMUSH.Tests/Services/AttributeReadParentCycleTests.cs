@@ -45,7 +45,7 @@ public class AttributeReadParentCycleTests
 		using var scope = budget.Enter();
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		await Assert.That(result.Message).IsNotNull();
-		await Assert.That(DBRef.TryParse(result.Message!.ToPlainText(), out _)).IsTrue();
+		await Assert.That(DBRef.TryParse(result.Message.ToPlainText(), out _)).IsTrue();
 		var dbref = DBRef.Parse(result.Message.ToPlainText());
 		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 	}

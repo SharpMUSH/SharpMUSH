@@ -7,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -66,27 +67,215 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		string rootCommand, string[] switches, CommandDefinition libraryCommandDefinition, bool singleArgument,
 		CommandArguments argumentResults, InvocationClock clock)
 	{
-		var arguments = argumentResults.Values;
-
 		var executor = await prs.CurrentState.ExecutorObject(services.Mediator);
+		var run = new BuiltInRun(rootCommand, switches, libraryCommandDefinition, singleArgument, argumentResults.Values,
+			executor, src);
 
-		var namedRegisters = new Dictionary<string, MString>
-		{
-			["ARGS"] = src // The entire argument string before evaluation
-		};
+		// PennMUSH command_parse rebuilds cmd_evaled from command_argparse's results and stores it
+		// before any hook runs, so /before, /after, the body and later commands all read it as %u.
+		prs.CurrentState.CommandText?.EvaluatedFrom(run.HookInput);
 
-		// Commands test their switches by name, so the state carries them upper-cased once rather
-		// than as a projection re-run on every lookup.
-		var upperSwitches = Array.ConvertAll(switches, static s => s.ToUpperInvariant());
-		if (switches.Length > 0)
+		run.Enter(prs);
+		var dispatchResult = await RunBuiltInAsync(visitor, run, clock);
+		return argumentResults.Preserve(dispatchResult);
+	}
+
+	/// <summary>
+	/// The built-in's own run, in PennMUSH's order: the /ignore and /before hooks, a plugin's veto, the
+	/// /override hook and a plugin's override, switch validation (and /extend), the restrictions and
+	/// CommandLock, the command itself, then the /after hook and the plugins' after seam.
+	/// </summary>
+	private async ValueTask<Option<CallState>> RunBuiltInAsync(SharpMUSHParserVisitor visitor, BuiltInRun run,
+		InvocationClock clock)
+	{
+		// 1. Check for /ignore hook
+		if (await IgnoredByHookAsync(run))
+			return run.PreserveHookErrors(CallState.Empty);
+
+		// 2. Check for /before hook
+		await RunHookAsync(run, "BEFORE");
+		// Hook text is ignored, but failure state is retained.
+
+		// Phase 2b: C# command interceptors run alongside the softcode @hook flow. The dispatcher
+		// no-ops (and HasCommandInterceptors is false) when no plugin registered an interceptor, so
+		// normal dispatch is unchanged. The raw command-with-switches text is the interceptor's input.
+		var pluginHooks = services.PluginHooks;
+		// before → after the softcode BEFORE: a C# interceptor returning false vetoes the command
+		// (mirrors a softcode IGNORE that returns false: skip the body and run the after seam).
+		if (pluginHooks is { HasCommandInterceptors: true }
+			&& !await pluginHooks.CommandBeforeAsync(run.Parser, run.PluginCommandText))
 		{
-			namedRegisters["SWITCHES"] = MarkupText.Plain(string.Join(" ", switches));
+			await pluginHooks.CommandAfterAsync(run.Parser, run.PluginCommandText);
+			return run.PreserveHookErrors(CallState.Empty);
 		}
 
-		// For EQSPLIT commands, populate LS/RS registers
-		if (!singleArgument && libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit))
+		// 3. Check for /override hook with $-command matching
+		if (await OverriddenByHookAsync(run) is CallState overridden)
+			return run.PreserveHookErrors(overridden);
+
+		if (pluginHooks is { HasCommandInterceptors: true }
+			&& await OverriddenByPluginAsync(run, pluginHooks) is Option<CallState> pluginOverride)
 		{
-			var sourceText = src.ToString();
+			return run.PreserveHookErrors(pluginOverride);
+		}
+
+		if (await RefuseInvalidSwitchesAsync(run) is CallState switchRefusal)
+			return run.PreserveHookErrors(switchRefusal);
+
+		// 4. Check the behaviour restrictions and CommandLock before executing
+		if (run.Executor is AnySharpObject lockedExecutor && !await PermitsAsync(run.Definition.Attribute, lockedExecutor))
+		{
+			await NotifyRestrictedAsync(run.Definition.Attribute, lockedExecutor);
+			return run.PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
+		}
+
+		// 5. Execute the built-in command
+		var commandSuccess = true;
+		Option<CallState> commandResult;
+		var commandText = run.Parser.CurrentState.CommandText;
+		var outputVersion = commandText?.OutputVersion;
+		var outputBefore = commandText?.Output;
+		try
+		{
+			if (run.Executor is AnySharpObject verboseExecutor && await verboseExecutor.HasFlag("VERBOSE"))
+			{
+				var verboseOutput = $"#{verboseExecutor.Object().DBRef.Number}] {run.CommandWithSwitches.ToPlainText()}";
+				await services.Diagnostics.SendDebugOrVerboseOutput(visitor.Parser, verboseExecutor, verboseOutput);
+			}
+
+			// Track command history for @retry support (shared mutable reference, persists across With() copies).
+			// A rerun records its output as this run does, so @retry leaves the last rerun's %>.
+			run.Parser.CurrentState.CommandHistory?.Push((Recorded(run.Definition),
+				run.Parser.CurrentState.Arguments));
+			commandResult = await run.Definition.Command.Invoke(run.Parser);
+		}
+		catch (Exception)
+		{
+			commandSuccess = false;
+			throw; // Re-throw, so commandResult will never be accessed uninitialized
+		}
+		finally
+		{
+			// The registered name, not the abbreviation or case typed, so @pe and @PEMIT are one series.
+			services.Telemetry?.RecordCommandInvocation(run.Definition.Attribute.Name.ToUpperInvariant(),
+				clock.OwnMilliseconds, clock.InclusiveMilliseconds, commandSuccess);
+		}
+
+		// %> is recorded before the after hook runs, so the hook reads the command's own output.
+		RecordOutput(commandText, outputVersion, outputBefore, run.Definition.Attribute.Output, commandResult);
+
+		// 5. Check for /after hook
+		await RunHookAsync(run, "AFTER");
+		// Hook text is ignored, but failure state is retained.
+
+		// after → near the softcode AFTER: C# interceptors observe the completed command. Result discarded.
+		if (pluginHooks is { HasCommandInterceptors: true })
+		{
+			await pluginHooks.CommandAfterAsync(run.Parser, run.PluginCommandText);
+		}
+
+		return run.PreserveHookErrors(commandResult);
+	}
+
+	/// <summary>
+	/// One built-in command's run: what its stages share, the parser it runs in, and whether a hook
+	/// along the way failed.
+	/// </summary>
+	private sealed class BuiltInRun(string rootCommand, string[] switches, CommandDefinition definition,
+		bool singleArgument, List<CallState> arguments, AnyOptionalSharpObject executor, MString commandWithSwitches)
+	{
+		public string[] Switches => switches;
+		public CommandDefinition Definition => definition;
+		public AnyOptionalSharpObject Executor => executor;
+		public MString CommandWithSwitches => commandWithSwitches;
+		public string PluginCommandText { get; } = commandWithSwitches.ToPlainText();
+
+		/// <summary>The parser the command runs in, once <see cref="Enter"/> has pushed its state.</summary>
+		public IMUSHCodeParser Parser { get; private set; } = null!;
+
+		public bool HookHadErrors { get; set; }
+
+		/// <summary>
+		/// A hook lives on the command, not on the name that reached it. Penn stores it on the
+		/// COMMAND_INFO every alias points at (command.h:161) and do_hook gets there with
+		/// command_find (command.c:2589), so `@hook/override say` fires for `"` as well. Keyed by
+		/// what was typed, a hook fired for one spelling of its command and no other (#1223).
+		/// </summary>
+		public string HookedCommand => definition.Attribute.Name;
+
+		private bool EqSplit => !singleArgument && definition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit);
+
+		public Option<CallState> PreserveHookErrors(Option<CallState> result)
+		{
+			if (!HookHadErrors) return result;
+			return (result is CallState value ? value : CallState.Empty) with { HadErrors = true };
+		}
+
+		public MString HookInput()
+		{
+			// Reuse the split arguments: evaluating the whole line loses bare function calls,
+			// ignores NoParse/RSNoParse/noeval, and runs side effects a second time.
+			var name = definition.Attribute.Name;
+			var prefix = switches.Length == 0 ? name : $"{name}/{string.Join('/', switches)}";
+			if (arguments.Count == 0) return MarkupText.Plain(prefix);
+
+			var values = arguments.Select(argument => argument.Message);
+			var text = EqSplit && arguments.Count > 1
+				? MarkupText.Concat([arguments[0].Message, MarkupText.Plain("="),
+					MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])
+				: MarkupText.Join(MarkupText.Plain(","), values);
+			return MarkupText.Concat(MarkupText.Plain(prefix + " "), text);
+		}
+
+		/// <summary>Pushes the command's own state — its name, switches, arguments and registers — onto <paramref name="caller"/>.</summary>
+		public void Enter(IMUSHCodeParser caller)
+		{
+			var namedRegisters = NamedRegisters();
+
+			// Commands test their switches by name, so the state carries them upper-cased once rather
+			// than as a projection re-run on every lookup.
+			var upperSwitches = Array.ConvertAll(switches, static s => s.ToUpperInvariant());
+
+			var state = caller.CurrentState;
+
+			// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
+			// This allows @wait/@force to preserve pattern-match variables in queued callbacks.
+			var callerArgs = state.Arguments
+				.Where(x => int.TryParse(x.Key, out _))
+				.ToDictionary(x => x.Key, x => x.Value);
+
+			var newState = state with
+			{
+				Command = rootCommand,
+				Switches = upperSwitches,
+				Arguments = SharpMUSHParserVisitor.NumberedArguments(arguments),
+				CommandInvoker = definition.Command,
+				Function = null,
+				CallerArguments = callerArgs.Count > 0 ? callerArgs : null
+			};
+
+			foreach (var (key, value) in namedRegisters)
+			{
+				newState.AddRegister(key, value);
+			}
+
+			Parser = caller.Push(newState);
+		}
+
+		private Dictionary<string, MString> NamedRegisters()
+		{
+			var namedRegisters = new Dictionary<string, MString>
+			{
+				["ARGS"] = commandWithSwitches // The entire argument string before evaluation
+			};
+
+			if (switches.Length > 0)
+			{
+				namedRegisters["SWITCHES"] = MarkupText.Plain(string.Join(" ", switches));
+			}
+
+			// For EQSPLIT commands, populate LS/RS registers
+			var sourceText = EqSplit ? commandWithSwitches.ToString() : string.Empty;
 			var equalsIndex = sourceText.IndexOf('=');
 			if (equalsIndex >= 0)
 			{
@@ -96,279 +285,145 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			}
 			else
 			{
-				namedRegisters["LS"] = src;
+				namedRegisters["LS"] = commandWithSwitches;
 			}
+
+			for (int i = 0; i < arguments.Count; i++)
+			{
+				namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
+			}
+
+			namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
+			return namedRegisters;
+		}
+	}
+
+	/// <summary>Runs one of the command's hooks, keeping its failure state on <paramref name="run"/>.</summary>
+	private async ValueTask<Option<CallState>> EvaluateHookAsync(BuiltInRun run, CommandHook hook,
+		Option<MString> input = null!)
+	{
+		var result = await HookAsync(run.Parser, run.Executor, hook, input);
+		run.HookHadErrors |= result is CallState { HadErrors: true };
+		return result;
+	}
+
+	/// <summary>Runs the command's <paramref name="hookType"/> hook when it has one; its text is ignored.</summary>
+	private async ValueTask RunHookAsync(BuiltInRun run, string hookType)
+	{
+		if (await services.HookService.GetHookAsync(run.HookedCommand, hookType) is CommandHook hook)
+		{
+			await EvaluateHookAsync(run, hook);
+		}
+	}
+
+	/// <summary>Whether the command's /ignore hook answered false, so the command does not run.</summary>
+	private async ValueTask<bool> IgnoredByHookAsync(BuiltInRun run)
+		=> await services.HookService.GetHookAsync(run.HookedCommand, "IGNORE") is CommandHook ignoreCode
+			&& await EvaluateHookAsync(run, ignoreCode) is CallState ignoreValue
+			&& ignoreValue.Message.Falsy(run.Parser);
+
+	/// <summary>
+	/// What the command's /override hook answered when its $-command matched, after its /after hook;
+	/// <see langword="null"/> when the command was not overridden.
+	/// </summary>
+	private async ValueTask<CallState?> OverriddenByHookAsync(BuiltInRun run)
+	{
+		if (await services.HookService.GetHookAsync(run.HookedCommand, "OVERRIDE") is not CommandHook overrideCode
+				|| await EvaluateHookAsync(run, overrideCode, run.HookInput()) is not CallState overridden)
+		{
+			return null;
+		}
+
+		// 5. Check for /after hook before returning
+		await RunHookAsync(run, "AFTER");
+		// Hook text is ignored, but failure state is retained.
+		return overridden;
+	}
+
+	/// <summary>
+	/// override → after the softcode OVERRIDE: a non-null C# interceptor override short-circuits
+	/// the built-in (mirrors a softcode OVERRIDE), still running both after seams before returning.
+	/// </summary>
+	/// <returns>The override, or <see langword="null"/> when no interceptor overrode the command.</returns>
+	private async ValueTask<Option<CallState>?> OverriddenByPluginAsync(BuiltInRun run,
+		IPluginHookDispatcher pluginHooks)
+	{
+		var pluginOverride = await pluginHooks.CommandTryOverrideAsync(run.Parser, run.PluginCommandText);
+		if (pluginOverride is null)
+			return null;
+
+		await RunHookAsync(run, "AFTER");
+		await pluginHooks.CommandAfterAsync(run.Parser, run.PluginCommandText);
+		return pluginOverride;
+	}
+
+	/// <summary>
+	/// Validates the command's switches. An unknown one goes to the /extend hook when there is one and
+	/// its $-command matches; otherwise the executor is told and the command refused.
+	/// </summary>
+	/// <returns>The answer in the command's place, or <see langword="null"/> when every switch is known.</returns>
+	private async ValueTask<CallState?> RefuseInvalidSwitchesAsync(BuiltInRun run)
+	{
+		var invalidSwitches = InvalidSwitches(run.Switches, run.Definition.Attribute.Switches ?? []);
+		if (invalidSwitches.Length == 0)
+			return null;
+
+		// Check for /extend hook to handle invalid switches
+		if (await services.HookService.GetHookAsync(run.HookedCommand, "EXTEND") is CommandHook extendCode
+				&& await EvaluateHookAsync(run, extendCode, run.HookInput()) is CallState extended)
+		{
+			// Execute /after hook before returning
+			await RunHookAsync(run, "AFTER");
+			return extended;
+		}
+
+		// No extend hook or it didn't match - return error for invalid switches.
+		// PennMUSH (src/command.c) *notifies* here — `notify(executor, switch_err)` with
+		// "%s doesn't know switch %s." — instead of running the command. Returning the error
+		// only as a CallState made a mistyped switch silently do nothing at a prompt, which is
+		// how `@shutdown/what` and `@wiki/get home` both came to complete with no output at all.
+		// PennMUSH names only the first unknown switch, and names it upper-cased — the switch
+		// text it formats has already been through the command line's canonicalisation
+		// (oracle: `@shutdown/what` → "@SHUTDOWN doesn't know switch WHAT."). The return value
+		// still lists every offender as typed, because that string is a machine-readable
+		// result callers already match on.
+		if (run.Executor is AnySharpObject notifiedExecutor)
+		{
+			await services.NotifyService.NotifyLocalized(notifiedExecutor,
+				nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
+				run.Definition.Attribute.Name, invalidSwitches[0].ToUpperInvariant());
+		}
+
+		var invalidSwitchList = string.Join(", ", invalidSwitches);
+		return new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}");
+	}
+
+	/// <summary>The switches the command does not declare; none when it takes <c>*</c>.</summary>
+	private static string[] InvalidSwitches(string[] switches, string[] allowedSwitches)
+		=> switches.Length == 0 || allowedSwitches.Contains("*", StringComparer.OrdinalIgnoreCase)
+			? []
+			: switches.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
+
+	/// <summary>Whether <paramref name="executor"/> passes the command's behaviour restrictions and its CommandLock.</summary>
+	private async ValueTask<bool> PermitsAsync(SharpCommandAttribute attribute, AnySharpObject executor)
+		=> await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(attribute, executor)
+			&& (string.IsNullOrEmpty(attribute.CommandLock) || await services.LockService.Evaluate(attribute.CommandLock, executor, executor));
+
+	/// <summary>
+	/// command_check_with sends the command's restrict_message in place of "Permission
+	/// denied." when it has one (command.c:2337-2341).
+	/// </summary>
+	private async ValueTask NotifyRestrictedAsync(SharpCommandAttribute attribute, AnySharpObject executor)
+	{
+		var restrictMessage = attribute.RestrictMessage;
+		if (string.IsNullOrEmpty(restrictMessage))
+		{
+			await services.NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
 		}
 		else
 		{
-			namedRegisters["LS"] = src;
+			await services.NotifyService.Notify(executor, restrictMessage, executor);
 		}
-
-		for (int i = 0; i < arguments.Count; i++)
-		{
-			namedRegisters[$"LSA{i + 1}"] = arguments[i].Message ?? MarkupText.Empty;
-		}
-
-		namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
-
-		var commandWithSwitches = src;
-
-		// PennMUSH command_parse rebuilds cmd_evaled from command_argparse's results and stores it
-		// before any hook runs, so /before, /after, the body and later commands all read it as %u.
-		prs.CurrentState.CommandText?.EvaluatedFrom(HookInput);
-
-		MString HookInput()
-		{
-			// Reuse the split arguments: evaluating the whole line loses bare function calls,
-			// ignores NoParse/RSNoParse/noeval, and runs side effects a second time.
-			var name = libraryCommandDefinition.Attribute.Name;
-			var prefix = switches.Length == 0 ? name : $"{name}/{string.Join('/', switches)}";
-			if (arguments.Count == 0) return MarkupText.Plain(prefix);
-
-			var values = arguments.Select(argument => argument.Message ?? MarkupText.Empty);
-			var eqSplit = !singleArgument && libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit);
-			var text = eqSplit && arguments.Count > 1
-				? MarkupText.Concat([arguments[0].Message ?? MarkupText.Empty, MarkupText.Plain("="),
-					MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])
-				: MarkupText.Join(MarkupText.Plain(","), values);
-			return MarkupText.Concat(MarkupText.Plain(prefix + " "), text);
-		}
-
-		var dispatchResult = await prs.With(state =>
-			{
-				// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
-				// This allows @wait/@force to preserve pattern-match variables in queued callbacks.
-				var callerArgs = state.Arguments
-					.Where(x => int.TryParse(x.Key, out _))
-					.ToDictionary(x => x.Key, x => x.Value);
-
-				var newState = state with
-				{
-					Command = rootCommand,
-					Switches = upperSwitches,
-					Arguments = SharpMUSHParserVisitor.NumberedArguments(arguments),
-					CommandInvoker = libraryCommandDefinition.Command,
-					Function = null,
-					CallerArguments = callerArgs.Count > 0 ? callerArgs : null
-				};
-
-				foreach (var (key, value) in namedRegisters)
-				{
-					newState.AddRegister(key, value);
-				}
-
-				return newState;
-			},
-			async newParser =>
-			{
-				// A hook lives on the command, not on the name that reached it. Penn stores it on the
-				// COMMAND_INFO every alias points at (command.h:161) and do_hook gets there with
-				// command_find (command.c:2589), so `@hook/override say` fires for `"` as well. Keyed by
-				// what was typed, a hook fired for one spelling of its command and no other (#1223).
-				var hookedCommand = libraryCommandDefinition.Attribute.Name;
-				var hookHadErrors = false;
-				async ValueTask<Option<CallState>> EvaluateHook(CommandHook hook, Option<MString> input = null!)
-				{
-					var result = await HookAsync(newParser, executor, hook, input);
-					hookHadErrors |= result is CallState { HadErrors: true };
-					return result;
-				}
-				Option<CallState> PreserveHookErrors(Option<CallState> result)
-				{
-					if (!hookHadErrors) return result;
-					return (result is CallState value ? value : CallState.Empty) with { HadErrors = true };
-				}
-
-				// 1. Check for /ignore hook
-				var ignoreHook = await services.HookService.GetHookAsync(hookedCommand, "IGNORE");
-				if (ignoreHook is CommandHook ignoreCode)
-				{
-					var ignoreResult = await EvaluateHook(ignoreCode);
-					if (ignoreResult is CallState ignoreValue && ignoreValue.Message.Falsy(newParser))
-					{
-						return PreserveHookErrors(CallState.Empty);
-					}
-				}
-
-				// 2. Check for /before hook
-				var beforeHook = await services.HookService.GetHookAsync(hookedCommand, "BEFORE");
-				if (beforeHook is CommandHook beforeCode)
-				{
-					await EvaluateHook(beforeCode);
-					// Hook text is ignored, but failure state is retained.
-				}
-
-				// Phase 2b: C# command interceptors run alongside the softcode @hook flow. The dispatcher
-				// no-ops (and HasCommandInterceptors is false) when no plugin registered an interceptor, so
-				// normal dispatch is unchanged. The raw command-with-switches text is the interceptor's input.
-				var pluginHooks = services.PluginHooks;
-				var pluginCommandText = commandWithSwitches.ToPlainText();
-				// before → after the softcode BEFORE: a C# interceptor returning false vetoes the command
-				// (mirrors a softcode IGNORE that returns false: skip the body and run the after seam).
-				if (pluginHooks is { HasCommandInterceptors: true }
-					&& !await pluginHooks.CommandBeforeAsync(newParser, pluginCommandText))
-				{
-					await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
-					return PreserveHookErrors(CallState.Empty);
-				}
-
-				// 3. Check for /override hook with $-command matching
-				var overrideHook = await services.HookService.GetHookAsync(hookedCommand, "OVERRIDE");
-				if (overrideHook is CommandHook overrideCode)
-				{
-					var overrideResult = await EvaluateHook(overrideCode, HookInput());
-					if (overrideResult is CallState overridden)
-					{
-						// 5. Check for /after hook before returning
-						var afterHook = await services.HookService.GetHookAsync(hookedCommand, "AFTER");
-						if (afterHook is CommandHook afterCode)
-						{
-							await EvaluateHook(afterCode);
-							// Hook text is ignored, but failure state is retained.
-						}
-
-						return PreserveHookErrors(overridden);
-					}
-				}
-
-				// override → after the softcode OVERRIDE: a non-null C# interceptor override short-circuits
-				// the built-in (mirrors a softcode OVERRIDE), still running both after seams before returning.
-				if (pluginHooks is { HasCommandInterceptors: true })
-				{
-					var pluginOverride = await pluginHooks.CommandTryOverrideAsync(newParser, pluginCommandText);
-					if (pluginOverride is not null)
-					{
-						var afterHook = await services.HookService.GetHookAsync(hookedCommand, "AFTER");
-						if (afterHook is CommandHook afterCode)
-						{
-							await EvaluateHook(afterCode);
-						}
-
-						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
-						return PreserveHookErrors(pluginOverride);
-					}
-				}
-
-				// Validate switches and check for /extend hook if invalid switches are found
-				var allowedSwitches = libraryCommandDefinition.Attribute.Switches ?? [];
-				var invalidSwitches = switches.Length == 0 || allowedSwitches.Contains("*", StringComparer.OrdinalIgnoreCase)
-					? []
-					: switches.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
-
-				if (invalidSwitches.Length > 0)
-				{
-					// Check for /extend hook to handle invalid switches
-					var extendHook = await services.HookService.GetHookAsync(hookedCommand, "EXTEND");
-					if (extendHook is CommandHook extendCode)
-					{
-						var extendResult = await EvaluateHook(extendCode, HookInput());
-						if (extendResult is CallState extended)
-						{
-							// Execute /after hook before returning
-							var afterHook = await services.HookService.GetHookAsync(hookedCommand, "AFTER");
-							if (afterHook is CommandHook afterCode)
-							{
-								await EvaluateHook(afterCode);
-							}
-
-							return PreserveHookErrors(extended);
-						}
-					}
-
-					// No extend hook or it didn't match - return error for invalid switches.
-					// PennMUSH (src/command.c) *notifies* here — `notify(executor, switch_err)` with
-					// "%s doesn't know switch %s." — instead of running the command. Returning the error
-					// only as a CallState made a mistyped switch silently do nothing at a prompt, which is
-					// how `@shutdown/what` and `@wiki/get home` both came to complete with no output at all.
-					// PennMUSH names only the first unknown switch, and names it upper-cased — the switch
-					// text it formats has already been through the command line's canonicalisation
-					// (oracle: `@shutdown/what` → "@SHUTDOWN doesn't know switch WHAT."). The return value
-					// still lists every offender as typed, because that string is a machine-readable
-					// result callers already match on.
-					if (executor is AnySharpObject notifiedExecutor)
-					{
-						await services.NotifyService.NotifyLocalized(notifiedExecutor,
-							nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
-							libraryCommandDefinition.Attribute.Name, invalidSwitches[0].ToUpperInvariant());
-					}
-
-					var invalidSwitchList = string.Join(", ", invalidSwitches);
-					return PreserveHookErrors(new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}"));
-				}
-
-				// 4. Check the behaviour restrictions and CommandLock before executing
-				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
-				if (executor is AnySharpObject lockedExecutor
-					&& (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(libraryCommandDefinition.Attribute, lockedExecutor)
-						|| (!string.IsNullOrEmpty(commandLockStr) && !await services.LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor))))
-				{
-					// command_check_with sends the command's restrict_message in place of "Permission
-					// denied." when it has one (command.c:2337-2341).
-					var restrictMessage = libraryCommandDefinition.Attribute.RestrictMessage;
-					if (string.IsNullOrEmpty(restrictMessage))
-					{
-						await services.NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
-					}
-					else
-					{
-						await services.NotifyService.Notify(lockedExecutor, restrictMessage, lockedExecutor);
-					}
-
-					return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
-				}
-
-				// 5. Execute the built-in command
-				var commandSuccess = true;
-				Option<CallState> commandResult;
-				var commandText = newParser.CurrentState.CommandText;
-				var outputVersion = commandText?.OutputVersion;
-				var outputBefore = commandText?.Output;
-				try
-				{
-					if (executor is AnySharpObject verboseExecutor && await verboseExecutor.HasFlag("VERBOSE"))
-					{
-						var verboseOutput = $"#{verboseExecutor.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
-						await services.Diagnostics.SendDebugOrVerboseOutput(visitor.Parser, verboseExecutor, verboseOutput);
-					}
-
-					// Track command history for @retry support (shared mutable reference, persists across With() copies).
-					// A rerun records its output as this run does, so @retry leaves the last rerun's %>.
-					newParser.CurrentState.CommandHistory?.Push((Recorded(libraryCommandDefinition),
-						newParser.CurrentState.Arguments));
-					commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
-				}
-				catch (Exception)
-				{
-					commandSuccess = false;
-					throw; // Re-throw, so commandResult will never be accessed uninitialized
-				}
-				finally
-				{
-					// The registered name, not the abbreviation or case typed, so @pe and @PEMIT are one series.
-					services.Telemetry?.RecordCommandInvocation(libraryCommandDefinition.Attribute.Name.ToUpperInvariant(),
-						clock.OwnMilliseconds, clock.InclusiveMilliseconds, commandSuccess);
-				}
-
-				// %> is recorded before the after hook runs, so the hook reads the command's own output.
-				RecordOutput(commandText, outputVersion, outputBefore, libraryCommandDefinition.Attribute.Output, commandResult);
-
-				// 5. Check for /after hook
-				var afterHookFinal = await services.HookService.GetHookAsync(hookedCommand, "AFTER");
-				if (afterHookFinal is CommandHook afterFinalCode)
-				{
-					await EvaluateHook(afterFinalCode);
-					// Hook text is ignored, but failure state is retained.
-				}
-
-				// after → near the softcode AFTER: C# interceptors observe the completed command. Result discarded.
-				if (pluginHooks is { HasCommandInterceptors: true })
-				{
-					await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
-				}
-
-				return PreserveHookErrors(commandResult);
-			});
-		return argumentResults.Preserve(dispatchResult);
 	}
 
 	/// <summary>
@@ -648,7 +703,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// direct input.
 		prs.CurrentState.CommandText?.EvaluatedFrom(() =>
 		{
-			var values = arguments.Select(argument => argument.Message ?? MarkupText.Empty).ToList();
+			var values = arguments.Select(argument => argument.Message).ToList();
 			var name = MarkupText.Plain($"ATTRIB_SET/{rest.ToUpperInvariant()} ");
 			return values.Count > 1
 				? MarkupText.Concat([name, values[0], MarkupText.Plain("="), MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])

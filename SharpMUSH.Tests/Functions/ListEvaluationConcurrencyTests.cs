@@ -55,7 +55,7 @@ public class ListEvaluationConcurrencyTests
 			_ => ValueTask.FromResult(CallState.Empty with { HadErrors = failed })), true));
 		var parser = original with { FunctionLibrary = library };
 		var result = await parser.FunctionParse(MarkupText.Plain("revwords(a b,emptyprobe())"));
-		await Assert.That(result!.Message!.Text).IsEqualTo("b a");
+		await Assert.That(result!.Message.Text).IsEqualTo("b a");
 		await Assert.That(result.HadErrors).IsEqualTo(failed);
 	}
 }

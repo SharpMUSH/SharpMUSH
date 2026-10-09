@@ -68,7 +68,7 @@ public class ListenerRoutingScopeTests
 		// Everything passed in is in the room. Stubbed so that a pass which still walks the contents
 		// really does reach the bystanders, rather than passing these tests on an empty stream.
 		_mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
-			.Returns(objects.Select(o => o.AsContent).ToAsyncEnumerable());
+			.Returns(objects.Select(o => o.AsOptionalContent.Expect<AnySharpContent>()).ToAsyncEnumerable());
 
 		foreach (var obj in objects)
 		{

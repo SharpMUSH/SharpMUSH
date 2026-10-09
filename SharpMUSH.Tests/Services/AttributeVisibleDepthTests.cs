@@ -29,7 +29,7 @@ public class AttributeVisibleDepthTests
 	private async ValueTask<AnySharpObject> CreateTreeAsync(string label)
 	{
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {label}"));
-		var dbref = DBRef.Parse(result.Message!.ToPlainText()!);
+		var dbref = DBRef.Parse(result.Message.ToPlainText()!);
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 		await AttributeService.SetAttributeAsync(obj, obj, "TREE", MarkupText.Plain("root"));

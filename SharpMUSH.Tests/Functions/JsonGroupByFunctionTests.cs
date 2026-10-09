@@ -22,7 +22,7 @@ public class JsonGroupByFunctionTests
 	{
 		var createResult = await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@create {objectName}"));
-		var dbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var dbRef = DBRef.Parse(createResult.Message.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&{attrName} #{dbRef.Number}={attrValue}"));
 		return dbRef.Number;
@@ -30,7 +30,7 @@ public class JsonGroupByFunctionTests
 
 	private async Task Check(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))!.Message;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 

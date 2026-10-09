@@ -44,20 +44,16 @@ public static class CommandAttributeScanner
 		var noInheritPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		if (!isLocal)
 		{
-			foreach (var attr in attrList)
-			{
-				if (attr.Flags.Any(f => f.Name == "no_inherit"))
-					noInheritPrefixes.Add(attr.LongName + "`");
-			}
+			noInheritPrefixes.UnionWith(attrList
+				.Where(attr => attr.Flags.Any(f => f.Name == "no_inherit"))
+				.Select(attr => attr.LongName + "`"));
 		}
 
 		// Build no_command prefixes from this object's attrs
-		var localNoCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var attr in attrList)
-		{
-			if (attr.Flags.Any(flag => flag.Name == "no_command"))
-				localNoCommandPrefixes.Add(attr.LongName + "`");
-		}
+		var localNoCommandPrefixes = attrList
+			.Where(attr => attr.Flags.Any(flag => flag.Name == "no_command"))
+			.Select(attr => attr.LongName + "`")
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var attr in attrList)
 		{

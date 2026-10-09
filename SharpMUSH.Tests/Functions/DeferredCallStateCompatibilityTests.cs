@@ -24,7 +24,7 @@ public class DeferredCallStateCompatibilityTests
 		};
 		var result = await state.GetParsedResultAsync();
 		await Assert.That(result.HadErrors).IsEqualTo(existing || evaluated);
-		await Assert.That(result.Message!.Text).IsEqualTo(empty ? "" : "parsed");
+		await Assert.That(result.Message.Text).IsEqualTo(empty ? "" : "parsed");
 		await Assert.That(calls).IsEqualTo(1);
 	}
 
@@ -47,7 +47,7 @@ public class DeferredCallStateCompatibilityTests
 		await Assert.That(preserveSpaces).IsTrue();
 		await Assert.That((await legacy())!.Text).IsEqualTo("parsed");
 		var result = await state.GetParsedResultAsync();
-		await Assert.That(result.Message!.Text).IsEqualTo("parsed");
+		await Assert.That(result.Message.Text).IsEqualTo("parsed");
 		await Assert.That(result.HadErrors).IsEqualTo(existing);
 		await Assert.That(calls).IsEqualTo(2);
 	}

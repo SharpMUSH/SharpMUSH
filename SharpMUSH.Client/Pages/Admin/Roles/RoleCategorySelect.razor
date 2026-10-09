@@ -1,0 +1,23 @@
+@using SharpMUSH.Library.Models
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A picker over one category list, keeping a value no category has any more. *@
+<select class="ra-input" aria-label="@Loc["RolCategoryLabel"]" value="@Value"
+        @onchange="@(e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty))">
+    <option value="">@Loc["RolCategoryChoose"]</option>
+    @foreach (var category in Categories)
+    {
+        <option value="@category.Name" title="@category.Description">@category.Name</option>
+    }
+    @if (Value.Length > 0 && !Categories.Any(c => string.Equals(c.Name, Value, StringComparison.OrdinalIgnoreCase)))
+    {
+        <option value="@Value">@Value</option>
+    }
+</select>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<RoleCategory> Categories { get; set; } = [];
+
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+}

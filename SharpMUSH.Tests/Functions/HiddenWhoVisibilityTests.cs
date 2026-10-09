@@ -27,10 +27,10 @@ public class HiddenWhoVisibilityTests
 
 	private async Task<string> EvalAs(DBRef executor, string expression)
 		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expression)))
-			?.Message!.ToPlainText() ?? "<null>";
+			?.Message.ToPlainText() ?? "<null>";
 
 	private async Task<string> God(string command)
-		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText() ?? "";
+		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText() ?? "";
 
 	/// <summary>
 	/// Entries are <c>#N</c> for the dbref-shaped functions and full objids (<c>#N:creation</c>) for the

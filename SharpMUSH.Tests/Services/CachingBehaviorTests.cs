@@ -71,7 +71,7 @@ public class CachingBehaviorTests
 		// Create a unique object so no other parallel test can invalidate its specific cache key
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@create QueryCachingBehavior Test Object"));
-		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var dbRef = Library.Models.DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
 
@@ -106,9 +106,9 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@dig FlagThroughContents Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig FlagThroughContents Room"))).Message.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@create FlagThroughContents Thing"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@create FlagThroughContents Thing"))).Message.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
 
 		// Populate the contents cache, then change a flag through the normal command path.
@@ -133,9 +133,9 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@dig OneInstance Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig OneInstance Room"))).Message.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@create OneInstance Thing"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@create OneInstance Thing"))).Message.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
 
 		var listed = (await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync())
@@ -162,9 +162,9 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@dig FlagThroughLocation Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig FlagThroughLocation Room"))).Message.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@create FlagThroughLocation Thing"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@create FlagThroughLocation Thing"))).Message.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
 
 		var occupant = (await mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
@@ -189,9 +189,9 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var parent = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@create FlagThroughParent Parent"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@create FlagThroughParent Parent"))).Message.ToPlainText()!);
 		var child = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@create FlagThroughParent Child"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@create FlagThroughParent Child"))).Message.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent #{child.Number}=#{parent.Number}"));
 
 		var node = (await mediator.Send(new GetObjectNodeQuery(child))).Expect<AnySharpObject>();
@@ -216,9 +216,9 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var home = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@dig FlagThroughHome Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig FlagThroughHome Room"))).Message.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@create FlagThroughHome Thing"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@create FlagThroughHome Thing"))).Message.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link #{thing.Number}=#{home.Number}"));
 
 		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Expect<SharpThing>();
@@ -300,7 +300,7 @@ public class CachingBehaviorTests
 		// Dig a unique room so no other parallel test can invalidate its specific cache key
 		var digResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@dig StreamCachingBehavior Test Room"));
-		var dbRef = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
+		var dbRef = Library.Models.DBRef.Parse(digResult.Message.ToPlainText()!);
 
 		var result1 = new List<AnySharpContent>();
 		await foreach (var item in mediator.CreateStream(new GetContentsQuery(dbRef)))
@@ -347,7 +347,7 @@ public class CachingBehaviorTests
 		// Create a unique object to avoid interference from parallel tests
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@create CacheInvalidation Test Object"));
-		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var dbRef = Library.Models.DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var before = await mediator.Send(new GetObjectNodeQuery(dbRef));
 		await Assert.That(before.Object()!.Name).IsEqualTo("CacheInvalidation Test Object");
@@ -371,7 +371,7 @@ public class CachingBehaviorTests
 
 		var createResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain("@create CacheInvalidation Visibility Test"));
-		var newDbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
+		var newDbRef = Library.Models.DBRef.Parse(createResult.Message.ToPlainText()!);
 
 		var obj = await mediator.Send(new GetObjectNodeQuery(newDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
@@ -398,7 +398,7 @@ public class CachingBehaviorTests
 
 		var digResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("ContentsRace")}"));
-		var room = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
+		var room = Library.Models.DBRef.Parse(digResult.Message.ToPlainText()!);
 
 		async Task<Library.Models.DBRef> Populate() => await mediator.Send(TestIsolationHelpers.CreateTestPlayerCommand(
 			TestIsolationHelpers.GenerateUniqueName("ContentsRacer"), room, room, (int)options.CurrentValue.Limit.StartingQuota));
@@ -458,7 +458,7 @@ public class CachingBehaviorTests
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
 				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+			return Library.Models.DBRef.Parse(dug.Message.ToPlainText()!);
 		}
 
 		var elsewhere = await Dig("BreadthElsewhere");
@@ -502,7 +502,7 @@ public class CachingBehaviorTests
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
 				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+			return Library.Models.DBRef.Parse(dug.Message.ToPlainText()!);
 		}
 
 		var source = await Dig("TagDeclFrom");
@@ -511,8 +511,8 @@ public class CachingBehaviorTests
 		var mover = await mediator.Send(TestIsolationHelpers.CreateTestPlayerCommand(
 			TestIsolationHelpers.GenerateUniqueName("TagDeclMover"), source, source, (int)options.CurrentValue.Limit.StartingQuota));
 
-		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>().AsContent;
-		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
+		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>().AsOptionalContent.Expect<AnySharpContent>();
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 
 		var command = new Library.Commands.Database.MoveObjectCommand(
 			moverContent, destinationContainer, OldContainer: source);
@@ -548,7 +548,7 @@ public class CachingBehaviorTests
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
 				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
+			return Library.Models.DBRef.Parse(dug.Message.ToPlainText()!);
 		}
 
 		var source = await Dig("MoveRaceFrom");
@@ -564,7 +564,7 @@ public class CachingBehaviorTests
 
 		var movers = (await Task.WhenAll(Enumerable.Range(0, 25).Select(_ => PopulateInto(source)))).ToList();
 
-		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 
 		using var readersRun = new CancellationTokenSource();
 		var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
@@ -579,7 +579,7 @@ public class CachingBehaviorTests
 		foreach (var mover in movers)
 		{
 			var moverObject = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>();
-			await moveService.MoveIt(Parser, moverObject.AsContent, destinationContainer, noMoveMsgs: true,
+			await moveService.MoveIt(Parser, moverObject.AsOptionalContent.Expect<AnySharpContent>(), destinationContainer, noMoveMsgs: true,
 				moverObject.Object().DBRef, "move");
 
 			var contents = await mediator.CreateStream(new GetContentsQuery(destination)).ToListAsync();

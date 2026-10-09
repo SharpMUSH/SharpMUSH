@@ -72,8 +72,8 @@ public class EventServiceTests
 		await Assert.That(state.Executor!.Value.Number).IsEqualTo(9);
 		await Assert.That(state.Enactor!.Value.Number).IsEqualTo(20);
 		await Assert.That(state.CurrentEvaluation).IsEqualTo(new DBAttribute(fixture.Handler.Object().DBRef, "TEST`EVENT"));
-		await Assert.That(state.Arguments["0"].Message!.ToPlainText()).IsEqualTo("first");
-		await Assert.That(state.EnvironmentRegisters["1"].Message!.ToPlainText()).IsEqualTo("second");
+		await Assert.That(state.Arguments["0"].Message.ToPlainText()).IsEqualTo("first");
+		await Assert.That(state.EnvironmentRegisters["1"].Message.ToPlainText()).IsEqualTo("second");
 		// The entry gets its own time limit when it runs; it does not carry the raiser's.
 		await Assert.That(state.ExecutionBudget).IsNull();
 	}

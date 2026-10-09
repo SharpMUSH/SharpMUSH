@@ -36,7 +36,7 @@ public class AttributeTreeParentSourcedReadTests
 	private async Task<string> Eval(long handle, string expression)
 	{
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return result?.Message?.ToPlainText() ?? string.Empty;
+		return result?.Message.ToPlainText() ?? string.Empty;
 	}
 
 	private async Task Cmd(long handle, string command)

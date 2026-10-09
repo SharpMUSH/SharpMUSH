@@ -100,7 +100,7 @@ public class ObjectsController(
 		}
 
 		var result = await commandInvoker.InvokeAsync(command, executor.Object().DBRef, arguments);
-		var message = result?.Message?.ToPlainText();
+		var message = result?.Message.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(message))
 		{

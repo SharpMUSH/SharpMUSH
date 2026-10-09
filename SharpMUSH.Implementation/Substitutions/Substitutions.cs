@@ -22,7 +22,7 @@ public static partial class Substitutions
 		{
 			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" =>
 				parser.CurrentState.EnvironmentRegisters.TryGetValue(symbol, out var tmpCs)
-					? tmpCs.Message!
+					? tmpCs.Message
 					: MarkupText.Empty,
 			"B" or "b" => " ",
 			"R" or "r" => "\n",
@@ -162,7 +162,7 @@ public static partial class Substitutions
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{
 		parser.CurrentState.Registers.TryPeek(out var curVal);
-		return curVal!.TryGetValue((symbol.Message ?? MarkupText.Empty).ToPlainText().ToUpper(), out var value)
+		return curVal!.TryGetValue(symbol.Message.ToPlainText().ToUpper(), out var value)
 			? new CallState(value)
 			: new CallState(string.Empty);
 	}
@@ -176,7 +176,7 @@ public static partial class Substitutions
 		var val = await attributeService.GetAttributeAsync(
 			executor,
 			executor,
-			symbol.Message!.ToPlainText(),
+			symbol.Message.ToPlainText(),
 			IAttributeService.AttributeMode.Read);
 
 		return val is SharpAttribute[] attr
@@ -187,7 +187,7 @@ public static partial class Substitutions
 	// Symbol Example: %$0 --> 0
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
-		var symbolValue = symbol.Message!.ToPlainText();
+		var symbolValue = symbol.Message.ToPlainText();
 		var stack = parser.CurrentState.SwitchStack;
 
 		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
@@ -223,7 +223,7 @@ public static partial class Substitutions
 	// Symbol Example: %i0 --> 0
 	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
-		var symbolValue = symbol.Message!.ToPlainText();
+		var symbolValue = symbol.Message.ToPlainText();
 		var symbolNumber = int.Parse(symbolValue);
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
 

@@ -23,9 +23,8 @@
         else if (_characters is { Count: > 0 })
         {
             <div class="online-characters-rows @(InMain ? "online-characters-rows--main" : null)">
-                @foreach (var c in _characters.Take(Shown))
+                @foreach (var row in _characters.Take(Shown))
                 {
-                    var row = c;
                     <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="@row.Image" Name="@row.Name" Label="@row.Name"
                                 Class="online-characters-row" Href="@($"/character/{Uri.EscapeDataString(row.Name)}")" />
                 }

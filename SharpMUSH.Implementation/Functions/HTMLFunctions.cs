@@ -48,10 +48,10 @@ public partial class Functions
 	public async ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var tagName = args["0"].Message!.ToPlainText().Trim();
+		var tagName = args["0"].Message.ToPlainText().Trim();
 		var hasParameters = args.Count > 2;
-		var content = args[hasParameters ? "2" : "1"].Message!;
-		var parameters = hasParameters ? args["1"].Message!.ToPlainText().Trim() : string.Empty;
+		var content = args[hasParameters ? "2" : "1"].Message;
+		var parameters = hasParameters ? args["1"].Message.ToPlainText().Trim() : string.Empty;
 
 		if (!HtmlMarkup.IsValidTagName(tagName))
 		{
@@ -82,8 +82,8 @@ public partial class Functions
 	public async ValueTask<CallState> CmdLink(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var text = args["0"].Message!;
-		var command = args["1"].Message!.ToPlainText();
+		var text = args["0"].Message;
+		var command = args["1"].Message.ToPlainText();
 		var hint = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, string.Empty).ToPlainText();
 
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
@@ -135,7 +135,7 @@ public partial class Functions
 	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html", "default"])]
 	public async ValueTask<CallState> WsHtml(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var html = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var html = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var privileged = await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator));
 
 		return HtmlFragment.Parse(html, privileged ? AnyElement : TagwrapPolicy.Wrap) switch
@@ -156,7 +156,7 @@ public partial class Functions
 		ParameterNames = ["html", "player"])]
 	public async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var htmlContent = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg)
@@ -164,7 +164,7 @@ public partial class Functions
 					parser,
 					executor,
 					executor,
-					targetArg.Message!.ToPlainText(),
+					targetArg.Message.ToPlainText(),
 					PlayersPreference | AbsoluteMatch) is Error<CallState> error)
 		{
 			return error.Value;
@@ -209,7 +209,7 @@ public partial class Functions
 	private async ValueTask<CallState> PlayAsync(IMUSHCodeParser parser, bool music)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var file = args["0"].Message!.ToPlainText().Trim();
+		var file = args["0"].Message.ToPlainText().Trim();
 
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
@@ -222,7 +222,7 @@ public partial class Functions
 		}
 
 		int? volume = null;
-		if (args.TryGetValue("1", out var volumeArg) && volumeArg.Message!.ToPlainText().Trim() is { Length: > 0 } volumeText)
+		if (args.TryGetValue("1", out var volumeArg) && volumeArg.Message.ToPlainText().Trim() is { Length: > 0 } volumeText)
 		{
 			if (!int.TryParse(volumeText, out var parsed) || parsed is < 0 or > 100)
 			{
@@ -233,7 +233,7 @@ public partial class Functions
 		}
 
 		int? repeats = null;
-		if (args.TryGetValue("2", out var repeatsArg) && repeatsArg.Message!.ToPlainText().Trim() is { Length: > 0 } repeatsText)
+		if (args.TryGetValue("2", out var repeatsArg) && repeatsArg.Message.ToPlainText().Trim() is { Length: > 0 } repeatsText)
 		{
 			if (!int.TryParse(repeatsText, out var parsed) || parsed == 0 || parsed < MarkupString.SoundMarkup.Forever)
 			{
@@ -261,7 +261,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var channel = args.TryGetValue("0", out var arg) ? arg.Message!.ToPlainText().Trim() : string.Empty;
+		var channel = args.TryGetValue("0", out var arg) ? arg.Message.ToPlainText().Trim() : string.Empty;
 
 		return channel.ToLowerInvariant() switch
 		{
@@ -289,13 +289,13 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var address = args["0"].Message!.ToPlainText().Trim();
+		var address = args["0"].Message.ToPlainText().Trim();
 		if (address.Length == 0 || address.Any(char.IsControl))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
-		var description = args.TryGetValue("1", out var descriptionArg) ? descriptionArg.Message!.ToPlainText() : null;
+		var description = args.TryGetValue("1", out var descriptionArg) ? descriptionArg.Message.ToPlainText() : null;
 
 		if (!TryPixels(args, "2", out var width) || !TryPixels(args, "3", out var height))
 		{
@@ -314,7 +314,7 @@ public partial class Functions
 	private static bool TryPixels(IReadOnlyDictionary<string, CallState> args, string key, out int? pixels)
 	{
 		pixels = null;
-		if (!args.TryGetValue(key, out var arg) || arg.Message!.ToPlainText().Trim() is not { Length: > 0 } text) return true;
+		if (!args.TryGetValue(key, out var arg) || arg.Message.ToPlainText().Trim() is not { Length: > 0 } text) return true;
 		if (!int.TryParse(text, out var parsed) || parsed <= 0) return false;
 
 		pixels = parsed;
@@ -335,9 +335,9 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var text = args["0"].Message!;
-		var name = args["1"].Message!.ToPlainText().Trim();
-		var title = args.TryGetValue("2", out var titleArg) ? titleArg.Message!.ToPlainText().Trim() : null;
+		var text = args["0"].Message;
+		var name = args["1"].Message.ToPlainText().Trim();
+		var title = args.TryGetValue("2", out var titleArg) ? titleArg.Message.ToPlainText().Trim() : null;
 
 		if (name.Length == 0 || name.Any(char.IsControl))
 		{
@@ -357,7 +357,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "preformat", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
 	public ValueTask<CallState> Preformat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(new CallState(MarkupText.Preformatted(parser.CurrentState.Arguments["0"].Message!)));
+		=> ValueTask.FromResult(new CallState(MarkupText.Preformatted(parser.CurrentState.Arguments["0"].Message)));
 
 	/// <summary>
 	/// <c>clearscreen()</c> — clears what the player has been shown: <c>ESC[H ESC[2J</c> for a terminal,
@@ -382,7 +382,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var address = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
+		var address = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
 
 		return address.Length == 0 || address.Any(char.IsControl)
 			? new CallState(ErrorMessages.Returns.InvalidArgument)
@@ -403,7 +403,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var group = args.TryGetValue("0", out var arg) ? arg.Message!.ToPlainText().Trim() : string.Empty;
+		var group = args.TryGetValue("0", out var arg) ? arg.Message.ToPlainText().Trim() : string.Empty;
 
 		// A line break inside the group would end the <EXPIRE> tag early and leave the links working.
 		if (group.Any(char.IsControl))

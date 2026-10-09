@@ -38,7 +38,7 @@ public class MailDeliveryTests
 	{
 		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
 		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var room = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		var room = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
 
 		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
@@ -65,7 +65,7 @@ public class MailDeliveryTests
 	}
 
 	private async Task<string> Get(DBRef obj, string attribute)
-		=> (await GodParser.FunctionParse(MarkupText.Plain($"[get(#{obj.Number}/{attribute})]")))!.Message!.ToPlainText();
+		=> (await GodParser.FunctionParse(MarkupText.Plain($"[get(#{obj.Number}/{attribute})]")))!.Message.ToPlainText();
 
 	/// <summary>
 	/// <c>do_mail_fwd</c> delivers through <c>send_mail</c> (<c>extmail.c:1296</c>), so the recipient hears
@@ -141,7 +141,7 @@ public class MailDeliveryTests
 		await Assert.That(heard).IsEquivalentTo(
 			["No such unique player: MdFwdNoSuchPlayer.", "MAIL: 0 messages forwarded."]);
 		// Nobody matched, which is not the same answer as a recipient refusing the mail.
-		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchPlayer);
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchPlayer);
 	}
 
 	/// <summary>
@@ -415,7 +415,7 @@ public class MailDeliveryTests
 		var royal = await Player("MdAmailInhRoyal");
 		var parentName = TestIsolationHelpers.GenerateUniqueName("MdAmailParent");
 		var parent = DBRef.Parse((await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {parentName}"))).Message!.ToPlainText().Trim());
+			MarkupText.Plain($"@create {parentName}"))).Message.ToPlainText().Trim());
 		await God($"@set #{royal.DbRef.Number}=ROYALTY");
 		await God($"&AMAIL #{parent.Number}=&INHERITEDAMAIL me=%#");
 		await God($"@parent #{royal.DbRef.Number}=#{parent.Number}");
@@ -441,7 +441,7 @@ public class MailDeliveryTests
 		var sender = await Player("MdSigInh");
 		var parentName = TestIsolationHelpers.GenerateUniqueName("MdSigParent");
 		var parent = DBRef.Parse((await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {parentName}"))).Message!.ToPlainText().Trim());
+			MarkupText.Plain($"@create {parentName}"))).Message.ToPlainText().Trim());
 		await God($"&MAILSIGNATURE #{parent.Number}=-- [name(%#)] [add(1,1)]");
 		await God($"@parent #{sender.DbRef.Number}=#{parent.Number}");
 

@@ -29,11 +29,11 @@ public class AttributeReadPathFunctionTests
 	private async Task<string> Eval(long handle, string expression)
 	{
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return result?.Message?.ToPlainText() ?? string.Empty;
+		return result?.Message.ToPlainText() ?? string.Empty;
 	}
 
 	private async Task<string> God(string expression)
-		=> (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		=> (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText();
 
 	[Test]
 	[Arguments("lattr(me/{0}`*)")]

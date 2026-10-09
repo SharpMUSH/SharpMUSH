@@ -115,7 +115,7 @@ public class PlayerAliasIndexTests
 	public async Task AliasOnAThingIsNotAPlayerAlias()
 	{
 		var god = await God();
-		var room = (await _db.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
 		var thing = await _db.CreateThingAsync("Teapot", room, god, room);
 
 		await _db.SetAttributeAsync(thing, ["ALIAS"], MarkupText.Plain("Pot"), god);

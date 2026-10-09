@@ -48,14 +48,14 @@ public class FindableFunctionTests
 	/// </summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer who, string expression)
 		=> (await WebAppFactoryArg.CommandParserFor(who.DbRef, who.Handle)
-			.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+			.FunctionParse(MarkupText.Plain(expression)))!.Message.ToPlainText().Trim();
 
 	/// <summary>A room of its own, so nothing another test leaves lying around is nearby.</summary>
 	private async Task<string> Room(string prefix, params object[] occupants)
 	{
 		var dig = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
-		var room = dig.Message!.ToPlainText().Trim();
+		var room = dig.Message.ToPlainText().Trim();
 		foreach (var occupant in occupants)
 		{
 			await God($"@teleport/silent {occupant}={room}");

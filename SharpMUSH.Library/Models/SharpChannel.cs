@@ -11,6 +11,8 @@ public class SharpChannel
 	[JsonIgnore] public string? Id { get; set; }
 	public required MString Name { get; set; }
 	public MString Description { get; set; } = MarkupText.Empty;
+	/// <summary>The owner's dbref, which stays readable when the owner itself is gone.</summary>
+	public required DBRef OwnerDBRef { get; set; }
 	public required AsyncLazy<SharpPlayer> Owner { get; set; }
 	public required Lazy<IAsyncEnumerable<MemberAndStatus>> Members { get; set; }
 	public required string[] Privs { get; set; }

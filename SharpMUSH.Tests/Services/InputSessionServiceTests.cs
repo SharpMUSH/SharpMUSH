@@ -131,7 +131,7 @@ public class InputSessionServiceTests
 		if (!timeoutAlreadyTaken) await Assert.That(h.Sessions.TakeExpired().Single().Id).IsEqualTo(original.Id);
 		await h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty, true);
 		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message!.ToPlainText()).IsEqualTo("timeout");
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.ToPlainText()).IsEqualTo("timeout");
 		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
 		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsNotEqualTo(original.Id);
 	}
@@ -267,8 +267,8 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness(); var session = await h.Start();
 		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Plain(input));
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message!.Text).IsEqualTo(input);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message!.Text).IsEqualTo("input");
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message.Text).IsEqualTo(input);
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.Text).IsEqualTo("input");
 		await Assert.That(h.Deliveries.Single().Executor).IsEqualTo(h.Actor.Object.DBRef);
 		await Assert.That(h.Deliveries.Single().Enactor).IsEqualTo(h.Character.Object.DBRef);
 		await Assert.That(h.Deliveries.Single().CurrentEvaluation).IsEqualTo(new DBAttribute(h.Target.Object.DBRef, "CALLBACK"));
@@ -482,7 +482,7 @@ public class InputSessionServiceTests
 		await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"))).IsFalse();
 		if (!alreadyPending) h.Sessions.TakeExpired();
 		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Empty, timeout: true);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message!.Text).IsEqualTo("timeout");
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.Text).IsEqualTo("timeout");
 	}
 
 	[Test]
@@ -502,7 +502,7 @@ public class InputSessionServiceTests
 		await Assert.That(expired.Count).IsEqualTo(1);
 		await Assert.That(h.Sessions.TakeExpired().Count).IsEqualTo(0);
 		await h.Sessions.DeliverAsync(h.Parser, third, MarkupText.Empty, timeout: true);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message!.Text).IsEqualTo("timeout");
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.Text).IsEqualTo("timeout");
 		await h.Sessions.DeliverAsync(h.Parser, third, MarkupText.Empty, timeout: true);
 		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
 	}
@@ -969,7 +969,7 @@ public class InputSessionServiceTests
 			await Assert.That(h.Deliveries.Count).IsEqualTo(0);
 		}
 		else
-			await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message!.Text).IsEqualTo(payload);
+			await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message.Text).IsEqualTo(payload);
 		await h.Parser.DidNotReceive().CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>());
 	}
 
@@ -1047,7 +1047,7 @@ public class InputSessionServiceTests
 		finally { release.TrySetResult(); }
 		await Drained(queue);
 		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message!.Text).IsEqualTo("first");
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message.Text).IsEqualTo("first");
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
 		await Assert.That(h.Sessions.GetCapturing(1)!.CallbackAttribute).IsEqualTo("REPLACEMENT");
 	}
@@ -1088,7 +1088,7 @@ public class InputSessionServiceTests
 		await queue.AdmitUserCommand(1, MarkupText.Plain("literal"), ParserState.Empty with { ConnectionSessionId = "transport" });
 		await Drained(queue);
 		await Assert.That(budgetPresent).IsTrue();
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message!.Text).IsEqualTo("literal");
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message.Text).IsEqualTo("literal");
 	}
 
 	[Test]

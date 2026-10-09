@@ -17,7 +17,7 @@ public class TimePrecisionFunctionTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
 
 	// ---- hostile input --------------------------------------------------------------------------
 

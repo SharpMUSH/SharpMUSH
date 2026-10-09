@@ -12,13 +12,8 @@
 <div class="page-stack page-stack--padded adm-server">
     <PlainPageHeader Kicker="@Loc["AdmServerKicker"]" Title="@Loc["AdmServerTitle"]" Description="@Loc["AdmServerDescription"]" />
 
-    @if (_error is not null)
-    {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="adm-server-error">@_error</MudAlert>
-    }
-
-    @if (_status is { } status)
-    {
+    <LoadState TValue="AdminServerStatus" Value="_status" Loading="@(_status is null && _error is null)" Error="@_error" ErrorClass="adm-server-error"
+               ProgressColor="Color.Primary" Context="status">
         <AdminStats>
             <AdminStat Key="ready" Icon="@(status.Ready ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.HourglassTop)"
                        Label="@Loc["AdmServerReadiness"]" Warn="@(!status.Ready)"
@@ -49,11 +44,7 @@
         </AdminStats>
 
         <p class="adm-server-note">@Loc["AdmServerUpdated", _readAt.ToString("HH:mm:ss")]</p>
-    }
-    else if (_error is null)
-    {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-    }
+    </LoadState>
 </div>
 
 @code {

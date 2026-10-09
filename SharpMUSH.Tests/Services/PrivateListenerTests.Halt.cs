@@ -30,7 +30,7 @@ public partial class PrivateListenerTests
 		var reference = kind switch
 		{
 			"player" => actor.DbRef,
-			"room" => DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText().Trim()),
+			"room" => DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message.ToPlainText().Trim()),
 			_ => await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "HaltAdmission")
 		};
 		await Admin($"@ahear {reference}=&HEARD me=admitted");
@@ -61,7 +61,7 @@ public partial class PrivateListenerTests
 	{
 		var owner = await Player();
 		var reference = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "HaltPuppet");
-		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message!.ToPlainText().Trim());
+		var room = DBRef.Parse((await Admin($"@dig {Guid.NewGuid():N}")).Message.ToPlainText().Trim());
 		await Admin($"@tel {reference}={room}");
 		if (!publicSpeech) await Admin($"@tel {owner.DbRef}={room}");
 		await Admin($"@chown {reference}={owner.DbRef}");

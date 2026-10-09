@@ -135,7 +135,7 @@ public class WikiCommandTests
 			MarkupText.Plain("@wiki/create Qualified Row Page=Body of the qualified row page."));
 		var listing = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list"));
 
-		var rows = listing.Message!.ToPlainText()
+		var rows = listing.Message.ToPlainText()
 			.Split('\n')
 			.Skip(1) // the "WIKI: N page(s):" header
 			.Select(r => r.Trim())
@@ -1346,7 +1346,7 @@ public class WikiCommandTests
 		msg is MString markup && markup.Render(format).Contains(contains);
 
 	private async Task<string> AsPlayerAsync(SharpMUSH.Library.Models.DBRef player, string code)
-		=> (await WebAppFactoryArg.FunctionParserFor(player).FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+		=> (await WebAppFactoryArg.FunctionParserFor(player).FunctionParse(MarkupText.Plain(code)))!.Message.ToPlainText();
 
 	/// <summary>A page filed in a category of its own, created and filed by <paramref name="player"/>.</summary>
 	private async Task<(string Title, string Slug, string Category)> FiledPageAsync(TestIsolationHelpers.TestPlayer player, string prefix)

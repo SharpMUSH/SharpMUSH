@@ -86,7 +86,9 @@ public class AttributeVisibilityCancellationTests
 			return true;
 		}
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute>()).Returns(call => Permission(call.Arg<SharpAttribute[]>()[0].LongName));
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<AttributeViewMemo>(), Arg.Any<SharpAttribute>()).Returns(call => Permission(call.Arg<SharpAttribute[]>()[0].LongName));
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute>()).Returns(call => Permission(call.Arg<LazySharpAttribute[]>()[0].LongName));
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<AttributeViewMemo>(), Arg.Any<LazySharpAttribute>()).Returns(call => Permission(call.Arg<LazySharpAttribute[]>()[0].LongName));
 		var depth = stage.EndsWith("leaves") || stage == "leaf-stream" || stage == "child-permission" ? 2 : 1;
 		async Task Read()
 		{
@@ -117,6 +119,7 @@ public class AttributeVisibilityCancellationTests
 		var target = new TestObjectFactory().CreateThing(10, "target");
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute>()).Returns(true);
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<AttributeViewMemo>(), Arg.Any<LazySharpAttribute>()).Returns(true);
 		var service = new AttributeService(Substitute.For<IMediator>(), permissions, Substitute.For<ILocateService>(), Substitute.For<IValidateService>(),
 			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>(),
 			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);

@@ -17,7 +17,12 @@ namespace SharpMUSH.Library.Queries.Database;
 /// answer; the caching behaviours also tag the entry with the object the answer embeds, so a
 /// write to the parent itself expires it as well.
 /// </remarks>
-public record GetOwnerOfQuery(string Id, int Number) : IQuery<SharpPlayer>, ICacheable
+/// <remarks>
+/// The owner reads as <see cref="None"/> when the owner edge is missing or names an object that is gone;
+/// <c>SharpObject.Owner</c> treats that as the broken invariant it is, and a caller that walks objects which
+/// may be damaged (<c>@wcheck</c>) matches on it instead.
+/// </remarks>
+public record GetOwnerOfQuery(string Id, int Number) : IQuery<AnyOptionalSharpObject>, ICacheable
 {
 	public string CacheKey => $"owner-of:{Id}";
 	public string[] CacheTags => [CacheKeys.ObjectTag(Number)];

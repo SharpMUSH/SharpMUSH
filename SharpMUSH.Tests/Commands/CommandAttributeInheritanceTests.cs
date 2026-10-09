@@ -33,7 +33,7 @@ public class CommandAttributeInheritanceTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		var dig = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig Room_{token}"));
-		var room = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+		var room = DBRef.Parse(dig.Message.ToPlainText().Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={room}"));
 		return new Mortal(player, parser, room);
 	}
@@ -43,7 +43,7 @@ public class CommandAttributeInheritanceTests
 			MarkupText.Plain(command));
 
 	private async Task<DBRef> Create(Mortal who, string name)
-		=> DBRef.Parse((await Run(who, $"@create {name}")).Message!.ToPlainText().Trim());
+		=> DBRef.Parse((await Run(who, $"@create {name}")).Message.ToPlainText().Trim());
 
 	private Task God(string command)
 		=> GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
@@ -100,9 +100,9 @@ public class CommandAttributeInheritanceTests
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("vexit");
 		var who = await MortalInOwnRoom(token);
-		var target = DBRef.Parse((await Run(who, $"@dig Target_{token}")).Message!.ToPlainText().Trim());
+		var target = DBRef.Parse((await Run(who, $"@dig Target_{token}")).Message.ToPlainText().Trim());
 
-		var exit = DBRef.Parse((await Run(who, $"@open VarExit_{token}")).Message!.ToPlainText().Trim());
+		var exit = DBRef.Parse((await Run(who, $"@open VarExit_{token}")).Message.ToPlainText().Trim());
 		await Run(who, $"@link {exit}=variable");
 		var code = await Create(who, $"VarCode_{token}");
 		await Run(who, $"&DESTINATION {code}=#{target.Number}");
@@ -266,7 +266,7 @@ public class CommandAttributeInheritanceTests
 		var token = TestIsolationHelpers.GenerateUniqueName("sex");
 		var who = await MortalInOwnRoom(token);
 		var parent = DBRef.Parse((await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create SexParent_{token}"))).Message!.ToPlainText().Trim());
+			MarkupText.Plain($"@create SexParent_{token}"))).Message.ToPlainText().Trim());
 		var gender = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Attribute.GenderAttribute;
 		await God($"&{gender} {parent}=Female");
 		await God($"@set {parent}/{gender}=mortal_dark");
