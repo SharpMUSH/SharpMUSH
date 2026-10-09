@@ -468,6 +468,7 @@ public partial class Commands
 
 			// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
 			int? width = null;
+			var viewMemo = new AttributeViewMemo();
 
 			foreach (var (attr, readFrom) in atrs)
 			{
@@ -485,7 +486,7 @@ public partial class Commands
 				var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 				var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 
-				if (!await PermissionService.CanViewAttribute(executor, viewing, attr))
+				if (!await PermissionService.CanViewAttribute(executor, viewing, viewMemo, attr))
 				{
 					continue;
 				}

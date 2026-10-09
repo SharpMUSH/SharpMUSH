@@ -165,8 +165,34 @@ public class PermissionService(
 		return true;
 	}
 
-	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
+	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
+		=> CanViewAttributeAsync(viewer, target, null, attribute,
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+
+	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
+		params LazySharpAttribute[] attribute)
+		=> CanViewAttributeAsync(viewer, target, null, attribute,
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+
+	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo,
+		params SharpAttribute[] attribute)
+		=> CanViewAttributeAsync(viewer, target, memo, attribute,
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+
+	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo,
+		params LazySharpAttribute[] attribute)
+		=> CanViewAttributeAsync(viewer, target, memo, attribute,
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+
+	/// <summary>
+	/// PennMUSH's <c>Can_Read_Attr</c> for one attribute path, root first. The tests that depend only
+	/// on the viewer and the object - privilege, <c>can_examine</c>, <c>can_look_at</c> - go through
+	/// <paramref name="memo"/> when there is one, so a listing asks each once per object.
+	/// </summary>
+	private async ValueTask<bool> CanViewAttributeAsync<T>(AnySharpObject viewer, AnySharpObject target,
+		AttributeViewMemo? memo, T[] attribute, Func<T, bool> isInternal, Func<T, bool> isMortalDark,
+		Func<T, bool> isVisual, Func<T, bool> isNearby)
 	{
 		// AF_INTERNAL denies reads to everyone, including wizards and God: PennMUSH's
 		// Can_Read_Attr macro (hdrs/mushdb.h:100-101) checks `!AF_Internal(a)` before the
@@ -175,15 +201,15 @@ public class PermissionService(
 		// (src/attrib.c:282-320) tests AF_Internal once on the passed-in leaf attribute before
 		// any tree walk, and the separate per-branch-segment loop below it only ever tests
 		// AF_Private (no_inherit) - AF_Internal never propagates across `-segments.
-		if (attribute.Length > 0 && attribute[^1].IsInternal())
+		if (attribute.Length > 0 && isInternal(attribute[^1]))
 			return false;
 
 		// mortal_dark hides from non-privileged viewers regardless of ownership
-		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
-				&& !viewer.IsGod() && !await viewer.IsWizard())
+		if (attribute.Length > 0 && attribute.Any(isMortalDark)
+				&& !await AttributeViewMemo.PrivilegedAsync(memo, viewer, async () => viewer.IsGod() || await viewer.IsWizard()))
 			return false;
 
-		if (await CanExamine(viewer, target))
+		if (await AttributeViewMemo.CanExamineAsync(memo, viewer, target, () => CanExamine(viewer, target)))
 			return true;
 
 		if (attribute.Length == 0)
@@ -192,33 +218,10 @@ public class PermissionService(
 		// PennMUSH attrib.c:305-310 - AF_Nearby overrides AF_Visual's grant when the viewer
 		// could not look at the target (can_look_at, hdrs/mushdb.h:104). Only pay for the
 		// nearby/location lookups when some level of the path actually carries the flag.
-		var canLook = attribute.Any(attr => attr.IsNearby()) && await CanLookAt(viewer, target);
+		var canLook = attribute.Any(isNearby)
+			&& await AttributeViewMemo.CanLookAtAsync(memo, viewer, target, () => CanLookAt(viewer, target));
 
-		return attribute.All(attr => attr.IsVisual() && (!attr.IsNearby() || canLook));
-	}
-
-	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
-		params LazySharpAttribute[] attribute)
-	{
-		// See the SharpAttribute overload above for the AF_INTERNAL rationale.
-		if (attribute.Length > 0 && attribute[^1].IsInternal())
-			return false;
-
-		// mortal_dark hides from non-privileged viewers regardless of ownership
-		if (attribute.Length > 0 && attribute.Any(attr => attr.IsMortalDark())
-				&& !viewer.IsGod() && !await viewer.IsWizard())
-			return false;
-
-		if (await CanExamine(viewer, target))
-			return true;
-
-		if (attribute.Length == 0)
-			return false;
-
-		// See the SharpAttribute overload above for the nearby/canlook rationale.
-		var canLook = attribute.Any(attr => attr.IsNearby()) && await CanLookAt(viewer, target);
-
-		return attribute.All(attr => attr.IsVisual() && (!attr.IsNearby() || canLook));
+		return attribute.All(attr => isVisual(attr) && (!isNearby(attr) || canLook));
 	}
 
 	/// <summary>

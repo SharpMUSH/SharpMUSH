@@ -383,8 +383,9 @@ public class AttributeService(
 	{
 		token.ThrowIfCancellationRequested();
 		if (depth <= 0) yield break;
+		var memo = new AttributeViewMemo();
 		var visible = await attributes
-			.Where((x, _) => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, x), token))
+			.Where((x, _) => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, memo, x), token))
 			.ToListAsync(token);
 		foreach (var attribute in visible)
 		{
@@ -408,6 +409,7 @@ public class AttributeService(
 		IAsyncEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth, ExecutionBudget budget,
 		[EnumeratorCancellation] CancellationToken token = default)
 	{
+		var memo = new AttributeViewMemo();
 		for (var remaining = depth; remaining > 0; remaining--)
 		{
 			var nextLevel = new List<IAsyncEnumerable<LazySharpAttribute>>();
@@ -415,7 +417,7 @@ public class AttributeService(
 			{
 				bool visible;
 				using (budget.Enter())
-					visible = await CheckReadAsync(() => ps.CanViewAttribute(executor, obj, attribute), token);
+					visible = await CheckReadAsync(() => ps.CanViewAttribute(executor, obj, memo, attribute), token);
 				if (!visible) continue;
 				yield return attribute;
 				if (remaining > 1)
@@ -489,23 +491,23 @@ public class AttributeService(
 		// for which object the test is made against. Attributes matched on a given object are
 		// reused as free ancestor data for that object only - one object's FOO must never vouch
 		// for another object's FOO`BAR.
-		var knownBySource = results
-			.GroupBy(x => x.SourceObject)
-			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
-
+		// Indexed only when a branch walk first asks: a listing of flat names never needs it.
+		Dictionary<DBRef, Dictionary<string, SharpAttribute>>? knownBySource = null;
 		List<DBRef>? parentChain = null;
 		var ancestors = new Dictionary<(DBRef Target, string Path), SharpAttribute?>();
 		var holders = new Dictionary<DBRef, AnySharpObject?>();
+		var memo = new AttributeViewMemo();
+		Func<ValueTask<List<DBRef>>> chainOf = async () => parentChain ??= await ParentChainAsync(obj, token);
+		Func<DBRef, string[], ValueTask<SharpAttribute?>> fetch = (target, parts) => MemoizedAncestorAsync(ancestors, target, parts,
+			() => FetchAncestorAsync(target, parts, knownBySource ??= KnownBySource(results, static x => x.SourceObject, static x => x.Attribute, static x => x.LongName)));
+		Func<AnySharpObject, SharpAttribute[], ValueTask<bool>> canView =
+			(target, path) => CheckReadAsync(() => ps.CanViewAttribute(executor, target, memo, path), token);
 
 		var permitted = new List<SharpAttribute>();
 		foreach (var (attr, source) in results)
 		{
 			token.ThrowIfCancellationRequested();
-			if (await CanReadPatternMatchAsync(obj, attr, source,
-					async () => parentChain ??= await ParentChainAsync(obj, token), holders,
-					(target, parts) => MemoizedAncestorAsync(ancestors, target, parts,
-						() => FetchAncestorAsync(target, parts, knownBySource)),
-					(target, path) => CheckReadAsync(() => ps.CanViewAttribute(executor, target, path), token),
+			if (await CanReadPatternMatchAsync(obj, attr, source, chainOf, holders, fetch, canView,
 					static x => x.LongName, static x => x.IsNoInherit(), token))
 			{
 				permitted.Add(attr);
@@ -589,25 +591,24 @@ public class AttributeService(
 		where T : class
 	{
 		var origin = obj.Object().DBRef;
+		var isBranch = longNameOf(attr).Contains('`');
 		if (source.SameObjectAs(origin))
 		{
-			return await AttributeAncestry.CanReadAsync(attr, source, [origin], origin, fetch,
-				path => canView(obj, path), longNameOf, isNoInherit);
+			return await CanReadOnHolderAsync(obj);
 		}
 
 		if (await HolderAsync(obj, source, holders, token) is AnySharpObject holder
-				&& await AttributeAncestry.CanReadAsync(attr, source, [source], source, fetch,
-					path => canView(holder, path), longNameOf, isNoInherit))
+				&& await CanReadOnHolderAsync(holder))
 		{
 			return true;
 		}
 
-		var segments = longNameOf(attr).Split('`');
-		if (segments.Length == 1)
+		if (!isBranch)
 		{
 			return false;
 		}
 
+		var segments = longNameOf(attr).Split('`');
 		var chain = await chainOf();
 		foreach (var target in chain.TakeWhile(target => !target.SameObjectAs(source)))
 		{
@@ -619,6 +620,14 @@ public class AttributeService(
 
 		return await AttributeAncestry.CanReadAsync(attr, source, chain, origin, fetch,
 			path => canView(obj, path), longNameOf, isNoInherit);
+
+		// The leaf is on the holder, so the holder's own walk ends at its first target, and a flat name
+		// has no prefixes to walk: its walk is the leaf's own test.
+		async ValueTask<bool> CanReadOnHolderAsync(AnySharpObject holder)
+			=> isBranch
+				? await AttributeAncestry.CanReadAsync(attr, source, [source], source, fetch,
+					path => canView(holder, path), longNameOf, isNoInherit)
+				: await canView(holder, [attr]);
 	}
 
 	/// <summary>The object an attribute was found on: <paramref name="obj"/> itself, or one loaded once per call.</summary>
@@ -842,6 +851,16 @@ public class AttributeService(
 	}
 
 	/// <summary>
+	/// A pattern read's matches indexed by the object each was read from, then by long name: the
+	/// ancestor walk's free data, each object vouching only for its own attributes.
+	/// </summary>
+	private static Dictionary<DBRef, Dictionary<string, T>> KnownBySource<TMatch, T>(IEnumerable<TMatch> matches,
+		Func<TMatch, DBRef> sourceOf, Func<TMatch, T> attributeOf, Func<T, string> longNameOf)
+		=> matches
+			.GroupBy(sourceOf)
+			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(attributeOf), longNameOf));
+
+	/// <summary>
 	/// Indexes already-materialised attributes by long name for the ancestor walk.
 	/// Case-insensitive, as attribute names are; last write wins on a duplicate rather
 	/// than throwing the way <c>ToDictionary</c> would.
@@ -953,14 +972,18 @@ public class AttributeService(
 		// the object CanReadPatternMatchAsync names - not whatever subset of the tree the pattern
 		// happened to match.
 		var results = await attributes.ToArrayAsync(cancellationToken);
-		var knownBySource = results
-			.GroupBy(x => x.SourceObject)
-			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
-
 		var ordered = InChainOrder(results, static x => x.SourceObject, static x => x.Attribute.LongName);
+		Dictionary<DBRef, Dictionary<string, LazySharpAttribute>>? knownBySource = null;
 		List<DBRef>? parentChain = null;
 		var ancestors = new Dictionary<(DBRef Target, string Path), LazySharpAttribute?>();
 		var holders = new Dictionary<DBRef, AnySharpObject?>();
+		var memo = new AttributeViewMemo();
+		Func<ValueTask<List<DBRef>>> chainOf = async () => parentChain ??= await ParentChainAsync(obj, cancellationToken);
+		Func<DBRef, string[], ValueTask<LazySharpAttribute?>> fetch = (target, parts) => MemoizedAncestorAsync(ancestors, target, parts,
+			() => FetchLazyAncestorAsync(target, parts,
+				knownBySource ??= KnownBySource(results, static x => x.SourceObject, static x => x.Attribute, static x => x.LongName), cancellationToken));
+		Func<AnySharpObject, LazySharpAttribute[], ValueTask<bool>> canView =
+			(target, path) => CheckReadAsync(() => ps.CanViewAttribute(executor, target, memo, path), cancellationToken);
 
 		foreach (var (attr, source) in ordered)
 		{
@@ -971,11 +994,7 @@ public class AttributeService(
 			// iterator token explicitly to every token-aware read-walk helper.
 			using (budget.Enter())
 			{
-				canRead = await CanReadPatternMatchAsync(obj, attr, source,
-					async () => parentChain ??= await ParentChainAsync(obj, cancellationToken), holders,
-					(target, parts) => MemoizedAncestorAsync(ancestors, target, parts,
-						() => FetchLazyAncestorAsync(target, parts, knownBySource, cancellationToken)),
-					(target, path) => CheckReadAsync(() => ps.CanViewAttribute(executor, target, path), cancellationToken),
+				canRead = await CanReadPatternMatchAsync(obj, attr, source, chainOf, holders, fetch, canView,
 					static x => x.LongName, static x => x.IsNoInherit(), cancellationToken);
 			}
 			if (canRead) yield return attr;

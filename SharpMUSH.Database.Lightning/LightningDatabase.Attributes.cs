@@ -169,9 +169,7 @@ public partial class LightningDatabase
 	private static bool NameMatches(Regex filter, string longName, CancellationToken ct)
 	{
 		ct.ThrowIfCancellationRequested();
-		var budget = ExecutionBudget.Current;
-		budget?.ThrowIfExceeded();
-		var bounded = budget is not null && budget.Remaining < filter.MatchTimeout
+		var bounded = ExecutionBudget.Current?.RemainingOrThrow() < filter.MatchTimeout
 			? SoftcodeRegex.Create(filter.ToString(), filter.Options)
 			: filter;
 		return bounded.IsMatch(longName);
