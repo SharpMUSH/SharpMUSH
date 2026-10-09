@@ -51,6 +51,7 @@ public partial class BBoardsIntegrationTests
 		await WebAppFactoryArg.QueueBarrierAsync();
 		var told = string.Join("\n", Notifications.For(player.DbRef).Skip(before));
 		await Assert.That(told).DoesNotContain("notice(").Because("every message is drawn by notice(), not shown as its call");
+		await Assert.That(told).DoesNotContain("#-1").Because("no function the screens call fails");
 		return told;
 	}
 
