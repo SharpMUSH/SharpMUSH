@@ -146,6 +146,41 @@ public class RadioIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// A frequency's colour is a theme colour, which tone() paints in each listener's own theme, or ansi()
+	/// codes; the default is the info theme colour.
+	/// </summary>
+	[Test]
+	public async Task AFrequencysColourIsAThemeColourOrAnsiCodes()
+	{
+		try
+		{
+			await InstallAsync();
+			var radio = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("radio"))
+				.Single(o => o.Ref == "radio").Objid;
+			async Task<string> Paint(string colour) =>
+				(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"u({radio}/FUN`PAINT,{colour},Police)")))!
+					.Message!.Render(MarkupFormat.Html);
+
+			await Assert.That(await Paint("success")).Contains("tone-success").And.Contains("Police");
+			await Assert.That(await Paint("hg")).DoesNotContain("tone-").And.Contains("Police");
+			await Assert.That(await Paint("")).IsEqualTo("Police");
+			await Assert.That(await God($"think [get({radio}/DATA`COLOR)]")).IsEqualTo("info");
+
+			var admin = await Player("RadColA", "radio-admin");
+			var ann = await Player("RadColAnn");
+			await Assert.That(await As(admin, "+radio/create Tower")).Contains("Created Tower.");
+			await As(ann, "+radio/join Tower");
+			await Assert.That(await As(ann, "+radio/color Tower=success")).Contains("You see Tower like this now.");
+			await Assert.That(await As(ann, "+radio/color Tower=hg")).Contains("You see Tower like this now.");
+			await Assert.That(await As(ann, "+radio/color Tower=")).Contains("You see Tower like this now.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	[Test]
 	public async Task ModeratorsRestrictAndLocksAndListsDecideWhoMayTuneIn()
 	{

@@ -782,7 +782,7 @@ public class PlusHelpIntegrationTests
 		await PutLibrarianInMasterRoomAsync();
 		var said = Joined(await RunAs(await ReaderAsync(), "+help write"));
 
-		await Assert.That(said).Contains("[ansi(hc,...)] and [name(%#)] both work");
+		await Assert.That(said).Contains("[tone(info,...)] and [name(%#)] both work");
 		await Assert.That(said).Contains("%% shows a %.");
 		await Assert.That(said).Contains(@"stores").And.Contains(@"\[write\]");
 	}

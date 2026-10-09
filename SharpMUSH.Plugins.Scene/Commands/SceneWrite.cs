@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -26,13 +27,13 @@ public static class SceneWrite
 
 		if (string.IsNullOrEmpty(ownerDbref))
 		{
-			await notifyService.Notify(executor, "SCENE: /create needs an owner dbref.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/create needs an owner dbref.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var scene = await sceneService.CreateSceneAsync(roomDbref, ownerDbref, title);
 		await notifyService.Notify(executor,
-			$"SCENE: Created scene #{scene.Id} owned by {scene.OwnerName}.");
+			SceneCommandHelper.Notice($"Created scene #{scene.Id} owned by {scene.OwnerName}.", NoticeKind.Ok));
 		return MarkupText.Plain(scene.Id);
 	}
 
@@ -48,20 +49,20 @@ public static class SceneWrite
 		var (sceneId, key) = SceneCommandHelper.SplitIdKey(lhs);
 		if (string.IsNullOrEmpty(key))
 		{
-			await notifyService.Notify(executor, "SCENE: /set needs <sceneId>/<key>=<value>.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("/set needs <sceneId>/<key>=<value>.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(sceneService, sceneId);
 		if (await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText()) is not Contracts.Scene scene)
 		{
-			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
 		}
 
 		await SceneRoomRefresh.AfterSetAsync(parser, key!, roomBefore, scene);
 
-		await notifyService.Notify(executor, $"SCENE: #{scene.Id} {key} set.");
+		await notifyService.Notify(executor, SceneCommandHelper.Notice($"#{scene.Id} {key} set.", NoticeKind.Ok));
 		return MarkupText.Plain(scene.Id);
 	}
 }

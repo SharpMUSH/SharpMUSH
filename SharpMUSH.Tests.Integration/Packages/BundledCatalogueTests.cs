@@ -103,11 +103,11 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task UpdateCheck_ForAPackageInstalledAtFirstBoot_AnswersFromTheImage()
 	{
-		if (await Registry.GetInstalledPackageAsync("common-functions") is not InstalledPackageRecord installed)
-			throw new InvalidOperationException("common-functions installs at first boot, but is not installed.");
+		if (await Registry.GetInstalledPackageAsync("plus-help") is not InstalledPackageRecord installed)
+			throw new InvalidOperationException("plus-help installs at first boot, but is not installed.");
 		await Assert.That(BundledPackages.IsCatalogueSource(installed.SourceRepo)).IsTrue();
 
-		var info = Value(await Controller().CheckForUpdate("common-functions", CancellationToken.None));
+		var info = Value(await Controller().CheckForUpdate("plus-help", CancellationToken.None));
 
 		await Assert.That(info.InstalledVersion).IsEqualTo(installed.Version);
 		await Assert.That(info.LatestVersion).IsEqualTo(installed.Version);

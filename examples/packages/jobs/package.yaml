@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -511,7 +511,7 @@ objects:
       # joined with %r and split on a newline, so a title holding a | stays one cell; the title wraps and
       # every other column is shown whole or, on a narrow screen, left out (Bucket and Updated first).
       FUN`TABLE: |-
-        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4%r5),min,json(string,%r%r12),priority,json(string,1%r2%r1%r1%r2),grow,json(string,%r%r1)),>[ansi(h,#)]%r[iter(%0,[if(u({{jobs}}/FUN`UNREAD,%i0,%1),*)][get(%i0/NUM)],,%r)],[ansi(h,Bucket)]%r[iter(%0,name(get(%i0/BUCKET)),,%r)],[ansi(h,Title)]%r[iter(%0,edit(get(%i0/TITLE),%r,%b),,%r)],[ansi(h,Status)]%r[iter(%0,if(cand(setr(_w,u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1)),u({{jobs}}/FUN`IS`OVERDUE,%i0)),ansi(hr,Overdue),u({{jobs}}/FUN`STATE`TEXT,%i0,%q<_w>)),,%r)],[ansi(h,Updated)]%r[iter(%0,u({{jobs}}/FUN`DATE,get(%i0/[if(u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)])),,%r)])]
+        [datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r2%r4%r5),min,json(string,%r%r12),priority,json(string,1%r2%r1%r1%r2),grow,json(string,%r%r1)),>[ansi(h,#)]%r[iter(%0,[if(u({{jobs}}/FUN`UNREAD,%i0,%1),tone(info,*))][get(%i0/NUM)],,%r)],[ansi(h,Bucket)]%r[iter(%0,name(get(%i0/BUCKET)),,%r)],[ansi(h,Title)]%r[iter(%0,edit(get(%i0/TITLE),%r,%b),,%r)],[ansi(h,Status)]%r[iter(%0,if(cand(setr(_w,u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1)),u({{jobs}}/FUN`IS`OVERDUE,%i0)),tone(error,Overdue),u({{jobs}}/FUN`STATE`TEXT,%i0,%q<_w>)),,%r)],[ansi(h,Updated)]%r[iter(%0,u({{jobs}}/FUN`DATE,get(%i0/[if(u({{jobs}}/FUN`CAN`WORK,get(%i0/BUCKET),%1),UPDATED`AT,PUBLIC`AT)])),,%r)])]
       # Every screen is a box() with no sides, corners or tees, as +help's and +wiki's are: a titled line
       # across the top, dividers and a bottom line across the whole width, and nothing beside the text, so
       # a reply copied from a terminal carries no |.
@@ -568,7 +568,7 @@ objects:
         [setq(_s,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))][setq(_nl,u({{jobs}}/FUN`NUMBERED,%0,%q<_s>))][setq(_v,squish(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(u({{jobs}}/FUN`ENTRY`VISIBLE,%0,%i0,%q<_s>,%3),%i0))))][if(strmatch(%3,last:*),setq(_v,revwords(extract(revwords(%q<_v>),1,after(%3,:)))))][box([u({{jobs}}/FUN`SHOW`FIELDS,%0,%1,%q<_s>)][iter(%q<_v>,%r[u({{jobs}}/FUN`ENTRY,%0,%i0,%1,max(10,%2),member(%q<_nl>,%i0))],%b,)]%r[rule()]%r+job/reply [get(%0/NUM)]=<text> answers,Job [get(%0/NUM)]: [get(%0/TITLE)],,u({{jobs}}/FUN`FRAME))]
       # Job %0's fields for person %1; %2 is 1 for someone who works its bucket.
       FUN`SHOW`FIELDS: |-
-        [setq(_st,[u({{jobs}}/FUN`STATE`TEXT,%0,%2)][if(cand(%2,u({{jobs}}/FUN`IS`OVERDUE,%0)),%b[ansi(hr,Overdue)])])][setq(_fi,[u({{jobs}}/FUN`WHEN,get(%0/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%0/FILED`BY),%0,%1)])][if(%2,fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Due,if(isint(get(%0/DUE)),u({{jobs}}/FUN`WHEN,get(%0/DUE)),None),Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Watchers,u({{jobs}}/FUN`NAMES,%0,%1,WATCHER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)),fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)))]
+        [setq(_st,[u({{jobs}}/FUN`STATE`TEXT,%0,%2)][if(cand(%2,u({{jobs}}/FUN`IS`OVERDUE,%0)),%b[tone(error,Overdue)])])][setq(_fi,[u({{jobs}}/FUN`WHEN,get(%0/FILED`AT))] by [u({{jobs}}/FUN`WHO,get(%0/FILED`BY),%0,%1)])][if(%2,fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Due,if(isint(get(%0/DUE)),u({{jobs}}/FUN`WHEN,get(%0/DUE)),None),Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Watchers,u({{jobs}}/FUN`NAMES,%0,%1,WATCHER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)),fields(,Bucket,name(get(%0/BUCKET)),Status,%q<_st>,Priority,capstr(get(%0/PRIORITY)),Filed,%q<_fi>,Handlers,u({{jobs}}/FUN`NAMES,%0,%1,HANDLER),Helpers,u({{jobs}}/FUN`NAMES,%0,%1,HELPER)))]
 
       # ---- guards ---------------------------------------------------------------
       # The job numbered %q<lhs>, as %q<jo>, %q<n>, its bucket %q<b> and %q<staff>. A job the person may

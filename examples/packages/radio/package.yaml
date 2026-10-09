@@ -1,6 +1,6 @@
 format: 1.2
 package: radio
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -62,9 +62,10 @@ objects:
         role^wizard|perm^softcode.radio.admin
       DATA`LOCK`ADMIN: |-
         role^wizard|perm^softcode.radio.admin
-      # The colour of a frequency's name for a listener who has chosen none, in ansi() codes.
+      # The colour of a frequency's name for a listener who has chosen none: a theme colour tone() takes,
+      # which each listener sees in their own @theme, or ansi() codes.
       DATA`COLOR: |-
-        h
+        info
       # How many lines +radio/recall shows when no number is given, and the most it shows.
       DATA`RECALL: |-
         50
@@ -143,7 +144,11 @@ objects:
       # %0 id, %1 speaker objid, %2 the name the line is under, %3 style, %4 text, %5 who reads it. The
       # frequency's name in the reader's colour, then the speaker's title on it.
       FUN`LINE: |-
-        [setq(_c,firstof(get({{radio}}/P`[u({{radio}}/FUN`KEY,%5)]`COLOR`%0),get({{radio}}/DATA`COLOR)))][setq(_t,get({{radio}}/P`[u({{radio}}/FUN`KEY,%1)]`TITLE`%0))][setq(_n,[if(strlen(%q<_t>),%q<_t>%b)]%2)]<[ansi(%q<_c>,u({{radio}}/FUN`NAME,%0))]> [switch(%3,pose,%q<_n> %4,semipose,%q<_n>%4,emit,%4,announce,%4,%q<_n> says\, "%4")]
+        [setq(_c,firstof(get({{radio}}/P`[u({{radio}}/FUN`KEY,%5)]`COLOR`%0),get({{radio}}/DATA`COLOR)))][setq(_t,get({{radio}}/P`[u({{radio}}/FUN`KEY,%1)]`TITLE`%0))][setq(_n,[if(strlen(%q<_t>),%q<_t>%b)]%2)]<[u({{radio}}/FUN`PAINT,%q<_c>,u({{radio}}/FUN`NAME,%0))]> [switch(%3,pose,%q<_n> %4,semipose,%q<_n>%4,emit,%4,announce,%4,%q<_n> says\, "%4")]
+      # %0 a colour, %1 text — the text in a theme colour when %0 names one (tone()), so each reader sees it in
+      # their own @theme, and in ansi() codes otherwise. tone() is asked first: "info" also reads as ansi() codes.
+      FUN`PAINT: |-
+        [if(strmatch(setr(_p,tone(%0,%1)),#-*),ansi(%0,%1),%q<_p>)]
       # The feed's tie-in: each listener's copy of a line. %0 text, %1 listener, %2 speaker, %3 style, %4 id,
       # %5 the alterego it was sent under.
       FEED`RADIO`FORMAT: |-
@@ -181,7 +186,7 @@ objects:
       INC`ALTEREGO: |-
         @include {{radio}}/INC`NEED`JOINED; @assert cand(lte(strlen(%q<rhs>),30),not(strmatch(%q<rhs>,*/*)))=@pemit %#=[notice(RADIO,An alterego is up to 30 characters with no /.,warn)]; &P`%q<me>`ALTEREGO`%q<id> {{radio}}=%q<rhs>; @pemit %#=[notice(RADIO,if(strlen(%q<rhs>),You speak on [u({{radio}}/FUN`NAME,%q<id>)] as %q<rhs> now.,You speak on [u({{radio}}/FUN`NAME,%q<id>)] under your own name now.),ok)]
       INC`COLOR: |-
-        @include {{radio}}/INC`NEED`JOINED; @assert cor(not(strlen(%q<rhs>)),not(strmatch(ansi(%q<rhs>,x),#-*)))=@pemit %#=[notice(RADIO,'%q<rhs>' is not a colour. See help ansi().,warn)]; &P`%q<me>`COLOR`%q<id> {{radio}}=%q<rhs>; @pemit %#=[notice(RADIO,You see [ansi(firstof(%q<rhs>,get({{radio}}/DATA`COLOR)),u({{radio}}/FUN`NAME,%q<id>))] like this now.,ok)]
+        @include {{radio}}/INC`NEED`JOINED; @assert cor(not(strlen(%q<rhs>)),not(strmatch(u({{radio}}/FUN`PAINT,%q<rhs>,x),#-*)))=@pemit %#=[notice(RADIO,'%q<rhs>' is not a colour. Use a theme colour such as info or success\, or ansi() codes.,warn)]; &P`%q<me>`COLOR`%q<id> {{radio}}=%q<rhs>; @pemit %#=[notice(RADIO,You see [u({{radio}}/FUN`PAINT,firstof(%q<rhs>,get({{radio}}/DATA`COLOR)),u({{radio}}/FUN`NAME,%q<id>))] like this now.,ok)]
       INC`EXAMINE: |-
         @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; think [setq(ad,u({{radio}}/FUN`IS`ADMIN,%q<id>,%#))][setq(on,feedwho(radio/%q<id>,active))]; @pemit %#=[rule(u({{radio}}/FUN`NAME,%q<id>))]%r[fields(,Category,firstof(get({{radio}}/F`%q<id>`CATEGORY),none),About,firstof(get({{radio}}/F`%q<id>`DESC),none),You,switch(u({{radio}}/FUN`STATE,%q<id>,%#),on,tuned in,gagged,tuned in and gagged,not tuned in),Title,firstof(get({{radio}}/P`%q<me>`TITLE`%q<id>),none),Alterego,firstof(get({{radio}}/P`%q<me>`ALTEREGO`%q<id>),none),Listening,u({{radio}}/FUN`NAMES,iter(%q<on>,if(hasflag(%i0,connected),%i0))),Admins,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`ADMIN)),Moderators,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MODERATOR)),Members,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MEMBER)))][if(%q<ad>,%r[fields(,Talk lock,firstof(get({{radio}}/F`%q<id>`LOCK`TALK),everyone),Moderate lock,firstof(get({{radio}}/F`%q<id>`LOCK`MODERATE),get({{radio}}/DATA`LOCK`MODERATE)),Admin lock,firstof(get({{radio}}/F`%q<id>`LOCK`ADMIN),get({{radio}}/DATA`LOCK`ADMIN)),Keeps,feedinfo(radio/%q<id>,max_messages) lines)])]%r[rule()]
       INC`RECALL: |-
@@ -278,7 +283,7 @@ objects:
         - `+radio/gag <frequency>` stops what you hear on it until you `+radio/ungag` it or disconnect. `+radio/gag all` gags every frequency.
         - `+radio/title <frequency>=<title>` puts a title before your name on that frequency.
         - `+radio/alterego <frequency>=<name>` speaks under another name there, such as a callsign. What you said keeps that name in the recall.
-        - `+radio/color <frequency>=<colour>` shows that frequency's name in a colour of your choosing, such as `hg`. See `help ansi\(\)`.
+        - `+radio/color <frequency>=<colour>` shows that frequency's name in a colour of your choosing: a theme colour such as `info`, `primary` or `success`, which follows your `@theme`, or ansi() codes such as `hg`. See `help tone\(\)` and `help ansi\(\)`.
 
         Leave the part after `=` empty to clear a setting.
       HELP`RADIO`MODERATORS: |-

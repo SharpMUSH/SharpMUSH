@@ -90,7 +90,7 @@ objects:                        # required — at least one object
         value: |-
           $+bbread *:@pemit %#=[u({{bbs_parent}}/FN_READ,%0)]
         flags: []
-      FN_HEADER: "[repeat(=,78)]"   # shorthand: quoted one-liners only
+      FN_HEADER: "[rule(Board)]"    # shorthand: quoted one-liners only
 
   - ref: bbs_parent
     type: thing
@@ -121,9 +121,8 @@ The escaping rules are the language's, not the package format's — see the
 
 Two places it bites a manifest in particular:
 
-- A bare `(` inside `header(...)` / `footer(...)` / `line(...)` closes the call
-  early, so the title truncates at the paren and the `)` leaks out after the
-  rule.
+- A bare `(` inside a `rule(...)` or `box(...)` title closes the call
+  early, so the title truncates at the paren and the `)` leaks out after it.
 - A `+help` topic body is evaluated before it is rendered, so
   `+help/list [<source>]` documents a syntax with no brackets in it. Write
   `%[<source>%]` or `\[<source>\]`.
@@ -489,7 +488,7 @@ network, no configured remote. Two different decisions live there:
   catalogue at any time.
 - **Installed at first boot**: a new game gets it without being asked.
   `http-handler`, `profile-handler`, `room-contents`, `comm-feed`,
-  `common-functions`, `plus-help` and `scene` are; `wiki-reader` ships
+  `plus-help` and `scene` are; `wiki-reader` ships
   available and unenabled, because it puts a `+wiki` object in the master room.
 
 Both are declared in `SharpMUSH.Server/Services/BundledPackages.cs`, and adding

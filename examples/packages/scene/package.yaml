@@ -1,6 +1,6 @@
 format: 1.2
 package: scene
-version: 1.5.1
+version: 1.5.2
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -48,7 +48,7 @@ permissions:
 # scene… functions; all data-writes use @scene/* commands (never side-effect fns).
 #
 # Attribute organization follows the project FUN`/CMD`/DATA`/INCLUDE` tree
-# convention (see the common-functions and http-handler packages):
+# convention (see the plus-help package):
 #   DATA`*     — config/constant knobs (reads, replaces a SceneOptions config)
 #   FUN`*      — pure reads / guards (called via u())
 #   CMD`*      — player verbs + capture $-commands (writes go through @scene/*)

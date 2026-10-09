@@ -199,14 +199,14 @@ public class GameFeatureServiceTests
 	[Test]
 	public async Task RemovingAFirstBootPackage_IsRemembered_UntilItIsInstalledAgain()
 	{
-		var game = new Game("common-functions", "plus-help", "scene");
+		var game = new Game("plus-help", "scene");
 		var features = game.Features();
 
-		await features.ApplyPackagesAsync(["plus-help", "common-functions"], CancellationToken.None);
+		await features.ApplyPackagesAsync(["plus-help"], CancellationToken.None);
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
 			.IsEquivalentTo(["scene"]);
 
-		await features.ApplyPackagesAsync(["plus-help", "common-functions", "scene"], CancellationToken.None);
+		await features.ApplyPackagesAsync(["plus-help", "scene"], CancellationToken.None);
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
 			.IsEmpty();
 	}

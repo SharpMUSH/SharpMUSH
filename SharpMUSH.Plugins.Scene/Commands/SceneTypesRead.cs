@@ -18,7 +18,7 @@ public static class SceneTypesRead
 	{
 		if (await SceneLogger.FindAsync(parser.ServiceProvider) is not AnySharpObject)
 		{
-			await notifyService.Notify(executor, "SCENE: The scene package is not installed, so there are no pose types.");
+			await notifyService.Notify(executor, SceneCommandHelper.Notice("The scene package is not installed, so there are no pose types.", NoticeKind.Warn));
 			return MarkupText.Empty;
 		}
 

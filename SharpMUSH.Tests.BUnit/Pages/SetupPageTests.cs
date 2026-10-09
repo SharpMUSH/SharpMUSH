@@ -48,7 +48,7 @@ file sealed class SetupApiHandler(
 	private bool? _wizardPending = wizard;
 	private int? _eventHandler;
 	private int? _httpHandler = 8;
-	private readonly HashSet<string> _installed = ["http-handler", "profile-handler", "common-functions", "plus-help", "scene"];
+	private readonly HashSet<string> _installed = ["http-handler", "profile-handler", "plus-help", "scene"];
 
 	/// <summary>What api/setup/wizard/handlers/{kind}/clashes answers for the HTTP handler; none by default.</summary>
 	public List<object> HttpClashes { get; } = [];
@@ -208,10 +208,9 @@ file sealed class SetupApiHandler(
 			Package("http-handler", "http", []),
 			Package("profile-handler", "http", ["http-handler"]),
 			Package("room-contents", "event", [], recommended: true),
-			Package("common-functions", null, []),
 			Package("plus-help", null, []),
-			Package("scene", null, ["plus-help", "common-functions"]),
-			Package("wiki-reader", null, ["plus-help", "common-functions"]),
+			Package("scene", null, ["plus-help"]),
+			Package("wiki-reader", null, ["plus-help"]),
 		},
 	};
 
@@ -440,7 +439,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		{
 			var installed = sent.RootElement.GetProperty("installed").EnumerateArray().Select(e => e.GetString()!).ToList();
 			await Assert.That(installed).IsEquivalentTo(
-				["http-handler", "profile-handler", "room-contents", "common-functions", "plus-help", "wiki-reader"]);
+				["http-handler", "profile-handler", "room-contents", "plus-help", "wiki-reader"]);
 		}
 		await Assert.That(handler.FinishCalls).IsEqualTo(1);
 		await Assert.That(handler.StarterWikiCalls).IsEqualTo(1)

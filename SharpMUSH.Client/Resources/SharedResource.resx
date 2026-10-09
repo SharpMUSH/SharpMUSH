@@ -4952,12 +4952,6 @@
   <data name="AdmSetupPkgCommFeedDesc" xml:space="preserve">
     <value>Gives the Play page's sidebar a player's channels, and each channel line and page to exactly the players who received it.</value>
   </data>
-  <data name="AdmSetupPkgCommonFunctionsTitle" xml:space="preserve">
-    <value>Common functions</value>
-  </data>
-  <data name="AdmSetupPkgCommonFunctionsDesc" xml:space="preserve">
-    <value>header(), footer() and line(): the rules and titles the other packages draw their output with.</value>
-  </data>
   <data name="AdmSetupPkgPlusHelpTitle" xml:space="preserve">
     <value>+help</value>
   </data>
