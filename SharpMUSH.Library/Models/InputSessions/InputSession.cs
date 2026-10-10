@@ -13,4 +13,5 @@ public sealed record InputSession(
 	DBRef CallbackTarget,
 	DBRef CallbackOwner,
 	string CallbackAttribute,
+	string Exit,
 	DateTimeOffset ExpiresAt);

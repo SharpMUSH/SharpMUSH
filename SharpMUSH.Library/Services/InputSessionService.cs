@@ -32,6 +32,7 @@ public sealed class InputSessionService : IInputSessionService
 	public const string NotActive = "#-1 NO ACTIVE INPUT SESSION";
 	public const string PendingTimeout = "#-1 INPUT SESSION TIMEOUT CALLBACK IS PENDING";
 	public const string InvalidTimeout = "#-1 INPUT TIMEOUT MUST BE BETWEEN 1 AND 3600 SECONDS";
+	public const string MissingExit = "#-1 INPUT NEEDS AN EXIT STRING";
 
 	private sealed class Entry(InputSession session)
 	{
@@ -180,8 +181,10 @@ public sealed class InputSessionService : IInputSessionService
 		}
 	}
 
-	public async ValueTask<string?> StartAsync(IMUSHCodeParser parser, DBRef target, string attribute, MString prompt, TimeSpan timeout)
+	public async ValueTask<string?> StartAsync(IMUSHCodeParser parser, DBRef target, string attribute, MString prompt, string exit, TimeSpan timeout)
 	{
+		exit = exit.Trim();
+		if (exit.Length == 0) return MissingExit;
 		if (timeout < TimeSpan.FromSeconds(1) || timeout > TimeSpan.FromHours(1)) return InvalidTimeout;
 		var state = parser.CurrentState;
 		if (state.Handle is not { } handle || _connections.Get(handle) is not { Ref: { } character } connection
@@ -202,7 +205,7 @@ public sealed class InputSessionService : IInputSessionService
 		HandlePublicationLane.Slot? place = null;
 		var session = new InputSession(Guid.NewGuid(), connection, connection.Metadata.GetValueOrDefault("SessionId"),
 			player.Object().DBRef, actor.Object().DBRef, owner, source.Object().DBRef,
-			callbackOwner, attribute, _time.GetUtcNow() + timeout);
+			callbackOwner, attribute, exit, _time.GetUtcNow() + timeout);
 		if (!session.Character.IsObjid || !session.Executor.IsObjid || !session.CallbackTarget.IsObjid
 			|| !session.Owner.IsObjid || !session.CallbackOwner.IsObjid) return InvalidContext;
 		lock (_gate)
@@ -462,7 +465,8 @@ public sealed class InputSessionService : IInputSessionService
 			await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionInputTooLarge");
 			return null;
 		}
-		if (timeout) Discard(session);
+		var exit = !timeout && IsExit(session, input);
+		if (timeout || exit) Discard(session);
 		var state = ParserState.RootFor(session.Executor) with
 		{
 			Executor = session.Executor,
@@ -475,11 +479,15 @@ public sealed class InputSessionService : IInputSessionService
 				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit),
 			EnvironmentRegisters = new Dictionary<string, CallState>
 			{
-				["0"] = new(input), ["1"] = new(timeout ? "timeout" : "input")
+				["0"] = new(input), ["1"] = new(timeout ? "timeout" : exit ? "exit" : "input")
 			}
 		};
 		return await parser.FromState(state).CommandListParse(callback.Last().Value);
 	}
+
+	/// <summary>Whether <paramref name="input"/> is the session's exit line: the whole line, trimmed, ignoring case.</summary>
+	private static bool IsExit(InputSession session, MString input)
+		=> input.ToPlainText().Trim().Equals(session.Exit, StringComparison.OrdinalIgnoreCase);
 
 	private async ValueTask<CallState?> Revoke(InputSession session)
 	{

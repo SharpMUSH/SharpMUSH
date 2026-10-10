@@ -10,6 +10,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -190,7 +191,7 @@ public class InputSessionCommandTests
 				actor, actor, "NESTEDBODY", MarkupText.Plain(name));
 			await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(
 				actor, actor, "CALLBACK", MarkupText.Plain(callback));
-			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,done,120");
 			var session = Sessions.GetCapturing(player.Handle);
 			await Assert.That(session).IsNotNull();
 			var result = await Sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));
@@ -213,7 +214,7 @@ public class InputSessionCommandTests
 		try
 		{
 			await Command(player.Handle, "&CALLBACK me=&ANSWER me=%0; &REASON me=%1");
-			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,done,120");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 			const string payload = "[setq(unsafe,yes)];&ATTACK me=bad;%q<unsafe>\r\nnext line";
 			await Assert.That((await Input(player.Handle, payload)).Accepted).IsTrue();
@@ -247,7 +248,7 @@ public class InputSessionCommandTests
 		try
 		{
 			await Command(player.Handle, "&CALLBACK me=&SET me=[listq()]|[setq(LOCAL,%0)]|%q<LOCAL>|[setr(OTHER,%0)]|[sort(listq())]; &READ me=%q<LOCAL>|[unsetq()]|[listq()]; think setq(LEFTOVER,secret)");
-			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,done,120");
 			foreach (var reply in new[] { "first", "second" })
 			{
 				await Assert.That((await Input(player.Handle, reply)).Accepted).IsTrue();
@@ -272,7 +273,7 @@ public class InputSessionCommandTests
 		{
 			await Command(player.Handle, "&COUNT me=0");
 			await Command(player.Handle, "&CALLBACK me=&COUNT me=inc(get(me/COUNT)); &ANSWER me=%0");
-			await Command(player.Handle, "@input me/CALLBACK=Lines:,120");
+			await Command(player.Handle, "@input me/CALLBACK=Lines:,done,120");
 			await Input(player.Handle, "first");
 			await Input(player.Handle, "&ATTACK me=bad");
 			await WaitFor(player.DbRef, "COUNT", "2");
@@ -288,13 +289,52 @@ public class InputSessionCommandTests
 	}
 
 	[Test]
+	public async Task ExitLineEndsTheSessionAndRunsTheCallbackWithExit()
+	{
+		var player = await Player();
+		try
+		{
+			await Command(player.Handle, "&CALLBACK me=&ANSWER me=%0; &REASON me=%1");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,.done,120");
+			await Input(player.Handle, "first");
+			await WaitFor(player.DbRef, "REASON", "input");
+			await Input(player.Handle, "  .DONE ");
+			await WaitFor(player.DbRef, "REASON", "exit");
+			await Assert.That(await Read(player.DbRef, "ANSWER")).IsEqualTo("  .DONE ")
+				.Because("the exit line reaches the callback as typed");
+			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNull()
+				.Because("the session ends on the exit line, before its callback runs");
+			await Input(player.Handle, "&ORDINARY me=restored");
+			await WaitFor(player.DbRef, "ORDINARY", "restored");
+		}
+		finally { await Connections.Disconnect(player.Handle); }
+	}
+
+	[Test]
+	[Arguments("@input/start me/CALLBACK=Answer:")]
+	[Arguments("@input/start me/CALLBACK=Answer:,")]
+	[Arguments("@input/start me/CALLBACK=Answer:,%b,120")]
+	public async Task StartWithoutAnExitStringIsRefused(string command)
+	{
+		var player = await Player();
+		try
+		{
+			await Command(player.Handle, "&CALLBACK me=think unreachable");
+			var result = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain(command));
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(InputSessionService.MissingExit);
+			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNull();
+		}
+		finally { await Connections.Disconnect(player.Handle); }
+	}
+
+	[Test]
 	public async Task TimeoutWorkerEndsCaptureAndRunsItsAdmittedCallback()
 	{
 		var player = await Player();
 		try
 		{
 			await Command(player.Handle, "&CALLBACK me=&REASON me=%1");
-			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,1");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,done,1");
 			await WaitFor(player.DbRef, "REASON", "timeout");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNull();
 		}
@@ -308,7 +348,7 @@ public class InputSessionCommandTests
 		try
 		{
 			await Command(player.Handle, "&CALLBACK me=&REASON me=%1");
-			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,3600");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,done,3600");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 			await Factory.Services.GetRequiredService<IMediator>().Send(new AdmitCommandListRequest(
 				MarkupText.Plain($"@input/rescue {player.Name}; &RESCUED {player.DbRef}=%>"),
@@ -329,7 +369,7 @@ public class InputSessionCommandTests
 		try
 		{
 			await Command(player.Handle, "&CALLBACK me=&REASON me=%1");
-			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,3600");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,done,3600");
 			await Command(other.Handle, $"@input/rescue {player.Name}");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 		}
@@ -344,10 +384,10 @@ public class InputSessionCommandTests
 		try
 		{
 			await Command(other.Handle, "&CALLBACK me=think forbidden");
-			await Command(player.Handle, $"@input/start {other.DbRef}/CALLBACK=Answer:");
+			await Command(player.Handle, $"@input/start {other.DbRef}/CALLBACK=Answer:,done");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNull();
 			await Command(player.Handle, "&CALLBACK me=think allowed");
-			await Command(player.Handle, "@input/start me/CALLBACK=Answer:");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,done");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 		}
 		finally { await Connections.Disconnect(player.Handle); await Connections.Disconnect(other.Handle); }
@@ -369,7 +409,7 @@ public class InputSessionCommandTests
 				Caller = player.DbRef,
 				Handle = player.Handle
 			});
-			await callbackParser.CommandListParse(MarkupText.Plain("@input/start me/CALLBACK=Answer:,120"));
+			await callbackParser.CommandListParse(MarkupText.Plain("@input/start me/CALLBACK=Answer:,done,120"));
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 			await Command(player.Handle, $"@halt {target}");
 			await Input(player.Handle, "must not run");
@@ -389,6 +429,6 @@ public class InputSessionCommandTests
 		var attribute = typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Input")!.GetCustomAttribute<SharpCommandAttribute>()!;
 		await Assert.That(attribute.Name).IsEqualTo("@INPUT");
 		await Assert.That(attribute.Switches.SequenceEqual(new[] { "START", "PROMPT", "CANCEL", "RESCUE" })).IsTrue();
-		await Assert.That(attribute.ParameterNames.SequenceEqual(new[] { "object/attribute", "prompt", "timeout-seconds" })).IsTrue();
+		await Assert.That(attribute.ParameterNames.SequenceEqual(new[] { "object/attribute", "prompt", "exit", "timeout-seconds" })).IsTrue();
 	}
 }

@@ -137,7 +137,7 @@ public class GuestOutputLimitTests
 			Handle = player.Handle,
 			ConnectionSessionId = ConnectionService.Get(player.Handle)!.Metadata.GetValueOrDefault("SessionId")
 		});
-		await Assert.That(await sessions.StartAsync(starter, obj.Object().DBRef, "CALLBACK", MarkupText.Plain("Reply:"),
+		await Assert.That(await sessions.StartAsync(starter, obj.Object().DBRef, "CALLBACK", MarkupText.Plain("Reply:"), "done",
 			TimeSpan.FromMinutes(2))).IsNull();
 		var session = sessions.GetCapturing(player.Handle)!;
 		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(player.DbRef);

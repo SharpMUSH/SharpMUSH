@@ -381,6 +381,12 @@ public partial class BBoardsIntegrationTests
 			await TypedUntil(mira, $"+bbreader {post}", "Read me with keys.");
 			await TypedUntil(mira, "c From the reader.", "Comment [1]");
 			await TypedUntil(mira, "?", "Reader keys");
+			await TypedUntil(mira, "c", "Every line is text now.");
+			// While writing, q is a line of text: the session's exit line is .toss, so . still posts.
+			await Typed(mira, "q");
+			await TypedUntil(mira, ".", "Comment [2]");
+			await TypedUntil(mira, "c", "Every line is text now.");
+			await TypedUntil(mira, " .TOSS", "Dropped.");
 			await TypedUntil(mira, "q", "Left the reader.");
 
 			await Assert.That(await As(mira, $"+bbread {post}")).Contains("From the reader.");

@@ -18,7 +18,7 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@INPUT", Switches = ["START", "PROMPT", "CANCEL", "RESCUE"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		SingleArgumentSwitches = ["PROMPT"], Output = CommandOutput.Value, MinArgs = 0, MaxArgs = 3, ParameterNames = ["object/attribute", "prompt", "timeout-seconds"])]
+		SingleArgumentSwitches = ["PROMPT"], Output = CommandOutput.Value, MinArgs = 0, MaxArgs = 4, ParameterNames = ["object/attribute", "prompt", "exit", "timeout-seconds"])]
 	public async ValueTask<Option<CallState>> Input(IMUSHCodeParser parser, SharpCommandAttribute _)
 	{
 		var sessions = parser.ServiceProvider.GetRequiredService<IInputSessionService>();
@@ -35,15 +35,17 @@ public partial class Commands
 		var separator = path.IndexOf('/');
 		if (separator < 1 || separator == path.Length - 1 || !arguments.TryGetValue("1", out var prompt))
 			return await InputError(parser, InputSessionService.InvalidCallback);
+		var exit = arguments.GetValueOrDefault("2")?.Message.ToPlainText().Trim() ?? "";
+		if (exit.Length == 0) return await InputError(parser, InputSessionService.MissingExit);
 		var seconds = 60;
-		if (arguments.TryGetValue("2", out var timeout)
+		if (arguments.TryGetValue("3", out var timeout)
 			&& (!int.TryParse(timeout.Message.Text, NumberStyles.None, CultureInfo.InvariantCulture, out seconds) || seconds is < 1 or > 3600))
 			return await InputError(parser, InputSessionService.InvalidTimeout);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, path[..separator], LocateFlags.All) switch
 		{
 			AnySharpObject target => await InputResult(parser, await sessions.StartAsync(parser, target.Object().DBRef,
-				path[(separator + 1)..], prompt.Message, TimeSpan.FromSeconds(seconds))),
+				path[(separator + 1)..], prompt.Message, exit, TimeSpan.FromSeconds(seconds))),
 			Error<CallState> error => error.Value
 		};
 	}

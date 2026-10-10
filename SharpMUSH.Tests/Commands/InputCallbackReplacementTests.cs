@@ -66,8 +66,8 @@ public class InputCallbackReplacementTests
 			var actor = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 			await Get<IAttributeService>().SetAttributeAsync(actor, actor, "REPLACEMENT", MarkupText.Plain("think next"));
 			await Get<IAttributeService>().SetAttributeAsync(actor, actor, "EXTERNAL", MarkupText.Plain("think unrelated"));
-			await Get<IAttributeService>().SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain($"@input/start me/REPLACEMENT=Next:,120; {finish}"));
-			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=First:,120"));
+			await Get<IAttributeService>().SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain($"@input/start me/REPLACEMENT=Next:,done,120; {finish}"));
+			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=First:,done,120"));
 			var session = sessions.GetCapturing(player.Handle)!;
 			await Assert.That(session).IsNotNull();
 			if (timeout)
@@ -82,7 +82,7 @@ public class InputCallbackReplacementTests
 			Guid? external = null;
 			if (outcome == "external")
 			{
-				await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/EXTERNAL=Unrelated:,120"));
+				await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/EXTERNAL=Unrelated:,done,120"));
 				external = sessions.GetCapturing(player.Handle)?.Id;
 				await Assert.That(external).IsNotNull();
 				await Assert.That(external).IsNotEqualTo(callbackReplacement);
