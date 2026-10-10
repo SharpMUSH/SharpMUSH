@@ -62,9 +62,21 @@ public partial class ThemeVariableTests
 	public async Task TokensCssDeclaresEveryDerivedColour()
 	{
 		var tokens = File.ReadAllText(Path.Join(ClientSource.CssRoot, "tokens.css"));
-		foreach (var (name, hex) in ThemeResolver.StatusColors.Concat(ThemeResolver.SyntaxColors))
+		foreach (var (name, hex) in ThemeResolver.StatusColors.Concat(ThemeResolver.SyntaxColors).Concat(ThemeResolver.HueColors))
 		{
 			await Assert.That(tokens).Contains($"--{name}: {hex};");
+		}
+	}
+
+	[Test]
+	public async Task TokensCssDeclaresPhosphorsToneAndAnsiColours()
+	{
+		var tokens = File.ReadAllText(Path.Join(ClientSource.CssRoot, "tokens.css"));
+		var phosphor = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
+		foreach (var name in Enumerable.Range(1, 6).Concat(Enumerable.Range(9, 6)).SelectMany(slot => new[] { $"ms-ansi-{slot}", $"ms-ansi-bg-{slot}" })
+			.Append("tone-tertiary").Append("highlight"))
+		{
+			await Assert.That(tokens).Contains($"--{name}: {phosphor.Token(name)};").Because(name);
 		}
 	}
 

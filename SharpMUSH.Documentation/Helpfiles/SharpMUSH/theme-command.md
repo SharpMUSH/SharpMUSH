@@ -94,7 +94,7 @@ The theme is worked out when the player connects, when `@theme` sets it, and whe
 
 ## Which theme wins
 
-A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it. The web portal, its play terminal included, draws layouts in the portal theme chosen there. Each portal theme has a theme of the same name here, in the same colours but for the genre themes, so `@theme me=cyberpunk` matches a portal set to Cyberpunk. You must control *<object>*.
+A player's theme sits over the game's `layout_theme` and under a theme a layout names itself, so softcode that asks for its own colours still gets them. It applies to telnet and other MU* clients, which are sent each layout drawn again under it. The web portal, its play terminal included, draws layouts in the portal theme chosen there. Each portal theme has a theme of the same name here, in the same colours but for the genre themes, so `@theme me=cyberpunk` matches a portal set to Cyberpunk. In the portal, [ANSI()] colours follow the portal theme too, as a terminal's colour scheme does: red, green, yellow, blue, magenta and cyan, and their bright forms, are the theme's own hues, and black, white and the greys stay as they are. You must control *<object>*.
 
 Text written with [TONE()] names a theme colour, so it is drawn in the reader's theme too: their `muted` for `tone(muted,...)`, their `info` for `tone(info,...)`.
 

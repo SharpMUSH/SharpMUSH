@@ -356,6 +356,35 @@ public class LayoutFunctionTests
 	}
 
 	/// <summary>
+	/// tone() takes the theme's hues by name, as a terminal's colour scheme decides what its red looks like;
+	/// <c>strong</c> is the text colour in bold, and <c>highlight</c> paints behind the text.
+	/// </summary>
+	[Test]
+	public async Task ToneTakesHuesStrongAndHighlight()
+	{
+		if (!ThemePalette.TryParse("nord", out var nord, out _)) throw new InvalidOperationException("nord does not read");
+		string Painted(ThemeColor colour, ThemePaint paint) =>
+			MarkupText.Wrap(AnsiTheme.Paint(colour, paint), "x").Render(MarkupFormat.Ansi) is var sample ? sample[..sample.IndexOf('x')] : "";
+
+		var purple = await Eval("tone(purple,Rose)");
+		await Assert.That(purple.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-purple\"");
+		await Assert.That(ToneMarkup.ForTelnet(purple, nord).Render(MarkupFormat.Ansi))
+			.StartsWith(Painted(nord![ThemeRole.Purple]!.Value, ThemePaint.Text) + "Rose");
+
+		var highlight = await Eval("tone(HIGHLIGHT,found)");
+		await Assert.That(ToneMarkup.ForTelnet(highlight, nord).Render(MarkupFormat.Ansi))
+			.StartsWith(Painted(nord[ThemeRole.Highlight]!.Value, ThemePaint.Background) + "found");
+
+		var strong = await Eval("tone(strong,Name)");
+		await Assert.That(strong.Render(MarkupFormat.Html)).Contains("<span class=\"tone tone-strong\"");
+		await Assert.That(ToneMarkup.ForTelnet(strong, nord).Render(MarkupFormat.Ansi))
+			.StartsWith(Painted(nord[ThemeRole.Foreground]!.Value, ThemePaint.Bold) + "Name");
+		await Assert.That(ToneMarkup.ForTelnet(strong, null).Render(MarkupFormat.Ansi))
+			.IsEqualTo(MarkupText.Wrap(AnsiMarkup.Create(bold: true), "Name").Render(MarkupFormat.Ansi))
+			.Because("with no colour to send, strong is still bold");
+	}
+
+	/// <summary>
 	/// The options are one JSON object, written inside a second pair of braces or built with
 	/// <c>json()</c>; a string keeps its colour and an escaped quote is a quote.
 	/// </summary>
@@ -457,7 +486,7 @@ public class LayoutFunctionTests
 	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("notice(JOBS,x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("tone(background,x)", "#-1 UNKNOWN TONE")]
-	[Arguments("tone(purple,x)", "#-1 UNKNOWN TONE")]
+	[Arguments("tone(mauve,x)", "#-1 UNKNOWN TONE")]
 	[Arguments("gradient(x,h|r)", "#-1 UNKNOWN COLOR")]
 	[Arguments("gradient(x,r|g,{{\"rgb\":\"\"}})", "#-1 UNKNOWN LAYOUT OPTION RGB")]
 	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]

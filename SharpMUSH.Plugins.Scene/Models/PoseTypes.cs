@@ -1,3 +1,4 @@
+using MarkupString;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -13,7 +14,7 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <param name="Key">The type's key, lower case: what a pose records.</param>
 /// <param name="Label">Its name in the portal's Show menu, the admin page and recall.</param>
 /// <param name="Presentation">The portal layout: one of <see cref="PoseTypes.Presentations"/>.</param>
-/// <param name="Tone">A theme colour's name (<see cref="ToneMarkup.Roles"/>), or empty for the theme's text colour.</param>
+/// <param name="Tone">A tone's name (<see cref="ToneNames"/>), or empty for the theme's text colour.</param>
 /// <param name="Icon">One of <see cref="PoseTypes.Icons"/>, or empty for none.</param>
 /// <param name="Hidden">Whether a reader who has not chosen starts with this type hidden.</param>
 /// <param name="Order">Its place in lists, lowest first.</param>
@@ -95,7 +96,7 @@ public static partial class PoseTypes
 					"presentation" => Text(value) is { } p && Presentations.Contains(p)
 						? type with { Presentation = p }
 						: Bad($"presentation must be one of {string.Join(", ", Presentations)}"),
-					"tone" => Text(value) is { } tone && (tone.Length == 0 || ToneMarkup.TryParse(tone, out _))
+					"tone" => Text(value) is { } tone && (tone.Length == 0 || ToneNames.Contains(tone, StringComparer.OrdinalIgnoreCase))
 						? type with { Tone = tone.ToLowerInvariant() }
 						: Bad($"tone must be one of {string.Join(", ", ToneNames)}"),
 					"icon" => Text(value) is { } icon && (icon.Length == 0 || Icons.Contains(icon))
@@ -122,8 +123,11 @@ public static partial class PoseTypes
 		}
 	}
 
-	/// <summary>The tone names a type may use, as <c>+scene/type/set</c> lists them.</summary>
-	public static IEnumerable<string> ToneNames => ToneMarkup.Roles.Select(ThemePalette.RoleName).Order();
+	/// <summary>
+	/// The tone names a type may use, as <c>+scene/type/set</c> lists them: every tone that colours text, so not
+	/// <c>highlight</c>, which is a background.
+	/// </summary>
+	public static IEnumerable<string> ToneNames => ToneMarkup.Tones.Values.Where(tone => tone.Paint != ThemePaint.Background).Select(tone => tone.Name).Order();
 
 	private static string? Text(JsonElement value) => value.ValueKind == JsonValueKind.String ? value.GetString()!.Trim() : null;
 

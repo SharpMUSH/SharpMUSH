@@ -223,11 +223,37 @@ public class ThemeStylesheetTests
 	}
 
 	[Test]
+	[MethodDataSource(nameof(BuiltInIds))]
+	public async Task EveryThemeDerivesReadableToneColours(string id)
+	{
+		var theme = ThemeResolver.Resolve(BuiltIn(id));
+		ThemeColor Token(string name) => ThemeColor.Parse(theme.Token(name));
+		string[] grounds = [ThemeTokens.Background, ThemeTokens.Surface, ThemeTokens.Surface3];
+
+		foreach (var name in ThemeResolver.HueColors.Select(h => h.Name).Append("tone-tertiary")
+			.Concat(Enumerable.Range(1, 6).Concat(Enumerable.Range(9, 6)).Select(slot => $"ms-ansi-{slot}")))
+		{
+			foreach (var ground in grounds)
+			{
+				await Assert.That(ThemeColor.Contrast(Token(name), Token(ground))).IsGreaterThanOrEqualTo(ThemeTokens.TextContrast)
+					.Because($"{id}: {name} on {ground}");
+			}
+		}
+
+		// Marked text and ansi() backgrounds keep the theme's text readable on them.
+		foreach (var name in Enumerable.Range(1, 6).Concat(Enumerable.Range(9, 6)).Select(slot => $"ms-ansi-bg-{slot}").Append("highlight"))
+		{
+			await Assert.That(ThemeColor.Contrast(Token(ThemeTokens.Text), Token(name))).IsGreaterThanOrEqualTo(ThemeTokens.TextContrast)
+				.Because($"{id}: text on {name}");
+		}
+	}
+
+	[Test]
 	public async Task PhosphorDerivesTheStatusAndSyntaxValuesTokensCssShips()
 	{
 		var theme = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
 
-		foreach (var (name, hex) in ThemeResolver.StatusColors.Concat(ThemeResolver.SyntaxColors))
+		foreach (var (name, hex) in ThemeResolver.StatusColors.Concat(ThemeResolver.SyntaxColors).Concat(ThemeResolver.HueColors))
 		{
 			await Assert.That(theme.Token(name)).IsEqualTo(hex).Because(name);
 		}

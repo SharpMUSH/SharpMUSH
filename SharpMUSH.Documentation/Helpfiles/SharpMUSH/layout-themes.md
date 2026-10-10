@@ -113,10 +113,16 @@ The colours, which `"colors"` sets by name:
 - `tertiary` - list bullets
 - `muted` - tree guides, separators, the line under table headings, a gauge's empty part
 - `success`, `warning`, `error`, `info` - [BADGE()] and [NOTICE()] use these
+- `subtle` - text quieter than `muted`, such as timestamps
+- `link` - links
+- `highlight` - the background behind marked text
+- `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `pink` - the theme's own hues, the way a terminal's colour scheme decides what its red looks like
 - `surface` - the background behind every second row of a striped table or field list (`"stripe":true`)
 - `background`, `foreground` - what the others are measured against; neither is painted
 
-A colour is `"#rrggbb"`, a standard colour from 0 to 15, or both as `{"rgb":"#88c0d0","slot":6}`. `null` leaves one out.
+[TONE()] takes all of these but `background` and `surface` by name.
+
+A colour is `"#rrggbb"`, a standard colour from 0 to 15, or both as `{"rgb":"#88c0d0","slot":6}`. `null` leaves one out. When `"colors"` leaves out `subtle`, `link`, `highlight` or a hue, it is worked out from the rest: `subtle` from `muted`, `link` from `primary`, `highlight` from the background, and each hue so it stands out 4.5 to 1.
 
 ## Looks
 
@@ -167,19 +173,30 @@ With `"contrast":1`, every colour stands out at least 7 to 1. The quiet `muted` 
 
 ```sharp
 > think swatch({{"seed":"#d08770","harmony":"split","contrast":1}},64)
-Role        Sample  Colour   16-colour         Contrast
--------------------------------------------------------
-background  -       #190f0b  0 black           -
-surface     Sample  #2b1c18  8 bright black    -
-foreground  Sample  #e8dbd7  7 white           13.9:1
-primary     Sample  #d98f78  9 bright red      7.3:1
-secondary   Sample  #6cd2c9  14 bright cyan    10.5:1
-tertiary    Sample  #7fb7ec  12 bright blue    8.9:1
-muted       Sample  #a69c97  7 white           7.0:1
-success     Sample  #9abd53  10 bright green   8.8:1
-warning     Sample  #ee9748  11 bright yellow  8.2:1
-error       Sample  #f98b6e  9 bright red      8.0:1
-info        Sample  #86acff  12 bright blue    8.4:1
+Role        Sample  Colour   16-colour          Contrast
+--------------------------------------------------------
+background  -       #190f0b  0 black            -
+surface     Sample  #2b1c18  8 bright black     -
+foreground  Sample  #e8dbd7  7 white            13.9:1
+primary     Sample  #d98f78  9 bright red       7.3:1
+secondary   Sample  #6cd2c9  14 bright cyan     10.5:1
+tertiary    Sample  #7fb7ec  12 bright blue     8.9:1
+muted       Sample  #a69c97  7 white            7.0:1
+success     Sample  #9abd53  10 bright green    8.8:1
+warning     Sample  #ee9748  11 bright yellow   8.2:1
+error       Sample  #f98b6e  9 bright red       8.0:1
+info        Sample  #86acff  12 bright blue     8.4:1
+subtle      Sample  #a59c9a  7 white            7.0:1
+link        Sample  #f4a890  9 bright red       9.7:1
+highlight   Sample  #562a1c  8 bright black     -
+red         Sample  #f98b6e  9 bright red       8.0:1
+orange      Sample  #f78d65  9 bright red       8.0:1
+yellow      Sample  #e1a035  11 bright yellow   8.3:1
+green       Sample  #9abd53  10 bright green    8.8:1
+cyan        Sample  #00c9b1  14 bright cyan     9.0:1
+blue        Sample  #96a7ff  12 bright blue     8.3:1
+purple      Sample  #da8dde  13 bright magenta  7.9:1
+pink        Sample  #f8869a  9 bright red       8.0:1
 ```
 
 ## Starting from another theme

@@ -41,7 +41,7 @@ and `ansi` requires the `Can_Spoof` power.
 
 ```sharp
 > think render(ansi(r,a<b>c),html)
-<span style="color: #aa0000">a&lt;b&gt;c</span>
+<span style="color: var(--ms-ansi-1, #aa0000)">a&lt;b&gt;c</span>
 > think render(ansi(r,red),markup)
 red
 ```

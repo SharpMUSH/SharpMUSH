@@ -673,6 +673,23 @@ public static class ThemeResolver
 		("syntax-emphasis", "#dcdcaa"),
 	];
 
+	/// <summary>
+	/// The hues <c>tone()</c> names, with Phosphor's values, in the order of the standard ANSI colours they also stand for
+	/// (<c>--ms-ansi-1</c> red to <c>--ms-ansi-6</c> cyan), orange and pink after. Every theme derives its own, readable on
+	/// its surfaces. They are hues, so a reader's colour vision leaves them as they are, as it does <c>ansi()</c> colours.
+	/// </summary>
+	public static readonly IReadOnlyList<(string Name, string Hex)> HueColors =
+	[
+		("hue-red", "#f07178"),
+		("hue-green", "#c3e88d"),
+		("hue-yellow", "#ffcb6b"),
+		("hue-blue", "#82aaff"),
+		("hue-purple", "#c792ea"),
+		("hue-cyan", "#89ddff"),
+		("hue-orange", "#f78c6c"),
+		("hue-pink", "#ff79c6"),
+	];
+
 	/// <summary>A colour's hue in degrees, whole, for the picture tones that tint toward the accent.</summary>
 	private static int Hue(ThemeColor c)
 	{
@@ -682,6 +699,28 @@ public static class ThemeResolver
 		if (d == 0) return 0;
 		var h = max == r ? (double)(g - b) / d % 6 : max == g ? (double)(b - r) / d + 2 : (double)(r - g) / d + 4;
 		return (int)Math.Round((h * 60 + 360) % 360);
+	}
+
+	/// <summary>The surface tinted with the accent, as far as <paramref name="text"/> still reads on it at 4.5:1.</summary>
+	private static ThemeColor Highlight(ThemeColor surface, ThemeColor accent, ThemeColor text)
+	{
+		for (var share = 0.24; share > 0; share -= 0.02)
+		{
+			var tinted = surface.Mix(accent, share);
+			if (ThemeColor.Contrast(text, tinted) >= ThemeTokens.TextContrast) return tinted;
+		}
+		return surface;
+	}
+
+	/// <summary><paramref name="color"/> taken toward <paramref name="page"/> until <paramref name="text"/> reads on it at 4.5:1.</summary>
+	private static ThemeColor Behind(ThemeColor color, ThemeColor page, ThemeColor text)
+	{
+		for (var share = 0.0; share < 1; share += 0.05)
+		{
+			var behind = color.Mix(page, share);
+			if (ThemeColor.Contrast(text, behind) >= ThemeTokens.TextContrast) return behind;
+		}
+		return page;
 	}
 
 	private static void Derive(Dictionary<string, string> tokens, bool dark, ThemeColor accent, string vision)
@@ -734,6 +773,29 @@ public static class ThemeResolver
 		foreach (var (name, hex) in ThemeVision.StatusColors(vision, dark))
 		{
 			tokens[name] = ReadableAgainst(ThemeColor.Parse(hex), dark, ThemeTokens.TextContrast, grounds).Hex;
+		}
+
+		// tone()'s tertiary colour, the theme's third decorative colour made readable, and its highlight, a background the
+		// accent tints that text still reads on.
+		tokens["tone-tertiary"] = ReadableAgainst(Get(ThemeTokens.Accent3), dark, ThemeTokens.TextContrast, grounds).Hex;
+		tokens["highlight"] = Highlight(surface, accent, Get(ThemeTokens.Text)).Hex;
+
+		// The hues tone() names, and the sixteen ANSI colours MarkupString's HTML reads (--ms-ansi-N), so ansi() colours
+		// follow the theme as a terminal's colour scheme does. The normal colours are the hues; the bright ones are lighter
+		// on a dark theme and darker on a light one. Behind text (--ms-ansi-bg-N) each is taken toward the page until the
+		// theme's text reads on it. Black, white and the greys keep their usual values.
+		var text = Get(ThemeTokens.Text);
+		for (var i = 0; i < HueColors.Count; i++)
+		{
+			var (name, hex) = HueColors[i];
+			var hue = ReadableAgainst(ThemeColor.Parse(hex), dark, ThemeTokens.TextContrast, grounds);
+			tokens[name] = hue.Hex;
+			if (i >= 6) continue;
+			var bright = ReadableAgainst(hue.Mix(dark ? ThemeColor.White : ThemeColor.Black, dark ? 0.25 : 0.15), dark, ThemeTokens.TextContrast, grounds);
+			tokens[$"ms-ansi-{i + 1}"] = hue.Hex;
+			tokens[$"ms-ansi-{i + 9}"] = bright.Hex;
+			tokens[$"ms-ansi-bg-{i + 1}"] = Behind(hue, bg, text).Hex;
+			tokens[$"ms-ansi-bg-{i + 9}"] = Behind(bright, bg, text).Hex;
 		}
 
 		var codeBg = dark ? bg.Mix(ThemeColor.Black, 0.35) : surface3;

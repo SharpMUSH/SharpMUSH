@@ -62,12 +62,23 @@ surface     Sample  #3b4252  8 bright black  -
 foreground  Sample  #e5e9f0  7 white         10.3:1
 primary     Sample  #81a1c1  4 blue          4.6:1
 secondary   Sample  #b48ead  5 magenta       4.4:1 (needs 4.5)
-tertiary    Sample  #88c0d0  6 cyan          6.2:1
+tertiary    Sample  #d08770  3 yellow        4.4:1 (needs 4.5)
 muted       Sample  #4c566a  8 bright black  1.7:1 (needs 3)
 success     Sample  #a3be8c  2 green         6.1:1
 warning     Sample  #ebcb8b  3 yellow        8.0:1
 error       Sample  #bf616a  1 red           3.1:1 (needs 4.5)
 info        Sample  #88c0d0  6 cyan          6.2:1
+subtle      Sample  #4d5668  8 bright black  1.7:1 (needs 3)
+link        Sample  #81a1c1  4 blue          4.6:1
+highlight   Sample  #434c5e  8 bright black  -
+red         Sample  #bf616a  1 red           3.1:1 (needs 4.5)
+orange      Sample  #d08770  3 yellow        4.4:1 (needs 4.5)
+yellow      Sample  #ebcb8b  3 yellow        8.0:1
+green       Sample  #a3be8c  2 green         6.1:1
+cyan        Sample  #88c0d0  6 cyan          6.2:1
+blue        Sample  #81a1c1  4 blue          4.6:1
+purple      Sample  #b48ead  5 magenta       4.4:1 (needs 4.5)
+pink        Sample  #bb7793  5 magenta       3.7:1 (needs 4.5)
 ```
 
 ::: seealso
@@ -677,10 +688,17 @@ A package says its own name once and uses it for every message, so its players l
 
 `tone(<colour>, <text>)`
 
-*<text>* in a theme colour, named for what it is for rather than as a colour, so each reader sees it in their own theme. *<colour>* is one of the colours in [LAYOUT THEMES]: `foreground`, `primary`, `secondary`, `tertiary`, `muted`, `success`, `warning`, `error` or `info`.
+*<text>* in a theme colour, named for what it is for rather than as a colour, so each reader sees it in their own theme. *<colour>* is one of the colours in [LAYOUT THEMES]:
+
+- For what the text is: `foreground`, `primary`, `secondary`, `tertiary`, `muted`, `subtle` (quieter than muted), `link`, `success`, `warning`, `error` or `info`.
+- `strong` - the text colour in bold, for a name or a heading.
+- `highlight` - the text on a marked background, for a search hit or something new.
+- A hue: `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple` or `pink`. Each theme draws its own red, as a terminal's colour scheme does, so it still reads on that theme.
+
+Who sees what:
 
 - A telnet reader with an [@THEME] sees that theme's colour, so a player who makes their `muted` colour paler sees every `tone(muted,...)` paler.
-- A telnet reader without one sees the game's `layout_theme` colour, or a standard colour when the game has none: `muted` in grey, `info` in cyan, `success` in green, `warning` in yellow, `error` in red.
+- A telnet reader without one sees the game's `layout_theme` colour, or a standard colour when the game has none: `muted` in grey, `info` in cyan, `success` in green, `warning` in yellow, `error` in red, each hue in its standard colour, and `strong` in bold.
 - The web portal colours it from the reader's portal theme.
 
 Use it for text whose colour says what kind of thing it is, such as an out-of-character remark or a radio call, and [ANSI()] for a colour chosen for its own sake. The scene package draws pose types with it; see `+help scene types`.
@@ -692,6 +710,13 @@ Use it for text whose colour says what kind of thing it is, such as an out-of-ch
 ```
 
 That line is grey for a reader with no theme, and their theme's `muted` colour for one with an @theme.
+
+```sharp
+> think tone(strong,Wren) says, "[tone(purple,Look.)]"
+Wren says, "Look."
+```
+
+The name is bold, and the speech is in the reader's theme's purple.
 
 ::: seealso
 - [@THEME]
