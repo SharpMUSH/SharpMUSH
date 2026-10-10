@@ -368,6 +368,7 @@ public class InputSessionCommandTests
 	[Arguments("@input/start Answer:=done,%b,120", nameof(InputSessionService.InvalidCallback))]
 	[Arguments("@input/start Answer:=done,NOSUCHEXIT", nameof(InputSessionService.InvalidCallback))]
 	[Arguments("@input/start Answer:=@INPUT/CANCEL,CALLBACK", nameof(InputSessionService.ReservedExit))]
+	[Arguments("@input/start/wild Answer:=@input/cancel,CALLBACK", nameof(InputSessionService.ReservedExit))]
 	[Arguments("@input/start/regex Answer:=*a,CALLBACK", nameof(InputSessionService.InvalidPattern))]
 	[Arguments("@input/start Answer:=done,CALLBACK,0", nameof(InputSessionService.InvalidTimeout))]
 	public async Task StartWithoutAWayOutIsRefused(string command, string error)

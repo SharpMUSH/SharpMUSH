@@ -193,7 +193,7 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (routes.Count == 0 || routes.Any(route => string.IsNullOrWhiteSpace(route.Pattern) || string.IsNullOrWhiteSpace(route.Attribute)))
 			return MissingExit;
-		if (match == InputMatch.Exact && routes[0].Pattern.Trim().Equals(CancelLine, StringComparison.OrdinalIgnoreCase))
+		if (routes[0].Pattern.Trim().Equals(CancelLine, StringComparison.OrdinalIgnoreCase))
 			return ReservedExit;
 		if (timeout < TimeSpan.FromSeconds(1) || timeout > TimeSpan.FromHours(1)) return InvalidTimeout;
 		var state = parser.CurrentState;
