@@ -28,6 +28,7 @@ public class TerminalServiceHost : ITerminalService
 
 	public event Action<TerminalLine>? LineReceived;
 	public event Action<bool>? ConnectionStateChanged;
+	public event Action? PromptChanged;
 
 	/// <summary>Raised once a new inner terminal is in place: a new session, whose screen starts empty.</summary>
 	public event Action? Recreated;
@@ -54,6 +55,8 @@ public class TerminalServiceHost : ITerminalService
 		Attach(_inner);
 
 		OnConnectionState(false);
+		// The new inner has no prompt; anyone showing the old one's drops it.
+		OnPromptChanged();
 		Recreated?.Invoke();
 	}
 
@@ -61,6 +64,7 @@ public class TerminalServiceHost : ITerminalService
 	{
 		inner.LineReceived += OnLine;
 		inner.ConnectionStateChanged += OnConnectionState;
+		inner.PromptChanged += OnPromptChanged;
 		_oob.SetInner(inner.OobChannels);
 	}
 
@@ -68,10 +72,12 @@ public class TerminalServiceHost : ITerminalService
 	{
 		inner.LineReceived -= OnLine;
 		inner.ConnectionStateChanged -= OnConnectionState;
+		inner.PromptChanged -= OnPromptChanged;
 	}
 
 	private void OnLine(TerminalLine line) => LineReceived?.Invoke(line);
 	private void OnConnectionState(bool connected) => ConnectionStateChanged?.Invoke(connected);
+	private void OnPromptChanged() => PromptChanged?.Invoke();
 
 	public bool IsConnected => _inner.IsConnected;
 
@@ -84,6 +90,7 @@ public class TerminalServiceHost : ITerminalService
 	public string? ServerUri => _inner.ServerUri;
 	public TerminalIdentity? Identity => _inner.Identity;
 	public IReadOnlyList<TerminalLine> Lines => _inner.Lines;
+	public TerminalPrompt? Prompt => _inner.Prompt;
 	public IOobChannelStore OobChannels => _oob;
 
 	public Task ConnectAsync(string serverUri) => _inner.ConnectAsync(serverUri);

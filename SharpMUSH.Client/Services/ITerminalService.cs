@@ -24,6 +24,16 @@ public interface ITerminalService : IAsyncDisposable
 	/// <summary>Read-only snapshot of the in-memory line buffer (up to 2000 lines).</summary>
 	IReadOnlyList<TerminalLine> Lines { get; }
 
+	/// <summary>
+	/// The prompt shown above the input line, or null for none. A prompt frame replaces it and never enters
+	/// <see cref="Lines"/>; a clear frame for its session (or naming none) empties it. Sending a line copies it
+	/// into the scrollback first, and clears it when it is a one-off prompt with no session behind it.
+	/// </summary>
+	TerminalPrompt? Prompt { get; }
+
+	/// <summary>Fires whenever <see cref="Prompt"/> changes, including to null.</summary>
+	event Action? PromptChanged;
+
 	Task ConnectAsync(string serverUri);
 
 	/// <summary>
@@ -45,7 +55,10 @@ public interface ITerminalService : IAsyncDisposable
 
 	Task DisconnectAsync();
 
-	/// <summary>Send a raw command string to the MUSH server.</summary>
+	/// <summary>
+	/// Send a line the player entered (typed, or a command link) to the MUSH server. The shown
+	/// <see cref="Prompt"/> goes into the scrollback ahead of it, as on telnet.
+	/// </summary>
 	Task SendAsync(string command);
 
 	/// <summary>

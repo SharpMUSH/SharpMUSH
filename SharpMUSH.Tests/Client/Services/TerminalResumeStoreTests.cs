@@ -107,4 +107,32 @@ public class TerminalResumeStoreTests
 		await Assert.That(after.Revoked).IsFalse();
 		await Assert.That(js.StoredValue(TerminalResumeStore.KeyFor("play", Alice))).IsEqualTo("{\"token\":\"tok-3\",\"lastSeq\":0}");
 	}
+
+	[Test]
+	public async Task The_prompt_is_kept_beside_the_point_and_forgotten_with_it()
+	{
+		var js = new FakeResumeJs();
+		var store = new TerminalResumeStore(js);
+		var slot = await store.OpenAsync("play", Alice);
+		var promptKey = TerminalResumeStore.PromptKeyFor("play", Alice);
+		var prompt = new SharpMUSH.Client.Models.TerminalPrompt(
+			new SharpMUSH.Client.Models.TerminalLine(DateTime.Now, "Read which post?", SharpMUSH.Client.Models.TerminalLineSource.Server), "s1");
+
+		await slot.SaveAsync(new TerminalResumePoint("tok-1", 0));
+		await slot.KeepPromptAsync(prompt);
+		await Assert.That(js.StagedValue(promptKey)).IsNotNull().Because("written on the page's timer, like the lines");
+		js.Flush();
+
+		var reopened = await store.OpenAsync("play", Alice);
+		await Assert.That(reopened.TakePrompt().Expect<SharpMUSH.Client.Models.TerminalPrompt>().Line.Text).IsEqualTo("Read which post?");
+		await Assert.That(reopened.TakePrompt() is NotFound).IsTrue().Because("handed out once");
+
+		await slot.KeepPromptAsync(null);
+		await Assert.That(js.StoredValue(promptKey)).IsNull();
+
+		await slot.KeepPromptAsync(prompt);
+		js.Flush();
+		await slot.ClearAsync();
+		await Assert.That(js.StoredValue(promptKey)).IsNull();
+	}
 }

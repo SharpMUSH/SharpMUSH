@@ -12,7 +12,12 @@ public enum TerminalFrameKind
 	/// <summary>Raw HTML pushed out-of-band (e.g. <c>wshtml()</c>).</summary>
 	Html,
 	/// <summary>Structured out-of-band data not meant for direct display.</summary>
-	Oob
+	Oob,
+	/// <summary>
+	/// <c>{ "type": "prompt", "clear": true, "session": … }</c>: the prompt shown is over. A clear naming a
+	/// session clears only that session's prompt; one naming none clears whatever prompt is shown.
+	/// </summary>
+	PromptClear
 }
 
 /// <param name="Kind">How to handle the frame.</param>
@@ -20,7 +25,16 @@ public enum TerminalFrameKind
 /// <param name="Html">Safe HTML for display (empty for <see cref="TerminalFrameKind.Oob"/>).</param>
 /// <param name="Package">Out-of-band package identifier (empty for non-OOB frames).</param>
 /// <param name="DataJson">Raw JSON text of the data payload (empty for non-OOB frames).</param>
-public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain, string Html, string Package, string DataJson);
+/// <param name="Prompt">
+/// A markup frame the engine marked as a prompt (<c>"prompt": true</c>: <c>@input</c>, <c>prompt()</c>,
+/// <c>@prompt</c>). The terminal shows it in its prompt row instead of the scrollback.
+/// </param>
+/// <param name="Session">
+/// The <c>@input</c> session a prompt or a prompt clear belongs to; empty for a one-off prompt, and for a
+/// clear that names no session.
+/// </param>
+public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain, string Html, string Package, string DataJson,
+	bool Prompt = false, string Session = "");
 
 /// <summary>
 /// Interprets a raw WebSocket text frame. Game output now arrives as an out-of-band JSON envelope
@@ -51,8 +65,12 @@ public static class TerminalFrameRenderer
 					{
 						var data = GetStringProperty(root, "data");
 						var ms = MarkupTextSerializer.Deserialize(data);
-						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render(MarkupFormat.Html), string.Empty, string.Empty);
+						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render(MarkupFormat.Html), string.Empty, string.Empty,
+							IsTrue(root, "prompt"), GetStringProperty(root, "session"));
 					}
+				case "prompt" when IsTrue(root, "clear"):
+					return new TerminalFrame(TerminalFrameKind.PromptClear, string.Empty, string.Empty, string.Empty, string.Empty,
+						Session: GetStringProperty(root, "session"));
 				case "html":
 					{
 						var data = GetStringProperty(root, "data");
@@ -78,6 +96,9 @@ public static class TerminalFrameRenderer
 			return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty, string.Empty, string.Empty);
 		}
 	}
+
+	private static bool IsTrue(JsonElement root, string name) =>
+		root.TryGetProperty(name, out var el) && el.ValueKind == JsonValueKind.True;
 
 	private static string GetStringProperty(JsonElement root, string name) =>
 		root.TryGetProperty(name, out var el) && el.ValueKind == JsonValueKind.String

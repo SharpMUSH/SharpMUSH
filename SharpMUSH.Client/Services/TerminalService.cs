@@ -45,8 +45,14 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	private bool _disposed;
 
+	// Guarded by _lines: the receive loop sets it while the renderer sends.
+	private TerminalPrompt? _prompt;
+
 	public event Action<TerminalLine>? LineReceived;
 	public event Action<bool>? ConnectionStateChanged;
+
+	/// <inheritdoc/>
+	public event Action? PromptChanged;
 
 	public bool IsConnected => wsService.IsConnected;
 
@@ -67,6 +73,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// A copy taken under the lock: a view of the live list would be enumerated outside it while the
 		// receive loop appends.
 		get { lock (_lines) return _lines.ToArray(); }
+	}
+
+	/// <inheritdoc/>
+	public TerminalPrompt? Prompt
+	{
+		get { lock (_lines) return _prompt; }
 	}
 
 	public Task ConnectAsync(string serverUri) => ConnectAsync(serverUri, identity: null, relogin: null);
@@ -188,6 +200,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		ConnectedPlayerName = null;
 		await wsService.DisconnectAsync();
 		UnsubscribeWebSocketHandlers();
+		// The session the prompt asked for is gone; a reconnect's resume brings back its own.
+		ClearPrompt(session: string.Empty);
 		AddSystemLine("Disconnected.");
 	}
 
@@ -213,6 +227,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 		LineReceived = null;
 		ConnectionStateChanged = null;
+		PromptChanged = null;
 
 		await wsService.DisposeAsync();
 		GC.SuppressFinalize(this);
@@ -220,6 +235,22 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 	public async Task SendAsync(string command)
 	{
+		// The prompt answered goes into the scrollback above the answer, so the transcript reads as telnet's
+		// does. A one-off prompt is over once answered; an @input session's stays until its next prompt or
+		// its clear.
+		TerminalPrompt? answered;
+		lock (_lines)
+		{
+			answered = _prompt;
+			if (answered is { Session.Length: 0 })
+				_prompt = null;
+		}
+		if (answered is not null)
+		{
+			AddLine(new TerminalLine(DateTime.Now, answered.Line.Text, answered.Line.Html, TerminalLineSource.Server));
+			if (answered.Session.Length == 0)
+				PromptCleared();
+		}
 		AddLine(command, TerminalLineSource.Client);
 		await wsService.SendAsync(command);
 	}
@@ -262,6 +293,15 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 		switch (frame.Kind)
 		{
+			case TerminalFrameKind.Markup when frame.Prompt:
+				ShowPrompt(new TerminalPrompt(new TerminalLine(DateTime.Now, frame.Plain.TrimEnd('\r', '\n'), frame.Html, TerminalLineSource.Server),
+					frame.Session));
+				return;
+
+			case TerminalFrameKind.PromptClear:
+				ClearPrompt(frame.Session);
+				return;
+
 			case TerminalFrameKind.Markup:
 				{
 					// A frame can be all action and no text — a sound(), a stopsound(), a clearscreen() —
@@ -372,6 +412,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		{
 			foreach (var line in slot.TakeScrollback())
 				AddLine(line, keep: false);
+			// And the prompt it showed. A replayed prompt replaces it, and the server clears it when its
+			// session ended while the page was away.
+			if (slot.TakePrompt() is TerminalPrompt prompt)
+				ShowPrompt(prompt, keep: false);
 		}
 	}
 
@@ -384,11 +428,40 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	private void HandleResumeRefused(object? sender, EventArgs e)
 	{
 		if (wsService.ResumeSlot is not { } slot) return;
+		// The prompt belonged to the session that ended; the fresh one asks its own.
+		_ = slot.TakePrompt();
 		var earlier = slot.TakeScrollback();
 		if (earlier.Count == 0) return;
 		foreach (var line in earlier)
 			AddLine(line);
 		AddSystemLine("— Earlier lines, from before the reload. The session started again. —");
+	}
+
+	private void ShowPrompt(TerminalPrompt prompt, bool keep = true)
+	{
+		lock (_lines) _prompt = prompt;
+		// Kept beside the scrollback, so a reload shows it again. Written on the page's timer, like the lines.
+		if (keep && wsService.ResumeSlot is { } slot)
+			_ = slot.KeepPromptAsync(prompt).AsTask();
+		PromptChanged?.Invoke();
+	}
+
+	/// <summary>Empties the prompt when it is <paramref name="session"/>'s, or whatever is shown when that is empty.</summary>
+	private void ClearPrompt(string session)
+	{
+		lock (_lines)
+		{
+			if (_prompt is null || (session.Length > 0 && _prompt.Session != session)) return;
+			_prompt = null;
+		}
+		PromptCleared();
+	}
+
+	private void PromptCleared()
+	{
+		if (wsService.ResumeSlot is { } slot)
+			_ = slot.KeepPromptAsync(null).AsTask();
+		PromptChanged?.Invoke();
 	}
 
 	private void AddSystemLine(string text) => AddLine(text, TerminalLineSource.System);
