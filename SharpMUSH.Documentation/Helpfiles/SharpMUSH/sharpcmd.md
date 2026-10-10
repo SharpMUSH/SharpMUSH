@@ -831,7 +831,7 @@ Show just the object names (with no ansi) in a table:
 
   Starts a guided input session on the current Telnet or WebSocket connection. The connection must be logged in to a character, and that character must be the command's enactor. There is no handle or player selector. The initiating executor must control the callback object and have both read and execute access to its directly stored attribute. Omitting `/start` also starts a session.
 
-  `<exit>` is required: it is the line that ends the session, such as `.done` or `q`. A line that matches it, ignoring case and spaces around it, ends capture and runs the callback one last time with that line in `%0` and `exit` in `%1`, so the callback can save the work or say goodbye. Without an exit string the command is refused with `#-1 INPUT NEEDS AN EXIT STRING`.
+  `<exit>` is required: it is the line that ends the session, such as `.done` or `q`. A line that matches it, ignoring case and spaces around it, ends capture and runs the callback one last time with that line in `%0` and `exit` in `%1`, so the callback can save the work or say goodbye. Without an exit string the command is refused with `#-1 INPUT NEEDS AN EXIT STRING`; `@input/cancel` cannot be the exit string, since that line always leaves without the callback.
 
   Every other input message invokes the callback with the exact input in `%0` and `input` in `%1`. Empty input and whitespace are accepted. Brackets, semicolons, percent substitutions, and newlines are literal data; they are not interpreted as commands or expressions. A transport that sends a paste as separate lines invokes the callback for each line. Capture continues until explicitly ended, so later pasted lines do not accidentally become commands.
 

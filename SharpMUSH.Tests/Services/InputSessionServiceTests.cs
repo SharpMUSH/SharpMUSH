@@ -531,6 +531,17 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments("@input/cancel")]
+	[Arguments(" @INPUT/CANCEL ")]
+	public async Task CancelLineCannotBeTheExit(string exit)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, exit, TimeSpan.FromSeconds(60)))
+			.IsEqualTo(InputSessionService.ReservedExit);
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
+	[Test]
 	[Arguments(0)]
 	[Arguments(3601)]
 	[Arguments(-1)]

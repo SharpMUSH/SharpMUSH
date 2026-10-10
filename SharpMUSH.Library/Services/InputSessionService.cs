@@ -33,6 +33,9 @@ public sealed class InputSessionService : IInputSessionService
 	public const string PendingTimeout = "#-1 INPUT SESSION TIMEOUT CALLBACK IS PENDING";
 	public const string InvalidTimeout = "#-1 INPUT TIMEOUT MUST BE BETWEEN 1 AND 3600 SECONDS";
 	public const string MissingExit = "#-1 INPUT NEEDS AN EXIT STRING";
+	public const string ReservedExit = "#-1 INPUT EXIT STRING CANNOT BE @INPUT/CANCEL";
+	/// <summary>The line that always leaves a session without its callback; <see cref="TryEscapeAsync"/> takes it first.</summary>
+	public const string CancelLine = "@input/cancel";
 
 	private sealed class Entry(InputSession session)
 	{
@@ -185,6 +188,7 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		exit = exit.Trim();
 		if (exit.Length == 0) return MissingExit;
+		if (exit.Equals(CancelLine, StringComparison.OrdinalIgnoreCase)) return ReservedExit;
 		if (timeout < TimeSpan.FromSeconds(1) || timeout > TimeSpan.FromHours(1)) return InvalidTimeout;
 		var state = parser.CurrentState;
 		if (state.Handle is not { } handle || _connections.Get(handle) is not { Ref: { } character } connection
@@ -296,7 +300,7 @@ public sealed class InputSessionService : IInputSessionService
 
 	public async ValueTask<bool> TryEscapeAsync(long handle, string? transportSessionId, MString input, Guid? expectedCapture = null)
 	{
-		if (!input.Text.Equals("@input/cancel", StringComparison.OrdinalIgnoreCase)) return false;
+		if (!input.Text.Equals(CancelLine, StringComparison.OrdinalIgnoreCase)) return false;
 		InputSession session;
 		HandlePublicationLane.Slot? place;
 		lock (_gate)
