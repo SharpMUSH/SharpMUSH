@@ -63,6 +63,19 @@ public class SoftcodeParseCacheTests
 		await Assert.That(cache.TryGet(KeyFor(attribute), out _)).IsFalse();
 	}
 
+	/// <summary>A function re-parsing part of the typed line in its own frame, as localize() does, still keeps none of it.</summary>
+	[Test]
+	public async Task TypedTextAFunctionEvaluates_IsNotKept()
+	{
+		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
+		var body = $"{TestIsolationHelpers.GenerateUniqueName("typedbody")} [add(1,2)]";
+
+		await Factory.CommandParser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(),
+			MarkupText.Plain($"think [localize({body})]"));
+
+		await Assert.That(cache.TryGet(KeyFor(body), out _)).IsFalse();
+	}
+
 	/// <summary>Attribute text a typed command runs is not part of the line, and is still kept.</summary>
 	[Test]
 	public async Task AttributeTextATypedLineRuns_IsKept()

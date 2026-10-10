@@ -296,20 +296,23 @@ public class DidItService(
 				Enactor = enactor,
 				Caller = enactor,
 				Arguments = args,
-				EnvironmentRegisters = args,
-				Registers = new([[]]),
-				IterationRegisters = [],
-				RegexRegisters = [],
-				SwitchStack = [],
-				ExecutionStack = [],
-				CallDepth = new InvocationCounter(),
-				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations = new InvocationCounter(),
-				LimitExceeded = new LimitExceededFlag(),
-				MoveDepth = new InvocationCounter(),
 				CommandHistory = null,
 				BreakPropagation = null,
-				HttpResponse = null
+				Context = baseState.Context with
+				{
+					EnvironmentRegisters = args,
+					Registers = new([[]]),
+					IterationRegisters = [],
+					RegexRegisters = [],
+					SwitchStack = [],
+					ExecutionStack = [],
+					CallDepth = new InvocationCounter(),
+					FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+					TotalInvocations = new InvocationCounter(),
+					LimitExceeded = new LimitExceededFlag(),
+					MoveDepth = new InvocationCounter(),
+					HttpResponse = null
+				}
 			},
 			new DbRefAttribute(executor, attributePath),
 			-1), ExecutionBudget.CurrentToken);

@@ -18,7 +18,7 @@ public static class JsonHelpers
 		Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 	};
 
-	public static ValueTask<CallState> NullJSON(ImmutableSortedDictionary<string, CallState> args)
+	public static ValueTask<CallState> NullJSON(OrderedArguments args)
 	{
 		if (args.Count == 1)
 		{
@@ -31,7 +31,7 @@ public static class JsonHelpers
 		return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
 	}
 
-	public static ValueTask<CallState> BooleanJSON(ImmutableSortedDictionary<string, CallState> args)
+	public static ValueTask<CallState> BooleanJSON(OrderedArguments args)
 	{
 		if (args.Count != 2)
 		{
@@ -47,7 +47,7 @@ public static class JsonHelpers
 		};
 	}
 
-	public static ValueTask<CallState> StringJSON(ImmutableSortedDictionary<string, CallState> args)
+	public static ValueTask<CallState> StringJSON(OrderedArguments args)
 	{
 		if (args.Count != 2)
 		{
@@ -64,7 +64,7 @@ public static class JsonHelpers
 	/// the serialized MString a portal <c>mstring</c> field or timeline row draws. <c>json(string)</c> keeps only
 	/// the plain text.
 	/// </summary>
-	public static ValueTask<CallState> MarkupStringJSON(ImmutableSortedDictionary<string, CallState> args)
+	public static ValueTask<CallState> MarkupStringJSON(OrderedArguments args)
 	{
 		if (args.Count != 2)
 		{
@@ -76,7 +76,7 @@ public static class JsonHelpers
 		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(MarkupTextSerializer.Serialize(entry), RelaxedJsonOptions)));
 	}
 
-	public static ValueTask<CallState> NumberJSON(ImmutableSortedDictionary<string, CallState> args)
+	public static ValueTask<CallState> NumberJSON(OrderedArguments args)
 	{
 		if (args.Count != 2)
 		{
@@ -92,7 +92,7 @@ public static class JsonHelpers
 		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(value)));
 	}
 
-	public static ValueTask<CallState> ArrayJSON(ImmutableSortedDictionary<string, CallState> args)
+	public static ValueTask<CallState> ArrayJSON(OrderedArguments args)
 	{
 		if (args.Count < 2)
 		{
@@ -123,7 +123,7 @@ public static class JsonHelpers
 		return document.RootElement.Clone();
 	}
 
-	public static ValueTask<CallState> ObjectJSON(ImmutableSortedDictionary<string, CallState> args)
+	public static ValueTask<CallState> ObjectJSON(OrderedArguments args)
 	{
 		if (args.Count < 3)
 		{

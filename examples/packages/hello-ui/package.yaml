@@ -22,7 +22,7 @@ keywords: [plugin, dll, ui, application]
 binaries:
   # The plugin/server contract version the DLL was built against. The installer refuses a package built
   # for a newer contract than the target server provides (checked against PluginContractVersion.Current).
-  min_server_version: ">=1.0"
+  min_server_version: ">=2.0"
   files:
     # file: = a FLAT name (no path separators, no '..'). Each deposits directly into the plugin's folder.
     # sha256: = the lowercase 64-hex digest of the built bytes.

@@ -386,7 +386,7 @@ authors: [You]
 description: "What it does"
 kind: plugin
 binaries:
-  min_server_version: ">=1.1"   # the plugin/server contract version your DLL was built against
+  min_server_version: ">=2.0"   # the plugin/server contract version your DLL was built against
   files:
     - file: MyPlugin.dll
       sha256: <64-hex SHA-256 of MyPlugin.dll>
@@ -419,7 +419,7 @@ hand-dropped plugin). Whoever runs the server and installs it takes that respons
 Either way the review page opens, and the apply needs the "I trust this author" box ticked
 (`allow_plugin_code`). The server's `SHARPMUSH_PLUGIN_INSTALL` switch (on unless set to `false`) decides whether
 it installs plugin packages at all. The package manager then verifies every file's hash, refuses anything built
-for a newer `min_server_version` than the server provides, and deposits the verified bytes. **Your plugin loads
+for a newer `min_server_version` than the server provides or for an older major contract (`>=1.0` on a 2.x server), and deposits the verified bytes. **Your plugin loads
 at the next start**; the Restart button on the Plugins tab (or `@shutdown/reboot`) restarts the engine without
 dropping client connections.
 

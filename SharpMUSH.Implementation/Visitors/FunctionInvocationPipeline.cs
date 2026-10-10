@@ -71,7 +71,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				return new CallState(EvaluationDiagnostics.UnknownFunction(name, parser.FunctionLibrary), context.Depth());
 			}
 
-			measuredName = definition.Attribute.Name.ToUpperInvariant();
+			measuredName = definition.Attribute.UpperName;
 			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 			if (IsRestricted(parser) && args.Length > EvaluationRestrictions.MaximumArguments)
 				throw new RestrictedExpressionException();
@@ -179,7 +179,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 					var msg = evaluated.Message;
 					retainedArguments?.Add(msg.Length);
 					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
-					refinedArguments.Add(new CallState(msg, x.Depth()) { HadErrors = evaluated.HadErrors });
+					refinedArguments.Add(evaluated.AsValue(msg, x.Depth()));
 				}
 
 				AtLeastOneArgument(refinedArguments, context);
@@ -356,7 +356,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
 		}
 
-		return result with { Depth = contextDepth };
+		return result.Depth == contextDepth ? result : result with { Depth = contextDepth };
 	}
 
 	/// <summary>

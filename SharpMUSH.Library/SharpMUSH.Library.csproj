@@ -39,9 +39,9 @@
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<PackageId>SharpMUSH.Library</PackageId>
-		<!-- Version is aligned to PluginContractVersion.Current (1.1.0). Bump both together when the
+		<!-- Version is aligned to PluginContractVersion.Current (2.0.0). Bump both together when the
 		     plugin contract surface changes. -->
-		<Version>1.1.0</Version>
+		<Version>2.0.0</Version>
 		<!-- NU5104: a stable package should not depend on a prerelease one, and Microsoft.Data.Sqlite
 		     below is pinned to $(DotNetPackageVersion), currently an 11.0 RC build, because .NET 11
 		     itself has not shipped stable yet (global.json). The contract surface this package ships
@@ -52,7 +52,7 @@
 		     case here. Safe to drop once $(DotNetPackageVersion) moves off prerelease. -->
 		<NoWarn>$(NoWarn);NU5104</NoWarn>
 		<Authors>SharpMUSH Contributors</Authors>
-		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 1.1.0.</Description>
+		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 2.0.0.</Description>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>

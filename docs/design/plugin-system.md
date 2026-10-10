@@ -341,7 +341,7 @@ package: my-plugin
 version: "1.0.0"
 kind: plugin
 binaries:
-  min_server_version: ">=1.1"        # plugin/server contract version constraint (refused if too new)
+  min_server_version: ">=2.0"        # plugin/server contract version constraint (refused if too new or an older major)
   files:
     - file: MyPlugin.dll             # flat file name — no path separators or '..'
       sha256: <64-hex SHA-256>       # the installer rejects a mismatch
@@ -379,6 +379,7 @@ delegates to **`IPluginPackageInstaller`** (`PluginPackageInstaller` in `SharpMU
    **`PackageApplyRequest.AllowPluginCode`** (`allow_plugin_code`; the "I trust this author" checkbox on the
    portal's review page). A package never declares its own trust.
 3. **Server-version check.** `PluginContractVersion.Satisfies(min_server_version)` — refuse a package built for
+   an older major contract (its lower bound, such as `>=1.0` on a 2.x server), or
    a newer contract than this server provides.
 4. **Hash verification.** Every declared file is read through the binary source and its SHA-256 compared to the
    manifest. A missing file or any mismatch **rejects the apply, having written nothing**.

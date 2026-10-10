@@ -21,7 +21,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	private static readonly Dictionary<string, Func<ImmutableSortedDictionary<string, CallState>, ValueTask<CallState>>> JsonFunctions = new()
+	private static readonly Dictionary<string, Func<OrderedArguments, ValueTask<CallState>>> JsonFunctions = new()
 	{
 		{"null", JsonHelpers.NullJSON},
 		{"boolean", JsonHelpers.BooleanJSON},
