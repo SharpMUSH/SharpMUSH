@@ -759,10 +759,10 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>objeval()</c> for text: the expression is evaluated as the caller first, like any argument, and
-	/// what it gives is then evaluated as the object. <c>objevaltext(%#,%0)</c> is what
+	/// what it gives is then evaluated as the object. <c>objevals(%#,%0)</c> is what
 	/// <c>objeval(%#,s(%0))</c> spells with an extra function.
 	/// </summary>
-	[SharpFunction(Name = "objevaltext", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "text"])]
+	[SharpFunction(Name = "objevals", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "text"])]
 	public async ValueTask<CallState> ObjectEvaluationOfText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
