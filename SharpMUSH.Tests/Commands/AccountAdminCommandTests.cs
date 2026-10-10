@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Queries.Database;
@@ -67,8 +68,8 @@ public class AccountAdminCommandTests
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/list {_username}"));
 
-		var listing = WebAppFactoryArg.Notifications.For(_actor.DbRef).Last(m => m.Contains($"{_username}* (", StringComparison.Ordinal));
-		await Assert.That(listing).Contains($"{_username}* (active)");
+		var listing = WebAppFactoryArg.Notifications.For(_actor.DbRef).Last(m => m.Contains($"{_username}*:", StringComparison.Ordinal));
+		await Assert.That(listing).Matches($@"{Regex.Escape(_username)}\*: +active");
 		await Assert.That(listing).Contains("* must change password at next login");
 	}
 

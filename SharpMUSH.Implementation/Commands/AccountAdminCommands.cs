@@ -61,10 +61,10 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			var grid = new Grid([.. filtered.Select(AccountEntry)]) { Gap = 3 };
+			var fields = new Fields([.. filtered.Select(AccountEntry)]) { Columns = 3 };
 			var panel = filtered.Any(a => a.MustChangePassword)
-				? ServerLayout.Panel(MarkupText.Plain("Accounts"), grid, ServerLayout.Body(MarkupText.Plain("* must change password at next login")))
-				: ServerLayout.Panel(MarkupText.Plain("Accounts"), grid);
+				? ServerLayout.Panel(MarkupText.Plain("Accounts"), fields, ServerLayout.Body(MarkupText.Plain("* must change password at next login")))
+				: ServerLayout.Panel(MarkupText.Plain("Accounts"), fields);
 			await NotifyService.Notify(executor, ServerLayout.Build(panel, 78));
 			return CallState.Empty;
 		}
@@ -199,7 +199,9 @@ public partial class Commands
 		var characters = await AccountService.GetCharactersAsync(account.Id!);
 		var details = ServerLayout.KeyValues([
 			("Email", MarkupText.Plain(account.Email ?? "(none)")),
-			("Status", MarkupText.Plain(StatusLabel(account.Status) + (account.MustChangePassword ? ", must change password" : string.Empty))),
+			("Status", account.MustChangePassword
+				? MarkupText.Concat(StatusLabel(account.Status), MarkupText.Plain(", must change password"))
+				: StatusLabel(account.Status)),
 			("Characters", MarkupText.Plain(characters.Count.ToString(CultureInfo.InvariantCulture)))]);
 		Block characterList = characters.Count == 0
 			? new TextBlock(MarkupText.Plain("No characters."))
@@ -314,12 +316,19 @@ public partial class Commands
 	}
 
 	/// <summary>One <c>@account/list</c> entry: the account's name, a <c>*</c> when it must change its password, and its state.</summary>
-	private MarkupText AccountEntry(SharpAccount account) =>
-		MarkupText.Plain($"{account.Username}{(account.MustChangePassword ? "*" : string.Empty)} ({StatusLabel(account.Status)})");
+	private Field AccountEntry(SharpAccount account) =>
+		new(MarkupText.Plain(account.Username + (account.MustChangePassword ? "*" : string.Empty)), new TextBlock(StatusLabel(account.Status)));
 
-	private string StatusLabel(AccountStatus status) => status switch
+	/// <summary>An account's state in the reader's theme colour for it.</summary>
+	private static MarkupText StatusLabel(AccountStatus status)
 	{
-		AccountStatus.Active => "active",
-		_ => status.ToString().ToUpperInvariant()
-	};
+		var role = status switch
+		{
+			AccountStatus.Active => ThemeRole.Success,
+			AccountStatus.Disabled => ThemeRole.Warning,
+			AccountStatus.Closed => ThemeRole.Muted,
+			_ => ThemeRole.Error
+		};
+		return ToneMarkup.Build(role, MarkupText.Plain(status.ToString().ToLowerInvariant()), ToneMarkup.Standard(role));
+	}
 }
