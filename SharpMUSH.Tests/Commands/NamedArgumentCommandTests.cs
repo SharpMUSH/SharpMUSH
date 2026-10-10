@@ -1,3 +1,6 @@
+using System.Text.RegularExpressions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Implementation.Common;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -91,7 +94,7 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
-	public async Task FunctionArgsTrailingNamesDealTheRestOutInTurn()
+	public async Task FunctionArgsGroupDealsTheRestOutInTurn()
 	{
 		var thing = await NewThing("FnGroups");
 		var name = $"ng{Guid.NewGuid():N}"[..20];
@@ -99,9 +102,29 @@ public class NamedArgumentCommandTests
 		await Run($"@function {name}={thing},FN");
 		try
 		{
-			await Run($"@function/args {name}=obj key... value... arg...");
+			await Run($"@function/args {name}=obj key...|value...|arg...");
 			await Assert.That(await Eval($"{name}(me,k1,v1,a1,k2,v2,a2)")).IsEqualTo("me:k1=v1+a1|k2=v2+a2:222");
 			await Assert.That(await Eval($"{name}(me,k1,v1,a1,k2)")).IsEqualTo("me:k1=v1+a1|k2=+:211");
+		}
+		finally
+		{
+			await Run($"@function/delete {name}");
+		}
+	}
+
+	/// <summary>A name after a group takes what is left over, as switch()'s <c>default</c> does.</summary>
+	[Test]
+	public async Task FunctionArgsNameAfterAGroupTakesTheLeftover()
+	{
+		var thing = await NewThing("FnDefault");
+		var name = $"nd{Guid.NewGuid():N}"[..20];
+		await Run($"&FN {thing}=[iter(lnum(1,%<casecount>),%<case##>=%<result##>,%b,|)]/%<default>");
+		await Run($"@function {name}={thing},FN");
+		try
+		{
+			await Run($"@function/args {name}=case...|result... default");
+			await Assert.That(await Eval($"{name}(a,1,b,2,other)")).IsEqualTo("a=1|b=2/other");
+			await Assert.That(await Eval($"{name}(a,1,b,2)")).IsEqualTo("a=1|b=2/");
 		}
 		finally
 		{
@@ -131,12 +154,33 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
-	[Arguments("items... who")]
-	[Arguments("...")]
+	[Arguments("who count")]
+	[Arguments("obj items...")]
+	[Arguments("key...|value...|arg...")]
+	[Arguments("expression case...|result... default")]
+	[Arguments("obj ...")]
+	[Arguments("... default")]
+	[Arguments("")]
+	public async Task ArgumentNamesTakeTheShapesBuiltInsDeclare(string names)
+		=> await Assert.That(ArgHelpers.ArgumentNames(names) is string[]).IsTrue();
+
+	[Test]
 	[Arguments("items items...")]
+	[Arguments("who WHO")]
+	[Arguments("who 2")]
 	[Arguments("key... ...")]
 	[Arguments("... ...")]
-	public async Task FunctionArgsRefusesAMisplacedOrRepeatedRest(string names)
+	[Arguments("key... value...")]
+	[Arguments("items... last")]
+	[Arguments("key...|value")]
+	[Arguments("key|value...")]
+	[Arguments("key...|...")]
+	[Arguments("case...|result... case")]
+	public async Task ArgumentNamesRefuseAMisplacedOrRepeatedName(string names)
+		=> await Assert.That(ArgHelpers.ArgumentNames(names) is Error<string>).IsTrue();
+
+	[Test]
+	public async Task FunctionArgsKeepsNoNamesItRefused()
 	{
 		var thing = await NewThing("FnRestBad");
 		var name = $"nb{Guid.NewGuid():N}"[..20];
@@ -144,8 +188,9 @@ public class NamedArgumentCommandTests
 		await Run($"@function {name}={thing},FN");
 		try
 		{
-			await Run($"@function/args {name}={names}");
-			await Assert.That(await Eval($"{name}(a,b)")).IsEqualTo("x");
+			await Run($"@function/args {name}=items... last");
+			await Assert.That(WebAppFactoryArg.Services.GetRequiredService<IUserDefinedFunctionService>().Get(name)?.ArgumentNames)
+				.IsEquivalentTo(Array.Empty<string>());
 		}
 		finally
 		{
@@ -246,6 +291,45 @@ public class HookNamedArgumentTests
 		{
 			await HookService.ClearHookAsync("@ATRCHOWN", "BEFORE");
 			await Run("@command/args @ATRCHOWN=");
+		}
+	}
+
+	/// <summary>
+	/// Runs every example in a help file that is followed by an <c>Output:</c> line, as written: each
+	/// <c>think</c> line's expression must evaluate to the next backticked value on that line.
+	/// </summary>
+	[Test]
+	[Arguments("named-arguments.md")]
+	[Arguments("function-command.md")]
+	public async Task HelpExamplesProduceTheirOutput(string helpFile)
+	{
+		var text = await File.ReadAllTextAsync(Path.Combine(TestPaths.Helpfiles.FullName, helpFile));
+		var examples = Regex.Matches(text, @"```sharp\n(?<code>.*?)```\nOutput: (?<output>[^\n]*)", RegexOptions.Singleline);
+		await Assert.That(examples.Count).IsGreaterThan(0);
+
+		foreach (Match example in examples)
+		{
+			var lines = example.Groups["code"].Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+			var expected = Regex.Matches(example.Groups["output"].Value, "`([^`]*)`").Select(match => match.Groups[1].Value).ToArray();
+			var functions = lines.Select(line => Regex.Match(line, @"^@function (\w+)=")).Where(match => match.Success)
+				.Select(match => match.Groups[1].Value).ToArray();
+			var heard = new List<string>();
+			try
+			{
+				foreach (var line in lines)
+				{
+					if (line.StartsWith("think ")) heard.Add((await FunctionParser.EvaluateAsync(MarkupText.Plain(line["think ".Length..]))).ToPlainText());
+					else await Run(line);
+				}
+			}
+			finally
+			{
+				foreach (var function in functions) await Run($"@function/delete {function}");
+				await HookService.ClearHookAsync("@ATRCHOWN", "BEFORE");
+				await Run("@command/args @ATRCHOWN=");
+			}
+
+			await Assert.That(heard).IsEquivalentTo(expected).Because($"{example.Value} gave [{string.Join("|", heard)}]");
 		}
 	}
 

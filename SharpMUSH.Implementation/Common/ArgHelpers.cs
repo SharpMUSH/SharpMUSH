@@ -338,63 +338,92 @@ public static partial class ArgHelpers
 		return named;
 	}
 
-	/// <summary>The suffix that makes the trailing <c>@function/args</c> or <c>@command/args</c> names take the rest.</summary>
+	/// <summary>The suffix that makes an <c>@function/args</c> or <c>@command/args</c> name take the rest.</summary>
 	public const string RestSuffix = "...";
 
 	/// <summary>
-	/// The space-separated argument names given to <c>@function/args</c> or <c>@command/args</c>. Names are
-	/// unique (case-insensitive) and not numbers. Names ending in <c>...</c> come last and share out the
-	/// rest; a bare <c>...</c>, alone at the end, takes the rest as name/value pairs the caller names.
+	/// The names <c>@function/args</c> and <c>@command/args</c> give arguments, in the shapes a built-in's
+	/// <see cref="SharpMUSH.Library.Attributes.SharpFunctionAttribute.ParameterNames"/> uses: the names before
+	/// the rest, at most one rest name (<c>items...</c>, a group <c>case...|result...</c>, or a bare <c>...</c>
+	/// for name/value pairs the caller names), and after a group or pairs, names for what is left once whole
+	/// groups are dealt (switch()'s <c>default</c>).
+	/// </summary>
+	private readonly record struct ArgumentLayout(string[] Before, string[] Stems, string[] After)
+	{
+		public int GroupSize => Stems is [""] ? 2 : Stems.Length;
+
+		public static ArgumentLayout Of(string[] names)
+		{
+			var restAt = Array.FindIndex(names, name => name.EndsWith(RestSuffix));
+			return restAt < 0
+				? new ArgumentLayout(names, [], [])
+				: new ArgumentLayout(names[..restAt],
+					names[restAt].Split('|').Select(part => part.EndsWith(RestSuffix) ? part[..^RestSuffix.Length] : part).ToArray(),
+					names[(restAt + 1)..]);
+		}
+	}
+
+	/// <summary>
+	/// The space-separated argument names given to <c>@function/args</c> or <c>@command/args</c>, checked:
+	/// names are unique (case-insensitive) and not numbers, there is one rest name at most, and names after
+	/// it need a group or pairs to take what is left over. See <see cref="ArgumentLayout"/>.
 	/// </summary>
 	public static Result<string[]> ArgumentNames(string? text)
 	{
 		var names = (text ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var fixedNames = names.TakeWhile(name => !name.EndsWith(RestSuffix)).ToArray();
-		var restNames = names[fixedNames.Length..];
-		var stems = names.Select(Stem).ToArray();
-		var valid = restNames.All(name => name.EndsWith(RestSuffix))
-			&& (restNames is not [_, _, ..] || restNames.All(name => name != RestSuffix))
-			&& stems.Where(stem => stem.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Count(stem => stem.Length > 0)
+		var layout = ArgumentLayout.Of(names);
+		var stems = layout.Before.Concat(layout.Stems).Concat(layout.After).Where(stem => stem.Length > 0).ToArray();
+		var valid = names.Count(name => name.EndsWith(RestSuffix)) <= 1
+			&& names.Where(name => !name.EndsWith(RestSuffix)).All(name => !name.Contains('|'))
+			&& names.Where(name => name.EndsWith(RestSuffix)).SelectMany(name => name.Split('|')).All(part => part.EndsWith(RestSuffix))
+			&& (layout.Stems is [] or [""] || layout.Stems.All(stem => stem.Length > 0))
+			&& (layout.After.Length == 0 || layout.GroupSize > 1)
+			&& stems.Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Length
 			&& stems.All(stem => !int.TryParse(stem, out _));
 		return valid ? names : new Error<string>(ErrorMessages.Returns.BadArgumentName);
 	}
 
-	private static string Stem(string name) => name.EndsWith(RestSuffix) ? name[..^RestSuffix.Length] : name;
-
 	/// <summary>
 	/// Adds <paramref name="values"/> to <paramref name="into"/> under <paramref name="names"/>, in order.
-	/// Trailing names such as <c>key... value...</c> deal the rest out in turn, as <c>key1</c>, <c>value1</c>,
-	/// <c>key2</c>, ..., each with its number as <c>keycount</c>, <c>valuecount</c> (as a hook's <c>LSA1</c>..
-	/// and <c>LSAC</c>). A bare <c>...</c> reads the rest as name/value pairs: an odd count, or a name that is
-	/// empty, a number or one of the fixed names, is refused.
+	/// A rest name <c>items...</c> takes the rest as <c>items1</c>, <c>items2</c>, ... with their number as
+	/// <c>itemscount</c> (as a hook's <c>LSA1</c>.. and <c>LSAC</c>); a group <c>key...|value...</c> deals
+	/// them out in turn as <c>key1</c>, <c>value1</c>, <c>key2</c>, ..., each with its count; a bare
+	/// <c>...</c> reads them as name/value pairs, refusing a name that is empty, a number or one of the other
+	/// names. Names after the rest take the last arguments that don't make up a whole group; without them,
+	/// an odd number of pairs is refused.
 	/// </summary>
 	public static Result<Success> AddNamedArguments<T>(IDictionary<string, T> into, IReadOnlyList<T> values, string[] names,
 		Func<T, string> toText, Func<string, T> fromText)
 	{
-		var fixedNames = names.TakeWhile(name => !name.EndsWith(RestSuffix)).ToArray();
-		foreach (var (value, position) in values.Take(fixedNames.Length).Select((value, position) => (value, position)))
-		{
-			into[fixedNames[position]] = value;
-		}
+		var layout = ArgumentLayout.Of(names);
+		AddInOrder(into, values.Take(layout.Before.Length), layout.Before);
+		if (layout.Stems is []) return new Success();
 
-		var restNames = names[fixedNames.Length..];
-		var remaining = values.Skip(fixedNames.Length).ToArray();
-		return restNames switch
-		{
-			[] => new Success(),
-			[RestSuffix] => AddCallerNamedPairs(into, remaining, fixedNames, toText),
-			_ => AddDealtOut(into, remaining, restNames.Select(Stem).ToArray(), fromText)
-		};
+		var remaining = values.Skip(layout.Before.Length).ToArray();
+		var afterCount = Math.Min(layout.After.Length, remaining.Length % layout.GroupSize);
+		var dealt = remaining[..^afterCount];
+		AddInOrder(into, remaining[^afterCount..], layout.After);
+		return layout.Stems is [""]
+			? AddCallerNamedPairs(into, dealt, layout.Before.Concat(layout.After).ToArray(), toText)
+			: AddDealtOut(into, dealt, layout.Stems, fromText);
 	}
 
-	private static Result<Success> AddCallerNamedPairs<T>(IDictionary<string, T> into, T[] remaining, string[] fixedNames,
+	private static void AddInOrder<T>(IDictionary<string, T> into, IEnumerable<T> values, string[] names)
+	{
+		foreach (var (value, position) in values.Select((value, position) => (value, position)))
+		{
+			into[names[position]] = value;
+		}
+	}
+
+	private static Result<Success> AddCallerNamedPairs<T>(IDictionary<string, T> into, T[] remaining, string[] otherNames,
 		Func<T, string> toText)
 	{
 		if (remaining.Length % 2 != 0) return new Error<string>(ErrorMessages.Returns.NamedArgumentsComeInPairs);
 
 		var pairs = remaining.Chunk(2).Select(pair => (Name: toText(pair[0]).Trim(), Value: pair[1])).ToArray();
 		if (pairs.Any(pair => pair.Name.Length == 0 || int.TryParse(pair.Name, out _)
-				|| fixedNames.Contains(pair.Name, StringComparer.OrdinalIgnoreCase)))
+				|| otherNames.Contains(pair.Name, StringComparer.OrdinalIgnoreCase)))
 		{
 			return new Error<string>(ErrorMessages.Returns.BadArgumentName);
 		}

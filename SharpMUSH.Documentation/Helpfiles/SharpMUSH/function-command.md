@@ -16,6 +16,11 @@
       "lookup": "@function startup loading"
     },
     {
+      "id": "named-arguments",
+      "heading": "Named arguments",
+      "lookup": "@function named arguments"
+    },
+    {
       "id": "replacing-built-in-functions",
       "heading": "Replacing built-in functions",
       "lookup": "@function replacing built-in functions"
@@ -59,7 +64,7 @@ Otherwise, this command defines a global function with the name `<function name>
 
 A function defined using @function works just like any of the normal MUSH functions, from the user's perspective. The functions are executed by the object, with its powers.
 
-Functions defined via @function should follow the format used by UFUN() - %0 is the first argument passed, %1 is the second argument passed, and so forth. `@function/args` names them as well: after `@function/args greet=who count`, a call `greet(Bob, 3)` also passes %`\<who\>` and %`\<count\>`. The last name may end in `...` to take the rest: after `@function/args glue=sep items...`, a call `glue(-,a,b c)` passes %`\<sep\>`, then %`\<items1\>` and %`\<items2\>`, and %`\<itemscount\>` (2). Several such names share the rest out in turn: after `@function/args set=obj key... value...`, a call `set(me,a,1,b,2)` passes %`\<key1\>`, %`\<value1\>`, %`\<key2\>`, %`\<value2\>`, %`\<keycount\>` and %`\<valuecount\>`. A bare `...` at the end lets the caller name the rest, in name/value pairs: after `@function/args greet=obj ...`, a call `greet(me,who,Bob)` passes %`\<obj\>` and %`\<who\>`. An odd number of them, or a name that is empty, a number or one of the fixed names, makes the call return an error. With no names, the arguments are passed by position only. Redefining the function clears its names, so set them after defining it. Optional third and fourth arguments to @function can be used to set a parser-enforced number of arguments for the function. If the maximum arguments is negative, any additional arguments are treated as part of the text of the last argument. Note that this behaviour is deprecated, and will be removed in the near future.
+Functions defined via @function should follow the format used by UFUN() - %0 is the first argument passed, %1 is the second argument passed, and so forth. `@function/args` also passes them under names of their own; see [@function named arguments]. Optional third and fourth arguments to @function can be used to set a parser-enforced number of arguments for the function. If the maximum arguments is negative, any additional arguments are treated as part of the text of the last argument. Note that this behaviour is deprecated, and will be removed in the near future.
 
 An optional fifth argument will set restriction flags.
 
@@ -89,6 +94,20 @@ For example, if you have one object that stores all your global functions, you c
 
 And then store each function as an attribute of the same name on object #100.
 
+## Named arguments
+
+`@function/args <function name>=[<name> ...]` passes the function's arguments under these space-separated names as well as %0, %1 and so on. The attribute reads them with %`\<name\>`. With no names, the names are cleared. Redefining the function clears them too, so set them after the @function in the same @startup.
+
+```sharp
+&FN`GREET me=Hello, %<who>. You have %<count> new posts.
+@function greet=me,FN`GREET
+@function/args greet=who count
+think greet(Bob,3)
+```
+Output: `Hello, Bob. You have 3 new posts.`
+
+The last name can take the rest of the arguments, in the shapes the built-in functions' parameter lists use: `items...` gives `items1`, `items2`, ... and `itemscount`; `key...|value...` deals them out in turn; `case...|result... default` also gives `default` what is left over after whole groups; and a bare `...` lets the caller name them in pairs. See [named arguments rest] for an example of each.
+
 ## Replacing built-in functions
 
 Normally, built in functions cannot be overriden by @functions. However, if a built-in function is deleted with `@function/delete`, you can then make a @function with the same name. "Deleted" built-ins can still be called through the FN() function, and can have restrictions applied with `@function/restrict/builtin`. `@function/restore` will delete the @function and turn the built in version back on.
@@ -107,6 +126,7 @@ This creates a new version of ansi() that doesn't do any colorization, and that 
 
 ::: seealso
 - [restrict]
+- [named arguments]
 - [functions]
 - [@startup]
 - [fn()]

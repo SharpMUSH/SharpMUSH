@@ -4,8 +4,7 @@
   "id": "uargs-function",
   "lookup": "uargs()",
   "aliases": [
-    "uargs",
-    "named arguments"
+    "uargs"
   ],
   "sections": [
     {
@@ -36,6 +35,7 @@ think uargs(me/FUN`GREETING, name, %n, count, 3)
 Output: `Hello, Cyclonus. You have 3 new posts.`
 
 ::: seealso
+- [named arguments]
 - [u()]
 - [r()]
 - [substitutions]
