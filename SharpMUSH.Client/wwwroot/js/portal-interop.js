@@ -57,10 +57,14 @@
                 // so output arriving meanwhile cannot move it to the bottom; shown again, the browser puts back
                 // the old scroll offset without a scroll event, a screen or more above the newest line. A
                 // follower is put back at the bottom whenever its size changes, which includes being shown.
+                // Removed from the page, the output is resized to nothing too: the observer lets go of it
+                // then, or it would keep the unmounted terminal and its scrollback alive.
                 if (typeof ResizeObserver !== 'undefined') {
-                    new ResizeObserver(function () {
+                    var resized = new ResizeObserver(function () {
+                        if (!el.isConnected) { resized.disconnect(); return; }
                         if (!el._sharpmushReading) el.scrollTop = el.scrollHeight;
-                    }).observe(el);
+                    });
+                    resized.observe(el);
                 }
             }
             if (el._sharpmushReading) {

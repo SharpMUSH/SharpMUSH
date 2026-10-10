@@ -16,7 +16,7 @@ function boot() {
         }
     };
     const output = {
-        scrollTop: 0, scrollHeight: 500, clientHeight: 200,
+        scrollTop: 0, scrollHeight: 500, clientHeight: 200, isConnected: true,
         contains: a => a.command !== undefined,
         closest: selector => selector === '.sharp-terminal-container' ? box : null,
         addEventListener: (name, handler) => listeners.set(name, handler),
@@ -26,7 +26,8 @@ function boot() {
     const resized = [];
     class ResizeObserver {
         constructor(callback) { this.callback = callback; }
-        observe(target) { resized.push({ target, fire: () => this.callback([{ target }]) }); }
+        observe(target) { resized.push({ target, observer: this, fire: () => this.callback([{ target }]) }); }
+        disconnect() { this.disconnected = true; }
     }
     const context = vm.createContext({ ResizeObserver, window: { addEventListener: (name) => windowListeners.push(name) }, document: {
         getElementById: id => id === 'output' ? output : null
@@ -109,6 +110,14 @@ test('a reader scrolled up stays where they were when the terminal is shown agai
     output.scrollHeight = 900;
     resized[0].fire();
     assert.equal(output.scrollTop, 100);
+});
+
+test('an unmounted terminal is let go of by its resize observer', () => {
+    const { terminal, output, resized } = boot();
+    terminal.scrollToBottom('output');
+    output.isConnected = false;
+    resized[0].fire();
+    assert.ok(resized[0].observer.disconnected);
 });
 
 test('following a terminal adds nothing to window, so an unmounted terminal is not kept alive', () => {
