@@ -258,7 +258,8 @@ public partial class LightningDatabase
 		}
 
 		// A room shows its picture (the Ancestor Room's DESCFORMAT) only when it may show pictures itself.
-		foreach (var room in InitialObjectImageSeed.Objects.Where(image => InitialObjectSeed.Objects.Single(seed => seed.Dbref == image.Dbref).Type == "ROOM"))
+		var rooms = InitialObjectSeed.Objects.Where(seed => seed.Type == "ROOM").Select(seed => seed.Dbref).ToHashSet();
+		foreach (var room in InitialObjectImageSeed.Objects.Where(image => rooms.Contains(image.Dbref)))
 		{
 			WriteObjectOverride(tx, room.Dbref, PortalPermission.GamePower("Send_Image"), PermissionState.Allow);
 		}
