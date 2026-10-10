@@ -1,6 +1,6 @@
 format: 1.2
 package: bboards
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -597,14 +597,16 @@ objects:
       FUN`DISPLAY`READERWHERE: |-
         [setqm(reader_where_place,get(%q<reader_holder>/BBOARD`HERE),reader_where_comment,get(%q<reader_holder>/BBOARD`HERE`C))][switch(1,u(%!/FUN`IS`POST,%q<reader_where_place>),[u(%!/FUN`PATH`OFPOST,%q<reader_where_place>)][if(strlen(%q<reader_where_comment>),%, comment [u(%!/FUN`STORE`COMMENTNUMBER,%q<reader_where_place>,%q<reader_where_comment>)] of [words(u(%!/FUN`STORE`COMMENTKEYS,%q<reader_where_place>))])],u(%!/FUN`IS`BOARD,%q<reader_where_place>),[u(%!/FUN`PATH`OFBOARD,%q<reader_where_place>)] [name(%q<reader_where_place>)],Boards)]
       # The reader's prompt: where you are, then the keys that matter there, each key coloured apart
-      # from what it does.
+      # from what it does. q is on every prompt but the writing one, where every line is text.
       FUN`DISPLAY`READERPROMPT: |-
-        [setq(reader_where_place,get(%q<reader_holder>/BBOARD`HERE))][tone(muted,bb:)] [tone(secondary,u(%!/FUN`DISPLAY`READERWHERE))]%b%b[switch(1,t(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE))),Every line is text: [u(%!/FUN`DISPLAY`READERKEY,.,posts)] · [u(%!/FUN`DISPLAY`READERKEY,.toss,drops)],u(%!/FUN`IS`POST,%q<reader_where_place>),[u(%!/FUN`DISPLAY`READERKEY,j k,next/prev comment)] · [u(%!/FUN`DISPLAY`READERKEY,c,comment)] · [u(%!/FUN`DISPLAY`READERKEY,r,reply)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,Enter,next new)],u(%!/FUN`IS`BOARD,%q<reader_where_place>),[u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,j k,next/prev page)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)],[u(%!/FUN`DISPLAY`READERKEY,Enter,next new)] · [u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)])]
-      # One reader key for the prompt: key %0, coloured, then what it does, %1.
+        [setq(reader_where_place,get(%q<reader_holder>/BBOARD`HERE))][tone(muted,bb:)] [tone(secondary,u(%!/FUN`DISPLAY`READERWHERE))]%b%b[switch(1,t(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE))),Every line is text: [u(%!/FUN`DISPLAY`READERKEY,.,posts)] · [u(%!/FUN`DISPLAY`READERKEY,.toss,drops)],u(%!/FUN`IS`POST,%q<reader_where_place>),[u(%!/FUN`DISPLAY`READERKEY,j k,next/prev comment)] · [u(%!/FUN`DISPLAY`READERKEY,c,comment)] · [u(%!/FUN`DISPLAY`READERKEY,r,reply)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,Enter,next new)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],u(%!/FUN`IS`BOARD,%q<reader_where_place>),[u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,j k,next/prev page)] · [u(%!/FUN`DISPLAY`READERKEY,u,up)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)],[u(%!/FUN`DISPLAY`READERKEY,Enter,next new)] · [u(%!/FUN`DISPLAY`READERKEY,<#>,open)] · [u(%!/FUN`DISPLAY`READERKEY,?,keys)] · [u(%!/FUN`DISPLAY`READERKEY,q,quit)])]
+      # Reader keys for the prompt: keys %0 (one or more, spaced), coloured, then what they do, %1.
+      # Each key is a link that types it, so a click works as typing does; Enter sends n, which does
+      # the same, and <#> stands for a number, so it is not a link.
       FUN`DISPLAY`READERKEY: |-
-        [tone(info,%0)] %1
+        [iter(%0,if(comp(%i0,<#>),u(%!/FUN`DISPLAY`LINK,tone(info,%i0),switch(%i0,Enter,n,%i0)),tone(info,%i0)))] %1
       FUN`DISPLAY`READERKEYS: |-
-        [rule(Reader keys)]%r[fields(,Enter or n,the next new thing%, what +bbnext shows,<#> or <path>,open board%, post or comment <#> here%, or any path,j k,next / previous: comment in a thread%, page in a list,J K,next / previous post on this board,p,the comment this one answers,t,the whole thread from the top,u,up one level: comment%, thread%, board%, parent board,c <text>,comment on this post,r <text>,reply to this comment,c or r alone,write several lines%; . posts%, .toss drops,e <old>/<new>,edit what you wrote here,f,follow or stop following this post,m,mark this board read,l,look: show this screen again,q,leave the reader)]%r[rule()]%rEverything you type here is a key or text. To use other commands%, q first.
+        [rule(Reader keys)]%r[fields(,Enter or n,the next new thing%, what +bbnext shows,<#> or <path>,open board%, post or comment <#> here%, or any path,j k,next / previous: comment in a thread%, page in a list,J K,next / previous post on this board,p,the comment this one answers,t,the whole thread from the top,u,up one level: comment%, thread%, board%, parent board,c <text>,comment on this post,r <text>,reply to this comment,c or r alone,write several lines%; . posts%, .toss drops,e <old>/<new>,edit what you wrote here,f,follow or stop following this post,m,mark this board read,l,look: show this screen again,+bbread +bbnext,work here too%, as do the links on the screens,q,leave the reader)]%r[rule()]%rEverything you type here is a key or text%, and the keys on the prompt are links. To use other commands%, q first.
       # +bbreader [<path>]: opens the reader there, or where you were.
       INC`CMD`READER: |-
         @assert not(strlen(%q<cmd_argument>))={think [u({{bboards}}/FUN`COMMAND`PARSE,read,,%q<cmd_argument>)]; @include/nobreak {{bboards}}/INC`CMD`READ; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`BOARD,get(%q<reader_holder>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`POST,get(%q<reader_holder>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};think [u({{bboards}}/FUN`COMMAND`PARSE,read,,)];@include/nobreak {{bboards}}/INC`CMD`READ;@include {{bboards}}/INC`READER`START
@@ -621,7 +623,7 @@ objects:
       # comp(), which minds case (j and J differ) and treats ? as itself. Each key that does more than
       # one thing has its own INC`READER`KEY` branch.
       INC`READER`KEY: |-
-        think [u({{bboards}}/FUN`READER`PLACE)];@assert strlen(%q<reader_key>)={@include {{bboards}}/INC`READER`KEY`NEXT};@assert comp(%q<reader_key>,n)={@include {{bboards}}/INC`READER`KEY`NEXT};@assert comp(%q<reader_key>,?)={@pemit %q<message_target>=[u({{bboards}}/FUN`DISPLAY`READERKEYS)]};@assert comp(%q<reader_key>,l)={@include {{bboards}}/INC`READER`LOOK};@include {{bboards}}/INC`READER`NAVIGATE;@assert not(t(member(c r,%q<reader_key_word>)))={@include {{bboards}}/INC`READER`COMMENT};@assert comp(%q<reader_key_word>,e)={@include {{bboards}}/INC`READER`KEY`EDIT};@assert comp(%q<reader_key>,f)={@include {{bboards}}/INC`READER`KEY`FOLLOW};@assert comp(%q<reader_key>,m)={@include {{bboards}}/INC`READER`KEY`MARK};@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`WARNING,"[left(%q<reader_key>,30)]" is not a reader key. q leaves the reader%, ? lists the keys.)]
+        think [u({{bboards}}/FUN`READER`PLACE)];@assert strlen(%q<reader_key>)={@include {{bboards}}/INC`READER`KEY`NEXT};@assert comp(%q<reader_key>,n)={@include {{bboards}}/INC`READER`KEY`NEXT};@assert comp(%q<reader_key>,?)={@pemit %q<message_target>=[u({{bboards}}/FUN`DISPLAY`READERKEYS)]};@assert comp(%q<reader_key>,l)={@include {{bboards}}/INC`READER`LOOK};@assert not(t(member(+bbread +bbnext,lcstr(before(%q<reader_key_word>,/)))))={@include {{bboards}}/INC`READER`KEY`COMMAND};@include {{bboards}}/INC`READER`NAVIGATE;@assert not(t(member(c r,%q<reader_key_word>)))={@include {{bboards}}/INC`READER`COMMENT};@assert comp(%q<reader_key_word>,e)={@include {{bboards}}/INC`READER`KEY`EDIT};@assert comp(%q<reader_key>,f)={@include {{bboards}}/INC`READER`KEY`FOLLOW};@assert comp(%q<reader_key>,m)={@include {{bboards}}/INC`READER`KEY`MARK};@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`WARNING,"[left(%q<reader_key>,30)]" is not a reader key. q leaves the reader%, ? lists the keys.)]
       # Where the reader is. Sets %q<reader_place> and %q<reader_comment> (its cursor), and %q<reader_at_post> and
       # %q<reader_at_board> (1 when that is a post, or a board); returns nothing.
       FUN`READER`PLACE: |-
@@ -630,6 +632,11 @@ objects:
       # matches runs its branch and ends the key; any other key falls through to the next step.
       INC`READER`NAVIGATE: |-
         @assert not(cand(eq(words(%q<reader_key>),1),cor(isint(%q<reader_key>),strmatch(%q<reader_key>,*/*))))={@include {{bboards}}/INC`READER`OPEN};@assert not(t(member(j k,%q<reader_key>)))={@include {{bboards}}/INC`READER`STEP};@assert not(t(member(J K jj kk,%q<reader_key>)))={@include {{bboards}}/INC`READER`KEY`SIBLING};@assert comp(%q<reader_key>,u)={@include {{bboards}}/INC`READER`KEY`UP};@assert comp(%q<reader_key>,t)={@include {{bboards}}/INC`READER`KEY`THREAD};@assert comp(%q<reader_key>,p)={@include {{bboards}}/INC`READER`KEY`ANSWERED}
+      # +bbread and +bbnext, with any switches, run as those commands. The links on the screens the
+      # reader shows send them, so a click there moves the reader too; a page switch is the page j and k
+      # go on from.
+      INC`READER`KEY`COMMAND: |-
+        think [setqm(reader_command_word,after(lcstr(before(%q<reader_key_word>,/)),+bb),reader_command_switches,if(strmatch(%q<reader_key_word>,*/*),/[after(%q<reader_key_word>,/)]))][u({{bboards}}/FUN`COMMAND`PARSE,%q<reader_command_word>,%q<reader_command_switches>,%q<reader_key_rest>)];&BBOARD`READER`PAGE %q<reader_holder>=%q<page_number>;@include {{bboards}}/INC`CMD`%q<cmd_route>
       # Enter or n: the next new thing, as +bbnext shows it.
       INC`READER`KEY`NEXT: |-
         think [u({{bboards}}/FUN`COMMAND`PARSE,next,,)];@include {{bboards}}/INC`CMD`NEXT
@@ -1639,8 +1646,10 @@ objects:
       # +bbread [<path>]: the index, a board, a thread or a conversation. /all lists every board.
       INC`CMD`READ: |-
         @assert not(strmatch(%q<cmd_switch>,all))={@include {{bboards}}/INC`READ`ALL};think [u({{bboards}}/FUN`PATH`SHORTFORM,%q<cmd_argument>)];@assert not(strlen(%q<path_short_error>))=@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_short_error>)];think [u({{bboards}}/FUN`PATH`RESOLVE,%q<path_short_result>,%q<viewer_objid>)];@assert not(strlen(%q<path_error>))=@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_error>)];@include {{bboards}}/INC`READ`%q<path_kind>
+      # The top has no number, so "here" becomes nothing: the reader's u, numbers and prompt start
+      # from the top again.
       INC`READ`LEVEL: |-
-        @pemit %q<message_target>=[u({{bboards}}/FUN`SCREEN`INDEX,%q<viewer_objid>)]
+        @pemit %q<message_target>=[u({{bboards}}/FUN`SCREEN`INDEX,%q<viewer_objid>)];think [setqm(reader_here_place,,reader_here_comment,)];@include {{bboards}}/INC`DO`REMEMBERHERE
       INC`READ`BOARD: |-
         @pemit %q<message_target>=[u({{bboards}}/FUN`SCREEN`BOARD,%q<path_current>,%q<viewer_objid>,%q<path_label>,%q<page_number>)];think [setqm(board_current,%q<path_current>,reader_here_place,%q<path_current>,reader_here_comment,)];@include {{bboards}}/INC`DO`COMPACTMARK;@include {{bboards}}/INC`DO`SEENNUMBERS;@include {{bboards}}/INC`DO`REMEMBERHERE
       INC`READ`POST: |-
@@ -1954,13 +1963,13 @@ objects:
       HELP`BBOARDS`READER: |-
         ## The reader
 
-        `+bbreader` opens a reader, at `<path>` with `+bbreader <path>`, where every line you type is a key, so you can move around with a letter at a time. Nothing you type in it runs as a command. `q` leaves it.
+        `+bbreader` opens a reader, at `<path>` with `+bbreader <path>`, where every line you type is a key, so you can move around with a letter at a time. Nothing you type in it runs as a command, except `+bbread` and `+bbnext`, so the links on its screens work. `q` leaves it, and every prompt shows it. In a client that shows links, each key on the prompt is one: clicking it is the same as typing it.
 
         - Enter or `n`: the next new thing, what `+bbnext` shows.
         - A number: open that board, post or comment where you are. A path such as `5/3` opens it from anywhere.
         - `j` and `k`: the next or previous comment in a thread, or page in a board.
         - `J` and `K`: the next or previous post on the board.
-        - `p`: the comment this one answers. `t`: the whole thread. `u`: up one level.
+        - `p`: the comment this one answers. `t`: the whole thread. `u`: up one level, up to the list of boards at the top.
         - `c <text>`: comment on this post. `r <text>`: reply to this comment. `c` or `r` alone lets you write several lines; a line of just `.` posts them and `.toss` drops them.
         - `e <old>/<new>`: edit what you wrote here.
         - `f`: follow or stop following this post. `m`: mark this board read.
