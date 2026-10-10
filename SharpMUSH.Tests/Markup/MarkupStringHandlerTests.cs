@@ -575,34 +575,20 @@ public class MarkupStringHandlerTests
 	}
 
 	[Test]
-	public async Task Hilight_String_ProducesBoldBrightWhite()
+	public async Task Hilight_IsBoldWithNoColourOfItsOwn()
 	{
-		// Hilight() uses AnsiCodeParser.Parse("hw") → AnsiColor.Standard(7, true)
-		// which renders as ESC[1;37m (bold + SGR bright white).
+		// A fixed bright white vanished on a light portal theme; the colour is the reader's theme text colour.
 		MString result = "hello".Hilight();
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		var ansiOut = result.Render(MarkupFormat.Ansi);
-		await Assert.That(ansiOut).Contains("\u001b[");
-		// Bold (1) and white (37) SGR codes must be present
-		await Assert.That(ansiOut).Contains("1;37");
+		await Assert.That(ansiOut).Contains("\u001b[1m");
+		await Assert.That(ansiOut).DoesNotContain("37");
 	}
 
 	[Test]
-	public async Task Hilight_MString_ProducesBoldBrightWhite()
+	public async Task Hilight_IsTheThemesTextColour()
 	{
-		MString inner = MarkupText.Plain("hello");
-		MString result = inner.Hilight();
-		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
-		var ansiOut = result.Render(MarkupFormat.Ansi);
-		await Assert.That(ansiOut).Contains("1;37");
-	}
-
-	[Test]
-	public async Task Hilight_RendersIdenticallyToColorHw()
-	{
-		MString value = MarkupText.Plain("hello");
-		MString fromHilight = value.Hilight();
-		MString fromColorHw = Format($"{value:color:hw}");
-		await Assert.That(fromHilight.Render(MarkupFormat.Ansi)).IsEqualTo(fromColorHw.Render(MarkupFormat.Ansi));
+		MString result = MarkupText.Plain("hello").Hilight();
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("tone-foreground");
 	}
 }

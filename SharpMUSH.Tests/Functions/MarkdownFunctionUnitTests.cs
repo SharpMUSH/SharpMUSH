@@ -589,7 +589,7 @@ public class MarkdownFunctionUnitTests
 		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`BOLD {obj}=[ansi(hr,BOLD:%0)]"));
 		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`INLINECODE {obj}=<%0>"));
 		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`LINK {obj}=%0 %(%1%) cmd=%2"));
-		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`WIKILINK {obj}=[ansi(hc,%0)] %(@wiki %1%)"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`WIKILINK {obj}=[tone(info,%0)] %(@wiki %1%)"));
 
 		// No commas: rendermarkdowncustom()'s second argument is the template object, so a comma in
 		// the markdown would be read as one (and the third as a width).
@@ -777,7 +777,7 @@ public class MarkdownFunctionUnitTests
 			"&FUN`TABLE`CELL {0}=[rendermarkdown([json_query(%1,unescape)],[max(10,json_query(%q<wd>,get,%2))])]",
 			"&FUN`TABLE`ROW {0}=[lalign(%q<spec>,[json_map({0}/FUN`TABLE`CELL,%0,|)],|)]",
 			"&FUN`TABLE`ROWJ {0}=[u({0}/FUN`TABLE`ROW,%1)]",
-			"&FUN`TABLE`HEAD {0}=[ansi(hw,[u({0}/FUN`TABLE`ROW,[json_query(%0,get,head)])])]",
+			"&FUN`TABLE`HEAD {0}=[ansi(h,[u({0}/FUN`TABLE`ROW,[json_query(%0,get,head)])])]",
 			"&FUN`TABLE`RULE {0}=[repeat(-,%q<tw>)]",
 			"&FUN`TABLE`BODY {0}=[json_map({0}/FUN`TABLE`ROWJ,[json_query(%0,get,rows)],%r)]",
 			"&RENDERMARKUP`TABLE {0}=[setq(wd,json_query(%0,get,widths))]"
