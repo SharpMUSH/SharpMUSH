@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Configuration.Options;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -10,6 +11,7 @@ using SharpMUSH.Library.Models.InputSessions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -32,8 +34,10 @@ public sealed class InputSessionService : IInputSessionService
 	public const string NotActive = "#-1 NO ACTIVE INPUT SESSION";
 	public const string PendingTimeout = "#-1 INPUT SESSION TIMEOUT CALLBACK IS PENDING";
 	public const string InvalidTimeout = "#-1 INPUT TIMEOUT MUST BE BETWEEN 1 AND 3600 SECONDS";
-	public const string MissingExit = "#-1 INPUT NEEDS AN EXIT STRING";
-	public const string ReservedExit = "#-1 INPUT EXIT STRING CANNOT BE @INPUT/CANCEL";
+	public const string MissingExit = "#-1 INPUT NEEDS AN EXIT PATTERN AND ATTRIBUTE";
+	public const string UnpairedPattern = "#-1 INPUT PATTERNS AND ATTRIBUTES COME IN PAIRS";
+	public const string InvalidPattern = "#-1 INVALID INPUT PATTERN";
+	public const string ReservedExit = "#-1 INPUT EXIT PATTERN CANNOT BE @INPUT/CANCEL";
 	/// <summary>The line that always leaves a session without its callback; <see cref="TryEscapeAsync"/> takes it first.</summary>
 	public const string CancelLine = "@input/cancel";
 
@@ -184,11 +188,13 @@ public sealed class InputSessionService : IInputSessionService
 		}
 	}
 
-	public async ValueTask<string?> StartAsync(IMUSHCodeParser parser, DBRef target, string attribute, MString prompt, string exit, TimeSpan timeout)
+	public async ValueTask<string?> StartAsync(IMUSHCodeParser parser, MString prompt, IReadOnlyList<InputRouteSpec> routes,
+		InputMatch match, TimeSpan timeout)
 	{
-		exit = exit.Trim();
-		if (exit.Length == 0) return MissingExit;
-		if (exit.Equals(CancelLine, StringComparison.OrdinalIgnoreCase)) return ReservedExit;
+		if (routes.Count == 0 || routes.Any(route => string.IsNullOrWhiteSpace(route.Pattern) || string.IsNullOrWhiteSpace(route.Attribute)))
+			return MissingExit;
+		if (match == InputMatch.Exact && routes[0].Pattern.Trim().Equals(CancelLine, StringComparison.OrdinalIgnoreCase))
+			return ReservedExit;
 		if (timeout < TimeSpan.FromSeconds(1) || timeout > TimeSpan.FromHours(1)) return InvalidTimeout;
 		var state = parser.CurrentState;
 		if (state.Handle is not { } handle || _connections.Get(handle) is not { Ref: { } character } connection
@@ -196,22 +202,24 @@ public sealed class InputSessionService : IInputSessionService
 			|| state.Enactor is not { } enactor || !TransportMatches(connection, state.ConnectionSessionId)) return InvalidContext;
 		if (await _mediator.Send(new GetObjectNodeQuery(character), ExecutionBudget.CurrentToken) is not AnySharpObject player
 			|| await _mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken) is not AnySharpObject actor
-			|| await _mediator.Send(new GetObjectNodeQuery(target), ExecutionBudget.CurrentToken) is not AnySharpObject source
 			|| await _mediator.Send(new GetObjectNodeQuery(enactor), ExecutionBudget.CurrentToken) is not AnySharpObject cause
 			|| player.Object().DBRef != cause.Object().DBRef) return InvalidContext;
-		if (await actor.HasFlag("HALT", ExecutionBudget.CurrentToken) || !await CheckReadAsync(() => _permissions.Controls(actor, source)))
-			return ErrorMessages.Returns.PermissionDenied;
-		if (!(await _attributes.GetAttributeAsync(actor, source, attribute, IAttributeService.AttributeMode.Read, false)).IsAttribute
-			|| !(await _attributes.GetAttributeAsync(actor, source, attribute, IAttributeService.AttributeMode.Execute, false)).IsAttribute)
-			return InvalidCallback;
+		if (await actor.HasFlag("HALT", ExecutionBudget.CurrentToken)) return ErrorMessages.Returns.PermissionDenied;
+		var built = new List<InputRoute>(routes.Count);
+		foreach (var spec in routes)
+		{
+			switch (await RouteAsync(actor, spec, match))
+			{
+				case InputRoute route: built.Add(route); break;
+				case Error<string> error: return error.Value;
+			}
+		}
 		var owner = (await actor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
-		var callbackOwner = (await source.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 		HandlePublicationLane.Slot? place = null;
 		var session = new InputSession(Guid.NewGuid(), connection, connection.Metadata.GetValueOrDefault("SessionId"),
-			player.Object().DBRef, actor.Object().DBRef, owner, source.Object().DBRef,
-			callbackOwner, attribute, exit, _time.GetUtcNow() + timeout);
-		if (!session.Character.IsObjid || !session.Executor.IsObjid || !session.CallbackTarget.IsObjid
-			|| !session.Owner.IsObjid || !session.CallbackOwner.IsObjid) return InvalidContext;
+			player.Object().DBRef, actor.Object().DBRef, owner, built, _time.GetUtcNow() + timeout);
+		if (!session.Character.IsObjid || !session.Executor.IsObjid || !session.Owner.IsObjid
+			|| built.Any(route => !route.Target.IsObjid || !route.TargetOwner.IsObjid)) return InvalidContext;
 		lock (_gate)
 		{
 			if (!BindingMatches(session)) return InvalidContext;
@@ -238,6 +246,35 @@ public sealed class InputSessionService : IInputSessionService
 		}
 		catch { Discard(session); throw; }
 		return null;
+	}
+
+	/// <summary>
+	/// <paramref name="spec"/> made ready to match: its object controlled by <paramref name="actor"/>, its
+	/// attribute readable and executable there, its pattern compiled. The error to give otherwise.
+	/// </summary>
+	private async ValueTask<Result<InputRoute>> RouteAsync(AnySharpObject actor, InputRouteSpec spec, InputMatch match)
+	{
+		if (await _mediator.Send(new GetObjectNodeQuery(spec.Target), ExecutionBudget.CurrentToken) is not AnySharpObject source)
+			return new Error<string>(InvalidContext);
+		if (!await CheckReadAsync(() => _permissions.Controls(actor, source))) return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		var attribute = spec.Attribute.Trim();
+		if (!(await _attributes.GetAttributeAsync(actor, source, attribute, IAttributeService.AttributeMode.Read, false)).IsAttribute
+			|| !(await _attributes.GetAttributeAsync(actor, source, attribute, IAttributeService.AttributeMode.Execute, false)).IsAttribute)
+			return new Error<string>(InvalidCallback);
+		var pattern = spec.Pattern.Trim();
+		Regex? matcher = null;
+		if (pattern != "*" && match != InputMatch.Exact)
+		{
+			try
+			{
+				matcher = match == InputMatch.Regex
+					? SoftcodeRegex.Create(pattern, RegexOptions.IgnoreCase)
+					: SoftcodeRegex.Wildcard(pattern);
+			}
+			catch (ArgumentException) { return new Error<string>(InvalidPattern); }
+		}
+		var owner = (await source.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		return new InputRoute(pattern, matcher, match == InputMatch.Regex, source.Object().DBRef, owner, attribute);
 	}
 
 	private static async ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read)
@@ -452,25 +489,36 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
+		// The timeout runs the exit route with no line; a line runs the first route it matches. A line too
+		// long to match, or one nothing matches, still has its authority checked against the exit route.
+		var oversized = !timeout && input.Length > MaxInputCodeUnits;
+		var (matched, arguments) = timeout ? (session.Exit, []) : oversized ? (null, []) : Route(session, input);
+		var route = matched ?? session.Exit;
 		if (await _mediator.Send(new GetObjectNodeQuery(session.Executor), ExecutionBudget.CurrentToken) is not AnySharpObject actor
-			|| await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget), ExecutionBudget.CurrentToken) is not AnySharpObject target
+			|| await _mediator.Send(new GetObjectNodeQuery(route.Target), ExecutionBudget.CurrentToken) is not AnySharpObject target
 			|| await _mediator.Send(new GetObjectNodeQuery(session.Character), ExecutionBudget.CurrentToken) is not AnySharpObject character
 			|| await actor.HasFlag("HALT", ExecutionBudget.CurrentToken)
 			|| (await actor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.Owner
-			|| (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.CallbackOwner
+			|| (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != route.TargetOwner
 			|| !await CheckReadAsync(() => _permissions.Controls(actor, target))) return await Revoke(session);
-		var readable = await _attributes.GetAttributeAsync(actor, target, session.CallbackAttribute, IAttributeService.AttributeMode.Read, false);
-		var executable = await _attributes.GetAttributeAsync(actor, target, session.CallbackAttribute, IAttributeService.AttributeMode.Execute, false);
+		var readable = await _attributes.GetAttributeAsync(actor, target, route.Attribute, IAttributeService.AttributeMode.Read, false);
+		var executable = await _attributes.GetAttributeAsync(actor, target, route.Attribute, IAttributeService.AttributeMode.Execute, false);
 		if (readable is not SharpAttribute[] || executable is not SharpAttribute[] callback) return await Revoke(session);
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
-		if (input.Length > MaxInputCodeUnits)
+		if (oversized)
 		{
 			await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionInputTooLarge");
 			return null;
 		}
-		var exit = !timeout && IsExit(session, input);
-		if (timeout || exit) Discard(session);
+		if (matched is null)
+		{
+			await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "",
+				"InputSessionNoMatchFormat", session.Exit.Pattern);
+			return null;
+		}
+		var exit = ReferenceEquals(route, session.Exit);
+		if (exit) Discard(session);
 		var state = ParserState.RootFor(session.Executor) with
 		{
 			Executor = session.Executor,
@@ -478,20 +526,37 @@ public sealed class InputSessionService : IInputSessionService
 			Enactor = session.Character,
 			Handle = session.Connection.Handle,
 			ConnectionSessionId = session.TransportSessionId,
-			CurrentEvaluation = new DBAttribute(session.CallbackTarget, session.CallbackAttribute),
+			CurrentEvaluation = new DBAttribute(route.Target, route.Attribute),
 			OutputLimit = await FunctionLimits.OutputLimitForAsync(character,
 				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit),
-			EnvironmentRegisters = new Dictionary<string, CallState>
-			{
-				["0"] = new(input), ["1"] = new(timeout ? "timeout" : exit ? "exit" : "input")
-			}
+			EnvironmentRegisters = arguments
 		};
+		state.AddRegister("REASON", MString.Plain(timeout ? "timeout" : exit ? "exit" : "input"));
 		return await parser.FromState(state).CommandListParse(callback.Last().Value);
 	}
 
-	/// <summary>Whether <paramref name="input"/> is the session's exit line: the whole line, trimmed, ignoring case.</summary>
-	private static bool IsExit(InputSession session, MString input)
-		=> input.ToPlainText().Trim().Equals(session.Exit, StringComparison.OrdinalIgnoreCase);
+	/// <summary>
+	/// The first of <paramref name="session"/>'s routes that <paramref name="input"/> matches, and what it
+	/// passes on: a wildcard's or regexp's captures as $-commands number them, otherwise the line in %0.
+	/// Null when none matches.
+	/// </summary>
+	private static (InputRoute? Route, Dictionary<string, CallState> Arguments) Route(InputSession session, MString input)
+	{
+		var line = input.Trim(TrimType.TrimBoth);
+		var plain = line.ToPlainText();
+		foreach (var route in session.Routes)
+		{
+			if (route.IsAny) return (route, new() { ["0"] = new(input) });
+			if (route.Matcher is null)
+			{
+				if (plain.Equals(route.Pattern, StringComparison.OrdinalIgnoreCase)) return (route, new() { ["0"] = new(input) });
+				continue;
+			}
+			if (SoftcodeRegex.Match(route.Matcher, plain) is { Success: true } match)
+				return (route, PatternArguments.Capture(route.Matcher, match, route.IsRegex, line));
+		}
+		return (null, []);
+	}
 
 	private async ValueTask<CallState?> Revoke(InputSession session)
 	{

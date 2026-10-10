@@ -87,7 +87,7 @@ public class InputUserCommandResultTests
 			await attributes.SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain($"{word} [ulocal(me/FAIL)]"));
 			var parser = Get<IMUSHCodeParser>();
 			var sessions = Get<IInputSessionService>();
-			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=Answer:,done,120"));
+			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,120"));
 			var session = sessions.GetCapturing(player.Handle)!;
 			await Assert.That(session).IsNotNull();
 			var result = await sessions.DeliverAsync(parser, session, MarkupText.Plain("reply"));

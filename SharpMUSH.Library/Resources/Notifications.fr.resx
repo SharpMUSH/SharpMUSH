@@ -164,6 +164,9 @@
   <data name="InputSessionInputTooLarge" xml:space="preserve">
     <value>La saisie est trop longue. La session reste active ; utilisez @input/cancel pour la quitter.</value>
   </data>
+  <data name="InputSessionNoMatchFormat" xml:space="preserve">
+    <value>Cette ligne ne correspond à rien ici. Tapez {0} pour quitter.</value>
+  </data>
   <data name="InputSessionRevoked" xml:space="preserve">
     <value>La session de saisie a pris fin car les autorisations du rappel ou l’identité du personnage ont changé.</value>
   </data>

@@ -2840,6 +2840,9 @@
   <data name="InputSessionInputTooLarge" xml:space="preserve">
     <value>Input was too long. The session is still active; use @input/cancel to leave.</value>
   </data>
+  <data name="InputSessionNoMatchFormat" xml:space="preserve">
+    <value>That line matched nothing here. Type {0} to leave.</value>
+  </data>
   <data name="InputSessionRevoked" xml:space="preserve">
     <value>Input session ended because its callback authority or character identity changed.</value>
   </data>

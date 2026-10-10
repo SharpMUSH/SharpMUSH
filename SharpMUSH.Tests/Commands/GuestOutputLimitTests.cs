@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Models.InputSessions;
+using SharpMUSH.Tests.Services;
 using Mediator;
 using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
@@ -137,7 +139,7 @@ public class GuestOutputLimitTests
 			Handle = player.Handle,
 			ConnectionSessionId = ConnectionService.Get(player.Handle)!.Metadata.GetValueOrDefault("SessionId")
 		});
-		await Assert.That(await sessions.StartAsync(starter, obj.Object().DBRef, "CALLBACK", MarkupText.Plain("Reply:"), "done",
+		await Assert.That(await sessions.StartAsync(starter, MarkupText.Plain("Reply:"), InputRoutes.To(obj.Object().DBRef, "CALLBACK"), InputMatch.Exact,
 			TimeSpan.FromMinutes(2))).IsNull();
 		var session = sessions.GetCapturing(player.Handle)!;
 		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(player.DbRef);
