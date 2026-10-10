@@ -1218,7 +1218,7 @@ You say, "90 degrees is 1.570796 radians"
   Example:
 ```sharp
 think decomposeweb(a<b> [ansi(hr,red)])
-a&lt;b&gt; <span style="color: #ff5555">red</span>
+a&lt;b&gt; <span style="color: var(--ms-ansi-9, #ff5555)">red</span>
 ```
 
   This is a SharpMUSH function; PennMUSH has no decomposeweb().

@@ -36,7 +36,8 @@ public static class LayoutThemes
 	/// <c>accent-2</c> (<c>text</c> for a theme without one), tertiary <c>accent-3</c> (<c>warn</c> without one), muted
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
-	/// theme, black on a light one, until it did.
+	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
+	/// (<see cref="ThemePalette.Completed()"/>).
 	/// </summary>
 	public static IReadOnlyList<ThemePalette> Own { get; } =
 	[
@@ -76,7 +77,7 @@ public static class LayoutThemes
 
 	/// <summary>
 	/// A palette from the colours of <see cref="ThemeRole"/>s in this order: background, surface, foreground, primary,
-	/// secondary, tertiary, muted, success, warning, error, info.
+	/// secondary, tertiary, muted, success, warning, error, info, with the rest worked out from them.
 	/// </summary>
 	private static ThemePalette Ported(string name, ThemeMode mode, string[] colors)
 	{
@@ -91,7 +92,7 @@ public static class LayoutThemes
 			Mode = mode,
 			Colors = roles.Zip(colors).ToImmutableDictionary(pair => pair.First,
 				pair => ColorMath.TryParseHex(pair.Second, out var rgb) ? ThemeColor.Of(rgb) : throw new FormatException(pair.Second)),
-		};
+		}.Completed();
 	}
 
 	/// <summary>SharpMUSH's preset named <paramref name="name"/>, ignoring case, or null.</summary>

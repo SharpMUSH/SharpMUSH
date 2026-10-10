@@ -463,7 +463,7 @@ public class StringFunctionUnitTests
 
 	[Test]
 	// decomposeweb() is the HTML render (#1513): text is escaped, colour is the renderer's own markup.
-	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color: #ff5555"">red</span>")]
+	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color: var(--ms-ansi-9, #ff5555)"">red</span>")]
 	[Arguments("decomposeweb(a<b>&c)", "a&lt;b&gt;&amp;c")]
 	public async Task DecomposeWeb(string str, string expectedText)
 	{

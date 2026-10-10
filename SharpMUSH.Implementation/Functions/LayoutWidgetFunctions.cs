@@ -268,7 +268,8 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>tone(&lt;colour&gt;, &lt;text&gt;)</c> — the text in a theme colour named by what it is for (<c>muted</c>,
-	/// <c>info</c>, <c>primary</c>, ...), which each reader sees in their own theme: a telnet reader in their
+	/// <c>info</c>, <c>link</c>, ...) or by its hue (<c>red</c>, <c>purple</c>, ...), in bold (<c>strong</c>), or on a
+	/// marked background (<c>highlight</c>) (<see cref="ToneMarkup.Tones"/>), which each reader sees in their own theme: a telnet reader in their
 	/// <c>@theme</c>, a portal reader in their portal theme (<see cref="ToneMarkup"/>). A reader with neither is
 	/// sent the game's <c>layout_theme</c> colour, or a standard colour.
 	/// </summary>
@@ -276,9 +277,9 @@ public partial class Functions
 	public ValueTask<CallState> Tone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		if (!ToneMarkup.TryParse(Arg(args, 0).ToPlainText(), out var role)) return ValueTask.FromResult(new CallState("#-1 UNKNOWN TONE"));
+		if (!ToneMarkup.TryParse(Arg(args, 0).ToPlainText(), out var tone)) return ValueTask.FromResult(new CallState("#-1 UNKNOWN TONE"));
 
-		return ValueTask.FromResult(new CallState(ToneMarkup.Build(role, Arg(args, 1), HousePalette()?[role] ?? ToneMarkup.Standard(role))));
+		return ValueTask.FromResult(new CallState(ToneMarkup.Build(tone, Arg(args, 1), HousePalette()?[tone.Role] ?? ToneMarkup.Standard(tone.Role))));
 	}
 
 	/// <summary>A badge's kind: the classic colour codes, the theme colour that replaces them, and the word that says it.</summary>

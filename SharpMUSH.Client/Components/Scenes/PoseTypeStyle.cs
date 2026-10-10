@@ -17,14 +17,25 @@ public static class PoseTypeStyle
 	private static readonly IReadOnlyDictionary<string, string> ToneTokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 	{
 		["foreground"] = "--text",
+		["strong"] = "--text",
 		["primary"] = "--accent",
 		["secondary"] = "--special",
-		["tertiary"] = "--info",
+		["tertiary"] = "--tone-tertiary",
 		["muted"] = "--text-dim",
+		["subtle"] = "--text-faint",
+		["link"] = "--accent",
 		["success"] = "--success",
 		["warning"] = "--warn",
 		["error"] = "--danger",
 		["info"] = "--info",
+		["red"] = "--hue-red",
+		["orange"] = "--hue-orange",
+		["yellow"] = "--hue-yellow",
+		["green"] = "--hue-green",
+		["cyan"] = "--hue-cyan",
+		["blue"] = "--hue-blue",
+		["purple"] = "--hue-purple",
+		["pink"] = "--hue-pink",
 	};
 
 	private static readonly IReadOnlyDictionary<string, string> IconSvgs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

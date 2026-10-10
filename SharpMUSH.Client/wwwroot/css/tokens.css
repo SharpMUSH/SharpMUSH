@@ -381,6 +381,45 @@
 	--info: #5aa9ff;                /* notices, pages */
 	--special: #b39cff;             /* roles, forms, other marked kinds */
 
+	/* ── tone() (ToneMarkup; shell.css .tone-*) ── */
+	--tone-tertiary: #ffb454;       /* the third decorative colour, readable */
+	--highlight: #114d40;           /* behind marked text: the surface tinted with the accent, text still 4.5:1 on it */
+	/* hues (ThemeResolver.HueColors), readable on the surfaces, the same in every colour vision */
+	--hue-red: #f07178;
+	--hue-green: #c3e88d;
+	--hue-yellow: #ffcb6b;
+	--hue-blue: #82aaff;
+	--hue-purple: #c792ea;
+	--hue-cyan: #89ddff;
+	--hue-orange: #f78c6c;
+	--hue-pink: #ff79c6;
+	/* ansi() colours in MarkupString's HTML: red to cyan and their bright forms from the hues; behind text, darkened
+	   until the text reads on them. Black, white and the greys keep MarkupString's own values. */
+	--ms-ansi-1: #f07178;
+	--ms-ansi-2: #c3e88d;
+	--ms-ansi-3: #ffcb6b;
+	--ms-ansi-4: #82aaff;
+	--ms-ansi-5: #c792ea;
+	--ms-ansi-6: #89ddff;
+	--ms-ansi-9: #f4949a;
+	--ms-ansi-10: #d2eeaa;
+	--ms-ansi-11: #ffd890;
+	--ms-ansi-12: #a1bfff;
+	--ms-ansi-13: #d5adef;
+	--ms-ansi-14: #a6e6ff;
+	--ms-ansi-bg-1: #a14f54;
+	--ms-ansi-bg-2: #5f7149;
+	--ms-ansi-bg-3: #7a643a;
+	--ms-ansi-bg-4: #4e6494;
+	--ms-ansi-bg-5: #7d5e93;
+	--ms-ansi-bg-6: #456c7c;
+	--ms-ansi-bg-9: #8c585c;
+	--ms-ansi-bg-10: #5c684e;
+	--ms-ansi-bg-11: #7a694a;
+	--ms-ansi-bg-12: #586788;
+	--ms-ansi-bg-13: #725e80;
+	--ms-ansi-bg-14: #4b6570;
+
 	/* ── code and syntax (ThemeResolver.SyntaxColors): help, the softcode console, highlighted softcode ── */
 	--code-bg: #090a0b;
 	--code-text: #e9edf0;

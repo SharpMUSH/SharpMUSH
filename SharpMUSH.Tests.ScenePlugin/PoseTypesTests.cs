@@ -22,13 +22,18 @@ public class PoseTypesTests
 	}
 
 	[Test]
+	public async Task AToneMayBeAHue()
+		=> await Assert.That(Expect<PoseType>(PoseTypes.Read("radio", """{"tone":"Purple"}""")).Tone).IsEqualTo("purple");
+
+	[Test]
 	public async Task AnEmptyObjectIsAnInCharacterLookNamedByItsKey()
 		=> await Assert.That(Expect<PoseType>(PoseTypes.Read("dice", "{}")))
 			.IsEqualTo(new PoseType("dice", "dice", "prose", "", "", false, 50));
 
 	[Test]
 	[Arguments("""{"presentation":"bubble"}""", "presentation must be one of prose, band, message, aside, notice")]
-	[Arguments("""{"tone":"purple"}""", "tone must be one of")]
+	[Arguments("""{"tone":"mauve"}""", "tone must be one of")]
+	[Arguments("""{"tone":"highlight"}""", "tone must be one of")]
 	[Arguments("""{"icon":"skull"}""", "icon must be one of")]
 	[Arguments("""{"hidden":"yes"}""", "hidden must be true or false")]
 	[Arguments("""{"order":1.5}""", "order must be a whole number")]

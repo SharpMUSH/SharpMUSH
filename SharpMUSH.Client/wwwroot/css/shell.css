@@ -779,14 +779,26 @@ pre.ms-preformatted {
 /* tone(): text coloured by a theme colour's name, so it follows the reader's portal theme. The same names are
    @theme's colours on telnet (ToneMarkup). */
 .tone-foreground { color: var(--text); }
+.tone-strong { color: var(--text); font-weight: 700; }
 .tone-primary { color: var(--accent); }
 .tone-secondary { color: var(--special); }
-.tone-tertiary { color: var(--info); }
+.tone-tertiary { color: var(--tone-tertiary); }
 .tone-muted { color: var(--text-dim); }
+.tone-subtle { color: var(--text-faint); }
+.tone-link { color: var(--accent); }
+.tone-highlight { background-color: var(--highlight); color: var(--text); }
 .tone-success { color: var(--success); }
 .tone-warning { color: var(--warn); }
 .tone-error { color: var(--danger); }
 .tone-info { color: var(--info); }
+.tone-red { color: var(--hue-red); }
+.tone-orange { color: var(--hue-orange); }
+.tone-yellow { color: var(--hue-yellow); }
+.tone-green { color: var(--hue-green); }
+.tone-cyan { color: var(--hue-cyan); }
+.tone-blue { color: var(--hue-blue); }
+.tone-purple { color: var(--hue-purple); }
+.tone-pink { color: var(--hue-pink); }
 
 /* ── Softcode Editor ── */
 .mush-editor-fill {
