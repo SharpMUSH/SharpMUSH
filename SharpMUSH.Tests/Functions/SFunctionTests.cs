@@ -96,4 +96,37 @@ public class SFunctionTests
 
 		await Assert.That(result!.HadErrors).IsTrue();
 	}
+
+	/// <summary>
+	/// objevaltext() evaluates what its text argument gives, as the object; objeval() hands the same
+	/// text back, since its one pass only substitutes the argument.
+	/// </summary>
+	[Test]
+	public async Task Objevaltext_EvaluatesTheTextAsTheObject()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), "ObjevaltextAs");
+
+		var text = await Parser.FunctionParse(MarkupText.Plain($"objevaltext(#{mortal.Number},lit([num(me)] %@))"));
+		var once = await Parser.FunctionParse(MarkupText.Plain($"objeval(#{mortal.Number},lit([num(me)] %@))"));
+
+		await Assert.That(text!.Message.ToString()).IsEqualTo($"#{mortal.Number} #1");
+		await Assert.That(once!.Message.ToString()).IsEqualTo("[num(me)] %@");
+	}
+
+	/// <summary>
+	/// Without control, objevaltext() evaluates as the one who asked, as objeval() does.
+	/// </summary>
+	[Test]
+	public async Task Objevaltext_WithoutControl_EvaluatesAsTheExecutor()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var asking = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, "ObjevaltextAsking");
+		var other = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, "ObjevaltextOther");
+
+		var result = await Parser.FunctionParse(MarkupText.Plain(
+			$"objeval(#{asking.Number},objevaltext(#{other.Number},lit([num(me)])))"));
+
+		await Assert.That(result!.Message.ToString()).IsEqualTo($"#{asking.Number}");
+	}
 }

@@ -746,7 +746,6 @@ public partial class Functions
 	[SharpFunction(Name = "objeval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse, ParameterNames = ["object", "expression"])]
 	public async ValueTask<CallState> ObjectEvaluation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var sideFxEnabled = Configuration.CurrentValue.Function.FunctionSideEffects;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		// NoParse holds BOTH arguments back, but only the expression is meant to wait for its new
 		// executor: PennMUSH's fun_objeval (src/funufun.c) runs process_expression over args[0] as
@@ -755,6 +754,27 @@ public partial class Functions
 		// #-1 NO MATCH for every dynamic object.
 		var objectArg = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
 		var expression = parser.CurrentState.Arguments["1"];
+		return await EvaluateAsAsync(parser, executor, objectArg, expression.Message ?? MString.Empty);
+	}
+
+	/// <summary>
+	/// <c>objeval()</c> for text: the expression is evaluated as the caller first, like any argument, and
+	/// what it gives is then evaluated as the object. <c>objevaltext(%#,%0)</c> is what
+	/// <c>objeval(%#,s(%0))</c> spells with an extra function.
+	/// </summary>
+	[SharpFunction(Name = "objevaltext", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "text"])]
+	public async ValueTask<CallState> ObjectEvaluationOfText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var objectArg = parser.CurrentState.Arguments["0"];
+		var text = parser.CurrentState.Arguments["1"];
+		var result = await EvaluateAsAsync(parser, executor, objectArg, text.Message ?? MString.Empty);
+		return result with { HadErrors = text.HadErrors || result.HadErrors };
+	}
+
+	private async ValueTask<CallState> EvaluateAsAsync(IMUSHCodeParser parser, AnySharpObject executor, CallState objectArg, MString expression)
+	{
+		var sideFxEnabled = Configuration.CurrentValue.Function.FunctionSideEffects;
 
 		// fun_objeval is not an error path: when match_thing finds nothing (it notifies "I can't see
 		// that here.") or the executor may not evaluate as what it found, the expression is evaluated
@@ -766,7 +786,7 @@ public partial class Functions
 
 		// The caller inside is whoever ran objeval(), as process_expression(..., obj, executor, ...) passes it.
 		var result = await parser.With(state => state with { Executor = evaluator.Object().DBRef, Caller = executor.Object().DBRef },
-			async newParser => await newParser.FunctionParse(expression.Message)) ?? CallState.Empty;
+			async newParser => await newParser.FunctionParse(expression)) ?? CallState.Empty;
 		return result with { HadErrors = objectArg.HadErrors || result.HadErrors };
 
 		async ValueTask<bool> MayEvaluateAs(AnySharpObject target) =>
