@@ -12,6 +12,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
@@ -561,15 +562,36 @@ public partial class Functions
 		var isWizard = await executor.IsWizard();
 		var hasSendOOBPower = await executor.HasPower("Send_OOB");
 
+		var mayReachOthers = isWizard || hasSendOOBPower;
+		var executorRef = executor.Object().DBRef;
 		int sentCount = 0;
 
-		foreach (var playerStr in players)
+		foreach (var target in players)
 		{
+			// A descriptor reaches a connection before anyone has logged in on it, which is when a client
+			// such as Mudlet sends External.Discord.Hello; see SOCKET`GMCP.
+			if (long.TryParse(target, NumberStyles.None, CultureInfo.InvariantCulture, out var descriptor))
+			{
+				var connection = ConnectionService.Get(descriptor);
+				if (connection is null)
+				{
+					continue;
+				}
+
+				if (!mayReachOthers && connection.Ref?.Number != executorRef.Number)
+				{
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
+				sentCount += await SendOutOfBandAsync(connection, package, message) ? 1 : 0;
+				continue;
+			}
+
 			var locate = await LocateService.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
-				playerStr,
+				target,
 				LocateFlags.All);
 
 			if (locate is not AnySharpObject located)
@@ -582,37 +604,40 @@ public partial class Functions
 				continue;
 			}
 
-			var isSelf = executor.Object().DBRef == located.Object().DBRef;
-
-			if (!isWizard && !isSelf && !hasSendOOBPower)
+			if (!mayReachOthers && executorRef != located.Object().DBRef)
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
 			{
-				// WebSocket (portal) connections receive a structured OOB envelope the browser
-				// routes by package; GMCP-negotiated telnet connections receive a GMCP package.
-				// Any other connection (plain telnet without GMCP) is skipped.
-				if (connection.ConnectionType == "websocket")
-				{
-					await MessageBus.Publish(new WebSocketOutputMessage(
-						connection.Handle,
-						WebSocketOobEnvelope.Build(package, message)));
-					sentCount++;
-				}
-				else if (connection.Metadata.GetValueOrDefault("GMCP", "0") == "1")
-				{
-					await MessageBus.Publish(new GMCPOutputMessage(
-						connection.Handle,
-						package,
-						message));
-					sentCount++;
-				}
+				sentCount += await SendOutOfBandAsync(connection, package, message) ? 1 : 0;
 			}
 		}
 
 		return new CallState(sentCount.ToString());
+	}
+
+	/// <summary>
+	/// Sends one package to one connection: WebSocket (portal) connections get a structured envelope the
+	/// browser routes by package, GMCP-negotiated telnet connections a GMCP package. Any other connection
+	/// (plain telnet without GMCP) is skipped.
+	/// </summary>
+	private async ValueTask<bool> SendOutOfBandAsync(IConnectionService.ConnectionData connection, string package, string message)
+	{
+		if (connection.ConnectionType == "websocket")
+		{
+			await MessageBus.Publish(new WebSocketOutputMessage(connection.Handle, WebSocketOobEnvelope.Build(package, message)));
+			return true;
+		}
+
+		if (connection.Metadata.GetValueOrDefault("GMCP", "0") == "1")
+		{
+			await MessageBus.Publish(new GMCPOutputMessage(connection.Handle, package, message));
+			return true;
+		}
+
+		return false;
 	}
 
 	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,

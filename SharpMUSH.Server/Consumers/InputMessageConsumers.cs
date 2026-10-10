@@ -81,51 +81,58 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 }
 
 /// <summary>
-/// Consumes GMCP signal messages from NATS JetStream
+/// Consumes the GMCP packages a client sends: marks the connection as speaking GMCP, records who the
+/// client says it is (<c>Core.Hello</c>), and hands every package to softcode as SOCKET`GMCP.
 /// </summary>
-public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionService connectionService)
+public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionService connectionService, IEventService eventService)
 	: IMessageConsumer<GMCPSignalMessage>
 {
-	public Task HandleAsync(GMCPSignalMessage message, CancellationToken cancellationToken = default)
+	/// <summary>The connection server answers these itself, and a client may send them every few seconds.</summary>
+	private static readonly HashSet<string> AnsweredByConnectionServer = new(StringComparer.Ordinal) { "Core.Ping", "Core.KeepAlive" };
+
+	public async Task HandleAsync(GMCPSignalMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogDebug("[NATS-RECV] GMCPSignalMessage received - Handle: {Handle}, Package: {Package}, Info: {Info}",
-			message.Handle, message.Package, message.Info);
+		logger.LogDebug("[NATS-RECV] GMCPSignalMessage received - Handle: {Handle}, Package: {Package}",
+			message.Handle, message.Package);
 
 		connectionService.Update(message.Handle, "GMCP", "1");
 
-		connectionService.Update(message.Handle, $"GMCP_{message.Package}", message.Info);
-
-		HandleGMCPPackage(message.Handle, message.Package, message.Info);
-
-		return Task.CompletedTask;
-	}
-
-	private void HandleGMCPPackage(long handle, string package, string info)
-	{
-		switch (package)
+		if (message.Package == "Core.Hello")
 		{
-			case "Core.Hello":
-				logger.LogInformation("Client {Handle} sent Core.Hello: {Info}", handle, info);
-				connectionService.Update(handle, "GMCP_ClientHello", info);
-				break;
-
-			case "Core.Supports.Set":
-				logger.LogInformation("Client {Handle} supports: {Info}", handle, info);
-				connectionService.Update(handle, "GMCP_ClientSupports", info);
-				break;
-
-			case "Char.Vitals":
-				logger.LogDebug("Client {Handle} sent Char.Vitals update", handle);
-				break;
-
-			case "Comm.Channel":
-				logger.LogDebug("Client {Handle} sent Comm.Channel data", handle);
-				break;
-
-			default:
-				logger.LogDebug("Unhandled GMCP package {Package} from handle {Handle}", package, handle);
-				break;
+			ConnectionClient.RecordGmcpHello(connectionService, message.Handle, message.Info);
 		}
+
+		if (AnsweredByConnectionServer.Contains(message.Package))
+		{
+			return;
+		}
+
+		var player = connectionService.Get(message.Handle)?.Ref;
+		await eventService.TriggerEventAsync("SOCKET`GMCP", player,
+			message.Handle.ToString(CultureInfo.InvariantCulture),
+			message.Package,
+			message.Info,
+			player is { } dbref ? $"#{dbref.Number}" : string.Empty);
+	}
+}
+
+/// <summary>
+/// Consumes the name and version a client gave through MNES.
+/// </summary>
+public class ClientIdentityConsumer(ILogger<ClientIdentityConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<ClientIdentityMessage>
+{
+	public async Task HandleAsync(ClientIdentityMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] ClientIdentityMessage - Handle: {Handle}", message.Handle);
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping client identity for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		ConnectionClient.Record(connectionService, message.Handle, message.Name, message.Version);
 	}
 }
 
@@ -180,12 +187,12 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 			{
 				case "CLIENT_NAME":
 					logger.LogInformation("Client {Handle} name: {ClientName}", handle, variable.Value);
-					connectionService.Update(handle, "ClientName", variable.Value);
+					ConnectionClient.Record(connectionService, handle, variable.Value, null);
 					break;
 
 				case "CLIENT_VERSION":
 					logger.LogInformation("Client {Handle} version: {ClientVersion}", handle, variable.Value);
-					connectionService.Update(handle, "ClientVersion", variable.Value);
+					ConnectionClient.Record(connectionService, handle, null, variable.Value);
 					break;
 
 				case "REPORTABLE_VARIABLES":

@@ -37,13 +37,13 @@ Event Types:
 - **sql**: sql\`connect, sql\`connectfail, sql\`disconnect
 - **signal**: signal\`usr1, signal\`usr2
 - **player**: player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn
-- **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail
+- **socket**: socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp
 - **http**: http\`blocked http\`fail http\`command
 - **room**: room\`contents
 - **channel**: channel\`message, channel\`who
 - **page**: page\`message
 
-The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is SharpMUSH's own too: it is how a warning from the web portal reaches the game.
+The room, channel and page events, and player\`channels, are SharpMUSH's own; PennMUSH has no equivalent. They exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is SharpMUSH's own too: it is how a warning from the web portal reaches the game. So is socket\`gmcp, which hands softcode what a client sends over GMCP.
 
 # Database Events
 # Event DB
@@ -164,6 +164,9 @@ To mimic old behaviour:
 - Triggered when a player create attempt fails. *<count>* is the # of fails caused by this ip. If the failure is from an attempt to register a player via email, the error code of the mailer program is provided as *<error>*.
 
 **Note**: A sitelock rule with deny_silent will not trigger socket\`createfail or socket\`createfail.
+
+- **socket\`gmcp** (*descriptor*, *package*, *message*, *player dbref*)
+- Triggered when a telnet client sends a GMCP package, such as Mudlet's External.Discord.Hello when it connects. *<message>* is the package's JSON, empty when it sent none. *<player dbref>* is whoever is logged in on the descriptor, empty at the connect screen; %# is that player too, or #1 before login. Answer with oob() on the descriptor, which reaches the client before anyone logs in. Core.Ping and Core.KeepAlive are answered by the server and do not trigger this. The client chooses everything it sends, so check *<package>* before acting on *<message>*.
 
 # HTTP Events
 # Event HTTP

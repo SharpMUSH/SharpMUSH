@@ -714,6 +714,11 @@ public static class SocketOptions
 		Row("Width", connection.Metadata.GetValueOrDefault("WIDTH", "78"));
 		Row("Height", connection.Metadata.GetValueOrDefault("HEIGHT", "24"));
 		Row("Terminal Type", connection.Metadata.GetValueOrDefault("TerminalType", "unknown"));
+		// Not a PennMUSH row: the name and version a client gave over GMCP, MSDP or MNES, shown only once one did.
+		if (connection.Metadata.TryGetValue(ConnectionClient.NameKey, out var client))
+		{
+			Row("Client", connection.Metadata.TryGetValue(ConnectionClient.VersionKey, out var version) ? $"{client} {version}" : client);
+		}
 		Row("Stripaccents", YesNo(connection.Metadata.GetValueOrDefault(StripAccentsKey) == "1"));
 		// The engine does not see what the client negotiated, so an unpinned charset is only "auto".
 		Row("Charset", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.CharsetKey) ?? "auto");

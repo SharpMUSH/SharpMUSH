@@ -18,6 +18,12 @@ public record GMCPSignalMessage(long Handle, string Package, string Info) : IHan
 public record GMCPNegotiatedMessage(long Handle, bool Agreed) : IHandleMessage;
 
 /// <summary>
+/// Message sent from ConnectionServer to MainProcess when a client names itself through MNES
+/// (NEW-ENVIRON <c>CLIENT_NAME</c>/<c>CLIENT_VERSION</c>). Either may be missing.
+/// </summary>
+public record ClientIdentityMessage(long Handle, string? Name, string? Version) : IHandleMessage;
+
+/// <summary>
 /// Message sent from ConnectionServer to MainProcess when a client sets an MSDP configurable variable
 /// (<c>CLIENT_NAME</c>, <c>CLIENT_VERSION</c>, <c>PLUGIN_ID</c>).
 /// </summary>

@@ -1170,6 +1170,52 @@ public class TelnetServerNegotiationTests
 		}
 	}
 
+	private const byte NEW_ENVIRON = 39;
+	private const byte ENV_VAR = 0;
+	private const byte ENV_VAL = 1;
+
+	/// <summary>
+	/// MNES: the server asks for the client's variables, and the name and version it gives are reported.
+	/// IPADDRESS is sent too, and must go nowhere.
+	/// </summary>
+	[Test]
+	public async Task MnesClientName_IsPublishedAndIpAddressIgnored()
+	{
+		var (toServer, fromServer, handler, published, cts) = StartServer();
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, NEW_ENVIRON));
+			await WriteAsync(toServer, IAC, WILL, NEW_ENVIRON);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, NEW_ENVIRON, SEND));
+			await WriteAsync(toServer, [IAC, SB, NEW_ENVIRON, IS,
+				ENV_VAR, .. "CLIENT_NAME"u8.ToArray(), ENV_VAL, .. "Mudlet"u8.ToArray(),
+				ENV_VAR, .. "CLIENT_VERSION"u8.ToArray(), ENV_VAL, .. "4.17"u8.ToArray(),
+				ENV_VAR, .. "IPADDRESS"u8.ToArray(), ENV_VAL, .. "203.0.113.9"u8.ToArray(),
+				IAC, SE]);
+
+			var message = await WaitForPublishedAsync<ClientIdentityMessage>(published);
+
+			await Assert.That(message).IsNotNull();
+			await Assert.That(message!.Name).IsEqualTo("Mudlet");
+			await Assert.That(message.Version).IsEqualTo("4.17");
+
+			bool leaked;
+			lock (published)
+			{
+				leaked = published.Any(item => item.ToString()?.Contains("203.0.113.9") == true);
+			}
+
+			await Assert.That(leaked).IsFalse().Because("a client may not choose the address sitelock sees");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
 	/// <summary>The prompt writer the connection handed the connection service when it registered.</summary>
 	private static async Task<Func<byte[], ValueTask>> RegisteredPromptWriterAsync(IConnectionServerService service)
 	{
