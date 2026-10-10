@@ -130,6 +130,28 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 }
 
 /// <summary>
+/// Consumes GMCP agreement: GMCP metadata follows the negotiation, so <c>oob()</c> reaches a client
+/// that agreed to GMCP before it has sent a package of its own, and stops when it withdraws.
+/// </summary>
+public class GMCPNegotiatedConsumer(ILogger<GMCPNegotiatedConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<GMCPNegotiatedMessage>
+{
+	public async Task HandleAsync(GMCPNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] GMCPNegotiatedMessage - Handle: {Handle}, Agreed: {Agreed}",
+			message.Handle, message.Agreed);
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping GMCP negotiation for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		connectionService.Update(message.Handle, "GMCP", message.Agreed ? "1" : "0");
+	}
+}
+
+/// <summary>
 /// Consumes MSDP update messages from NATS JetStream
 /// </summary>
 public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionService connectionService)

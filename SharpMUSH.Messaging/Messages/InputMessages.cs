@@ -11,7 +11,15 @@ public record TelnetInputMessage(long Handle, string Input, string? SessionId = 
 public record GMCPSignalMessage(long Handle, string Package, string Info) : IHandleMessage;
 
 /// <summary>
-/// Message sent from ConnectionServer to MainProcess for MSDP updates
+/// Message sent from ConnectionServer to MainProcess when a client agrees to GMCP, or withdraws it.
+/// The main process sets GMCP metadata from it, which is what <c>oob()</c> and <c>terminfo()</c> read:
+/// a client that agreed may be sent GMCP before it has sent any itself.
+/// </summary>
+public record GMCPNegotiatedMessage(long Handle, bool Agreed) : IHandleMessage;
+
+/// <summary>
+/// Message sent from ConnectionServer to MainProcess when a client sets an MSDP configurable variable
+/// (<c>CLIENT_NAME</c>, <c>CLIENT_VERSION</c>, <c>PLUGIN_ID</c>).
 /// </summary>
 public record MSDPUpdateMessage(long Handle, Dictionary<string, string> Variables) : IHandleMessage;
 

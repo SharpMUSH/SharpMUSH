@@ -7,6 +7,7 @@ using SharpMUSH.Messaging.Messages;
 using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
+using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Protocols;
 
@@ -53,17 +54,25 @@ public partial class TelnetServer
 				// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
 				// which asks every plugin rather than just the one that fired: reaching any of them means
 				// some option settled, and a client that answers only NAWS still speaks telnet.
-				.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
+				// The Core session answers Core.Ping and keeps Core.Supports; every message, Core.* included,
+				// still reaches the callback below.
+				.AddPlugin<GMCPProtocol>().UseGmcpServerSession(out _)
+				.OnGMCPMessage(async data =>
 				{
 					await AnnounceTelnetIfNegotiatedAsync();
 					await held.PublishAsync(
 						() => server._publishEndpoint.Publish(new GMCPSignalMessage(handle, data.Package, data.Info), ct));
 				})
+				.OnGMCPNegotiated(OnGmcpNegotiatedAsync)
 				.AddPlugin<MSSPProtocol>().WithMSSPConfig(() => server._mssp.Current)
 				// A client reporting MSSP to a server means nothing here; the callback is only a sampling point.
 				.OnMSSP(async _ => await AnnounceTelnetIfNegotiatedAsync())
 				.AddPlugin<NAWSProtocol>().OnNAWS(OnNawsAsync)
-				.AddPlugin<MSDPProtocol>().OnMSDPMessage(server.MSDPCallback(connection))
+				.AddPlugin<MSDPProtocol>().OnMSDPMessage(CreateMsdpHandler().HandleAsync)
+				// Prompts end in IAC EOR for a client that agrees to it, the marker Mudlet, TinTin++ and
+				// MUSHclient look for; otherwise in IAC GA as before. A client's own EOR means nothing to a
+				// server, so the callback is only a sampling point.
+				.AddPlugin<EORProtocol>().OnPrompt(async () => await AnnounceTelnetIfNegotiatedAsync())
 				.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
 				// What the client agreed to read: output is written in it, each character it lacks replaced.
 				.OnCharsetChange(OnCharsetChangeAsync)
@@ -164,6 +173,34 @@ public partial class TelnetServer
 				await server._publishEndpoint.Publish(
 					new TerminalTypeNegotiatedMessage(handle, snapshot), ct);
 			});
+		}
+
+		private async ValueTask OnGmcpNegotiatedAsync(bool agreed)
+		{
+			await AnnounceTelnetIfNegotiatedAsync();
+			await held.PublishAsync(
+				() => server._publishEndpoint.Publish(new GMCPNegotiatedMessage(handle, agreed), ct));
+		}
+
+		/// <summary>
+		/// Answers MSDP, natively or over GMCP. The game reports no MSDP variables of its own: a client is
+		/// told the game's name (<c>SERVER_ID</c>), and the client variables it sets are recorded on the
+		/// connection.
+		/// </summary>
+		private MSDPServerHandler CreateMsdpHandler() =>
+			new(new MSDPServerModel(_ => ValueTask.CompletedTask)
+			{
+				Commands = () => ["LIST", "REPORT", "RESET", "SEND", "UNREPORT"],
+				Configurable_Variables = () => ["CLIENT_NAME", "CLIENT_VERSION", "PLUGIN_ID"],
+				Sendable_Variables = new() { ["SERVER_ID"] = () => server._mssp.Current.Name },
+				SetCallbackAsync = OnMsdpVariableSetAsync
+			}, server._logger);
+
+		private async ValueTask OnMsdpVariableSetAsync(string variable, string value)
+		{
+			await AnnounceTelnetIfNegotiatedAsync();
+			await held.PublishAsync(() => server._publishEndpoint.Publish(
+				new MSDPUpdateMessage(handle, new Dictionary<string, string> { [variable] = value }), ct));
 		}
 
 		private async ValueTask OnNawsAsync(int newHeight, int newWidth)

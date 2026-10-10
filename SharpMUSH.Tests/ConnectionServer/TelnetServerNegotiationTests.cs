@@ -1020,4 +1020,172 @@ public class TelnetServerNegotiationTests
 			cts.Dispose();
 		}
 	}
+
+	private const byte DONT = 254;
+	private const byte EOR = 25;
+	private const byte EORMARK = 239;
+	private const byte GA = 249;
+	private const byte MSDP = 69;
+	private const byte MSDP_VAR = 1;
+	private const byte MSDP_VAL = 2;
+	private const byte GMCP = 201;
+
+	/// <summary>
+	/// An MSDP request used to be written straight back to the client as text, so a client that asked
+	/// <c>LIST COMMANDS</c> saw <c>{"LIST":"COMMANDS"}</c> printed in its window and got no answer.
+	/// </summary>
+	[Test]
+	public async Task MsdpRequest_IsAnsweredOverMsdpNotEchoedAsText()
+	{
+		var (toServer, fromServer, handler, _, cts) = StartServer();
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MSDP));
+			await WriteAsync(toServer, IAC, DO, MSDP);
+			await WriteAsync(toServer, [IAC, SB, MSDP, MSDP_VAR, .. "LIST"u8.ToArray(), MSDP_VAL, .. "COMMANDS"u8.ToArray(), IAC, SE]);
+
+			var answer = await ReadUntilAsync(fromServer,
+				seen => Contains(seen, [IAC, SB, MSDP, MSDP_VAR, .. "COMMANDS"u8.ToArray()]));
+
+			await Assert.That(Contains(answer, "REPORT"u8.ToArray())).IsTrue()
+				.Because("LIST COMMANDS is answered with the commands the server understands");
+			await Assert.That(Contains(answer, "{\"LIST\""u8.ToArray())).IsFalse()
+				.Because("the request is not the answer, and must never reach the client as text");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	[Test]
+	public async Task MsdpClientName_IsPublishedToTheMainProcess()
+	{
+		var (toServer, fromServer, handler, published, cts) = StartServer();
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MSDP));
+			await WriteAsync(toServer, IAC, DO, MSDP);
+			await WriteAsync(toServer, [IAC, SB, MSDP, MSDP_VAR, .. "CLIENT_NAME"u8.ToArray(), MSDP_VAL, .. "Mudlet"u8.ToArray(), IAC, SE]);
+
+			var message = await WaitForPublishedAsync<MSDPUpdateMessage>(published);
+
+			await Assert.That(message).IsNotNull();
+			await Assert.That(message!.Variables["CLIENT_NAME"]).IsEqualTo("Mudlet");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>
+	/// A prompt ends in IAC EOR once the client agrees to End of Record, and in IAC GA otherwise.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Prompt_EndsInEorOnlyWhenTheClientAgrees(bool agrees)
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service);
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, EOR));
+			await WriteAsync(toServer, IAC, agrees ? DO : DONT, EOR);
+			// Settled once a later option is answered: the read loop handles bytes in order.
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			var prompt = await RegisteredPromptWriterAsync(service);
+			await prompt("> "u8.ToArray());
+
+			var written = await ReadUntilAsync(fromServer, seen => Contains(seen, (byte)'>', (byte)' ', IAC));
+			await Assert.That(Contains(written, (byte)'>', (byte)' ', IAC, agrees ? EORMARK : GA)).IsTrue()
+				.Because($"saw {Describe(written)}");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>
+	/// <c>oob()</c> sends GMCP to a connection marked as speaking it. That mark used to wait for the client
+	/// to send a GMCP package; agreeing to the option is enough.
+	/// </summary>
+	[Test]
+	public async Task GmcpAgreement_IsPublishedToTheMainProcess()
+	{
+		var (toServer, fromServer, handler, published, cts) = StartServer();
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, GMCP));
+			await WriteAsync(toServer, IAC, DO, GMCP);
+
+			var message = await WaitForPublishedAsync<GMCPNegotiatedMessage>(published);
+
+			await Assert.That(message).IsNotNull();
+			await Assert.That(message!.Agreed).IsTrue();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	[Test]
+	public async Task GmcpCorePing_IsAnswered()
+	{
+		var (toServer, fromServer, handler, _, cts) = StartServer();
+		using var serverLifetime = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, GMCP));
+			await WriteAsync(toServer, IAC, DO, GMCP);
+			await WriteAsync(toServer, [IAC, SB, GMCP, .. "Core.Ping"u8.ToArray(), IAC, SE]);
+
+			var answer = await ReadUntilAsync(fromServer,
+				seen => Contains(seen, [IAC, SB, GMCP, .. "Core.Ping"u8.ToArray(), IAC, SE]));
+
+			await Assert.That(Contains(answer, [IAC, SB, GMCP, .. "Core.Ping"u8.ToArray(), IAC, SE])).IsTrue();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>The prompt writer the connection handed the connection service when it registered.</summary>
+	private static async Task<Func<byte[], ValueTask>> RegisteredPromptWriterAsync(IConnectionServerService service)
+	{
+		var deadline = DateTimeOffset.UtcNow + Timeout;
+		while (DateTimeOffset.UtcNow < deadline)
+		{
+			var registration = service.ReceivedCalls()
+				.FirstOrDefault(call => call.GetMethodInfo().Name == nameof(IConnectionServerService.RegisterAsync));
+			if (registration is not null)
+			{
+				return (Func<byte[], ValueTask>)registration.GetArguments()[5]!;
+			}
+
+			await Task.Delay(25);
+		}
+
+		throw new TimeoutException("The connection never registered");
+	}
 }

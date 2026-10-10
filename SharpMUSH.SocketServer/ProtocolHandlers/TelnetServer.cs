@@ -324,24 +324,4 @@ public partial class TelnetServer : ConnectionHandler
 
 		return false;
 	}
-
-	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection)
-	{
-		return async (ti, str) =>
-		{
-			try
-			{
-				// Write MSDP response using the library's thread-safe WriteToNetworkAsync
-				await ti.WriteToNetworkAsync(ti.CurrentEncoding.GetBytes(str));
-			}
-			catch (ObjectDisposedException ode)
-			{
-				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
-			}
-		};
-	}
 }
