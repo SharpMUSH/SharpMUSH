@@ -343,7 +343,7 @@ Command          Effect     Cost
 @wiki/search   Find pages      1
 @wiki/audit   Staff report
 ```
-(header in bright white, `index` bold because the cell was passed through
+(header in bold, `index` bold because the cell was passed through
 `rendermarkdown()`, and the short last row padded out by `lalign()`)
 
 Three registers are computed once from the payload: `%q<wd>` keeps `widths` as
