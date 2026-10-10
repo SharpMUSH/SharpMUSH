@@ -59,6 +59,20 @@ public class AccountAdminCommandTests
 	}
 
 	[Test]
+	public async ValueTask AccountList_ShowsEachAccountWithItsState()
+	{
+		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+		await accountService.CreateAccountAsync(_username, null, "some-password-1");
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/newpassword {_username}=temp-password-9"));
+
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/list {_username}"));
+
+		var listing = WebAppFactoryArg.Notifications.For(_actor.DbRef).Last(m => m.Contains($"{_username}* (", StringComparison.Ordinal));
+		await Assert.That(listing).Contains($"{_username}* (active)");
+		await Assert.That(listing).Contains("* must change password at next login");
+	}
+
+	[Test]
 	public async ValueTask AccountDisable_BlocksLogin_EnableRestores()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();

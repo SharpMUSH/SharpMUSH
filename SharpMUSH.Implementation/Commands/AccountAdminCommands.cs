@@ -61,15 +61,11 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			var table = ServerLayout.Listing(
-				[
-					new TableColumn(MarkupText.Plain("Account")) { Min = 10 },
-					new TableColumn(MarkupText.Plain("Status")) { Wrap = false },
-					new TableColumn(MarkupText.Plain("Password")) { Wrap = false, Priority = 2 },
-				],
-				filtered.Select(a => (IEnumerable<string>)
-					[a.Username, StatusLabel(a.Status), a.MustChangePassword ? "must change" : string.Empty]));
-			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Accounts"), table), 78));
+			var grid = new Grid([.. filtered.Select(AccountEntry)]) { Gap = 3 };
+			var panel = filtered.Any(a => a.MustChangePassword)
+				? ServerLayout.Panel(MarkupText.Plain("Accounts"), grid, ServerLayout.Body(MarkupText.Plain("* must change password at next login")))
+				: ServerLayout.Panel(MarkupText.Plain("Accounts"), grid);
+			await NotifyService.Notify(executor, ServerLayout.Build(panel, 78));
 			return CallState.Empty;
 		}
 
@@ -316,6 +312,10 @@ public partial class Commands
 		AnySharpObject target = player;
 		return target.IsGod() ? !executor.IsGod() : await target.IsWizard() && !await executor.IsWizard();
 	}
+
+	/// <summary>One <c>@account/list</c> entry: the account's name, a <c>*</c> when it must change its password, and its state.</summary>
+	private MarkupText AccountEntry(SharpAccount account) =>
+		MarkupText.Plain($"{account.Username}{(account.MustChangePassword ? "*" : string.Empty)} ({StatusLabel(account.Status)})");
 
 	private string StatusLabel(AccountStatus status) => status switch
 	{
