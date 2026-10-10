@@ -623,11 +623,11 @@ objects:
         @pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,The reader closed after an hour without a line. +bbreader picks up where you were.)]
       # q, or an hour without a line: the session has ended. On q the reader forgets where it was.
       INPUT`READER`QUIT: |-
-        think [u({{bboards}}/FUN`READER`CONTEXT)];@assert not(strmatch(%q<reason>,timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER %q<reader_holder>=;@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)]
+        think [u({{bboards}}/FUN`READER`CONTEXT)];@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER %q<reader_holder>=;@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)]
       # .toss while writing, or an hour without a line: the session has ended. .toss drops what was
       # written and opens the reader again; a timeout keeps it for +bbreader.
       INPUT`POSTING`TOSS: |-
-        think [u({{bboards}}/FUN`READER`CONTEXT)];@assert not(strmatch(%q<reason>,timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER`WRITE %q<reader_holder>=;&BBOARD`READER`TEXT %q<reader_holder>=;@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Dropped.)];@include {{bboards}}/INC`READER`START
+        think [u({{bboards}}/FUN`READER`CONTEXT)];@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER`WRITE %q<reader_holder>=;&BBOARD`READER`TEXT %q<reader_holder>=;@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Dropped.)];@include {{bboards}}/INC`READER`START
       # . while writing: posts what was written.
       INPUT`POSTING`POST: |-
         think [u({{bboards}}/FUN`READER`CONTEXT)];think [setqm(reader_write_kind,get(%q<reader_holder>/BBOARD`READER`WRITE),reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT))];&BBOARD`READER`WRITE %q<reader_holder>=;&BBOARD`READER`TEXT %q<reader_holder>=;think [u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)][setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START

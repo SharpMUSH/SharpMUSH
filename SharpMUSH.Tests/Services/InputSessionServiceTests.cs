@@ -22,9 +22,9 @@ namespace SharpMUSH.Tests.Services;
 
 public class InputSessionServiceTests
 {
-	/// <summary>The %q&lt;reason&gt; a delivery ran with: input, exit or timeout.</summary>
+	/// <summary>The reason argument a delivery ran with: input, exit or timeout.</summary>
 	private static string? Reason(ParserState state)
-		=> state.Registers.TryPeek(out var registers) && registers.TryGetValue("REASON", out var reason) ? reason.ToPlainText() : null;
+		=> state.EnvironmentRegisters.TryGetValue(InputSessionService.ReasonArgument, out var reason) ? reason.Message?.ToPlainText() : null;
 
 	private sealed class Clock : TimeProvider
 	{

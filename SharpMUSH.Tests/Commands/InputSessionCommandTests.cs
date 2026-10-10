@@ -218,7 +218,7 @@ public class InputSessionCommandTests
 		var player = await Player();
 		try
 		{
-			await Command(player.Handle, "&CALLBACK me=&ANSWER me=%0; &REASON me=%q<reason>");
+			await Command(player.Handle, "&CALLBACK me=&ANSWER me=%0; &REASON me=[r(reason,args)]");
 			await Command(player.Handle, "@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,120");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 			const string payload = "[setq(unsafe,yes)];&ATTACK me=bad;%q<unsafe>\r\nnext line";
@@ -260,8 +260,8 @@ public class InputSessionCommandTests
 				var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 				await Scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "input-register-check", "test");
 				await drained.Task.WaitAsync(QueueDeadline);
-				await Assert.That(await Read(player.DbRef, "SET")).IsEqualTo($"REASON||{reply}|{reply}|LOCAL OTHER REASON")
-					.Because("no register but REASON carries over from the previous reply, and each is readable as it is set");
+				await Assert.That(await Read(player.DbRef, "SET")).IsEqualTo($"||{reply}|{reply}|LOCAL OTHER")
+					.Because("no register carries over from the previous reply, and each is readable as it is set");
 				await Assert.That(await Read(player.DbRef, "READ")).IsEqualTo($"{reply}||")
 					.Because("a register set in one command is readable in the next, and unsetq() empties the set");
 				await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
@@ -299,8 +299,8 @@ public class InputSessionCommandTests
 		var player = await Player();
 		try
 		{
-			await Command(player.Handle, "&CALLBACK me=&ANSWER me=%0; &REASON me=%q<reason>");
-			await Command(player.Handle, "&FINISH me=&FINISHED me=%0|%q<reason>");
+			await Command(player.Handle, "&CALLBACK me=&ANSWER me=%0; &REASON me=[r(reason,args)]");
+			await Command(player.Handle, "&FINISH me=&FINISHED me=%0|[r(reason,args)]");
 			await Command(player.Handle, "@input/start Answer:=.done,FINISH,*,CALLBACK,120");
 			await Input(player.Handle, "first");
 			await WaitFor(player.DbRef, "REASON", "input");
@@ -323,7 +323,7 @@ public class InputSessionCommandTests
 		try
 		{
 			await Command(player.Handle, "&ON`HELP me=&SEEN me=[get(me/SEEN)]help:%0|");
-			await Command(player.Handle, "&ON`QUIT me=&SEEN me=[get(me/SEEN)]quit:%q<reason>");
+			await Command(player.Handle, "&ON`QUIT me=&SEEN me=[get(me/SEEN)]quit:[r(reason,args)]");
 			var marker = TestIsolationHelpers.GenerateUniqueName("Leave");
 			await Command(player.Handle, $"@input/start Keys:={marker},ON`QUIT,help,ON`HELP,120");
 			await Input(player.Handle, "HELP");
@@ -391,7 +391,7 @@ public class InputSessionCommandTests
 		var player = await Player();
 		try
 		{
-			await Command(player.Handle, "&CALLBACK me=&REASON me=%q<reason>");
+			await Command(player.Handle, "&CALLBACK me=&REASON me=[r(reason,args)]");
 			await Command(player.Handle, "@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,1");
 			await WaitFor(player.DbRef, "REASON", "timeout");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNull();
@@ -405,7 +405,7 @@ public class InputSessionCommandTests
 		var player = await Player();
 		try
 		{
-			await Command(player.Handle, "&CALLBACK me=&REASON me=%q<reason>");
+			await Command(player.Handle, "&CALLBACK me=&REASON me=[r(reason,args)]");
 			await Command(player.Handle, "@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,3600");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 			await Factory.Services.GetRequiredService<IMediator>().Send(new AdmitCommandListRequest(
@@ -426,7 +426,7 @@ public class InputSessionCommandTests
 		var other = await Player();
 		try
 		{
-			await Command(player.Handle, "&CALLBACK me=&REASON me=%q<reason>");
+			await Command(player.Handle, "&CALLBACK me=&REASON me=[r(reason,args)]");
 			await Command(player.Handle, "@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,3600");
 			await Command(other.Handle, $"@input/rescue {player.Name}");
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();

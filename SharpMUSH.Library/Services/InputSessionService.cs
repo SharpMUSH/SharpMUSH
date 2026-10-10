@@ -40,6 +40,8 @@ public sealed class InputSessionService : IInputSessionService
 	public const string ReservedExit = "#-1 INPUT EXIT PATTERN CANNOT BE @INPUT/CANCEL";
 	/// <summary>The line that always leaves a session without its callback; <see cref="TryEscapeAsync"/> takes it first.</summary>
 	public const string CancelLine = "@input/cancel";
+	/// <summary>The named argument, read with <c>r(reason,args)</c>, that says why an attribute runs: exit, input or timeout.</summary>
+	public const string ReasonArgument = "reason";
 
 	private sealed class Entry(InputSession session)
 	{
@@ -523,6 +525,9 @@ public sealed class InputSessionService : IInputSessionService
 		}
 		var exit = ReferenceEquals(route, session.Exit);
 		if (exit) Discard(session);
+		// A named argument, as a regexp's named group is, so it lives only as long as this run; it
+		// replaces a group of the same name.
+		arguments[ReasonArgument] = new CallState(MString.Plain(timeout ? "timeout" : exit ? "exit" : "input"), 0);
 		var state = ParserState.RootFor(session.Executor) with
 		{
 			Executor = session.Executor,
@@ -535,7 +540,7 @@ public sealed class InputSessionService : IInputSessionService
 				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit),
 			EnvironmentRegisters = arguments
 		};
-		state.AddRegister("REASON", MString.Plain(timeout ? "timeout" : exit ? "exit" : "input"));
+
 		return await parser.FromState(state).CommandListParse(callback.Last().Value);
 	}
 
