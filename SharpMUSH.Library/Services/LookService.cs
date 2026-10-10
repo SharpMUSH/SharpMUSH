@@ -349,16 +349,22 @@ public class LookService(
 
 		var (visibleContents, visibleExits) = await VisibleContentsAsync(look, container);
 
-		if (showInventory && visibleContents.Count > 0)
+		// look.c look_contents/look_exits: a CONFORMAT or EXITFORMAT runs even when the list is empty, so
+		// it can say so; only the built-in listing is skipped when there is nothing to list.
+		if (showInventory && (visibleContents.Count > 0 || await HasFormatAsync(look, "CONFORMAT")))
 		{
 			await ShowContentsAsync(look, visibleContents);
 		}
 
-		if (showExits && visibleExits.Count > 0)
+		if (showExits && (visibleExits.Count > 0 || await HasFormatAsync(look, "EXITFORMAT")))
 		{
 			await ShowExitsAsync(look, visibleExits);
 		}
 	}
+
+	private async ValueTask<bool> HasFormatAsync(Look look, string formatAttributeName)
+		=> (await attributeService.GetAttributeAsync(look.God, look.Viewing, formatAttributeName,
+			IAttributeService.AttributeMode.Read, true)).IsAttribute;
 
 	/// <summary>What the looker can see in the container, split into exits and everything else.</summary>
 	private async ValueTask<(List<AnySharpContent> Contents, List<AnySharpContent> Exits)> VisibleContentsAsync(
@@ -402,7 +408,9 @@ public class LookService(
 			}
 			return MarkupText.Plain(item.Object().Name);
 		}));
-		var defaultContents = MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
+		var defaultContents = visibleContents.Count == 0
+			? MarkupText.Empty
+			: MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
 
 		var conFormatArgs = new Dictionary<string, CallState>
 		{
@@ -414,7 +422,10 @@ public class LookService(
 			attributeService, look.Parser, look.Looker, look.Viewing, "CONFORMAT",
 			conFormatArgs, defaultContents);
 
-		await notifyService.Notify(look.Looker, formattedContents, look.Looker);
+		if (formattedContents.Length > 0)
+		{
+			await notifyService.Notify(look.Looker, formattedContents, look.Looker);
+		}
 	}
 
 	private async ValueTask ShowExitsAsync(Look look, List<AnySharpContent> visibleExits)
@@ -426,7 +437,9 @@ public class LookService(
 		};
 
 		var isTransparent = await look.Viewing.IsTransparent();
-		var defaultExits = isTransparent
+		var defaultExits = visibleExits.Count == 0
+			? MarkupText.Empty
+			: isTransparent
 			? await TransparentExitListAsync(look.Looker, visibleExits)
 			: MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"),
 				MessageFormatting.FormatMStringsWithOxfordComma(visibleExits.Select(x => ExitLink(x.Object().Name)).ToList()));
@@ -434,6 +447,11 @@ public class LookService(
 		var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService, look.Parser, look.Looker, look.Viewing, "EXITFORMAT",
 			exitFormatArgs, defaultExits);
+
+		if (formattedExits.Length == 0)
+		{
+			return;
+		}
 
 		if (formattedExits == defaultExits && isTransparent)
 		{
