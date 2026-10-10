@@ -43,7 +43,10 @@ public class ParserStateArgumentsTests
 	[Test]
 	public async ValueTask ArgumentKeysAreSharedAndExact()
 	{
-		await Assert.That(ReferenceEquals(ParserState.ArgumentKey(3), ParserState.ArgumentKey(3))).IsTrue();
+		// Two lookups of the same position hand back the one shared string, not two equal ones.
+		var first = ParserState.ArgumentKey(3);
+		var second = ParserState.ArgumentKey(3);
+		await Assert.That(second).IsSameReferenceAs(first);
 		await Assert.That(ParserState.ArgumentKey(63)).IsEqualTo("63");
 		await Assert.That(ParserState.ArgumentKey(64)).IsEqualTo("64");
 		await Assert.That(ParserState.ArgumentKey(1000)).IsEqualTo("1000");
