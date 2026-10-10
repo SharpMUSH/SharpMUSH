@@ -8,6 +8,7 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
+@inject TerminalLog TerminalLog
 @inject AccountAuthService AccountAuth
 @inject ICommFeed Comms
 @inject ILayoutService Layouts
@@ -137,7 +138,7 @@ else
                                         <PlaySceneHint Scene="running" OnOpen="OpenScene" OnHide="() => _hintHiddenFor = running.Id" />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" />
+                                                    TargetColumns="_targetCols" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
                         </ChildContent>
@@ -232,7 +233,8 @@ else
     {
         <PlayTerminalSettings Menu="menu" Open="@(_settingsOpen == menu)" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))"
                               OnEscape="CloseSettings" Columns="_targetCols" ColumnsChanged="OnColsChanged"
-                              ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync" OnClear="ClearTerminal"
+                              ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
+                              KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnClear="ClearTerminal"
                               Focus="_focus" FocusChanged="OnFocusChanged" />
     };
 

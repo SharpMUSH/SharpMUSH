@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Для игры с программой чтения с экрана в этом браузере: буквенные клавиши выходов отключены, ваши собственные команды не зачитываются, Alt и цифра повторно читает одну из последних строк (Alt+1 — самую новую), а игра об этом знает и может не показывать картинки, нарисованные символами.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Хранить более длинные журналы</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Сохраняет вывод игры этого персонажа в этом браузере, до {0} строк в течение {1} дней, чтобы можно было прокрутить дальше назад, даже после закрытия вкладки. Любой, кто пользуется этим профилем браузера, может его прочитать. Выключение удаляет его.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Показать более ранние строки</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Более ранних строк не сохранено</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Быстрые ссылки</value>
   </data>

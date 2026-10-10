@@ -120,6 +120,17 @@ test('an unmounted terminal is let go of by its resize observer', () => {
     assert.ok(resized[0].observer.disconnected);
 });
 
+test('earlier lines put in above keep the view on the lines being read', () => {
+    const { terminal, output, classes } = boot();
+    output.scrollHeight = 900;
+    output.scrollTop = 0;
+    terminal.holdPlace('output');
+    output.scrollHeight = 1500;
+    terminal.restorePlace('output');
+    assert.equal(output.scrollTop, 600, 'the same distance from the bottom as before');
+    assert.ok(classes.has('sharp-terminal--reading'), 'left above the bottom, it is reading');
+});
+
 test('following a terminal adds nothing to window, so an unmounted terminal is not kept alive', () => {
     const { terminal, windowListeners } = boot();
     const before = windowListeners.length;

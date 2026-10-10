@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Til at spille med en skærmlæser i denne browser: bogstavtasterne til udgange er slået fra, dine egne kommandoer læses ikke op igen, Alt og et tal læser en af de seneste linjer igen (Alt+1 den nyeste), og spillet får besked, så det kan udelade billeder tegnet med tegn.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Gem længere logs</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Gemmer denne karakters spiloutput i denne browser, op til {0} linjer i {1} dage, så du kan rulle længere tilbage, også efter du har lukket fanen. Alle, der bruger denne browserprofil, kan læse det. Slår du det fra, slettes det.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Vis tidligere linjer</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Ingen tidligere linjer gemt</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Genveje</value>
   </data>

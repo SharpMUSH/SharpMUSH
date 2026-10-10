@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Pentru a juca cu un cititor de ecran în acest browser: tastele cu litere pentru ieșiri sunt oprite, propriile comenzi nu sunt citite înapoi, Alt și o cifră citește din nou un rând recent (Alt+1 cel mai nou), iar jocul află, ca să poată omite desenele făcute din caractere.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Păstrează jurnale mai lungi</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Păstrează ieșirea jocului acestui personaj în acest browser, până la {0} rânduri timp de {1} zile, ca să poți derula mai înapoi, chiar și după ce închizi fila. Oricine folosește acest profil de browser o poate citi. Dezactivarea o șterge.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Arată rândurile anterioare</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Niciun rând anterior păstrat</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Linkuri rapide</value>
   </data>

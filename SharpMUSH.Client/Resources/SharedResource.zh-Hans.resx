@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>在此浏览器中使用读屏软件游玩：出口的字母快捷键会关闭，你自己输入的命令不会被朗读，Alt 加数字可重读最近的一行（Alt+1 为最新一行），并告知游戏，以便省略用字符绘制的图片。</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>保留更长的日志</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>在此浏览器中保存该角色的游戏输出，最多 {0} 行，保留 {1} 天，这样即使关闭标签页后也能向上翻看更早的内容。使用此浏览器配置文件的任何人都能读取。关闭此项会将其删除。</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>显示更早的行</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>没有保存更早的行</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>快捷链接</value>
   </data>

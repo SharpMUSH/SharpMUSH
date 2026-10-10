@@ -26,6 +26,7 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		Services.AddMudServices();
 		Services.AddSingleton<CommandHistory>();
 		Services.AddSingleton<ScreenReaderMode>();
+		Services.AddSingleton<TerminalLog>();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -48,6 +49,30 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		terminal.IsConnected.Returns(false);
 		terminal.Lines.Returns([]);
 		return terminal;
+	}
+
+	[Test]
+	public async Task Earlier_lines_from_the_kept_log_go_above_the_rest()
+	{
+		var terminal = AnonymousTerminal();
+		var now = DateTime.Now;
+		terminal.Lines.Returns([new SharpMUSH.Client.Models.TerminalLine(now, "now", "now", SharpMUSH.Client.Models.TerminalLineSource.Server)]);
+		terminal.Identity.Returns(new TerminalIdentity("ada@example.com", "#7:1"));
+		var at = new DateTimeOffset(now.AddMinutes(-5)).ToUnixTimeMilliseconds();
+		JSInterop.Setup<string?>("SharpMUSH.TerminalLog.earlier", _ => true).SetResult($$"""[{"t":"earlier","h":"earlier","at":{{at}}}]""");
+		await Services.GetRequiredService<TerminalLog>().SetAsync(true);
+
+		var withoutLog = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal));
+		await Assert.That(withoutLog.FindAll(".sharp-terminal-earlier-btn")).IsEmpty().Because("only the play terminal offers the log");
+
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal).Add(g => g.KeepsLog, true));
+		await cut.Find(".sharp-terminal-earlier-btn").ClickAsync(new());
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".sharp-terminal-earlier").TextContent.Trim() != "earlier") throw new InvalidOperationException("not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.Terminal.restorePlace")).IsTrue();
 	}
 
 	[Test]

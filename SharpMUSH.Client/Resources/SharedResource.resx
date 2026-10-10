@@ -7636,6 +7636,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>For playing with a screen reader in this browser: the exit letter keys are off, your own commands are not read back, Alt+number reads a recent line again (Alt+1 the newest), and the game is told so it can leave out pictures made of characters.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Keep longer logs</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Keeps this character's game output in this browser, up to {0} lines for {1} days, so you can scroll back further, even after you close the tab. Anyone who uses this browser profile can read it. Turning this off deletes it.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Show earlier lines</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>No earlier lines kept</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Quick links</value>
   </data>

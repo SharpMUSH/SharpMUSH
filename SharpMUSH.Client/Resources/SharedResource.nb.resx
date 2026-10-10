@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>For å spille med skjermleser i denne nettleseren: bokstavtastene for utganger er slått av, dine egne kommandoer leses ikke opp igjen, Alt og et tall leser en av de siste linjene igjen (Alt+1 den nyeste), og spillet får beskjed så det kan utelate bilder tegnet med tegn.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Behold lengre logger</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Lagrer spillutdataene til denne karakteren i denne nettleseren, opptil {0} linjer i {1} dager, slik at du kan rulle lenger tilbake, også etter at du har lukket fanen. Alle som bruker denne nettleserprofilen, kan lese dem. Slår du det av, slettes de.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Vis tidligere linjer</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Ingen tidligere linjer lagret</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Snarveier</value>
   </data>

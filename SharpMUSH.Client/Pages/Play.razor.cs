@@ -233,6 +233,7 @@ public partial class Play
 	protected override async Task OnInitializedAsync()
 	{
 		await ScreenReader.LoadAsync();
+		await TerminalLog.LoadAsync();
 		_scenesOn = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
 		await ResolveRosterAsync();
 		await LoadAsideAsync();

@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Para jogar com um leitor de tela neste navegador: as teclas de letra das saídas ficam desligadas, seus próprios comandos não são lidos de volta, Alt e um número lê de novo uma linha recente (Alt+1 a mais nova), e o jogo é avisado para poder omitir desenhos feitos com caracteres.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Manter registros mais longos</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Guarda a saída do jogo deste personagem neste navegador, até {0} linhas por {1} dias, para que você possa rolar mais para trás, mesmo depois de fechar a aba. Qualquer pessoa que use este perfil do navegador pode lê-la. Desativar apaga tudo.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Mostrar linhas anteriores</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Nenhuma linha anterior guardada</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Atalhos</value>
   </data>

@@ -25,6 +25,7 @@ public class GlobalTerminalScreenReaderTests : BunitContext
 		Services.AddMudServices();
 		Services.AddSingleton<CommandHistory>();
 		Services.AddSingleton<ScreenReaderMode>();
+		Services.AddSingleton<TerminalLog>();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 

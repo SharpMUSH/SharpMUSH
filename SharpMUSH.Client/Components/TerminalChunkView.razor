@@ -1,0 +1,37 @@
+@using SharpMUSH.Client.Models
+
+@* One chunk of a terminal's lines. It renders again only when its chunk gained a line, so a new line costs
+   one chunk's render however long the scrollback is; the browser skips laying out a chunk off screen
+   (content-visibility, shell.css). Lines are keyed, so a chunk that grows only adds its new line. *@
+<div class="sharp-terminal-chunk">
+    @foreach (var line in Chunk.Lines)
+    {
+        <div @key="line" class="@LineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TerminalChunk Chunk { get; set; } = null!;
+
+    /// <summary>The chunk's <see cref="TerminalChunk.Version"/> as the terminal last rendered it.</summary>
+    [Parameter] public int Version { get; set; }
+
+    private TerminalChunk? _rendered;
+    private int _renderedVersion = -1;
+
+    protected override void OnInitialized() => (_rendered, _renderedVersion) = (Chunk, Version);
+
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_rendered, Chunk) && _renderedVersion == Version) return false;
+        (_rendered, _renderedVersion) = (Chunk, Version);
+        return true;
+    }
+
+    public static string LineClass(TerminalLineSource source) => source switch
+    {
+        TerminalLineSource.Client => "terminal-line terminal-sent",
+        TerminalLineSource.System => "terminal-line terminal-system",
+        _ => "terminal-line"
+    };
+}

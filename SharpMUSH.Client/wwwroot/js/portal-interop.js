@@ -74,6 +74,25 @@
             el.scrollTop = el.scrollHeight;
         },
 
+        // Earlier lines are about to go in above everything: holdPlace() notes how far the view is from the
+        // bottom, and restorePlace(), once they are in, puts it back there, so the lines the player was
+        // reading stay where they were. A view left above the bottom is reading, as if they had scrolled.
+        holdPlace: function (elementId) {
+            var el = document.getElementById(elementId);
+            if (el) el._sharpmushHeld = el.scrollHeight - el.scrollTop;
+        },
+
+        restorePlace: function (elementId) {
+            var el = document.getElementById(elementId);
+            if (!el || el._sharpmushHeld === undefined) return;
+            el.scrollTop = el.scrollHeight - el._sharpmushHeld;
+            delete el._sharpmushHeld;
+            var reading = el.scrollHeight - el.scrollTop - el.clientHeight > 48;
+            el._sharpmushReading = reading;
+            var box = el.closest('.sharp-terminal-container') || el;
+            box.classList.toggle('sharp-terminal--reading', reading);
+        },
+
         // Back to the newest line, following again (the jump button, or the player sending a command).
         jumpToLatest: function (elementId) {
             var el = document.getElementById(elementId);

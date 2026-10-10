@@ -18,6 +18,9 @@ public interface ITerminalService : IAsyncDisposable
 	/// <summary>The last server URI connected to (or null if never connected).</summary>
 	string? ServerUri { get; }
 
+	/// <summary>Who this connection plays as, when it logged in as an account's character; null for a guest or a typed login.</summary>
+	TerminalIdentity? Identity => null;
+
 	/// <summary>Read-only snapshot of the in-memory line buffer (up to 2000 lines).</summary>
 	IReadOnlyList<TerminalLine> Lines { get; }
 

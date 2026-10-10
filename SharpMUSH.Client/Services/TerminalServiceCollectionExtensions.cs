@@ -32,6 +32,8 @@ public static class TerminalServiceCollectionExtensions
 		// did inject the interface — the /websocket-test dev harness — is gone.
 		// Both clients keep their resume point here, so a reload resumes their sessions.
 		services.AddSingleton<TerminalResumeStore>();
+		// The play terminal's longer log, when the player turns it on.
+		services.AddSingleton<TerminalLog>();
 		// Logs a terminal back in when a reconnect could not resume its session.
 		services.AddSingleton<ITerminalLoginTokens>(sp => new AccountTerminalLoginTokens(sp));
 		services.AddSingleton(sp => new TerminalServiceHost(
@@ -55,7 +57,8 @@ public static class TerminalServiceCollectionExtensions
 			() => new PlayTerminalService(
 				ActivatorUtilities.CreateInstance<PlayWebSocketClientService>(sp),
 				sp.GetRequiredService<ILogger<TerminalService>>(),
-				sp.GetRequiredService<ITerminalLoginTokens>())));
+				sp.GetRequiredService<ITerminalLoginTokens>(),
+				sp.GetRequiredService<TerminalLog>())));
 		services.AddSingleton<IPlayTerminalService>(sp => sp.GetRequiredService<PlayTerminalServiceHost>());
 
 		// Channels and pages for the Play sidebar, read off the play terminal's OOB store: the comm-feed
