@@ -303,7 +303,7 @@ public class HookNamedArgumentTests
 	[Arguments("function-command.md")]
 	public async Task HelpExamplesProduceTheirOutput(string helpFile)
 	{
-		var text = await File.ReadAllTextAsync(Path.Combine(TestPaths.Helpfiles.FullName, helpFile));
+		var text = await File.ReadAllTextAsync(Path.Join(TestPaths.Helpfiles.FullName, helpFile));
 		var examples = Regex.Matches(text, @"```sharp\n(?<code>.*?)```\nOutput: (?<output>[^\n]*)", RegexOptions.Singleline);
 		await Assert.That(examples.Count).IsGreaterThan(0);
 
