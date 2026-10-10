@@ -856,16 +856,15 @@ Show just the object names (with no ansi) in a table:
 
   **Warning:** while a session is open, every line the player sends goes to your attributes, and nothing they type runs as a command. That is the point of `@input`: a player can write plain text without setting off other commands. The exit pattern is the player's way out, so name it in the first prompt and in every later one, and pick one nobody types as ordinary text (`.done` rather than `done`). Do not rely on the timeout to end a session. It is a safety net for a player who walked away: it fires a fixed time after the start, whether or not the player is still typing. The built-in `@input/cancel` escape ends the session without running anything, so whatever the exit attribute saves is never saved.
 
-  This example is a notepad with a `+note` command that takes a note of any number of lines. A line of just `.done` ends the session and runs `` FINISH`NOTE ``, which saves the note; `.undo` runs `` UNDO`NOTE ``, which drops the last line; any other line goes to `` INPUT`NOTE ``, which adds it. If the time runs out, `` FINISH`NOTE `` still saves what was written:
+  This example is a notepad with a `+note` command that takes a note of any number of lines. A line of just `.done` ends the session and runs `` INPUT`NOTE`DONE ``, which saves the note; `.undo` runs `` INPUT`NOTE`UNDO ``, which drops the last line; any other line goes to `` INPUT`NOTE`LINE ``, which adds it. If the time runs out, `` INPUT`NOTE`DONE `` still saves what was written:
 
 ```sharp
 @create Notepad
 @set Notepad=!no_command
-&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start Type your note. Send .done on a line by itself to save it.=.done,FINISH`NOTE,.undo,UNDO`NOTE,*,INPUT`NOTE,1800
-&INPUT`NOTE Notepad=&DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, .undo to drop the last, or .done to save:
-&UNDO`NOTE Notepad=&DATA`DRAFT me=[ldelete(v(DATA`DRAFT),words(v(DATA`DRAFT),%r),%r)]; @input/prompt Dropped. Next line, or .done to save:
-&FINISH`NOTE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=[if(strmatch(%q<reason>,timeout),Time ran out%, so your note was saved as it was.,Note saved.)]
-@set Notepad/INPUT`NOTE=cmdsyntax
+&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start Type your note. Send .done on a line by itself to save it.=.done,INPUT`NOTE`DONE,.undo,INPUT`NOTE`UNDO,*,INPUT`NOTE`LINE,1800
+&INPUT`NOTE`LINE Notepad=&DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, .undo to drop the last, or .done to save:
+&INPUT`NOTE`UNDO Notepad=&DATA`DRAFT me=[ldelete(v(DATA`DRAFT),words(v(DATA`DRAFT),%r),%r)]; @input/prompt Dropped. Next line, or .done to save:
+&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=[if(strmatch(%q<reason>,timeout),Time ran out%, so your note was saved as it was.,Note saved.)]
 ```
 
   Output: a player carrying the notepad types `+note`, then `Hello [there]`, `oops`, `.undo`, `look` and `.done`. `` get(Notepad/DATA`NOTE) `` returns the two lines `Hello [there]` and `look`; none was evaluated or run. The player sees `Note saved.` and is back at ordinary commands.
