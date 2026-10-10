@@ -21,7 +21,8 @@ For one connection handle and one transport incarnation (`SessionId`):
    existing `SessionId` check fences incarnations on both sides, before and after rendering.
 
 Disconnect, timeout, callback failure and shutdown publish no notice of their own. Rule 2 still
-orders whatever is published after them.
+orders whatever is published after them. Every end of a capture, these included, does publish a
+clear for a WebSocket client (below), in the place reserved when the capture ended.
 
 ## Mechanism
 
@@ -41,6 +42,44 @@ orders whatever is published after them.
   socket owner consumes that subject in one sequential loop and writes a prompt to the connection's
   prompt channel, so stream order is display order. A publication completes only once JetStream
   acknowledges it, so reservation order is stream order.
+
+## Prompt frames on a WebSocket
+
+A terminal's prompt is its last line, so it needs nothing more. A WebSocket client keeps the current
+prompt in a row of its own above the input line, so it is told which frames are prompts and when a
+prompt stops applying. The socket owner's `MarkupOutputConsumer` writes these for a `websocket`
+connection (`WebSocketPromptFrames`):
+
+- `{"type":"markup","data":<markup>,"prompt":true,"session":<id>}` for
+  `MarkupOutputMessage { Prompt = true }`. `session` is the capture's id
+  (`MarkupOutputMessage.InputSession`); a one-off prompt from `prompt()` or `@prompt` has none.
+- `{"type":"prompt","clear":true,"session":<id>}` for `MarkupOutputMessage { ClearPrompt = true }`,
+  which carries no markup. A client takes its prompt down only when the clear names the session the
+  prompt belongs to, or names none, so a late clear never removes a newer capture's prompt.
+
+Both travel inside the sequence envelope, so a resume replays them in order. A terminal connection
+is written nothing for a clear, and an older socket owner drops it, since its markup is empty.
+
+`InputSessionService` removes a capture in exactly one place, `End`, which runs under `_gate` and
+reserves the clear's place there; the clear is published once the lock is released
+(`INotifyService.ClearPromptToSession`). That covers `@input/cancel`, the escape line, a timeout or
+`@input/rescue`, callback failure or an exceeded budget, revocation, a binding that no longer
+matches, and the connection-state listener (disconnect, logout, character switch). A reprompt or a
+replacement start sends no clear: the new prompt replaces the old one. `NotifyService` publishes a
+clear only to a socket owner that orders prompts, and to nothing once the connection is gone.
+
+A reloaded page restores the prompt it last showed, but a clear published before its `lastSeq` is
+not replayed. `ConnectionResumedPromptHandler` therefore publishes a clear naming no session on every
+resume while no capture is collecting lines on that handle
+(`IInputSessionService.ClearPromptUnlessCapturingAsync`). The check and the clear's place are taken
+together under `_gate`, so a capture starting at that moment publishes its prompt after the clear.
+
+When the server ends a session for good (`{"type":"bye"}`: QUIT, a ban, `@boot`), the connection is
+gone before a capture's clear could reach it, so the portal takes the prompt down itself.
+
+A client sends the shown prompt into its scrollback, ahead of the line the player sends, as a
+terminal would show it. A one-off prompt comes down at that point; a capture's prompt stays until
+its clear or the next prompt.
 
 ## Older socket owners
 

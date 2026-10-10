@@ -101,6 +101,16 @@
     @if (Interactive)
     {
         <LiveAnnouncer @ref="_announcer" Label="@Loc["TermLatestLines"]" />
+        @* The prompt the game is waiting on (@input, prompt(), @prompt), kept above the input line instead of
+           scrolling away with the output. Always on the page, hidden while there is none, so its command links
+           (xch_cmd) are attached once like the output's. A screen reader hears it when its text changes, not
+           when the same prompt arrives again: the same HTML leaves the row as it was. *@
+        <div id="@_promptId" class="sharp-terminal-prompt" aria-live="polite" hidden="@(_promptHtml is null)">
+            @if (_promptHtml is not null)
+            {
+                @((MarkupString)_promptHtml)
+            }
+        </div>
         <div class="sharp-terminal-input">
             <span class="term-prompt" aria-hidden="true">›</span>
             @* The page's main text box (input-focus.js): focused once the connection is up, and where typing on the
@@ -195,6 +205,11 @@
     // Unique IDs per instance so multiple terminals on the same page don't conflict
     private readonly string _outputId = $"sharp-terminal-output-{Guid.NewGuid():N}";
     private readonly string _bottomId = $"sharp-terminal-bottom-{Guid.NewGuid():N}";
+    private readonly string _promptId = $"sharp-terminal-prompt-{Guid.NewGuid():N}";
+
+    // The shown prompt's HTML, changed only when it changes, so the row's live region stays quiet otherwise.
+    private string? _promptHtml;
+    private IJSObjectReference? _promptLinkHandle;
 
     private string _serverUri = string.Empty;
     private string _input = string.Empty;
@@ -252,8 +267,10 @@
         _connected = Terminal.IsConnected;
 
         _transcript = new TerminalTranscript(Terminal.Lines);
+        _promptHtml = Terminal.Prompt?.Line.Html;
 
         Terminal.LineReceived += OnLineReceived;
+        Terminal.PromptChanged += OnPromptChanged;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         ScreenReader.Changed += OnScreenReaderChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
@@ -339,6 +356,22 @@
             {
                 await ReleaseAsync(_cmdLinkHandle);
                 return;
+            }
+
+            // The prompt row sits outside the output, so its links get handlers of their own.
+            if (Interactive)
+            {
+                try
+                {
+                    _promptLinkHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
+                        "SharpMUSH.Terminal.attachCommandLinks", _promptId, _selfRef);
+                }
+                catch (JSException) { /* ignore if JS not ready */ }
+                if (_disposed)
+                {
+                    await ReleaseAsync(_promptLinkHandle);
+                    return;
+                }
             }
 
             _metricsRef = DotNetObjectReference.Create(this);
@@ -566,6 +599,15 @@
         StateHasChanged();
     });
 
+    // From the receive loop, like a line; the row redraws only when the prompt's HTML differs.
+    private void OnPromptChanged() => _ = InvokeAsync(() =>
+    {
+        var html = Terminal.Prompt?.Line.Html;
+        if (html == _promptHtml) return;
+        _promptHtml = html;
+        StateHasChanged();
+    });
+
     private LiveAnnouncer? _announcer;
     private bool _reviewKeys;
 
@@ -644,6 +686,7 @@
     private void OnRecreated() => InvokeAsync(() =>
     {
         _transcript = new TerminalTranscript(Terminal.Lines);
+        _promptHtml = Terminal.Prompt?.Line.Html;
         _noEarlier = false;
         StateHasChanged();
     });
@@ -719,6 +762,7 @@
     {
         _disposed = true;
         Terminal.LineReceived -= OnLineReceived;
+        Terminal.PromptChanged -= OnPromptChanged;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         ScreenReader.Changed -= OnScreenReaderChanged;
         Log.Changed -= OnLogChanged;
@@ -726,6 +770,7 @@
         if (Terminal is TerminalServiceHost host) host.Recreated -= OnRecreated;
 
         await ReleaseAsync(_cmdLinkHandle);
+        await ReleaseAsync(_promptLinkHandle);
         _selfRef?.Dispose();
 
         await ReleaseAsync(_metricsHandle);

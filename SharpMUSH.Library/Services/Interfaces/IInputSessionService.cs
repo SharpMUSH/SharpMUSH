@@ -18,5 +18,11 @@ public interface IInputSessionService
 	ValueTask<int> RescueAsync(DBRef character);
 	IReadOnlyList<InputSession> TakeExpired();
 	void Discard(InputSession session);
+	/// <summary>
+	/// Takes down whatever prompt a WebSocket client on <paramref name="handle"/> shows, unless a session is
+	/// capturing its lines. The check and the clear's place in the handle's order are taken together, so a
+	/// session starting meanwhile publishes its prompt after the clear.
+	/// </summary>
+	ValueTask ClearPromptUnlessCapturingAsync(long handle);
 	ValueTask<CallState?> DeliverAsync(IMUSHCodeParser parser, InputSession session, MString input, bool timeout = false);
 }

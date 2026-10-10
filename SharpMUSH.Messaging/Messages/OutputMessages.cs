@@ -48,6 +48,19 @@ public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage
 	/// socket owner that advertised <see cref="ConnectionEstablishedMessage.OrderedPrompts"/>.
 	/// </summary>
 	public bool Prompt { get; init; }
+
+	/// <summary>
+	/// The <c>@input</c> session a <see cref="Prompt"/> belongs to, or that a <see cref="ClearPrompt"/>
+	/// ends; null for a one-off prompt. A WebSocket client keeps a prompt until a clear naming its
+	/// session arrives, and ignores a clear naming another.
+	/// </summary>
+	public string? InputSession { get; init; }
+
+	/// <summary>
+	/// Takes down the prompt a WebSocket client is showing: its <c>@input</c> session ended. Carries no
+	/// markup, so a terminal connection, whose prompt is only its last line, is sent nothing.
+	/// </summary>
+	public bool ClearPrompt { get; init; }
 }
 
 /// <summary>

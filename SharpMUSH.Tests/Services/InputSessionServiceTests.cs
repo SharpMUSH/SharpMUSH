@@ -623,7 +623,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness();
 		var caller = await h.Connect();
-		h.Notify.PromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<SharpMessage>()).Returns(_ => throw new InvalidOperationException("prompt failed"));
+		h.Notify.PromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<SharpMessage>(), Arg.Any<Guid?>()).Returns(_ => throw new InvalidOperationException("prompt failed"));
 		try { await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60)); }
 		catch (InvalidOperationException) { }
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
@@ -776,7 +776,7 @@ public class InputSessionServiceTests
 		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsEqualTo(independent);
 		await Assert.That(h.Notify.ReceivedCalls().Any()).IsFalse();
 		await Assert.That(await h.Sessions.PromptAsync(caller, MarkupText.Plain("CURRENT"))).IsNull();
-		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Is<SharpMessage>(text => TestHelpers.MessageIsMarkup(text, "CURRENT")));
+		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Is<SharpMessage>(text => TestHelpers.MessageIsMarkup(text, "CURRENT")), Arg.Any<Guid?>());
 		await Assert.That(await h.Sessions.CancelAsync(caller)).IsNull();
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 		await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionCancelled");
@@ -1228,6 +1228,7 @@ public class InputSessionServiceTests
 		bus.HandlePublish(Arg.Any<MarkupOutputMessage>(), Arg.Any<CancellationToken>()).Returns(async call =>
 		{
 			var message = call.Arg<MarkupOutputMessage>();
+			if (message.ClearPrompt) { lock (published) published.Add($"clear:{message.InputSession}"); return; }
 			var text = MarkupString.MarkupTextSerializer.Deserialize(message.Markup).ToPlainText();
 			lock (published) published.Add($"{(message.Prompt ? "prompt" : "output")}:{text}");
 			if (text == "first") { promptEntered.TrySetResult(); await releasePrompt.Task; }
@@ -1241,23 +1242,155 @@ public class InputSessionServiceTests
 		await promptEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		var session = sessions.GetCapturing(1)!;
 		string[] Published() { lock (published) return [.. published]; }
-		(Task followed, string expected) = transition switch
+		var clear = $"clear:{session.Id:N}";
+		(Task Followed, string[] Expected) transitionResult = transition switch
 		{
-			"cancel" => (Task.Run(async () => { await sessions.CancelAsync(caller); }), "output:InputSessionCancelled"),
-			"escape" => (Task.Run(async () => { await sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); }), "output:InputSessionCancelled"),
-			"replace" => (Task.Run(async () => { await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("second"), TimeSpan.FromSeconds(60)); }), "prompt:second"),
-			"reprompt" => (Task.Run(async () => { await sessions.PromptAsync(caller, MarkupText.Plain("again")); }), "prompt:again"),
-			"revoke" => (Task.Run(async () => { h.CanControl = false; await sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("answer")); }), "output:InputSessionRevoked"),
-			_ => (Task.Run(async () => { await h.Connections.Bind(1, h.Owner.Object.DBRef); await notify.Notify(1, "switched", null); }), "output:switched")
+			"cancel" => (Task.Run(async () => { await sessions.CancelAsync(caller); }), ["output:InputSessionCancelled", clear]),
+			"escape" => (Task.Run(async () => { await sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); }), ["output:InputSessionCancelled", clear]),
+			"replace" => (Task.Run(async () => { await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("second"), TimeSpan.FromSeconds(60)); }), ["prompt:second"]),
+			"reprompt" => (Task.Run(async () => { await sessions.PromptAsync(caller, MarkupText.Plain("again")); }), ["prompt:again"]),
+			"revoke" => (Task.Run(async () => { h.CanControl = false; await sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("answer")); }), [clear, "output:InputSessionRevoked"]),
+			_ => (Task.Run(async () => { await h.Connections.Bind(1, h.Owner.Object.DBRef); await notify.Notify(1, "switched", null); }), [clear, "output:switched"])
 		};
 
+		var (followed, expected) = transitionResult;
 		await Task.Delay(200);
 		await Assert.That(Published()).IsEquivalentTo(["prompt:first"]);
 		await Assert.That(followed.IsCompleted).IsFalse();
 
 		releasePrompt.SetResult();
 		await Task.WhenAll(started, followed).WaitAsync(TimeSpan.FromSeconds(5));
-		await Assert.That(Published()).IsEquivalentTo(["prompt:first", expected], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		// A clear is sent without being awaited; it already holds its place, so it is published by the time a later one is.
+		await WaitUntil(() => Published().Length == 1 + expected.Length);
+		await Assert.That(Published()).IsEquivalentTo(["prompt:first", .. expected], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	private static async Task WaitUntil(Func<bool> condition)
+	{
+		using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		while (!condition()) await Task.Delay(10, limit.Token);
+	}
+
+	/// <summary>
+	/// Every way a session ends takes down the prompt a WebSocket client shows for it, naming that session,
+	/// so a reader that quits or times out does not leave its prompt behind.
+	/// </summary>
+	[Test]
+	[Arguments("cancel")]
+	[Arguments("escape")]
+	[Arguments("timeout")]
+	[Arguments("rescue")]
+	[Arguments("callback-failure")]
+	[Arguments("revoke")]
+	[Arguments("disconnect")]
+	[Arguments("switch")]
+	[Arguments("stale-capture")]
+	[Arguments("stale-expiry")]
+	public async Task EndingASessionClearsItsPrompt(string ending)
+	{
+		var h = new Harness();
+		var caller = await h.Connect();
+		var session = await h.Start();
+		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Any<SharpMessage>(), session.Id);
+		await h.Notify.DidNotReceive().ClearPromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<Guid?>());
+
+		switch (ending)
+		{
+			case "cancel": await h.Sessions.CancelAsync(caller); break;
+			case "escape": await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); break;
+			case "timeout":
+				h.Time.Now += TimeSpan.FromMinutes(2);
+				await h.Sessions.DeliverAsync(h.Parser, h.Sessions.TakeExpired().Single(), MarkupText.Empty, timeout: true);
+				break;
+			case "rescue":
+				await h.Sessions.RescueAsync(h.Character.Object.DBRef);
+				await h.Sessions.DeliverAsync(h.Parser, h.Sessions.TakeExpired().Single(), MarkupText.Empty, timeout: true);
+				break;
+			case "callback-failure":
+				h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(ValueTask.FromException<CallState?>(new InvalidOperationException("callback failed")));
+				try { await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Empty); }
+				catch (InvalidOperationException) { }
+				break;
+			case "revoke":
+				h.CanControl = false;
+				await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Empty);
+				break;
+			case "disconnect": await h.Connections.Disconnect(1); break;
+			case "switch": await h.Connections.Bind(1, h.Owner.Object.DBRef); break;
+			case "stale-capture":
+				h.Connections.Get(1)!.Metadata["SessionId"] = "replaced";
+				await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+				break;
+			default:
+				h.Connections.Get(1)!.Metadata["SessionId"] = "replaced";
+				await Assert.That(h.Sessions.TakeExpired()).IsEmpty();
+				break;
+		}
+
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+		await WaitUntil(() => h.Notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(INotifyService.ClearPromptToSession)));
+		await h.Notify.Received(1).ClearPromptToSession(1, "transport", session.Id);
+	}
+
+	/// <summary>A new prompt replaces the old one on the client, so neither a reprompt nor a restart clears.</summary>
+	[Test]
+	public async Task ReplacingASessionOrItsPromptSendsNoClear()
+	{
+		var h = new Harness();
+		var caller = await h.Connect();
+		var first = await h.Start();
+		await Assert.That(await h.Sessions.PromptAsync(caller, MarkupText.Plain("again"))).IsNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("next"), TimeSpan.FromSeconds(60))).IsNull();
+		var second = h.Sessions.GetCapturing(1)!;
+		await h.Notify.Received(2).PromptToSession(1, "transport", Arg.Any<SharpMessage>(), first.Id);
+		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Any<SharpMessage>(), second.Id);
+		await h.Notify.DidNotReceive().ClearPromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<Guid?>());
+	}
+
+	/// <summary>A session leaves only through End, which is what sends its clear; a new removal must go through it too.</summary>
+	[Test]
+	public async Task SessionsAreRemovedOnlyByEnd()
+	{
+		var source = await File.ReadAllTextAsync(Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Library", "Services", "InputSessionService.cs"));
+		var removals = System.Text.RegularExpressions.Regex.Matches(source, @"_sessions\.(Remove|Clear)\(").Count;
+		await Assert.That(removals).IsEqualTo(1);
+		await Assert.That(source).Contains("if (!_sessions.Remove(handle, out var entry)) return;");
+	}
+
+	/// <summary>A reloaded page restores the prompt it showed; a resume takes it down unless a session still captures.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task AResumeClearsThePromptWhenNoSessionCaptures(bool capturing)
+	{
+		var h = new Harness();
+		if (capturing) await h.Start();
+		else await h.Connect();
+		var handler = new SharpMUSH.Implementation.Handlers.ConnectionResumedPromptHandler(h.Sessions);
+
+		await handler.Handle(new SharpMUSH.Library.Notifications.ConnectionResumedNotification(1, h.Character.Object.DBRef), CancellationToken.None);
+
+		if (capturing) await h.Notify.DidNotReceive().ClearPromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<Guid?>());
+		else await h.Notify.Received(1).ClearPromptToSession(1, "transport", null);
+	}
+
+	[Test]
+	public async Task ClearPromptGoesOnTheOutputSubjectOnlyToASocketOwnerThatOrdersPrompts()
+	{
+		var h = new Harness();
+		var bus = Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>();
+		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>());
+		await h.Connect(1);
+		await h.Connect(2, orderedPrompts: true);
+		var session = Guid.NewGuid();
+
+		await notify.ClearPromptToSession(1, "transport", session);
+		await notify.ClearPromptToSession(2, "transport", session);
+		await notify.ClearPromptToSession(3, "transport", session);
+
+		await bus.Received(1).HandlePublish(Arg.Is<MarkupOutputMessage>(message => message.Handle == 2 && message.ClearPrompt
+			&& !message.Prompt && message.Markup == "" && message.SessionId == "transport" && message.InputSession == session.ToString("N")), Arg.Any<CancellationToken>());
+		await Assert.That(bus.ReceivedCalls().Count()).IsEqualTo(1);
 	}
 
 	[Test]

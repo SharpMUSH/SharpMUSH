@@ -101,4 +101,26 @@ public class TerminalScrollbackTests
 	{
 		await Assert.That(TerminalScrollback.Parse(stored)).IsEmpty();
 	}
+
+	[Test]
+	public async Task A_prompt_keeps_its_line_and_its_session()
+	{
+		var line = Server(MarkupText.Plain("Read which post?"));
+
+		var stored = TerminalScrollback.SerializePrompt(new TerminalPrompt(line, "s1")).Expect<string>();
+		var restored = TerminalScrollback.ParsePrompt(stored).Expect<TerminalPrompt>();
+
+		await Assert.That(restored.Session).IsEqualTo("s1");
+		await Assert.That(restored.Line.Text).IsEqualTo("Read which post?");
+		await Assert.That(restored.Line.Html).IsEqualTo(line.Html);
+		await Assert.That(restored.Line.Source).IsEqualTo(TerminalLineSource.Server);
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("not json")]
+	[Arguments("{\"s\":\"s1\"}")]
+	public async Task A_damaged_kept_prompt_is_no_prompt(string? stored) =>
+		await Assert.That(TerminalScrollback.ParsePrompt(stored) is NotFound).IsTrue();
 }

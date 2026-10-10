@@ -39,6 +39,9 @@ public sealed class InputSessionService : IInputSessionService
 		public bool TimeoutPending { get; set; }
 	}
 
+	/// <summary>A session that ended, and the place its clear takes in its handle's publication order.</summary>
+	private readonly record struct Ended(InputSession Session, HandlePublicationLane.Slot? Place);
+
 	private sealed class CallbackOwnership(InputSession original, CallbackOwnership? parent)
 	{
 		public InputSession Original { get; } = original;
@@ -59,6 +62,8 @@ public sealed class InputSessionService : IInputSessionService
 	private readonly ConditionalWeakTable<ConcurrentDictionary<string, string>, Generation> _generations = new();
 	private readonly Lock _gate = new();
 	private readonly Dictionary<long, Entry> _sessions = [];
+	// Sessions End removed whose clear is not sent yet; guarded by _gate.
+	private readonly List<Ended> _ended = [];
 	private readonly IConnectionService _connections;
 	private readonly IMediator _mediator;
 	private readonly IAttributeService _attributes;
@@ -84,10 +89,11 @@ public sealed class InputSessionService : IInputSessionService
 		{
 			lock (_gate)
 			{
-				_sessions.Remove(change.Item1);
+				End(change.Item1);
 				foreach (var callback in _activeCallbacks)
 					if (callback.Original.Connection.Handle == change.Item1) callback.Cancelled = true;
 			}
+			SendEnded();
 		});
 	}
 
@@ -109,20 +115,68 @@ public sealed class InputSessionService : IInputSessionService
 
 	public InputCaptureSnapshot CapturePendingInput(long handle)
 	{
-		lock (_gate)
+		try
 		{
-			return _connections.Get(handle) is { } connection
-				? new(GetCapturing(handle), GenerationFor(connection).Ticket) : default;
+			lock (_gate)
+			{
+				return _connections.Get(handle) is { } connection
+					? new(GetCapturing(handle), GenerationFor(connection).Ticket) : default;
+			}
 		}
+		finally { SendEnded(); }
 	}
 
 	public InputSession? GetCapturing(long handle)
 	{
+		try
+		{
+			lock (_gate)
+			{
+				if (!_sessions.TryGetValue(handle, out var entry)) return null;
+				if (!BindingMatches(entry.Session)) { End(handle); return null; }
+				return entry.TimeoutPending || entry.Session.ExpiresAt <= _time.GetUtcNow() ? null : entry.Session;
+			}
+		}
+		finally { SendEnded(); }
+	}
+
+	/// <summary>
+	/// The one way a session leaves <see cref="_sessions"/>. Called under <see cref="_gate"/>, it takes the
+	/// place of the session's clear in the handle's publication order, so the clear follows everything the
+	/// session published and precedes whatever comes after it; <see cref="SendEnded"/> sends it once the
+	/// lock is released. A connection that is gone, or does not order prompts, is sent nothing.
+	/// </summary>
+	private void End(long handle)
+	{
+		if (!_sessions.Remove(handle, out var entry)) return;
+		_ended.Add(new Ended(entry.Session, _lane?.Reserve(handle, entry.Session.TransportSessionId)));
+	}
+
+	/// <summary>Sends the clears <see cref="End"/> queued, unless the caller still holds <see cref="_gate"/>.</summary>
+	private void SendEnded()
+	{
+		if (_gate.IsHeldByCurrentThread) return;
+		Ended[] ended;
 		lock (_gate)
 		{
-			if (!_sessions.TryGetValue(handle, out var entry)) return null;
-			if (!BindingMatches(entry.Session)) { _sessions.Remove(handle); return null; }
-			return entry.TimeoutPending || entry.Session.ExpiresAt <= _time.GetUtcNow() ? null : entry.Session;
+			if (_ended.Count == 0) return;
+			ended = [.. _ended];
+			_ended.Clear();
+		}
+		foreach (var session in ended) _ = ClearAsync(session);
+	}
+
+	private async Task ClearAsync(Ended ended)
+	{
+		var session = ended.Session;
+		try
+		{
+			using (Publishing(ended.Place))
+				await _notify.ClearPromptToSession(session.Connection.Handle, session.TransportSessionId ?? "", session.Id);
+		}
+		catch
+		{
+			// The session has ended either way; its prompt stays up until the next prompt or a resume replaces it.
 		}
 	}
 
@@ -173,7 +227,7 @@ public sealed class InputSessionService : IInputSessionService
 		}
 		try
 		{
-			using (Publishing(place)) await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
+			using (Publishing(place)) await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt, session.Id);
 		}
 		catch { Discard(session); throw; }
 		return null;
@@ -216,7 +270,7 @@ public sealed class InputSessionService : IInputSessionService
 			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
 			place = _lane?.Reserve(handle, session.TransportSessionId);
 		}
-		using (Publishing(place)) await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
+		using (Publishing(place)) await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt, session.Id);
 		return null;
 	}
 
@@ -229,9 +283,10 @@ public sealed class InputSessionService : IInputSessionService
 		{
 			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
 			CancelCallbacks(session);
-			_sessions.Remove(handle);
 			place = _lane?.Reserve(handle, session.TransportSessionId);
+			End(handle);
 		}
+		SendEnded();
 		using (Publishing(place)) await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return null;
 	}
@@ -249,9 +304,10 @@ public sealed class InputSessionService : IInputSessionService
 			if (expectedCapture is { } expected && entry.Session.Id != expected) return true;
 			session = entry.Session;
 			CancelCallbacks(session);
-			_sessions.Remove(handle);
 			place = _lane?.Reserve(handle, session.TransportSessionId);
+			End(handle);
 		}
+		SendEnded();
 		using (Publishing(place)) await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return true;
 	}
@@ -300,25 +356,48 @@ public sealed class InputSessionService : IInputSessionService
 
 	public IReadOnlyList<InputSession> TakeExpired()
 	{
-		lock (_gate)
+		try
 		{
-			var result = new List<InputSession>();
-			foreach (var pair in _sessions.ToArray())
+			lock (_gate)
 			{
-				if (!BindingMatches(pair.Value.Session)) { _sessions.Remove(pair.Key); continue; }
-				if (pair.Value.TimeoutPending || pair.Value.Session.ExpiresAt > _time.GetUtcNow()) continue;
-				pair.Value.TimeoutPending = true;
-				result.Add(pair.Value.Session);
+				var result = new List<InputSession>();
+				foreach (var pair in _sessions.ToArray())
+				{
+					if (!BindingMatches(pair.Value.Session)) { End(pair.Key); continue; }
+					if (pair.Value.TimeoutPending || pair.Value.Session.ExpiresAt > _time.GetUtcNow()) continue;
+					pair.Value.TimeoutPending = true;
+					result.Add(pair.Value.Session);
+				}
+				return result;
 			}
-			return result;
 		}
+		finally { SendEnded(); }
 	}
 
 	public void Discard(InputSession session)
 	{
 		lock (_gate)
 			if (_sessions.TryGetValue(session.Connection.Handle, out var entry) && entry.Session.Id == session.Id)
-				_sessions.Remove(session.Connection.Handle);
+				End(session.Connection.Handle);
+		SendEnded();
+	}
+
+	public async ValueTask ClearPromptUnlessCapturingAsync(long handle)
+	{
+		string sessionId;
+		HandlePublicationLane.Slot? place;
+		try
+		{
+			lock (_gate)
+			{
+				if (GetCapturing(handle) is not null
+					|| _connections.Get(handle)?.Metadata.GetValueOrDefault("SessionId") is not { } current) return;
+				sessionId = current;
+				place = _lane?.Reserve(handle, sessionId);
+			}
+		}
+		finally { SendEnded(); }
+		using (Publishing(place)) await _notify.ClearPromptToSession(handle, sessionId, null);
 	}
 
 	private bool IsCurrent(InputSession session, bool timeout)
@@ -356,6 +435,7 @@ public sealed class InputSessionService : IInputSessionService
 						if (ownership.Replacement is { } replacement) Discard(replacement);
 					}
 				}
+				SendEnded();
 			}
 			finally { _callbackOwnership.Value = prior; }
 		}
@@ -404,12 +484,16 @@ public sealed class InputSessionService : IInputSessionService
 	private async ValueTask<CallState?> Revoke(InputSession session)
 	{
 		HandlePublicationLane.Slot? place;
-		lock (_gate)
+		try
 		{
-			Discard(session);
-			if (!BindingMatches(session)) return null;
-			place = _lane?.Reserve(session.Connection.Handle, session.TransportSessionId);
+			lock (_gate)
+			{
+				Discard(session);
+				if (!BindingMatches(session)) return null;
+				place = _lane?.Reserve(session.Connection.Handle, session.TransportSessionId);
+			}
 		}
+		finally { SendEnded(); }
 		using (Publishing(place)) await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionRevoked");
 		return null;
 	}

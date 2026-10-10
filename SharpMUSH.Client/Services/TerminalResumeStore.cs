@@ -53,16 +53,27 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 	public static string LinesKeyFor(string presenceClass, TerminalIdentity identity) =>
 		KeyFor(presenceClass, identity) + "#lines";
 
+	/// <summary>
+	/// Where the terminal's current prompt is kept (<see cref="TerminalScrollback.SerializePrompt"/>), beside its
+	/// point. Apart from the lines: a prompt is not scrollback, and the next one replaces it.
+	/// </summary>
+	public static string PromptKeyFor(string presenceClass, TerminalIdentity identity) =>
+		KeyFor(presenceClass, identity) + "#prompt";
+
 	/// <summary>The slot one connection keeps its point in, with what a reloaded page left there.</summary>
 	public async ValueTask<TerminalResumeSlot> OpenAsync(string presenceClass, TerminalIdentity identity)
 	{
 		var key = KeyFor(presenceClass, identity);
 		var linesKey = LinesKeyFor(presenceClass, identity);
 		var stored = Parse(await CallAsync<string?>("SharpMUSH.Resume.resumable", key));
+		var promptKey = PromptKeyFor(presenceClass, identity);
 		var scrollback = stored is TerminalResumePoint
 			? TerminalScrollback.Parse(await CallAsync<string?>("SharpMUSH.Resume.resumable", linesKey))
 			: [];
-		return new TerminalResumeSlot(this, key, linesKey, _generation, stored, scrollback);
+		Found<TerminalPrompt> prompt = stored is TerminalResumePoint
+			? TerminalScrollback.ParsePrompt(await CallAsync<string?>("SharpMUSH.Resume.resumable", promptKey))
+			: new NotFound();
+		return new TerminalResumeSlot(this, key, linesKey, promptKey, _generation, stored, scrollback, prompt);
 	}
 
 	/// <summary>
@@ -92,6 +103,17 @@ public sealed class TerminalResumeStore(IJSRuntime js)
 		if (!IsCurrent(slot)) return;
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.Key);
 		await CallVoidAsync("SharpMUSH.Resume.remove", slot.LinesKey);
+		await CallVoidAsync("SharpMUSH.Resume.remove", slot.PromptKey);
+	}
+
+	/// <summary>Stages the prompt for the page's timer to write, or forgets the kept one when there is none.</summary>
+	internal async ValueTask KeepPromptAsync(TerminalResumeSlot slot, Found<string> prompt)
+	{
+		if (!IsCurrent(slot)) return;
+		if (prompt is string stored)
+			await CallVoidAsync("SharpMUSH.Resume.stage", slot.PromptKey, stored);
+		else
+			await CallVoidAsync("SharpMUSH.Resume.remove", slot.PromptKey);
 	}
 
 	internal async ValueTask AppendLineAsync(TerminalResumeSlot slot, string line)
@@ -152,20 +174,24 @@ public sealed class TerminalResumeSlot
 	private readonly TerminalResumeStore _store;
 
 	private IReadOnlyList<TerminalLine> _scrollback;
+	private Found<TerminalPrompt> _prompt;
 
-	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, int generation,
-		Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback)
+	internal TerminalResumeSlot(TerminalResumeStore store, string key, string linesKey, string promptKey, int generation,
+		Found<TerminalResumePoint> stored, IReadOnlyList<TerminalLine> scrollback, Found<TerminalPrompt> prompt)
 	{
 		_store = store;
 		Key = key;
 		LinesKey = linesKey;
+		PromptKey = promptKey;
 		Generation = generation;
 		Stored = stored;
 		_scrollback = scrollback;
+		_prompt = prompt;
 	}
 
 	public string Key { get; }
 	public string LinesKey { get; }
+	public string PromptKey { get; }
 	internal int Generation { get; }
 
 	/// <summary>The point a reloaded page left for this terminal and identity.</summary>
@@ -193,6 +219,21 @@ public sealed class TerminalResumeSlot
 		_scrollback = [];
 		return lines;
 	}
+
+	/// <summary>
+	/// The prompt a reloaded page showed, handed out once, like <see cref="TakeScrollback"/>: a resumed session
+	/// shows it again until a replayed prompt replaces it or the server clears it.
+	/// </summary>
+	public Found<TerminalPrompt> TakePrompt()
+	{
+		var prompt = _prompt;
+		_prompt = new NotFound();
+		return prompt;
+	}
+
+	/// <summary>Keeps the prompt shown now for a reload; null forgets the one kept.</summary>
+	public ValueTask KeepPromptAsync(TerminalPrompt? prompt) =>
+		_store.KeepPromptAsync(this, prompt is null ? new NotFound() : TerminalScrollback.SerializePrompt(prompt));
 
 	/// <summary>Keeps one line of the screen, when it is one to keep (see <see cref="TerminalScrollback"/>).</summary>
 	public ValueTask AppendLineAsync(TerminalLine line) =>

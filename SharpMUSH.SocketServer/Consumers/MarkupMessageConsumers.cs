@@ -18,6 +18,8 @@ public class MarkupOutputConsumer(
 	ILogger<MarkupOutputConsumer> logger)
 	: IMessageConsumer<MarkupOutputMessage>
 {
+	private const string WebSocketConnectionType = "websocket";
+
 	public async Task HandleAsync(MarkupOutputMessage message, CancellationToken cancellationToken = default)
 	{
 		var connection = connectionService.Get(message.Handle);
@@ -25,6 +27,12 @@ public class MarkupOutputConsumer(
 		if (connection == null || (message.SessionId is { } expected && connection.SessionId != expected))
 		{
 			logger.LogWarning("Received markup output for unknown connection handle: {Handle}", message.Handle);
+			return;
+		}
+
+		if (connection.ConnectionType == WebSocketConnectionType && (message.Prompt || message.ClearPrompt))
+		{
+			await WritePromptFrameAsync(message, connection);
 			return;
 		}
 
@@ -49,6 +57,28 @@ public class MarkupOutputConsumer(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error sending markup output to connection {Handle}", message.Handle);
+		}
+	}
+
+	/// <summary>
+	/// A WebSocket client keeps its prompt apart from the output (<see cref="WebSocketPromptFrames"/>), so a
+	/// prompt is marked as one and the end of its <c>@input</c> session is sent as a frame of its own. A
+	/// terminal's prompt is only its last line, so a clear sends it nothing.
+	/// </summary>
+	private async ValueTask WritePromptFrameAsync(MarkupOutputMessage message, ConnectionServerService.ConnectionData connection)
+	{
+		if (message.Prompt && string.IsNullOrEmpty(message.Markup)) return;
+		var frame = message.ClearPrompt
+			? WebSocketPromptFrames.Clear(message.InputSession)
+			: WebSocketPromptFrames.Prompt(message.Markup, message.InputSession);
+		try
+		{
+			if (message.ClearPrompt) await connection.OutputFunction(frame);
+			else await connection.PromptOutputFunction(frame);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error sending a prompt frame to connection {Handle}", message.Handle);
 		}
 	}
 }

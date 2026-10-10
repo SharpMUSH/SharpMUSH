@@ -40,6 +40,61 @@ public class OrderedPromptTests
 		await Assert.That(written).IsEquivalentTo([prompt ? "prompt" : "output"]);
 	}
 
+	private static (MarkupOutputConsumer Consumer, List<(string Channel, string Frame)> Written) WebSocketConsumer(string type = "websocket")
+	{
+		var written = new List<(string, string)>();
+		var connection = new ConnectionServerService.ConnectionData(1, null, ConnectionServerService.ConnectionState.Connected,
+			bytes => { written.Add(("output", Encoding.UTF8.GetString(bytes))); return ValueTask.CompletedTask; },
+			bytes => { written.Add(("prompt", Encoding.UTF8.GetString(bytes))); return ValueTask.CompletedTask; },
+			() => Encoding.UTF8, () => { }, null, new ProtocolCapabilities(), null, type);
+		var connections = Substitute.For<IConnectionServerService>();
+		connections.Get(1).Returns(connection);
+		var renderer = Substitute.For<IMarkupOutputRenderer>();
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult(new RenderedOutput("rendered"u8.ToArray(), false)));
+		return (new MarkupOutputConsumer(connections, renderer, Substitute.For<IOutputTransformService>(), NullLogger<MarkupOutputConsumer>.Instance), written);
+	}
+
+	/// <summary>A WebSocket client is told a prompt is one, and which @input session it belongs to.</summary>
+	[Test]
+	public async Task WebSocketPromptFrameIsMarkedWithItsSession()
+	{
+		var (consumer, written) = WebSocketConsumer();
+
+		await consumer.HandleAsync(new MarkupOutputMessage(1, "serialized") { Prompt = true, InputSession = "abc" });
+		await consumer.HandleAsync(new MarkupOutputMessage(1, "serialized") { Prompt = true });
+		await consumer.HandleAsync(new MarkupOutputMessage(1, "serialized"));
+
+		await Assert.That(written).IsEquivalentTo([
+			("prompt", """{"type":"markup","data":"serialized","prompt":true,"session":"abc"}"""),
+			("prompt", """{"type":"markup","data":"serialized","prompt":true}"""),
+			("output", "rendered")], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task WebSocketClearFrameNamesTheEndedSession()
+	{
+		var (consumer, written) = WebSocketConsumer();
+
+		await consumer.HandleAsync(new MarkupOutputMessage(1, "") { ClearPrompt = true, InputSession = "abc" });
+		await consumer.HandleAsync(new MarkupOutputMessage(1, "") { ClearPrompt = true });
+
+		await Assert.That(written).IsEquivalentTo([
+			("output", """{"type":"prompt","clear":true,"session":"abc"}"""),
+			("output", """{"type":"prompt","clear":true}""")], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>A terminal's prompt is only its last line, so a clear writes nothing to it.</summary>
+	[Test]
+	public async Task TelnetIsSentNothingForAClear()
+	{
+		var (consumer, written) = WebSocketConsumer("telnet");
+
+		await consumer.HandleAsync(new MarkupOutputMessage(1, "") { ClearPrompt = true, InputSession = "abc" });
+
+		await Assert.That(written).IsEmpty();
+	}
+
 	[Test]
 	public async Task SocketOwnerAdvertisesOrderedPromptsOnRegistrationAndInTheStateStore()
 	{

@@ -52,6 +52,33 @@ public static partial class TerminalScrollback
 		}
 	}
 
+	/// <summary>
+	/// The prompt a terminal shows, for a reload: its line kept as a scrollback line is, with its session.
+	/// A prompt with nothing to show is not kept.
+	/// </summary>
+	public static Found<string> SerializePrompt(TerminalPrompt prompt) =>
+		Serialize(prompt.Line) switch
+		{
+			string line => $"{{\"s\":{JsonSerializer.Serialize(prompt.Session)},\"l\":{line}}}",
+			_ => new NotFound()
+		};
+
+	public static Found<TerminalPrompt> ParsePrompt(string? stored)
+	{
+		if (string.IsNullOrEmpty(stored)) return new NotFound();
+		try
+		{
+			return JsonSerializer.Deserialize<StoredPrompt>(stored) is { L.T: { } text } kept
+				? new TerminalPrompt(new TerminalLine(DateTimeOffset.FromUnixTimeMilliseconds(kept.L.At).LocalDateTime, text,
+					Inert(kept.L.H ?? string.Empty), TerminalLineSource.Server), kept.S ?? string.Empty)
+				: new NotFound();
+		}
+		catch (JsonException)
+		{
+			return new NotFound();
+		}
+	}
+
 	/// <summary>The HTML without the elements that act when rendered.</summary>
 	private static string Inert(string html) => EmptyActionElement().Replace(MediaOrLink().Replace(html, string.Empty), string.Empty);
 
@@ -64,6 +91,10 @@ public static partial class TerminalScrollback
 	// Only these: an empty table cell or text block (ms-nowrap, ms-text) holds its place in a layout.
 	[GeneratedRegex(@"<(\w+)\b[^>]*\bclass=""ms-(?:sound|sound-stop|bell|clear|expire)(?:\s[^""]*)?""[^>]*>\s*</\1\s*>", RegexOptions.IgnoreCase)]
 	private static partial Regex EmptyActionElement();
+
+	private sealed record StoredPrompt(
+		[property: System.Text.Json.Serialization.JsonPropertyName("s")] string? S,
+		[property: System.Text.Json.Serialization.JsonPropertyName("l")] StoredLine L);
 
 	private sealed record StoredLine(
 		[property: System.Text.Json.Serialization.JsonPropertyName("t")] string? T,
