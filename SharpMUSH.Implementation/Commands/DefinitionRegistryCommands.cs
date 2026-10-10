@@ -94,9 +94,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.CommandNotFound);
 		}
 
-		var argumentNames = (names ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		if (argumentNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != argumentNames.Length
-			|| argumentNames.Any(name => int.TryParse(name, out _)))
+		if (ArgHelpers.ArgumentNames(names) is not string[] argumentNames)
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.BadArgumentName, executor);
 			return new CallState(ErrorMessages.Returns.BadArgumentName);
@@ -1378,9 +1376,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return denied;
 		}
 
-		var argumentNames = (names ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		if (argumentNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != argumentNames.Length
-			|| argumentNames.Any(name => int.TryParse(name, out _)))
+		if (ArgHelpers.ArgumentNames(names) is not string[] argumentNames)
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.BadArgumentName, executor);
 			return new CallState(ErrorMessages.Returns.BadArgumentName);

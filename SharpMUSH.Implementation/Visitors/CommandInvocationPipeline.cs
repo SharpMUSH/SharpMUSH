@@ -13,6 +13,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using static SharpMUSHParser;
+using SharpMUSH.Implementation.Common;
 
 namespace SharpMUSH.Implementation.Visitors;
 
@@ -290,12 +291,13 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				namedRegisters["LS"] = argumentText;
 			}
 
-			var argumentNames = definition.Attribute.ArgumentNames;
 			for (int i = 0; i < arguments.Count; i++)
 			{
 				namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
-				if (i < argumentNames.Length) namedRegisters[argumentNames[i]] = arguments[i].Message;
 			}
+
+			ArgHelpers.AddNamedArguments(namedRegisters, arguments.Select(argument => argument.Message).ToArray(),
+				definition.Attribute.ArgumentNames, MarkupText.Plain);
 
 			namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
 			return namedRegisters;

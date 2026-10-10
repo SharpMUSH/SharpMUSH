@@ -39,7 +39,7 @@ The `/alias` switch creates an alias for `<command>`, allowing players to type `
 
 `@command/restrict` can be used to restrict who can use `<command>`. See [restrict] for more information.
 
-`@command/args` names the command's arguments for its @hooks: in order, the left side and then each right-side argument. A hook reads each as %`\<name\>` as well as `LSA<n>` (see [@hook]). With no names, the names are cleared. Wizard-only, and like the other switches it lasts until the server restarts.
+`@command/args` names the command's arguments for its @hooks: in order, the left side and then each right-side argument. A hook reads each as %`\<name\>` as well as `LSA<n>` (see [@hook]). The last name may end in `...` to take the rest: `@command/args @atrchown=parts...` gives %`\<parts1\>`, %`\<parts2\>` and %`\<partscount\>`. With no names, the names are cleared. Wizard-only, and like the other switches it lasts until the server restarts.
 
 Switches include:
 - /add : Add a new command that does nothing, but can be @hook'd.

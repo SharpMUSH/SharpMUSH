@@ -11,6 +11,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSHParser;
+using SharpMUSH.Implementation.Common;
 
 namespace SharpMUSH.Implementation.Visitors;
 
@@ -469,12 +470,14 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 			// The arguments pushed for this call become %0, %1, … inside the attribute, and with
 			// @function/args also %<name> for each name in order.
+			var values = invokedParser.CurrentState.Arguments.Values.ToArray();
 			var args = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
-			foreach (var (value, i) in invokedParser.CurrentState.Arguments.Values.Select((value, i) => (value, i)))
+			foreach (var (value, i) in values.Select((value, i) => (value, i)))
 			{
 				args[i.ToString()] = value;
-				if (i < argumentNames.Length) args[argumentNames[i]] = value;
 			}
+
+			ArgHelpers.AddNamedArguments(args, values, argumentNames, text => new CallState(text));
 
 			// A global @function runs *as the backing object, with its powers* (PennMUSH semantics):
 			// the attribute is read and evaluated with the function object's permissions, not the

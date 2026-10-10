@@ -338,6 +338,52 @@ public static partial class ArgHelpers
 		return named;
 	}
 
+	/// <summary>The suffix that makes the last of <c>@function/args</c> or <c>@command/args</c>' names take the rest.</summary>
+	public const string RestSuffix = "...";
+
+	/// <summary>
+	/// The space-separated argument names given to <c>@function/args</c> or <c>@command/args</c>. Names are
+	/// unique (case-insensitive) and not numbers; only the last may end in <c>...</c>, naming the rest.
+	/// </summary>
+	public static Result<string[]> ArgumentNames(string? text)
+	{
+		var names = (text ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var stems = names.Select(name => name.EndsWith(RestSuffix) ? name[..^RestSuffix.Length] : name).ToArray();
+		var valid = stems.Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Length
+			&& stems.All(stem => stem.Length > 0 && !int.TryParse(stem, out _))
+			&& names.SkipLast(1).All(name => !name.EndsWith(RestSuffix));
+		return valid ? names : new Error<string>(ErrorMessages.Returns.BadArgumentName);
+	}
+
+	/// <summary>
+	/// Adds <paramref name="values"/> to <paramref name="into"/> under <paramref name="names"/>, in order. A
+	/// last name <c>items...</c> takes the rest as <c>items1</c>, <c>items2</c>, ... and their number as
+	/// <c>itemscount</c>, as a hook's <c>LSA1</c>.. and <c>LSAC</c> do.
+	/// </summary>
+	public static void AddNamedArguments<T>(IDictionary<string, T> into, IReadOnlyList<T> values, string[] names,
+		Func<string, T> fromText)
+	{
+		if (names.Length == 0) return;
+
+		var last = names[^1];
+		var rest = last.EndsWith(RestSuffix) ? last[..^RestSuffix.Length] : null;
+		var fixedCount = rest is null ? names.Length : names.Length - 1;
+		foreach (var (value, position) in values.Take(fixedCount).Select((value, position) => (value, position)))
+		{
+			into[names[position]] = value;
+		}
+
+		if (rest is null) return;
+
+		var remaining = values.Skip(fixedCount).ToArray();
+		foreach (var (value, position) in remaining.Select((value, position) => (value, position)))
+		{
+			into[$"{rest}{position + 1}"] = value;
+		}
+
+		into[$"{rest}count"] = fromText(remaining.Length.ToString());
+	}
+
 	/// <summary>
 	/// The numbered arguments from <paramref name="first"/> on, each moved down one place (argument
 	/// <c>i</c> becomes register <c>i - 1</c>): how a command or function hands its trailing arguments

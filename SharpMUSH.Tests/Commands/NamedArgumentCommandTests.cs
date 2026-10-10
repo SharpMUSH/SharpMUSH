@@ -72,6 +72,46 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
+	public async Task FunctionArgsLastNameTakesTheRestNumbered()
+	{
+		var thing = await NewThing("FnRest");
+		var name = $"nr{Guid.NewGuid():N}"[..20];
+		await Run($"&FN {thing}=%<who>:%<items1>:%<items2>:%<itemscount>:[%<items3>]");
+		await Run($"@function {name}={thing},FN");
+		try
+		{
+			await Run($"@function/args {name}=who items...");
+			await Assert.That(await Eval($"{name}(Bob,a b,c)")).IsEqualTo("Bob:a b:c:2:");
+			await Assert.That(await Eval($"{name}(Bob)")).IsEqualTo("Bob:::0:");
+		}
+		finally
+		{
+			await Run($"@function/delete {name}");
+		}
+	}
+
+	[Test]
+	[Arguments("items... who")]
+	[Arguments("...")]
+	[Arguments("items items...")]
+	public async Task FunctionArgsRefusesAMisplacedOrRepeatedRest(string names)
+	{
+		var thing = await NewThing("FnRestBad");
+		var name = $"nb{Guid.NewGuid():N}"[..20];
+		await Run($"&FN {thing}=[%<items1>]x");
+		await Run($"@function {name}={thing},FN");
+		try
+		{
+			await Run($"@function/args {name}={names}");
+			await Assert.That(await Eval($"{name}(a,b)")).IsEqualTo("x");
+		}
+		finally
+		{
+			await Run($"@function/delete {name}");
+		}
+	}
+
+	[Test]
 	public async Task StepArgsPassesEachRunUnderTheNames()
 	{
 		var thing = await NewThing("StepArgs");
@@ -159,6 +199,29 @@ public class HookNamedArgumentTests
 			await Run($"@atrchown {target}/A=#1");
 			var seen = await FunctionParser.EvaluateAsync(MarkupText.Plain($"get({holder}/SEEN)"));
 			await Assert.That(seen.ToPlainText()).IsEqualTo($"{target}/A|#1|#1");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync("@ATRCHOWN", "BEFORE");
+			await Run("@command/args @ATRCHOWN=");
+		}
+	}
+
+	[Test]
+	public async Task CommandArgsLastNameTakesTheRestNumbered()
+	{
+		var holder = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HookRest");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HookRTgt");
+		await Run($"&SEEN {holder}=");
+		await Run($"&BEFORE {holder}=attrib_set({holder}/SEEN,%<parts1>|%<parts2>|%<partscount>)");
+		await Run("@command/args @ATRCHOWN=parts...");
+		await Run($"@hook/before @ATRCHOWN={holder},BEFORE");
+		try
+		{
+			await Run($"&A {target}=1");
+			await Run($"@atrchown {target}/A=#1");
+			var seen = await FunctionParser.EvaluateAsync(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen.ToPlainText()).IsEqualTo($"{target}/A|#1|2");
 		}
 		finally
 		{
