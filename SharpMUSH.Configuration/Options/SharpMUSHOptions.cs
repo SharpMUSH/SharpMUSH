@@ -101,7 +101,8 @@ public record SharpMUSHOptions
 			TinyBooleans: false,
 			TinyMath: false,
 			TinyTrimFun: false,
-			ParenGroups: false
+			ParenGroups: false,
+			HttpQRegisters: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

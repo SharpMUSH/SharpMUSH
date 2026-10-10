@@ -316,6 +316,29 @@ public static partial class ArgHelpers
 	}
 
 	/// <summary>
+	/// The numbered arguments from <paramref name="first"/> on, read as <c>&lt;name&gt;, &lt;value&gt;</c>
+	/// pairs: how <c>uargs()</c>, <c>@trigger/args</c> and <c>@include/args</c> pass named arguments.
+	/// Names are trimmed and case-insensitive; a later pair replaces an earlier one of the same name.
+	/// </summary>
+	public static Result<Dictionary<string, CallState>> NamedArguments(IReadOnlyDictionary<string, CallState> args, int first)
+	{
+		var values = Enumerable.Range(first, Math.Max(0, args.Count - first))
+			.Select(index => args.TryGetValue(index.ToString(), out var value) ? value : CallState.Empty)
+			.ToArray();
+		if (values.Length % 2 != 0) return new Error<string>(ErrorMessages.Returns.NamedArgumentsComeInPairs);
+
+		var named = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+		foreach (var pair in values.Chunk(2))
+		{
+			var name = pair[0].Message.ToPlainText().Trim();
+			if (name.Length == 0) return new Error<string>(ErrorMessages.Returns.BadArgumentName);
+			named[name] = pair[1];
+		}
+
+		return named;
+	}
+
+	/// <summary>
 	/// The numbered arguments from <paramref name="first"/> on, each moved down one place (argument
 	/// <c>i</c> becomes register <c>i - 1</c>): how a command or function hands its trailing arguments
 	/// on as <c>%0</c>-<c>%9</c>.

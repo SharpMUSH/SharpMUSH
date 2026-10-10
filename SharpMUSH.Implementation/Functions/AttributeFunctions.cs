@@ -1077,22 +1077,20 @@ public partial class Functions
 	[SharpFunction(Name = "uargs", MinArgs = 1, MaxArgs = 65, Flags = FunctionFlags.Regular | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["object/attribute", "name", "value..."])]
 	public async ValueTask<CallState> UserAttributeNamedArguments(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arguments = parser.CurrentState.ArgumentsOrdered.Skip(1).Select(pair => pair.Value).Chunk(2).ToList();
-		if (arguments.Any(pair => pair[0].Message.ToPlainText().Trim().Length == 0))
-			return new CallState(ErrorMessages.Returns.BadArgumentName);
+		return ArgHelpers.NamedArguments(parser.CurrentState.Arguments, 1) switch
+		{
+			Dictionary<string, CallState> named => await CallWithNamedArgumentsAsync(parser, named),
+			Error<string> error => new CallState(error.Value)
+		};
+	}
 
-		var named = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
-		foreach (var pair in arguments)
-			named[pair[0].Message.ToPlainText().Trim()] = pair[1];
-
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return await AttributeService.EvaluateAttributeFunctionResultAsync(
+	private async ValueTask<CallState> CallWithNamedArgumentsAsync(IMUSHCodeParser parser, Dictionary<string, CallState> named)
+		=> await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
-			executor,
+			await parser.CurrentState.KnownExecutorObject(Mediator),
 			objAndAttribute: parser.CurrentState.Arguments["0"].Message,
 			args: named,
 			ignoreLambda: true);
-	}
 
 	/// <summary>
 	/// PennMUSH's <c>fun_pfun</c> (<c>funufun.c:244-292</c>): the attribute is read from the executor's

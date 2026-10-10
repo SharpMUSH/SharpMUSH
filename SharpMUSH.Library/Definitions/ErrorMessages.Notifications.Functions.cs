@@ -50,6 +50,10 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionRestrictionClearedFormat = "Restriction cleared on function '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionArgumentNamesFormat = "Function '{0}' passes its arguments as: {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionArgumentNamesClearedFormat = "Function '{0}' passes its arguments by position only.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionClonedFormat = "Function '{0}' cloned from '{1}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionBuiltinRestoredFormat = "Function '{0}' restored to its built-in implementation.";
@@ -78,6 +82,8 @@ public static partial class ErrorMessages
 		public const string FunctionInfoMinArgsFormat = "  Min Args: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionInfoMaxArgsFormat = "  Max Args: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionInfoArgumentNamesFormat = "  Arguments: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionInfoFlagsFormat = "  Flags: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

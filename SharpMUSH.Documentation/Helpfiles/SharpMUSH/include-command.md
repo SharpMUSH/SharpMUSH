@@ -27,7 +27,8 @@
 -->
 # @include
 
-`@include[/<switches>] <object>/<attribute>[=<arg1>,<arg2>,...]`
+`@include[/<switches>] <object>/<attribute>[=<arg1>,<arg2>,...]`<br>
+`@include/args[/<switches>] <object>/<attribute>=<name>,<value>[,<name>,<value>...]`
 
 @include inserts the contents of the attribute provided into the action list in-place, without adding a new queue entry. It is useful to avoid having to copy the same code into multiple commands. The attribute to be included must be visible to the enactor.
 
@@ -52,6 +53,7 @@ In-place action lists (those run by @include, @trigger, @force, @switch/inplace,
 ## Include switches
 
 @include takes the following switches to alter its behaviour:
+- /args: The arguments are `<name>,<value>` pairs, read in the included actions as %`\<name\>` (see [uargs()]). The including environment's own arguments stay available.
 - /chain: Include several attributes in sequence, as a pipeline. See [@include attribute pipelines].
 - /nobreak: Prevents an @break/@assert in the included attribute from breaking the including action list.
 - /localize: Saves all q-registers before including the attribute, and restores them after including the attribute.

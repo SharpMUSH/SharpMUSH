@@ -36,7 +36,8 @@
 `@function/<switch> <function name>`<br>
 `@function/restrict[/builtin] <function name>=<restrictions>`<br>
 `@function/alias <function name>=<alias>`<br>
-`@function/clone <function name>=<clone>`
+`@function/clone <function name>=<clone>`<br>
+`@function/args <function name>=[<name> ...]`
 
 When used without any arguments, this command lists all global user-defined functions. For wizards and others with the Functions power, it also lists the dbref number and attribute corresponding to the listed functions.
 
@@ -58,7 +59,7 @@ Otherwise, this command defines a global function with the name `<function name>
 
 A function defined using @function works just like any of the normal MUSH functions, from the user's perspective. The functions are executed by the object, with its powers.
 
-Functions defined via @function should follow the format used by UFUN() - %0 is the first argument passed, %1 is the second argument passed, and so forth. Optional third and fourth arguments to @function can be used to set a parser-enforced number of arguments for the function. If the maximum arguments is negative, any additional arguments are treated as part of the text of the last argument. Note that this behaviour is deprecated, and will be removed in the near future.
+Functions defined via @function should follow the format used by UFUN() - %0 is the first argument passed, %1 is the second argument passed, and so forth. `@function/args` names them as well: after `@function/args greet=who count`, a call `greet(Bob, 3)` also passes %`\<who\>` and %`\<count\>`. With no names, the arguments are passed by position only. Redefining the function clears its names, so set them after defining it. Optional third and fourth arguments to @function can be used to set a parser-enforced number of arguments for the function. If the maximum arguments is negative, any additional arguments are treated as part of the text of the last argument. Note that this behaviour is deprecated, and will be removed in the near future.
 
 An optional fifth argument will set restriction flags.
 

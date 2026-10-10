@@ -449,6 +449,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 		var target = entry.Object;
 		var attributeName = entry.Attribute;
+		var argumentNames = entry.ArgumentNames;
 
 		return new FunctionDefinition(attribute, async invokedParser =>
 		{
@@ -466,10 +467,14 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 					name.ToUpperInvariant(), $"#{targetObject.Object().DBRef.Number}", attributeName));
 			}
 
-			// The arguments pushed for this call become %0, %1, … inside the attribute.
-			var args = invokedParser.CurrentState.Arguments
-				.Select((kvp, i) => new KeyValuePair<string, CallState>(i.ToString(), kvp.Value))
-				.ToDictionary();
+			// The arguments pushed for this call become %0, %1, … inside the attribute, and with
+			// @function/args also %<name> for each name in order.
+			var args = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+			foreach (var (value, i) in invokedParser.CurrentState.Arguments.Values.Select((value, i) => (value, i)))
+			{
+				args[i.ToString()] = value;
+				if (i < argumentNames.Length) args[argumentNames[i]] = value;
+			}
 
 			// A global @function runs *as the backing object, with its powers* (PennMUSH semantics):
 			// the attribute is read and evaluated with the function object's permissions, not the

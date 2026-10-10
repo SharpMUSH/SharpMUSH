@@ -56,13 +56,4 @@ public interface IHookService
 	/// <param name="commandName">The name of the command</param>
 	/// <returns>A dictionary of hook types to hook information</returns>
 	ValueTask<Dictionary<string, CommandHook>> GetAllHooksAsync(string commandName);
-
-	/// <summary>
-	/// Executes a hook and returns the result.
-	/// </summary>
-	/// <param name="parser">The parser context</param>
-	/// <param name="hook">The hook to execute</param>
-	/// <param name="namedRegisters">Named registers to make available in the hook</param>
-	/// <returns>The result of executing the hook</returns>
-	ValueTask<Option<CallState>> ExecuteHookAsync(IMUSHCodeParser parser, CommandHook hook, Dictionary<string, string> namedRegisters);
 }

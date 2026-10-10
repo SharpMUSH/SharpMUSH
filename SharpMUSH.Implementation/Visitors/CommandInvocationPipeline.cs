@@ -230,8 +230,6 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		/// <summary>Pushes the command's own state — its name, switches, arguments and registers — onto <paramref name="caller"/>.</summary>
 		public void Enter(IMUSHCodeParser caller)
 		{
-			var namedRegisters = NamedRegisters();
-
 			// Commands test their switches by name, so the state carries them upper-cased once rather
 			// than as a projection re-run on every lookup.
 			var upperSwitches = Array.ConvertAll(switches, static s => s.ToUpperInvariant());
@@ -254,19 +252,23 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				CallerArguments = callerArgs.Count > 0 ? callerArgs : null
 			};
 
-			foreach (var (key, value) in namedRegisters)
-			{
-				newState.AddRegister(key, value);
-			}
-
 			Parser = caller.Push(newState);
 		}
 
+		/// <summary>
+		/// The named arguments a hook on this command reads as <c>%&lt;name&gt;</c> or <c>r(&lt;name&gt;,args)</c>
+		/// (Penn's <c>run_hook</c> argument registers): ARGS, LS, LSA1.., LSAC, and for an <c>=</c> split
+		/// EQUALS and RS. Only hooks get them; the command itself and the code after it do not.
+		/// </summary>
+		public Dictionary<string, CallState> HookArguments()
+			=> NamedRegisters().ToDictionary(pair => pair.Key, pair => new CallState(pair.Value), StringComparer.OrdinalIgnoreCase);
+
 		private Dictionary<string, MString> NamedRegisters()
 		{
+			var argumentText = ArgumentText();
 			var namedRegisters = new Dictionary<string, MString>
 			{
-				["ARGS"] = commandWithSwitches // The entire argument string before evaluation
+				["ARGS"] = argumentText // The entire argument string before evaluation
 			};
 
 			if (switches.Length > 0)
@@ -275,7 +277,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			}
 
 			// For EQSPLIT commands, populate LS/RS registers
-			var sourceText = EqSplit ? commandWithSwitches.ToString() : string.Empty;
+			var sourceText = EqSplit ? argumentText.ToString() : string.Empty;
 			var equalsIndex = sourceText.IndexOf('=');
 			if (equalsIndex >= 0)
 			{
@@ -285,7 +287,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			}
 			else
 			{
-				namedRegisters["LS"] = commandWithSwitches;
+				namedRegisters["LS"] = argumentText;
 			}
 
 			for (int i = 0; i < arguments.Count; i++)
@@ -296,13 +298,42 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
 			return namedRegisters;
 		}
+
+		/// <summary>
+		/// What was typed after the command and its switches, before evaluation: <c>#3/A=#1</c> from
+		/// <c>@atrchown/x #3/A=#1</c>, and <c>hi</c> from a one-character token such as <c>"hi</c>.
+		/// </summary>
+		private MString ArgumentText()
+		{
+			var text = commandWithSwitches.ToPlainText();
+			int start;
+			if (text.StartsWith(rootCommand, StringComparison.OrdinalIgnoreCase))
+			{
+				start = rootCommand.Length;
+				while (start < text.Length && text[start] == '/')
+				{
+					var next = text.IndexOfAny([' ', '/'], start + 1);
+					start = next < 0 ? text.Length : next;
+				}
+			}
+			else
+			{
+				var space = text.IndexOf(' ');
+				start = text.Length > 0 && !char.IsLetterOrDigit(text[0]) && text[0] is not ('@' or '+')
+					? 1
+					: space < 0 ? text.Length : space;
+			}
+
+			if (start < text.Length && text[start] == ' ') start++;
+			return commandWithSwitches.Substring(start, text.Length - start);
+		}
 	}
 
 	/// <summary>Runs one of the command's hooks, keeping its failure state on <paramref name="run"/>.</summary>
 	private async ValueTask<Option<CallState>> EvaluateHookAsync(BuiltInRun run, CommandHook hook,
 		Option<MString> input = null!)
 	{
-		var result = await HookAsync(run.Parser, run.Executor, hook, input);
+		var result = await HookAsync(run.Parser, run.Executor, hook, input, run.HookArguments());
 		run.HookHadErrors |= result is CallState { HadErrors: true };
 		return result;
 	}
@@ -474,8 +505,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// </summary>
 	public async ValueTask<Option<CallState>> HookAsync(IMUSHCodeParser localParser,
 		AnyOptionalSharpObject executor,
-		CommandHook hook, Option<MString> commandInput = null!)
+		CommandHook hook, Option<MString> commandInput = null!, Dictionary<string, CallState>? hookArguments = null)
 	{
+		hookArguments ??= [];
 		var targetObject = await services.Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
 		if (targetObject is not AnySharpObject targetObj)
 		{
@@ -509,13 +541,25 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			// run_cmd_hook (command.c:2454) hands hook->inplace to atr_comm_match as the queue type, so
 			// the matched body runs in place only for an /inline hook. Otherwise parse_que_attr queues
 			// it as its own entry, after the current action list, with fresh q-registers.
-			return await UserDefinedAsync(localParser, matches, inPlace: hook.Inline);
+			// The command's hook arguments ride along with the pattern's own captures, which win a clash.
+			return await UserDefinedAsync(localParser,
+				matches.Select(match => match with { Arguments = WithHookArguments(match.Arguments, hookArguments) }),
+				inPlace: hook.Inline);
 		}
 
 		// run_hook (command.c:2406-2433) reads the hook attribute with a bare atr_get: the wizard who set
 		// the @hook chose the code, so the player whose command triggered it needs no right to read it.
 		return await services.AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
-			hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true);
+			hook.AttributeName, hookArguments, evalParent: true, ignorePermissions: true);
+	}
+
+	/// <summary><paramref name="captures"/> with <paramref name="hookArguments"/> under them: a capture wins a clash.</summary>
+	private static Dictionary<string, CallState> WithHookArguments(Dictionary<string, CallState> captures,
+		Dictionary<string, CallState> hookArguments)
+	{
+		var arguments = new Dictionary<string, CallState>(hookArguments, StringComparer.OrdinalIgnoreCase);
+		foreach (var (name, value) in captures) arguments[name] = value;
+		return arguments;
 	}
 
 	/// <summary>

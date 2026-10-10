@@ -1143,31 +1143,57 @@ public partial class Functions
 	[SharpFunction(Name = "step", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "step", "delimiter", "outsep"])]
 	public async ValueTask<CallState> Step(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var stepArg = parser.CurrentState.Arguments["2"].Message.ToPlainText();
+		if (!ArgHelpers.TryInteger(parser, stepArg, out var step) || step < 1 || step > 30)
+		{
+			return new CallState(ErrorMessages.Returns.Integer);
+		}
+
+		return await StepAsync(parser, Enumerable.Range(0, step).Select(position => position.ToString()).ToArray());
+	}
+
+	/// <summary>
+	/// <c>stepargs([&lt;obj&gt;/]&lt;attr&gt;, &lt;list&gt;, &lt;names&gt;[, &lt;delim&gt;[, &lt;osep&gt;]])</c>: step() that
+	/// takes as many items at a time as <c>&lt;names&gt;</c> has words and passes each under its name, read
+	/// as <c>%&lt;name&gt;</c>. A short last run leaves its last names unset.
+	/// </summary>
+	[SharpFunction(Name = "stepargs", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "names", "delimiter", "outsep"])]
+	public async ValueTask<CallState> StepArguments(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var names = parser.CurrentState.Arguments["2"].Message.ToPlainText()
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (names.Length is 0 or > 30 || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Length)
+		{
+			return new CallState(ErrorMessages.Returns.BadArgumentName);
+		}
+
+		return await StepAsync(parser, names);
+	}
+
+	/// <summary>
+	/// step() and stepargs(): one call of the attribute per run of <paramref name="names"/>.Length items,
+	/// each item passed under the name in its place (the last run may be shorter).
+	/// </summary>
+	private async ValueTask<CallState> StepAsync(IMUSHCodeParser parser, string[] names)
+	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var stepArg = parser.CurrentState.Arguments["2"].Message.ToPlainText();
-		if (!ArgHelpers.TryInteger(parser, stepArg, out var step) || step < 1 || step > 30)
-		{
-			return errors.Complete(new CallState(ErrorMessages.Returns.Integer));
-		}
-
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var runs = list.Chunk(names.Length)
+			.Select(run => run.Select((item, position) => (item, position))
+				.ToDictionary(pair => names[pair.position], pair => new CallState(pair.item), StringComparer.OrdinalIgnoreCase))
+			.ToList();
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var result = new List<MString>();
-			for (var i = 0; i < list.Length; i += step)
+			foreach (var args in runs)
 			{
-				var args = new Dictionary<string, CallState>();
-				for (var j = 0; j < step && (i + j) < list.Length; j++)
-				{
-					args[j.ToString()] = new CallState(list[i + j]);
-				}
 				result.Add(errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, args)));
 			}
 			return errors.Complete(new CallState(MarkupText.Join(sep, result)));
@@ -1176,28 +1202,18 @@ public partial class Functions
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
-				await StepByAttributeAsync(parser, function, list, step, errors)))),
+				await StepByAttributeAsync(parser, function, runs, errors)))),
 			CallState refusal => errors.Complete(refusal),
 		};
 	}
 
-	/// <summary>
-	/// step() over a fetched attribute: one call per run of <paramref name="step"/> items, the run's
-	/// items as %0, %1, ... (the last run may be shorter).
-	/// </summary>
+	/// <summary>step() over a fetched attribute: one call per run of arguments.</summary>
 	private async ValueTask<List<MString>> StepByAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
-		MString[] list, int step, ListEvaluationErrors errors)
+		List<Dictionary<string, CallState>> runs, ListEvaluationErrors errors)
 	{
 		var attrResult = new List<MString>();
-
-		for (var i = 0; i < list.Length; i += step)
+		foreach (var args in runs)
 		{
-			var args = new Dictionary<string, CallState>();
-			for (var j = 0; j < step && (i + j) < list.Length; j++)
-			{
-				args[j.ToString()] = new CallState(list[i + j]);
-			}
-
 			attrResult.Add(errors.Record(await CallAttributeWithArgumentsAsync(parser, function, args)));
 		}
 

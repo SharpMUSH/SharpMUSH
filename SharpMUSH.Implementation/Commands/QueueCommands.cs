@@ -1205,7 +1205,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@TRIGGER", Output = CommandOutput.Runs,
-		Switches = ["CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
+		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1280,6 +1280,24 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatchString);
 		}
 
+		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
+		// RSArgs that become %0, %1, %2, … inside the triggered attribute. With /args they are
+		// <name>,<value> pairs (after the /match string) read as %<name>, and there is no %0.
+		// These go into EnvironmentRegisters, NOT the q-register stack.
+		var envRegisters = ArgHelpers.ShiftedArguments(args, 1);
+		if (switches.Contains("ARGS"))
+		{
+			switch (ArgHelpers.NamedArguments(args, matchArg is null ? 1 : 2))
+			{
+				case Dictionary<string, CallState> named:
+					envRegisters = named;
+					break;
+				case Error<string> refusal:
+					await NotifyService.Notify(executor, refusal.Value, executor);
+					return new CallState(refusal.Value);
+			}
+		}
+
 		// do_trigger (PennMUSH src/set.c:1341-1345): once queue_attribute_base_priv has found a readable
 		// attribute, the triggerer hears "<name> - Triggered." unless AreQuiet - even if the attribute is
 		// empty or /match finds nothing, since queue_attribute_useatr still returns 1. Penn queues the body,
@@ -1300,12 +1318,6 @@ public partial class Commands
 		//   No /spoof (default): the object USING @trigger (executor) becomes the enactor (%#)
 		//   /spoof: preserve the current enactor (the original player who started the chain)
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : executor.Object().DBRef;
-
-		// Build argument registers from all provided arguments.
-		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
-		// RSArgs that become %0, %1, %2, … inside the triggered attribute.
-		// These go into EnvironmentRegisters (the positional %0-%9 args), NOT the q-register stack.
-		var envRegisters = ArgHelpers.ShiftedArguments(args, 1);
 
 		// Q-registers from the calling context are copied into the triggered attribute unless
 		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger

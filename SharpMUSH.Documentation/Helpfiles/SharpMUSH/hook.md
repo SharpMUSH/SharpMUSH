@@ -154,7 +154,7 @@ Walker sticks his right foot out
 
 ## Argument registers
 
-The following named registers may be available (via `r(<name>,args)`) in your @hook, depending on the command hooked and the arguments given when run; use `registers(,args)` to get the available registers. `/before`, `/after` and `/ignore` hooks can also use the %u substitution to access the entire command string entered.
+The following named arguments may be available (via %`\<name\>` or `r(<name>,args)`) in your @hook, depending on the command hooked and the arguments given when run; use `registers(,args)` to get the available registers. `/before`, `/after` and `/ignore` hooks can also use the %u substitution to access the entire command string entered.
 
 | Register | Description |
 | --- | --- |

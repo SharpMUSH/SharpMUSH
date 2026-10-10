@@ -101,14 +101,22 @@ public partial class Commands
 
 						using var response = await client.SendAsync(message, ExecutionBudget.CurrentToken);
 
-						parser.CurrentState.AddRegister("STATUS",
-							MarkupText.Plain(((int)response.StatusCode).ToString()));
-						parser.CurrentState.AddRegister("CONTENT-TYPE",
-							MarkupText.Plain(response.Content.Headers.ContentType?.ToString() ?? string.Empty));
+						var status = MarkupText.Plain(((int)response.StatusCode).ToString());
+						var contentType = MarkupText.Plain(response.Content.Headers.ContentType?.ToString() ?? string.Empty);
+						// PennMUSH hands these over as q-registers; a PennMUSH import keeps them with http_qregisters.
+						if (Configuration.CurrentValue.Compatibility.HttpQRegisters)
+						{
+							parser.CurrentState.AddRegister("STATUS", status);
+							parser.CurrentState.AddRegister("CONTENT-TYPE", contentType);
+						}
 
 						var content = await response.Content.ReadAsStringAsync(ExecutionBudget.CurrentToken);
-						var contentState = new CallState(MarkupText.Plain(content));
-						var contentDict = new Dictionary<string, CallState> { { "0", contentState } };
+						var contentDict = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
+						{
+							["0"] = new CallState(MarkupText.Plain(content)),
+							["status"] = new CallState(status),
+							["content-type"] = new CallState(contentType)
+						};
 
 						return parser.CurrentState with
 						{

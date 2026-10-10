@@ -291,8 +291,8 @@ public class PostmanEchoHttpTests
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPSTAT");
 
-		// Use %q<STATUS> to emit the HTTP status code alongside the unique token.
-		await SetCallbackAttributeWithContent(attrName, $"think {token} %q<STATUS>");
+		// %<status> is the named argument holding the HTTP status code.
+		await SetCallbackAttributeWithContent(attrName, $"think {token} %<status>");
 
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
@@ -312,8 +312,8 @@ public class PostmanEchoHttpTests
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPST4");
 
-		// Use %q<STATUS> to emit the HTTP status code alongside the unique token.
-		await SetCallbackAttributeWithContent(attrName, $"think {token} %q<STATUS>");
+		// %<status> is the named argument holding the HTTP status code.
+		await SetCallbackAttributeWithContent(attrName, $"think {token} %<status>");
 
 		// postman-echo.com/status/404 deliberately returns a 404 response.
 		await Parser.CommandParse(1, ConnectionService,

@@ -1014,7 +1014,7 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
-		Switches = ["ALIAS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT", "LOCAL"],
+		Switches = ["ALIAS", "ARGS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT", "LOCAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 5, ParameterNames = ["name", "object/attribute"])]
 	public async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1055,13 +1055,14 @@ public partial class Commands : ICommandRestrictionApplier
 			"DISABLE" => await SetFunctionEnabledAsync(executor, userFunctionService, functionName, false),
 			"ENABLE" => await SetFunctionEnabledAsync(executor, userFunctionService, functionName, true),
 			"RESTRICT" => await RestrictFunctionAsync(executor, userFunctionService, functionName, rightSide),
+			"ARGS" => await NameFunctionArgumentsAsync(executor, userFunctionService, functionName, rightSide),
 			_ => await DefineOrDescribeFunctionAsync(parser, executor, userFunctionService, functionName)
 		};
 	}
 
 	/// <summary>The <c>@function</c> switches that act on a named function, in the order they are tried.</summary>
 	private static readonly string[] FunctionActionSwitches =
-		["ALIAS", "CLONE", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "RESTRICT"];
+		["ALIAS", "CLONE", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "RESTRICT", "ARGS"];
 
 	/// <summary><c>@function</c> with no arguments: how many user-defined and built-in functions there are.</summary>
 	private async ValueTask<Option<CallState>> SummarizeFunctionsAsync(IMUSHCodeParser parser, AnySharpObject executor)
@@ -1326,6 +1327,45 @@ public partial class Commands : ICommandRestrictionApplier
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// @function/args &lt;name&gt;=&lt;names&gt;: the global function's arguments are also passed under these
+	/// space-separated names, in order (%0 as the first name). No names passes them by position only.
+	/// </summary>
+	private async ValueTask<Option<CallState>> NameFunctionArgumentsAsync(AnySharpObject executor,
+		IUserDefinedFunctionService userFunctionService, string functionName, string? names)
+	{
+		if (await RejectUnlessConfigAdmin(executor) is { } denied)
+		{
+			return denied;
+		}
+
+		var argumentNames = (names ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (argumentNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != argumentNames.Length
+			|| argumentNames.Any(name => int.TryParse(name, out _)))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Returns.BadArgumentName, executor);
+			return new CallState(ErrorMessages.Returns.BadArgumentName);
+		}
+
+		if (!userFunctionService.SetArgumentNames(functionName, argumentNames))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+			return new CallState(ErrorMessages.Returns.FunctionNotFound);
+		}
+
+		if (argumentNames.Length == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionArgumentNamesClearedFormat), executor, functionName);
+		}
+		else
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionArgumentNamesFormat), executor, functionName,
+				string.Join(" ", argumentNames));
+		}
+
+		return CallState.Empty;
+	}
+
 	/// <summary>Stores the restriction where <see cref="RestrictFunctionAsync"/> says; false when there is no such function.</summary>
 	private bool SetFunctionRestriction(IUserDefinedFunctionService userFunctionService, string functionName, string? restriction)
 	{
@@ -1441,6 +1481,12 @@ public partial class Commands : ICommandRestrictionApplier
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoTypeFormat), executor, "User-defined");
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), executor, registeredFunction.MinArgs);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), executor, registeredFunction.MaxArgs);
+			if (registeredFunction.ArgumentNames.Length > 0)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor,
+					string.Join(" ", registeredFunction.ArgumentNames));
+			}
+
 			return CallState.Empty;
 		}
 

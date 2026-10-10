@@ -217,7 +217,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Channels imported", 0.97);
 
 			await ReinstallPackagesAsync(context);
-			await EnableParenGroupsAsync(context, cancellationToken);
+			await EnablePennMUSHCompatibilityAsync(context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
 			ReportProgress("Complete", 1.0);
 
@@ -258,37 +258,39 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Turns on <c>paren_groups</c> in the configuration of the world being written. PennMUSH softcode
-	/// writes a literal parenthesis inside a function's arguments unescaped, which SharpMUSH reads as
-	/// PennMUSH does only with that option on. Written through the Mediator, like the objects, so it
+	/// Turns on <c>paren_groups</c> and <c>http_qregisters</c> in the configuration of the world being
+	/// written. PennMUSH softcode writes a literal parenthesis inside a function's arguments unescaped,
+	/// which SharpMUSH reads as PennMUSH does only with paren_groups on, and reads an @http response's
+	/// status and content type from q-registers. Written through the Mediator, like the objects, so it
 	/// lands in the same world, and signalled so a running game rereads its configuration.
 	/// </summary>
 	/// <remarks>
 	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands,
-	/// and the option is left for the administrator to set.
+	/// and the options are left for the administrator to set.
 	/// </remarks>
-	private async ValueTask EnableParenGroupsAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
+	private async ValueTask EnablePennMUSHCompatibilityAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
 		var warnings = context.Warnings;
 		try
 		{
 			var options = _options.CurrentValue;
-			if (options.Compatibility.ParenGroups) return;
+			if (options.Compatibility is { ParenGroups: true, HttpQRegisters: true }) return;
 
 			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
 				options with
 				{
-					Compatibility = options.Compatibility with { ParenGroups = true },
+					Compatibility = options.Compatibility with { ParenGroups = true, HttpQRegisters = true },
 					Database = context.WrittenDatabaseOptions ?? options.Database
 				}), cancellationToken);
 			_configurationReload?.SignalChange();
-			_logger.LogInformation("Turned on paren_groups for the imported PennMUSH softcode");
+			_logger.LogInformation("Turned on paren_groups and http_qregisters for the imported PennMUSH softcode");
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			_logger.LogWarning(ex, "Could not turn on paren_groups for the imported PennMUSH softcode");
-			warnings.Add($"paren_groups could not be turned on ({ex.Message}); imported softcode that writes literal " +
-				"parentheses unescaped needs it: set paren_groups to yes in the configuration and reload it.");
+			_logger.LogWarning(ex, "Could not turn on paren_groups and http_qregisters for the imported PennMUSH softcode");
+			warnings.Add($"paren_groups and http_qregisters could not be turned on ({ex.Message}); imported softcode " +
+				"that writes literal parentheses unescaped or reads @http's %q<status> needs them: set both to yes in the " +
+				"configuration and reload it.");
 		}
 	}
 
