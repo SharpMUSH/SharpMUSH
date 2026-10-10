@@ -10,7 +10,13 @@ public interface IInputSessionService
 	InputCaptureSnapshot CapturePendingInput(long handle);
 	/// <summary>Opaque transport revision retained after capture ends; changes on each successful start.</summary>
 	Guid GetCaptureGeneration(long handle);
-	ValueTask<string?> StartAsync(IMUSHCodeParser parser, DBRef target, string attribute, MString prompt, TimeSpan timeout);
+	/// <summary>
+	/// Opens a session on the connection: each line typed runs the attribute of the first of
+	/// <paramref name="routes"/> it matches. A line matching the first, the exit, ends the session before
+	/// its attribute runs, and the timeout runs that attribute too. Returns the error, or null.
+	/// </summary>
+	ValueTask<string?> StartAsync(IMUSHCodeParser parser, MString prompt, IReadOnlyList<InputRouteSpec> routes,
+		InputMatch match, TimeSpan timeout);
 	ValueTask<string?> PromptAsync(IMUSHCodeParser parser, MString prompt);
 	ValueTask<string?> CancelAsync(IMUSHCodeParser parser);
 	ValueTask<bool> TryEscapeAsync(long handle, string? transportSessionId, MString input, Guid? expectedCapture = null);

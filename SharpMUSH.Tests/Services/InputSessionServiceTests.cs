@@ -22,6 +22,10 @@ namespace SharpMUSH.Tests.Services;
 
 public class InputSessionServiceTests
 {
+	/// <summary>The reason argument a delivery ran with: input, exit or timeout.</summary>
+	private static string? Reason(ParserState state)
+		=> state.EnvironmentRegisters.TryGetValue(InputSessionService.ReasonArgument, out var reason) ? reason.Message?.ToPlainText() : null;
+
 	private sealed class Clock : TimeProvider
 	{
 		public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
@@ -97,7 +101,7 @@ public class InputSessionServiceTests
 		public async Task<InputSession> Start(long handle = 1)
 		{
 			var caller = await Connect(handle);
-			await Assert.That(await Sessions.StartAsync(caller, Target.Object.DBRef, "CALLBACK", MarkupText.Plain("Answer: "), TimeSpan.FromSeconds(60))).IsNull();
+			await Assert.That(await Sessions.StartAsync(caller, MarkupText.Plain("Answer: "), InputRoutes.To(Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNull();
 			return Sessions.GetCapturing(handle)!;
 		}
 
@@ -121,18 +125,18 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness();
 		var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var original = h.Sessions.GetCapturing(1)!;
 		h.Time.Now += TimeSpan.FromMinutes(2);
 		if (timeoutAlreadyTaken) await Assert.That(h.Sessions.TakeExpired().Single().Id).IsEqualTo(original.Id);
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
-		var restarted = await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var restarted = await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "REPLACEMENT"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		await Assert.That(restarted).IsNotNull();
 		if (!timeoutAlreadyTaken) await Assert.That(h.Sessions.TakeExpired().Single().Id).IsEqualTo(original.Id);
 		await h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty, true);
 		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.ToPlainText()).IsEqualTo("timeout");
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(Reason(h.Deliveries.Single())).IsEqualTo("timeout");
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "REPLACEMENT"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNull();
 		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsNotEqualTo(original.Id);
 	}
 
@@ -210,7 +214,7 @@ public class InputSessionServiceTests
 		localization.Format(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<object[]>()).Returns(call => call.ArgAt<string>(0));
 		var notify = new NotifyService(bus, h.Connections, localization);
 		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
-		await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var session = sessions.GetCapturing(1)!;
 		switch (action)
 		{
@@ -252,7 +256,7 @@ public class InputSessionServiceTests
 		{ published = call.Arg<MarkupPromptMessage>(); return Task.CompletedTask; });
 		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>());
 		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
-		await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("private prompt"), TimeSpan.FromSeconds(60));
+		await sessions.StartAsync(caller, MarkupText.Plain("private prompt"), InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		if (reprompt) await sessions.PromptAsync(caller, MarkupText.Plain("another private prompt"));
 		var serialized = System.Text.Json.JsonSerializer.SerializeToElement(published);
 		await Assert.That(serialized.TryGetProperty("SessionId", out var identity)).IsTrue();
@@ -268,7 +272,7 @@ public class InputSessionServiceTests
 		var h = new Harness(); var session = await h.Start();
 		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Plain(input));
 		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message.Text).IsEqualTo(input);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.Text).IsEqualTo("input");
+		await Assert.That(Reason(h.Deliveries.Single())).IsEqualTo("input");
 		await Assert.That(h.Deliveries.Single().Executor).IsEqualTo(h.Actor.Object.DBRef);
 		await Assert.That(h.Deliveries.Single().Enactor).IsEqualTo(h.Character.Object.DBRef);
 		await Assert.That(h.Deliveries.Single().CurrentEvaluation).IsEqualTo(new DBAttribute(h.Target.Object.DBRef, "CALLBACK"));
@@ -282,7 +286,7 @@ public class InputSessionServiceTests
 		await h.Sessions.DeliverAsync(h.Parser, second, MarkupText.Plain("two"));
 		await Assert.That(h.Deliveries.Single().Handle).IsEqualTo(2L);
 		var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		await h.Sessions.DeliverAsync(h.Parser, first, MarkupText.Plain("stale"));
 		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
 	}
@@ -304,9 +308,9 @@ public class InputSessionServiceTests
 	public async Task AdmissionEscapeCannotCancelReplacementAfterSnapshot()
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "FIRST", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "FIRST"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var snapshot = h.Sessions.CapturePendingInput(1);
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "SECOND", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "SECOND"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var sessions = Substitute.For<IInputSessionService>();
 		sessions.CapturePendingInput(1).Returns(snapshot);
 		sessions.TryEscapeAsync(1, "transport", Arg.Any<MarkupText>(), Arg.Any<Guid?>())
@@ -314,7 +318,7 @@ public class InputSessionServiceTests
 		await using var queue = Queue(h, sessions);
 		await Assert.That((await queue.AdmitUserCommand(1, MarkupText.Plain("@input/cancel"),
 			ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" })).Accepted).IsTrue();
-		await Assert.That(h.Sessions.GetCapturing(1)?.CallbackAttribute).IsEqualTo("SECOND");
+		await Assert.That(h.Sessions.GetCapturing(1)?.Routes[^1].Attribute).IsEqualTo("SECOND");
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
 	}
 
@@ -322,11 +326,11 @@ public class InputSessionServiceTests
 	public async Task GenerationBoundEscapeCannotCancelAConcurrentReplacement()
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "FIRST", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "FIRST"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var first = h.Sessions.GetCapturing(1)!;
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "SECOND", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "SECOND"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"), first.Id)).IsTrue();
-		await Assert.That(h.Sessions.GetCapturing(1)!.CallbackAttribute).IsEqualTo("SECOND");
+		await Assert.That(h.Sessions.GetCapturing(1)!.Routes[^1].Attribute).IsEqualTo("SECOND");
 	}
 
 	[Test]
@@ -467,7 +471,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness(); var caller = await h.Connect();
 		Halt(h.Actor.Object);
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNotNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNotNull();
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 	}
 
@@ -482,7 +486,7 @@ public class InputSessionServiceTests
 		await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"))).IsFalse();
 		if (!alreadyPending) h.Sessions.TakeExpired();
 		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Empty, timeout: true);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.Text).IsEqualTo("timeout");
+		await Assert.That(Reason(h.Deliveries.Single())).IsEqualTo("timeout");
 	}
 
 	[Test]
@@ -502,7 +506,7 @@ public class InputSessionServiceTests
 		await Assert.That(expired.Count).IsEqualTo(1);
 		await Assert.That(h.Sessions.TakeExpired().Count).IsEqualTo(0);
 		await h.Sessions.DeliverAsync(h.Parser, third, MarkupText.Empty, timeout: true);
-		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message.Text).IsEqualTo("timeout");
+		await Assert.That(Reason(h.Deliveries.Single())).IsEqualTo("timeout");
 		await h.Sessions.DeliverAsync(h.Parser, third, MarkupText.Empty, timeout: true);
 		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
 	}
@@ -516,9 +520,31 @@ public class InputSessionServiceTests
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
 		for (var handle = 2; handle <= InputSessionService.MaxOwnerSessions; handle++) await h.Start(handle);
 		var caller = await h.Connect(1000);
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60)))
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60)))
 			.IsEqualTo(InputSessionService.SessionLimit);
 	}
+	[Test]
+	[Arguments("")]
+	[Arguments("   ")]
+	public async Task MissingExitCannotStartCapture(string exit)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK", exit), InputMatch.Exact, TimeSpan.FromSeconds(60)))
+			.IsEqualTo(InputSessionService.MissingExit);
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
+	[Test]
+	[Arguments("@input/cancel")]
+	[Arguments(" @INPUT/CANCEL ")]
+	public async Task CancelLineCannotBeTheExit(string exit)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK", exit), InputMatch.Exact, TimeSpan.FromSeconds(60)))
+			.IsEqualTo(InputSessionService.ReservedExit);
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
 	[Test]
 	[Arguments(0)]
 	[Arguments(3601)]
@@ -526,7 +552,7 @@ public class InputSessionServiceTests
 	public async Task InvalidTimeoutCannotStartCapture(int seconds)
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(seconds)))
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(seconds)))
 			.IsEqualTo(InputSessionService.InvalidTimeout);
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 	}
@@ -544,7 +570,7 @@ public class InputSessionServiceTests
 			"transport" => caller.CurrentState with { ConnectionSessionId = "old" },
 			_ => caller.CurrentState with { Handle = null }
 		});
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60)))
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60)))
 			.IsEqualTo(InputSessionService.InvalidContext);
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 	}
@@ -559,7 +585,7 @@ public class InputSessionServiceTests
 	public async Task CancelRechecksCaptureAfterAuthorityRead(string transition)
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var original = h.Sessions.GetCapturing(1)!;
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -583,7 +609,7 @@ public class InputSessionServiceTests
 			switch (transition)
 			{
 				case "replacement":
-					await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+					await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "REPLACEMENT"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 					replacement = h.Sessions.GetCapturing(1)?.Id;
 					await Assert.That(replacement).IsNotNull();
 					await Assert.That(replacement).IsNotEqualTo(original.Id);
@@ -624,7 +650,7 @@ public class InputSessionServiceTests
 		var h = new Harness();
 		var caller = await h.Connect();
 		h.Notify.PromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<SharpMessage>(), Arg.Any<Guid?>()).Returns(_ => throw new InvalidOperationException("prompt failed"));
-		try { await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60)); }
+		try { await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60)); }
 		catch (InvalidOperationException) { }
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 		h = new Harness();
@@ -647,7 +673,7 @@ public class InputSessionServiceTests
 	public async Task FailedDeliveryRetiresCallbackOwnedReplacement(bool timeout, string failure)
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var original = h.Sessions.GetCapturing(1)!;
 		if (timeout) { h.Time.Now += TimeSpan.FromMinutes(2); h.Sessions.TakeExpired(); }
 		using var cancellation = new CancellationTokenSource();
@@ -656,7 +682,7 @@ public class InputSessionServiceTests
 		Guid? replacement = null;
 		async ValueTask<CallState?> Callback()
 		{
-			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "REPLACEMENT"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 			replacement = h.Sessions.GetCapturing(1)?.Id;
 			if (failure == "throw") throw new InvalidOperationException("callback failed");
 			if (failure is "cancel" or "budget") cancellation.Cancel();
@@ -679,17 +705,17 @@ public class InputSessionServiceTests
 	public async Task NestedDeliveryRestoresOuterReplacementOwnership(bool startAgain)
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var original = h.Sessions.GetCapturing(1)!;
 		var calls = 0;
 		async ValueTask<CallState?> Callback()
 		{
 			calls++;
-			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "REPLACEMENT"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 			if (calls == 1)
 			{
 				await h.Sessions.DeliverAsync(h.Parser, h.Sessions.GetCapturing(1)!, MarkupText.Empty);
-				if (startAgain) await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "OUTER", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				if (startAgain) await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "OUTER"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 				return new CallState("failed outer") { HadErrors = true };
 			}
 			return CallState.Empty;
@@ -711,7 +737,7 @@ public class InputSessionServiceTests
 	public async Task CancelledCallbackCannotReopenCapture(string cancellation, bool nested, bool externalBeforeCancel)
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var original = h.Sessions.GetCapturing(1)!;
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -721,22 +747,22 @@ public class InputSessionServiceTests
 		{
 			if (nested && ++calls == 1)
 			{
-				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "NESTED", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "NESTED"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 				await h.Sessions.DeliverAsync(h.Parser, h.Sessions.GetCapturing(1)!, MarkupText.Empty);
 			}
 			else { entered.SetResult(); await release.Task; }
-			starts.Add(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "LATE", MarkupText.Empty, TimeSpan.FromSeconds(60)));
+			starts.Add(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "LATE"), InputMatch.Exact, TimeSpan.FromSeconds(60)));
 			return CallState.Empty;
 		}
 		h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => Callback());
 		var delivery = h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty).AsTask();
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		if (externalBeforeCancel) await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "BEFORE", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		if (externalBeforeCancel) await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "BEFORE"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		if (cancellation == "escape") await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"))).IsTrue();
 		else if (cancellation == "cancel") await Assert.That(await h.Sessions.CancelAsync(caller)).IsNull();
 		else { await h.Connections.Unbind(1); await h.Connections.Bind(1, h.Character.Object.DBRef); }
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "INDEPENDENT", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "INDEPENDENT"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNull();
 		var independent = h.Sessions.GetCapturing(1)!.Id;
 		release.SetResult();
 		await delivery.WaitAsync(TimeSpan.FromSeconds(5));
@@ -750,7 +776,7 @@ public class InputSessionServiceTests
 	public async Task CancelledCallbackCannotManageIndependentCapture(string operation)
 	{
 		var h = new Harness(); var caller = await h.Connect();
-		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var original = h.Sessions.GetCapturing(1)!;
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -767,7 +793,7 @@ public class InputSessionServiceTests
 		var delivery = h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty).AsTask();
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"))).IsTrue();
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "INDEPENDENT", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "INDEPENDENT"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNull();
 		var independent = h.Sessions.GetCapturing(1)!.Id;
 		h.Notify.ClearReceivedCalls();
 		release.SetResult();
@@ -876,7 +902,7 @@ public class InputSessionServiceTests
 		h.Parser.CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>())
 			.Returns(async ValueTask<CallState> (_) =>
 			{
-				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 				return CallState.Empty;
 			});
 		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
@@ -892,7 +918,7 @@ public class InputSessionServiceTests
 		finally { release.TrySetResult(); }
 		await Drained(queue);
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNull();
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
 	}
 
@@ -909,7 +935,7 @@ public class InputSessionServiceTests
 		h.Parser.CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>())
 			.Returns(async ValueTask<CallState> (_) =>
 			{
-				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 				return CallState.Empty;
 			});
 		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
@@ -926,7 +952,7 @@ public class InputSessionServiceTests
 		finally { release.TrySetResult(); }
 		await Drained(queue);
 		if (mode == "none")
-			await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+			await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNull();
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
 	}
 
@@ -947,7 +973,7 @@ public class InputSessionServiceTests
 		{
 			entered.SetResult();
 			await release.Task;
-			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 			return null;
 		}, "queued-session-start", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -988,7 +1014,7 @@ public class InputSessionServiceTests
 		{
 			entered.SetResult();
 			await release.Task;
-			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 			switch (ending)
 			{
 				case "escape": await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); break;
@@ -1028,13 +1054,13 @@ public class InputSessionServiceTests
 		await queue.AdmitWork(async () =>
 		{
 			entered.SetResult(); await release.Task;
-			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 			return null;
 		}, "queued-start", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		async ValueTask<CallState?> ReplaceCapture()
 		{
-			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			await h.Sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "REPLACEMENT"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 			return CallState.Empty;
 		}
 		h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => ReplaceCapture());
@@ -1049,7 +1075,7 @@ public class InputSessionServiceTests
 		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
 		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message.Text).IsEqualTo("first");
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
-		await Assert.That(h.Sessions.GetCapturing(1)!.CallbackAttribute).IsEqualTo("REPLACEMENT");
+		await Assert.That(h.Sessions.GetCapturing(1)!.Routes[^1].Attribute).IsEqualTo("REPLACEMENT");
 	}
 
 	[Test]
@@ -1238,7 +1264,7 @@ public class InputSessionServiceTests
 		var notify = new NotifyService(bus, h.Connections, localization);
 		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
 
-		var started = sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("first"), TimeSpan.FromSeconds(60)).AsTask();
+		var started = sessions.StartAsync(caller, MarkupText.Plain("first"), InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60)).AsTask();
 		await promptEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		var session = sessions.GetCapturing(1)!;
 		string[] Published() { lock (published) return [.. published]; }
@@ -1247,7 +1273,7 @@ public class InputSessionServiceTests
 		{
 			"cancel" => (Task.Run(async () => { await sessions.CancelAsync(caller); }), ["output:InputSessionCancelled", clear]),
 			"escape" => (Task.Run(async () => { await sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); }), ["output:InputSessionCancelled", clear]),
-			"replace" => (Task.Run(async () => { await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("second"), TimeSpan.FromSeconds(60)); }), ["prompt:second"]),
+			"replace" => (Task.Run(async () => { await sessions.StartAsync(caller, MarkupText.Plain("second"), InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60)); }), ["prompt:second"]),
 			"reprompt" => (Task.Run(async () => { await sessions.PromptAsync(caller, MarkupText.Plain("again")); }), ["prompt:again"]),
 			"revoke" => (Task.Run(async () => { h.CanControl = false; await sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("answer")); }), [clear, "output:InputSessionRevoked"]),
 			_ => (Task.Run(async () => { await h.Connections.Bind(1, h.Owner.Object.DBRef); await notify.Notify(1, "switched", null); }), [clear, "output:switched"])
@@ -1340,7 +1366,7 @@ public class InputSessionServiceTests
 		var caller = await h.Connect();
 		var first = await h.Start();
 		await Assert.That(await h.Sessions.PromptAsync(caller, MarkupText.Plain("again"))).IsNull();
-		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("next"), TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, MarkupText.Plain("next"), InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60))).IsNull();
 		var second = h.Sessions.GetCapturing(1)!;
 		await h.Notify.Received(2).PromptToSession(1, "transport", Arg.Any<SharpMessage>(), first.Id);
 		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Any<SharpMessage>(), second.Id);

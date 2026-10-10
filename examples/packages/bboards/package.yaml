@@ -1,6 +1,6 @@
 format: 1.2
 package: bboards
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -610,15 +610,36 @@ objects:
       # +bbreader [<path>]: opens the reader there, or where you were.
       INC`CMD`READER: |-
         @assert not(strlen(%q<cmd_argument>))={think [u({{bboards}}/FUN`COMMAND`PARSE,read,,%q<cmd_argument>)]; @include/nobreak {{bboards}}/INC`CMD`READ; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`BOARD,get(%q<reader_holder>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};@assert u({{bboards}}/FUN`IS`POST,get(%q<reader_holder>/BBOARD`HERE))={@include {{bboards}}/INC`READER`LOOK; @include {{bboards}}/INC`READER`START};think [u({{bboards}}/FUN`COMMAND`PARSE,read,,)];@include/nobreak {{bboards}}/INC`CMD`READ;@include {{bboards}}/INC`READER`START
-      # (Re)starts the session at its longest timeout, with the prompt.
+      # (Re)starts the session at its longest timeout, with the prompt and what each line runs. While
+      # writing: .toss drops (and ends the session), . posts, anything else is text. Otherwise q leaves
+      # and anything else is a key.
       INC`READER`START: |-
-        &BBOARD`READER %q<reader_holder>=[secs()];@input/start {{bboards}}/INPUT`READER=[u({{bboards}}/FUN`DISPLAY`READERPROMPT)],3600
+        &BBOARD`READER %q<reader_holder>=[secs()];@assert not(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE)))={@input/start [u({{bboards}}/FUN`DISPLAY`READERPROMPT)]=.toss,{{bboards}}/INPUT`POSTING`TOSS,.,{{bboards}}/INPUT`POSTING`POST,*,{{bboards}}/INPUT`POSTING`TEXT,3600};@input/start [u({{bboards}}/FUN`DISPLAY`READERPROMPT)]=q,{{bboards}}/INPUT`READER`QUIT,*,{{bboards}}/INPUT`READER`KEY,3600
+      # The registers every reader line starts from: %q<viewer_objid>, %q<reader_holder>, %q<message_target>.
+      FUN`READER`CONTEXT: |-
+        [setqm(viewer_objid,objid(%#),reader_holder,u(%!/FUN`READING`HOLDER,objid(%#)),message_target,%#)]
+      # Told when the reader closes after an hour without a line; where it was is kept.
+      INC`READER`TIMEDOUT: |-
+        @pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,The reader closed after an hour without a line. +bbreader picks up where you were.)]
+      # q, or an hour without a line: the session has ended. On q the reader forgets where it was.
+      INPUT`READER`QUIT: |-
+        think [u({{bboards}}/FUN`READER`CONTEXT)];@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER %q<reader_holder>=;@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)]
+      # .toss while writing, or an hour without a line: the session has ended. .toss drops what was
+      # written and opens the reader again; a timeout keeps it for +bbreader.
+      INPUT`POSTING`TOSS: |-
+        think [u({{bboards}}/FUN`READER`CONTEXT)];@assert not(strmatch(r(reason,args),timeout))={@include {{bboards}}/INC`READER`TIMEDOUT};&BBOARD`READER`WRITE %q<reader_holder>=;&BBOARD`READER`TEXT %q<reader_holder>=;@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Dropped.)];@include {{bboards}}/INC`READER`START
+      # . while writing: posts what was written.
+      INPUT`POSTING`POST: |-
+        think [u({{bboards}}/FUN`READER`CONTEXT)];think [setqm(reader_write_kind,get(%q<reader_holder>/BBOARD`READER`WRITE),reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT))];&BBOARD`READER`WRITE %q<reader_holder>=;&BBOARD`READER`TEXT %q<reader_holder>=;think [u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)][setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START
+      # Any other line while writing, %0 exactly as typed: added to the text.
+      INPUT`POSTING`TEXT: |-
+        think [u({{bboards}}/FUN`READER`CONTEXT)];think [setq(reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT))];&BBOARD`READER`TEXT %q<reader_holder>=[if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0)];@include {{bboards}}/INC`READER`START
       # Shows what the reader is on again.
       INC`READER`LOOK: |-
         think [setqm(reader_look_place,get(%q<reader_holder>/BBOARD`HERE),reader_last_comment,get(%q<reader_holder>/BBOARD`HERE`C))];think [u({{bboards}}/FUN`COMMAND`PARSE,read,[if(strlen(get(%q<reader_holder>/BBOARD`READER`PAGE)),/[get(%q<reader_holder>/BBOARD`READER`PAGE)])],switch(1,u({{bboards}}/FUN`IS`POST,%q<reader_look_place>),[u({{bboards}}/FUN`PATH`OFPOST,%q<reader_look_place>)][if(strlen(%q<reader_last_comment>),/[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_look_place>,%q<reader_last_comment>)])],u({{bboards}}/FUN`IS`BOARD,%q<reader_look_place>),u({{bboards}}/FUN`PATH`OFBOARD,%q<reader_look_place>),))];@include/nobreak {{bboards}}/INC`CMD`READ
-      # One line in the reader. %0 is the line exactly as typed; %1 is input, or timeout.
-      INPUT`READER: |-
-        think [setqm(viewer_objid,objid(%#),reader_holder,u({{bboards}}/FUN`READING`HOLDER,%q<viewer_objid>),message_target,%#)];@assert strmatch(%1,input)={@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,The reader closed after an hour without a line. +bbreader picks up where you were.)]};@assert not(strlen(get(%q<reader_holder>/BBOARD`READER`WRITE)))={@include {{bboards}}/INC`READER`WRITING};think [setqm(reader_key,trim(%0),reader_key_word,first(%q<reader_key>),reader_key_rest,trim(rest(%q<reader_key>)))];@assert comp(%q<reader_key>,q)={@input/cancel; &BBOARD`READER %q<reader_holder>=; @pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Left the reader.)]};@include/nobreak {{bboards}}/INC`READER`KEY;@include {{bboards}}/INC`READER`START
+      # A key in the reader, %0 exactly as typed. q is its own pattern (INPUT`READER`QUIT).
+      INPUT`READER`KEY: |-
+        think [u({{bboards}}/FUN`READER`CONTEXT)];think [setqm(reader_key,trim(%0),reader_key_word,first(%q<reader_key>),reader_key_rest,trim(rest(%q<reader_key>)))];@include/nobreak {{bboards}}/INC`READER`KEY;@include {{bboards}}/INC`READER`START
       # Runs key %q<reader_key> (%q<reader_key_word> its first word, %q<reader_key_rest> the rest). Keys are compared with
       # comp(), which minds case (j and J differ) and treats ? as itself. Each key that does more than
       # one thing has its own INC`READER`KEY` branch.
@@ -675,9 +696,6 @@ objects:
       # c <text> comments on this post, r <text> answers this comment; alone, each starts writing.
       INC`READER`COMMENT: |-
         @assert %q<reader_at_post>=@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`WARNING,Open a post first.)];@assert cor(not(comp(%q<reader_key_word>,c)),strlen(%q<reader_comment>))=@pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`WARNING,r answers a comment%; open one first%, or use c.)];@assert strlen(%q<reader_key_rest>)={&BBOARD`READER`WRITE %q<reader_holder>=%q<reader_key_word>; &BBOARD`READER`TEXT %q<reader_holder>=; @pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,if(not(comp(%q<reader_key_word>,r)),Writing a reply to %[[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_place>,%q<reader_comment>)]%] %([u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<reader_place>,%q<reader_comment>,%q<viewer_objid>)]%).,Writing a comment on [u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)].) Every line is text now.)]%rFinish with a line of just . to post it%, or .toss to drop it.};think [u({{bboards}}/FUN`COMMAND`PARSE,if(not(comp(%q<reader_key_word>,r)),reply,comment),,%q<reader_key_rest>)];@include {{bboards}}/INC`CMD`COMMENT
-      # A line while writing: . posts, .toss drops, anything else is added.
-      INC`READER`WRITING: |-
-        think [setqm(reader_write_kind,get(%q<reader_holder>/BBOARD`READER`WRITE),reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT))];@assert not(strmatch(%0,.toss))={&BBOARD`READER`WRITE %q<reader_holder>=; &BBOARD`READER`TEXT %q<reader_holder>=; @pemit %q<message_target>=[u({{bboards}}/FUN`MESSAGE`INFO,Dropped.)]; @include {{bboards}}/INC`READER`START};@assert not(strmatch(%0,.))={&BBOARD`READER`WRITE %q<reader_holder>=; &BBOARD`READER`TEXT %q<reader_holder>=; think [u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)][setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))]; @include/nobreak {{bboards}}/INC`CMD`COMMENT; @include {{bboards}}/INC`READER`START};&BBOARD`READER`TEXT %q<reader_holder>=[if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0)];@include {{bboards}}/INC`READER`START
       # The board table: #, Board, New, Last. Names can hold |, so cells split at line breaks.
       FUN`DISPLAY`OPTIONS`BOARDS: |-
         json(object,delim,json(string,%r),rule,json(string,),grow,json(string,%r1),nowrap,json(string,1%r3%r4),min,json(string,4))

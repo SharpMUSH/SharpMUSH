@@ -166,14 +166,15 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 
 ## Free-text input: `@input`
 
-`@input/start <obj>/<attr>=<prompt>[,<seconds>]` captures every line the player sends and hands it to the callback as `%0` (`%1` is `input`, or `timeout` once at expiry). Nothing typed runs as a command, which is the point: plain text with no risk of setting off other commands. So the callback **must** recognise a finish line (`.done`) and end the session itself with `@input/cancel`; every other line is appended. Name that line in every prompt. **Never let the timeout be the way out**: it fires a fixed time after the start whether or not the player is still typing, and until then they are stuck. The player's own `@input/cancel` escape runs no callback, so it saves nothing either.
+`@input/start[/wild|/regex] <prompt>=<exit pattern>,<exit attr>[,<pattern>,<attr>...][,<seconds>]` captures every line the player sends and runs the attribute of the first pattern it matches. Nothing typed runs as a command, which is the point: plain text with no risk of setting off other commands. The first pair is the exit and is required: its line ends the session, then its attribute runs; save the work there. Later pairs keep the session open; `*` takes any other line. A line nothing matches runs nothing and the player is told the exit. Patterns are exact (trimmed, any case) unless `/wild` or `/regex`, which capture into `%0`-`%9` like `$`-commands; exact and `*` pass the line in `%0`. `r(reason,args)` is `exit`, `input` or `timeout` (a named argument, gone after the run). Attributes are `attr` on the executor or `obj/attr`. Pick an exit nobody types as text (`.done`, not `done`) and name it in every prompt. At expiry the exit attribute runs with `timeout`; **never let the timeout be the way out**, it fires a fixed time after the start whether or not the player is still typing. The player's own `@input/cancel` escape runs nothing, so it saves nothing.
 
 ```sharp
-&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start me/INPUT`NOTE=Type your note. Send .done on a line by itself to save it.,1800
-&INPUT`NOTE Notepad=@assert strmatch(%1,input)=@pemit %#=Time ran out before .done, so the note was not saved.; @break strmatch(trim(%0),.done)={&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=Note saved.; @input/cancel}; &DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, or .done to save:
+&CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start Type your note. Send .done on a line by itself to save it.=.done,INPUT`NOTE`DONE,*,INPUT`NOTE`LINE,1800
+&INPUT`NOTE`LINE Notepad=&DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, or .done to save:
+&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=[if(strmatch(r(reason,args),timeout),Time ran out%, so your note was saved as it was.,Note saved.)]
 ```
 
-`%0` is data: storing or substituting it never evaluates brackets or runs `;`. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
+`%0` is data: storing or substituting it never evaluates brackets or runs `;`. To evaluate typed text on purpose, evaluate it as the player, once, in the exit attribute: `` [objevals(%#,v(DATA`DRAFT))] ``. `objeval()` would only substitute the attribute and give the text back. Never `s()` typed text, and only do this from an object that controls its players (wizard-owned), since `objevals()` otherwise falls back to the object's own privileges. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
 
 ## Common mistakes (all observed in practice)
 
@@ -197,4 +198,4 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | `[ansi(h,rjust(%0:,14))] %1` label gutters | `fields(, <label>, <value>, …)` |
 | `width(%#)` passed to a layout function | Leave it empty; each reader gets their own width |
 | `{{"delim":"\n"}}` inline | `json(object,delim,json(string,%r))` |
-| `@input` session that only ends on its timeout | Callback ends it on a finish line (`.done`) with `@input/cancel`; the timeout is a safety net |
+| One attribute that branches on every line it gets | A pattern and attribute per key (`` q,INPUT`READER`QUIT,*,INPUT`READER`KEY ``); the exit attribute runs after the session has ended, and also at the timeout (`r(reason,args)`) |

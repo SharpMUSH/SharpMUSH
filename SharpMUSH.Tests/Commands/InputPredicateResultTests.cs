@@ -87,7 +87,7 @@ public class InputPredicateResultTests
 			await attributes.SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain(callback));
 			var parser = Get<IMUSHCodeParser>();
 			var sessions = Get<IInputSessionService>();
-			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=Answer:,120"));
+			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,120"));
 			var session = sessions.GetCapturing(player.Handle);
 			await Assert.That(session).IsNotNull();
 			var result = await sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));
@@ -142,7 +142,7 @@ public class InputPredicateResultTests
 			var arguments = stage == "argument" ? "=[ulocal(me/PREDICATE)]" : "";
 			await attributes.SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain($"think [setq(retrycounter,0)];{name};@retry {condition}{arguments}"));
 			var sessions = Get<IInputSessionService>();
-			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=Answer:,120"));
+			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,120"));
 			var session = sessions.GetCapturing(player.Handle)!;
 			await Assert.That(session).IsNotNull();
 			var result = await sessions.DeliverAsync(parser, session, MarkupText.Plain("reply"));

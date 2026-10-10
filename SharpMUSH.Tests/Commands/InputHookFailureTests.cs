@@ -115,7 +115,7 @@ public class InputHookFailureTests
 			if (mode == "nested") await attributes.SetAttributeAsync(actor, actor, "NESTED", MarkupText.Plain("["));
 			await attributes.SetAttributeAsync(actor, actor, "HOOKBODY", MarkupText.Plain(hookText));
 			await attributes.SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain(commandName + (mode is "branch-extend" or "branch-invalid" ? "/extra" : "")));
-			await original.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=Answer:,120"));
+			await original.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start Answer:=done,me/CALLBACK,*,me/CALLBACK,120"));
 			var session = sessions.GetCapturing(player.Handle);
 			await Assert.That(session).IsNotNull();
 			var result = await sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));

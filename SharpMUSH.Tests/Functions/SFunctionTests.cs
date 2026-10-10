@@ -71,6 +71,21 @@ public class SFunctionTests
 	}
 
 	/// <summary>
+	/// Inside objeval() the caller is whoever ran it: fun_objeval passes its executor as the caller of
+	/// the evaluation, so %@ there names the object that asked, not the one evaluated as.
+	/// </summary>
+	[Test]
+	public async Task Objeval_CallerIsTheObjectThatAsked()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), "ObjevalCaller");
+
+		var result = await Parser.FunctionParse(MarkupText.Plain($"objeval(#{mortal.Number},num(me) %@ [objeval(#1,%@)])"));
+
+		await Assert.That(result!.Message.ToString()).IsEqualTo($"#{mortal.Number} #1 #{mortal.Number}");
+	}
+
+	/// <summary>
 	/// Argument zero's failure metadata survives: a parse failure there is reported on objeval()'s
 	/// result, as default() and the other NoParse functions that evaluate their own arguments do.
 	/// </summary>
@@ -80,5 +95,38 @@ public class SFunctionTests
 		var result = await Parser.FunctionParse(MarkupText.Plain(@"objeval(ulambda(#lambda/\[),add(1,2))"));
 
 		await Assert.That(result!.HadErrors).IsTrue();
+	}
+
+	/// <summary>
+	/// objevals() evaluates what its text argument gives, as the object; objeval() hands the same
+	/// text back, since its one pass only substitutes the argument.
+	/// </summary>
+	[Test]
+	public async Task Objevals_EvaluatesTheTextAsTheObject()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), "ObjevalsAs");
+
+		var text = await Parser.FunctionParse(MarkupText.Plain($"objevals(#{mortal.Number},lit([num(me)] %@))"));
+		var once = await Parser.FunctionParse(MarkupText.Plain($"objeval(#{mortal.Number},lit([num(me)] %@))"));
+
+		await Assert.That(text!.Message.ToString()).IsEqualTo($"#{mortal.Number} #1");
+		await Assert.That(once!.Message.ToString()).IsEqualTo("[num(me)] %@");
+	}
+
+	/// <summary>
+	/// Without control, objevals() evaluates as the one who asked, as objeval() does.
+	/// </summary>
+	[Test]
+	public async Task Objevals_WithoutControl_EvaluatesAsTheExecutor()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var asking = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, "ObjevalsAsking");
+		var other = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, "ObjevalsOther");
+
+		var result = await Parser.FunctionParse(MarkupText.Plain(
+			$"objeval(#{asking.Number},objevals(#{other.Number},lit([num(me)])))"));
+
+		await Assert.That(result!.Message.ToString()).IsEqualTo($"#{asking.Number}");
 	}
 }

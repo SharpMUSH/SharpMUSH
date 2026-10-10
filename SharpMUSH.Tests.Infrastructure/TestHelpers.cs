@@ -363,6 +363,12 @@ public static class TestHelpers
 				call.ArgAt<long>(0),
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
 
+		notifier
+			.When(x => x.NotifyLocalizedToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<object[]>()))
+			.Do(call => DeliverToHandle(
+				call.ArgAt<long>(0),
+				localization.Format(call.ArgAt<string>(2), null, call.ArgAt<object[]>(3))));
+
 		// NotifyAndReturn both delivers and produces the command's return value. A substitute with no
 		// configuration for it answers default(CallState) — a null the visitor reads as "no command
 		// ran", so a refusal reached the player as its own command line echoed back and the message
