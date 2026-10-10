@@ -207,7 +207,7 @@ explicitEvaluationString__CallInGroup_RCE_G:
 bracketPattern__CallInGroup_RCE_G: OBRACK evaluationString__CallInGroup_RCE_G? CBRACK;
 regexpCapture__CallInGroup_RCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__CallInGroup_RCE_G? CCARET?;
 validSubstitution__CallInGroup_RCE_G: complexSubstitutionSymbol__CallInGroup_RCE_G | substitutionSymbol;
-complexSubstitutionSymbol__CallInGroup_RCE_G: (REG_STARTCARET explicitEvaluationString__CallInGroup_RCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__CallInGroup_RCE_G: (REG_STARTCARET explicitEvaluationString__CallInGroup_RCE_G CCARET | ARG_STARTCARET explicitEvaluationString__CallInGroup_RCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__CallInGroup_RCE_G: beginGenericText__CallInGroup_RCE_G;
 beginGenericText__CallInGroup_RCE_G: CPAREN | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -288,7 +288,7 @@ explicitEvaluationString__CallInGroup_RSCE_G:
 bracketPattern__CallInGroup_RSCE_G: OBRACK evaluationString__CallInGroup_RSCE_G? CBRACK;
 regexpCapture__CallInGroup_RSCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G? CCARET?;
 validSubstitution__CallInGroup_RSCE_G: complexSubstitutionSymbol__CallInGroup_RSCE_G | substitutionSymbol;
-complexSubstitutionSymbol__CallInGroup_RSCE_G: (REG_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__CallInGroup_RSCE_G: (REG_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G CCARET | ARG_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__CallInGroup_RSCE_G: beginGenericText__CallInGroup_RSCE_G;
 beginGenericText__CallInGroup_RSCE_G: CPAREN | SEMICOLON | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -317,7 +317,7 @@ explicitEvaluationString__CallInGroup_RSCE_G2:
 bracketPattern__CallInGroup_RSCE_G2: OBRACK evaluationString__CallInGroup_RSCE_G2? CBRACK;
 regexpCapture__CallInGroup_RSCE_G2: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G2? CCARET?;
 validSubstitution__CallInGroup_RSCE_G2: complexSubstitutionSymbol__CallInGroup_RSCE_G2 | substitutionSymbol;
-complexSubstitutionSymbol__CallInGroup_RSCE_G2: (REG_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G2 CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__CallInGroup_RSCE_G2: (REG_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G2 CCARET | ARG_STARTCARET explicitEvaluationString__CallInGroup_RSCE_G2 CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__CallInGroup_RSCE_G2: beginGenericText__CallInGroup_RSCE_G2;
 beginGenericText__CallInGroup_RSCE_G2: CPAREN | SEMICOLON | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -345,7 +345,7 @@ function__Call_E: FUNCHAR evaluationString__Call_E? (COMMAWS evaluationString__C
 bracketPattern__Call_E: OBRACK evaluationString__Call_E? CBRACK;
 regexpCapture__Call_E: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Call_E? CCARET?;
 validSubstitution__Call_E: complexSubstitutionSymbol__Call_E | substitutionSymbol;
-complexSubstitutionSymbol__Call_E: (REG_STARTCARET explicitEvaluationString__Call_E CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Call_E: (REG_STARTCARET explicitEvaluationString__Call_E CCARET | ARG_STARTCARET explicitEvaluationString__Call_E CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Call_E: beginGenericText__Call_E | FUNCHAR;
 beginGenericText__Call_E: EQUALS | OPAREN | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -427,7 +427,7 @@ function__Call_E_G: FUNCHAR evaluationString__Call_E_G? (COMMAWS evaluationStrin
 bracketPattern__Call_E_G: OBRACK evaluationString__Call_E_G? CBRACK;
 regexpCapture__Call_E_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Call_E_G? CCARET?;
 validSubstitution__Call_E_G: complexSubstitutionSymbol__Call_E_G | substitutionSymbol;
-complexSubstitutionSymbol__Call_E_G: (REG_STARTCARET explicitEvaluationString__Call_E_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Call_E_G: (REG_STARTCARET explicitEvaluationString__Call_E_G CCARET | ARG_STARTCARET explicitEvaluationString__Call_E_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Call_E_G: beginGenericText__Call_E_G;
 beginGenericText__Call_E_G: EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -455,7 +455,7 @@ function__Call_SE: FUNCHAR evaluationString__Call_SE? (COMMAWS evaluationString_
 bracketPattern__Call_SE: OBRACK evaluationString__Call_SE? CBRACK;
 regexpCapture__Call_SE: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Call_SE? CCARET?;
 validSubstitution__Call_SE: complexSubstitutionSymbol__Call_SE | substitutionSymbol;
-complexSubstitutionSymbol__Call_SE: (REG_STARTCARET explicitEvaluationString__Call_SE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Call_SE: (REG_STARTCARET explicitEvaluationString__Call_SE CCARET | ARG_STARTCARET explicitEvaluationString__Call_SE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Call_SE: beginGenericText__Call_SE | FUNCHAR;
 beginGenericText__Call_SE: SEMICOLON | EQUALS | OPAREN | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -483,7 +483,7 @@ function__Call_SE2: FUNCHAR evaluationString__Call_SE2? (COMMAWS evaluationStrin
 bracketPattern__Call_SE2: OBRACK evaluationString__Call_SE2? CBRACK;
 regexpCapture__Call_SE2: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Call_SE2? CCARET?;
 validSubstitution__Call_SE2: complexSubstitutionSymbol__Call_SE2 | substitutionSymbol;
-complexSubstitutionSymbol__Call_SE2: (REG_STARTCARET explicitEvaluationString__Call_SE2 CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Call_SE2: (REG_STARTCARET explicitEvaluationString__Call_SE2 CCARET | ARG_STARTCARET explicitEvaluationString__Call_SE2 CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Call_SE2: beginGenericText__Call_SE2 | FUNCHAR;
 beginGenericText__Call_SE2: SEMICOLON | EQUALS | OPAREN | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -617,7 +617,7 @@ function__Call_SE_G: FUNCHAR evaluationString__Call_SE_G? (COMMAWS evaluationStr
 bracketPattern__Call_SE_G: OBRACK evaluationString__Call_SE_G? CBRACK;
 regexpCapture__Call_SE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Call_SE_G? CCARET?;
 validSubstitution__Call_SE_G: complexSubstitutionSymbol__Call_SE_G | substitutionSymbol;
-complexSubstitutionSymbol__Call_SE_G: (REG_STARTCARET explicitEvaluationString__Call_SE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Call_SE_G: (REG_STARTCARET explicitEvaluationString__Call_SE_G CCARET | ARG_STARTCARET explicitEvaluationString__Call_SE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Call_SE_G: beginGenericText__Call_SE_G;
 beginGenericText__Call_SE_G: SEMICOLON | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -647,7 +647,7 @@ function__Call_SE_G2: FUNCHAR evaluationString__Call_SE_G2? (COMMAWS evaluationS
 bracketPattern__Call_SE_G2: OBRACK evaluationString__Call_SE_G2? CBRACK;
 regexpCapture__Call_SE_G2: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Call_SE_G2? CCARET?;
 validSubstitution__Call_SE_G2: complexSubstitutionSymbol__Call_SE_G2 | substitutionSymbol;
-complexSubstitutionSymbol__Call_SE_G2: (REG_STARTCARET explicitEvaluationString__Call_SE_G2 CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Call_SE_G2: (REG_STARTCARET explicitEvaluationString__Call_SE_G2 CCARET | ARG_STARTCARET explicitEvaluationString__Call_SE_G2 CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Call_SE_G2: beginGenericText__Call_SE_G2;
 beginGenericText__Call_SE_G2: SEMICOLON | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -920,7 +920,7 @@ explicitEvaluationString__TopInGroup_RCE_G:
 bracketPattern__TopInGroup_RCE_G: OBRACK evaluationString__TopInGroup_RCE_G? CBRACK;
 regexpCapture__TopInGroup_RCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__TopInGroup_RCE_G? CCARET?;
 validSubstitution__TopInGroup_RCE_G: complexSubstitutionSymbol__TopInGroup_RCE_G | substitutionSymbol;
-complexSubstitutionSymbol__TopInGroup_RCE_G: (REG_STARTCARET explicitEvaluationString__TopInGroup_RCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__TopInGroup_RCE_G: (REG_STARTCARET explicitEvaluationString__TopInGroup_RCE_G CCARET | ARG_STARTCARET explicitEvaluationString__TopInGroup_RCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__TopInGroup_RCE_G: beginGenericText__TopInGroup_RCE_G;
 beginGenericText__TopInGroup_RCE_G: CPAREN | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1004,7 +1004,7 @@ explicitEvaluationString__TopInGroup_RSCE_G:
 bracketPattern__TopInGroup_RSCE_G: OBRACK evaluationString__TopInGroup_RSCE_G? CBRACK;
 regexpCapture__TopInGroup_RSCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__TopInGroup_RSCE_G? CCARET?;
 validSubstitution__TopInGroup_RSCE_G: complexSubstitutionSymbol__TopInGroup_RSCE_G | substitutionSymbol;
-complexSubstitutionSymbol__TopInGroup_RSCE_G: (REG_STARTCARET explicitEvaluationString__TopInGroup_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__TopInGroup_RSCE_G: (REG_STARTCARET explicitEvaluationString__TopInGroup_RSCE_G CCARET | ARG_STARTCARET explicitEvaluationString__TopInGroup_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__TopInGroup_RSCE_G: beginGenericText__TopInGroup_RSCE_G;
 beginGenericText__TopInGroup_RSCE_G: CPAREN | SEMICOLON | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1034,7 +1034,7 @@ explicitEvaluationString__TopInGroup_RSC_G:
 bracketPattern__TopInGroup_RSC_G: OBRACK evaluationString__TopInGroup_RSC_G? CBRACK;
 regexpCapture__TopInGroup_RSC_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__TopInGroup_RSC_G? CCARET?;
 validSubstitution__TopInGroup_RSC_G: complexSubstitutionSymbol__TopInGroup_RSC_G | substitutionSymbol;
-complexSubstitutionSymbol__TopInGroup_RSC_G: (REG_STARTCARET explicitEvaluationString__TopInGroup_RSC_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__TopInGroup_RSC_G: (REG_STARTCARET explicitEvaluationString__TopInGroup_RSC_G CCARET | ARG_STARTCARET explicitEvaluationString__TopInGroup_RSC_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__TopInGroup_RSC_G: beginGenericText__TopInGroup_RSC_G;
 beginGenericText__TopInGroup_RSC_G: CPAREN | SEMICOLON | COMMAWS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1061,7 +1061,7 @@ explicitEvaluationString__Top_RCE:
 bracketPattern__Top_RCE: OBRACK evaluationString__Top_RCE? CBRACK;
 regexpCapture__Top_RCE: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RCE? CCARET?;
 validSubstitution__Top_RCE: complexSubstitutionSymbol__Top_RCE | substitutionSymbol;
-complexSubstitutionSymbol__Top_RCE: (REG_STARTCARET explicitEvaluationString__Top_RCE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RCE: (REG_STARTCARET explicitEvaluationString__Top_RCE CCARET | ARG_STARTCARET explicitEvaluationString__Top_RCE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RCE: beginGenericText__Top_RCE | FUNCHAR;
 beginGenericText__Top_RCE: CPAREN | COMMAWS | EQUALS | OPAREN | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1142,7 +1142,7 @@ explicitEvaluationString__Top_RCE_G:
 bracketPattern__Top_RCE_G: OBRACK evaluationString__Top_RCE_G? CBRACK;
 regexpCapture__Top_RCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RCE_G? CCARET?;
 validSubstitution__Top_RCE_G: complexSubstitutionSymbol__Top_RCE_G | substitutionSymbol;
-complexSubstitutionSymbol__Top_RCE_G: (REG_STARTCARET explicitEvaluationString__Top_RCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RCE_G: (REG_STARTCARET explicitEvaluationString__Top_RCE_G CCARET | ARG_STARTCARET explicitEvaluationString__Top_RCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RCE_G: beginGenericText__Top_RCE_G;
 beginGenericText__Top_RCE_G: CPAREN | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1185,7 +1185,7 @@ bracePattern__Top_RSC: OBRACE braceExplicitEvaluationString__Top_RSC? CBRACE;
 bracketPattern__Top_RSC: OBRACK evaluationString__Top_RSC? CBRACK;
 regexpCapture__Top_RSC: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSC? CCARET?;
 validSubstitution__Top_RSC: complexSubstitutionSymbol__Top_RSC | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSC: (REG_STARTCARET explicitEvaluationString__Top_RSC CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSC: (REG_STARTCARET explicitEvaluationString__Top_RSC CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSC CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSC: beginGenericText__Top_RSC | FUNCHAR;
 beginGenericText__Top_RSC: CPAREN | SEMICOLON | COMMAWS | OPAREN | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1314,7 +1314,7 @@ bracePattern__Top_RSCE: OBRACE braceExplicitEvaluationString__Top_RSCE? CBRACE;
 bracketPattern__Top_RSCE: OBRACK evaluationString__Top_RSCE? CBRACK;
 regexpCapture__Top_RSCE: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSCE? CCARET?;
 validSubstitution__Top_RSCE: complexSubstitutionSymbol__Top_RSCE | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSCE: (REG_STARTCARET explicitEvaluationString__Top_RSCE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSCE: (REG_STARTCARET explicitEvaluationString__Top_RSCE CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSCE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSCE: beginGenericText__Top_RSCE | FUNCHAR;
 beginGenericText__Top_RSCE: CPAREN | SEMICOLON | COMMAWS | EQUALS | OPAREN | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1449,7 +1449,7 @@ bracePattern__Top_RSCE_G: OBRACE braceExplicitEvaluationString__Top_RSCE_G? CBRA
 bracketPattern__Top_RSCE_G: OBRACK evaluationString__Top_RSCE_G? CBRACK;
 regexpCapture__Top_RSCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSCE_G? CCARET?;
 validSubstitution__Top_RSCE_G: complexSubstitutionSymbol__Top_RSCE_G | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSCE_G: (REG_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSCE_G: (REG_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSCE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSCE_G: beginGenericText__Top_RSCE_G;
 beginGenericText__Top_RSCE_G: CPAREN | SEMICOLON | COMMAWS | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1498,7 +1498,7 @@ bracePattern__Top_RSC_G: OBRACE braceExplicitEvaluationString__Top_RSC_G? CBRACE
 bracketPattern__Top_RSC_G: OBRACK evaluationString__Top_RSC_G? CBRACK;
 regexpCapture__Top_RSC_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSC_G? CCARET?;
 validSubstitution__Top_RSC_G: complexSubstitutionSymbol__Top_RSC_G | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSC_G: (REG_STARTCARET explicitEvaluationString__Top_RSC_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSC_G: (REG_STARTCARET explicitEvaluationString__Top_RSC_G CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSC_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSC_G: beginGenericText__Top_RSC_G;
 beginGenericText__Top_RSC_G: CPAREN | SEMICOLON | COMMAWS | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1525,7 +1525,7 @@ explicitEvaluationString__Top_RSE:
 bracketPattern__Top_RSE: OBRACK evaluationString__Top_RSE? CBRACK;
 regexpCapture__Top_RSE: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSE? CCARET?;
 validSubstitution__Top_RSE: complexSubstitutionSymbol__Top_RSE | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSE: (REG_STARTCARET explicitEvaluationString__Top_RSE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSE: (REG_STARTCARET explicitEvaluationString__Top_RSE CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSE CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSE: beginGenericText__Top_RSE | FUNCHAR;
 beginGenericText__Top_RSE: CPAREN | SEMICOLON | EQUALS | OPAREN | (escapedText | OTHER | DOLLAR | ansi);
 
@@ -1627,7 +1627,7 @@ explicitEvaluationString__Top_RSE_G:
 bracketPattern__Top_RSE_G: OBRACK evaluationString__Top_RSE_G? CBRACK;
 regexpCapture__Top_RSE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSE_G? CCARET?;
 validSubstitution__Top_RSE_G: complexSubstitutionSymbol__Top_RSE_G | substitutionSymbol;
-complexSubstitutionSymbol__Top_RSE_G: (REG_STARTCARET explicitEvaluationString__Top_RSE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
+complexSubstitutionSymbol__Top_RSE_G: (REG_STARTCARET explicitEvaluationString__Top_RSE_G CCARET | ARG_STARTCARET explicitEvaluationString__Top_RSE_G CCARET | REG_NUM | REG_ALPHA | ITEXT_NUM | ITEXT_LAST | STEXT_NUM | STEXT_LAST | VWX);
 genericText__Top_RSE_G: beginGenericText__Top_RSE_G;
 beginGenericText__Top_RSE_G: CPAREN | SEMICOLON | EQUALS | (escapedText | OTHER | DOLLAR | ansi);
 

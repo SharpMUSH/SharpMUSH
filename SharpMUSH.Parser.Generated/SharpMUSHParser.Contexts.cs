@@ -185,6 +185,7 @@ public partial class SharpMUSHParser
 	public interface IComplexSubstitutionSymbolContext : ISoftcodeContext
 	{
 		ITerminalNode REG_STARTCARET() => SoftcodeTree.Token(this, SharpMUSHParser.REG_STARTCARET, 0);
+		ITerminalNode ARG_STARTCARET() => SoftcodeTree.Token(this, SharpMUSHParser.ARG_STARTCARET, 0);
 		IExplicitEvaluationStringContext explicitEvaluationString() => SoftcodeTree.Rule<IExplicitEvaluationStringContext>(this, 0);
 		ITerminalNode CCARET() => SoftcodeTree.Token(this, SharpMUSHParser.CCARET, 0);
 		ITerminalNode REG_NUM() => SoftcodeTree.Token(this, SharpMUSHParser.REG_NUM, 0);

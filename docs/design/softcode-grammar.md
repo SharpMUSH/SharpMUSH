@@ -37,7 +37,7 @@ A context is the set of facts that decide what the five tokens mean:
 | mode | the entry point: plain, command list (`;` separates), command args (`,` separates), or before the `=` of an `=` split |
 | F | inside a function call, since the last brace (a brace starts over) |
 | B | inside a brace, at any depth |
-| K | inside a register or capture name (`%q<...>`, `$<...>`) |
+| K | inside a register, argument or capture name (`%q<...>`, `%<...>`, `$<...>`) |
 | P | with paren_groups: outside a group, inside one (its `)` closes it), or in brackets or a name inside one |
 | G | paren_groups is on |
 

@@ -1015,6 +1015,17 @@ public partial record ParserState
 		=> RegexpCaptures is { } frame && frame.TryGetValue(name, out var value)
 			? value
 			: MarkupText.Empty;
+
+	/// <summary>
+	/// The argument <paramref name="name"/>, as <c>%&lt;name&gt;</c> and <c>r(&lt;name&gt;,args)</c> read it:
+	/// a position (<c>0</c> is <c>%0</c>) or a name given by a regexp $-command, mapsql() or uargs().
+	/// Names are case-insensitive, as <c>pe_regs_get</c> upper-cases them; an exact match wins.
+	/// </summary>
+	public MString Argument(string name)
+		=> EnvironmentRegisters.TryGetValue(name, out var exact)
+			? exact.Message
+			: EnvironmentRegisters.FirstOrDefault(pair => pair.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+				.Value?.Message ?? MarkupText.Empty;
 }
 
 /// <summary>

@@ -15,7 +15,7 @@ SharpMUSH is a modern MUSH server that *targets* PennMUSH compatibility but dive
 - **Never bracket a bare %-substitution.** `%0`, `%q<name>`, `%#` — as-is. `[%0]` does nothing.
 - **Player-typed input is single-command mode**: a `;` typed at the client is literal text. Command lists (`;`-separated) exist only inside stored attributes and command arguments. Brace `{}` a segment whose own `;` must not split the list.
 - **Attribute trees use backticks**, never dots: `` CMD`SETRANK ``, `` DATA`GUILD`<objid> ``. `*`/`?` wildcards stop at a backtick; `**` crosses it (``examine obj/BRANCH`**``).
-- `%0`–`%9` = arguments; `%#` = enactor dbref; `%:` = enactor objid; `%q<name>` = named q-register (set with `setq(name, value)`; register names are case-insensitive).
+- `%0`–`%9` = arguments; `%#` = enactor dbref; `%:` = enactor objid; `%q<name>` = named q-register (set with `setq(name, value)`; register names are case-insensitive). `%<name>` = named argument, scoped to the one call like `%0` (passed by `uargs(obj/attr, name, value, ...)`, a regex `$`-command's named capture, or `mapsql()`). Pass a helper named arguments with `uargs()` rather than q-registers it would read, and rather than `%0`-`%9` whose meaning the reader has to look up.
 
 ## Core substitutions & tools
 
@@ -43,7 +43,7 @@ Never build nested `@switch` ladders for validation. Guard with `@assert`/`@brea
 - Factor reusable guards/steps into `` INC`<NAME> `` attributes pulled in with `@include` (runs inline; its `@break` stops the caller; `/nobreak`, `/localize`, `/clearregs` fence that off).
 - `@include/chain me/INC`A me/INC`B me/INC`C=%0` runs a pipeline: same args to every link, shared q-registers, a fired `@break`/`@assert` short-circuits the rest.
 - Naming: `` CMD`<NAME> `` for $-commands, `` FUN` `` for functions, `` INC` `` for includes, `` DATA` `` for data; grow a second level (`` CMD`WIZARD`<NAME> ``) to lock whole branches at once.
-- Regex commands need the attribute flagged: ``@set obj/CMD`X=Regex``; read named captures with `r(Name, args)`. Match switches loosely and validate inside — an over-tight pattern gives players a bare `Huh?`.
+- Regex commands need the attribute flagged: ``@set obj/CMD`X=Regex``; read named captures with `%<Name>` (or `r(Name, args)`). Match switches loosely and validate inside — an over-tight pattern gives players a bare `Huh?`.
 
 ## Data: one datum per leaf
 

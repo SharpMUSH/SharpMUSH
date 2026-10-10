@@ -38,10 +38,10 @@
 | [HASFLAG()]    | [LATTR()]      | [LFLAGS()]     | [NATTR()]      |
 | [OBJ()]        | [OWNER()]      | [PFUN()]       | [POSS()]       |
 | [REGLATTR()]   | [REGREP()]     | [REGREPI()]    | [REGXATTR()]   |
-| [SET()]        | [SUBJ()]       | [U()]          | [UDEFAULT()]   |
-| [UFUN()]       | [ULAMBDA()]    | [ULDEFAULT()]  | [ULOCAL()]     |
-| [V()]          | [WILDGREP()]   | [WILDGREPI()]  | [XATTR()]      |
-| [XGET()]       | [ZFUN()]       |                |                |
+| [SET()]        | [SUBJ()]       | [U()]          | [UARGS()]      |
+| [UDEFAULT()]   | [UFUN()]       | [ULAMBDA()]    | [ULDEFAULT()]  |
+| [ULOCAL()]     | [V()]          | [WILDGREP()]   | [WILDGREPI()]  |
+| [XATTR()]      | [XGET()]       | [ZFUN()]       |                |
 
 ::: seealso
 - [attributes]
@@ -4279,7 +4279,7 @@ think permission(me, wiki.delete)
   `<type>` defaults to "qregisters", and must be one of:
 
     qregisters - registers set with setq(), setr() and similar functions<br>
-    args       - the stack, usually accessed via %0-%9. There are up to 30 stack registers, plus named stack registers from regexp $-commands<br>
+    args       - the stack, usually accessed via %0-%9. There are up to 30 stack registers, plus named arguments from regexp $-commands, mapsql() and uargs(), also available as %`\<name\>`. Names are case-insensitive.<br>
     iter       - itext() context from iter() or @dolist. Must be an int, or "L" for the outermost itext().<br>
     switch     - stext() context from switch() or @switch. Must be an int, or "L" for the outermost stext()<br>
     regexp     - regexp capture names from re*() regexp functions

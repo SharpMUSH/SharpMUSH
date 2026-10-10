@@ -1070,6 +1070,31 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// <c>uargs(&lt;obj&gt;/&lt;attr&gt;, &lt;name&gt;, &lt;value&gt;, ...)</c>: <c>ufun()</c> with named arguments.
+	/// The attribute reads each with <c>%&lt;name&gt;</c> or <c>r(&lt;name&gt;,args)</c>; it gets no
+	/// <c>%0</c>-<c>%9</c> unless a name is a number. Like every argument, they end with the call.
+	/// </summary>
+	[SharpFunction(Name = "uargs", MinArgs = 1, MaxArgs = 65, Flags = FunctionFlags.Regular | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["object/attribute", "name", "value..."])]
+	public async ValueTask<CallState> UserAttributeNamedArguments(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var arguments = parser.CurrentState.ArgumentsOrdered.Skip(1).Select(pair => pair.Value).Chunk(2).ToList();
+		if (arguments.Any(pair => pair[0].Message.ToPlainText().Trim().Length == 0))
+			return new CallState(ErrorMessages.Returns.BadArgumentName);
+
+		var named = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+		foreach (var pair in arguments)
+			named[pair[0].Message.ToPlainText().Trim()] = pair[1];
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await AttributeService.EvaluateAttributeFunctionResultAsync(
+			parser,
+			executor,
+			objAndAttribute: parser.CurrentState.Arguments["0"].Message,
+			args: named,
+			ignoreLambda: true);
+	}
+
+	/// <summary>
 	/// PennMUSH's <c>fun_pfun</c> (<c>funufun.c:244-292</c>): the attribute is read from the executor's
 	/// parent through <c>atr_get</c> (the parent's own chain and type ancestor), with no permission
 	/// check; a no_inherit or internal attribute is refused even on the parent itself; and the code runs
