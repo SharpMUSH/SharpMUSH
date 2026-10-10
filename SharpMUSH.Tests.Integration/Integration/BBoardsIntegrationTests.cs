@@ -407,7 +407,8 @@ public partial class BBoardsIntegrationTests
 			await TypedUntil(mira, $"+bbreader {board}", "Upward");
 			await TypedUntil(mira, "u", "+bbread <#> opens one.");
 			await TypedUntil(mira, number, "Upward");
-			await TypedUntil(mira, $"+bbread {post}", "Read me after going up.");
+			await TypedUntil(mira, "+BBNEXT", "Read me after going up.");
+			await TypedUntil(mira, $"+bbread {board}", "Upward");
 			await TypedUntil(mira, "q", "Left the reader.");
 		}
 		finally

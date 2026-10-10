@@ -636,7 +636,7 @@ objects:
       # reader shows send them, so a click there moves the reader too; a page switch is the page j and k
       # go on from.
       INC`READER`KEY`COMMAND: |-
-        think [setqm(reader_command_word,after(before(%q<reader_key_word>,/),+bb),reader_command_switches,if(strmatch(%q<reader_key_word>,*/*),/[after(%q<reader_key_word>,/)]))][u({{bboards}}/FUN`COMMAND`PARSE,%q<reader_command_word>,%q<reader_command_switches>,%q<reader_key_rest>)];&BBOARD`READER`PAGE %q<reader_holder>=%q<page_number>;@include {{bboards}}/INC`CMD`%q<cmd_route>
+        think [setqm(reader_command_word,after(lcstr(before(%q<reader_key_word>,/)),+bb),reader_command_switches,if(strmatch(%q<reader_key_word>,*/*),/[after(%q<reader_key_word>,/)]))][u({{bboards}}/FUN`COMMAND`PARSE,%q<reader_command_word>,%q<reader_command_switches>,%q<reader_key_rest>)];&BBOARD`READER`PAGE %q<reader_holder>=%q<page_number>;@include {{bboards}}/INC`CMD`%q<cmd_route>
       # Enter or n: the next new thing, as +bbnext shows it.
       INC`READER`KEY`NEXT: |-
         think [u({{bboards}}/FUN`COMMAND`PARSE,next,,)];@include {{bboards}}/INC`CMD`NEXT
