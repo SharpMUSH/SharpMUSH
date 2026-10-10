@@ -1,9 +1,12 @@
+using System.Globalization;
+using MarkupString.Layout;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -52,10 +55,17 @@ public partial class Commands
 			var filtered = string.IsNullOrWhiteSpace(arg0)
 				? accounts
 				: accounts.Where(a => a.Username.Contains(arg0, StringComparison.OrdinalIgnoreCase)).ToList();
-			var lines = filtered.Select(a =>
-				$"{a.Username,-30} {StatusLabel(a.Status),-10} {(a.MustChangePassword ? "must-change-pw" : string.Empty)}");
-			await NotifyService.Notify(executor,
-				filtered.Count == 0 ? "No matching accounts." : string.Join("\n", lines));
+			if (filtered.Count == 0)
+			{
+				await NotifyService.Notify(executor, "No matching accounts.");
+				return CallState.Empty;
+			}
+
+			var fields = new Fields([.. filtered.Select(AccountEntry)]) { Columns = 3 };
+			var panel = filtered.Any(a => a.MustChangePassword)
+				? ServerLayout.Panel(MarkupText.Plain("Accounts"), fields, ServerLayout.Body(MarkupText.Plain("* must change password at next login")))
+				: ServerLayout.Panel(MarkupText.Plain("Accounts"), fields);
+			await NotifyService.Notify(executor, ServerLayout.Build(panel, 78));
 			return CallState.Empty;
 		}
 
@@ -179,16 +189,30 @@ public partial class Commands
 		}
 
 		// No switch: show details.
-		var characters = await AccountService.GetCharactersAsync(account.Id!);
-		var charList = characters.Count == 0
-			? "  (none)"
-			: string.Join("\n", characters.Select(c => $"  {c.Object.Name} (#{c.Object.Key})"));
-		await NotifyService.Notify(executor,
-			$"Account: {account.Username}\n" +
-			$"Email: {account.Email ?? "(none)"}\n" +
-			$"Status: {StatusLabel(account.Status)}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
-			$"Characters:\n{charList}");
+		await NotifyService.Notify(executor, await DescribeAccountAsync(account));
 		return CallState.Empty;
+	}
+
+	/// <summary>An account's email, status and characters, as a panel titled with its name.</summary>
+	private async ValueTask<MString> DescribeAccountAsync(SharpAccount account)
+	{
+		var characters = await AccountService.GetCharactersAsync(account.Id!);
+		var details = ServerLayout.KeyValues([
+			("Email", MarkupText.Plain(account.Email ?? "(none)")),
+			("Status", account.MustChangePassword
+				? MarkupText.Concat(StatusLabel(account.Status), MarkupText.Plain(", must change password"))
+				: StatusLabel(account.Status)),
+			("Characters", MarkupText.Plain(characters.Count.ToString(CultureInfo.InvariantCulture)))]);
+		Block characterList = characters.Count == 0
+			? new TextBlock(MarkupText.Plain("No characters."))
+			: ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Character")) { Min = 10 },
+					new TableColumn(MarkupText.Plain("Dbref")) { Wrap = false },
+				],
+				characters.Select(character => (IEnumerable<string>)[character.Object.Name, $"#{character.Object.Key}"]));
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Account {account.Username}"),
+			details, new Rule(), characterList), 78);
 	}
 
 	/// <summary>
@@ -291,9 +315,20 @@ public partial class Commands
 		return target.IsGod() ? !executor.IsGod() : await target.IsWizard() && !await executor.IsWizard();
 	}
 
-	private string StatusLabel(AccountStatus status) => status switch
+	/// <summary>One <c>@account/list</c> entry: the account's name, a <c>*</c> when it must change its password, and its state.</summary>
+	private Field AccountEntry(SharpAccount account) =>
+		new(MarkupText.Plain(account.Username + (account.MustChangePassword ? "*" : string.Empty)), new TextBlock(StatusLabel(account.Status)));
+
+	/// <summary>An account's state in the reader's theme colour for it.</summary>
+	private static MarkupText StatusLabel(AccountStatus status)
 	{
-		AccountStatus.Active => "active",
-		_ => status.ToString().ToUpperInvariant()
-	};
+		var role = status switch
+		{
+			AccountStatus.Active => ThemeRole.Success,
+			AccountStatus.Disabled => ThemeRole.Warning,
+			AccountStatus.Closed => ThemeRole.Muted,
+			_ => ThemeRole.Error
+		};
+		return ToneMarkup.Build(role, MarkupText.Plain(status.ToString().ToLowerInvariant()), ToneMarkup.Standard(role));
+	}
 }

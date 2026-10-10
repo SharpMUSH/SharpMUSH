@@ -1,10 +1,12 @@
 using System.Globalization;
+using MarkupString.Layout;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -51,12 +53,32 @@ public partial class Commands
 		var report = await service.InspectAsync(actor, ct: ExecutionBudget.CurrentToken);
 		if (report is not QueueDiagnosticsReport { Profile: { } profile })
 			return await DiagnosticFailure(parser, report is DiagnosticsError error ? error : DiagnosticsError.NotFound);
-		var rows = string.Join('\n', profile.Rows.Select(row =>
-			$"{row.Source ?? "?"}{(row.SourceAttribute is null ? "" : "/" + row.SourceAttribute)} {row.Kind} {row.Name} " +
-			$"{row.Count} {row.Failures} {row.InclusiveMilliseconds.ToString("F2", CultureInfo.InvariantCulture)} {row.MaximumMilliseconds.ToString("F2", CultureInfo.InvariantCulture)}"));
-		await NotifyService.NotifyLocalized(executor, "QueueProfileReport", profile.ExpiresAt.ToString("u"), rows);
+		var table = ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("Source")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Kind")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Name")) { Min = 8 },
+				new TableColumn(MarkupText.Plain("Calls")) { Alignment = Alignment.Right, Wrap = false },
+				new TableColumn(MarkupText.Plain("Failed")) { Alignment = Alignment.Right, Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Total ms")) { Alignment = Alignment.Right, Wrap = false },
+				new TableColumn(MarkupText.Plain("Max ms")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+			],
+			profile.Rows.Select(row => (IEnumerable<string>)
+			[
+				DiagnosticSource(row.Source, row.SourceAttribute), row.Kind, row.Name,
+				row.Count.ToString(CultureInfo.InvariantCulture), row.Failures.ToString(CultureInfo.InvariantCulture),
+				Milliseconds(row.InclusiveMilliseconds), Milliseconds(row.MaximumMilliseconds)
+			]));
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Queue profile"), table), 78), executor);
+		await NotifyService.NotifyLocalized(executor, "QueueProfileReport", profile.ExpiresAt.ToString("u"));
 		return CallState.Empty;
 	}
+
+	private static string DiagnosticSource(string? source, string? attribute)
+		=> (source ?? "?") + (attribute is null ? "" : "/" + attribute);
+
+	private static string Milliseconds(double milliseconds)
+		=> milliseconds.ToString("F2", CultureInfo.InvariantCulture);
 
 	private async ValueTask<Option<CallState>> QueueHistory(IMUSHCodeParser parser)
 	{
@@ -78,11 +100,27 @@ public partial class Commands
 
 	private async ValueTask<Option<CallState>> ReportQueueHistory(AnySharpObject executor, QueueDiagnosticsReport report)
 	{
-		var rows = string.Join('\n', report.Recent.Select(row =>
-			$"{row.Pid?.ToString() ?? "-"} {row.Source ?? "?"}{(row.SourceAttribute is null ? "" : "/" + row.SourceAttribute)} {row.Owner ?? "?"} {row.Kind} {row.Status} " +
-			$"{row.WaitDuration?.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture) ?? "-"} " +
-			$"{row.ExecutionDuration?.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture) ?? "-"} {row.InvocationCount}"));
-		await NotifyService.NotifyLocalized(executor, "QueueHistoryReport", rows);
+		var table = ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("PID")) { Alignment = Alignment.Right, Wrap = false },
+				new TableColumn(MarkupText.Plain("Source")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Owner")) { Wrap = false, Priority = 3 },
+				new TableColumn(MarkupText.Plain("Kind")) { Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Outcome")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Wait ms")) { Alignment = Alignment.Right, Wrap = false, Priority = 2 },
+				new TableColumn(MarkupText.Plain("Run ms")) { Alignment = Alignment.Right, Wrap = false },
+				new TableColumn(MarkupText.Plain("Calls")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+			],
+			report.Recent.Select(row => (IEnumerable<string>)
+			[
+				row.Pid?.ToString(CultureInfo.InvariantCulture) ?? "-", DiagnosticSource(row.Source, row.SourceAttribute),
+				row.Owner ?? "?", row.Kind, row.Status,
+				row.WaitDuration is { } wait ? Milliseconds(wait.TotalMilliseconds) : "-",
+				row.ExecutionDuration is { } run ? Milliseconds(run.TotalMilliseconds) : "-",
+				row.InvocationCount?.ToString(CultureInfo.InvariantCulture) ?? "-"
+			]));
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Queue history"), table), 78), executor);
+		await NotifyService.NotifyLocalized(executor, "QueueHistoryReport");
 		return CallState.Empty;
 	}
 

@@ -1411,7 +1411,7 @@ public class MovementParityTests
 		await Assert.That(seen.Count(m => m == "You climb out.")).IsEqualTo(1);
 
 		// enter_room's look is the only one: a trailing `look` in the command would name the room twice.
-		await Assert.That(seen.Count(m => m.StartsWith(roomName, StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(seen.Count(m => m.Contains($"{roomName}(", StringComparison.Ordinal))).IsEqualTo(1);
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 	}
 

@@ -1872,6 +1872,19 @@ public partial class Commands : ICommandRestrictionApplier
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// A flag's or power's details as a panel titled with its name; <c>/debug</c> adds the stored id.
+	/// </summary>
+	private static MString DescribeDefinition(DefinitionRegistry registry, RegistryEntry entry, bool debug)
+	{
+		// The first field is the name, which the title carries.
+		var fields = registry.Describe(entry)[1..];
+		IEnumerable<(string Label, string Value)> shown = debug ? [("ID", entry.Id ?? "N/A"), .. fields] : fields;
+		var title = MarkupText.Plain($"{registry.Kind} {entry.Name}{(debug ? " (debug)" : string.Empty)}");
+		return ServerLayout.Build(ServerLayout.Panel(title,
+			ServerLayout.KeyValues(shown.Select(field => (field.Label, MarkupText.Plain(field.Value))))), 78);
+	}
+
 	private enum DefinitionOperation { Default, List, Add, Delete, Letter, Type, Alias, Restrict, Decompile, Disable, Enable, Debug }
 
 	private static DefinitionOperation SelectDefinitionOperation(IEnumerable<string> switches, bool power)
@@ -1912,7 +1925,8 @@ public partial class Commands : ICommandRestrictionApplier
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var operation = SelectDefinitionOperation(parser.CurrentState.Switches, power: false);
 
-		if (operation != DefinitionOperation.Default)
+		// cmd_flag (src/cmds.c:545): with no switch, a name is do_flag_info and nothing is the usage.
+		if (operation != DefinitionOperation.Default || parser.CurrentState.Arguments.Count > 0)
 		{
 			return await EditDefinitionAsync(FlagRegistry, parser, executor, operation);
 		}
@@ -1962,15 +1976,7 @@ public partial class Commands : ICommandRestrictionApplier
 				return CallState.Empty;
 			}
 
-			var info = new System.Text.StringBuilder();
-			info.AppendLine($"{"Name",9}: {namedPower.Name}");
-			info.AppendLine($"{"Character",9}: {namedPower.Symbol}");
-			info.AppendLine($"{"Aliases",9}: {string.Join(" ", namedPower.Aliases)}");
-			info.AppendLine($"{"Type(s)",9}: {string.Join(" ", namedPower.TypeRestrictions)}");
-			info.AppendLine($"{"Perms",9}: {string.Join(" ", namedPower.SetPermissions)}");
-			info.Append($"{"ResetPrms",9}: {string.Join(" ", namedPower.UnsetPermissions)}");
-
-			await NotifyService.Notify(executor, info.ToString(), executor);
+			await NotifyService.Notify(executor, DescribeDefinition(PowerRegistry, FromPower(namedPower), debug: false), executor);
 			return new CallState(MarkupText.Plain(namedPower.Name));
 		}
 
@@ -2013,7 +2019,8 @@ public partial class Commands : ICommandRestrictionApplier
 		string ListTitle,
 		ImmutableArray<TableColumn> ListColumns,
 		Func<RegistryEntry, string[]> ListRow,
-		Func<RegistryEntry, string[]> Describe,
+		string Kind,
+		Func<RegistryEntry, (string Label, string Value)[]> Describe,
 		RegistryMessages Messages);
 
 	/// <summary>The message keys (and, for the three unlocalised results, formats) of one registry.</summary>
@@ -2047,16 +2054,17 @@ public partial class Commands : ICommandRestrictionApplier
 			new(MarkupText.Plain("Type Restrictions")) { Min = 10 },
 		],
 		ListRow: flag => [flag.Name, flag.Symbol, string.Join(",", flag.TypeRestrictions)],
+		Kind: "Flag",
 		Describe: flag =>
 		[
-			$"Flag: {flag.Name}",
-			$"Symbol: {flag.Symbol}",
-			$"System: {(flag.System ? "Yes" : "No")}",
-			$"Disabled: {(flag.Disabled ? "Yes" : "No")}",
-			$"Aliases: {(flag.Aliases is { Length: > 0 } aliases ? string.Join(", ", aliases) : "none")}",
-			$"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}",
-			$"Set Permissions: {string.Join(", ", flag.SetPermissions)}",
-			$"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}"
+			("Flag", flag.Name),
+			("Symbol", flag.Symbol),
+			("System", flag.System ? "Yes" : "No"),
+			("Disabled", flag.Disabled ? "Yes" : "No"),
+			("Aliases", flag.Aliases is { Length: > 0 } aliases ? string.Join(", ", aliases) : "none"),
+			("Type Restrictions", string.Join(", ", flag.TypeRestrictions)),
+			("Set Permissions", string.Join(", ", flag.SetPermissions)),
+			("Unset Permissions", string.Join(", ", flag.UnsetPermissions))
 		],
 		Messages: new(
 			AddRequires: nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol),
@@ -2117,16 +2125,17 @@ public partial class Commands : ICommandRestrictionApplier
 			new(MarkupText.Plain("Type Restrictions")) { Min = 10 },
 		],
 		ListRow: power => [power.Name, power.Symbol, string.Join(",", power.Aliases ?? []), string.Join(",", power.TypeRestrictions)],
+		Kind: "Power",
 		Describe: power =>
 		[
-			$"Power: {power.Name}",
-			$"Symbol: {power.Symbol}",
-			$"Aliases: {(power.Aliases is { Length: > 0 } aliases ? string.Join(", ", aliases) : "none")}",
-			$"System: {(power.System ? "Yes" : "No")}",
-			$"Disabled: {(power.Disabled ? "Yes" : "No")}",
-			$"Type Restrictions: {string.Join(", ", power.TypeRestrictions)}",
-			$"Set Permissions: {string.Join(", ", power.SetPermissions)}",
-			$"Unset Permissions: {string.Join(", ", power.UnsetPermissions)}"
+			("Power", power.Name),
+			("Symbol", power.Symbol),
+			("Aliases", power.Aliases is { Length: > 0 } aliases ? string.Join(", ", aliases) : "none"),
+			("System", power.System ? "Yes" : "No"),
+			("Disabled", power.Disabled ? "Yes" : "No"),
+			("Type Restrictions", string.Join(", ", power.TypeRestrictions)),
+			("Set Permissions", string.Join(", ", power.SetPermissions)),
+			("Unset Permissions", string.Join(", ", power.UnsetPermissions))
 		],
 		Messages: new(
 			AddRequires: nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias),
@@ -2207,7 +2216,7 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		// Authorize the selected operation, not an unrelated switch in the same request.
-		if (operation is not (DefinitionOperation.Decompile or DefinitionOperation.Debug) && !executor.IsGod())
+		if (operation is not (DefinitionOperation.Default or DefinitionOperation.Decompile or DefinitionOperation.Debug) && !executor.IsGod())
 		{
 			return await Say(nameof(ErrorMessages.Notifications.NotEnoughMagic));
 		}
@@ -2242,7 +2251,7 @@ public partial class Commands : ICommandRestrictionApplier
 			DefinitionOperation.Type => keys.TypeRequires,
 			DefinitionOperation.Alias => keys.AliasRequires,
 			DefinitionOperation.Restrict => keys.RestrictRequires,
-			DefinitionOperation.Decompile => keys.DecompileRequires,
+			DefinitionOperation.Default or DefinitionOperation.Decompile => keys.DecompileRequires,
 			DefinitionOperation.Debug => nameof(ErrorMessages.Notifications.FlagDebugRequiresName),
 			_ => keys.DisableEnableRequires
 		};
@@ -2260,7 +2269,7 @@ public partial class Commands : ICommandRestrictionApplier
 		{
 			DefinitionOperation.Type when string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value) => keys.NameAndTypesEmpty,
 			DefinitionOperation.Restrict when string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value) => keys.NameAndPermissionsEmpty,
-			DefinitionOperation.Decompile or DefinitionOperation.Debug => null,
+			DefinitionOperation.Default or DefinitionOperation.Decompile or DefinitionOperation.Debug => null,
 			_ when string.IsNullOrWhiteSpace(typed) => keys.NameEmpty,
 			_ => null
 		};
@@ -2271,13 +2280,16 @@ public partial class Commands : ICommandRestrictionApplier
 			return await Say(keys.NotFound, typed);
 		}
 
-		if (operation is DefinitionOperation.Decompile or DefinitionOperation.Debug)
+		if (operation is DefinitionOperation.Decompile)
 		{
-			var lines = registry.Describe(entry);
-			string[] output = operation == DefinitionOperation.Debug
-				? [$"DEBUG - {lines[0]}", $"ID: {entry.Id ?? "N/A"}", .. lines[1..]]
-				: lines;
-			await NotifyService.Notify(executor, string.Join(Environment.NewLine, output), executor);
+			var lines = registry.Describe(entry).Select(field => $"{field.Label}: {field.Value}");
+			await NotifyService.Notify(executor, string.Join(Environment.NewLine, lines), executor);
+			return CallState.Empty;
+		}
+
+		if (operation is DefinitionOperation.Default or DefinitionOperation.Debug)
+		{
+			await NotifyService.Notify(executor, DescribeDefinition(registry, entry, operation == DefinitionOperation.Debug), executor);
 			return CallState.Empty;
 		}
 

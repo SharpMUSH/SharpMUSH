@@ -230,10 +230,10 @@ apart - wrap `%2`-true links so the client runs them, and `%2`-false links so
 the client opens them.
 
 ## Example Usage
-Set up custom green color for headings:
+Colour headings with the reader's theme. `tone()` takes a theme colour's name, so each reader sees their own theme's colour, on a light theme as well as a dark one:
 ```sharp
-&RENDERMARKUP`H1 #123=[ansi(hg,%0)]
-&RENDERMARKUP`H2 #123=[ansi(hc,%0)]
+&RENDERMARKUP`H1 #123=[ansi(h,tone(primary,%0))]
+&RENDERMARKUP`H2 #123=[tone(secondary,%0)]
 think rendermarkdowncustom(# My Heading, #123)
 ```
 Output:
@@ -241,11 +241,11 @@ Output:
 My Heading
 ==========
 ```
-(heading rendered in bright green with ANSI code hg)
+(heading in bold, in the theme's primary colour)
 
-Set up custom code block with yellow header:
+Set up a custom code block with a header line:
 ```sharp
-&RENDERMARKUP`CODEBLOCK #123=[ansi(hy,CODE:)]%r[ansi(h,%0)]
+&RENDERMARKUP`CODEBLOCK #123=[tone(warning,CODE:)]%r[ansi(h,%0)]
 think rendermarkdowncustom(``````%rvar x = 42;%r```````, #123)
 ```
 Output:
@@ -253,13 +253,13 @@ Output:
 CODE:
   var x = 42;
 ```
-(CODE: in bright yellow, code content in white)
+(CODE: in the theme's warning colour, the code in bold)
 
 ## List examples
 
 Set up custom list items with colored bullets:
 ```sharp
-&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,%1.) %2,ansi(hb,*) %2)]
+&RENDERMARKUP`LISTITEM #123=[if(%0,tone(primary,%1.) %2,tone(info,*) %2)]
 think rendermarkdowncustom(- First%r- Second%r- Third, #123)
 ```
 Output:
@@ -268,11 +268,11 @@ Output:
 * Second
 * Third
 ```
-(bullets in bright blue via ANSI code hb)
+(bullets in the theme's info colour)
 
 Ordered list with custom template:
 ```sharp
-&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,%1.) %2,ansi(hb,*) %2)]
+&RENDERMARKUP`LISTITEM #123=[if(%0,tone(primary,%1.) %2,tone(info,*) %2)]
 think rendermarkdowncustom(1. First%r2. Second%r3. Third, #123)
 ```
 Output:
@@ -281,13 +281,13 @@ Output:
 2. Second
 3. Third
 ```
-(numbers in bright red via ANSI code hr)
+(numbers in the theme's primary colour)
 
 Complete example with multiple custom elements:
 ```sharp
-&RENDERMARKUP`H1 #123=[ansi(hc,%0)]
-&RENDERMARKUP`LISTITEM #123=[ansi(hg,->)] %2
-&RENDERMARKUP`QUOTE #123=[ansi(hy,%0)]
+&RENDERMARKUP`H1 #123=[ansi(h,tone(primary,%0))]
+&RENDERMARKUP`LISTITEM #123=[tone(success,->)] %2
+&RENDERMARKUP`QUOTE #123=[tone(muted,%0)]
 think rendermarkdowncustom(# Tasks%r%r- Do this%r- Do that%r%r> Important note, #123)
 ```
 Output:
@@ -300,13 +300,13 @@ Tasks
 
   Important note
 ```
-(heading in cyan, arrow bullets in green, quote in yellow)
+(heading in the primary colour, arrows in the success colour, quote in the muted colour)
 
 ## Wiki link example
 
 Spell out where a wiki link goes, instead of only styling it:
 ```sharp
-&RENDERMARKUP`WIKILINK #123=[ansi(hc,%0)] %(@wiki %1%)
+&RENDERMARKUP`WIKILINK #123=[tone(info,%0)] %(@wiki %1%)
 think rendermarkdowncustom(See %[%[Help:Markdown Guide%]%] first., #123)
 ```
 Output:
@@ -329,7 +329,7 @@ rebuilds the default look with `lalign()`:
 &FUN`TABLE`CELL #123=[rendermarkdown([json_query(%1,unescape)],[max(10,json_query(%q<wd>,get,%2))])]
 &FUN`TABLE`ROW #123=[lalign(%q<spec>,[json_map(#123/FUN`TABLE`CELL,%0,|)],|)]
 &FUN`TABLE`ROWJ #123=[u(#123/FUN`TABLE`ROW,%1)]
-&FUN`TABLE`HEAD #123=[ansi(hw,[u(#123/FUN`TABLE`ROW,[json_query(%0,get,head)])])]
+&FUN`TABLE`HEAD #123=[ansi(h,[u(#123/FUN`TABLE`ROW,[json_query(%0,get,head)])])]
 &FUN`TABLE`RULE #123=[repeat(-,%q<tw>)]
 &FUN`TABLE`BODY #123=[json_map(#123/FUN`TABLE`ROWJ,[json_query(%0,get,rows)],%r)]
 &RENDERMARKUP`TABLE #123=[setq(wd,json_query(%0,get,widths))][setq(spec,json_map(#123/FUN`TABLE`SPEC,[json_query(%0,get,align)],%b))][setq(tw,add(lmath(add,[json_map(#123/FUN`VAL,%q<wd>,%b)]),sub(json_query(%q<wd>,size),1)))][jiter(#123/FUN`TABLE`HEAD #123/FUN`TABLE`RULE #123/FUN`TABLE`BODY,%0,%r)]
@@ -343,7 +343,7 @@ Command          Effect     Cost
 @wiki/search   Find pages      1
 @wiki/audit   Staff report
 ```
-(header in bright white, `index` bold because the cell was passed through
+(header in bold, `index` bold because the cell was passed through
 `rendermarkdown()`, and the short last row padded out by `lalign()`)
 
 Three registers are computed once from the payload: `%q<wd>` keeps `widths` as

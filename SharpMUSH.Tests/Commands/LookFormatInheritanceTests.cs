@@ -124,8 +124,46 @@ public class LookFormatInheritanceTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
-		await Assert.That(heard).Contains((string line) => line.StartsWith($"Room_{token}", StringComparison.Ordinal));
+		await Assert.That(heard).Contains((string line) => line.Contains($"Room_{token}", StringComparison.Ordinal));
 		await Assert.That(heard).DoesNotContain((string line) => line.Contains("Contents:", StringComparison.Ordinal));
 		await Assert.That(heard).DoesNotContain((string line) => line.Contains(player.Name, StringComparison.Ordinal));
+	}
+
+	/// <summary>
+	/// <c>look_exits</c> and <c>look_contents</c> (<c>look.c</c>) call EXITFORMAT and CONFORMAT before they
+	/// count anything, so a room with nothing to list still shows what its formats say.
+	/// </summary>
+	[Test]
+	public async Task Look_RunsTheFormatsOfAnEmptyRoom()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("empty");
+		var (player, parser, _) = await MortalInOwnRoom(token);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&EXITFORMAT here=NOEXITS_{token}:[words(%0)]"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&CONFORMAT here=NOCONTENTS_{token}:[words(%0)]"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+		await Assert.That(heard).Contains($"NOEXITS_{token}:0");
+		await Assert.That(heard).Contains($"NOCONTENTS_{token}:0");
+	}
+
+	/// <summary>Without a format, an empty room lists no headings, and a format that says nothing shows nothing.</summary>
+	[Test]
+	public async Task Look_ShowsNoHeadingsForAnEmptyRoom()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("bare");
+		var (player, parser, _) = await MortalInOwnRoom(token);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&EXITFORMAT here=[null(%0)]"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+		await Assert.That(heard).Contains((string line) => line.Contains($"Room_{token}", StringComparison.Ordinal));
+		await Assert.That(heard).DoesNotContain((string line) => line.Contains("Obvious exits:", StringComparison.Ordinal));
+		await Assert.That(heard).DoesNotContain((string line) => line.Contains("Contents:", StringComparison.Ordinal));
+		await Assert.That(heard).DoesNotContain((string line) => line.Length == 0);
 	}
 }

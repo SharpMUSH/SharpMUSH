@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -54,18 +55,12 @@ public static class ListWiki
 		var pages = await wikiService.GetAllPagesAsync(0, MaxListed, ns, visibility);
 		var total = await wikiService.CountPagesAsync(ns, visibility);
 
-		var lines = new List<MString>
-		{
-			MarkupText.Plain($"WIKI: {total} page(s){(ns is null ? "" : $" in namespace '{nsText!.ToLowerInvariant()}'")}:"),
-		};
-		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
-			.Select(l => MarkupText.Plain("  " + l)));
 		// Both terms are drawn from the same population — the pages this reader may see — so the remainder
-		// is "visible pages past the window", and neither the header nor this line reveals a draft.
-		if (total > pages.Count)
-			lines.Add(MarkupText.Plain($"  … and {total - pages.Count} more. See the web portal for the full index."));
-
-		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		// is "visible pages past the window", and neither the title nor this line reveals a draft.
+		var output = WikiCommandHelper.PageListing(
+			$"{total} page(s){(ns is null ? "" : $" in namespace '{nsText!.ToLowerInvariant()}'")}",
+			await PageRowsAsync(localization, pages, locale, forceSource),
+			after: total > pages.Count ? $"… and {total - pages.Count} more. See the web portal for the full index." : null);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
@@ -104,15 +99,13 @@ public static class ListWiki
 		var names = forceSource
 			? null
 			: await localization.GetCategoryNamesAsync(locale, await WikiCommandHelper.VisibilityAsync(parser, executor));
-		var lines = new List<MString>
-		{
-			MarkupText.Plain($"WIKI: Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies):"),
-		};
-		lines.AddRange(subcategories.Select(p => MarkupText.Plain($"  Category:{WikiHelpers.CategoryLabel(p.Slug, names)}")));
-		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
-			.Select(l => MarkupText.Plain("  " + l)));
-
-		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		var output = WikiCommandHelper.PageListing(
+			$"Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies)",
+			await PageRowsAsync(localization, pages, locale, forceSource),
+			before: subcategories.Count == 0
+				? null
+				: ServerLayout.KeyValues([("Subcategories", MarkupText.Plain(string.Join(", ",
+					subcategories.Select(p => $"Category:{WikiHelpers.CategoryLabel(p.Slug, names)}"))))]));
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
@@ -142,19 +135,15 @@ public static class ListWiki
 			wikiService, localization, needle, MaxSearchResults,
 			await WikiCommandHelper.VisibilityAsync(parser, executor), locale, forceSource);
 
-		var lines = new List<MString>
-		{
-			MarkupText.Plain($"WIKI: {matches.Count} page(s) matching '{needle}':"),
-		};
 		// The locale marker mirrors @wiki/view's: shown only when the hit is somewhere the reader is not
 		// already looking. Without it, a page whose English title and body contain the needle nowhere looks
 		// like a false positive.
-		lines.AddRange(matches.Select(m => MarkupText.Plain("  " + WikiCommandHelper.FormatPageLine(m.Page)
-			+ (m.Locale.Equals(localization.SourceLocaleOf(m.Page), StringComparison.OrdinalIgnoreCase)
-				? string.Empty
-				: $" [{m.Locale}]"))));
-
-		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		var rows = matches.Select(m => WikiCommandHelper.PageRow(m.Page) switch
+		{
+			var row when m.Locale.Equals(localization.SourceLocaleOf(m.Page), StringComparison.OrdinalIgnoreCase) => row,
+			var row => [row[0], $"{row[1]} [{m.Locale}]", .. row[2..]],
+		}).ToList();
+		var output = WikiCommandHelper.PageListing($"{matches.Count} page(s) matching '{needle}'", rows);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
@@ -189,34 +178,31 @@ public static class ListWiki
 		var pages = await wikiService.GetRecentChangesAsync(
 			count, await WikiCommandHelper.VisibilityAsync(parser, executor));
 
-		var lines = new List<MString> { MarkupText.Plain("WIKI: Recently edited pages:") };
-		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
-			.Select(l => MarkupText.Plain("  " + l)));
-
-		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		var output = WikiCommandHelper.PageListing("Recently edited pages",
+			await PageRowsAsync(localization, pages, locale, forceSource));
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
 
 	/// <summary>
-	/// Formats a listing, resolving each title into the reader's locale unless <paramref name="forceSource"/>.
+	/// A listing's rows, each title resolved into the reader's locale unless <paramref name="forceSource"/>.
 	/// </summary>
 	/// <remarks>
 	/// <c>includeDrafts: false</c> even for a wizard: a listing is a discovery surface, and an unpublished
 	/// translation's title appearing in it is exactly the leak the visibility filter exists to prevent. A
 	/// staffer who wants to see a draft translation opens the page.
 	/// </remarks>
-	private static async ValueTask<IReadOnlyList<string>> FormatPagesAsync(
+	private static async ValueTask<IReadOnlyCollection<string[]>> PageRowsAsync(
 		IWikiLocalizationService localization,
 		IReadOnlyList<WikiPage> pages,
 		string? locale,
 		bool forceSource)
 	{
 		if (forceSource)
-			return pages.Select(WikiCommandHelper.FormatPageLine).ToList();
+			return pages.Select(WikiCommandHelper.PageRow).ToList();
 
 		var localized = await localization.LocalizeAllAsync(pages, locale, includeDrafts: false);
-		return localized.Select(WikiCommandHelper.FormatPageLine).ToList();
+		return localized.Select(WikiCommandHelper.PageRow).ToList();
 	}
 
 	/// <summary>

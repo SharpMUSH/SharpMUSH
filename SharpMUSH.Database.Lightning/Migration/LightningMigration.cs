@@ -39,7 +39,7 @@ public partial class LightningDatabase
 				await Store.WriteAsync(ApplyInitialSeed, cancellationToken);
 				// After the object seed because it writes attributes onto #4 owned by #1, and through
 				// SetAttributeAsync rather than raw puts so the stored values match what a write in game makes.
-				await AncestorSeed.SeedAncestorPlayerFormatsAsync(this, cancellationToken);
+				await AncestorSeed.SeedAncestorFormatsAsync(this, cancellationToken);
 				await RecordMigrationAsync(InitialMigrationId, cancellationToken);
 			}
 
@@ -255,6 +255,13 @@ public partial class LightningDatabase
 			WriteInitialAttribute(tx, image.Dbref, "IMAGE`BANNER", image.Banner);
 			WriteInitialAttribute(tx, image.Dbref, "IMAGE`ALT", image.Alt);
 			WriteInitialAttribute(tx, image.Dbref, "IMAGE`FOCAL", image.Focal);
+		}
+
+		// A room shows its picture (the Ancestor Room's DESCFORMAT) only when it may show pictures itself.
+		var rooms = InitialObjectSeed.Objects.Where(seed => seed.Type == "ROOM").Select(seed => seed.Dbref).ToHashSet();
+		foreach (var room in InitialObjectImageSeed.Objects.Where(image => rooms.Contains(image.Dbref)))
+		{
+			WriteObjectOverride(tx, room.Dbref, PortalPermission.GamePower("Send_Image"), PermissionState.Allow);
 		}
 
 		tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(10));

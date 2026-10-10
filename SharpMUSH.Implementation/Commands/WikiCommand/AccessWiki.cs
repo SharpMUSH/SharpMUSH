@@ -1,3 +1,4 @@
+using MarkupString.Layout;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -5,6 +6,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -63,9 +65,8 @@ public static class AccessWiki
 		switch (result)
 		{
 			case WikiRequirements requirements:
-				var lines = new List<MString> { MarkupText.Plain($"WIKI: {target.Label} now requires:") };
-				lines.AddRange(Describe(requirements.For(target.Rule)));
-				var output = MarkupText.Join(MarkupText.NewLine, lines);
+				var output = ServerLayout.Build(
+					ServerLayout.Section(MarkupText.Plain($"{target.Label} now requires"), Describe(requirements.For(target.Rule))), 78);
 				await notifyService.Notify(executor, output, executor);
 				return MarkupText.Plain(target.Rule.ToString());
 			case Error<string> error:
@@ -106,26 +107,26 @@ public static class AccessWiki
 		}
 
 		var requirements = await access.RequirementsAsync();
-		var lines = new List<MString>();
 		var playerText = playerArg?.ToPlainText().Trim() ?? string.Empty;
+		Block shown;
 
 		if (playerText.Length == 0)
 		{
-			lines.Add(MarkupText.Plain($"WIKI: {target.Label} requires:"));
-			lines.AddRange(Describe(requirements.For(target.Rule)));
+			List<Block> parts = [Describe(requirements.For(target.Rule))];
 			if (target is PageTarget page)
 			{
 				var inherited = new[] { WikiRuleTarget.ForNamespace(page.Page.Namespace) }
 					.Concat(page.Page.Categories.Select(WikiRuleTarget.ForCategory))
 					.Select(requirements.For)
-					.OfType<WikiRequirementSet>()
-					.ToList();
+					.OfType<WikiRequirementSet>();
 				foreach (var set in inherited)
 				{
-					lines.Add(MarkupText.Plain($"  From {set.Target}:"));
-					lines.AddRange(Describe(set).Select(line => MarkupText.Plain("  " + line.ToPlainText())));
+					parts.Add(new Rule(MarkupText.Plain($"From {set.Target}")) { TitleAlignment = Alignment.Left });
+					parts.Add(Describe(set));
 				}
 			}
+
+			shown = ServerLayout.Section(MarkupText.Plain($"{target.Label} requires"), [.. parts]);
 		}
 		else
 		{
@@ -147,18 +148,20 @@ public static class AccessWiki
 			}
 
 			var reader = await access.ForObjectAsync(who);
-			lines.Add(MarkupText.Plain($"WIKI: What {player.Object.Name} may do with {target.Label}:"));
+			var decisions = new List<(string Label, MString Value)>();
 			foreach (var action in Enum.GetValues<WikiAction>().Where(a => a != WikiAction.Create))
 			{
 				var decision = await access.DecideAsync(reader, page.Page, action);
-				lines.Add(MarkupText.Plain($"  {action.ToString().ToLowerInvariant(),-7} {decision.Describe()}"));
+				decisions.Add((action.ToString(), MarkupText.Plain(decision.Describe())));
 			}
 
+			List<Block> parts = [ServerLayout.KeyValues(decisions)];
 			if (!access.MaySeeDraft(reader, page.Page))
-				lines.Add(MarkupText.Plain("  The page is a draft, which needs wiki.drafts to read."));
+				parts.Add(new TextBlock(MarkupText.Plain("The page is a draft, which needs wiki.drafts to read.")));
+			shown = ServerLayout.Section(MarkupText.Plain($"What {player.Object.Name} may do with {target.Label}"), [.. parts]);
 		}
 
-		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		var output = ServerLayout.Build(shown, 78);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
@@ -211,12 +214,15 @@ public static class AccessWiki
 		return changes.Count > 0 ? changes : null;
 	}
 
-	private static IEnumerable<MString> Describe(WikiRequirementSet? set)
+	/// <summary>Each action a set requires something for, with what it requires.</summary>
+	private static Block Describe(WikiRequirementSet? set)
 	{
-		var lines = Enum.GetValues<WikiAction>()
+		var required = Enum.GetValues<WikiAction>()
 			.Where(action => set?.For(action).Count > 0)
-			.Select(action => MarkupText.Plain($"  {action.ToString().ToLowerInvariant(),-7} {string.Join(" ", set!.For(action))}"))
+			.Select(action => (action.ToString(), MarkupText.Plain(string.Join(" ", set!.For(action)))))
 			.ToList();
-		return lines.Count > 0 ? lines : [MarkupText.Plain("  nothing beyond the wiki.* permissions")];
+		return required.Count > 0
+			? ServerLayout.KeyValues(required)
+			: new TextBlock(MarkupText.Plain("Nothing beyond the wiki.* permissions."));
 	}
 }

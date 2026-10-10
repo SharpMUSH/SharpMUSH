@@ -73,8 +73,9 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookBasic");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look"));
 
-		// Use StartsWith because HALT flag ('h') gets set on Room Zero by other tests in the shared session
-		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("Room Zero(#0", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		// Not the whole name: the HALT flag ('h') gets set on Room Zero by other tests in the shared session.
+		// The Ancestor Room's NAMEFORMAT sets the name into a rule, so the line does not start with it.
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Room Zero(#0", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -82,12 +83,19 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookBasicAnsi");
+		var roomName = TestIsolationHelpers.GenerateUniqueName("LookAnsiRoom");
+		var room = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"))).Message.ToPlainText().Trim();
+		// %1 is the name as look would show it without the Ancestor Room's NAMEFORMAT, which strips it.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NAMEFORMAT {room}=%1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {testPlayer.DbRef}={room}"));
+		// Arriving looks too; only the explicit look below is counted.
+		var before = WebAppFactoryArg.Notifications.RawCountFor(testPlayer.DbRef);
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		// The room name must be sent as an MString that, when rendered as ANSI, contains escape codes
-		// because name.Hilight() applies bold+bright-white (ansi("hw", …) → ESC[1;37m).
-		await Assert.That(WebAppFactoryArg.Notifications.RawFor(testPlayer.DbRef)
-				.Where(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0") && RendersAnsiEscapes(msg)))
+		// because name.Hilight() makes it bold.
+		await Assert.That(WebAppFactoryArg.Notifications.RawFor(testPlayer.DbRef).Skip(before)
+				.Where(msg => TestHelpers.MessagePlainTextStartsWith(msg, $"{roomName}(#") && RendersAnsiEscapes(msg)))
 			.Count().IsEqualTo(1);
 	}
 
@@ -105,7 +113,7 @@ public class UtilityCommandTests
 	public async ValueTask ExamineObject_HeaderContainsNameAndDbref()
 	{
 		var testPlayer = await CreateWizardAsync("ExamNameDbref");
-		// We use plain-text check because name.Hilight() inserts ANSI codes (bold+bright-white) around the name.
+		// We use plain-text check because name.Hilight() inserts ANSI codes (bold) around the name.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
 		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith(NameRow(testPlayer), StringComparison.Ordinal))).Count().IsEqualTo(1);
@@ -116,7 +124,7 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await CreateWizardAsync("ExamNameAnsi");
 		// The name row output must be an MString where the ANSI render contains escape codes,
-		// because the object name is wrapped with Hilight() which applies bold+bright-white (ESC[1;37m).
+		// because the object name is wrapped with Hilight(), which makes it bold.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
 		await Assert.That(WebAppFactoryArg.Notifications.RawFor(testPlayer.DbRef)
