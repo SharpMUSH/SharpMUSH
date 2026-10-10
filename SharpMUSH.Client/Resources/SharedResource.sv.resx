@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>För att spela med skärmläsare i den här webbläsaren: bokstavstangenterna för utgångar är avstängda, dina egna kommandon läses inte upp igen, Alt och en siffra läser en av de senaste raderna igen (Alt+1 den nyaste), och spelet får veta det så att det kan utelämna bilder ritade med tecken.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Behåll längre loggar</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Sparar den här karaktärens spelutdata i den här webbläsaren, upp till {0} rader i {1} dagar, så att du kan rulla längre tillbaka, även efter att du stängt fliken. Alla som använder den här webbläsarprofilen kan läsa den. Stänger du av det raderas den.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Visa tidigare rader</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Inga tidigare rader sparade</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Snabblänkar</value>
   </data>

@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Om te spelen met een schermlezer in deze browser: de lettertoetsen voor uitgangen staan uit, je eigen opdrachten worden niet teruggelezen, Alt en een cijfer leest een recente regel opnieuw voor (Alt+1 de nieuwste), en het spel krijgt het te horen zodat het tekeningen van tekens kan weglaten.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Langere logs bewaren</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Bewaart de speluitvoer van dit personage in deze browser, tot {0} regels gedurende {1} dagen, zodat je verder terug kunt scrollen, ook nadat je het tabblad hebt gesloten. Iedereen die dit browserprofiel gebruikt, kan het lezen. Uitzetten verwijdert het.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Eerdere regels tonen</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Geen eerdere regels bewaard</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Snelkoppelingen</value>
   </data>

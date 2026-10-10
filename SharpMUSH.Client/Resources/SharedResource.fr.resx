@@ -5271,6 +5271,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Pour jouer avec un lecteur d'écran dans ce navigateur : les touches de lettre des sorties sont désactivées, vos propres commandes ne sont pas relues, Alt et un chiffre relit une ligne récente (Alt+1 la plus récente), et le jeu en est informé pour pouvoir omettre les images dessinées avec des caractères.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Garder des journaux plus longs</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Garde la sortie de jeu de ce personnage dans ce navigateur, jusqu'à {0} lignes pendant {1} jours, pour remonter plus loin, même après avoir fermé l'onglet. Toute personne utilisant ce profil de navigateur peut la lire. La désactivation l'efface.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Afficher les lignes précédentes</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Aucune ligne précédente gardée</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Liens rapides</value>
   </data>

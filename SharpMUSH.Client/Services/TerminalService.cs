@@ -22,8 +22,12 @@ namespace SharpMUSH.Client.Services;
 /// Mints the token that logs a reconnect the server could not resume back in. Without it, such a
 /// reconnect stays at the login screen.
 /// </param>
+/// <param name="log">
+/// Keeps the server's lines for the character, when the player turned the longer log on. Only the play
+/// terminal has one.
+/// </param>
 public partial class TerminalService(IWebSocketClientService wsService, ILogger<TerminalService> logger,
-	ITerminalLoginTokens? loginTokens = null)
+	ITerminalLoginTokens? loginTokens = null, TerminalLog? log = null)
 	: ITerminalService
 {
 	/// <summary>The most lines the buffer holds; a terminal's own transcript holds as many.</summary>
@@ -55,6 +59,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// <inheritdoc/>
 	public string? ServerUri => _serverUri;
 
+	/// <inheritdoc/>
+	public TerminalIdentity? Identity { get; private set; }
+
 	public IReadOnlyList<TerminalLine> Lines
 	{
 		// A copy taken under the lock: a view of the live list would be enumerated outside it while the
@@ -69,6 +76,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		Func<Func<string, Task>, CancellationToken, Task<bool>>? relogin)
 	{
 		_serverUri = serverUri;
+		Identity = identity;
 		// New connection/login: drop any OOB payloads from a previous session so the UI never
 		// renders stale cross-session data until fresh OOB arrives.
 		_oob.Clear();
@@ -409,6 +417,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// script call completes at once in the browser; a refused one only costs the stored screen.
 		if (keep && wsService.ResumeSlot is { } slot)
 			_ = slot.AppendLineAsync(line).AsTask();
+		// And in the longer log, when the player keeps one. Its script queues the line and returns.
+		if (keep && log is not null && Identity is { } identity)
+			_ = log.AppendAsync(identity, line);
 		LineReceived?.Invoke(line);
 	}
 }

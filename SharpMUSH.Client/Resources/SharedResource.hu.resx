@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Képernyőolvasóval való játékhoz ebben a böngészőben: a kijáratok betűbillentyűi ki vannak kapcsolva, a saját parancsaidat nem olvassa fel újra, az Alt és egy szám újra felolvas egy friss sort (Alt+1 a legújabbat), és a játék is tud róla, így elhagyhatja a karakterekből rajzolt képeket.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Hosszabb naplók megőrzése</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Megőrzi ennek a karakternek a játékkimenetét ebben a böngészőben, legfeljebb {0} sort {1} napig, hogy messzebb visszagörgethess, akár a lap bezárása után is. Bárki, aki ezt a böngészőprofilt használja, elolvashatja. Kikapcsolva törlődik.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Korábbi sorok megjelenítése</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Nincsenek megőrzött korábbi sorok</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Gyorshivatkozások</value>
   </data>

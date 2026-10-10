@@ -53,12 +53,44 @@
                     if (!reading) box.classList.remove('sharp-terminal--new');
                 };
                 el.addEventListener('scroll', el._sharpmushFollow, { passive: true });
+                // Hidden (display: none, as Play's terminal is under a channel view), the output has no height,
+                // so output arriving meanwhile cannot move it to the bottom; shown again, the browser puts back
+                // the old scroll offset without a scroll event, a screen or more above the newest line. A
+                // follower is put back at the bottom whenever its size changes, which includes being shown.
+                // Removed from the page, the output is resized to nothing too: the observer lets go of it
+                // then, or it would keep the unmounted terminal and its scrollback alive.
+                if (typeof ResizeObserver !== 'undefined') {
+                    var resized = new ResizeObserver(function () {
+                        if (!el.isConnected) { resized.disconnect(); return; }
+                        if (!el._sharpmushReading) el.scrollTop = el.scrollHeight;
+                    });
+                    resized.observe(el);
+                }
             }
             if (el._sharpmushReading) {
                 box.classList.add('sharp-terminal--new');
                 return;
             }
             el.scrollTop = el.scrollHeight;
+        },
+
+        // Earlier lines are about to go in above everything: holdPlace() notes how far the view is from the
+        // bottom, and restorePlace(), once they are in, puts it back there, so the lines the player was
+        // reading stay where they were. A view left above the bottom is reading, as if they had scrolled.
+        holdPlace: function (elementId) {
+            var el = document.getElementById(elementId);
+            if (el) el._sharpmushHeld = el.scrollHeight - el.scrollTop;
+        },
+
+        restorePlace: function (elementId) {
+            var el = document.getElementById(elementId);
+            if (!el || el._sharpmushHeld === undefined) return;
+            el.scrollTop = el.scrollHeight - el._sharpmushHeld;
+            delete el._sharpmushHeld;
+            var reading = el.scrollHeight - el.scrollTop - el.clientHeight > 48;
+            el._sharpmushReading = reading;
+            var box = el.closest('.sharp-terminal-container') || el;
+            box.classList.toggle('sharp-terminal--reading', reading);
         },
 
         // Back to the newest line, following again (the jump button, or the player sending a command).

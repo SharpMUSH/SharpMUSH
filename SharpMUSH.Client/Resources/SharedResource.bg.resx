@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>За игра с екранен четец в този браузър: буквените клавиши за изходи са изключени, собствените ви команди не се четат отново, Alt и цифра прочита отново един от последните редове (Alt+1 най-новия), а играта е уведомена, за да може да пропуска картинки, нарисувани със символи.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Пазене на по-дълги записи</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Пази изхода от играта на този персонаж в този браузър, до {0} реда за {1} дни, за да можете да превъртате по-назад, дори след като затворите раздела. Всеки, който ползва този профил на браузъра, може да го прочете. Изключването го изтрива.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Покажи по-ранни редове</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Няма запазени по-ранни редове</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Бързи връзки</value>
   </data>

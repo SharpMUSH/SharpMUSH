@@ -26,5 +26,5 @@ public interface IPlayTerminalService : ITerminalService;
 /// command/softcode terminal.
 /// </summary>
 public sealed class PlayTerminalService(IPlayWebSocketClientService wsService, ILogger<TerminalService> logger,
-	ITerminalLoginTokens? loginTokens = null)
-	: TerminalService(wsService, logger, loginTokens), IPlayTerminalService;
+	ITerminalLoginTokens? loginTokens = null, TerminalLog? log = null)
+	: TerminalService(wsService, logger, loginTokens, log), IPlayTerminalService;

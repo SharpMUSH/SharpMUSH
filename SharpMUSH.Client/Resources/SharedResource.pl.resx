@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Do gry z czytnikiem ekranu w tej przeglądarce: klawisze liter wyjść są wyłączone, Twoje własne polecenia nie są odczytywane ponownie, Alt i cyfra odczytuje ponownie jeden z ostatnich wierszy (Alt+1 najnowszy), a gra o tym wie, więc może pominąć obrazki rysowane znakami.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Zachowuj dłuższe logi</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Zachowuje wyjście gry tej postaci w tej przeglądarce, do {0} wierszy przez {1} dni, aby można było przewinąć dalej wstecz, nawet po zamknięciu karty. Każdy, kto korzysta z tego profilu przeglądarki, może je przeczytać. Wyłączenie usuwa je.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Pokaż wcześniejsze wiersze</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Brak zachowanych wcześniejszych wierszy</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Szybkie linki</value>
   </data>

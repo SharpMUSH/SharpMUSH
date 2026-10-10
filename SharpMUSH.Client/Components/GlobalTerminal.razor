@@ -11,6 +11,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject CommandHistory History
 @inject ScreenReaderMode ScreenReader
+@inject TerminalLog Log
 @implements IAsyncDisposable
 
 <div class="sharp-terminal-container" style="background:var(--surface-3);color:var(--text);font-family:var(--font-mono);font-size:0.84375rem;">
@@ -28,11 +29,28 @@
            horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
            and the measured NAWS is floored to match (see OnTerminalResize). *@
         <div class="sharp-terminal-track" style="@(TargetColumns > 0 ? $"min-width:{TargetColumns}ch;" : "")">
-            @* Keyed, so a full scrollback drops its oldest line instead of rewriting every line in place, which
-               the log would read out again from the top. *@
-            @foreach (var line in _transcript.Lines)
+            @if (EarlierOffered)
             {
-                <div @key="line" class="@GetLineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
+                <div class="sharp-terminal-earlier-bar">
+                    <button type="button" class="sharp-terminal-earlier-btn" disabled="@(_loadingEarlier || _noEarlier)" @onclick="LoadEarlierAsync">
+                        @(_noEarlier ? Loc["TermNoEarlierLines"] : Loc["TermShowEarlierLines"])
+                    </button>
+                </div>
+            }
+            @* Lines loaded from the kept log, above the log's own: added at the top, they are not new output
+               for the log to read out. *@
+            <div class="sharp-terminal-earlier" aria-live="off">
+                @foreach (var chunk in _transcript.Earlier)
+                {
+                    <TerminalChunkView @key="chunk.Id" Chunk="chunk" Version="chunk.Version" />
+                }
+            </div>
+            @* In chunks (TerminalTranscript): a new line renders its own chunk again, not the whole scrollback,
+               and a full scrollback drops its oldest chunk whole instead of rewriting every line in place,
+               which the log would read out again from the top. *@
+            @foreach (var chunk in _transcript.Live)
+            {
+                <TerminalChunkView @key="chunk.Id" Chunk="chunk" Version="chunk.Version" />
             }
             <div id="@_bottomId"></div>
         </div>
@@ -240,6 +258,11 @@
         ScreenReader.Changed += OnScreenReaderChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
         if (Terminal is TerminalServiceHost host) host.Recreated += OnRecreated;
+        if (KeepsLog)
+        {
+            Log.Changed += OnLogChanged;
+            _ = Log.LoadAsync();
+        }
 
         // Restore account session (sessionStorage is tab-scoped)
         await AccountAuth.InitAsync();
@@ -337,6 +360,13 @@
 
         if (_autoScroll)
             await ScrollToBottomAsync();
+
+        if (_restorePlace)
+        {
+            _restorePlace = false;
+            try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.restorePlace", _outputId); }
+            catch (JSException) { /* ignore if JS not ready */ }
+        }
 
         // The input line is enabled once the connection is up: that is when the page is ready to type in.
         if (Interactive && !_reviewKeys)
@@ -480,6 +510,7 @@
     public void ClearOutput()
     {
         _transcript.Clear();
+        _noEarlier = false;
         StateHasChanged();
     }
 
@@ -613,6 +644,7 @@
     private void OnRecreated() => InvokeAsync(() =>
     {
         _transcript = new TerminalTranscript(Terminal.Lines);
+        _noEarlier = false;
         StateHasChanged();
     });
 
@@ -635,12 +667,41 @@
         catch { /* ignore if JS not ready */ }
     }
 
-    private static string GetLineClass(TerminalLineSource source) => source switch
+    /// <summary>
+    /// Whether this terminal offers earlier lines from the player's longer log (<see cref="TerminalLog"/>):
+    /// the play terminal does, while the log is on and it is logged in as a character.
+    /// </summary>
+    [Parameter] public bool KeepsLog { get; set; }
+
+    private bool _loadingEarlier;
+    private bool _noEarlier;
+    private bool _restorePlace;
+
+    private bool EarlierOffered => KeepsLog && Log.On && Terminal.Identity is not null && _transcript.CanTakeEarlier;
+
+    /// <summary>Puts a page of kept lines above the oldest shown, keeping the view where it was.</summary>
+    private async Task LoadEarlierAsync()
     {
-        TerminalLineSource.Client => "terminal-line terminal-sent",
-        TerminalLineSource.System => "terminal-line terminal-system",
-        _ => "terminal-line"
-    };
+        if (_loadingEarlier || Terminal.Identity is not { } identity) return;
+        _loadingEarlier = true;
+        var earlier = await Log.EarlierAsync(identity, [.. _transcript.Lines]);
+        _loadingEarlier = false;
+        if (earlier.Count == 0)
+        {
+            _noEarlier = true;
+            return;
+        }
+        try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.holdPlace", _outputId); }
+        catch (JSException) { /* ignore if JS not ready */ }
+        _transcript.Prepend(earlier);
+        _restorePlace = true;
+    }
+
+    private void OnLogChanged() => _ = InvokeAsync(() =>
+    {
+        _noEarlier = false;
+        StateHasChanged();
+    });
 
     private bool _disposed;
 
@@ -660,6 +721,7 @@
         Terminal.LineReceived -= OnLineReceived;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         ScreenReader.Changed -= OnScreenReaderChanged;
+        Log.Changed -= OnLogChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
         if (Terminal is TerminalServiceHost host) host.Recreated -= OnRecreated;
 

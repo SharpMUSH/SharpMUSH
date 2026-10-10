@@ -629,6 +629,14 @@
     padding: 0.0625rem 0;
 }
 
+/* A terminal renders its lines in chunks of a hundred (TerminalChunkView). The browser skips laying out and
+   painting a chunk off screen; it stays in the page for find, selection and a screen reader. The size is a
+   stand-in until the chunk is first laid out, then its real height ("auto") is remembered. */
+.sharp-terminal-chunk {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 2400px;
+}
+
 /* A layout block in the terminal's pre-wrap text. As a block it already ends its line, so the newline
    softcode writes after a box() (before its footer) left an empty line under it. Laid inline across the
    whole line, the box is still on a line of its own and that newline only ends it. */

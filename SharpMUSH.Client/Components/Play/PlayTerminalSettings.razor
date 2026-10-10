@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Play's terminal settings menu: the width in columns, screen reader mode, Clear, and focus mode. The page
+@* Play's terminal settings menu: the width in columns, screen reader mode, the longer log, Clear, and focus mode. The page
    keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
 <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
              Open="Open" OpenChanged="OpenChanged">
@@ -25,6 +25,13 @@
                        aria-describedby="@ReaderWhat" @onchange="e => ScreenReaderChanged.InvokeAsync(e.Value is true)" />
             </label>
             <div class="play-cfg-note" id="@ReaderWhat">@Loc["NavScreenReaderModeTooltip"]</div>
+            @* Off until the player turns it on, with what it keeps and where said beside it (TerminalLog). *@
+            <label class="play-cfg-row">
+                <span>@Loc["NavKeepLongerLogs"]</span>
+                <input class="play-cfg-check" type="checkbox" checked="@KeepLogsOn"
+                       aria-describedby="@LogsWhat" @onchange="e => KeepLogsChanged.InvokeAsync(e.Value is true)" />
+            </label>
+            <div class="play-cfg-note" id="@LogsWhat">@Loc["NavKeepLongerLogsTooltip", TerminalLog.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays]</div>
             <button type="button" class="play-cfg-item" @onclick="OnClear">
                 <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:1rem;" />
                 <span>@Loc["TermClearTerminal"]</span>
@@ -57,12 +64,17 @@
     [Parameter] public bool ScreenReaderOn { get; set; }
     [Parameter] public EventCallback<bool> ScreenReaderChanged { get; set; }
 
+    /// <summary>The play terminal's longer log is on in this browser.</summary>
+    [Parameter] public bool KeepLogsOn { get; set; }
+    [Parameter] public EventCallback<bool> KeepLogsChanged { get; set; }
+
     [Parameter] public EventCallback OnClear { get; set; }
 
     [Parameter] public bool Focus { get; set; }
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }
 
     private string ReaderWhat => $"play-cfg-reader-what-{Menu}";
+    private string LogsWhat => $"play-cfg-logs-what-{Menu}";
 
     private Task CloseOnEscape(KeyboardEventArgs e) => e.Key == "Escape" ? OnEscape.InvokeAsync() : Task.CompletedTask;
 }

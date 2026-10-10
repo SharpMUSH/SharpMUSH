@@ -5977,6 +5977,18 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Za igranje s čitačem zaslona u ovom pregledniku: tipke sa slovima za izlaze su isključene, vaše vlastite naredbe ne čitaju se ponovno, Alt i broj ponovno čita jedan od nedavnih redaka (Alt+1 najnoviji), a igra to zna pa može izostaviti slike nacrtane znakovima.</value>
   </data>
+  <data name="NavKeepLongerLogs" xml:space="preserve">
+    <value>Čuvaj duže zapise</value>
+  </data>
+  <data name="NavKeepLongerLogsTooltip" xml:space="preserve">
+    <value>Čuva izlaz igre ovog lika u ovom pregledniku, do {0} redaka tijekom {1} dana, kako biste mogli pomicati dalje unatrag, čak i nakon zatvaranja kartice. Svatko tko koristi ovaj profil preglednika može ga pročitati. Isključivanje ga briše.</value>
+  </data>
+  <data name="TermShowEarlierLines" xml:space="preserve">
+    <value>Prikaži ranije retke</value>
+  </data>
+  <data name="TermNoEarlierLines" xml:space="preserve">
+    <value>Nema spremljenih ranijih redaka</value>
+  </data>
   <data name="NavBottomNavLabel" xml:space="preserve">
     <value>Brze poveznice</value>
   </data>
