@@ -391,4 +391,28 @@ public partial class BBoardsIntegrationTests
 			await UninstallAsync();
 		}
 	}
+
+	[Test]
+	public async Task TheReaderGoesUpToTheTopAndOpensNumbersFromThere()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbTopA", "bboard-admin");
+			var mira = await Player("BbTopM");
+			var board = await Board(admin, "BbTop");
+			var post = await Post(admin, board, "Upward", "Read me after going up.");
+			var number = post.Split('/')[0];
+
+			await TypedUntil(mira, $"+bbreader {board}", "Upward");
+			await TypedUntil(mira, "u", "+bbread <#> opens one.");
+			await TypedUntil(mira, number, "Upward");
+			await TypedUntil(mira, $"+bbread {post}", "Read me after going up.");
+			await TypedUntil(mira, "q", "Left the reader.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
 }
