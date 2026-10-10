@@ -77,7 +77,7 @@ Output: `Welcome, Bob.`
 
 ## Naming a function's arguments
 
-A global function made with @function gets its arguments as %0, %1 and so on. `@function/args <function>=<names>` also passes them under space-separated names, in order. Wizard-only. Redefining the function clears its names, so set them after it in the same @startup.
+A global function made with @function gets its arguments as %0, %1 and so on. `@function/args <function>=<names>` also passes them under space-separated names, in order. Needs the config.admin permission. Redefining the function clears its names, so set them after it in the same @startup.
 
 ```sharp
 &FN`GREET me=Hello, %<who>. You have %<count> new posts.
@@ -91,7 +91,7 @@ Output: `Hello, Bob. You have 3 new posts.`
 
 ## The rest of the arguments
 
-The last name can take every argument after the ones before it. These are the shapes the built-in functions' own parameter lists use:
+The last name can take every argument after the ones before it. These are the shapes the built-in functions' own parameter lists use, as an editor shows them (switch() reads `string`, `expression...|list...`, `default`):
 
 | Last name | The rest arrive as |
 | --- | --- |
@@ -141,7 +141,7 @@ A call that leaves a pair unfinished returns `#-1 NAMED ARGUMENTS COME IN PAIRS`
 
 ## Naming a command's arguments
 
-An @hook reads its command's arguments as `LS`, `RS`, `LSA1`, `LSA2` and the others in [@hook registers]. `@command/args <command>=<names>` names them as well, in order: the left side, then each right-side argument. The rest shapes above work here too. Wizard-only, and it lasts until the server restarts, like the other @command switches.
+An @hook reads its command's arguments as `LS`, `RS`, `LSA1`, `LSA2` and the others in [@hook registers]. `@command/args <command>=<names>` names them as well, in order: the left side, then each right-side argument. The rest shapes above work here too. It needs the config.admin permission and lasts until the server restarts, like the other @command switches.
 
 ```sharp
 &HOOK`CHOWN me=[attrib_set(me/LAST`CHOWN,%<attribute> to %<owner>)]
