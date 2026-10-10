@@ -53,6 +53,15 @@
                     if (!reading) box.classList.remove('sharp-terminal--new');
                 };
                 el.addEventListener('scroll', el._sharpmushFollow, { passive: true });
+                // Hidden (display: none, as Play's terminal is under a channel view), the output has no height,
+                // so output arriving meanwhile cannot move it to the bottom; shown again, the browser puts back
+                // the old scroll offset without a scroll event, a screen or more above the newest line. A
+                // follower is put back at the bottom whenever its size changes, which includes being shown.
+                if (typeof ResizeObserver !== 'undefined') {
+                    new ResizeObserver(function () {
+                        if (!el._sharpmushReading) el.scrollTop = el.scrollHeight;
+                    }).observe(el);
+                }
             }
             if (el._sharpmushReading) {
                 box.classList.add('sharp-terminal--new');

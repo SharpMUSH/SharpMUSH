@@ -23,7 +23,12 @@ function boot() {
         removeEventListener: name => listeners.delete(name)
     };
     const windowListeners = [];
-    const context = vm.createContext({ window: { addEventListener: (name) => windowListeners.push(name) }, document: {
+    const resized = [];
+    class ResizeObserver {
+        constructor(callback) { this.callback = callback; }
+        observe(target) { resized.push({ target, fire: () => this.callback([{ target }]) }); }
+    }
+    const context = vm.createContext({ ResizeObserver, window: { addEventListener: (name) => windowListeners.push(name) }, document: {
         getElementById: id => id === 'output' ? output : null
     }});
     const html = readFileSync(new URL('index.html', root), 'utf8');
@@ -33,7 +38,7 @@ function boot() {
         const src = reference.replace('#[.{fingerprint}]', '');
         vm.runInContext(readFileSync(new URL(src, root), 'utf8'), context, { filename: src });
     }
-    return { terminal: context.window.SharpMUSH.Terminal, helpers: context.window.SharpMUSH, output, listeners, classes, windowListeners };
+    return { terminal: context.window.SharpMUSH.Terminal, helpers: context.window.SharpMUSH, output, listeners, classes, windowListeners, resized };
 }
 
 test('fresh Play page scrolls new output without loading an editor', () => {
@@ -79,6 +84,31 @@ test('a scroll the reader did not make does not stop the terminal following', ()
     output.scrollHeight = 1200;
     terminal.scrollToBottom('output');
     assert.equal(output.scrollTop, 1200, 'still following');
+});
+
+test('hidden under a channel view, a following terminal is back at the bottom when shown', () => {
+    const { terminal, output, resized } = boot();
+    terminal.scrollToBottom('output');
+    assert.equal(output.scrollTop, 500);
+    const observed = resized.filter(r => r.target === output);
+    assert.equal(observed.length, 1, 'the output is observed once');
+    // Hidden: no height, so new output cannot move it. Shown: the browser restores the old offset
+    // without a scroll event, above the lines that arrived meanwhile.
+    output.scrollHeight = 900;
+    output.scrollTop = 500;
+    observed[0].fire();
+    assert.equal(output.scrollTop, 900);
+});
+
+test('a reader scrolled up stays where they were when the terminal is shown again', () => {
+    const { terminal, output, listeners, resized } = boot();
+    terminal.scrollToBottom('output');
+    listeners.get('wheel')();
+    output.scrollTop = 100;
+    listeners.get('scroll')();
+    output.scrollHeight = 900;
+    resized[0].fire();
+    assert.equal(output.scrollTop, 100);
 });
 
 test('following a terminal adds nothing to window, so an unmounted terminal is not kept alive', () => {
