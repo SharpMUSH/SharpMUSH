@@ -30,6 +30,13 @@ public sealed class SharpCommandAttribute : Attribute
 	/// </summary>
 	public string[] ParameterNames { get; set; } = [];
 
+	/// <summary>
+	/// Names <c>@command/args</c> gives the command's arguments, in order (the left side, then each
+	/// right-side argument): its hooks read each as <c>%&lt;name&gt;</c> as well as <c>LSA&lt;n&gt;</c>.
+	/// Mutable for the same reason <see cref="CommandLock"/> is.
+	/// </summary>
+	public string[] ArgumentNames { get; set; } = [];
+
 	/// <summary>What the command leaves in <c>%></c>. See <see cref="CommandOutput"/>.</summary>
 	public CommandOutput Output { get; set; } = CommandOutput.None;
 }

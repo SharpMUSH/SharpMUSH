@@ -290,9 +290,11 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				namedRegisters["LS"] = argumentText;
 			}
 
+			var argumentNames = definition.Attribute.ArgumentNames;
 			for (int i = 0; i < arguments.Count; i++)
 			{
 				namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
+				if (i < argumentNames.Length) namedRegisters[argumentNames[i]] = arguments[i].Message;
 			}
 
 			namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());

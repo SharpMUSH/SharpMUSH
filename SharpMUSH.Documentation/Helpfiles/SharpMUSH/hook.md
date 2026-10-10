@@ -170,3 +170,5 @@ The following named arguments may be available (via %`\<name\>` or `r(<name>,arg
 | RSAx | The xth right-side-arg, where x is between 1 and RSAC |
 | **Available for SWITCHES commands (such as @lock):** | |
 | SWITCHES | The switch string given. (Note: Currently, switches given to normal commands are not available here, but can be accessed via the %u substitution.) |
+
+A wizard can also give the arguments names of their own with @command/args: after `@command/args @atrchown=attribute owner`, a hook on @atrchown reads %`\<attribute\>` and %`\<owner\>` beside LSA1 and LSA2. See [@command].

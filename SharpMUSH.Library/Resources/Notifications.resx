@@ -1579,6 +1579,12 @@
   <data name="CommandInfoLockFormat" xml:space="preserve">
     <value>Lock       : {0}</value>
   </data>
+  <data name="CommandInfoArgumentNamesFormat" xml:space="preserve">
+    <value>Arg names  : {0}</value>
+  </data>
+  <data name="CommandArgumentNamesFormat" xml:space="preserve">
+    <value>{0} hooks read its arguments as: {1}</value>
+  </data>
   <data name="CommandInfoFailureMsgFormat" xml:space="preserve">
     <value>Failure Msg: {0}</value>
   </data>

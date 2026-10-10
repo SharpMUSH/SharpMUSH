@@ -43,7 +43,7 @@ public partial class Commands : ICommandRestrictionApplier
 	[SharpCommand(Name = "@COMMAND",
 		Switches =
 		[
-			"ADD", "ALIAS", "CLONE", "DELETE", "EqSplit", "LSARGS", "RSARGS", "NOEVAL", "ON", "OFF", "QUIET", "ENABLE",
+			"ADD", "ALIAS", "ARGS", "CLONE", "DELETE", "EqSplit", "LSARGS", "RSARGS", "NOEVAL", "ON", "OFF", "QUIET", "ENABLE",
 			"DISABLE", "RESTRICT", "NOPARSE", "RSNoParse"
 		], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "command", "code"])]
 	public async ValueTask<Option<CallState>> Command(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -68,12 +68,45 @@ public partial class Commands : ICommandRestrictionApplier
 			"ALIAS" => await AliasCommandAsync(executor, commandName, rightSide?.Trim().ToUpperInvariant() ?? "", switches.Contains("QUIET")),
 			"CLONE" => await CloneCommandAsync(executor, commandName, rightSide?.Trim().ToUpperInvariant() ?? ""),
 			"DELETE" => await DeleteCommandAsync(executor, commandName),
+			"ARGS" => await NameCommandArgumentsAsync(executor, commandName, rightSide),
 			_ => await ConfigureAndDescribeCommandAsync(executor, commandName, switches, rightSide ?? "")
 		};
 	}
 
 	/// <summary>The <c>@command</c> switches that act on their own, in the order <c>cmd_command</c> tries them.</summary>
-	private static readonly string[] CommandActionSwitches = ["ADD", "ALIAS", "CLONE", "DELETE"];
+	private static readonly string[] CommandActionSwitches = ["ADD", "ALIAS", "CLONE", "DELETE", "ARGS"];
+
+	/// <summary>
+	/// @command/args &lt;command&gt;=&lt;names&gt;: the command's hooks also read its arguments under these
+	/// space-separated names, in order. No names clears them.
+	/// </summary>
+	private async ValueTask<Option<CallState>> NameCommandArgumentsAsync(AnySharpObject executor, string commandName, string? names)
+	{
+		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!CommandLibrary.TryGetValue(commandName, out var command))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
+			return new CallState(ErrorMessages.Returns.CommandNotFound);
+		}
+
+		var argumentNames = (names ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (argumentNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != argumentNames.Length
+			|| argumentNames.Any(name => int.TryParse(name, out _)))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Returns.BadArgumentName, executor);
+			return new CallState(ErrorMessages.Returns.BadArgumentName);
+		}
+
+		command.LibraryInformation.Attribute.ArgumentNames = argumentNames;
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandArgumentNamesFormat), executor,
+			command.LibraryInformation.Attribute.Name, argumentNames.Length == 0 ? "-" : string.Join(" ", argumentNames));
+		return CallState.Empty;
+	}
 
 	/// <summary>The <c>@command</c> switches that change a command's state, which only a wizard may use.</summary>
 	private static bool IsCommandStateSwitch(string sw) => sw is "ON" or "OFF" or "ENABLE" or "DISABLE" or "RESTRICT";
@@ -166,6 +199,12 @@ public partial class Commands : ICommandRestrictionApplier
 		if (!string.IsNullOrEmpty(attr.RestrictMessage))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoFailureMsgFormat), executor, attr.RestrictMessage);
+		}
+
+		if (attr.ArgumentNames.Length > 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoArgumentNamesFormat), executor,
+				string.Join(" ", attr.ArgumentNames));
 		}
 
 		await DescribeCommandSwitchesAsync(executor, attr);

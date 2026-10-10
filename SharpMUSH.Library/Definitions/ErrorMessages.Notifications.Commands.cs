@@ -41,6 +41,10 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandInfoLockFormat = "Lock       : {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CommandInfoArgumentNamesFormat = "Arg names  : {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CommandArgumentNamesFormat = "{0} hooks read its arguments as: {1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandInfoFailureMsgFormat = "Failure Msg: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandInfoSwitchesFormat = "Switches   : {0}";

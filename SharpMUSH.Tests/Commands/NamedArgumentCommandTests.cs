@@ -143,4 +143,37 @@ public class HookNamedArgumentTests
 			await HookService.ClearHookAsync("@ATRCHOWN", "BEFORE");
 		}
 	}
+
+	[Test]
+	public async Task CommandArgsNamesTheArgumentsHooksRead()
+	{
+		var holder = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HookNamed");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HookNTgt");
+		await Run($"&SEEN {holder}=");
+		await Run($"&BEFORE {holder}=attrib_set({holder}/SEEN,%<attribute>|%<owner>|%<lsa2>)");
+		await Run("@command/args @ATRCHOWN=attribute owner");
+		await Run($"@hook/before @ATRCHOWN={holder},BEFORE");
+		try
+		{
+			await Run($"&A {target}=1");
+			await Run($"@atrchown {target}/A=#1");
+			var seen = await FunctionParser.EvaluateAsync(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen.ToPlainText()).IsEqualTo($"{target}/A|#1|#1");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync("@ATRCHOWN", "BEFORE");
+			await Run("@command/args @ATRCHOWN=");
+		}
+	}
+
+	[Test]
+	[Arguments("one ONE")]
+	[Arguments("one 2")]
+	public async Task CommandArgsRefusesRepeatedOrNumericNames(string names)
+	{
+		await Run($"@command/args @ATRCHOWN={names}");
+		var attribute = CommandParser.CommandLibrary["@ATRCHOWN"].LibraryInformation.Attribute;
+		await Assert.That(attribute.ArgumentNames.Length).IsEqualTo(0);
+	}
 }
