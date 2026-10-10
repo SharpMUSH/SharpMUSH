@@ -21,6 +21,16 @@ public class ParserStateContextTests
 	}
 
 	[Test]
+	public async ValueTask AFunctionFrameKeepsTheTypedLineAndSession()
+	{
+		var typed = ParserState.ForTypedLine(new DBRef(7), handle: 3, session: "session-a", outputLimit: 100, line: "think [add(1,2)]");
+		var frame = typed.ForFunction("add", new Dictionary<string, CallState>());
+
+		await Assert.That(frame.TypedLine).IsEqualTo("think [add(1,2)]");
+		await Assert.That(frame.ConnectionSessionId).IsEqualTo("session-a");
+	}
+
+	[Test]
 	public async ValueTask ReplacingASharedValueCopiesTheContextForThatFrameOnly()
 	{
 		var root = ParserState.RootFor(new DBRef(7));

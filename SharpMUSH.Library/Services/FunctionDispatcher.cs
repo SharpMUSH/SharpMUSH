@@ -178,13 +178,13 @@ public static class FunctionDispatcher
 		return null;
 	}
 
+	private const FunctionFlags NumericFlags = FunctionFlags.IntegersOnly | FunctionFlags.PositiveIntegersOnly
+		| FunctionFlags.DecimalsOnly | FunctionFlags.NumbersOnly;
+
 	/// <summary>
 	/// The numeric flags' check on already-evaluated arguments. Public so lmath() can hold its
 	/// list to the same rule the scalar function it runs would apply.
 	/// </summary>
-	private const FunctionFlags NumericFlags = FunctionFlags.IntegersOnly | FunctionFlags.PositiveIntegersOnly
-		| FunctionFlags.DecimalsOnly | FunctionFlags.NumbersOnly;
-
 	public static string? ValidateNumericArguments(SharpFunctionAttribute attribute, IEnumerable<CallState> arguments, IMUSHCodeParser parser)
 	{
 		if ((attribute.Flags & NumericFlags) == 0) return null;

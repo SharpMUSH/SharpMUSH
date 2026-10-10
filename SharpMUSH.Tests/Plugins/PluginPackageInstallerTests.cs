@@ -199,7 +199,7 @@ public class PluginPackageInstallerTests
 				version: "1.0.0"
 				kind: plugin
 				binaries:
-				  min_server_version: ">=1.0"
+				  min_server_version: ">=2.0"
 				  files:
 				    - file: {PluginPackageFixture.DllName}
 				      sha256: {PluginPackageFixture.DllSha}
@@ -239,6 +239,23 @@ public class PluginPackageInstallerTests
 
 			var error = result.Expect<Error<string>>("a SHA-256 mismatch must reject the deploy");
 			await Assert.That(error.Value).Contains("SHA-256 mismatch");
+			await Assert.That(Directory.Exists(Path.Combine(directories.Installed, PackageId))).IsFalse();
+		}
+		finally
+		{
+			PluginPackageFixture.Delete(directories);
+		}
+	}
+
+	[Test]
+	public async Task Deploy_MinServerVersionOlderMajor_IsRejected()
+	{
+		var directories = PluginPackageFixture.ScratchDirectories();
+		try
+		{
+			var result = await DeployAsync(NewInstaller(directories), PluginPackageFixture.Yaml(PackageId, minServerVersion: ">=1.0"));
+
+			await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("a DLL built against contract 1.x does not bind to 2.x");
 			await Assert.That(Directory.Exists(Path.Combine(directories.Installed, PackageId))).IsFalse();
 		}
 		finally

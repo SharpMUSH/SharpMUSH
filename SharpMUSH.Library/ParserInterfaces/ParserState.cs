@@ -830,7 +830,8 @@ public partial record ParserState
 	/// invocation counters — since a function runs inside its caller's evaluation, and binds
 	/// <paramref name="arguments"/> as <c>%0</c>-<c>%9</c>. It starts with no command, switches,
 	/// command history, caller arguments or break propagation, and leaves the execution budget and
-	/// restrictions to the ambient scopes already entered for the evaluation.
+	/// restrictions to the ambient scopes already entered for the evaluation. It keeps the typed line
+	/// and connection session it was called from.
 	/// </summary>
 	/// <param name="function">The function's name as called.</param>
 	/// <param name="arguments">The call's arguments, keyed <c>"0"</c>, <c>"1"</c>, ….</param>
@@ -846,6 +847,10 @@ public partial record ParserState
 		Caller = Caller,
 		ParseMode = ParseMode,
 		Flags = Flags,
+		// Still the same typed line, so its text stays out of the parse cache when the function parses
+		// part of it, and the same connection's session for @input.
+		TypedLine = TypedLine,
+		ConnectionSessionId = ConnectionSessionId,
 		// Same actors, so the same objects: a function body that asks for its executor reuses the
 		// caller's rather than fetching it again.
 		_executorObject = _executorObject,

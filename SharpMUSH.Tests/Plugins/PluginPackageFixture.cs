@@ -30,7 +30,7 @@ public static class PluginPackageFixture
 	/// hash by default) and its <c>plugin.json</c>, with <paramref name="relations"/> lines spliced in above the
 	/// binaries.
 	/// </summary>
-	public static string Yaml(string id, string version = "1.0.0", string relations = "", string minServerVersion = ">=1.0",
+	public static string Yaml(string id, string version = "1.0.0", string relations = "", string minServerVersion = ">=2.0",
 		string? dllSha = null) => $"""
 		package: {id}
 		version: "{version}"
