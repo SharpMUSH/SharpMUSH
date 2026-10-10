@@ -1243,7 +1243,7 @@ public class InputSessionServiceTests
 		var session = sessions.GetCapturing(1)!;
 		string[] Published() { lock (published) return [.. published]; }
 		var clear = $"clear:{session.Id:N}";
-		(Task followed, string[] expected) = transition switch
+		(Task Followed, string[] Expected) transitionResult = transition switch
 		{
 			"cancel" => (Task.Run(async () => { await sessions.CancelAsync(caller); }), ["output:InputSessionCancelled", clear]),
 			"escape" => (Task.Run(async () => { await sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); }), ["output:InputSessionCancelled", clear]),
@@ -1253,6 +1253,7 @@ public class InputSessionServiceTests
 			_ => (Task.Run(async () => { await h.Connections.Bind(1, h.Owner.Object.DBRef); await notify.Notify(1, "switched", null); }), [clear, "output:switched"])
 		};
 
+		var (followed, expected) = transitionResult;
 		await Task.Delay(200);
 		await Assert.That(Published()).IsEquivalentTo(["prompt:first"]);
 		await Assert.That(followed.IsCompleted).IsFalse();

@@ -259,4 +259,30 @@ public class TerminalServiceHostTests
 
 		throw new InvalidOperationException("No WebSocketClientService found on the inner terminal.");
 	}
+
+	[Test]
+	public async Task Prompt_and_its_changes_come_from_the_current_inner()
+	{
+		var first = Substitute.For<ITerminalService>();
+		var second = Substitute.For<ITerminalService>();
+		var prompt = new SharpMUSH.Client.Models.TerminalPrompt(
+			new SharpMUSH.Client.Models.TerminalLine(DateTime.Now, "Continue?", SharpMUSH.Client.Models.TerminalLineSource.Server), "");
+		first.Prompt.Returns(prompt);
+		var queue = new Queue<ITerminalService>([first, second]);
+		var sut = new TerminalServiceHost(() => queue.Dequeue());
+		var changes = 0;
+		sut.PromptChanged += () => changes++;
+
+		first.PromptChanged += Raise.Event<Action>();
+		await Assert.That(sut.Prompt).IsSameReferenceAs(prompt);
+		await Assert.That(changes).IsEqualTo(1);
+
+		await sut.RecreateAsync();
+		await Assert.That(sut.Prompt).IsNull();
+		await Assert.That(changes).IsEqualTo(2).Because("the new inner has no prompt, so the old one's is dropped");
+
+		first.PromptChanged += Raise.Event<Action>();
+		second.PromptChanged += Raise.Event<Action>();
+		await Assert.That(changes).IsEqualTo(3).Because("only the current inner is heard");
+	}
 }
