@@ -70,7 +70,12 @@ clear only to a socket owner that orders prompts, and to nothing once the connec
 
 A reloaded page restores the prompt it last showed, but a clear published before its `lastSeq` is
 not replayed. `ConnectionResumedPromptHandler` therefore publishes a clear naming no session on every
-resume while no capture is collecting lines on that handle.
+resume while no capture is collecting lines on that handle
+(`IInputSessionService.ClearPromptUnlessCapturingAsync`). The check and the clear's place are taken
+together under `_gate`, so a capture starting at that moment publishes its prompt after the clear.
+
+When the server ends a session for good (`{"type":"bye"}`: QUIT, a ban, `@boot`), the connection is
+gone before a capture's clear could reach it, so the portal takes the prompt down itself.
 
 A client sends the shown prompt into its scrollback, ahead of the line the player sends, as a
 terminal would show it. A one-off prompt comes down at that point; a capture's prompt stays until

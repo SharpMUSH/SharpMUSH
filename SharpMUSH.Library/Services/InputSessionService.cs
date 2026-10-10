@@ -382,6 +382,24 @@ public sealed class InputSessionService : IInputSessionService
 		SendEnded();
 	}
 
+	public async ValueTask ClearPromptUnlessCapturingAsync(long handle)
+	{
+		string sessionId;
+		HandlePublicationLane.Slot? place;
+		try
+		{
+			lock (_gate)
+			{
+				if (GetCapturing(handle) is not null
+					|| _connections.Get(handle)?.Metadata.GetValueOrDefault("SessionId") is not { } current) return;
+				sessionId = current;
+				place = _lane?.Reserve(handle, sessionId);
+			}
+		}
+		finally { SendEnded(); }
+		using (Publishing(place)) await _notify.ClearPromptToSession(handle, sessionId, null);
+	}
+
 	private bool IsCurrent(InputSession session, bool timeout)
 	{
 		lock (_gate)

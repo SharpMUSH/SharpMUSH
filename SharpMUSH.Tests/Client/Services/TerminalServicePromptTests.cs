@@ -186,6 +186,18 @@ public class TerminalServicePromptTests
 		await Assert.That(svc.Prompt).IsNull();
 	}
 
+	/// <summary>QUIT, a ban or @boot drops the connection before the session's own clear can arrive.</summary>
+	[Test]
+	public async Task The_server_ending_the_session_clears_the_prompt()
+	{
+		var (svc, ws) = await ConnectedAsync();
+		Receive(ws, PromptFrame("Read which post?", "s1"));
+
+		ws.Terminated += Raise.Event<EventHandler>(ws, EventArgs.Empty);
+
+		await Assert.That(svc.Prompt).IsNull();
+	}
+
 	/// <summary>
 	/// The prompt is kept beside the scrollback, so a reload that resumes shows it again; the server then
 	/// clears it if its session ended meanwhile.

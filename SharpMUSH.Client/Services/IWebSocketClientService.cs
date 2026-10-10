@@ -31,6 +31,12 @@ public interface IWebSocketClientService : IAsyncDisposable
 	event EventHandler? ResumeRefused;
 
 	/// <summary>
+	/// Raised when the server ended the session for good (its <c>{"type":"bye"}</c>: QUIT, a ban, <c>@boot</c>).
+	/// No reconnect follows, and nothing the session showed, such as its prompt, applies any more.
+	/// </summary>
+	event EventHandler? Terminated;
+
+	/// <summary>
 	/// Logs a reconnect the server could not resume back in. It then landed in a fresh session at the login
 	/// screen; this runs before the commands buffered while disconnected are sent, and is handed the only way
 	/// to write to the socket until it returns (<see cref="SendAsync"/> buffers meanwhile). It returns false

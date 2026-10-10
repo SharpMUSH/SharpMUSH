@@ -86,6 +86,7 @@ public class WebSocketClientService : IWebSocketClientService
 	/// terminal can skip the re-login it would otherwise run after a reconnect.
 	/// </summary>
 	public event EventHandler? Reattached;
+	public event EventHandler? Terminated;
 
 	/// <inheritdoc/>
 	public event EventHandler? ResumeRefused;
@@ -488,6 +489,7 @@ public class WebSocketClientService : IWebSocketClientService
 			_lastSeq = 0;
 			_verdict?.TrySetResult(ResumeVerdict.Fresh);
 			if (_slot is { } ended) await ended.ClearAsync();
+			Terminated?.Invoke(this, EventArgs.Empty);
 			return;
 		}
 

@@ -9,17 +9,9 @@ namespace SharpMUSH.Implementation.Handlers;
 /// capturing its lines any more. A reloaded page restores the prompt it last showed, and the clear for
 /// a session that ended before the page's <c>lastSeq</c> is not in the replay.
 /// </summary>
-public class ConnectionResumedPromptHandler(
-	IInputSessionService inputSessions,
-	IConnectionService connections,
-	INotifyService notify)
+public class ConnectionResumedPromptHandler(IInputSessionService inputSessions)
 	: INotificationHandler<ConnectionResumedNotification>
 {
 	public ValueTask Handle(ConnectionResumedNotification notification, CancellationToken cancellationToken)
-	{
-		if (inputSessions.GetCapturing(notification.Handle) is not null
-			|| connections.Get(notification.Handle)?.Metadata.GetValueOrDefault("SessionId") is not { } sessionId)
-			return ValueTask.CompletedTask;
-		return notify.ClearPromptToSession(notification.Handle, sessionId, null);
-	}
+		=> inputSessions.ClearPromptUnlessCapturingAsync(notification.Handle);
 }

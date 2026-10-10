@@ -1366,7 +1366,7 @@ public class InputSessionServiceTests
 		var h = new Harness();
 		if (capturing) await h.Start();
 		else await h.Connect();
-		var handler = new SharpMUSH.Implementation.Handlers.ConnectionResumedPromptHandler(h.Sessions, h.Connections, h.Notify);
+		var handler = new SharpMUSH.Implementation.Handlers.ConnectionResumedPromptHandler(h.Sessions);
 
 		await handler.Handle(new SharpMUSH.Library.Notifications.ConnectionResumedNotification(1, h.Character.Object.DBRef), CancellationToken.None);
 

@@ -96,6 +96,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.MessageReceived += HandleMessage;
 		wsService.ConnectionStateChanged += HandleStateChange;
 		wsService.Reattached += HandleReattached;
+		wsService.Terminated += HandleTerminated;
 		wsService.ResumeRefused += HandleResumeRefused;
 		wsService.Relogin = relogin;
 
@@ -109,6 +110,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.MessageReceived -= HandleMessage;
 		wsService.ConnectionStateChanged -= HandleStateChange;
 		wsService.Reattached -= HandleReattached;
+		wsService.Terminated -= HandleTerminated;
 		wsService.ResumeRefused -= HandleResumeRefused;
 		wsService.Relogin = null;
 	}
@@ -397,6 +399,12 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// The socket's state is shown by the page's connection indicator, not in the scrollback: a drop and the
 	/// reconnect that follows (a network blip, a server update) leave the screen as it was.
 	/// </summary>
+	/// <summary>
+	/// The server ended the session (QUIT, a ban, <c>@boot</c>). It dropped the connection before the session's
+	/// own clear could be sent, so the prompt comes down here.
+	/// </summary>
+	private void HandleTerminated(object? sender, EventArgs e) => ClearPrompt(session: string.Empty);
+
 	private void HandleStateChange(object? sender, WebSocketState state) =>
 		ConnectionStateChanged?.Invoke(state == WebSocketState.Open);
 
