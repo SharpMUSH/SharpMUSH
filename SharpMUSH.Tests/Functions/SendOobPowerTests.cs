@@ -93,5 +93,48 @@ public class SendOobPowerTests
 			.Because("PennMUSH keeps Pueblo_Send as an alias of Send_OOB, so it grants the same power");
 	}
 
+	/// <summary>
+	/// A descriptor reaches a connection before anyone logs in on it, so naming one carries the same gate
+	/// as naming another player: the descriptor's own player may, anyone else needs the power.
+	/// </summary>
+	[Test]
+	public async Task Oob_ToAnotherPlayersDescriptor_IsDeniedWithoutThePower()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobDescMortal");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobDescTarget");
+
+		var said = await ThinkAs(mortal, $"oob({target.Handle}, testpkg)");
+
+		await Assert.That(said).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	[Test]
+	public async Task Oob_ToOwnDescriptor_IsAllowed()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobOwnDesc");
+
+		var said = await ThinkAs(mortal, $"oob({mortal.Handle}, testpkg)");
+
+		await Assert.That(said).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	[Test]
+	public async Task Oob_ToAnotherPlayersDescriptor_IsAllowedWithThePower()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobDescPowered");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator(), ConnectionService, "OobDescPowTarget");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {mortal.DbRef}=Send_OOB"));
+
+		var said = await ThinkAs(mortal, $"oob({target.Handle}, testpkg)");
+
+		await Assert.That(said).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+	}
+
 	private Mediator.IMediator Mediator() => WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
 }

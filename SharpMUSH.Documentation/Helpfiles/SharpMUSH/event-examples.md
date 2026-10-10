@@ -9,6 +9,11 @@
       "id": "player-creation-example",
       "heading": "Player creation example",
       "lookup": "event examples player creation example"
+    },
+    {
+      "id": "discord-presence-example",
+      "heading": "Discord presence example",
+      "lookup": "event examples discord presence example"
     }
   ],
   "redirects": {
@@ -40,6 +45,7 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 
 ::: seealso
 - [event examples player creation example]
+- [event examples discord presence example]
 :::
 
 ## Player creation example
@@ -53,3 +59,15 @@ Auto-Setting Grid-BC Builder and Shared
 Note there is no `@set #9=wizard` step: the seeded #9 is already a wizard object, so it runs with its own elevated permissions and can `@power`/`@lock` the new player as-is. (A custom, non-wizard handler object would need `@set <obj>=wizard` first.)
 
 The Event Handler object, since it's handling so many events, may become cluttered with attributes. We recommend using `@trigger` and `@include` to separate events to multiple objects.
+
+## Discord presence example
+
+Mudlet can show your game in its players' Discord status. When it connects it sends the GMCP package External.Discord.Hello, and a game that answers with External.Discord.Info gets an invite link shown there. Answer from socket\`gmcp, sending to the descriptor (%0), since nobody has logged in yet:
+```sharp
+> &SOCKET`GMCP #9=@assert strmatch(%1,External.Discord.Hello) ; think oob(%0,External.Discord.Info,json(object,inviteurl,json(string,https://discord.gg/example)))
+```
+Then say what each player is doing once they log in, from player\`connect (%2 is the descriptor):
+```sharp
+> &PLAYER`CONNECT #9=think oob(%2,External.Discord.Status,json(object,details,json(string,Playing [name(%0)])))
+```
+If #9 already has a PLAYER\`CONNECT, add the oob() to it rather than replacing it. Nothing is sent to a client that did not agree to GMCP, so both are safe on every connection.

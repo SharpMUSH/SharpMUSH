@@ -73,6 +73,10 @@ public partial class TelnetServer
 				// MUSHclient look for; otherwise in IAC GA as before. A client's own EOR means nothing to a
 				// server, so the callback is only a sampling point.
 				.AddPlugin<EORProtocol>().OnPrompt(async () => await AnnounceTelnetIfNegotiatedAsync())
+				// MNES: the client's name and version, for clients that keep them out of TTYPE. IPADDRESS is
+				// not read: any client can send one, and believing it would let a client choose the address
+				// sitelock and bans see.
+				.AddPlugin<NewEnvironProtocol>().OnEnvironmentVariables(OnEnvironmentVariablesAsync)
 				.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
 				// What the client agreed to read: output is written in it, each character it lacks replaced.
 				.OnCharsetChange(OnCharsetChangeAsync)
@@ -173,6 +177,23 @@ public partial class TelnetServer
 				await server._publishEndpoint.Publish(
 					new TerminalTypeNegotiatedMessage(handle, snapshot), ct);
 			});
+		}
+
+		private async ValueTask OnEnvironmentVariablesAsync(
+			Dictionary<string, string> environment, Dictionary<string, string> user)
+		{
+			await AnnounceTelnetIfNegotiatedAsync();
+
+			var name = Lookup("CLIENT_NAME");
+			var version = Lookup("CLIENT_VERSION");
+			if (name is null && version is null) return;
+
+			await held.PublishAsync(
+				() => server._publishEndpoint.Publish(new ClientIdentityMessage(handle, name, version), ct));
+
+			// MNES sends these as VAR, but a client that sends them as USERVAR means the same thing.
+			string? Lookup(string variable) =>
+				environment.TryGetValue(variable, out var value) || user.TryGetValue(variable, out value) ? value : null;
 		}
 
 		private async ValueTask OnGmcpNegotiatedAsync(bool agreed)
