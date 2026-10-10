@@ -28,7 +28,8 @@
 `@command/<switch> <command>`<br>
 `@command/alias <command>=<alias>`<br>
 `@command/clone <command>=<clone>`<br>
-`@command/restrict <command>=<restriction> [" <error message>]`
+`@command/restrict <command>=<restriction> [" <error message>]`<br>
+`@command/args <command>=[<name> ...]`
 
 @command can be used for adding new built-in commands, altering the way a built-in command works, and displaying information about how commands currently work.
 
@@ -37,6 +38,8 @@ With no switches, @command shows all sorts of interesting information about how 
 The `/alias` switch creates an alias for `<command>`, allowing players to type `<alias>` to run `<command>`. The `/clone` switch creates a separate copy of `<command>`, which works the same initially but can be restricted, @hooked, etc, separately.
 
 `@command/restrict` can be used to restrict who can use `<command>`. See [restrict] for more information.
+
+`@command/args` names the command's arguments for its @hooks: in order, the left side and then each right-side argument. A hook reads each as %`\<name\>` as well as `LSA<n>` (see [@hook]). The last name can take the rest of the arguments, in the same shapes as `@function/args` (`parts...`, `key...|value...`, `case...|result... default`, or a bare `...` for pairs); see [named arguments commands]. With no names, the names are cleared. It needs the config.admin permission and, like the other switches, lasts until the server restarts.
 
 Switches include:
 - /add : Add a new command that does nothing, but can be @hook'd.

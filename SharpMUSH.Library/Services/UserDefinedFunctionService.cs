@@ -145,6 +145,20 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
+	public bool SetArgumentNames(string name, string[] names)
+	{
+		lock (_mutations)
+		{
+			if (!_functions.TryGetValue(Key(name, null), out var entry))
+			{
+				return false;
+			}
+
+			_functions[Key(entry.Name, null)] = entry with { ArgumentNames = names };
+			return true;
+		}
+	}
+
 	public bool Clone(string newName, string existing) => Clone(newName, existing, null);
 
 	public bool Clone(string newName, string existing, DBRef? owner)

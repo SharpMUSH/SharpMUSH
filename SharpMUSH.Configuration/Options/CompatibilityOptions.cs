@@ -47,5 +47,13 @@ public record CompatibilityOptions(
 		Description = "Treat an unescaped ( that starts no function call as a literal group whose commas and ) are text, as PennMUSH does. A PennMUSH database import turns it on",
 		Group = "PennMUSH Compatibility",
 		Order = 1)]
-	bool ParenGroups
+	bool ParenGroups,
+
+	[property: SharpConfig(
+		Name = "http_qregisters",
+		Category = "Compatibility",
+		Description = "@http also hands its callback the response's status and content type as the q-registers STATUS and CONTENT-TYPE, as PennMUSH does, besides the named arguments %<status> and %<content-type>. A PennMUSH database import turns it on",
+		Group = "PennMUSH Compatibility",
+		Order = 2)]
+	bool HttpQRegisters
 );

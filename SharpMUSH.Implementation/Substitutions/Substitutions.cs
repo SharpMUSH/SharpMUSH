@@ -141,6 +141,7 @@ public static partial class Substitutions
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
 		if (context.STEXT_LAST() is not null) return HandleSTextLast(parser);
 		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
+		if (context.ARG_STARTCARET() is not null) return new CallState(parser.CurrentState.Argument(symbol.Message.ToPlainText()));
 		return HandleRegistrySymbol(symbol, parser);
 	}
 

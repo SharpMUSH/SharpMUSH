@@ -316,6 +316,144 @@ public static partial class ArgHelpers
 	}
 
 	/// <summary>
+	/// The numbered arguments from <paramref name="first"/> on, read as <c>&lt;name&gt;, &lt;value&gt;</c>
+	/// pairs: how <c>uargs()</c>, <c>@trigger/args</c> and <c>@include/args</c> pass named arguments.
+	/// Names are trimmed and case-insensitive; a later pair replaces an earlier one of the same name.
+	/// </summary>
+	public static Result<Dictionary<string, CallState>> NamedArguments(IReadOnlyDictionary<string, CallState> args, int first)
+	{
+		var values = Enumerable.Range(first, Math.Max(0, args.Count - first))
+			.Select(index => args.TryGetValue(index.ToString(), out var value) ? value : CallState.Empty)
+			.ToArray();
+		if (values.Length % 2 != 0) return new Error<string>(ErrorMessages.Returns.NamedArgumentsComeInPairs);
+
+		var named = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+		foreach (var pair in values.Chunk(2))
+		{
+			var name = pair[0].Message.ToPlainText().Trim();
+			if (name.Length == 0) return new Error<string>(ErrorMessages.Returns.BadArgumentName);
+			named[name] = pair[1];
+		}
+
+		return named;
+	}
+
+	/// <summary>The suffix that makes an <c>@function/args</c> or <c>@command/args</c> name take the rest.</summary>
+	public const string RestSuffix = "...";
+
+	/// <summary>
+	/// The names <c>@function/args</c> and <c>@command/args</c> give arguments, in the shapes a built-in's
+	/// <see cref="SharpMUSH.Library.Attributes.SharpFunctionAttribute.ParameterNames"/> uses: the names before
+	/// the rest, at most one rest name (<c>items...</c>, a group <c>case...|result...</c>, or a bare <c>...</c>
+	/// for name/value pairs the caller names), and after a group or pairs, names for what is left once whole
+	/// groups are dealt (switch()'s <c>default</c>).
+	/// </summary>
+	private readonly record struct ArgumentLayout(string[] Before, string[] Stems, string[] After)
+	{
+		public int GroupSize => Stems is [""] ? 2 : Stems.Length;
+
+		public static ArgumentLayout Of(string[] names)
+		{
+			var restAt = Array.FindIndex(names, name => name.EndsWith(RestSuffix));
+			return restAt < 0
+				? new ArgumentLayout(names, [], [])
+				: new ArgumentLayout(names[..restAt],
+					names[restAt].Split('|').Select(part => part.EndsWith(RestSuffix) ? part[..^RestSuffix.Length] : part).ToArray(),
+					names[(restAt + 1)..]);
+		}
+	}
+
+	/// <summary>
+	/// The space-separated argument names given to <c>@function/args</c> or <c>@command/args</c>, checked:
+	/// names are unique (case-insensitive) and not numbers, there is one rest name at most, and names after
+	/// it need a group or pairs to take what is left over. See <see cref="ArgumentLayout"/>.
+	/// </summary>
+	public static Result<string[]> ArgumentNames(string? text)
+	{
+		var names = (text ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var layout = ArgumentLayout.Of(names);
+		var stems = layout.Before.Concat(layout.Stems).Concat(layout.After).Where(stem => stem.Length > 0).ToArray();
+		var valid = names.Count(name => name.EndsWith(RestSuffix)) <= 1
+			&& names.Where(name => !name.EndsWith(RestSuffix)).All(name => !name.Contains('|'))
+			&& names.Where(name => name.EndsWith(RestSuffix)).SelectMany(name => name.Split('|')).All(part => part.EndsWith(RestSuffix))
+			&& (layout.Stems is [] or [""] || layout.Stems.All(stem => stem.Length > 0))
+			&& (layout.After.Length == 0 || layout.GroupSize > 1)
+			&& stems.Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Length
+			&& stems.All(stem => !int.TryParse(stem, out _));
+		return valid ? names : new Error<string>(ErrorMessages.Returns.BadArgumentName);
+	}
+
+	/// <summary>
+	/// Adds <paramref name="values"/> to <paramref name="into"/> under <paramref name="names"/>, in order.
+	/// A rest name <c>items...</c> takes the rest as <c>items1</c>, <c>items2</c>, ... with their number as
+	/// <c>itemscount</c> (as a hook's <c>LSA1</c>.. and <c>LSAC</c>); a group <c>key...|value...</c> deals
+	/// them out in turn as <c>key1</c>, <c>value1</c>, <c>key2</c>, ..., each with its count; a bare
+	/// <c>...</c> reads them as name/value pairs, refusing a name that is empty, a number or one of the other
+	/// names. Names after the rest take the last arguments that don't make up a whole group; without them,
+	/// an odd number of pairs is refused.
+	/// </summary>
+	public static Result<Success> AddNamedArguments<T>(IDictionary<string, T> into, IReadOnlyList<T> values, string[] names,
+		Func<T, string> toText, Func<string, T> fromText)
+	{
+		var layout = ArgumentLayout.Of(names);
+		AddInOrder(into, values.Take(layout.Before.Length), layout.Before);
+		if (layout.Stems is []) return new Success();
+
+		var remaining = values.Skip(layout.Before.Length).ToArray();
+		var afterCount = Math.Min(layout.After.Length, remaining.Length % layout.GroupSize);
+		var dealt = remaining[..^afterCount];
+		AddInOrder(into, remaining[^afterCount..], layout.After);
+		return layout.Stems is [""]
+			? AddCallerNamedPairs(into, dealt, layout.Before.Concat(layout.After).ToArray(), toText)
+			: AddDealtOut(into, dealt, layout.Stems, fromText);
+	}
+
+	private static void AddInOrder<T>(IDictionary<string, T> into, IEnumerable<T> values, string[] names)
+	{
+		foreach (var (value, position) in values.Select((value, position) => (value, position)))
+		{
+			into[names[position]] = value;
+		}
+	}
+
+	private static Result<Success> AddCallerNamedPairs<T>(IDictionary<string, T> into, T[] remaining, string[] otherNames,
+		Func<T, string> toText)
+	{
+		if (remaining.Length % 2 != 0) return new Error<string>(ErrorMessages.Returns.NamedArgumentsComeInPairs);
+
+		var pairs = remaining.Chunk(2).Select(pair => (Name: toText(pair[0]).Trim(), Value: pair[1])).ToArray();
+		if (pairs.Any(pair => pair.Name.Length == 0 || int.TryParse(pair.Name, out _)
+				|| otherNames.Contains(pair.Name, StringComparer.OrdinalIgnoreCase)))
+		{
+			return new Error<string>(ErrorMessages.Returns.BadArgumentName);
+		}
+
+		foreach (var (name, value) in pairs)
+		{
+			into[name] = value;
+		}
+
+		return new Success();
+	}
+
+	private static Result<Success> AddDealtOut<T>(IDictionary<string, T> into, T[] remaining, string[] stems,
+		Func<string, T> fromText)
+	{
+		foreach (var (value, position) in remaining.Select((value, position) => (value, position)))
+		{
+			into[$"{stems[position % stems.Length]}{position / stems.Length + 1}"] = value;
+		}
+
+		foreach (var (stem, turn) in stems.Select((stem, turn) => (stem, turn)))
+		{
+			var dealt = (remaining.Length - turn + stems.Length - 1) / stems.Length;
+			into[$"{stem}count"] = fromText(dealt.ToString());
+		}
+
+		return new Success();
+	}
+
+	/// <summary>
 	/// The numbered arguments from <paramref name="first"/> on, each moved down one place (argument
 	/// <c>i</c> becomes register <c>i - 1</c>): how a command or function hands its trailing arguments
 	/// on as <c>%0</c>-<c>%9</c>.

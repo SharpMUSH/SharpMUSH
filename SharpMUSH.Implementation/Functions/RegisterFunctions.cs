@@ -237,12 +237,9 @@ public partial class Functions
 						? new CallState(qval)
 						: CallState.Empty);
 
-			// The argument stack (%0-%9, up to 30) plus named stack registers from regexp $-commands.
+			// The argument stack (%0-%9, up to 30) plus named arguments, as %<name> reads them.
 			case "args":
-				return ValueTask.FromResult(
-					parser.CurrentState.EnvironmentRegisters.TryGetValue(registerName, out var aval)
-						? new CallState(aval.Message)
-						: CallState.Empty);
+				return ValueTask.FromResult(new CallState(parser.CurrentState.Argument(registerName)));
 
 			// $0-$9 and named captures from switch(), reswitch() and regedit(). PennMUSH's fun_r has no
 			// case for this type and always returns nothing; this returns the capture, as `help r` says.

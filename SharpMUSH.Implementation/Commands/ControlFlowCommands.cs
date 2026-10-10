@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -863,8 +864,8 @@ public partial class Commands
 		return new CallState(1000 - limit) { HadErrors = hadErrors };
 	}
 
-	[SharpCommand(Name = "@INCLUDE", Output = CommandOutput.Runs, Switches = ["LOCALIZE", "CLEARREGS", "NOBREAK", "CHAIN"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31, ParameterNames = ["file"])]
+	[SharpCommand(Name = "@INCLUDE", Output = CommandOutput.Runs, Switches = ["ARGS", "LOCALIZE", "CLEARREGS", "NOBREAK", "CHAIN"],
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 65, ParameterNames = ["file"])]
 	public async ValueTask<Option<CallState>> Include(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -893,12 +894,28 @@ public partial class Commands
 
 		// Build EnvironmentRegisters once so %0, %1, ... are substituted — the same args reach every target
 		// in a chain. args["0"] is the target list; args["1"], args["2"], ... map to %0, %1, ...
-		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters);
-		for (var i = 1; i < args.Count; i++)
+		// With /args they are <name>,<value> pairs instead, added to the caller's arguments as %<name>.
+		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters, StringComparer.OrdinalIgnoreCase);
+		if (switches.Contains("ARGS"))
 		{
-			if (args.TryGetValue(i.ToString(), out var argVal))
+			switch (ArgHelpers.NamedArguments(args, 1))
 			{
-				envArgs[(i - 1).ToString()] = argVal;
+				case Dictionary<string, CallState> named:
+					foreach (var (name, value) in named) envArgs[name] = value;
+					break;
+				case Error<string> refusal:
+					await NotifyService.Notify(executor, refusal.Value, executor);
+					return new CallState(refusal.Value);
+			}
+		}
+		else
+		{
+			for (var i = 1; i < args.Count; i++)
+			{
+				if (args.TryGetValue(i.ToString(), out var argVal))
+				{
+					envArgs[(i - 1).ToString()] = argVal;
+				}
 			}
 		}
 

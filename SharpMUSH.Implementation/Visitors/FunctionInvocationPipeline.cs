@@ -11,6 +11,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSHParser;
+using SharpMUSH.Implementation.Common;
 
 namespace SharpMUSH.Implementation.Visitors;
 
@@ -449,6 +450,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 		var target = entry.Object;
 		var attributeName = entry.Attribute;
+		var argumentNames = entry.ArgumentNames;
 
 		return new FunctionDefinition(attribute, async invokedParser =>
 		{
@@ -466,10 +468,20 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 					name.ToUpperInvariant(), $"#{targetObject.Object().DBRef.Number}", attributeName));
 			}
 
-			// The arguments pushed for this call become %0, %1, … inside the attribute.
-			var args = invokedParser.CurrentState.Arguments
-				.Select((kvp, i) => new KeyValuePair<string, CallState>(i.ToString(), kvp.Value))
-				.ToDictionary();
+			// The arguments pushed for this call become %0, %1, … inside the attribute, and with
+			// @function/args also %<name> for each name in order.
+			var values = invokedParser.CurrentState.Arguments.Values.ToArray();
+			var args = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+			foreach (var (value, i) in values.Select((value, i) => (value, i)))
+			{
+				args[i.ToString()] = value;
+			}
+
+			if (ArgHelpers.AddNamedArguments(args, values, argumentNames, value => value.Message.ToPlainText(),
+					text => new CallState(text)) is Error<string> refused)
+			{
+				return new CallState(refused.Value);
+			}
 
 			// A global @function runs *as the backing object, with its powers* (PennMUSH semantics):
 			// the attribute is read and evaluated with the function object's permissions, not the

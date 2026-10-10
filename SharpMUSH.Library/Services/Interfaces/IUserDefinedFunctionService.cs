@@ -38,6 +38,12 @@ public record UserDefinedFunction(
 {
 	/// <summary>Full owner identity for a local definition; null for a global definition.</summary>
 	public DBRef? Owner { get; init; }
+
+	/// <summary>
+	/// Names set with <c>@function/args</c>: the call's arguments are also passed under these, in
+	/// order, read as <c>%&lt;name&gt;</c>. Empty passes them by position only.
+	/// </summary>
+	public string[] ArgumentNames { get; init; } = [];
 }
 
 /// <summary>
@@ -116,6 +122,12 @@ public interface IUserDefinedFunctionService
 	/// restriction on an existing user function. Returns whether an entry was found.
 	/// </summary>
 	bool SetRestriction(string name, string? restriction);
+
+	/// <summary>
+	/// Sets the names <c>@function/args</c> gives an existing function's arguments (none clears them).
+	/// Returns whether an entry was found; a registry that keeps no names finds none.
+	/// </summary>
+	bool SetArgumentNames(string name, string[] names) => false;
 
 	/// <summary>Owner-scoped overload for local function registries.</summary>
 	bool SetRestriction(string name, string? restriction, DBRef? owner)

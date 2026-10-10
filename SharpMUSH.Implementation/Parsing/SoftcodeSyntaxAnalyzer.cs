@@ -336,7 +336,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.EscapedTextContext
 				=> SemanticTokenType.EscapeSequence,
 
-			// %q<register> — opening token (q<) and closing > are both Register
+			// %q<register> and %<argument> — opening token (q< or <) and closing > are both Register
 			SharpMUSHParser.IComplexSubstitutionSymbolContext
 				=> SemanticTokenType.Register,
 
@@ -375,7 +375,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	{
 		return LexerVocabulary.GetSymbolicName(token.Type) switch
 		{
-			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_ALPHA" or "REG_STARTCARET" => SemanticTokenType.Register,
+			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_ALPHA" or "REG_STARTCARET" or "ARG_STARTCARET" => SemanticTokenType.Register,
 			"ENACTOR_NAME" or "CAP_ENACTOR_NAME" or "ACCENT_NAME" or "MONIKER_NAME" => SemanticTokenType.Substitution,
 			"SUB_PRONOUN" or "OBJ_PRONOUN" or "POS_PRONOUN" or "ABS_POS_PRONOUN" => SemanticTokenType.Substitution,
 			"CALLED_DBREF" or "EXECUTOR_DBREF" or "LOCATION_DBREF" or "DBREF" => SemanticTokenType.Substitution,

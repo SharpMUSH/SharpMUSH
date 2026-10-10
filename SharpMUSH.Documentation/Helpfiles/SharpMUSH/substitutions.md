@@ -32,6 +32,7 @@
         "%?",
         "%=",
         "%+",
+        "%<",
         "%d"
       ]
     },
@@ -100,7 +101,7 @@ Other substitutions:<br>
     %= = The dbref/attribute currently being evaluated<br>
     %+ = The number of arguments passed to the current ufun.<br>
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function<br>
-    %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function<br>
+    %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function<br>    %`\<name\>` = the equivalent of r(name, args): the argument called `<name>`, from `uargs()`, a regexp `$-command` or `mapsql()`. `%<0>` is `%0`. Like `%0`, it ends with the call.<br>
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.<br>
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 

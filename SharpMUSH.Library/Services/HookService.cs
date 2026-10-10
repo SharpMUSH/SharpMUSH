@@ -93,33 +93,4 @@ public class HookService : IHookService
 
 		return ValueTask.FromResult(new Dictionary<string, CommandHook>());
 	}
-
-	public async ValueTask<Option<CallState>> ExecuteHookAsync(IMUSHCodeParser parser, CommandHook hook, Dictionary<string, string> namedRegisters)
-	{
-		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
-		var attributeService = parser.ServiceProvider.GetRequiredService<IAttributeService>();
-
-		if (await mediator.Send(new GetObjectNodeQuery(hook.TargetObject)) is not AnySharpObject targetObject)
-		{
-			return CallState.Empty;
-		}
-
-		var attrResult = await attributeService.GetAttributeAsync(
-			targetObject,
-			targetObject,
-			hook.AttributeName,
-			IAttributeService.AttributeMode.Execute);
-
-		if (attrResult.IsError || attrResult.IsNone)
-		{
-			return CallState.Empty;
-		}
-
-		// For now, return empty - full implementation would require parser.With and
-		// proper state management which are available in implementation-level parsers
-		// This provides the infrastructure for hook execution to be completed later
-		await ValueTask.CompletedTask;
-
-		return CallState.Empty;
-	}
 }

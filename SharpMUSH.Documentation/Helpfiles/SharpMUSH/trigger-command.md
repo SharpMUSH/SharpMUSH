@@ -25,13 +25,15 @@
 # @trigger
 
 `@trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]`<br>
-`@trigger/match[/<switches>] <object>/<attribute>=<string>`
+`@trigger/match[/<switches>] <object>/<attribute>=<string>`<br>
+`@trigger/args[/<switches>] <object>/<attribute>=<name>, <value>[, <name>, <value>...]`
 
 @trigger queues an action list stored in an attribute. It can also pass values to that attribute on the stack, as %0 to %9 and `r(0,args)` to `r(29,args)`.
 
 Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
 
 Switches:
+- /args: Pass named arguments instead: each `<name>, <value>` pair is read in the attribute as %`\<name\>` (see [uargs()]), and %0-%9 are empty. With `/match`, the pairs follow the match string.
 - /spoof: If you control `<object>`, enactor is preserved.
 - /inline: Run @triggered attribute immediately, rather than queueing it.
 - /clearregs: Clear Q-registers before @triggering.

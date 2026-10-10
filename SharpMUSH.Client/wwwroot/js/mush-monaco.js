@@ -37,6 +37,9 @@
                         // & attribute-set command at start of line
                         [/^&[A-Z_][A-Z0-9_\-]*/, 'keyword.control'],
 
+                        // Named register and argument substitutions: %q<name> %<name>
+                        [/%[qQ]?<[^<>]*>/, 'variable.other.register'],
+
                         // Register substitutions: %q<x> %v<x> %Q<x> %V<x>
                         [/%[qvQV][a-zA-Z0-9]/, 'variable.other.register'],
 

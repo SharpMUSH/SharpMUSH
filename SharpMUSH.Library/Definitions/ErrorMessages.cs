@@ -120,6 +120,8 @@ public static partial class ErrorMessages
 		public const string OutputTooLarge = "#-1 OUTPUT EXCEEDED MAXIMUM SIZE";
 		public const string RegisterRange = "#-1 REGISTER OUT OF RANGE";
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
+		public const string BadArgumentName = "#-1 ARGUMENT NAME INVALID";
+		public const string NamedArgumentsComeInPairs = "#-1 NAMED ARGUMENTS COME IN PAIRS";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 		public const string OutOfRange = "#-1 OUT OF RANGE";
 		/// <summary><c>fun_die</c>'s answer for a count of dice outside 1..700 (<c>src/funmisc.c:851-852</c>).</summary>
