@@ -338,50 +338,90 @@ public static partial class ArgHelpers
 		return named;
 	}
 
-	/// <summary>The suffix that makes the last of <c>@function/args</c> or <c>@command/args</c>' names take the rest.</summary>
+	/// <summary>The suffix that makes the trailing <c>@function/args</c> or <c>@command/args</c> names take the rest.</summary>
 	public const string RestSuffix = "...";
 
 	/// <summary>
 	/// The space-separated argument names given to <c>@function/args</c> or <c>@command/args</c>. Names are
-	/// unique (case-insensitive) and not numbers; only the last may end in <c>...</c>, naming the rest.
+	/// unique (case-insensitive) and not numbers. Names ending in <c>...</c> come last and share out the
+	/// rest; a bare <c>...</c>, alone at the end, takes the rest as name/value pairs the caller names.
 	/// </summary>
 	public static Result<string[]> ArgumentNames(string? text)
 	{
 		var names = (text ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var stems = names.Select(name => name.EndsWith(RestSuffix) ? name[..^RestSuffix.Length] : name).ToArray();
-		var valid = stems.Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Length
-			&& stems.All(stem => stem.Length > 0 && !int.TryParse(stem, out _))
-			&& names.SkipLast(1).All(name => !name.EndsWith(RestSuffix));
+		var fixedNames = names.TakeWhile(name => !name.EndsWith(RestSuffix)).ToArray();
+		var restNames = names[fixedNames.Length..];
+		var stems = names.Select(Stem).ToArray();
+		var valid = restNames.All(name => name.EndsWith(RestSuffix))
+			&& (restNames is not [_, _, ..] || restNames.All(name => name != RestSuffix))
+			&& stems.Where(stem => stem.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Count() == stems.Count(stem => stem.Length > 0)
+			&& stems.All(stem => !int.TryParse(stem, out _));
 		return valid ? names : new Error<string>(ErrorMessages.Returns.BadArgumentName);
 	}
 
+	private static string Stem(string name) => name.EndsWith(RestSuffix) ? name[..^RestSuffix.Length] : name;
+
 	/// <summary>
-	/// Adds <paramref name="values"/> to <paramref name="into"/> under <paramref name="names"/>, in order. A
-	/// last name <c>items...</c> takes the rest as <c>items1</c>, <c>items2</c>, ... and their number as
-	/// <c>itemscount</c>, as a hook's <c>LSA1</c>.. and <c>LSAC</c> do.
+	/// Adds <paramref name="values"/> to <paramref name="into"/> under <paramref name="names"/>, in order.
+	/// Trailing names such as <c>key... value...</c> deal the rest out in turn, as <c>key1</c>, <c>value1</c>,
+	/// <c>key2</c>, ..., each with its number as <c>keycount</c>, <c>valuecount</c> (as a hook's <c>LSA1</c>..
+	/// and <c>LSAC</c>). A bare <c>...</c> reads the rest as name/value pairs: an odd count, or a name that is
+	/// empty, a number or one of the fixed names, is refused.
 	/// </summary>
-	public static void AddNamedArguments<T>(IDictionary<string, T> into, IReadOnlyList<T> values, string[] names,
+	public static Result<Success> AddNamedArguments<T>(IDictionary<string, T> into, IReadOnlyList<T> values, string[] names,
+		Func<T, string> toText, Func<string, T> fromText)
+	{
+		var fixedNames = names.TakeWhile(name => !name.EndsWith(RestSuffix)).ToArray();
+		foreach (var (value, position) in values.Take(fixedNames.Length).Select((value, position) => (value, position)))
+		{
+			into[fixedNames[position]] = value;
+		}
+
+		var restNames = names[fixedNames.Length..];
+		var remaining = values.Skip(fixedNames.Length).ToArray();
+		return restNames switch
+		{
+			[] => new Success(),
+			[RestSuffix] => AddCallerNamedPairs(into, remaining, fixedNames, toText),
+			_ => AddDealtOut(into, remaining, restNames.Select(Stem).ToArray(), fromText)
+		};
+	}
+
+	private static Result<Success> AddCallerNamedPairs<T>(IDictionary<string, T> into, T[] remaining, string[] fixedNames,
+		Func<T, string> toText)
+	{
+		if (remaining.Length % 2 != 0) return new Error<string>(ErrorMessages.Returns.NamedArgumentsComeInPairs);
+
+		var pairs = remaining.Chunk(2).Select(pair => (Name: toText(pair[0]).Trim(), Value: pair[1])).ToArray();
+		if (pairs.Any(pair => pair.Name.Length == 0 || int.TryParse(pair.Name, out _)
+				|| fixedNames.Contains(pair.Name, StringComparer.OrdinalIgnoreCase)))
+		{
+			return new Error<string>(ErrorMessages.Returns.BadArgumentName);
+		}
+
+		foreach (var (name, value) in pairs)
+		{
+			into[name] = value;
+		}
+
+		return new Success();
+	}
+
+	private static Result<Success> AddDealtOut<T>(IDictionary<string, T> into, T[] remaining, string[] stems,
 		Func<string, T> fromText)
 	{
-		if (names.Length == 0) return;
-
-		var last = names[^1];
-		var rest = last.EndsWith(RestSuffix) ? last[..^RestSuffix.Length] : null;
-		var fixedCount = rest is null ? names.Length : names.Length - 1;
-		foreach (var (value, position) in values.Take(fixedCount).Select((value, position) => (value, position)))
-		{
-			into[names[position]] = value;
-		}
-
-		if (rest is null) return;
-
-		var remaining = values.Skip(fixedCount).ToArray();
 		foreach (var (value, position) in remaining.Select((value, position) => (value, position)))
 		{
-			into[$"{rest}{position + 1}"] = value;
+			into[$"{stems[position % stems.Length]}{position / stems.Length + 1}"] = value;
 		}
 
-		into[$"{rest}count"] = fromText(remaining.Length.ToString());
+		foreach (var (stem, turn) in stems.Select((stem, turn) => (stem, turn)))
+		{
+			var dealt = (remaining.Length - turn + stems.Length - 1) / stems.Length;
+			into[$"{stem}count"] = fromText(dealt.ToString());
+		}
+
+		return new Success();
 	}
 
 	/// <summary>

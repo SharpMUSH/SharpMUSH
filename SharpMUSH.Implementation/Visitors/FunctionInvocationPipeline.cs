@@ -477,7 +477,11 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				args[i.ToString()] = value;
 			}
 
-			ArgHelpers.AddNamedArguments(args, values, argumentNames, text => new CallState(text));
+			if (ArgHelpers.AddNamedArguments(args, values, argumentNames, value => value.Message.ToPlainText(),
+					text => new CallState(text)) is Error<string> refused)
+			{
+				return new CallState(refused.Value);
+			}
 
 			// A global @function runs *as the backing object, with its powers* (PennMUSH semantics):
 			// the attribute is read and evaluated with the function object's permissions, not the

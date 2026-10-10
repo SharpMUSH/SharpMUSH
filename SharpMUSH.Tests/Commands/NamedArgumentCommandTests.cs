@@ -91,9 +91,51 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
+	public async Task FunctionArgsTrailingNamesDealTheRestOutInTurn()
+	{
+		var thing = await NewThing("FnGroups");
+		var name = $"ng{Guid.NewGuid():N}"[..20];
+		await Run($"&FN {thing}=%<obj>:[iter(lnum(1,%<keycount>),%<key##>=%<value##>+%<arg##>,%b,|)]:%<keycount>%<valuecount>%<argcount>");
+		await Run($"@function {name}={thing},FN");
+		try
+		{
+			await Run($"@function/args {name}=obj key... value... arg...");
+			await Assert.That(await Eval($"{name}(me,k1,v1,a1,k2,v2,a2)")).IsEqualTo("me:k1=v1+a1|k2=v2+a2:222");
+			await Assert.That(await Eval($"{name}(me,k1,v1,a1,k2)")).IsEqualTo("me:k1=v1+a1|k2=+:211");
+		}
+		finally
+		{
+			await Run($"@function/delete {name}");
+		}
+	}
+
+	[Test]
+	public async Task FunctionArgsBareRestTakesCallerNamedPairs()
+	{
+		var thing = await NewThing("FnPairs");
+		var name = $"np{Guid.NewGuid():N}"[..20];
+		await Run($"&FN {thing}=%<obj>:%<who>:%<count>");
+		await Run($"@function {name}={thing},FN");
+		try
+		{
+			await Run($"@function/args {name}=obj ...");
+			await Assert.That(await Eval($"{name}(me,who,Bob,count,3)")).IsEqualTo("me:Bob:3");
+			await Assert.That(await Eval($"{name}(me,who)")).IsEqualTo(ErrorMessages.Returns.NamedArgumentsComeInPairs);
+			await Assert.That(await Eval($"{name}(me,obj,x)")).IsEqualTo(ErrorMessages.Returns.BadArgumentName);
+			await Assert.That(await Eval($"{name}(me,0,x)")).IsEqualTo(ErrorMessages.Returns.BadArgumentName);
+		}
+		finally
+		{
+			await Run($"@function/delete {name}");
+		}
+	}
+
+	[Test]
 	[Arguments("items... who")]
 	[Arguments("...")]
 	[Arguments("items items...")]
+	[Arguments("key... ...")]
+	[Arguments("... ...")]
 	public async Task FunctionArgsRefusesAMisplacedOrRepeatedRest(string names)
 	{
 		var thing = await NewThing("FnRestBad");

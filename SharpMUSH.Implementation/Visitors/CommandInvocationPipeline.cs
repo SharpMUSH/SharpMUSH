@@ -296,8 +296,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
 			}
 
-			ArgHelpers.AddNamedArguments(namedRegisters, arguments.Select(argument => argument.Message).ToArray(),
-				definition.Attribute.ArgumentNames, MarkupText.Plain);
+			// A hook can't refuse its command, so caller-named pairs it can't read are left unnamed.
+			_ = ArgHelpers.AddNamedArguments(namedRegisters, arguments.Select(argument => argument.Message).ToArray(),
+				definition.Attribute.ArgumentNames, argument => argument.ToPlainText(), MarkupText.Plain);
 
 			namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
 			return namedRegisters;
