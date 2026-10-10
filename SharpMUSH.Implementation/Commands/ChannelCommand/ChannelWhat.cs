@@ -1,7 +1,9 @@
+using MarkupString.Layout;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
@@ -24,7 +26,7 @@ public static class ChannelWhat
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var prefix = prefixArgument.ToPlainText().Trim();
 
-		List<MString> lines = [];
+		List<Block> panels = [];
 
 		await foreach (var channel in mediator.CreateStream(new GetChannelListQuery()))
 		{
@@ -39,57 +41,57 @@ public static class ChannelWhat
 			// ChannelHelper.TryResolveOwner.
 			var owner = await ChannelHelper.TryResolveOwner(mediator, channel);
 
-			lines.Add(channel.Name);
-			lines.Add(MarkupText.Concat(MarkupText.Plain("Description: "), channel.Description));
-			lines.Add(MarkupText.Plain(owner is SharpPlayer player
-				? $"Owner: {player.Object.Name}(#{player.Object.DBRef.Number})"
-				: "Owner: #-1"));
+			List<(string Label, MString Value)> details =
+			[
+				("Description", channel.Description),
+				("Owner", MarkupText.Plain(owner is SharpPlayer player
+					? $"{player.Object.Name}(#{player.Object.DBRef.Number})"
+					: "#-1")),
+			];
 
 			// extchat.c:2757 — the mogrifier line only appears when one is set.
 			if (!string.IsNullOrEmpty(channel.Mogrifier))
 			{
-				lines.Add(MarkupText.Plain($"Mogrifier: {channel.Mogrifier}"));
+				details.Add(("Mogrifier", MarkupText.Plain(channel.Mogrifier)));
 			}
 
-			lines.Add(MarkupText.Plain($"Flags: {ChannelHelper.PrivilegeNames(channel.Privs)}"));
+			details.Add(("Flags", MarkupText.Plain(ChannelHelper.PrivilegeNames(channel.Privs))));
 
 			var storedLines = await mediator.Send(new CountChannelMessagesQuery(channel.Id ?? string.Empty));
-			lines.Add(MarkupText.Plain(
-				string.Format(ErrorMessages.Notifications.ChatRecallBufferSummary, channel.Buffer, storedLines)));
+			details.Add(("Recall", MarkupText.Plain($"{channel.Buffer} full lines, with {storedLines} lines stored")));
+
+			List<Block> parts = [ServerLayout.KeyValues(details)];
 
 			// extchat.c:2770 — the locks are shown only to someone who could decompile the channel, and only
 			// the ones that are actually set.
 			if (await permissionService.ChannelCanDecomposeAsync(executor, channel))
 			{
-				List<string> locks = [];
-				void Add(string label, string key)
-				{
-					if (!string.IsNullOrEmpty(key))
+				var locks = new (string Label, string Key)[]
 					{
-						locks.Add($"\n{label,7}: {key}");
+						("Mod", channel.ModLock), ("Hide", channel.HideLock), ("Join", channel.JoinLock),
+						("Speak", channel.SpeakLock), ("See", channel.SeeLock)
 					}
-				}
-
-				Add("mod", channel.ModLock);
-				Add("hide", channel.HideLock);
-				Add("join", channel.JoinLock);
-				Add("speak", channel.SpeakLock);
-				Add("see", channel.SeeLock);
+					.Where(entry => !string.IsNullOrEmpty(entry.Key))
+					.Select(entry => (entry.Label, MarkupText.Plain(entry.Key)))
+					.ToList();
 
 				if (locks.Count != 0)
 				{
-					lines.Add(MarkupText.Plain($"Locks:{string.Concat(locks)}"));
+					parts.Add(new Rule(MarkupText.Plain("Locks")));
+					parts.Add(ServerLayout.KeyValues(locks));
 				}
 			}
+
+			panels.Add(ServerLayout.Panel(channel.Name, [.. parts]));
 		}
 
-		if (lines.Count == 0)
+		if (panels.Count == 0)
 		{
 			await notifyService.Notify(executor, ErrorMessages.Notifications.DontRecognizeThatChannel, executor);
 			return new CallState(ErrorMessages.Returns.NoSuchChannel);
 		}
 
-		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		var output = ServerLayout.Build(panels.Count == 1 ? panels[0] : new Stack([.. panels]), 78);
 		await notifyService.Notify(executor, output, executor);
 		return new CallState(output);
 	}

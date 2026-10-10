@@ -124,7 +124,7 @@ public class LookFormatInheritanceTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
-		await Assert.That(heard).Contains((string line) => line.StartsWith($"Room_{token}", StringComparison.Ordinal));
+		await Assert.That(heard).Contains((string line) => line.Contains($"Room_{token}", StringComparison.Ordinal));
 		await Assert.That(heard).DoesNotContain((string line) => line.Contains("Contents:", StringComparison.Ordinal));
 		await Assert.That(heard).DoesNotContain((string line) => line.Contains(player.Name, StringComparison.Ordinal));
 	}

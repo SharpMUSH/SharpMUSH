@@ -1,3 +1,5 @@
+using System.Globalization;
+using MarkupString.Layout;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -5,6 +7,8 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Models.RecurringJobs;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -22,7 +26,7 @@ public partial class Commands
 	{
 		var ct = ExecutionBudget.CurrentToken;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var output = "";
+		MString output = MarkupText.Empty;
 		try
 		{
 			var actor = await parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>().GetGameActorAsync(executor.Object().DBRef, ct)
@@ -36,7 +40,7 @@ public partial class Commands
 			if (operation[0] == "LIST")
 			{
 				var jobs = await service.ListAsync(actor, switches.Contains("ALL"), ct);
-				output = jobs.Length == 0 ? "No recurring jobs." : string.Join('\n', jobs.Select(j => $"{j.Id} {j.Target}/{j.Attribute} | {j.Schedule} {j.TimeZone} | {j.Status} | next={j.NextRun} last={j.LastRun} error={j.LastError}"));
+				output = jobs.Length == 0 ? MarkupText.Plain("No recurring jobs.") : RecurringJobListing(jobs);
 			}
 			else if (operation[0] == "CREATE")
 			{
@@ -47,7 +51,7 @@ public partial class Commands
 				if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target[0].Trim(), LocateFlags.All) is not AnySharpObject found)
 					return new CallState(ErrorMessages.Returns.NoMatch);
 				var job = await service.CreateAsync(actor, new(found.Object().DBRef.ToString(), target[1].Trim(), schedule[0].Trim(), schedule[1].Trim(), schedule.Length == 3 ? schedule[2].Trim() : ""), ct);
-				output = "Created recurring job " + job.Id;
+				output = MarkupText.Plain("Created recurring job " + job.Id);
 			}
 			else
 			{
@@ -56,19 +60,49 @@ public partial class Commands
 				if (operation[0] == "DELETE")
 				{
 					await service.DeleteAsync(actor, job.Id, ct);
-					output = "Recurring job deleted.";
+					output = MarkupText.Plain("Recurring job deleted.");
 				}
 				else
 				{
 					var schedule = operation[0] == "SCHEDULE" ? rhs.Split('|', 2) : [job.Schedule, job.TimeZone];
 					if (schedule.Length != 2) throw new RecurringJobException("invalid", "Use job-id=schedule|timezone.");
 					await service.ConfigureAsync(actor, job.Id, schedule[0].Trim(), schedule[1].Trim(), operation[0] == "ENABLE" || operation[0] == "SCHEDULE" && job.Enabled, ct);
-					output = "Recurring job updated.";
+					output = MarkupText.Plain("Recurring job updated.");
 				}
 			}
 		}
-		catch (RecurringJobException ex) { output = "#-1 " + ex.Message; }
+		catch (RecurringJobException ex) { output = MarkupText.Plain("#-1 " + ex.Message); }
 		await NotifyService.Notify(executor, output);
 		return new CallState(output);
 	}
+
+	/// <summary>
+	/// The jobs, each under a divider carrying its id: an id is the whole of what <c>/disable</c> and the
+	/// rest take, too long to share a table row with the schedule and the next run.
+	/// </summary>
+	private static MString RecurringJobListing(RecurringJob[] jobs)
+	{
+		var parts = jobs.SelectMany(job => new Block[]
+		{
+			new Rule(MarkupText.Plain(job.Id)) { TitleAlignment = Alignment.Left },
+			ServerLayout.KeyValues(JobFields(job)),
+		});
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Recurring jobs"), [.. parts]), 78);
+	}
+
+	private static IEnumerable<(string Label, MString Value)> JobFields(RecurringJob job)
+	{
+		if (job.Description.Length > 0) yield return ("Description", MarkupText.Plain(job.Description));
+		yield return ("Runs", MarkupText.Plain($"{job.Target}/{job.Attribute}"));
+		yield return ("Schedule", MarkupText.Plain($"{job.Schedule} {job.TimeZone}"));
+		yield return ("Status", MarkupText.Plain(job.Status));
+		yield return ("Next run", MarkupText.Plain(JobTime(job.NextRun)));
+		yield return ("Last run", MarkupText.Plain(JobTime(job.LastRun)));
+		if (!string.IsNullOrEmpty(job.LastError)) yield return ("Last error", MarkupText.Plain(job.LastError));
+	}
+
+	private static string JobTime(long? unixMilliseconds)
+		=> unixMilliseconds is { } at
+			? DateTimeOffset.FromUnixTimeMilliseconds(at).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) + " UTC"
+			: "-";
 }

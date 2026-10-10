@@ -1,9 +1,12 @@
+using System.Globalization;
+using MarkupString.Layout;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -52,10 +55,21 @@ public partial class Commands
 			var filtered = string.IsNullOrWhiteSpace(arg0)
 				? accounts
 				: accounts.Where(a => a.Username.Contains(arg0, StringComparison.OrdinalIgnoreCase)).ToList();
-			var lines = filtered.Select(a =>
-				$"{a.Username,-30} {StatusLabel(a.Status),-10} {(a.MustChangePassword ? "must-change-pw" : string.Empty)}");
-			await NotifyService.Notify(executor,
-				filtered.Count == 0 ? "No matching accounts." : string.Join("\n", lines));
+			if (filtered.Count == 0)
+			{
+				await NotifyService.Notify(executor, "No matching accounts.");
+				return CallState.Empty;
+			}
+
+			var table = ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Account")) { Min = 10 },
+					new TableColumn(MarkupText.Plain("Status")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Password")) { Wrap = false, Priority = 2 },
+				],
+				filtered.Select(a => (IEnumerable<string>)
+					[a.Username, StatusLabel(a.Status), a.MustChangePassword ? "must change" : string.Empty]));
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Accounts"), table), 78));
 			return CallState.Empty;
 		}
 
@@ -179,16 +193,28 @@ public partial class Commands
 		}
 
 		// No switch: show details.
-		var characters = await AccountService.GetCharactersAsync(account.Id!);
-		var charList = characters.Count == 0
-			? "  (none)"
-			: string.Join("\n", characters.Select(c => $"  {c.Object.Name} (#{c.Object.Key})"));
-		await NotifyService.Notify(executor,
-			$"Account: {account.Username}\n" +
-			$"Email: {account.Email ?? "(none)"}\n" +
-			$"Status: {StatusLabel(account.Status)}{(account.MustChangePassword ? ", must change password" : string.Empty)}\n" +
-			$"Characters:\n{charList}");
+		await NotifyService.Notify(executor, await DescribeAccountAsync(account));
 		return CallState.Empty;
+	}
+
+	/// <summary>An account's email, status and characters, as a panel titled with its name.</summary>
+	private async ValueTask<MString> DescribeAccountAsync(SharpAccount account)
+	{
+		var characters = await AccountService.GetCharactersAsync(account.Id!);
+		var details = ServerLayout.KeyValues([
+			("Email", MarkupText.Plain(account.Email ?? "(none)")),
+			("Status", MarkupText.Plain(StatusLabel(account.Status) + (account.MustChangePassword ? ", must change password" : string.Empty))),
+			("Characters", MarkupText.Plain(characters.Count.ToString(CultureInfo.InvariantCulture)))]);
+		Block characterList = characters.Count == 0
+			? new TextBlock(MarkupText.Plain("No characters."))
+			: ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Character")) { Min = 10 },
+					new TableColumn(MarkupText.Plain("Dbref")) { Wrap = false },
+				],
+				characters.Select(character => (IEnumerable<string>)[character.Object.Name, $"#{character.Object.Key}"]));
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Account {account.Username}"),
+			details, new Rule(), characterList), 78);
 	}
 
 	/// <summary>

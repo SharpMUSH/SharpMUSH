@@ -110,9 +110,6 @@ public static partial class ErrorMessages
 		public const string ChatChannelList = "CHAT: Channel list: {0}";
 		/// <summary>PennMUSH src/extchat.c:2696.</summary>
 		public const string ChatNone = "(None)";
-		/// <summary>PennMUSH src/extchat.c:2764 — @channel/what's buffer line.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatRecallBufferSummary = "Recall buffer: {0} full lines, with {1} lines stored.";
 
 		// --- @channel/gag, /mute, /hide and /combine: PennMUSH do_chan_user_flags (src/extchat.c:1900-2050)
 		/// <summary>PennMUSH src/extchat.c:1908.</summary>

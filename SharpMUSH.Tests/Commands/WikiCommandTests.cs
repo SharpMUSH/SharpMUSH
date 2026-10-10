@@ -135,11 +135,16 @@ public class WikiCommandTests
 			MarkupText.Plain("@wiki/create Qualified Row Page=Body of the qualified row page."));
 		var listing = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list"));
 
+		// The panel's rows, between its side lines, under the "Page" heading and the rule beneath it. A long
+		// title wraps onto an indented line of its own, which is not a row.
 		var rows = listing.Message.ToPlainText()
 			.Split('\n')
-			.Skip(1) // the "WIKI: N page(s):" header
-			.Select(r => r.Trim())
-			.Where(r => r.Length > 0 && !r.StartsWith('…'))
+			.Select(line => line.Trim().Trim('│').TrimEnd())
+			.SkipWhile(line => !line.TrimStart().StartsWith("Page "))
+			.Skip(2)
+			.TakeWhile(line => line.Trim().Length > 0 && !line.StartsWith('╰') && !line.Trim().StartsWith('…') && !line.StartsWith('├'))
+			.Where(line => line.Length > 1 && line[1] != ' ')
+			.Select(line => line.Trim())
 			.ToArray();
 
 		await Assert.That(rows).IsNotEmpty();
@@ -360,13 +365,13 @@ public class WikiCommandTests
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/category wyrmholt places"));
-		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt Places' — 1 page(s), 0 subcategory(ies):");
+		await ExpectNotify(player.DbRef, "Category 'Wyrmholt Places' — 1 page(s), 0 subcategory(ies)");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki/category Wyrmholt_Setting"));
 		await ExpectNotify(player.DbRef, "Category:Wyrmholt Places");
 		// Filing a page in a new category gave it a category page titled as typed, capitals and all.
-		await ExpectNotify(player.DbRef, "WIKI: Category 'Wyrmholt Setting'");
+		await ExpectNotify(player.DbRef, "Category 'Wyrmholt Setting' —");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain("@wiki wyrmholt_gate"));
@@ -814,7 +819,7 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list"));
 
 		await ExpectNoNotify(player.DbRef, page.Slug);
-		await ExpectNotify(player.DbRef, "WIKI: ");
+		await ExpectNotify(player.DbRef, "page(s)");
 	}
 
 	[Test]
@@ -835,13 +840,13 @@ public class WikiCommandTests
 			"Draft Counting Fodder", "counting body", WikiNamespace.System);
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list system"));
-		await ExpectNotify(player.DbRef, "WIKI: 0 page(s) in namespace 'system'");
+		await ExpectNotify(player.DbRef, "0 page(s) in namespace 'system'");
 		await ExpectNoNotify(player.DbRef, page.Slug);
 
 		// A count hard-wired to the published total would satisfy the assertion above and hide the draft
 		// from the one reader entitled to see it, so the wizard's view has to be pinned in the same breath.
 		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@wiki/list system"));
-		await ExpectNotify(wizard.DbRef, "WIKI: 1 page(s) in namespace 'system'");
+		await ExpectNotify(wizard.DbRef, "1 page(s) in namespace 'system'");
 		await ExpectNotify(wizard.DbRef, page.Slug);
 	}
 
@@ -991,7 +996,7 @@ public class WikiCommandTests
 			MarkupText.Plain($"@wiki/history {page.Slug}"));
 
 		await ExpectNotify(player.DbRef, "This is a draft; its revision history is not shown.");
-		await ExpectNoNotify(player.DbRef, "by #1");
+		await ExpectNoNotify(player.DbRef, "Rev  Edited");
 	}
 
 	[Test]
@@ -1005,7 +1010,7 @@ public class WikiCommandTests
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/history/draft {page.Slug}"));
 
-		await ExpectNotify(wizard.DbRef, "by #1");
+		await ExpectNotify(wizard.DbRef, "Rev  Edited");
 	}
 
 	/// <summary>Creates a plain English page through the service and returns it.</summary>
@@ -1368,7 +1373,7 @@ public class WikiCommandTests
 		var (title, slug, category) = await FiledPageAsync(player, "Gated");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/require category {category}=edit media.admin"));
-		await ExpectNotify(god, $"WIKI: Category {category} now requires:");
+		await ExpectNotify(god, $"Category {category} now requires");
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/edit {slug}=changed"));
 		await ExpectNotify(player.DbRef, $"You can't edit '{title}': category {category} requires media.admin");
@@ -1380,7 +1385,7 @@ public class WikiCommandTests
 		await Assert.That(await AsPlayerAsync(god, $"wikiaccess({slug}, edit)")).IsEqualTo("1");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wiki/access {slug}=*{player.Name}"));
-		await ExpectNotify(god, $"edit    category {category} requires media.admin");
+		await ExpectNotify(god, $"category {category} requires media.admin");
 	}
 
 	[Test]

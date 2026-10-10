@@ -1,9 +1,12 @@
+using System.Globalization;
+using MarkupString.Layout;
 using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -155,22 +158,46 @@ public static class WikiCommandHelper
 	public static string EditorDbref(AnySharpObject executor) =>
 		$"#{executor.Object().Key}";
 
-	/// <summary>One listing line: "reference — Title (rev N, yyyy-MM-dd)" plus a draft marker.</summary>
-	public static string FormatPageLine(WikiPage page)
-	{
-		var markers = page.Published ? "" : " (draft)";
-		return $"{DisplayReference(page),-30} {page.Title} (rev {page.RevisionNumber}, {page.UpdatedAt:yyyy-MM-dd}){markers}";
-	}
+	/// <summary>One listing row: the page's reference, its title (marked when a draft), revision and last edit.</summary>
+	public static string[] PageRow(WikiPage page) =>
+		PageRow(DisplayReference(page), page.Title, page.Published, page.RevisionNumber, page.UpdatedAt);
 
 	/// <summary>
-	/// One listing line for a page resolved into a locale. Identical to the
-	/// <see cref="FormatPageLine(WikiPage)"/> overload except that the title, revision number and
-	/// published marker are the served locale's rather than the source's.
+	/// One listing row for a page resolved into a locale. Identical to the <see cref="PageRow(WikiPage)"/>
+	/// overload except that the title, revision number and published marker are the served locale's rather
+	/// than the source's.
 	/// </summary>
-	public static string FormatPageLine(LocalizedWikiPage page)
+	public static string[] PageRow(LocalizedWikiPage page) =>
+		PageRow(DisplayReference(page.Page), page.Title, page.Published, page.RevisionNumber, page.UpdatedAt);
+
+	private static string[] PageRow(string reference, string title, bool published, int revision, DateTimeOffset updated) =>
+		[reference, published ? title : $"{title} (draft)", revision.ToString(CultureInfo.InvariantCulture), updated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)];
+
+	/// <summary>
+	/// A wiki listing: <paramref name="rows"/> (<see cref="PageRow(WikiPage)"/>) as a table in a panel titled
+	/// <paramref name="title"/>, with <paramref name="before"/> above the table and <paramref name="after"/>
+	/// under a divider below it.
+	/// </summary>
+	public static MString PageListing(string title, IReadOnlyCollection<string[]> rows, Block? before = null, string? after = null)
 	{
-		var markers = page.Published ? "" : " (draft)";
-		return $"{DisplayReference(page.Page),-30} {page.Title} (rev {page.RevisionNumber}, {page.UpdatedAt:yyyy-MM-dd}){markers}";
+		Block pages = rows.Count == 0
+			? new TextBlock(MarkupText.Plain("No pages."))
+			: ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Page")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Title")) { Min = 10 },
+					new TableColumn(MarkupText.Plain("Rev")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+					new TableColumn(MarkupText.Plain("Edited")) { Wrap = false, Priority = 2 },
+				],
+				rows);
+		List<Block> parts = before is null ? [pages] : [before, new Rule(), pages];
+		if (after is not null)
+		{
+			parts.Add(new Rule());
+			parts.Add(new TextBlock(MarkupText.Plain(after)));
+		}
+
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title), [.. parts]), 78);
 	}
 
 	/// <summary>

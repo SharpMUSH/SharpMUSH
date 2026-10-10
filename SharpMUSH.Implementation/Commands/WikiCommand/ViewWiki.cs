@@ -1,3 +1,4 @@
+using System.Globalization;
 using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
@@ -214,25 +215,30 @@ public static class ViewWiki
 			: localized.Locale;
 
 		var streamMarker = stream.Length == 0 ? string.Empty : $" ({stream})";
-		var lines = new List<MString>
-		{
-			MarkupText.Plain($"WIKI: Revision history for {localized?.Title ?? page.Title} [{page.Namespace}]{streamMarker}:"),
-		};
-
+		Block history;
 		if (IsPublic(page, localized) || (showDraft && maySeeDrafts))
 		{
 			var revisions = stream.Length == 0
 				? await wikiService.GetRevisionsAsync(page.Id)
 				: await wikiService.GetRevisionsForLocaleAsync(page.Id, stream, 0, 20);
 
-			lines.AddRange(revisions.Select(r => MarkupText.Plain($"  r{r.RevisionNumber,-4} {r.Timestamp:yyyy-MM-dd HH:mm}  by {r.EditorDbref,-8} {r.EditSummary ?? ""}".TrimEnd())));
+			history = ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Rev")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Edited")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("By")) { Wrap = false, Priority = 2 },
+					new TableColumn(MarkupText.Plain("Summary")) { Min = 10 },
+				],
+				revisions.Select(r => (IEnumerable<string>)
+					[$"r{r.RevisionNumber}", r.Timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), r.EditorDbref, r.EditSummary ?? ""]));
 		}
 		else
 		{
-			lines.Add(DraftWithheld("revision history", maySeeDrafts));
+			history = new TextBlock(DraftWithheld("revision history", maySeeDrafts));
 		}
 
-		var output = MarkupText.Join(MarkupText.NewLine, lines);
+		var output = ServerLayout.Build(ServerLayout.Panel(
+			MarkupText.Plain($"Revision history for {localized?.Title ?? page.Title} [{page.Namespace}]{streamMarker}"), history), 78);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}

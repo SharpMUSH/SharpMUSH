@@ -135,7 +135,7 @@ public class SocketCommandTests
 
 		await RunAsync(handle, "SOCKSET screenreader=on");
 		await Assert.That(ConnectionService.Get(handle)!.Metadata[TerminalCapabilityReader.ScreenReaderKey]).IsEqualTo("1");
-		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Screen Reader")).IsNotNull().And.Contains("Screen Reader  :  on");
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Screen Reader")).IsNotNull().And.Contains("Screen Reader:   on ");
 	}
 
 	// --- IDLE --------------------------------------------------------------------------------

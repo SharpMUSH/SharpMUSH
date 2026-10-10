@@ -55,6 +55,13 @@ public static class AttributeHelpers
 		Dictionary<string, CallState> formatArgs,
 		MString defaultValue)
 	{
+		// A limit already tripped in this evaluation halts everything after it, so the format would come
+		// back as its own unevaluated code.
+		if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
+		{
+			return defaultValue;
+		}
+
 		try
 		{
 			// The evaluator does the lookup itself as #1, and a missing attribute evaluates to nothing.

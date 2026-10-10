@@ -7,6 +7,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -313,7 +314,7 @@ public partial class Commands
 
 		if (argument.Length == 0)
 		{
-			await NotifyService.Notify(handle, SocketOptions.Show(connection, "\n",
+			await NotifyService.Notify(handle, SocketOptions.Show(connection,
 				await ArgHelpers.ColorFlagsOfAsync(Mediator, connection.Ref)));
 			return new None();
 		}
@@ -428,7 +429,7 @@ public partial class Commands
 
 		if (pairs.Length == 0)
 		{
-			await NotifyService.Notify(executor, SocketOptions.Show(target, "\n",
+			await NotifyService.Notify(executor, SocketOptions.Show(target,
 				await ArgHelpers.ColorFlagsOfAsync(Mediator, target.Ref)), executor);
 			return CallState.Empty;
 		}
@@ -682,21 +683,19 @@ public static class SocketOptions
 	internal const string ColorStyleKey = "COLORSTYLE";
 
 	/// <summary>
-	/// The settings report. PennMUSH lays this out as a 15-column label followed by two spaces and the
-	/// value, and omits the prefix/suffix rows entirely when they are unset.
+	/// The settings report: PennMUSH's rows, as labelled values in a panel. Like PennMUSH it omits the
+	/// prefix/suffix rows entirely when they are unset.
 	/// </summary>
 	/// <param name="colorFlags">
 	/// The colour flags of whoever is behind the descriptor, or null at the connect screen. They can
 	/// raise the depth above what the terminal negotiated, so the "auto (...)" reading is wrong
 	/// without them.
 	/// </param>
-	public static string Show(IConnectionService.ConnectionData connection, string newLine,
-		PlayerColorFlags? colorFlags = null)
+	public static MString Show(IConnectionService.ConnectionData connection, PlayerColorFlags? colorFlags = null)
 	{
-		var builder = new StringBuilder();
-		builder.Append(newLine);
+		var rows = new List<(string Label, MString Value)>();
 
-		void Row(string label, string value) => builder.Append($"{label,-15}:  {value}").Append(newLine);
+		void Row(string label, string value) => rows.Add((label, MarkupText.Plain(value)));
 
 		if (connection.Metadata.TryGetValue("OutputPrefix", out var prefix) && !string.IsNullOrEmpty(prefix))
 		{
@@ -748,9 +747,9 @@ public static class SocketOptions
 			? terminal?.Name ?? "unknown"
 			: $"auto ({terminal?.Name ?? "unknown"})");
 
-		builder.Append($"{"Prompt Newlines",-15}:  {YesNo(connection.Metadata.GetValueOrDefault(PromptNewlinesKey) == "1")}");
+		Row("Prompt Newlines", YesNo(connection.Metadata.GetValueOrDefault(PromptNewlinesKey) == "1"));
 
-		return builder.ToString();
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Connection settings"), ServerLayout.KeyValues(rows)), 78);
 
 		static string YesNo(bool value) => value ? "Yes" : "No";
 		static string OnOff(bool value) => value ? "on" : "off";

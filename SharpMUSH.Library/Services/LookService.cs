@@ -234,7 +234,8 @@ public class LookService(
 				look.God, look.Viewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
 		}
 
-		if (!formatAttribute.IsAttribute)
+		// As in AttributeHelpers.EvaluateFormatAttribute: after a tripped limit the format would show its code.
+		if (!formatAttribute.IsAttribute || look.Parser.CurrentState.LimitExceeded?.IsExceeded == true)
 		{
 			return description.Base;
 		}

@@ -508,7 +508,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "     Name: Builder")),
+				Arg.Is<SharpMessage>(s => PlainTextMatches(s, @"Power Builder")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -721,7 +721,7 @@ public class FlagAndPowerCommandTests
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
 
-	// PennMUSH src/flags.c do_flag_info prints a "Character:" line between Name and Aliases.
+	// PennMUSH src/flags.c do_flag_info shows the power's letter; here it is the panel's Symbol field.
 	[Test]
 	public async ValueTask Power_NoEquals_ShowsTheCharacter()
 	{
@@ -734,12 +734,14 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s =>
-					TestHelpers.MessagePlainTextContains(s, "Character: X")),
+				Arg.Is<SharpMessage>(s => PlainTextMatches(s, @"Symbol:\s+X\s")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
+
+	private static bool PlainTextMatches(SharpMessage message, string pattern) =>
+		System.Text.RegularExpressions.Regex.IsMatch(message switch { MString text => text.ToPlainText(), string text => text }, pattern);
 
 	// PennMUSH src/flags.c list_all_flags filters the listing by a glob pattern.
 	[Test]
