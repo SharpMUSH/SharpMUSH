@@ -174,7 +174,7 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 &INPUT`NOTE`DONE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=[if(strmatch(%q<reason>,timeout),Time ran out%, so your note was saved as it was.,Note saved.)]
 ```
 
-`%0` is data: storing or substituting it never evaluates brackets or runs `;`. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
+`%0` is data: storing or substituting it never evaluates brackets or runs `;`. To evaluate typed text on purpose, evaluate it as the player, once, in the exit attribute: `` [setq(note_text,v(DATA`DRAFT))][objeval(%#,s(%q<note_text>))] ``. `objeval()` alone only substitutes the register; the inner `s()` is safe there because it runs as the player. Never `s()` typed text outside `objeval()`, and only do this from an object that controls its players (wizard-owned), since `objeval()` otherwise falls back to the object's own privileges. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
 
 ## Common mistakes (all observed in practice)
 

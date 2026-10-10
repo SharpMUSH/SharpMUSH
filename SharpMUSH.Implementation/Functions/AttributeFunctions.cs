@@ -764,7 +764,8 @@ public partial class Functions
 			objectArg.Message.ToPlainText(), LocateFlags.All);
 		var evaluator = located is AnySharpObject found && await MayEvaluateAs(found) ? found : executor;
 
-		var result = await parser.With(state => state with { Executor = evaluator.Object().DBRef },
+		// The caller inside is whoever ran objeval(), as process_expression(..., obj, executor, ...) passes it.
+		var result = await parser.With(state => state with { Executor = evaluator.Object().DBRef, Caller = executor.Object().DBRef },
 			async newParser => await newParser.FunctionParse(expression.Message)) ?? CallState.Empty;
 		return result with { HadErrors = objectArg.HadErrors || result.HadErrors };
 

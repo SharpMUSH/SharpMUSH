@@ -71,6 +71,21 @@ public class SFunctionTests
 	}
 
 	/// <summary>
+	/// Inside objeval() the caller is whoever ran it: fun_objeval passes its executor as the caller of
+	/// the evaluation, so %@ there names the object that asked, not the one evaluated as.
+	/// </summary>
+	[Test]
+	public async Task Objeval_CallerIsTheObjectThatAsked()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), "ObjevalCaller");
+
+		var result = await Parser.FunctionParse(MarkupText.Plain($"objeval(#{mortal.Number},num(me) %@ [objeval(#1,%@)])"));
+
+		await Assert.That(result!.Message.ToString()).IsEqualTo($"#{mortal.Number} #1 #{mortal.Number}");
+	}
+
+	/// <summary>
 	/// Argument zero's failure metadata survives: a parse failure there is reported on objeval()'s
 	/// result, as default() and the other NoParse functions that evaluate their own arguments do.
 	/// </summary>
