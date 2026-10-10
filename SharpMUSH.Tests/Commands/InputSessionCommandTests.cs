@@ -451,6 +451,30 @@ public class InputSessionCommandTests
 	}
 
 	[Test]
+	public async Task CallbacksKeepTheCallerOfTheStart()
+	{
+		var player = await Player();
+		var command = "+" + TestIsolationHelpers.GenerateUniqueName("ask").ToLowerInvariant();
+		try
+		{
+			var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain("@create CallerKeeper"));
+			var keeper = DBRef.Parse(created.Message.Text);
+			await Command(player.Handle, $"@set {keeper}=!no_command");
+			await Command(player.Handle, $"&INPUT`ASK`LINE {keeper}=&LINE me=%@");
+			await Command(player.Handle, $"&INPUT`ASK`DONE {keeper}=&DONE me=%@");
+			await Command(player.Handle, $"&CMD`ASK {keeper}=${command}:@input/start Answer:=done,INPUT`ASK`DONE,*,INPUT`ASK`LINE");
+			await Input(player.Handle, command);
+			using (var deadline = new CancellationTokenSource(QueueDeadline))
+				while (Sessions.GetCapturing(player.Handle) is null) await Task.Delay(10, deadline.Token);
+			await Input(player.Handle, "hello");
+			await WaitFor(keeper, "LINE", $"#{player.DbRef.Number}");
+			await Input(player.Handle, "done");
+			await WaitFor(keeper, "DONE", $"#{player.DbRef.Number}");
+		}
+		finally { await Connections.Disconnect(player.Handle); }
+	}
+
+	[Test]
 	public async Task HaltingAnObjectStopsItsFutureCapturedCallbacks()
 	{
 		var player = await Player();

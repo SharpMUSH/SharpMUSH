@@ -8,6 +8,7 @@ namespace SharpMUSH.Library.Models.InputSessions;
 /// What each line runs, tried in order; the first is the exit, which ends the session before its
 /// attribute runs, and is also what runs at the timeout.
 /// </param>
+/// <param name="Caller">The %@ of the code that ran <c>@input/start</c>, which every callback keeps.</param>
 public sealed record InputSession(
 	Guid Id,
 	IConnectionService.ConnectionData Connection,
@@ -15,6 +16,7 @@ public sealed record InputSession(
 	DBRef Character,
 	DBRef Executor,
 	DBRef Owner,
+	DBRef Caller,
 	IReadOnlyList<InputRoute> Routes,
 	DateTimeOffset ExpiresAt)
 {

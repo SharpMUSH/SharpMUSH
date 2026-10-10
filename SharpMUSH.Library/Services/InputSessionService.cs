@@ -215,9 +215,13 @@ public sealed class InputSessionService : IInputSessionService
 			}
 		}
 		var owner = (await actor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		var caller = state.Caller is { } calledBy
+			&& await _mediator.Send(new GetObjectNodeQuery(calledBy), ExecutionBudget.CurrentToken) is AnySharpObject callerObject
+				? callerObject.Object().DBRef
+				: actor.Object().DBRef;
 		HandlePublicationLane.Slot? place = null;
 		var session = new InputSession(Guid.NewGuid(), connection, connection.Metadata.GetValueOrDefault("SessionId"),
-			player.Object().DBRef, actor.Object().DBRef, owner, built, _time.GetUtcNow() + timeout);
+			player.Object().DBRef, actor.Object().DBRef, owner, caller, built, _time.GetUtcNow() + timeout);
 		if (!session.Character.IsObjid || !session.Executor.IsObjid || !session.Owner.IsObjid
 			|| built.Any(route => !route.Target.IsObjid || !route.TargetOwner.IsObjid)) return InvalidContext;
 		lock (_gate)
@@ -522,7 +526,7 @@ public sealed class InputSessionService : IInputSessionService
 		var state = ParserState.RootFor(session.Executor) with
 		{
 			Executor = session.Executor,
-			Caller = session.Executor,
+			Caller = session.Caller,
 			Enactor = session.Character,
 			Handle = session.Connection.Handle,
 			ConnectionSessionId = session.TransportSessionId,
