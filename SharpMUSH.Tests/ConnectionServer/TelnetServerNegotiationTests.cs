@@ -1038,6 +1038,7 @@ public class TelnetServerNegotiationTests
 	public async Task MsdpRequest_IsAnsweredOverMsdpNotEchoedAsText()
 	{
 		var (toServer, fromServer, handler, _, cts) = StartServer();
+		using var serverLifetime = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MSDP));
@@ -1057,7 +1058,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -1065,6 +1065,7 @@ public class TelnetServerNegotiationTests
 	public async Task MsdpClientName_IsPublishedToTheMainProcess()
 	{
 		var (toServer, fromServer, handler, published, cts) = StartServer();
+		using var serverLifetime = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MSDP));
@@ -1081,7 +1082,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -1095,6 +1095,7 @@ public class TelnetServerNegotiationTests
 	{
 		var service = Substitute.For<IConnectionServerService>();
 		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service);
+		using var serverLifetime = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, EOR));
@@ -1115,7 +1116,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -1127,6 +1127,7 @@ public class TelnetServerNegotiationTests
 	public async Task GmcpAgreement_IsPublishedToTheMainProcess()
 	{
 		var (toServer, fromServer, handler, published, cts) = StartServer();
+		using var serverLifetime = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, GMCP));
@@ -1142,7 +1143,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
@@ -1150,6 +1150,7 @@ public class TelnetServerNegotiationTests
 	public async Task GmcpCorePing_IsAnswered()
 	{
 		var (toServer, fromServer, handler, _, cts) = StartServer();
+		using var serverLifetime = cts;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, GMCP));
@@ -1166,7 +1167,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
