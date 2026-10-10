@@ -154,9 +154,9 @@ public class NotifyService(
 	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline. A socket owner that orders
 	/// prompts gets them on the output subject; any other keeps the separate, unordered prompt subject.
 	/// </summary>
-	private ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing, string? sessionId = null)
+	private ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing, string? sessionId = null, string? inputSession = null)
 		=> connections.Get(handle)?.Metadata.GetValueOrDefault(OrderedPromptsMetadata) == "1"
-			? Publish(handle, new MarkupOutputMessage(handle, outgoing.Serialized) { SessionId = sessionId, Prompt = true }, sessionId)
+			? Publish(handle, new MarkupOutputMessage(handle, outgoing.Serialized) { SessionId = sessionId, Prompt = true, InputSession = inputSession }, sessionId)
 			: Publish(handle, new MarkupPromptMessage(handle, outgoing.Serialized) { SessionId = sessionId }, sessionId);
 
 	/// <summary>
@@ -349,8 +349,20 @@ public class NotifyService(
 	public ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
 
-	public ValueTask PromptToSession(long handle, string sessionId, SharpMessage what)
-		=> PublishMarkupPrompt(handle, Prepare(what), sessionId);
+	public ValueTask PromptToSession(long handle, string sessionId, SharpMessage what, Guid? inputSession = null)
+		=> PublishMarkupPrompt(handle, Prepare(what), sessionId, inputSession?.ToString("N"));
+
+	/// <summary>
+	/// Carried on the output subject, in order with the session's prompts, and only to a socket owner that
+	/// orders prompts: one that does not would have no prompt of its own to take down.
+	/// </summary>
+	public ValueTask ClearPromptToSession(long handle, string sessionId, Guid? inputSession)
+		=> connections.Get(handle)?.Metadata.GetValueOrDefault(OrderedPromptsMetadata) == "1"
+			? Publish(handle, new MarkupOutputMessage(handle, string.Empty)
+			{
+				SessionId = sessionId, ClearPrompt = true, InputSession = inputSession?.ToString("N")
+			}, sessionId)
+			: ValueTask.CompletedTask;
 
 	public async ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{

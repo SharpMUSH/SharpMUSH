@@ -35,9 +35,20 @@ public interface INotifyService
 
 	ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
-	/// <summary>Publishes a prompt only to the captured transport incarnation.</summary>
-	ValueTask PromptToSession(long handle, string sessionId, SharpMessage what)
+	/// <summary>
+	/// Publishes a prompt only to the captured transport incarnation. <paramref name="inputSession"/> is
+	/// the <c>@input</c> session it belongs to, which a WebSocket client keeps it under until
+	/// <see cref="ClearPromptToSession"/> names that session.
+	/// </summary>
+	ValueTask PromptToSession(long handle, string sessionId, SharpMessage what, Guid? inputSession = null)
 		=> throw new NotSupportedException("This notifier does not support incarnation-bound prompts.");
+
+	/// <summary>
+	/// Tells a WebSocket client that <c>@input</c> session <paramref name="inputSession"/> ended, so the
+	/// prompt it shows for it comes down; null takes down whatever prompt it shows. A terminal is sent nothing.
+	/// </summary>
+	ValueTask ClearPromptToSession(long handle, string sessionId, Guid? inputSession)
+		=> ValueTask.CompletedTask;
 
 	ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
