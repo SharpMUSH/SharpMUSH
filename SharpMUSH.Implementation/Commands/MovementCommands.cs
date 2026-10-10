@@ -282,24 +282,27 @@ public partial class Commands
 					Executor = follower.Object().DBRef,
 					Enactor = leader.Object().DBRef,
 					Caller = leader.Object().DBRef,
-					Handle = null,
 					// parse_que passes no pe_regs, so %0-%9 and the q-registers start empty.
 					Arguments = new Dictionary<string, CallState>(),
-					EnvironmentRegisters = new Dictionary<string, CallState>(),
 					CallerArguments = null,
-					Registers = new([[]]),
-					IterationRegisters = [],
-					RegexRegisters = [],
-					SwitchStack = [],
-					ExecutionStack = [],
-					CallDepth = new InvocationCounter(),
-					FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-					TotalInvocations = new InvocationCounter(),
-					LimitExceeded = new LimitExceededFlag(),
-					MoveDepth = new InvocationCounter(),
 					CommandHistory = null,
 					BreakPropagation = null,
-					HttpResponse = null
+					Context = parser.CurrentState.Context with
+					{
+						Handle = null,
+						EnvironmentRegisters = new Dictionary<string, CallState>(),
+						Registers = new([[]]),
+						IterationRegisters = [],
+						RegexRegisters = [],
+						SwitchStack = [],
+						ExecutionStack = [],
+						CallDepth = new InvocationCounter(),
+						FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+						TotalInvocations = new InvocationCounter(),
+						LimitExceeded = new LimitExceededFlag(),
+						MoveDepth = new InvocationCounter(),
+						HttpResponse = null
+					}
 				},
 				new DbRefAttribute(follower.Object().DBRef, DefaultSemaphoreAttributeArray),
 				-1), ExecutionBudget.CurrentToken);

@@ -48,4 +48,26 @@ public class ParserStateArgumentsTests
 		await Assert.That(ParserState.ArgumentKey(64)).IsEqualTo("64");
 		await Assert.That(ParserState.ArgumentKey(1000)).IsEqualTo("1000");
 	}
+
+	[Test]
+	public async ValueTask KeysAreReadAsNumbers()
+	{
+		var ordered = (ParserState.Empty with { Arguments = Bound("0", "1 ", "name") }).ArgumentsOrdered;
+
+		await Assert.That(ordered.Count).IsEqualTo(2);
+		await Assert.That(ordered["1"].Message.ToPlainText()).IsEqualTo("1 ");
+		await Assert.That(ordered.ContainsKey("2")).IsFalse();
+		await Assert.That(ordered.ContainsKey("name")).IsFalse();
+		await Assert.That(() => ordered["5"]).Throws<KeyNotFoundException>();
+	}
+
+	[Test]
+	public async ValueTask EnumeratesKeysAndValuesTogether()
+	{
+		var ordered = (ParserState.Empty with { Arguments = Bound("1", "0") }).ArgumentsOrdered;
+
+		await Assert.That(ordered.Select(pair => $"{pair.Key}={pair.Value.Message.ToPlainText()}"))
+			.IsEquivalentTo(["0=0", "1=1"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(ordered.Skip(1).Single().Key).IsEqualTo("1");
+	}
 }

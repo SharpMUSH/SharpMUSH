@@ -75,7 +75,7 @@ public partial class Functions
 	/// <summary>
 	/// The argument values as plain text, in argument order, ready for one of the integer folds.
 	/// </summary>
-	private IEnumerable<string> Operands(ImmutableSortedDictionary<string, CallState> args)
+	private IEnumerable<string> Operands(OrderedArguments args)
 		=> args.Select(arg => arg.Value.Message.ToPlainText());
 
 	/// <summary>

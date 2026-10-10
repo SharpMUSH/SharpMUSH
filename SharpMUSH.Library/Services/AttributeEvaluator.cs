@@ -259,12 +259,7 @@ internal sealed class AttributeEvaluator(
 					s => s with
 					{
 						Arguments = slimArgs,
-						EnvironmentRegisters = slimArgs,
-						CallDepth = s.CallDepth,
-						FunctionRecursionDepths = s.FunctionRecursionDepths,
-						TotalInvocations = s.TotalInvocations,
-						LimitExceeded = s.LimitExceeded,
-						MoveDepth = s.MoveDepth
+						EnvironmentRegisters = slimArgs
 					},
 					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
@@ -287,12 +282,7 @@ internal sealed class AttributeEvaluator(
 			var result = await parser.With(s => s with
 			{
 				Arguments = args,
-				EnvironmentRegisters = args,
-				CallDepth = s.CallDepth,
-				FunctionRecursionDepths = s.FunctionRecursionDepths,
-				TotalInvocations = s.TotalInvocations,
-				LimitExceeded = s.LimitExceeded,
-				MoveDepth = s.MoveDepth
+				EnvironmentRegisters = args
 			},
 				async np => await np.FunctionParse(attribute));
 			return result ?? CallState.Empty;

@@ -334,88 +334,291 @@ public sealed class CommandText(MString? output = null, MString? printed = null)
 }
 
 /// <summary>
-/// A layer or Parser State
+/// What every frame of one evaluation shares: the register stacks, the invocation counters and limits,
+/// the connection, <c>%c</c>/<c>%u</c>/<c>%></c>/<c>%|</c> and the output limit. A function frame forked
+/// with <see cref="ParserState.ForFunction"/> points at its caller's, so a call copies none of it.
 /// </summary>
-/// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
-/// <param name="IterationRegisters">The current iteration registers: %i0, #@, etc</param>
-/// <param name="RegexRegisters">
-/// The regexp capture frames that <c>$0</c>-<c>$9</c> and <c>$&lt;name&gt;</c> read, innermost on top
-/// (see <see cref="RegexpCaptureFrame"/>). Not <c>%$0</c>, which is the switch text in <see cref="SwitchStack"/>.
-/// </param>
-/// <param name="SwitchStack">The switch context stack for stext() and slev() functions. Tracks the string being matched in nested switch statements.</param>
-/// <param name="CurrentEvaluation">The current evaluation context</param>
-/// <param name="ParserFunctionDepth">The function depth.</param>
-/// <param name="Function">Function name being evaluated</param>
-/// <param name="Command">Name of the command being evaluated; its text is <see cref="CommandText"/></param>
-/// <param name="Switches">Switches for the command being evaluated</param>
-/// <param name="Arguments">The arguments to the command or function</param>
-/// <param name="Executor">The executor of a command is the object actually carrying out the command or running the code: %!</param>
-/// <param name="Enactor">The enactor is the object which causes something to happen: %# or %:</param>
-/// <param name="Caller">The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@</param>
-/// <param name="Handle">The telnet handle running the command.</param>
-/// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
-/// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
-/// <param name="CallDepth">Shared counter tracking overall function call nesting depth. Mutable and shared across all states in an evaluation.</param>
-/// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
-/// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
-/// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
-/// <param name="CommandHistory">Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside CommandListParse context.</param>
-/// <param name="Flags">
-/// Bitfield of <see cref="ParserStateFlags"/> values controlling parser behavior.
-/// Use <see cref="ParserStateFlags.DirectInput"/> (≙ <c>QUEUE_NOLIST</c>),
-/// <see cref="ParserStateFlags.Debug"/> (≙ <c>QUEUE_DEBUG</c>), and
-/// <see cref="ParserStateFlags.NoDebug"/> (≙ <c>QUEUE_NODEBUG</c>).
-/// </param>
-/// <param name="BreakPropagation">
-/// Shared, one-shot channel letting a nested command list hand its break to the list that ran it.
-/// Null everywhere except around a run that wants it (<c>@include</c>).
-/// </param>
-/// <param name="CallerArguments">
-/// Saves the caller's numbered arguments (%0-%9) from the enclosing scope before a command
-/// overwrites Arguments with its own parsed args. Used by @wait/@force to preserve pattern-match
-/// variables in queued callbacks. Equivalent to PennMUSH's wenv (wild environment).
-/// </param>
-public partial record ParserState(
-	ConcurrentStack<Dictionary<string, MString>> Registers,
-	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
-	ConcurrentStack<Dictionary<string, MString>> RegexRegisters,
-	ConcurrentStack<MString> SwitchStack,
-	ConcurrentStack<Execution> ExecutionStack,
-	Dictionary<string, CallState> EnvironmentRegisters,
-	DBAttribute? CurrentEvaluation,
-	int? ParserFunctionDepth,
-	string? Function,
-	string? Command,
-	Func<IMUSHCodeParser, ValueTask<Option<CallState>>> CommandInvoker,
-	IEnumerable<string> Switches,
-	Dictionary<string, CallState> Arguments,
-	DBRef? Executor,
-	DBRef? Enactor,
-	DBRef? Caller,
-	long? Handle,
-	ParseMode ParseMode = ParseMode.Default,
-	HttpResponseContext? HttpResponse = null,
-	InvocationCounter? CallDepth = null,
-	Dictionary<string, int>? FunctionRecursionDepths = null,
-	InvocationCounter? TotalInvocations = null,
-	LimitExceededFlag? LimitExceeded = null,
-	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null,
-	ParserStateFlags Flags = ParserStateFlags.None,
-	Dictionary<string, CallState>? CallerArguments = null,
-	BreakPropagation? BreakPropagation = null,
-	string? ConnectionSessionId = null)
+/// <remarks>
+/// Immutable like <see cref="ParserState"/>: a frame that replaces one of these (<c>with { Registers = … }</c>)
+/// gets a copy of its own, which the frames forked from it then share. The values themselves are the same
+/// shared, mutable objects they always were.
+/// </remarks>
+public sealed record EvaluationContext
 {
+	/// <summary>The current standard registers (%q-registers), top frame first.</summary>
+	public required ConcurrentStack<Dictionary<string, MString>> Registers { get; init; }
+
+	/// <summary>The current iteration registers: %i0, ##, #@, etc.</summary>
+	public required ConcurrentStack<IterationWrapper<MString>> IterationRegisters { get; init; }
+
+	/// <summary>
+	/// The regexp capture frames that <c>$0</c>-<c>$9</c> and <c>$&lt;name&gt;</c> read, innermost on top
+	/// (see <see cref="RegexpCaptureFrame"/>). Not <c>%$0</c>, which is the switch text in <see cref="SwitchStack"/>.
+	/// </summary>
+	public required ConcurrentStack<Dictionary<string, MString>> RegexRegisters { get; init; }
+
+	/// <summary>The switch context stack for stext() and slev(): the string matched in each nested switch.</summary>
+	public required ConcurrentStack<MString> SwitchStack { get; init; }
+
+	/// <summary>Execution control for the running command list (<see cref="Execution.CommandListBreak"/>).</summary>
+	public required ConcurrentStack<Execution> ExecutionStack { get; init; }
+
+	/// <summary>The environment registers.</summary>
+	public required Dictionary<string, CallState> EnvironmentRegisters { get; init; }
+
+	/// <summary>The telnet handle running the command.</summary>
+	public long? Handle { get; init; }
+
+	/// <summary>HTTP response context for building HTTP responses.</summary>
+	public HttpResponseContext? HttpResponse { get; init; }
+
+	/// <summary>Overall function call nesting depth.</summary>
+	public InvocationCounter? CallDepth { get; init; }
+
+	/// <summary>Per-function recursion depths.</summary>
+	public Dictionary<string, int>? FunctionRecursionDepths { get; init; }
+
+	/// <summary>Total function invocations.</summary>
+	public InvocationCounter? TotalInvocations { get; init; }
+
+	/// <summary>Set once a limit has been exceeded.</summary>
+	public LimitExceededFlag? LimitExceeded { get; init; }
+
+	/// <inheritdoc cref="ParserState.MoveDepth"/>
+	public InvocationCounter? MoveDepth { get; init; }
+
+	/// <inheritdoc cref="ParserState.CommandText"/>
+	public CommandText? CommandText { get; init; }
+
+	/// <inheritdoc cref="ParserState.QueuedOutput"/>
+	public MString? QueuedOutput { get; init; }
+
+	/// <inheritdoc cref="ParserState.QueuedPrinted"/>
+	public MString? QueuedPrinted { get; init; }
+
+	/// <inheritdoc cref="ParserState.OutputLimit"/>
+	public int OutputLimit { get; init; } = OutputCeiling.CurrentLimit;
+}
+
+/// <summary>
+/// One frame of an evaluation: who is running what, with which arguments, over the
+/// <see cref="EvaluationContext"/> the whole evaluation shares.
+/// </summary>
+/// <remarks>
+/// The shared values read through to <see cref="Context"/> under their old names, and setting one in a
+/// <c>with</c> gives this frame a context of its own. A frame is made only by the factories below
+/// (<see cref="RootFor"/>, <see cref="ForTypedLine"/>, <see cref="ForTrackedEvaluation"/>,
+/// <see cref="ForFunction"/>, <see cref="SnapshotForQueuedAction"/>) plus <c>with</c> for any extras.
+/// </remarks>
+public partial record ParserState
+{
+	private ParserState() { }
+
+	/// <summary>What this frame shares with the rest of its evaluation.</summary>
+	public required EvaluationContext Context { get; init; }
+
+	/// <inheritdoc cref="EvaluationContext.Registers"/>
+	public ConcurrentStack<Dictionary<string, MString>> Registers
+	{
+		get => Context.Registers;
+		init => Context = Context with { Registers = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.IterationRegisters"/>
+	public ConcurrentStack<IterationWrapper<MString>> IterationRegisters
+	{
+		get => Context.IterationRegisters;
+		init => Context = Context with { IterationRegisters = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.RegexRegisters"/>
+	public ConcurrentStack<Dictionary<string, MString>> RegexRegisters
+	{
+		get => Context.RegexRegisters;
+		init => Context = Context with { RegexRegisters = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.SwitchStack"/>
+	public ConcurrentStack<MString> SwitchStack
+	{
+		get => Context.SwitchStack;
+		init => Context = Context with { SwitchStack = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.ExecutionStack"/>
+	public ConcurrentStack<Execution> ExecutionStack
+	{
+		get => Context.ExecutionStack;
+		init => Context = Context with { ExecutionStack = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.EnvironmentRegisters"/>
+	public Dictionary<string, CallState> EnvironmentRegisters
+	{
+		get => Context.EnvironmentRegisters;
+		init => Context = Context with { EnvironmentRegisters = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.Handle"/>
+	public long? Handle
+	{
+		get => Context.Handle;
+		init => Context = Context with { Handle = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.HttpResponse"/>
+	public HttpResponseContext? HttpResponse
+	{
+		get => Context.HttpResponse;
+		init => Context = Context with { HttpResponse = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.CallDepth"/>
+	public InvocationCounter? CallDepth
+	{
+		get => Context.CallDepth;
+		init => Context = Context with { CallDepth = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.FunctionRecursionDepths"/>
+	public Dictionary<string, int>? FunctionRecursionDepths
+	{
+		get => Context.FunctionRecursionDepths;
+		init => Context = Context with { FunctionRecursionDepths = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.TotalInvocations"/>
+	public InvocationCounter? TotalInvocations
+	{
+		get => Context.TotalInvocations;
+		init => Context = Context with { TotalInvocations = value };
+	}
+
+	/// <inheritdoc cref="EvaluationContext.LimitExceeded"/>
+	public LimitExceededFlag? LimitExceeded
+	{
+		get => Context.LimitExceeded;
+		init => Context = Context with { LimitExceeded = value };
+	}
+
 	/// <summary>
 	/// Shared counter bounding recursive movement — <c>enter_room</c> reached through
 	/// <c>safe_tel</c>'s HOME case or through a container's drop-to. PennMUSH caps the equivalent at
 	/// 15 (<c>src/move.c:232</c>) with a process-global counter, which is only safe under its
 	/// single-threaded queue; here it is per evaluation, like <see cref="CallDepth"/>.
 	/// </summary>
-	/// <remarks>
-	/// An init-only property rather than a positional parameter: the record's positional signature is
-	/// the contract compiled plugins bind to, and <c>ParserStateCompatibilityTests</c> holds it fixed.
-	/// </remarks>
-	public InvocationCounter? MoveDepth { get; init; }
+	public InvocationCounter? MoveDepth
+	{
+		get => Context.MoveDepth;
+		init => Context = Context with { MoveDepth = value };
+	}
+
+	/// <summary>
+	/// <c>%c</c> and <c>%u</c> for the queue entry this state belongs to; null outside a command.
+	/// Shared by reference like <see cref="CommandHistory"/>.
+	/// </summary>
+	public CommandText? CommandText
+	{
+		get => Context.CommandText;
+		init => Context = Context with { CommandText = value };
+	}
+
+	/// <summary>
+	/// <c>%></c> as the list that queued this state had it when it did. A queued entry has no
+	/// <see cref="CommandText"/> of its own until its list starts, and starts it with this output.
+	/// </summary>
+	public MString? QueuedOutput
+	{
+		get => Context.QueuedOutput;
+		init => Context = Context with { QueuedOutput = value };
+	}
+
+	/// <summary>
+	/// <c>%|</c> as the list that queued this state had it when it did, started the same way as
+	/// <see cref="QueuedOutput"/>.
+	/// </summary>
+	public MString? QueuedPrinted
+	{
+		get => Context.QueuedPrinted;
+		init => Context = Context with { QueuedPrinted = value };
+	}
+
+	/// <summary>
+	/// Most UTF-16 code units one function may produce in this evaluation. Lowered for a guest's
+	/// input, and carried by every copy of the state, including the snapshots of queued actions.
+	/// A new state starts from the <see cref="OutputCeiling"/> of the evaluation that creates it.
+	/// </summary>
+	public int OutputLimit
+	{
+		get => Context.OutputLimit;
+		init => Context = Context with { OutputLimit = value };
+	}
+
+	/// <summary>The attribute being evaluated.</summary>
+	public DBAttribute? CurrentEvaluation { get; init; }
+
+	/// <summary>The function depth.</summary>
+	public int? ParserFunctionDepth { get; init; }
+
+	/// <summary>Function name being evaluated.</summary>
+	public string? Function { get; init; }
+
+	/// <summary>Name of the command being evaluated; its text is <see cref="CommandText"/>.</summary>
+	public string? Command { get; init; }
+
+	/// <summary>Runs the command being evaluated again (<c>@retry</c>).</summary>
+	public Func<IMUSHCodeParser, ValueTask<Option<CallState>>> CommandInvoker { get; init; } = NoCommand;
+
+	private static readonly Func<IMUSHCodeParser, ValueTask<Option<CallState>>> NoCommand
+		= _ => ValueTask.FromResult(new Option<CallState>(new None()));
+
+	/// <summary>Switches for the command being evaluated.</summary>
+	public IEnumerable<string> Switches { get; init; } = [];
+
+	/// <summary>The arguments to the command or function: %0-%9 by number, and named arguments.</summary>
+	public required Dictionary<string, CallState> Arguments { get; init; }
+
+	/// <summary>The executor of a command is the object actually carrying out the command or running the code: %!</summary>
+	public DBRef? Executor { get; init; }
+
+	/// <summary>The enactor is the object which causes something to happen: %# or %:</summary>
+	public DBRef? Enactor { get; init; }
+
+	/// <summary>The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@</summary>
+	public DBRef? Caller { get; init; }
+
+	/// <summary>Parse mode, in case we need to NoParse.</summary>
+	public ParseMode ParseMode { get; init; } = ParseMode.Default;
+
+	/// <summary>
+	/// Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside
+	/// CommandListParse context.
+	/// </summary>
+	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory { get; init; }
+
+	/// <summary>
+	/// Bitfield of <see cref="ParserStateFlags"/> values controlling parser behavior.
+	/// Use <see cref="ParserStateFlags.DirectInput"/> (≙ <c>QUEUE_NOLIST</c>),
+	/// <see cref="ParserStateFlags.Debug"/> (≙ <c>QUEUE_DEBUG</c>), and
+	/// <see cref="ParserStateFlags.NoDebug"/> (≙ <c>QUEUE_NODEBUG</c>).
+	/// </summary>
+	public ParserStateFlags Flags { get; init; }
+
+	/// <summary>
+	/// Saves the caller's numbered arguments (%0-%9) from the enclosing scope before a command
+	/// overwrites Arguments with its own parsed args. Used by @wait/@force to preserve pattern-match
+	/// variables in queued callbacks. Equivalent to PennMUSH's wenv (wild environment).
+	/// </summary>
+	public Dictionary<string, CallState>? CallerArguments { get; init; }
+
+	/// <summary>
+	/// Shared, one-shot channel letting a nested command list hand its break to the list that ran it.
+	/// Null everywhere except around a run that wants it (<c>@include</c>).
+	/// </summary>
+	public BreakPropagation? BreakPropagation { get; init; }
+
+	/// <summary>The connection session the evaluation runs for, when there is one.</summary>
+	public string? ConnectionSessionId { get; init; }
 
 	/// <summary>Synchronous command-modifier nesting, bounded by MaxDepth and reset for independent queued actions.</summary>
 	public uint CommandModifierDepth { get; init; }
@@ -441,32 +644,14 @@ public partial record ParserState(
 	public EvaluationRestrictions? Restrictions { get; init; }
 
 	/// <summary>
-	/// <c>%c</c> and <c>%u</c> for the queue entry this state belongs to; null outside a command.
-	/// Shared by reference like <see cref="CommandHistory"/>.
-	/// </summary>
-	public CommandText? CommandText { get; init; }
-
-	/// <summary>
 	/// The line a player typed, as plain text, carried by the states that run it; null for a state that
 	/// did not start from one. Text drawn from it is never kept by the parse cache, since a typed line can
 	/// carry a password.
 	/// </summary>
 	public string? TypedLine { get; init; }
 
-	/// <summary>
-	/// <c>%></c> as the list that queued this state had it when it did. A queued entry has no
-	/// <see cref="CommandText"/> of its own until its list starts, and starts it with this output.
-	/// </summary>
-	public MString? QueuedOutput { get; init; }
-
 	/// <summary><c>%></c>: the logical output of the last command run in this queue entry.</summary>
 	public MString PipedOutput => CommandText?.Output ?? QueuedOutput ?? MarkupText.Empty;
-
-	/// <summary>
-	/// <c>%|</c> as the list that queued this state had it when it did, started the same way as
-	/// <see cref="QueuedOutput"/>.
-	/// </summary>
-	public MString? QueuedPrinted { get; init; }
 
 	/// <summary><c>%|</c>: what the command piped into the running one printed.</summary>
 	public MString PrintedOutput => CommandText?.Printed ?? QueuedPrinted ?? MarkupText.Empty;
@@ -475,14 +660,10 @@ public partial record ParserState(
 	public CommandText NewCommandText() => new(QueuedOutput, QueuedPrinted);
 
 	/// <summary>This state, about to be queued: it keeps the values <c>%></c> and <c>%|</c> have now.</summary>
-	public ParserState WithQueuedOutput() => this with { QueuedOutput = PipedOutput, QueuedPrinted = PrintedOutput };
-
-	/// <summary>
-	/// Most UTF-16 code units one function may produce in this evaluation. Lowered for a guest's
-	/// input, and carried by every copy of the state, including the snapshots of queued actions.
-	/// A new state starts from the <see cref="OutputCeiling"/> of the evaluation that creates it.
-	/// </summary>
-	public int OutputLimit { get; init; } = OutputCeiling.CurrentLimit;
+	public ParserState WithQueuedOutput() => this with
+	{
+		Context = Context with { QueuedOutput = PipedOutput, QueuedPrinted = PrintedOutput }
+	};
 
 	/// <summary>
 	/// Captures the register environment for an independent queued action. Like PE_INFO_CLONE,
@@ -493,36 +674,39 @@ public partial record ParserState(
 	/// </summary>
 	public ParserState SnapshotForQueuedAction() => this with
 	{
-		Registers = new([Registers.TryPeek(out var registers)
-			? new Dictionary<string, MString>(registers, registers.Comparer)
-			: []]),
-		// ConcurrentStack enumerates top-first, but its constructor pushes each item in order.
-		IterationRegisters = new(IterationRegisters.Reverse().Select(frame => new IterationWrapper<MString>
+		Context = Context with
 		{
-			Value = frame.Value,
-			Iteration = frame.Iteration,
-			Break = frame.Break,
-			NoBreak = frame.NoBreak
-		})),
-		RegexRegisters = new(RegexRegisters.Reverse().Select(frame => frame is RegexpCaptureFrame owned
-			? owned.Clone()
-			: new Dictionary<string, MString>(frame, frame.Comparer))),
-		SwitchStack = new(SwitchStack.Reverse()),
-		EnvironmentRegisters = new(EnvironmentRegisters, EnvironmentRegisters.Comparer),
-		ExecutionStack = [],
+			Registers = new([Registers.TryPeek(out var registers)
+				? new Dictionary<string, MString>(registers, registers.Comparer)
+				: []]),
+			// ConcurrentStack enumerates top-first, but its constructor pushes each item in order.
+			IterationRegisters = new(IterationRegisters.Reverse().Select(frame => new IterationWrapper<MString>
+			{
+				Value = frame.Value,
+				Iteration = frame.Iteration,
+				Break = frame.Break,
+				NoBreak = frame.NoBreak
+			})),
+			RegexRegisters = new(RegexRegisters.Reverse().Select(frame => frame is RegexpCaptureFrame owned
+				? owned.Clone()
+				: new Dictionary<string, MString>(frame, frame.Comparer))),
+			SwitchStack = new(SwitchStack.Reverse()),
+			EnvironmentRegisters = new(EnvironmentRegisters, EnvironmentRegisters.Comparer),
+			ExecutionStack = [],
+			CallDepth = new(),
+			FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),
+			TotalInvocations = new(),
+			LimitExceeded = new(),
+			MoveDepth = new(),
+			CommandText = null,
+			QueuedOutput = PipedOutput,
+			QueuedPrinted = PrintedOutput
+		},
 		CommandHistory = null,
 		BreakPropagation = null,
-		CallDepth = new(),
-		FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),
-		TotalInvocations = new(),
-		LimitExceeded = new(),
-		MoveDepth = new(),
 		CommandModifierDepth = 0,
 		InplaceDepth = 0,
-		ExecutionBudget = null,
-		CommandText = null,
-		QueuedOutput = PipedOutput,
-		QueuedPrinted = PrintedOutput
+		ExecutionBudget = null
 	};
 
 	private AnyOptionalSharpObject? _executorObject;
@@ -543,42 +727,33 @@ public partial record ParserState(
 		}
 	}
 
-	public static ParserState Empty => new(
-		new ConcurrentStack<Dictionary<string, MString>>(),
-		new ConcurrentStack<IterationWrapper<MString>>(),
-		new ConcurrentStack<Dictionary<string, MString>>(),
-		new ConcurrentStack<MString>(),
-		new ConcurrentStack<Execution>(),
-		[],
-		null,
-		null,
-		null,
-		null,
-		_ => new ValueTask<Option<CallState>>(new None()),
-		[],
-		new Dictionary<string, CallState>(),
-		null,
-		null,
-		null,
-		null,
-		ParseMode.Default,
-		null,
-		new InvocationCounter(),
-		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-		new InvocationCounter(),
-		new LimitExceededFlag())
+	public static ParserState Empty => new()
 	{
-		MoveDepth = new InvocationCounter()
+		Context = new EvaluationContext
+		{
+			Registers = [],
+			IterationRegisters = [],
+			RegexRegisters = [],
+			SwitchStack = [],
+			ExecutionStack = [],
+			EnvironmentRegisters = [],
+			CallDepth = new InvocationCounter(),
+			FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+			TotalInvocations = new InvocationCounter(),
+			LimitExceeded = new LimitExceededFlag(),
+			MoveDepth = new InvocationCounter()
+		},
+		Arguments = new Dictionary<string, CallState>()
 	};
 
-	// Construction. Every state is made one of three ways, and these are the only places that spell
-	// out the record's positional fields (ParserStateConstructionTests holds every other file to them):
-	//  - fresh: RootFor, ForTypedLine and ForTrackedEvaluation start an evaluation with new registers
-	//    and new invocation counters (PennMUSH's PE_INFO_DEFAULT);
-	//  - forked: ForFunction opens a function frame that shares the caller's registers and counters;
+	// Construction. Every state is made one of three ways, and these are the only places that build one
+	// (ParserStateConstructionTests holds every other file to them):
+	//  - fresh: RootFor, ForTypedLine and ForTrackedEvaluation start an evaluation with a new context:
+	//    new registers and new invocation counters (PennMUSH's PE_INFO_DEFAULT);
+	//  - forked: ForFunction opens a function frame over the caller's context;
 	//  - cloned: SnapshotForQueuedAction copies what a queued action keeps and owns (PE_INFO_CLONE).
-	// A state copied with `with` shares every mutable field it does not replace, so new work that
-	// starts an independent evaluation picks one of these rather than copying the caller.
+	// A state copied with `with` shares its context and every mutable value it does not replace, so new
+	// work that starts an independent evaluation picks one of these rather than copying the caller.
 
 	/// <summary>
 	/// A fresh root state for code that runs as <paramref name="actor"/> with no ambient parser:
@@ -618,82 +793,59 @@ public partial record ParserState(
 
 	private static ParserState Fresh(DBRef? executor, DBRef? enactor, DBRef? caller, long? handle,
 		ParserStateFlags flags, string? session, ExecutionBudget? budget, EvaluationRestrictions? restrictions,
-		CommandText? commandText, int outputLimit, string? typedLine = null) => new(
-		Registers: new([[]]),
-		IterationRegisters: [],
-		RegexRegisters: [],
-		SwitchStack: [],
-		ExecutionStack: [],
-		EnvironmentRegisters: new Dictionary<string, CallState>(),
-		CurrentEvaluation: null,
-		ParserFunctionDepth: 0,
-		Function: null,
-		Command: null,
-		CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-		Switches: [],
-		Arguments: new Dictionary<string, CallState>(),
-		Executor: executor,
-		Enactor: enactor,
-		Caller: caller,
-		Handle: handle,
-		ParseMode: ParseMode.Default,
-		HttpResponse: null,
-		CallDepth: new InvocationCounter(),
-		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-		TotalInvocations: new InvocationCounter(),
-		LimitExceeded: new LimitExceededFlag(),
-		Flags: flags,
-		ConnectionSessionId: session)
+		CommandText? commandText, int outputLimit, string? typedLine = null) => new()
 		{
-			MoveDepth = new InvocationCounter(),
+			Context = new EvaluationContext
+			{
+				Registers = new([[]]),
+				IterationRegisters = [],
+				RegexRegisters = [],
+				SwitchStack = [],
+				ExecutionStack = [],
+				EnvironmentRegisters = new Dictionary<string, CallState>(),
+				Handle = handle,
+				CallDepth = new InvocationCounter(),
+				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations = new InvocationCounter(),
+				LimitExceeded = new LimitExceededFlag(),
+				MoveDepth = new InvocationCounter(),
+				CommandText = commandText,
+				OutputLimit = outputLimit
+			},
+			ParserFunctionDepth = 0,
+			Arguments = new Dictionary<string, CallState>(),
+			Executor = executor,
+			Enactor = enactor,
+			Caller = caller,
+			Flags = flags,
+			ConnectionSessionId = session,
 			ExecutionBudget = budget,
 			Restrictions = restrictions,
-			CommandText = commandText,
-			TypedLine = typedLine,
-			OutputLimit = outputLimit
+			TypedLine = typedLine
 		};
 
 	/// <summary>
-	/// The frame a built-in or <c>@function</c> call runs in, forked from this state. It shares this
-	/// state's registers, iteration, regexp and switch contexts, environment and invocation counters
-	/// by reference — a function runs inside its caller's evaluation — and binds
+	/// The frame a built-in or <c>@function</c> call runs in, forked from this state. It runs over this
+	/// state's <see cref="Context"/> — registers, iteration, regexp and switch contexts, environment and
+	/// invocation counters — since a function runs inside its caller's evaluation, and binds
 	/// <paramref name="arguments"/> as <c>%0</c>-<c>%9</c>. It starts with no command, switches,
 	/// command history, caller arguments or break propagation, and leaves the execution budget and
 	/// restrictions to the ambient scopes already entered for the evaluation.
 	/// </summary>
 	/// <param name="function">The function's name as called.</param>
 	/// <param name="arguments">The call's arguments, keyed <c>"0"</c>, <c>"1"</c>, ….</param>
-	public ParserState ForFunction(string function, Dictionary<string, CallState> arguments) => new(
-		Registers: Registers,
-		IterationRegisters: IterationRegisters,
-		RegexRegisters: RegexRegisters,
-		SwitchStack: SwitchStack,
-		ExecutionStack: ExecutionStack,
-		CurrentEvaluation: CurrentEvaluation,
-		EnvironmentRegisters: EnvironmentRegisters,
-		ParserFunctionDepth: ParserFunctionDepth + 1,
-		Function: function,
-		Command: null,
-		CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-		Switches: [],
-		Arguments: arguments,
-		Executor: Executor,
-		Enactor: Enactor,
-		Caller: Caller,
-		Handle: Handle,
-		ParseMode: ParseMode,
-		HttpResponse: HttpResponse,
-		Flags: Flags,
-		CallDepth: CallDepth,
-		FunctionRecursionDepths: FunctionRecursionDepths,
-		TotalInvocations: TotalInvocations,
-		LimitExceeded: LimitExceeded)
+	public ParserState ForFunction(string function, Dictionary<string, CallState> arguments) => new()
 	{
-		MoveDepth = MoveDepth,
-		CommandText = CommandText,
-		QueuedOutput = QueuedOutput,
-		QueuedPrinted = QueuedPrinted,
-		OutputLimit = OutputLimit,
+		Context = Context,
+		CurrentEvaluation = CurrentEvaluation,
+		ParserFunctionDepth = ParserFunctionDepth + 1,
+		Function = function,
+		Arguments = arguments,
+		Executor = Executor,
+		Enactor = Enactor,
+		Caller = Caller,
+		ParseMode = ParseMode,
+		Flags = Flags,
 		// Same actors, so the same objects: a function body that asks for its executor reuses the
 		// caller's rather than fetching it again.
 		_executorObject = _executorObject,
@@ -767,7 +919,7 @@ public partial record ParserState(
 	/// <summary>
 	/// Just the numbered arguments, %0-%9 etc., in numerical order. This excludes named arguments.
 	/// </summary>
-	public ImmutableSortedDictionary<string, CallState> ArgumentsOrdered
+	public OrderedArguments ArgumentsOrdered
 	{
 		get
 		{
@@ -776,36 +928,13 @@ public partial record ParserState(
 				return _argumentsOrdered;
 
 			_argumentsOrderedSource = Arguments;
-			_argumentsOrdered = OrderArguments(Arguments);
+			_argumentsOrdered = OrderedArguments.From(Arguments);
 			return _argumentsOrdered;
 		}
 	}
 
-	/// <summary>
-	/// The numbered entries of <paramref name="arguments"/>, keyed by the numeric comparer so the sorted
-	/// dictionary keeps %0,%1,%2,…,%10,%11 in numeric order. A plain ToImmutableSortedDictionary() would
-	/// order keys lexicographically ("10" before "2"), scrambling argument order for any function with
-	/// ten or more args (e.g. json(object,…) with ≥10 pairs).
-	/// </summary>
-	/// <remarks>
-	/// Nearly every call binds exactly <c>"0"</c>…<c>"n-1"</c> and nothing else, already in order, so those
-	/// are added to a builder one by one. Sorting through LINQ allocated an intermediate sorted
-	/// dictionary, its tree and four iterators for every function call.
-	/// </remarks>
-	private static ImmutableSortedDictionary<string, CallState> OrderArguments(Dictionary<string, CallState> arguments)
-	{
-		var ordered = ImmutableSortedDictionary.CreateBuilder<string, CallState>(NumericKeyComparer.Instance);
-		for (var position = 0; position < arguments.Count; position++)
-		{
-			if (!arguments.TryGetValue(ArgumentKey(position), out var value))
-				return arguments
-					.Where(x => int.TryParse(x.Key, out _))
-					.ToImmutableSortedDictionary(x => x.Key, x => x.Value, NumericKeyComparer.Instance);
-			ordered.Add(ArgumentKey(position), value);
-		}
-
-		return ordered.ToImmutable();
-	}
+	private OrderedArguments? _argumentsOrdered;
+	private Dictionary<string, CallState>? _argumentsOrderedSource;
 
 	private static readonly string[] ArgumentKeys = [.. Enumerable.Range(0, 64).Select(position => position.ToString())];
 
@@ -815,22 +944,6 @@ public partial record ParserState(
 	/// </summary>
 	public static string ArgumentKey(int position)
 		=> (uint)position < (uint)ArgumentKeys.Length ? ArgumentKeys[position] : position.ToString();
-
-	private ImmutableSortedDictionary<string, CallState>? _argumentsOrdered;
-	private Dictionary<string, CallState>? _argumentsOrderedSource;
-
-	/// <summary>Orders numeric-string keys ("0","1","10",…) by their integer value, not lexically.</summary>
-	private sealed class NumericKeyComparer : IComparer<string>
-	{
-		public static readonly NumericKeyComparer Instance = new();
-
-		public int Compare(string? x, string? y)
-		{
-			var xParsed = int.TryParse(x, out var xi);
-			var yParsed = int.TryParse(y, out var yi);
-			return xParsed && yParsed ? xi.CompareTo(yi) : string.CompareOrdinal(x, y);
-		}
-	}
 
 	/// <summary>
 	/// Add a register value to the Register stack.

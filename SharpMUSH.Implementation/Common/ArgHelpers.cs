@@ -131,7 +131,7 @@ public static partial class ArgHelpers
 	private static bool StartsUnsigned(string? text)
 		=> text.AsSpan().TrimStart(" \t\r\n\v\f") is [] or [('+' or (>= '0' and <= '9')), ..];
 
-	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
+	public static MString NoParseDefaultNoParseArgument(OrderedArguments args, int item,
 		MString defaultValue)
 	{
 		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message.ToPlainText()) ||
@@ -143,7 +143,7 @@ public static partial class ArgHelpers
 		return args[item.ToString()].Message;
 	}
 
-	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
+	public static MString NoParseDefaultNoParseArgument(OrderedArguments args, int item,
 		string defaultValue)
 		=> NoParseDefaultNoParseArgument(args, item, MarkupText.Plain(defaultValue));
 

@@ -366,7 +366,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> EditAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject targetObject, ImmutableSortedDictionary<string, CallState> args, IEnumerable<string> switches,
+		AnySharpObject targetObject, OrderedArguments args, IEnumerable<string> switches,
 		string attrPattern)
 	{
 		var canModify = await PermissionService.Controls(executor, targetObject);

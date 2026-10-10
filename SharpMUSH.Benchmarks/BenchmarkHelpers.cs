@@ -99,30 +99,10 @@ internal static class BenchmarkHelpers
 	/// A new top-level parser state for <paramref name="executor"/> on handle 1, with fresh tracking
 	/// counters - what <c>CommandParse(handle, ...)</c> builds for every command a player types.
 	/// </summary>
-	public static ParserState FreshState(DBRef executor) => new(
-		Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-		IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),
-		RegexRegisters: new ConcurrentStack<Dictionary<string, MString>>(),
-		SwitchStack: new ConcurrentStack<MString>(),
-		ExecutionStack: new ConcurrentStack<Execution>(),
-		EnvironmentRegisters: [],
-		CurrentEvaluation: null,
-		ParserFunctionDepth: 0,
-		Function: null,
-		Command: "think",
-		CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
-		Switches: [],
-		Arguments: [],
-		Executor: executor,
-		Enactor: executor,
-		Caller: executor,
-		Handle: 1,
-		CallDepth: new InvocationCounter(),
-		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-		TotalInvocations: new InvocationCounter(),
-		LimitExceeded: new LimitExceededFlag(),
-		Flags: ParserStateFlags.DirectInput)
+	public static ParserState FreshState(DBRef executor) => ParserState.RootFor(executor) with
 	{
-		MoveDepth = new InvocationCounter()
+		Command = "think",
+		Handle = 1,
+		Flags = ParserStateFlags.DirectInput
 	};
 }
