@@ -16,7 +16,9 @@ SharpMUSH is a modern MUSH server that *targets* PennMUSH compatibility but dive
 - **Never bracket a bare %-substitution.** `%0`, `%q<name>`, `%#` — as-is. `[%0]` does nothing.
 - **Player-typed input is single-command mode**: a `;` typed at the client is literal text. Command lists (`;`-separated) exist only inside stored attributes and command arguments. Brace `{}` a segment whose own `;` must not split the list.
 - **Attribute trees use backticks**, never dots: `` CMD`SETRANK ``, `` DATA`GUILD`<objid> ``. `*`/`?` wildcards stop at a backtick; `**` crosses it (``examine obj/BRANCH`**``).
-- `%0`–`%9` = arguments; `%#` = enactor dbref; `%:` = enactor objid; `%q<name>` = named q-register (set with `setq(name, value)`; register names are case-insensitive). `%<name>` = named argument, scoped to the one call like `%0` (passed by `uargs(obj/attr, name, value, ...)`, a regex `$`-command's named capture, or `mapsql()`). Pass a helper named arguments with `uargs()` (or `@trigger/args`, `@include/args`, `stepargs()`, and `@function/args` for a global function) rather than q-registers it would read, and rather than `%0`-`%9` whose meaning the reader has to look up. A variable tail is named the way built-ins declare parameters: `@function/args fn=value case...|result... default` gives `%<case1>`, `%<result1>`, ..., `%<casecount>` and `%<default>`; `items...` gives `%<items1>`.. `%<itemscount>`; a bare `...` takes caller-named pairs (`help named arguments`).
+- `%0`–`%9` = arguments; `%#` = enactor dbref; `%:` = enactor objid; `%q<name>` = named q-register (set with `setq(name, value)`; register names are case-insensitive). `%<name>` = named argument, scoped to the one call like `%0` (passed by `uargs(obj/attr, name, value, ...)`, a regex `$`-command's named capture, or `mapsql()`; `@include` passes the caller's on, a `u()` inside does not see them). A variable tail is named the way built-ins declare parameters: `@function/args fn=value case...|result... default` gives `%<case1>`, `%<result1>`, ..., `%<casecount>` and `%<default>`; `items...` gives `%<items1>`.. `%<itemscount>`; a bare `...` takes caller-named pairs (`help named arguments`).
+- **Values the game hands you have names: read them.** Every event passes its arguments by name as well as by position (`` player`connect `` gives `%<objid>`, `%<connections>`, `%<descriptor>`; `help event list`); feed tie-ins and taps get `%<id>`, `%<speaker>`, `%<text>`, `%<recipient>` and the rest (`help @feed tie-ins`); an `/http` route gets `%<path>`, `%<body>`, `%<viewer>`, `%<headers>` and `%<hdr.<name>>`. The positions are there for PennMUSH code; `%<style>` says what it is, `%2` makes the reader look it up.
+- **Hand values to a helper by name, not in q-registers.** ``uargs(me/FN`ROW, name, %<name>, count, 3)`` for a function, ``@include/args me/INC`STEP=who, %q<who>, rank, %1`` for an include (the names sit beside the caller's own arguments), `@trigger/args` for queued work; also `stepargs()`, and `@function/args` for a global function. A `setq()` lasts the whole queue entry, so a register set for a helper leaks into everything after it and a helper reading one picks up whatever the last caller left there. A value with commas in it arrives whole. Use `uargs()` over a `u()` of four or more positions, whose meaning the reader has to look up. Keep q-registers for what they are good at: state one command shares across its steps (its parsed parts), values a helper hands BACK to its caller, and caches.
 
 ## Core substitutions & tools
 
@@ -37,11 +39,11 @@ Never build nested `@switch` ladders for validation. Guard with `@assert`/`@brea
 ```
 @permission/define guild.rank=Staff/Set guild ranks
 @role/allow <rank-manager role>=guild.rank
-&CMD`SETRANK obj=$+setrank *=*: @assert permission(%#,guild.rank)=@pemit %#=Permission denied.; @assert isdbref(setr(who, locate(%#, %0, PFym)))=@pemit %#=No such player: %0; @assert t(match(recruit member officer, lcstr(%1)))=@pemit %#=Rank must be recruit, member, or officer.; @include me/INC`SETRANK=%q<who>,[lcstr(%1)]
+&CMD`SETRANK obj=$+setrank *=*: @assert permission(%#,guild.rank)=@pemit %#=Permission denied.; @assert isdbref(setr(who, locate(%#, %0, PFym)))=@pemit %#=No such player: %0; @assert t(match(recruit member officer, lcstr(%1)))=@pemit %#=Rank must be recruit, member, or officer.; @include/args me/INC`SETRANK=who,%q<who>,rank,[lcstr(%1)]
 ```
 
 - `@assert <bool>=<action>` stops the list unless bool is true; `@break` is the inverse.
-- Factor reusable guards/steps into `` INC`<NAME> `` attributes pulled in with `@include` (runs inline; its `@break` stops the caller; `/nobreak`, `/localize`, `/clearregs` fence that off).
+- Factor reusable guards/steps into `` INC`<NAME> `` attributes pulled in with `@include` (runs inline; its `@break` stops the caller; `/nobreak`, `/localize`, `/clearregs` fence that off). Hand it its inputs with `@include/args` and read them as `%<who>`, `%<rank>`.
 - `@include/chain me/INC`A me/INC`B me/INC`C=%0` runs a pipeline: same args to every link, shared q-registers, a fired `@break`/`@assert` short-circuits the rest.
 - Naming: `` CMD`<NAME> `` for $-commands, `` FUN` `` for functions, `` INC` `` for includes, `` DATA` `` for data; grow a second level (`` CMD`WIZARD`<NAME> ``) to lock whole branches at once.
 - Regex commands need the attribute flagged: ``@set obj/CMD`X=Regex``; read named captures with `%<Name>` (or `r(Name, args)`). Match switches loosely and validate inside — an over-tight pattern gives players a bare `Huh?`.
@@ -94,7 +96,7 @@ Who may do what is the game's job, not a staff list in an attribute. Roles are n
 - **A Deny role does not cancel another role's Allow.** Take a permission from one person with `@permission/deny`, from a group by removing it from their role.
 - **Typos fail closed.** An unknown role makes `hasrole()` `0`; an unknown permission makes `permission()` `#-1 NO SUCH PERMISSION`, which is false. Check names with `valid(permission, <name>)` / `valid(rolename, <name>)`; `@role/player <obj>` shows where each permission came from.
 
-A package declares the roles, permissions and categories it needs in `package.yaml` (format 1.2: `categories:`, `permissions:`, `roles:`) instead of creating them from `AINSTALL`; `help roles packages`. On `/http` routes, `%q<viewer>` is the portal visitor's character (empty when anonymous), so a route asks `permission(%q<viewer>, …)`.
+A package declares the roles, permissions and categories it needs in `package.yaml` (format 1.2: `categories:`, `permissions:`, `roles:`) instead of creating them from `AINSTALL`; `help roles packages`. On `/http` routes, `%<viewer>` is the portal visitor's character (empty when anonymous), so a route asks `permission(%<viewer>, …)`.
 
 ## Layout: draw screens with the layout functions
 
@@ -131,12 +133,12 @@ A fresh SharpMUSH seeds: `#0` Room Zero, `#1` God, `#2` Master Room, `#3`–`#6`
 ### Events — add an attribute to #9, done
 
 ```
-&PLAYER`CONNECT #9=@cemit Admin=[name(%0)] connected (connection %1).
+&PLAYER`CONNECT #9=@cemit Admin=[name(%<objid>)] connected (connection %<connections>).
 ```
 
-- Event names are `` <type>`<event> `` (types: dump, db, log, object, player, socket, http, signal, sql). Args are per-event — check `help event <type>`. `` player`connect `` = (objid, count, descriptor); `` player`create `` = (objid, name, how, descriptor, email).
+- Event names are `` <type>`<event> `` (types: dump, db, log, object, player, socket, http, signal, sql). Args are per-event — check `help event <type>` — and arrive by name and by position: read the names. `` player`connect `` = `%<objid>`, `%<connections>`, `%<descriptor>`; `` player`create `` = `%<objid>`, `%<name>`, `%<how>`, `%<descriptor>`, `%<email>`.
 - The handler runs **with its own permissions** (#9 is wizard). A custom handler object needs its own wizard flag.
-- `%#` is the causer; for system events (dump, signal) `%#` is `#1` (God) — **never `#-1`**. Distinguish system- vs player-caused by the event's args (e.g. gate `` player`create `` on `%2` = `pcreate`/`create`/`register`), not by `%#`.
+- `%#` is the causer; for system events (dump, signal) `%#` is `#1` (God) — **never `#-1`**. Distinguish system- vs player-caused by the event's args (e.g. gate `` player`create `` on `%<how>` = `pcreate`/`create`/`register`), not by `%#`.
 
 ### HTTP — add a sub-handler attribute to #8, done
 
@@ -146,7 +148,7 @@ The verb routers (`&GET`, `&POST`, …) are pre-installed on `#8`. URLs live und
 &GET`GUILDROSTER #8=@respond/type application/json; think json_array(iter(lattr(#300/DATA`*`NAME), json(string, get(#300/%i0))))
 ```
 
-- In a **sub-handler**: `%0` = request BODY (raw); query params arrive pre-decoded as `%q<form.name>`; headers as `%q<hdr.host>` etc. (`Authorization`, `Proxy-Authorization` and `Cookie` are withheld); the signed-in caller's objid as `%q<viewer>` (empty when anonymous).
+- In a **sub-handler**: `%0` = request BODY (raw), also `%<body>`; `%<path>` the path and query; query params arrive pre-decoded as `%q<form.name>`; headers as named arguments, `%<hdr.host>` etc. (`Authorization`, `Proxy-Authorization` and `Cookie` are withheld); the signed-in caller's objid as `%<viewer>` (empty when anonymous). They reach an `@include`d step, not a `u()` function or queued work: pass a helper the viewer as an argument.
 - Everything `think`/`@pemit`-ed to the handler during the run IS the response body; queued work (`@wait`, $-commands) never reaches the client — write inline.
 - `@respond <code> <text>`, `@respond/type <ctype>`, `@respond/header <name>=<value>` control the response; default is 404 for unmatched routes.
 - Build JSON with `json()`, `json_array()`, `json_group_by()`, `json_query()` — never hand-concatenate escaped brackets.
@@ -187,6 +189,10 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | Nested `@switch` validation ladder | `@assert` chain, one error per guard |
 | Keying records by dbref number or player name | Key by objid |
 | `@assert %#` to detect system events | `%#` is `#1` for system events; gate on event args |
+| `%2` in an event, feed tie-in or route | The argument's name: `%<how>`, `%<text>`, `%<body>` |
+| `%q<viewer>`, `%q<hdr.host>` in an `/http` route | `%<viewer>`, `%<hdr.host>` — named arguments, not registers |
+| ``think setq(who,…); @include me/INC`STEP`` | ``@include/args me/INC`STEP=who,…``, read as `%<who>` |
+| ``u(me/FN`ROW,%0,%1,%2,%3,%4)`` | ``uargs(me/FN`ROW,name,…,rank,…)`` |
 | `and(…)`/`or(…)` as the default boolean | `cand()`/`cor()` stop at the first deciding argument; `and()`/`or()` evaluate everything |
 | `ibreak()add(…)` trailing function unevaluated | `ibreak()[add(…)]` |
 | Flagging the event handler wizard "so it can act" | Seeded `#9` already is; only custom handlers need it |
