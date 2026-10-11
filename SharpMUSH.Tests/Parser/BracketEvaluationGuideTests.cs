@@ -43,6 +43,11 @@ public class BracketEvaluationGuideTests : ServerTestBase
 	// Brackets around a substitution, or doubled, change nothing.
 	[Arguments("[%#]", "#1")]
 	[Arguments("[[add(1,2)]]", "3")]
+	// An argument the function does not evaluate stays text, brackets included.
+	[Arguments("lit(add(1,2))", "add(1,2)")]
+	[Arguments("lit([add(1,2)])", "[add(1,2)]")]
+	// An empty pair evaluates to nothing.
+	[Arguments("A[[]x[]]B", "AxB")]
 	// Braces in an argument stop recognition; brackets inside them start it again.
 	[Arguments("if(1,{add(1,2)})", "add(1,2)")]
 	[Arguments("if(1,{[add(1,2)]})", "3")]
@@ -77,11 +82,11 @@ public class BracketEvaluationGuideTests : ServerTestBase
 	public async Task EachArgumentOfACommandStartsAfresh()
 	{
 		var attribute = "BRK" + Guid.NewGuid().ToString("N")[..10].ToUpperInvariant();
-		await Cmd($"&{attribute}`STEP me=&{attribute}`OUT me=%0|%1");
+		await Cmd($"&{attribute}`STEP me=&{attribute}`OUT me=%0|%1|%2");
 
-		await Cmd($"@include me/{attribute}`STEP= lcstr(ABC), x lcstr(DEF)");
+		await Cmd($"@include me/{attribute}`STEP= lcstr(ABC), lcstr(DEF), x lcstr(GHI)");
 
-		await Assert.That(await Eval($"get(me/{attribute}`OUT)")).IsEqualTo("abc|x lcstr(DEF)");
+		await Assert.That(await Eval($"get(me/{attribute}`OUT)")).IsEqualTo("abc|def|x lcstr(GHI)");
 	}
 
 	[Test]

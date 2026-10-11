@@ -16,7 +16,7 @@ A call evaluates without `[]` wherever it starts a piece of code. Brackets are n
 **Where a piece of code starts** (no brackets needed):
 
 - An attribute body that `u()`, a lock or an event evaluates: `` &FUN`NEXT obj=add(%0,1) ``.
-- Each function argument: `add(mul(2,3),1)`, `` if(%0,u(FUN`A),u(FUN`B)) ``, `iter(%0,name(%i0))`.
+- Each argument a function evaluates: `add(mul(2,3),1)`, `` if(%0,u(FUN`A),u(FUN`B)) ``, `iter(%0,name(%i0))`. `lit()`, `@@()` and the other functions that take an argument as text evaluate nothing in it, brackets or not: `lit(add(1,2))` gives `add(1,2)`.
 - Each command argument: after the command word (`think setq(total,0)`), after `=` (`` @pemit %#=u(FUN`DISPLAY) ``, `@assert cand(…)=…`, `` @dolist lattr(me/DATA`*)=… ``), and after each `,` of a command that splits on commas (`` @include me/INC`SETRANK=%q<who>,lcstr(%1) ``).
 
 Spaces after the command word, `=`, `(` and `,` are skipped. Anything else first (text, a `%`-substitution, `%b`, a space at the start of an attribute body, a `(`) makes the call plain text.
@@ -33,9 +33,9 @@ Text after a leading call is still evaluated, so only a *later* call needs brack
 | text inside an argument | `iter(%0,%i0: [name(%i0)])` |
 | an opening brace inside an argument | `if(%0,{[u(FUN`A)]})`: braces stop calls being recognised, brackets inside them start it again |
 
-The argument case breaks more than the one call: the unevaluated call's own `,` and `)` split and close the outer call. `cat(a,b add(1,2))` gives `a b add(1 2)`, and `iter(1 2,%i0: add(%i0,1))` gives `: add(1 2: add( 2)`.
+The argument case breaks more than the one call: the unevaluated call's own `,` and `)` split and close the outer call. `cat(a,b add(1,2))` gives `a b add(1 2)`, and `iter(1 2,%i0: add(%i0,1))` gives `: add(1 2: add( 2)`. That is with `paren_groups` off, the default; with it on, a bare `(` opens a group of text that keeps its `,` and `)` (`help compatibility config`).
 
-**Never needed:** round a whole attribute body (`[add(%0,1)]`), a nested call (`add([mul(2,3)],1)`), a whole argument (`` if(%0,[u(FUN`A)]) ``), a whole command argument (`think [setq(…)]`, `@pemit %#=[u(…)]`, `@assert [cand(…)]=`), a substitution (`[%0]`), or another pair (`[[add(1,2)]]`). Each gives the same result as without.
+**Never needed:** round a whole attribute body (`[add(%0,1)]`), a nested call (`add([mul(2,3)],1)`), a whole argument (`` if(%0,[u(FUN`A)]) ``), a whole command argument (`think [setq(…)]`, `@pemit %#=[u(…)]`, `@assert [cand(…)]=`), a substitution (`[%0]`), or another pair (`[[add(1,2)]]`). Each gives the same result as without, except in an argument the function does not evaluate, where they stay as text: `lit([add(1,2)])` gives `[add(1,2)]`.
 
 **Brackets are not what makes code evaluate.** Run from inside an attribute, `&OUT obj=add(1,2)` stores `3`, brackets or not; brace the value (`&OUT obj={add(1,2)}`) to store it as written. Typed at a client, `&` stores its value as written either way.
 
@@ -45,7 +45,7 @@ The argument case breaks more than the one call: the unevaluated call's own `,` 
 - An unknown name is text outside brackets (`Smile(s) all round` prints as typed) and an error inside them (`[smile(s)]` gives `#-1 FUNCTION (SMILE) NOT FOUND`).
 - `@@(<note>)` heads code bare; `[@@(<note>)]` is the same comment, but turns the call after it into a call after text.
 - **A literal `[ ] ( )` needs `%[` `%]` `%(` `%)`.** An unescaped `(` inside a function argument closes the call early — `` [header(Home ([wiki(%0,namespace)]))] `` prints `Home (main` and leaks the `)` after the rule. `\[` also escapes, but only where the backslash survives to evaluation: it does in a value the package manager or `@set` wrote, and inside a `[...]` region, but a client-typed `&ATTR obj=A\[B\]C` stores `A[B]C` and the bracket is then read as an evaluation bracket. `%[` survives every path — prefer it.
-- **`[[]x[]]` is not an escape for `[x]`.** An empty `[]` is not a function call, and SharpMUSH refuses it — sometimes as `#-1 PARSER FAILURE`, sometimes by swallowing the whole line, so `&ATTR me=A[[]x[]]B` can silently store nothing at all. (PennMUSH evaluates it away to a bare `x`, so the brackets are lost there too.) Escape them.
+- **`[[]x[]]` is not an escape for `[x]`.** An empty `[]` evaluates to nothing, as in PennMUSH, so `A[[]x[]]B` gives `AxB`. Escape them.
 
 These are PennMUSH's rules too: its parser looks for a function only at the start of an expression and inside brackets, and reports an unknown one only inside brackets. `BracketEvaluationGuideTests` in SharpMUSH checks these rules.
 
