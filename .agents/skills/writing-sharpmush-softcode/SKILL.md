@@ -9,11 +9,80 @@ description: Use when writing, reviewing, or debugging SharpMUSH softcode — $-
 
 SharpMUSH is a modern MUSH server that *targets* PennMUSH compatibility but diverges deliberately: handlers are pre-populated, HTTP is routed, and a pipeline-function vocabulary replaces classic contortions. Write SharpMUSH-idiomatic code, not remembered PennMUSH code. When unsure of a function or command, verify with in-game `help <topic>` or the repo helpfiles at `SharpMUSH.Documentation/Helpfiles/SharpMUSH/*.md` — do not guess from PennMUSH memory.
 
+## Brackets: only where a call follows something
+
+A call evaluates without `[]` wherever it starts a piece of code. Brackets are needed only for a call that comes after something else in the same piece. Each pair is an extra evaluation step, about 0.5 to 1 microsecond on the profile harness, and inside a loop body it is paid per element: `iter(lnum(20),[add(%i0,1)])` runs 10-20% slower than `iter(lnum(20),add(%i0,1))`. Write them where they change the result and nowhere else.
+
+**Where a piece of code starts** (no brackets needed):
+
+- An attribute body that `u()`, a lock or an event evaluates: `` &FUN`NEXT obj=add(%0,1) ``.
+- Each argument a function evaluates: `add(mul(2,3),1)`, `` if(%0,u(FUN`A),u(FUN`B)) ``, `iter(%0,name(%i0))`. `lit()`, `@@()` and the other functions that take an argument as text evaluate nothing in it, brackets or not: `lit(add(1,2))` gives `add(1,2)`.
+- Each command argument: after the command word (`think setq(total,0)`), after `=` (`` @pemit %#=u(FUN`DISPLAY) ``, `@assert cand(…)=…`, `` @dolist lattr(me/DATA`*)=… ``), and after each `,` of a command that splits on commas (`` @include me/INC`SETRANK=%q<who>,lcstr(%1) ``).
+
+Spaces after the command word, `=`, `(` and `,` are skipped. Anything else first (text, a `%`-substitution, `%b`, a space at the start of an attribute body, a `(`) makes the call plain text.
+
+Text after a leading call is still evaluated, so only a *later* call needs brackets: `name(%#) says hello`, `setq(total,0)%q<total>`, `` v(DATA`DRAFT)[if(…,%r)]%0 ``.
+
+**Where brackets are needed:**
+
+| A call after | Write |
+|---|---|
+| literal text | `think Total: [add(%0,%1)]` |
+| a substitution | `%q<label>[add(%0,1)]`, `%r[rule()]` |
+| another call | `ibreak()[add(%0,1)]`, `a()[b()]` |
+| text inside an argument | `iter(%0,%i0: [name(%i0)])` |
+| an opening brace inside an argument | `if(%0,{[u(FUN`A)]})`: braces stop calls being recognised, brackets inside them start it again |
+
+The argument case breaks more than the one call: the unevaluated call's own `,` and `)` split and close the outer call. `cat(a,b add(1,2))` gives `a b add(1 2)`, and `iter(1 2,%i0: add(%i0,1))` gives `: add(1 2: add( 2)`. That is with `paren_groups` off, the default; with it on, a bare `(` opens a group of text that keeps its `,` and `)` (`help compatibility config`).
+
+**Never needed:** round a whole attribute body (`[add(%0,1)]`), a nested call (`add([mul(2,3)],1)`), a whole argument (`` if(%0,[u(FUN`A)]) ``), a whole command argument (`think [setq(…)]`, `@pemit %#=[u(…)]`, `@assert [cand(…)]=`), a substitution (`[%0]`), or another pair (`[[add(1,2)]]`). Each gives the same result as without, except in an argument the function does not evaluate, where they stay as text: `lit([add(1,2)])` gives `[add(1,2)]`.
+
+**Brackets are not what makes code evaluate.** Run from inside an attribute, `&OUT obj=add(1,2)` stores `3`, brackets or not; brace the value (`&OUT obj={add(1,2)}`) to store it as written. Typed at a client, `&` stores its value as written either way.
+
+**Traps:**
+
+- A function's name with `(` straight after it, at the start, is a call even when you meant text: `@pemit %#=Last(minute) changes are fine` prints `minute changes are fine`. Write `\Last(minute)`, or put other text first. `add (1,2)`, with a space, is text.
+- A second call straight after a call is text: `add(1,2)mul(2,3)` gives `3mul(2,3)`. Write `add(1,2)[mul(2,3)]`.
+- An unknown name is text outside brackets (`Smile(s) all round` prints as typed) and an error inside them (`[smile(s)]` gives `#-1 FUNCTION (SMILE) NOT FOUND`).
+- `@@(<note>)` heads code bare; `[@@(<note>)]` is the same comment, but turns the call after it into a call after text.
+- **A literal `[ ] ( )` needs `%[` `%]` `%(` `%)`.** An unescaped `(` inside a function argument closes the call early — `` [header(Home ([wiki(%0,namespace)]))] `` prints `Home (main` and leaks the `)` after the rule. `\[` also escapes, but only where the backslash survives to evaluation: it does in a value the package manager or `@set` wrote, and inside a `[...]` region, but a client-typed `&ATTR obj=A\[B\]C` stores `A[B]C` and the bracket is then read as an evaluation bracket. `%[` survives every path — prefer it.
+- **`[[]x[]]` is not an escape for `[x]`.** An empty `[]` evaluates to nothing, as in PennMUSH, so `A[[]x[]]B` gives `AxB`. Escape them.
+
+These are PennMUSH's rules too: its parser looks for a function only at the start of an expression and inside brackets, and reports an unknown one only inside brackets. `BracketEvaluationGuideTests` in SharpMUSH checks these rules.
+
+## `t()` inside a condition: never
+
+Every condition turns its value into true or false with the same test `t()` uses, so `t()` inside one tests a value twice and gives the same answer, for the cost of one more call. That holds with `tiny_booleans` on as well, since both read the option. The conditions:
+
+- Functions: `if()`, `ifelse()`, `cond()`, `condall()`, `ncond()`, `ncondall()`, `not()`, `and()`, `or()`, `xor()`, `nand()`, `nor()`, `cand()`, `cor()`, `ncand()`, `ncor()`, and the predicate of `filterbool()`, `every()` and `some()`.
+- Commands: `@break`, `@assert`, `@if`/`@ifelse`.
+
+Write the test bare:
+
+| Not | But |
+|---|---|
+| `if(t(match(%0,yes no)),…)` | `if(match(%0,yes no),…)` |
+| `@assert t(member(%q<list>,%0))=…` | `@assert member(%q<list>,%0)=…` |
+| `not(t(get(%0/HIDDEN)))` | `not(get(%0/HIDDEN))` |
+| `cand(t(pos(=,%1)),…)` | `cand(pos(=,%1),…)` |
+| `if(t(%0),1,0)` | `t(%0)` |
+
+A position, count or lookup is a condition already. `match()`, `member()` and `words()` give `0` when there is nothing, and `pos()` and `num()` give `#-1`, which is false like every value starting `#-`.
+
+**Where `t()` changes the result,** the value is used as text, not tested:
+
+- `filter()` keeps only elements whose result is exactly `1`: with `&ITSELF me=%0`, `filter(me/ITSELF,1 2 abc 0)` gives `1`. Use `filterbool()` rather than wrapping the predicate.
+- `switch()`, `case()`, `@switch` and `@select` compare text: `switch(1,match(a b c,c),yes,no)` gives `no`, because `match()` gave `3`. Use `cond()` for a ladder of tests.
+- Arithmetic: `add(t(abc),t(0),t(5))` counts two true values, and without `t()` `add()` refuses `abc` with `#-1 ARGUMENTS MUST BE NUMBERS`.
+- A flag that is stored or printed and must read `1` or `0`.
+
+`strlen()` is a different test, not a longer spelling: `0` is false, but `strlen(0)` is `1`. Use it only where the empty string must be the only false value.
+
+PennMUSH works the same way: its `t()`, `if()`, `@break` and `@assert` all call `parse_boolean()`, and its `filter()` keeps only `1`. `TruthinessGuideTests` in SharpMUSH checks these rules.
+
 ## Evaluation rules (get these wrong and code silently breaks)
 
-- **A function after literal text needs `[brackets]`** to evaluate: `think Kept: [filter(...)]`. A bare leading function evaluates on its own: `&F obj=add(%0,1)` is fine; `&F obj=ibreak()add(%0,1)` is NOT — write `ibreak()[add(%0,1)]`.
 - **Booleans: `cand()`/`cor()`, not `and()`/`or()`.** The `c` forms stop at the first argument that settles the answer and never evaluate the rest, so a costly test placed last runs only when it matters, and a later argument can rely on the earlier ones: `` cand(isdbref(%0), u(me/FN`ISMEMBER, %0)) `` never calls the predicate on a non-object. Same for the negations: `ncand()`/`ncor()` over `nand()`/`nor()`. `and()`/`or()` evaluate every argument; reach for them only when each argument has a side effect that must run.
-- **Never bracket a bare %-substitution.** `%0`, `%q<name>`, `%#` — as-is. `[%0]` does nothing.
 - **Player-typed input is single-command mode**: a `;` typed at the client is literal text. Command lists (`;`-separated) exist only inside stored attributes and command arguments. Brace `{}` a segment whose own `;` must not split the list.
 - **Attribute trees use backticks**, never dots: `` CMD`SETRANK ``, `` DATA`GUILD`<objid> ``. `*`/`?` wildcards stop at a backtick; `**` crosses it (``examine obj/BRANCH`**``).
 - `%0`–`%9` = arguments; `%#` = enactor dbref; `%:` = enactor objid; `%q<name>` = named q-register (set with `setq(name, value)`; register names are case-insensitive). `%<name>` = named argument, scoped to the one call like `%0` (passed by `uargs(obj/attr, name, value, ...)`, a regex `$`-command's named capture, or `mapsql()`; `@include` passes the caller's on, a `u()` inside does not see them). A variable tail is named the way built-ins declare parameters: `@function/args fn=value case...|result... default` gives `%<case1>`, `%<result1>`, ..., `%<casecount>` and `%<default>`; `items...` gives `%<items1>`.. `%<itemscount>`; a bare `...` takes caller-named pairs (`help named arguments`).
@@ -39,7 +108,7 @@ Never build nested `@switch` ladders for validation. Guard with `@assert`/`@brea
 ```
 @permission/define guild.rank=Staff/Set guild ranks
 @role/allow <rank-manager role>=guild.rank
-&CMD`SETRANK obj=$+setrank *=*: @assert permission(%#,guild.rank)=@pemit %#=Permission denied.; @assert isdbref(setr(who, locate(%#, %0, PFym)))=@pemit %#=No such player: %0; @assert t(match(recruit member officer, lcstr(%1)))=@pemit %#=Rank must be recruit, member, or officer.; @include/args me/INC`SETRANK=who,%q<who>,rank,[lcstr(%1)]
+&CMD`SETRANK obj=$+setrank *=*: @assert permission(%#,guild.rank)=@pemit %#=Permission denied.; @assert isdbref(setr(who, locate(%#, %0, PFym)))=@pemit %#=No such player: %0; @assert t(match(recruit member officer, lcstr(%1)))=@pemit %#=Rank must be recruit, member, or officer.; @include/args me/INC`SETRANK=who,%q<who>,rank,lcstr(%1)
 ```
 
 - `@assert <bool>=<action>` stops the list unless bool is true; `@break` is the inverse.
@@ -133,7 +202,7 @@ A fresh SharpMUSH seeds: `#0` Room Zero, `#1` God, `#2` Master Room, `#3`–`#6`
 ### Events — add an attribute to #9, done
 
 ```
-&PLAYER`CONNECT #9=@cemit Admin=[name(%<objid>)] connected (connection %<connections>).
+&PLAYER`CONNECT #9=@cemit Admin=name(%<objid>) connected (connection %<connections>).
 ```
 
 - Event names are `` <type>`<event> `` (types: dump, db, log, object, player, socket, http, signal, sql). Args are per-event — check `help event <type>` — and arrive by name and by position: read the names. `` player`connect `` = `%<objid>`, `%<connections>`, `%<descriptor>`; `` player`create `` = `%<objid>`, `%<name>`, `%<how>`, `%<descriptor>`, `%<email>`.
@@ -172,11 +241,11 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 
 ```sharp
 &CMD`NOTE Notepad=$+note:&DATA`DRAFT me; @input/start Type your note. Send .done on a line by itself to save it.=.done,INPUT`NOTE`DONE,*,INPUT`NOTE`LINE,1800
-&INPUT`NOTE`LINE Notepad=&DATA`DRAFT me=[v(DATA`DRAFT)][if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, or .done to save:
-&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=[if(strmatch(r(reason,args),timeout),Time ran out%, so your note was saved as it was.,Note saved.)]
+&INPUT`NOTE`LINE Notepad=&DATA`DRAFT me=v(DATA`DRAFT)[if(hasattr(me,DATA`DRAFT),%r)]%0; @input/prompt Next line, or .done to save:
+&INPUT`NOTE`DONE Notepad=&DATA`NOTE me=v(DATA`DRAFT); @pemit %#=if(strmatch(r(reason,args),timeout),Time ran out%, so your note was saved as it was.,Note saved.)
 ```
 
-`%0` is data: storing or substituting it never evaluates brackets or runs `;`. To evaluate typed text on purpose, evaluate it as the player, once, in the exit attribute: `` [objevals(%#,v(DATA`DRAFT))] ``. `objeval()` would only substitute the attribute and give the text back. Never `s()` typed text, and only do this from an object that controls its players (wizard-owned), since `objevals()` otherwise falls back to the object's own privileges. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
+`%0` is data: storing or substituting it never evaluates brackets or runs `;`. To evaluate typed text on purpose, evaluate it as the player, once, in the exit attribute: `` objevals(%#,v(DATA`DRAFT)) ``. `objeval()` would only substitute the attribute and give the text back. Never `s()` typed text, and only do this from an object that controls its players (wizard-owned), since `objevals()` otherwise falls back to the object's own privileges. `` &DATA`DRAFT me `` with no `=` clears the draft; `` &DATA`DRAFT me= `` leaves an empty attribute.
 
 ## Common mistakes (all observed in practice)
 
@@ -195,6 +264,8 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | ``u(me/FN`ROW,%0,%1,%2,%3,%4)`` | ``uargs(me/FN`ROW,name,…,rank,…)`` |
 | `and(…)`/`or(…)` as the default boolean | `cand()`/`cor()` stop at the first deciding argument; `and()`/`or()` evaluate everything |
 | `ibreak()add(…)` trailing function unevaluated | `ibreak()[add(…)]` |
+| `if(t(<x>),…)`, `@assert t(<x>)`, `not(t(<x>))` | Drop the `t()`: every condition already tests truthiness the same way. Keep it only where the value is compared or counted (`switch(1,t(…),…)`, `add(t(…),…)`); use `filterbool()` over `filter()` with `t()` |
+| `[…]` round a whole attribute body, argument or command argument (`think [setq(…)]`, `if(%0,[u(…)])`) | Drop them: a call that starts the code evaluates on its own. Brackets are for a call after text, a substitution or another call |
 | Flagging the event handler wizard "so it can act" | Seeded `#9` already is; only custom handlers need it |
 | `orflags(%#,Wr)`, `hasrole(%#,wizard)` or a `&STAFF` dbref list as the gate | `permission(%#, <perm>)`; define a custom one for the job |
 | `permission(me, …)` on a wizard global | Check `%#`; `me` is the global, not the player |
