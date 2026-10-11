@@ -1,0 +1,41 @@
+name: Disposable deployment smoke
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deployment-smoke.yml'
+      - '.github/scripts/smoke_*.py'
+      - '.github/scripts/test_*smoke*.py'
+      - 'deploy/**'
+      - '**/Dockerfile'
+      - 'Dockerfile'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: TLS and Restic recovery on disposable Docker volumes
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Check harness without containers
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*smoke*.py' -v
+      - name: Build exact-head images and exercise isolated deployment
+        timeout-minutes: 40
+        env:
+          SMOKE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PYTHONUNBUFFERED: '1'
+        run: python3 .github/scripts/smoke_deployment.py
+      - name: Clean up only this job's disposable resources
+        if: always()
+        run: python3 .github/scripts/smoke_deployment.py --cleanup
