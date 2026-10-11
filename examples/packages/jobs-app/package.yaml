@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs-app
-version: 1.0.0
+version: 1.0.1
 kind: application
 authors: [SharpMUSH]
 description: "Registers the job queue (the jobs package) as a portal page at /apps/jobs: the queue, each job's conversation with its staff buttons, and a new-request form."
@@ -14,7 +14,7 @@ requires_server: ">=0.1"
 # shows, and every button on it, is decided by that softcode for the character viewing it.
 depends:
   - package: jobs
-    version: ">=1.0 <2.0"
+    version: ">=1.6 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: jobs/
