@@ -19,6 +19,16 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	private static readonly Scenario[] Scenarios =
 	[
 		new("think", "think Hello World", true),
+		new("b-fn", "add(1,2)", false),
+		new("b-fn-br", "[add(1,2)]", false),
+		new("b-nest", "add(mul(2,3),sub(5,1))", false),
+		new("b-nest-br", "[add([mul(2,3)],[sub(5,1)])]", false),
+		new("b-iter", "iter(lnum(20),add(%i0,1))", false),
+		new("b-iter-br", "[iter(lnum(20),[add(%i0,1)])]", false),
+		new("b-sub", "%#", false),
+		new("b-sub-br", "[%#]", false),
+		new("b-think", "think add(1,2)", true),
+		new("b-think-br", "think [add(1,2)]", true),
 		new("think-subst", "think %#", true),
 		new("pemit-fn", "@pemit me=[add(1,2)]", true),
 		new("fn1", "[add(1,2)]", false),
