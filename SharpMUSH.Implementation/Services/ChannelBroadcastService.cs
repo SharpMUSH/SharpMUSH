@@ -202,14 +202,12 @@ public class ChannelBroadcastService(
 		}
 
 		// Common arguments for control mogrifiers (BLOCK, OVERRIDE, NOBUFFER)
-		var controlArgs = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState(MarkupText.Plain(chatType)),
-			["1"] = new CallState(chanName),
-			["2"] = new CallState(notification.Message),
-			["3"] = new CallState(notification.PlayerName),
-			["4"] = new CallState(notification.Title)
-		};
+		var controlArgs = CallbackArguments.Of(
+			("type", MarkupText.Plain(chatType)),
+			("channel", chanName),
+			("message", notification.Message),
+			("name", notification.PlayerName),
+			("title", notification.Title));
 
 		// extchat.c:3806 - BLOCK refuses on any non-empty result, tested as text.
 		var blockResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`BLOCK", controlArgs);
@@ -230,21 +228,20 @@ public class ChannelBroadcastService(
 		// and SPEECHTEXT write into, so each callback is handed what the earlier ones made of
 		// them. %3 is the raw message throughout, including for MESSAGE itself, because
 		// MESSAGE is written last.
-		var partArgs = new Dictionary<string, CallState>
-		{
+		var partArgs = CallbackArguments.Of(
 			// %0 varies by mogrifier (set individually)
-			["1"] = new CallState(chanName),
-			["2"] = new CallState(MarkupText.Plain(chatType)),
-			["3"] = new CallState(notification.Message),
-			["4"] = new CallState(notification.Title),
-			["5"] = new CallState(notification.PlayerName),
-			["6"] = new CallState(notification.Says),
-			["7"] = new CallState(MarkupText.Plain(options))
-		};
+			("value", MarkupText.Empty),
+			("channel", chanName),
+			("type", MarkupText.Plain(chatType)),
+			("message", notification.Message),
+			("title", notification.Title),
+			("name", notification.PlayerName),
+			("says", notification.Says),
+			("options", MarkupText.Plain(options)));
 
 		async ValueTask<MString> MogrifyPart(string attributeName, MString current)
 		{
-			partArgs["0"] = new CallState(current);
+			partArgs.Set(0, "value", current);
 			var result = await EvaluateMogrifyAttribute(source, mogrifierObj, attributeName, partArgs);
 			return result.Length > 0 ? result : current;
 		}
@@ -252,10 +249,10 @@ public class ChannelBroadcastService(
 		line = line with { ChanName = await MogrifyPart("MOGRIFY`CHANNAME", line.ChanName) };
 
 		line = line with { Title = await MogrifyPart("MOGRIFY`TITLE", line.Title) };
-		partArgs["4"] = new CallState(line.Title);
+		partArgs.Set(4, "title", line.Title);
 
 		line = line with { PlayerName = await MogrifyPart("MOGRIFY`PLAYERNAME", line.PlayerName) };
-		partArgs["5"] = new CallState(line.PlayerName);
+		partArgs.Set(5, "name", line.PlayerName);
 
 		// CB_SPEECH (extchat.h:75) is speech alone, and it is the only thing that carries a speech verb.
 		// extchat.c:3847 - so a pose or an emit leaves SPEECHTEXT unread and hands the untouched "says"
@@ -263,28 +260,27 @@ public class ChannelBroadcastService(
 		if (notification.MessageType is INotifyService.NotificationType.Say or INotifyService.NotificationType.NSSay)
 		{
 			line = line with { Says = await MogrifyPart("MOGRIFY`SPEECHTEXT", line.Says) };
-			partArgs["6"] = new CallState(line.Says);
+			partArgs.Set(6, "says", line.Says);
 		}
 
 		line = line with { Message = await MogrifyPart("MOGRIFY`MESSAGE", line.Message) };
 
 		// MOGRIFY`FORMAT - the channel-wide line, extchat.c:3905-3920.
-		// %0=type, %1=channel, %2=message, %3=name, %4=title, %5=default, %6=says, %7=noisiness.
+		// %0=type, %1=channel, %2=message, %3=name, %4=title, %5=default, %6=says, %7=noisiness, each
+		// also passed under that name (%7 as options, as @chatformat names it).
 		// %1 here is argv[1] = channame, the bracketed name AFTER MOGRIFY`CHANNAME has run -
 		// not ChanName(channel). @chatformat's %1 is the raw name (extchat.c:3939), and the
 		// two differ on purpose: a FORMAT that rebuilds the line has to be able to keep what
 		// CHANNAME produced.
-		var formatArgs = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState(MarkupText.Plain(chatType)),
-			["1"] = new CallState(line.ChanName),
-			["2"] = new CallState(line.Message),
-			["3"] = new CallState(line.PlayerName),
-			["4"] = new CallState(line.Title),
-			["5"] = new CallState(BuildDefaultMessage(line)),
-			["6"] = new CallState(line.Says),
-			["7"] = new CallState(MarkupText.Plain(options))
-		};
+		var formatArgs = CallbackArguments.Of(
+			("type", MarkupText.Plain(chatType)),
+			("channel", line.ChanName),
+			("message", line.Message),
+			("name", line.PlayerName),
+			("title", line.Title),
+			("default", BuildDefaultMessage(line)),
+			("says", line.Says),
+			("options", MarkupText.Plain(options)));
 		var formatResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`FORMAT", formatArgs);
 		return formatResult.Length > 0 ? line with { FormatOverride = formatResult } : line;
 	}
@@ -433,17 +429,17 @@ public class ChannelBroadcastService(
 		// %5 = default formatted message
 		// %6 = says text
 		// %7 = options (space-separated)
-		var formatArgs = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState(MarkupText.Plain(chatType)),
-			["1"] = new CallState(channelName),
-			["2"] = new CallState(message),
-			["3"] = new CallState(playerName),
-			["4"] = new CallState(title),
-			["5"] = new CallState(defaultFormat),
-			["6"] = new CallState(says),
-			["7"] = new CallState(MarkupText.Plain(options))
-		};
+		// Each is also passed by name: %<type>, %<channel>, %<message>, %<name>, %<title>, %<default>,
+		// %<says> and %<options>.
+		var formatArgs = CallbackArguments.Of(
+			("type", MarkupText.Plain(chatType)),
+			("channel", channelName),
+			("message", message),
+			("name", playerName),
+			("title", title),
+			("default", defaultFormat),
+			("says", says),
+			("options", MarkupText.Plain(options)));
 
 		// checkprivs = 0 (extchat.c:3935): the member's own CHATFORMAT is read without asking whether the
 		// speaker could have evaluated it, so the member is its own executor for the permission check.

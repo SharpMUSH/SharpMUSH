@@ -19,7 +19,7 @@ public sealed class SpeechService(IAttributeService attributes, IOptionsWrapper<
 			Enactor = executor.Object().DBRef,
 			Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer)))
 		}, scoped => attributes.EvaluateAttributeFunctionResultAsync(scoped, executor, executor, "SPEECHMOD",
-			new Dictionary<string, CallState> { ["0"] = new(message), ["1"] = new(token) }, ignorePermissions: true));
+			CallbackArguments.Of(("message", message), ("type", token)), ignorePermissions: true));
 		ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
 		if (parser.CurrentState.LimitExceeded?.IsExceeded == true) return result with { HadErrors = true };
 		if (result.HadErrors) return result;

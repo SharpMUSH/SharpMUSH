@@ -613,6 +613,27 @@ public class MarkdownFunctionUnitTests
 	}
 
 	/// <summary>
+	/// Templates read their arguments by name as well as by position: LINK's %&lt;text&gt;, %&lt;url&gt;
+	/// and %&lt;command&gt;, LISTITEM's %&lt;ordered&gt;, %&lt;number&gt; and %&lt;text&gt;, BOLD's %&lt;text&gt;.
+	/// </summary>
+	[Test]
+	public async Task RenderMarkdownCustom_TemplatesReadArgumentsByName()
+	{
+		var obj = await CreateTemplateObject("MarkdownNamedTemplateObj");
+
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`BOLD {obj}=B:%<text>"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`LINK {obj}=%<text> %(%<url>%) cmd=%<command>"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`LISTITEM {obj}=%<ordered>/%<number>/%<text>"));
+
+		var result = await EvaluateAsync(
+			$"rendermarkdowncustom(1. A **named** %[Site%]%(https://example.com%)%r2. Second,{obj})");
+		var plainText = result.ToPlainText();
+
+		await Assert.That(plainText).Contains("1/1/A B:named Site (https://example.com) cmd=0");
+		await Assert.That(plainText).Contains("1/2/Second");
+	}
+
+	/// <summary>
 	/// Every template is optional and absent ones change nothing: an object with no
 	/// <c>RENDERMARKUP`</c> attributes at all must render byte-for-byte like <c>rendermarkdown()</c>,
 	/// including for the elements that only gained a template hook now.

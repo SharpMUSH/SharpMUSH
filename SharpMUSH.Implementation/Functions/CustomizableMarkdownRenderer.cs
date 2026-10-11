@@ -160,10 +160,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 		var content = RenderInlineContent(heading.Inline);
 
-		var args = new Dictionary<string, CallState>
-		{
-			{ "0", new CallState(content) }
-		};
+		var args = Args(("text", content));
 
 		var custom = TryEvaluateTemplate(templateName, args).GetAwaiter().GetResult();
 		return custom ?? base.RenderHeading(heading);
@@ -194,10 +191,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 			.Select(line => line.Slice.ToString()) ?? [];
 
 		var codeContent = string.Join("\n", lines);
-		var args = new Dictionary<string, CallState>
-		{
-			{ "0", new CallState(MarkupText.Plain(codeContent)) }
-		};
+		var args = Args(("code", MarkupText.Plain(codeContent)));
 
 		var custom = TryEvaluateTemplate("CODEBLOCK", args).GetAwaiter().GetResult();
 		return custom ?? base.RenderCodeBlock(code);
@@ -222,12 +216,10 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		// Content only: the template supplies the marker, and taking it from base.RenderListItem
 		// would prefix one as well.
 		var content = RenderListItemContent(listItem);
-		var args = new Dictionary<string, CallState>
-		{
-			{ "0", new CallState(MarkupText.Plain(isOrdered ? "1" : "0")) },
-			{ "1", new CallState(MarkupText.Plain((index + 1).ToString())) }, // Convert to 1-based index
-			{ "2", new CallState(content) }
-		};
+		var args = Args(
+			("ordered", Flag(isOrdered)),
+			("number", MarkupText.Plain((index + 1).ToString())), // Convert to 1-based index
+			("text", content));
 
 		var custom = TryEvaluateTemplate("LISTITEM", args).GetAwaiter().GetResult();
 		return custom ?? MarkupText.Concat(ListMarker(index, isOrdered), content);
@@ -245,7 +237,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var contents = seeAlso.Items is null
 			? MarkupText.Join(MarkupText.NewLine, seeAlso.Select(Render).Where(rendered => rendered.Length > 0))
 			: MarkupText.Join(MarkupText.Plain(", "), RenderSeeAlsoItems(seeAlso));
-		return Template("CONTAINER", Args(Text(HelpSeeAlsoExtension.Name), Text(string.Empty), contents))
+		return Template("CONTAINER", Args(("directive", Text(HelpSeeAlsoExtension.Name)), ("options", Text(string.Empty)), ("text", contents)))
 			?? base.RenderSeeAlso(seeAlso);
 	}
 
@@ -256,20 +248,17 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 			.Where(rendered => rendered.Length > 0);
 
 		var content = MarkupText.Join(MarkupText.NewLine, parts);
-		var args = new Dictionary<string, CallState>
-		{
-			{ "0", new CallState(content) }
-		};
+		var args = Args(("text", content));
 
 		var custom = TryEvaluateTemplate("QUOTE", args).GetAwaiter().GetResult();
 		return custom ?? base.RenderQuote(quote);
 	}
 
-	/// <summary>Numbers template arguments <c>%0</c>, <c>%1</c>, … in the order given.</summary>
-	private static Dictionary<string, CallState> Args(params MString[] values) =>
-		values
-			.Select((value, index) => (index, value))
-			.ToDictionary(pair => pair.index.ToString(), pair => new CallState(pair.value));
+	/// <summary>
+	/// Template arguments, numbered <c>%0</c>, <c>%1</c>, … in the order given and passed by name as well.
+	/// </summary>
+	private static Dictionary<string, CallState> Args(params ReadOnlySpan<(string Name, CallState Value)> values) =>
+		CallbackArguments.Of(values);
 
 	/// <summary>A boolean template argument, in the <c>1</c>/<c>0</c> spelling softcode tests with.</summary>
 	private static MString Flag(bool value) => MarkupText.Plain(value ? "1" : "0");
@@ -302,19 +291,19 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	/// a template that received it would be the only thing in the pipeline that could see it.
 	/// </remarks>
 	protected override MString RenderBold(MString content) =>
-		Template("BOLD", Args(Plain(content))) ?? base.RenderBold(content);
+		Template("BOLD", Args(("text", Plain(content)))) ?? base.RenderBold(content);
 
 	/// <inheritdoc cref="RenderBold"/>
 	protected override MString RenderItalic(MString content) =>
-		Template("ITALIC", Args(Plain(content))) ?? base.RenderItalic(content);
+		Template("ITALIC", Args(("text", Plain(content)))) ?? base.RenderItalic(content);
 
 	/// <inheritdoc cref="RenderBold"/>
 	protected override MString RenderUnderline(MString content) =>
-		Template("UNDERLINE", Args(Plain(content))) ?? base.RenderUnderline(content);
+		Template("UNDERLINE", Args(("text", Plain(content)))) ?? base.RenderUnderline(content);
 
 	/// <summary><c>RENDERMARKUP`INLINECODE</c>: <c>%0</c> the code text, which is plain by construction.</summary>
 	protected override MString RenderInlineCode(CodeInline code) =>
-		Template("INLINECODE", Args(Text(code.Content))) ?? base.RenderInlineCode(code);
+		Template("INLINECODE", Args(("code", Text(code.Content)))) ?? base.RenderInlineCode(code);
 
 	/// <summary>
 	/// <c>RENDERMARKUP`LINK</c>: <c>%0</c> link text (plain), <c>%1</c> URL or command, <c>%2</c> whether
@@ -345,7 +334,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var text = string.IsNullOrWhiteSpace(contentText) ? url : contentText;
 		var isCommand = link.GetData(HelpTopicInlineParser.CommandDataKey) is true;
 
-		return Template("LINK", Args(Text(text), Text(url), Flag(isCommand), Text(link.Title)))
+		return Template("LINK", Args(("text", Text(text)), ("url", Text(url)), ("command", Flag(isCommand)), ("title", Text(link.Title))))
 			?? base.RenderLink(link, content);
 	}
 
@@ -359,12 +348,12 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	/// argument that the helpfile calls "the alt text".
 	/// </remarks>
 	protected override MString RenderImage(LinkInline link, MString content) =>
-		Template("IMAGE", Args(Text(content.ToPlainText().Trim()), Text(link.Url)))
+		Template("IMAGE", Args(("alt", Text(content.ToPlainText().Trim())), ("url", Text(link.Url))))
 			?? base.RenderImage(link, content);
 
 	/// <summary>An image alone in its paragraph goes to <c>IMAGE</c> too, so a template sees every image.</summary>
 	protected override MString RenderFigure(LinkInline link, MString content) =>
-		Template("IMAGE", Args(Text(content.ToPlainText().Trim()), Text(link.Url)))
+		Template("IMAGE", Args(("alt", Text(content.ToPlainText().Trim())), ("url", Text(link.Url))))
 			?? base.RenderFigure(link, content);
 
 	/// <summary>
@@ -388,7 +377,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 		var reference = WikiCommandHelper.ReferenceForWikiLink(wikiLink);
 
-		return Template("WIKILINK", Args(Text(display), Text(reference), Text(wikiLink.Title)))
+		return Template("WIKILINK", Args(("text", Text(display)), ("page", Text(reference)), ("title", Text(wikiLink.Title))))
 			?? base.RenderWikiLink(wikiLink);
 	}
 
@@ -403,13 +392,13 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	protected override MString RenderAutolink(AutolinkInline autolink) =>
 		string.IsNullOrEmpty(autolink.Url)
 			? base.RenderAutolink(autolink)
-			: Template("AUTOLINK", Args(Text(autolink.Url))) ?? base.RenderAutolink(autolink);
+			: Template("AUTOLINK", Args(("url", Text(autolink.Url)))) ?? base.RenderAutolink(autolink);
 
 	/// <summary><c>RENDERMARKUP`TASKLIST</c>: <c>%0</c> is 1 when the box is ticked.</summary>
 	/// <remarks>A task-list marker is a checked flag and nothing else, so there is no state in which the
 	/// default renders nothing and no content that could carry markup.</remarks>
 	protected override MString RenderTaskList(TaskList task) =>
-		Template("TASKLIST", Args(Flag(task.Checked))) ?? base.RenderTaskList(task);
+		Template("TASKLIST", Args(("checked", Flag(task.Checked)))) ?? base.RenderTaskList(task);
 
 	/// <summary>
 	/// <c>RENDERMARKUP`TABLE</c>: <c>%0</c> is the table described as one JSON object, so a template can
@@ -497,7 +486,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 		// Serialised with the options json() uses, so a template meets one JSON dialect whichever
 		// function produced the document it is reading.
-		var custom = Template("TABLE", Args(MarkupText.Plain(JsonSerializer.Serialize(payload, JsonHelpers.RelaxedJsonOptions))));
+		var custom = Template("TABLE", Args(("table", MarkupText.Plain(JsonSerializer.Serialize(payload, JsonHelpers.RelaxedJsonOptions)))));
 
 		return custom ?? base.RenderTable(table);
 	}
@@ -542,7 +531,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 		var contents = MarkupText.Join(MarkupText.NewLine, container.Select(Render).Where(rendered => rendered.Length > 0));
 
-		return Template("CONTAINER", Args(Text(name), Text(arguments), contents))
+		return Template("CONTAINER", Args(("directive", Text(name)), ("options", Text(arguments)), ("text", contents)))
 			?? base.RenderCustomContainer(container);
 	}
 }

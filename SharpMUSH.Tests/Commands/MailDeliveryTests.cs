@@ -708,6 +708,22 @@ public class MailDeliveryTests
 		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// The filter reads the same values by name: %&lt;sender&gt;, %&lt;subject&gt;, %&lt;body&gt; and
+	/// %&lt;flags&gt; are %0-%3.
+	/// </summary>
+	[Test]
+	public async ValueTask AMailFilterReadsItsArgumentsByName()
+	{
+		var sender = await Player("MdFltNamed");
+		var target = await Player("MdFltNamedTo");
+		await Run(target, "&MAILFILTER me=[pemit(me,named:%<sender>|%<subject>|%<Body>|%<flags>)]");
+
+		var heard = await Heard(target, () => Run(sender, $"@mail/urgent #{target.DbRef.Number}=Named subject/named body"));
+
+		await Assert.That(heard).Contains($"named:#{sender.DbRef.Number}|Named subject|named body|U");
+	}
+
 	/// <summary>A forward reaches the filter flagged <c>F</c> (<c>extmail.c:3306</c>).</summary>
 	[Test]
 	public async ValueTask AMailFilterSeesAForwardFlagged()

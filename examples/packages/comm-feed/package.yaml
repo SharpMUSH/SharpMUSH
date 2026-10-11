@@ -50,7 +50,8 @@ objects:
 
       # ── Values ───────────────────────────────────────────────────────────
       # A line's text as the terminal reads it after the channel name or the
-      # page prefix (%0 = style, %1 = the speaker's name, %2 = the message):
+      # page prefix (%0 or %<style> = the style, %1 or %<name> = the speaker's
+      # name, %2 or %<message> = the message; each by position and by name):
       # a pose is "Name waves", a semipose "Name's here", anything else the
       # message alone — the speaker's name is the payload's from.
       FN`COMM`TEXT: |-
@@ -82,7 +83,7 @@ objects:
       # key a line has no value for is absent, not null — a null in a
       # json_mod() patch removes the key.
       FN`COMM`MESSAGE: |-
-        json_mod(json(object,v,json(number,2),kind,json(string,%<kind>),to,json_array(iter(%<to>,json(string,name(%i0)),,%r),%r),from,json(string,%<name>),text,json(string,u(me/FN`COMM`TEXT,%<style>,%<name>,%<message>)),style,json(string,%<style>),ts,json(number,%<time>)),patch,json(object,channel,if(strlen(%<channel>),json(string,%<channel>),null),fromObjid,if(strlen(%<speaker>),json(string,%<speaker>),null),toObjids,if(words(%<to>),json_array(iter(%<to>,json(string,%i0),,%r),%r),null),id,if(strlen(%<id>),json(number,%<id>),null)))
+        json_mod(json(object,v,json(number,2),kind,json(string,%<kind>),to,json_array(iter(%<to>,json(string,name(%i0)),,%r),%r),from,json(string,%<name>),text,json(string,uargs(me/FN`COMM`TEXT,0,%<style>,1,%<name>,2,%<message>,style,%<style>,name,%<name>,message,%<message>)),style,json(string,%<style>),ts,json(number,%<time>)),patch,json(object,channel,if(strlen(%<channel>),json(string,%<channel>),null),fromObjid,if(strlen(%<speaker>),json(string,%<speaker>),null),toObjids,if(words(%<to>),json_array(iter(%<to>,json(string,%i0),,%r),%r),null),id,if(strlen(%<id>),json(number,%<id>),null)))
 
       # comm.who, from named arguments: channel, member (objid), name (the
       # member's name) and change (on|off): the member came onto or went off

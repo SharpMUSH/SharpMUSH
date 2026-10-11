@@ -121,7 +121,7 @@ collide with `room-contents`' ``FN`*``.
 |---|---|
 | ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to: a CONNECTED player |
 | ``FN`COMM`RECIPIENTS`` (`%0` objids) | the players a `comm.message` or `comm.who` goes to: ``filter(me/FN`COMM`VIEWER,%0)`` |
-| ``FN`COMM`TEXT`` (`%0` style, `%1` name, `%2` message) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
+| ``FN`COMM`TEXT`` (`%0` or `%<style>`, `%1` or `%<name>`, `%2` or `%<message>`) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
 | ``FN`COMM`CHANNELROW`` (`%0` channel, `%1` viewer) | one row of `channels` |
 | ``FN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
 | ``FN`COMM`MESSAGE`` (named: `%<kind>`, `%<channel>`, `%<speaker>`, `%<name>`, `%<style>`, `%<message>`, `%<time>`, `%<to>` page recipients, `%<id>` line id) | the whole `comm.message` payload |

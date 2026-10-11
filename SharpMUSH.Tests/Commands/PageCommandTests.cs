@@ -112,6 +112,43 @@ public class PageCommandTests
 		}
 	}
 
+	/// <summary>
+	/// The page formats read the same values by name as by position: %&lt;message&gt;, %&lt;type&gt;,
+	/// %&lt;alias&gt;, %&lt;recipients&gt; and %&lt;default&gt;.
+	/// </summary>
+	[Test]
+	public async ValueTask PageFormats_ReadArgumentsByName()
+	{
+		var sender = await CreatePlayerAsync("PageNamedSender");
+		var recipient = await CreatePlayerAsync("PageNamedRecipient");
+		try
+		{
+			await AttributeService.SetAttributeAsync(recipient.Object, recipient.Object, "PAGEFORMAT",
+				MarkupText.Plain("NAMEDIN:%<message>|%<type>|%<alias>|%<recipients>|%<Default>"));
+			await AttributeService.SetAttributeAsync(sender.Object, sender.Object, "OUTPAGEFORMAT",
+				MarkupText.Plain("NAMEDOUT:%<message>|%<type>|%<alias>|%<recipients>|%<default>"));
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			var recipientStart = Notifications.CountFor(recipient.DbRef);
+			await PageAsync(sender, recipient.Name, ":Test");
+			var recipientDbRef = $"#{recipient.DbRef.Number}";
+			var incoming = $"NAMEDIN:Test|:||{recipientDbRef}|From afar, {sender.Name} Test";
+			var outgoing = $"NAMEDOUT:Test|:||{recipientDbRef}|Long distance to {recipient.Name}: {sender.Name} Test";
+			var defaultIncoming = $"From afar, {sender.Name} Test";
+			var defaultOutgoing = $"Long distance to {recipient.Name}: {sender.Name} Test";
+
+			await Assert.That(PageMessagesSince(recipient.DbRef, recipientStart, incoming, defaultIncoming))
+				.IsEquivalentTo([incoming]);
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, outgoing, defaultOutgoing))
+				.IsEquivalentTo([outgoing]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
 	[Test]
 	public async ValueTask MultipleRecipients_UseReadableNamesAndPennContext()
 	{

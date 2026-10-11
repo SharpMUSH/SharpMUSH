@@ -106,6 +106,17 @@ public partial class SpeechTransformationTests
 		await Assert.That(Factory.Notifications.For(room).Contains($"actor original #{actor.DbRef.Number}")).IsTrue();
 	}
 
+	/// <summary>SPEECHMOD reads its arguments by name too: %&lt;message&gt; is %0 and %&lt;type&gt; is %1.</summary>
+	[Test]
+	public async Task SpeechModReadsArgumentsByName()
+	{
+		var actor = await Player();
+		await Room(actor);
+		await Admin($"&SPEECHMOD {actor.DbRef}=named %<type> [ucstr(%<Message>)]");
+		await Command(actor, "@emit quietly");
+		await Assert.That(Factory.Notifications.For(actor.DbRef).Contains("named | QUIETLY")).IsTrue();
+	}
+
 	[Test]
 	[Arguments("@pemit/silent")]
 	[Arguments("@remit/silent")]

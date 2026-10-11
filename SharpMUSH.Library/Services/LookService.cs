@@ -205,11 +205,9 @@ public class LookService(
 			return defaultFormattedName;
 		}
 
-		var nameFormatArgs = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState(look.ViewingObject.DBRef.ToString()),
-			["1"] = new CallState(defaultFormattedName)
-		};
+		var nameFormatArgs = CallbackArguments.Of(
+			("object", look.ViewingObject.DBRef.ToString()),
+			("name", defaultFormattedName));
 
 		return await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService, look.Parser, look.Looker, look.Viewing, "NAMEFORMAT",
@@ -240,11 +238,9 @@ public class LookService(
 			return description.Base;
 		}
 
-		var descFormatArgs = new Dictionary<string, CallState>();
-		if (description.AttributeName is not null)
-		{
-			descFormatArgs["0"] = new CallState(description.Base);
-		}
+		var descFormatArgs = description.AttributeName is null
+			? []
+			: CallbackArguments.Of(("description", description.Base));
 
 		return await look.Parser.With(
 			state => state with { Enactor = look.Looker.Object().DBRef },
@@ -412,11 +408,7 @@ public class LookService(
 			? MarkupText.Empty
 			: MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
 
-		var conFormatArgs = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState(contentDbrefs),
-			["1"] = new CallState(contentNames)
-		};
+		var conFormatArgs = CallbackArguments.Of(("contents", contentDbrefs), ("names", contentNames));
 
 		var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService, look.Parser, look.Looker, look.Viewing, "CONFORMAT",
@@ -431,10 +423,7 @@ public class LookService(
 	private async ValueTask ShowExitsAsync(Look look, List<AnySharpContent> visibleExits)
 	{
 		var exitDbrefs = string.Join(" ", visibleExits.Select(x => $"#{x.Object().DBRef.Number}"));
-		var exitFormatArgs = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState(exitDbrefs)
-		};
+		var exitFormatArgs = CallbackArguments.Of(("exits", exitDbrefs));
 
 		var isTransparent = await look.Viewing.IsTransparent();
 		var defaultExits = visibleExits.Count == 0

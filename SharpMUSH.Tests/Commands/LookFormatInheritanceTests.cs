@@ -62,6 +62,39 @@ public class LookFormatInheritanceTests
 		await Assert.That(heard).Contains($"PEXIT_{token}:1");
 	}
 
+	/// <summary>
+	/// The look formats read their values by name as well as by position: @nameformat's %&lt;object&gt; and
+	/// %&lt;name&gt;, @descformat's %&lt;description&gt;, @conformat's %&lt;contents&gt; and %&lt;names&gt;, and
+	/// @exitformat's %&lt;exits&gt;.
+	/// </summary>
+	[Test]
+	public async Task LookFormats_ReadArgumentsByName()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("nfmt");
+		var (player, parser, _) = await MortalInOwnRoom(token);
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create Thing_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"drop Thing_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open Exit_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@describe here=Desc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&NAMEFORMAT here=NNAME_{token}:[name(%<object>)]:[strmatch(%<name>,%1)]"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&DESCFORMAT here=NDESC_{token}:%<description>"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&CONFORMAT here=NCON_{token}:[name(%<contents>)]:%<names>"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&EXITFORMAT here=NEXIT_{token}:[name(%<exits>)]"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		var heard = WebAppFactoryArg.Notifications.For(player.DbRef);
+		await Assert.That(heard).Contains($"NNAME_{token}:Room_{token}:1");
+		await Assert.That(heard).Contains($"NDESC_{token}:Desc_{token}");
+		await Assert.That(heard).Contains($"NCON_{token}:Thing_{token}:Thing_{token}");
+		await Assert.That(heard).Contains($"NEXIT_{token}:Exit_{token}");
+	}
+
 	[Test]
 	[NotInParallel]
 	public async Task AncestorRoomNameFormat_AppliesToAMortalsLook()
