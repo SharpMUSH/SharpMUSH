@@ -7,7 +7,6 @@ No SDK, Docker, Restic, or live application behavior is mocked by this module.
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 from pathlib import Path
@@ -16,16 +15,27 @@ import secrets
 import shlex
 import ssl
 import subprocess
+import struct
 import time
 import urllib.error
 import urllib.request
 import uuid
 import zipfile
+import zlib
 
 
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise RuntimeError(message)
+
+
+def png_fixture() -> bytes:
+    """One opaque red pixel with valid PNG chunk checksums, no image dependency."""
+    def chunk(kind, data):
+        return struct.pack("!I", len(data)) + kind + data + struct.pack("!I", zlib.crc32(kind + data))
+
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack("!2I5B", 1, 1, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"\0\xff\0\0\xff")) + chunk(b"IEND", b""))
 
 
 def documented_restore(readme: Path, copy_name: str) -> str:
@@ -248,7 +258,7 @@ def run_recovery_checks(compose: list[str], *, https_port: int, ca_file: Path,
 
     verify_plugins()
     print("PASS: installed plugin executes and disabled plugin remains off after restart", flush=True)
-    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=")
+    png = png_fixture()
     asset = api.upload("/api/wiki-assets", "recovery.png", png, "image/png")
     require(api.request("GET", asset["url"], binary=True) == png, "The seeded wiki asset did not round-trip")
     waiting = api.upload("/api/packages/plugins/upload", packages["command-only"].name,

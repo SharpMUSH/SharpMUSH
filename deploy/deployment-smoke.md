@@ -7,8 +7,12 @@ It checks the exact PR head, rather than a moving published image tag.
 
 The harness requires at least 12 GiB free before building. It does not push images, use
 repository secrets, contact a production service, or create a cloud backup repository.
-It has `contents: read` permission only. Container ports bind to runner loopback,
-networks are internal, and all volume/network names belong to this job's unique project.
+It has `contents: read` permission only. Container ports bind to runner loopback, and
+all volume/network names belong to this job's unique project. Backing networks are
+internal; only Caddy and SocketServer also join a disposable ingress bridge, because
+Docker can omit host port mappings for internal-only networks. Those two containers
+have outbound capability, but the fixture supplies no external service or credentials;
+Caddy uses manual test TLS instead of ACME. No host firewall settings are changed.
 Generated certificates and passwords stay in the runner's temporary directory and are
 never uploaded as artifacts. The workflow's `always()` cleanup removes its Compose
 resources; the hosted runner is discarded even if the job is terminated.

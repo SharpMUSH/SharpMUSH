@@ -4,14 +4,33 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import struct
 import tempfile
 import unittest
 import zipfile
+import zlib
 
-from smoke_recovery import documented_restore, package_fixture
+from smoke_recovery import documented_restore, package_fixture, png_fixture
 
 
 class RecoverySmokeHelperTests(unittest.TestCase):
+    def test_png_fixture_has_valid_checksums_and_one_rgba_pixel(self):
+        data = png_fixture()
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+        offset, chunks = 8, {}
+        while offset < len(data):
+            size = struct.unpack("!I", data[offset:offset + 4])[0]
+            kind = data[offset + 4:offset + 8]
+            payload = data[offset + 8:offset + 8 + size]
+            crc = struct.unpack("!I", data[offset + 8 + size:offset + 12 + size])[0]
+            self.assertEqual(crc, zlib.crc32(kind + payload))
+            chunks[kind] = payload
+            offset += 12 + size
+        self.assertEqual(offset, len(data))
+        self.assertEqual(struct.unpack("!2I5B", chunks[b"IHDR"]), (1, 1, 8, 6, 0, 0, 0))
+        self.assertEqual(zlib.decompress(chunks[b"IDAT"]), b"\0\xff\0\0\xff")
+        self.assertEqual(chunks[b"IEND"], b"")
+
     def test_extracts_the_documented_shell_without_production_root_rewrites(self):
         readme = Path(__file__).resolve().parents[2] / "deploy" / "README.md"
         script = documented_restore(readme, "20261011-064900-123")

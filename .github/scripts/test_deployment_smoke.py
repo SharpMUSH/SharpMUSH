@@ -50,7 +50,10 @@ class DeploymentSmokeTests(unittest.TestCase):
 
     def test_all_networks_and_resources_are_isolated(self):
         model = self.isolate(self.model())
-        self.assertTrue(all(n["internal"] for n in model["networks"].values()))
+        self.assertTrue(all(n["internal"] for name, n in model["networks"].items() if name != "smoke-ingress"))
+        self.assertEqual({name for name, service in model["services"].items()
+                          if "smoke-ingress" in service.get("networks", {})}, {"caddy", "connectionserver"})
+        self.assertNotIn("internal", model["networks"]["smoke-ingress"])
         for resources in (model["networks"], model["volumes"]):
             self.assertTrue(all(r["name"].startswith("smush-smoke-123-1_") for r in resources.values()))
         self.assertFalse(any("container_name" in s for s in model["services"].values()))

@@ -2,7 +2,7 @@
 
 Builds the repository Dockerfiles at the checked-out commit. The production Compose
 model and TLS overlay are retained, except for explicit CI isolation: local image
-tags, unique resources, loopback ports, internal networks, a manual test certificate,
+tags, unique resources, loopback ports, internal backing networks, a manual test certificate,
 and a local Restic repository. Never use a deployment .env or a production volume.
 """
 
@@ -94,6 +94,13 @@ def isolated_model(source, *, project, workdir, image_tags, ports):
             raise AssertionError("External networks are forbidden")
         network["name"] = project + "_" + name
         network["internal"] = True
+    # Docker can silently omit published ports on an internal-only bridge. A
+    # separate, job-scoped ingress bridge gives only the two socket frontends a
+    # publishable endpoint; every host mapping still binds loopback. The engine,
+    # broker, renderer and backup remain on internal networks only.
+    model["networks"]["smoke-ingress"] = {"name": project + "_smoke-ingress", "driver": "bridge"}
+    for name in ("caddy", "connectionserver"):
+        model["services"][name].setdefault("networks", {})["smoke-ingress"] = None
     model["volumes"]["smoke-repository"] = {"name": project + "_smoke-repository"}
     model["volumes"]["smoke-restore"] = {"name": project + "_smoke-restore"}
     connection = model["services"]["connectionserver"]
@@ -145,14 +152,29 @@ def wait_ready(https_port, ca_file, timeout=120):
     context = ssl.create_default_context(cafile=str(ca_file))
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     deadline = time.monotonic() + timeout
+    last = "not contacted"
     while time.monotonic() < deadline:
         try:
             with urllib.request.urlopen(f"https://localhost:{https_port}/ready", context=context, timeout=5) as response:
                 if response.status == 200 and response.read() == b"ready":
                     return
-        except (OSError, urllib.error.URLError):
+                last = f"HTTP {response.status}, unexpected readiness body"
+        except urllib.error.HTTPError as error:
+            last = f"HTTP {error.code}"
             time.sleep(2)
-    raise RuntimeError("Disposable stack did not become ready within its deadline")
+        except (OSError, urllib.error.URLError) as error:
+            last = type(error).__name__ + ": " + str(error)
+            time.sleep(2)
+    raise RuntimeError("Disposable stack did not become ready within its deadline: " + last)
+
+
+def verify_published_ports(compose, ports):
+    for service, target, label in (("connectionserver", 4201, "plaintext"),
+                                   ("connectionserver", 4203, "tls"), ("caddy", 443, "https")):
+        mapped = run(compose + ["port", service, str(target)], capture=True).stdout.strip()
+        if mapped != f"127.0.0.1:{ports[label]}":
+            raise RuntimeError(f"Docker did not publish {service}:{target} on its expected loopback port")
+    print("PASS: Docker published all three endpoints on runner loopback only", flush=True)
 
 
 def cleanup():
@@ -241,6 +263,7 @@ def main():
     try:
         run(compose + ["up", "-d", "--no-build", "--wait", "--wait-timeout", "120",
                        "nats", "renderer", "connectionserver", "sharpmush-server", "caddy"], timeout=180)
+        verify_published_ports(compose, ports)
         wait_ready(ports["https"], ca_file)
         print("PASS: real Compose stack ready through verified HTTPS proxy", flush=True)
         run_tls_checks(compose, tls_port=ports["tls"], plaintext_port=ports["plaintext"],
