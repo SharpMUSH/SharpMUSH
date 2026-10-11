@@ -9,12 +9,14 @@ Everything runs under Docker Compose. **Kubernetes is not needed** at this scale
 
 ## What's here
 
-Two entry points, pick one based on how you terminate TLS:
+Two entry points, pick one based on how you terminate web TLS. Native-client TLS is a
+separate, optional overlay for either stack:
 
 | File | Purpose |
 |------|---------|
 | `docker-compose.prod.yml` | The stack: nats, connectionserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
-| `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports, hidden origin IP). See the Cloudflare section below. |
+| `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports). Native clients still connect directly. See the Cloudflare section below. |
+| `docker-compose.telnet-tls.yml` | Opt-in native-client TLS on 4203 with an operator-supplied certificate. See [Native-client TLS](native-client-tls.md). |
 | `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
 | `grafana/sharpmush-invocations.json` | Optional Grafana dashboard for function and command timings (see [Function and command timings](#function-and-command-timings)) |
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
@@ -40,7 +42,9 @@ docker compose -f docker-compose.prod.yml run --rm backup restic init
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-The web portal comes up on `https://<your-domain>` (via Caddy) and telnet on port `4201`.
+The web portal comes up on `https://<your-domain>` (via Caddy) and plaintext telnet on port `4201`.
+For encrypted native MU* clients, also follow [Native-client TLS](native-client-tls.md);
+web HTTPS alone does not protect telnet.
 Then open `https://<your-domain>/setup` straight away: the first visitor claims the admin
 account linked to `#1`.
 
@@ -142,27 +146,27 @@ reached at one stable HTTPS address and the proxy passes the browser's `Host` th
 |------|---------|----------------------|
 | 80 / 443 (TCP), 443 (UDP) | Caddy (web portal, SignalR, and `/ws` → connection server); UDP 443 is HTTP/3 (QUIC) | yes — open UDP 443 on the host firewall too, or browsers stay on HTTP/2 |
 | 4201 | Telnet — **plaintext** | yes |
-| 4203 | Telnet over TLS — *configured but not yet implemented* | not yet |
+| 4203 | Native Telnet over TLS | only with `docker-compose.telnet-tls.yml`; allow TCP 4203 on the host firewall when enabled |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
 | 4202 | Connection server HTTP / `/ws` WebSocket | no — internal, reached via Caddy's `/ws` route |
 | 9092 | Server `/metrics` for Prometheus (plain HTTP, answers nothing else; `Metrics:Port`, 0 turns it off) | no — published on the host's loopback only (`127.0.0.1:9092`), for a scraper on the host or an ssh tunnel. Needs Docker Engine 28.3.3 or later: older engines let hosts on the same network segment reach loopback-published ports (before 28.0.0), or did so after a firewalld reload (before 28.3.3) |
 | 9091 | Connection server `/metrics` (same; `ConnectionServer:MetricsPort`) | no — scrape it from the compose network |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
 
-> **Telnet is unencrypted today.** Everything a player types on `4201`, including their password
-> on login, crosses the network in the clear. The web portal is HTTPS via Caddy, but MU\* clients
-> connect straight to `4201` and bypass it entirely.
->
-> `ssl_port` (4203) exists in the configuration and **nothing listens on it** —
-> [#743](https://github.com/SharpMUSH/SharpMUSH/issues/743) is the issue to implement it, and
-> records the intended deployment shape: the Caddy stack can reuse the Let's Encrypt certificate
-> Caddy already renews into `caddy-data`, and the Cloudflare stack (which has no Caddy, and so no
-> local certificate) needs an ACME sidecar doing a DNS-01 challenge.
->
-> Until then, if you need encrypted player connections, terminate TLS in front of `4201` yourself
-> (stunnel, or a TCP-mode proxy). Be aware of the cost: the game takes a connection's IP from the
-> socket's peer address and has no PROXY-protocol support, so every player will appear to connect
-> from the proxy — site-locks, bans and connection logs all lose the real client address.
+**Port 4201 is plaintext**, including login passwords. The optional
+[`docker-compose.telnet-tls.yml`](docker-compose.telnet-tls.yml) overlay enables the existing
+SocketServer TLS listener on **4203**, terminating TLS directly in the socket owner so it retains
+the client's peer address. It works with either base stack and leaves 4201 enabled.
+
+Follow [Native-client TLS](native-client-tls.md) for trusted PEM certificates, permissions,
+verification and renewal. Set `ConnectionServer__TelnetSslPort` to open the listener;
+`ssl_port` in the game configuration only advertises the MSSP port and does not open one.
+Without the overlay, `TelnetSslPort` defaults to `0` and there is no TLS listener.
+
+Caddy and Cloudflare provide HTTPS for the web portal and WebSocket terminal only. This overlay
+does not discover Caddy's certificates, provision ACME certificates, or renew them. Certificate
+changes require a deliberate `connectionserver` restart, which disconnects its native and
+WebSocket clients.
 
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
 terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server — you must
@@ -221,8 +225,9 @@ dials *outbound* to Cloudflare and Cloudflare routes public traffic back down th
 connection, which means:
 
 - you open **no inbound web ports** (no 80/443 on the host firewall),
-- you manage **no TLS certificate** (Cloudflare terminates HTTPS at its edge),
-- your server's **origin IP stays hidden** behind Cloudflare.
+- you manage **no web TLS certificate** (Cloudflare terminates HTTPS at its edge),
+- web traffic reaches the origin through the tunnel; a DNS-only native-client hostname
+  still reveals the same host's public IP.
 
 ### The one thing to understand first: there are TWO independent front doors
 
@@ -231,13 +236,15 @@ SharpMUSH is reached two different ways, and Cloudflare only handles one of them
 | Traffic | Protocol | Path | Goes through Cloudflare? |
 |---------|----------|------|--------------------------|
 | Web portal, REST, SignalR, WebSocket terminal | HTTP/HTTPS + WS | Cloudflare Tunnel → `sharpmush-server:8080` | **Yes** |
-| Telnet (MU\* clients) | raw TCP | Client → host IP `:4201` directly | **No** |
+| Telnet (MU\* clients) | raw TCP, optionally TLS | Client → host IP `:4201` (plaintext) or `:4203` (TLS overlay) directly | **No** |
 
 Cloudflare's normal proxy (the orange cloud) only carries HTTP/HTTPS and WebSockets.
 **Raw telnet is plain TCP and cannot go through it** on free/standard plans — that would
 require the paid Spectrum product. So the Zero Trust / Tunnel steps below apply **only to
 the web side**. Telnet is configured entirely separately, with a plain DNS record, and is
-served straight off the host. Keep the two in separate mental buckets.
+served straight off the host. TLS on 4203 is still native TCP, not HTTPS, and does not
+make this traffic compatible with the orange-cloud web proxy. See Cloudflare's
+[network-port guidance](https://developers.cloudflare.com/fundamentals/reference/network-ports/).
 
 ### Part A — the web side (Cloudflare Zero Trust Tunnel)
 
@@ -287,13 +294,18 @@ that resolves straight to your server:
    record, e.g. `telnet.mush.example.com` → your host's public IP.
 2. Set that record to **DNS only (grey cloud)**, *not* proxied. A proxied record would try
    to send telnet through Cloudflare's HTTP proxy, which does not work.
-3. Make sure the host firewall allows inbound **TCP 4201** (the compose file already
-   publishes it). Players then connect their MU\* client to `telnet.mush.example.com 4201`.
+3. For encrypted connections, enable [Native-client TLS](native-client-tls.md), allow inbound
+   **TCP 4203** on the host firewall, and give players `telnet.mush.example.com 4203` with
+   their client's TLS/SSL option enabled and certificate validation on. The certificate must
+   cover that hostname.
+4. The base stack also publishes **TCP 4201**, which is plaintext. Allow it through the host
+   firewall only if you intend to offer legacy plaintext access; the TLS overlay does not
+   remove that mapping.
 
 > Trade-off to be aware of: because this record is DNS-only, that hostname reveals your
-> server's real IP. The web portal stays hidden behind Cloudflare; only the telnet
-> hostname is exposed. If hiding the telnet IP matters to you, that requires Cloudflare
-> Spectrum (paid) or a different TCP proxy.
+> server's real IP, including when native TLS is enabled. Web traffic still uses Cloudflare,
+> but the shared host's address is no longer secret. If hiding the telnet IP matters to you,
+> that requires Cloudflare Spectrum (paid) or a different TCP proxy.
 
 ### Part C — bring it up
 
@@ -311,7 +323,8 @@ Check the tunnel is healthy with `docker compose -f docker-compose.cloudflare.ym
 
 | Port | Service | Open on host firewall? |
 |------|---------|------------------------|
-| 4201 | Telnet | **yes** (Part B) |
+| 4201 | Telnet — plaintext | only if offering legacy plaintext access (Part B); published by the base stack |
+| 4203 | Native Telnet over TLS | **yes when enabled** with the TLS overlay (Part B) |
 | 80 / 443 | — | **no** — the tunnel is outbound-only |
 | 8080 | ASP.NET server (HTTP) | no — internal, reached via the tunnel |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
