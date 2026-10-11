@@ -208,7 +208,7 @@ Before dispatching, the router sets:
 - *%q<attrpath>*: the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (``api`users``)
 - *%q<fields>*: the [FORMQ()]-decoded query parameter name list; each parameter is readable as *%q<form.*>*
 
-The sub-attribute receives *%0* = the raw request body. The body is left raw on purpose: check %`\<hdr.content-type\>` and use [FORMQ()] or [json_query()] on *%0* as appropriate. Sub-attributes read the decoded *%q<form.*>* registers, and the raw query string is still `after(%<path>,?)`.
+The sub-attribute receives *%0* = the raw request body, and the request's named arguments (%`\<path\>`, %`\<body\>`, %`\<viewer\>`, %`\<hdr.<name>\>`), which `@include` passes on. The body is left raw on purpose: check %`\<hdr.content-type\>` and use [FORMQ()] or [json_query()] on *%0* as appropriate. Sub-attributes read the decoded *%q<form.*>* registers, and the raw query string is still `after(%<path>,?)`.
 
 ### Adding a route
 
@@ -223,9 +223,9 @@ To serve `GET /api/users`:
 The router guards the dispatch with `@assert`: a request whose path maps to no sub-attribute (including the bare root `/`) answers **404 API NOT FOUND** and stops. The seeded router for each verb is:
 
 ```sharp
-think setq(fields,formq(after(%0,?)))
-@assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
-@include me/GET`%q<attrpath>=%1
+think setq(fields,formq(after(%<path>,?)))
+@assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
+@include me/GET`%q<attrpath>=%<body>
 ```
 
 ## Stock routes

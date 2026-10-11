@@ -1,6 +1,6 @@
 format: 1.2
 package: radio-scene
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Radio in scenes: +radio/log puts what a player hears on a frequency into the scene they are in. Joins the radio and scene packages through a tap on the radio feed kind."
 license: MIT
@@ -12,7 +12,7 @@ requires_server: ">=0.1"
 # package keeps scenes and their poses. This one listens to the radio's feed and writes into scenes.
 depends:
   - package: radio
-    version: ">=1.0 <2.0"
+    version: ">=1.2 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/radio/
@@ -35,13 +35,14 @@ objects:
     name: Radio Scene Log
     flags: [WIZARD]
     attributes:
-      # A tap on the radio kind, queued once per line after it is delivered. %0 line id, %1 radio/<id>,
-      # %2 who heard it, %3 speaker, %4 style, %5 text, %6 alterego. A listener who logs this frequency
+      # A tap on the radio kind, queued once per line after it is delivered. It reads the line by name (help
+      # @feed taps): feed is radio/<id>, recipients who heard it, speaker, style, text, and name the
+      # alterego. A listener who logs this frequency
       # and is in a scene gets the line into that scene, drawn as they heard it, once per scene however
       # many people in it are logging. It is recorded as the radio type, with the frequency's name in the
       # pose's frequency field, which the portal shows in the message's header.
       TAP`LOG: |-
-        think [setq(_f,after(%1,/))][setq(_d,)][setq(_p,)][iter(%2,if(cand(hasattr({{radiolog}},P`[u({{radio/radio}}/FUN`KEY,%i0)]`LOG`%q<_f>),not(strmatch(setr(_x,scenefocus(%i0)),#-*)),not(member(%q<_d>,%q<_x>))),[setq(_d,%q<_d> %q<_x>)][setq(_p,%q<_p> %q<_x>~%i0)]))]; @dolist/inline %q<_p>={@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],radio,emit,,[u({{radio/radio}}/FUN`LINE,%q<_f>,%3,firstof(%6,name(%3)),%4,%5,after(##,~))]; @scene/setpose [last(sceneposes(before(##,~)))]/frequency=[u({{radio/radio}}/FUN`NAME,%q<_f>)]}
+        think [setq(_f,after(%<feed>,/))][setq(_d,)][setq(_p,)][iter(%<recipients>,if(cand(hasattr({{radiolog}},P`[u({{radio/radio}}/FUN`KEY,%i0)]`LOG`%q<_f>),not(strmatch(setr(_x,scenefocus(%i0)),#-*)),not(member(%q<_d>,%q<_x>))),[setq(_d,%q<_d> %q<_x>)][setq(_p,%q<_p> %q<_x>~%i0)]))]; @dolist/inline %q<_p>={@scene/addpose [before(##,~)]=[after(##,~)],[scenemember(before(##,~),after(##,~),showas)],[loc(after(##,~))],radio,emit,,[uargs({{radio/radio}}/FUN`LINE,frequency,%q<_f>,speaker,%<speaker>,name,firstof(%<name>,name(%<speaker>)),style,%<style>,text,%<text>,reader,after(##,~))]; @scene/setpose [last(sceneposes(before(##,~)))]/frequency=[u({{radio/radio}}/FUN`NAME,%q<_f>)]}
 
       # +radio includes these with its registers: %q<lhs> the frequency as typed, %q<me> the player's key and
       # %q<ext> this object. The radio is the executor while they run, so they name it %! and this object

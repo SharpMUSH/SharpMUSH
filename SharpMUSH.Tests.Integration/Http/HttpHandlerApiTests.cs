@@ -137,12 +137,13 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 	public async Task DefaultVerbHandler_RoutesPathToSubAttribute_WithFormRegisters()
 	{
 		// The stock POST router: POST /api/users?name=Joe+Smith ⇒ @include me/POST`API`USERS with
-		// %0 = raw request body and formq()-decoded %q<form.*> registers ambient. (POST is used
+		// %0 = raw request body and formq()-decoded %q<form.*> registers ambient, and the handler's named
+		// arguments (%<path>, %<body>) passed on by the @include. (POST is used
 		// because the in-memory test transport only forwards request bodies for standard
 		// body-carrying methods.)
 		await SeedHandlerAttribute("POST", SharpMUSH.Server.Services.BundledHttpHooks.Attribute("POST"));
 		await SeedHandlerAttribute("POST`API`USERS",
-			"think hello=%q<form.name> body=%0 fields=%q<fields> attrpath=%q<attrpath>; @respond 200 Routed");
+			"think hello=%q<form.name> body=%0 named=%<body> path=%<path> fields=%q<fields> attrpath=%q<attrpath>; @respond 200 Routed");
 
 		var http = factory.CreateHttpClient();
 		var response = await http.PostAsync("http/api/users?name=Joe+Smith&like=a&like=b",
@@ -153,6 +154,8 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		await Assert.That(response.ReasonPhrase ?? string.Empty).Contains("Routed");
 		await Assert.That(body).Contains("hello=Joe Smith");
 		await Assert.That(body).Contains("body=the-payload");
+		await Assert.That(body).Contains("named=the-payload");
+		await Assert.That(body).Contains("path=/api/users?name=Joe+Smith&like=a&like=b");
 		await Assert.That(body).Contains("fields=NAME LIKE");
 		await Assert.That(body).Contains("attrpath=api`users");
 	}

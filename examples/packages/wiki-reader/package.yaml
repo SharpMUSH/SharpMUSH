@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -214,7 +214,7 @@ objects:
 
       FUN`DISPLAY`LISTING:
         value: |-
-          [@@(%0 title · %1 refs · %2 page · %3 table attribute · %4 the command and its switches · %5 what follows them — reads %q<pages>. The next page is %4/<n> %5)][box([u(%!/%3,u(%!/FUN`GET`SLICE,%1,%2))]%r[rule()]%r[u(%!/FUN`DISPLAY`COUNT,words(%1),entry,entries)]%b-%bpage %2 of %q<pages>[if(lt(%2,%q<pages>),%b-%b%4/[add(%2,1)][if(strlen(%5),%b%5)])],%0,,u(%!/FUN`GET`FRAME))]
+          [@@(named: title · list the refs · page · pages how many · table the table attribute · head the command and its switches · tail what follows them. The next page is head/<n> tail)][box([u(%!/%<table>,u(%!/FUN`GET`SLICE,%<list>,%<page>))]%r[rule()]%r[u(%!/FUN`DISPLAY`COUNT,words(%<list>),entry,entries)]%b-%bpage %<page> of %<pages>[if(lt(%<page>,%<pages>),%b-%b%<head>/[add(%<page>,1)][if(strlen(%<tail>),%b%<tail>)])],%<title>,,u(%!/FUN`GET`FRAME))]
         flags: [funsyntax]
       FUN`DISPLAY`ARTICLE:
         value: |-
@@ -237,11 +237,11 @@ objects:
           [@@(no arguments — each namespace, clickable to its listing, with what it holds and how many pages. What it holds is left out first on a narrow screen)][box([datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),min,json(string,%r12),priority,json(string,1%r2%r1),grow,json(string,%r1)),[ansi(h,Namespace)]%r[iter(u(%!/FUN`GET`NAMESPACES),cmdlink(%i0,+wiki/list %i0,Pages in %i0),%b,%r)],[ansi(h,Holds)]%r[iter(u(%!/FUN`GET`NAMESPACES),u(%!/FUN`GET`NSDESC,%i0),%b,%r)],>[ansi(h,Pages)]%r[iter(u(%!/FUN`GET`NAMESPACES),words(wikilist(%i0)),%b,%r)])]%r[rule()]%r+wiki <page>%b·%b+wiki/info <page>%b·%b+wiki/search <text>%r+wiki/list %[<namespace>%]%b·%b+wiki/category %[<name>%]%b·%b+wiki/recent %[<n>%],Wiki,,u(%!/FUN`GET`FRAME))]
         flags: [funsyntax]
 
-      # Reads registers rather than arguments: @include splits its arguments on commas, and a title
-      # carries what the reader typed.
+      # Takes its arguments by name (@include/args), so a title carrying what the reader typed, commas
+      # and all, arrives whole and nothing is left behind in a register.
       INC`DO`LISTING:
         value: |-
-          @@ no arguments — lists %q<list> with the table %q<table> under the title %q<title>, page %q<page>, the next page being %q<head>/<n> %q<tail>; @assert words(%q<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%q<list>))]; @assert lte(%q<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %q<page>.; @pemit %#=[u(%!/FUN`DISPLAY`LISTING,%q<title>,%q<list>,%q<page>,%q<table>,%q<head>,%q<tail>)]
+          @@ named: list the refs · table the table attribute · title · page · head and tail, the next page being head/<n> tail; @assert words(%<list>)=@include %!/INC`DISPLAY`INFO=Nothing to show.; think [setq(pages,u(%!/FUN`GET`NPAGES,%<list>))]; @assert lte(%<page>,%q<pages>)=@include %!/INC`DISPLAY`WARN=There [if(gt(%q<pages>,1),are %q<pages> pages,is one page)] — you asked for page %<page>.; @pemit %#=[uargs(%!/FUN`DISPLAY`LISTING,title,%<title>,list,%<list>,page,%<page>,pages,%q<pages>,table,%<table>,head,%<head>,tail,%<tail>)]
         flags: [cmdsyntax]
       INC`DISPLAY`USAGE:
         value: |-
@@ -254,7 +254,7 @@ objects:
 
       INC`IS`NAMESPACE:
         value: |-
-          @@ no arguments — validates the optional %q<namespace> a listing was asked for. No commas in the message: @include splits its right side on them, so itemize() here would report "Try main" and stop.; @assert cor(not(%q<namespace>),u(%!/FUN`IS`NAMESPACE,%q<namespace>))=@include %!/INC`DISPLAY`WARN=No such namespace: %q<namespace>. Try one of: [u(%!/FUN`GET`NAMESPACES)].
+          @@ named: namespace — validates the optional namespace a listing was asked for. No commas in the message: @include splits its right side on them, so itemize() here would report "Try main" and stop.; @assert cor(not(%<namespace>),u(%!/FUN`IS`NAMESPACE,%<namespace>))=@include %!/INC`DISPLAY`WARN=No such namespace: %<namespace>. Try one of: [u(%!/FUN`GET`NAMESPACES)].
         flags: [cmdsyntax]
 
       INC`IS`ADMIN:
@@ -263,7 +263,7 @@ objects:
         flags: [cmdsyntax]
       INC`IS`PAGE:
         value: |-
-          @@ no arguments — validates %q<ref>, which the calling command stages, and resolves it to the page it names; @assert strlen(%q<ref>)=@include %!/INC`DISPLAY`WARN=Which page? Try +wiki/list.; think [setq(found,u(%!/FUN`GET`RESOLVE,%q<ref>))]; @assert cor(strlen(%q<found>),lte(words(setr(also,u(%!/FUN`GET`ELSEWHERE,%q<ref>))),1))=@pemit %#=[notice(WIKI,There is no main page called %q<ref>. Did you mean [itemize(iter(%q<also>,u(%!/FUN`DISPLAY`REF,%i0),%b,|),|,or)]?,warn)]; @assert strlen(%q<found>)=@include %!/INC`DISPLAY`WARN=No such wiki page: %q<ref>; think [setq(ref,%q<found>)]
+          @@ named: ref — validates the page reference as typed and resolves it to the page it names, handed back in %q<ref>; @assert strlen(%<ref>)=@include %!/INC`DISPLAY`WARN=Which page? Try +wiki/list.; think [setq(found,u(%!/FUN`GET`RESOLVE,%<ref>))]; @assert cor(strlen(%q<found>),lte(words(setr(also,u(%!/FUN`GET`ELSEWHERE,%<ref>))),1))=@pemit %#=[notice(WIKI,There is no main page called %<ref>. Did you mean [itemize(iter(%q<also>,u(%!/FUN`DISPLAY`REF,%i0),%b,|),|,or)]?,warn)]; @assert strlen(%q<found>)=@include %!/INC`DISPLAY`WARN=No such wiki page: %<ref>; think [setq(ref,%q<found>)]
         flags: [cmdsyntax]
 
       # Non-capturing groups are "(?\:" — a bare colon would end the pattern.
@@ -274,7 +274,7 @@ objects:
 
       CMD`READ:
         value: |-
-          $(?s)^\+wiki\s+(?<ref>\S.*)$:think [setq(ref,trim(r(ref,args)))]; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`ARTICLE,%q<ref>)]
+          $(?s)^\+wiki\s+(?<ref>\S.*)$:@include/args %!/INC`IS`PAGE=ref,[trim(%<ref>)]; @pemit %#=[u(%!/FUN`DISPLAY`ARTICLE,%q<ref>)]
         flags: [regexp, cmdsyntax]
 
       # Every switch comes through here, named in full or by any beginning only it has (/l is /list),
@@ -309,27 +309,27 @@ objects:
 
       INC`SW`LIST:
         value: |-
-          @@ %q<rest> — \[<namespace>\] · %q<page> the page; think [setq(namespace,trim(%q<rest>))]; @assert lte(words(%q<namespace>),1)=@include %!/INC`DISPLAY`USAGE; @include %!/INC`IS`NAMESPACE; think [setq(list,wikilist(%q<namespace>),title,Pages[if(strlen(%q<namespace>),: %q<namespace>)],table,FUN`DISPLAY`TABLE,head,+wiki/list,tail,%q<namespace>)]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — \[<namespace>\] · %q<page> the page; think [setq(namespace,trim(%q<rest>))]; @assert lte(words(%q<namespace>),1)=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`NAMESPACE=namespace,%q<namespace>; @include/args %!/INC`DO`LISTING=list,[wikilist(%q<namespace>)],title,Pages[if(strlen(%q<namespace>),: %q<namespace>)],table,FUN`DISPLAY`TABLE,head,+wiki/list,tail,%q<namespace>,page,%q<page>
         flags: [cmdsyntax]
       # A * or ? in the text is a wildcard, as in +help/search: wikisearch() takes them.
       INC`SW`SEARCH:
         value: |-
-          @@ %q<rest> — <text> · %q<page> the page; think [setq(query,trim(%q<rest>))]; @assert strlen(%q<query>)=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikisearch(%q<query>),title,Search: %q<query>,table,FUN`DISPLAY`TABLE,head,+wiki/search,tail,%q<query>)]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — <text> · %q<page> the page; think [setq(query,trim(%q<rest>))]; @assert strlen(%q<query>)=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`DO`LISTING=list,[wikisearch(%q<query>)],title,Search: %q<query>,table,FUN`DISPLAY`TABLE,head,+wiki/search,tail,%q<query>,page,%q<page>
         flags: [cmdsyntax]
       # Categories are not in a page's name: a category is a list of pages, read with wikicategory().
       # With no name, the categories themselves.
       INC`SW`CATEGORY:
         value: |-
-          @@ %q<rest> — \[<name>\] · %q<page> the page; think [setq(key,u(%!/FUN`GET`CATKEY,%q<rest>))]; think [if(strlen(%q<key>),setq(list,wikicategory(%q<key>),title,Category: [u(%!/FUN`DISPLAY`CATLABEL,%q<key>)],table,FUN`DISPLAY`TABLE,head,+wiki/category,tail,%q<key>),setq(list,u(%!/FUN`GET`CATEGORIES),title,Categories,table,FUN`DISPLAY`CATTABLE,head,+wiki/category,tail,))]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — \[<name>\] · %q<page> the page; think [setq(key,u(%!/FUN`GET`CATKEY,%q<rest>))]; @include/args %!/INC`DO`LISTING=list,[if(strlen(%q<key>),wikicategory(%q<key>),u(%!/FUN`GET`CATEGORIES))],title,[if(strlen(%q<key>),Category: [u(%!/FUN`DISPLAY`CATLABEL,%q<key>)],Categories)],table,[if(strlen(%q<key>),FUN`DISPLAY`TABLE,FUN`DISPLAY`CATTABLE)],head,+wiki/category,tail,%q<key>,page,%q<page>
         flags: [cmdsyntax]
       # wikirecent() takes 1 to 50.
       INC`SW`RECENT:
         value: |-
-          @@ %q<rest> — \[<n>\] · %q<page> the page; think [setq(count,strfirstof(trim(%q<rest>),10))]; @assert cand(isint(%q<count>),gt(%q<count>,0),lte(%q<count>,50))=@include %!/INC`DISPLAY`USAGE; think [setq(list,wikirecent(%q<count>),title,Recently edited,table,FUN`DISPLAY`RECENTTABLE,head,+wiki/recent,tail,%q<count>)]; @include %!/INC`DO`LISTING
+          @@ %q<rest> — \[<n>\] · %q<page> the page; think [setq(count,strfirstof(trim(%q<rest>),10))]; @assert cand(isint(%q<count>),gt(%q<count>,0),lte(%q<count>,50))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`DO`LISTING=list,[wikirecent(%q<count>)],title,Recently edited,table,FUN`DISPLAY`RECENTTABLE,head,+wiki/recent,tail,%q<count>,page,%q<page>
         flags: [cmdsyntax]
       INC`SW`INFO:
         value: |-
-          @@ %q<rest> — <page>; think [setq(ref,trim(%q<rest>))]; @assert strlen(%q<ref>)=@include %!/INC`DISPLAY`USAGE; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`FIELDS,%q<ref>)]
+          @@ %q<rest> — <page>; @assert strlen(trim(%q<rest>))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`PAGE=ref,[trim(%q<rest>)]; @pemit %#=[u(%!/FUN`DISPLAY`FIELDS,%q<ref>)]
         flags: [cmdsyntax]
       # Drafts never appear in wikilist(), so this audits published pages only.
       INC`SW`AUDIT:

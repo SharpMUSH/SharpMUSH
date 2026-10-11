@@ -1,6 +1,6 @@
 format: 1
 package: room-contents
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -250,8 +250,8 @@ objects:
         json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
 
       # ── The handler ──────────────────────────────────────────────────────
-      # %0 = the affected room, %1 = cause (move-in / move-out / connect /
-      # disconnect / resume / scene).
+      # Reads the event's arguments by name: %<room> = the affected room,
+      # %<cause> = move-in / move-out / connect / disconnect / resume / scene.
       #
       # The room's connected viewers come first: with none, nothing is built
       # and nothing is sent.
@@ -276,4 +276,4 @@ objects:
       # same room.info can ignore it. null() swallows the oob() counts, which
       # would otherwise be thought at the handler object.
       ROOM`CONTENTS: |-
-        think null(if(setr(viewers,filter(me/FN`VIEWER,lplayers(%0))),if(strmatch(%1,scene),[setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))],[u(me/FN`PREPARE,%0)][iter(if(strmatch(%1,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))])])))
+        think null(if(setr(viewers,filter(me/FN`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),[setq(info[rest(num(%<room>),#)],u(me/FN`INFOBASE,%<room>))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))],[u(me/FN`PREPARE,%<room>)][iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%<room>,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))])])))
