@@ -42,12 +42,43 @@ The argument case breaks more than the one call: the unevaluated call's own `,` 
 **Traps:**
 
 - A function's name with `(` straight after it, at the start, is a call even when you meant text: `@pemit %#=Last(minute) changes are fine` prints `minute changes are fine`. Write `\Last(minute)`, or put other text first. `add (1,2)`, with a space, is text.
+- A second call straight after a call is text: `add(1,2)mul(2,3)` gives `3mul(2,3)`. Write `add(1,2)[mul(2,3)]`.
 - An unknown name is text outside brackets (`Smile(s) all round` prints as typed) and an error inside them (`[smile(s)]` gives `#-1 FUNCTION (SMILE) NOT FOUND`).
 - `@@(<note>)` heads code bare; `[@@(<note>)]` is the same comment, but turns the call after it into a call after text.
 - **A literal `[ ] ( )` needs `%[` `%]` `%(` `%)`.** An unescaped `(` inside a function argument closes the call early — `` [header(Home ([wiki(%0,namespace)]))] `` prints `Home (main` and leaks the `)` after the rule. `\[` also escapes, but only where the backslash survives to evaluation: it does in a value the package manager or `@set` wrote, and inside a `[...]` region, but a client-typed `&ATTR obj=A\[B\]C` stores `A[B]C` and the bracket is then read as an evaluation bracket. `%[` survives every path — prefer it.
 - **`[[]x[]]` is not an escape for `[x]`.** An empty `[]` evaluates to nothing, as in PennMUSH, so `A[[]x[]]B` gives `AxB`. Escape them.
 
 These are PennMUSH's rules too: its parser looks for a function only at the start of an expression and inside brackets, and reports an unknown one only inside brackets. `BracketEvaluationGuideTests` in SharpMUSH checks these rules.
+
+## `t()` inside a condition: never
+
+Every condition turns its value into true or false with the same test `t()` uses, so `t()` inside one tests a value twice and gives the same answer, for the cost of one more call. That holds with `tiny_booleans` on as well, since both read the option. The conditions:
+
+- Functions: `if()`, `ifelse()`, `cond()`, `condall()`, `ncond()`, `ncondall()`, `not()`, `and()`, `or()`, `xor()`, `nand()`, `nor()`, `cand()`, `cor()`, `ncand()`, `ncor()`, and the predicate of `filterbool()`, `every()` and `some()`.
+- Commands: `@break`, `@assert`, `@if`/`@ifelse`.
+
+Write the test bare:
+
+| Not | But |
+|---|---|
+| `if(t(match(%0,yes no)),…)` | `if(match(%0,yes no),…)` |
+| `@assert t(member(%q<list>,%0))=…` | `@assert member(%q<list>,%0)=…` |
+| `not(t(get(%0/HIDDEN)))` | `not(get(%0/HIDDEN))` |
+| `cand(t(pos(=,%1)),…)` | `cand(pos(=,%1),…)` |
+| `if(t(%0),1,0)` | `t(%0)` |
+
+A position, count or lookup is a condition already. `match()`, `member()` and `words()` give `0` when there is nothing, and `pos()` and `num()` give `#-1`, which is false like every value starting `#-`.
+
+**Where `t()` changes the result,** the value is used as text, not tested:
+
+- `filter()` keeps only elements whose result is exactly `1`: with `&ITSELF me=%0`, `filter(me/ITSELF,1 2 abc 0)` gives `1`. Use `filterbool()` rather than wrapping the predicate.
+- `switch()`, `case()`, `@switch` and `@select` compare text: `switch(1,match(a b c,c),yes,no)` gives `no`, because `match()` gave `3`. Use `cond()` for a ladder of tests.
+- Arithmetic: `add(t(abc),t(0),t(5))` counts two true values, and without `t()` `add()` refuses `abc` with `#-1 ARGUMENTS MUST BE NUMBERS`.
+- A flag that is stored or printed and must read `1` or `0`.
+
+`strlen()` is a different test, not a longer spelling: `0` is false, but `strlen(0)` is `1`. Use it only where the empty string must be the only false value.
+
+PennMUSH works the same way: its `t()`, `if()`, `@break` and `@assert` all call `parse_boolean()`, and its `filter()` keeps only `1`. `TruthinessGuideTests` in SharpMUSH checks these rules.
 
 ## Evaluation rules (get these wrong and code silently breaks)
 
@@ -233,6 +264,7 @@ Prefer queued `@dolist` (optionally `/notify` + semaphore `@wait`) over `@dolist
 | ``u(me/FN`ROW,%0,%1,%2,%3,%4)`` | ``uargs(me/FN`ROW,name,…,rank,…)`` |
 | `and(…)`/`or(…)` as the default boolean | `cand()`/`cor()` stop at the first deciding argument; `and()`/`or()` evaluate everything |
 | `ibreak()add(…)` trailing function unevaluated | `ibreak()[add(…)]` |
+| `if(t(<x>),…)`, `@assert t(<x>)`, `not(t(<x>))` | Drop the `t()`: every condition already tests truthiness the same way. Keep it only where the value is compared or counted (`switch(1,t(…),…)`, `add(t(…),…)`); use `filterbool()` over `filter()` with `t()` |
 | `[…]` round a whole attribute body, argument or command argument (`think [setq(…)]`, `if(%0,[u(…)])`) | Drop them: a call that starts the code evaluates on its own. Brackets are for a call after text, a substitution or another call |
 | Flagging the event handler wizard "so it can act" | Seeded `#9` already is; only custom handlers need it |
 | `orflags(%#,Wr)`, `hasrole(%#,wizard)` or a `&STAFF` dbref list as the gate | `permission(%#, <perm>)`; define a custom one for the job |

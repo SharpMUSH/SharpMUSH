@@ -348,9 +348,10 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.SubstitutionSymbolContext
 				=> SemanticTokenType.Substitution,
 
-			// PERCENT is the only direct terminal child of IExplicitEvaluationStringContext.
+			// PERCENT is the only direct terminal child of these.
 			SharpMUSHParser.IExplicitEvaluationStringContext
 			or SharpMUSHParser.IBraceExplicitEvaluationStringContext
+			or SharpMUSHParser.ICallTailContext
 				=> SemanticTokenType.Substitution,
 
 			SharpMUSHParser.IStartEqSplitCommandContext

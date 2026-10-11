@@ -196,17 +196,23 @@ def generate(grammar_name):
 		# ')', which the group would have taken, so a call's arguments have only closed groups.
 		open_tails = c.G and not c.F
 		w(f'// ---- {n}: {describe(c)}')
-		w(f'evaluationString__{n}:\n      function__{inside(c, "call")} explicitEvaluationString__{n}?\n    | explicitEvaluationString__{n}\n;')
+		# What follows a leading call is not the start of the string, so it takes what may come later in
+		# one: a name( there is text, as it is after any other text. explicitEvaluationString cannot
+		# begin with a name(, which is how a string that starts with one is known to start with a call.
+		w(f'evaluationString__{n}:\n      function__{inside(c, "call")} callTail__{n}?\n    | explicitEvaluationString__{n}\n;')
 		loop = block(later(c)) + '*'
 		if open_tails:
 			w(f'explicitEvaluationString__{n}:\n      {block(first(c))} {loop} openTail__{group}?\n    | openTailFirst__{group}\n;')
 			w(f'braceExplicitEvaluationString__{n}:\n      {block(later(c))} {loop} openTail__{group}?\n    | openTail__{group}\n;')
+			w(f'callTail__{n}:\n      {block(later(c))} {loop} openTail__{group}?\n    | openTail__{group}\n;')
 		else:
 			w(f'explicitEvaluationString__{n}:\n    {block(first(c))} {loop}\n;')
 			w(f'braceExplicitEvaluationString__{n}:\n    {block(later(c))} {loop}\n;')
+			w(f'callTail__{n}:\n    {block(later(c))} {loop}\n;')
 		if c == starts['args', 1]:
-			w(f'evaluationString__{n}_closed:\n      function__{inside(c, "call")} explicitEvaluationString__{n}_closed?\n    | explicitEvaluationString__{n}_closed\n;')
+			w(f'evaluationString__{n}_closed:\n      function__{inside(c, "call")} callTail__{n}_closed?\n    | explicitEvaluationString__{n}_closed\n;')
 			w(f'explicitEvaluationString__{n}_closed:\n    {block(first(c))} {loop}\n;')
+			w(f'callTail__{n}_closed:\n    {block(later(c))} {loop}\n;')
 		w(f'function__{n}: FUNCHAR evaluationString__{n}? (COMMAWS evaluationString__{n}?)* CPAREN;')
 		w(f'bracePattern__{n}: OBRACE braceExplicitEvaluationString__{n}? CBRACE;')
 		w(f'bracketPattern__{n}: OBRACK evaluationString__{n}? CBRACK;')
@@ -280,10 +286,12 @@ ACCESSORS = {
 	'commandList': [('command', True), ('SEMICOLON', True)],
 	'command': [('evaluationString', False)],
 	'commaCommandArgs': [('evaluationString', True), ('COMMAWS', True)],
-	'evaluationString': [('function', False), ('explicitEvaluationString', False)],
+	'evaluationString': [('function', False), ('explicitEvaluationString', False), ('callTail', False)],
 	'explicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('beginGenericText', False),
 		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True), ('genericText', True)],
 	'braceExplicitEvaluationString': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
+		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True)],
+	'callTail': [('bracePattern', True), ('bracketPattern', True), ('genericText', True),
 		('PERCENT', True), ('validSubstitution', True), ('regexpCapture', True)],
 	'regexpCapture': [('REGEXP_NUM', False), ('REGEXP_STARTCARET', False), ('explicitEvaluationString', False), ('CCARET', False)],
 	'bracePattern': [('OBRACE', False), ('braceExplicitEvaluationString', False), ('CBRACE', False)],
