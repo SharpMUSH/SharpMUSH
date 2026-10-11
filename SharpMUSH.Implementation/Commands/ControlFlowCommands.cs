@@ -779,15 +779,19 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
-		var falsey = parsedIfElse!.Falsy(parser);
+		var truthy = parsedIfElse!.Truthy(parser);
+		// PennMUSH's cmd_ifelse: @skip runs its list only when the condition is false; /ifelse is @if.
+		var branch = parser.CurrentState.Switches.Contains("IFELSE")
+			? truthy ? "1" : "2"
+			: truthy ? null : "1";
 		CallState? nestedResult = null;
 
-		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
+		if (branch is not null && parser.CurrentState.Arguments.TryGetValue(branch, out var actionList))
 		{
-			nestedResult = await parser.CommandListParse(arg1.Message);
+			nestedResult = await parser.CommandListParse(actionList.Message);
 		}
 
-		return new CallState(!falsey) { HadErrors = nestedResult?.HadErrors == true };
+		return new CallState(truthy) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@RETRY", Output = CommandOutput.Runs, Switches = [],

@@ -72,6 +72,35 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	[Arguments("1", false)]
+	[Arguments("abc", false)]
+	[Arguments("0", true)]
+	[Arguments("", true)]
+	[Arguments("#-1 NO MATCH", true)]
+	public async ValueTask SkipRunsItsListOnlyWhenTheConditionIsFalse(string condition, bool runs)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var marker = TestIsolationHelpers.GenerateUniqueName("SkipRuns");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@skip {condition}=@pemit #1={marker}"));
+
+		await Assert.That(Delivered(executor, marker, INotifyService.NotificationType.PrivateEmit)).IsEqualTo(runs ? 1 : 0);
+	}
+
+	[Test]
+	[Arguments("1", "True")]
+	[Arguments("0", "False")]
+	public async ValueTask SkipIfElseIsIf(string condition, string branch)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var marker = TestIsolationHelpers.GenerateUniqueName("SkipIfElse");
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@skip/ifelse {condition}=@pemit #1={marker} True,@pemit #1={marker} False"));
+
+		await Assert.That(Delivered(executor, $"{marker} {branch}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(Delivered(executor, $"{marker} {(branch == "True" ? "False" : "True")}", INotifyService.NotificationType.PrivateEmit)).IsEqualTo(0);
+	}
+
+	[Test]
 	public async ValueTask IfElseCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
