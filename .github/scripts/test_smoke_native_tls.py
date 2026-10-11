@@ -58,6 +58,7 @@ class SmokeTlsProtocolTests(unittest.TestCase):
     @contextmanager
     def server(self, handler, *, allow_handshake_failure=False):
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(self.certificates / "fullchain.pem", self.certificates / "privkey.pem")
         listener = socket.socket()
         listener.bind(("127.0.0.1", 0))
@@ -77,7 +78,7 @@ class SmokeTlsProtocolTests(unittest.TestCase):
                         except ssl.SSLError:
                             if not allow_handshake_failure:
                                 raise
-            except BaseException as error:
+            except Exception as error:
                 errors.append(error)
 
         thread = threading.Thread(target=serve, daemon=True)
@@ -104,6 +105,12 @@ class SmokeTlsProtocolTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             smoke.generate_certificates(self.certificates)
 
+    def test_client_context_requires_tls12_and_certificate_verification(self):
+        context = smoke._tls_context(self.ca)
+        self.assertEqual(context.minimum_version, ssl.TLSVersion.TLSv1_2)
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+
     def test_verified_tls_carries_who_and_declines_telnet_options(self):
         def handler(stream):
             self.assertEqual(stream.recv(4096), b"WHO\r\n")
@@ -123,8 +130,10 @@ class SmokeTlsProtocolTests(unittest.TestCase):
     def test_verified_tls_rejects_untrusted_root(self):
         with self.server(lambda stream: None, allow_handshake_failure=True) as port:
             with socket.create_connection(("127.0.0.1", port), timeout=5) as raw:
+                context = ssl.create_default_context()
+                context.minimum_version = ssl.TLSVersion.TLSv1_2
                 with self.assertRaises(ssl.SSLCertVerificationError):
-                    ssl.create_default_context().wrap_socket(raw, server_hostname="localhost")
+                    context.wrap_socket(raw, server_hostname="localhost")
 
     def test_websocket_upgrade_control_frames_and_fragmented_seq_output(self):
         def handler(stream):

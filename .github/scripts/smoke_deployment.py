@@ -56,6 +56,13 @@ def fixture_directory():
     return temporary / project_name()
 
 
+def compose_prefix(project, workdir):
+    # `config` otherwise omits the opt-in backup service. Explicit service names
+    # on `up` below still keep its cron container from starting automatically.
+    return ["docker", "compose", "--project-name", project, "--env-file",
+            str(workdir / "empty.env"), "--profile", "backup"]
+
+
 def port():
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
@@ -136,6 +143,7 @@ def test_caddyfile(original):
 
 def wait_ready(https_port, ca_file, timeout=120):
     context = ssl.create_default_context(cafile=str(ca_file))
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
@@ -154,8 +162,8 @@ def cleanup():
     model = workdir / "compose.json"
     try:
         if model.is_file():
-            result = run(["docker", "compose", "--project-name", project_name(), "--env-file",
-                          str(workdir / "empty.env"), "-f", str(model), "down", "--volumes",
+            result = run(compose_prefix(project_name(), workdir) +
+                         ["-f", str(model), "down", "--volumes",
                           "--remove-orphans", "--timeout", "10"], check=False, timeout=90)
             if result.returncode:
                 raise RuntimeError("Disposable Compose cleanup failed")
@@ -221,8 +229,7 @@ def main():
     ports = {key: port() for key in ("plaintext", "tls", "https")}
     if len(set(ports.values())) != len(ports):
         raise RuntimeError("Ephemeral port collision; no stack was started")
-    render = ["docker", "compose", "--project-name", project, "--env-file", str(workdir / "empty.env"),
-              "-f", str(ROOT / "deploy/docker-compose.prod.yml"),
+    render = compose_prefix(project, workdir) + ["-f", str(ROOT / "deploy/docker-compose.prod.yml"),
               "-f", str(ROOT / "deploy/docker-compose.telnet-tls.yml"), "config", "--format", "json"]
     environment = clean_environment()
     environment.update({"SHARPMUSH_DOMAIN": "localhost", "SHARPMUSH_TELNET_TLS_CERT_DIR": str(workdir / "certificates")})
@@ -230,8 +237,7 @@ def main():
                                        env=environment, timeout=30).stdout)
     model = isolated_model(source, project=project, workdir=workdir, image_tags=images, ports=ports)
     (workdir / "compose.json").write_text(json.dumps(model, indent=2))
-    compose = ["docker", "compose", "--project-name", project, "--env-file", str(workdir / "empty.env"),
-               "-f", str(workdir / "compose.json")]
+    compose = compose_prefix(project, workdir) + ["-f", str(workdir / "compose.json")]
     try:
         run(compose + ["up", "-d", "--no-build", "--wait", "--wait-timeout", "120",
                        "nats", "renderer", "connectionserver", "sharpmush-server", "caddy"], timeout=180)

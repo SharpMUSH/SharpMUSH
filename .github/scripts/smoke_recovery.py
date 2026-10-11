@@ -68,6 +68,7 @@ class Api:
     def __init__(self, port: int, ca_file: Path):
         self.base = f"https://localhost:{port}"
         self.context = ssl.create_default_context(cafile=str(ca_file))
+        self.context.minimum_version = ssl.TLSVersion.TLSv1_2
         self.token = ""
 
     def request(self, method: str, path: str, *, body=None, raw: bytes | None = None,

@@ -3,14 +3,19 @@
 import copy
 import os
 from pathlib import Path
-import tempfile
 import unittest
 from unittest.mock import patch
 
-from smoke_deployment import clean_environment, isolated_model, project_name, test_caddyfile
+from smoke_deployment import clean_environment, compose_prefix, isolated_model, project_name, test_caddyfile
 
 
 class DeploymentSmokeTests(unittest.TestCase):
+    def test_compose_config_includes_backup_profile_and_ignores_deployment_env(self):
+        command = compose_prefix("smush-smoke-123-1", Path("/tmp/fixture"))
+        self.assertEqual(command[command.index("--profile") + 1], "backup")
+        self.assertEqual(command[command.index("--env-file") + 1], "/tmp/fixture/empty.env")
+        self.assertEqual(command[command.index("--project-name") + 1], "smush-smoke-123-1")
+
     def model(self):
         services = {name: {"container_name": "production-" + name, "restart": "unless-stopped",
                            "ports": [{"target": 80, "published": "80"}],

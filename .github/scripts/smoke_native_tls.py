@@ -138,6 +138,7 @@ def renew_certificates(cert_dir: Path) -> None:
 def _tls_context(ca: Path) -> ssl.SSLContext:
     # Explicit CA only: do not inherit the machine's trust anchors or bypass hostname checking.
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_verify_locations(cafile=str(ca))
     return context
 
@@ -445,8 +446,10 @@ def run_tls_checks(compose: list[str], *, tls_port: int, plaintext_port: int,
     except ssl.SSLCertVerificationError:
         pass
     with socket.create_connection(("127.0.0.1", tls_port), timeout=TIMEOUT) as raw:
+        untrusted_context = ssl.create_default_context()
+        untrusted_context.minimum_version = ssl.TLSVersion.TLSv1_2
         try:
-            with ssl.create_default_context().wrap_socket(raw, server_hostname="localhost"):
+            with untrusted_context.wrap_socket(raw, server_hostname="localhost"):
                 raise RuntimeError("TLS unexpectedly trusted the private smoke CA")
         except ssl.SSLCertVerificationError:
             pass
