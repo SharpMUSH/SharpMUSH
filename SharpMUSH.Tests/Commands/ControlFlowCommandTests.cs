@@ -101,6 +101,23 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	// Checked against PennMUSH 1.8.8p0: @skip runs only its first list, and @skip/ifelse with a false
+	// condition and no second list runs nothing.
+	[Arguments("@skip 0=@pemit #1={0} first,@pemit #1={0} second", "first")]
+	[Arguments("@skip 0={{@pemit #1={0} a, b}}", "a, b")]
+	[Arguments("@skip/ifelse 0=@pemit #1={0} only-true", null)]
+	public async ValueTask SkipRunsOneList(string command, string? heard)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var marker = TestIsolationHelpers.GenerateUniqueName("SkipList");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(string.Format(command, marker)));
+
+		foreach (var text in new[] { "first", "second", "a, b", "only-true" })
+			await Assert.That(Delivered(executor, $"{marker} {text}", INotifyService.NotificationType.PrivateEmit))
+				.IsEqualTo(text == heard ? 1 : 0).Because(text);
+	}
+
+	[Test]
 	public async ValueTask IfElseCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
