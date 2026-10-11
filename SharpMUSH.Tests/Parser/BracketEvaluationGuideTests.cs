@@ -1,3 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Services.Interfaces;
+
 namespace SharpMUSH.Tests.Parser;
 
 /// <summary>
@@ -130,5 +133,13 @@ public class BracketEvaluationGuideTests : ServerTestBase
 		await Cmd($"&{attribute}`VB me=nice day");
 
 		await Assert.That(await Eval($"first(rest(v({attribute}`VA) [v({attribute}`VB)]))")).IsEqualTo("is");
+	}
+
+	[Test]
+	public async Task HelpBracketsOpensTheBracketsSection()
+	{
+		var help = await WebAppFactoryArg.Services.GetRequiredService<ITextFileService>().GetEntryAsync("help", "brackets");
+
+		await Assert.That(help).Contains("A function is recognised without brackets in these places");
 	}
 }

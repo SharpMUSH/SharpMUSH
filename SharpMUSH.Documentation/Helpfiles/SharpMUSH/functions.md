@@ -4,14 +4,16 @@
   "id": "functions",
   "lookup": "functions",
   "aliases": [
-    "FUNCTION",
-    "BRACKETS"
+    "FUNCTION"
   ],
   "sections": [
     {
       "id": "brackets",
       "heading": "Brackets",
-      "lookup": "functions brackets"
+      "lookup": "functions brackets",
+      "aliases": [
+        "BRACKETS"
+      ]
     },
     {
       "id": "built-in-and-user-functions",
