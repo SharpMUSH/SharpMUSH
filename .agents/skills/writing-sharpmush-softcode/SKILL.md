@@ -73,7 +73,7 @@ A position, count or lookup is a condition already. `match()`, `member()` and `w
 
 - `filter()` keeps only elements whose result is exactly `1`: with `&ITSELF me=%0`, `filter(me/ITSELF,1 2 abc 0)` gives `1`. Use `filterbool()` rather than wrapping the predicate.
 - `switch()`, `case()`, `@switch` and `@select` compare text: `switch(1,match(a b c,c),yes,no)` gives `no`, because `match()` gave `3`. Use `cond()` for a ladder of tests.
-- Arithmetic: `add(t(abc),t(0),t(5))` counts two true values, and without `t()` `add()` refuses `abc` with `#-1 ARGUMENTS MUST BE NUMBERS`.
+- Arithmetic: `add(t(abc),t(0),t(5))` counts two true values (one with `tiny_booleans` on, where text is false), and without `t()` `add()` refuses `abc` with `#-1 ARGUMENTS MUST BE NUMBERS`.
 - A flag that is stored or printed and must read `1` or `0`.
 
 `strlen()` is a different test, not a longer spelling: `0` is false, but `strlen(0)` is `1`. Use it only where the empty string must be the only false value.

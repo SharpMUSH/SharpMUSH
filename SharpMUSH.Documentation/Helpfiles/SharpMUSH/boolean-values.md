@@ -77,7 +77,7 @@ yes
 
 A position, count or lookup is a condition already: match() and member() give 0 when nothing matches, and pos() gives #-1, which is false.
 
-t() is needed where the value is used as text rather than tested. filter() keeps only results that are exactly 1, switch() and @switch compare text, and add() counts numbers:
+t() is needed where the value is used as text rather than tested. filter() keeps only results that are exactly 1, switch() and @switch compare text, and add() counts numbers (with tiny_booleans off; with it on, t(abc) is 0):
 
 ```sharp
 > &ITSELF me=%0
