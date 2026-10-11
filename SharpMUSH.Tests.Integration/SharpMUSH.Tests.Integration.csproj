@@ -19,6 +19,10 @@
 	<ItemGroup>
 		<!-- TUnit test framework -->
 		<PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+		<ProjectReference Include="../SharpMUSH.LspBridge/SharpMUSH.LspBridge.csproj" />
+		<ProjectReference Include="../SharpMUSH.AnalysisProtocol/SharpMUSH.AnalysisProtocol.csproj" />
+		<ProjectReference Include="../SharpMUSH.Plugins.Lsp/SharpMUSH.Plugins.Lsp.csproj" />
+		<ProjectReference Include="../SharpMUSH.Plugins.Mcp/SharpMUSH.Plugins.Mcp.csproj" />
 		<PackageReference Include="TUnit.AspNetCore" Version="$(TUnitVersion)" />
 		<PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
 	</ItemGroup>
@@ -35,6 +39,18 @@
 		     copy into plugins/scene/. ReferenceOutputAssembly=false: it is loaded at runtime, not linked. -->
 		<ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
 	</ItemGroup>
+
+	<Target Name="CopyLspPluginFixture" AfterTargets="Build">
+		<ItemGroup><LspFixtureFiles Include="../SharpMUSH.Server/bin/$(Configuration)/net11.0/plugins/lsp/**/*" /></ItemGroup>
+		<RemoveDir Directories="$(OutDir)plugins/lsp" />
+		<Copy SourceFiles="@(LspFixtureFiles)" DestinationFiles="@(LspFixtureFiles->'$(OutDir)plugins/lsp/%(RecursiveDir)%(Filename)%(Extension)')" />
+	</Target>
+
+	<Target Name="CopyMcpPluginFixture" AfterTargets="Build">
+		<ItemGroup><McpFixtureFiles Include="../SharpMUSH.Server/bin/$(Configuration)/net11.0/plugins/mcp/**/*" /></ItemGroup>
+		<RemoveDir Directories="$(OutDir)plugins/mcp" />
+		<Copy SourceFiles="@(McpFixtureFiles)" DestinationFiles="@(McpFixtureFiles->'$(OutDir)plugins/mcp/%(RecursiveDir)%(Filename)%(Extension)')" />
+	</Target>
 
 	<!-- Drop the built SamplePlugin (DLL + manifest only — its SharpMUSH deps resolve from the host's
 	     default load context via McMaster, which keeps contract types unified) into the test output's

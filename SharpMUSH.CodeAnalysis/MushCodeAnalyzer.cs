@@ -24,6 +24,7 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 		var lines = code.Split('\n');
 		for (var i = 0; i < lines.Length; i++)
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			lines[i] = FormatLine(lines[i]);
 		}
 
@@ -77,7 +78,7 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 			var newline = code.Contains("\r\n") ? "\r\n" : "\n";
 			return SoftcodeRenderer.Render(tokens, breaks, newline);
 		}
-		catch (Exception)
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			return code;
 		}
@@ -94,7 +95,7 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 		{
 			return parser.GetDiagnostics(MarkupText.Plain(code), parseType);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			// Anchor the fallback range to a valid position: the end lands on the last line
 			// (so a multi-line buffer doesn't produce a character offset past line 0), and a
@@ -132,6 +133,7 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 
 		for (var i = 0; i < lines.Length; i++)
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var line = lines[i].TrimEnd('\r');
 			if (string.IsNullOrWhiteSpace(line)) continue;
 

@@ -46,6 +46,7 @@ internal static class SoftcodeParsePipeline
 	/// </param>
 	public static BufferedTokenSpanStream Lex(string plainText, string sourceName, bool rewriteOrphanedClosers = true)
 	{
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		StringSpanInputStream inputStream = new(plainText, sourceName);
 		var lexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream tokens = new(lexer);
@@ -151,8 +152,10 @@ internal static class SoftcodeParsePipeline
 		Stack<char>? open = null;
 		var depth = 0;
 
+		var checkedTokens = 0;
 		foreach (var token in CollectionsMarshal.AsSpan(tokenStream.tokens))
 		{
+			if ((checkedTokens++ & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 			switch (token.Type)
 			{
 				case SharpMUSHLexer.OBRACK:

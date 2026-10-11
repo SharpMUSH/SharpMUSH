@@ -100,7 +100,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.BadArgumentName);
 		}
 
-		command.LibraryInformation.Attribute.ArgumentNames = argumentNames;
+		CommandLibrary.MutateMetadata(() => command.LibraryInformation.Attribute.ArgumentNames = argumentNames);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandArgumentNamesFormat), executor,
 			command.LibraryInformation.Attribute.Name, argumentNames.Length == 0 ? "-" : string.Join(" ", argumentNames));
 		return CallState.Empty;
@@ -716,11 +716,17 @@ public partial class Commands : ICommandRestrictionApplier
 
 				break;
 			case CommandRestriction translated:
-				attribute.CommandLock = translated.Lock;
-				attribute.Behavior = translated.Behavior;
+				CommandLibrary.MutateMetadata(() =>
+				{
+					attribute.CommandLock = translated.Lock;
+					attribute.Behavior = translated.Behavior;
+				});
 				break;
 			case NotFound when LockService.Validate(words, executor):
-				attribute.CommandLock = words;
+				CommandLibrary.MutateMetadata(() =>
+				{
+					attribute.CommandLock = words;
+				});
 				break;
 			default:
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictFailed), executor);
@@ -731,7 +737,10 @@ public partial class Commands : ICommandRestrictionApplier
 		// stores what follows only if anything does (command.c:1741-1750), so a bare `"` clears it.
 		if (message is not null)
 		{
-			attribute.RestrictMessage = message;
+			CommandLibrary.MutateMetadata(() =>
+			{
+				attribute.RestrictMessage = message;
+			});
 		}
 
 		await Audit.RecordAsync(executor, AuditActions.RestrictionSet,
@@ -826,11 +835,14 @@ public partial class Commands : ICommandRestrictionApplier
 		_configuredRestrictions.Clear();
 	}
 
-	private static void RestoreBaseline(SharpCommandAttribute attribute, CommandRestrictionBaseline baseline)
+	private void RestoreBaseline(SharpCommandAttribute attribute, CommandRestrictionBaseline baseline)
 	{
-		attribute.CommandLock = baseline.Lock;
-		attribute.RestrictMessage = baseline.Message;
-		attribute.Behavior = baseline.Behavior;
+		CommandLibrary.MutateMetadata(() =>
+		{
+			attribute.CommandLock = baseline.Lock;
+			attribute.RestrictMessage = baseline.Message;
+			attribute.Behavior = baseline.Behavior;
+		});
 	}
 
 	private async ValueTask ApplyConfiguredLayerAsync(IReadOnlyDictionary<string, string[]> restrictions)
@@ -890,11 +902,17 @@ public partial class Commands : ICommandRestrictionApplier
 
 						break;
 					case CommandRestriction translated:
-						attribute.CommandLock = translated.Lock;
-						attribute.Behavior = translated.Behavior;
+						CommandLibrary.MutateMetadata(() =>
+						{
+							attribute.CommandLock = translated.Lock;
+							attribute.Behavior = translated.Behavior;
+						});
 						break;
 					case NotFound when lockee is { } subject && LockService.Validate(terms, subject):
-						attribute.CommandLock = terms;
+						CommandLibrary.MutateMetadata(() =>
+						{
+							attribute.CommandLock = terms;
+						});
 						break;
 					default:
 						Logger.LogWarning("CONFIG: Invalid command or restriction for {Command}.", name);
@@ -904,7 +922,10 @@ public partial class Commands : ICommandRestrictionApplier
 
 			if (message is not null)
 			{
-				attribute.RestrictMessage = message;
+				CommandLibrary.MutateMetadata(() =>
+				{
+					attribute.RestrictMessage = message;
+				});
 			}
 
 			_configuredRestrictions[attribute] = disabled || _configuredRestrictions.GetValueOrDefault(attribute);

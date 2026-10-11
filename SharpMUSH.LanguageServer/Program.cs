@@ -6,9 +6,7 @@ using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Implementation;
 using SharpMUSH.LanguageServer.Handlers;
 using SharpMUSH.LanguageServer.Services;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 // The markup layers this app can render: MarkupText resolves emitters and codecs through
@@ -53,8 +51,7 @@ try
 				{
 					var logger = sp.GetRequiredService<ILogger<MUSHCodeParser>>();
 
-					var functionLibrary = new LibraryService<string, FunctionDefinition>();
-					var commandLibrary = new LibraryService<string, CommandDefinition>();
+					var (functionLibrary, commandLibrary) = BuiltInAnalysisLibraries.Create();
 
 					var options = new MinimalOptionsWrapper();
 
@@ -118,10 +115,10 @@ finally
 
 /// <summary>
 /// Minimal implementation of IOptionsWrapper for LSP usage.
-/// The LSP server doesn't need full runtime configuration.
+/// Uses shipped parser defaults without loading a world or persistent configuration.
 /// </summary>
 file class MinimalOptionsWrapper : IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>
 {
-	public SharpMUSH.Configuration.Options.SharpMUSHOptions CurrentValue =>
-		throw new NotSupportedException("LSP parser does not support runtime options");
+	public SharpMUSH.Configuration.Options.SharpMUSHOptions CurrentValue { get; } =
+		SharpMUSH.Configuration.Options.SharpMUSHOptions.Default();
 }

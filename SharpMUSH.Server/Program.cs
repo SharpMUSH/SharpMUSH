@@ -15,8 +15,9 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Messaging.NATS.Strategy;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Registration;
 using SharpMUSH.Server.Logging;
-using SharpMUSH.Server.Mcp;
+
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 
@@ -110,6 +111,7 @@ public class Program
 		// Content-Encoding — the precompressed portal assets — are skipped, never encoded twice.
 		app.UseResponseCompression();
 
+		app.UseWebSockets();
 		app.UseRouting();
 		app.UseCors();
 
@@ -151,29 +153,11 @@ public class Program
 		app.UseMiddleware<BotPrerenderMiddleware>();
 
 		app.UseAuthentication();
-		app.UseAuthorization();
 		app.UseRateLimiter();
+		app.UseAuthorization();
 		app.MapControllers();
 		app.MapRazorPages();
 		app.MapHub<GameHub>("/hubs/game");
-
-		// In-server MCP (Model Context Protocol) endpoint. Only mapped when Mcp:Enabled is
-		// true; otherwise requests to the path fall through to the SPA fallback / 404. The
-		// endpoint requires an authenticated game character via the MushBasic scheme
-		// (Authorization: Basic base64(character:password)).
-		var mcpOptions = app.Services.GetRequiredService<IOptions<McpOptions>>().Value;
-		if (mcpOptions.Enabled)
-		{
-			var mcpPolicy = new AuthorizationPolicyBuilder(MushBasicAuthenticationHandler.SchemeName)
-				.RequireAuthenticatedUser()
-				.Build();
-			// Rate-limit the endpoint: it does character+password Basic auth on every request, so
-			// the per-IP "mcp" limiter blunts brute-force credential guessing without throttling a
-			// legitimate agent's tool-call throughput.
-			app.MapMcp(mcpOptions.Path)
-				.RequireRateLimiting("mcp")
-				.RequireAuthorization(mcpPolicy);
-		}
 
 		// Phase 9 — plugin web-contribution seam: after the host maps its own controllers/hubs, let each
 		// plugin implementing IEndpointContributor map its endpoints (hubs/routes) into the pipeline. The
@@ -224,6 +208,7 @@ public class Program
 
 		// The portal's asset endpoints, and the SPA fallback: all non-API, non-file routes serve
 		// index.html (no-cache) so that Blazor WASM handles client-side routing (deep links, refresh).
+		app.MapAnalysisTransportFallback(app.Configuration);
 		app.MapPortal(portalManifest);
 
 		return app;

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using Range = SharpMUSH.Library.Models.Range;
 
 namespace SharpMUSH.CodeAnalysis;
@@ -8,7 +9,7 @@ namespace SharpMUSH.CodeAnalysis;
 /// <summary>
 /// Position-based code intelligence (hover, completion, signature help, symbols) extracted
 /// from the Language Server handlers so the LSP and the in-server MCP tools share one
-/// implementation. All methods are read-only and never throw.
+/// implementation. Methods are read-only; ambient budget cancellation propagates.
 /// </summary>
 public partial class MushCodeAnalyzer
 {
@@ -16,14 +17,15 @@ public partial class MushCodeAnalyzer
 	{
 		try
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var lines = code.Split('\n');
 			var text = line >= 0 && line < lines.Length ? lines[line] : string.Empty;
 			character = Math.Clamp(character, 0, text.Length);
 
 			var wordStart = character;
 			var wordEnd = character;
-			while (wordStart > 0 && IsHoverWordChar(text[wordStart - 1])) wordStart--;
-			while (wordEnd < text.Length && IsHoverWordChar(text[wordEnd])) wordEnd++;
+			while (wordStart > 0 && IsHoverWordChar(text[wordStart - 1])) { if ((wordStart & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded(); wordStart--; }
+			while (wordEnd < text.Length && IsHoverWordChar(text[wordEnd])) { if ((wordEnd & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded(); wordEnd++; }
 			if (wordStart >= wordEnd) return null;
 
 			var word = text.Substring(wordStart, wordEnd - wordStart);
@@ -48,7 +50,7 @@ public partial class MushCodeAnalyzer
 				markdown,
 				new Range { Start = new Position(line, wordStart), End = new Position(line, wordEnd) });
 		}
-		catch
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			return null;
 		}
@@ -59,18 +61,20 @@ public partial class MushCodeAnalyzer
 		var completions = new List<CompletionSuggestion>();
 		try
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var lines = code.Split('\n');
 			var text = line >= 0 && line < lines.Length ? lines[line] : string.Empty;
 			character = Math.Clamp(character, 0, text.Length);
 
 			var wordStart = character;
-			while (wordStart > 0 && IsCompletionWordChar(text[wordStart - 1])) wordStart--;
+			while (wordStart > 0 && IsCompletionWordChar(text[wordStart - 1])) { if ((wordStart & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded(); wordStart--; }
 			var prefix = wordStart < text.Length ? text.Substring(wordStart, character - wordStart) : string.Empty;
 			bool Offered(string name) => prefix.Length == 0 || name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
 
 			foreach (var (name, definition) in parser.FunctionLibrary.Where(entry => Offered(entry.Key)))
 			{
 				var attr = definition.LibraryInformation.Attribute;
+				ExecutionBudget.Current?.ThrowIfExceeded();
 				completions.Add(new CompletionSuggestion(
 					name,
 					"Function",
@@ -87,19 +91,20 @@ public partial class MushCodeAnalyzer
 				foreach (var (name, definition) in parser.CommandLibrary.Where(entry => Offered(entry.Key)))
 				{
 					var switches = definition.LibraryInformation.Attribute.Switches ?? [];
+					ExecutionBudget.Current?.ThrowIfExceeded();
 					completions.Add(new CompletionSuggestion(
-						name,
-						"Keyword",
-						$"Command: {name}",
-						$"Switches: {string.Join(", ", switches)}",
-						name,
-						IsSnippet: false));
+							name,
+							"Keyword",
+							$"Command: {name}",
+							$"Switches: {string.Join(", ", switches)}",
+							name,
+							IsSnippet: false));
 				}
 			}
 
 			AddCommonPatterns(completions, prefix);
 		}
-		catch
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			// fall through with whatever was collected
 		}
@@ -111,6 +116,7 @@ public partial class MushCodeAnalyzer
 	{
 		try
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var lines = code.Split('\n');
 			var text = line >= 0 && line < lines.Length ? lines[line] : string.Empty;
 			character = Math.Clamp(character, 0, text.Length);
@@ -126,7 +132,7 @@ public partial class MushCodeAnalyzer
 
 			return null;
 		}
-		catch
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			return null;
 		}
@@ -137,9 +143,11 @@ public partial class MushCodeAnalyzer
 		var symbols = new List<CodeSymbol>();
 		try
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var lines = code.Split('\n');
 			for (var i = 0; i < lines.Length; i++)
 			{
+				ExecutionBudget.Current?.ThrowIfExceeded();
 				// Drop a trailing CR so symbol ranges aren't off-by-one on CRLF documents.
 				var line = lines[i].TrimEnd('\r');
 
@@ -180,7 +188,7 @@ public partial class MushCodeAnalyzer
 				}
 			}
 		}
-		catch
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			// fall through with whatever was collected
 		}
@@ -306,6 +314,7 @@ public partial class MushCodeAnalyzer
 
 		while (i >= 0)
 		{
+			if ((i & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 			if (line[i] == ')')
 			{
 				depth++;
@@ -317,7 +326,7 @@ public partial class MushCodeAnalyzer
 				{
 					var nameEnd = i;
 					i--;
-					while (i >= 0 && IsSignatureWordChar(line[i])) i--;
+					while (i >= 0 && IsSignatureWordChar(line[i])) { if ((i & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded(); i--; }
 					var functionName = line.Substring(i + 1, nameEnd - i - 1);
 					return (functionName, paramCount);
 				}
@@ -338,8 +347,17 @@ public partial class MushCodeAnalyzer
 		var parameters = new List<ParameterInfo>();
 		var label = functionName + "(";
 
-		for (var i = 0; i < attr.MaxArgs; i++)
+		// Unbounded functions use int.MaxValue; describe the required/current arguments,
+		// rather than attempting to materialize billions of optional parameter entries.
+		const int maximumDisplayedParameters = 64;
+		var desiredCount = attr.MaxArgs == int.MaxValue
+			? Math.Max((long)attr.MinArgs, (long)activeParam + 1)
+			: attr.MaxArgs;
+		var truncated = desiredCount > maximumDisplayedParameters;
+		var parameterCount = (int)Math.Min(desiredCount, maximumDisplayedParameters - (truncated ? 1 : 0));
+		for (var i = 0; i < parameterCount; i++)
 		{
+			if ((i & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 			var paramName = GetSignatureParameterName(i, attr);
 			var isOptional = i >= attr.MinArgs;
 
@@ -353,6 +371,13 @@ public partial class MushCodeAnalyzer
 				isOptional ? $"Optional parameter {i + 1}" : $"Required parameter {i + 1}"));
 		}
 
+		if (truncated)
+		{
+			label += ", ...";
+			parameters.Add(new ParameterInfo("...", "Additional arguments"));
+			activeParam = Math.Min(activeParam, parameters.Count - 1);
+		}
+		else if (attr.MaxArgs == int.MaxValue) label += ", ...";
 		label += ")";
 
 		var documentation = $"**Function**: {functionName}\n\n";

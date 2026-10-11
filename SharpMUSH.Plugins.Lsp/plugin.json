@@ -1,0 +1,6 @@
+{
+  "id": "lsp", "name": "Remote MUSH LSP", "version": "1.0.0",
+  "description": "Bounded authenticated editor diagnostics and intelligence over WebSocket.",
+  "entry": "SharpMUSH.Plugins.Lsp.dll", "dependencies": [], "priority": 0,
+  "sharedAssemblies": ["SharpMUSH.CodeAnalysis"]
+}
