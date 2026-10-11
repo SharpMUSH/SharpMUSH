@@ -565,14 +565,14 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors, withPosition: true);
 			return errors.Complete(new CallState(MarkupText.Join(sep, lambdaResults)));
 		}
 
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
-				await CallAttributeForEachItemAsync(parser, function, list, errors)))),
+				await CallAttributeForEachItemAsync(parser, function, list, errors, withPosition: true)))),
 			CallState refusal => errors.Complete(refusal),
 		};
 	}
@@ -1596,23 +1596,26 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Evaluates a #lambda or #apply expression for each item in a list.
+	/// Evaluates a #lambda or #apply expression for each item in a list, the item as %0 and, when
+	/// <paramref name="withPosition"/>, its position from 1 as %1, as map() passes them.
 	/// </summary>
 	private async ValueTask<List<MString>> EvaluateLambdaOrApplyForEachItemAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		MString rawAttrArg,
 		MString[] list,
-		ListEvaluationErrors errors)
+		ListEvaluationErrors errors,
+		bool withPosition = false)
 	{
 		var results = new List<MString>(list.Length);
-		foreach (var item in list)
+		for (var position = 0; position < list.Length; position++)
 		{
+			var item = list[position];
 			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
 				parser,
 				executor,
 				rawAttrArg,
-				new Dictionary<string, CallState> { { "0", new CallState(item) } });
+				ItemArguments(item, position, withPosition));
 			results.Add(errors.Record(evaluated));
 		}
 
@@ -1631,31 +1634,44 @@ public partial class Functions
 			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
 		}), function);
 
+	/// <summary>An item as %0 and, when <paramref name="withPosition"/>, its position from 1 as %1.</summary>
+	private static Dictionary<string, CallState> ItemArguments(MString item, int position, bool withPosition)
+		=> withPosition
+			? new Dictionary<string, CallState> { ["0"] = new CallState(item), ["1"] = new CallState((position + 1).ToString()) }
+			: new Dictionary<string, CallState> { ["0"] = new CallState(item) };
+
 	/// <summary>A list with nothing in it: no items, or the one empty item splitting an empty string gives.</summary>
 	private static bool IsBlankList(MString[] list)
 		=> list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(list[0].ToPlainText()));
 
 	/// <summary>
-	/// Runs a fetched attribute for each item in a list, the item as %0 and
-	/// <paramref name="environmentRegisters"/>, when given, as the rest of the environment.
+	/// Runs a fetched attribute for each item in a list, the item as %0, its position from 1 as %1 when
+	/// <paramref name="withPosition"/>, and <paramref name="environmentRegisters"/>, when given, as the
+	/// rest of the environment.
 	/// </summary>
 	private async ValueTask<List<MString>> CallAttributeForEachItemAsync(
 		IMUSHCodeParser parser,
 		AttributeFunction function,
 		MString[] list,
 		ListEvaluationErrors errors,
-		Dictionary<string, CallState>? environmentRegisters = null)
+		Dictionary<string, CallState>? environmentRegisters = null,
+		bool withPosition = false)
 	{
 		var results = new List<MString>(list.Length);
-		foreach (var item in list)
+		for (var position = 0; position < list.Length; position++)
 		{
+			var item = list[position];
+			var arguments = ItemArguments(item, position, withPosition);
+			var registers = new Dictionary<string, CallState>(environmentRegisters ?? []);
+			foreach (var (key, value) in arguments)
+			{
+				registers[key] = value;
+			}
+
 			var newParser = parser.Push(parser.CurrentState with
 			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters ?? [])
-				{
-					["0"] = new CallState(item)
-				}
+				Arguments = arguments,
+				EnvironmentRegisters = registers
 			});
 			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
 		}

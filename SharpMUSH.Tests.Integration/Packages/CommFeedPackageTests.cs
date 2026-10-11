@@ -295,7 +295,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 			.Message.ToPlainText();
 		using var pageLog = TestOptionsOverride.Scope(options => options with { Chat = options.Chat with { PageLog = true } });
 
-		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
+		// The redefinition reads its arguments by position and by name: both paths pass both.
+		await God($"&FN`COMM`TEXT #{handler}=switch(%2,*{marker}*,custom:%#:%!:%0:%1:%2:%<style>:%<name>:%<message>,switch(%0,pose,%1 %2,semipose,%1%2,%2))");
 		try
 		{
 			await using var watch = await OobWatch.OpenAsync(factory);
@@ -308,6 +309,9 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 
 			await Assert.That(pushed["text"]!.GetValue<string>()).StartsWith("custom:")
 				.Because("the redefinition is what the push composed with");
+			await Assert.That(pushed["text"]!.GetValue<string>())
+				.EndsWith($":pose:{pager.Name}:nods {marker}:pose:{pager.Name}:nods {marker}")
+				.Because("the push passes the style, name and message by name as well as by position");
 			await Assert.That(pulled.Text).IsEqualTo(pushed["text"]!.GetValue<string>());
 		}
 		finally

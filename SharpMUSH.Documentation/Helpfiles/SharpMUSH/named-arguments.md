@@ -160,6 +160,16 @@ A hook can't refuse its command, so when a command named with `...` is given an 
 - @hook attributes: `ARGS`, `LS`, `RS`, `EQUALS`, `SWITCHES`, `LSAC` and `LSA<n>` (see [@hook registers]).
 - @http callbacks: %`\<status\>` and %`\<content-type\>`, with the body in %0 (see [@http]).
 - @input callbacks: %`\<reason\>` (see [@input]).
+- Event handlers: each argument by the name the event shows, such as %`\<destination\>` for object\`move (see [event list]).
+- @feed tie-ins and taps: %`\<id\>`, %`\<key\>`, %`\<speaker\>`, %`\<style\>`, %`\<text\>`, %`\<name\>` and the rest of their table (see [@feed tie-ins]).
+- The http_handler: %`\<path\>`, %`\<body\>`, %`\<viewer\>`, %`\<headers\>` and %`\<hdr.<name>\>` for each header (see [http requests]).
+- @chatformat and MOGRIFY\`FORMAT: %`\<type\>`, %`\<channel\>`, %`\<message\>`, %`\<name\>`, %`\<title\>`, %`\<default\>`, %`\<says\>`, %`\<options\>` (see [@chatformat], [mogrifier]).
+- The other MOGRIFY\` attributes: the same names, and %`\<value\>` for the part being rewritten (see [mogrifier]).
+- @pageformat and @outpageformat: %`\<message\>`, %`\<type\>`, %`\<alias\>`, %`\<recipients\>`, %`\<default\>` (see [@pageformat]).
+- @speechmod: %`\<message\>`, %`\<type\>` (see [@speechmod]).
+- @mailfilter: %`\<sender\>`, %`\<subject\>`, %`\<body\>`, %`\<flags\>` (see [@mailfilter]).
+- Look formats: @nameformat's %`\<object\>` and %`\<name\>`, @descformat's and @idescformat's %`\<description\>`, @conformat's %`\<contents\>` and %`\<names\>`, @exitformat's %`\<exits\>` (see [@nameformat]).
+- rendermarkdowncustom() templates: %`\<text\>`, %`\<url\>` and the other names in their list (see [rendermarkdowncustom()]).
 - Regexp $-commands: each named capture.
 - mapsql(): each column, by its name.
 

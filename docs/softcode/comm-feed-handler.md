@@ -68,12 +68,15 @@ passes an empty speaker objid and name, and the payload's `from` is empty and
 
 ## Event arguments
 
-| Event | `%0` | `%1` | `%2` | `%3` | `%4` | `%5` | `%6` | `%7` |
-|---|---|---|---|---|---|---|---|---|
-| ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms | line id |
-| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | page id | |
-| ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect and resume) | | | | | |
-| ``CHANNEL`WHO`` | channel name | member objid | member name | `on` or `off` | viewer objids | cause | | |
+Each event passes its arguments by name, read as `%<name>`, and by position
+(`%0`-`%7`, in the order below) for code written before the names:
+
+| Event | Arguments, in order |
+|---|---|
+| ``CHANNEL`MESSAGE`` | `channel` (channel name), `speaker` (objid; empty when sourceless or an `@cemit`), `style`, `name` (speaker name; empty for an `@cemit`), `message`, `recipients` (objids), `time` (unix ms), `id` (line id) |
+| ``PAGE`MESSAGE`` | `speaker` (pager objid), `recipients` (objids), `style`, `name` (pager name, with the page alias when `page_aliases` is on), `message`, `time` (unix ms), `id` (page id) |
+| ``PLAYER`CHANNELS`` | `objid` (player), `cause`, `channel` (empty on connect and resume) |
+| ``CHANNEL`WHO`` | `channel` (channel name), `member` (objid), `name` (member name), `change` (`on` or `off`), `viewers` (objids), `cause` |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
   connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
@@ -108,26 +111,31 @@ comments every attribute; every helper is under ``FN`COMM`` so it cannot
 collide with `room-contents`' ``FN`*``.
 
 ```mushcode
-&CHANNEL`MESSAGE #9=think null(if(strmatch(%2,presence),,oob(u(me/FN`COMM`RECIPIENTS,%5),comm.message,u(me/FN`COMM`MESSAGE,channel,%0,%1,%3,%2,%4,%6,,%7))))
-&PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%0,%1)),comm.message,u(me/FN`COMM`MESSAGE,page,,%0,%3,%2,%4,%5,%1,%6)))
-&PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%0),oob(%0,comm.channels,u(me/FN`COMM`CHANNELS,%0))))
-&CHANNEL`WHO #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%4),comm.who,u(me/FN`COMM`WHO,%0,%1,%2,%3)))
+&CHANNEL`MESSAGE #9=think null(if(strmatch(%<style>,presence),,oob(u(me/FN`COMM`RECIPIENTS,%<recipients>),comm.message,uargs(me/FN`COMM`MESSAGE,kind,channel,channel,%<channel>,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,id,%<id>))))
+&PAGE`MESSAGE #9=think null(oob(u(me/FN`COMM`RECIPIENTS,setunion(%<speaker>,%<recipients>)),comm.message,uargs(me/FN`COMM`MESSAGE,kind,page,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,to,%<recipients>,id,%<id>)))
+&PLAYER`CHANNELS #9=think null(if(u(me/FN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FN`COMM`CHANNELS,%<objid>))))
+&CHANNEL`WHO #9=think null(oob(u(me/FN`COMM`RECIPIENTS,%<viewers>),comm.who,uargs(me/FN`COMM`WHO,channel,%<channel>,member,%<member>,name,%<name>,change,%<change>)))
 ```
 
 | Attribute | Decides |
 |---|---|
 | ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to: a CONNECTED player |
 | ``FN`COMM`RECIPIENTS`` (`%0` objids) | the players a `comm.message` or `comm.who` goes to: ``filter(me/FN`COMM`VIEWER,%0)`` |
-| ``FN`COMM`TEXT`` (`%0` style, `%1` name, `%2` message) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
+| ``FN`COMM`TEXT`` (`%0` or `%<style>`, `%1` or `%<name>`, `%2` or `%<message>`) | `text`: a pose is `Name waves`, a semipose `Name's here`, anything else the message alone |
 | ``FN`COMM`CHANNELROW`` (`%0` channel, `%1` viewer) | one row of `channels` |
 | ``FN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
-| ``FN`COMM`MESSAGE`` (`%0` kind … `%7` page recipients, `%8` line id) | the whole `comm.message` payload |
-| ``FN`COMM`WHO`` (`%0` channel, `%1` member objid, `%2` member name, `%3` on/off) | the whole `comm.who` payload |
+| ``FN`COMM`MESSAGE`` (named: `%<kind>`, `%<channel>`, `%<speaker>`, `%<name>`, `%<style>`, `%<message>`, `%<time>`, `%<to>` page recipients, `%<id>` line id) | the whole `comm.message` payload |
+| ``FN`COMM`WHO`` (named: `%<channel>`, `%<member>` objid, `%<name>` member name, `%<change>` on/off) | the whole `comm.who` payload |
 
 The idioms are the ones `room-contents` uses (see its handler document):
 `think null(...)` to swallow `oob()`'s count, `json_array()` with `%r` as the
 separator, and a `json_mod()` patch in which `null` removes a key, so a value
-a line does not have is absent rather than null. Two more:
+a line does not have is absent rather than null. More:
+
+- **Arguments by name.** Each handler reads the event's arguments by name, and
+  hands the payload builders theirs by name with `uargs()`, so a builder needs
+  no fixed order of nine positions that differs between a channel line and a
+  page.
 
 - **One `oob()` call per payload.** `oob(<list>, …)` sends the same payload to
   every player in the list. A `comm.message` is the same for everyone who
@@ -135,8 +143,8 @@ a line does not have is absent rather than null. Two more:
   player's own list.
 - **`cstatus()` takes the object first** on SharpMUSH (`cstatus(<object>,
   <channel>)`), the other way round from PennMUSH.
-- **The message is never evaluated again.** `%4` arrives as the text the
-  speaker's command produced; `json(string, %4)` escapes it and nothing
+- **The message is never evaluated again.** `%<message>` arrives as the text the
+  speaker's command produced; `json(string, %<message>)` escapes it and nothing
   re-parses it, so `\[add(1,2)\]` typed on a channel arrives as `[add(1,2)]`.
 
 ## Payloads (v2)

@@ -100,8 +100,10 @@ The sections:
 
 The HTTP surface is served under a dedicated **`/http/`** path, so it can't shadow the web portal's own routes. When a request to `http://<mush>/http/<path>` arrives, SharpMUSH invisibly runs the HTTP Handler object (`@config http_handler`), executing an `@include me/<method>`, e.g. `@include me/GET`.
 
-- *%0* will be the pathname **with the `/http` prefix stripped**: a request to `/http/path/to?foo=bar` arrives as *%0* = `/path/to?foo=bar`. So *%0* is `/`, `/path/to`, `/foo?bar=baz`, etc.
-- *%1* will be the body of the request. If it's JSON, use [json_query()] to deal with it. If it's form-encoded, look at [FORMDECODE()].
+- *%0*, also %`\<path\>`, will be the pathname **with the `/http` prefix stripped**: a request to `/http/path/to?foo=bar` arrives as *%0* = `/path/to?foo=bar`. So *%0* is `/`, `/path/to`, `/foo?bar=baz`, etc.
+- *%1*, also %`\<body\>`, will be the body of the request. If it's JSON, use [json_query()] to deal with it. If it's form-encoded, look at [FORMDECODE()].
+
+These, the headers and the viewer below are named arguments (see [named arguments]): `@include` passes them on, but a u() function does not see them, so pass what it needs as an argument.
 
 ### Output is the response
 
@@ -165,13 +167,15 @@ Inbound request body and header limits come from ASP.NET Core, Kestrel, and any 
 
 ### Request headers
 
-Incoming headers will be set in Q-registers: *%q<headers>* contains a list of all headers by name. Individual headers will be set in *%q<hdr.`[name]`>*, prefixed with `hdr.`, e.g. *%q<hdr.host>* to obtain the value of the `Host:` header.
+Incoming headers are named arguments: %`\<headers\>` is a list of all headers by name, and each header is %`\<hdr.<name>\>`, e.g. %`\<hdr.host\>` for the `Host:` header.
 
-Multiple header lines will be added to the same q-register name, but %r-delimited. So two `Accept:` lines become *%q<hdr.accept>* with two %r-delimited lines.
+Multiple header lines go in the same argument, %r-delimited. So two `Accept:` lines become %`\<hdr.accept\>` with two %r-delimited lines.
+
+PennMUSH sets the q-registers *%q<headers>* and *%q<hdr.<name>>* instead. A game imported from PennMUSH has the `http_qregisters` option on, which sets them as well.
 
 ### Credentials and the viewer
 
-Unlike PennMUSH, **credentials never reach softcode**: the `Authorization`, `Proxy-Authorization` and `Cookie` headers are left out of both *%q<hdr.*>* and *%q<headers>*, and an `access_token` query parameter is removed from *%0*. They carry the web portal's sign-in, a client's password, or a proxy's session, and every route's code sees the same registers. Instead, *%q<viewer>* holds the objid of the character the request signed in as (the portal account's current character), already checked by the server, or is empty for an anonymous request. A route that answers differently per player reads *%q<viewer>*; it never checks a password itself.
+Unlike PennMUSH, **credentials never reach softcode**: the `Authorization`, `Proxy-Authorization` and `Cookie` headers are left out of both %`\<hdr.*\>` and %`\<headers\>` (and of the q-registers), and an `access_token` query parameter is removed from *%0*. They carry the web portal's sign-in, a client's password, or a proxy's session, and every route's code sees the same arguments. Instead, %`\<viewer\>` holds the objid of the character the request signed in as (the portal account's current character), already checked by the server, or is empty for an anonymous request. A route that answers differently per player reads %`\<viewer\>`; it never checks a password itself.
 
 ### Response size
 
@@ -204,7 +208,7 @@ Before dispatching, the router sets:
 - *%q<attrpath>*: the path mapped to attribute form: leading slash and query stripped, remaining slashes become backticks (``api`users``)
 - *%q<fields>*: the [FORMQ()]-decoded query parameter name list; each parameter is readable as *%q<form.*>*
 
-The sub-attribute receives *%0* = the raw request body. The body is left raw on purpose: check *%q<hdr.content-type>* and use [FORMQ()] or [json_query()] on *%0* as appropriate. The raw query string remains available as `after(%0,?)` only at the verb level; sub-attributes read the decoded *%q<form.*>* registers instead.
+The sub-attribute receives *%0* = the raw request body, and the request's named arguments (%`\<path\>`, %`\<body\>`, %`\<viewer\>`, %`\<hdr.<name>\>`), which `@include` passes on. The body is left raw on purpose: check %`\<hdr.content-type\>` and use [FORMQ()] or [json_query()] on *%0* as appropriate. Sub-attributes read the decoded *%q<form.*>* registers, and the raw query string is still `after(%<path>,?)`.
 
 ### Adding a route
 
@@ -219,9 +223,9 @@ To serve `GET /api/users`:
 The router guards the dispatch with `@assert`: a request whose path maps to no sub-attribute (including the bare root `/`) answers **404 API NOT FOUND** and stops. The seeded router for each verb is:
 
 ```sharp
-think setq(fields,formq(after(%0,?)))
-@assert cand(t(setr(attrpath,edit(before(rest(%0,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
-@include me/GET`%q<attrpath>=%1
+think setq(fields,formq(after(%<path>,?)))
+@assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
+@include me/GET`%q<attrpath>=%<body>
 ```
 
 ## Stock routes
@@ -374,7 +378,7 @@ To accept either, depending on whether the client sends JSON:
 ```sharp
 > &POST\`JSON *HTTPHandler=@chat [json_query(%1,extract,$.channel)]=[json_query(%1,extract,$.msg)]
 > &POST\`FORM *HTTPHandler=@chat [formdecode(%1,channel)]=[formdecode(%1,msg)]
-> &POST *HTTPHandler=@break strmatch(%q<hdr.content-type>,*json*)=@include me/post\`json ; @include me/post\`form
+> &POST *HTTPHandler=@break strmatch(%<hdr.content-type>,*json*)=@include me/post\`json ; @include me/post\`form
 ```
 
 Check: POST either form data or JSON.

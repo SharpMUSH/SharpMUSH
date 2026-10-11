@@ -316,13 +316,11 @@ public static partial class MailDelivery
 		try
 		{
 			var recipient = new AnySharpObject(target);
-			var arguments = new Dictionary<string, CallState>
-			{
-				["0"] = new(MarkupText.Plain($"#{sender.Object().DBRef.Number}")),
-				["1"] = new(letter.Subject),
-				["2"] = new(letter.Body),
-				["3"] = new(MarkupText.Plain((letter.Urgent ? "U" : string.Empty) + (letter.Forwarded ? "F" : string.Empty)))
-			};
+			var arguments = CallbackArguments.Of(
+				("sender", MarkupText.Plain($"#{sender.Object().DBRef.Number}")),
+				("subject", letter.Subject),
+				("body", letter.Body),
+				("flags", MarkupText.Plain((letter.Urgent ? "U" : string.Empty) + (letter.Forwarded ? "F" : string.Empty))));
 
 			var result = await parser.With(
 				state => state with { Executor = target.Object.DBRef, Enactor = sender.Object().DBRef, Caller = target.Object.DBRef },

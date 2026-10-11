@@ -7,8 +7,8 @@ banner, the *Here* and *Exits* cards) populate.
 The engine fires `` ROOM`CONTENTS `` room-scoped whenever a room's population
 changes — movement, connect, disconnect — for a resumed web session, and, from
 the Scene plugin, when the room's scene or its cast changes, with
-`%0` = the affected room and `%1` = the cause (`move-in`, `move-out`,
-`connect`, `disconnect`, `resume`, `scene`). This package
+`%<room>` = the affected room and `%<cause>` = the cause (`move-in`, `move-out`,
+`connect`, `disconnect`, `resume`, `scene`), by name (and as `%0` and `%1`). This package
 supplies the attribute that turns that event into **OOB v2** pushes, built for
 one connected occupant at a time and sent to that occupant alone:
 

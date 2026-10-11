@@ -288,7 +288,7 @@ public class FeedCommandTests : ServerTestBase
 	public async Task TapsHearEveryLineOfTheirKind()
 	{
 		var logger = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "FeedLogger");
-		await Cmd($"&LOG {Ref(logger)}=@pemit {Ref(_ann)}=Tapped %1 from [name(%3)] to %2: %5");
+		await Cmd($"&LOG {Ref(logger)}=@pemit {Ref(_ann)}=Tapped %<feed> from [name(%<speaker>)] to %<recipients>: %<text>");
 		await Assert.That(await Cmd($"@feed/tap {_kind}={Ref(logger)}/LOG")).Contains("now taps");
 		await Heard(_system, $"@feed/join {_kind}/1={Ref(_bo)}");
 
@@ -309,7 +309,7 @@ public class FeedCommandTests : ServerTestBase
 		{
 			await Cmd($"@tel {Ref(radio)}=[config(master_room)]");
 			await Cmd($"@feed/define radio={Ref(radio)}");
-			await Cmd($"&FEED`RADIO`FORMAT {Ref(radio)}=<Radio %4> [name(%2)]: %0");
+			await Cmd($"&FEED`RADIO`FORMAT {Ref(radio)}=<Radio %<key>> [name(%<speaker>)]: %<text>");
 			await Cmd($"&CMD`TUNE {Ref(radio)}=$+tune *:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@feed/join radio/%0=%#;@pemit %#=Tuned to %0.");
 			await Cmd($"&CMD`RADIO {Ref(radio)}=$+radio *:@assert setr(f,first(feedsof(%#,radio)))=@pemit %#=Tune in first.;@feed/send %q<f>=%0");
 			await Cmd($"&CMD`OFF {Ref(radio)}=$+radio/off:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@pemit %#=Radio off.");

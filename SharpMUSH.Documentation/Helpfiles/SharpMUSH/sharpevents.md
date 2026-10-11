@@ -25,7 +25,9 @@ If you would rather use a different object, point the config at it with `@config
 Event names are of the format *<type>\`<event>*. The 'type' is used simply to group similar events together for help.
 
 Event syntax in the help is of the form:<br>
-*<eventgroup>\`<eventname>* (What is passed as %0, %1, ... %9)
+*<eventgroup>\`<eventname>* (*<first>*, *<second>*, ...)
+
+The handler gets each argument by position, the first as %0, and by the name shown, as %`\<name\>` (see [named arguments]). `&OBJECT\`MOVE #9=...` can read the destination as %1 or as %`\<destination\>`. A name of the form *received/sent/commands* names the parts of a value made of numbers joined by `/`: %`\<received\>`, %`\<sent\>` and %`\<commands\>` are each one number, and the position holds the whole value, as in PennMUSH.
 
 The following event types and events have been added to SharpMUSH. To see the help for them, type [event <type>].
 
@@ -55,13 +57,13 @@ The room, channel and page events, and player\`channels, are SharpMUSH's own; Pe
 
 # Dump Events
 # Event Dump
-- **dump\`5min** (*Original message*, *isforking*)
+- **dump\`5min** (*message*, *forking*)
 - Database save will occur in 5 minutes.
-- **dump\`1min** (*Original message*, *isforking*)
+- **dump\`1min** (*message*, *forking*)
 - Database save will occur in 1 minute.
-- **dump\`complete** (*Original message*, *wasforking*)
+- **dump\`complete** (*message*, *forking*)
 - Database save has completed.
-- **dump\`error** (*Error message*, *wasforking*, *exit_status*)
+- **dump\`error** (*message*, *forking*, *status*)
 - Database save failed! You might want this to alert any admin on.
 - *exit_status* has different meanings in forking and non-forking dumps.
 - In forking: *exit_status* is a string, either "SIGNAL <int>" or "EXIT <int>". SIGNAL <int> refers to the mush process receiving error message via signal while EXIT <int> refers to mush process exiting abnormally.
@@ -83,20 +85,20 @@ Events in the log tree get triggered whenever the game logs any information to a
 
 # Object Events
 # Event Object
-- **object\`create** (*new objid*, *cloned-from*)
-- Triggered on the creation of any object except player. If it was created using `@clone`, then *<cloned-from>* will be a objid. Otherwise *<cloned-from>* will be null.
+- **object\`create** (*objid*, *clone*)
+- Triggered on the creation of any object except player. If it was created using `@clone`, then *<clone>* will be a objid. Otherwise *<clone>* will be null.
 
-- **object\`destroy** (*objid*, *origname*, *type*, *owner*, *parent*, *zone*)
+- **object\`destroy** (*objid*, *name*, *type*, *owner*, *parent*, *zone*)
 - Triggered _after_ the object is totally destroyed. Passed arguments are former objid, name, type, owner, etc. Enactor is always #-1, so use former owner.
 
-- **object\`move** (*objid*, *newloc*, *origloc*, *issilent*, *cause*)
-- Triggered after the object is moved, `@tel'd`, or otherwise sent to a new location. If *<issilent>* is 1, then the object was moved using `@tel/silent`.
+- **object\`move** (*objid*, *destination*, *origin*, *silent*, *cause*)
+- Triggered after the object is moved, `@tel'd`, or otherwise sent to a new location. If *<silent>* is 1, then the object was moved using `@tel/silent`.
 
-- **object\`rename** (*objid*, *new name*, *old name*)
+- **object\`rename** (*objid*, *name*, *oldname*)
 - Triggered when any object is renamed.
     
-- **object\`flag** (*objid of object with flag*, *flag name*, *type*, *setbool*, *setstr*)
-- Triggered when a flag or power which has the "event" restriction is set or cleared. *<type>* is one of FLAG or POWER. *<setbool>* is 1 if the flag/power is being set, and 0 if it's being cleared. *<setstr>* is either "SET" or "CLEARED".
+- **object\`flag** (*objid*, *flag*, *type*, *set*, *change*)
+- Triggered when a flag or power which has the "event" restriction is set or cleared. *<type>* is one of FLAG or POWER. *<set>* is 1 if the flag/power is being set, and 0 if it's being cleared. *<change>* is either "SET" or "CLEARED".
 
 ### Example
 ```sharp
@@ -108,10 +110,10 @@ Events in the log tree get triggered whenever the game logs any information to a
 - **sql\`connect** (*platform*)
 - Triggered on successful connect to the SQL database. *<platform>* is 'mysql', 'postgresql' or 'sqlite3'.
 
-- **sql\`connectfail** (*platform*, *error message*)
+- **sql\`connectfail** (*platform*)
 - Triggered on unsuccessful connect to the SQL database.
 
-- **sql\`disconnect** (*platform*, *error message*)
+- **sql\`disconnect** (*platform*)
 - Triggered if SQL disconnects for any reason. Usually not a worry since Penn will auto-reconnect if it can.
 
 # Signal Events
@@ -134,10 +136,10 @@ To mimic old behaviour:
 - **player\`create** (*objid*, *name*, *how*, *descriptor*, *email*)
 - Triggered when a player is created. If the player was `@pcreated`, then %# will be the person who did the `@pcreate`. If player was created by using 'create' at the connect screen, then %# will be #-1 and *<descriptor>* will be non-null. *<how>* is one of: "pcreate", "create" or "register". If created using 'register', *<email>* will be set appropriately.
 
-- **player\`connect** (*objid*, *number of connections*, *descriptor*)
+- **player\`connect** (*objid*, *connections*, *descriptor*)
 - Similar to `@aconnect`, but for events, and so you can use descriptor.
 
-- **player\`disconnect** (*objid*, *number of remaining connections*, *hidden?*, *cause of disconnection*, *ip*, *descriptor*, *conn() secs*, *idle() secs*, *recv bytes/sent bytes/command count*)
+- **player\`disconnect** (*objid*, *connections*, *hidden*, *cause*, *ip*, *descriptor*, *connected*, *idle*, *received/sent/commands*)
 - Similar to `@adisconnect`, but for event system, and with more information available.
 
 - **player\`inactivity**
@@ -146,56 +148,56 @@ To mimic old behaviour:
 - **player\`channels** (*objid*, *cause*, *channel*)
 - Triggered for a connected player when their channel list may have changed. *<cause>* is one of connect, resume, join, leave, status (a change to their own channel flags, such as a gag or a title), rename or delete; *<channel>* is the channel concerned (its new name after a rename), and empty on connect and resume. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection), and is sent the list again. Not triggered for a player who is not connected: they are sent their whole list when they connect.
 
-- **player\`warn** (*objid*, *reason*, *staff account*)
-- Triggered when staff warn a character from the web portal's moderation page. %# is the staff member's character, *<objid>* the warned character, *<reason>* what staff wrote, and *<staff account>* the staff member's account name. SharpMUSH keeps no warning itself beyond the audit log entry: the handler decides what a warning does, such as sending mail, opening a job or keeping a count. Nothing happens when the handler has no PLAYER\`WARN attribute.
+- **player\`warn** (*objid*, *reason*, *account*)
+- Triggered when staff warn a character from the web portal's moderation page. %# is the staff member's character, *<objid>* the warned character, *<reason>* what staff wrote, and *<account>* the staff member's account name. SharpMUSH keeps no warning itself beyond the audit log entry: the handler decides what a warning does, such as sending mail, opening a job or keeping a count. Nothing happens when the handler has no PLAYER\`WARN attribute.
 
 # Socket Events
 # Event Socket
 - **socket\`connect** (*descriptor*, *ip*)
 - Triggered when a socket first connects to the port. Using both this and player\`connect could be spammy. This happens when a connecting socket sees the connect screen.
 
-- **socket\`disconnect** (*former descriptor*, *former ip*, *cause of disconnection*, *recv bytes/sent bytes/command count*)
+- **socket\`disconnect** (*descriptor*, *ip*, *cause*, *received/sent/commands*)
 - Triggered when a socket disconnects. Using this and player\`disconnect could be spammy.
 
-- **socket\`loginfail** (*descriptor*, *IP*, *count*, *reason*, *playerobjid*, *name*)
-- Triggered when a login attempt fails. *<count>* is the number of fails in the past 10 minutes. If used in conjuction with the config option connect_fail_limit, then any failures after the limit is reached will **NOT** trigger socket\`loginfail. If the connect is a failed attempt to log into a valid player, *<playerobjid>* will be set to that objid. Otherwise it will be set to #-1. *<name>* is the name the connection attempted to connect with, and is only set when *<playerobjid>* is #-1.
+- **socket\`loginfail** (*descriptor*, *ip*, *count*, *reason*, *objid*, *name*)
+- Triggered when a login attempt fails. *<count>* is the number of fails in the past 10 minutes. If used in conjuction with the config option connect_fail_limit, then any failures after the limit is reached will **NOT** trigger socket\`loginfail. If the connect is a failed attempt to log into a valid player, *<objid>* will be set to that objid. Otherwise it will be set to #-1. *<name>* is the name the connection attempted to connect with, and is only set when *<objid>* is #-1.
 
-- **socket\`createfail** (*descriptor*, *ip*, *count*, *reason*, *name[*, *error]*)
+- **socket\`createfail** (*descriptor*, *ip*, *count*, *reason*, *name*[, *error*])
 - Triggered when a player create attempt fails. *<count>* is the # of fails caused by this ip. If the failure is from an attempt to register a player via email, the error code of the mailer program is provided as *<error>*.
 
 **Note**: A sitelock rule with deny_silent will not trigger socket\`createfail or socket\`createfail.
 
-- **socket\`gmcp** (*descriptor*, *package*, *message*, *player dbref*)
-- Triggered when a telnet client sends a GMCP package, such as Mudlet's External.Discord.Hello when it connects. *<message>* is the package's JSON, empty when it sent none. *<player dbref>* is whoever is logged in on the descriptor, empty at the connect screen; %# is that player too, or #1 before login. Answer with oob() on the descriptor, which reaches the client before anyone logs in. Core.Ping and Core.KeepAlive are answered by the server and do not trigger this. The client chooses everything it sends, so check *<package>* before acting on *<message>*.
+- **socket\`gmcp** (*descriptor*, *package*, *message*, *player*)
+- Triggered when a telnet client sends a GMCP package, such as Mudlet's External.Discord.Hello when it connects. *<message>* is the package's JSON, empty when it sent none. *<player>* is whoever is logged in on the descriptor, empty at the connect screen; %# is that player too, or #1 before login. Answer with oob() on the descriptor, which reaches the client before anyone logs in. Core.Ping and Core.KeepAlive are answered by the server and do not trigger this. The client chooses everything it sends, so check *<package>* before acting on *<message>*.
 
 # HTTP Events
 # Event HTTP
-- **http\`blocked** (*former descriptor*, *ip*, *method*, *path*, *reason*)
+- **http\`blocked** (*descriptor*, *ip*, *method*, *path*, *reason*)
 - Triggered when an HTTP request is sitelocked !connect, by IP or path, 'reason' will describe if it's IP or path.
 
-- **http\`fail** (*former descriptor*, *ip*, *reason*)
+- **http\`fail** (*descriptor*, *ip*, *reason*)
 - Triggered when an HTTP connection fails for poor formatting, malformed requests, or similar parsing errors. This can occur before method, path, etc are obtained, so is limited in information.
 
-- **http\`command** (*IP*, *method*, *path*, *resp_code*, *resp_content_type*, *request_content_len*, *resp_content_len*)
+- **http\`command** (*ip*, *method*, *path*, *status*, *content-type*, *request-length*, *response-length*)
 - Triggered after an HTTP command is executed, using the same remaining request lifetime. It is omitted if that lifetime has already expired. If the event exhausts the deadline, the HTTP response is 503; request cancellation also cancels the event.
 
 **Note**: A sitelock rule with deny_silent will not trigger http\`blocked
 
 # Room Events
 # Event Room
-- **room\`contents** (*room objid*, *cause*)
+- **room\`contents** (*room*, *cause*)
 - Triggered, for the room rather than for whoever moved, whenever what is in a room changes: something enters or leaves it, or a player connects or disconnects in it. *<cause>* is one of move-in, move-out, connect, disconnect or resume. %# is whoever caused it: the mover, or the wizard who `@tel`'d them. resume is a web connection that came back to its session, still logged in (a page reload, or a dropped connection): nothing in the room changed, %# is that player, and only they need the room again.
 
 # Channel Events
 # Event Channel
-- **channel\`message** (*channel*, *speaker objid*, *style*, *speaker name*, *message*, *recipients*, *time*, *id*)
-- Triggered after a channel line has been delivered. *<recipients>* is the objids of exactly the members it was delivered to: a member who has gagged the channel, one the speaker may not be heard by, one whose `@chatformat` silenced the line, and a muted member's copy of a connect or disconnect line are not among them. Nobody received it, nothing is triggered. *<style>* is one of say, pose, semipose, emit or presence (a connect or disconnect line). *<speaker name>* and *<message>* are plain text, as the channel's mogrifier left them. *<speaker objid>* is empty for a line with no speaker, and both it and *<speaker name>* are empty for an `@cemit` line, which does not name its emitter (%# is still the emitter). *<time>* is milliseconds since 1970. *<id>* is the line's id, the one `@channel/recall`'s buffer holds it under (and the web portal reads it back by); ids rise with time, so a later line has a larger one.
+- **channel\`message** (*channel*, *speaker*, *style*, *name*, *message*, *recipients*, *time*, *id*)
+- Triggered after a channel line has been delivered. *<recipients>* is the objids of exactly the members it was delivered to: a member who has gagged the channel, one the speaker may not be heard by, one whose `@chatformat` silenced the line, and a muted member's copy of a connect or disconnect line are not among them. Nobody received it, nothing is triggered. *<style>* is one of say, pose, semipose, emit or presence (a connect or disconnect line). *<name>* and *<message>* are plain text, as the channel's mogrifier left them. *<speaker>* is empty for a line with no speaker, and both it and *<name>* are empty for an `@cemit` line, which does not name its emitter (%# is still the emitter). *<time>* is milliseconds since 1970. *<id>* is the line's id, the one `@channel/recall`'s buffer holds it under (and the web portal reads it back by); ids rise with time, so a later line has a larger one.
 
-- **channel\`who** (*channel*, *member objid*, *member name*, *on|off*, *viewers*, *cause*)
+- **channel\`who** (*channel*, *member*, *name*, *change*, *viewers*, *cause*)
 - Triggered when a member comes onto or goes off a channel's member list, as `@channel/who` lists it: a thing always, a player while connected, and a member hiding on the channel only to a viewer who may see hidden members. *<viewers>* is the objids of the connected player members whose view of the list changed, and *on* or *off* is what changed for them; a change seen differently by different members (someone starting `@channel/hide`) triggers once for each. *<cause>* is one of connect, disconnect (the last connection closing), join, leave or status (hiding or no longer hiding). %# is the member.
 
 # Page Events
 # Event Page
-- **page\`message** (*pager objid*, *recipients*, *style*, *pager name*, *message*, *time*, *id*)
-- Triggered after a page reaches at least one recipient. *<recipients>* is the objids of the players it reached: one who is not connected, is HAVEN, refuses pages from the pager, or whose page lock the pager fails is not among them. *<style>* is one of say, pose or semipose. *<pager name>* is as the recipients' terminal shows it, with the page alias when page_aliases is on. *<message>* is plain text. *<time>* is milliseconds since 1970. *<id>* is the page's id, from the sequence channel line ids come from; when the page_log option is on, it is the id the page log keeps the page under (see [page log]).
+- **page\`message** (*speaker*, *recipients*, *style*, *name*, *message*, *time*, *id*)
+- Triggered after a page reaches at least one recipient. *<recipients>* is the objids of the players it reached: one who is not connected, is HAVEN, refuses pages from the pager, or whose page lock the pager fails is not among them. *<style>* is one of say, pose or semipose. *<name>* is as the recipients' terminal shows it, with the page alias when page_aliases is on. *<message>* is plain text. *<time>* is milliseconds since 1970. *<id>* is the page's id, from the sequence channel line ids come from; when the page_log option is on, it is the id the page log keeps the page under (see [page log]).
 

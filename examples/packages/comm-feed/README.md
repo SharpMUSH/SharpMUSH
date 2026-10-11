@@ -47,7 +47,7 @@ The payload shapes, the event arguments and the tests are in
 |---|---|
 | ``FN`COMM`VIEWER`` (`%0` objid) | who is pushed to (default: a connected player) |
 | ``FN`COMM`RECIPIENTS`` (`%0` objids) | who a `comm.message` or `comm.who` goes to — it can narrow the engine's list, never widen it |
-| ``FN`COMM`TEXT`` (`%0` style, `%1` name, `%2` message) | the `text` of a line |
+| ``FN`COMM`TEXT`` (`%0` or `%<style>`, `%1` or `%<name>`, `%2` or `%<message>`) | the `text` of a line |
 | ``FN`COMM`CHANNELROW`` / ``FN`COMM`CHANNELS`` | the `comm.channels` rows and payload |
 | ``FN`COMM`MESSAGE`` | the `comm.message` payload |
 | ``FN`COMM`WHO`` | the `comm.who` payload |

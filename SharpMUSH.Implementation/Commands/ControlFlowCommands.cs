@@ -142,18 +142,9 @@ public partial class Commands
 
 		if (isInline)
 		{
-			foreach (var element in list)
+			foreach (var (position, element) in list.Index())
 			{
-				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
-				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-				registerStack.Push(registerDict);
-
-				var stateForElement = parser.CurrentState with
-				{
-					Registers = registerStack,
-					Executor = target.Object().DBRef,
-					Caller = parser.CurrentState.Executor
-				};
+				var stateForElement = MapElementState(parser.CurrentState, target, element!, position);
 
 				var result = await parser.With(state => stateForElement, async newParser =>
 				{
@@ -181,18 +172,9 @@ public partial class Commands
 		}
 		else
 		{
-			foreach (var element in list)
+			foreach (var (position, element) in list.Index())
 			{
-				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
-				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-				registerStack.Push(registerDict);
-
-				var stateForElement = parser.CurrentState with
-				{
-					Registers = registerStack,
-					Executor = target.Object().DBRef,
-					Caller = parser.CurrentState.Executor
-				};
+				var stateForElement = MapElementState(parser.CurrentState, target, element!, position);
 
 				await Mediator.Send(new AdmitCommandListRequest(
 					attribute.Value,
@@ -212,6 +194,27 @@ public partial class Commands
 
 			return CallState.Empty;
 		}
+	}
+
+	/// <summary>
+	/// What one run of an @map attribute sees: the element as %0 and its position, from 1, as %1, as
+	/// map() passes them, with q-registers of its own.
+	/// </summary>
+	private static ParserState MapElementState(ParserState state, AnySharpObject target, MString element, int position)
+	{
+		var registers = new ConcurrentStack<Dictionary<string, MString>>();
+		registers.Push([]);
+		return state with
+		{
+			Registers = registers,
+			EnvironmentRegisters = new Dictionary<string, CallState>
+			{
+				["0"] = new CallState(element),
+				["1"] = new CallState((position + 1).ToString())
+			},
+			Executor = target.Object().DBRef,
+			Caller = state.Executor
+		};
 	}
 
 	[SharpCommand(Name = "@DOLIST", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,

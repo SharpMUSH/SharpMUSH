@@ -14,15 +14,15 @@ using SharpMUSH.Tests.Server;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// Credentials sent to <c>/http/</c> stay out of the registers every route's softcode reads; the
-/// verified caller arrives as <c>%q&lt;viewer&gt;</c>. The route itself is covered end to end by
+/// Credentials sent to <c>/http/</c> stay out of the arguments and registers every route's softcode
+/// reads; the verified caller arrives as <c>%&lt;viewer&gt;</c>. The route itself is covered end to end by
 /// <c>SharpMUSH.Tests.Integration.Http.HttpHandlerCredentialTests</c>.
 /// </summary>
 public class HttpHandlerCredentialTests
 {
-	/// <summary>Dispatches one request and returns the registers and <c>%0</c> the handler ran with.</summary>
-	private static async Task<(Dictionary<string, MString> Registers, string Path)> DispatchAsync(
-		string path, IEnumerable<(string, string)> headers, DBRef? viewer)
+	/// <summary>Dispatches one request and returns the q-registers and arguments the handler ran with.</summary>
+	private static async Task<(Dictionary<string, MString> Registers, Dictionary<string, CallState> Arguments)> DispatchAsync(
+		string path, IEnumerable<(string, string)> headers, DBRef? viewer, bool qRegisters = false)
 	{
 		var mediator = Substitute.For<IMediator>();
 		AnySharpObject handler = new TestObjectFactory().CreateThing(8, "HTTP handler");
@@ -46,7 +46,8 @@ public class HttpHandlerCredentialTests
 		options.CurrentValue.Returns(baseline with
 		{
 			Database = baseline.Database with { HttpHandler = 8, EventHandler = null, HttpRequestsPerSecond = 30 },
-			Limit = baseline.Limit with { QueueEntryCpuTime = 0 }
+			Limit = baseline.Limit with { QueueEntryCpuTime = 0 },
+			Compatibility = baseline.Compatibility with { HttpQRegisters = qRegisters }
 		});
 
 		var service = new HttpHandlerCommandService(mediator, attributes, parser, new HttpOutputCapture(),
@@ -57,7 +58,7 @@ public class HttpHandlerCredentialTests
 
 		await Assert.That(pushed).IsNotNull();
 		pushed!.Registers.TryPeek(out var registers);
-		return (registers!, pushed.EnvironmentRegisters["0"].Message.ToPlainText());
+		return (registers!, pushed.EnvironmentRegisters);
 	}
 
 	[Test]
@@ -65,37 +66,61 @@ public class HttpHandlerCredentialTests
 	[Arguments("authorization")]
 	[Arguments("Proxy-Authorization")]
 	[Arguments("Cookie")]
-	public async Task CredentialHeaderIsNotARegister(string name)
+	public async Task CredentialHeaderIsNeitherAnArgumentNorARegister(string name)
 	{
-		var (registers, _) = await DispatchAsync("/x", [(name, "secret-value"), ("X-Kept", "kept")], null);
+		var (registers, arguments) = await DispatchAsync("/x", [(name, "secret-value"), ("X-Kept", "kept")], null,
+			qRegisters: true);
 
+		await Assert.That(arguments.Keys.Any(key => key.StartsWith("HDR.") && key != "HDR.X-KEPT")).IsFalse();
+		await Assert.That(arguments["headers"].Message.ToPlainText()).IsEqualTo("X-KEPT");
+		await Assert.That(arguments.Values.Any(value => value.Message.ToPlainText().Contains("secret-value"))).IsFalse();
 		await Assert.That(registers.Keys.Any(key => key.StartsWith("HDR.") && key != "HDR.X-KEPT")).IsFalse();
 		await Assert.That(registers["HEADERS"].ToPlainText()).IsEqualTo("X-KEPT");
 		await Assert.That(registers.Values.Any(value => value.ToPlainText().Contains("secret-value"))).IsFalse();
 	}
 
 	[Test]
-	public async Task ViewerRegisterHoldsTheVerifiedObjid()
+	public async Task HeadersAreNamedArgumentsAndRepeatsJoinWithANewline()
 	{
-		var (registers, _) = await DispatchAsync("/x", [], new DBRef(42, 1700000000000));
+		var (registers, arguments) = await DispatchAsync("/x", [("Accept", "a"), ("X-Kept", "kept"), ("accept", "b")], null);
 
-		await Assert.That(registers["VIEWER"].ToPlainText()).IsEqualTo("#42:1700000000000");
+		await Assert.That(arguments["hdr.accept"].Message.ToPlainText()).IsEqualTo("a\nb");
+		await Assert.That(arguments["headers"].Message.ToPlainText()).IsEqualTo("ACCEPT X-KEPT");
+		await Assert.That(registers).IsEmpty();
+	}
+
+	[Test]
+	public async Task HttpQRegistersAlsoSetsTheHeaderRegisters()
+	{
+		var (registers, _) = await DispatchAsync("/x", [("Accept", "a")], null, qRegisters: true);
+
+		await Assert.That(registers["HDR.ACCEPT"].ToPlainText()).IsEqualTo("a");
+		await Assert.That(registers["HEADERS"].ToPlainText()).IsEqualTo("ACCEPT");
+	}
+
+	[Test]
+	public async Task ViewerArgumentHoldsTheVerifiedObjid()
+	{
+		var (_, arguments) = await DispatchAsync("/x", [], new DBRef(42, 1700000000000));
+
+		await Assert.That(arguments["viewer"].Message.ToPlainText()).IsEqualTo("#42:1700000000000");
 	}
 
 	[Test]
 	public async Task AnonymousRequestHasAnEmptyViewer()
 	{
-		var (registers, _) = await DispatchAsync("/x", [], null);
+		var (_, arguments) = await DispatchAsync("/x", [], null);
 
-		await Assert.That(registers["VIEWER"].ToPlainText()).IsEqualTo(string.Empty);
+		await Assert.That(arguments["viewer"].Message.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
 	[Test]
-	public async Task AccessTokenIsRemovedFromPathRegister()
+	public async Task AccessTokenIsRemovedFromThePath()
 	{
-		var (_, path) = await DispatchAsync("/x?a=1&access_token=secret&b=2", [], null);
+		var (_, arguments) = await DispatchAsync("/x?a=1&access_token=secret&b=2", [], null);
 
-		await Assert.That(path).IsEqualTo("/x?a=1&b=2");
+		await Assert.That(arguments["0"].Message.ToPlainText()).IsEqualTo("/x?a=1&b=2");
+		await Assert.That(arguments["path"].Message.ToPlainText()).IsEqualTo("/x?a=1&b=2");
 	}
 
 	[Test]

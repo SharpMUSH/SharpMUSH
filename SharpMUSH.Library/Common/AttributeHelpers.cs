@@ -34,7 +34,8 @@ public static class AttributeHelpers
 	/// PennMUSH: the look formats (<c>@nameformat</c>, <c>@conformat</c>, <c>@exitformat</c>),
 	/// <c>@pageformat</c>/<c>@outpageformat</c> (<c>speech.c:778</c>), <c>@doing</c> (<c>bsd.c:6251</c>)
 	/// and a variable exit's <c>DESTINATION</c>/<c>EXITTO</c> (<c>move.c:376-377</c>). Each receives its
-	/// arguments as <c>%0</c>, <c>%1</c>, ... from <paramref name="formatArgs"/>.
+	/// arguments as <c>%0</c>, <c>%1</c>, ... from <paramref name="formatArgs"/>, and by name where the caller
+	/// built them with <see cref="CallbackArguments"/>.
 	/// </remarks>
 	/// <param name="attributeService">The attribute service</param>
 	/// <param name="parser">Parser carrying the state the attribute body runs in. A caller with no

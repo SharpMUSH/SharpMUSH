@@ -496,15 +496,17 @@ public partial class Commands
 	private static string SafeStringWithSpace(string name)
 		=> name.Contains(' ') ? $"\"{name}\"" : name;
 
+	/// <summary>
+	/// <c>@pageformat</c>'s and <c>@outpageformat</c>'s arguments, by position as PennMUSH passes them and by name.
+	/// </summary>
 	private static Dictionary<string, CallState> PageFormatArguments(
-		MString message, string pageType, string alias, string recipientRefs, MString defaultMessage) => new()
-		{
-			["0"] = new CallState(message),
-			["1"] = new CallState(pageType),
-			["2"] = new CallState(alias),
-			["3"] = new CallState(recipientRefs),
-			["4"] = new CallState(defaultMessage)
-		};
+		MString message, string pageType, string alias, string recipientRefs, MString defaultMessage)
+		=> CallbackArguments.Of(
+			("message", message),
+			("type", pageType),
+			("alias", alias),
+			("recipients", recipientRefs),
+			("default", defaultMessage));
 
 	private enum PageMessageType
 	{

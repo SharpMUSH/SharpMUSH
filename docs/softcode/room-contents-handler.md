@@ -23,12 +23,13 @@ The v1 shapes are at the end; v2 only adds keys to them.
 
 ## What the handler does
 
-When ``ROOM`CONTENTS`` fires the handler receives:
+When ``ROOM`CONTENTS`` fires the handler receives its arguments by name (and
+by position, as `%0` and `%1`, for code written before the names):
 
-| Register | Value |
+| Argument | Value |
 |----------|-------|
-| `%0` | Dbref of the affected room |
-| `%1` | Cause: `move-in`, `move-out`, `connect`, `disconnect`, `resume`, or `scene` |
+| `%<room>` (`%0`) | Dbref of the affected room |
+| `%<cause>` (`%1`) | Cause: `move-in`, `move-out`, `connect`, `disconnect`, `resume`, or `scene` |
 | `%#` | The object that **caused** the event — see below |
 
 It does the viewer-independent work once (``FN`PREPARE``), then for **each**
@@ -256,23 +257,23 @@ carries a comment per attribute; this is the map.
 &FN`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0),,,%1),u(me/FN`WHOROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`EXITS #9=json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FN`EXITVIS,lexits(%0),,,%1)),u(me/FN`EXITROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`INFO #9=json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
-&ROOM`CONTENTS #9=think null(if(setr(viewers,filter(me/FN`VIEWER,lcon(%0))),if(strmatch(%1,scene),[setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))],[u(me/FN`PREPARE,%0)][iter(if(strmatch(%1,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect resume,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))])])))
+&ROOM`CONTENTS #9=think null(if(setr(viewers,filter(me/FN`VIEWER,lplayers(%<room>))),if(strmatch(%<cause>,scene),[setq(info[rest(num(%<room>),#)],u(me/FN`INFOBASE,%<room>))][iter(%q<viewers>,oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))],[u(me/FN`PREPARE,%<room>)][iter(if(strmatch(%<cause>,resume),%q<mover>,%q<viewers>),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%<room>,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%<room>,%i0))][if(cand(match(move-in connect resume,%<cause>),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%<room>,%i0)))])])))
 ```
 
 Reading the main handler:
 
-- ``setr(viewers, filter(me/FN`VIEWER, lcon(%0)))`` — first: the room's
+- ``setr(viewers, filter(me/FN`VIEWER, lplayers(%<room>)))`` — first: the room's
   connected players. With none, nothing is built and nothing is sent, so a
-  move through an empty room costs one ``lcon()``.
-- ``u(me/FN`PREPARE, %0)`` — once: every base row and the room's info into
+  move through an empty room costs one ``lplayers()``.
+- ``u(me/FN`PREPARE, %<room>)`` — once: every base row and the room's info into
   registers; `mover` = the enactor's dbref if the enactor is a viewer
   (``FN`VIEWER``) in the room.
 - For `scene`, only the room's base info is prepared and every viewer is sent
   `room.info`; the rest of this list is the other causes.
-- ``filter(me/FN`VIEWER, lcon(%0))`` — the viewers: connected players in the room;
+- ``filter(me/FN`VIEWER, lplayers(%<room>))`` — the viewers: connected players in the room;
   for `resume`, `%q<mover>` alone (the resuming player, or nobody).
 - `iter(<viewers>, …)` — for each, with `%i0` the viewer:
-  - ``oob(%i0, room.contents, u(me/FN`PAYLOAD`CONTENTS, %0, %i0))`` — the who
+  - ``oob(%i0, room.contents, u(me/FN`PAYLOAD`CONTENTS, %<room>, %i0))`` — the who
     list as this viewer sees it, to this viewer alone;
   - the same for `room.exits`;
   - on the arrival causes, `room.info` — to the mover when known, else to all.

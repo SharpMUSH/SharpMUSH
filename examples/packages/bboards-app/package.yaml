@@ -1,6 +1,6 @@
 format: 1.2
 package: bboards-app
-version: 1.0.0
+version: 1.0.1
 kind: application
 authors: [SharpMUSH]
 description: "Registers the bulletin boards (the bboards package) as a portal page at /apps/boards: every board by category, each board's posts, each post with its comments as conversations, and forms to post, comment, reply and edit."
@@ -12,10 +12,11 @@ requires_server: ">=0.1"
 # An application package owns no objects. The bboards package serves the routes it points at:
 # GET /http/boards/schema, /http/boards/data and /http/boards/nav, and POST /http/boards/act.
 # Everything the page shows, and every button on it, is decided by that softcode for the character
-# viewing it, through the same locks the commands use.
+# viewing it, through the same locks the commands use. It needs bboards 1.2 or later, whose routes
+# read the signed-in character as the named argument %<viewer>.
 depends:
   - package: bboards
-    version: ">=1.1 <2.0"
+    version: ">=1.2 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH-Packages
       path: bboards/

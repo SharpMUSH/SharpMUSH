@@ -960,7 +960,7 @@ public partial record ParserState
 	{
 		// Validate register pattern: alphanumeric characters, underscores, hyphens, and dots.
 		// Register names should be uppercase and match pattern: [A-Z0-9_.-]+
-		// Dots are required for the HTTP handler's %q<hdr.name> header registers (see help sharphttp).
+		// Dots are required for the HTTP handler's %q<hdr.name> header registers under http_qregisters (see help sharphttp).
 		if (string.IsNullOrEmpty(register) || !RegisterNameRegex().IsMatch(register))
 		{
 			return false;

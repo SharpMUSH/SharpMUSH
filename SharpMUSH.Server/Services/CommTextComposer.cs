@@ -65,12 +65,7 @@ public sealed class CommTextComposer(
 		var enactor = await mediator.Send(new GetObjectNodeQuery(speaker), ct) is AnySharpObject
 			? speaker
 			: new DBRef(1);
-		var args = new Dictionary<string, CallState>
-		{
-			["0"] = new(style),
-			["1"] = new(name),
-			["2"] = new(message)
-		};
+		var args = CallbackArguments.Of(("style", style), ("name", name), ("message", message));
 
 		using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		using var budget = ExecutionBudget.FromMilliseconds(

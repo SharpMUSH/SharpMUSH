@@ -288,4 +288,48 @@ public class MogrifierTests
 		await Assert.That(fromRefused).DoesNotContain(x => x.Contains("MOG|"));
 		await Assert.That(fromRefused).Contains(x => x.Contains($"says, \"I may not\""));
 	}
+
+	// --- Named arguments ----------------------------------------------------------------------------
+
+	/// <summary>
+	/// A member's <c>@chatformat</c> reads each value by name as well as by position: %&lt;type&gt;,
+	/// %&lt;channel&gt;, %&lt;message&gt;, %&lt;name&gt;, %&lt;title&gt;, %&lt;default&gt;, %&lt;says&gt; and
+	/// %&lt;options&gt; are %0-%7.
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_ReadsArgumentsByName()
+	{
+		var stage = await Setup("ChatFmtNamed", attachMogrifier: false);
+		await As(stage.Speaker, $"@channel/title {stage.ChannelName}=Herald");
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=NAMED:%<type>|%<channel>|%<Message>|%<name>|%<title>|%<says>|[strmatch(%<options>,%7)][strmatch(%<default>,%5)][strmatch(%<message>,%2)]");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=by name"));
+
+		await Assert.That(heard).Contains(x =>
+			x == $"NAMED:\"|{stage.ChannelName}|by name|{stage.Speaker.Name}|Herald|says|111");
+	}
+
+	/// <summary>
+	/// The <c>MOGRIFY`*</c> chain passes its values by name too: <c>MOGRIFY`BLOCK</c> reads
+	/// %&lt;message&gt;, a part such as <c>MOGRIFY`TITLE</c> reads the part as it stands as
+	/// %&lt;value&gt;, and <c>MOGRIFY`FORMAT</c> reads the parts the chain made of the line.
+	/// </summary>
+	[Test]
+	public async Task MogrifyChain_ReadsArgumentsByName()
+	{
+		var stage = await Setup("MogNamed");
+		await As(stage.Speaker, $"@channel/title {stage.ChannelName}=Page");
+		await AsGod($"&MOGRIFY`BLOCK {stage.Mogrifier}=[if(strmatch(%<message>,hush*),Hushed: %<message> on %<channel>)]");
+		await AsGod($"&MOGRIFY`TITLE {stage.Mogrifier}=[ucstr(%<value>)]");
+		await AsGod($"&MOGRIFY`FORMAT {stage.Mogrifier}=MOGNAMED %<title> %<name> %<says> %<message> %<type>");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=named parts"));
+		await Assert.That(heard).Contains(x => x == $"MOGNAMED PAGE {stage.Speaker.Name} says named parts \"");
+
+		var told = await MessagesWhile(stage.Speaker.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=hush now"));
+		await Assert.That(told).Contains(x => x.Contains($"Hushed: hush now on {stage.ChannelName}"));
+	}
 }

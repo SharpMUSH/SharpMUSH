@@ -39,6 +39,16 @@ The script configures `game/mush.cnf` for HTTP (handler player + rate limit), st
 &PUT *HTTPHandler=think host=[%q<hdr.host>] names=[%q<headers>]
 ```
 
+That is PennMUSH softcode: PennMUSH hands the headers to the handler in q-registers. SharpMUSH
+passes them as named arguments, so the SharpMUSH side of the comparison reads them by name:
+
+```
+&PUT #8=think host=%<hdr.host> names=%<headers>
+```
+
+(A game with the `http_qregisters` option on, as one imported from PennMUSH has, sets the
+q-registers as well, and the PennMUSH line works unchanged.)
+
 ## Comparing against SharpMUSH
 
 PennMUSH serves HTTP **on the mush port** itself; SharpMUSH (this milestone) serves it
@@ -55,7 +65,8 @@ curl -isSk 'https://localhost:8081/http/foo?bar=baz'
 Compare: status line (`@respond <code> <text>` → reason phrase), default
 `Content-Type: text/plain`, `@respond/type` / `@respond/header` overrides, the body
 (everything `think`/`@pemit`'d at the handler, in order), `%0` = path **including**
-query string, `%1` = request body, and the `%q<hdr.*>` / `%q<headers>` registers.
+query string, `%1` = request body, and the headers: PennMUSH's `%q<hdr.*>` / `%q<headers>`
+registers against SharpMUSH's `%<hdr.*>` / `%<headers>` named arguments.
 
 ## Oracle-verified behavior (PennMUSH 1.8.8, captured 2026-06)
 

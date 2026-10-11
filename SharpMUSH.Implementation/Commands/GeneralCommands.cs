@@ -341,11 +341,7 @@ public partial class Commands
 				var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
 				var contentNames = string.Join("|", contents.Select(x => x.Object().Name));
 
-				var formatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(contentDbrefs),
-					["1"] = new CallState(contentNames)
-				};
+				var formatArgs = CallbackArguments.Of(("contents", contentDbrefs), ("names", contentNames));
 
 				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
 					parser, executor, viewingKnown, "CONFORMAT", formatArgs);

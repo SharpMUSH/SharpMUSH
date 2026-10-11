@@ -154,14 +154,11 @@ public class HttpHandlerCommandService(
 
 				// Build a fresh parser state — there is no ambient parser on the HTTP request path.
 				// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
+				var request = RequestHeaders(headers);
 				var evalParser = parser.Push(ParserState.RootFor(handlerRef.Value) with
 				{
-					Registers = new([BuildRequestRegisters(headers, viewer)]),
-					EnvironmentRegisters = new Dictionary<string, CallState>
-					{
-						["0"] = new CallState(path),
-						["1"] = new CallState(body)
-					},
+					Registers = new([options.CurrentValue.Compatibility.HttpQRegisters ? RequestRegisters(request) : []]),
+					EnvironmentRegisters = RequestArguments(path, body, request, viewer),
 					ExecutionBudget = budget,
 					HttpResponse = context
 				});
@@ -211,9 +208,9 @@ public class HttpHandlerCommandService(
 	/// <summary>
 	/// Request headers that carry a credential. The portal's account-session bearer, a client's MUSH
 	/// password (Basic) and any cookie a proxy in front of the game set all arrive this way, and none
-	/// of them is the handler's to read: every route's softcode sees the same registers, and anything
-	/// it can read it can log or send elsewhere. They never become <c>%q&lt;hdr.*&gt;</c> registers.
-	/// Who is calling reaches softcode as <c>%q&lt;viewer&gt;</c> instead, already verified.
+	/// of them is the handler's to read: every route's softcode sees the same arguments, and anything
+	/// it can read it can log or send elsewhere. They never become <c>%&lt;hdr.*&gt;</c> arguments.
+	/// Who is calling reaches softcode as <c>%&lt;viewer&gt;</c> instead, already verified.
 	/// Names are compared after register normalization, so a client cannot respell one past this.
 	/// </summary>
 	public static readonly IReadOnlySet<string> CredentialHeaders =
@@ -246,17 +243,13 @@ public class HttpHandlerCommandService(
 	}
 
 	/// <summary>
-	/// Seeds the q-registers Penn provides to HTTP handler code: one <c>HDR.&lt;NAME&gt;</c> register
-	/// per header (duplicate headers joined with a newline, i.e. <c>%r</c>), plus <c>HEADERS</c>
-	/// holding the space-separated list of header names. <see cref="CredentialHeaders"/> are left
-	/// out of both. <c>VIEWER</c> holds the objid of the character the request authenticated as, or
-	/// nothing for an anonymous one.
+	/// The request's headers as the handler is given them: each name normalized as a register name is
+	/// (<c>X-Forwarded-For</c> becomes <c>X-FORWARDED-FOR</c>), duplicates joined with a newline (<c>%r</c>),
+	/// in the order they first arrived. <see cref="CredentialHeaders"/> are left out.
 	/// </summary>
-	private static Dictionary<string, MString> BuildRequestRegisters(IEnumerable<(string Name, string Value)> headers, DBRef? viewer)
+	private static List<(string Name, MString Value)> RequestHeaders(IEnumerable<(string Name, string Value)> headers)
 	{
-		var registers = new Dictionary<string, MString>();
-		var names = new List<string>();
-
+		var request = new List<(string Name, MString Value)>();
 		foreach (var (name, value) in headers)
 		{
 			var normalized = Utilities.RegisterNames.NormalizeSegment(name);
@@ -265,20 +258,54 @@ public class HttpHandlerCommandService(
 				continue;
 			}
 
-			var key = $"HDR.{normalized}";
-			if (registers.TryGetValue(key, out var existing))
+			var index = request.FindIndex(header => header.Name == normalized);
+			if (index < 0)
 			{
-				registers[key] = MarkupText.Concat([existing, MarkupText.Plain("\n"), MarkupText.Plain(value)]);
+				request.Add((normalized, MarkupText.Plain(value)));
 			}
 			else
 			{
-				registers[key] = MarkupText.Plain(value);
-				names.Add(normalized);
+				request[index] = (normalized, MarkupText.Concat([request[index].Value, MarkupText.Plain("\n"), MarkupText.Plain(value)]));
 			}
 		}
 
-		registers["HEADERS"] = MarkupText.Plain(string.Join(' ', names));
-		registers["VIEWER"] = MarkupText.Plain(viewer?.ToString() ?? string.Empty);
+		return request;
+	}
+
+	/// <summary>
+	/// What the handler's attribute reads: the path and query as <c>%0</c> and <c>%&lt;path&gt;</c>, the body
+	/// as <c>%1</c> and <c>%&lt;body&gt;</c>, each header as <c>%&lt;hdr.&lt;name&gt;&gt;</c>, their names as
+	/// <c>%&lt;headers&gt;</c>, and as <c>%&lt;viewer&gt;</c> the objid of the character the request
+	/// authenticated as, or nothing for an anonymous one.
+	/// </summary>
+	private static Dictionary<string, CallState> RequestArguments(string path, string body,
+		List<(string Name, MString Value)> request, DBRef? viewer)
+	{
+		var arguments = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
+		{
+			["0"] = new CallState(path),
+			["1"] = new CallState(body),
+			["path"] = new CallState(path),
+			["body"] = new CallState(body),
+			["headers"] = new CallState(string.Join(' ', request.Select(header => header.Name))),
+			["viewer"] = new CallState(viewer?.ToString() ?? string.Empty)
+		};
+		foreach (var (name, value) in request)
+		{
+			arguments[$"HDR.{name}"] = new CallState(value);
+		}
+
+		return arguments;
+	}
+
+	/// <summary>
+	/// The q-registers PennMUSH gives HTTP handler code, kept for an imported game by <c>http_qregisters</c>:
+	/// one <c>HDR.&lt;NAME&gt;</c> per header and <c>HEADERS</c>, the list of their names.
+	/// </summary>
+	private static Dictionary<string, MString> RequestRegisters(List<(string Name, MString Value)> request)
+	{
+		var registers = request.ToDictionary(header => $"HDR.{header.Name}", header => header.Value);
+		registers["HEADERS"] = MarkupText.Plain(string.Join(' ', request.Select(header => header.Name)));
 		return registers;
 	}
 

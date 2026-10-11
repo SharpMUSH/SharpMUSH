@@ -117,8 +117,8 @@ public class FeedService(
 		{
 			var result = await attributeService.EvaluateAttributeFunctionAsync(parser, owner, owner,
 				IFeedService.TieIn(message.Kind, "ROUTE"), Arguments(
-					message.Id.ToString(), message.Key, message.Speaker.ToString(), message.Style, message.Text,
-					Objids(audience), Objids(to), message.DisplayName));
+					("id", message.Id), ("key", message.Key), ("speaker", message.Speaker), ("style", message.Style),
+					("text", message.Text), ("audience", Objids(audience)), ("to", Objids(to)), ("name", message.DisplayName)));
 			routed = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(word => DBRef.TryParse(word, out var dbref) ? dbref : null)
 				.OfType<DBRef>();
@@ -144,9 +144,9 @@ public class FeedService(
 		var ownerRef = owner.Object().DBRef;
 		if (await TieInAsync(owner, message.Kind, "DELIVER") is [.., var deliver])
 		{
-			var arguments = Arguments(message.Id.ToString(), message.Key,
-				Objids(recipients.Select(r => r.Object().DBRef)), message.Speaker.ToString(), message.Style, message.Text,
-				message.DisplayName);
+			var arguments = Arguments(("id", message.Id), ("key", message.Key),
+				("recipients", Objids(recipients.Select(r => r.Object().DBRef))), ("speaker", message.Speaker),
+				("style", message.Style), ("text", message.Text), ("name", message.DisplayName));
 			var registers = new ConcurrentStack<Dictionary<string, MString>>();
 			registers.Push([]);
 			await parser.With(state => state with
@@ -178,9 +178,9 @@ public class FeedService(
 
 			var line = format
 				? await attributeService.EvaluateAttributeFunctionAsync(parser, owner, owner,
-					IFeedService.TieIn(message.Kind, "FORMAT"), Arguments(message.Text,
-						recipient.Object().DBRef.ToString(), message.Speaker.ToString(), message.Style, message.Key,
-						message.DisplayName, message.Id.ToString()))
+					IFeedService.TieIn(message.Kind, "FORMAT"), Arguments(("text", message.Text),
+						("recipient", recipient.Object().DBRef), ("speaker", message.Speaker), ("style", message.Style),
+						("key", message.Key), ("name", message.DisplayName), ("id", message.Id)))
 				: DefaultLine(message);
 			if (line.Length == 0) continue;
 
@@ -224,13 +224,13 @@ public class FeedService(
 				continue;
 			}
 
-			var arguments = Arguments(message.Id.ToString(), message.Feed, Objids(recipients), message.Speaker.ToString(),
-				message.Style, message.Text, message.DisplayName);
+			var arguments = Arguments(("id", message.Id), ("feed", message.Feed), ("recipients", Objids(recipients)),
+				("speaker", message.Speaker), ("style", message.Style), ("text", message.Text), ("name", message.DisplayName));
 			var state = ParserState.RootFor(tapObject.Object().DBRef) with
 			{
 				Enactor = message.Speaker,
 				Arguments = arguments,
-				EnvironmentRegisters = new(arguments),
+				EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
 				CurrentEvaluation = new DBAttribute(tapObject.Object().DBRef, tap.Attribute)
 			};
 			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(chain.Last().Value.ToPlainText()), state);
@@ -242,10 +242,24 @@ public class FeedService(
 
 	private static string Objids(IEnumerable<DBRef> dbrefs) => string.Join(' ', dbrefs);
 
-	private static Dictionary<string, CallState> Arguments(params object[] values)
-		=> values.Index().ToDictionary(x => x.Index.ToString(), x => x.Item switch
+	/// <summary>
+	/// A tie-in's or tap's arguments, each by position as %0-%9 and by its name as %&lt;name&gt;. A name means
+	/// the same value in every tie-in, wherever its position.
+	/// </summary>
+	private static Dictionary<string, CallState> Arguments(params (string Name, object Value)[] values)
+	{
+		var arguments = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (position, (name, value)) in values.Index())
 		{
-			MString text => new CallState(text),
-			var other => new CallState(other.ToString()!)
-		});
+			var argument = value switch
+			{
+				MString text => new CallState(text),
+				var other => new CallState(other.ToString()!)
+			};
+			arguments[position.ToString()] = argument;
+			arguments[name] = argument;
+		}
+
+		return arguments;
+	}
 }

@@ -536,7 +536,75 @@ public class JobsIntegrationTests
 			await As(player, "+request Commas, kept=Text.");
 			await WebAppFactoryArg.QueueBarrierAsync();
 			await Assert.That(string.Join("\n", Notifications.For(player.DbRef)))
-				.Contains($"HOOKFILE 1 {player.Name} Commas, kept command");
+				.Contains($"HOOKFILE 1 {player.Name} Commas, kept command")
+				.Because("a hook written for the positions still reads them");
+
+			await God($"&ON`FILE {requests}=@pemit %<filer>=HOOKNAMED %<job>/%0 [name(%<filer>)] %<title> %<how>");
+			await As(player, "+request Names, too=Text.");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(string.Join("\n", Notifications.For(player.DbRef)))
+				.Contains($"HOOKNAMED 2/2 {player.Name} Names, too command")
+				.Because("every hook argument also comes by name, the same value as its position");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task TheApiTakesAJobsPartsByName()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsApi");
+			var filer = await Objid(player);
+			var jobs = await God("think [first(iter(lsearch(all,type,thing),if(cand(strmatch(name(%i0),Jobs),not(hasflag(%i0,GOING))),%i0)))]");
+			var code = await God($"think [create({TestIsolationHelpers.GenerateUniqueName("JobsApiCode")})]");
+			await God($"&RUN {code}=think [setq(title,Filed\\, from code)][setq(text,Text\\, with commas.)]; @include/args {jobs}/INC`API`FILE=player,{filer},bucket,Requests,title,%q<title>,text,%q<text>; &FILED {code}=%q<job>; @include/args {jobs}/INC`API`REPLY=job,%q<job>,actor,{filer},text,A reply\\, too.; @include/args {jobs}/INC`API`CLOSE=job,%q<job>,actor,{filer},outcome,canceled");
+			// The API's references to the Jobs object read the including object's PM`REFS`JOBS, which Jobs holds.
+			await God($"@force {jobs}=@include {code}/RUN");
+
+			await Assert.That(await God($"think [get({code}/FILED)]")).IsEqualTo("1");
+			await Assert.That(await God("think [job(1,title)]/[job(1,state)]/[job(1,outcome)]")).IsEqualTo("Filed, from code/closed/canceled");
+			await Assert.That(await As(player, "+job 1")).Contains("Text, with commas.").And.Contains("A reply, too.")
+				.Because("text handed over by name arrives whole");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task CloseAndTurnHooksNameTheirArguments()
+	{
+		try
+		{
+			await InstallAsync("jobs");
+			var player = await Player("JobsHookN");
+			var staff = await Player("JobsHookNS", "job-admin");
+			var requests = await God("think [first(iter(lsearch(all,type,thing),if(cand(strmatch(name(%i0),Requests),not(hasflag(%i0,GOING))),%i0)))]");
+			await God($"&ON`COMPLETE {requests}=@pemit %<filer>=HOOKDONE %<job> %0 [name(%<actor>)] [name(%2)] %<entry>=%3");
+			await God($"&ON`TURN {requests}=@pemit %<actor>=HOOKTURN %<job> %<from>>%<to> %2>%3");
+
+			await As(player, "+request Done soon=Please.");
+			await As(staff, "+job/claim 1");
+			await As(staff, "+job/complete 1=Finished, with commas.");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			await Assert.That(string.Join("\n", Notifications.For(player.DbRef)))
+				.Contains($"HOOKDONE 1 1 {staff.Name} {player.Name} 4=4")
+				.Because("the claim and its turn are log entries 2 and 3, the closing message 4");
+			await Assert.That(string.Join("\n", Notifications.For(staff.DbRef)))
+				.Contains("HOOKTURN 1 new>staff new>staff");
+
+			await Assert.That(await As(player, "+help jobs hooks"))
+				.Contains("%<job> (%0): job number.").And.Contains("%<handler> (%2): the handler")
+				.Because("the hooks' help names each argument beside its position");
+			await Assert.That(await As(player, "+help jobs api"))
+				.Contains("Jobs/INC`API`FILE=player,%#,bucket,Applications,title,Application for")
+				.Because("the API takes the job's parts by name");
 		}
 		finally
 		{
@@ -621,10 +689,11 @@ public class JobsIntegrationTests
 			await Assert.That(refused.GetProperty("ok").GetBoolean()).IsFalse();
 			await Assert.That(refused.GetProperty("errors").GetProperty("text").GetString()).IsEqualTo("Write something first.");
 
-			var replied = await Http("POST", "/jobs/act", """{"op":"reply","job":1,"text":"Looking, now.","kind":"reply"}""", staff);
+			var replied = await Http("POST", "/jobs/act", """{"op":"reply","job":1,"text":"{Looking}, now.","kind":"reply"}""", staff);
 			await Assert.That(replied.GetProperty("ok").GetBoolean()).IsTrue();
 			var entries = replied.GetProperty("data").GetProperty("fields").GetProperty("entries").GetProperty("value");
-			await Assert.That(entries.EnumerateArray().Any(e => e.GetProperty("body").GetString() == "Looking, now.")).IsTrue();
+			await Assert.That(entries.EnumerateArray().Any(e => e.GetProperty("body").GetString() == "{Looking}, now.")).IsTrue()
+				.Because("a reply reaches the job whole, commas and braces too");
 			await Assert.That(await God("think [job(1,state)]")).IsEqualTo("player");
 
 			var stranger = await Player("JobsWebX");

@@ -1,6 +1,6 @@
 format: 1.2
 package: radio
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -141,18 +141,18 @@ objects:
         [firstof(itemize(iter(%0,name(%i0),,|),|),none)]
 
       # ---- the line -------------------------------------------------------------
-      # %0 id, %1 speaker objid, %2 the name the line is under, %3 style, %4 text, %5 who reads it. The
-      # frequency's name in the reader's colour, then the speaker's title on it.
+      # Named arguments: frequency (its id), speaker (objid), name (the name the line is under), style, text, and reader
+      # (who reads it). The frequency's name in the reader's colour, then the speaker's title on it.
       FUN`LINE: |-
-        [setq(_c,firstof(get({{radio}}/P`[u({{radio}}/FUN`KEY,%5)]`COLOR`%0),get({{radio}}/DATA`COLOR)))][setq(_t,get({{radio}}/P`[u({{radio}}/FUN`KEY,%1)]`TITLE`%0))][setq(_n,[if(strlen(%q<_t>),%q<_t>%b)]%2)]<[u({{radio}}/FUN`PAINT,%q<_c>,u({{radio}}/FUN`NAME,%0))]> [switch(%3,pose,%q<_n> %4,semipose,%q<_n>%4,emit,%4,announce,%4,%q<_n> says\, "%4")]
+        [setq(_c,firstof(get({{radio}}/P`[u({{radio}}/FUN`KEY,%<reader>)]`COLOR`%<frequency>),get({{radio}}/DATA`COLOR)))][setq(_t,get({{radio}}/P`[u({{radio}}/FUN`KEY,%<speaker>)]`TITLE`%<frequency>))][setq(_n,[if(strlen(%q<_t>),%q<_t>%b)]%<name>)]<[u({{radio}}/FUN`PAINT,%q<_c>,u({{radio}}/FUN`NAME,%<frequency>))]> [switch(%<style>,pose,%q<_n> %<text>,semipose,%q<_n>%<text>,emit,%<text>,announce,%<text>,%q<_n> says\, "%<text>")]
       # %0 a colour, %1 text — the text in a theme colour when %0 names one (tone()), so each reader sees it in
       # their own @theme, and in ansi() codes otherwise. tone() is asked first: "info" also reads as ansi() codes.
       FUN`PAINT: |-
         [if(strmatch(setr(_p,tone(%0,%1)),#-*),ansi(%0,%1),%q<_p>)]
-      # The feed's tie-in: each listener's copy of a line. %0 text, %1 listener, %2 speaker, %3 style, %4 id,
-      # %5 the alterego it was sent under.
+      # The feed's tie-in: each listener's copy of a line, read by name (help @feed tie-ins): key the
+      # frequency's id, recipient the listener, name the alterego it was sent under.
       FEED`RADIO`FORMAT: |-
-        [u({{radio}}/FUN`LINE,%4,%2,firstof(%5,name(%2)),%3,%0,%1)]
+        [uargs({{radio}}/FUN`LINE,frequency,%<key>,speaker,%<speaker>,name,firstof(%<name>,name(%<speaker>)),style,%<style>,text,%<text>,reader,%<recipient>)]
       # ---- players --------------------------------------------------------------
       INC`USAGE: |-
         @pemit %#=[notice(RADIO,+radio <frequency>=<message> speaks. +help radio lists the rest.,warn)]
@@ -190,7 +190,7 @@ objects:
       INC`EXAMINE: |-
         @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; think [setq(ad,u({{radio}}/FUN`IS`ADMIN,%q<id>,%#))][setq(on,feedwho(radio/%q<id>,active))]; @pemit %#=[rule(u({{radio}}/FUN`NAME,%q<id>))]%r[fields(,Category,firstof(get({{radio}}/F`%q<id>`CATEGORY),none),About,firstof(get({{radio}}/F`%q<id>`DESC),none),You,switch(u({{radio}}/FUN`STATE,%q<id>,%#),on,tuned in,gagged,tuned in and gagged,not tuned in),Title,firstof(get({{radio}}/P`%q<me>`TITLE`%q<id>),none),Alterego,firstof(get({{radio}}/P`%q<me>`ALTEREGO`%q<id>),none),Listening,u({{radio}}/FUN`NAMES,iter(%q<on>,if(hasflag(%i0,connected),%i0))),Admins,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`ADMIN)),Moderators,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MODERATOR)),Members,u({{radio}}/FUN`NAMES,get({{radio}}/F`%q<id>`LIST`MEMBER)))][if(%q<ad>,%r[fields(,Talk lock,firstof(get({{radio}}/F`%q<id>`LOCK`TALK),everyone),Moderate lock,firstof(get({{radio}}/F`%q<id>`LOCK`MODERATE),get({{radio}}/DATA`LOCK`MODERATE)),Admin lock,firstof(get({{radio}}/F`%q<id>`LOCK`ADMIN),get({{radio}}/DATA`LOCK`ADMIN)),Keeps,feedinfo(radio/%q<id>,max_messages) lines)])]%r[rule()]
       INC`RECALL: |-
-        @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; think [setq(n,firstof(%q<rhs>,get({{radio}}/DATA`RECALL)))]; @assert cand(isint(%q<n>),gt(%q<n>,0),lte(%q<n>,get({{radio}}/DATA`RECALL`MAX)))=@pemit %#=[notice(RADIO,Recall takes a number of lines from 1 to [get({{radio}}/DATA`RECALL`MAX)].,warn)]; think [setq(ln,feedrecall(radio/%q<id>,%q<n>))]; @assert words(%q<ln>)=@pemit %#=[notice(RADIO,Nothing has been said on [u({{radio}}/FUN`NAME,%q<id>)].)]; @pemit %#=[rule(Recall: [u({{radio}}/FUN`NAME,%q<id>)])]%r[iter(%q<ln>,u({{radio}}/FUN`LINE,%q<id>,feedmsg(%i0,speaker),firstof(feedmsg(%i0,display),feedmsg(%i0,name)),feedmsg(%i0,style),feedmsg(%i0,text),%#),%b,%r)]%r[rule(End of recall)]
+        @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<id>,%#)=@pemit %#=[notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<id>)].,error)]; think [setq(n,firstof(%q<rhs>,get({{radio}}/DATA`RECALL)))]; @assert cand(isint(%q<n>),gt(%q<n>,0),lte(%q<n>,get({{radio}}/DATA`RECALL`MAX)))=@pemit %#=[notice(RADIO,Recall takes a number of lines from 1 to [get({{radio}}/DATA`RECALL`MAX)].,warn)]; think [setq(ln,feedrecall(radio/%q<id>,%q<n>))]; @assert words(%q<ln>)=@pemit %#=[notice(RADIO,Nothing has been said on [u({{radio}}/FUN`NAME,%q<id>)].)]; @pemit %#=[rule(Recall: [u({{radio}}/FUN`NAME,%q<id>)])]%r[iter(%q<ln>,uargs({{radio}}/FUN`LINE,frequency,%q<id>,speaker,feedmsg(%i0,speaker),name,firstof(feedmsg(%i0,display),feedmsg(%i0,name)),style,feedmsg(%i0,style),text,feedmsg(%i0,text),reader,%#),%b,%r)]%r[rule(End of recall)]
 
       # ---- moderators -----------------------------------------------------------
       # /restrict <frequency>=<player>[/<duration>]: no speaking until it ends, or until /unrestrict.
@@ -200,21 +200,23 @@ objects:
         @include {{radio}}/INC`NEED`MOD; @assert strlen(setr(tp,u({{radio}}/FUN`PLAYER,%q<rhs>)))=@pemit %#=[notice(RADIO,+radio/unrestrict <frequency>=<player>,warn)]; @assert u({{radio}}/FUN`RESTRICTED,%q<id>,%q<tp>)=@pemit %#=[notice(RADIO,[name(%q<tp>)] is not restricted on [u({{radio}}/FUN`NAME,%q<id>)].,warn)]; &F`%q<id>`RESTRICT`[u({{radio}}/FUN`KEY,%q<tp>)] {{radio}}; @pemit %#=[notice(RADIO,[name(%q<tp>)] may speak on [u({{radio}}/FUN`NAME,%q<id>)] again.,ok)]; @pemit %q<tp>=[notice(RADIO,You may speak on [u({{radio}}/FUN`NAME,%q<id>)] again.)]
       # /memadd and /memrem are a moderator's; the moderator and admin lists are an admin's.
       INC`MEMADD: |-
-        @include {{radio}}/INC`NEED`MOD; think [setq(list,MEMBER)][setq(listword,members)]; @include {{radio}}/INC`DO`LISTADD
+        @include {{radio}}/INC`NEED`MOD; @include/args {{radio}}/INC`DO`LISTADD=list,MEMBER,listword,members
       INC`MEMREM: |-
-        @include {{radio}}/INC`NEED`MOD; think [setq(list,MEMBER)][setq(listword,members)]; @include {{radio}}/INC`DO`LISTREM
+        @include {{radio}}/INC`NEED`MOD; @include/args {{radio}}/INC`DO`LISTREM=list,MEMBER,listword,members
       INC`MODADD: |-
-        @include {{radio}}/INC`NEED`ADMIN; think [setq(list,MODERATOR)][setq(listword,moderators)]; @include {{radio}}/INC`DO`LISTADD
+        @include {{radio}}/INC`NEED`ADMIN; @include/args {{radio}}/INC`DO`LISTADD=list,MODERATOR,listword,moderators
       INC`MODREM: |-
-        @include {{radio}}/INC`NEED`ADMIN; think [setq(list,MODERATOR)][setq(listword,moderators)]; @include {{radio}}/INC`DO`LISTREM
+        @include {{radio}}/INC`NEED`ADMIN; @include/args {{radio}}/INC`DO`LISTREM=list,MODERATOR,listword,moderators
       INC`ADMADD: |-
-        @include {{radio}}/INC`NEED`ADMIN; think [setq(list,ADMIN)][setq(listword,admins)]; @include {{radio}}/INC`DO`LISTADD
+        @include {{radio}}/INC`NEED`ADMIN; @include/args {{radio}}/INC`DO`LISTADD=list,ADMIN,listword,admins
       INC`ADMREM: |-
-        @include {{radio}}/INC`NEED`ADMIN; think [setq(list,ADMIN)][setq(listword,admins)]; @include {{radio}}/INC`DO`LISTREM
+        @include {{radio}}/INC`NEED`ADMIN; @include/args {{radio}}/INC`DO`LISTREM=list,ADMIN,listword,admins
+      # Named arguments: list, the list's attribute word (MEMBER, MODERATOR or ADMIN), and listword, its name
+      # in a message. %q<id> and %q<rhs> are the frequency and the player, as the command set them.
       INC`DO`LISTADD: |-
-        @assert strlen(setr(tp,u({{radio}}/FUN`PLAYER,%q<rhs>)))=@pemit %#=[notice(RADIO,I don't know a player called '%q<rhs>'.,warn)]; @assert not(u({{radio}}/FUN`ON,%q<id>,%q<tp>,%q<list>))=@pemit %#=[notice(RADIO,[name(%q<tp>)] is one of the %q<listword> of [u({{radio}}/FUN`NAME,%q<id>)] already.,warn)]; &F`%q<id>`LIST`%q<list> {{radio}}=[squish(get({{radio}}/F`%q<id>`LIST`%q<list>) %q<tp>)]; @pemit %#=[notice(RADIO,[name(%q<tp>)] is one of the %q<listword> of [u({{radio}}/FUN`NAME,%q<id>)] now.,ok)]
+        @assert strlen(setr(tp,u({{radio}}/FUN`PLAYER,%q<rhs>)))=@pemit %#=[notice(RADIO,I don't know a player called '%q<rhs>'.,warn)]; @assert not(u({{radio}}/FUN`ON,%q<id>,%q<tp>,%<list>))=@pemit %#=[notice(RADIO,[name(%q<tp>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<id>)] already.,warn)]; &F`%q<id>`LIST`%<list> {{radio}}=[squish(get({{radio}}/F`%q<id>`LIST`%<list>) %q<tp>)]; @pemit %#=[notice(RADIO,[name(%q<tp>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<id>)] now.,ok)]
       INC`DO`LISTREM: |-
-        @assert strlen(setr(tp,u({{radio}}/FUN`PLAYER,%q<rhs>)))=@pemit %#=[notice(RADIO,I don't know a player called '%q<rhs>'.,warn)]; @assert u({{radio}}/FUN`ON,%q<id>,%q<tp>,%q<list>)=@pemit %#=[notice(RADIO,[name(%q<tp>)] is not one of the %q<listword> of [u({{radio}}/FUN`NAME,%q<id>)].,warn)]; &F`%q<id>`LIST`%q<list> {{radio}}=[remove(get({{radio}}/F`%q<id>`LIST`%q<list>),%q<tp>)]; @pemit %#=[notice(RADIO,[name(%q<tp>)] is no longer one of the %q<listword> of [u({{radio}}/FUN`NAME,%q<id>)].,ok)]
+        @assert strlen(setr(tp,u({{radio}}/FUN`PLAYER,%q<rhs>)))=@pemit %#=[notice(RADIO,I don't know a player called '%q<rhs>'.,warn)]; @assert u({{radio}}/FUN`ON,%q<id>,%q<tp>,%<list>)=@pemit %#=[notice(RADIO,[name(%q<tp>)] is not one of the %<listword> of [u({{radio}}/FUN`NAME,%q<id>)].,warn)]; &F`%q<id>`LIST`%<list> {{radio}}=[remove(get({{radio}}/F`%q<id>`LIST`%<list>),%q<tp>)]; @pemit %#=[notice(RADIO,[name(%q<tp>)] is no longer one of the %<listword> of [u({{radio}}/FUN`NAME,%q<id>)].,ok)]
 
       # ---- admins ---------------------------------------------------------------
       # /create <name>[=<category>]: whoever passes DATA`LOCK`ADMIN, and the creator is its first admin.
