@@ -74,7 +74,8 @@ line names the help topic that explains it. For where SharpMUSH still differs fr
 - [restrictedexpr()] evaluates code limited to the functions you allow. [localfun] gives each
   owner their own named functions.
 - [@map] runs an attribute once for each element of a list, and [@input] passes each line a
-  player types to an attribute until the session ends.
+  player types to an attribute until the session ends. The optional bundled softcode-editor package
+  builds [@editor] on that capture mechanism.
 - Every new game is seeded with handler objects for [EVENTS] and [http] requests, so softcode
   can answer them without any setup.
 - [JSON FUNCTIONS], [rendermarkdown()] and [~] (strict argument parsing) round out the toolset.

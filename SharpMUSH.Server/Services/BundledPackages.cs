@@ -57,6 +57,8 @@ public static class BundledPackages
 	/// </summary>
 	public static readonly IReadOnlyList<Descriptor> All =
 	[
+		// Available, not installed: administrators opt into the global @editor command.
+		new("softcode-editor", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("http-handler", BundledPackageHandler.Http, InstallAtFirstBoot: true),
 		new("profile-handler", BundledPackageHandler.Http, InstallAtFirstBoot: true),
 		new("room-contents", BundledPackageHandler.Event, InstallAtFirstBoot: true),

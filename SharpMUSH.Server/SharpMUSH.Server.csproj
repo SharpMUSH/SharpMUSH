@@ -131,6 +131,10 @@
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <EmbeddedResource Include="..\examples\packages\softcode-editor\package.yaml">
+      <Link>BundledPackages\softcode-editor.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.softcode-editor.package.yaml</LogicalName>
+    </EmbeddedResource>
     <!-- The default HTTP handler softcode, installed via the package manager at
          first boot. Single source of truth shared with examples/ and the public repo. -->
     <EmbeddedResource Include="..\examples\packages\http-handler\package.yaml">
