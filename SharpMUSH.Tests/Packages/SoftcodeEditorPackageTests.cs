@@ -21,7 +21,7 @@ public class SoftcodeEditorPackageTests
 		var directory = new DirectoryInfo(AppContext.BaseDirectory);
 		while (directory is not null)
 		{
-			var candidate = Path.Combine(directory.FullName, "examples", "packages", "softcode-editor", "package.yaml");
+			var candidate = Path.Join(directory.FullName, "examples", "packages", "softcode-editor", "package.yaml");
 			if (File.Exists(candidate)) return candidate;
 			directory = directory.Parent;
 		}
@@ -48,6 +48,9 @@ public class SoftcodeEditorPackageTests
 		await Assert.That(save.IndexOf("controls(%#,%q<obj>)", StringComparison.Ordinal))
 			.IsLessThan(save.IndexOf("@force/inline", StringComparison.Ordinal));
 		await Assert.That(save).Contains("=!%q<other>");
+		await Assert.That(command).Contains("ORIGINALCMD").And.Contains("ORIGINALFUN");
+		await Assert.That(save).Contains("get(%!/DATA`%d`ORIGINALCMD)")
+			.And.Contains("get(%!/DATA`%d`ORIGINALFUN)");
 		await Assert.That(editor.Attributes["INPUT`EXIT"].Value).Contains("@include/args %!/INC`SAVE=mode,exit");
 		await Assert.That(save).Contains("strmatch(%<mode>,exit)=1,@include %!/INPUT`START");
 	}
