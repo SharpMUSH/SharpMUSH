@@ -81,32 +81,34 @@ Without a ``RENDERMARKUP`TABLE`` template, a table with headings spans the whole
 ## Custom Template System
 The function looks for attributes on `<object>` with specific names that define how to render each markdown element. These attributes contain softcode that is evaluated with markdown content passed as arguments. If a template attribute is not found, the default rendering is used.
 
+Each argument is passed by position and by the name shown in the list below (see [named arguments]): a link template can read its URL as %1 or as %`\<url\>`. A name means the same thing in every template: %`\<text\>` is always the element's text.
+
 ## Supported Template Attributes
 - ``RENDERMARKUP`H1`` - Heading level 1 rendering
-  - `%0` - The heading content (already formatted with base styles)
+  - `%0` or `%<text>` - The heading content (already formatted with base styles)
   
 - ``RENDERMARKUP`H2`` - Heading level 2 rendering
-  - `%0` - The heading content (already formatted with base styles)
+  - `%0` or `%<text>` - The heading content (already formatted with base styles)
   
 - ``RENDERMARKUP`H3`` - Heading level 3 rendering
-  - `%0` - The heading content (already formatted with base styles)
+  - `%0` or `%<text>` - The heading content (already formatted with base styles)
   
 - ``RENDERMARKUP`CODEBLOCK`` - Code block rendering
-  - `%0` - The code content (plain text, newlines separated)
+  - `%0` or `%<code>` - The code content (plain text, newlines separated)
   
 - ``RENDERMARKUP`LISTITEM`` - List item rendering
-  - `%0` - Is ordered list? (1 for ordered, 0 for unordered)
-  - `%1` - Item number, 1-based (the first item is `1`)
-  - `%2` - The list item content
+  - `%0` or `%<ordered>` - Is ordered list? (1 for ordered, 0 for unordered)
+  - `%1` or `%<number>` - Item number, 1-based (the first item is `1`)
+  - `%2` or `%<text>` - The list item content
   
 - ``RENDERMARKUP`QUOTE`` - Block quote rendering
-  - `%0` - The quote content (already rendered)
+  - `%0` or `%<text>` - The quote content (already rendered)
   
 ## Table templates
 
 - ``RENDERMARKUP`TABLE`` - Table rendering. Receives the table described as a
   single JSON object, so a template can lay the table out itself
-  - `%0` - The table, as JSON:
+  - `%0` or `%<table>` - The table, as JSON:
     ```json
     {
       "width": 78,
@@ -136,50 +138,50 @@ The function looks for attributes on `<object>` with specific names that define 
 ## Container templates
 
 - ``RENDERMARKUP`CONTAINER`` - Custom container (`::: name args`) rendering
-  - `%0` - The directive name (`category`, `tag`, `pagelist`, `recent`, `seealso`, or your own)
-  - `%1` - The rest of the fence line, empty if there is none
-  - `%2` - The container's contents, rendered (see the note below). For a
+  - `%0` or `%<directive>` - The directive name (`category`, `tag`, `pagelist`, `recent`, `seealso`, or your own)
+  - `%1` or `%<options>` - The rest of the fence line, empty if there is none
+  - `%2` or `%<text>` - The container's contents, rendered (see the note below). For a
     `::: seealso` footer of names only, that is the topics separated by `, `
   
 ## Inline templates
 
 - ``RENDERMARKUP`BOLD`` - Bold (`**text**`) rendering
-  - `%0` - The emphasised text, plain
+  - `%0` or `%<text>` - The emphasised text, plain
   
 - ``RENDERMARKUP`ITALIC`` - Italic (`*text*`) rendering
-  - `%0` - The emphasised text, plain
+  - `%0` or `%<text>` - The emphasised text, plain
   
 - ``RENDERMARKUP`UNDERLINE`` - Underline rendering
-  - `%0` - The underlined text, plain
+  - `%0` or `%<text>` - The underlined text, plain
   
 - ``RENDERMARKUP`INLINECODE`` - Inline code (`` `text` ``) rendering
-  - `%0` - The code text (plain text)
+  - `%0` or `%<code>` - The code text (plain text)
   
 - ``RENDERMARKUP`LINK`` - Link rendering. Not called for a link with no URL,
   which is not a link and renders as its own text
-  - `%0` - The link text as it would be shown, plain (the URL, if the link has
+  - `%0` or `%<text>` - The link text as it would be shown, plain (the URL, if the link has
     no text)
-  - `%1` - The URL, or the command for a command link
-  - `%2` - Is it a command link? (1 for a command, 0 for a URL)
-  - `%3` - The link title/hint, empty if there is none
+  - `%1` or `%<url>` - The URL, or the command for a command link
+  - `%2` or `%<command>` - Is it a command link? (1 for a command, 0 for a URL)
+  - `%3` or `%<title>` - The link title/hint, empty if there is none
   
 - ``RENDERMARKUP`WIKILINK`` - Wiki link (`[[Page Name]]`) rendering. Not called
   for a link with no display text, which renders as nothing
-  - `%0` - The display text, plain
-  - `%1` - The `@wiki` page reference, always fully qualified as
+  - `%0` or `%<text>` - The display text, plain
+  - `%1` or `%<page>` - The `@wiki` page reference, always fully qualified as
     `<namespace>:<slug>`
-  - `%2` - The target page's title
+  - `%2` or `%<title>` - The target page's title
   
 - ``RENDERMARKUP`AUTOLINK`` - Autolink (`<https://example.com>`) rendering. Not
   called for an autolink with no URL, which renders as nothing
-  - `%0` - The URL, which is also the text shown
+  - `%0` or `%<url>` - The URL, which is also the text shown
   
 - ``RENDERMARKUP`IMAGE`` - Image (`![alt](url)`) rendering
-  - `%0` - The alt text, plain and trimmed; empty if there is none
-  - `%1` - The image URL
+  - `%0` or `%<alt>` - The alt text, plain and trimmed; empty if there is none
+  - `%1` or `%<url>` - The image URL
   
 - ``RENDERMARKUP`TASKLIST`` - Task list marker (`- `[x]``) rendering
-  - `%0` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
+  - `%0` or `%<checked>` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
 
 ## Template arguments
 

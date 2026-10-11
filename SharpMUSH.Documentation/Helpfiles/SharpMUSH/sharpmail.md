@@ -185,10 +185,12 @@ This attribute allows wizards to change the maximum number of messages a player 
 # MAILFILTER
 
 The @mailfilter attribute specifies automatic filing of incoming @mail messages into folders. When an @mail message is received, the contents of @mailfilter are evaluated, with the following arguments passed:
-* `%0` - dbref of message sender
-* `%1` - message subject
-* `%2` - message body
-* `%3` - message status flags (a string containing U, F, and/or R, for urgent, forwarded, and/or reply, respectively)
+* `%0` or %`\<sender\>` - dbref of message sender
+* `%1` or %`\<subject\>` - message subject
+* `%2` or %`\<body\>` - message body
+* `%3` or %`\<flags\>` - message status flags (a string containing U and/or F, for urgent and/or forwarded)
+
+Each value is passed by position and by the name shown (see [named arguments]). Code written for PennMUSH reads the positions.
 
 If @mailfilter evaluates to a folder name or number, the message will be filed into that folder. If @mailfilter evaluates to a null string, the message remains in the incoming folder.
 
@@ -196,6 +198,11 @@ If @mailfilter evaluates to a folder name or number, the message will be filed i
 Filter urgent messages into folder 1
 ```sharp
 > @mailfilter me=if(strmatch(%3,*U*),1)
+```
+
+The same, reading the flags by name:
+```sharp
+> @mailfilter me=if(strmatch(%<flags>,*U*),1)
 ```
 
 

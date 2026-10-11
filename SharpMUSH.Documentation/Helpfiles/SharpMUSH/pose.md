@@ -31,7 +31,7 @@
 
 The pose and semipose commands allow you to perform actions. Pose shows your name, a space, and then `<action>`; semipose omits the space. They can be abbreviated to ':' and ';' respectively. The `/noeval` switch stops `<action>` from being evaluated.
 
-If you have a SPEECHMOD attribute set, it will be evaluated with `<action>` as %0 and either : (for pose) or ; (for semipose) as %1. The result is used instead of `<action>`, as long as it returns a non-empty string.
+If you have a SPEECHMOD attribute set, it will be evaluated with `<action>` as %0 or %`\<message\>` and either : (for pose) or ; (for semipose) as %1 or %`\<type\>`. The result is used instead of `<action>`, as long as it returns a non-empty string.
 
 ::: seealso
 - ["]

@@ -793,7 +793,7 @@ For information about parameters, see [@config parameters]
 
 When set, the CONFORMAT attribute is evaluated when `<object>` is looked at, and the result is displayed instead of the usual "Contents:" (for rooms) or "Carrying:" (for players and things) list of contents.
 
-The dbrefs of the objects which would appear in the normal contents list are passed to the attribute as %0 (you can use lcon(me) for a full contents list). A list of the names of these objects as they would appear in the default contents list is passed as %1, |-delimited.
+The dbrefs of the objects which would appear in the normal contents list are passed to the attribute as %0 or %`\<contents\>` (you can use lcon(me) for a full contents list). A list of the names of these objects is passed as %1 or %`\<names\>`, |-delimited. Each is passed by position and by name (see [named arguments]).
 
 Q-registers (set via setq() and similar functions) are inherited from the @descformat, and passed on to the @exitformat.
 
@@ -805,7 +805,7 @@ Show the normal contents list, but in upper-case:
 
 Show just the object names (with no ansi) in a table:
 ```sharp
-> @conformat here=table(iter(%0, name(%i0), %b, |), 20, width(%#), |)
+> @conformat here=table(iter(%<contents>, name(%i0), %b, |), 20, width(%#), |)
 ```
 
 
@@ -907,7 +907,7 @@ You're holding: Red Ball, Pickle, and Piano
 # @descformat
 `@descformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed instead of `<object>`'s @describe, when someone looks at `<object>`. The evaluated @describe, which would be shown if no @descformat were set, is passed to the @descformt as %0; use v(describe) to get the unevaluted description.
+When set, this attribute is evaluated and displayed instead of `<object>`'s @describe, when someone looks at `<object>`. The evaluated @describe, which would be shown if no @descformat were set, is passed to the @descformat as %0, and by name as %`\<description\>` (see [named arguments]); use v(describe) to get the unevaluated description.
 
 This is primarily useful for room parents, to enforce a consistent look for all rooms without having to apply formatting to ever @describe. Note that this object is only used with @describe - to format the @idescribe, use @idescformat.
 
@@ -930,7 +930,7 @@ Q-registers (set via setq() and similar functions) are inherited from the @namef
 # @idescformat
 `@idescformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed instead of `<object>`'s inside description when someone looks at `<object>` while inside it. The evaluated @idescribe is passed to @idescformat as %0; use v(idescribe) to get the unevaluated description.
+When set, this attribute is evaluated and displayed instead of `<object>`'s inside description when someone looks at `<object>` while inside it. The evaluated @idescribe is passed to @idescformat as %0, and by name as %`\<description\>` (see [named arguments]); use v(idescribe) to get the unevaluated description.
 
 If no @idescribe is set, @idescformat formats the evaluated @describe instead. When neither @idescribe nor @idescformat is set, the normal @describe and @descformat attributes are used.
 
@@ -972,7 +972,7 @@ If a container has both a @nameaccent and a @nameformat, the @nameformat is used
 # @nameformat
 `@nameformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed in place of `<object>`'s name, when objects inside `<object>` "look". The room's dbref is passed as %0, and the default-formatted name (as it would be displayed with no @nameformat set) is passed as %1.
+When set, this attribute is evaluated and displayed in place of `<object>`'s name, when objects inside `<object>` "look". The room's dbref is passed as %0 or %`\<object\>`, and the default-formatted name (as it would be displayed with no @nameformat set) is passed as %1 or %`\<name\>`. Each is passed by position and by name (see [named arguments]).
 
 @nameformat is not used when people who are outside the object look at it.
 
@@ -982,6 +982,11 @@ Q-registers (set via setq() and similar functions) are passed on from the namefo
 Show the room's zone after its name.
 ```sharp
 > @nameformat here = %1 [if(zone(%0),<[name(zone(%0))]>)]
+```
+
+The same, reading the arguments by name:
+```sharp
+> @nameformat here = %<name> [if(zone(%<object>),<[name(zone(%<object>))]>)]
 ```
 
 
@@ -1228,7 +1233,7 @@ and<br>
 `@emit[/<switch>] <message>`<br>
 `\<message>`
 
-This sends `<message>` to everyone in your location. Nothing is added to the message, not even your name. If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` as %0, and | as %1, and the result will be shown instead of `<message>` as long as it evaluates to a non-empty string.
+This sends `<message>` to everyone in your location. Nothing is added to the message, not even your name. If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` as %0 or %`\<message\>`, and | as %1 or %`\<type\>`, and the result will be shown instead of `<message>` as long as it evaluates to a non-empty string.
 
 The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
@@ -1330,13 +1335,18 @@ If you control `<object>`, or have the Search or See_All powers, all objects lin
 # @exitformat
 `@exitformat <object>[=<format>]`
 
-When set, the exitformat attribute is evaluated and shown in place of the "Obvious exits" list for a room. (It has no meaning when set on other types of object.) The dbrefs of the exits which would appear in the default "Obvious exits" list is passed to the attribute as %0 as a space-separated list; you can use lexits(me) to get all the exits in the room.
+When set, the exitformat attribute is evaluated and shown in place of the "Obvious exits" list for a room. (It has no meaning when set on other types of object.) The dbrefs of the exits which would appear in the default "Obvious exits" list is passed to the attribute as %0, and by name as %`\<exits\>` (see [named arguments]), as a space-separated list; you can use lexits(me) to get all the exits in the room.
 
 Q-registers (set via setq() and similar functions) are inherited from the @conformat.
 
 ### Example
 ```sharp
 > @exitformat here=Exits: [itemize(iter(%0, name(%i0)))]
+```
+
+The same, reading the exits by name:
+```sharp
+> @exitformat here=Exits: [itemize(iter(%<exits>, name(%i0)))]
 ```
 
 
@@ -2610,13 +2620,13 @@ Charset set to 'ascii'
 # @speechmod
 `@speechmod <object>[=<modifier>]`
 
-When set, this attribute modifies everything `<object>` says, poses, semiposes and @emits. The original text spoken/posed/emitted is passed as %0, with %1 passed as " (for say), : (for pose), ; (for semipose) or | (for @emit).
+When set, this attribute modifies everything `<object>` says, poses, semiposes and @emits. The original text spoken/posed/emitted is passed as %0 or %`\<message\>`, with %1 or %`\<type\>` passed as " (for say), : (for pose), ; (for semipose) or | (for @emit). Each is passed by position and by name (see [named arguments]).
 
 If the attribute evaluates to an empty string, the original text will be used. Otherwise, the result of the attribute is used.
 
 ### Example
 ```sharp
-> @speechmod me=ucstr(%0)!
+> @speechmod me=ucstr(%<message>)!
 > say hello
 You say, "HELLO!"
 > pose waves
@@ -3428,7 +3438,7 @@ The news system works just like the help system. Many MUSHes use it to provide s
 
 Says `<message>` out loud. The message will be enclosed in double-quotes. A single double-quote is the abbreviation for this common command. If the `/noeval` switch is given, `<message>` will not be evaluated.
 
-If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` passed as %0 and " (a double-quote) passed as %1. The result is shown instead of `<message>`, as long as it evaluates to a non-empty string.
+If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` passed as %0 or %`\<message\>` and " (a double-quote) passed as %1 or %`\<type\>`. The result is shown instead of `<message>`, as long as it evaluates to a non-empty string.
 
 If `<message>` begins with a double-quote and the chat_strip_quote @config option is on, the leading " will be stripped.
 

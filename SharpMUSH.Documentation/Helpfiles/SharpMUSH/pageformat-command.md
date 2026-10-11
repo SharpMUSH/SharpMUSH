@@ -27,11 +27,13 @@
 `@pageformat` changes the message seen by `<object>` when it receives a page.<br>
 `@outpageformat` sets the message seen by `<object>` when it sends a page.
 
-%0 will be set to the page message (not including :, ; or ").<br>
-%1 will be set to ':' ';' or '"' for pose, semipose and normal page, respectively.<br>
-%2 will be set to the alias of the pager, if any.<br>
-%3 will be a space-separated list of recipient dbrefs.<br>
-%4 will be set to the default message.
+%0 or %`\<message\>` will be set to the page message (not including :, ; or ").<br>
+%1 or %`\<type\>` will be set to ':' ';' or '"' for pose, semipose and normal page, respectively.<br>
+%2 or %`\<alias\>` will be set to the alias of the pager, if any.<br>
+%3 or %`\<recipients\>` will be a space-separated list of recipient dbrefs.<br>
+%4 or %`\<default\>` will be set to the default message.
+
+Each value is passed by position and by the name shown (see [named arguments]). Code written for PennMUSH reads the positions.
 
 
 ::: seealso
@@ -48,6 +50,11 @@ For simple page timestamps:
 ```sharp
 > @pageformat me=\[[time()]\] %4
 > @outpageformat me=\[[time()]\] %4
+```
+
+The same, reading the default message by name:
+```sharp
+> @pageformat me=\[[time()]\] %<default>
 ```
 
 To obtain 'page_aliases' behavior:
