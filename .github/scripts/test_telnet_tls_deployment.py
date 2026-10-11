@@ -98,6 +98,7 @@ class NativeTlsComposeTests(unittest.TestCase):
         )
         if result.returncode:
             raise unittest.SkipTest("Docker Compose unavailable; rendering was not run")
+        print(result.stdout.strip())
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="sharpmush-tls-compose-")
@@ -178,7 +179,9 @@ class NativeTlsComposeTests(unittest.TestCase):
                 self.assertEqual(mounts[0]["type"], "bind")
                 self.assertEqual(mounts[0]["source"], str(self.certificates))
                 self.assertIs(mounts[0]["read_only"], True)
-                self.assertIs(mounts[0]["bind"]["create_host_path"], False)
+                # Some Compose versions omit false fields from normalized JSON. The
+                # source test above separately requires an explicit false in YAML.
+                self.assertIs(mounts[0].get("bind", {}).get("create_host_path", False), False)
 
                 # Removing exactly the overlay's additions restores the complete base
                 # model: renderer socket, plaintext port, proxy trust and all other
