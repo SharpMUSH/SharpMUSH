@@ -47,8 +47,9 @@ public class SoftcodeEditorPackageTests
 			await Assert.That(input + command + editor.Attributes["INPUT`HELP"].Value).Contains(route);
 		await Assert.That(save.IndexOf("controls(%#,%q<obj>)", StringComparison.Ordinal))
 			.IsLessThan(save.IndexOf("@force/inline", StringComparison.Ordinal));
-		await Assert.That(save).Contains("=!%q<other>")
-			.And.Contains("not(hasflag(%q<obj>/%q<attr>,%q<other>))");
+		await Assert.That(save).Contains("=!%q<other>");
+		await Assert.That(editor.Attributes["INPUT`EXIT"].Value).Contains("@include/args %!/INC`SAVE=mode,exit");
+		await Assert.That(save).Contains("strmatch(%<mode>,exit)=1,@include %!/INPUT`START");
 	}
 
 	[Test]
@@ -113,8 +114,8 @@ public class SoftcodeEditorPackageTests
 			await Assert.That(sessions.GetCapturing(player.Handle)).IsNotNull();
 			var exit = await sessions.DeliverAsync(parser, sessions.GetCapturing(player.Handle)!, MarkupText.Plain(".sq"));
 			await Assert.That(exit?.HadErrors).IsFalse().Because(exit?.Message.ToPlainText() ?? "no callback result");
-			using (var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
-				while (sessions.GetCapturing(player.Handle) is not null) await Task.Delay(10, deadline.Token);
+			await Assert.That(sessions.GetCapturing(player.Handle)).IsNull()
+				.Because(string.Join(" | ", Factory.Notifications.For(player.DbRef)));
 
 			var saved = await database.GetAttributeAsync(player.DbRef, ["EDITME"], CancellationToken.None)
 				.LastOrDefaultAsync();
@@ -144,6 +145,44 @@ public class SoftcodeEditorPackageTests
 			finally
 			{
 				await connections.Disconnect(functionPlayer.Handle);
+			}
+
+			var blankPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+				Factory.Services, Factory.Services.GetRequiredService<IMediator>(), connections, "SoftcodeBlankLineEditor");
+			try
+			{
+				await parser.CommandParse(blankPlayer.Handle, connections,
+					MarkupText.Plain("@editor me/EDITBLANK=command"));
+				await sessions.DeliverAsync(parser, sessions.GetCapturing(blankPlayer.Handle)!, MarkupText.Empty);
+				await sessions.DeliverAsync(parser, sessions.GetCapturing(blankPlayer.Handle)!, MarkupText.Plain("think after blank"));
+				var blankDraft = await database.GetAttributeAsync(editor,
+					["DATA", blankPlayer.Handle.ToString(), "DRAFT"], CancellationToken.None).LastOrDefaultAsync();
+				await Assert.That(blankDraft?.Value.ToPlainText()).IsEqualTo("\nthink after blank");
+				await sessions.DeliverAsync(parser, sessions.GetCapturing(blankPlayer.Handle)!, MarkupText.Plain(".q"));
+			}
+			finally
+			{
+				await connections.Disconnect(blankPlayer.Handle);
+			}
+
+			var failurePlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+				Factory.Services, Factory.Services.GetRequiredService<IMediator>(), connections, "SoftcodeFailedSaveEditor");
+			try
+			{
+				await parser.CommandParse(failurePlayer.Handle, connections,
+					MarkupText.Plain("@editor me/EDITFAIL=function"));
+				await sessions.DeliverAsync(parser, sessions.GetCapturing(failurePlayer.Handle)!, MarkupText.Plain("add(1,2"));
+				await sessions.DeliverAsync(parser, sessions.GetCapturing(failurePlayer.Handle)!, MarkupText.Plain(".sq"));
+				await Assert.That(sessions.GetCapturing(failurePlayer.Handle)).IsNotNull()
+					.Because("a failed save-and-quit must restart capture with the draft intact");
+				var failedDraft = await database.GetAttributeAsync(editor,
+					["DATA", failurePlayer.Handle.ToString(), "DRAFT"], CancellationToken.None).LastOrDefaultAsync();
+				await Assert.That(failedDraft?.Value.ToPlainText()).IsEqualTo("add(1,2");
+				await sessions.DeliverAsync(parser, sessions.GetCapturing(failurePlayer.Handle)!, MarkupText.Plain(".q"));
+			}
+			finally
+			{
+				await connections.Disconnect(failurePlayer.Handle);
 			}
 		}
 		finally
