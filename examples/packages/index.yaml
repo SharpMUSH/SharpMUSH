@@ -21,7 +21,7 @@ packages:
     description: Two rooms and linked exits
   - path: http-handler/
     package: http-handler
-    version: 1.0.1
+    version: 1.0.2
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
@@ -37,7 +37,7 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 1.0.2
+    version: 1.0.3
     description: Dynamic Application (Area 21) — a character-application form (requires http-handler)
   - path: chargen-app/
     package: chargen-app
@@ -45,7 +45,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page (requires chargen)
   - path: scene/
     package: scene
-    version: 1.5.3
+    version: 1.5.4
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -65,7 +65,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.6.0
+    version: 1.6.1
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -80,7 +80,7 @@ packages:
   - path: radio/
     name: Radio
     package: radio
-    version: 1.2.0
+    version: 1.2.1
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-scene/
     name: Radio in scenes
@@ -90,7 +90,7 @@ packages:
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.2.0
+    version: 1.2.1
     description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help and http-handler)
   - path: bboards-app/
     name: BBoards in the portal

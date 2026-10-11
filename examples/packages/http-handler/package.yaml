@@ -1,6 +1,6 @@
 format: 1
 package: http-handler
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Inbound HTTP verb routers (GET/POST/…) for the configured http_handler object."
 license: MIT
@@ -22,14 +22,14 @@ objects:
       # missing route; @include runs the sub-handler with %0 = raw body, and
       # passes the named arguments (%<viewer>, %<hdr.<name>>, ...) on to it.
       GET: |-
-        think setq(fields,formq(after(%<path>,?))); @assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/GET`%q<attrpath>=%<body>
+        think setq(fields,formq(after(%<path>,?))); @assert cand(setr(attrpath,edit(before(rest(%<path>,/),?),/,`)),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/GET`%q<attrpath>=%<body>
       POST: |-
-        think setq(fields,formq(after(%<path>,?))); @assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,POST`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/POST`%q<attrpath>=%<body>
+        think setq(fields,formq(after(%<path>,?))); @assert cand(setr(attrpath,edit(before(rest(%<path>,/),?),/,`)),hasattr(me,POST`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/POST`%q<attrpath>=%<body>
       PUT: |-
-        think setq(fields,formq(after(%<path>,?))); @assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,PUT`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PUT`%q<attrpath>=%<body>
+        think setq(fields,formq(after(%<path>,?))); @assert cand(setr(attrpath,edit(before(rest(%<path>,/),?),/,`)),hasattr(me,PUT`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PUT`%q<attrpath>=%<body>
       DELETE: |-
-        think setq(fields,formq(after(%<path>,?))); @assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,DELETE`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/DELETE`%q<attrpath>=%<body>
+        think setq(fields,formq(after(%<path>,?))); @assert cand(setr(attrpath,edit(before(rest(%<path>,/),?),/,`)),hasattr(me,DELETE`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/DELETE`%q<attrpath>=%<body>
       PATCH: |-
-        think setq(fields,formq(after(%<path>,?))); @assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,PATCH`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PATCH`%q<attrpath>=%<body>
+        think setq(fields,formq(after(%<path>,?))); @assert cand(setr(attrpath,edit(before(rest(%<path>,/),?),/,`)),hasattr(me,PATCH`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/PATCH`%q<attrpath>=%<body>
       HEAD: |-
-        think setq(fields,formq(after(%<path>,?))); @assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,HEAD`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/HEAD`%q<attrpath>=%<body>
+        think setq(fields,formq(after(%<path>,?))); @assert cand(setr(attrpath,edit(before(rest(%<path>,/),?),/,`)),hasattr(me,HEAD`%q<attrpath>))=@respond 404 API NOT FOUND; @include me/HEAD`%q<attrpath>=%<body>

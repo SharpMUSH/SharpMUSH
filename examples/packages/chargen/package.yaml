@@ -1,6 +1,6 @@
 format: 1
 package: chargen
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Example Dynamic Application (Area 21) — a character-application form served as a Portal Schema Document over the HTTP verb routers."
 license: MIT
@@ -32,4 +32,4 @@ objects:
       # POST /http/chargen/submit — validate and acknowledge. %<body> = posted field JSON.
       # Demonstration: requires a non-empty character name, returns the structured envelope.
       POST`CHARGEN`SUBMIT: |-
-        @respond/type application/json; think firstof(if(not(t(edit(json_query(%<body>,get,charname),",))),json(object,ok,json(boolean,false),errors,json(object,charname,json(string,A character name is required.)))),json(object,ok,json(boolean,true),message,json(string,Application received. Staff will review it.),redirect,json(string,/characters)))
+        @respond/type application/json; think firstof(if(not(edit(json_query(%<body>,get,charname),",)),json(object,ok,json(boolean,false),errors,json(object,charname,json(string,A character name is required.)))),json(object,ok,json(boolean,true),message,json(string,Application received. Staff will review it.),redirect,json(string,/characters)))
