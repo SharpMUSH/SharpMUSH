@@ -365,9 +365,9 @@ To enable it, fill in the restic settings in `.env` and uncomment:
 COMPOSE_PROFILES=backup
 ```
 
-Once enabled, the `backup` service snapshots `/data/backup`, `/data/wiki-assets` and
-`/data/lightning.dataprotection-keys` to your bucket every night at 03:30, keeping 7 daily and 4
-weekly snapshots. The volume is mounted
+Once enabled, the `backup` service snapshots `/data/backup`, `/data/wiki-assets`,
+`/data/lightning.dataprotection-keys`, and `/data/lightning.plugins` to your bucket every night
+at 03:30, keeping 7 daily and 4 weekly snapshots. The volume is mounted
 **read-only**, so a backup run can never corrupt live data.
 
 **What it snapshots is a copy, not the live world.** restic reads `data.mdb` front to back
@@ -405,6 +405,8 @@ enabled — `run` activates a service's profile automatically.
 > ```bash
 > export COMPOSE_FILE=docker-compose.prod.yml        # or docker-compose.cloudflare.yml
 > ```
+> Include any enabled overlays in `COMPOSE_FILE` too, separated by `:` on Linux, so later
+> `docker compose up` commands keep the same configuration.
 
 ```bash
 # List snapshots:
@@ -420,34 +422,94 @@ docker compose run --rm -v restore:/restore backup \
 
 **To restore for real**: stop the stack, then put the snapshot's
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
-`lightning`, and `wiki-assets` and `lightning.dataprotection-keys` go back as they are. The game
-reads whatever is in the volume on boot.
+`lightning`, and `wiki-assets`, `lightning.dataprotection-keys`, and `lightning.plugins` go back
+beside it. Restore the whole installed-plugin directory, including `plugins.state.json` (disabled
+plugins) and hidden `.uploads/` contents. Replace it rather than merging: files installed after
+the recovery point must not remain beside the restored world. The game reads the volume on boot.
+
+Use a fresh, empty scratch volume for each snapshot; restoring over an earlier scratch restore
+can leave files the selected snapshot did not contain. The commands below create a uniquely named
+volume and keep it until you have verified recovery. Replace `REPLACE_WITH_SELECTED_TIMESTAMP`
+with a completed directory name from step 2, not `latest` or an `.incoming-*` directory. If you
+changed the configured world, asset, key-ring, or plugin paths, adjust the paths below as well.
+Do not continue after a failed stop or Restic restore command.
 
 ```bash
-docker compose stop sharpmush-server connectionserver
+RESTORE_VOLUME="sharpmush-restore-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+docker compose stop sharpmush-server connectionserver &&
 
 # 1. Restore into a scratch volume. The -v is what makes the files outlive the container;
 #    without it restic writes into the container's own filesystem and they are gone.
-docker compose run --rm -v restore:/restore backup \
-  restic restore latest --target /restore
+docker volume create "$RESTORE_VOLUME" &&
+docker compose run --rm -v "$RESTORE_VOLUME:/restore" backup \
+  restic restore latest --target /restore &&
 
 # 2. See which copies the snapshot carried and pick one.
-docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server \
-  -c 'ls /restore/data/backup'
+docker compose run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server \
+  -c 'ls /restore/data/backup' &&
 
 # 3. Put it in place. The app image mounts app-data read-write, unlike the backup service.
-docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server -c '
-  rm -rf /app/data/lightning &&
-  cp -a /restore/data/backup/<timestamp> /app/data/lightning &&
-  cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/ &&
-  if [ -d /restore/data/lightning.dataprotection-keys ]; then
-    rm -rf /app/data/lightning.dataprotection-keys &&
-    cp -a /restore/data/lightning.dataprotection-keys /app/data/lightning.dataprotection-keys
-  fi'
-
-docker compose start connectionserver sharpmush-server
-docker volume rm restore    # once the game is up and you are satisfied
+docker compose run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint sh sharpmush-server -c '
+  set -eu
+  source=/restore/data
+  target=/app/data
+  world_copy=REPLACE_WITH_SELECTED_TIMESTAMP
+  case "$world_copy" in
+    ""|.*|*/*|latest)
+      echo "Choose a completed, dated world copy before restoring." >&2
+      exit 1 ;;
+  esac
+  world="$source/backup/$world_copy"
+  if [ ! -f "$world/data.mdb" ]; then
+    echo "Selected world copy has no data.mdb; nothing was changed." >&2
+    exit 1
+  fi
+  if [ ! -d "$source/wiki-assets" ]; then
+    echo "Snapshot has no wiki-assets directory; nothing was changed." >&2
+    exit 1
+  fi
+  if [ ! -d "$source/lightning.plugins" ]; then
+    echo "Snapshot has no plugin directory; inspect the recovery point before continuing." >&2
+    exit 1
+  fi
+  rm -rf "$target/lightning"
+  cp -a "$world" "$target/lightning"
+  mkdir -p "$target/wiki-assets"
+  cp -a "$source/wiki-assets/." "$target/wiki-assets/"
+  if [ -d "$source/lightning.dataprotection-keys" ]; then
+    rm -rf "$target/lightning.dataprotection-keys"
+    cp -a "$source/lightning.dataprotection-keys" "$target/lightning.dataprotection-keys"
+  fi
+  rm -rf "$target/lightning.plugins"
+  cp -a "$source/lightning.plugins" "$target/lightning.plugins"' && \
+  docker compose start connectionserver sharpmush-server
 ```
+
+If the plugin directory is absent, stop and inspect the selected recovery point. An older backup
+may have omitted it, or the game may never have installed plugins or saved any enable/disable
+state. Recover any required plugin files and state from a matching trusted source before starting
+the game. Only if you have verified that the intended plugin directory should be empty, create an
+empty directory in the scratch volume and repeat step 3; this deliberately clears any currently
+installed plugins and disabled-plugin state:
+
+```bash
+docker compose run --rm --no-deps -v "$RESTORE_VOLUME:/restore" --entrypoint mkdir sharpmush-server \
+  -p /restore/data/lightning.plugins
+```
+
+Check world identity, logins, wiki assets, and plugin behavior using the
+[operator restore drill](../docs/guides/operator-handbook.md#restore-drill). Confirm a required
+installed plugin loads and a disabled plugin remains disabled. If any command failed, leave the
+services stopped and keep the scratch volume while you investigate. Once recovery is verified:
+
+```bash
+docker volume rm "$RESTORE_VOLUME"
+```
+
+A local regression check exercises the shell in step 3 against disposable fixture directories:
+`python3 -m unittest discover -s .github/scripts -p test_restore_instructions.py -v` from the
+repository root. This checks file replacement and failure handling; it does not replace a
+Restic/LMDB restore drill.
 
 A restored copy carries no `lock.mdb` — LMDB writes a fresh one on open — and no
 `lightning.previous`, which is a superseded world from a staging promotion and never part of a
