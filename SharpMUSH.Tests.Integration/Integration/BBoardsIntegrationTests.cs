@@ -174,6 +174,55 @@ public partial class BBoardsIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// A board's ON` hooks are a contract with the game's own code: each argument comes by name and by
+	/// place, so a hook written either way hears the same thing.
+	/// </summary>
+	[Test]
+	public async Task BoardHooksGetTheirArgumentsByNameAndByPlace()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbHookAdm", "bboard-admin");
+			var actor = await Objid(admin);
+			var board = await Board(admin, "BbHook");
+			var (_, key) = await BoardRow(admin, board);
+			await God($"&ON`POST {key}=&HEARD`POST me=%<post>|%0|%<actor>|%1|%<path>|%2|%<title>|%3");
+			await God($"&ON`COMMENT {key}=&HEARD`COMMENT me=%<post>|%0|%<actor>|%1|%<path>|%2|%<comment>|%3|%<reply>|%4");
+			await God($"&ON`PIN {key}=&HEARD`PIN me=%<post>|%0|%<actor>|%1|%<pinned>|%2");
+
+			var post = await Post(admin, board, "Hooked, by name", "Body.");
+			var heard = (await God($"think [get({key}/HEARD`POST)]")).Split('|');
+			await Assert.That(heard.Length).IsEqualTo(8).Because(string.Join("|", heard));
+			var postObjid = heard[0];
+			await Assert.That(postObjid).StartsWith("#").And.IsEqualTo(heard[1]);
+			await Assert.That(heard[2]).IsEqualTo(actor).And.IsEqualTo(heard[3]);
+			await Assert.That(heard[4]).IsEqualTo(post).And.IsEqualTo(heard[5]);
+			await Assert.That(heard[6]).IsEqualTo("Hooked, by name").And.IsEqualTo(heard[7])
+				.Because("a title holding a comma arrives whole, by name and by place");
+
+			await As(admin, $"+bbcomment {post}=First.");
+			await As(admin, $"+bbreply {post}/1=Answer.");
+			heard = (await God($"think [get({key}/HEARD`COMMENT)]")).Split('|');
+			await Assert.That(heard.Length).IsEqualTo(10).Because(string.Join("|", heard));
+			await Assert.That(heard[0]).IsEqualTo(postObjid).And.IsEqualTo(heard[1]);
+			await Assert.That(heard[2]).IsEqualTo(actor).And.IsEqualTo(heard[3]);
+			await Assert.That(heard[4]).IsEqualTo(post).And.IsEqualTo(heard[5]);
+			await Assert.That(heard[6]).IsNotEmpty().And.IsEqualTo(heard[7]);
+			await Assert.That(heard[8]).IsNotEmpty().And.IsEqualTo(heard[9])
+				.Because("a reply names the comment it answers");
+
+			await As(admin, $"+bbpin {post}");
+			heard = (await God($"think [get({key}/HEARD`PIN)]")).Split('|');
+			await Assert.That(string.Join("|", heard)).IsEqualTo($"{postObjid}|{postObjid}|{actor}|{actor}|1|1");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	[Test]
 	public async Task AModeratorsEditRunsAsTheModeratorAndSeesAnonymousAuthors()
 	{
