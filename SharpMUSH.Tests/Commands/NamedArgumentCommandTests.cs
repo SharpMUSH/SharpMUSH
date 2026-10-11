@@ -36,6 +36,15 @@ public class NamedArgumentCommandTests
 	}
 
 	[Test]
+	public async Task MapPassesTheElementAsPercentZeroAndItsPositionAsPercentOne()
+	{
+		var thing = await NewThing("MapArgs");
+		await Run($"&RUN {thing}=&OUT {thing}=[get({thing}/OUT)]%0%1[%q0]");
+		await Run($"@map/inline {thing}/RUN=a b");
+		await Assert.That(await Eval($"get({thing}/OUT)")).IsEqualTo("a1b2");
+	}
+
+	[Test]
 	public async Task TriggerArgsRefusesAnUnpairedName()
 	{
 		var thing = await NewThing("TrigOdd");

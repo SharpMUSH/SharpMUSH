@@ -52,7 +52,7 @@ public record CompatibilityOptions(
 	[property: SharpConfig(
 		Name = "http_qregisters",
 		Category = "Compatibility",
-		Description = "@http also hands its callback the response's status and content type as the q-registers STATUS and CONTENT-TYPE, as PennMUSH does, besides the named arguments %<status> and %<content-type>. A PennMUSH database import turns it on",
+		Description = "Also hand HTTP softcode q-registers, as PennMUSH does, besides the named arguments: STATUS and CONTENT-TYPE to an @http callback, and HDR.<name> and HEADERS to the http_handler. A PennMUSH database import turns it on",
 		Group = "PennMUSH Compatibility",
 		Order = 2)]
 	bool HttpQRegisters

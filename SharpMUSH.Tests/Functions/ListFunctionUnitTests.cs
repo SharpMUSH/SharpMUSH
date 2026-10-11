@@ -259,6 +259,17 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	/// <summary>map() passes each element's position, from 1, as %1, as PennMUSH does.</summary>
+	[Test]
+	[Arguments("map(test/POSITION_MAP,a b c)", "a1 b2 c3")]
+	[Arguments(@"map(#lambda/\%0\%1,a b c)", "a1 b2 c3")]
+	public async Task MapPassesThePositionAsPercentOne(string function, string expected)
+	{
+		var objNum = await CreateObjectWithAttribute("map_position_obj", "POSITION_MAP", "%0%1");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function.Replace("test", $"#{objNum}")));
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
 	/// <summary>
 	/// PennMUSH reads a bare attribute name as one on the executor.
 	/// </summary>

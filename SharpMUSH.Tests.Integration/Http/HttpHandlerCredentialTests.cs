@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Integration.Http;
 /// <summary>
 /// The portal sends its account-session bearer to <c>/http/</c>, and every route's softcode reads
 /// the same request registers. The credential (Authorization, Cookie, <c>?access_token</c>) must
-/// never reach softcode; the character it proves does, as <c>%q&lt;viewer&gt;</c>.
+/// never reach softcode; the character it proves does, as <c>%&lt;viewer&gt;</c>.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
@@ -74,7 +74,7 @@ public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
 	public async Task CredentialHeadersNeverReachSoftcode()
 	{
 		await SeedHandlerAttribute("CREDS",
-			"think auth=|%q<hdr.authorization>| proxy=|%q<hdr.proxy-authorization>| cookie=|%q<hdr.cookie>| names=|%q<headers>| custom=|%q<hdr.x-sharp-test>|");
+			"think auth=|%<hdr.authorization>| proxy=|%<hdr.proxy-authorization>| cookie=|%<hdr.cookie>| names=|%<headers>| custom=|%<hdr.x-sharp-test>|");
 
 		var http = CreateClient();
 		var (token, _) = await SignedInCharacterAsync(http);
@@ -100,7 +100,7 @@ public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task BasicCredentialsNeverReachSoftcode()
 	{
-		await SeedHandlerAttribute("BASICCREDS", "think auth=|%q<hdr.authorization>| viewer=|%q<viewer>|");
+		await SeedHandlerAttribute("BASICCREDS", "think auth=|%<hdr.authorization>| viewer=|%<viewer>|");
 
 		var http = CreateClient();
 		using var request = new HttpRequestMessage(new HttpMethod("BASICCREDS"), "http/basic");
@@ -116,7 +116,7 @@ public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task AccessTokenQueryParameterIsRemovedFromThePath()
 	{
-		await SeedHandlerAttribute("QUERYCREDS", "think path=|%0| viewer=|%q<viewer>|");
+		await SeedHandlerAttribute("QUERYCREDS", "think path=|%0| viewer=|%<viewer>|");
 
 		var http = CreateClient();
 		var (token, objid) = await SignedInCharacterAsync(http);
@@ -135,7 +135,7 @@ public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task SignedInRequestNamesItsCharacterAsViewer()
 	{
-		await SeedHandlerAttribute("WHOAMI", "think viewer=|%q<viewer>| name=|[name(%q<viewer>)]|");
+		await SeedHandlerAttribute("WHOAMI", "think viewer=|%<viewer>| name=|[name(%<viewer>)]|");
 
 		var http = CreateClient();
 		var (token, objid) = await SignedInCharacterAsync(http);
@@ -152,7 +152,7 @@ public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task AnonymousRequestHasNoViewer()
 	{
-		await SeedHandlerAttribute("ANONWHO", "think viewer=|%q<viewer>|");
+		await SeedHandlerAttribute("ANONWHO", "think viewer=|%<viewer>|");
 
 		var http = CreateClient();
 		using var request = new HttpRequestMessage(new HttpMethod("ANONWHO"), "http/anon");
@@ -168,7 +168,7 @@ public class HttpHandlerCredentialTests(ServerWebAppFactory factory)
 	{
 		// The stock router @includes the sub-attribute, which keeps the request's registers.
 		await SeedHandlerAttribute("POST", SharpMUSH.Server.Services.BundledHttpHooks.Attribute("POST"));
-		await SeedHandlerAttribute("POST`CREDTEST`WHO", "think viewer=|%q<viewer>| auth=|%q<hdr.authorization>|");
+		await SeedHandlerAttribute("POST`CREDTEST`WHO", "think viewer=|%<viewer>| auth=|%<hdr.authorization>|");
 
 		var http = CreateClient();
 		var (token, objid) = await SignedInCharacterAsync(http);

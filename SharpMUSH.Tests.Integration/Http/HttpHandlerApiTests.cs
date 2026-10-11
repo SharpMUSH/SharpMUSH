@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Integration.Http;
 /// End-to-end tests for the command-based inbound HTTP handler (help sharphttp): a request to
 /// <c>/http/&lt;path&gt;</c> runs the http_handler's (#8) <c>&lt;METHOD&gt;</c> attribute as a command list —
 /// PennMUSH's invisible-login + <c>@include #handler/&lt;method&gt;</c>. <c>%0</c> is the path+query,
-/// <c>%1</c> the body, headers arrive as <c>%q&lt;hdr.name&gt;</c> registers, everything emitted to the
+/// <c>%1</c> the body, headers arrive as <c>%&lt;hdr.name&gt;</c> named arguments, everything emitted to the
 /// handler becomes the response body, and <c>@respond</c> shapes status/content-type/headers.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -62,9 +62,9 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task Put_HeadersAndBodyArriveAtVerbAttribute()
 	{
-		// %q<hdr.NAME> per header plus %q<headers> listing the names (help sharphttp / HTTP3),
+		// %<hdr.NAME> per header plus %<headers> listing the names (help sharphttp / HTTP3),
 		// and %1 = the raw request body — JSON braces pass through verbatim.
-		await SeedHandlerAttribute("PUT", "think host=%q<hdr.host> custom=%q<hdr.x-sharp-test> names=%q<headers> got=%1");
+		await SeedHandlerAttribute("PUT", "think host=%<hdr.host> custom=%<hdr.x-sharp-test> names=%<headers> got=%1");
 
 		var http = factory.CreateHttpClient();
 		using var request = new HttpRequestMessage(HttpMethod.Put, "http/headers");

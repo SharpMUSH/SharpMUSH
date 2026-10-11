@@ -156,11 +156,29 @@ The default line is `<radio/101.5> Ann says, "Coming in."`, or `<radio/101.5> An
 
 ## Tie-in attributes
 
-These attributes on the kind's owner decide where a line goes and how it reads. Each is named after the kind, and each is optional. They are evaluated as the owner, with the speaker as enactor (`%#`). Each line has been stored by then, so [feedmsg()] can read it from `%0`.
+These attributes on the kind's owner decide where a line goes and how it reads. Each is named after the kind, and each is optional. They are evaluated as the owner, with the speaker as enactor (`%#`). Each line has been stored by then, so [feedmsg()] can read it from `%<id>`.
 
-- `FEED`<KIND>`ROUTE` returns the objids that should receive the line, separated by spaces. Without it, the line goes to the members who are not gagged. It gets `%0` the line id, `%1` the feed key, `%2` the speaker, `%3` the style, `%4` the message, `%5` the members who are not gagged, `%6` the `/to` list and `%7` the `/as` name.
-- `FEED`<KIND>`DELIVER` is run as an action list, in place, once per line, and does the delivery itself (`@pemit`, `@message`, anything). It gets `%0` the line id, `%1` the feed key, `%2` the recipients, `%3` the speaker, `%4` the style, `%5` the message and `%6` the `/as` name.
-- `FEED`<KIND>`FORMAT`, when there is no DELIVER, is evaluated for each recipient who can hear the speaker, and is the line that recipient sees; an empty result sends them nothing. It gets `%0` the message, `%1` the recipient, `%2` the speaker, `%3` the style, `%4` the feed key, `%5` the `/as` name and `%6` the line id.
+- `FEED`<KIND>`ROUTE` returns the objids that should receive the line, separated by spaces. Without it, the line goes to the members who are not gagged.
+- `FEED`<KIND>`DELIVER` is run as an action list, in place, once per line, and does the delivery itself (`@pemit`, `@message`, anything).
+- `FEED`<KIND>`FORMAT`, when there is no DELIVER, is evaluated for each recipient who can hear the speaker, and is the line that recipient sees; an empty result sends them nothing.
+
+Each reads what it needs by name (see [named arguments]). A name means the same thing in every tie-in and tap:
+
+| Name | Value | ROUTE | DELIVER | FORMAT | tap |
+| --- | --- | --- | --- | --- | --- |
+| `%<id>` | the line id | %0 | %0 | %6 | %0 |
+| `%<key>` | the feed key | %1 | %1 | %4 | |
+| `%<feed>` | the feed, `<kind>/<key>` | | | | %1 |
+| `%<speaker>` | the speaker | %2 | %3 | %2 | %3 |
+| `%<style>` | the style | %3 | %4 | %3 | %4 |
+| `%<text>` | the message | %4 | %5 | %0 | %5 |
+| `%<name>` | the `/as` name | %7 | %6 | %5 | %6 |
+| `%<audience>` | the members who are not gagged | %5 | | | |
+| `%<to>` | the `/to` list | %6 | | | |
+| `%<recipients>` | who receives it | | %2 | | %2 |
+| `%<recipient>` | the one recipient this line is for | | | %1 | |
+
+The positions are there for code written before the names; new code is easier to read with the names.
 
 ## Taps
 
@@ -169,7 +187,7 @@ These attributes on the kind's owner decide where a line goes and how it reads. 
 
 A tap is another system that hears every line of a kind, such as a scene recorder or a staff log. `@feed/tap radio=Logger/LOG`RADIO` adds one; `*` in place of the kind hears every kind. You must control the tap's object. `@feed/untap` removes one.
 
-For each line, after it is delivered, the tap's attribute is queued on its object with the speaker as enactor. It gets `%0` the line id, `%1` the feed (`<kind>/<key>`), `%2` who received it, `%3` the speaker, `%4` the style, `%5` the message and `%6` the `/as` name. A tap whose object or attribute is gone is skipped.
+For each line, after it is delivered, the tap's attribute is queued on its object with the speaker as enactor. It gets the names in the table under [@feed tie-ins]. A tap whose object or attribute is gone is skipped.
 
 ## Settings
 
@@ -219,7 +237,7 @@ The Radio object sits in the master room, so its commands are global. It needs n
 
 ```sharp
 > @feed/define radio=Radio
-> &FEED`RADIO`FORMAT Radio=<Radio %4> [name(%2)]: %0
+> &FEED`RADIO`FORMAT Radio=<Radio %<key>> [name(%<speaker>)]: %<text>
 > &CMD`TUNE Radio=$+tune *:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@feed/join radio/%0=%#;@pemit %#=Tuned to %0.
 > &CMD`RADIO Radio=$+radio *:@assert setr(f,first(feedsof(%#,radio)))=@pemit %#=Tune in first.;@feed/send %q<f>=%0
 > &CMD`OFF Radio=$+radio/off:@dolist/inline feedsof(%#,radio)=@feed/leave ##=%#;@pemit %#=Radio off.

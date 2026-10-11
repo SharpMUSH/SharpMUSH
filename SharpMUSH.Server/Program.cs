@@ -270,7 +270,7 @@ public class Program
 
 		// Who is calling, as the server verified it: the account session's acting character. The
 		// credential itself (Authorization, Cookie, ?access_token) is withheld from softcode by the
-		// dispatcher; this is what a route reads instead, as %q<viewer>. The scheme is named rather
+		// dispatcher; this is what a route reads instead, as %<viewer>. The scheme is named rather
 		// than taken from context.User so that Development's DebugAuth, which signs every request in
 		// as God, does not tell softcode an anonymous caller is God.
 		var session = await context.AuthenticateAsync(

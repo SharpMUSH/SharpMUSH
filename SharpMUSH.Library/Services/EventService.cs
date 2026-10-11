@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -72,14 +73,14 @@ public class EventService(
 			// by the handler and charged to it, so the code that raised the event never waits on it or
 			// shares its time limit. The handler runs with its own permissions: the seeded Event Handler
 			// (#9) is a WIZARD object; a custom, non-wizard handler runs unprivileged. The arguments are
-			// %0-%9. The body is re-wrapped as plain text (as @include does) so the stored markup cannot
-			// interfere with parsing.
-			var arguments = args.Index().ToDictionary(x => x.Index.ToString(), x => new CallState(x.Item));
+			// %0-%9, and each also by its name in EventArguments. The body is re-wrapped as plain text (as
+			// @include does) so the stored markup cannot interfere with parsing.
+			var arguments = EventArguments.Of(eventName, args);
 			var state = ParserState.RootFor(handlerRef) with
 			{
 				Enactor = resolvedEnactorRef,
 				Arguments = arguments,
-				EnvironmentRegisters = new(arguments),
+				EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
 				CurrentEvaluation = new DBAttribute(handlerRef, eventName)
 			};
 
