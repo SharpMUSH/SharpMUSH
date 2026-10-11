@@ -32,4 +32,4 @@ objects:
       # POST /http/PACKAGE_ID/submit — validate and acknowledge. %1 = posted
       # field JSON. Requires a non-empty subject; returns the structured envelope.
       POST`PACKAGE_UID`SUBMIT: |-
-        @respond/type application/json; think firstof(if(not(t(edit(json_query(%1,get,subject),",))),json(object,ok,json(boolean,false),errors,json(object,subject,json(string,A subject is required.)))),json(object,ok,json(boolean,true),message,json(string,Received. Staff will review it.),redirect,json(string,/)))
+        @respond/type application/json; think firstof(if(not(edit(json_query(%1,get,subject),",)),json(object,ok,json(boolean,false),errors,json(object,subject,json(string,A subject is required.)))),json(object,ok,json(boolean,true),message,json(string,Received. Staff will review it.),redirect,json(string,/)))

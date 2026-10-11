@@ -224,7 +224,7 @@ The router guards the dispatch with `@assert`: a request whose path maps to no s
 
 ```sharp
 think setq(fields,formq(after(%<path>,?)))
-@assert cand(t(setr(attrpath,edit(before(rest(%<path>,/),?),/,`))),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
+@assert cand(setr(attrpath,edit(before(rest(%<path>,/),?),/,`)),hasattr(me,GET`%q<attrpath>))=@respond 404 API NOT FOUND
 @include me/GET`%q<attrpath>=%<body>
 ```
 

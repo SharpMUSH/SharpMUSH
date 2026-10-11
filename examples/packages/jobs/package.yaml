@@ -1,6 +1,6 @@
 format: 1.2
 package: jobs
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -232,7 +232,7 @@ objects:
       # switches, %2 what follows, both exactly as typed.
       CMD`JOB:
         value: |-
-          $(?is)^\+(?\:my)?(?\:jobs?|tickets?)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)][setq(swm,u({{jobs}}/FUN`SWITCH,%q<sw>,JOB))]; @assert cor(not(strlen(%q<sw>)),strlen(%q<swm>))=@pemit %#=[notice(JOBS,[uargs({{jobs}}/FUN`ERR`SWITCH,switch,%q<sw>,kind,JOB,command,+job,topic,jobs commands)],warn)]; think [setq(sw,%q<swm>)][setq(route,u({{jobs}}/FUN`ROUTE,%q<sw>,%q<arg>))]; @assert cor(not(strlen(%q<page>)),t(member(get({{jobs}}/DATA`PAGED),%q<route>)))=@pemit %#=[notice(JOBS,[if(strlen(%q<sw>),+job/%q<sw>,+job <#>)] takes no page number.,warn)]; @include {{jobs}}/INC`JOB`%q<route>
+          $(?is)^\+(?\:my)?(?\:jobs?|tickets?)(/\S*)?(?\: +(.*))?$: think [u({{jobs}}/FUN`PARSE,%1,%2)][setq(swm,u({{jobs}}/FUN`SWITCH,%q<sw>,JOB))]; @assert cor(not(strlen(%q<sw>)),strlen(%q<swm>))=@pemit %#=[notice(JOBS,[uargs({{jobs}}/FUN`ERR`SWITCH,switch,%q<sw>,kind,JOB,command,+job,topic,jobs commands)],warn)]; think [setq(sw,%q<swm>)][setq(route,u({{jobs}}/FUN`ROUTE,%q<sw>,%q<arg>))]; @assert cor(not(strlen(%q<page>)),member(get({{jobs}}/DATA`PAGED),%q<route>))=@pemit %#=[notice(JOBS,[if(strlen(%q<sw>),+job/%q<sw>,+job <#>)] takes no page number.,warn)]; @include {{jobs}}/INC`JOB`%q<route>
         flags: [REGEXP]
       # +request [<bucket>/]<title>=<text>. What comes before the first / names a bucket only when it is
       # a bucket's full name, so "+request Help w/ exits=..." is a title in the default bucket.
@@ -257,7 +257,7 @@ objects:
       # %q<lhs> and %q<rhs> around the first =, %q<eq> (1 when there was an =), %q<me> (the actor's key)
       # and %q<actor>.
       FUN`PARSE: |-
-        [setq(sws,lcstr(trim(edit(%0,/,%b))))][setq(page,if(regmatch(last(%q<sws>),^\[0-9\]+$),last(%q<sws>)))][if(strlen(%q<page>),setq(sws,ldelete(%q<sws>,words(%q<sws>))))][setq(fmt,if(t(member(iter(%q<sws>,u({{jobs}}/FUN`FMTSW,%i0)),softcode)),softcode,markdown))][setq(sw,first(trim(iter(%q<sws>,if(strlen(u({{jobs}}/FUN`FMTSW,%i0)),,%i0)))))][setq(arg,trim(%1))][setq(eq,strmatch(%1,*=*))][setq(lhs,trim(before(%1,=)))][setq(rhs,trim(after(%1,=)))][setq(me,u({{jobs}}/FUN`KEY,%#))][setq(actor,objid(%#))]
+        [setq(sws,lcstr(trim(edit(%0,/,%b))))][setq(page,if(regmatch(last(%q<sws>),^\[0-9\]+$),last(%q<sws>)))][if(strlen(%q<page>),setq(sws,ldelete(%q<sws>,words(%q<sws>))))][setq(fmt,if(member(iter(%q<sws>,u({{jobs}}/FUN`FMTSW,%i0)),softcode),softcode,markdown))][setq(sw,first(trim(iter(%q<sws>,if(strlen(u({{jobs}}/FUN`FMTSW,%i0)),,%i0)))))][setq(arg,trim(%1))][setq(eq,strmatch(%1,*=*))][setq(lhs,trim(before(%1,=)))][setq(rhs,trim(after(%1,=)))][setq(me,u({{jobs}}/FUN`KEY,%#))][setq(actor,objid(%#))]
       # %0 a switch as typed: softcode or markdown when it is one of those or a prefix of three letters or
       # more (/soft), else nothing.
       FUN`FMTSW: |-
@@ -361,15 +361,15 @@ objects:
         [first(squish(iter(lcon({{buckets}}),if(not(comp(lcstr(name(%i0)),lcstr(trim(%0)))),objid(%i0)))))]
       # The same, unless the bucket is hidden from %1.
       FUN`BUCKET`SEEN: |-
-        [setq(_b,u({{jobs}}/FUN`BUCKET,%0))][if(cand(strlen(%q<_b>),cor(not(t(get(%q<_b>/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%q<_b>,%1))),%q<_b>)]
+        [setq(_b,u({{jobs}}/FUN`BUCKET,%0))][if(cand(strlen(%q<_b>),cor(not(get(%q<_b>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%q<_b>,%1))),%q<_b>)]
       FUN`BUCKETS`SEEN: |-
-        [sortkey({{jobs}}/FUN`NAMEKEY,squish(iter(lcon({{buckets}}),if(cor(not(t(get(%i0/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%i0,%0)),objid(%i0)))))]
+        [sortkey({{jobs}}/FUN`NAMEKEY,squish(iter(lcon({{buckets}}),if(cor(not(get(%i0/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%i0,%0)),objid(%i0)))))]
       FUN`NAMEKEY: |-
         [name(%0)]
       # Whether bucket %0 takes new jobs: filed in it or moved into it. +bucket/disable stops it; the jobs
       # already there stay and are worked as before.
       FUN`TAKES`JOBS: |-
-        [not(t(get(%0/DISABLED)))]
+        [not(get(%0/DISABLED))]
       # The slug a bucket called %0 gets: its permission is softcode.jobs.<slug>, its role job-admin-<slug>.
       FUN`SLUG: |-
         [lcstr(edit(trim(%0),%b,_,-,_))]
@@ -418,7 +418,7 @@ objects:
         [switch(%0,new,new,staff,needs staff,player,waiting on the player,held,on hold,closed,closed,%0)]
       # Overdue only counts while it is staff's turn, so a job waiting on its player is never overdue.
       FUN`IS`OVERDUE: |-
-        [cand(t(match(new staff,get(%0/STATE))),isint(get(%0/DUE)),lt(get(%0/DUE),secs()))]
+        [cand(match(new staff,get(%0/STATE)),isint(get(%0/DUE)),lt(get(%0/DUE),secs()))]
       FUN`WHEN: |-
         [if(isint(%0),timefmt($b $d $H:$M,%0),-)]
       FUN`DATE: |-
@@ -430,7 +430,7 @@ objects:
         [if(gt(setr(_t,firstof(get(%0/TURNAROUND),0)),0),add(secs(),mul(%q<_t>,86400)))]
       # none, +<n>h, +<n>d, +<n>w, or a date convtime() reads. Seconds, none, or #-1.
       FUN`DUE`PARSE: |-
-        [setq(_x,edit(trim(lcstr(%0)),+,,%b,))][switch(1,t(match(none clear,%q<_x>)),none,cand(isint(left(%q<_x>,dec(strlen(%q<_x>)))),t(match(h d w,right(%q<_x>,1)))),add(secs(),mul(left(%q<_x>,dec(strlen(%q<_x>))),switch(right(%q<_x>,1),h,3600,w,604800,86400))),isint(setr(_c,convtime(%0))),%q<_c>,#-1)]
+        [setq(_x,edit(trim(lcstr(%0)),+,,%b,))][switch(1,t(match(none clear,%q<_x>)),none,cand(isint(left(%q<_x>,dec(strlen(%q<_x>)))),match(h d w,right(%q<_x>,1))),add(secs(),mul(left(%q<_x>,dec(strlen(%q<_x>))),switch(right(%q<_x>,1),h,3600,w,604800,86400))),isint(setr(_c,convtime(%0))),%q<_c>,#-1)]
       FUN`PRIORITY`PARSE: |-
         [switch(lcstr(trim(%0)),low,low,green,low,normal,normal,yellow,normal,high,high,red,high,)]
       FUN`OUTCOME`HOOK: |-
@@ -463,7 +463,7 @@ objects:
         [squish(iter(lcon({{store}}),if(cand(not(hasflag(%i0,GOING)),u({{jobs}}/FUN`P`%1,%i0,%0,%2)),%i0)))]
       # Needs staff, in a bucket the person works.
       FUN`P`QUEUE: |-
-        [cand(t(match(new staff,get(%0/STATE))),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
+        [cand(match(new staff,get(%0/STATE)),u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1))]
       # Open, and theirs.
       FUN`P`OWN: |-
         [cand(not(strmatch(get(%0/STATE),closed)),u({{jobs}}/FUN`IS`PARTY,%0,%1))]
@@ -498,7 +498,7 @@ objects:
         [cand(u({{jobs}}/FUN`CAN`SEE,%0,%1),u({{jobs}}/FUN`UNREAD,%0,%1))]
       # The title or any message the person may read contains %2.
       FUN`P`SEARCH: |-
-        [cand(u({{jobs}}/FUN`CAN`SEE,%0,%1),cor(t(pos(lcstr(%2),lcstr(get(%0/TITLE)))),t(words(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(cand(uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%0,entry,%i0,staff,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1)),t(pos(lcstr(%2),lcstr(get(%0/ENTRY`%i0`TEXT))))),%i0))))))]
+        [cand(u({{jobs}}/FUN`CAN`SEE,%0,%1),cor(pos(lcstr(%2),lcstr(get(%0/TITLE))),words(iter(lnum(1,firstof(get(%0/ENTRIES),0)),if(cand(uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%0,entry,%i0,staff,u({{jobs}}/FUN`CAN`WORK,get(%0/BUCKET),%1)),pos(lcstr(%2),lcstr(get(%0/ENTRY`%i0`TEXT)))),%i0))))))
       # High priority first, then whoever has waited longest for their turn.
       FUN`SORT: |-
         [sortkey({{jobs}}/FUN`SORTKEY,%0)]
@@ -551,7 +551,7 @@ objects:
       # %<job> entry %<entry>, %<staff> 1 for staff, %<mode> empty, all or act. Replies are public, notes
       # staff-only, and the action log shows with /all and /act.
       FUN`ENTRY`VISIBLE: |-
-        [switch(get(%<job>/ENTRY`%<entry>`KIND),reply,not(strmatch(%<mode>,act)),note,cand(%<staff>,not(strmatch(%<mode>,act))),action,cand(%<staff>,t(match(all act,%<mode>))),0)]
+        [switch(get(%<job>/ENTRY`%<entry>`KIND),reply,not(strmatch(%<mode>,act)),note,cand(%<staff>,not(strmatch(%<mode>,act))),action,cand(%<staff>,match(all act,%<mode>)),0)]
       # The messages of job %0 a reader numbers, oldest first: replies, and notes for staff (%1 1). The
       # log is never numbered, so nobody's numbers skip, and a player's do not show that notes exist.
       FUN`NUMBERED: |-
@@ -656,7 +656,7 @@ objects:
       INC`JOB`REOPEN: |-
         @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert strmatch(get(%q<jo>/STATE),closed)=@pemit %#=[notice(JOBS,Job %q<n> is open.,warn)]; @include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,0; @pemit %#=[notice(JOBS,Job %q<n> is open again and waiting on staff.,ok)]
       INC`JOB`STATE: |-
-        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert t(match(staff player held,setr(to,lcstr(%q<rhs>))))=@pemit %#=[notice(JOBS,+job/state %q<n>=staff\, player or held.,warn)]; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,%q<to>; @pemit %#=[notice(JOBS,Job %q<n> is [u({{jobs}}/FUN`STATE`NAME,%q<to>)].,ok)]
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert match(staff player held,setr(to,lcstr(%q<rhs>)))=@pemit %#=[notice(JOBS,+job/state %q<n>=staff\, player or held.,warn)]; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,%q<to>; @pemit %#=[notice(JOBS,Job %q<n> is [u({{jobs}}/FUN`STATE`NAME,%q<to>)].,ok)]
       INC`JOB`HOLD: |-
         @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,held; @pemit %#=[notice(JOBS,Job %q<n> is on hold.,ok)]
       INC`JOB`CLAIM: |-
@@ -665,7 +665,7 @@ objects:
         @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @assert hasattr(%q<jo>,HANDLER`%q<me>)=@pemit %#=[notice(JOBS,You don't handle job %q<n>.,warn)]; @include/args {{jobs}}/INC`DO`CLAIM=handler,%q<actor>,add,0; @pemit %#=[notice(JOBS,You no longer handle job %q<n>.,ok)]
       # /assign <#>=<names>: replaces the handlers. +<role> assigns every holder of a role.
       INC`JOB`ASSIGN: |-
-        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert strlen(%q<rhs>)=@pemit %#=[notice(JOBS,+job/assign %q<n>=<players and +roles>,warn)]; think [setq(hl,iter(edit(%q<rhs>,chr(44),%b),if(strmatch(%i0,+*),if(valid(rolename,lcstr(rest(%i0,+))),role:[lcstr(rest(%i0,+))],#-1),firstof(u({{jobs}}/FUN`PLAYER,%i0,%#),#-1))))]; @assert not(t(member(%q<hl>,#-1)))=@pemit %#=[notice(JOBS,Assign players by name and roles as +<role>.,warn)]; @dolist/inline [lattr(%q<jo>/HANDLER`*)] [lattr(%q<jo>/HROLE`*)]=&## %q<jo>; @dolist/inline %q<hl>={@include/args {{jobs}}/INC`DO`CLAIM=handler,##,add,1}; @pemit %#=[notice(JOBS,Job %q<n> is handled by [u({{jobs}}/FUN`NAMES,%q<jo>,%#,HANDLER)].)]
+        @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; @include {{jobs}}/INC`NEED`OPEN; @assert strlen(%q<rhs>)=@pemit %#=[notice(JOBS,+job/assign %q<n>=<players and +roles>,warn)]; think [setq(hl,iter(edit(%q<rhs>,chr(44),%b),if(strmatch(%i0,+*),if(valid(rolename,lcstr(rest(%i0,+))),role:[lcstr(rest(%i0,+))],#-1),firstof(u({{jobs}}/FUN`PLAYER,%i0,%#),#-1))))]; @assert not(member(%q<hl>,#-1))=@pemit %#=[notice(JOBS,Assign players by name and roles as +<role>.,warn)]; @dolist/inline [lattr(%q<jo>/HANDLER`*)] [lattr(%q<jo>/HROLE`*)]=&## %q<jo>; @dolist/inline %q<hl>={@include/args {{jobs}}/INC`DO`CLAIM=handler,##,add,1}; @pemit %#=[notice(JOBS,Job %q<n> is handled by [u({{jobs}}/FUN`NAMES,%q<jo>,%#,HANDLER)].)]
       # /watch, and /tag: told of every change without handling it.
       INC`JOB`WATCH: |-
         @include {{jobs}}/INC`NEED`JOB; @include {{jobs}}/INC`NEED`STAFF; &WATCHER`%q<me> %q<jo>=[secs()]; @pemit %#=[notice(JOBS,You watch job %q<n>.,ok)]
@@ -698,7 +698,7 @@ objects:
         @include {{jobs}}/INC`NEED`ENTRY; @assert strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>)=@pemit %#=[notice(JOBS,You can only edit your own messages.,error)]; @assert cand(%q<eq>,strmatch(%q<rhs>,*/*),strlen(before(%q<rhs>,/)))=@pemit %#=[notice(JOBS,+job/edit %q<n>/%q<entn>=<old text>/<new text>,warn)]; @assert isint(pos(before(%q<rhs>,/),get(%q<jo>/ENTRY`%q<ent>`TEXT)))=@pemit %#=[notice(JOBS,Message %q<entn> on job %q<n> has no "[before(%q<rhs>,/)]" in it. Nothing changed.,warn)]; &ENTRY`%q<ent>`TEXT %q<jo>=[edit(get(%q<jo>/ENTRY`%q<ent>`TEXT),before(%q<rhs>,/),after(%q<rhs>,/))]; &ENTRY`%q<ent>`EDITED %q<jo>=[secs()]; @pemit %#=[notice(JOBS,Message %q<entn> on job %q<n> is changed.,ok)]
       # /format <#>/<entry>=markdown|softcode: how one message shows. The text is untouched.
       INC`JOB`FORMAT: |-
-        @include {{jobs}}/INC`NEED`ENTRY; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=@pemit %#=[notice(JOBS,Only its author or staff can change how a message shows.,error)]; @assert t(match(markdown softcode,setr(fmt,lcstr(%q<rhs>))))=@pemit %#=[notice(JOBS,+job/format %q<n>/%q<entn>=markdown or softcode,warn)]; @include/args {{jobs}}/INC`DO`FORMAT=entry,%q<ent>,format,%q<fmt>; @pemit %#=[notice(JOBS,Message %q<entn> on job %q<n> shows as %q<fmt>.,ok)]
+        @include {{jobs}}/INC`NEED`ENTRY; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=@pemit %#=[notice(JOBS,Only its author or staff can change how a message shows.,error)]; @assert match(markdown softcode,setr(fmt,lcstr(%q<rhs>)))=@pemit %#=[notice(JOBS,+job/format %q<n>/%q<entn>=markdown or softcode,warn)]; @include/args {{jobs}}/INC`DO`FORMAT=entry,%q<ent>,format,%q<fmt>; @pemit %#=[notice(JOBS,Message %q<entn> on job %q<n> shows as %q<fmt>.,ok)]
       # /create <bucket>/<title>=<text>: staff open a job of their own.
       INC`JOB`CREATE: |-
         @assert cand(%q<eq>,strmatch(%q<lhs>,*/*))=@pemit %#=[notice(JOBS,+job/create <bucket>/<title>=<text>,warn)]; @assert strlen(setr(fb,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,There is no bucket called [before(%q<lhs>,/)].,warn)]; @assert u({{jobs}}/FUN`CAN`WORK,%q<fb>,%#)=@pemit %#=[notice(JOBS,Only staff who work the [name(%q<fb>)] bucket can open a job in it.,error)]; @include/args {{jobs}}/INC`FILE`CHECKED=bucket,%q<fb>,title,[trim(after(%q<lhs>,/))],text,%q<rhs>
@@ -707,11 +707,11 @@ objects:
         @assert cand(%q<eq>,strmatch(%q<lhs>,*/*))=@pemit %#=[notice(JOBS,+job/query <player>/<title>=<text>,warn)]; @assert strlen(setr(tp,u({{jobs}}/FUN`PLAYER,before(%q<lhs>,/),%#)))=@pemit %#=[notice(JOBS,I don't know a player called [before(%q<lhs>,/)].,warn)]; @assert strlen(setr(fb,u({{jobs}}/FUN`BUCKET,get({{jobs}}/DATA`DEFAULT`BUCKET))))=@pemit %#=[notice(JOBS,There is no [get({{jobs}}/DATA`DEFAULT`BUCKET)] bucket.,warn)]; @assert u({{jobs}}/FUN`CAN`WORK,%q<fb>,%#)=@pemit %#=[notice(JOBS,Only staff who work the [name(%q<fb>)] bucket can open a job for a player.,error)]; @assert cand(strlen(setr(title,trim(after(%q<lhs>,/)))),strlen(%q<rhs>))=@pemit %#=[notice(JOBS,+job/query <player>/<title>=<text>,warn)]; @include/args {{jobs}}/INC`DO`FILE=filer,[objid(%q<tp>)],author,%q<actor>,priority,,bucket,%q<fb>,title,%q<title>,text,%q<rhs>,format,%q<fmt>,how,query; @include/args {{jobs}}/INC`DO`CLAIM=handler,%q<actor>,add,1; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,player; @pemit %#=[notice(JOBS,Opened job %q<n> for [name(%q<tp>)]: %q<title>,ok)]
       # Each person turns job @mail on or off. Staff /mail reaches them either way.
       INC`JOB`OPTIONS: |-
-        @break not(strlen(%q<arg>))=@pemit %#=[notice(JOBS,Job mail is [setr(_mo,firstof(get({{store}}/OPT`MAIL`%q<me>),on))]. +job/options mail=[if(strmatch(%q<_mo>,off),on starts,off stops)] it.)]; @assert cand(strmatch(%q<lhs>,mail),t(match(on off,lcstr(%q<rhs>))))=@pemit %#=[notice(JOBS,+job/options mail=on or mail=off,warn)]; &OPT`MAIL`%q<me> {{store}}=[if(strmatch(%q<rhs>,off),off)]; @pemit %#=[notice(JOBS,Job mail is [lcstr(%q<rhs>)].,ok)]
+        @break not(strlen(%q<arg>))=@pemit %#=[notice(JOBS,Job mail is [setr(_mo,firstof(get({{store}}/OPT`MAIL`%q<me>),on))]. +job/options mail=[if(strmatch(%q<_mo>,off),on starts,off stops)] it.)]; @assert cand(strmatch(%q<lhs>,mail),match(on off,lcstr(%q<rhs>)))=@pemit %#=[notice(JOBS,+job/options mail=on or mail=off,warn)]; &OPT`MAIL`%q<me> {{store}}=[if(strmatch(%q<rhs>,off),off)]; @pemit %#=[notice(JOBS,Job mail is [lcstr(%q<rhs>)].,ok)]
       # %<bucket> (an objid, or empty when there is none), %<title> and %<text>, from +request, +bug and
       # friends, and /create; the /softcode switch is %q<fmt>, as FUN`PARSE left it.
       INC`FILE`CHECKED: |-
-        @assert strlen(%<bucket>)=@pemit %#=[notice(JOBS,There is no such bucket. +buckets lists them.,warn)]; @assert cand(u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#),cor(not(t(get(%<bucket>/HIDDEN))),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#)))=@pemit %#=[notice(JOBS,You can't file in [name(%<bucket>)].,error)]; @assert u({{jobs}}/FUN`TAKES`JOBS,%<bucket>)=@pemit %#=[notice(JOBS,[name(%<bucket>)] is not taking new jobs. +buckets lists the buckets.,warn)]; @assert strlen(%<title>)=@pemit %#=[notice(JOBS,Give it a title: +request <title>=<text>,warn)]; @assert lte(strlen(%<title>),80)=@pemit %#=[notice(JOBS,Keep the title to 80 characters. The rest goes after the =.,warn)]; @assert strlen(%<text>)=@pemit %#=[notice(JOBS,Say what you need after the =.,warn)]; @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<fmt>,how,command; @pemit %#=[notice(JOBS,Filed job %q<n> in [name(%<bucket>)]: %<title>. +job %q<n> shows it.,ok)]
+        @assert strlen(%<bucket>)=@pemit %#=[notice(JOBS,There is no such bucket. +buckets lists them.,warn)]; @assert cand(u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#),cor(not(get(%<bucket>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#)))=@pemit %#=[notice(JOBS,You can't file in [name(%<bucket>)].,error)]; @assert u({{jobs}}/FUN`TAKES`JOBS,%<bucket>)=@pemit %#=[notice(JOBS,[name(%<bucket>)] is not taking new jobs. +buckets lists the buckets.,warn)]; @assert strlen(%<title>)=@pemit %#=[notice(JOBS,Give it a title: +request <title>=<text>,warn)]; @assert lte(strlen(%<title>),80)=@pemit %#=[notice(JOBS,Keep the title to 80 characters. The rest goes after the =.,warn)]; @assert strlen(%<text>)=@pemit %#=[notice(JOBS,Say what you need after the =.,warn)]; @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<fmt>,how,command; @pemit %#=[notice(JOBS,Filed job %q<n> in [name(%<bucket>)]: %<title>. +job %q<n> shows it.,ok)]
 
       # ---- writes, shared with the portal routes and the API -------------------
       # Each takes what it writes as named arguments (@include/args): text with commas in it arrives
@@ -735,7 +735,7 @@ objects:
       # A reply or staff note (%<kind>) of %<text> (%<format>) on %q<jo>, with the turn and reopening rules
       # of +job/reply. %<mailforce> 1 mails the filer even when they turned job mail off.
       INC`DO`REPLY: |-
-        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(astaff,u({{jobs}}/FUN`CAN`WORK,get(%q<jo>/BUCKET),%q<actor>))][setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,%<kind>,action,,by,%q<actor>,text,%<text>,format,%<format>; think [setq(rentry,%q<entry>)]; @if cand(strmatch(%<kind>,reply),%q<wasclosed>,not(%q<astaff>))={@include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,1}; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,[if(cand(strmatch(%<kind>,reply),not(t(match(closed held,get(%q<jo>/STATE))))),if(%q<astaff>,player,staff))]; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,if(strmatch(%<kind>,note),added a staff note to,replied to))],verb,[if(strmatch(%<kind>,reply),replied to)],mail,1,mailtext,%<text>,mailforce,%<mailforce>; @trigger/args %q<b>/ON`REPLY=0,%q<n>,1,%q<actor>,2,%q<rentry>,3,[if(strmatch(%<kind>,reply),1,0)],job,%q<n>,actor,%q<actor>,entry,%q<rentry>,public,[if(strmatch(%<kind>,reply),1,0)]
+        think [setq(b,get(%q<jo>/BUCKET))][setq(n,get(%q<jo>/NUM))][setq(astaff,u({{jobs}}/FUN`CAN`WORK,get(%q<jo>/BUCKET),%q<actor>))][setq(wasclosed,strmatch(get(%q<jo>/STATE),closed))]; @include/args {{jobs}}/INC`DO`ENTRY=kind,%<kind>,action,,by,%q<actor>,text,%<text>,format,%<format>; think [setq(rentry,%q<entry>)]; @if cand(strmatch(%<kind>,reply),%q<wasclosed>,not(%q<astaff>))={@include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,1}; @include/nobreak/args {{jobs}}/INC`DO`TURN=to,[if(cand(strmatch(%<kind>,reply),not(match(closed held,get(%q<jo>/STATE)))),if(%q<astaff>,player,staff))]; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,[u({{jobs}}/FUN`MSG,%q<jo>,%q<actor>,if(strmatch(%<kind>,note),added a staff note to,replied to))],verb,[if(strmatch(%<kind>,reply),replied to)],mail,1,mailtext,%<text>,mailforce,%<mailforce>; @trigger/args %q<b>/ON`REPLY=0,%q<n>,1,%q<actor>,2,%q<rentry>,3,[if(strmatch(%<kind>,reply),1,0)],job,%q<n>,actor,%q<actor>,entry,%q<rentry>,public,[if(strmatch(%<kind>,reply),1,0)]
       # Moves %q<jo> to state %<to>; nothing when it is there already or %<to> is empty. Include with /nobreak.
       INC`DO`TURN: |-
         @break cor(not(strlen(%<to>)),strmatch(get(%q<jo>/STATE),%<to>)); think [setq(_from,get(%q<jo>/STATE))]; &STATE %q<jo>=%<to>; &TURN`AT %q<jo>=[secs()]; @include/args {{jobs}}/INC`DO`LOG=line,Moved from [u({{jobs}}/FUN`STATE`NAME,%q<_from>)] to [u({{jobs}}/FUN`STATE`NAME,%<to>)].,code,state:%<to>; @trigger/args [get(%q<jo>/BUCKET)]/ON`TURN=0,[get(%q<jo>/NUM)],1,%q<actor>,2,%q<_from>,3,%<to>,job,[get(%q<jo>/NUM)],actor,%q<actor>,from,%q<_from>,to,%<to>
@@ -790,14 +790,14 @@ objects:
         [fields(,About,get(%0/DESCRIPTION),Turnaround,[firstof(get(%0/TURNAROUND),0)] days,Reopen,[firstof(get(%0/REOPEN),0)] days,Anonymous,firstof(get(%0/ANONYMOUS),none),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%0),yes,no))]
       # The same with what only the people who work it need.
       FUN`BUCKET`FIELDS`STAFF: |-
-        [fields(,About,get(%0/DESCRIPTION),Turnaround,[firstof(get(%0/TURNAROUND),0)] days,Reopen,[firstof(get(%0/REOPEN),0)] days,Anonymous,firstof(get(%0/ANONYMOUS),none),Hidden,if(t(get(%0/HIDDEN)),yes,no),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%0),yes,no),Priority,firstof(get(%0/PRIORITY),normal),Keep,if(get(%0/KEEP),[get(%0/KEEP)] days,forever),Permission,softcode.jobs.[get(%0/SLUG)],Role,job-admin-[get(%0/SLUG)],File lock,lock(%0/file),Work lock,lock(%0/work),Hooks,firstof(itemize(squish(iter(lattr(%0/ON`*),if(strmatch(get(%0/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]
+        [fields(,About,get(%0/DESCRIPTION),Turnaround,[firstof(get(%0/TURNAROUND),0)] days,Reopen,[firstof(get(%0/REOPEN),0)] days,Anonymous,firstof(get(%0/ANONYMOUS),none),Hidden,if(get(%0/HIDDEN),yes,no),Taking jobs,if(u({{jobs}}/FUN`TAKES`JOBS,%0),yes,no),Priority,firstof(get(%0/PRIORITY),normal),Keep,if(get(%0/KEEP),[get(%0/KEEP)] days,forever),Permission,softcode.jobs.[get(%0/SLUG)],Role,job-admin-[get(%0/SLUG)],File lock,lock(%0/file),Work lock,lock(%0/work),Hooks,firstof(itemize(squish(iter(lattr(%0/ON`*),if(strmatch(get(%0/%i0),@@*),,lcstr(after(%i0,`)))))),none written))]
       FUN`SETTING`OK: |-
         [switch(%0,description,lte(strlen(%1),200),turnaround,cand(isint(%1),gte(%1,0)),reopen,cand(isint(%1),gte(%1,0)),keep,cor(not(strlen(%1)),cand(isint(%1),gt(%1,0))),anonymous,t(match(none filer staff,lcstr(%1))),hidden,t(match(yes no on off 1 0,lcstr(%1))),priority,t(strlen(u({{jobs}}/FUN`PRIORITY`PARSE,%1))),0)]
       FUN`SETTING`VALUE: |-
         [switch(%0,hidden,t(match(yes on 1,lcstr(%1))),anonymous,lcstr(%1),priority,u({{jobs}}/FUN`PRIORITY`PARSE,%1),%1)]
       # Settings only. Hook code (ON`*) is written by whoever controls the bucket object, not through here.
       INC`BUCKET`SET: |-
-        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/set <bucket>/<setting>=<value>,warn)]; @assert cor(u({{jobs}}/FUN`IS`ADMIN,%#),u({{jobs}}/FUN`CAN`WORK,%q<bk>,%#))=@pemit %#=[notice(JOBS,Only a Job Admin or someone who works [name(%q<bk>)] can change it.,error)]; @assert t(match(description turnaround reopen anonymous hidden priority keep,setr(set,lcstr(trim(after(%q<lhs>,/))))))=@pemit %#=[notice(JOBS,The settings are description\, turnaround\, reopen\, anonymous\, hidden\, priority and keep.,warn)]; @assert u({{jobs}}/FUN`SETTING`OK,%q<set>,%q<rhs>)=@pemit %#=[notice(JOBS,[get({{jobs}}/DATA`SETTING`%q<set>)],warn)]; &%q<set> %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,%q<set>,%q<rhs>)]; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<set> is [firstof(get(%q<bk>/%q<set>),nothing)].)]
+        @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/set <bucket>/<setting>=<value>,warn)]; @assert cor(u({{jobs}}/FUN`IS`ADMIN,%#),u({{jobs}}/FUN`CAN`WORK,%q<bk>,%#))=@pemit %#=[notice(JOBS,Only a Job Admin or someone who works [name(%q<bk>)] can change it.,error)]; @assert match(description turnaround reopen anonymous hidden priority keep,setr(set,lcstr(trim(after(%q<lhs>,/)))))=@pemit %#=[notice(JOBS,The settings are description\, turnaround\, reopen\, anonymous\, hidden\, priority and keep.,warn)]; @assert u({{jobs}}/FUN`SETTING`OK,%q<set>,%q<rhs>)=@pemit %#=[notice(JOBS,[get({{jobs}}/DATA`SETTING`%q<set>)],warn)]; &%q<set> %q<bk>=[u({{jobs}}/FUN`SETTING`VALUE,%q<set>,%q<rhs>)]; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<set> is [firstof(get(%q<bk>/%q<set>),nothing)].)]
       # What is wrong with %0 as the name of a new bucket, or of bucket %1 renamed; nothing when it will do.
       FUN`ERR`NAME: |-
         [setq(_en,u({{jobs}}/FUN`BUCKET,%0))][switch(1,not(cand(strlen(%0),lte(strlen(%0),20),valid(name,%0),valid(permission,softcode.jobs.[u({{jobs}}/FUN`SLUG,%0)]))),A bucket name is up to 20 letters\, digits\, spaces and dashes\, starting with a letter.,cand(strlen(%q<_en>),comp(%q<_en>,%1)),There is a [name(%q<_en>)] bucket already.,cand(not(strlen(%1)),strlen(u({{jobs}}/FUN`BUCKET`BYSLUG,u({{jobs}}/FUN`SLUG,%0)))),[name(u({{jobs}}/FUN`BUCKET`BYSLUG,u({{jobs}}/FUN`SLUG,%0)))] already has the permission softcode.jobs.[u({{jobs}}/FUN`SLUG,%0)]. Pick another name.,)]
@@ -849,7 +849,7 @@ objects:
         @assert cand(isdbref(%0),strlen(get(%0/DELETING`TO))); think [setq(bk,%0)][setq(nb,get(%0/DELETING`TO))][setq(actor,get(%0/DELETING`BY))][setq(bname,name(%0))][setq(_bs,get({{jobs}}/DATA`MOVE`BATCH))][setq(_dj,u({{jobs}}/FUN`SELECT,%q<actor>,INBUCKET,%0))]; @assert isdbref(%q<nb>)={&DELETING`TO %0; @pemit %q<actor>=[notice(JOBS,Stopped deleting bucket %q<bname>: the bucket its jobs were moving to is gone. It takes no new jobs. Delete it again to move the rest.,warn)]}; @dolist/inline [extract(%q<_dj>,1,%q<_bs>)]={think [setq(jo,##)]; @include/args {{jobs}}/INC`DO`TRANSFER=bucket,%q<nb>}; @break gt(words(%q<_dj>),%q<_bs>)=@trigger {{jobs}}/TRIG`BUCKET`DRAIN=%0; think [setq(_dm,get(%0/DELETING`MOVED))][setq(_dn,name(%q<nb>))]; @include {{jobs}}/INC`DO`BUCKET`GONE; @pemit %q<actor>=[notice(JOBS,Bucket %q<bname> is deleted\, with its role and permission. [u({{jobs}}/FUN`NJOBS,%q<_dm>)] moved to %q<_dn>.,ok)]
       # +bucket/lock <bucket>/file|work=<lock>: ordinary locks, so perm^, role^ and the rest all work.
       INC`BUCKET`LOCK: |-
-        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/lock <bucket>/file|work=<lock>,warn)]; @assert t(match(file work,setr(lk,lcstr(trim(after(%q<lhs>,/))))))=@pemit %#=[notice(JOBS,A bucket has a file lock \(who may file\) and a work lock \(who works it\).,warn)]; @lock/user:%q<lk> %q<bk>=%q<rhs>; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<lk> lock: [lock(%q<bk>/%q<lk>)])]
+        @include {{jobs}}/INC`NEED`ADMIN; @assert strlen(setr(bk,u({{jobs}}/FUN`BUCKET,before(%q<lhs>,/))))=@pemit %#=[notice(JOBS,+bucket/lock <bucket>/file|work=<lock>,warn)]; @assert match(file work,setr(lk,lcstr(trim(after(%q<lhs>,/)))))=@pemit %#=[notice(JOBS,A bucket has a file lock \(who may file\) and a work lock \(who works it\).,warn)]; @lock/user:%q<lk> %q<bk>=%q<rhs>; @pemit %#=[notice(JOBS,[name(%q<bk>)] %q<lk> lock: [lock(%q<bk>/%q<lk>)])]
 
       # ---- timer, login, functions, API ----------------------------------------------
       FUN`DUE`NOW: |-
@@ -867,7 +867,7 @@ objects:
       # Whether calling object %1 may read job %0 through job(), jobs() and jobentries(): someone who may
       # see it, a see_all holder, or a bucket's own hook.
       FUN`CALLER`OK: |-
-        [cor(u({{jobs}}/FUN`CAN`SEE,%0,%1),t(permission(%1,game.see_all)),strmatch(objid(loc(%1)),{{buckets}}))]
+        [cor(u({{jobs}}/FUN`CAN`SEE,%0,%1),permission(%1,game.see_all),strmatch(objid(loc(%1)),{{buckets}}))]
       # job(<#>, <field>): see +help jobs api.
       FUN`API`JOB: |-
         [setq(_j,u({{jobs}}/FUN`JOB,%0))][if(not(cand(strlen(%q<_j>),u({{jobs}}/FUN`CALLER`OK,%q<_j>,%@))),#-1 NO SUCH JOB,switch(lcstr(%1),number,get(%q<_j>/NUM),bucket,name(get(%q<_j>/BUCKET)),title,get(%q<_j>/TITLE),state,get(%q<_j>/STATE),outcome,get(%q<_j>/OUTCOME),priority,get(%q<_j>/PRIORITY),filer,if(u({{jobs}}/FUN`FILER`SHOWN,%q<_j>,%@),get(%q<_j>/FILED`BY)),filed,get(%q<_j>/FILED`AT),due,get(%q<_j>/DUE),updated,get(%q<_j>/UPDATED`AT),overdue,u({{jobs}}/FUN`IS`OVERDUE,%q<_j>),handlers,u({{jobs}}/FUN`HLIST,%q<_j>,HANDLER),watchers,u({{jobs}}/FUN`HLIST,%q<_j>,WATCHER),helpers,u({{jobs}}/FUN`HLIST,%q<_j>,HELPER),entries,get(%q<_j>/ENTRIES),#-1 NO SUCH FIELD))]
@@ -891,7 +891,7 @@ objects:
       # @include/args Jobs/INC`API`CLOSE=job,<#>,actor,<actor>,outcome,<approved|denied|completed|canceled>[,text,<text>]
       # closes a job, with the closing message when there is one.
       INC`API`CLOSE: |-
-        think [setq(jo,u({{jobs}}/FUN`JOB,%<job>))][setq(actor,objid(%<actor>))][setq(outcome,lcstr(%<outcome>))]; @assert cand(strlen(%q<jo>),strlen(%q<actor>),t(match(approved denied completed canceled,%q<outcome>)),not(strmatch(get(%q<jo>/STATE),closed))); @include/args {{jobs}}/INC`DO`CLOSE=outcome,%q<outcome>,text,%<text>,format,[firstof(%<format>,markdown)]
+        think [setq(jo,u({{jobs}}/FUN`JOB,%<job>))][setq(actor,objid(%<actor>))][setq(outcome,lcstr(%<outcome>))]; @assert cand(strlen(%q<jo>),strlen(%q<actor>),match(approved denied completed canceled,%q<outcome>),not(strmatch(get(%q<jo>/STATE),closed))); @include/args {{jobs}}/INC`DO`CLOSE=outcome,%q<outcome>,text,%<text>,format,[firstof(%<format>,markdown)]
 
       # ---- portal -----------------------------------------------------------------
       # The jobs-app package shows these at /apps/jobs. The routes on the HTTP handler (below) hand
@@ -907,10 +907,10 @@ objects:
       WEB`EMPTY: |-
         [chr(123)][chr(125)]
       WEB`B: |-
-        [json(boolean,if(t(%0),true,false))]
+        [json(boolean,if(%0,true,false))]
       # One datum: JSON value %0, shown when %1 is true.
       WEB`V: |-
-        [json(object,value,if(t(%1),%0,json(string,)),visible,u({{jobs}}/WEB`B,%1))]
+        [json(object,value,if(%1,%0,json(string,)),visible,u({{jobs}}/WEB`B,%1))]
       # Field %0 of the posted JSON in %q<body>, unquoted.
       WEB`GET: |-
         [setq(_g,json_query(%q<body>,get,%0))][if(strmatch(%q<_g>,"*),json_query(%q<_g>,unescape),%q<_g>)]
@@ -973,7 +973,7 @@ objects:
         [setq(_qk,u({{jobs}}/WEB`QBUCKET,%0,%2))][setq(_qt,json(object,kind,json(string,table),rows_field,json(string,jobs),columns,u({{jobs}}/WEB`COLS),empty,json(string,No jobs here.)))][u({{jobs}}/WEB`DOC,view,if(strlen(%q<_qk>),Open jobs in [name(%q<_qk>)],u({{jobs}}/WEB`FLABEL,u({{jobs}}/WEB`QFILTER,%0,%1),u({{jobs}}/WEB`STAFF,%0))),u({{jobs}}/WEB`SEC,,1,%q<_qt>))]
       # Filter %1 when viewer %0 has it, else default.
       WEB`QFILTER: |-
-        [if(t(match(u({{jobs}}/WEB`FILTERS,%0),%1)),%1,default)]
+        [if(match(u({{jobs}}/WEB`FILTERS,%0),%1),%1,default)]
       # The bucket whose slug is %1, when viewer %0 works it.
       WEB`QBUCKET: |-
         [if(strlen(%1),first(squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(cand(strmatch(get(%i0/SLUG),%1),u({{jobs}}/FUN`CAN`WORK,%i0,%0)),%i0)))))]
@@ -1046,7 +1046,7 @@ objects:
       # Runs the posted op as %<viewer> and leaves the answer in %q<out>. Checks mirror the +job and
       # +bucket commands; the writes are the same INC`DO` routines and settings.
       WEB`ACT: |-
-        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%<viewer>)][setq(me,if(strlen(%<viewer>),u({{jobs}}/FUN`KEY,%<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(t(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode)))),softcode,markdown))]; @assert strlen(%<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert t(match(file reply claim unclaim close reopen format bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<op>))=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
+        think [setq(out,u({{jobs}}/WEB`ERR,Something went wrong.))][setq(op,lcstr(u({{jobs}}/WEB`GET,op)))][setq(actor,%<viewer>)][setq(me,if(strlen(%<viewer>),u({{jobs}}/FUN`KEY,%<viewer>)))][setq(wn,u({{jobs}}/WEB`GET,job))][setq(text,u({{jobs}}/WEB`GET,text))][setq(fmt,if(match(true 1 yes on,lcstr(u({{jobs}}/WEB`GET,softcode))),softcode,markdown))]; @assert strlen(%<viewer>)=think [setq(out,u({{jobs}}/WEB`ERR,Sign in with a character first.))]; @assert match(file reply claim unclaim close reopen format bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<op>)=think [setq(out,u({{jobs}}/WEB`ERR,There is no [firstof(%q<op>,such)] action.))]; @include {{jobs}}/WEB`ACT`%q<op>
       WEB`ACT`FILE: |-
         think [setq(fb,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`GET,bucket),%<viewer>))][setq(title,trim(u({{jobs}}/WEB`GET,title)))]; @assert cand(strlen(%q<fb>),u({{jobs}}/FUN`CAN`FILE,%q<fb>,%<viewer>))=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,Pick a bucket you can file in.))]; @assert u({{jobs}}/FUN`TAKES`JOBS,%q<fb>)=think [setq(out,u({{jobs}}/WEB`ERRF,bucket,[name(%q<fb>)] is not taking new jobs.))]; @assert strlen(%q<title>)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Give it a title.))]; @assert lte(strlen(%q<title>),80)=think [setq(out,u({{jobs}}/WEB`ERRF,title,Keep the title to 80 characters.))]; @assert strlen(trim(%q<text>))=think [setq(out,u({{jobs}}/WEB`ERRF,text,Say what you need.))]; @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%q<fb>,title,%q<title>,text,%q<text>,format,%q<fmt>,how,portal; think [setq(out,json(object,ok,json(boolean,true),message,json(string,Filed job %q<n>.),redirect,json(string,/apps/jobs/%q<n>)))]
       # The posted job, as INC`NEED`JOB finds one for a command.
@@ -1064,11 +1064,11 @@ objects:
         @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @assert hasattr(%q<jo>,HANDLER`%q<me>)=think [setq(out,u({{jobs}}/WEB`ERR,You do not handle job %q<n>.))]; @include/args {{jobs}}/INC`DO`CLAIM=handler,%q<actor>,add,0; think [setq(out,u({{jobs}}/WEB`DONE,You no longer handle job %q<n>.,%<viewer>))]
       # The message box, when filled, is the closing message, as with +job/approve <#>=<text>.
       WEB`ACT`CLOSE: |-
-        @include {{jobs}}/WEB`NEED`JOB; think [setq(outcome,lcstr(u({{jobs}}/WEB`GET,outcome)))]; @assert t(match(approved denied completed canceled,%q<outcome>))=think [setq(out,u({{jobs}}/WEB`ERR,A job closes as approved/denied/completed or canceled.))]; @assert cor(%q<staff>,cand(strmatch(%q<outcome>,canceled),u({{jobs}}/FUN`IS`PARTY,%q<jo>,%<viewer>)))=think [setq(out,u({{jobs}}/WEB`ERR,Only staff who work the [name(%q<b>)] bucket can do that.))]; @include {{jobs}}/WEB`NEED`OPEN; @include/args {{jobs}}/INC`DO`CLOSE=outcome,%q<outcome>,text,%q<text>,format,%q<fmt>; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is closed: %q<outcome>.,%<viewer>))]
+        @include {{jobs}}/WEB`NEED`JOB; think [setq(outcome,lcstr(u({{jobs}}/WEB`GET,outcome)))]; @assert match(approved denied completed canceled,%q<outcome>)=think [setq(out,u({{jobs}}/WEB`ERR,A job closes as approved/denied/completed or canceled.))]; @assert cor(%q<staff>,cand(strmatch(%q<outcome>,canceled),u({{jobs}}/FUN`IS`PARTY,%q<jo>,%<viewer>)))=think [setq(out,u({{jobs}}/WEB`ERR,Only staff who work the [name(%q<b>)] bucket can do that.))]; @include {{jobs}}/WEB`NEED`OPEN; @include/args {{jobs}}/INC`DO`CLOSE=outcome,%q<outcome>,text,%q<text>,format,%q<fmt>; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is closed: %q<outcome>.,%<viewer>))]
       WEB`ACT`REOPEN: |-
         @include {{jobs}}/WEB`NEED`JOB; @include {{jobs}}/WEB`NEED`STAFF; @assert strmatch(get(%q<jo>/STATE),closed)=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> is open.))]; @include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,0; think [setq(out,u({{jobs}}/WEB`DONE,Job %q<n> is open again.,%<viewer>))]
       WEB`ACT`FORMAT: |-
-        @include {{jobs}}/WEB`NEED`JOB; think [setq(ent,u({{jobs}}/WEB`GET,entry))][setq(fmt,lcstr(u({{jobs}}/WEB`GET,fmt)))]; @assert cand(isint(%q<ent>),hasattr(%q<jo>,ENTRY`%q<ent>`KIND),not(strmatch(get(%q<jo>/ENTRY`%q<ent>`KIND),action)),uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%q<jo>,entry,%q<ent>,staff,%q<staff>))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> has no message %q<ent>.))]; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=think [setq(out,u({{jobs}}/WEB`ERR,Only its author or staff can change how a message shows.))]; @assert t(match(markdown softcode,%q<fmt>))=think [setq(out,u({{jobs}}/WEB`ERR,A message shows as markdown or softcode.))]; @include/args {{jobs}}/INC`DO`FORMAT=entry,%q<ent>,format,%q<fmt>; think [setq(out,u({{jobs}}/WEB`DONE,Message %q<ent> shows [if(strmatch(%q<fmt>,softcode),as typed,as markdown)] now.,%<viewer>))]
+        @include {{jobs}}/WEB`NEED`JOB; think [setq(ent,u({{jobs}}/WEB`GET,entry))][setq(fmt,lcstr(u({{jobs}}/WEB`GET,fmt)))]; @assert cand(isint(%q<ent>),hasattr(%q<jo>,ENTRY`%q<ent>`KIND),not(strmatch(get(%q<jo>/ENTRY`%q<ent>`KIND),action)),uargs({{jobs}}/FUN`ENTRY`VISIBLE,job,%q<jo>,entry,%q<ent>,staff,%q<staff>))=think [setq(out,u({{jobs}}/WEB`ERR,Job %q<n> has no message %q<ent>.))]; @assert cor(%q<staff>,strmatch(get(%q<jo>/ENTRY`%q<ent>`BY),%q<actor>))=think [setq(out,u({{jobs}}/WEB`ERR,Only its author or staff can change how a message shows.))]; @assert match(markdown softcode,%q<fmt>)=think [setq(out,u({{jobs}}/WEB`ERR,A message shows as markdown or softcode.))]; @include/args {{jobs}}/INC`DO`FORMAT=entry,%q<ent>,format,%q<fmt>; think [setq(out,u({{jobs}}/WEB`DONE,Message %q<ent> shows [if(strmatch(%q<fmt>,softcode),as typed,as markdown)] now.,%<viewer>))]
 
       # The bucket page's Save: every setting at once, checked as +bucket/set checks one.
       WEB`ACT`BUCKET: |-
@@ -1099,7 +1099,7 @@ objects:
         @include {{jobs}}/WEB`NEED`ADMIN; @include {{jobs}}/WEB`NEED`BUCKET; think [setq(_to,u({{jobs}}/WEB`GETS,moveto))][setq(mv,if(strlen(%q<_to>),u({{jobs}}/FUN`BUCKET`BYSLUG,%q<_to>)))][setq(_nj,words(u({{jobs}}/FUN`SELECT,%<viewer>,INBUCKET,%q<bk>)))]; @assert not(strlen(setr(err,u({{jobs}}/FUN`ERR`DELETE,%q<bk>,%q<mv>,%q<_to>))))=think [setq(out,u({{jobs}}/WEB`ERRF,if(%q<_nj>,moveto,_global),%q<err>))]; @include/nobreak/args {{jobs}}/INC`DO`BUCKET`DELETE=to,%q<mv>; think [setq(out,json(object,ok,json(boolean,true),message,json(string,uargs({{jobs}}/FUN`DELETED,name,%q<bname>,moved,%q<moved>,to,%q<mv>,pending,%q<pending>)),redirect,json(string,/apps/jobs/buckets)))]
       # Setting %0 as posted, in the words +bucket/set takes.
       WEB`SETTING: |-
-        [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(t(match(true 1 yes on,lcstr(%q<_v>))),yes,no),if(strmatch(%q<_v>,null),,%q<_v>))]
+        [setq(_v,u({{jobs}}/WEB`GET,%0))][switch(%0,hidden,if(match(true 1 yes on,lcstr(%q<_v>)),yes,no),if(strmatch(%q<_v>,null),,%q<_v>))]
 
       # sidebar: GET /http/jobs/nav
       # Viewer %0's sidebar: staff get the queue's views and the buckets they work, players their own

@@ -1,6 +1,6 @@
 format: 1.2
 package: radio
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -85,7 +85,7 @@ objects:
       # %1 is the switches and %2 what follows, both as typed.
       CMD`RADIO:
         value: |-
-          $(?is)^\+radio(/\S*)?(?\: +(.*))?$: think [setq(sw,lcstr(after(%1,/)))][setq(arg,trim(%2))][setq(eq,strmatch(%q<arg>,*=*))][setq(lhs,trim(before(%q<arg>,=)))][setq(rhs,trim(after(%q<arg>,=)))][setq(me,u({{radio}}/FUN`KEY,%#))]; @assert cor(not(strlen(%q<sw>)),t(member(get({{radio}}/DATA`SWITCHES),%q<sw>)),hasattr({{radio}},EXT`%q<sw>))=@pemit %#=[notice(RADIO,+radio has no /%q<sw> switch. +help radio lists them.,warn)]; think [setq(ext,if(cand(strlen(%q<sw>),hasattr({{radio}},EXT`%q<sw>)),u({{radio}}/EXT`%q<sw>),{{radio}}))]; @include %q<ext>/INC`[firstof(%q<sw>,if(%q<eq>,SEND,if(strlen(%q<arg>),USAGE,LIST)))]
+          $(?is)^\+radio(/\S*)?(?\: +(.*))?$: think [setq(sw,lcstr(after(%1,/)))][setq(arg,trim(%2))][setq(eq,strmatch(%q<arg>,*=*))][setq(lhs,trim(before(%q<arg>,=)))][setq(rhs,trim(after(%q<arg>,=)))][setq(me,u({{radio}}/FUN`KEY,%#))]; @assert cor(not(strlen(%q<sw>)),member(get({{radio}}/DATA`SWITCHES),%q<sw>),hasattr({{radio}},EXT`%q<sw>))=@pemit %#=[notice(RADIO,+radio has no /%q<sw> switch. +help radio lists them.,warn)]; think [setq(ext,if(cand(strlen(%q<sw>),hasattr({{radio}},EXT`%q<sw>)),u({{radio}}/EXT`%q<sw>),{{radio}}))]; @include %q<ext>/INC`[firstof(%q<sw>,if(%q<eq>,SEND,if(strlen(%q<arg>),USAGE,LIST)))]
         flags: [REGEXP]
 
       # ---- reads ----------------------------------------------------------------
@@ -236,12 +236,12 @@ objects:
         @include {{radio}}/INC`NEED`ADMIN; think [setq(nm,u({{radio}}/FUN`NAME,%q<id>))]; @assert strmatch(%q<rhs>,%q<nm>)=@pemit %#=[notice(RADIO,This deletes %q<nm> with everything said on it. Type +radio/delete %q<nm>=%q<nm> to do it.,warn)]; @feed/delete radio/%q<id>; @wipe {{radio}}/F`%q<id>`**; @dolist/inline [lattr({{radio}}/P`*`*`%q<id>)]=&## {{radio}}; @pemit %#=[notice(RADIO,Deleted %q<nm>.,ok)]
       # /lock <frequency>/<talk|moderate|admin>=<lock>; /unlock puts back the default.
       INC`LOCK: |-
-        think [setq(lk,ucstr(after(%q<lhs>,/)))][setq(lhs,before(%q<lhs>,/))]; @include {{radio}}/INC`NEED`ADMIN; @assert t(member(TALK MODERATE ADMIN,%q<lk>))=@pemit %#=[notice(RADIO,+radio/lock <frequency>/talk=<lock> \(or /moderate or /admin\),warn)]; @assert strlen(%q<rhs>)=@pemit %#=[notice(RADIO,Give a lock\, such as role^police. +radio/unlock puts back the default.,warn)]; @assert not(strmatch(testlock(%q<rhs>,%#),#-*))=@pemit %#=[notice(RADIO,'%q<rhs>' is not a lock.,warn)]; &F`%q<id>`LOCK`%q<lk> {{radio}}=%q<rhs>; @pemit %#=[notice(RADIO,The [lcstr(%q<lk>)] lock of [u({{radio}}/FUN`NAME,%q<id>)] is %q<rhs> now.,ok)]
+        think [setq(lk,ucstr(after(%q<lhs>,/)))][setq(lhs,before(%q<lhs>,/))]; @include {{radio}}/INC`NEED`ADMIN; @assert member(TALK MODERATE ADMIN,%q<lk>)=@pemit %#=[notice(RADIO,+radio/lock <frequency>/talk=<lock> \(or /moderate or /admin\),warn)]; @assert strlen(%q<rhs>)=@pemit %#=[notice(RADIO,Give a lock\, such as role^police. +radio/unlock puts back the default.,warn)]; @assert not(strmatch(testlock(%q<rhs>,%#),#-*))=@pemit %#=[notice(RADIO,'%q<rhs>' is not a lock.,warn)]; &F`%q<id>`LOCK`%q<lk> {{radio}}=%q<rhs>; @pemit %#=[notice(RADIO,The [lcstr(%q<lk>)] lock of [u({{radio}}/FUN`NAME,%q<id>)] is %q<rhs> now.,ok)]
       INC`UNLOCK: |-
-        think [setq(lk,ucstr(after(%q<lhs>,/)))][setq(lhs,before(%q<lhs>,/))]; @include {{radio}}/INC`NEED`ADMIN; @assert t(member(TALK MODERATE ADMIN,%q<lk>))=@pemit %#=[notice(RADIO,+radio/unlock <frequency>/talk \(or /moderate or /admin\),warn)]; &F`%q<id>`LOCK`%q<lk> {{radio}}; @pemit %#=[notice(RADIO,The [lcstr(%q<lk>)] lock of [u({{radio}}/FUN`NAME,%q<id>)] is the default now.,ok)]
+        think [setq(lk,ucstr(after(%q<lhs>,/)))][setq(lhs,before(%q<lhs>,/))]; @include {{radio}}/INC`NEED`ADMIN; @assert member(TALK MODERATE ADMIN,%q<lk>)=@pemit %#=[notice(RADIO,+radio/unlock <frequency>/talk \(or /moderate or /admin\),warn)]; &F`%q<id>`LOCK`%q<lk> {{radio}}; @pemit %#=[notice(RADIO,The [lcstr(%q<lk>)] lock of [u({{radio}}/FUN`NAME,%q<id>)] is the default now.,ok)]
       # /options <frequency>/<keep|age|length>=<value>: the feed's own limits, set on its feed.
       INC`OPTIONS: |-
-        think [setq(op,lcstr(after(%q<lhs>,/)))][setq(lhs,before(%q<lhs>,/))]; @include {{radio}}/INC`NEED`ADMIN; @assert t(member(keep age length,%q<op>))=@pemit %#=[notice(RADIO,+radio/options <frequency>/keep=<lines>\, /age=<30d> or /length=<characters>. Nothing after = puts back the default.,warn)]; @feed/set radio/%q<id>/[switch(%q<op>,keep,max_messages,age,max_age,max_length)]=%q<rhs>; @pemit %#=[notice(RADIO,[u({{radio}}/FUN`NAME,%q<id>)]: %q<op> is [firstof(%q<rhs>,the default)].,ok)]
+        think [setq(op,lcstr(after(%q<lhs>,/)))][setq(lhs,before(%q<lhs>,/))]; @include {{radio}}/INC`NEED`ADMIN; @assert member(keep age length,%q<op>)=@pemit %#=[notice(RADIO,+radio/options <frequency>/keep=<lines>\, /age=<30d> or /length=<characters>. Nothing after = puts back the default.,warn)]; @feed/set radio/%q<id>/[switch(%q<op>,keep,max_messages,age,max_age,max_length)]=%q<rhs>; @pemit %#=[notice(RADIO,[u({{radio}}/FUN`NAME,%q<id>)]: %q<op> is [firstof(%q<rhs>,the default)].,ok)]
 
       # ---- lifecycle ------------------------------------------------------------
       # A player's gags end when they disconnect. The radio sits in the master room, so this runs for everyone.
