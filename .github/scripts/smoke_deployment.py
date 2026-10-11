@@ -133,10 +133,21 @@ def isolated_model(source, *, project, workdir, image_tags, ports):
                                   "RESTIC_PASSWORD_FILE": "/run/smoke-restic-password"})
     backup["volumes"] += [
         {"type": "volume", "source": "smoke-repository", "target": "/repo"},
+        # Compose prunes unused top-level volumes from `config`. Keep the scratch
+        # volume referenced so both the recovery helper and `down -v` can find it.
+        {"type": "volume", "source": "smoke-restore", "target": "/restore"},
         {"type": "bind", "source": str(workdir / "restic-password"),
          "target": "/run/smoke-restic-password", "read_only": True},
     ]
     return model
+
+
+def validate_compose_round_trip(model):
+    if set(model["services"]) != set(SERVICES):
+        raise AssertionError("The rendered smoke model lost a required service")
+    for name in ("app-data", "smoke-repository", "smoke-restore"):
+        if name not in model["volumes"]:
+            raise AssertionError(f"The rendered smoke model lost its {name} volume")
 
 
 def test_caddyfile(original):
@@ -235,13 +246,7 @@ def main():
     run(["docker", "compose", "version"])
     print(f"Building and testing exact commit {sha}", flush=True)
     images = {name: f"smush-smoke-{name}:{sha}" for name in IMAGES}
-    for name, dockerfile in IMAGES.items():
-        run(["docker", "build", "--label", f"org.opencontainers.image.revision={sha}",
-             "-f", str(ROOT / dockerfile), "-t", images[name], str(ROOT)], timeout=1500)
     builder_image = f"smush-smoke-build:{sha}"
-    run(["docker", "build", "--target", "build", "-f", str(ROOT / "Dockerfile"),
-         "-t", builder_image, str(ROOT)], timeout=300)
-    print("PASS: all production images built from the exact checkout", flush=True)
     ca_file = generate_certificates(workdir / "certificates")
     (workdir / "empty.env").write_text("")
     password = workdir / "restic-password"
@@ -261,6 +266,14 @@ def main():
     (workdir / "compose.json").write_text(json.dumps(model, indent=2))
     compose = compose_prefix(project, workdir) + ["-f", str(workdir / "compose.json")]
     try:
+        validate_compose_round_trip(json.loads(run(compose + ["config", "--format", "json"], capture=True).stdout))
+        print("PASS: Compose round-trip retained all services and disposable volumes", flush=True)
+        for name, dockerfile in IMAGES.items():
+            run(["docker", "build", "--label", f"org.opencontainers.image.revision={sha}",
+                 "-f", str(ROOT / dockerfile), "-t", images[name], str(ROOT)], timeout=1500)
+        run(["docker", "build", "--target", "build", "-f", str(ROOT / "Dockerfile"),
+             "-t", builder_image, str(ROOT)], timeout=300)
+        print("PASS: all production images built from the exact checkout", flush=True)
         run(compose + ["up", "-d", "--no-build", "--wait", "--wait-timeout", "120",
                        "nats", "renderer", "connectionserver", "sharpmush-server", "caddy"], timeout=180)
         verify_published_ports(compose, ports)

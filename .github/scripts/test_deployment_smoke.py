@@ -6,7 +6,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from smoke_deployment import clean_environment, compose_prefix, isolated_model, project_name, test_caddyfile
+from smoke_deployment import clean_environment, compose_prefix, isolated_model, project_name, test_caddyfile, validate_compose_round_trip
 
 
 class DeploymentSmokeTests(unittest.TestCase):
@@ -101,6 +101,15 @@ class DeploymentSmokeTests(unittest.TestCase):
             self.assertNotIn(key, environment)
         self.assertEqual(environment["RESTIC_BACKUP_SOURCES"], before["services"]["backup"]["environment"]["RESTIC_BACKUP_SOURCES"])
         self.assertTrue(next(v for v in backup["volumes"] if v["target"] == "/data")["read_only"])
+        scratch = next(v for v in backup["volumes"] if v["target"] == "/restore")
+        self.assertEqual(scratch, {"type": "volume", "source": "smoke-restore", "target": "/restore"})
+
+    def test_unused_scratch_volume_pruning_is_caught_before_image_builds(self):
+        model = self.isolate(self.model())
+        validate_compose_round_trip(model)
+        del model["volumes"]["smoke-restore"]
+        with self.assertRaisesRegex(AssertionError, "smoke-restore"):
+            validate_compose_round_trip(model)
 
     def test_caddy_keeps_production_routes_but_uses_only_manual_tls(self):
         original = "{$SHARPMUSH_DOMAIN} {\n handle /ws { reverse_proxy connectionserver:4202 }\n}\n"
