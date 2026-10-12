@@ -1,4 +1,5 @@
 ﻿using Antlr4.Runtime;
+using SharpMUSH.Library.ParserInterfaces;
 using Antlr4.Runtime.Misc;
 using System.Runtime.CompilerServices;
 
@@ -18,6 +19,7 @@ internal sealed class StringSpanInputStream(string input, string sourceName) : I
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Consume()
 	{
+		if ((Index & 1023) == 0) ExecutionBudget.Current?.ThrowIfExceeded();
 		Index++;
 	}
 

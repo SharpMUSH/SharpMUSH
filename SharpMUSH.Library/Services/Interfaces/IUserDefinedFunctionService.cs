@@ -58,8 +58,17 @@ public record UserDefinedFunction(
 /// <para>Built-in functions always take precedence — the parser only consults this registry on a
 /// FunctionLibrary miss. Owner-local calls use explicit localfun invocation with an owner scope.</para>
 /// </summary>
+public sealed record UserFunctionCatalogState(
+	IReadOnlyList<UserDefinedFunction> Global,
+	IReadOnlyList<UserDefinedFunction> Local,
+	IReadOnlyDictionary<string, string> BuiltinRestrictions);
+
 public interface IUserDefinedFunctionService
 {
+	/// <summary>Detached resolvable metadata in global and exactly this owner scope; legacy registries fail closed.</summary>
+	UserFunctionCatalogState CaptureCatalog(DBRef owner)
+		=> throw new NotSupportedException("This registry does not support catalog capture.");
+
 	/// <summary>Removes local definitions backed by, or scoped to, a deleted or re-owned object.</summary>
 	void InvalidateLocalDefinitions(DBRef target) { }
 

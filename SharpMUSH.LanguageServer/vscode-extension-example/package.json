@@ -18,7 +18,9 @@
     "game development"
   ],
   "activationEvents": [
-    "onLanguage:mush"
+    "onLanguage:mush",
+    "onCommand:sharpmush.setRemoteCredentials",
+    "onCommand:sharpmush.clearRemoteCredentials"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -27,7 +29,10 @@
         "id": "mush",
         "extensions": [
           ".mush",
-          ".mu"
+          ".mu",
+          ".mushfn",
+          ".fun",
+          ".mushcmd"
         ],
         "aliases": [
           "MUSH",
@@ -61,15 +66,45 @@
           ],
           "default": "off",
           "description": "Traces the communication between VS Code and the language server"
+        },
+        "sharpmush.languageServer.mode": {
+          "type": "string",
+          "enum": [
+            "offline",
+            "remote"
+          ],
+          "default": "offline",
+          "description": "Offline stdio analysis or authenticated remote LSP."
+        },
+        "sharpmush.languageServer.bridgePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to SharpMUSH.LspBridge.dll for remote mode."
+        },
+        "sharpmush.languageServer.endpoint": {
+          "type": "string",
+          "default": "",
+          "description": "WSS remote LSP endpoint, without credentials or query."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "sharpmush.setRemoteCredentials",
+        "title": "SharpMUSH: Set Remote Credentials"
+      },
+      {
+        "command": "sharpmush.clearRemoteCredentials",
+        "title": "SharpMUSH: Clear Remote Credentials"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test": "npm run compile && node tests/launch.cjs"
   },
   "dependencies": {
     "vscode-languageclient": "^8.1.0"
@@ -77,7 +112,12 @@
   "devDependencies": {
     "@types/node": "^18.x",
     "@types/vscode": "^1.75.0",
-    "@vscode/vsce": "^2.19.0",
+    "@vscode/vsce": "^4.0.0",
     "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SharpMUSH/SharpMUSH.git",
+    "directory": "SharpMUSH.LanguageServer/vscode-extension-example"
   }
 }

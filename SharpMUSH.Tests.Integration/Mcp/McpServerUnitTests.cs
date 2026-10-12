@@ -27,36 +27,43 @@ public class McpDocumentStoreTests
 	[Test]
 	public async Task Open_NullText_Throws()
 	{
-		var store = new McpDocumentStore();
+		var store = CreateStore();
 		await Assert.That(() => store.Open(null!)).Throws<ArgumentNullException>();
 	}
 
 	[Test]
 	public async Task Open_RoundTripsById()
 	{
-		var store = new McpDocumentStore();
+		var store = CreateStore();
 		var id = store.Open("add(1,2)");
 
 		await Assert.That(store.TryGet(id, out var text)).IsTrue();
 		await Assert.That(text).IsEqualTo("add(1,2)");
 	}
 
-	[Test]
-	public async Task Open_BeyondCapacity_EvictsOldestSoTheStoreStaysBounded()
+	private static McpDocumentStore CreateStore()
 	{
-		var store = new McpDocumentStore();
-
-		// Capacity is 1024; opening well past it must evict the oldest ids rather than grow forever.
-		var firstId = store.Open("first");
-		string lastId = firstId;
-		for (var i = 0; i < 1200; i++)
+		var context = new HttpContextAccessor
 		{
-			lastId = store.Open($"doc {i}");
-		}
-
-		await Assert.That(store.TryGet(firstId, out _)).IsFalse();
-		await Assert.That(store.TryGet(lastId, out _)).IsTrue();
+			HttpContext = new DefaultHttpContext
+			{
+				User = new ClaimsPrincipal(new ClaimsIdentity([
+				new Claim("character_key", "1"), new Claim("character_creation_time", "100")], MushBasicAuthenticationHandler.SchemeName))
+			}
+		};
+		return new McpDocumentStore(Options.Create(new McpOptions()), context, TimeProvider.System);
 	}
+
+	[Test]
+	public async Task Open_BeyondCapacity_RejectsWithoutEvictingExistingDocuments()
+	{
+		var store = CreateStore();
+		var firstId = store.Open("first");
+		for (var i = 1; i < 64; i++) store.Open($"doc {i}");
+		await Assert.That(() => store.Open("overflow")).Throws<ArgumentException>();
+		await Assert.That(store.TryGet(firstId, out _)).IsTrue();
+	}
+
 }
 
 public class MushBasicAuthenticationHandlerTests

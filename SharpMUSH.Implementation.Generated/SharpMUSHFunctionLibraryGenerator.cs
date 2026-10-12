@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Immutable;
 using System.Linq;
@@ -89,6 +89,12 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		                 {{string.Join(",\n\t\t", staticEntries)}}
 		               };
 
+		               /// <summary>Fresh attributes for every declared name, without binding or constructing an implementation.</summary>
+		               public static Dictionary<string, SharpMUSH.Library.Attributes.SharpFunctionAttribute> CreateMetadata() => new Dictionary<string, SharpMUSH.Library.Attributes.SharpFunctionAttribute>
+		               {
+		                 {{string.Join(",\n\t\t", infoList.Select(info => $"{{ \"{EscapeString(info.AttributeName)}\", {AttributeToSource(info)} }}"))}}
+		               };
+
 		               {{string.Join("\n\n", factories)}}
 		             }
 		             """;
@@ -99,25 +105,25 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 	private static string EscapeString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
 	/// <param name="receiver">What the method is invoked on: the class name for a static method, or the factory's instance parameter.</param>
-	private static string InfoToSource(FunctionInformation info, string receiver)
-	{
-		return
-			$$"""
-			{
-						"{{info.AttributeName}}",
-						CreateFunctionDefinition(
-							new SharpMUSH.Library.Attributes.SharpFunctionAttribute
-							{
-								Name = "{{info.AttributeName}}",
-								MinArgs = {{info.MinArgs}},
-								MaxArgs = {{info.MaxArgs}},
-								Flags = (SharpMUSH.Library.Definitions.FunctionFlags){{info.Flags}},
-								SideEffectMinArgs = {{info.SideEffectMinArgs}},
-								Restrict = [ {{string.Join(", ", info.Restrict.Select(x => $"\"{x}\""))}} ],
-								ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ]
-							},
-							{{receiver}}.{{info.MethodName}})
-					}
-			""";
-	}
+	private static string InfoToSource(FunctionInformation info, string receiver) =>
+		$$"""
+		{
+			"{{EscapeString(info.AttributeName)}}",
+			CreateFunctionDefinition({{AttributeToSource(info)}}, {{receiver}}.{{info.MethodName}})
+		}
+		""";
+
+	private static string AttributeToSource(FunctionInformation info) =>
+		$$"""
+		new SharpMUSH.Library.Attributes.SharpFunctionAttribute
+		{
+				Name = "{{EscapeString(info.AttributeName)}}",
+				MinArgs = {{info.MinArgs}},
+				MaxArgs = {{info.MaxArgs}},
+				Flags = (SharpMUSH.Library.Definitions.FunctionFlags){{info.Flags}},
+				SideEffectMinArgs = {{info.SideEffectMinArgs}},
+				Restrict = [ {{string.Join(", ", info.Restrict.Select(x => $"\"{EscapeString(x)}\""))}} ],
+				ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ]
+		}
+		""";
 }

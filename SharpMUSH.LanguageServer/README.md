@@ -6,6 +6,30 @@ This directory contains the Language Server Protocol (LSP) implementation for Sh
 
 The SharpMUSH Language Server provides syntax validation, error diagnostics, and semantic highlighting for MUSH code in text editors that support LSP (VS Code, Neovim, Emacs, etc.).
 
+## Standalone host status
+
+The standalone process uses shipped parser defaults and does not load a game world.
+Syntax diagnostics support `.mush`/`.mu` (commands per line), `.mushfn`/`.fun`
+(function expressions), and `.mushcmd` (command lists).
+
+Built-in function and command hover/completion, function signature help, and
+shipped default aliases are available without a database or game services. The
+catalog is generated from the same attributes as the runtime libraries. This
+process rejects evaluation; command-only parameter signature help remains
+unsupported, while function signatures inside commands work.
+
+After building, run `python3 scripts/test-lsp-stdio.py` from the repository root
+for the actual-process regression probe. It checks startup, valid/invalid code
+for all five extensions, function and command intelligence, default aliases,
+variadic signature help, and shutdown. Application logs use a temporary directory.
+
+This standalone process is an offline fallback. It does not discover a remote
+world's custom functions or configuration. The example VS Code extension currently
+launches local stdio and requires a local .NET runtime/server bundle; it has no
+remote LSP connection mode. The in-server MCP endpoint is the existing remote
+analysis transport, when enabled and authenticated. Remote editor transport is
+not implemented by this host.
+
 ## Features
 
 - **Real-time Syntax Validation**: Immediate feedback on syntax errors as you type

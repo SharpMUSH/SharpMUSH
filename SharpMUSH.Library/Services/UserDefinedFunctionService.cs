@@ -12,7 +12,7 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 {
-	private readonly object _mutations = new();
+	private readonly object _mutations = CatalogMutationSynchronization.Gate;
 
 	private static string Key(string name, DBRef? owner) => $"{owner?.ToString() ?? "global"}/{name.ToLowerInvariant()}";
 
@@ -257,14 +257,25 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 
 	public void SetBuiltinRestriction(string name, string? restriction)
 	{
-		var key = name.ToLowerInvariant();
-		if (string.IsNullOrWhiteSpace(restriction))
+		lock (_mutations)
 		{
-			_builtinRestrictions.TryRemove(key, out _);
-			return;
+			var key = name.ToLowerInvariant();
+			if (string.IsNullOrWhiteSpace(restriction)) _builtinRestrictions.TryRemove(key, out _);
+			else _builtinRestrictions[key] = restriction.Trim();
 		}
+	}
 
-		_builtinRestrictions[key] = restriction.Trim();
+	public UserFunctionCatalogState CaptureCatalog(DBRef owner)
+	{
+		if (!owner.IsObjid) throw new ArgumentException("A full owner identity is required.", nameof(owner));
+		lock (_mutations)
+		{
+			UserDefinedFunction[] Scope(DBRef? scope) => _functions.Values.Where(entry => entry.Owner == scope)
+				.Select(entry => Resolve(entry.Name, scope)).OfType<UserDefinedFunction>()
+				.Select(entry => entry with { ArgumentNames = entry.ArgumentNames.ToArray() }).ToArray();
+			return new UserFunctionCatalogState(Scope(null), Scope(owner),
+				new Dictionary<string, string>(_builtinRestrictions, StringComparer.OrdinalIgnoreCase));
+		}
 	}
 
 	public string? GetBuiltinRestriction(string name)

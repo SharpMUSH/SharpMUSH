@@ -1,0 +1,7 @@
+tests/**
+**/*.ts
+**/*.map
+tsconfig.json
+package-lock.json
+.vscode-test/**
+*.vsix

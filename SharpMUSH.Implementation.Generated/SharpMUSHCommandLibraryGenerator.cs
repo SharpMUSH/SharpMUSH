@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Immutable;
 using System.Linq;
@@ -89,6 +89,12 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 		                 {{string.Join(",\n\t\t", staticEntries)}}
 		               };
 
+		               /// <summary>Fresh attributes for every declared name, without binding or constructing an implementation.</summary>
+		               public static Dictionary<string, SharpMUSH.Library.Attributes.SharpCommandAttribute> CreateMetadata() => new Dictionary<string, SharpMUSH.Library.Attributes.SharpCommandAttribute>
+		               {
+		                 {{string.Join(",\n\t\t", infoList.Select(info => $"{{ \"{EscapeString(info.AttributeName)}\", {AttributeToSource(info)} }}"))}}
+		               };
+
 		               {{string.Join("\n\n", factories)}}
 		             }
 		             """;
@@ -99,27 +105,27 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 	private static string EscapeString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
 	/// <param name="receiver">What the method is invoked on: the class name for a static method, or the factory's instance parameter.</param>
-	private static string InfoToSource(CommandInformation info, string receiver)
-	{
-		return
-			$$"""
-			  { 
-			  			"{{info.AttributeName}}", 
-			  			CreateCommandDefinition(
-			  				new SharpMUSH.Library.Attributes.SharpCommandAttribute 
-			  				{
-			  					Name = "{{info.AttributeName}}",
-			  					MinArgs = {{info.MinArgs}},
-			  					MaxArgs = {{info.MaxArgs}},
-			  					CommandLock = "{{info.CommandLock}}",
-			  					Behavior = (SharpMUSH.Library.Definitions.CommandBehavior){{info.CommandBehavior}},
-			  					Switches = [ {{string.Join(", ", info.Switches.Select(x => $"\"{x}\""))}} ],
-			                      SingleArgumentSwitches = [ {{string.Join(", ", info.SingleArgumentSwitches.Select(x => $"\"{EscapeString(x)}\""))}} ],
-			  					ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ],
-			  					Output = (SharpMUSH.Library.Attributes.CommandOutput){{info.Output}}
-			  				},
-			  				{{receiver}}.{{info.MethodName}})
-			  		}
-			  """;
-	}
+	private static string InfoToSource(CommandInformation info, string receiver) =>
+		$$"""
+		{
+			"{{EscapeString(info.AttributeName)}}",
+			CreateCommandDefinition({{AttributeToSource(info)}}, {{receiver}}.{{info.MethodName}})
+		}
+		""";
+
+	private static string AttributeToSource(CommandInformation info) =>
+		$$"""
+		new SharpMUSH.Library.Attributes.SharpCommandAttribute
+		{
+				Name = "{{EscapeString(info.AttributeName)}}",
+				MinArgs = {{info.MinArgs}},
+				MaxArgs = {{info.MaxArgs}},
+				CommandLock = "{{EscapeString(info.CommandLock)}}",
+				Behavior = (SharpMUSH.Library.Definitions.CommandBehavior){{info.CommandBehavior}},
+				Switches = [ {{string.Join(", ", info.Switches.Select(x => $"\"{EscapeString(x)}\""))}} ],
+				SingleArgumentSwitches = [ {{string.Join(", ", info.SingleArgumentSwitches.Select(x => $"\"{EscapeString(x)}\""))}} ],
+				ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ],
+				Output = (SharpMUSH.Library.Attributes.CommandOutput){{info.Output}}
+		}
+		""";
 }

@@ -14,10 +14,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.CodeAnalysis;
+using SharpMUSH.CodeAnalysis.Catalog;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
-using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
@@ -321,6 +321,15 @@ internal static class EngineRegistration
 		// Shared MUSH code intelligence — the single source of truth behind both the
 		// Language Server (for editors) and the in-server MCP tools (for agents/tooling).
 		services.AddSingleton<IMushCodeAnalyzer, MushCodeAnalyzer>();
+		services.AddOptions<AnalysisExecutionOptions>().BindConfiguration("Mcp").BindConfiguration("Analysis");
+		services.AddSingleton(provider => new AnalysisExecutor(provider.GetRequiredService<IOptions<AnalysisExecutionOptions>>(), provider.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
+		services.AddSingleton<IAnalysisSessionFactory, SharpMUSH.Server.Services.AnalysisSessionFactory>();
+		services.AddSingleton<IAnalysisCatalog>(provider =>
+		{
+			var parser = provider.GetRequiredService<SharpMUSH.Library.ParserInterfaces.IMUSHCodeParser>();
+			return new LiveAnalysisCatalog(parser.FunctionLibrary, parser.CommandLibrary,
+				provider.GetRequiredService<IUserDefinedFunctionService>(), provider.GetRequiredService<ILockService>());
+		});
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
 		services.AddOptions<SharpMUSHOptions>().ValidateOnStart();

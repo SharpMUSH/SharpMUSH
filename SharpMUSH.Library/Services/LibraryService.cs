@@ -3,6 +3,12 @@ using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Library.Services;
 
+// One gate spans function/command tables and user-function metadata for joint catalog capture.
+internal static class CatalogMutationSynchronization
+{
+	internal static readonly object Gate = new();
+}
+
 /// <summary>
 /// A live command or function table. <c>@command</c>, <c>@function</c> and plugin loads change it while
 /// other connections are dispatching through it, so it is safe to read and enumerate during a change.
@@ -13,8 +19,7 @@ public class LibraryService<TKey, TValue> : IReadOnlyDictionary<TKey, (TValue Li
 	where TKey : notnull
 {
 	/// <remarks>
-	/// One lock stripe: changes are rare and already serialised by their callers. Reads and
-	/// enumeration never lock.
+	/// One lock stripe: changes are rare and already serialised by their callers. Ordinary dispatch reads and enumeration never lock; explicit catalog capture shares the mutation gate.
 	/// </remarks>
 	private readonly ConcurrentDictionary<TKey, (TValue LibraryInformation, bool IsSystem)> _entries;
 	private readonly HashSet<TKey> _systemNames;
@@ -28,6 +33,22 @@ public class LibraryService<TKey, TValue> : IReadOnlyDictionary<TKey, (TValue Li
 	public long Version => Interlocked.Read(ref _version);
 
 	private void Changed() => Interlocked.Increment(ref _version);
+
+	/// <summary>Projects metadata under the shared mutation gate. Detach mutable values before returning.</summary>
+	public TResult Capture<TResult>(Func<IReadOnlyList<KeyValuePair<TKey, (TValue LibraryInformation, bool IsSystem)>>, TResult> projection)
+	{
+		lock (CatalogMutationSynchronization.Gate) return projection(_entries.ToArray());
+	}
+
+	/// <summary>Serializes an in-place metadata edit with catalog capture and advances the table revision.</summary>
+	public void MutateMetadata(Action mutation)
+	{
+		lock (CatalogMutationSynchronization.Gate)
+		{
+			try { mutation(); }
+			finally { Changed(); }
+		}
+	}
 
 	public LibraryService() : this(null)
 	{
@@ -65,31 +86,43 @@ public class LibraryService<TKey, TValue> : IReadOnlyDictionary<TKey, (TValue Li
 		get => _entries[key];
 		set
 		{
-			_entries[key] = value;
-			Changed();
+			lock (CatalogMutationSynchronization.Gate)
+			{
+				_entries[key] = value;
+				Changed();
+			}
 		}
 	}
 
 	public bool TryAdd(TKey key, (TValue LibraryInformation, bool IsSystem) value)
 	{
-		if (!_entries.TryAdd(key, value)) return false;
-		Changed();
-		return true;
+		lock (CatalogMutationSynchronization.Gate)
+		{
+			if (!_entries.TryAdd(key, value)) return false;
+			Changed();
+			return true;
+		}
 	}
 
 	public bool TryRemove(TKey key, out (TValue LibraryInformation, bool IsSystem) value)
 	{
-		if (!_entries.TryRemove(key, out value)) return false;
-		Changed();
-		return true;
+		lock (CatalogMutationSynchronization.Gate)
+		{
+			if (!_entries.TryRemove(key, out value)) return false;
+			Changed();
+			return true;
+		}
 	}
 
 	/// <summary>Removes exactly <paramref name="entry"/>: nothing if the name now holds something else.</summary>
 	public bool TryRemove(KeyValuePair<TKey, (TValue LibraryInformation, bool IsSystem)> entry)
 	{
-		if (!_entries.TryRemove(entry)) return false;
-		Changed();
-		return true;
+		lock (CatalogMutationSynchronization.Gate)
+		{
+			if (!_entries.TryRemove(entry)) return false;
+			Changed();
+			return true;
+		}
 	}
 
 	/// <summary>Adds an entry, throwing if the name is taken, as <see cref="Dictionary{TKey,TValue}.Add"/> does.</summary>

@@ -16,7 +16,7 @@ using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
-using SharpMUSH.Server.Mcp;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
@@ -36,7 +36,6 @@ using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -160,7 +159,7 @@ internal static class WebHostRegistration
 		return services;
 	}
 
-	/// <summary>The authentication schemes, the in-server MCP surface, and role derivation.</summary>
+	/// <summary>The host authentication schemes and role derivation.</summary>
 	public static IServiceCollection AddSharpMushAuthentication(
 		this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
@@ -178,15 +177,7 @@ internal static class WebHostRegistration
 			.AddScheme<AuthenticationSchemeOptions, MushBasicAuthenticationHandler>(
 				MushBasicAuthenticationHandler.SchemeName, _ => { });
 
-		// In-server MCP (Model Context Protocol): exposes the shared MUSH code intelligence as
-		// tools over Streamable HTTP. Services are always registered; the endpoint is only
-		// mapped when Mcp:Enabled is true (see Program.MapMcp), so a disabled MCP returns 404.
-		services.Configure<McpOptions>(configuration.GetSection(McpOptions.Section));
-		services.AddSingleton<McpDocumentStore>();
-		services.AddMcpServer()
-			.WithHttpTransport(mcpTransport => mcpTransport.Stateless = true)
-			.WithTools<MushTools>();
-
+		services.AddAnalysisTransportPolicy(configuration);
 
 		return services;
 	}

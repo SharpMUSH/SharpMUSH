@@ -27,7 +27,7 @@ namespace SharpMUSH.Implementation;
 /// 
 /// <para><b>Performance Optimizations:</b></para>
 /// <list type="bullet">
-/// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
+/// <item><description>Evaluation services are resolved once on first evaluation and cached to avoid repeated DI lookups</description></item>
 /// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string; one trie is shared per command library</description></item>
 /// <item><description><see cref="SoftcodeParsePipeline"/> is the one lexer/parser setup, shared with the tooling half (<see cref="SoftcodeSyntaxAnalyzer"/>)</description></item>
 /// <item><description>Custom span-based streams and token factory (BufferedTokenSpanStream, StringSpanInputStream, OptimizedTokenFactory) minimize allocations</description></item>
@@ -42,16 +42,16 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
 	/// <summary>
-	/// The services evaluation uses, resolved once here and shared by every state this parser pushes
-	/// and every visitor it builds; see <see cref="EvaluationServices"/>.
+	/// The services evaluation uses, resolved once on first evaluation and shared by every state this parser pushes
+	/// and every evaluation visitor it builds; syntax analysis needs no game services. See <see cref="EvaluationServices"/>.
 	/// </summary>
-	private readonly EvaluationServices _services = EvaluationServices.From(ServiceProvider);
+	private readonly Lazy<EvaluationServices> _services = new(() => EvaluationServices.From(ServiceProvider));
 
 	/// <summary>
 	/// <see cref="_services"/>, locating its optional services in this parser's current provider when a
 	/// copy of the parser was given another one.
 	/// </summary>
-	private EvaluationServices Services => _services.For(ServiceProvider);
+	private EvaluationServices Services => _services.Value.For(ServiceProvider);
 
 	/// <summary>
 	/// The command trie for prefix lookups. Shared by every parser derived from the same command
@@ -73,7 +73,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	/// <summary>
 	/// A parser over a single fresh state. A record copy, not a new construction: the services this
-	/// record resolves in its field initialisers are singletons, and re-resolving them for every
+	/// record resolves on first evaluation are singletons, and re-resolving them for every
 	/// command a player types bought nothing.
 	/// </summary>
 	/// <remarks>
@@ -427,7 +427,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.StartPlainString(), nameof(FunctionParse), parser);
 			budget.ThrowIfExceeded();
 
-			await EvaluationDiagnostics.EmitSubstitutionOnlyDebugTraceAsync(_services.Mediator, _services.NotifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
+			await EvaluationDiagnostics.EmitSubstitutionOnlyDebugTraceAsync(_services.Value.Mediator, _services.Value.NotifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
 				rawText, result?.Message, suppressSubstitutionDebug);
 			budget.ThrowIfExceeded();
 			return result;
@@ -531,7 +531,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>A handle not yet logged in has no player, and gets the full ceiling.</summary>
 	private async ValueTask<int> OutputLimitForAsync(DBRef? player)
 		=> await FunctionLimits.OutputLimitForAsync(
-			player is { } dbref && await _services.Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
+			player is { } dbref && await _services.Value.Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
 			Configuration.CurrentValue.Limit.GuestOutputLimit);
 
 	/// <summary>
@@ -561,8 +561,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (result is { IsParseFailure: true, Message: { } failure })
 		{
 			await (player is { } typist
-				? _services.NotifyService.Notify(typist, failure)
-				: _services.NotifyService.Notify(handle, failure));
+				? _services.Value.NotifyService.Notify(typist, failure)
+				: _services.Value.NotifyService.Notify(handle, failure));
 		}
 
 		return result ?? CallState.Empty;
@@ -581,7 +581,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
 		if (result is { IsParseFailure: true, Message: { } failure })
 		{
-			await _services.NotifyService.Notify(player, failure);
+			await _services.Value.NotifyService.Notify(player, failure);
 		}
 
 		return result ?? CallState.Empty;

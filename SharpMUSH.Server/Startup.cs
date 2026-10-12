@@ -16,7 +16,6 @@ using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
-using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Registration;

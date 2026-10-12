@@ -5,9 +5,9 @@ This directory contains example files for creating a VS Code extension that uses
 ## Setup
 
 1. **Prerequisites**:
-   - Node.js and npm installed
-   - TypeScript installed globally: `npm install -g typescript`
-   - VS Code Extension Manager: `npm install -g @vscode/vsce`
+   - Node.js 22 or newer and npm installed
+   - Build the offline language server or remote bridge with the repository's .NET 11 SDK.
+   - TypeScript and VSCE are project dependencies; no global installation is needed.
 
 2. **Install dependencies**:
    ```bash
@@ -51,3 +51,22 @@ This will create a `.vsix` file that can be installed in VS Code.
 ## Notes
 
 The TextMate grammar provides basic syntax highlighting, but the LSP server provides semantic highlighting which is more accurate and context-aware.
+
+## Bounded remote mode
+
+Build/publish `SharpMUSH.LspBridge`, then set `sharpmush.languageServer.mode` to `remote`,
+`sharpmush.languageServer.bridgePath` to its DLL, and `sharpmush.languageServer.endpoint` to a WSS
+`/lsp` endpoint without userinfo/query/fragment. Run **SharpMUSH: Set Remote Credentials** for an
+existing character. Values are endpoint-bound SecretStorage entries injected into the bridge's
+private child environment, never settings/arguments/logs. **Clear Remote Credentials** removes both
+and stops the current client. Reload to reconnect after changing settings/credentials.
+
+Offline mode remains the default and uses `sharpmush.languageServer.path`. .NET 11 is required for
+both. Remote capabilities are full sync, diagnostics, completion, hover and signatures across
+`.mush`, `.mu`, `.mushfn`, `.fun`, `.mushcmd`; no remote formatting/rename/attribute save is advertised.
+Only trusted workspaces may launch/configure the client. `npm test` compiles TypeScript and verifies
+remote launch/SecretStorage behavior with a mocked IDE API, not a real VS Code UI/TLS E2E test.
+
+Remote overload or connection loss requires a fresh initialize and reopening current documents.
+The server closes explicitly if synchronized text cannot obtain analysis admission. Real VS Code UI
+and TLS/proxy integration still require a separately approved disposable fixture.
