@@ -96,7 +96,7 @@ public class PluginUploadStoreTests
 			    name: Thing
 			""")), CancellationToken.None);
 
-		await Assert.That(result.Expect<Error<string>>().Value).Contains("Only plugin packages");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("Only plugin and UI file packages");
 	});
 
 	[Test]

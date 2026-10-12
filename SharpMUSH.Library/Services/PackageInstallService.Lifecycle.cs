@@ -44,6 +44,11 @@ public partial class PackageInstallService
 		// and unloadable), then drop the registry records.
 		if (installed.DeployedFiles is { Count: > 0 })
 		{
+			var instances = installed.Kind == PackageKind.Ui
+				? (await applications.GetApplicationsAsync()).Where(a => a.DefinitionId == packageId).ToArray()
+				: [];
+			if (instances.Length > 0 && !force)
+				return new Error<string>($"UI definition '{packageId}' is used by {instances.Length} application instance(s). Remove them first or force-remove.");
 			var removed = await managedInstaller.RemoveAsync(
 				packageId, installed.DeployedFiles, cancellationToken);
 			if (removed is Error<string> removeError)
@@ -51,7 +56,18 @@ public partial class PackageInstallService
 				return removeError;
 			}
 
-			await registry.RemoveInstalledPackageAsync(packageId);
+			try
+			{
+				// Removal refusal must leave registrations/configs intact. Delete them only after assets go.
+				foreach (var instance in instances) await applications.RemoveApplicationAsync(instance.Slug);
+				await registry.RemoveInstalledPackageAsync(packageId);
+			}
+			catch
+			{
+				// Files and registry rows have separate commits; retain configs for an explicit reapply/repair.
+				foreach (var instance in instances) await applications.UpsertApplicationAsync(instance);
+				throw;
+			}
 			return new Success();
 		}
 

@@ -95,9 +95,9 @@ else
     }
 
     @* ── Plugin code ──────────────────────────────────────────────────── *@
-    @if (_plan.Kind == PackageKind.Plugin && _plan.Binary is { } binary)
+    @if ((_plan.Kind is PackageKind.Plugin or PackageKind.Ui) && _plan.Binary is { } binary)
     {
-        <KitCard Title="@Loc["PkgPluginCode"]" Sub="@Loc["PkgPluginCodeSub"]">
+        <KitCard Title="@(_plan.Kind == PackageKind.Ui ? "UI package files" : Loc["PkgPluginCode"].Value)" Sub="@(_plan.Kind == PackageKind.Ui ? "HTML and JavaScript for the reusable application host." : Loc["PkgPluginCodeSub"].Value)">
             <div class="pkg-review-body">
                 <MudTable Items="binary.Files" Dense="true" Elevation="0" Class="pkg-objects-table">
                     <HeaderContent>
@@ -110,7 +110,7 @@ else
                 </MudTable>
                 <MudText Typo="Typo.caption">@Loc["PkgPluginMinServer", binary.MinServerVersion.ToString()]</MudText>
                 <MudCheckBox T="bool" @bind-Value="_pluginTrusted" Color="Color.Error" id="pkg-plugin-trust"
-                             Label="@Loc["PkgPluginTrust", _plan.PackageId]" />
+                             Label="@(_plan.Kind == PackageKind.Ui ? $"I trust the browser code in {_plan.PackageId}." : Loc["PkgPluginTrust", _plan.PackageId].Value)" />
             </div>
         </KitCard>
     }
@@ -326,7 +326,7 @@ else
     /// <summary>Whether the administrator confirmed they trust a plugin package's author; a plugin cannot install without it.</summary>
     private bool _pluginTrusted;
 
-    private bool IsPlugin => _plan?.Kind == PackageKind.Plugin;
+    private bool IsPlugin => _plan?.Kind is PackageKind.Plugin or PackageKind.Ui;
 
     private bool IsUpload => string.Equals(_remote, "upload", StringComparison.OrdinalIgnoreCase);
 

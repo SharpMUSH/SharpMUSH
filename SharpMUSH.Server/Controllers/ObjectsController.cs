@@ -114,6 +114,19 @@ public class ObjectsController(
 			: Ok(new CreatedObjectDto(message));
 	}
 
+	[HttpGet("topology")]
+	public async Task<IActionResult> GetTopology([FromQuery] int[] rooms, CancellationToken ct)
+	{
+		if (rooms.Length is < 1 or > RoomTopologyReader.MaxRooms || rooms.Any(id => id < 0))
+			return BadRequest(new ApiErrorDto("Select 1–100 non-negative room dbrefs."));
+		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
+		var result = await new RoomTopologyReader(mediator, permissionService, reality, attributeService).ReadAsync(executor, rooms, ct);
+		// Unlinking or recycling the selected character during the scan cannot retain access.
+		if (await ResolveExecutorAsync(ct) is not { } current || current.Object().DBRef != executor.Object().DBRef) return Unauthorized();
+		Response.Headers.CacheControl = "no-store";
+		return Ok(result);
+	}
+
 	[HttpGet("{dbref:int}")]
 	public async Task<IActionResult> GetObject(int dbref, CancellationToken ct)
 	{

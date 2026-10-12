@@ -71,7 +71,10 @@ public enum PackageKind
 	Application,
 
 	/// <summary>A compiled C# plugin DLL. Requires <c>binaries:</c>; forbids <c>objects:</c>/<c>application:</c>.</summary>
-	Plugin
+	Plugin,
+
+	/// <summary>Plain HTML/JavaScript definition with ui.json and hashed browser assets; no assembly.</summary>
+	Ui
 }
 
 /// <summary>

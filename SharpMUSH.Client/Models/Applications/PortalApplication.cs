@@ -33,9 +33,14 @@ public sealed record PortalApplication(
 	string? Scope = null,
 	string? OobPackage = null,
 	string? Permission = null,
-	string? NavUrl = null)
+	string? NavUrl = null,
+	string? DefinitionId = null,
+	int ConfigVersion = 1,
+	System.Text.Json.JsonElement? Config = null)
 {
 	/// <summary>True when this app is rendered by a plugin-shipped compiled component (not the schema renderer).</summary>
+	public bool IsHosted => string.Equals(RenderKind, ApplicationRenderKind.Hosted, StringComparison.OrdinalIgnoreCase);
+
 	public bool IsComponent =>
 		string.Equals(RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase);
 
