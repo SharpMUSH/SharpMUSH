@@ -26,7 +26,7 @@ public partial class PackageManifestService
 	private static PackageDeclarations ReadDeclarations(
 		Dictionary<string, object?> doc, PackageKind kind, List<PackageManifestIssue> issues)
 	{
-		if (kind == PackageKind.Plugin)
+		if (kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			foreach (var key in new[] { "categories", "permissions", "roles" }.Where(doc.ContainsKey))
 			{

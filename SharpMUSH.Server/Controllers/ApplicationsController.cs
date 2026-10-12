@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Applications;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,14 +34,15 @@ public class ApplicationsController(
 	IApplicationRegistryService registry,
 	IHttpHandlerCommandDispatcher dispatcher,
 	IOptionsWrapper<SharpMUSHOptions> options,
-	ILogger<ApplicationsController> logger) : ControllerBase
+	ILogger<ApplicationsController> logger,
+	UiPackageStore? uiPackages = null) : ControllerBase
 {
 	public record ApplicationDto(
 		string Slug,
 		string DisplayName,
 		string? Icon,
 		string Kind,
-		string SchemaUrl,
+		string? SchemaUrl,
 		string? DataUrl,
 		string? SubmitRoute,
 		string MinimumRole,
@@ -54,7 +56,10 @@ public class ApplicationsController(
 		string? Scope = null,
 		string? OobPackage = null,
 		string? Permission = null,
-		string? NavUrl = null);
+		string? NavUrl = null,
+		string? DefinitionId = null,
+		int ConfigVersion = 1,
+		JsonElement? Config = null);
 
 	// Reads are anonymous: these records are nav/widget metadata (the actual data and actions are
 	// authorized by the in-game handler), and the portal needs them to render widgets on public pages
@@ -81,14 +86,22 @@ public class ApplicationsController(
 	}
 
 	private static bool IsComponent(RegisteredApplication a) =>
-		string.Equals(a.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase);
+		string.Equals(a.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase)
+		|| string.Equals(a.RenderKind, ApplicationRenderKind.Hosted, StringComparison.OrdinalIgnoreCase);
+
+	[HttpGet("{slug}/configuration")]
+	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
+	public async Task<IActionResult> Configuration(string slug) =>
+		await registry.GetApplicationAsync(slug) is RegisteredApplication app
+			? Ok(ToDto(app) with { Config = app.Config?.Clone() }) : NotFound();
 
 	[HttpPost]
 	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
 	public async Task<IActionResult> Upsert([FromBody] ApplicationDto dto)
 	{
+		var hosted = string.Equals(dto.RenderKind, ApplicationRenderKind.Hosted, StringComparison.OrdinalIgnoreCase);
 		if (string.IsNullOrWhiteSpace(dto.Slug) || string.IsNullOrWhiteSpace(dto.DisplayName)
-			|| string.IsNullOrWhiteSpace(dto.SchemaUrl))
+			|| (!hosted && string.IsNullOrWhiteSpace(dto.SchemaUrl)))
 		{
 			return BadRequest(new { error = "Slug, display name, and schema URL are required." });
 		}
@@ -105,10 +118,21 @@ public class ApplicationsController(
 
 		// Validate the schema endpoint returns parseable JSON before persisting — the same defensive
 		// stance the client's SchemaAppService takes, but enforced server-side at registration time.
-		var (ok, reason) = await ValidateSchemaEndpointAsync(dto.SchemaUrl);
+		var (ok, reason) = hosted ? (true, string.Empty) : await ValidateSchemaEndpointAsync(dto.SchemaUrl!);
 		if (!ok)
 		{
 			return BadRequest(new { error = $"Schema endpoint validation failed: {reason}" });
+		}
+
+		if (hosted)
+		{
+			if (kind != ApplicationKind.Page || !UiDefinition.IsName(dto.Slug) || !UiDefinition.IsName(dto.DefinitionId)
+				|| dto.Config is not { ValueKind: JsonValueKind.Object } config)
+				return BadRequest(new { error = "Hosted applications require a page, flat slug/definition id and object config." });
+			if (uiPackages is null || await uiPackages.GetAsync(dto.DefinitionId!) is not { } definition)
+				return BadRequest(new { error = "The UI definition is not installed or verified." });
+			if (definition.ValidateConfig(dto.ConfigVersion, config) is { } configError)
+				return BadRequest(new { error = configError });
 		}
 
 		// Preserve provenance: a manual edit of a package-installed application keeps its OwningPackage,
@@ -117,7 +141,7 @@ public class ApplicationsController(
 			? existing.OwningPackage
 			: null;
 
-		var renderKind = string.Equals(dto.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase)
+		var renderKind = hosted ? ApplicationRenderKind.Hosted : string.Equals(dto.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase)
 			? ApplicationRenderKind.Component
 			: ApplicationRenderKind.Schema;
 
@@ -126,7 +150,7 @@ public class ApplicationsController(
 			dto.DisplayName.Trim(),
 			string.IsNullOrWhiteSpace(dto.Icon) ? null : dto.Icon.Trim(),
 			kind,
-			dto.SchemaUrl.Trim(),
+			dto.SchemaUrl?.Trim() ?? string.Empty,
 			string.IsNullOrWhiteSpace(dto.DataUrl) ? null : dto.DataUrl.Trim(),
 			string.IsNullOrWhiteSpace(dto.SubmitRoute) ? null : dto.SubmitRoute.Trim(),
 			role,
@@ -140,7 +164,10 @@ public class ApplicationsController(
 			string.IsNullOrWhiteSpace(dto.Scope) ? null : dto.Scope.Trim(),
 			string.IsNullOrWhiteSpace(dto.OobPackage) ? null : dto.OobPackage.Trim(),
 			string.IsNullOrWhiteSpace(dto.Permission) ? null : dto.Permission.Trim(),
-			string.IsNullOrWhiteSpace(dto.NavUrl) ? null : dto.NavUrl.Trim());
+			string.IsNullOrWhiteSpace(dto.NavUrl) ? null : dto.NavUrl.Trim(),
+			hosted ? dto.DefinitionId : null,
+			dto.ConfigVersion,
+			hosted ? dto.Config?.Clone() : null);
 
 		await registry.UpsertApplicationAsync(application);
 		logger.LogInformation("Registered application '{Slug}' ({Kind}).", LogSanitizer.Sanitize(application.Slug), application.Kind);
@@ -238,5 +265,7 @@ public class ApplicationsController(
 		a.Scope,
 		a.OobPackage,
 		a.Permission,
-		a.NavUrl);
+		a.NavUrl,
+		a.DefinitionId,
+		a.ConfigVersion);
 }

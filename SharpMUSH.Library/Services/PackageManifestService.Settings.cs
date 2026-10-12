@@ -19,7 +19,7 @@ public partial class PackageManifestService
 			return [];
 		}
 
-		if (kind == PackageKind.Plugin)
+		if (kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			issues.Add(PackageManifestIssue.Error("settings",
 				"A plugin package cannot declare 'settings'; declare them in a softcode package it depends on."));

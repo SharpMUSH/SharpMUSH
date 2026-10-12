@@ -62,7 +62,7 @@ public partial class PackageInstallService
 		// softcode: there is no plan/changeset to compute. Verify + trust-gate +
 		// deposit the binaries, then record the install (with the deployed file
 		// list) and return. The plugin loads on the next boot.
-		if (manifest.Kind == PackageKind.Plugin)
+		if (manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{
 			return await ApplyManagedAsync(manifest, request, binarySource, cancellationToken) switch
 			{
@@ -542,6 +542,9 @@ public partial class PackageInstallService
 				$"Plugin package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
 		}
 
+		if (await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord installed && installed.Kind != manifest.Kind)
+			return new Error<string>("A package upgrade cannot change kind. Uninstall the old package first.");
+
 		// The same dependency/conflict gate a softcode plan enforces, and it must run here: once
 		// DeployAsync has written plugins/<id>/, the loader runs that code on the next boot.
 		var issues = PackagePlanService.CheckDependenciesAndConflicts(manifest, await registry.GetInstalledPackagesAsync());
@@ -578,7 +581,7 @@ public partial class PackageInstallService
 		await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
 			manifest.Name, manifest.Version.ToString(), request.Source.Repo, request.Source.Path,
 			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision, deployed,
-			Kind: PackageKind.Plugin));
+			Kind: manifest.Kind));
 
 		await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
 			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
@@ -600,8 +603,9 @@ public partial class PackageInstallService
 
 		var notes = new List<string>
 		{
-			$"Installed {deployed.Count} verified file(s) for plugin {manifest.Name}. "
-			+ "It starts when the server restarts."
+			manifest.Kind == PackageKind.Ui
+				? $"Installed UI definition {manifest.Name} with {deployed.Count} verified files; create applications referring to this definition."
+				: $"Installed {deployed.Count} verified file(s) for plugin {manifest.Name}. It starts when the server restarts."
 		};
 		return new PackageApplyResult(revision, new Dictionary<string, string>(StringComparer.Ordinal), notes);
 	}

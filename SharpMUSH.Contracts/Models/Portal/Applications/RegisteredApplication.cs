@@ -87,7 +87,10 @@ public sealed record RegisteredApplication(
 	string? Scope = null,
 	string? OobPackage = null,
 	string? Permission = null,
-	string? NavUrl = null);
+	string? NavUrl = null,
+	string? DefinitionId = null,
+	int ConfigVersion = 1,
+	System.Text.Json.JsonElement? Config = null);
 
 /// <summary>
 /// String discriminator values for <see cref="RegisteredApplication.RenderKind"/>. Kept as constants
@@ -101,4 +104,7 @@ public static class ApplicationRenderKind
 
 	/// <summary>Render via a plugin-shipped compiled Blazor component loaded at runtime (operator-gated).</summary>
 	public const string Component = "Component";
+
+	/// <summary>Render a trusted plain UI package in the reusable Razor host.</summary>
+	public const string Hosted = "Hosted";
 }

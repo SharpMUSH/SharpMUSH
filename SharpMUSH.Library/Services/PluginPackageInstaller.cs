@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Applications;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -47,6 +48,7 @@ public sealed class PluginPackageInstaller(
 
 		if (!request.AllowPluginCode)
 		{
+			if (manifest.Kind == PackageKind.Ui) return new Error<string>("Confirm that you trust this UI package using the existing allow_plugin_code apply confirmation.");
 			return new Error<string>(
 				$"Plugin package '{manifest.Name}' was not installed: a plugin runs compiled C# with full access to the "
 				+ "server. Confirm that you trust its author (allow_plugin_code) to install it.");
@@ -81,13 +83,15 @@ public sealed class PluginPackageInstaller(
 			verified.Add((file.FileName, bytes));
 		}
 
-		if (CheckPluginManifest(manifest.Name, verified) is { } refusal)
+		if ((manifest.Kind == PackageKind.Ui ? CheckUiManifest(manifest.Name, verified) : CheckPluginManifest(manifest.Name, verified)) is { } refusal)
 		{
 			return new Error<string>($"Plugin package '{manifest.Name}': {refusal}");
 		}
 
-		var targetDirectory = Path.Combine(directories.Installed, manifest.Name);
-		var staging = Path.Combine(directories.Installed, $".incoming-{manifest.Name}-{Guid.NewGuid():N}");
+		var root = manifest.Kind == PackageKind.Ui ? directories.UiPackages : directories.Installed;
+		Directory.CreateDirectory(root);
+		var targetDirectory = Path.Combine(root, manifest.Name);
+		var staging = Path.Combine(root, $".incoming-{manifest.Name}-{Guid.NewGuid():N}");
 		try
 		{
 			Directory.CreateDirectory(staging);
@@ -114,10 +118,13 @@ public sealed class PluginPackageInstaller(
 
 			Directory.Move(staging, targetDirectory);
 
-			logger.LogInformation(
-				"Deployed plugin package '{PackageId}' v{Version}: {Count} verified file(s) into {Directory}. "
-				+ "It loads at the next restart.",
-				manifest.Name, manifest.Version, deployed.Count, targetDirectory);
+			if (manifest.Kind == PackageKind.Ui)
+				logger.LogInformation("Deployed UI package '{PackageId}' v{Version}: {Count} verified files into {Directory}.",
+					manifest.Name, manifest.Version, deployed.Count, targetDirectory);
+			else
+				logger.LogInformation(
+					"Deployed plugin package '{PackageId}' v{Version}: {Count} verified file(s) into {Directory}. It loads at the next restart.",
+					manifest.Name, manifest.Version, deployed.Count, targetDirectory);
 
 			return new Result<IReadOnlyList<string>>(deployed);
 		}
@@ -135,6 +142,25 @@ public sealed class PluginPackageInstaller(
 	/// it must be there, carry the package's id, not take the id of a plugin the server ships, and leave no doubt
 	/// which DLL is the plugin.
 	/// </summary>
+	private static string? CheckUiManifest(string id, IReadOnlyList<(string FileName, byte[] Bytes)> files)
+	{
+		if (files.Count > 32 || files.Sum(f => (long)f.Bytes.Length) > 8 * 1024 * 1024
+			|| files.Any(f => !UiDefinition.IsName(f.FileName) || UiDefinition.ContentType(f.FileName) is null || f.Bytes.Length > 2 * 1024 * 1024))
+			return "UI packages allow at most 32 browser asset files, 2 MiB each and 8 MiB total; no assemblies.";
+		var manifest = files.FirstOrDefault(f => f.FileName == UiDefinition.FileName).Bytes;
+		if (manifest is null) return "A UI package requires ui.json.";
+		try
+		{
+			var definition = UiDefinition.Parse(manifest);
+			if (definition.Id != id) return "The UI definition id must match the package id.";
+			return files.Any(f => f.FileName == definition.Entry) ? null : "The UI entry is not a declared package file.";
+		}
+		catch (Exception ex) when (ex is JsonException or FormatException or InvalidOperationException)
+		{
+			return ex.Message;
+		}
+	}
+
 	private string? CheckPluginManifest(string packageId, IReadOnlyList<(string FileName, byte[] Bytes)> files)
 	{
 		var manifestFile = files.FirstOrDefault(f => string.Equals(f.FileName, PluginManifest.FileName, StringComparison.OrdinalIgnoreCase));
@@ -230,19 +256,23 @@ public sealed class PluginPackageInstaller(
 		// Unload first (if loaded + unloadable) so no assembly is pinned while we
 		// delete its DLL; a load-once plugin cannot be unloaded at runtime, but its
 		// directory is still removed so the next boot does not re-load it.
-		switch (await pluginManager.UnloadAsync(packageId))
-		{
-			case Success:
-				logger.LogInformation("Unloaded plugin package '{PackageId}' before removing its directory.", LogSanitizer.Sanitize(packageId));
-				break;
-			case Error<string> error:
-				logger.LogDebug(
-					"Plugin package '{PackageId}' not unloaded at runtime ({Reason}); removing its directory so it does not load on next boot.",
-					LogSanitizer.Sanitize(packageId), error.Value);
-				break;
-		}
+		var uiDirectory = Path.Combine(directories.UiPackages, packageId);
+		var pluginDirectory = Path.Combine(directories.Installed, packageId);
+		var isUi = Directory.Exists(uiDirectory);
+		if (isUi && Directory.Exists(pluginDirectory)) return new Error<string>("Both UI and plugin directories exist; refuse an ambiguous removal.");
+		if (!isUi) switch (await pluginManager.UnloadAsync(packageId))
+			{
+				case Success:
+					logger.LogInformation("Unloaded plugin package '{PackageId}' before removing its directory.", LogSanitizer.Sanitize(packageId));
+					break;
+				case Error<string> error:
+					logger.LogDebug(
+						"Plugin package '{PackageId}' not unloaded at runtime ({Reason}); removing its directory so it does not load on next boot.",
+						LogSanitizer.Sanitize(packageId), error.Value);
+					break;
+			}
 
-		var targetDirectory = Path.Combine(directories.Installed, packageId);
+		var targetDirectory = isUi ? uiDirectory : pluginDirectory;
 		try
 		{
 			if (Directory.Exists(targetDirectory))

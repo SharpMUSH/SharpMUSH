@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Authorization
@@ -38,7 +39,16 @@
                                   HelperText="@Loc["LayAppPermissionHelper"]" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_schemaUrl" Label="@Loc["LayAppSchemaUrl"]" Required="true" Variant="Variant.Outlined"
+                    <MudCheckBox T="bool" @bind-Value="_hosted" Label="Plain HTML/JavaScript package" />
+                </MudItem>
+                @if (_hosted)
+                {
+                    <MudItem xs="12" sm="8"><MudTextField @bind-Value="_definitionId" Label="Installed definition ID" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField @bind-Value="_configVersion" Label="Config version" Min="1" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="_configJson" Label="Instance JSON config" Lines="8" Variant="Variant.Outlined" /></MudItem>
+                }
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_schemaUrl" Label="@Loc["LayAppSchemaUrl"]" Required="@(!_hosted)" Disabled="_hosted" Variant="Variant.Outlined"
                                   HelperText="@Loc["LayAppSchemaUrlHelper"]" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
@@ -112,6 +122,11 @@
 
     [Parameter] public PortalApplication? Existing { get; set; }
 
+    private bool _hosted;
+    private string _definitionId = "";
+    private int _configVersion = 1;
+    private string _configJson = "{}";
+    private bool _configUnavailable;
     private bool _isNew;
     private bool _saving;
     private string _slug = "";
@@ -130,11 +145,21 @@
     private string? _permission;
     private string? _navUrl;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _isNew = Existing is null;
+        if (Existing?.IsHosted == true)
+        {
+            var configured = await Registry.GetConfiguredAsync(Existing.Slug);
+            if (configured is null) _configUnavailable = true;
+            else Existing = configured;
+        }
         if (Existing is not null)
         {
+            _hosted = Existing.IsHosted;
+            _definitionId = Existing.DefinitionId ?? "";
+            _configVersion = Existing.ConfigVersion;
+            _configJson = Existing.Config?.GetRawText() ?? "{}";
             _slug = Existing.Slug;
             _displayName = Existing.DisplayName;
             _icon = Existing.Icon;
@@ -158,12 +183,20 @@
     private async Task Save()
     {
         if (string.IsNullOrWhiteSpace(_slug) || string.IsNullOrWhiteSpace(_displayName)
-            || string.IsNullOrWhiteSpace(_schemaUrl))
+            || (!_hosted && string.IsNullOrWhiteSpace(_schemaUrl)))
         {
             Snackbar.Add(Loc["LayAppRequiredFields"], Severity.Warning);
             return;
         }
 
+        if (_configUnavailable) { Snackbar.Add("Instance config could not be read. Reopen the editor before saving.", Severity.Error); return; }
+        JsonElement? config = null;
+        if (_hosted)
+        {
+            try { using var document = JsonDocument.Parse(_configJson); config = document.RootElement.Clone(); }
+            catch (JsonException) { Snackbar.Add("Instance config must be valid JSON.", Severity.Warning); return; }
+            _kind = ApplicationKind.Page;
+        }
         _saving = true;
         var model = new PortalApplication(
             _slug.Trim(),
@@ -180,13 +213,16 @@
             // The dialog has no inputs for these; an edit sends back what the record already holds,
             // so saving a component app does not quietly turn it into a schema app.
             Existing?.OwningPackage,
-            Existing?.RenderKind ?? ApplicationRenderKind.Schema,
+            _hosted ? ApplicationRenderKind.Hosted : Existing?.IsHosted == true ? ApplicationRenderKind.Schema : Existing?.RenderKind ?? ApplicationRenderKind.Schema,
             Existing?.ComponentAssemblyUrl,
             Existing?.ComponentTypeName,
             _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_scope) ? null : _scope.Trim(),
             _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_oobPackage) ? null : _oobPackage.Trim(),
             string.IsNullOrWhiteSpace(_permission) ? null : _permission.Trim(),
-            _kind != ApplicationKind.Page || string.IsNullOrWhiteSpace(_navUrl) ? null : _navUrl.Trim());
+            _kind != ApplicationKind.Page || string.IsNullOrWhiteSpace(_navUrl) ? null : _navUrl.Trim(),
+            _hosted ? _definitionId.Trim() : null,
+            _configVersion,
+            config);
 
         var result = await Registry.UpsertAsync(model);
         _saving = false;

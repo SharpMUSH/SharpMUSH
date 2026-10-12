@@ -59,6 +59,10 @@
             }
         </div>
     }
+    else if (_app.IsHosted)
+    {
+        <SharpMUSH.Client.Components.Applications.HostedApplication @key="_app.Slug" Slug="@_app.Slug" Title="@_app.DisplayName" />
+    }
     else if (_app.IsComponent)
     {
         @if (_componentType is not null)
@@ -182,7 +186,7 @@
                         _componentType = componentType;
                     }
                 }
-                else
+                else if (!app.IsHosted)
                 {
                     await LoadSchemaAppAsync(app, generation);
                 }

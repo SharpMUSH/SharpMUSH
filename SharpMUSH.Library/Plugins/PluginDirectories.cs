@@ -26,6 +26,8 @@ public sealed record PluginDirectories(string BuiltIn, string Installed)
 	/// The file that records which plugins an administrator turned off. It is read before the world is open,
 	/// which is why it is a file rather than a world record.
 	/// </summary>
+	public string UiPackages => Path.Combine(Installed, ".ui");
+
 	public string StateFile => Path.Combine(Installed, PluginState.FileName);
 
 	/// <summary>Where an uploaded plugin package waits between upload and apply.</summary>
