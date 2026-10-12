@@ -79,7 +79,9 @@ quotas terminate/reject the operation explicitly. Small single-frame cancellatio
 for the first bounded fragment uses the idle/session deadline; the message deadline starts when
 continuation is required. Request overload errors are awaited and bounded by the receive loop. If
 accepted document synchronization cannot obtain analysis admission, the session closes explicitly;
-clients must reconnect, initialize and reopen current text. It never silently retains an unanalyzed update.
+clients must reconnect, initialize and reopen current text. It never silently retains an unanalyzed update. A per-analysis deadline after admission publishes a
+generation-checked warning and keeps the session open; edit the document to retry. This avoids
+reconnect loops for slow documents without presenting timed-out analysis as a clean validation.
 Disconnect, idle/session deadline and host stop cancel work and release documents; uncooperative
 workers still retain their execution admission until termination. Responses have bounded result counts.
 
@@ -115,8 +117,8 @@ Basic credentials/account changes, TLS/reverse-proxy and a separate bridge proce
 require the separately approved disposable fixture. No production-ready/deployed claim is made.
 
 Final local evidence: actual standalone stdio42/42 assertions; analyzer50/50, local LSP handlers21/21,
-cooperative token3/3, catalog9/9 and parser5/5 tests. Fresh published payload passes isolated transport
-42/42 and MCP46/46 tests, including private plugin dependency/type identity, identity refresh,
+cooperative token3/3, catalog10/10 and parser5/5 tests. Fresh published payload passes isolated transport
+47/47 and MCP46/46 tests, including private plugin dependency/type identity, identity refresh,
 principal isolation, quotas, overload, lifecycle and negotiated protocol revisions. Editor strict
 compile/SecretStorage launch harness passes, npm audit reports zero vulnerabilities, and actual VSIX
 packaging succeeds. A read-only whole-branch review identified six transport findings addressed in

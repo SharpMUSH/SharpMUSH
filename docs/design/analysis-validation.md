@@ -10,8 +10,8 @@ for the configuration, transport and reconnection contract.
 | --- | --- |
 | Actual standalone stdio host | 42 assertions: initialization, valid/invalid diagnostics in all five extensions/modes, built-in intelligence, bounded variadic signatures, shutdown |
 | Analyzer/handler/token regressions | 50 analyzer, 21 local LSP handler, 3 cooperative token tests |
-| Catalog/parser | 9 catalog and 5 parser tests |
-| Published private plugin payload | 42 isolated transport tests; shared contract/private dependency identity checked through actual plugin loading |
+| Catalog/parser | 10 catalog and 5 parser tests |
+| Published private plugin payload | 47 isolated transport tests; shared contract/private dependency identity checked through actual plugin loading |
 | MCP | 46 isolated tests including eight tools, per-principal documents, identity/catalog refresh, quotas and HTTP admission |
 | Protocol revisions | Explicit MCP2025-06-18, 2025-11-25 and 2026-07-28 lifecycle/tool discovery; notification202 and invalid protocol-header400 for2025-11-25 |
 | Desktop example | Strict TypeScript compilation, mocked VS Code launch/SecretStorage harness, all five extensions and actual VSIX packaging; npm audit0 |
@@ -48,3 +48,12 @@ review found no Critical and six Important findings, addressed in one fix pass w
 - Hard preemption, exact heap ceilings, cross-session resume, and editor automatic retry/reopen are separate designs.
 - VSIX dependency bundling and the example's pre-existing license manifest/package reconciliation remain packaging follow-ups. Packaging emits warnings for those; the entrypoint and runtime dependencies are present.
 - The world-backed integration suite was not run because its persistent world/network fixtures are outside current authorization. No full-suite or deployment-ready claim is made.
+
+## Review follow-up
+
+Command-lock projection and notification-deadline regressions failed before their fixes. Canonical
+and alias command hover now retain captured lock metadata. Per-analysis notification deadlines
+publish a generation-checked warning while keeping the session usable; later edits can retry.
+Admission failure still closes explicitly. Authentication narrows nested object union cases directly,
+with missing/non-player cases rejected before account/catalog resolution. A live-catalog regression
+confirms compiled aliases exclude conflicting global names; silent collision skipping is not needed.

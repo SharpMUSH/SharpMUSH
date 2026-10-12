@@ -37,7 +37,7 @@ public sealed class AnalysisSessionFactory(IMediator mediator, IAccountService a
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			var result = await factory._mediator.Send(new GetObjectNodeQuery(reference), cancellationToken);
-			if (result.Value is not AnySharpObject found || found.Value is not SharpPlayer player || player.Object.DBRef != reference ||
+			if (result is not (AnySharpObject found and SharpPlayer player) || player.Object.DBRef != reference ||
 				string.IsNullOrEmpty(player.PasswordHash) || AnalysisIdentity.CredentialVersion(player.PasswordHash) != credentialVersion)
 				throw new UnauthorizedAccessException("Analysis identity is no longer available.");
 			var account = await factory._accounts.GetAccountForCharacterAsync(reference, cancellationToken);

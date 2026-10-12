@@ -35,7 +35,8 @@ public static class AnalysisCatalogAnalyzer
 				var attribute = new SharpCommandAttribute
 				{
 					Name = entry.Name, MinArgs = entry.MinArgs, MaxArgs = entry.MaxArgs ?? int.MaxValue,
-					Behavior = Enum.Parse<CommandBehavior>(entry.Flags), ParameterNames = entry.ParameterNames.ToArray(), Switches = entry.Switches.ToArray()
+					Behavior = Enum.Parse<CommandBehavior>(entry.Flags), CommandLock = entry.Restrictions.FirstOrDefault() ?? string.Empty,
+					ParameterNames = entry.ParameterNames.ToArray(), Switches = entry.Switches.ToArray()
 				};
 				var definition = new CommandDefinition(attribute, _ => throw new NotSupportedException("Analysis cannot evaluate softcode."));
 				foreach (var name in entry.Aliases.Prepend(entry.Name)) commands.Add(name, (definition, entry.Origin == "compiled"));

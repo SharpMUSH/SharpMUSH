@@ -260,7 +260,18 @@ public sealed class LspEndpoint(IAnalysisSessionFactory sessions, AnalysisExecut
 							code = diagnostic.Code
 						}).ToArray(), () => _documents.Get(uri)?.Generation == snapshot.Generation);
 				}
-				catch (OperationCanceledException) { if (id is not null && !_stop.IsCancellationRequested) await Error(id.Value, -32800, "Request cancelled"); else if (id is null) _stop.Cancel(); }
+				catch (OperationCanceledException) when (!_stop.IsCancellationRequested)
+				{
+					if (id is not null) await Error(id.Value, -32800, "Request cancelled");
+					else if (uri is not null && snapshot is not null)
+						await Diagnostics(uri, snapshot.Version, [new
+						{
+							range = new { start = new { line = 0, character = 0 }, end = new { line = 0, character = 0 } },
+							severity = 2, message = "Analysis timed out; diagnostics are unavailable for this version. Edit the document to retry.",
+							source = "SharpMUSH", code = "analysis-timeout"
+						}], () => _documents.Get(uri)?.Generation == snapshot.Generation);
+				}
+				catch (OperationCanceledException) { }
 				catch (UnauthorizedAccessException) { if (id is not null) await Error(id.Value, -32001, "Analysis identity is unavailable"); _stop.Cancel(); }
 				catch (Exception exception) when (exception is InvalidOperationException or ArgumentException) { if (id is not null) await Error(id.Value, -32000, "Analysis unavailable or capacity exceeded"); else _stop.Cancel(); }
 				catch (Exception) { if (id is not null && !_stop.IsCancellationRequested) await Error(id.Value, -32603, "Analysis failed"); else _stop.Cancel(); }

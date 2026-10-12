@@ -5,8 +5,8 @@ This directory contains example files for creating a VS Code extension that uses
 ## Setup
 
 1. **Prerequisites**:
-   - Node.js22 or newer and npm installed
-   - Build the offline language server or remote bridge with the repository's .NET11 SDK.
+   - Node.js 22 or newer and npm installed
+   - Build the offline language server or remote bridge with the repository's .NET 11 SDK.
    - TypeScript and VSCE are project dependencies; no global installation is needed.
 
 2. **Install dependencies**:

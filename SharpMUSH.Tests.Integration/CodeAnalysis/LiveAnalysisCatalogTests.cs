@@ -42,6 +42,21 @@ public class LiveAnalysisCatalogTests
 	};
 
 	[Test]
+	public async Task CompiledAliases_ExcludeCollidingGlobalNamesBeforeProjection()
+	{
+		var functions = new FunctionLibraryService();
+		var definition = new FunctionDefinition(new SharpFunctionAttribute { Name = "public", Flags = FunctionFlags.Regular, MinArgs = 0, MaxArgs = 1 }, _ => throw new NotSupportedException());
+		functions.Add("public", (definition, true)); functions.Add("alias", (definition, true));
+		var users = new UserDefinedFunctionService();
+		users.Define(new UserDefinedFunction("ALIAS", new DBRef(9, 100), "FN", 1, 2, true, null));
+		var snapshot = await new LiveAnalysisCatalog(functions, new CommandLibraryService(), users, Substitute.For<ILockService>()).GetSnapshotAsync(Actor(2));
+		await Assert.That(snapshot.Entries.Count).IsEqualTo(1);
+		await Assert.That(snapshot.Entries[0].Aliases.Contains("alias")).IsTrue();
+		var analyzer = AnalysisCatalogAnalyzer.Create(snapshot, SharpMUSH.Configuration.Options.SharpMUSHOptions.Default());
+		await Assert.That(analyzer.Hover("alias(1)", 0, 2)).IsNotNull();
+	}
+
+	[Test]
 	public async Task LocalScope_UsesRuntimeOwnerInsteadOfExecutorObjectIdentity()
 	{
 		var owner = Actor(2);

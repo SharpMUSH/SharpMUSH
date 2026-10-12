@@ -19,4 +19,16 @@ public class AnalysisProjectionTests
 		await Assert.That(analyzer.Validate("visible(1)").Count).IsEqualTo(0);
 		await Assert.That(analyzer.SignatureHelp("visible(1,2)", 0, 11)!.Parameters.Count).IsEqualTo(2);
 	}
+	[Test]
+	[Arguments("@locked")]
+	[Arguments("@alias")]
+	public async Task CatalogProjection_CommandHoverPreservesVisibleLiveLock(string name)
+	{
+		var entry = new AnalysisCatalogEntry("@locked", "command", "compiled", 0, 1, ["@alias"], [], [], "Default", ["fixture-lock"]);
+		var analyzer = AnalysisCatalogAnalyzer.Create(new AnalysisCatalogSnapshot("epoch", "revision", "live", [entry]), SharpMUSHOptions.Default());
+		var hover = analyzer.Hover(name + " argument", 0, 3);
+		await Assert.That(hover).IsNotNull();
+		await Assert.That(hover!.Markdown).Contains("**Lock:** fixture-lock");
+	}
+
 }

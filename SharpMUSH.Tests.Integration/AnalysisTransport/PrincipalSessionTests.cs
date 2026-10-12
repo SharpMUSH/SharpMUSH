@@ -20,6 +20,22 @@ public class PrincipalSessionTests
 	private sealed class Options : IOptionsWrapper<SharpMUSHOptions> { public SharpMUSHOptions CurrentValue => SharpMUSHOptions.Default(); }
 
 	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Session_RejectsMissingOrNonPlayerCasesBeforeMetadata(bool missing)
+	{
+		var mediator = Substitute.For<IMediator>();
+		AnyOptionalSharpObject resolved = missing ? new None() : new SharpRoom { Object = LiveAnalysisCatalogTests.Actor(2).Object, Location = new(_ => Task.FromResult<AnyOptionalSharpContainer>(new None())) };
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(resolved);
+		var accounts = Substitute.For<IAccountService>(); var catalog = Substitute.For<IAnalysisCatalog>();
+		var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim("character_key", "2"), new Claim("character_creation_time", "100"), new Claim(AnalysisIdentity.CredentialVersionClaim, "synthetic")], AnalysisTransportSecurity.AuthenticationScheme));
+		var session = new AnalysisSessionFactory(mediator, accounts, catalog, new Options()).CreateSession(principal);
+		await Assert.That(async () => await session.CreateAnalyzerAsync()).Throws<UnauthorizedAccessException>();
+		await catalog.DidNotReceive().GetSnapshotAsync(Arg.Any<AnySharpObject>(), Arg.Any<CancellationToken>());
+		await accounts.DidNotReceive().GetAccountForCharacterAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async Task Session_RevalidatesPasswordAccountAndIncarnationBeforeMetadata()
 	{
 		var player = LiveAnalysisCatalogTests.Actor(2);

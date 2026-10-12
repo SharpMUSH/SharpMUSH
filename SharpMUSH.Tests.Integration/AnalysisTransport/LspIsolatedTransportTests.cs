@@ -27,7 +27,7 @@ namespace SharpMUSH.Tests.Integration.AnalysisTransport;
 
 public class LspIsolatedTransportTests
 {
-	internal static async Task<WebApplication> StartApp(Action<LspOptions>? configure = null, IAnalysisSessionFactory? sessions = null, string availability = "enabled")
+	internal static async Task<WebApplication> StartApp(Action<LspOptions>? configure = null, IAnalysisSessionFactory? sessions = null, string availability = "enabled", AnalysisExecutionOptions? executionOptions = null)
 	{
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseTestServer();
@@ -62,7 +62,7 @@ public class LspIsolatedTransportTests
 			if (AssemblyLoadContext.GetLoadContext(protocol) != AssemblyLoadContext.GetLoadContext(assembly)) throw new InvalidOperationException("Protocol dependency is not private.");
 		}
 		builder.Services.AddSingleton<IAnalysisSessionFactory>(sessions ?? new FixedAnalysisSessions(AnalysisCatalogAnalyzer.Create(BuiltInAnalysisCatalog.CreateSnapshot(), SharpMUSHOptions.Default())));
-		builder.Services.AddSingleton(new AnalysisExecutor(Options.Create(new AnalysisExecutionOptions())));
+		builder.Services.AddSingleton(new AnalysisExecutor(Options.Create(executionOptions ?? new AnalysisExecutionOptions())));
 		builder.Services.AddAuthentication("DebugAuth")
 			.AddScheme<AuthenticationSchemeOptions, McpIsolatedTransportTests.FixtureAuthentication>("DebugAuth", _ => { })
 			.AddScheme<AuthenticationSchemeOptions, McpIsolatedTransportTests.FixtureAuthentication>(MushBasicAuthenticationHandler.SchemeName, _ => { });
@@ -166,6 +166,23 @@ public class LspIsolatedTransportTests
 			await Assert.That((await Response(socket, 200)).GetProperty("error").GetProperty("code").GetInt32()).IsEqualTo(-32601);
 		}
 		finally { analyzer.Release.Set(); }
+	}
+
+	[Test]
+	public async Task DiagnosticsDeadline_PublishesWarningAndKeepsSessionUsable()
+	{
+		using var analyzer = new GatedAnalyzer { GateValidation = true };
+		await using var app = await StartApp(sessions: new FixedAnalysisSessions(analyzer), executionOptions: new AnalysisExecutionOptions { AnalysisTimeout = TimeSpan.FromMilliseconds(200) });
+		using var socket = await Connect(app); await Initialize(socket);
+		const string uri = "file:///deadline.fun";
+		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didOpen", @params = new { textDocument = new { uri, version = 1, text = "slow[" } } });
+		var diagnostic = (await Receive(socket)).GetProperty("params").GetProperty("diagnostics")[0];
+		await Assert.That(diagnostic.GetProperty("code").GetString()).IsEqualTo("analysis-timeout");
+		await Assert.That(diagnostic.GetProperty("severity").GetInt32()).IsEqualTo(2);
+		await Send(socket, new { jsonrpc = "2.0", id = 2, method = "unknown" });
+		await Assert.That((await Response(socket, 2)).GetProperty("error").GetProperty("code").GetInt32()).IsEqualTo(-32601);
+		await Send(socket, new { jsonrpc = "2.0", method = "textDocument/didChange", @params = new { textDocument = new { uri, version = 2 }, contentChanges = new[] { new { text = "get(#1/DESC)" } } } });
+		await Assert.That((await Receive(socket)).GetProperty("params").GetProperty("diagnostics").GetArrayLength()).IsEqualTo(0);
 	}
 
 	[Test]
