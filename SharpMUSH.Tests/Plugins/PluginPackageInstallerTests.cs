@@ -50,6 +50,74 @@ public class PluginPackageInstallerTests
 		installer.DeployAsync(Parse(yaml), Request(allow), source ?? new PluginPackageFixture.BinarySource(PackageId));
 
 	[Test]
+	[Arguments("../outside")]
+	[Arguments("/tmp/outside")]
+	[Arguments("C:\\outside")]
+	[Arguments(".")]
+	[Arguments(".ui")]
+	public async Task DirectDeploymentRejectsUnsafePackageIdsBeforeReadingFiles(string id)
+	{
+		var directories = PluginPackageFixture.ScratchDirectories();
+		try
+		{
+			var manifest = Parse(PluginPackageFixture.Yaml(PackageId)) with { Name = id };
+			var source = new RefuseReadSource();
+			await Assert.That(await NewInstaller(directories).DeployAsync(manifest, Request(true), source) is Error<string>).IsTrue();
+			await Assert.That(source.Reads).IsEqualTo(0);
+			await Assert.That(Directory.Exists(directories.Installed)).IsFalse();
+		}
+		finally { PluginPackageFixture.Delete(directories); }
+	}
+
+	[Test]
+	[Arguments("../payload.dll")]
+	[Arguments("/tmp/payload.dll")]
+	[Arguments("C:\\payload.dll")]
+	[Arguments("nested/payload.dll")]
+	[Arguments("nested\\payload.dll")]
+	public async Task DirectDeploymentRejectsUnsafeFilesBeforeReadingSource(string file)
+	{
+		var directories = PluginPackageFixture.ScratchDirectories();
+		try
+		{
+			var manifest = Parse(PluginPackageFixture.Yaml(PackageId));
+			manifest = manifest with { Binary = manifest.Binary! with { Files = [new(file, new string('0', 64))] } };
+			var source = new RefuseReadSource();
+			await Assert.That(await NewInstaller(directories).DeployAsync(manifest, Request(true), source) is Error<string>).IsTrue();
+			await Assert.That(source.Reads).IsEqualTo(0);
+			await Assert.That(Directory.Exists(directories.Installed)).IsFalse();
+		}
+		finally { PluginPackageFixture.Delete(directories); }
+	}
+
+	[Test]
+	public async Task DirectRemovalRejectsTraversalAndKeepsSiblingFiles()
+	{
+		var directories = PluginPackageFixture.ScratchDirectories();
+		try
+		{
+			Directory.CreateDirectory(directories.Installed);
+			var outside = Path.Combine(Path.GetDirectoryName(directories.Installed)!, "outside");
+			Directory.CreateDirectory(outside);
+			var marker = Path.Combine(outside, "keep.txt");
+			await File.WriteAllTextAsync(marker, "keep");
+			await Assert.That(await NewInstaller(directories).RemoveAsync("../outside", []) is Error<string>).IsTrue();
+			await Assert.That(File.Exists(marker)).IsTrue();
+		}
+		finally { PluginPackageFixture.Delete(directories); }
+	}
+
+	private sealed class RefuseReadSource : IPluginPackageBinarySource
+	{
+		public int Reads { get; private set; }
+		public Task<byte[]?> ReadBinaryAsync(string fileName, CancellationToken cancellationToken = default)
+		{
+			Reads++;
+			return Task.FromResult<byte[]?>(null);
+		}
+	}
+
+	[Test]
 	public async Task FixtureDll_Exists()
 	{
 		await Assert.That(File.Exists(PluginPackageFixture.DllPath)).IsTrue()

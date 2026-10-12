@@ -5,6 +5,7 @@
 @implements IAsyncDisposable
 @inject IHttpClientFactory HttpClients
 @inject IJSRuntime JS
+@inject ILogger<HostedApplication> Logger
 
 @if (_error is not null)
 {
@@ -36,7 +37,9 @@ else
             var payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(bootstrap.GetRawText())!;
             var entryUrl = new Uri(http.BaseAddress!, bootstrap.GetProperty("entryUrl").GetString()!);
             payload["entryUrl"] = JsonSerializer.SerializeToElement(entryUrl.AbsoluteUri);
-            payload["html"] = JsonSerializer.SerializeToElement(await http.GetStringAsync(entryUrl, _lifetime.Token));
+            using var entryResponse = await http.GetAsync(entryUrl, _lifetime.Token);
+            entryResponse.EnsureSuccessStatusCode();
+            payload["html"] = JsonSerializer.SerializeToElement(await entryResponse.Content.ReadAsStringAsync(_lifetime.Token));
             _bootstrap = JsonSerializer.SerializeToElement(payload);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or OperationCanceledException)
@@ -77,8 +80,15 @@ else
             if (_mount is not null) { await _mount.InvokeVoidAsync("dispose"); await _mount.DisposeAsync(); }
             if (_module is not null) await _module.DisposeAsync();
         }
-        catch (JSDisconnectedException) { }
-        _reference?.Dispose();
-        _lifetime.Dispose();
+        catch (JSDisconnectedException ex)
+        {
+            // A departing browser has no JS runtime left to release. Managed references still need cleanup.
+            Logger.LogDebug(ex, "Hosted application JS runtime disconnected during disposal.");
+        }
+        finally
+        {
+            _reference?.Dispose();
+            _lifetime.Dispose();
+        }
     }
 }

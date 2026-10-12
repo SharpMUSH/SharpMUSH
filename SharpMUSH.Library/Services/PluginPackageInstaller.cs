@@ -26,6 +26,15 @@ public sealed class PluginPackageInstaller(
 	PluginDirectories directories,
 	ILogger<PluginPackageInstaller> logger) : IPluginPackageInstaller
 {
+	// Validate at this filesystem boundary even when a caller constructs records without the YAML parser.
+	private static bool IsPackageId(string? id) => id is { Length: > 0 and <= 64 }
+		&& id[0] is >= 'a' and <= 'z' && id.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-');
+
+	private static bool IsFileName(string? file) => !string.IsNullOrWhiteSpace(file)
+		&& !file.Contains('/') && !file.Contains('\\') && !file.Contains(':')
+		&& !file.Contains("..", StringComparison.Ordinal) && !Path.IsPathRooted(file)
+		&& file == Path.GetFileName(file) && file.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
+
 	private static readonly JsonSerializerOptions ManifestJson = new() { PropertyNameCaseInsensitive = true };
 
 	public async Task<Result<IReadOnlyList<string>>> DeployAsync(
@@ -34,6 +43,7 @@ public sealed class PluginPackageInstaller(
 		IPluginPackageBinarySource binarySource,
 		CancellationToken cancellationToken = default)
 	{
+		if (!IsPackageId(manifest.Name)) return new Error<string>("Invalid package id; expected a lowercase package slug.");
 		if (manifest.Binary is null)
 		{
 			return new Error<string>($"Plugin package '{manifest.Name}' has no 'binaries' block to deploy.");
@@ -60,6 +70,9 @@ public sealed class PluginPackageInstaller(
 				$"Plugin package '{manifest.Name}' requires plugin contract {manifest.Binary.MinServerVersion}; "
 				+ $"this server provides {PluginContractVersion.Current}. Upgrade the server to install it.");
 		}
+
+		if (manifest.Binary.Files.Any(file => !IsFileName(file.FileName)))
+			return new Error<string>("Binary files must be bare file names without paths or '..'.");
 
 		// Verify every file against its hash BEFORE writing anything.
 		var verified = new List<(string FileName, byte[] Bytes)>();
@@ -253,6 +266,8 @@ public sealed class PluginPackageInstaller(
 		IReadOnlyList<string> deployedFiles,
 		CancellationToken cancellationToken = default)
 	{
+		if (!IsPackageId(packageId)) return new Error<string>("Invalid package id; expected a lowercase package slug.");
+
 		// Unload first (if loaded + unloadable) so no assembly is pinned while we
 		// delete its DLL; a load-once plugin cannot be unloaded at runtime, but its
 		// directory is still removed so the next boot does not re-load it.
