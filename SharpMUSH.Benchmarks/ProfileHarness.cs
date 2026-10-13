@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
 using System.Text;
 
@@ -7,7 +8,7 @@ namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Profiling harness: <c>dotnet run -c Release -- profile [scenario,...] [--seconds N] [--wait N]
-/// [--things N] [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
+/// [--things N] [--connections N] [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
 /// second, managed bytes allocated per operation, and generation-zero collections per thousand
 /// operations. <c>--things</c> is how many things God carries (default 50), for the scenarios that
 /// grow with a container. <c>--paren-groups</c> sets that compatibility option for the run; the <c>paren-*</c>
@@ -16,6 +17,8 @@ namespace SharpMUSH.Benchmarks;
 public sealed class ProfileHarness : LightningBaseBenchmark
 {
 	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false, bool AsMortal = false);
+
+	private static readonly string Shuffled100 = string.Join(' ', Enumerable.Range(0, 100).Select(i => i * 37 % 100));
 
 	private static readonly Scenario[] Scenarios =
 	[
@@ -71,6 +74,9 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("setq", "[setq(w1,x)]", false),
 		new("rc-whovis", "[filter(me/PROFILE_WHOVIS,lcon(me),,,me)]", false),
 		new("rc-whobase", "[iter(lcon(me),u(me/PROFILE_WHOBASE,##))]", false),
+		// 0-99 in a fixed shuffled order: a sorted list is a merge sort's best case.
+		new("sort", $"[sort({Shuffled100})]", false),
+		new("sortby", $"[sortby(me/PROFILE_CMP,{Shuffled100})]", false),
 		new("set", "&PROFILE_X me=x", true),
 		new("set+lattr", "&PROFILE_X me=x;think [lattr(me)]", true, IsCommandList: true),
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
@@ -93,6 +99,9 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("hasattr-m", "[hasattr({BIG},FLAT3999)]", false, AsMortal: true),
 		new("grep-m", "[grep({BIG},FLAT1*,value)]", false, AsMortal: true),
 		new("examine-m", "examine {BIG}", true, AsMortal: true),
+		// With --connections: a player's own theme, and the player ancestor's, which every player inherits from.
+		new("theme-me", "@theme me=fantasy", true),
+		new("theme-anc", "@theme #4=fantasy", true),
 	];
 
 	private const int BigFlat = 4000;
@@ -121,6 +130,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var seconds = 10;
 		var wait = 0;
 		var things = 50;
+		var connections = 0;
 		bool? parenGroups = null;
 		var selected = new List<string>();
 		for (var i = 0; i < args.Length; i++)
@@ -147,6 +157,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 						_ => throw new ArgumentException("--paren-groups takes on or off.")
 					} : throw new ArgumentException("--paren-groups takes on or off.");
 					break;
+				case "--connections":
+					if (++i >= args.Length || !int.TryParse(args[i], out connections) || connections < 0)
+						throw new ArgumentException("--connections requires a non-negative integer.");
+					break;
 				default: selected.AddRange(args[i].Split(',', StringSplitOptions.RemoveEmptyEntries)); break;
 			}
 		}
@@ -160,7 +174,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await harness.Setup();
 		try
 		{
-			await harness.RunScenariosAsync(scenarios, seconds, wait, things, parenGroups);
+			await harness.RunScenariosAsync(scenarios, seconds, wait, things, parenGroups, connections);
 		}
 		finally
 		{
@@ -168,7 +182,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		}
 	}
 
-	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, int things, bool? parenGroups)
+	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, int things, bool? parenGroups, int connections)
 	{
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
@@ -182,9 +196,12 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOBASE"], MarkupText.Plain("json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,status,if(hastype(%0,player),json(string,idle(%0)),null),profile,if(hastype(%0,player),true,null)))"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_DOC"], MarkupText.Plain("{\"kind\":\"\",\"schema_version\":1,\"title\":\"\",\"pages\":[{\"key\":\"main\",\"title\":\"\",\"order\":1,\"sections\":[]}],\"actions\":{}}"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_NOOP"], MarkupText.Plain("think"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_CMP"], MarkupText.Plain("sub(%0,%1)"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_ACTIONS"], MarkupText.Plain("@pemit me=Got %0 [add(%0,1)];think [mul(%0,2)];@switch %0=5,{@pemit me=five},{@pemit me=other}"), god);
 		for (var i = 0; i < things; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
+
+		await ConnectPlayersAsync(connections);
 
 		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))
 			? await SeedBigObjectsAsync()
@@ -264,6 +281,26 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			=> await _database!.GetObjectNodeAsync(dbref) is AnySharpObject node
 				? node
 				: throw new InvalidOperationException($"#{dbref.Number} is missing.");
+	}
+
+	/// <summary>
+	/// <paramref name="count"/> players logged in on handles of their own, output discarded, each with a THEME
+	/// that is code, as a game's would be.
+	/// </summary>
+	private async Task ConnectPlayersAsync(int count)
+	{
+		var connectionService = _server!.Services.GetRequiredService<IConnectionService>();
+		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
+			throw new InvalidOperationException("God (#1) is not seeded as a player.");
+		for (var i = 0; i < count; i++)
+		{
+			var player = await _database.CreatePlayerAsync($"ProfileOnline{i}", "unused", new DBRef(0), new DBRef(0), 100);
+			await _database.SetAttributeAsync(player, ["THEME"], MarkupText.Plain("if(1,nord)"), god);
+			var handle = 900_000L + i;
+			await connectionService.Register(handle, "localhost", "localhost", "profile",
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+			await connectionService.Bind(handle, player);
+		}
 	}
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)

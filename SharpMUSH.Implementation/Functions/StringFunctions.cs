@@ -1465,7 +1465,7 @@ public partial class Functions
 
 		if (FunctionLimits.ExceedsOutput(parser.CurrentState, repeatNumber))
 			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
-		var repeat = MarkupText.Space.Repeat(repeatNumber);
+		var repeat = MarkupText.Plain(new string(' ', repeatNumber));
 		return ValueTask.FromResult(new CallState(repeat));
 	}
 
