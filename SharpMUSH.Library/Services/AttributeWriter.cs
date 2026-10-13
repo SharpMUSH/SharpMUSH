@@ -34,6 +34,14 @@ internal sealed class AttributeWriter(
 		AnySharpObject obj,
 		string attribute,
 		MString value)
+		=> Succeeded(await SetAttributeForReportAsync(executor, obj, attribute, value));
+
+	/// <summary>As <see cref="SetAttributeAsync(AnySharpObject, AnySharpObject, string, MString)"/>, answering
+	/// whether the attribute written is <c>quiet</c>.</summary>
+	public async ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		MString value)
 		=> await SetAttributeAsync(executor, obj, attribute, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None), isAttributeCopy: false);
 
@@ -49,7 +57,13 @@ internal sealed class AttributeWriter(
 		string attribute,
 		MString value,
 		SharpPlayer creator)
-		=> await SetAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy: true);
+		=> Succeeded(await SetAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy: true));
+
+	private static Result<Success> Succeeded(Result<WrittenAttribute> result) => result switch
+	{
+		WrittenAttribute => new Success(),
+		Error<string> error => error
+	};
 
 	/// <param name="isAttributeCopy">
 	/// Whether this write is PennMUSH's <c>atr_cpy</c> (<c>src/attrib.c:1706</c>) rather than an
@@ -60,7 +74,7 @@ internal sealed class AttributeWriter(
 	/// The <c>Controls</c>, stored-flag and <c>check_attr_value</c> gates still run: only the two
 	/// checks Penn reaches exclusively through <c>do_set_atr</c>/<c>atr_add</c> are skipped.
 	/// </param>
-	private async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
+	private async ValueTask<Result<WrittenAttribute>> SetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
 		MString value,
@@ -73,7 +87,7 @@ internal sealed class AttributeWriter(
 		}
 
 		var result = await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: true);
-		await ReportPlayerAliasAsync(executor, result, value.ToPlainText().Length > 0
+		await ReportPlayerAliasAsync(executor, Succeeded(result), value.ToPlainText().Length > 0
 			? nameof(ErrorMessages.Notifications.PlayerAliasSet)
 			: nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
 		return result;
@@ -100,7 +114,7 @@ internal sealed class AttributeWriter(
 		}
 	}
 
-	private async ValueTask<Result<Success>> WriteAttributeAsync(AnySharpObject executor,
+	private async ValueTask<Result<WrittenAttribute>> WriteAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
 		MString value,
@@ -271,7 +285,7 @@ internal sealed class AttributeWriter(
 	}
 
 	/// <summary>The value checks that follow the permission gates, then the write itself.</summary>
-	private async ValueTask<Result<Success>> WritePlannedAsync(AttributeWrite write, WritePlan plan, MString value)
+	private async ValueTask<Result<WrittenAttribute>> WritePlannedAsync(AttributeWrite write, WritePlan plan, MString value)
 	{
 		// The forward lists are validated here, four lines ahead of check_attr_value, exactly where
 		// Penn's do_set_atr puts them (src/attrib.c:2326-2358): an entry that is not an objid, does not
@@ -293,7 +307,7 @@ internal sealed class AttributeWriter(
 
 		return await RestrictedValueAsync(write, plan, fullName, value) switch
 		{
-			MString stored => await StoreAsync(write, stored),
+			MString stored => await StoreAsync(write, plan, stored),
 			Error<string> refused => refused
 		};
 	}
@@ -324,12 +338,22 @@ internal sealed class AttributeWriter(
 		};
 	}
 
-	private async ValueTask<Result<Success>> StoreAsync(AttributeWrite write, MString value)
+	private async ValueTask<Result<WrittenAttribute>> StoreAsync(AttributeWrite write, WritePlan plan, MString value)
 	{
 		await mediator.Send(new SetAttributeCommand(write.Obj.Object().DBRef, write.AttrPath, value, write.Creator));
 		await WarnSyntaxErrorsAsync(write, value);
-		return new Success();
+		return new WrittenAttribute(IsQuiet(write, plan));
 	}
+
+	/// <summary>
+	/// Whether the leaf just written carries <c>quiet</c>, without reading it back: a value set leaves an
+	/// existing leaf's flags as they were (the pre-set snapshot), and the provider gives a new leaf its
+	/// attribute entry's default flags, the entry <see cref="GateCreatedLevelsAsync"/> already fetched.
+	/// </summary>
+	private static bool IsQuiet(AttributeWrite write, WritePlan plan)
+		=> write.Existing.Count != 0
+			? write.Existing[^1].IsQuiet()
+			: plan.LeafEntry?.DefaultFlags.Any(flag => flag.Equals("quiet", StringComparison.OrdinalIgnoreCase)) == true;
 
 	/// <summary>
 	/// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and

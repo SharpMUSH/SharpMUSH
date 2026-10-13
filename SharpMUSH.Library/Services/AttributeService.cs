@@ -40,6 +40,11 @@ public class AttributeService(
 		=> _writer.SetAttributeAsync(executor, obj, attribute, value);
 
 	/// <inheritdoc/>
+	public ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor, AnySharpObject obj,
+		string attribute, MString value)
+		=> _writer.SetAttributeForReportAsync(executor, obj, attribute, value);
+
+	/// <inheritdoc/>
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value, SharpPlayer creator)
 		=> _writer.SetAttributeAsync(executor, obj, attribute, value, creator);
