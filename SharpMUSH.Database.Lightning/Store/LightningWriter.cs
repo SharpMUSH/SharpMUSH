@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
 using LightningDB;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -5,18 +6,28 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning.Store;
 
 /// <summary>
-/// The one thread allowed to begin LMDB write transactions. Jobs run to completion in submission
-/// order. Typed jobs (<see cref="EnqueueAsync{T}"/>, the store's own commit-on-return transaction) are
-/// group-committed: whatever has queued up while the previous commit was in flight is taken together,
-/// up to <see cref="LightningStoreOptions.MaxBatch"/>, and run inside one transaction with one commit and
-/// one sync. Each job in a batch runs in its own nested transaction, so a job that throws is aborted
+/// Serializes LMDB write transactions: one at a time, to completion, in submission order. Typed jobs
+/// (<see cref="EnqueueAsync{T}"/>, the store's own commit-on-return transaction) are group-committed:
+/// whatever has queued up while the previous commit was in flight is taken together, up to
+/// <see cref="LightningStoreOptions.MaxBatch"/>, and run inside one transaction with one commit and one
+/// sync. Each job in a batch runs in its own nested transaction, so a job that throws is aborted
 /// alone and its exception is delivered to its caller only; the others in the batch still land. A lone
 /// job commits on its own, immediately — batching never waits for company.
 ///
+/// A typed job that finds nothing ahead of it — the queue empty, no job running, the writer not paused —
+/// runs on the caller's own thread instead of being handed to the writer thread. That handoff was most of
+/// an uncontended write's cost: waking the writer thread, then a pool thread to resume the caller, several
+/// times what the transaction itself takes. The job is the same one-job batch with the same commit and
+/// sync; only the thread differs. Whatever arrives while it runs queues as before, and the writer thread
+/// takes it together once the caller is done, so group commit under load is unchanged. Only one job runs
+/// at a time either way: <see cref="_turn"/> is held by whichever thread is running one, and the writer
+/// thread takes jobs off the queue only while holding it, so an empty queue under it means nothing
+/// submitted earlier is still waiting.
+///
 /// Raw jobs (<see cref="EnqueueRawAsync{T}"/>, for callers that need the untyped
 /// <see cref="LightningTransaction"/> itself — e.g. <c>LightningStore.OpenTable</c> opening a sub-database —
-/// and commit on their own) always run alone: they own their top-level transaction and cannot nest. Both
-/// shapes go through the same queue on this same thread, so they still serialize against each other.
+/// and commit on their own) always run alone, and always on the writer thread: they own their top-level
+/// transaction and cannot nest. They take the same turn as typed jobs, so the two still serialize.
 /// </summary>
 internal sealed class LightningWriter : IDisposable
 {
@@ -45,11 +56,22 @@ internal sealed class LightningWriter : IDisposable
 	private readonly Thread _thread;
 	private readonly ManualResetEventSlim _resume = new(true);
 
-	public LightningWriter(Action<IReadOnlyList<BatchItem>> executeBatch, Func<Func<LightningTransaction, object?>, object?> executeRaw, int maxBatch)
+	/// <summary>Held by the thread running a job: the writer thread, or a caller running its own.</summary>
+	private readonly SemaphoreSlim _turn = new(1, 1);
+
+	/// <summary>Whether the calling thread may run a job itself. The store says no while that thread is
+	/// inside one of its own read sections, whose lock it could not take again.</summary>
+	private readonly Func<bool> _mayRunInline;
+
+	private volatile bool _disposed;
+
+	public LightningWriter(Action<IReadOnlyList<BatchItem>> executeBatch, Func<Func<LightningTransaction, object?>, object?> executeRaw, int maxBatch,
+		Func<bool>? mayRunInline = null)
 	{
 		if (maxBatch < 1) throw new ArgumentOutOfRangeException(nameof(maxBatch), maxBatch, "A batch holds at least one job.");
 		_executeBatch = executeBatch;
 		_executeRaw = executeRaw;
+		_mayRunInline = mayRunInline ?? (() => true);
 		_maxBatch = maxBatch;
 		_thread = new Thread(Run) { IsBackground = true, Name = "lightning-writer" };
 		_thread.Start();
@@ -58,6 +80,11 @@ internal sealed class LightningWriter : IDisposable
 	public async ValueTask<T> EnqueueAsync<T>(Func<ITx, T> job, CancellationToken ct)
 	{
 		ct.ThrowIfCancellationRequested();
+		if (TryRunInline(job, out var result))
+		{
+			return result;
+		}
+
 		var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		await _queue.Writer.WriteAsync(new TypedJob(tx => job(tx), completion, ct), ct).ConfigureAwait(false);
 		return (T)(await completion.Task.ConfigureAwait(false))!;
@@ -72,6 +99,54 @@ internal sealed class LightningWriter : IDisposable
 		var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		await _queue.Writer.WriteAsync(new SoloJob(() => _executeRaw(tx => job(tx)), completion, ct), ct).ConfigureAwait(false);
 		return (T)(await completion.Task.ConfigureAwait(false))!;
+	}
+
+	/// <summary>
+	/// Runs <paramref name="job"/> on the calling thread when nothing is ahead of it; see the class remarks.
+	/// False, with nothing run, when the queue holds a job, another job is running, the writer is paused or
+	/// disposed, or the store refuses; the caller then queues as usual. A job that throws, or whose commit
+	/// fails, throws here, as it would from the queue.
+	/// </summary>
+	private bool TryRunInline<T>(Func<ITx, T> job, out T result)
+	{
+		result = default!;
+		if (_disposed || !_mayRunInline() || !_turn.Wait(0))
+		{
+			return false;
+		}
+
+		var item = new BatchItem(tx => job(tx));
+		try
+		{
+			// Checked under the turn: the writer thread only dequeues while holding it, so an empty queue
+			// here means every job submitted before this one has finished.
+			if (_disposed || !_resume.IsSet || _queue.Reader.Count != 0)
+			{
+				return false;
+			}
+
+			try
+			{
+				_executeBatch([item]);
+			}
+			catch (Exception ex)
+			{
+				// The commit itself failed, as in RunBatch.
+				item.Error ??= ex;
+			}
+		}
+		finally
+		{
+			_turn.Release();
+		}
+
+		if (item.Error is { } error)
+		{
+			ExceptionDispatchInfo.Throw(error);
+		}
+
+		result = (T)item.Result!;
+		return true;
 	}
 
 	public void Pause() => _resume.Reset();
@@ -108,19 +183,21 @@ internal sealed class LightningWriter : IDisposable
 		var batch = new List<TypedJob>(_maxBatch);
 		while (true)
 		{
-			Job first;
 			try
 			{
 				if (!reader.WaitToReadAsync().AsTask().GetAwaiter().GetResult()) return;
-				if (!reader.TryRead(out first!)) continue;
 			}
 			catch (ChannelClosedException) { return; }
 
+			// Neither wait can throw: Dispose disposes the resume event only once this thread has exited, and
+			// never the turn.
+			_resume.Wait();
+			_turn.Wait();
 			try
 			{
-				// Inside the try: Dispose can race a job that is parked here, and an ObjectDisposedException
-				// off the resume event has to fault that job's caller, not tear the process down.
-				_resume.Wait();
+				// Dequeued only under the turn, so a caller running its own job never overtakes one submitted
+				// before it.
+				if (!reader.TryRead(out var first)) continue;
 
 				if (first is SoloJob solo)
 				{
@@ -139,10 +216,9 @@ internal sealed class LightningWriter : IDisposable
 
 				RunBatch(batch);
 			}
-			catch (Exception ex)
+			finally
 			{
-				// Only the resume wait can throw here: RunSolo and RunBatch deliver their own failures.
-				first.Completion.TrySetException(ex);
+				_turn.Release();
 			}
 		}
 	}
@@ -199,14 +275,24 @@ internal sealed class LightningWriter : IDisposable
 		}
 	}
 
-	/// <summary>Closes the queue, wakes a parked writer and waits for the thread to finish the job it is on.
-	/// The resume event is disposed only once that thread has actually exited — a job still running would
-	/// otherwise wait on a disposed event.</summary>
+	/// <summary>Closes the queue, wakes a parked writer and waits for the thread to finish the job it is on,
+	/// then for a caller's own job still running. The resume event is disposed only once that thread has
+	/// actually exited — a job still running would otherwise wait on a disposed event. The turn is never
+	/// disposed: it holds no wait handle, and a caller that read <see cref="_disposed"/> just before it was
+	/// set must still be able to try it.</summary>
 	public void Dispose()
 	{
 		_queue.Writer.TryComplete();
 		_resume.Set();
 		if (Thread.CurrentThread == _thread) return;
-		if (_thread.Join(TimeSpan.FromSeconds(10))) _resume.Dispose();
+		var exited = _thread.Join(TimeSpan.FromSeconds(10));
+
+		// Once this holds the turn, no caller's own job is running, and none starts after: they see
+		// _disposed and queue instead, which the closed queue refuses.
+		var holding = _turn.Wait(TimeSpan.FromSeconds(10));
+		_disposed = true;
+		if (holding) _turn.Release();
+
+		if (exited) _resume.Dispose();
 	}
 }

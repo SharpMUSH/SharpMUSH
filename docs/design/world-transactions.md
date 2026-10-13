@@ -218,7 +218,8 @@ Lightning is the only storage engine; SurrealDB support was dropped (#1182). A p
 later has to supply a transaction with the same semantics before it can support world
 transactions.
 
-Writes today are synchronous jobs on one writer thread (`LightningWriter`), group-committed, with
+Writes today are synchronous jobs run one at a time (`LightningWriter`): a lone write runs on its
+caller's thread, and writes that queue behind it are group-committed on the writer thread, with
 each job in a nested child transaction under one parent (`LightningStore.WriteBatch`). An LMDB
 write transaction belongs to its thread, so it cannot stay open across the `await`s of an
 operation. The writer thread has to own it instead:

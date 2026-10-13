@@ -102,7 +102,7 @@ public static class SetHelpers
 			var attribute = flagOrAttributeValue.Substring(0, colonIndex);
 			var content = flagOrAttributeValue.Substring(colonIndex + 1, flagOrAttributeValue.Length - (colonIndex + 1));
 
-			var result = await attributeService.SetAttributeAsync(executor, found, attribute.ToPlainText(), content);
+			var result = await attributeService.SetAttributeForReportAsync(executor, found, attribute.ToPlainText(), content);
 
 			// A player's alias list was reported by the write itself, success or not (PlayerAliases).
 			if (PlayerAliases.Applies(found, attribute.ToPlainText()))
@@ -110,22 +110,31 @@ public static class SetHelpers
 				return new CallState(result is Error<string> refused ? refused.Value : string.Empty);
 			}
 
-			if (result is Error<string> error)
+			return result switch
 			{
-				await notifyService.Notify(executor, error.Value, executor);
-				return new CallState(error.Value);
-			}
+				WrittenAttribute written => await ReportAttributeSet(found, attribute.ToPlainText(), written, areQuiet),
+				Error<string> error => await ReportAttributeRefused(error)
+			};
+		}
 
-			// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
-			// written attribute's own AF_Quiet suppresses the line as well.
-			if (!areQuiet && !await AttributeWriteReport.IsSuppressedAsync(attributeService, executor, found,
-						attribute.ToPlainText()))
+		// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the written
+		// attribute's own AF_Quiet suppresses the line as well.
+		async ValueTask<CallState> ReportAttributeSet(AnySharpObject found, string attribute, WrittenAttribute written,
+			bool areQuiet)
+		{
+			if (!areQuiet && !await AttributeWriteReport.IsSuppressedAsync(executor, found, written))
 			{
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-					found.Object().Name, attribute.ToPlainText());
+					found.Object().Name, attribute);
 			}
 
 			return new CallState(string.Empty);
+		}
+
+		async ValueTask<CallState> ReportAttributeRefused(Error<string> error)
+		{
+			await notifyService.Notify(executor, error.Value, executor);
+			return new CallState(error.Value);
 		}
 
 		// `do { f = split_token(&p, ' '); … set_flag(player, thing, f, negate, …) } while (p)`. The

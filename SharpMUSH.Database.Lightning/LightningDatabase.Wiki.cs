@@ -43,7 +43,7 @@ namespace SharpMUSH.Database.Lightning;
 /// same job.
 /// </para>
 /// <para>
-/// Every mutation is one write job on the single writer thread, so <c>WriteTranslationAsync</c>'s
+/// Every mutation is one write job, and write jobs run one at a time, so <c>WriteTranslationAsync</c>'s
 /// compare-and-swap reads the stored revision number and appends its revision inside the same
 /// transaction: two writers holding the same <c>expectedRevisionNumber</c> cannot both win, and the
 /// loser leaves no revision behind.

@@ -37,18 +37,19 @@ public class GroupCommitTests
 		return Task.CompletedTask;
 	}
 
-	/// <summary>Parks the writer thread inside a job until <paramref name="release"/> is set, so everything
-	/// queued meanwhile is guaranteed to be waiting in the channel together.</summary>
+	/// <summary>Holds a job open until <paramref name="release"/> is set, so everything queued meanwhile is
+	/// guaranteed to be waiting in the channel together. The job is submitted from a pool thread: with
+	/// nothing ahead of it, it runs on the thread that submitted it, which must not be the test's own.</summary>
 	private static (Task<int> Blocker, Task Started) Block(LightningStore store, ManualResetEventSlim release)
 	{
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var blocker = store.WriteAsync(tx =>
+		var blocker = Task.Run(async () => await store.WriteAsync(tx =>
 		{
 			started.SetResult();
 			release.Wait();
 			tx.Put(Tables.Meta, Keys.Str("blocker"), Keys.Str("1"));
 			return 0;
-		}).AsTask();
+		}));
 		return (blocker, started.Task);
 	}
 
