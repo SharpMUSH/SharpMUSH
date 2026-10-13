@@ -279,7 +279,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var options = Configuration.CurrentValue;
 		var typedLine = parser.State.IsEmpty ? null : parser.CurrentState.TypedLine;
 		var cache = options.Debug.DebugSharpParser || plainText.Length > SoftcodeParseCache.MaxTextLength
-			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse) or nameof(CommandCommaArgsParse)
+			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse) or nameof(PipedCommandParse) or nameof(CommandCommaArgsParse)
 				or nameof(CommandSingleArgParse) or nameof(CommandEqSplitArgsParse) or nameof(CommandEqSplitParse))
 			|| typedLine?.Contains(plainText, StringComparison.Ordinal) == true
 			? null
@@ -592,7 +592,17 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	/// <param name="text">The text to parse.</param>
 	/// <returns>A completed task.</returns>
-	public async ValueTask<CallState> CommandParse(MString text)
+	public ValueTask<CallState> CommandParse(MString text)
+		=> RedispatchedCommandParse(text, nameof(CommandParse));
+
+	/// <summary>
+	/// The command after a <c>;|</c>, without its <c>|</c>. Its text is part of a command list already
+	/// being run, so it is code, and its tree is kept as that list's is (a typed line still is not).
+	/// </summary>
+	public ValueTask<CallState> PipedCommandParse(MString text)
+		=> RedispatchedCommandParse(text, nameof(PipedCommandParse));
+
+	private async ValueTask<CallState> RedispatchedCommandParse(MString text, string methodName)
 	{
 		// A command redispatched from another one (`]`, `~`, a speech token, WITH, TEACH) keeps the
 		// origin it inherited: DirectInput only if the running command itself came from a connection.
@@ -610,7 +620,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Flags = derivedFlags,
 			CommandText = CurrentState.CommandText ?? CurrentState.NewCommandText()
 		});
-		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), parserToUse);
+		var result = await ParseInternal(text, p => p.StartSingleCommandString(), methodName, parserToUse);
 		return result ?? CallState.Empty;
 	}
 
