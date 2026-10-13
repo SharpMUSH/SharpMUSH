@@ -749,6 +749,21 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.Next().resultCode == MDBResultCode.Success);
 		}
 
+		public long CountRange(TableDef table, byte[] prefix, byte[] startKey)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			if (cursor.SetRange(startKey) != MDBResultCode.Success) return 0;
+			var count = 0L;
+			do
+			{
+				var (code, k, _) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success || !Keys.StartsWith(k.AsSpan(), prefix)) break;
+				count++;
+			} while (cursor.Next().resultCode == MDBResultCode.Success);
+
+			return count;
+		}
+
 		/// <summary>
 		/// <see cref="Range"/> walked backwards: the cursor seeks to the first key past the prefix (the prefix
 		/// with its last byte below 0xFF raised by one, the bytes after it dropped) and steps back from there,

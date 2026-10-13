@@ -166,6 +166,23 @@ public partial class LightningDatabase
 		return ValueTask.FromResult(members);
 	}
 
+	public ValueTask<Found<SharpFeedMember>> GetFeedMemberAsync(string kind, string key, DBRef member,
+		CancellationToken cancellationToken = default)
+	{
+		var creation = MemberCreation(member);
+		return ValueTask.FromResult(Store.Read<Found<SharpFeedMember>>(tx =>
+			tx.TryGet(Tables.FeedMember, MemberKey(kind, key, member.Number), out var bytes)
+			&& Codec.Deserialize<FeedMemberRecord>(bytes) is { } record && record.CreationTime == creation
+				? ToMember(member.Number, record)
+				: new NotFound()));
+	}
+
+	public ValueTask<int> CountFeedMembersAsync(string kind, string key, CancellationToken cancellationToken = default)
+	{
+		var prefix = FeedPrefix(kind, key);
+		return ValueTask.FromResult((int)Store.Read(tx => tx.CountRange(Tables.FeedMember, prefix, prefix)));
+	}
+
 	public ValueTask<IReadOnlyList<(string Kind, string Key)>> GetMemberFeedsAsync(DBRef member, string? kind,
 		CancellationToken cancellationToken = default)
 	{
@@ -247,11 +264,14 @@ public partial class LightningDatabase
 			};
 
 			// Oldest first, until the feed is inside every limit. The line just written is never dropped for
-			// age, and only for size when it alone is over the limit, which leaves the feed empty.
+			// age, and only for size when it alone is over the limit, which leaves the feed empty. The walk stops
+			// at the first line kept, so a feed inside its limits costs one read however many lines it holds;
+			// the lines going are deleted once the cursor is closed.
 			var maxMessages = limits.MaxMessages ?? 0;
 			var maxBytes = limits.MaxBytes ?? 0;
 			var cutoff = limits.MaxAge is { } age && age > TimeSpan.Zero ? record.AtMs - (long)age.TotalMilliseconds : long.MinValue;
-			foreach (var (oldKey, oldValue) in tx.Range(Tables.FeedMessage, FeedPrefix(message.Kind, message.Key)).ToList())
+			var dropped = new List<(byte[] Key, long Id)>();
+			foreach (var (oldKey, oldValue) in tx.Range(Tables.FeedMessage, FeedPrefix(message.Kind, message.Key)))
 			{
 				var old = Codec.Deserialize<FeedMessageRecord>(oldValue);
 				var over = (maxMessages > 0 && feed.Messages > maxMessages)
@@ -259,9 +279,14 @@ public partial class LightningDatabase
 					|| (old.Id != record.Id && old.AtMs < cutoff);
 				if (!over) break;
 
-				tx.Delete(Tables.FeedMessage, oldKey);
-				tx.Delete(Tables.FeedMessageId, Keys.Dbref(old.Id));
+				dropped.Add((oldKey, old.Id));
 				feed = Without(feed, old);
+			}
+
+			foreach (var (oldKey, id) in dropped)
+			{
+				tx.Delete(Tables.FeedMessage, oldKey);
+				tx.Delete(Tables.FeedMessageId, Keys.Dbref(id));
 			}
 
 			tx.Put(Tables.Feed, FeedKey(message.Kind, message.Key), Codec.Serialize(feed));
@@ -281,6 +306,29 @@ public partial class LightningDatabase
 		newest.Reverse();
 		IReadOnlyList<SharpFeedMessage> messages = newest;
 		return ValueTask.FromResult(messages);
+	}
+
+	public ValueTask<IReadOnlyList<long>> GetFeedMessageIdsAsync(string kind, string key, int count, long afterId,
+		CancellationToken cancellationToken = default)
+	{
+		// A line's key ends in its id, so the newest ids come off the keys without a line being decoded.
+		var newest = Store.Read(tx => tx.RangeReverse(Tables.FeedMessage, FeedPrefix(kind, key))
+			.Select(entry => Keys.ReadDbref(entry.Key.AsSpan(entry.Key.Length - 8)))
+			.TakeWhile(id => id > afterId)
+			.Take(count > 0 ? count : int.MaxValue)
+			.ToList());
+		newest.Reverse();
+		IReadOnlyList<long> ids = newest;
+		return ValueTask.FromResult(ids);
+	}
+
+	public ValueTask<int> CountFeedMessagesAsync(string kind, string key, long afterId,
+		CancellationToken cancellationToken = default)
+	{
+		if (afterId == long.MaxValue) return ValueTask.FromResult(0);
+		var prefix = FeedPrefix(kind, key);
+		var start = MessageKey(kind, key, Math.Max(afterId, 0) + 1);
+		return ValueTask.FromResult((int)Store.Read(tx => tx.CountRange(Tables.FeedMessage, prefix, start)));
 	}
 
 	public ValueTask<Found<SharpFeedMessage>> GetFeedMessageAsync(long id, CancellationToken cancellationToken = default)

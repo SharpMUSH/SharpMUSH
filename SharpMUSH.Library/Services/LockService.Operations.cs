@@ -167,6 +167,9 @@ public partial class LockService
 			if (current.Object().Locks.TryGetValue(name, out var data))
 			{
 				if (current.Object().DBRef != target.Object().DBRef && data.Flags.HasFlag(LockFlags.Private)) return new NotFound();
+				// An ORPHAN skips the ancestor. Asked only once the ancestor's side has the lock, since most
+				// lookups (an unset @lock/interact on every listener of a line) find nothing there.
+				if (usedAncestor && await target.HasFlag("ORPHAN")) return new NotFound();
 				return new ResolvedLock(name, current, data);
 			}
 			if (await current.Object().Parent.WithCancellation(cancellationToken) is AnySharpObject parent)
@@ -174,7 +177,7 @@ public partial class LockService
 				current = parent;
 				continue;
 			}
-			if (usedAncestor || ancestorNumber is null || await target.HasFlag("ORPHAN")) return new NotFound();
+			if (usedAncestor || ancestorNumber is null) return new NotFound();
 			usedAncestor = true;
 			if (await mediator.Send(new GetObjectNodeQuery(new DBRef((int)ancestorNumber.Value)), cancellationToken) is not AnySharpObject ancestor)
 				return new NotFound();

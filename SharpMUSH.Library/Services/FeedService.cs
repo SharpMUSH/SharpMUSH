@@ -171,20 +171,22 @@ public class FeedService(
 			FeedStyles.Announce => INotifyService.NotificationType.Announce,
 			_ => INotifyService.NotificationType.Say
 		};
+		var defaultLine = format ? null : DefaultLine(message);
 		var delivered = new List<DBRef>();
 		foreach (var recipient in recipients)
 		{
 			if (!await permissionService.CanInteract(speaker, recipient, IPermissionService.InteractType.Hear)) continue;
 
-			var line = format
-				? await attributeService.EvaluateAttributeFunctionAsync(parser, owner, owner,
-					IFeedService.TieIn(message.Kind, "FORMAT"), Arguments(("text", message.Text),
-						("recipient", recipient.Object().DBRef), ("speaker", message.Speaker), ("style", message.Style),
-						("key", message.Key), ("name", message.DisplayName), ("id", message.Id)))
-				: DefaultLine(message);
+			var line = defaultLine ?? await attributeService.EvaluateAttributeFunctionAsync(parser, owner, owner,
+				IFeedService.TieIn(message.Kind, "FORMAT"), Arguments(("text", message.Text),
+					("recipient", recipient.Object().DBRef), ("speaker", message.Speaker), ("style", message.Style),
+					("key", message.Key), ("name", message.DisplayName), ("id", message.Id)));
 			if (line.Length == 0) continue;
 
-			await notifyService.Notify(recipient, line, speaker, type);
+			// Every listener hears the speaker from where the line was sent, found once in SendAsync, and has
+			// just passed the hearing check, which the listener pass would otherwise make again.
+			var context = new NotificationContext(recipient.Object().DBRef, message.Location, []) { HearingChecked = true };
+			await notifyService.NotifyWithContextAsync(context, line, speaker, type, target: recipient);
 			delivered.Add(recipient.Object().DBRef);
 		}
 

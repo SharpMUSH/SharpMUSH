@@ -33,6 +33,13 @@ public interface ITx
 	/// </summary>
 	IEnumerable<(byte[] Key, byte[] Value)> RangeReverseBefore(TableDef table, byte[] prefix, byte[] beforeKey)
 		=> RangeReverse(table, prefix).SkipWhile(entry => entry.Key.AsSpan().SequenceCompareTo(beforeKey) >= 0);
+	/// <summary>
+	/// How many entries whose key starts with <paramref name="prefix"/> sort at or after
+	/// <paramref name="startKey"/>, which starts with <paramref name="prefix"/> or is the prefix itself. The
+	/// provider counts on the cursor without copying an entry out.
+	/// </summary>
+	long CountRange(TableDef table, byte[] prefix, byte[] startKey)
+		=> RangeFromKey(table, startKey).TakeWhile(entry => entry.Key.AsSpan().StartsWith(prefix)).LongCount();
 	/// <summary>All duplicate values stored under <paramref name="key"/>, in order.</summary>
 	IEnumerable<byte[]> Dups(TableDef table, byte[] key);
 	/// <summary>

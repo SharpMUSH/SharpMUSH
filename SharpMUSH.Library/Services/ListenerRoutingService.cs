@@ -103,7 +103,8 @@ public class ListenerRoutingService(
 			actualSender = location;
 		}
 
-		if (!await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
+		if (!(context.HearingChecked && sender is not null)
+			&& !await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
 			return;
 
 		var messageText = message switch
@@ -214,6 +215,8 @@ public class ListenerRoutingService(
 		{
 			Prefix = prefix,
 			PuppetOk = true,
+			// The caller's hearing check was for the listener, not for what it relays to.
+			HearingChecked = false,
 			Relay = context.Relay == NotificationRelay.Initial ? NotificationRelay.RelayOnce : NotificationRelay.NoRelay
 		};
 		do
