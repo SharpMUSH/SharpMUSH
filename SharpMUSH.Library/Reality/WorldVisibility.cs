@@ -55,7 +55,7 @@ public static class WorldVisibility
 	}
 
 	private static ValueTask<SharpObjectFlag[]> FlagsOf(AnySharpObject obj)
-		=> obj.Object().Flags.Value.ToArrayAsync(ExecutionBudget.CurrentToken);
+		=> obj.Object().FlagsNowAsync(ExecutionBudget.CurrentToken);
 
 	// Visibility helpers and the connection interface retain their published tokenless signatures.
 	// Each read gets the caller's lifetime, including delegate invocations after scan creation ends.

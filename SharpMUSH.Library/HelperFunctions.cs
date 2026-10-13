@@ -454,7 +454,20 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> RoleFlags.Find(flag) is { } roleFlag
 			? (await obj.Grants.WithCancellation(cancellationToken)).Shows(roleFlag.Scope)
-			: await obj.Flags.Value.AnyAsync(x => Names(x, flag), cancellationToken);
+			: HasFlag(await obj.FlagsNowAsync(cancellationToken), flag);
+
+	/// <summary>
+	/// The object's flags as stored now, its type's flag last: read on the spot when the provider can
+	/// (<see cref="IReadableNow{T}"/>), otherwise enumerated.
+	/// </summary>
+	public static ValueTask<SharpObjectFlag[]> FlagsNowAsync(this SharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var flags = obj.Flags.Value;
+		if (flags is not IReadableNow<SharpObjectFlag> now) return flags.ToArrayAsync(cancellationToken);
+		var read = now.ReadNow();
+		return ValueTask.FromResult(read as SharpObjectFlag[] ?? [.. read]);
+	}
 
 	/// <summary>
 	/// <see cref="HasFlag(SharpObject,string,CancellationToken)"/> over flags already read from the object: a
@@ -490,7 +503,7 @@ public static partial class HelperFunctions
 	/// of its questions answers as the per-read helper here does.
 	/// </summary>
 	public static async ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj, CancellationToken cancellationToken)
-		=> new(obj.DBRef, await obj.Flags.Value.ToListAsync(cancellationToken), await obj.Grants.WithCancellation(cancellationToken));
+		=> new(obj.DBRef, await obj.FlagsNowAsync(cancellationToken), await obj.Grants.WithCancellation(cancellationToken));
 
 	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj)
 		=> obj.ReadFlagsAsync(ExecutionBudget.CurrentToken);

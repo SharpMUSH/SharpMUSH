@@ -212,4 +212,26 @@ public class FreshAsyncEnumerableTests
 
 		await Assert.That(results.All(x => x)).IsTrue();
 	}
+
+	[Test]
+	public async Task FreshAsyncList_ReadsAfreshForEachEnumerationAndEachReadNow()
+	{
+		var reads = 0;
+		var list = new FreshAsyncList<int>(() => [++reads, 10]);
+
+		await Assert.That(list.ReadNow()).IsEquivalentTo([1, 10]);
+		await Assert.That(await list.ToArrayAsync()).IsEquivalentTo([2, 10]);
+		await Assert.That(await list.AnyAsync(x => x == 3)).IsTrue();
+		await Assert.That(reads).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task FreshAsyncList_EnumerationHonoursItsToken()
+	{
+		using var cancelled = new CancellationTokenSource();
+		await cancelled.CancelAsync();
+
+		await Assert.That(async () => await new FreshAsyncList<int>(() => [1, 2]).ToArrayAsync(cancelled.Token))
+			.Throws<OperationCanceledException>();
+	}
 }

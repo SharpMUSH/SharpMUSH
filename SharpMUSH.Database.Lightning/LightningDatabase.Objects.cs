@@ -1357,19 +1357,26 @@ public partial class LightningDatabase
 		=> Store.DupsMapAsync(Tables.Parent.Reverse, Keys.Dbref(dbref), ReadSharpObject, ct: ct);
 
 	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(long dbref, string type) => new(()
-		=> new FreshAsyncEnumerable<SharpObjectFlag>(ct => GetFlagsCoreAsync(dbref, type, ct)));
+		=> new FreshAsyncList<SharpObjectFlag>(() => ReadFlagsNow(dbref, type)));
 
-	private async IAsyncEnumerable<SharpObjectFlag> GetFlagsCoreAsync(long dbref, string type, [EnumeratorCancellation] CancellationToken ct)
+	/// <summary>The object's stored flags, then the one for its type, in one read.</summary>
+	private SharpObjectFlag[] ReadFlagsNow(long dbref, string type)
 	{
-		var flags = Store.Read(tx => ReadObjectFlags(tx, dbref).ToList());
-
-		foreach (var flag in flags)
+		var flags = Store.Read(tx =>
 		{
-			ct.ThrowIfCancellationRequested();
-			yield return flag;
-		}
-
-		yield return ObjectTypeFlag.For(type);
+			// ReadObjectFlags without its iterator chain; this runs for every flag question asked.
+			var definitions = FlagDefinitions(tx);
+			var read = new List<SharpObjectFlag>();
+			foreach (var stored in tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(dbref)))
+			{
+				if (definitions.ByStoredName(Keys.ReadStr(stored).ToUpperInvariant()) is { } record) read.Add(SharedFlag(record));
+			}
+			return read;
+		});
+		var all = new SharpObjectFlag[flags.Count + 1];
+		flags.CopyTo(all);
+		all[^1] = ObjectTypeFlag.For(type);
+		return all;
 	}
 
 	private Lazy<IAsyncEnumerable<SharpPower>> PowersOf(long dbref) => new(()

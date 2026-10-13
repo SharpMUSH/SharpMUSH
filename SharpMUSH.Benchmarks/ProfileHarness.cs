@@ -84,8 +84,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("include", "@include me/PROFILE_ACTIONS=5", true, IsCommandList: true),
 		// God's inventory holds --things "Profile Thing N" objects; these grow with it.
 		new("look-me", "look me", true),
-		new("locate", "[locate(me,Profile Thing 1,*)]", false),
-		new("tel", "[tel(Profile Thing 1,me)]", false),
+		new("locate", "[locate(me,Profile Thing 0,*)]", false),
+		new("tel", "[tel(Profile Thing 0,me)]", false),
 		// {BIG}: a mortal's object holding BigFlat flat attributes and BigBranches trees of BigLeaves leaves.
 		// {KID}: a child of {BIG} with KidAttributes of its own. "-m" runs as that mortal, not as God.
 		new("lattr-big", "[lattr({BIG})]", false),
@@ -169,6 +169,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var scenarios = selected.Count == 0
 			? all
 			: all.Where(s => selected.Contains(s.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
+
+		// locate and tel name the first thing God carries.
+		if (things == 0 && scenarios.Any(scenario => scenario.Input.Contains("Profile Thing 0")))
+			throw new ArgumentException("locate and tel need --things of at least 1.");
 
 		var harness = new ProfileHarness();
 		await harness.Setup();
