@@ -233,7 +233,7 @@ public static partial class HelperFunctions
 	/// <summary><see cref="IsDarkLegal(AnySharpObject, CancellationToken)"/> with the object's own flags already read.</summary>
 	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj, IReadOnlyList<SharpObjectFlag> flags,
 		CancellationToken cancellationToken)
-		=> HasFlag(flags, "DARK") && (await obj.CanDark(cancellationToken) || !await obj.IsAlive(cancellationToken));
+		=> HasFlag(flags, "DARK") && (await obj.CanDark(cancellationToken) || !await obj.IsAlive(flags, cancellationToken));
 
 	public static async ValueTask<bool> IsAudible(this AnySharpObject obj)
 		=> await obj.HasFlag("AUDIBLE");
@@ -253,6 +253,16 @@ public static partial class HelperFunctions
 		cancellationToken.ThrowIfCancellationRequested();
 		return obj.IsPlayer || await obj.HasFlag("PUPPET", cancellationToken)
 			|| await obj.HasFlag("AUDIBLE", cancellationToken) && await obj.Object().LazyAttributes.Value
+				.AnyAsync(attribute => attribute.Name.Equals("FORWARDLIST", StringComparison.OrdinalIgnoreCase), cancellationToken);
+	}
+
+	/// <summary><see cref="IsAlive(AnySharpObject, CancellationToken)"/> with the object's own flags already read.</summary>
+	public static async ValueTask<bool> IsAlive(this AnySharpObject obj, IReadOnlyList<SharpObjectFlag> flags,
+		CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsPlayer || HasFlag(flags, "PUPPET")
+			|| HasFlag(flags, "AUDIBLE") && await obj.Object().LazyAttributes.Value
 				.AnyAsync(attribute => attribute.Name.Equals("FORWARDLIST", StringComparison.OrdinalIgnoreCase), cancellationToken);
 	}
 

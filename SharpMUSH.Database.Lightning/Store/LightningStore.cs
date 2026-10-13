@@ -291,14 +291,20 @@ public sealed partial class LightningStore : IDisposable
 		try
 		{
 			var tx = RentReader();
+			T result;
 			try
 			{
-				return read(new Tx(tx, _tables));
+				result = read(new Tx(tx, _tables));
 			}
-			finally
+			catch
 			{
-				ReturnReader(tx);
+				// A read that failed may have left a cursor open on the transaction; it is not pooled.
+				tx.Dispose();
+				throw;
 			}
+
+			ReturnReader(tx);
+			return result;
 		}
 		finally
 		{
