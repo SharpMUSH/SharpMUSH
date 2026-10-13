@@ -11,6 +11,8 @@ public sealed class ExecutionBudget : IDisposable
 	private readonly TimeProvider _clock;
 	private readonly long _started;
 	private readonly TimeSpan _duration;
+	// The deadline in Environment.TickCount64 milliseconds.
+	private readonly long _expiresAt;
 	public const string Error = "#-1 EXECUTION TIME LIMIT EXCEEDED";
 	public static ExecutionBudget? Current => Ambient.Value;
 	public static CancellationToken CurrentToken => Current?.Token ?? CancellationToken.None;
@@ -24,6 +26,8 @@ public sealed class ExecutionBudget : IDisposable
 		_duration = duration;
 		_clock = timeProvider;
 		_started = timeProvider.GetTimestamp();
+		_expiresAt = duration == Timeout.InfiniteTimeSpan ? long.MaxValue
+			: Environment.TickCount64 + (long)Math.Ceiling(duration.TotalMilliseconds) + 1;
 		_cancelledBy = cancellationToken;
 		_deadline = new CancellationTokenSource(duration, timeProvider);
 		if (duration == TimeSpan.Zero) _deadline.Cancel();
@@ -38,8 +42,10 @@ public sealed class ExecutionBudget : IDisposable
 	public static ExecutionBudget FromMilliseconds(uint milliseconds, CancellationToken token = default)
 		=> new(milliseconds == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(milliseconds), token);
 	public TimeSpan Remaining => _duration == Timeout.InfiniteTimeSpan ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(0, (_duration - _clock.GetElapsedTime(_started)).Ticks));
-	// Timer callbacks and the clock can cross their boundary at different granularities.
-	public bool IsExpired => _deadline.IsCancellationRequested || Remaining == TimeSpan.Zero;
+	// Timer callbacks and the clock can cross their boundary at different granularities. Every function call
+	// asks this several times, so it reads the coarse tick count rather than the precise clock: a tick or so
+	// of slack against the deadline timer, which still fires on time.
+	public bool IsExpired => _deadline.IsCancellationRequested || Environment.TickCount64 >= _expiresAt;
 	public bool IsCancelled => _cancellation.IsCancellationRequested;
 	public bool IsExceeded => IsExpired || IsCancelled;
 	public void ThrowIfExceeded()
