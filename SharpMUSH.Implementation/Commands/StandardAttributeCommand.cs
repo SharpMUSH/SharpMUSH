@@ -207,7 +207,7 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			return CallState.Empty;
 		}
 
-		var setResult = await services.AttributeService.SetAttributeAsync(
+		var setResult = await services.AttributeService.SetAttributeForReportAsync(
 			executor, targetObject, matchedEntry.Name, valueMString);
 
 		var handle2 = prs.CurrentState.Handle;
@@ -217,22 +217,21 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			return CallState.Empty;
 		}
 
-		if (setResult is not Error<string> error)
+		switch (setResult)
 		{
 			// do_set_atr's QUIET gate (src/attrib.c:2446).
-			if (await AttributeWriteReport.IsSuppressedAsync(services.AttributeService, executor, targetObject,
-						matchedEntry.Name))
-			{
-				return CallState.Empty;
-			}
+			case WrittenAttribute written:
+				if (!await AttributeWriteReport.IsSuppressedAsync(executor, targetObject, written))
+				{
+					await services.NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet),
+						executor, targetObject.Object().Name, matchedEntry.Name);
+				}
 
-			await services.NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-				targetObject.Object().Name, matchedEntry.Name);
-		}
-		else
-		{
-			await services.NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat),
-				executor, error.Value);
+				break;
+			case Error<string> error:
+				await services.NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.ErrorDetailFormat),
+					executor, error.Value);
+				break;
 		}
 
 		return CallState.Empty;
