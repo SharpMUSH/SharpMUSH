@@ -100,7 +100,7 @@ public partial class TelnetServer : ConnectionHandler
 
 			// Await the read task, which completes when the connection closes or the cancellation token
 			// is triggered.
-			await AwaitReadTaskAsync(readTask, connection.ConnectionId);
+			await ReportReadEndAsync(readTask, nextPort);
 		}
 		finally
 		{
@@ -138,6 +138,25 @@ public partial class TelnetServer : ConnectionHandler
 		catch (Exception ex)
 		{
 			_logger.LogDebug(ex, "Connection {ConnectionId} telnet disposal failed", connectionId);
+		}
+	}
+
+	// Says once, at Information, how the read side ended. Without it a socket the kernel timed out,
+	// a reset from the peer and a client that simply quit all leave the same "Disconnecting handle" line.
+	private async Task ReportReadEndAsync(Task readTask, long handle)
+	{
+		try
+		{
+			await readTask;
+			_logger.LogInformation("Connection {Handle} closed: the read side ended without an error", handle);
+		}
+		catch (OperationCanceledException)
+		{
+			_logger.LogInformation("Connection {Handle} closed: the read was cancelled", handle);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation("Connection {Handle} closed: {ErrorType}: {Reason}", handle, ex.GetType().Name, ex.Message);
 		}
 	}
 

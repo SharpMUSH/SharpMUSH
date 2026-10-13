@@ -226,7 +226,7 @@ public class Program
 
 			options.ListenAnyIP(connectionServerOptions.TelnetPort, listenOptions =>
 			{
-				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
+				listenOptions.UseTcpKeepAlive(keepAlive);
 				listenOptions.UseConnectionHandler<TelnetServer>();
 			});
 
@@ -241,7 +241,7 @@ public class Program
 			{
 				options.ListenAnyIP(connectionServerOptions.TelnetSslPort, listenOptions =>
 				{
-					listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
+					listenOptions.UseTcpKeepAlive(keepAlive);
 					listenOptions.UseHttps();
 					listenOptions.UseConnectionHandler<TelnetServer>();
 				});
@@ -249,7 +249,7 @@ public class Program
 
 			options.ListenAnyIP(connectionServerOptions.HttpPort, listenOptions =>
 			{
-				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
+				listenOptions.UseTcpKeepAlive(keepAlive);
 			});
 
 			// /metrics only; see ConnectionServerOptions.MetricsPort.
