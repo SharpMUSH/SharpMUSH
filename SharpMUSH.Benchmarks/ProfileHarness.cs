@@ -71,6 +71,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("rc-whovis", "[filter(me/PROFILE_WHOVIS,lcon(me),,,me)]", false),
 		new("rc-whobase", "[iter(lcon(me),u(me/PROFILE_WHOBASE,##))]", false),
 		new("set", "&PROFILE_X me=x", true),
+		new("set-cmd", "@set me=PROFILE_X:x", true),
+		new("set-fn", "[attrib_set(me/PROFILE_X,x)]", false),
 		new("set+lattr", "&PROFILE_X me=x;think [lattr(me)]", true, IsCommandList: true),
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
 		new("actions", "@pemit me=Hi [add(1,2)];@switch 1=1,think yes;@trigger me/PROFILE_NOOP=a,b", true, IsCommandList: true),

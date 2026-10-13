@@ -9,8 +9,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// LMDB embedded storage provider: one directory per world, one dedicated writer thread serializing
-/// every mutation, readers running lock-free snapshots. This file holds construction, the store handle,
+/// LMDB embedded storage provider: one directory per world, one write job at a time serializing
+/// every mutation (<see cref="Store.LightningWriter"/>), readers running lock-free snapshots. This file holds construction, the store handle,
 /// database lifecycle (<see cref="WipeDatabaseAsync"/>, <see cref="CreateStagingAsync"/>) and the small
 /// helpers every area partial shares for allocating dbrefs and maintaining the single- and multi-valued
 /// dbref-to-dbref edge tables. <see cref="Migration.LightningMigration"/> (a partial of this class) holds

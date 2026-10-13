@@ -19,7 +19,7 @@ namespace SharpMUSH.Database.Lightning;
 /// object belonged to without scanning every channel.
 ///
 /// <para><c>CreateChannelAsync</c> needs no lock beyond the store's own single-writer serialization:
-/// only one job runs on the LMDB writer thread at a time,
+/// only one write job runs at a time,
 /// so a <c>TryGet</c> immediately followed by a <c>Put</c> inside one job is already atomic with respect
 /// to every other create.</para>
 /// </summary>

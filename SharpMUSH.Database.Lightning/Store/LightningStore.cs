@@ -93,7 +93,9 @@ public sealed partial class LightningStore : IDisposable
 		_options = options;
 		_logger = logger;
 		Open();
-		_writer = new LightningWriter(WriteBatch, rawWork => WriteRawInternal(rawWork), options.MaxBatch);
+		// A thread inside one of the gate's sections cannot take it again (NoRecursion), so its writes queue.
+		_writer = new LightningWriter(WriteBatch, rawWork => WriteRawInternal(rawWork), options.MaxBatch,
+			() => !_gate.IsReadLockHeld && !_gate.IsWriteLockHeld);
 		if (options.Sync == LightningSyncMode.Periodic)
 		{
 			_flushTimer = new Timer(_ => FlushIfDirty(), null, options.FlushInterval, options.FlushInterval);
@@ -297,7 +299,7 @@ public sealed partial class LightningStore : IDisposable
 	}
 
 	/// <summary>
-	/// Runs one group commit on the calling thread; only <see cref="LightningWriter"/>'s thread may call
+	/// Runs one group commit on the calling thread; only <see cref="LightningWriter"/>, holding its turn, may call
 	/// this. A single item runs directly in the top-level transaction, exactly as a lone write always has.
 	/// Several items each get a nested transaction under one parent: an item that throws (its own code,
 	/// or a failed put) has its child aborted and its <see cref="LightningWriter.BatchItem.Error"/> set,
