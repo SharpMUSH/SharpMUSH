@@ -179,7 +179,52 @@ public class ThemeCommandTests
 		await Assert.That(heard).Contains(ErrorMessages.Notifications.PermissionDenied);
 	}
 
-	[Test]
+	/// <summary>A THEME that notes each time it is worked out for its player, in THEME_SEEN.</summary>
+	private const string CountingTheme = "nord[attrib_set(%#/THEME_SEEN,strcat(get(%#/THEME_SEEN),x))]";
+
+	/// <summary>A new connected player in a room of their own whose THEME counts how often it is worked out.</summary>
+	private async Task<(TestIsolationHelpers.TestPlayer Player, DBRef Home)> CountingPlayer()
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ThemeRoom"), god.Expect<SharpPlayer>()));
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "Themer", home);
+		var node = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
+		// Set directly, so nothing works it out on the way in.
+		await WebAppFactoryArg.Services.GetRequiredService<IAttributeService>()
+			.SetAttributeAsync(god, node, "THEME", MarkupText.Plain(CountingTheme));
+		return (player, home);
+	}
+
+	private async Task<string> Seen(TestIsolationHelpers.TestPlayer player)
+		=> (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({player.DbRef}/THEME_SEEN)"))).ToPlainText();
+
+	[Test, NotInParallel("ThemeRefreshAll")]
+	public async Task Theme_OnAPlayer_LeavesOtherPlayersThemesAlone()
+	{
+		var (bystander, _) = await CountingPlayer();
+		var (player, _) = await PlayerWithParent();
+		await Run(player, "@theme me=fantasy");
+
+		await Assert.That(await InUse(player)).IsEqualTo("Theme in use: fantasy");
+		await Assert.That(await Seen(bystander)).IsEmpty();
+	}
+
+	[Test, NotInParallel("ThemeRefreshAll")]
+	public async Task Theme_OnAParent_RefreshesOnlyItsChildren()
+	{
+		var (bystander, _) = await CountingPlayer();
+		var (child, home) = await CountingPlayer();
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(child.DbRef))).Expect<SharpPlayer>();
+		var room = (await Mediator.Send(new GetObjectNodeQuery(home))).Expect<SharpRoom>();
+		var parent = await Mediator.Send(new CreateThingCommand(TestIsolationHelpers.GenerateUniqueName("Faction"), room, owner, room));
+		await Run(child, $"@parent me={parent}");
+		await Run(child, $"@theme {parent}=fantasy");
+
+		await Assert.That(await Seen(child)).IsEqualTo("x");
+		await Assert.That(await Seen(bystander)).IsEmpty();
+	}
+
+	[Test, NotInParallel("ThemeRefreshAll")]
 	public async Task AnAddedTheme_CanBeChosen_UntilRemoved()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("mytheme").ToLowerInvariant().Replace('_', '-');
