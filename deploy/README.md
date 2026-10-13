@@ -519,6 +519,8 @@ complete.
 
 ## Disk capacity
 
+Every Compose inspection, cleanup, compaction and restart command in this section explicitly selects the Caddy production file. For a Cloudflare deployment, replace each `-f docker-compose.prod.yml` with `-f docker-compose.cloudflare.yml`. Include enabled overlays after the base file in every invocation; `COMPOSE_FILE` cannot supply overlays omitted from explicit `-f` arguments.
+
 The world's disk use is easy to misread. Four numbers describe it, and `@storage` (wizard-only)
 reports each of them:
 
@@ -583,6 +585,8 @@ Nothing is written in that case.
 
 ### Earlier worlds
 
+Use your deployed base file and all enabled overlays for the cleanup commands below; the shown commands are Caddy examples.
+
 Promoting a staged import moves the world it replaces to `<world>.previous`. That world is **never
 deleted automatically**, because it is the way back if the import turns out wrong. Delete it once the
 promoted world has been verified. `@storage` lists it, along with any `.staging-*` world an import left
@@ -602,6 +606,8 @@ docker system df -v | grep -E 'app-data|nats-data'
 ```
 
 ### Compacting the world
+
+Before copying the commands below, select your deployed base file: Caddy uses `docker-compose.prod.yml`, Cloudflare uses `docker-compose.cloudflare.yml`. Append all enabled overlays to each command, including restart and log inspection.
 
 To give the disk back what deleted records freed, have the server replace the world's file with a
 compacted copy of itself when it starts. Nothing else has the file open at that point, so no write

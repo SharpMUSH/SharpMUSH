@@ -31,7 +31,7 @@ Run **SharpMUSH: Set Remote Credentials** from the Command Palette. Enter the ex
 
 Create `analysis-smoke.mushfn` containing `add(`. Expect a syntax diagnostic in Problems. Replace it with `add(1,2)`; expect that syntax error to clear. Hover `add` for function help, request completion with `ad`, and signature help within `add(`. These are expected checks, not a live IDE run recorded here. `.mush`/`.mu` use commands per line, `.mushfn`/`.fun` use function mode, and `.mushcmd` uses command-list mode.
 
-An `analysis-timeout` warning preserves the document; edit again to retry. Admission rejection instead closes the session: reload/reconnect and reopen files. The client does not automatically resume documents.
+An `analysis-timeout` warning preserves the document; edit again to retry. If pending document work is rejected within an established session, the session closes: reload/reconnect and reopen files. If initial session admission returns HTTP 429 before WebSocket upgrade, no session exists; retry the connection after capacity becomes available. The client does not automatically resume documents.
 
 
 ## Offline mode

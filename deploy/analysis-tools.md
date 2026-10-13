@@ -85,7 +85,7 @@ Run **SharpMUSH: Set Remote Credentials** from the Command Palette. Enter the ex
 
 Create `analysis-smoke.mushfn` containing `add(`. Expect a syntax diagnostic in Problems. Replace it with `add(1,2)`; expect that syntax error to clear. Hover `add` for function help, request completion with `ad`, and signature help within `add(`. These are expected checks, not a live IDE run recorded here. `.mush`/`.mu` use commands per line, `.mushfn`/`.fun` use function mode, and `.mushcmd` uses command-list mode.
 
-An `analysis-timeout` warning preserves the document; edit again to retry. Admission rejection instead closes the session: reload/reconnect and reopen files. The client does not automatically resume documents.
+An `analysis-timeout` warning preserves the document; edit again to retry. If pending document work is rejected within an established session, the session closes: reload/reconnect and reopen files. If initial session admission returns HTTP 429 before WebSocket upgrade, no session exists; retry the connection after capacity becomes available. The client does not automatically resume documents.
 
 ## 3. Try MCP with curl before configuring an AI client
 
@@ -169,6 +169,7 @@ Client configuration fields follow the [VS Code MCP reference](https://code.visu
 | LSP fails before diagnostics | WSS URL, valid TLS chain, `/lsp` main-server routing and `sharpmush-lsp-v1` transport via bridge; `/ws` is terminal only |
 | VS Code does not start bridge | Trusted workspace, installed VSIX, existing bridge DLL/dependencies, dotnet on PATH, mode/endpoint and stored credentials; reload window |
 | Diagnostic warning `analysis-timeout` | Next edit retries; no document reopening needed just for this warning |
-| Explicit overload close | Reconnect, initialize and reopen current text; no transparent resume |
+| Initial LSP HTTP 429 | No session was opened; retry the connection when capacity is available |
+| Established-session overload close | Reconnect, initialize and reopen current text; no transparent resume |
 
 Keep the analysis quotas, authentication and exact Origin policy described in the remote-analysis contract. Do not disable certificate validation to make a failing client connect.
