@@ -156,13 +156,28 @@ class RestoreInstructionsTests(unittest.TestCase):
 
     def test_restart_is_conditional_on_successful_restore(self):
         _, after_command = restore_command()
-        self.assertRegex(after_command, r"^\s*&&[ \t]*\\\n\s*docker compose start connectionserver sharpmush-server")
+        self.assertRegex(after_command, r"^\s*&&[ \t]*\\\n\s*docker compose -f docker-compose\.prod\.yml start connectionserver sharpmush-server")
+
+    def test_host_restore_selects_production_file_explicitly(self):
+        commands = re.findall(r"^[ \t]*docker compose[^\n]*", host_commands(), re.M)
+        self.assertEqual(len(commands), 5)
+        for command in commands:
+            self.assertEqual(command.split()[:4],
+                             ["docker", "compose", "-f", "docker-compose.prod.yml"])
 
     def test_host_commands_stop_at_each_failed_step(self):
         # The shell function replaces Docker entirely. It never runs container commands,
         # touches a volume, or executes the inner restore script.
         stub = r'''
 docker() {
+  if [ "$1" = compose ]; then
+    shift
+    [ "$1" = -f ] && [ "$2" = docker-compose.prod.yml ] || {
+      echo "Unexpected Compose selection" >&2; return 99;
+    }
+    shift 2
+    set -- compose "$@"
+  fi
   case "$*" in
     "compose stop "*) step=stop ;;
     "volume create "*) step=volume ;;
