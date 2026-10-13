@@ -13,26 +13,29 @@ public static class SocketKeepAlive
 	// Linux TCP_USER_TIMEOUT (netinet/tcp.h); no named .NET enum exists for it.
 	private const int TcpUserTimeoutOption = 18;
 
-	public static void Apply(Socket socket, TimeSpan userTimeout, int idleSeconds = 20, int intervalSeconds = 5, int retryCount = 3)
+	public static void Apply(Socket socket, KeepAliveOptions options)
 	{
 		// SO_KEEPALIVE is universally supported; the per-probe timings are the cross-platform tuning
 		// (Windows + Linux). Each is best-effort so an option a platform lacks (e.g.
 		// TcpKeepAliveRetryCount on macOS) is skipped rather than failing the whole connection.
 		TrySet(socket, SocketOptionLevel.Socket, SocketOptionName.KeepAlive, 1);
-		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, idleSeconds);
-		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, intervalSeconds);
-		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, retryCount);
+		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, (int)options.TcpIdle.TotalSeconds);
+		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, (int)options.TcpProbeInterval.TotalSeconds);
+		TrySet(socket, SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, options.TcpProbeCount);
 
 		// TCP_USER_TIMEOUT caps how long unacknowledged (in-flight) data may remain outstanding before
 		// the connection is dropped — this catches a peer that vanishes mid-send, which the idle-only
-		// keep-alive probes above do not. Linux-only; there is no portable .NET equivalent. Best-effort.
+		// keep-alive probes above do not. It also overrides the probe count: once it is set, the kernel
+		// resets an idle socket when nothing has arrived for this long and a probe is outstanding, so
+		// KeepAliveOptions keeps it at or above the whole probe budget.
+		// Linux-only; there is no portable .NET equivalent. Best-effort.
 		if (OperatingSystem.IsLinux())
 		{
 			try
 			{
 				socket.SetRawSocketOption(
 					(int)SocketOptionLevel.Tcp, TcpUserTimeoutOption,
-					BitConverter.GetBytes((int)userTimeout.TotalMilliseconds));
+					BitConverter.GetBytes((int)options.TcpUserTimeout.TotalMilliseconds));
 			}
 			catch (SocketException)
 			{

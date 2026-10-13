@@ -7,13 +7,13 @@ namespace SharpMUSH.SocketServer;
 /// <summary>Adds OS-level TCP keep-alive + TCP_USER_TIMEOUT to every connection on a Kestrel listener.</summary>
 public static class KeepAliveListenExtensions
 {
-	public static void UseTcpKeepAlive(this ListenOptions listenOptions, TimeSpan userTimeout)
+	public static void UseTcpKeepAlive(this ListenOptions listenOptions, KeepAliveOptions keepAlive)
 	{
 		listenOptions.Use(next => async connection =>
 		{
 			var socket = connection.Features.Get<IConnectionSocketFeature>()?.Socket;
 			if (socket is not null)
-				SocketKeepAlive.Apply(socket, userTimeout);
+				SocketKeepAlive.Apply(socket, keepAlive);
 			await next(connection);
 		});
 	}
