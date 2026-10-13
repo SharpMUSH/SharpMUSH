@@ -23,6 +23,12 @@ public interface IMUSHCodeParser
 	ValueTask<CallState> CommandParse(MString text);
 
 	/// <summary>
+	/// Runs the command after a <c>;|</c> (help piping), without its <c>|</c>, as <see cref="CommandParse(MString)"/>
+	/// runs a command. Its text is part of a command list already being run, so a parser may keep its tree.
+	/// </summary>
+	ValueTask<CallState> PipedCommandParse(MString text) => CommandParse(text);
+
+	/// <summary>
 	/// Runs a line <paramref name="player"/> typed in the web portal: as a line typed at a connection
 	/// (not split on semicolons, a matched <c>$</c>-command run in place), but with no connection handle.
 	/// </summary>

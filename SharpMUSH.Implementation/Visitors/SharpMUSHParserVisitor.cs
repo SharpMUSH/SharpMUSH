@@ -1074,7 +1074,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (commandText is not null) commandText.Printed = printed;
 		try
 		{
-			return await parser.CommandParse(text);
+			return await parser.PipedCommandParse(text);
 		}
 		finally
 		{
