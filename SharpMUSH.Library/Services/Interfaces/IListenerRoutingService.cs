@@ -47,6 +47,12 @@ public record NotificationContext(
 	public NotificationRelay Relay { get; init; }
 	public bool PuppetOk { get; init; }
 	public MString Prefix { get; init; } = MString.Empty;
+
+	/// <summary>
+	/// The sender has just passed the Hear interaction with <see cref="Target"/> (<c>can_interact</c>), checked by
+	/// the caller, so the listener pass does not check it again.
+	/// </summary>
+	public bool HearingChecked { get; init; }
 }
 
 public enum NotificationRelay { Initial, RelayOnce, NoRelay }

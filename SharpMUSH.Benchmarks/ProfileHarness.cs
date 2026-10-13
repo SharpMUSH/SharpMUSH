@@ -106,6 +106,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("feed-send", "@feed/send bench/crowd=Coming in.", true),
 		new("feed-long", "@feed/send bench/long=Coming in.", true),
 		new("feed-quiet", "@feed/send bench/quiet=Coming in.", true),
+		// radio/1: bench/quiet's members, each line drawn by the radio package's FORMAT.
+		new("feed-format", "@feed/send radio/1=Coming in.", true),
+		new("radio-line0", "[uargs(me/FUN`LINE,frequency,1,speaker,%#,name,God,style,pose,text,waves.,reader,%#)]", false),
+		new("radio-line", "[uargs(me/FUN`LINE,id,1,frequency,1,speaker,%#,name,God,style,say,text,Coming in.,reader,%#)]", false),
 		new("feed-member", "[feedmember(bench/crowd,{MEMBER})]", false),
 		new("feed-gag", "[feedmember(bench/crowd,{MEMBER},gag)]", false),
 		new("feed-unread", "[feedunread(bench/long,{MEMBER})]", false),
@@ -120,6 +124,21 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	private const int BigLeaves = 50;
 	private const int KidAttributes = 100;
 	private const string FeedKind = "bench";
+
+	/// <summary>
+	/// The bundled radio package's line (examples/packages/radio, <c>{{radio}}</c> as <c>me</c>), on God, for
+	/// <c>feed-format</c> and <c>radio-line</c>. Copy it again when the package changes.
+	/// </summary>
+	private static readonly Dictionary<string, string> RadioLine = new()
+	{
+		["FUN`KEY"] = "[edit(objid(%0),#,,:,_)]",
+		["FUN`NAME"] = "[get(me/F`%0`NAME)]",
+		["FUN`LINE"] = "if(cor(not(strlen(%<id>)),comp(%q<line_id>,%<frequency>/%<id>)),setqm(line_id,%<frequency>/%<id>,line_title,get(me/P`[u(me/FUN`KEY,%<speaker>)]`TITLE`%<frequency>),line_speaker,if(strlen(%q<line_title>),%q<line_title>%b)%<name>,line_frequency,get(me/F`%<frequency>`NAME),line_painted_colour,#-1))[setq(line_colour,firstof(get(me/P`[edit(objid(%<reader>),#,,:,_)]`COLOR`%<frequency>),get(me/DATA`COLOR)))][if(comp(%q<line_painted_colour>,%q<line_colour>),setqm(line_painted_colour,%q<line_colour>,line_painted,u(me/FUN`PAINT,%q<line_colour>,%q<line_frequency>)))]<%q<line_painted>> [switch(%<style>,pose,%q<line_speaker> %<text>,semipose,%q<line_speaker>%<text>,emit,%<text>,announce,%<text>,%q<line_speaker> says\\, \"%<text>\")]",
+		["FUN`PAINT"] = "[if(strmatch(setr(_p,tone(%0,%1)),#-*),ansi(%0,%1),%q<_p>)]",
+		["FEED`RADIO`FORMAT"] = "uargs(me/FUN`LINE,id,%<id>,frequency,%<key>,speaker,%<speaker>,name,firstof(%<name>,name(%<speaker>)),style,%<style>,text,%<text>,reader,%<recipient>)",
+		["DATA`COLOR"] = "info",
+		["F`1`NAME"] = "Ops",
+	};
 
 	/// <summary>
 	/// <see cref="ParenGroupBenchmarks"/>' workloads, each in the form its setting reads: unescaped with
@@ -224,7 +243,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var (mortal, big, kid) = scenarios.Any(scenario => scenario.Input.Contains("{BIG}") || scenario.Input.Contains("{KID}"))
 			? await SeedBigObjectsAsync()
 			: (one, one, one);
-		var member = scenarios.Any(scenario => scenario.Input.Contains($"{FeedKind}/") || scenario.Input.Contains("{MEMBER}"))
+		var member = scenarios.Any(scenario => scenario.Name.StartsWith("feed", StringComparison.Ordinal)
+				|| scenario.Name.StartsWith("radio", StringComparison.Ordinal))
 			? await SeedFeedsAsync(baseParser, one, feedMembers, feedLines)
 			: one;
 		var inputs = scenarios.ToDictionary(scenario => scenario, scenario => MarkupText.Plain(scenario.Input
@@ -316,7 +336,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		var ids = _server.Services.GetRequiredService<IChannelMessageIdSource>();
 		foreach (var command in new[]
 		{
-			$"@feed/define {FeedKind}=me", $"@feed/set {FeedKind}/long/max_messages=0", $"@feed/set {FeedKind}/quiet/logged=no"
+			$"@feed/define {FeedKind}=me", $"@feed/set {FeedKind}/long/max_messages=0", $"@feed/set {FeedKind}/quiet/logged=no",
+			"@feed/define radio=me", "@feed/set radio/1/logged=no"
 		})
 			await baseParser.FromState(BenchmarkHelpers.FreshState(god)).CommandParse(MarkupText.Plain(command));
 
@@ -327,14 +348,16 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			last = await _database.GetObjectNodeAsync(created) is AnySharpObject player
 				? player.Object().DBRef
 				: throw new InvalidOperationException($"#{created.Number} is missing.");
-			foreach (var key in new[] { "crowd", "quiet" })
-				await mediator.Send(new SetFeedMemberCommand(FeedKind, key, new SharpFeedMember(last, 0, false, 0)));
+			foreach (var (kind, key) in new[] { (FeedKind, "crowd"), (FeedKind, "quiet"), ("radio", "1") })
+				await mediator.Send(new SetFeedMemberCommand(kind, key, new SharpFeedMember(last, 0, false, 0)));
 		}
 
 		await mediator.Send(new SetFeedMemberCommand(FeedKind, "long", new SharpFeedMember(last, 0, false, 0)));
-		var godObject = await _database!.GetObjectNodeAsync(god) is AnySharpObject found
-			? found.Object()
-			: throw new InvalidOperationException("God is missing.");
+		if (await _database!.GetObjectNodeAsync(god) is not (AnySharpObject found and SharpPlayer godPlayer))
+			throw new InvalidOperationException("God is missing.");
+		var godObject = found.Object();
+		foreach (var (name, value) in RadioLine)
+			await _database.SetAttributeAsync(god, name.Split('`'), MarkupText.Plain(value), godPlayer);
 		var crowdLimits = FeedSettings.Defaults;
 		var longLimits = FeedSettings.Defaults with { MaxMessages = 0 };
 		foreach (var (key, count, limits) in new[] { ("crowd", 500, crowdLimits), ("long", lines, longLimits) })

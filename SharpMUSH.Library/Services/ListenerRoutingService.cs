@@ -103,7 +103,8 @@ public class ListenerRoutingService(
 			actualSender = location;
 		}
 
-		if (!await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
+		if (!(context.HearingChecked && sender is not null)
+			&& !await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
 			return;
 
 		var messageText = message switch
