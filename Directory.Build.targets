@@ -1,5 +1,15 @@
 <Project>
 
+  <!-- One embedded icon for every published SharpMUSH package. Targets are imported
+       after project properties, so PackageId is available for this selection. -->
+  <PropertyGroup Condition="'$(PackageId)' == 'SharpMUSH.Library' OR '$(PackageId)' == 'SharpMUSH.Implementation.Generated' OR '$(PackageId)' == 'SharpMUSH.PackageTool' OR '$(PackageId)' == 'SharpMUSH.Templates'">
+    <PackageIcon>sharpmush-icon.png</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(PackageIcon)' == 'sharpmush-icon.png'">
+    <None Include="$(MSBuildThisFileDirectory)assets/branding/sharpmush-icon.png"
+          Pack="true" PackagePath="/" />
+  </ItemGroup>
+
   <!--
     Fails the build when a project's C# no longer matches .editorconfig.
 

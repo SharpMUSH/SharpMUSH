@@ -30,6 +30,7 @@
 		<RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageProjectUrl>https://github.com/SharpMUSH/SharpMUSH</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<Deterministic>true</Deterministic>
 		<DevelopmentDependency>true</DevelopmentDependency>
 		<!-- Analyzer packages legitimately have no lib/ build output. -->
@@ -38,6 +39,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="/" />
 		<!-- Ship the generator assembly under analyzers/dotnet/cs (the standard analyzer package layout). -->
 		<None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs"
 			Visible="false" />
