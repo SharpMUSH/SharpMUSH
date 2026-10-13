@@ -11,7 +11,7 @@ public sealed class ExecutionBudget : IDisposable
 	private readonly TimeProvider _clock;
 	private readonly long _started;
 	private readonly TimeSpan _duration;
-	// The system clock's deadline is in Environment.TickCount64 milliseconds; any other clock's in its own timestamps.
+	// On the system clock, the deadline in Environment.TickCount64 milliseconds.
 	private readonly bool _coarse;
 	private readonly long _expiresAt;
 	public const string Error = "#-1 EXECUTION TIME LIMIT EXCEEDED";
@@ -29,8 +29,7 @@ public sealed class ExecutionBudget : IDisposable
 		_started = timeProvider.GetTimestamp();
 		_coarse = timeProvider == TimeProvider.System;
 		_expiresAt = duration == Timeout.InfiniteTimeSpan ? long.MaxValue
-			: _coarse ? Environment.TickCount64 + (long)Math.Ceiling(duration.TotalMilliseconds) + 1
-			: _started + (long)(duration.Ticks * (double)timeProvider.TimestampFrequency / TimeSpan.TicksPerSecond);
+			: Environment.TickCount64 + (long)Math.Ceiling(duration.TotalMilliseconds) + 1;
 		_cancelledBy = cancellationToken;
 		_deadline = new CancellationTokenSource(duration, timeProvider);
 		if (duration == TimeSpan.Zero) _deadline.Cancel();
@@ -47,9 +46,10 @@ public sealed class ExecutionBudget : IDisposable
 	public TimeSpan Remaining => _duration == Timeout.InfiniteTimeSpan ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(0, (_duration - _clock.GetElapsedTime(_started)).Ticks));
 	// Timer callbacks and the clock can cross their boundary at different granularities. Every function call
 	// asks this several times, so on the system clock it reads the coarse tick count rather than the precise
-	// clock: a tick or so of slack against the deadline timer, which still fires on time.
+	// clock: a tick or so of slack against the deadline timer, which still fires on time. Any other clock
+	// keeps the exact check.
 	public bool IsExpired => _deadline.IsCancellationRequested
-		|| (_coarse ? Environment.TickCount64 : _clock.GetTimestamp()) >= _expiresAt;
+		|| (_coarse ? Environment.TickCount64 >= _expiresAt : Remaining == TimeSpan.Zero);
 	public bool IsCancelled => _cancellation.IsCancellationRequested;
 	public bool IsExceeded => IsExpired || IsCancelled;
 	public void ThrowIfExceeded()
