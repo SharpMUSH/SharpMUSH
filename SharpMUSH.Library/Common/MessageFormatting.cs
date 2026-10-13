@@ -1,3 +1,4 @@
+using System.Text;
 using MarkupString;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -81,12 +82,13 @@ public static class MessageFormatting
 	public static async ValueTask<SharpObjectFlag[]> VisibleFlagsAsync(SharpObject obj, FlagView? view = null,
 		ObjectFlagSet? read = null)
 	{
-		var flags = new List<SharpObjectFlag>();
-		var ownFlags = (read ?? await obj.ReadFlagsAsync()).Flags
-			.Where(flag => !flag.Name.Equals(obj.Type, StringComparison.OrdinalIgnoreCase));
-		foreach (var flag in ownFlags)
+		var ownFlags = (read ?? await obj.ReadFlagsAsync()).Flags;
+		var flags = new List<SharpObjectFlag>(ownFlags.Count);
+		for (var i = 0; i < ownFlags.Count; i++)
 		{
-			if (view is not null && !await view.CanSeeAsync(obj, flag)) continue;
+			var flag = ownFlags[i];
+			if (flag.Name.Equals(obj.Type, StringComparison.OrdinalIgnoreCase)
+				|| view is not null && !await view.CanSeeAsync(obj, flag)) continue;
 			flags.Add(flag);
 		}
 
@@ -112,8 +114,12 @@ public static class MessageFormatting
 	/// <see cref="VisibleFlagsAsync"/>. Example: <c>PenAc</c> for a connected player.
 	/// </summary>
 	public static async ValueTask<string> FlagSymbolsAsync(SharpObject obj, FlagView? view = null, ObjectFlagSet? read = null)
-		=> obj.Type[..1].ToUpperInvariant()
-			+ string.Concat((await VisibleFlagsAsync(obj, view, read)).Select(flag => flag.Symbol));
+	{
+		var flags = await VisibleFlagsAsync(obj, view, read);
+		var symbols = new StringBuilder(flags.Length + 1).Append(char.ToUpperInvariant(obj.Type[0]));
+		foreach (var flag in flags) symbols.Append(flag.Symbol);
+		return symbols.ToString();
+	}
 
 	/// <summary>
 	/// PennMUSH's <c>flag_description</c> (<c>src/flags.c:1683</c>), examine's

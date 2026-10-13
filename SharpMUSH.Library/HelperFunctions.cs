@@ -335,16 +335,26 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>The role-backed flags (<see cref="RoleFlags"/>) a role or override shows on the object.</summary>
-	public static IEnumerable<SharpObjectFlag> RoleFlagsShown(ObjectGrants grants)
-		=> RoleFlags.All.Where(flag => grants.Shows(flag.Scope)).Select(flag => new SharpObjectFlag
+	public static IReadOnlyList<SharpObjectFlag> RoleFlagsShown(ObjectGrants grants)
+	{
+		// Most objects show none; a listing asks this once per line.
+		List<SharpObjectFlag>? shown = null;
+		for (var i = 0; i < RoleFlags.All.Count; i++)
 		{
-			Name = flag.Name,
-			Symbol = flag.Symbol,
-			System = true,
-			SetPermissions = [],
-			UnsetPermissions = [],
-			TypeRestrictions = ["ROOM", "PLAYER", "EXIT", "THING"]
-		});
+			var flag = RoleFlags.All[i];
+			if (!grants.Shows(flag.Scope)) continue;
+			(shown ??= []).Add(new SharpObjectFlag
+			{
+				Name = flag.Name,
+				Symbol = flag.Symbol,
+				System = true,
+				SetPermissions = [],
+				UnsetPermissions = [],
+				TypeRestrictions = ["ROOM", "PLAYER", "EXIT", "THING"]
+			});
+		}
+		return shown ?? [];
+	}
 
 	/// <summary>
 	/// PennMUSH's <c>Hearer</c> (<c>src/game.c:1564</c>) walks <c>ATTR_FOR_EACH(thing, ptr)</c>,
@@ -452,9 +462,10 @@ public static partial class HelperFunctions
 	/// </summary>
 	public static bool HasFlag(IReadOnlyList<SharpObjectFlag> flags, string flag)
 	{
-		foreach (var each in flags)
+		// Indexed: a foreach over the interface boxes an enumerator per call, and this runs per item of a listing.
+		for (var i = 0; i < flags.Count; i++)
 		{
-			if (Names(each, flag)) return true;
+			if (Names(flags[i], flag)) return true;
 		}
 
 		return false;

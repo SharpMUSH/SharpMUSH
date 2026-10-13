@@ -53,6 +53,8 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 			{
 				foreach (var value in read)
 				{
+					// The resolved values are already in hand; the token still ends the walk, as each lookup did.
+					cancellationToken.ThrowIfCancellationRequested();
 					yield return value;
 				}
 

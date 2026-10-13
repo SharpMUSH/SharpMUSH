@@ -1369,7 +1369,7 @@ public partial class LightningDatabase
 			yield return flag;
 		}
 
-		yield return ObjectTypeFlag.For(type.ToUpperInvariant());
+		yield return ObjectTypeFlag.For(type);
 	}
 
 	private Lazy<IAsyncEnumerable<SharpPower>> PowersOf(long dbref) => new(()

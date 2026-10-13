@@ -25,7 +25,23 @@ public sealed class ObjectFlagSet
 	{
 		Object = owner;
 		Grants = grants;
-		Flags = [.. flags.Where(flag => RoleFlags.Find(flag.Name) is null), .. HelperFunctions.RoleFlagsShown(grants)];
+		var shown = new List<SharpObjectFlag>(flags.Count);
+		// Indexed loops here and below: a foreach over the interface boxes an enumerator, once per object listed.
+		for (var i = 0; i < flags.Count; i++)
+		{
+			if (!IsRoleFlag(flags[i])) shown.Add(flags[i]);
+		}
+		shown.AddRange(HelperFunctions.RoleFlagsShown(grants));
+		Flags = shown;
+	}
+
+	private static bool IsRoleFlag(SharpObjectFlag flag)
+	{
+		for (var i = 0; i < RoleFlags.All.Count; i++)
+		{
+			if (string.Equals(RoleFlags.All[i].Name, flag.Name, StringComparison.OrdinalIgnoreCase)) return true;
+		}
+		return false;
 	}
 
 	private HashSet<string> Names => _names ??= new(Flags.Select(flag => flag.Name), StringComparer.OrdinalIgnoreCase);

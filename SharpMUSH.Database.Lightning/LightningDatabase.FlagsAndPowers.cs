@@ -279,7 +279,16 @@ public partial class LightningDatabase
 	/// surfaced as null. Does not synthesize the type-named flag <c>FlagsOf</c> appends; callers that need that
 	/// (Hydrate) add it themselves.</summary>
 	internal IEnumerable<SharpObjectFlag> ReadObjectFlags(ITx tx, long dbref)
-		=> ReadObjectFlagRecords(tx, dbref).Select(MapFlag);
+		=> ReadObjectFlagRecords(tx, dbref).Select(SharedFlag);
+
+	/// <summary>
+	/// One model per definition record, shared by every object that carries the flag: an object's flags are
+	/// read on every enumeration, and a room listing reads them for each item. A changed definition is a new
+	/// record, so it maps afresh; the old one's model goes with it.
+	/// </summary>
+	private static readonly ConditionalWeakTable<FlagRecord, SharpObjectFlag> SharedFlags = new();
+
+	private static SharpObjectFlag SharedFlag(FlagRecord record) => SharedFlags.GetOrAdd(record, MapFlag);
 
 	/// <summary><see cref="ReadObjectFlags"/> without mapping each definition to a Library model.</summary>
 	internal IEnumerable<FlagRecord> ReadObjectFlagRecords(ITx tx, long dbref)

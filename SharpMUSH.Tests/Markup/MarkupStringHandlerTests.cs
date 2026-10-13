@@ -3,6 +3,7 @@ using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using M = MarkupString.Ansi.AnsiMarkup;
 using static MarkupString.MStringInterpolation;
 
@@ -590,5 +591,26 @@ public class MarkupStringHandlerTests
 	{
 		MString result = MarkupText.Plain("hello").Hilight();
 		await Assert.That(result.Render(MarkupFormat.Html)).Contains("tone-foreground");
+	}
+
+	[Test]
+	[Arguments("Ansi")]
+	[Arguments("Html")]
+	[Arguments("Pueblo")]
+	[Arguments("Mxp")]
+	public async Task Hilight_OnPlainTextRendersAsTheFullBuild(string format)
+	{
+		// Plain text takes the shared layer set; styled text still builds the layers around its own.
+		var markupFormat = format switch
+		{
+			"Ansi" => MarkupFormat.Ansi,
+			"Html" => MarkupFormat.Html,
+			"Pueblo" => MarkupFormat.Pueblo,
+			_ => MarkupFormat.Mxp
+		};
+		var built = MarkupText.Wrap(AnsiMarkup.Create(bold: true),
+			ToneMarkup.Build(ThemeRole.Foreground, MarkupText.Plain("hello"), null));
+		await Assert.That("hello".Hilight().Render(markupFormat)).IsEqualTo(built.Render(markupFormat));
+		await Assert.That(MarkupText.Plain("hello").Hilight().Render(markupFormat)).IsEqualTo(built.Render(markupFormat));
 	}
 }
